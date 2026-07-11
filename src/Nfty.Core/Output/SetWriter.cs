@@ -20,17 +20,35 @@ public static class SetWriter
         Directory.CreateDirectory(Path.Combine(outDir, "images"));
         Directory.CreateDirectory(Path.Combine(outDir, "metadata"));
 
-        // Observed frequencies across the produced set (Type + every layer trait).
+        // Existing metadata not being overwritten by this batch, so rarity/count can
+        // be recomputed over the whole collection rather than just this batch.
+        var newNumbers = new HashSet<int>(set.Assets.Select(a => a.SetNumber));
+        var existing = new List<(string Path, ItemMetadata Item)>();
+        var metaDir = Path.Combine(outDir, "metadata");
+        if (Directory.Exists(metaDir))
+        {
+            foreach (var file in Directory.EnumerateFiles(metaDir, "*.json"))
+            {
+                var item = JsonSerializer.Deserialize<ItemMetadata>(File.ReadAllText(file), Json.Options)!;
+                if (!newNumbers.Contains(item.SetNumber))
+                    existing.Add((file, item));
+            }
+        }
+
+        // Observed frequencies across the whole collection (existing ∪ this batch).
         var counts = new Dictionary<(string, string), int>();
         void Bump(string traitType, string value) =>
             counts[(traitType, value)] = counts.GetValueOrDefault((traitType, value)) + 1;
+        foreach (var (_, item) in existing)
+            foreach (var attr in item.Attributes) Bump(attr.Trait_type, attr.Value);
         foreach (var a in set.Assets)
         {
             Bump(TypeTrait, a.RecipeName);
             foreach (var t in a.Traits) Bump(t.IngredientName, t.VariantName);
         }
 
-        double n = Math.Max(1, set.Assets.Count);
+        int total = existing.Count + set.Assets.Count;
+        double n = Math.Max(1, total);
         RarityAttribute Rar(string traitType, string value) =>
             new(traitType, value, Math.Round(counts.GetValueOrDefault((traitType, value)) / n * 100, 2));
 
@@ -64,8 +82,19 @@ public static class SetWriter
                 JsonSerializer.Serialize(meta, Json.Options));
         }
 
-        var distribution = set.Assets
-            .GroupBy(a => a.RecipeId)
+        // Rewrite existing items' rarity to reflect the whole collection.
+        foreach (var (path, item) in existing)
+        {
+            var updated = item with
+            {
+                Rarity = item.Attributes.Select(a => Rar(a.Trait_type, a.Value)).ToList(),
+            };
+            File.WriteAllText(path, JsonSerializer.Serialize(updated, Json.Options));
+        }
+
+        var distribution = existing.Select(e => e.Item.Recipe)
+            .Concat(set.Assets.Select(a => a.RecipeId))
+            .GroupBy(id => id)
             .Select(g => new RecipeCount(g.Key, g.Count(), Math.Round(g.Count() / n * 100, 2)))
             .OrderBy(d => d.Recipe).ToList();
 
@@ -73,7 +102,7 @@ public static class SetWriter
             .Select(k => Rar(k.Item1, k.Item2))
             .OrderBy(r => r.Trait_type).ThenBy(r => r.Value).ToList();
 
-        var setManifest = new SetManifest(set.CollectionName, set.Assets.Count, set.Seed,
+        var setManifest = new SetManifest(set.CollectionName, total, set.Seed,
             GeneratorVersion, distribution, rarityTable);
         File.WriteAllText(Path.Combine(outDir, "set.json"),
             JsonSerializer.Serialize(setManifest, Json.Options));
