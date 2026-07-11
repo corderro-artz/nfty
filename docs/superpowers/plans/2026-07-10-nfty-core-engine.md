@@ -2763,6 +2763,7 @@ git checkout master && git merge --no-ff feat/cli -m "Merge feat/cli"
 
 ## Deferred to a follow-up plan
 - Authoring commands `new` (scaffold empty `.cbk`/`.rcp`/`.igt`) and `add` (append a recipe / ingredient / variant with dimension validation). Formats + validator already support these; they are a thin CLI layer added once the read/generate surface is proven end-to-end.
+- **Streaming generation for large collections.** The current `Generator.Generate` materializes the entire `GeneratedSet` — every asset's decoded `Image<Rgba32>` — in memory before `SetWriter.Write` persists it. For large drops (e.g. 5–10k items at 512×512 RGBA ≈ 20–40 GB resident) this risks OOM. Follow-up: stream the pipeline (produce → write → dispose per asset, e.g. `Generator` yields an `IEnumerable<GeneratedAsset>` and `SetWriter` writes incrementally, computing the aggregate `set.json` in a second pass over `metadata/`). The CLI already disposes asset images after `Write`; the remaining work is bounding *peak* memory. Validated scope (modest sets) is unaffected.
 - The Avalonia GUI (separate sub-project per the spec).
 
 ---
