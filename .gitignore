@@ -1,0 +1,14 @@
+# .NET
+bin/
+obj/
+*.user
+.vs/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+*.nupkg
+TestResults/
+
+# OS / editor
+.DS_Store
+.idea/
