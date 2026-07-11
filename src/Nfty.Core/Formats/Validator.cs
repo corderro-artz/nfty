@@ -1,3 +1,5 @@
+using Nfty.Core.Model;
+
 namespace Nfty.Core.Formats;
 
 public static class Validator
@@ -31,6 +33,8 @@ public static class Validator
                     problems.Add($"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}' has no variants.");
                 if (ing.Manifest.Variants.Sum(v => v.Weight) <= 0)
                     problems.Add($"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}' has zero total variant weight.");
+                if (ing.Manifest.Kind == LayerKind.Dynamic && ing.Manifest.Colorization is null)
+                    problems.Add($"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}' is dynamic but has no colorization.");
 
                 foreach (var v in ing.Manifest.Variants)
                 {
