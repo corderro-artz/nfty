@@ -2056,6 +2056,8 @@ git checkout master && git merge --no-ff feat/generator -m "Merge feat/generator
   - `static class SetWriter { const string GeneratorVersion; void Write(GeneratedSet set, string outDir, bool pack); record ExistingSet(IReadOnlyList<string> Dnas, int NextNumber); ExistingSet ReadExisting(string outDir) }`
   - Each item's `attributes` begins with `{trait_type:"Type", value:<recipeName>}`, then one per layer.
 
+> **Implemented refinement (collection-rarity fix):** `Write` aggregates rarity/count/distribution over the FULL collection — existing on-disk `metadata/*.json` items (excluding any whose `SetNumber` is in the current batch) plus the new batch. On extend it rewrites existing items' `rarity` field (only) and `set.json` so the whole collection is consistent; fresh writes (empty `metadata/`) are unchanged. The Step 5 code below is the initial single-batch version; the merged implementation extends it accordingly.
+
 - [ ] **Step 1: Create the branch**
 
 ```bash

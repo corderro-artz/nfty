@@ -169,7 +169,7 @@ DNA = SHA-256 over: the **recipe id**, then (sorted by ingredient id) each layer
 A single string seed drives a SplitMix64 RNG, recorded in the Set manifest. Same cookbook + seed ⇒ identical output.
 
 ### 5.6 Extend
-`extend` re-opens an existing Set with its cookbook, loads recorded DNAs and item numbering, then rolls only new, non-colliding assets up to the new `N`, preserving existing items exactly.
+`extend` re-opens an existing Set with its cookbook, loads recorded DNAs and item numbering, then rolls only new, non-colliding assets up to the new `N`, preserving existing items' images, traits, DNA, and numbering exactly. Because rarity is derived from the whole collection, `extend` **recomputes** every item's `rarity` and the `set.json` count/distribution/aggregate rarity over the full collection (existing on-disk items + new additions), rewriting existing items' `rarity` field only.
 
 ---
 
