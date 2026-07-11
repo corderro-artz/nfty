@@ -211,4 +211,33 @@ public class ValidatorTests
         Assert.Contains(Validator.Validate(book),
             p => p.Contains("dynamic", StringComparison.OrdinalIgnoreCase));
     }
+
+    [Fact]
+    public void Colorization_entry_with_neither_fixed_nor_range_reported()
+    {
+        var colorization = new Colorization(ColorModel.Hsv, 8, 8,
+            new[] { new ColorEntry(1, null, null) });
+        var ing = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("dyn", "Dynamic", LayerKind.Dynamic, colorization,
+                new[] { new Variant("a", "A", 10) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>>
+            {
+                ["a"] = new Image<Rgba32>(4, 4, new Rgba32(0, 0, 0, 255)),
+            },
+        };
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("test", "Test", new[] { "dyn" }, Array.Empty<IncompatibilityRule>()),
+            Ingredients = new[] { ing },
+        };
+        var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "Book", new Dimensions(4, 4),
+                new Collection("B", "", "B"), new Dictionary<string, double> { ["test"] = 10 }),
+            Recipes = new[] { recipe },
+        };
+        Assert.Contains(Validator.Validate(book),
+            p => p.Contains("exactly one of fixed or range", StringComparison.OrdinalIgnoreCase));
+    }
 }

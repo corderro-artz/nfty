@@ -35,6 +35,10 @@ public static class Validator
                     problems.Add($"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}' has zero total variant weight.");
                 if (ing.Manifest.Kind == LayerKind.Dynamic && ing.Manifest.Colorization is null)
                     problems.Add($"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}' is dynamic but has no colorization.");
+                if (ing.Manifest.Kind == LayerKind.Dynamic && ing.Manifest.Colorization is not null)
+                    foreach (var entry in ing.Manifest.Colorization.Entries)
+                        if ((entry.Fixed is null) == (entry.Range is null))
+                            problems.Add($"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}' has a colorization entry that must have exactly one of fixed or range.");
 
                 foreach (var v in ing.Manifest.Variants)
                 {

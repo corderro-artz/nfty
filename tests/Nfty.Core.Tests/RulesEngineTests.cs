@@ -35,4 +35,31 @@ public class RulesEngineTests
         Assert.False(RulesEngine.IsLegal(Sel(("body", "robot"), ("eyes", "sleepy")), rules));
         Assert.True(RulesEngine.IsLegal(Sel(("body", "cat"), ("eyes", "sleepy")), rules));
     }
+
+    [Fact]
+    public void Multi_target_and_multi_rule_selections_evaluated_correctly()
+    {
+        var multiTargetRules = new[]
+        {
+            new IncompatibilityRule(RuleType.Require,
+                new RuleTarget("body", "robot"),
+                new[] { new RuleTarget("eyes", "chrome"), new RuleTarget("hat", "cap") }),
+        };
+        Assert.False(RulesEngine.IsLegal(
+            Sel(("body", "robot"), ("eyes", "chrome"), ("hat", "visor")), multiTargetRules));
+        Assert.True(RulesEngine.IsLegal(
+            Sel(("body", "robot"), ("eyes", "chrome"), ("hat", "cap")), multiTargetRules));
+
+        var multiRules = new[]
+        {
+            new IncompatibilityRule(RuleType.Require,
+                new RuleTarget("body", "robot"),
+                new[] { new RuleTarget("eyes", "chrome") }),
+            new IncompatibilityRule(RuleType.Exclude,
+                new RuleTarget("body", "robot"),
+                new[] { new RuleTarget("hat", "visor") }),
+        };
+        Assert.False(RulesEngine.IsLegal(
+            Sel(("body", "robot"), ("eyes", "chrome"), ("hat", "visor")), multiRules));
+    }
 }
