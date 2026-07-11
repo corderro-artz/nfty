@@ -123,6 +123,7 @@ public static class CommandFactory
             var opts = new GenerateOptions(parse.GetValue(count), parse.GetValue(seed)!, parse.GetValue(recipe));
             var set = Generator.Generate(book, opts);
             SetWriter.Write(set, parse.GetValue(outDir)!, parse.GetValue(pack));
+            foreach (var a in set.Assets) a.Image.Dispose();
             Console.WriteLine($"Generated {set.Assets.Count} → {parse.GetValue(outDir)}");
             return 0;
         });
@@ -146,6 +147,7 @@ public static class CommandFactory
             var more = Generator.Generate(book, new GenerateOptions(need, parse.GetValue(seed)!),
                 existing.Dnas, existing.NextNumber);
             SetWriter.Write(more, parse.GetValue(dir)!, pack: false);
+            foreach (var a in more.Assets) a.Image.Dispose();
             Console.WriteLine($"Extended by {need} → {parse.GetValue(to)} total.");
             return 0;
         });
