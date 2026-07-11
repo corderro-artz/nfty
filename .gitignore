@@ -12,3 +12,6 @@ TestResults/
 # OS / editor
 .DS_Store
 .idea/
+
+# Six Labors license (account-specific; never commit)
+sixlabors.lic
