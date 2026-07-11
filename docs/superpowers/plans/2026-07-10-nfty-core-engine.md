@@ -355,7 +355,7 @@ public class ColorConvertTests
     public void RgbToHsv_roundtrips_hue_saturation()
     {
         var (h, s, v) = ColorConvert.RgbToHsv(new RgbColor(214, 36, 159));
-        Assert.InRange(h, 321.0, 323.0);
+        Assert.InRange(h, 318.0, 320.0);
         Assert.InRange(s, 0.82, 0.84);
         Assert.InRange(v, 0.83, 0.85);
     }
