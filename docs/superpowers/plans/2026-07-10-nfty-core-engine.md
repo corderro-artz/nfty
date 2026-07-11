@@ -4,25 +4,26 @@
 
 **Goal:** Build the headless `Nfty.Core` library and `nfty` CLI that authors layered NFT collections as versioned ZIP archives and generates deterministic asset sets with static and dynamic (grayscale-recolored) layers.
 
-**Architecture:** A pure C# class library (`Nfty.Core`) holds the domain model, ZIP archive I/O, imaging/colorization, a seeded generation pipeline (weighted roll → rules → colorize → composite → DNA dedup), and set output. A thin `Nfty.Cli` wires `System.CommandLine` over the library. Everything is TDD with xUnit; imaging uses ImageSharp (fully managed).
+**Architecture (Model A):** A CookBook is an *uncooked Set* — a container of Recipes. Each Recipe is a full template for one image/character *type*: an ordered stack of Ingredient-layers, each holding weighted variant images. Cooking a CookBook rolls a Recipe per asset (by weight), then rolls each layer's variant, colorizes dynamic layers, composites, and dedups by DNA. A thin `Nfty.Cli` wires `System.CommandLine` over the pure `Nfty.Core` library. Everything is TDD with xUnit; imaging uses ImageSharp (fully managed).
 
-**Tech Stack:** .NET 10 (LTS), C#, SixLabors.ImageSharp 4.0.0, System.CommandLine 2.0.9, System.IO.Compression, System.Text.Json, xUnit.
+**Tech Stack:** .NET 10, C#, SixLabors.ImageSharp 3.1.11, System.CommandLine 2.0.9, System.IO.Compression, System.Text.Json, xUnit.
 
-**Design spec:** `docs/superpowers/specs/2026-07-10-nfty-core-engine-design.md` (Model B domain model).
+**Design spec:** `docs/superpowers/specs/2026-07-10-nfty-core-engine-design.md` (Model A).
 
 ## Global Constraints
 
 - **Target framework:** `net10.0` for every project.
-- **Packages (pinned):** `SixLabors.ImageSharp` `4.0.0`; `System.CommandLine` `2.0.9`.
-- **Domain model:** Model B — CookBook (`.cbk`) = full template; Recipe (`.rcp`) = one layer; Ingredient (`.igt`) = one image variant; Set (`.set`) = generated bundle.
-- **Weights & colorization live on the Recipe; incompatibility rules live on the CookBook; `kind` (static/dynamic) is per-Recipe.**
-- **Canvas is the single source of truth for size.** No per-layer/ingredient dimensions; validate images against `canvas` on add/generate.
+- **Packages (pinned):** `SixLabors.ImageSharp` **`3.1.11`** (NOT 4.0.0 — 4.0.0 enforces a build-time license key); `System.CommandLine` `2.0.9`.
+- **Domain model (Model A):** CookBook (`.cbk`) = uncooked Set / container of Recipes; Recipe (`.rcp`) = a full template for one type (ordered Ingredient-layers + rules); Ingredient (`.igt`) = one layer holding weighted variant images; Variant = one image+weight+name inside an Ingredient (not its own file type); Set (`.set`) = cooked bundle.
+- **Weight placement:** variant weights live on the **Ingredient**; recipe-selection weights live on the **CookBook**. `kind` + colorization live on the **Ingredient**. Incompatibility rules live on the **Recipe**.
+- **Canvas is the single source of truth for size.** No per-layer/variant dimensions; validate every variant image against `canvas` on generate/validate.
 - **Color input syntax (prefix required):** `hex:rrggbb`, `rgb:r,g,b`, `hsl:h,s,l`, `hsv:h,s,v`. Unknown/missing prefix is an error.
 - **Dynamic colorization:** grayscale value = red channel `g = R/255`; `g`→V (hsv) or L (hsl); rolled color supplies H,S; alpha preserved.
+- **Generation (weighted mix):** each asset rolls a Recipe by cookbook weight, then rolls each layer's variant. A single-recipe mode (`--recipe <id>`) fixes the recipe. DNA is recipe-aware.
 - **Determinism:** a string seed drives a SplitMix64 RNG; same cookbook + seed ⇒ identical output. Seed stored in `set.json`.
 - **All manifests carry `schemaVersion` (start at `1`).** JSON is camelCase, enums as strings.
-- **Metadata:** ERC-721/OpenSea fields + extras (`setNumber`, `dna`, `seed`, `rarity`, `colorRolls`).
-- **Git workflow:** no remote yet. Each task lands on its own local branch `feat/<task>` and is merged into `master` with `--no-ff`. When a remote is added later these become PRs. Commit messages end with the `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>` trailer.
+- **Metadata:** ERC-721/OpenSea fields + extras (`recipe`, `setNumber`, `dna`, `seed`, `rarity`, `colorRolls`); the recipe/type is also an `attributes` entry `{trait_type:"Type", value:<recipeName>}`.
+- **Git workflow:** no remote yet. Each task lands on its own local branch `feat/<task>` and is merged into `master` with `--no-ff`. Commit messages end with the `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>` trailer.
 
 ---
 
@@ -32,16 +33,16 @@
 nfty.sln
 src/
   Nfty.Core/
-    Nfty.Core.csproj
     Model/
       Dimensions.cs            # canvas size record
       Colorization.cs          # ColorModel, ColorRange, ColorEntry, Colorization
       LayerKind.cs             # enum Static|Dynamic
-      IngredientManifest.cs
-      RecipeManifest.cs
+      Variant.cs               # Variant(id,name,weight)
+      IngredientManifest.cs    # id,name,kind,colorization?,variants
       IncompatibilityRule.cs   # RuleType, RuleTarget, IncompatibilityRule
+      RecipeManifest.cs        # id,name,layerOrder,rules
       Collection.cs
-      CookBookManifest.cs
+      CookBookManifest.cs      # id,name,canvas,collection,recipeWeights
     Imaging/
       RgbColor.cs
       ColorConvert.cs          # HSV/HSL <-> RGB
@@ -55,144 +56,64 @@ src/
       IngredientArchive.cs
       RecipeArchive.cs
       CookBookArchive.cs
-      Validator.cs             # canvas + weight + rule-reference checks
+      Validator.cs
     Generation/
       Rng.cs                   # IRng + SplitMix64Rng + SeedHash
       WeightedRoller.cs
       ColorRoller.cs
-      Dna.cs                   # LayerSelection, Dna.Compute
+      Dna.cs                   # LayerSelection, Dna.Compute(recipeId, ...)
       RulesEngine.cs
       Generator.cs             # orchestrator -> GeneratedSet
-      GeneratedSet.cs          # GeneratedAsset, TraitSelection, ColorRoll, GeneratedSet
+      GeneratedSet.cs          # GeneratedAsset, TraitSelection, ColorRoll, GeneratedSet, GenerateOptions
     Output/
       Metadata.cs              # ERC-721 + extras DTOs
       SetWriter.cs             # write folder or .set, + extend loader
     Stats/
       RarityCalculator.cs
   Nfty.Cli/
-    Nfty.Cli.csproj
     Program.cs
     CommandFactory.cs          # builds RootCommand (testable)
 tests/
-  Nfty.Core.Tests/
-    Nfty.Core.Tests.csproj
-    <one test file per unit>
-  Nfty.Cli.Tests/
-    Nfty.Cli.Tests.csproj
-    CommandFactoryTests.cs
+  Nfty.Core.Tests/  <one test file per unit>
+  Nfty.Cli.Tests/   CommandFactoryTests.cs
 ```
 
 ---
 
-## Task 1: Solution & project scaffold
+## Task 1: Solution & project scaffold — ✅ COMPLETE
 
-**Files:**
-- Create: `nfty.sln`, `src/Nfty.Core/Nfty.Core.csproj`, `src/Nfty.Cli/Nfty.Cli.csproj`, `tests/Nfty.Core.Tests/Nfty.Core.Tests.csproj`, `tests/Nfty.Cli.Tests/Nfty.Cli.Tests.csproj`
-- Test: `tests/Nfty.Core.Tests/SmokeTest.cs`
-
-**Interfaces:**
-- Consumes: nothing.
-- Produces: the solution, project references, and pinned packages every later task builds on.
-
-- [ ] **Step 1: Create the branch**
-
-```bash
-cd /home/dev/repo/nfty && git checkout -b feat/scaffold
-```
-
-- [ ] **Step 2: Create solution and projects**
-
-```bash
-dotnet new sln -n nfty
-dotnet new classlib -o src/Nfty.Core -n Nfty.Core -f net10.0
-dotnet new console  -o src/Nfty.Cli  -n Nfty.Cli  -f net10.0
-dotnet new xunit    -o tests/Nfty.Core.Tests -n Nfty.Core.Tests -f net10.0
-dotnet new xunit    -o tests/Nfty.Cli.Tests  -n Nfty.Cli.Tests  -f net10.0
-rm src/Nfty.Core/Class1.cs
-dotnet sln add src/Nfty.Core src/Nfty.Cli tests/Nfty.Core.Tests tests/Nfty.Cli.Tests
-```
-
-- [ ] **Step 3: Wire references and packages**
-
-```bash
-dotnet add src/Nfty.Core package SixLabors.ImageSharp --version 4.0.0
-dotnet add src/Nfty.Cli  package System.CommandLine   --version 2.0.9
-dotnet add src/Nfty.Cli reference src/Nfty.Core
-dotnet add tests/Nfty.Core.Tests reference src/Nfty.Core
-dotnet add tests/Nfty.Core.Tests package SixLabors.ImageSharp --version 4.0.0
-dotnet add tests/Nfty.Cli.Tests  reference src/Nfty.Cli
-```
-
-- [ ] **Step 4: Enable nullable + implicit usings in Core**
-
-Confirm `src/Nfty.Core/Nfty.Core.csproj` `<PropertyGroup>` contains:
-
-```xml
-<TargetFramework>net10.0</TargetFramework>
-<ImplicitUsings>enable</ImplicitUsings>
-<Nullable>enable</Nullable>
-```
-
-(The templates set these by default; add any that are missing.)
-
-- [ ] **Step 5: Write the smoke test**
-
-`tests/Nfty.Core.Tests/SmokeTest.cs`:
-
-```csharp
-namespace Nfty.Core.Tests;
-
-public class SmokeTest
-{
-    [Fact]
-    public void Solution_builds_and_tests_run() => Assert.True(true);
-}
-```
-
-- [ ] **Step 6: Build and test**
-
-Run: `dotnet build && dotnet test`
-Expected: build succeeds; 1 test passes.
-
-- [ ] **Step 7: Commit and merge**
-
-```bash
-git add -A
-git commit -m "chore: scaffold nfty solution (Core, Cli, tests)
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
-git checkout master && git merge --no-ff feat/scaffold -m "Merge feat/scaffold"
-```
+**Status:** Already implemented and merged to `master` (commits `6e3c165` scaffold, `8137ac4` ImageSharp pin). The solution (`Nfty.Core`, `Nfty.Cli`, `Nfty.Core.Tests`, `Nfty.Cli.Tests`), project references, and packages (`SixLabors.ImageSharp` 3.1.11, `System.CommandLine` 2.0.9) exist and `dotnet build` is green with zero warnings. Per decision, no placeholder/smoke test was committed — real tests begin in Task 2. **Do not redo this task.** Start execution at Task 2.
 
 ---
 
-## Task 2: Domain model records
+## Task 2: Domain model records (Model A)
 
 **Files:**
-- Create: `src/Nfty.Core/Model/Dimensions.cs`, `Colorization.cs`, `LayerKind.cs`, `IngredientManifest.cs`, `RecipeManifest.cs`, `IncompatibilityRule.cs`, `Collection.cs`, `CookBookManifest.cs`
+- Create: `src/Nfty.Core/Model/Dimensions.cs`, `Colorization.cs`, `LayerKind.cs`, `Variant.cs`, `IngredientManifest.cs`, `IncompatibilityRule.cs`, `RecipeManifest.cs`, `Collection.cs`, `CookBookManifest.cs`
 - Test: `tests/Nfty.Core.Tests/ModelTests.cs`
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces (namespace `Nfty.Core.Model`), exact shapes:
+- Produces (namespace `Nfty.Core.Model`):
   - `record Dimensions(int Width, int Height)`
   - `enum LayerKind { Static, Dynamic }`
   - `enum ColorModel { Hsv, Hsl }`
   - `record ColorRange(double HueMin, double HueMax, double SatMin, double SatMax)`
   - `record ColorEntry(double Weight, ColorRange? Range, string? Fixed)`
   - `record Colorization(ColorModel Model, int HueQuantize, int SatQuantize, IReadOnlyList<ColorEntry> Entries)`
-  - `record IngredientManifest(string Id, string Name, string Sha256, int SchemaVersion = 1)`
-  - `record RecipeManifest(string Id, string Name, LayerKind Kind, int Order, IReadOnlyDictionary<string,double> Measurements, Colorization? Colorization, int SchemaVersion = 1)`
+  - `record Variant(string Id, string Name, double Weight)`
+  - `record IngredientManifest(string Id, string Name, LayerKind Kind, Colorization? Colorization, IReadOnlyList<Variant> Variants, int SchemaVersion = 1)`
   - `enum RuleType { Exclude, Require }`
-  - `record RuleTarget(string LayerId, string IngredientId)`
+  - `record RuleTarget(string IngredientId, string VariantId)`
   - `record IncompatibilityRule(RuleType Type, RuleTarget When, IReadOnlyList<RuleTarget> Targets)`
+  - `record RecipeManifest(string Id, string Name, IReadOnlyList<string> LayerOrder, IReadOnlyList<IncompatibilityRule> Rules, int SchemaVersion = 1)`
   - `record Collection(string Name, string Description, string Symbol)`
-  - `record CookBookManifest(string Id, string Name, Dimensions Canvas, IReadOnlyList<string> LayerOrder, IReadOnlyList<IncompatibilityRule> Rules, Collection Collection, int SchemaVersion = 1)`
+  - `record CookBookManifest(string Id, string Name, Dimensions Canvas, Collection Collection, IReadOnlyDictionary<string,double> RecipeWeights, int SchemaVersion = 1)`
 
 - [ ] **Step 1: Create the branch**
 
 ```bash
-git checkout -b feat/model
+cd /home/dev/repo/nfty && git checkout master && git checkout -b feat/model
 ```
 
 - [ ] **Step 2: Write the failing test**
@@ -207,35 +128,55 @@ namespace Nfty.Core.Tests;
 public class ModelTests
 {
     [Fact]
-    public void CookBookManifest_holds_canvas_and_layer_order()
+    public void CookBook_holds_canvas_and_recipe_weights()
     {
         var cb = new CookBookManifest(
             Id: "cb1", Name: "VaporPets",
             Canvas: new Dimensions(512, 512),
-            LayerOrder: new[] { "bg", "body" },
-            Rules: Array.Empty<IncompatibilityRule>(),
-            Collection: new Collection("VaporPets", "desc", "VPET"));
+            Collection: new Collection("VaporPets", "desc", "VPET"),
+            RecipeWeights: new Dictionary<string, double> { ["cat"] = 70, ["robot"] = 30 });
 
         Assert.Equal(512, cb.Canvas.Width);
-        Assert.Equal(new[] { "bg", "body" }, cb.LayerOrder);
+        Assert.Equal(70, cb.RecipeWeights["cat"]);
         Assert.Equal(1, cb.SchemaVersion);
     }
 
     [Fact]
-    public void Dynamic_recipe_carries_colorization_entries()
+    public void Recipe_is_an_ordered_layer_stack_with_rules()
     {
         var recipe = new RecipeManifest(
-            Id: "aura", Name: "Aura", Kind: LayerKind.Dynamic, Order: 5,
-            Measurements: new Dictionary<string, double> { ["glow"] = 1.0 },
+            Id: "cat", Name: "Cat",
+            LayerOrder: new[] { "bg", "body", "hat" },
+            Rules: new[]
+            {
+                new IncompatibilityRule(RuleType.Exclude,
+                    new RuleTarget("body", "fox"),
+                    new[] { new RuleTarget("hat", "visor") }),
+            });
+
+        Assert.Equal(new[] { "bg", "body", "hat" }, recipe.LayerOrder);
+        Assert.Single(recipe.Rules);
+    }
+
+    [Fact]
+    public void Dynamic_ingredient_carries_colorization_and_variants()
+    {
+        var ing = new IngredientManifest(
+            Id: "aura", Name: "Aura", Kind: LayerKind.Dynamic,
             Colorization: new Colorization(ColorModel.Hsv, 5, 5, new[]
             {
                 new ColorEntry(10, null, "hex:d6249f"),
                 new ColorEntry(30, new ColorRange(175, 195, 60, 90), null),
-            }));
+            }),
+            Variants: new[]
+            {
+                new Variant("glow", "Glow", 60),
+                new Variant("spark", "Spark", 40),
+            });
 
-        Assert.Equal(LayerKind.Dynamic, recipe.Kind);
-        Assert.Equal(2, recipe.Colorization!.Entries.Count);
-        Assert.Equal("hex:d6249f", recipe.Colorization.Entries[0].Fixed);
+        Assert.Equal(LayerKind.Dynamic, ing.Kind);
+        Assert.Equal(2, ing.Colorization!.Entries.Count);
+        Assert.Equal(60, ing.Variants[0].Weight);
     }
 }
 ```
@@ -243,7 +184,7 @@ public class ModelTests
 - [ ] **Step 3: Run test to verify it fails**
 
 Run: `dotnet test tests/Nfty.Core.Tests --filter ModelTests`
-Expected: FAIL — types `CookBookManifest`, etc. do not exist.
+Expected: FAIL — types do not exist.
 
 - [ ] **Step 4: Write the records**
 
@@ -282,26 +223,25 @@ public record Colorization(
     IReadOnlyList<ColorEntry> Entries);
 ```
 
+`src/Nfty.Core/Model/Variant.cs`:
+
+```csharp
+namespace Nfty.Core.Model;
+
+public record Variant(string Id, string Name, double Weight);
+```
+
 `src/Nfty.Core/Model/IngredientManifest.cs`:
 
 ```csharp
 namespace Nfty.Core.Model;
 
-public record IngredientManifest(string Id, string Name, string Sha256, int SchemaVersion = 1);
-```
-
-`src/Nfty.Core/Model/RecipeManifest.cs`:
-
-```csharp
-namespace Nfty.Core.Model;
-
-public record RecipeManifest(
+public record IngredientManifest(
     string Id,
     string Name,
     LayerKind Kind,
-    int Order,
-    IReadOnlyDictionary<string, double> Measurements,
     Colorization? Colorization,
+    IReadOnlyList<Variant> Variants,
     int SchemaVersion = 1);
 ```
 
@@ -312,9 +252,22 @@ namespace Nfty.Core.Model;
 
 public enum RuleType { Exclude, Require }
 
-public record RuleTarget(string LayerId, string IngredientId);
+public record RuleTarget(string IngredientId, string VariantId);
 
 public record IncompatibilityRule(RuleType Type, RuleTarget When, IReadOnlyList<RuleTarget> Targets);
+```
+
+`src/Nfty.Core/Model/RecipeManifest.cs`:
+
+```csharp
+namespace Nfty.Core.Model;
+
+public record RecipeManifest(
+    string Id,
+    string Name,
+    IReadOnlyList<string> LayerOrder,
+    IReadOnlyList<IncompatibilityRule> Rules,
+    int SchemaVersion = 1);
 ```
 
 `src/Nfty.Core/Model/Collection.cs`:
@@ -334,22 +287,21 @@ public record CookBookManifest(
     string Id,
     string Name,
     Dimensions Canvas,
-    IReadOnlyList<string> LayerOrder,
-    IReadOnlyList<IncompatibilityRule> Rules,
     Collection Collection,
+    IReadOnlyDictionary<string, double> RecipeWeights,
     int SchemaVersion = 1);
 ```
 
 - [ ] **Step 5: Run test to verify it passes**
 
 Run: `dotnet test tests/Nfty.Core.Tests --filter ModelTests`
-Expected: PASS (2 tests).
+Expected: PASS (3 tests).
 
 - [ ] **Step 6: Commit and merge**
 
 ```bash
 git add -A
-git commit -m "feat: domain model records (Model B)
+git commit -m "feat: domain model records (Model A)
 
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 git checkout master && git merge --no-ff feat/model -m "Merge feat/model"
@@ -367,17 +319,13 @@ git checkout master && git merge --no-ff feat/model -m "Merge feat/model"
 - Consumes: nothing.
 - Produces (namespace `Nfty.Core.Imaging`):
   - `readonly record struct RgbColor(byte R, byte G, byte B)`
-  - `static class ColorConvert` with:
-    - `static RgbColor HsvToRgb(double h, double s, double v)` — `h`∈[0,360), `s,v`∈[0,1]
-    - `static RgbColor HslToRgb(double h, double s, double l)`
-    - `static (double H, double S, double V) RgbToHsv(RgbColor c)`
-    - `static (double H, double S, double L) RgbToHsl(RgbColor c)`
-  - `static class ColorSpec` with `static RgbColor Parse(string spec)` (throws `FormatException` on bad/missing prefix)
+  - `static class ColorConvert`: `RgbColor HsvToRgb(double h, double s, double v)`; `RgbColor HslToRgb(double h, double s, double l)`; `(double H, double S, double V) RgbToHsv(RgbColor c)`; `(double H, double S, double L) RgbToHsl(RgbColor c)` (`h`∈[0,360), `s/v/l`∈[0,1]).
+  - `static class ColorSpec`: `RgbColor Parse(string spec)` (throws `FormatException` on bad/missing prefix).
 
 - [ ] **Step 1: Create the branch**
 
 ```bash
-git checkout -b feat/color-spec
+git checkout master && git checkout -b feat/color-spec
 ```
 
 - [ ] **Step 2: Write the failing tests**
@@ -392,23 +340,16 @@ namespace Nfty.Core.Tests;
 public class ColorConvertTests
 {
     [Fact]
-    public void HsvToRgb_pure_red()
-    {
-        var c = ColorConvert.HsvToRgb(0, 1, 1);
-        Assert.Equal(new RgbColor(255, 0, 0), c);
-    }
+    public void HsvToRgb_pure_red() =>
+        Assert.Equal(new RgbColor(255, 0, 0), ColorConvert.HsvToRgb(0, 1, 1));
 
     [Fact]
-    public void HsvToRgb_zero_value_is_black_for_any_hue()
-    {
+    public void HsvToRgb_zero_value_is_black_for_any_hue() =>
         Assert.Equal(new RgbColor(0, 0, 0), ColorConvert.HsvToRgb(210, 0.8, 0.0));
-    }
 
     [Fact]
-    public void HslToRgb_full_lightness_is_white()
-    {
+    public void HslToRgb_full_lightness_is_white() =>
         Assert.Equal(new RgbColor(255, 255, 255), ColorConvert.HslToRgb(120, 0.5, 1.0));
-    }
 
     [Fact]
     public void RgbToHsv_roundtrips_hue_saturation()
@@ -517,9 +458,8 @@ public static class ColorConvert
         double r = c.R / 255.0, g = c.G / 255.0, b = c.B / 255.0;
         double max = Math.Max(r, Math.Max(g, b)), min = Math.Min(r, Math.Min(g, b));
         double d = max - min;
-        double h = Hue(r, g, b, max, d);
         double s = max == 0 ? 0 : d / max;
-        return (h, s, max);
+        return (Hue(r, g, b, max, d), s, max);
     }
 
     public static (double H, double S, double L) RgbToHsl(RgbColor c)
@@ -622,13 +562,12 @@ git checkout master && git merge --no-ff feat/color-spec -m "Merge feat/color-sp
 
 **Interfaces:**
 - Consumes: `ColorConvert`, `Nfty.Core.Model.ColorModel`.
-- Produces: `static class Colorizer` with
-  `static Image<Rgba32> Apply(Image<Rgba32> valueMap, double h, double s, ColorModel model)` — returns a new recolored image; `g = R/255` drives V (hsv) or L (hsl); alpha preserved; input not mutated.
+- Produces: `static class Colorizer` with `static Image<Rgba32> Apply(Image<Rgba32> valueMap, double h, double s, ColorModel model)` — returns a new recolored image; `g = R/255` drives V (hsv) or L (hsl); alpha preserved; input not mutated.
 
 - [ ] **Step 1: Create the branch**
 
 ```bash
-git checkout -b feat/colorizer
+git checkout master && git checkout -b feat/colorizer
 ```
 
 - [ ] **Step 2: Write the failing test**
@@ -654,7 +593,6 @@ public class ColorizerTests
         using var outImg = Colorizer.Apply(map, h: 0, s: 1.0, ColorModel.Hsv);
 
         var px = outImg[0, 0];
-        // hue 0, s 1, v 0.502 -> pure-ish red at half value
         Assert.Equal(128, px.R);
         Assert.Equal(0, px.G);
         Assert.Equal(0, px.B);
@@ -670,7 +608,7 @@ public class ColorizerTests
         using var outImg = Colorizer.Apply(map, h: 180, s: 0.5, ColorModel.Hsl);
 
         Assert.Equal(64, outImg[0, 0].A);
-        Assert.Equal(new Rgba32(200, 200, 200, 64), map[0, 0]); // unchanged
+        Assert.Equal(new Rgba32(200, 200, 200, 64), map[0, 0]);
     }
 }
 ```
@@ -741,13 +679,12 @@ git checkout master && git merge --no-ff feat/colorizer -m "Merge feat/colorizer
 
 **Interfaces:**
 - Consumes: `Nfty.Core.Model.Dimensions`.
-- Produces: `static class Compositor` with
-  `static Image<Rgba32> Composite(Dimensions canvas, IReadOnlyList<Image<Rgba32>> layersBottomToTop)` — new transparent canvas with each layer drawn source-over, bottom first.
+- Produces: `static class Compositor` with `static Image<Rgba32> Composite(Dimensions canvas, IReadOnlyList<Image<Rgba32>> layersBottomToTop)` — new transparent canvas, each layer drawn source-over, bottom first.
 
 - [ ] **Step 1: Create the branch**
 
 ```bash
-git checkout -b feat/compositor
+git checkout master && git checkout -b feat/compositor
 ```
 
 - [ ] **Step 2: Write the failing test**
@@ -844,18 +781,18 @@ git checkout master && git merge --no-ff feat/compositor -m "Merge feat/composit
 - Consumes: `Nfty.Core.Model.*`, ImageSharp.
 - Produces (namespace `Nfty.Core.Formats`):
   - `static class Json { static JsonSerializerOptions Options }` (camelCase, `JsonStringEnumConverter`, indented).
-  - `class LoadedIngredient { IngredientManifest Manifest; Image<Rgba32> Image }`
+  - `class LoadedIngredient { IngredientManifest Manifest; IReadOnlyDictionary<string,Image<Rgba32>> VariantImages }` (keyed by variant id).
   - `class LoadedRecipe { RecipeManifest Manifest; IReadOnlyList<LoadedIngredient> Ingredients }`
   - `class LoadedCookBook { CookBookManifest Manifest; IReadOnlyList<LoadedRecipe> Recipes }`
-  - `static class IngredientArchive { void Write(string path, IngredientManifest m, Image<Rgba32> img); LoadedIngredient Read(string path) }`
-  - `static class RecipeArchive { void Write(string path, RecipeManifest m, IReadOnlyList<LoadedIngredient> ingredients); LoadedRecipe Read(string path) }`
+  - `static class IngredientArchive { void Write(string path, IngredientManifest m, IReadOnlyDictionary<string,Image<Rgba32>> variants); LoadedIngredient Read(string path); + ZipArchive overloads }`
+  - `static class RecipeArchive { void Write(string path, RecipeManifest m, IReadOnlyList<LoadedIngredient> ingredients); LoadedRecipe Read(string path); + ZipArchive overloads }`
   - `static class CookBookArchive { void Write(string path, CookBookManifest m, IReadOnlyList<LoadedRecipe> recipes); LoadedCookBook Read(string path) }`
-  - `static class Validator { IReadOnlyList<string> Validate(LoadedCookBook cb) }` — returns human-readable problems (empty = valid).
+  - `static class Validator { IReadOnlyList<string> Validate(LoadedCookBook cb) }` — empty = valid.
 
 - [ ] **Step 1: Create the branch**
 
 ```bash
-git checkout -b feat/formats
+git checkout master && git checkout -b feat/formats
 ```
 
 - [ ] **Step 2: Write the failing tests**
@@ -872,10 +809,11 @@ namespace Nfty.Core.Tests;
 
 public class ArchiveRoundTripTests
 {
-    private static LoadedIngredient MakeIngredient(string id, Rgba32 fill) => new()
+    private static LoadedIngredient Ingredient(string id, params (string vid, Rgba32 fill)[] variants) => new()
     {
-        Manifest = new IngredientManifest(id, id, Sha256: ""),
-        Image = new Image<Rgba32>(4, 4, fill),
+        Manifest = new IngredientManifest(id, id, LayerKind.Static, null,
+            variants.Select(v => new Variant(v.vid, v.vid, 1)).ToList()),
+        VariantImages = variants.ToDictionary(v => v.vid, v => new Image<Rgba32>(4, 4, v.fill)),
     };
 
     [Fact]
@@ -884,29 +822,26 @@ public class ArchiveRoundTripTests
         var dir = Directory.CreateTempSubdirectory().FullName;
         var path = Path.Combine(dir, "VaporPets.cbk");
 
-        var bg = new LoadedRecipe
+        var bg = Ingredient("bg", ("sunset", new Rgba32(255, 128, 0, 255)), ("grid", new Rgba32(0, 128, 255, 255)));
+        var recipe = new LoadedRecipe
         {
-            Manifest = new RecipeManifest("bg", "Background", LayerKind.Static, 0,
-                new Dictionary<string, double> { ["sunset"] = 55, ["grid"] = 45 }, null),
-            Ingredients = new[]
-            {
-                MakeIngredient("sunset", new Rgba32(255, 128, 0, 255)),
-                MakeIngredient("grid", new Rgba32(0, 128, 255, 255)),
-            },
+            Manifest = new RecipeManifest("cat", "Cat", new[] { "bg" }, Array.Empty<IncompatibilityRule>()),
+            Ingredients = new[] { bg },
         };
         var cb = new CookBookManifest("cb", "VaporPets", new Dimensions(4, 4),
-            new[] { "bg" }, Array.Empty<IncompatibilityRule>(),
-            new Collection("VaporPets", "d", "VP"));
+            new Collection("VaporPets", "d", "VP"),
+            new Dictionary<string, double> { ["cat"] = 100 });
 
-        CookBookArchive.Write(path, cb, new[] { bg });
+        CookBookArchive.Write(path, cb, new[] { recipe });
         var loaded = CookBookArchive.Read(path);
 
         Assert.Equal("VaporPets", loaded.Manifest.Name);
         Assert.Equal(new Dimensions(4, 4), loaded.Manifest.Canvas);
+        Assert.Equal(100, loaded.Manifest.RecipeWeights["cat"]);
         Assert.Single(loaded.Recipes);
-        Assert.Equal(2, loaded.Recipes[0].Ingredients.Count);
-        Assert.Equal(55, loaded.Recipes[0].Manifest.Measurements["sunset"]);
-        Assert.Equal(new Rgba32(255, 128, 0, 255), loaded.Recipes[0].Ingredients[0].Image[0, 0]);
+        var loadedBg = loaded.Recipes[0].Ingredients.Single();
+        Assert.Equal(2, loadedBg.Manifest.Variants.Count);
+        Assert.Equal(new Rgba32(255, 128, 0, 255), loadedBg.VariantImages["sunset"][0, 0]);
     }
 }
 ```
@@ -923,50 +858,54 @@ namespace Nfty.Core.Tests;
 
 public class ValidatorTests
 {
-    private static LoadedCookBook Book(int imgW, int imgH, double weight)
+    private static LoadedCookBook Book(int imgW, int imgH, double variantWeight, double recipeWeight)
     {
         var ing = new LoadedIngredient
         {
-            Manifest = new IngredientManifest("a", "A", ""),
-            Image = new Image<Rgba32>(imgW, imgH, new Rgba32(0, 0, 0, 255)),
+            Manifest = new IngredientManifest("bg", "BG", LayerKind.Static, null,
+                new[] { new Variant("a", "A", variantWeight) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>>
+            {
+                ["a"] = new Image<Rgba32>(imgW, imgH, new Rgba32(0, 0, 0, 255)),
+            },
         };
         var recipe = new LoadedRecipe
         {
-            Manifest = new RecipeManifest("bg", "Background", LayerKind.Static, 0,
-                new Dictionary<string, double> { ["a"] = weight }, null),
+            Manifest = new RecipeManifest("cat", "Cat", new[] { "bg" }, Array.Empty<IncompatibilityRule>()),
             Ingredients = new[] { ing },
         };
         return new LoadedCookBook
         {
             Manifest = new CookBookManifest("cb", "Book", new Dimensions(4, 4),
-                new[] { "bg" }, Array.Empty<IncompatibilityRule>(), new Collection("B", "", "B")),
+                new Collection("B", "", "B"), new Dictionary<string, double> { ["cat"] = recipeWeight }),
             Recipes = new[] { recipe },
         };
     }
 
     [Fact]
-    public void Valid_book_has_no_problems() => Assert.Empty(Validator.Validate(Book(4, 4, 10)));
+    public void Valid_book_has_no_problems() => Assert.Empty(Validator.Validate(Book(4, 4, 10, 10)));
 
     [Fact]
-    public void Wrong_dimensions_reported()
-    {
-        var problems = Validator.Validate(Book(8, 8, 10));
-        Assert.Contains(problems, p => p.Contains("dimension", StringComparison.OrdinalIgnoreCase));
-    }
+    public void Wrong_dimensions_reported() =>
+        Assert.Contains(Validator.Validate(Book(8, 8, 10, 10)),
+            p => p.Contains("dimension", StringComparison.OrdinalIgnoreCase));
 
     [Fact]
-    public void Zero_total_weight_reported()
-    {
-        var problems = Validator.Validate(Book(4, 4, 0));
-        Assert.Contains(problems, p => p.Contains("weight", StringComparison.OrdinalIgnoreCase));
-    }
+    public void Zero_variant_weight_reported() =>
+        Assert.Contains(Validator.Validate(Book(4, 4, 0, 10)),
+            p => p.Contains("weight", StringComparison.OrdinalIgnoreCase));
+
+    [Fact]
+    public void Zero_recipe_weight_reported() =>
+        Assert.Contains(Validator.Validate(Book(4, 4, 10, 0)),
+            p => p.Contains("recipe", StringComparison.OrdinalIgnoreCase));
 }
 ```
 
 - [ ] **Step 3: Run tests to verify they fail**
 
 Run: `dotnet test tests/Nfty.Core.Tests --filter "ArchiveRoundTripTests|ValidatorTests"`
-Expected: FAIL — `CookBookArchive`, `Validator`, etc. do not exist.
+Expected: FAIL — types do not exist.
 
 - [ ] **Step 4: Implement JSON options and loaded types**
 
@@ -1001,7 +940,7 @@ namespace Nfty.Core.Formats;
 public class LoadedIngredient
 {
     public required IngredientManifest Manifest { get; init; }
-    public required Image<Rgba32> Image { get; init; }
+    public required IReadOnlyDictionary<string, Image<Rgba32>> VariantImages { get; init; }
 }
 
 public class LoadedRecipe
@@ -1057,8 +996,7 @@ internal static class ArchiveIo
 
     public static Image<Rgba32> ReadImage(ZipArchive zip, string name)
     {
-        var entry = zip.GetEntry(name)
-            ?? throw new InvalidDataException($"Archive is missing {name}.");
+        var entry = zip.GetEntry(name) ?? throw new InvalidDataException($"Archive is missing {name}.");
         using var s = entry.Open();
         using var ms = new MemoryStream();
         s.CopyTo(ms);
@@ -1079,8 +1017,7 @@ internal static class ArchiveIo
 
     public static T ReadNested<T>(ZipArchive zip, string entryName, Func<ZipArchive, T> read)
     {
-        var entry = zip.GetEntry(entryName)
-            ?? throw new InvalidDataException($"Archive is missing {entryName}.");
+        var entry = zip.GetEntry(entryName) ?? throw new InvalidDataException($"Archive is missing {entryName}.");
         using var s = entry.Open();
         using var ms = new MemoryStream();
         s.CopyTo(ms);
@@ -1103,27 +1040,34 @@ internal static class ArchiveIo
 ```csharp
 using System.IO.Compression;
 using Nfty.Core.Model;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Nfty.Core.Formats;
 
 public static class IngredientArchive
 {
-    public static void Write(ZipArchive zip, IngredientManifest manifest, SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32> image)
+    public static void Write(ZipArchive zip, IngredientManifest manifest,
+        IReadOnlyDictionary<string, Image<Rgba32>> variantImages)
     {
         ArchiveIo.WriteManifest(zip, manifest);
-        ArchiveIo.WriteImage(zip, "image.png", image);
+        foreach (var v in manifest.Variants)
+            ArchiveIo.WriteImage(zip, $"variants/{v.Id}.png", variantImages[v.Id]);
     }
 
-    public static LoadedIngredient Read(ZipArchive zip) => new()
+    public static LoadedIngredient Read(ZipArchive zip)
     {
-        Manifest = ArchiveIo.ReadManifest<IngredientManifest>(zip),
-        Image = ArchiveIo.ReadImage(zip, "image.png"),
-    };
+        var manifest = ArchiveIo.ReadManifest<IngredientManifest>(zip);
+        var images = manifest.Variants.ToDictionary(
+            v => v.Id, v => ArchiveIo.ReadImage(zip, $"variants/{v.Id}.png"));
+        return new LoadedIngredient { Manifest = manifest, VariantImages = images };
+    }
 
-    public static void Write(string path, IngredientManifest manifest, SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32> image)
+    public static void Write(string path, IngredientManifest manifest,
+        IReadOnlyDictionary<string, Image<Rgba32>> variantImages)
     {
         using var zip = ZipFile.Open(path, ZipArchiveMode.Create);
-        Write(zip, manifest, image);
+        Write(zip, manifest, variantImages);
     }
 
     public static LoadedIngredient Read(string path)
@@ -1149,7 +1093,7 @@ public static class RecipeArchive
         ArchiveIo.WriteManifest(zip, manifest);
         foreach (var ing in ingredients)
             ArchiveIo.WriteNested(zip, $"ingredients/{ing.Manifest.Id}.igt",
-                inner => IngredientArchive.Write(inner, ing.Manifest, ing.Image));
+                inner => IngredientArchive.Write(inner, ing.Manifest, ing.VariantImages));
     }
 
     public static LoadedRecipe Read(ZipArchive zip)
@@ -1213,8 +1157,6 @@ public static class CookBookArchive
 `src/Nfty.Core/Formats/Validator.cs`:
 
 ```csharp
-using Nfty.Core.Model;
-
 namespace Nfty.Core.Formats;
 
 public static class Validator
@@ -1225,30 +1167,49 @@ public static class Validator
         var canvas = cb.Manifest.Canvas;
         var recipeIds = cb.Recipes.Select(r => r.Manifest.Id).ToHashSet();
 
-        foreach (var id in cb.Manifest.LayerOrder)
+        if (cb.Manifest.RecipeWeights.Values.Sum() <= 0)
+            problems.Add("CookBook has zero total recipe weight.");
+        foreach (var id in cb.Manifest.RecipeWeights.Keys)
             if (!recipeIds.Contains(id))
-                problems.Add($"layerOrder references unknown recipe '{id}'.");
+                problems.Add($"recipeWeights references unknown recipe '{id}'.");
+        foreach (var r in cb.Recipes)
+            if (!cb.Manifest.RecipeWeights.ContainsKey(r.Manifest.Id))
+                problems.Add($"Recipe '{r.Manifest.Id}' has no recipe weight.");
 
         foreach (var r in cb.Recipes)
         {
-            if (r.Manifest.Measurements.Values.Sum() <= 0)
-                problems.Add($"Recipe '{r.Manifest.Id}' has zero total weight.");
+            var ingById = r.Ingredients.ToDictionary(i => i.Manifest.Id);
+
+            foreach (var layerId in r.Manifest.LayerOrder)
+                if (!ingById.ContainsKey(layerId))
+                    problems.Add($"Recipe '{r.Manifest.Id}' layerOrder references unknown ingredient '{layerId}'.");
 
             foreach (var ing in r.Ingredients)
             {
-                if (ing.Image.Width != canvas.Width || ing.Image.Height != canvas.Height)
-                    problems.Add(
-                        $"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}' has dimensions "
-                        + $"{ing.Image.Width}x{ing.Image.Height}, expected canvas {canvas.Width}x{canvas.Height}.");
-                if (!r.Manifest.Measurements.ContainsKey(ing.Manifest.Id))
-                    problems.Add($"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}' has no measurement.");
-            }
-        }
+                if (ing.Manifest.Variants.Count == 0)
+                    problems.Add($"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}' has no variants.");
+                if (ing.Manifest.Variants.Sum(v => v.Weight) <= 0)
+                    problems.Add($"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}' has zero total variant weight.");
 
-        foreach (var rule in cb.Manifest.Rules)
-            foreach (var t in rule.Targets.Append(rule.When))
-                if (!recipeIds.Contains(t.LayerId))
-                    problems.Add($"Rule references unknown layer '{t.LayerId}'.");
+                foreach (var v in ing.Manifest.Variants)
+                {
+                    if (!ing.VariantImages.TryGetValue(v.Id, out var img))
+                    {
+                        problems.Add($"Variant '{v.Id}' in '{ing.Manifest.Id}' has no image.");
+                        continue;
+                    }
+                    if (img.Width != canvas.Width || img.Height != canvas.Height)
+                        problems.Add(
+                            $"Variant '{v.Id}' in '{ing.Manifest.Id}'/'{r.Manifest.Id}' has dimensions "
+                            + $"{img.Width}x{img.Height}, expected canvas {canvas.Width}x{canvas.Height}.");
+                }
+            }
+
+            foreach (var rule in r.Manifest.Rules)
+                foreach (var t in rule.Targets.Append(rule.When))
+                    if (!ingById.ContainsKey(t.IngredientId))
+                        problems.Add($"Recipe '{r.Manifest.Id}' rule references unknown ingredient '{t.IngredientId}'.");
+        }
 
         return problems;
     }
@@ -1258,13 +1219,13 @@ public static class Validator
 - [ ] **Step 8: Run tests to verify they pass**
 
 Run: `dotnet test tests/Nfty.Core.Tests --filter "ArchiveRoundTripTests|ValidatorTests"`
-Expected: PASS (4 tests).
+Expected: PASS (5 tests).
 
 - [ ] **Step 9: Commit and merge**
 
 ```bash
 git add -A
-git commit -m "feat: zip archive formats (.igt/.rcp/.cbk) and validator
+git commit -m "feat: zip archive formats (.igt/.rcp/.cbk) and validator (Model A)
 
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 git checkout master && git merge --no-ff feat/formats -m "Merge feat/formats"
@@ -1284,14 +1245,14 @@ git checkout master && git merge --no-ff feat/formats -m "Merge feat/formats"
   - `interface IRng { double NextDouble(); }`
   - `sealed class SplitMix64Rng(ulong seed) : IRng`
   - `static class SeedHash { ulong ToUlong(string seed) }`
-  - `static class WeightedRoller { string Roll(IReadOnlyDictionary<string,double> weights, IRng rng) }` — iterates weights ordered by key.
+  - `static class WeightedRoller { string Roll(IReadOnlyDictionary<string,double> weights, IRng rng) }` — iterates weights ordered by key; used for BOTH recipe and variant rolls.
   - `readonly record struct RolledColor(double H, double S)`
-  - `static class ColorRoller { RolledColor Roll(Colorization c, IRng rng) }`
+  - `static class ColorRoller { RolledColor Roll(Colorization c, IRng rng) }` — H,S; S returned in [0,1].
 
 - [ ] **Step 1: Create the branch**
 
 ```bash
-git checkout -b feat/rng-roll
+git checkout master && git checkout -b feat/rng-roll
 ```
 
 - [ ] **Step 2: Write the failing tests**
@@ -1325,11 +1286,7 @@ public class RngTests
     public void Output_in_unit_interval()
     {
         var r = new SplitMix64Rng(1);
-        for (int i = 0; i < 1000; i++)
-        {
-            double d = r.NextDouble();
-            Assert.InRange(d, 0.0, 1.0);
-        }
+        for (int i = 0; i < 1000; i++) Assert.InRange(r.NextDouble(), 0.0, 1.0);
     }
 }
 ```
@@ -1349,18 +1306,13 @@ public class WeightedRollerTests
         var weights = new Dictionary<string, double> { ["a"] = 90, ["b"] = 10 };
         var rng = new SplitMix64Rng(42);
         int a = 0;
-        for (int i = 0; i < 10000; i++)
-            if (WeightedRoller.Roll(weights, rng) == "a") a++;
-
+        for (int i = 0; i < 10000; i++) if (WeightedRoller.Roll(weights, rng) == "a") a++;
         Assert.InRange(a / 10000.0, 0.87, 0.93);
     }
 
     [Fact]
-    public void Single_option_always_selected()
-    {
-        var weights = new Dictionary<string, double> { ["only"] = 5 };
-        Assert.Equal("only", WeightedRoller.Roll(weights, new SplitMix64Rng(1)));
-    }
+    public void Single_option_always_selected() =>
+        Assert.Equal("only", WeightedRoller.Roll(new Dictionary<string, double> { ["only"] = 5 }, new SplitMix64Rng(1)));
 }
 ```
 
@@ -1377,10 +1329,7 @@ public class ColorRollerTests
     [Fact]
     public void Fixed_entry_yields_its_hue_saturation()
     {
-        var c = new Colorization(ColorModel.Hsv, 5, 5, new[]
-        {
-            new ColorEntry(1, null, "hsv:200,50,80"),
-        });
+        var c = new Colorization(ColorModel.Hsv, 5, 5, new[] { new ColorEntry(1, null, "hsv:200,50,80") });
         var rolled = ColorRoller.Roll(c, new SplitMix64Rng(7));
         Assert.InRange(rolled.H, 199.0, 201.0);
         Assert.InRange(rolled.S, 0.49, 0.51);
@@ -1389,10 +1338,7 @@ public class ColorRollerTests
     [Fact]
     public void Range_entry_samples_within_bounds()
     {
-        var c = new Colorization(ColorModel.Hsv, 5, 5, new[]
-        {
-            new ColorEntry(1, new ColorRange(175, 195, 60, 90), null),
-        });
+        var c = new Colorization(ColorModel.Hsv, 5, 5, new[] { new ColorEntry(1, new ColorRange(175, 195, 60, 90), null) });
         for (int i = 0; i < 200; i++)
         {
             var rolled = ColorRoller.Roll(c, new SplitMix64Rng((ulong)i));
@@ -1464,8 +1410,7 @@ public static class WeightedRoller
         double total = ordered.Sum(kv => kv.Value);
         if (total <= 0) throw new InvalidOperationException("Total weight must be positive.");
 
-        double r = rng.NextDouble() * total;
-        double acc = 0;
+        double r = rng.NextDouble() * total, acc = 0;
         foreach (var kv in ordered)
         {
             acc += kv.Value;
@@ -1523,7 +1468,7 @@ public static class ColorRoller
 }
 ```
 
-Note: `satRange` values are percentages (0–100) per the spec; a `fixed` color's saturation already comes back as 0–1 from `ColorConvert`.
+Note: `satRange` values are percentages (0–100); a `fixed` color's saturation already returns 0–1 from `ColorConvert`.
 
 - [ ] **Step 7: Run tests to verify they pass**
 
@@ -1542,22 +1487,22 @@ git checkout master && git merge --no-ff feat/rng-roll -m "Merge feat/rng-roll"
 
 ---
 
-## Task 8: DNA & dedup identity
+## Task 8: DNA & dedup identity (recipe-aware)
 
 **Files:**
 - Create: `src/Nfty.Core/Generation/Dna.cs`
 - Test: `tests/Nfty.Core.Tests/DnaTests.cs`
 
 **Interfaces:**
-- Consumes: nothing (self-contained value types).
+- Consumes: nothing.
 - Produces (namespace `Nfty.Core.Generation`):
-  - `readonly record struct LayerSelection(string LayerId, string IngredientId, double? Hue, double? Sat, int HueQuantize, int SatQuantize)` — `Hue/Sat` null for static layers.
-  - `static class Dna { string Compute(IReadOnlyList<LayerSelection> selections) }` — order-independent (sorts by LayerId), color quantized before hashing, SHA-256 hex.
+  - `readonly record struct LayerSelection(string IngredientId, string VariantId, double? Hue, double? Sat, int HueQuantize, int SatQuantize)` — `Hue/Sat` null for static layers.
+  - `static class Dna { string Compute(string recipeId, IReadOnlyList<LayerSelection> selections) }` — sorts layers by IngredientId, quantizes color, SHA-256 hex, recipe id included.
 
 - [ ] **Step 1: Create the branch**
 
 ```bash
-git checkout -b feat/dna
+git checkout master && git checkout -b feat/dna
 ```
 
 - [ ] **Step 2: Write the failing test**
@@ -1576,7 +1521,14 @@ public class DnaTests
     {
         var a = new[] { new LayerSelection("bg", "sunset", null, null, 5, 5) };
         var b = new[] { new LayerSelection("bg", "sunset", null, null, 5, 5) };
-        Assert.Equal(Dna.Compute(a), Dna.Compute(b));
+        Assert.Equal(Dna.Compute("cat", a), Dna.Compute("cat", b));
+    }
+
+    [Fact]
+    public void Different_recipe_changes_dna()
+    {
+        var sel = new[] { new LayerSelection("bg", "sunset", null, null, 5, 5) };
+        Assert.NotEqual(Dna.Compute("cat", sel), Dna.Compute("robot", sel));
     }
 
     [Fact]
@@ -1592,7 +1544,7 @@ public class DnaTests
             new LayerSelection("body", "cat", null, null, 5, 5),
             new LayerSelection("bg", "sunset", null, null, 5, 5),
         };
-        Assert.Equal(Dna.Compute(a), Dna.Compute(b));
+        Assert.Equal(Dna.Compute("cat", a), Dna.Compute("cat", b));
     }
 
     [Fact]
@@ -1600,7 +1552,7 @@ public class DnaTests
     {
         var a = new[] { new LayerSelection("aura", "glow", 181.0, 0.71, 5, 5) };
         var b = new[] { new LayerSelection("aura", "glow", 184.0, 0.73, 5, 5) };
-        Assert.Equal(Dna.Compute(a), Dna.Compute(b)); // both bucket hue=36, sat=14
+        Assert.Equal(Dna.Compute("cat", a), Dna.Compute("cat", b));
     }
 
     [Fact]
@@ -1608,7 +1560,7 @@ public class DnaTests
     {
         var a = new[] { new LayerSelection("aura", "glow", 181.0, 0.71, 5, 5) };
         var b = new[] { new LayerSelection("aura", "glow", 200.0, 0.71, 5, 5) };
-        Assert.NotEqual(Dna.Compute(a), Dna.Compute(b));
+        Assert.NotEqual(Dna.Compute("cat", a), Dna.Compute("cat", b));
     }
 }
 ```
@@ -1629,21 +1581,22 @@ using System.Text;
 namespace Nfty.Core.Generation;
 
 public readonly record struct LayerSelection(
-    string LayerId, string IngredientId, double? Hue, double? Sat, int HueQuantize, int SatQuantize);
+    string IngredientId, string VariantId, double? Hue, double? Sat, int HueQuantize, int SatQuantize);
 
 public static class Dna
 {
-    public static string Compute(IReadOnlyList<LayerSelection> selections)
+    public static string Compute(string recipeId, IReadOnlyList<LayerSelection> selections)
     {
         var sb = new StringBuilder();
-        foreach (var s in selections.OrderBy(x => x.LayerId, StringComparer.Ordinal))
+        sb.Append("recipe=").Append(recipeId).Append('|');
+        foreach (var s in selections.OrderBy(x => x.IngredientId, StringComparer.Ordinal))
         {
-            sb.Append(s.LayerId).Append('=').Append(s.IngredientId);
+            sb.Append(s.IngredientId).Append('=').Append(s.VariantId);
             if (s.Hue is double h && s.Sat is double sat)
             {
                 long hb = (long)Math.Floor(h / Math.Max(1, s.HueQuantize));
-                long sb2 = (long)Math.Floor(sat * 100.0 / Math.Max(1, s.SatQuantize));
-                sb.Append('@').Append(hb).Append(',').Append(sb2);
+                long sbk = (long)Math.Floor(sat * 100.0 / Math.Max(1, s.SatQuantize));
+                sb.Append('@').Append(hb).Append(',').Append(sbk);
             }
             sb.Append('|');
         }
@@ -1656,13 +1609,13 @@ public static class Dna
 - [ ] **Step 5: Run test to verify it passes**
 
 Run: `dotnet test tests/Nfty.Core.Tests --filter DnaTests`
-Expected: PASS (4 tests).
+Expected: PASS (5 tests).
 
 - [ ] **Step 6: Commit and merge**
 
 ```bash
 git add -A
-git commit -m "feat: DNA computation with quantized color identity
+git commit -m "feat: recipe-aware DNA with quantized color identity
 
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 git checkout master && git merge --no-ff feat/dna -m "Merge feat/dna"
@@ -1679,12 +1632,12 @@ git checkout master && git merge --no-ff feat/dna -m "Merge feat/dna"
 **Interfaces:**
 - Consumes: `Nfty.Core.Model.IncompatibilityRule/RuleType/RuleTarget`.
 - Produces (namespace `Nfty.Core.Generation`):
-  - `static class RulesEngine { bool IsLegal(IReadOnlyDictionary<string,string> selection, IReadOnlyList<IncompatibilityRule> rules) }` — `selection` maps layerId→ingredientId.
+  - `static class RulesEngine { bool IsLegal(IReadOnlyDictionary<string,string> selection, IReadOnlyList<IncompatibilityRule> rules) }` — `selection` maps ingredientId→variantId.
 
 - [ ] **Step 1: Create the branch**
 
 ```bash
-git checkout -b feat/rules
+git checkout master && git checkout -b feat/rules
 ```
 
 - [ ] **Step 2: Write the failing test**
@@ -1754,16 +1707,16 @@ public static class RulesEngine
     {
         foreach (var rule in rules)
         {
-            bool whenMatches = selection.TryGetValue(rule.When.LayerId, out var chosen)
-                               && chosen == rule.When.IngredientId;
+            bool whenMatches = selection.TryGetValue(rule.When.IngredientId, out var chosen)
+                               && chosen == rule.When.VariantId;
             if (!whenMatches) continue;
 
             foreach (var target in rule.Targets)
             {
-                bool targetPresent = selection.TryGetValue(target.LayerId, out var got)
-                                     && got == target.IngredientId;
-                if (rule.Type == RuleType.Exclude && targetPresent) return false;
-                if (rule.Type == RuleType.Require && !targetPresent) return false;
+                bool present = selection.TryGetValue(target.IngredientId, out var got)
+                               && got == target.VariantId;
+                if (rule.Type == RuleType.Exclude && present) return false;
+                if (rule.Type == RuleType.Require && !present) return false;
             }
         }
         return true;
@@ -1788,27 +1741,26 @@ git checkout master && git merge --no-ff feat/rules -m "Merge feat/rules"
 
 ---
 
-## Task 10: Generator orchestrator
+## Task 10: Generator orchestrator (two-level roll)
 
 **Files:**
 - Create: `src/Nfty.Core/Generation/GeneratedSet.cs`, `Generator.cs`
 - Test: `tests/Nfty.Core.Tests/GeneratorTests.cs`
 
 **Interfaces:**
-- Consumes: `LoadedCookBook`, `Compositor`, `Colorizer`, `WeightedRoller`, `ColorRoller`, `Dna`, `RulesEngine`, `SplitMix64Rng`, `SeedHash`.
+- Consumes: `LoadedCookBook/LoadedRecipe/LoadedIngredient`, `Validator`, `Compositor`, `Colorizer`, `WeightedRoller`, `ColorRoller`, `Dna`, `RulesEngine`, `SplitMix64Rng`, `SeedHash`.
 - Produces (namespace `Nfty.Core.Generation`):
-  - `record TraitSelection(string LayerId, string LayerName, string IngredientId, string IngredientName)`
+  - `record TraitSelection(string IngredientId, string IngredientName, string VariantId, string VariantName)`
   - `record ColorRoll(string LayerId, ColorModel Model, double H, double S)`
-  - `class GeneratedAsset { int SetNumber; string Dna; Image<Rgba32> Image; IReadOnlyList<TraitSelection> Traits; IReadOnlyList<ColorRoll> ColorRolls }`
+  - `class GeneratedAsset { int SetNumber; string Dna; string RecipeId; string RecipeName; Image<Rgba32> Image; IReadOnlyList<TraitSelection> Traits; IReadOnlyList<ColorRoll> ColorRolls }`
   - `record GeneratedSet(string CollectionName, string Description, string Symbol, string Seed, IReadOnlyList<GeneratedAsset> Assets)`
-  - `record GenerateOptions(int Count, string Seed, int MaxRerollsPerAsset = 10000)`
-  - `static class Generator { GeneratedSet Generate(LoadedCookBook book, GenerateOptions opts, IReadOnlyList<string>? existingDnas = null, int startNumber = 1) }`
-  - Throws `InvalidOperationException` when the unique space is exhausted before `Count`.
+  - `record GenerateOptions(int Count, string Seed, string? RecipeId = null, int MaxRerollsPerAsset = 10000)`
+  - `static class Generator { GeneratedSet Generate(LoadedCookBook book, GenerateOptions opts, IReadOnlyList<string>? existingDnas = null, int startNumber = 1) }` — throws `InvalidOperationException` on invalid cookbook or exhausted unique space.
 
 - [ ] **Step 1: Create the branch**
 
 ```bash
-git checkout -b feat/generator
+git checkout master && git checkout -b feat/generator
 ```
 
 - [ ] **Step 2: Write the failing test**
@@ -1826,63 +1778,84 @@ namespace Nfty.Core.Tests;
 
 public class GeneratorTests
 {
-    private static LoadedIngredient Ing(string id, Rgba32 fill) => new()
+    // A static ingredient with N variants, each a distinct solid fill.
+    private static LoadedIngredient Ing(string id, params string[] variantIds) => new()
     {
-        Manifest = new IngredientManifest(id, id, ""),
-        Image = new Image<Rgba32>(2, 2, fill),
+        Manifest = new IngredientManifest(id, id, LayerKind.Static, null,
+            variantIds.Select(v => new Variant(v, v, 1)).ToList()),
+        VariantImages = variantIds.ToDictionary(v => v, _ => new Image<Rgba32>(2, 2, new Rgba32(10, 20, 30, 255))),
     };
 
-    private static LoadedCookBook TwoLayerBook()
+    private static LoadedRecipe Recipe(string id, params LoadedIngredient[] ings) => new()
     {
-        var bg = new LoadedRecipe
+        Manifest = new RecipeManifest(id, id, ings.Select(i => i.Manifest.Id).ToList(),
+            Array.Empty<IncompatibilityRule>()),
+        Ingredients = ings,
+    };
+
+    // One recipe "cat": 2 bg variants x 2 body variants = 4 unique combos.
+    private static LoadedCookBook OneRecipeBook() => new()
+    {
+        Manifest = new CookBookManifest("cb", "VaporPets", new Dimensions(2, 2),
+            new Collection("VaporPets", "d", "VP"), new Dictionary<string, double> { ["cat"] = 1 }),
+        Recipes = new[] { Recipe("cat", Ing("bg", "a", "b"), Ing("body", "x", "y")) },
+    };
+
+    // Two recipes with skewed weights, each a single fixed combo (1 unique each).
+    private static LoadedCookBook TwoRecipeBook() => new()
+    {
+        Manifest = new CookBookManifest("cb", "VaporPets", new Dimensions(2, 2),
+            new Collection("VaporPets", "d", "VP"),
+            new Dictionary<string, double> { ["cat"] = 80, ["robot"] = 20 }),
+        Recipes = new[]
         {
-            Manifest = new RecipeManifest("bg", "Background", LayerKind.Static, 0,
-                new Dictionary<string, double> { ["a"] = 1, ["b"] = 1 }, null),
-            Ingredients = new[] { Ing("a", new Rgba32(255, 0, 0, 255)), Ing("b", new Rgba32(0, 255, 0, 255)) },
-        };
-        var body = new LoadedRecipe
-        {
-            Manifest = new RecipeManifest("body", "Body", LayerKind.Static, 1,
-                new Dictionary<string, double> { ["x"] = 1, ["y"] = 1 }, null),
-            Ingredients = new[] { Ing("x", new Rgba32(0, 0, 255, 128)), Ing("y", new Rgba32(0, 0, 0, 0)) },
-        };
-        return new LoadedCookBook
-        {
-            Manifest = new CookBookManifest("cb", "VaporPets", new Dimensions(2, 2),
-                new[] { "bg", "body" }, Array.Empty<IncompatibilityRule>(), new Collection("VaporPets", "d", "VP")),
-            Recipes = new[] { bg, body },
-        };
-    }
+            Recipe("cat", Ing("bg", "a"), Ing("body", "x")),
+            Recipe("robot", Ing("bg", "a"), Ing("body", "x")),
+        },
+    };
 
     [Fact]
     public void Same_seed_reproduces_identical_dna_sequence()
     {
         var opts = new GenerateOptions(3, "seed-1");
-        var a = Generator.Generate(TwoLayerBook(), opts).Assets.Select(x => x.Dna);
-        var b = Generator.Generate(TwoLayerBook(), opts).Assets.Select(x => x.Dna);
+        var a = Generator.Generate(OneRecipeBook(), opts).Assets.Select(x => x.Dna);
+        var b = Generator.Generate(OneRecipeBook(), opts).Assets.Select(x => x.Dna);
         Assert.Equal(a, b);
     }
 
     [Fact]
     public void All_dna_unique()
     {
-        var set = Generator.Generate(TwoLayerBook(), new GenerateOptions(4, "seed-1"));
+        var set = Generator.Generate(OneRecipeBook(), new GenerateOptions(4, "seed-1"));
         Assert.Equal(4, set.Assets.Select(x => x.Dna).Distinct().Count());
     }
 
     [Fact]
-    public void Exhausted_space_throws()
-    {
-        // 2 x 2 = 4 unique combos; asking for 5 must fail.
+    public void Exhausted_space_throws() =>
         Assert.Throws<InvalidOperationException>(
-            () => Generator.Generate(TwoLayerBook(), new GenerateOptions(5, "seed-1")));
+            () => Generator.Generate(OneRecipeBook(), new GenerateOptions(5, "seed-1")));
+
+    [Fact]
+    public void Numbering_is_sequential_from_start()
+    {
+        var set = Generator.Generate(OneRecipeBook(), new GenerateOptions(3, "seed-1"));
+        Assert.Equal(new[] { 1, 2, 3 }, set.Assets.Select(a => a.SetNumber));
     }
 
     [Fact]
-    public void Numbering_starts_at_one_and_is_sequential()
+    public void Weighted_mix_draws_from_both_recipes()
     {
-        var set = Generator.Generate(TwoLayerBook(), new GenerateOptions(3, "seed-1"));
-        Assert.Equal(new[] { 1, 2, 3 }, set.Assets.Select(a => a.SetNumber));
+        // 2 unique combos total (cat and robot); generate both, expect one of each.
+        var set = Generator.Generate(TwoRecipeBook(), new GenerateOptions(2, "seed-xyz"));
+        var recipes = set.Assets.Select(a => a.RecipeId).OrderBy(x => x).ToArray();
+        Assert.Equal(new[] { "cat", "robot" }, recipes);
+    }
+
+    [Fact]
+    public void Single_recipe_mode_only_uses_that_recipe()
+    {
+        var set = Generator.Generate(TwoRecipeBook(), new GenerateOptions(1, "s", RecipeId: "robot"));
+        Assert.Equal("robot", set.Assets.Single().RecipeId);
     }
 }
 ```
@@ -1903,7 +1876,7 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace Nfty.Core.Generation;
 
-public record TraitSelection(string LayerId, string LayerName, string IngredientId, string IngredientName);
+public record TraitSelection(string IngredientId, string IngredientName, string VariantId, string VariantName);
 
 public record ColorRoll(string LayerId, ColorModel Model, double H, double S);
 
@@ -1911,6 +1884,8 @@ public class GeneratedAsset
 {
     public required int SetNumber { get; init; }
     public required string Dna { get; init; }
+    public required string RecipeId { get; init; }
+    public required string RecipeName { get; init; }
     public required Image<Rgba32> Image { get; init; }
     public required IReadOnlyList<TraitSelection> Traits { get; init; }
     public required IReadOnlyList<ColorRoll> ColorRolls { get; init; }
@@ -1920,7 +1895,7 @@ public record GeneratedSet(
     string CollectionName, string Description, string Symbol, string Seed,
     IReadOnlyList<GeneratedAsset> Assets);
 
-public record GenerateOptions(int Count, string Seed, int MaxRerollsPerAsset = 10000);
+public record GenerateOptions(int Count, string Seed, string? RecipeId = null, int MaxRerollsPerAsset = 10000);
 ```
 
 - [ ] **Step 5: Implement Generator**
@@ -1948,9 +1923,13 @@ public static class Generator
         if (problems.Count > 0)
             throw new InvalidOperationException("Invalid cookbook:\n" + string.Join("\n", problems));
 
-        var layers = book.Recipes
-            .OrderBy(r => book.Manifest.LayerOrder.ToList().IndexOf(r.Manifest.Id))
-            .ToList();
+        var recipeById = book.Recipes.ToDictionary(r => r.Manifest.Id);
+        IReadOnlyDictionary<string, double> recipeWeights =
+            opts.RecipeId is null
+                ? book.Manifest.RecipeWeights
+                : new Dictionary<string, double> { [opts.RecipeId] = 1 };
+        if (opts.RecipeId is not null && !recipeById.ContainsKey(opts.RecipeId))
+            throw new InvalidOperationException($"Recipe '{opts.RecipeId}' not found in cookbook.");
 
         var rng = new SplitMix64Rng(SeedHash.ToUlong(opts.Seed));
         var seen = new HashSet<string>(existingDnas ?? Array.Empty<string>());
@@ -1962,14 +1941,11 @@ public static class Generator
             GeneratedAsset? asset = null;
             for (int attempt = 0; attempt < opts.MaxRerollsPerAsset; attempt++)
             {
-                var candidate = RollOne(book, layers, rng, number);
-                if (candidate is null) continue;          // rule violation → reroll
-                if (seen.Add(candidate.Dna))
-                {
-                    asset = candidate;
-                    break;
-                }
-                candidate.Image.Dispose();                // duplicate → discard
+                string recipeId = WeightedRoller.Roll(recipeWeights, rng);
+                var candidate = RollOne(book.Manifest.Canvas, recipeById[recipeId], rng, number);
+                if (candidate is null) continue;             // rule violation → reroll
+                if (seen.Add(candidate.Dna)) { asset = candidate; break; }
+                candidate.Image.Dispose();                   // duplicate → discard
             }
 
             if (asset is null)
@@ -1989,50 +1965,54 @@ public static class Generator
             assets);
     }
 
-    private static GeneratedAsset? RollOne(
-        LoadedCookBook book, IReadOnlyList<LoadedRecipe> layers, IRng rng, int number)
+    private static GeneratedAsset? RollOne(Dimensions canvas, LoadedRecipe recipe, IRng rng, int number)
     {
+        var ingById = recipe.Ingredients.ToDictionary(i => i.Manifest.Id);
         var selection = new Dictionary<string, string>();
         var traits = new List<TraitSelection>();
         var colorRolls = new List<ColorRoll>();
         var dnaParts = new List<LayerSelection>();
         var images = new List<Image<Rgba32>>();
 
-        foreach (var layer in layers)
+        foreach (var ingId in recipe.Manifest.LayerOrder)
         {
-            string ingId = WeightedRoller.Roll(layer.Manifest.Measurements, rng);
-            selection[layer.Manifest.Id] = ingId;
-            var ing = layer.Ingredients.First(x => x.Manifest.Id == ingId);
-            traits.Add(new TraitSelection(layer.Manifest.Id, layer.Manifest.Name, ingId, ing.Manifest.Name));
+            var ing = ingById[ingId];
+            var weights = ing.Manifest.Variants.ToDictionary(v => v.Id, v => v.Weight);
+            string variantId = WeightedRoller.Roll(weights, rng);
+            var variant = ing.Manifest.Variants.First(v => v.Id == variantId);
+            selection[ingId] = variantId;
+            traits.Add(new TraitSelection(ingId, ing.Manifest.Name, variantId, variant.Name));
 
-            if (layer.Manifest.Kind == LayerKind.Dynamic && layer.Manifest.Colorization is { } col)
+            var srcImage = ing.VariantImages[variantId];
+            if (ing.Manifest.Kind == LayerKind.Dynamic && ing.Manifest.Colorization is { } col)
             {
                 var rolled = ColorRoller.Roll(col, rng);
-                colorRolls.Add(new ColorRoll(layer.Manifest.Id, col.Model, rolled.H, rolled.S));
-                images.Add(Colorizer.Apply(ing.Image, rolled.H, rolled.S, col.Model));
-                dnaParts.Add(new LayerSelection(layer.Manifest.Id, ingId, rolled.H, rolled.S,
-                    col.HueQuantize, col.SatQuantize));
+                colorRolls.Add(new ColorRoll(ingId, col.Model, rolled.H, rolled.S));
+                images.Add(Colorizer.Apply(srcImage, rolled.H, rolled.S, col.Model));
+                dnaParts.Add(new LayerSelection(ingId, variantId, rolled.H, rolled.S, col.HueQuantize, col.SatQuantize));
             }
             else
             {
-                images.Add(ing.Image.Clone());
-                dnaParts.Add(new LayerSelection(layer.Manifest.Id, ingId, null, null, 1, 1));
+                images.Add(srcImage.Clone());
+                dnaParts.Add(new LayerSelection(ingId, variantId, null, null, 1, 1));
             }
         }
 
-        if (!RulesEngine.IsLegal(selection, book.Manifest.Rules))
+        if (!RulesEngine.IsLegal(selection, recipe.Manifest.Rules))
         {
             foreach (var img in images) img.Dispose();
             return null;
         }
 
-        var composed = Compositor.Composite(book.Manifest.Canvas, images);
+        var composed = Compositor.Composite(canvas, images);
         foreach (var img in images) img.Dispose();
 
         return new GeneratedAsset
         {
             SetNumber = number,
-            Dna = Dna.Compute(dnaParts),
+            Dna = Dna.Compute(recipe.Manifest.Id, dnaParts),
+            RecipeId = recipe.Manifest.Id,
+            RecipeName = recipe.Manifest.Name,
             Image = composed,
             Traits = traits,
             ColorRolls = colorRolls,
@@ -2044,13 +2024,13 @@ public static class Generator
 - [ ] **Step 6: Run test to verify it passes**
 
 Run: `dotnet test tests/Nfty.Core.Tests --filter GeneratorTests`
-Expected: PASS (4 tests).
+Expected: PASS (6 tests).
 
 - [ ] **Step 7: Commit and merge**
 
 ```bash
 git add -A
-git commit -m "feat: generation orchestrator (roll/rules/colorize/composite/dedup)
+git commit -m "feat: two-level generation orchestrator (recipe + variant roll, dedup)
 
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 git checkout master && git merge --no-ff feat/generator -m "Merge feat/generator"
@@ -2067,20 +2047,19 @@ git checkout master && git merge --no-ff feat/generator -m "Merge feat/generator
 **Interfaces:**
 - Consumes: `GeneratedSet`, `GeneratedAsset`, ImageSharp, `Json`.
 - Produces (namespace `Nfty.Core.Output`):
-  - `record MetadataAttribute(string Trait_type, string Value)` (serialized as `trait_type`/`value`).
+  - `record MetadataAttribute(string Trait_type, string Value)` (serializes `trait_type`/`value`).
   - `record RarityAttribute(string Trait_type, string Value, double RarityPct)`
   - `record ColorRollDto(string Layer, string Model, double H, double S)`
-  - `record ItemMetadata(string Name, string Description, string Image, IReadOnlyList<MetadataAttribute> Attributes, int SetNumber, string Dna, string Seed, IReadOnlyList<RarityAttribute> Rarity, IReadOnlyList<ColorRollDto> ColorRolls)`
-  - `record SetManifest(string Name, int Count, string Seed, string GeneratorVersion, IReadOnlyList<RarityAttribute> Rarity)`
-  - `static class SetWriter`:
-    - `void Write(GeneratedSet set, string outDir, bool pack)`
-    - `record ExistingSet(IReadOnlyList<string> Dnas, int NextNumber)`
-    - `ExistingSet ReadExisting(string outDir)` — reads `metadata/*.json`, returns DNAs + max(setNumber)+1.
+  - `record ItemMetadata(string Name, string Description, string Image, IReadOnlyList<MetadataAttribute> Attributes, int SetNumber, string Recipe, string Dna, string Seed, IReadOnlyList<RarityAttribute> Rarity, IReadOnlyList<ColorRollDto> ColorRolls)`
+  - `record RecipeCount(string Recipe, int Count, double Percent)`
+  - `record SetManifest(string Name, int Count, string Seed, string GeneratorVersion, IReadOnlyList<RecipeCount> Distribution, IReadOnlyList<RarityAttribute> Rarity)`
+  - `static class SetWriter { const string GeneratorVersion; void Write(GeneratedSet set, string outDir, bool pack); record ExistingSet(IReadOnlyList<string> Dnas, int NextNumber); ExistingSet ReadExisting(string outDir) }`
+  - Each item's `attributes` begins with `{trait_type:"Type", value:<recipeName>}`, then one per layer.
 
 - [ ] **Step 1: Create the branch**
 
 ```bash
-git checkout -b feat/set-output
+git checkout master && git checkout -b feat/set-output
 ```
 
 - [ ] **Step 2: Write the failing test**
@@ -2089,9 +2068,7 @@ git checkout -b feat/set-output
 
 ```csharp
 using System.Text.Json;
-using Nfty.Core.Formats;
 using Nfty.Core.Generation;
-using Nfty.Core.Model;
 using Nfty.Core.Output;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -2106,7 +2083,7 @@ public class SetWriterTests
         {
             new GeneratedAsset
             {
-                SetNumber = 1, Dna = "abc",
+                SetNumber = 1, Dna = "abc", RecipeId = "cat", RecipeName = "Cat",
                 Image = new Image<Rgba32>(2, 2, new Rgba32(1, 2, 3, 255)),
                 Traits = new[] { new TraitSelection("bg", "Background", "sunset", "Sunset") },
                 ColorRolls = Array.Empty<ColorRoll>(),
@@ -2125,7 +2102,11 @@ public class SetWriterTests
         var json = File.ReadAllText(Path.Combine(dir, "metadata", "0001.json"));
         using var doc = JsonDocument.Parse(json);
         Assert.Equal("VaporPets #1", doc.RootElement.GetProperty("name").GetString());
-        Assert.Equal("Background", doc.RootElement.GetProperty("attributes")[0].GetProperty("trait_type").GetString());
+        var attrs = doc.RootElement.GetProperty("attributes");
+        Assert.Equal("Type", attrs[0].GetProperty("trait_type").GetString());
+        Assert.Equal("Cat", attrs[0].GetProperty("value").GetString());
+        Assert.Equal("Background", attrs[1].GetProperty("trait_type").GetString());
+        Assert.Equal("cat", doc.RootElement.GetProperty("recipe").GetString());
         Assert.Equal("abc", doc.RootElement.GetProperty("dna").GetString());
     }
 
@@ -2174,20 +2155,24 @@ public record ItemMetadata(
     string Image,
     IReadOnlyList<MetadataAttribute> Attributes,
     int SetNumber,
+    string Recipe,
     string Dna,
     string Seed,
     IReadOnlyList<RarityAttribute> Rarity,
     IReadOnlyList<ColorRollDto> ColorRolls);
+
+public record RecipeCount(string Recipe, int Count, double Percent);
 
 public record SetManifest(
     string Name,
     int Count,
     string Seed,
     string GeneratorVersion,
+    IReadOnlyList<RecipeCount> Distribution,
     IReadOnlyList<RarityAttribute> Rarity);
 ```
 
-Note: property names `Trait_type` serialize to `trait_type` under camelCase policy (the policy lowercases the first segment only, preserving the underscore), matching ERC-721.
+Note: property `Trait_type` serializes to `trait_type` under the camelCase policy (it lowercases the first character only, preserving the underscore), matching ERC-721.
 
 - [ ] **Step 5: Implement SetWriter**
 
@@ -2207,6 +2192,7 @@ namespace Nfty.Core.Output;
 public static class SetWriter
 {
     public const string GeneratorVersion = "nfty/1.0";
+    private const string TypeTrait = "Type";
 
     public record ExistingSet(IReadOnlyList<string> Dnas, int NextNumber);
 
@@ -2215,31 +2201,41 @@ public static class SetWriter
         Directory.CreateDirectory(Path.Combine(outDir, "images"));
         Directory.CreateDirectory(Path.Combine(outDir, "metadata"));
 
-        // Aggregate rarity across the produced set (actual observed frequencies).
+        // Observed frequencies across the produced set (Type + every layer trait).
         var counts = new Dictionary<(string, string), int>();
+        void Bump(string traitType, string value) =>
+            counts[(traitType, value)] = counts.GetValueOrDefault((traitType, value)) + 1;
         foreach (var a in set.Assets)
-            foreach (var t in a.Traits)
-                counts[(t.LayerName, t.IngredientName)] =
-                    counts.GetValueOrDefault((t.LayerName, t.IngredientName)) + 1;
+        {
+            Bump(TypeTrait, a.RecipeName);
+            foreach (var t in a.Traits) Bump(t.IngredientName, t.VariantName);
+        }
 
         double n = Math.Max(1, set.Assets.Count);
-        RarityAttribute Rar(string layer, string value) =>
-            new(layer, value, Math.Round(counts.GetValueOrDefault((layer, value)) / n * 100, 2));
+        RarityAttribute Rar(string traitType, string value) =>
+            new(traitType, value, Math.Round(counts.GetValueOrDefault((traitType, value)) / n * 100, 2));
 
         foreach (var a in set.Assets)
         {
             string stem = a.SetNumber.ToString("D4");
             a.Image.Save(Path.Combine(outDir, "images", $"{stem}.png"), new PngEncoder());
 
+            var attributes = new List<MetadataAttribute> { new(TypeTrait, a.RecipeName) };
+            attributes.AddRange(a.Traits.Select(t => new MetadataAttribute(t.IngredientName, t.VariantName)));
+
+            var rarity = new List<RarityAttribute> { Rar(TypeTrait, a.RecipeName) };
+            rarity.AddRange(a.Traits.Select(t => Rar(t.IngredientName, t.VariantName)));
+
             var meta = new ItemMetadata(
                 Name: $"{set.CollectionName} #{a.SetNumber}",
                 Description: set.Description,
                 Image: $"images/{stem}.png",
-                Attributes: a.Traits.Select(t => new MetadataAttribute(t.LayerName, t.IngredientName)).ToList(),
+                Attributes: attributes,
                 SetNumber: a.SetNumber,
+                Recipe: a.RecipeId,
                 Dna: a.Dna,
                 Seed: set.Seed,
-                Rarity: a.Traits.Select(t => Rar(t.LayerName, t.IngredientName)).ToList(),
+                Rarity: rarity,
                 ColorRolls: a.ColorRolls
                     .Select(c => new ColorRollDto(c.LayerId, c.Model.ToString().ToLowerInvariant(),
                         Math.Round(c.H, 1), Math.Round(c.S, 3)))
@@ -2249,11 +2245,17 @@ public static class SetWriter
                 JsonSerializer.Serialize(meta, Json.Options));
         }
 
+        var distribution = set.Assets
+            .GroupBy(a => a.RecipeId)
+            .Select(g => new RecipeCount(g.Key, g.Count(), Math.Round(g.Count() / n * 100, 2)))
+            .OrderBy(d => d.Recipe).ToList();
+
         var rarityTable = counts.Keys
             .Select(k => Rar(k.Item1, k.Item2))
             .OrderBy(r => r.Trait_type).ThenBy(r => r.Value).ToList();
+
         var setManifest = new SetManifest(set.CollectionName, set.Assets.Count, set.Seed,
-            GeneratorVersion, rarityTable);
+            GeneratorVersion, distribution, rarityTable);
         File.WriteAllText(Path.Combine(outDir, "set.json"),
             JsonSerializer.Serialize(setManifest, Json.Options));
 
@@ -2297,22 +2299,28 @@ Append to `tests/Nfty.Core.Tests/SetWriterTests.cs` (inside the class):
     [Fact]
     public void Extend_preserves_existing_and_appends_new()
     {
-        // Build a 4-combo book, generate 2, then extend to 4.
-        LoadedIngredient Ing(string id, Rgba32 f) => new()
-        { Manifest = new IngredientManifest(id, id, ""), Image = new Image<Rgba32>(2, 2, f) };
-
-        var book = new LoadedCookBook
+        LoadedIngredient Ing(string id, params string[] vids) => new()
         {
-            Manifest = new CookBookManifest("cb", "VP", new Dimensions(2, 2),
-                new[] { "bg", "body" }, Array.Empty<IncompatibilityRule>(), new Collection("VP", "", "VP")),
+            Manifest = new Nfty.Core.Model.IngredientManifest(id, id,
+                Nfty.Core.Model.LayerKind.Static, null,
+                vids.Select(v => new Nfty.Core.Model.Variant(v, v, 1)).ToList()),
+            VariantImages = vids.ToDictionary(v => v,
+                _ => new Image<Rgba32>(2, 2, new Rgba32(9, 9, 9, 255))),
+        };
+        var book = new Nfty.Core.Formats.LoadedCookBook
+        {
+            Manifest = new Nfty.Core.Model.CookBookManifest("cb", "VP",
+                new Nfty.Core.Model.Dimensions(2, 2),
+                new Nfty.Core.Model.Collection("VP", "", "VP"),
+                new Dictionary<string, double> { ["cat"] = 1 }),
             Recipes = new[]
             {
-                new LoadedRecipe { Manifest = new RecipeManifest("bg", "BG", LayerKind.Static, 0,
-                    new Dictionary<string, double>{["a"]=1,["b"]=1}, null),
-                    Ingredients = new[]{ Ing("a", new Rgba32(255,0,0,255)), Ing("b", new Rgba32(0,255,0,255)) } },
-                new LoadedRecipe { Manifest = new RecipeManifest("body", "Body", LayerKind.Static, 1,
-                    new Dictionary<string, double>{["x"]=1,["y"]=1}, null),
-                    Ingredients = new[]{ Ing("x", new Rgba32(0,0,255,255)), Ing("y", new Rgba32(0,0,0,0)) } },
+                new Nfty.Core.Formats.LoadedRecipe
+                {
+                    Manifest = new Nfty.Core.Model.RecipeManifest("cat", "Cat",
+                        new[] { "bg", "body" }, Array.Empty<Nfty.Core.Model.IncompatibilityRule>()),
+                    Ingredients = new[] { Ing("bg", "a", "b"), Ing("body", "x", "y") }, // 4 combos
+                },
             },
         };
 
@@ -2324,7 +2332,8 @@ Append to `tests/Nfty.Core.Tests/SetWriterTests.cs` (inside the class):
             existingDnas: existing.Dnas, startNumber: existing.NextNumber);
         SetWriter.Write(more, dir, pack: false);
 
-        var all = Directory.GetFiles(Path.Combine(dir, "images"), "*.png").Select(Path.GetFileName).OrderBy(x => x);
+        var all = Directory.GetFiles(Path.Combine(dir, "images"), "*.png")
+            .Select(Path.GetFileName).OrderBy(x => x);
         Assert.Equal(new[] { "0001.png", "0002.png", "0003.png", "0004.png" }, all);
     }
 ```
@@ -2336,7 +2345,7 @@ Expected: PASS (4 tests).
 
 ```bash
 git add -A
-git commit -m "feat: set output, ERC-721 metadata, and extend support
+git commit -m "feat: set output, ERC-721 metadata (Type trait), and extend
 
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 git checkout master && git merge --no-ff feat/set-output -m "Merge feat/set-output"
@@ -2353,13 +2362,15 @@ git checkout master && git merge --no-ff feat/set-output -m "Merge feat/set-outp
 **Interfaces:**
 - Consumes: `LoadedCookBook`.
 - Produces (namespace `Nfty.Core.Stats`):
-  - `record TraitOdds(string LayerId, string LayerName, string IngredientId, string IngredientName, double Percent)`
-  - `static class RarityCalculator { IReadOnlyList<TraitOdds> Compute(LoadedCookBook book) }` — per-trait theoretical probability = weight / layer total × 100.
+  - `record RecipeOdds(string RecipeId, string RecipeName, double Percent)`
+  - `record TraitOdds(string RecipeId, string RecipeName, string IngredientId, string IngredientName, string VariantId, string VariantName, double WithinRecipePercent, double OverallPercent)`
+  - `record RarityReport(IReadOnlyList<RecipeOdds> Recipes, IReadOnlyList<TraitOdds> Traits)`
+  - `static class RarityCalculator { RarityReport Compute(LoadedCookBook book) }` — `RecipePercent = recipeWeight/totalRecipeWeight×100`; `WithinRecipePercent = variantWeight/layerTotal×100`; `OverallPercent = RecipePercent/100 × WithinRecipePercent`.
 
 - [ ] **Step 1: Create the branch**
 
 ```bash
-git checkout -b feat/stats
+git checkout master && git checkout -b feat/stats
 ```
 
 - [ ] **Step 2: Write the failing test**
@@ -2377,27 +2388,48 @@ namespace Nfty.Core.Tests;
 
 public class RarityCalculatorTests
 {
-    [Fact]
-    public void Percent_is_weight_over_layer_total()
+    private static LoadedIngredient Ing(string id, params (string vid, double w)[] variants) => new()
     {
-        LoadedIngredient Ing(string id) => new()
-        { Manifest = new IngredientManifest(id, id, ""), Image = new Image<Rgba32>(1, 1) };
+        Manifest = new IngredientManifest(id, id, LayerKind.Static, null,
+            variants.Select(v => new Variant(v.vid, v.vid, v.w)).ToList()),
+        VariantImages = variants.ToDictionary(v => v.vid, _ => new Image<Rgba32>(1, 1)),
+    };
 
-        var book = new LoadedCookBook
+    private static LoadedCookBook Book() => new()
+    {
+        Manifest = new CookBookManifest("cb", "B", new Dimensions(1, 1),
+            new Collection("B", "", "B"),
+            new Dictionary<string, double> { ["cat"] = 75, ["robot"] = 25 }),
+        Recipes = new[]
         {
-            Manifest = new CookBookManifest("cb", "B", new Dimensions(1, 1),
-                new[] { "bg" }, Array.Empty<IncompatibilityRule>(), new Collection("B", "", "B")),
-            Recipes = new[]
+            new LoadedRecipe
             {
-                new LoadedRecipe { Manifest = new RecipeManifest("bg", "BG", LayerKind.Static, 0,
-                    new Dictionary<string, double> { ["a"] = 75, ["b"] = 25 }, null),
-                    Ingredients = new[] { Ing("a"), Ing("b") } },
+                Manifest = new RecipeManifest("cat", "Cat", new[] { "bg" }, Array.Empty<IncompatibilityRule>()),
+                Ingredients = new[] { Ing("bg", ("a", 80), ("b", 20)) },
             },
-        };
+            new LoadedRecipe
+            {
+                Manifest = new RecipeManifest("robot", "Robot", new[] { "bg" }, Array.Empty<IncompatibilityRule>()),
+                Ingredients = new[] { Ing("bg", ("a", 50), ("b", 50)) },
+            },
+        },
+    };
 
-        var odds = RarityCalculator.Compute(book);
-        Assert.Equal(75.0, odds.Single(o => o.IngredientId == "a").Percent);
-        Assert.Equal(25.0, odds.Single(o => o.IngredientId == "b").Percent);
+    [Fact]
+    public void Recipe_percent_is_weight_over_total()
+    {
+        var report = RarityCalculator.Compute(Book());
+        Assert.Equal(75.0, report.Recipes.Single(r => r.RecipeId == "cat").Percent);
+        Assert.Equal(25.0, report.Recipes.Single(r => r.RecipeId == "robot").Percent);
+    }
+
+    [Fact]
+    public void Overall_trait_percent_multiplies_recipe_and_within()
+    {
+        var report = RarityCalculator.Compute(Book());
+        var catA = report.Traits.Single(t => t.RecipeId == "cat" && t.VariantId == "a");
+        Assert.Equal(80.0, catA.WithinRecipePercent);
+        Assert.Equal(60.0, catA.OverallPercent); // 75% * 80%
     }
 }
 ```
@@ -2416,26 +2448,45 @@ using Nfty.Core.Formats;
 
 namespace Nfty.Core.Stats;
 
+public record RecipeOdds(string RecipeId, string RecipeName, double Percent);
+
 public record TraitOdds(
-    string LayerId, string LayerName, string IngredientId, string IngredientName, double Percent);
+    string RecipeId, string RecipeName,
+    string IngredientId, string IngredientName,
+    string VariantId, string VariantName,
+    double WithinRecipePercent, double OverallPercent);
+
+public record RarityReport(IReadOnlyList<RecipeOdds> Recipes, IReadOnlyList<TraitOdds> Traits);
 
 public static class RarityCalculator
 {
-    public static IReadOnlyList<TraitOdds> Compute(LoadedCookBook book)
+    public static RarityReport Compute(LoadedCookBook book)
     {
-        var result = new List<TraitOdds>();
+        double recipeTotal = book.Manifest.RecipeWeights.Values.Sum();
+        var recipes = new List<RecipeOdds>();
+        var traits = new List<TraitOdds>();
+
         foreach (var r in book.Recipes)
         {
-            double total = r.Manifest.Measurements.Values.Sum();
+            double recipeWeight = book.Manifest.RecipeWeights.GetValueOrDefault(r.Manifest.Id);
+            double recipePct = recipeTotal > 0 ? recipeWeight / recipeTotal * 100 : 0;
+            recipes.Add(new RecipeOdds(r.Manifest.Id, r.Manifest.Name, Math.Round(recipePct, 2)));
+
             foreach (var ing in r.Ingredients)
             {
-                double w = r.Manifest.Measurements.GetValueOrDefault(ing.Manifest.Id);
-                double pct = total > 0 ? Math.Round(w / total * 100, 2) : 0;
-                result.Add(new TraitOdds(r.Manifest.Id, r.Manifest.Name,
-                    ing.Manifest.Id, ing.Manifest.Name, pct));
+                double layerTotal = ing.Manifest.Variants.Sum(v => v.Weight);
+                foreach (var v in ing.Manifest.Variants)
+                {
+                    double within = layerTotal > 0 ? v.Weight / layerTotal * 100 : 0;
+                    double overall = recipePct / 100 * within;
+                    traits.Add(new TraitOdds(r.Manifest.Id, r.Manifest.Name,
+                        ing.Manifest.Id, ing.Manifest.Name, v.Id, v.Name,
+                        Math.Round(within, 2), Math.Round(overall, 2)));
+                }
             }
         }
-        return result;
+
+        return new RarityReport(recipes, traits);
     }
 }
 ```
@@ -2443,13 +2494,13 @@ public static class RarityCalculator
 - [ ] **Step 5: Run test to verify it passes**
 
 Run: `dotnet test tests/Nfty.Core.Tests --filter RarityCalculatorTests`
-Expected: PASS (1 test).
+Expected: PASS (2 tests).
 
 - [ ] **Step 6: Commit and merge**
 
 ```bash
 git add -A
-git commit -m "feat: theoretical rarity calculator
+git commit -m "feat: two-level theoretical rarity calculator
 
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 git checkout master && git merge --no-ff feat/stats -m "Merge feat/stats"
@@ -2464,17 +2515,17 @@ git checkout master && git merge --no-ff feat/stats -m "Merge feat/stats"
 - Test: `tests/Nfty.Cli.Tests/CommandFactoryTests.cs`
 
 **Interfaces:**
-- Consumes: all of `Nfty.Core` (`CookBookArchive`, `Generator`, `SetWriter`, `RarityCalculator`, `Validator`, `Colorizer`, `ColorSpec`).
+- Consumes: `Nfty.Core` (`CookBookArchive`, `IngredientArchive`, `Generator`, `SetWriter`, `RarityCalculator`, `Validator`, `Colorizer`, `ColorSpec`, `ColorConvert`).
 - Produces:
-  - `static class CommandFactory { RootCommand Build() }` — commands: `inspect`, `validate`, `stats`, `preview`, `generate`, `extend`. (`new`/`add` authoring commands are covered by a follow-up; `generate`/`extend`/`stats`/`validate`/`inspect`/`preview` are the read/produce surface exercised here.)
+  - `static class CommandFactory { RootCommand Build() }` — commands: `inspect`, `validate`, `stats`, `preview`, `generate`, `extend`.
   - `Program.Main` returns `CommandFactory.Build().Parse(args).Invoke()`.
 
-Note: This task wires the CLI over already-tested Core logic. The test invokes the parser in-process and asserts on exit codes / stdout, so it does not depend on Core internals beyond the public API. If the installed `System.CommandLine` 2.0.9 surface differs from the calls below (e.g. `SetAction` overloads), consult `dotnet` IntelliSense for the exact method names — the command tree and handler bodies stay the same.
+Note: this wires the CLI over already-tested Core logic. The test invokes the parser in-process and asserts on the command tree / parse errors. If the installed `System.CommandLine` 2.0.9 surface differs from the calls below (e.g. `SetAction` / `GetValue` overloads), consult `dotnet` IntelliSense for the exact names — the command tree and handler bodies stay the same.
 
 - [ ] **Step 1: Create the branch**
 
 ```bash
-git checkout -b feat/cli
+git checkout master && git checkout -b feat/cli
 ```
 
 - [ ] **Step 2: Write the failing test**
@@ -2520,11 +2571,10 @@ using System.CommandLine;
 using Nfty.Core.Formats;
 using Nfty.Core.Generation;
 using Nfty.Core.Imaging;
+using Nfty.Core.Model;
 using Nfty.Core.Output;
 using Nfty.Core.Stats;
-using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.PixelFormats;
 
 namespace Nfty.Cli;
 
@@ -2533,7 +2583,6 @@ public static class CommandFactory
     public static RootCommand Build()
     {
         var root = new RootCommand("nfty — layered NFT asset generator");
-
         root.Subcommands.Add(Inspect());
         root.Subcommands.Add(Validate());
         root.Subcommands.Add(Stats());
@@ -2551,12 +2600,18 @@ public static class CommandFactory
         {
             var cb = CookBookArchive.Read(parse.GetValue(path)!);
             Console.WriteLine($"CookBook: {cb.Manifest.Name} ({cb.Manifest.Canvas.Width}x{cb.Manifest.Canvas.Height})");
-            foreach (var id in cb.Manifest.LayerOrder)
+            foreach (var r in cb.Recipes)
             {
-                var r = cb.Recipes.First(x => x.Manifest.Id == id);
-                Console.WriteLine($"  Recipe: {r.Manifest.Name} [{r.Manifest.Kind}]");
-                foreach (var ing in r.Ingredients)
-                    Console.WriteLine($"    Ingredient: {ing.Manifest.Name} (w={r.Manifest.Measurements.GetValueOrDefault(ing.Manifest.Id)})");
+                double w = cb.Manifest.RecipeWeights.GetValueOrDefault(r.Manifest.Id);
+                Console.WriteLine($"  Recipe: {r.Manifest.Name} (weight={w})");
+                var byId = r.Ingredients.ToDictionary(i => i.Manifest.Id);
+                foreach (var layerId in r.Manifest.LayerOrder)
+                {
+                    var ing = byId[layerId];
+                    Console.WriteLine($"    Ingredient: {ing.Manifest.Name} [{ing.Manifest.Kind}]");
+                    foreach (var v in ing.Manifest.Variants)
+                        Console.WriteLine($"      Variant: {v.Name} (w={v.Weight})");
+                }
             }
             return 0;
         });
@@ -2583,8 +2638,13 @@ public static class CommandFactory
         var cmd = new Command("stats", "Show rarity breakdown") { path };
         cmd.SetAction(parse =>
         {
-            foreach (var o in RarityCalculator.Compute(CookBookArchive.Read(parse.GetValue(path)!)))
-                Console.WriteLine($"{o.LayerName,-16} {o.IngredientName,-16} {o.Percent,6:0.00}%");
+            var report = RarityCalculator.Compute(CookBookArchive.Read(parse.GetValue(path)!));
+            Console.WriteLine("Recipes:");
+            foreach (var r in report.Recipes)
+                Console.WriteLine($"  {r.RecipeName,-16} {r.Percent,6:0.00}%");
+            Console.WriteLine("Traits (overall):");
+            foreach (var t in report.Traits)
+                Console.WriteLine($"  {t.RecipeName,-12} {t.IngredientName,-14} {t.VariantName,-14} {t.OverallPercent,6:0.00}%");
             return 0;
         });
         return cmd;
@@ -2592,21 +2652,23 @@ public static class CommandFactory
 
     private static Command Preview()
     {
-        var path = new Argument<string>("ingredient") { Description = "Path to a .igt value-map" };
+        var path = new Argument<string>("ingredient") { Description = "Path to a .igt layer" };
+        var variant = new Option<string>("--variant") { Description = "Variant id to render", Required = true };
         var color = new Option<string>("--color") { Description = "Color spec, e.g. hsv:200,70,80", Required = true };
         var model = new Option<string>("--model") { Description = "hsv or hsl", DefaultValueFactory = _ => "hsv" };
         var outp = new Option<string>("--out") { Description = "Output PNG path", DefaultValueFactory = _ => "preview.png" };
-        var cmd = new Command("preview", "Render a value-map with a chosen color") { path, color, model, outp };
+        var cmd = new Command("preview", "Render a value-map variant with a chosen color") { path, variant, color, model, outp };
         cmd.SetAction(parse =>
         {
             var ing = IngredientArchive.Read(parse.GetValue(path)!);
+            var image = ing.VariantImages[parse.GetValue(variant)!];
             var rgb = ColorSpec.Parse(parse.GetValue(color)!);
             var m = parse.GetValue(model)!.Equals("hsl", StringComparison.OrdinalIgnoreCase)
-                ? Nfty.Core.Model.ColorModel.Hsl : Nfty.Core.Model.ColorModel.Hsv;
-            var (h, s) = m == Nfty.Core.Model.ColorModel.Hsv
+                ? ColorModel.Hsl : ColorModel.Hsv;
+            var (h, s) = m == ColorModel.Hsv
                 ? (ColorConvert.RgbToHsv(rgb).H, ColorConvert.RgbToHsv(rgb).S)
                 : (ColorConvert.RgbToHsl(rgb).H, ColorConvert.RgbToHsl(rgb).S);
-            using var img = Colorizer.Apply(ing.Image, h, s, m);
+            using var img = Colorizer.Apply(image, h, s, m);
             img.Save(parse.GetValue(outp)!, new PngEncoder());
             Console.WriteLine($"Wrote {parse.GetValue(outp)}");
             return 0;
@@ -2621,11 +2683,13 @@ public static class CommandFactory
         var seed = new Option<string>("--seed") { Description = "RNG seed", DefaultValueFactory = _ => "nfty" };
         var outDir = new Option<string>("--out") { Description = "Output directory", Required = true };
         var pack = new Option<bool>("--pack") { Description = "Also produce a .set archive" };
-        var cmd = new Command("generate", "Generate a set") { path, count, seed, outDir, pack };
+        var recipe = new Option<string?>("--recipe") { Description = "Restrict to a single recipe id" };
+        var cmd = new Command("generate", "Generate a set") { path, count, seed, outDir, pack, recipe };
         cmd.SetAction(parse =>
         {
             var book = CookBookArchive.Read(parse.GetValue(path)!);
-            var set = Generator.Generate(book, new GenerateOptions(parse.GetValue(count), parse.GetValue(seed)!));
+            var opts = new GenerateOptions(parse.GetValue(count), parse.GetValue(seed)!, parse.GetValue(recipe));
+            var set = Generator.Generate(book, opts);
             SetWriter.Write(set, parse.GetValue(outDir)!, parse.GetValue(pack));
             Console.WriteLine($"Generated {set.Assets.Count} → {parse.GetValue(outDir)}");
             return 0;
@@ -2678,7 +2742,7 @@ Expected: PASS (2 tests).
 Run: `dotnet build && dotnet test`
 Expected: all projects build; all tests pass.
 
-- [ ] **Step 8: Manual smoke check (optional but recommended)**
+- [ ] **Step 8: Manual smoke check**
 
 Run: `dotnet run --project src/Nfty.Cli -- --help`
 Expected: usage lists `inspect`, `validate`, `stats`, `preview`, `generate`, `extend`.
@@ -2696,17 +2760,17 @@ git checkout master && git merge --no-ff feat/cli -m "Merge feat/cli"
 ---
 
 ## Deferred to a follow-up plan
-- Authoring commands `new` (scaffold empty `.cbk`/`.rcp`/`.igt`) and `add ingredient` (append an image variant with dimension validation). The formats and validator already support these; they are a thin CLI layer added once the read/generate surface is proven end-to-end.
+- Authoring commands `new` (scaffold empty `.cbk`/`.rcp`/`.igt`) and `add` (append a recipe / ingredient / variant with dimension validation). Formats + validator already support these; they are a thin CLI layer added once the read/generate surface is proven end-to-end.
 - The Avalonia GUI (separate sub-project per the spec).
 
 ---
 
 ## Self-Review
 
-**Spec coverage:**
-- §2 domain model → Task 2. §3/§4 formats (ZIP + manifest, versioned, `.igt`/`.rcp`/`.cbk`) → Task 6. §4.5 color-spec syntax → Task 3. Dynamic colorization math (HSV/HSL, g→V/L, alpha) → Task 4. Compositing → Task 5. Weighted roll → Task 7. Color roll (weighted fixed/range) → Task 7. DNA + dedup (quantized color) → Task 8. Incompatibility rules → Task 9. Deterministic seed + generation pipeline + exhausted-space error → Task 10. Set output + ERC-721 metadata + extend → Task 11. Rarity stats → Task 12. Canvas-only dimension validation → Task 6 (`Validator`). CLI surface → Task 13. `new`/`add` authoring commands → explicitly deferred (noted above), formats/validation already present.
-- Every spec section maps to a task; the only spec-listed CLI verbs not built here (`new`, `add`) are called out as a deferred thin follow-up, not a gap in the engine.
+**Spec coverage (Model A):**
+- §3 domain model (CookBook/Recipe/Ingredient/Variant) → Task 2. §4 formats (ZIP + versioned manifests, `.igt` holding variants, `.rcp` holding ingredients, `.cbk` holding recipes + recipeWeights) → Task 6. §4.5 color-spec syntax → Task 3. §5.3 dynamic colorization → Task 4. Compositing → Task 5. §5.1 two-level weighted roll → Task 7 (roller) + Task 10 (orchestration). §5.2 per-recipe rules → Task 9 + Task 10. §5.4 recipe-aware DNA + dedup → Task 8 + Task 10. §5.5 deterministic seed + §5.6 extend → Tasks 10/11. §6 set output + ERC-721 metadata (Type trait) → Task 11. §7 stats (recipe + trait odds) → Task 12. §9 canvas-only validation, zero-weight, empty-ingredient → Task 6. CLI surface → Task 13. `new`/`add` authoring → explicitly deferred.
+- Every spec section maps to a task; the only spec-listed CLI verbs not built here (`new`, `add`) are called out as a deferred thin follow-up.
 
-**Placeholder scan:** No "TBD"/"handle edge cases"/"similar to Task N" — every step carries complete code and exact commands. The one caveat (System.CommandLine API surface) is explicit and actionable, not a placeholder.
+**Placeholder scan:** No "TBD"/"handle edge cases"/"similar to Task N" — every step carries complete code and exact commands. The one caveat (System.CommandLine API surface) is explicit and actionable.
 
-**Type consistency:** `LoadedIngredient/Recipe/CookBook` (Task 6) are consumed unchanged by Tasks 10–13. `IRng`/`SplitMix64Rng`/`SeedHash` (Task 7) used by Tasks 8/10. `LayerSelection`/`Dna.Compute` (Task 8) match Generator usage (Task 10). `GeneratedSet`/`GeneratedAsset`/`TraitSelection`/`ColorRoll` (Task 10) match `SetWriter` (Task 11). `RulesEngine.IsLegal(IReadOnlyDictionary<string,string>, …)` (Task 9) matches Generator's `selection` dictionary (Task 10). Color-roll saturation convention (0–1) is consistent between `ColorRoller` (Task 7) and `Colorizer` (Task 4).
+**Type consistency (Model A):** `LoadedIngredient.VariantImages` (dict id→image, Task 6) is consumed by Generator (Task 10) and Preview CLI (Task 13). `IngredientManifest(... Colorization?, IReadOnlyList<Variant> ...)` (Task 2) matches Generator's variant-weight map and colorization use (Task 10). `RuleTarget(IngredientId, VariantId)` (Task 2) matches `RulesEngine.IsLegal(ingredientId→variantId, ...)` (Task 9) and Generator's `selection` map (Task 10). `Dna.Compute(recipeId, IReadOnlyList<LayerSelection>)` (Task 8) matches Generator's call (Task 10). `GeneratedAsset{ RecipeId, RecipeName, Traits, ColorRolls }` (Task 10) matches `SetWriter` attribute/rarity/distribution construction (Task 11). `RarityReport{Recipes,Traits}` (Task 12) matches the `stats` command (Task 13). `CookBookManifest.RecipeWeights` (Task 2) is used by Validator (Task 6), Generator (Task 10), RarityCalculator (Task 12), and inspect/stats CLI (Task 13).

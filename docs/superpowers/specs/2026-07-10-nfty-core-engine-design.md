@@ -1,28 +1,30 @@
 # nfty — Core Engine & CLI Design
 
 **Date:** 2026-07-10
-**Status:** Approved (design phase)
-**Scope of this spec:** Headless core library + CLI. The Avalonia GUI is a separate later sub-project built on top of `Nfty.Core`.
+**Status:** Approved (design phase) — **Model A revision**
+**Scope of this spec:** Headless core library + CLI. The Avalonia GUI is a separate later sub-project built on `Nfty.Core`.
+
+> **Revision note:** This design was updated from "Model B" (Recipe = one layer) to **Model A** (Recipe = a whole template). A CookBook is now an *uncooked Set*: a container of Recipes, where each Recipe is a complete character/type template. Generating a CookBook produces a mixed Set, rolling a Recipe per asset by weight.
 
 ---
 
 ## 1. Overview
 
-`nfty` is a tool for generating NFT-style asset collections from layered PNGs. It goes beyond typical layer-stacking generators by supporting two kinds of layers:
+`nfty` generates NFT-style asset collections from layered PNGs. Beyond typical layer-stacking, it supports two kinds of layers:
 
 - **Static layers** — WYSIWYG full-color PNGs, composited as-is.
-- **Dynamic layers** — grayscale *value-maps* that are recolored at generation time by a weighted, partly-randomized color roll. The value/lightness of every pixel is preserved exactly while hue and saturation are supplied by the rolled base color. This makes the effective combination space explode far beyond the finite set of source images.
+- **Dynamic layers** — grayscale *value-maps* recolored at generation time by a weighted, partly-randomized color roll. Each pixel's value/lightness is preserved exactly while hue and saturation come from the rolled base color, so the effective combination space explodes beyond the finite source images.
 
-All layers in a collection must share identical pixel dimensions (a hard requirement for correct compositing).
+All layers share identical pixel dimensions (a hard requirement for compositing), fixed by the CookBook canvas.
 
-The domain uses a cooking metaphor: a **CookBook** is a complete generative template, a **Recipe** is one layer, an **Ingredient** is one image variant, and generating produces a **Set** (a bundle of finished assets + metadata).
+The domain uses a cooking metaphor. Cooking a **CookBook** (an *uncooked Set*) produces a **Set**. A CookBook contains **Recipes**; each Recipe is a full template for one image/character *type*. A Recipe is an ordered stack of **Ingredients** (layers); each Ingredient holds weighted **variant** images.
 
 ### Goals
 - Author and organize collections as inspectable, versioned archive files.
-- Generate `N` assets — or extend an existing Set to a larger `N` — using weighted/rarity rolls.
+- Generate `N` assets — or extend an existing Set to a larger `N` — using weighted/rarity rolls at two levels: which Recipe (type), then which variant per layer.
 - Support static and dynamic layers, with HSV- or HSL-based colorization.
 - Produce marketplace-compatible (ERC-721/OpenSea) metadata plus tool-specific detail.
-- Guarantee unique combinations, deterministic reproduction by seed, and rule-based incompatibilities.
+- Guarantee unique combinations, deterministic reproduction by seed, and rule-based incompatibilities within a Recipe.
 
 ### Non-goals (this spec)
 - The GUI (tree view, live preview, rarity dashboard, vaporsoft theming) — later sub-project.
@@ -34,171 +36,178 @@ The domain uses a cooking metaphor: a **CookBook** is a complete generative temp
 ## 2. Stack & tooling
 
 - **Language / runtime:** C# on **.NET 10 (LTS)**.
-- **Imaging:** **SixLabors.ImageSharp** — fully managed (no native dependencies), so `Nfty.Core` runs unchanged on desktop, mobile, and WASM when the GUI arrives.
-- **CLI:** `System.CommandLine`.
+- **Imaging:** **SixLabors.ImageSharp 3.1.11** — fully managed (no native dependencies), so `Nfty.Core` runs unchanged on desktop, mobile, and WASM. (Pinned to 3.1.11: version 4.0.0 enforces a build-time license key; 3.1.11 builds royalty-free under the same Six Labors Split License with an identical API for our usage.)
+- **CLI:** `System.CommandLine` 2.0.9.
 - **Archives:** `System.IO.Compression` (ZIP).
 - **Tests:** xUnit.
 
 ---
 
-## 3. Domain model (Model B)
+## 3. Domain model (Model A)
 
 | Item | Extension | Is a… | Owns |
 |------|-----------|-------|------|
-| **CookBook** | `.cbk` | Complete generative template you roll from | Canvas dimensions, ordered layer list, cross-layer incompatibility rules, collection metadata |
-| **Recipe** | `.rcp` | One layer (trait-category) | `kind` (static/dynamic), z-order, measurements (weights), colorization config (if dynamic) |
-| **Ingredient** | `.igt` | One image variant | Identity + a single PNG (RGBA for static; grayscale value-map for dynamic) |
-| **Set** | `.set` (packed) or folder | A generated output bundle | Finished images + per-item metadata + aggregate rarity + seed |
+| **CookBook** | `.cbk` | An *uncooked Set* — container of Recipes | Canvas dimensions, collection metadata, per-Recipe selection weights |
+| **Recipe** | `.rcp` | A complete template for one image/character *type* | Ordered layer stack (Ingredient ids), incompatibility rules |
+| **Ingredient** | `.igt` | One layer / trait-category | `kind` (static/dynamic), colorization (if dynamic), its weighted variant images |
+| **Variant** | — (inside `.igt`) | One image + weight + name | A single PNG (RGBA for static; grayscale value-map for dynamic). Hidden behind the Ingredient; not its own file type. |
+| **Set** | `.set` (packed) or folder | A generated (cooked) output bundle | Finished images + per-item metadata + aggregate rarity + seed |
 
-**Key placement decisions:**
-- **Measurements (weights)** live on the **Recipe**, as an `ingredientId → weight` table — matching "a recipe contains its ingredients *and* its measurements." Ingredients stay pure images with no embedded weight.
-- **`kind` (static vs dynamic)** is a property of the **Recipe (layer)**, not the individual ingredient. Every ingredient in a dynamic layer is a grayscale value-map.
-- **Colorization config** (HSV/HSL mode + weighted color entries) lives on the **Recipe**, because it applies to whichever ingredient was rolled for that layer.
-- **Incompatibility rules** live on the **CookBook**, because they span multiple layers.
+**Key placement decisions (moved from Model B):**
+- **Variant weights (measurements)** live on the **Ingredient**, as the collection of variant weights.
+- **`kind` (static vs dynamic)** and **colorization config** live on the **Ingredient (layer)** — they apply to whichever variant is rolled for that layer.
+- **Incompatibility rules** live on the **Recipe**, spanning that recipe's layers.
+- **Recipe selection weights** live on the **CookBook** — used to roll which type each asset is.
+- **Canvas** stays on the **CookBook** — every variant of every ingredient of every recipe must match it, so all output images share one size.
 
 ---
 
 ## 4. File formats
 
-Each domain file is a ZIP with a fixed internal layout; the custom extension is a renamed `.zip`, so any unzip tool can inspect it. Every `manifest.json` carries a `schemaVersion` field for forward compatibility.
+Each domain file is a ZIP with a fixed internal layout; the custom extension is a renamed `.zip`, so any unzip tool can inspect it. Every `manifest.json` carries a `schemaVersion` field (starting at `1`) for forward compatibility.
 
-### 4.1 Ingredient — `.igt`
-```
-manifest.json   { schemaVersion, id, name, sha256 }
-image.png       # static layer: full RGBA · dynamic layer: grayscale value-map (alpha preserved)
-```
-Dimensions are **not** stored here. The CookBook `canvas` is the single source of truth; every source layer is assumed to be authored at the final image size, and images are validated against the canvas when added or generated (§9).
-
-### 4.2 Recipe — `.rcp`
+### 4.1 Ingredient — `.igt` (a layer)
 ```
 manifest.json
   {
     schemaVersion, id, name,
     kind: "static" | "dynamic",
-    order: <int z-index>,
-    measurements: { "<ingredientId>": <weight:number>, ... },
     colorization: {                     # present only when kind == "dynamic"
       model: "hsv" | "hsl",
       quantize: { hue: <int deg>, sat: <int pct> },   # DNA precision for this layer
       entries: [
         { weight, fixed: "hex:d6249f" },              # any color spec (§4.5)
-        { weight, hueRange:[h0,h1], satRange:[s0,s1] }   # degrees / percent
+        { weight, hueRange:[h0,h1], satRange:[s0,s1] } # degrees / percent
       ]
-    }
+    },
+    variants: [ { id, name, weight }, ... ]           # the measurements are these weights
   }
-ingredients/
-  <name>.igt
+variants/
+  <variantId>.png    # static: full RGBA · dynamic: grayscale value-map (alpha preserved)
   ...
 ```
 
-### 4.3 CookBook — `.cbk`
+### 4.2 Recipe — `.rcp` (a full template / one type)
+```
+manifest.json
+  {
+    schemaVersion, id, name,
+    layerOrder: [ "<ingredientId>", ... ],   # bottom → top composite order
+    rules: [ <IncompatibilityRule>, ... ]     # cross-layer within this recipe
+  }
+ingredients/
+  <ingredientId>.igt
+  ...
+```
+
+### 4.3 CookBook — `.cbk` (uncooked Set / container)
 ```
 manifest.json
   {
     schemaVersion, id, name,
     canvas: { w, h },
-    layerOrder: [ "<recipeId>", ... ],      # bottom → top composite order
-    rules: [ <IncompatibilityRule>, ... ],
-    collection: { name, description, symbol }
+    collection: { name, description, symbol },
+    recipeWeights: { "<recipeId>": <weight:number>, ... }   # selection weight per type
   }
 recipes/
-  <name>.rcp
+  <recipeId>.rcp
   ...
 ```
 
 ### 4.4 Incompatibility rule shape
-Declarative, references layers (recipes) and ingredients by id:
+Declarative, references ingredients (layers) and variants by id, scoped to a single Recipe:
 ```
-{ type: "exclude", when: {layer, ingredient}, forbid: [ {layer, ingredient}, ... ] }
-{ type: "require", when: {layer, ingredient}, force:  {layer, ingredient} }
+{ type: "exclude", when: {ingredient, variant}, forbid: [ {ingredient, variant}, ... ] }
+{ type: "require", when: {ingredient, variant}, force:  {ingredient, variant} }
 ```
-Rules are symmetric-checked at generation; an illegal roll is rejected and re-rolled.
+Rules are checked at generation; an illegal roll is rejected and re-rolled.
 
 ### 4.5 Color spec syntax
-Everywhere a color is entered by the user (the `preview --color` flag, `fixed` entries in a colorization config), it uses a single **prefixed** form so the input space is always unambiguous:
+Everywhere a color is entered by the user (`preview --color`, `fixed` entries in a colorization config), it uses a single **prefixed** form:
 
 | Prefix | Form | Example |
 |--------|------|---------|
-| `hex:` | `rrggbb` (or `rgba` 8-digit) | `hex:d6249f` |
+| `hex:` | `rrggbb` (or `rrggbbaa`) | `hex:d6249f` |
 | `rgb:` | `r,g,b` (0–255) | `rgb:214,36,159` |
 | `hsl:` | `h,s,l` (deg, %, %) | `hsl:322,72,49` |
 | `hsv:` | `h,s,v` (deg, %, %) | `hsv:322,83,84` |
 
-A missing or unknown prefix is a validation error (never guessed). For dynamic colorization only `H`/`S` are used from a `fixed` color; the value/lightness comes from the grayscale value-map.
+A missing or unknown prefix is a validation error (never guessed). For dynamic colorization only `H`/`S` are used from a `fixed` color; value/lightness comes from the grayscale value-map.
 
 ---
 
 ## 5. Generation engine
 
-Per-asset pipeline:
+Cooking a CookBook to `N` assets. Per asset:
 
 ```
-roll layers → apply rules → colorize dynamic layers → composite → hash DNA → dedup → emit
+roll recipe (by cookbook weight) → roll each layer's variant → apply recipe rules
+  → colorize dynamic layers → composite → hash DNA → dedup → emit
 ```
 
-### 5.1 Weighted roll
-For each layer, pick one ingredient via a **seeded** weighted RNG over the recipe's measurements. Zero total weight is a validation error.
+### 5.1 Two-level weighted roll
+- **Recipe roll:** pick one Recipe via seeded weighted RNG over the cookbook's `recipeWeights`. (A single-recipe generation mode skips this and fixes the recipe.)
+- **Variant roll:** within the chosen recipe, for each Ingredient-layer, pick one variant via seeded weighted RNG over that ingredient's variant weights.
 
-### 5.2 Incompatibility rules
-After a full roll, evaluate cookbook rules. On violation, re-roll the offending layer(s). If a layer has no legal ingredient given current selections, emit a clear error naming the conflict. A bounded retry budget guards against unsatisfiable rule sets.
+Zero total weight at either level is a validation error.
+
+### 5.2 Incompatibility rules (per recipe)
+After a full variant roll, evaluate the recipe's rules over the selected `{ingredientId → variantId}` map. On violation, re-roll; if a layer has no legal variant, emit a clear error. A bounded retry budget guards against unsatisfiable rule sets.
 
 ### 5.3 Dynamic colorization
-For a dynamic layer's rolled value-map:
+For a dynamic layer's rolled variant value-map:
 1. **Roll base color:** pick one weighted `entry`; sample `H ∈ hueRange`, `S ∈ satRange` uniformly (a `fixed` entry is a degenerate range).
-2. **Recolor per pixel:** grayscale `g ∈ [0..1]` (pixel luminance) becomes **V** (`model: hsv`) or **L** (`model: hsl`); the rolled `(H, S)` supply hue and saturation. Convert `(H,S,V)`/`(H,S,L)` → RGB.
-3. **Preserve alpha** from the value-map (retains shape/transparency).
+2. **Recolor per pixel:** grayscale `g = R/255` becomes **V** (`hsv`) or **L** (`hsl`); the rolled `(H, S)` supply hue and saturation.
+3. **Preserve alpha** from the value-map.
 
-Documented edges: `g = 0` → black for any hue; in HSL, `g = 1` → white; in HSV, `V = 1` stays colored. These are intended and match standard color-space behavior.
+Documented edges: `g = 0` → black for any hue; in HSL, `g = 1` → white; in HSV, `V = 1` stays colored. Intended, matching standard color-space behavior.
 
 ### 5.4 DNA & deduplication
-DNA = SHA-256 over the ordered selection:
-- each layer's selected **ingredient id**, and
-- for dynamic layers, the rolled `(H, S)` **quantized** per that layer's `colorization.quantize` precision.
-
-Quantizing color into the DNA means the explosive color space still contributes to uniqueness. A duplicate DNA triggers a re-roll. If the legal unique space is exhausted before reaching `N`, emit an error stating how many unique assets were actually possible.
+DNA = SHA-256 over: the **recipe id**, then (sorted by ingredient id) each layer's selected **variant id**, plus for dynamic layers the rolled `(H, S)` **quantized** per that layer's `colorization.quantize`. Quantizing color into the DNA means the explosive color space still contributes to uniqueness. Duplicate DNA ⇒ re-roll. If the legal unique space is exhausted before `N`, emit an error stating how many unique assets were possible.
 
 ### 5.5 Determinism
-A single RNG seed governs the whole run and is recorded in the Set manifest. Same cookbook + same seed ⇒ byte-identical output.
+A single string seed drives a SplitMix64 RNG, recorded in the Set manifest. Same cookbook + seed ⇒ identical output.
 
 ### 5.6 Extend
-`extend` re-opens an existing Set, loads its recorded DNAs, seed lineage, and item numbering, then rolls only **new, non-colliding** assets until the new `N` is reached. Existing items and their numbers are preserved exactly.
+`extend` re-opens an existing Set with its cookbook, loads recorded DNAs and item numbering, then rolls only new, non-colliding assets up to the new `N`, preserving existing items exactly.
 
 ---
 
 ## 6. Set (bundle) output
 
-Default output is a **folder** (convenient for upload); `--pack` zips it into a `.set` archive.
+Default output is a **folder**; `--pack` zips it into a `.set`.
 
 ```
 myset/
-├─ set.json            # collection name, N, seed, cookbook sha256, generator version, aggregate rarity table
-├─ images/
-│  ├─ 0001.png
-│  └─ ...
-└─ metadata/
-   ├─ 0001.json
-   └─ ...
+├─ set.json            # collection name, N, seed, cookbook sha256, generator version,
+│                      # recipe distribution, aggregate rarity table
+├─ images/0001.png ...
+└─ metadata/0001.json  # ERC-721/OpenSea + extras
 ```
 
 ### 6.1 Per-item metadata (`metadata/NNNN.json`)
-ERC-721/OpenSea standard fields plus tool-specific extras:
+ERC-721/OpenSea fields plus extras. The recipe (type) is exposed as a `Type` attribute:
 ```json
 {
   "name": "VaporPets #1",
   "description": "...",
   "image": "images/0001.png",
-  "attributes": [ { "trait_type": "Background", "value": "Sunset" }, ... ],
+  "attributes": [
+    { "trait_type": "Type", "value": "Cat" },
+    { "trait_type": "Background", "value": "Sunset" }
+  ],
 
   "setNumber": 1,
+  "recipe": "cat",
   "dna": "<sha256 hex>",
   "seed": "<run seed>",
   "rarity": [ { "trait_type": "Background", "value": "Sunset", "rarityPct": 12.4 }, ... ],
-  "colorRolls": [ { "layer": "Aura", "model": "hsv", "h": 187, "s": 72 }, ... ]
+  "colorRolls": [ { "layer": "Aura", "model": "hsv", "h": 187, "s": 0.72 }, ... ]
 }
 ```
 
 ### 6.2 `set.json`
-Collection-level: `name`, `count`, `seed`, `cookbookSha256`, `generatorVersion`, and an aggregate rarity table (per trait_type/value occurrence counts and percentages).
+Collection-level: `name`, `count`, `seed`, `cookbookSha256`, `generatorVersion`, a per-recipe distribution table (counts + percent), and an aggregate trait rarity table.
 
 ---
 
@@ -206,14 +215,14 @@ Collection-level: `name`, `count`, `seed`, `cookbookSha256`, `generatorVersion`,
 
 | Command | Purpose |
 |---------|---------|
-| `nfty new cookbook\|recipe\|ingredient <name>` | Scaffold a new archive with a valid empty manifest |
-| `nfty add ingredient <png> --to <recipe.rcp> --weight <w>` | Add an image variant (validates dimensions) |
-| `nfty inspect <file>` | Print the manifest / tree of any `.cbk`/`.rcp`/`.igt` |
-| `nfty preview <igt\|rcp> --color <spec> [--out png]` | Render a preview with a chosen color (for dynamic layers); `<spec>` uses the prefixed color syntax (§4.5) |
-| `nfty stats <cookbook.cbk>` | Rarity breakdown and percentage chances per trait |
-| `nfty validate <file>` | Schema + dimension-consistency check |
-| `nfty generate <cookbook.cbk> --count N --seed S --out <dir> [--pack]` | Generate a Set |
-| `nfty extend <set> --to N` | Grow an existing Set to a new count |
+| `nfty inspect <file>` | Print the tree of a `.cbk`/`.rcp`/`.igt` (cookbook → recipes → ingredients → variants) |
+| `nfty validate <cbk>` | Schema + dimension-consistency + weight/rule checks |
+| `nfty stats <cbk>` | Rarity breakdown: per-recipe odds and overall per-trait odds |
+| `nfty preview <igt> --variant <id> --color <spec> [--model hsv] [--out png]` | Render one variant recolored |
+| `nfty generate <cbk> --count N --seed S --out <dir> [--pack] [--recipe <id>]` | Cook a Set (optionally restricted to one recipe/type) |
+| `nfty extend <cbk> <set-dir> --to N [--seed S]` | Grow an existing Set to a new count |
+
+Authoring commands (`new`, `add`) that scaffold/append archives are a deferred thin follow-up (formats + validation already support them).
 
 ---
 
@@ -221,59 +230,61 @@ Collection-level: `name`, `count`, `seed`, `cookbookSha256`, `generatorVersion`,
 
 `.NET 10` solution:
 
-- **`Nfty.Core`** (class library) — the entire engine, no console concerns. Internal boundaries:
-  - `Model/` — immutable domain records (CookBook, Recipe, Ingredient, rules, colorization).
-  - `Formats/` — ZIP + manifest readers/writers, schema-versioned, round-trippable.
-  - `Imaging/` — value-map handling, HSV/HSL colorization, compositing (ImageSharp).
-  - `Generation/` — weighted roller, rules engine, DNA, dedup, extend, orchestrator.
+- **`Nfty.Core`** (class library) — the entire engine. Internal boundaries:
+  - `Model/` — immutable domain records (CookBook, Recipe, Ingredient, Variant, rules, colorization).
+  - `Formats/` — ZIP + manifest readers/writers, schema-versioned, round-trippable; validator.
+  - `Imaging/` — color conversion, color-spec parsing, value-map colorization, compositing (ImageSharp).
+  - `Generation/` — deterministic RNG, weighted roller, color roller, DNA, rules engine, generation orchestrator.
+  - `Output/` — ERC-721 metadata + set writer + extend loader.
   - `Stats/` — rarity computation.
 - **`Nfty.Cli`** (console) — thin `System.CommandLine` wiring over `Nfty.Core`.
 - **`Nfty.Core.Tests`**, **`Nfty.Cli.Tests`** (xUnit).
 
-Each unit has one purpose and communicates through well-defined interfaces so the future GUI can consume `Nfty.Core` directly and each piece is testable in isolation.
+Each unit has one purpose and a well-defined interface so the future GUI can consume `Nfty.Core` directly and each piece is testable in isolation.
 
 ---
 
 ## 9. Validation & error handling
 
-- **Canvas is the single source of truth for size.** Dimensions are not stored per layer/ingredient; every source image is expected to already be the final image size. On `add` and `generate`, each ingredient PNG is validated against the cookbook `canvas`, and mismatches are rejected with a specific message.
-- **Color specs** must carry a known prefix (§4.5); a missing/unknown prefix is rejected, never guessed.
-- **Zero total weight** in a layer → validation error.
-- **Unsatisfiable rules** / no legal ingredient for a layer → clear conflict error.
+- **Canvas is the single source of truth for size.** Every variant image (all ingredients, all recipes) is validated against the cookbook `canvas`; mismatches are rejected with a specific message.
+- **Zero total weight** — at the recipe-selection level, or within any ingredient's variants → validation error.
+- **Empty ingredient** (no variants) → validation error.
+- **Unsatisfiable rules** / no legal variant for a layer → clear conflict error.
 - **Exhausted unique space** before `N` → error stating the true maximum.
-- **Manifest schema version** unsupported → explicit "unsupported version" error, never a silent misparse.
+- **Color specs** must carry a known prefix (§4.5); missing/unknown prefix is rejected, never guessed.
+- **Manifest schema version** unsupported → explicit error, never a silent misparse.
 
 ---
 
 ## 10. Testing strategy
 
-- Seeded **distribution** tests for the weighted roller (observed frequencies match weights within tolerance).
-- **Exact-pixel** tests for HSV and HSL colorization against hand-computed values, including edge grays (0, 1).
-- **DNA stability** (same selection ⇒ same hash) and **dedup** (no duplicate DNA in output).
-- **Rules satisfaction** (no output violates any rule; unsatisfiable sets error).
-- **Format round-trip** (write → read → equal) for all three archive types.
-- **Dimension validation** rejection paths.
+- Seeded **distribution** tests for the weighted roller at both levels (observed frequencies match weights).
+- **Exact-pixel** tests for HSV/HSL colorization, including edge grays (0, 1).
+- **DNA stability** (same selection ⇒ same hash, recipe-aware) and **dedup** (no duplicate DNA).
+- **Rules satisfaction** (no output violates a recipe's rules; unsatisfiable sets error).
+- **Format round-trip** (write → read → equal) for all three archive types, including multi-variant ingredients and multi-recipe cookbooks.
+- **Dimension/weight validation** rejection paths.
+- **Two-level generation**: recipe mix proportions, per-layer variant rolls, single-recipe mode.
 - **Extend** preserves existing items, numbering, and uniqueness.
-- **Golden-image** tests for compositing and colorization output.
+- **Golden-image** tests for compositing and colorization.
 
 ---
 
 ## 11. Delivery workflow
 
 - **One fresh agent per major task**, **one traceable PR per push** — clean, reviewable history.
-- Repository is git-initialized (this spec is the first commit). **No remote exists yet** — one is created later. Until then, each major task lands on its own **local feature branch** merged into `master`, so the history is already PR-shaped; when the GitHub remote is added, those branches are pushed as PRs with no rework.
-- Major-task decomposition (solution scaffold → formats → imaging/colorization → generation/rules/dedup → set output/metadata → CLI → stats/validate) is finalized in the implementation plan.
+- Repository is git-initialized. **No remote yet** — one is created later. Until then, each major task lands on its own **local feature branch** merged into `master` with `--no-ff`; when the GitHub remote is added, those branches are pushed as PRs with no rework.
+- Major-task decomposition (solution scaffold → model → imaging → formats → generation → set output → stats → CLI) is realized in the implementation plan.
 
 ---
 
-## 12. Open items resolved
+## 12. Resolved decisions
+- **Domain model: Model A** — CookBook = uncooked Set (container of Recipes); Recipe = whole template (one type); Ingredient = a layer holding weighted variants; Variant = one image+weight inside an Ingredient; Set = cooked output.
+- **CookBook generation: weighted mix** — roll a Recipe per asset by cookbook weight; a single-recipe mode is also supported.
 - Packed-bundle extension: **`.set`**.
-- Target framework: **.NET 10 (latest stable/LTS)**.
-- Domain model: **Model B** (CookBook = template, Recipe = layer, Ingredient = variant).
-- Color roll: **weighted entries, each fixed or range**.
-- Container: **ZIP + manifest.json**.
-- Metadata: **ERC-721/OpenSea + extras**.
-- Generation guarantees: **DNA dedup, extend, deterministic seed, incompatibility rules** (all in scope).
-- Dimensions: **canvas only** (single source of truth); no per-layer/ingredient dimensions.
-- Color input: **prefixed spec syntax** (`hex:`/`rgb:`/`hsl:`/`hsv:`), prefix required.
-- Remote: **none yet**; local feature branches now, pushed as PRs when a remote is created.
+- Target framework: **.NET 10**; imaging **ImageSharp 3.1.11**; CLI **System.CommandLine 2.0.9**.
+- Container: **ZIP + manifest.json**, schema-versioned.
+- Color roll: **weighted entries, each fixed or range**; color input uses **prefixed spec syntax**.
+- Metadata: **ERC-721/OpenSea + extras** (recipe exposed as a `Type` attribute).
+- Generation guarantees: **DNA dedup (recipe-aware), extend, deterministic seed, per-recipe incompatibility rules**.
+- Dimensions: **canvas only** (single source of truth); no per-layer/variant dimensions.
