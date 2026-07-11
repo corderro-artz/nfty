@@ -64,9 +64,10 @@ Each domain file is a ZIP with a fixed internal layout; the custom extension is 
 
 ### 4.1 Ingredient — `.igt`
 ```
-manifest.json   { schemaVersion, id, name, dimensions:{w,h}, sha256 }
+manifest.json   { schemaVersion, id, name, sha256 }
 image.png       # static layer: full RGBA · dynamic layer: grayscale value-map (alpha preserved)
 ```
+Dimensions are **not** stored here. The CookBook `canvas` is the single source of truth; every source layer is assumed to be authored at the final image size, and images are validated against the canvas when added or generated (§9).
 
 ### 4.2 Recipe — `.rcp`
 ```
@@ -75,13 +76,12 @@ manifest.json
     schemaVersion, id, name,
     kind: "static" | "dynamic",
     order: <int z-index>,
-    dimensions: { w, h },
     measurements: { "<ingredientId>": <weight:number>, ... },
     colorization: {                     # present only when kind == "dynamic"
       model: "hsv" | "hsl",
       quantize: { hue: <int deg>, sat: <int pct> },   # DNA precision for this layer
       entries: [
-        { weight, fixed: "#rrggbb" },
+        { weight, fixed: "hex:d6249f" },              # any color spec (§4.5)
         { weight, hueRange:[h0,h1], satRange:[s0,s1] }   # degrees / percent
       ]
     }
@@ -113,6 +113,18 @@ Declarative, references layers (recipes) and ingredients by id:
 { type: "require", when: {layer, ingredient}, force:  {layer, ingredient} }
 ```
 Rules are symmetric-checked at generation; an illegal roll is rejected and re-rolled.
+
+### 4.5 Color spec syntax
+Everywhere a color is entered by the user (the `preview --color` flag, `fixed` entries in a colorization config), it uses a single **prefixed** form so the input space is always unambiguous:
+
+| Prefix | Form | Example |
+|--------|------|---------|
+| `hex:` | `rrggbb` (or `rgba` 8-digit) | `hex:d6249f` |
+| `rgb:` | `r,g,b` (0–255) | `rgb:214,36,159` |
+| `hsl:` | `h,s,l` (deg, %, %) | `hsl:322,72,49` |
+| `hsv:` | `h,s,v` (deg, %, %) | `hsv:322,83,84` |
+
+A missing or unknown prefix is a validation error (never guessed). For dynamic colorization only `H`/`S` are used from a `fixed` color; the value/lightness comes from the grayscale value-map.
 
 ---
 
@@ -197,7 +209,7 @@ Collection-level: `name`, `count`, `seed`, `cookbookSha256`, `generatorVersion`,
 | `nfty new cookbook\|recipe\|ingredient <name>` | Scaffold a new archive with a valid empty manifest |
 | `nfty add ingredient <png> --to <recipe.rcp> --weight <w>` | Add an image variant (validates dimensions) |
 | `nfty inspect <file>` | Print the manifest / tree of any `.cbk`/`.rcp`/`.igt` |
-| `nfty preview <igt\|rcp> --color <spec> [--out png]` | Render a preview with a chosen color (for dynamic layers) |
+| `nfty preview <igt\|rcp> --color <spec> [--out png]` | Render a preview with a chosen color (for dynamic layers); `<spec>` uses the prefixed color syntax (§4.5) |
 | `nfty stats <cookbook.cbk>` | Rarity breakdown and percentage chances per trait |
 | `nfty validate <file>` | Schema + dimension-consistency check |
 | `nfty generate <cookbook.cbk> --count N --seed S --out <dir> [--pack]` | Generate a Set |
@@ -224,7 +236,8 @@ Each unit has one purpose and communicates through well-defined interfaces so th
 
 ## 9. Validation & error handling
 
-- **Identical dimensions** enforced on `add` and `generate`: every ingredient must match the cookbook canvas size; mismatches are rejected with a specific message.
+- **Canvas is the single source of truth for size.** Dimensions are not stored per layer/ingredient; every source image is expected to already be the final image size. On `add` and `generate`, each ingredient PNG is validated against the cookbook `canvas`, and mismatches are rejected with a specific message.
+- **Color specs** must carry a known prefix (§4.5); a missing/unknown prefix is rejected, never guessed.
 - **Zero total weight** in a layer → validation error.
 - **Unsatisfiable rules** / no legal ingredient for a layer → clear conflict error.
 - **Exhausted unique space** before `N` → error stating the true maximum.
@@ -248,7 +261,7 @@ Each unit has one purpose and communicates through well-defined interfaces so th
 ## 11. Delivery workflow
 
 - **One fresh agent per major task**, **one traceable PR per push** — clean, reviewable history.
-- Repository is git-initialized (this spec is the first commit). **PRs require a GitHub remote**; the remote/branching approach is confirmed at the start of the implementation plan.
+- Repository is git-initialized (this spec is the first commit). **No remote exists yet** — one is created later. Until then, each major task lands on its own **local feature branch** merged into `master`, so the history is already PR-shaped; when the GitHub remote is added, those branches are pushed as PRs with no rework.
 - Major-task decomposition (solution scaffold → formats → imaging/colorization → generation/rules/dedup → set output/metadata → CLI → stats/validate) is finalized in the implementation plan.
 
 ---
@@ -261,3 +274,6 @@ Each unit has one purpose and communicates through well-defined interfaces so th
 - Container: **ZIP + manifest.json**.
 - Metadata: **ERC-721/OpenSea + extras**.
 - Generation guarantees: **DNA dedup, extend, deterministic seed, incompatibility rules** (all in scope).
+- Dimensions: **canvas only** (single source of truth); no per-layer/ingredient dimensions.
+- Color input: **prefixed spec syntax** (`hex:`/`rgb:`/`hsl:`/`hsv:`), prefix required.
+- Remote: **none yet**; local feature branches now, pushed as PRs when a remote is created.
