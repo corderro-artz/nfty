@@ -50,4 +50,12 @@ public class DnaTests
         var b = new[] { new LayerSelection("aura", "glow", 200.0, 0.71, 5, 5) };
         Assert.NotEqual(Dna.Compute("cat", a), Dna.Compute("cat", b));
     }
+
+    [Fact]
+    public void Sat_crossing_a_bucket_changes_dna()
+    {
+        var a = new[] { new LayerSelection("aura", "glow", 181.0, 0.71, 5, 5) };
+        var b = new[] { new LayerSelection("aura", "glow", 181.0, 0.95, 5, 5) };
+        Assert.NotEqual(Dna.Compute("cat", a), Dna.Compute("cat", b));
+    }
 }
