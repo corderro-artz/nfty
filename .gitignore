@@ -13,5 +13,8 @@ TestResults/
 .DS_Store
 .idea/
 
+# Claude Code local worktrees (transient)
+.claude/worktrees/
+
 # Six Labors license (account-specific; never commit)
 sixlabors.lic
