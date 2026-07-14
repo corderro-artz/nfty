@@ -33,12 +33,36 @@ public static class Validator
                     problems.Add($"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}' has no variants.");
                 if (ing.Manifest.Variants.Sum(v => v.Weight) <= 0)
                     problems.Add($"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}' has zero total variant weight.");
-                if (ing.Manifest.Kind == LayerKind.Dynamic && ing.Manifest.Colorization is null)
-                    problems.Add($"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}' is dynamic but has no colorization.");
-                if (ing.Manifest.Kind == LayerKind.Dynamic && ing.Manifest.Colorization is not null)
-                    foreach (var entry in ing.Manifest.Colorization.Entries)
-                        if ((entry.Fixed is null) == (entry.Range is null))
-                            problems.Add($"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}' has a colorization entry that must have exactly one of fixed or range.");
+                string where = $"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}'";
+                var col = ing.Manifest.Colorization;
+                switch (ing.Manifest.Kind)
+                {
+                    case LayerKind.Custom:
+                        // Composited as-is; must NEVER carry a colorization.
+                        if (col is not null)
+                            problems.Add($"{where} is custom but has a colorization; custom layers must have none.");
+                        break;
+
+                    case LayerKind.Static:
+                        // Colorized with exactly one fixed color, deterministically.
+                        if (col is null)
+                            problems.Add($"{where} is static but has no colorization; static requires exactly one fixed color.");
+                        else if (col.Entries.Count != 1)
+                            problems.Add($"{where} is static but has {col.Entries.Count} colorization entries; static requires exactly one fixed color.");
+                        else if (col.Entries[0].Fixed is null || col.Entries[0].Range is not null)
+                            problems.Add($"{where} is static but its colorization entry is not a single fixed color (no ranges allowed).");
+                        break;
+
+                    case LayerKind.Dynamic:
+                        // Value-map rolled from one or more weighted entries.
+                        if (col is null)
+                            problems.Add($"{where} is dynamic but has no colorization.");
+                        else
+                            foreach (var entry in col.Entries)
+                                if ((entry.Fixed is null) == (entry.Range is null))
+                                    problems.Add($"{where} has a colorization entry that must have exactly one of fixed or range.");
+                        break;
+                }
 
                 foreach (var v in ing.Manifest.Variants)
                 {

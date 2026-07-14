@@ -11,7 +11,7 @@ public class GeneratorTests
     // A static ingredient with N variants, each a distinct solid fill.
     private static LoadedIngredient Ing(string id, params string[] variantIds) => new()
     {
-        Manifest = new IngredientManifest(id, id, LayerKind.Static, null,
+        Manifest = new IngredientManifest(id, id, LayerKind.Custom, null,
             variantIds.Select(v => new Variant(v, v, 1)).ToList()),
         VariantImages = variantIds.ToDictionary(v => v, _ => new Image<Rgba32>(2, 2, new Rgba32(10, 20, 30, 255))),
     };

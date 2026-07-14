@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Nfty.Core.Formats;
 using Nfty.Core.Generation;
+using Nfty.Core.Model;
 using Nfty.Core.Output;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -17,29 +18,79 @@ public class SetWriterTests
             {
                 SetNumber = 1, Dna = "abc", RecipeId = "cat", RecipeName = "Cat",
                 Image = new Image<Rgba32>(2, 2, new Rgba32(1, 2, 3, 255)),
-                Traits = new[] { new TraitSelection("bg", "Background", "sunset", "Sunset") },
-                ColorRolls = Array.Empty<ColorRoll>(),
+                Traits = new[]
+                {
+                    new TraitSelection("bg", "Background", "sunset", "Sunset"),
+                    new TraitSelection("aura", "Aura", "glow", "Glow"),
+                },
+                ColorRolls = new[]
+                {
+                    new ColorRoll("bg", LayerKind.Custom, null, null, null),
+                    new ColorRoll("aura", LayerKind.Dynamic, ColorModel.Hsv, 187, 0.72),
+                },
             },
         });
 
     [Fact]
-    public void Writes_images_metadata_and_set_manifest()
+    public void Writes_images_and_set_manifest()
     {
         var dir = Path.Combine(Directory.CreateTempSubdirectory().FullName, "out");
         SetWriter.Write(MakeSet(), dir, pack: false);
 
         Assert.True(File.Exists(Path.Combine(dir, "images", "0001.png")));
         Assert.True(File.Exists(Path.Combine(dir, "set.json")));
+        Assert.True(File.Exists(Path.Combine(dir, "metadata", "0001.json")));
+        Assert.True(File.Exists(Path.Combine(dir, "nfty", "0001.json")));
+    }
+
+    [Fact]
+    public void OpenSea_metadata_file_is_standard_only()
+    {
+        var dir = Path.Combine(Directory.CreateTempSubdirectory().FullName, "out");
+        SetWriter.Write(MakeSet(), dir, pack: false);
 
         var json = File.ReadAllText(Path.Combine(dir, "metadata", "0001.json"));
         using var doc = JsonDocument.Parse(json);
-        Assert.Equal("VaporPets #1", doc.RootElement.GetProperty("name").GetString());
-        var attrs = doc.RootElement.GetProperty("attributes");
+        var root = doc.RootElement;
+
+        Assert.Equal("VaporPets #1", root.GetProperty("name").GetString());
+        Assert.Equal("desc", root.GetProperty("description").GetString());
+        Assert.Equal("images/0001.png", root.GetProperty("image").GetString());
+
+        var attrs = root.GetProperty("attributes");
         Assert.Equal("Type", attrs[0].GetProperty("trait_type").GetString());
         Assert.Equal("Cat", attrs[0].GetProperty("value").GetString());
         Assert.Equal("Background", attrs[1].GetProperty("trait_type").GetString());
-        Assert.Equal("cat", doc.RootElement.GetProperty("recipe").GetString());
-        Assert.Equal("abc", doc.RootElement.GetProperty("dna").GetString());
+
+        // Standards-pure: no nfty-specific keys leak into the OpenSea file.
+        foreach (var extra in new[] { "setNumber", "recipe", "dna", "seed", "rarity", "colorRolls", "layers" })
+            Assert.False(root.TryGetProperty(extra, out _), $"OpenSea file must not contain '{extra}'.");
+    }
+
+    [Fact]
+    public void Nfty_metadata_file_carries_extras_and_all_layer_colors()
+    {
+        var dir = Path.Combine(Directory.CreateTempSubdirectory().FullName, "out");
+        SetWriter.Write(MakeSet(), dir, pack: false);
+
+        var json = File.ReadAllText(Path.Combine(dir, "nfty", "0001.json"));
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        Assert.Equal(1, root.GetProperty("setNumber").GetInt32());
+        Assert.Equal("cat", root.GetProperty("recipe").GetString());
+        Assert.Equal("abc", root.GetProperty("dna").GetString());
+        Assert.Equal("seed-1", root.GetProperty("seed").GetString());
+        Assert.NotEqual(0, root.GetProperty("rarity").GetArrayLength());
+
+        var layers = root.GetProperty("layers");
+        Assert.Equal(2, layers.GetArrayLength());
+        var bg = layers.EnumerateArray().Single(l => l.GetProperty("layer").GetString() == "bg");
+        Assert.Equal("custom", bg.GetProperty("kind").GetString());
+        var aura = layers.EnumerateArray().Single(l => l.GetProperty("layer").GetString() == "aura");
+        Assert.Equal("dynamic", aura.GetProperty("kind").GetString());
+        Assert.Equal("hsv", aura.GetProperty("model").GetString());
+        Assert.Equal(187, aura.GetProperty("h").GetDouble());
     }
 
     [Fact]
@@ -67,7 +118,7 @@ public class SetWriterTests
         LoadedIngredient Ing(string id, params string[] vids) => new()
         {
             Manifest = new Nfty.Core.Model.IngredientManifest(id, id,
-                Nfty.Core.Model.LayerKind.Static, null,
+                Nfty.Core.Model.LayerKind.Custom, null,
                 vids.Select(v => new Nfty.Core.Model.Variant(v, v, 1)).ToList()),
             VariantImages = vids.ToDictionary(v => v,
                 _ => new Image<Rgba32>(2, 2, new Rgba32(9, 9, 9, 255))),
@@ -108,7 +159,7 @@ public class SetWriterTests
         LoadedIngredient Ing(string id, string name, params string[] vids) => new()
         {
             Manifest = new Nfty.Core.Model.IngredientManifest(id, name,
-                Nfty.Core.Model.LayerKind.Static, null,
+                Nfty.Core.Model.LayerKind.Custom, null,
                 vids.Select(v => new Nfty.Core.Model.Variant(v, v, 1)).ToList()),
             VariantImages = vids.ToDictionary(v => v,
                 _ => new Image<Rgba32>(2, 2, new Rgba32(9, 9, 9, 255))),
@@ -145,7 +196,7 @@ public class SetWriterTests
         Assert.Equal(4, distributionSum);
 
         // Item from the FIRST batch must reflect full-collection rarity, not just its batch.
-        var itemJson = File.ReadAllText(Path.Combine(dir, "metadata", "0001.json"));
+        var itemJson = File.ReadAllText(Path.Combine(dir, "nfty", "0001.json"));
         using var itemDoc = JsonDocument.Parse(itemJson);
         foreach (var rarity in itemDoc.RootElement.GetProperty("rarity").EnumerateArray())
         {

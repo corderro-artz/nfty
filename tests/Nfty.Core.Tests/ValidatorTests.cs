@@ -11,7 +11,7 @@ public class ValidatorTests
     {
         var ing = new LoadedIngredient
         {
-            Manifest = new IngredientManifest("bg", "BG", LayerKind.Static, null,
+            Manifest = new IngredientManifest("bg", "BG", LayerKind.Custom, null,
                 new[] { new Variant("a", "A", variantWeight) }),
             VariantImages = new Dictionary<string, Image<Rgba32>>
             {
@@ -54,7 +54,7 @@ public class ValidatorTests
     {
         var ing = new LoadedIngredient
         {
-            Manifest = new IngredientManifest("empty", "Empty", LayerKind.Static, null,
+            Manifest = new IngredientManifest("empty", "Empty", LayerKind.Custom, null,
                 Array.Empty<Variant>()),
             VariantImages = new Dictionary<string, Image<Rgba32>>(),
         };
@@ -78,7 +78,7 @@ public class ValidatorTests
     {
         var ing = new LoadedIngredient
         {
-            Manifest = new IngredientManifest("bg", "BG", LayerKind.Static, null,
+            Manifest = new IngredientManifest("bg", "BG", LayerKind.Custom, null,
                 new[] { new Variant("a", "A", 10) }),
             VariantImages = new Dictionary<string, Image<Rgba32>>
             {
@@ -105,7 +105,7 @@ public class ValidatorTests
     {
         var ing = new LoadedIngredient
         {
-            Manifest = new IngredientManifest("bg", "BG", LayerKind.Static, null,
+            Manifest = new IngredientManifest("bg", "BG", LayerKind.Custom, null,
                 new[] { new Variant("a", "A", 10) }),
             VariantImages = new Dictionary<string, Image<Rgba32>>
             {
@@ -136,7 +136,7 @@ public class ValidatorTests
     {
         var ing = new LoadedIngredient
         {
-            Manifest = new IngredientManifest("bg", "BG", LayerKind.Static, null,
+            Manifest = new IngredientManifest("bg", "BG", LayerKind.Custom, null,
                 new[] { new Variant("a", "A", 10) }),
             VariantImages = new Dictionary<string, Image<Rgba32>>
             {
@@ -163,7 +163,7 @@ public class ValidatorTests
     {
         var ing = new LoadedIngredient
         {
-            Manifest = new IngredientManifest("bg", "BG", LayerKind.Static, null,
+            Manifest = new IngredientManifest("bg", "BG", LayerKind.Custom, null,
                 new[] { new Variant("a", "A", 10) }),
             VariantImages = new Dictionary<string, Image<Rgba32>>
             {
@@ -240,4 +240,81 @@ public class ValidatorTests
         Assert.Contains(Validator.Validate(book),
             p => p.Contains("exactly one of fixed or range", StringComparison.OrdinalIgnoreCase));
     }
+
+    // Wraps a single ingredient into an otherwise-valid one-recipe cookbook.
+    private static LoadedCookBook Wrap(IngredientManifest m)
+    {
+        var ing = new LoadedIngredient
+        {
+            Manifest = m,
+            VariantImages = m.Variants.ToDictionary(
+                v => v.Id, _ => (Image<Rgba32>)new Image<Rgba32>(4, 4, new Rgba32(0, 0, 0, 255))),
+        };
+        return new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "Book", new Dimensions(4, 4),
+                new Collection("B", "", "B"), new Dictionary<string, double> { ["test"] = 10 }),
+            Recipes = new[]
+            {
+                new LoadedRecipe
+                {
+                    Manifest = new RecipeManifest("test", "Test", new[] { m.Id }, Array.Empty<IncompatibilityRule>()),
+                    Ingredients = new[] { ing },
+                },
+            },
+        };
+    }
+
+    private static Colorization Fixed(string spec) =>
+        new(ColorModel.Hsv, 5, 5, new[] { new ColorEntry(1, null, spec) });
+
+    [Fact]
+    public void Custom_with_colorization_reported() =>
+        Assert.Contains(
+            Validator.Validate(Wrap(new IngredientManifest("c", "C", LayerKind.Custom,
+                Fixed("hex:ffffff"), new[] { new Variant("v", "v", 1) }))),
+            p => p.Contains("custom", StringComparison.OrdinalIgnoreCase));
+
+    [Fact]
+    public void Valid_custom_with_null_colorization_has_no_problems() =>
+        Assert.Empty(Validator.Validate(Wrap(new IngredientManifest("c", "C", LayerKind.Custom,
+            null, new[] { new Variant("v", "v", 1) }))));
+
+    [Fact]
+    public void Static_without_colorization_reported() =>
+        Assert.Contains(
+            Validator.Validate(Wrap(new IngredientManifest("s", "S", LayerKind.Static,
+                null, new[] { new Variant("v", "v", 1) }))),
+            p => p.Contains("static", StringComparison.OrdinalIgnoreCase));
+
+    [Fact]
+    public void Static_with_range_entry_reported() =>
+        Assert.Contains(
+            Validator.Validate(Wrap(new IngredientManifest("s", "S", LayerKind.Static,
+                new Colorization(ColorModel.Hsv, 5, 5, new[] { new ColorEntry(1, new ColorRange(0, 10, 0, 10), null) }),
+                new[] { new Variant("v", "v", 1) }))),
+            p => p.Contains("static", StringComparison.OrdinalIgnoreCase));
+
+    [Fact]
+    public void Static_with_multiple_entries_reported() =>
+        Assert.Contains(
+            Validator.Validate(Wrap(new IngredientManifest("s", "S", LayerKind.Static,
+                new Colorization(ColorModel.Hsv, 5, 5, new[]
+                {
+                    new ColorEntry(1, null, "hex:ff0000"),
+                    new ColorEntry(1, null, "hex:00ff00"),
+                }),
+                new[] { new Variant("v", "v", 1) }))),
+            p => p.Contains("static", StringComparison.OrdinalIgnoreCase));
+
+    [Fact]
+    public void Valid_static_with_single_fixed_has_no_problems() =>
+        Assert.Empty(Validator.Validate(Wrap(new IngredientManifest("s", "S", LayerKind.Static,
+            Fixed("hex:d6249f"), new[] { new Variant("v", "v", 1) }))));
+
+    [Fact]
+    public void Valid_dynamic_with_range_has_no_problems() =>
+        Assert.Empty(Validator.Validate(Wrap(new IngredientManifest("d", "D", LayerKind.Dynamic,
+            new Colorization(ColorModel.Hsv, 5, 5, new[] { new ColorEntry(1, new ColorRange(0, 10, 0, 10), null) }),
+            new[] { new Variant("v", "v", 1) }))));
 }

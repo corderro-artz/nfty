@@ -10,7 +10,7 @@ public class RarityCalculatorTests
 {
     private static LoadedIngredient Ing(string id, params (string vid, double w)[] variants) => new()
     {
-        Manifest = new IngredientManifest(id, id, LayerKind.Static, null,
+        Manifest = new IngredientManifest(id, id, LayerKind.Custom, null,
             variants.Select(v => new Variant(v.vid, v.vid, v.w)).ToList()),
         VariantImages = variants.ToDictionary(v => v.vid, _ => new Image<Rgba32>(1, 1)),
     };

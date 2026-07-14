@@ -10,10 +10,11 @@
 
 ## 1. Overview
 
-`nfty` generates NFT-style asset collections from layered PNGs. Beyond typical layer-stacking, it supports two kinds of layers:
+`nfty` generates NFT-style asset collections from layered PNGs. Beyond typical layer-stacking, it supports three kinds of layers:
 
-- **Static layers** — WYSIWYG full-color PNGs, composited as-is.
 - **Dynamic layers** — grayscale *value-maps* recolored at generation time by a weighted, partly-randomized color roll. Each pixel's value/lightness is preserved exactly while hue and saturation come from the rolled base color, so the effective combination space explodes beyond the finite source images.
+- **Static layers** — grayscale *value-maps* colorized with **exactly one fixed color, deterministically** (no RNG roll, no per-asset variation). Value/lightness is preserved from the value-map; hue and saturation come from that single fixed color.
+- **Custom layers** — WYSIWYG full-color RGBA PNGs, composited **as-is** and never colorized.
 
 All layers share identical pixel dimensions (a hard requirement for compositing), fixed by the CookBook canvas.
 
@@ -49,13 +50,13 @@ The domain uses a cooking metaphor. Cooking a **CookBook** (an *uncooked Set*) p
 |------|-----------|-------|------|
 | **CookBook** | `.cbk` | An *uncooked Set* — container of Recipes | Canvas dimensions, collection metadata, per-Recipe selection weights |
 | **Recipe** | `.rcp` | A complete template for one image/character *type* | Ordered layer stack (Ingredient ids), incompatibility rules |
-| **Ingredient** | `.igt` | One layer / trait-category | `kind` (static/dynamic), colorization (if dynamic), its weighted variant images |
-| **Variant** | — (inside `.igt`) | One image + weight + name | A single PNG (RGBA for static; grayscale value-map for dynamic). Hidden behind the Ingredient; not its own file type. |
+| **Ingredient** | `.igt` | One layer / trait-category | `kind` (dynamic/static/custom), colorization (dynamic & static only), its weighted variant images |
+| **Variant** | — (inside `.igt`) | One image + weight + name | A single PNG (grayscale value-map for dynamic & static; full RGBA for custom). Hidden behind the Ingredient; not its own file type. |
 | **Set** | `.set` (packed) or folder | A generated (cooked) output bundle | Finished images + per-item metadata + aggregate rarity + seed |
 
 **Key placement decisions (moved from Model B):**
 - **Variant weights (measurements)** live on the **Ingredient**, as the collection of variant weights.
-- **`kind` (static vs dynamic)** and **colorization config** live on the **Ingredient (layer)** — they apply to whichever variant is rolled for that layer.
+- **`kind` (dynamic / static / custom)** and **colorization config** live on the **Ingredient (layer)** — they apply to whichever variant is rolled for that layer. Dynamic rolls its color per asset; static uses one fixed color deterministically; custom is composited as-is with no colorization.
 - **Incompatibility rules** live on the **Recipe**, spanning that recipe's layers.
 - **Recipe selection weights** live on the **CookBook** — used to roll which type each asset is.
 - **Canvas** stays on the **CookBook** — every variant of every ingredient of every recipe must match it, so all output images share one size.
@@ -71,19 +72,19 @@ Each domain file is a ZIP with a fixed internal layout; the custom extension is 
 manifest.json
   {
     schemaVersion, id, name,
-    kind: "static" | "dynamic",
-    colorization: {                     # present only when kind == "dynamic"
+    kind: "dynamic" | "static" | "custom",
+    colorization: {                     # present for "dynamic" and "static"; MUST be null for "custom"
       model: "hsv" | "hsl",
       quantize: { hue: <int deg>, sat: <int pct> },   # DNA precision for this layer
-      entries: [
+      entries: [                        # dynamic: ≥1 entries (fixed and/or range)
         { weight, fixed: "hex:d6249f" },              # any color spec (§4.5)
         { weight, hueRange:[h0,h1], satRange:[s0,s1] } # degrees / percent
-      ]
+      ]                                 # static: EXACTLY ONE entry, and it must be `fixed` (no ranges)
     },
     variants: [ { id, name, weight }, ... ]           # the measurements are these weights
   }
 variants/
-  <variantId>.png    # static: full RGBA · dynamic: grayscale value-map (alpha preserved)
+  <variantId>.png    # dynamic & static: grayscale value-map (alpha preserved) · custom: full RGBA
   ...
 ```
 
@@ -154,16 +155,22 @@ Zero total weight at either level is a validation error.
 ### 5.2 Incompatibility rules (per recipe)
 After a full variant roll, evaluate the recipe's rules over the selected `{ingredientId → variantId}` map. On violation, re-roll; if a layer has no legal variant, emit a clear error. A bounded retry budget guards against unsatisfiable rule sets.
 
-### 5.3 Dynamic colorization
-For a dynamic layer's rolled variant value-map:
+### 5.3 Colorization (dynamic & static)
+Both dynamic and static layers colorize a grayscale value-map; they differ only in where `(H, S)` comes from.
+
+**Dynamic** — per asset:
 1. **Roll base color:** pick one weighted `entry`; sample `H ∈ hueRange`, `S ∈ satRange` uniformly (a `fixed` entry is a degenerate range).
 2. **Recolor per pixel:** grayscale `g = R/255` becomes **V** (`hsv`) or **L** (`hsl`); the rolled `(H, S)` supply hue and saturation.
 3. **Preserve alpha** from the value-map.
 
+**Static** — identical recolor step, but `(H, S)` comes from the layer's **single fixed color**, resolved **deterministically and without consuming any RNG**. This keeps seeds reproducible regardless of how many static layers a recipe has, and produces zero per-asset variation for the layer.
+
+**Custom** — no colorization at all; the full-color image is composited as-is.
+
 Documented edges: `g = 0` → black for any hue; in HSL, `g = 1` → white; in HSV, `V = 1` stays colored. Intended, matching standard color-space behavior.
 
 ### 5.4 DNA & deduplication
-DNA = SHA-256 over: the **recipe id**, then (sorted by ingredient id) each layer's selected **variant id**, plus for dynamic layers the rolled `(H, S)` **quantized** per that layer's `colorization.quantize`. Quantizing color into the DNA means the explosive color space still contributes to uniqueness. Duplicate DNA ⇒ re-roll. If the legal unique space is exhausted before `N`, emit an error stating how many unique assets were possible.
+DNA = SHA-256 over: the **recipe id**, then (sorted by ingredient id) each layer's selected **variant id**, plus the resolved `(H, S)` **quantized** per that layer's `colorization.quantize` for **dynamic and static** layers (custom layers contribute variant id only). Quantizing color into the DNA means the explosive dynamic color space still contributes to uniqueness; a static layer's fixed color is constant, so it does not add cross-asset uniqueness but is recorded for correctness. Duplicate DNA ⇒ re-roll. If the legal unique space is exhausted before `N`, emit an error stating how many unique assets were possible.
 
 ### 5.5 Determinism
 A single string seed drives a SplitMix64 RNG, recorded in the Set manifest. Same cookbook + seed ⇒ identical output.
@@ -182,11 +189,14 @@ myset/
 ├─ set.json            # collection name, N, seed, cookbook sha256, generator version,
 │                      # recipe distribution, aggregate rarity table
 ├─ images/0001.png ...
-└─ metadata/0001.json  # ERC-721/OpenSea + extras
+├─ metadata/0001.json  # (a) standards-pure ERC-721 / OpenSea
+└─ nfty/0001.json      # (b) rich nfty extras (same stem number as its OpenSea sibling)
 ```
 
-### 6.1 Per-item metadata (`metadata/NNNN.json`)
-ERC-721/OpenSea fields plus extras. The recipe (type) is exposed as a `Type` attribute:
+**Two files per item — decision.** The item metadata is split into two files rather than one mixed file or a namespaced sub-object, so the OpenSea file is unambiguously standards-pure (nothing non-standard for a drag-and-drop web3 storefront to trip over). The rich nfty file is keyed by the same `NNNN` stem, so tools pair them by number. `metadata/` is what you point a marketplace at; `nfty/` is the tool's own detail. (`extend` reads back `nfty/NNNN.json` for DNA + numbering, and the OpenSea `attributes` for full-collection rarity.)
+
+### 6.1a Per-item OpenSea metadata (`metadata/NNNN.json`)
+Standard ERC-721 / OpenSea only — `name`, `description`, `image`, `attributes`. The recipe (type) is exposed as a `Type` attribute; each layer's rolled variant name is an attribute:
 ```json
 {
   "name": "VaporPets #1",
@@ -195,14 +205,24 @@ ERC-721/OpenSea fields plus extras. The recipe (type) is exposed as a `Type` att
   "attributes": [
     { "trait_type": "Type", "value": "Cat" },
     { "trait_type": "Background", "value": "Sunset" }
-  ],
+  ]
+}
+```
 
+### 6.1b Per-item nfty metadata (`nfty/NNNN.json`)
+The tool-specific extras, including a per-layer resolved color for **every** kind (dynamic → rolled `(H,S)`; static → its fixed `(H,S)`; custom → nulls, composited as-is), each tagged with its `kind`:
+```json
+{
   "setNumber": 1,
   "recipe": "cat",
   "dna": "<sha256 hex>",
   "seed": "<run seed>",
   "rarity": [ { "trait_type": "Background", "value": "Sunset", "rarityPct": 12.4 }, ... ],
-  "colorRolls": [ { "layer": "Aura", "model": "hsv", "h": 187, "s": 0.72 }, ... ]
+  "layers": [
+    { "layer": "aura", "kind": "dynamic", "model": "hsv", "h": 187, "s": 0.72 },
+    { "layer": "skin", "kind": "static",  "model": "hsv", "h": 30,  "s": 0.5 },
+    { "layer": "base", "kind": "custom",  "model": null,  "h": null, "s": null }
+  ]
 }
 ```
 
@@ -285,6 +305,7 @@ Each unit has one purpose and a well-defined interface so the future GUI can con
 - Target framework: **.NET 10**; imaging **ImageSharp 3.1.11**; CLI **System.CommandLine 2.0.9**.
 - Container: **ZIP + manifest.json**, schema-versioned.
 - Color roll: **weighted entries, each fixed or range**; color input uses **prefixed spec syntax**.
-- Metadata: **ERC-721/OpenSea + extras** (recipe exposed as a `Type` attribute).
+- Layer kinds: **dynamic / static / custom** — dynamic rolls color per asset; static uses one fixed color deterministically (no RNG); custom is full-color, composited as-is.
+- Metadata: **two files per item** — a standards-pure ERC-721/OpenSea `metadata/NNNN.json` (recipe exposed as a `Type` attribute) plus a rich `nfty/NNNN.json` (dna, seed, rarity, per-layer resolved color + kind).
 - Generation guarantees: **DNA dedup (recipe-aware), extend, deterministic seed, per-recipe incompatibility rules**.
 - Dimensions: **canvas only** (single source of truth); no per-layer/variant dimensions.
