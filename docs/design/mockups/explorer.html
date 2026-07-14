@@ -7,7 +7,7 @@
     --line: #1214181f;  --line-strong: #12141833;
     --guide: #1214182b; --guide-hi: #12141859;
     --accent: #a11f31;  --accent-hover: #b92f44;  --accent-text: #97192a; --on-accent: #f7f2ec;
-    --success: #3d6b52; --warning: #6a4a25;  --info: #3b5b6f;
+    --success: #3d6b52; --warning: #6a4a25;  --info: #3b5b6f; --custom: #6d4f9c;
     --accent-wash: #a11f3114; --accent-line: #a11f3140;
     --tile: #ece5db;
     --shadow: 0 1px 2px #12141810, 0 18px 48px -24px #12141833;
@@ -22,7 +22,7 @@
       --line: #f2ede624;  --line-strong: #f2ede633;
       --guide: #f2ede61f; --guide-hi: #f2ede63d;
       --accent: #a11f31;  --accent-hover: #ba3447;  --accent-text: #e0788a; --on-accent: #f7f2ec;
-      --success: #a6c08a; --warning: #e0c28c;  --info: #7fb0c4;
+      --success: #a6c08a; --warning: #e0c28c;  --info: #7fb0c4; --custom: #c3a6ea;
       --accent-wash: #a11f3126; --accent-line: #a11f3166;
       --tile: #12141c;
       --shadow: 0 1px 2px #00000060, 0 22px 60px -28px #000000;
@@ -33,7 +33,7 @@
     --fg: #121318; --fg-muted: #121418b8; --line: #1214181f; --line-strong: #12141833;
     --guide: #1214182b; --guide-hi: #12141859;
     --accent: #a11f31; --accent-hover: #b92f44; --accent-text: #97192a; --on-accent: #f7f2ec;
-    --success: #3d6b52; --warning: #6a4a25; --info: #3b5b6f;
+    --success: #3d6b52; --warning: #6a4a25; --info: #3b5b6f; --custom: #6d4f9c;
     --accent-wash: #a11f3114; --accent-line: #a11f3140; --tile: #ece5db;
     --shadow: 0 1px 2px #12141810, 0 18px 48px -24px #12141833;
   }
@@ -42,7 +42,7 @@
     --fg: #f2ede6; --fg-muted: #f2ede6c7; --line: #f2ede624; --line-strong: #f2ede633;
     --guide: #f2ede61f; --guide-hi: #f2ede63d;
     --accent: #a11f31; --accent-hover: #ba3447; --accent-text: #e0788a; --on-accent: #f7f2ec;
-    --success: #a6c08a; --warning: #e0c28c; --info: #7fb0c4;
+    --success: #a6c08a; --warning: #e0c28c; --info: #7fb0c4; --custom: #c3a6ea;
     --accent-wash: #a11f3126; --accent-line: #a11f3166; --tile: #12141c;
     --shadow: 0 1px 2px #00000060, 0 22px 60px -28px #000000;
   }
@@ -114,9 +114,11 @@
            text-align: center; flex: 0 0 auto; cursor: default; }
   .kmark.dyn  { color: var(--info); }
   .kmark.stat { color: var(--warning); }
+  .kmark.cust { color: var(--custom); }
   .kind-txt { font-family: var(--font-mono); font-size: 12px; }
   .kind-txt.dyn  { color: var(--info); }
   .kind-txt.stat { color: var(--warning); }
+  .kind-txt.cust { color: var(--custom); }
 
   /* reserved refined badge — squared, tight, subtle (held for later) */
   .kbadge { font-family: var(--font-mono); font-size: 10px; letter-spacing: .03em; line-height: 1;
@@ -153,7 +155,9 @@
 
   /* panes */
   .panes-scroll { overflow-x: auto; }
-  .panes { display: grid; grid-template-columns: 286px minmax(392px, 1fr) 336px; min-height: 512px; }
+  .panes { display: grid; grid-template-columns: 286px minmax(392px, 1fr) 336px; min-height: 440px; }
+  .panes.two { grid-template-columns: 286px minmax(560px, 1fr); }
+  .panes.two .pane.inspector { display: none; }
   @media (max-width: 900px) { .panes { min-width: 1000px; } }
   .pane { border-right: 1px solid var(--line); min-width: 0; }
   .pane:last-child { border-right: 0; }
@@ -162,6 +166,8 @@
   .detail-h .dcount { font-family: var(--font-mono); font-size: 11px; color: var(--fg-muted);
                       letter-spacing: 0; text-transform: none; }
   .detail-h #detailTitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 0 1 auto; }
+  .detail-h .dico { display: inline-flex; flex: 0 0 auto; color: var(--fg-muted); }
+  .detail-h .dico .ti { width: 14px; height: 14px; }
 
   .detail-h .vtag { margin-left: auto; font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em;
                     text-transform: uppercase; color: var(--fg-muted); border: 1px solid var(--line);
@@ -221,6 +227,7 @@
            padding: 3px 6px; border-radius: var(--r-xs); border: 1px solid transparent; cursor: default; }
   .fchip.dyn  { color: var(--info);    background: color-mix(in srgb, var(--info) 12%, transparent);    border-color: color-mix(in srgb, var(--info) 26%, transparent); }
   .fchip.stat { color: var(--warning); background: color-mix(in srgb, var(--warning) 13%, transparent); border-color: color-mix(in srgb, var(--warning) 28%, transparent); }
+  .fchip.cust { color: var(--custom);  background: color-mix(in srgb, var(--custom) 13%, transparent);  border-color: color-mix(in srgb, var(--custom) 28%, transparent); }
   .ftimes { color: var(--fg-muted); opacity: .5; font-family: var(--font-mono); font-size: 11px; }
   .crow .ceq { color: var(--fg-muted); font-family: var(--font-mono); font-size: 12px; margin: 0 3px; }
   .crow .cnum { font-family: var(--font-mono); font-weight: 700; font-size: 13.5px; font-variant-numeric: tabular-nums; }
@@ -243,7 +250,7 @@
                   letter-spacing: .1em; text-transform: uppercase; color: var(--fg-muted);
                   padding: 7px 10px; border-bottom: 1px solid var(--line); }
   table.data th.num { text-align: right; }
-  table.data td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  table.data td { padding: 12px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
   table.data tbody tr { cursor: pointer; }
   table.data tbody tr:hover td { background: var(--bg-alt2); }
   table.data tbody tr.sel td { background: var(--accent-wash); }
@@ -272,8 +279,7 @@
   .stpill.ok { color: var(--success); background: color-mix(in srgb, var(--success) 12%, transparent);
                border-color: color-mix(in srgb, var(--success) 26%, transparent); }
 
-  /* ---- recipe · curated hybrid (portrait hero above compact layer table) ---- */
-  .recipe-stack { display: flex; flex-direction: column; gap: 14px; }
+  /* ---- recipe · portrait hero + layer table ---- */
   .rhero { display: flex; gap: 16px; align-items: center; padding: 14px 15px; border: 1px solid var(--line);
            border-radius: var(--r-md); background: linear-gradient(var(--bg-alt2), var(--panel));
            box-shadow: inset 0 1px 0 color-mix(in srgb, var(--fg) 6%, transparent); }
@@ -289,16 +295,17 @@
   .dice.spin svg { animation: rr .45s ease; }
   @keyframes rr { from { transform: rotate(0); } to { transform: rotate(-360deg); } }
   .rmeta { flex: 1; min-width: 0; }
-  .rmath { font-family: var(--font-mono); font-size: 15px; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
-  .rmath b { font-weight: 700; }
-  .rmath .u { color: var(--fg-muted); font-size: 12px; margin-left: 6px; letter-spacing: 0; }
+  .rfactors { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 6px; }
+  .rfactors .feq { color: var(--fg-muted); font-family: var(--font-mono); font-size: 13px; margin: 0 2px; }
+  .rtotal { font-family: var(--font-mono); font-size: 20px; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+  .rlabel { font-size: 12px; color: var(--fg-muted); margin-top: 5px; }
   .rstats { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 12px; }
   .rstat { font-size: 12px; color: var(--fg-muted); }
   .rstat b { color: var(--fg); font-family: var(--font-mono); font-variant-numeric: tabular-nums; margin-left: 6px; font-weight: 600; }
   .rstack .sub-h { display: block; margin-bottom: 9px; }
 
   /* ---- ingredient · curated hybrid (art hero strip + sortable variant table) ---- */
-  .ing-hy { display: flex; flex-direction: column; gap: 14px; }
+  .ing-hy { display: flex; flex-direction: column; gap: 18px; }
   .vhero { display: flex; gap: 15px; align-items: center; padding: 14px 15px; border: 1px solid var(--line);
            border-radius: var(--r-md); background: linear-gradient(var(--bg-alt2), var(--panel));
            box-shadow: inset 0 1px 0 color-mix(in srgb, var(--fg) 6%, transparent); }
@@ -319,6 +326,54 @@
   th.sortable:hover { color: var(--fg); }
   th.sortable.on { color: var(--accent-text); }
 
+  /* ---- cookbook · identity header + two-column composition ---- */
+  .cbk-id { display: flex; align-items: flex-start; gap: 14px; padding: 14px 16px; margin-bottom: 17px;
+            border: 1px solid var(--line); border-radius: var(--r-md);
+            background: linear-gradient(var(--bg-alt2), var(--panel));
+            box-shadow: inset 0 1px 0 color-mix(in srgb, var(--fg) 6%, transparent); }
+  .cbk-id .idmain { flex: 1; min-width: 0; }
+  .cbk-id .idname { display: flex; align-items: center; gap: 9px; font-family: var(--font-mono); font-weight: 700; font-size: 18px; letter-spacing: -.01em; }
+  .cbk-id .idname .ti { width: 19px; height: 19px; flex: 0 0 auto; }
+  .cbk-id .iddesc { font-size: 12.5px; color: var(--fg-muted); margin-top: 5px; max-width: 64ch; line-height: 1.5; }
+  .cbk-id .idchips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+  .idchip { font-family: var(--font-mono); font-size: 11px; display: inline-flex; align-items: center; gap: 6px;
+            padding: 4px 9px; border-radius: var(--r-xs); border: 1px solid var(--line-strong); color: var(--fg-muted); }
+  .idchip b { color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  .cbk-cols { display: grid; grid-template-columns: minmax(260px, 0.82fr) minmax(340px, 1.18fr); gap: 24px; align-items: stretch; }
+  @media (max-width: 680px) { .cbk-cols { grid-template-columns: 1fr; } }
+  .statband.two2 { grid-template-columns: repeat(2, 1fr); }
+  .cbk-right { display: flex; }
+  .cbk-right .cspace { flex: 1; display: flex; flex-direction: column; }
+  .cbk-right .crows { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+
+  /* ---- recipe · main column (hero + layers) + rules rail (right) ---- */
+  .recipe-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(208px, 1fr); gap: 16px; align-items: stretch; }
+  @media (max-width: 680px) { .recipe-grid { grid-template-columns: 1fr; } }
+  .recipe-rules { min-width: 0; display: flex; }
+  .recipe-rules .rules-panel { flex: 1; overflow-y: auto; }
+  .recipe-main { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+  .mcpc { color: var(--fg-muted); margin-left: 7px; }
+
+  /* ---- incompatibility rules — table-ized rows (recipe rail + ingredient inspector) ---- */
+  .rules-panel { border: 1px solid var(--line); border-radius: var(--r-md); padding: 12px 13px; background: var(--bg-alt2);
+                 box-shadow: inset 0 1px 0 color-mix(in srgb, var(--fg) 5%, transparent); }
+  .rules-h { display: flex; align-items: baseline; gap: 7px; }
+  .rules-ct { font-family: var(--font-mono); font-size: 11px; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+  .rules { display: flex; flex-direction: column; margin-top: 4px; }
+  .rrow { display: flex; gap: 9px; align-items: flex-start; padding: 9px 0; border-bottom: 1px solid var(--line); }
+  .rrow:last-child { border-bottom: 0; padding-bottom: 2px; }
+  .rop { flex: 0 0 auto; width: 20px; height: 20px; display: grid; place-items: center; border-radius: var(--r-xs);
+         font-family: var(--font-mono); font-size: 12px; font-weight: 700; margin-top: 1px; cursor: default; }
+  .rop.exclude { color: var(--accent-text); background: var(--accent-wash); border: 1px solid var(--accent-line); }
+  .rop.require { color: var(--info); background: color-mix(in srgb, var(--info) 12%, transparent); border: 1px solid color-mix(in srgb, var(--info) 28%, transparent); }
+  .rpair { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  .rchip { display: inline-flex; align-items: baseline; gap: 6px; padding: 4px 9px; border-radius: var(--r-xs);
+           background: var(--panel); border: 1px solid var(--line-strong); align-self: flex-start; max-width: 100%; }
+  .rchip .rcl { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--fg-muted); flex: 0 0 auto; }
+  .rchip .rcv { font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+  .rules-empty { font-size: 12.5px; color: var(--fg-muted); margin-top: 10px; }
+
   /* ---- inspector ---- */
   .insp { padding: 15px 16px 18px; display: flex; flex-direction: column; gap: 15px; }
   .insp-prev { background: var(--bg-alt2); border: 1px solid var(--line); border-radius: var(--r-md);
@@ -331,9 +386,10 @@
           border-bottom: 1px dashed var(--line); }
   .prop .k { color: var(--fg-muted); } .prop .v { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
   .prop .v.dyn { color: var(--info); }
-  .colorroll { display: flex; flex-direction: column; gap: 8px; }
-  .rollstrip { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
-  .rollstrip canvas { width: 36px; height: 36px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--tile); }
+  .prop .v.stat { color: var(--warning); }
+  .prop .v.cust { color: var(--custom); }
+  .insp-sec { display: flex; flex-direction: column; }
+  .insp-sec .sub-h { margin-bottom: 9px; }
 
   /* ---- status bar ---- */
   .statusbar { display: flex; align-items: center; gap: 14px; padding: 8px 16px; border-top: 1px solid var(--line);
@@ -370,9 +426,9 @@
     <div>
       <h1>nfty · explorer</h1>
       <p>Browse a cookbook the way you'd browse a filesystem. Select any node in <b>Contents</b> and the center pane
-        <span class="a">adapts to what it is</span>: a cookbook shows its composition and combination space, a recipe
-        pairs a sample roll with its layer stack, and an ingredient opens a sortable table of weighted variants.
-        Unlock, top-right, to edit.</p>
+        <span class="a">adapts to what it is</span>: a cookbook lays out its identity, composition and DNA space, a
+        recipe pairs a sample roll with its layer stack and rules, and an ingredient opens a sortable variant table
+        beside a live Inspector for the selected variant. Unlock, top-right, to edit.</p>
     </div>
     <button class="ghost" id="theme" title="Toggle light / dark">◐ Theme</button>
   </div>
@@ -411,6 +467,7 @@
           <!-- type-aware detail -->
           <div class="pane detail">
             <div class="pane-h detail-h">
+              <span class="dico" id="detailIcon"></span>
               <span id="detailTitle"></span>
               <span class="dcount" id="detailCount"></span>
               <span class="vtag" id="viewTag"></span>
@@ -418,8 +475,8 @@
             <div class="detail-body" id="detailBody"></div>
           </div>
 
-          <!-- inspector -->
-          <div class="pane">
+          <!-- inspector (ingredient view only) -->
+          <div class="pane inspector">
             <div class="pane-h">Inspector</div>
             <div class="insp" id="inspBody"></div>
           </div>
@@ -451,7 +508,7 @@
 (function () {
   var root = document.documentElement, win = document.getElementById('window');
   var base = 1.25, zoomPct = 100, effZoom = base, locked = true;
-  var TARGET_SUPPLY = 5000;
+  var TARGET_SUPPLY = 500;
 
   /* ---------- icons ---------- */
   var CBICO = '<svg class="cbico" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 3.5h11.4a.7.7 0 0 1 .7.7V20a.7.7 0 0 1-.7.7H6.3A2.3 2.3 0 0 1 4 18.4V5.8A2.3 2.3 0 0 1 6.3 3.5Z" fill="var(--panel)" stroke="currentColor" stroke-width="1.4"/><path d="M4.4 18.1a2.3 2.3 0 0 1 1.9-1h11.8" stroke="currentColor" stroke-width="1.4"/><path d="M9.4 3.5h3.4v5.2l-1.7-1.2-1.7 1.2z" fill="var(--accent)"/></svg>';
@@ -469,25 +526,37 @@
   function vs(kind, defs) { return defs.map(function (d) { return { n: d[0], k: kind, w: d[1], hue: d[2] }; }); }
   var COOK = {
     name: 'VaporPets',
+    symbol: 'VPET',
+    description: 'A collection of neon companions, each one hatched from its own recipe.',
+    canvas: { w: 1000, h: 1000 },
     recipes: [
       { n: 'Aurora', w: 50, hue: 196, ings: [
         { n: 'Body', kind: 'dynamic', variants: vs('dynamic', [['Slime', 40, 196], ['Fluff', 25, 118], ['Chitin', 20, 284], ['Ghostly', 15, 348]]) },
         { n: 'Ears', kind: 'dynamic', variants: vs('dynamic', [['Pointed', 45, 150], ['Round', 35, 158], ['Tufted', 20, 142]]) },
         { n: 'Eyes', kind: 'static', variants: vs('static', [['Wide', 30, 40], ['Sleepy', 25, 40], ['Star', 20, 40], ['Cyclops', 15, 40], ['Void', 10, 40]]) },
-        { n: 'Accessory', kind: 'static', variants: vs('static', [['None', 35, 284], ['Scarf', 20, 284], ['Crown', 15, 284], ['Halo', 12, 284], ['Bell', 10, 284], ['Antenna', 8, 284]]) }
+        { n: 'Accessory', kind: 'custom', variants: vs('custom', [['None', 35, 284], ['Scarf', 20, 46], ['Crown', 15, 44], ['Halo', 12, 190], ['Bell', 10, 20], ['Antenna', 8, 130]]) }
+      ], rules: [
+        { type: 'exclude', when: { ing: 'Body', variant: 'Ghostly' }, forbid: [{ ing: 'Accessory', variant: 'Crown' }] },
+        { type: 'require', when: { ing: 'Accessory', variant: 'Halo' }, force: { ing: 'Eyes', variant: 'Star' } },
+        { type: 'exclude', when: { ing: 'Ears', variant: 'Tufted' }, forbid: [{ ing: 'Accessory', variant: 'Antenna' }] },
+        { type: 'exclude', when: { ing: 'Body', variant: 'Chitin' }, forbid: [{ ing: 'Ears', variant: 'Round' }] }
       ] },
       { n: 'Ember', w: 35, hue: 18, ings: [
         { n: 'Body', kind: 'dynamic', variants: vs('dynamic', [['Ember', 40, 18], ['Ash', 30, 10], ['Molten', 18, 32], ['Cinder', 12, 4]]) },
-        { n: 'Horns', kind: 'static', variants: vs('static', [['Curved', 45, 20], ['Straight', 35, 20], ['Broken', 20, 20]]) },
+        { n: 'Horns', kind: 'custom', variants: vs('custom', [['Curved', 45, 26], ['Straight', 35, 12], ['Broken', 20, 40]]) },
         { n: 'Eyes', kind: 'static', variants: vs('static', [['Wide', 30, 40], ['Sleepy', 28, 40], ['Star', 24, 40], ['Void', 18, 40]]) },
         { n: 'Aura', kind: 'dynamic', variants: vs('dynamic', [['Faint', 45, 300], ['Bright', 33, 312], ['Blaze', 22, 288]]) }
+      ], rules: [
+        { type: 'exclude', when: { ing: 'Body', variant: 'Molten' }, forbid: [{ ing: 'Aura', variant: 'Faint' }] },
+        { type: 'exclude', when: { ing: 'Horns', variant: 'Broken' }, forbid: [{ ing: 'Aura', variant: 'Blaze' }] },
+        { type: 'require', when: { ing: 'Body', variant: 'Cinder' }, force: { ing: 'Eyes', variant: 'Void' } }
       ] },
       { n: 'Tidepool', w: 15, hue: 188, ings: [
         { n: 'Body', kind: 'dynamic', variants: vs('dynamic', [['Coral', 30, 10], ['Kelp', 25, 120], ['Pearl', 20, 50], ['Abyss', 15, 240], ['Reef', 10, 170]]) },
         { n: 'Fins', kind: 'dynamic', variants: vs('dynamic', [['Wide', 35, 180], ['Frill', 30, 188], ['Spiny', 20, 172], ['Silk', 15, 196]]) },
         { n: 'Eyes', kind: 'static', variants: vs('static', [['Wide', 30, 40], ['Sleepy', 26, 40], ['Star', 24, 40], ['Void', 20, 40]]) },
-        { n: 'Bubbles', kind: 'static', variants: vs('static', [['None', 35, 210], ['Few', 25, 210], ['Stream', 18, 210], ['Cloud', 12, 210], ['Halo', 10, 210]]) }
-      ] }
+        { n: 'Bubbles', kind: 'custom', variants: vs('custom', [['None', 35, 210], ['Few', 25, 196], ['Stream', 18, 172], ['Cloud', 12, 220], ['Halo', 10, 150]]) }
+      ], rules: [] }
     ]
   };
 
@@ -583,12 +652,16 @@
   }
 
   /* ================= renderers ================= */
-  function renderAll() { tip.classList.remove('on'); renderCrumbs(); renderTree(); renderDetail(); renderInspector(); renderToolbar(); renderStatus(); redrawCanvases(); }
+  /* kind → css class / abbreviation (dynamic · static · custom) */
+  function kcls(k) { return k === 'dynamic' ? 'dyn' : k === 'custom' ? 'cust' : 'stat'; }
+  function kabbr(k) { return k === 'dynamic' ? 'D' : k === 'custom' ? 'C' : 'S'; }
+  function renderAll() { tip.classList.remove('on'); setLayout(); renderCrumbs(); renderTree(); renderDetail(); renderInspector(); renderToolbar(); renderStatus(); redrawCanvases(); }
+  function setLayout() { document.getElementById('explorer').classList.toggle('two', state.type !== 'ingredient'); }
 
   /* ---- breadcrumb ---- */
   function renderCrumbs() {
     var t = state.type, h = CBICO;
-    h += '<span class="cseg' + (t === 'cookbook' ? ' active' : '') + '" data-key="cbk" role="link" tabindex="0">' + COOK.name + '<span class="ext">.cbk</span></span>';
+    h += '<span class="cseg' + (t === 'cookbook' ? ' active' : '') + '" data-key="cbk" role="link" tabindex="0">' + COOK.name + '</span>';
     if (t === 'recipe' || t === 'ingredient') h += '<span class="sep" aria-hidden="true">›</span><span class="cseg' + (t === 'recipe' ? ' active' : '') + '" data-key="r:' + state.recipe + '" role="link" tabindex="0">' + state.recipe + '</span>';
     if (t === 'ingredient') h += '<span class="sep" aria-hidden="true">›</span><span class="cseg active" aria-current="page">' + state.ing + '</span>';
     document.getElementById('crumbs').innerHTML = h;
@@ -597,13 +670,13 @@
   /* ---- tree ---- */
   function nodeHTML(o) {
     var caret = '<span class="tw"' + (o.caret ? ' data-caret="' + o.key + '"' : '') + '>' + (o.caret || '') + '</span>';
-    var km = o.kind ? '<span class="kmark ' + (o.kind === 'dynamic' ? 'dyn' : 'stat') + '" data-tip="' + o.kind + '">' + (o.kind === 'dynamic' ? 'D' : 'S') + '</span>' : '';
+    var km = o.kind ? '<span class="kmark ' + kcls(o.kind) + '" data-tip="' + o.kind + '">' + kabbr(o.kind) + '</span>' : '';
     var ct = (o.ct != null) ? '<span class="ct"' + (o.ctTip ? ' data-tip="' + o.ctTip + '"' : '') + '>' + o.ct + '</span>' : '';
     return '<div class="node ' + (o.cls || '') + (o.sel ? ' sel' : '') + '" data-key="' + o.key + '" role="button" tabindex="0" aria-pressed="' + (o.sel ? 'true' : 'false') + '">' + caret + km + o.icon + '<span class="nlabel">' + o.label + '</span>' + ct + '</div>';
   }
   function renderTree() {
     var rootOpen = expanded['cbk'], html = '';
-    html += nodeHTML({ key: 'cbk', cls: 'root', caret: rootOpen ? '▾' : '▸', icon: ICON.cook, label: COOK.name + '.cbk', ct: COOK.recipes.length + ' recipes', sel: state.type === 'cookbook' });
+    html += nodeHTML({ key: 'cbk', cls: 'root', caret: rootOpen ? '▾' : '▸', icon: ICON.cook, label: COOK.name, ct: COOK.recipes.length + ' recipes', sel: state.type === 'cookbook' });
     if (rootOpen) {
       html += '<div class="branch">';
       COOK.recipes.forEach(function (r) {
@@ -634,54 +707,95 @@
   function mulberry(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
   function pickW(list, rnd) { var s = list.reduce(function (a, v) { return a + v.w; }, 0) * rnd(); for (var i = 0; i < list.length; i++) { s -= list[i].w; if (s <= 0) return list[i]; } return list[list.length - 1]; }
   function sampleBodyHue(r, seed) { var rnd = mulberry(r.n.length * 97 + seed * 131 + 7); return pickW(r.ings[0].variants, rnd).hue; }
-  function statband(items) { return '<div class="statband">' + items.map(function (m) { return '<div class="metric' + (m[2] ? ' accent' : '') + '"><div class="mv">' + m[0] + '</div><div class="ml">' + m[1] + '</div></div>'; }).join('') + '</div>'; }
-  function cookFooter() { return '<div class="cookbar"><div class="ci">Target supply <b>' + fmt(TARGET_SUPPLY) + '</b> · ' + fmt(totalCombos()) + ' unique combinations available</div><button class="tbtn accent">' + ICON.cook_go + ' Cook set</button></div>'; }
+  function statband(items, cls) { return '<div class="statband' + (cls ? ' ' + cls : '') + '">' + items.map(function (m) { return '<div class="metric' + (m[2] ? ' accent' : '') + '"' + (m[3] ? ' data-tip="' + m[3] + '"' : '') + '><div class="mv">' + m[0] + '</div><div class="ml">' + m[1] + '</div></div>'; }).join('') + '</div>'; }
+  function cookFooter() { return '<div class="cookbar"><div class="ci">Target supply <b>' + fmt(TARGET_SUPPLY) + '</b> of ' + fmt(totalCombos()) + ' unique DNA</div><button class="tbtn accent">' + ICON.cook_go + ' Cook set</button></div>'; }
 
   function combospace() {
     var recs = COOK.recipes, tot = totalCombos();
     var rows = recs.map(function (r) {
       var c = recipeCombos(r), share = c / tot * 100;
-      var chips = r.ings.map(function (ig) { return '<span class="fchip ' + (ig.kind === 'dynamic' ? 'dyn' : 'stat') + '" data-tip="' + ig.n + ' · ' + ig.kind + ' · ' + ig.variants.length + ' variants">' + ig.variants.length + '</span>'; }).join('<span class="ftimes">×</span>');
+      var chips = r.ings.map(function (ig) { return '<span class="fchip ' + kcls(ig.kind) + '" data-tip="' + ig.n + ' · ' + ig.kind + ' · ' + ig.variants.length + ' variants">' + ig.variants.length + '</span>'; }).join('<span class="ftimes">×</span>');
       return '<div class="crow"><div class="top"><span class="cdot" style="background:' + hsv(r.hue, .55, .7) + '"></span><span class="cname">' + r.n + '</span>' +
         '<span class="factors">' + chips + '<span class="ceq">=</span><span class="cnum">' + fmt(c) + '</span></span></div>' +
-        '<div class="bottom"><span class="cbar"><i style="width:' + share + '%;background:' + hsv(r.hue, .5, .72) + '"></i></span><span class="cshare">' + share.toFixed(1) + '% of space</span></div></div>';
+        '<div class="bottom"><span class="cbar"><i style="width:' + share + '%;background:' + hsv(r.hue, .5, .72) + '"></i></span><span class="cshare">' + share.toFixed(1) + '% of DNA</span></div></div>';
     }).join('');
-    return '<div class="cspace"><div class="sub-h">Combination space<span class="hint">how each recipe multiplies out</span></div>' + rows +
-      '<div class="cfoot">' + recs.length + ' recipes · <b>' + fmt(tot) + '</b> unique combinations across the cookbook</div></div>';
+    return '<div class="cspace"><div class="sub-h">DNA space</div><div class="crows">' + rows + '</div></div>';
   }
-  function cookA() {
+  function cbkIdentity() {
+    var c = COOK;
+    return '<div class="cbk-id"><div class="idmain">' +
+      '<div class="idname">' + ICON.cook + c.name + '</div>' +
+      '<div class="iddesc">' + c.description + '</div>' +
+      '<div class="idchips">' +
+        '<span class="idchip">symbol <b>' + c.symbol + '</b></span>' +
+        '<span class="idchip">canvas <b>' + c.canvas.w + ' × ' + c.canvas.h + '</b></span>' +
+        '<span class="idchip">target supply <b>' + fmt(TARGET_SUPPLY) + '</b></span>' +
+        '<span class="idchip">status <b style="color:var(--success)">● Valid</b></span>' +
+      '</div></div></div>';
+  }
+  function mintDist() {
     var recs = COOK.recipes, ws = weightSum();
-    var stat = statband([[recs.length, 'Recipes'], [layerCount(), 'Layers'], [fmt(variantCount()), 'Variants'], [fmt(totalCombos()), 'Combinations', true]]);
     var segs = recs.map(function (r) { var pc = r.w / ws * 100; return '<span style="width:' + pc + '%;background:' + hsv(r.hue, .5, .72) + '" data-tip="' + r.n + ' · ' + pc.toFixed(0) + '%"></span>'; }).join('');
     var legend = recs.map(function (r) { var pc = r.w / ws * 100; return '<span class="li"><span class="sw" style="background:' + hsv(r.hue, .5, .72) + '"></span>' + r.n + ' <span class="pc">' + pc.toFixed(0) + '%</span></span>'; }).join('');
-    return stat +
-      '<div class="dist"><div class="sub-h">Mint distribution<span class="hint">by recipe weight</span></div><div class="distbar">' + segs + '</div><div class="distlegend">' + legend + '</div></div>' +
-      combospace() + cookFooter();
+    return '<div class="dist"><div class="sub-h">Mint distribution</div><div class="distbar">' + segs + '</div><div class="distlegend">' + legend + '</div></div>';
+  }
+  function cookA() {
+    var stat = statband([[COOK.recipes.length, 'Recipes'], [layerCount(), 'Layers'], [fmt(variantCount()), 'Variants'], [fmt(totalCombos()), 'Unique DNA', true, 'Distinct assets the cookbook can generate — one DNA per recipe + variant + color combination']], 'two2');
+    return cbkIdentity() +
+      '<div class="cbk-cols"><div class="cbk-left">' + stat + mintDist() + '</div>' +
+      '<div class="cbk-right">' + combospace() + '</div></div>' +
+      cookFooter();
+  }
+  function mostCommon(ig) { return ig.variants.reduce(function (a, v) { return v.w > a.w ? v : a; }, ig.variants[0]); }
+  function ruleChip(t) { return '<span class="rchip"><span class="rcl">' + t.ing + '</span><span class="rcv">' + t.variant + '</span></span>'; }
+  function ruleRow(ru) {
+    var mk = function (glyph, cls, tip, a, b) {
+      return '<div class="rrow"><span class="rop ' + cls + '" data-tip="' + tip + '">' + glyph + '</span><div class="rpair">' + ruleChip(a) + ruleChip(b) + '</div></div>';
+    };
+    if (ru.type === 'exclude') return ru.forbid.map(function (x) { return mk('✕', 'exclude', 'Never together', ru.when, x); }).join('');
+    return mk('→', 'require', 'Always together', ru.when, ru.force);
+  }
+  function rulesFor(r, ingName) {
+    return (r.rules || []).filter(function (ru) {
+      if (ru.when.ing === ingName) return true;
+      return ru.type === 'exclude' ? ru.forbid.some(function (x) { return x.ing === ingName; }) : ru.force.ing === ingName;
+    });
+  }
+  function rulesHead(n) { return '<div class="rules-h"><span class="sub-h">Rules</span>' + (n ? '<span class="rules-ct">' + n + '</span>' : '') + '</div>'; }
+  function renderRules(r) {
+    var rules = r.rules || [];
+    if (!rules.length) return '<div class="rules-panel">' + rulesHead(0) + '<div class="rules-empty">No incompatibilities — every combination is allowed.</div></div>';
+    return '<div class="rules-panel">' + rulesHead(rules.length) + '<div class="rules">' + rules.map(ruleRow).join('') + '</div></div>';
   }
   function recipeView(r) {
     var hue = sampleBodyHue(r, state.rerollSeed);
-    var mathExpr = r.ings.map(function (i) { return i.variants.length; }).join(' × ');
+    var factors = r.ings.map(function (ig) {
+      return '<span class="fchip ' + kcls(ig.kind) + '" data-tip="' + ig.n + ' · ' + ig.kind + ' · ' + ig.variants.length + ' variants">' + ig.variants.length + '</span>';
+    }).join('<span class="ftimes">×</span>');
     var hero = '<div class="rhero">' +
       '<div class="rport-wrap"><canvas class="petc" id="rport" data-size="92" data-hue="' + hue + '" data-sat="0.58" data-val="0.86"></canvas>' +
-      '<button class="dice" id="reroll" aria-label="Reroll sample creation" data-tip="Reroll sample">' + ICON.dice + '</button></div>' +
-      '<div class="rmeta"><div class="rmath">' + mathExpr + ' = <b>' + fmt(recipeCombos(r)) + '</b><span class="u">unique combinations</span></div>' +
-      '<div class="rstats">' +
-        '<span class="rstat">Weight<b>' + r.w + '</b></span>' +
-        '<span class="rstat">Mint share<b>' + (r.w / weightSum() * 100).toFixed(0) + '%</b></span>' +
-        '<span class="rstat">Layers<b>' + r.ings.length + '</b></span>' +
-        '<span class="rstat">Variants<b>' + recipeVariants(r) + '</b></span>' +
-      '</div></div></div>';
-    var maxv = Math.max.apply(null, r.ings.map(function (i) { return i.variants.length; }));
+      '<button class="dice" id="reroll" aria-label="Reroll sample" data-tip="Reroll sample">' + ICON.dice + '</button></div>' +
+      '<div class="rmeta">' +
+        '<div class="rfactors">' + factors + '<span class="feq">=</span><b class="rtotal">' + fmt(recipeCombos(r)) + '</b></div>' +
+        '<div class="rlabel">unique DNA</div>' +
+        '<div class="rstats">' +
+          '<span class="rstat">Weight<b>' + r.w + '</b></span>' +
+          '<span class="rstat">Mint share<b>' + (r.w / weightSum() * 100).toFixed(0) + '%</b></span>' +
+          '<span class="rstat">Variants<b>' + recipeVariants(r) + '</b></span>' +
+        '</div></div></div>';
     var rows = r.ings.map(function (ig, idx) {
       var sel = state.type === 'ingredient' && state.ing === ig.n;
+      var mc = mostCommon(ig), sum = ig.variants.reduce(function (a, v) { return a + v.w; }, 0) || 1;
       return '<tr data-ik="' + ig.n + '" class="' + (sel ? 'sel' : '') + '"><td class="num">' + (idx + 1) + '</td>' +
         '<td><span class="vname">' + ig.n + '</span></td>' +
-        '<td><span class="kind-txt ' + (ig.kind === 'dynamic' ? 'dyn' : 'stat') + '">' + ig.kind + '</span></td>' +
-        '<td class="num"><div class="wcell" style="align-items:flex-end">' + ig.variants.length + '<div class="wbar"><i style="width:' + (ig.variants.length / maxv * 100) + '%"></i></div></div></td></tr>';
+        '<td><span class="kind-txt ' + kcls(ig.kind) + '">' + ig.kind + '</span></td>' +
+        '<td class="num">' + ig.variants.length + '</td>' +
+        '<td>' + mc.n + '<span class="mcpc">' + (mc.w / sum * 100).toFixed(0) + '%</span></td></tr>';
     }).join('');
-    var table = '<div class="rstack"><div class="sub-h">Layers<span class="hint">top = frontmost</span></div>' +
-      '<table class="data"><thead><tr><th class="num" style="width:34px">#</th><th>Ingredient</th><th>Kind</th><th class="num">Variants</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
-    return '<div class="recipe-stack">' + hero + table + '</div>';
+    var table = '<div class="rstack"><div class="sub-h">Layers</div>' +
+      '<table class="data"><thead><tr><th class="num" style="width:34px">#</th><th>Layer</th><th>Kind</th><th class="num">Variants</th><th>Most common</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+    var main = '<div class="recipe-main">' + hero + table + '</div>';
+    return '<div class="recipe-grid">' + main + '<div class="recipe-rules">' + renderRules(r) + '</div></div>';
   }
 
   function ingHero(ig) {
@@ -690,7 +804,7 @@
     var v = ig.variants[state.variant] || ig.variants[0]; var inr = v.w / sum * 100, ov = inr * mint;
     return '<div class="vhero" id="vhero">' + petCv(84, v.hue, 0.58, 0.86) +
       '<div class="hbody"><div class="hname">' + v.n + '</div>' +
-      '<div class="hsub"><span class="kind-txt ' + (v.k === 'dynamic' ? 'dyn' : 'stat') + '">' + v.k + '</span> · variant ' + (state.variant + 1) + ' of ' + ig.variants.length + '</div>' +
+      '<div class="hsub"><span class="kind-txt ' + kcls(v.k) + '">' + v.k + '</span> · variant ' + (state.variant + 1) + ' of ' + ig.variants.length + '</div>' +
       '<div class="rarity">' +
         '<div class="rr"><div class="rl">In-recipe <b>' + inr.toFixed(1) + '%</b></div><div class="rt"><i style="width:' + inr + '%"></i></div></div>' +
         '<div class="rr"><div class="rl">Overall <b>' + ov.toFixed(1) + '%</b></div><div class="rt ghost"><i style="width:' + ov + '%"></i></div></div>' +
@@ -719,8 +833,8 @@
       return '<tr data-vi="' + i + '" class="' + (i === state.variant ? 'sel' : '') + '">' +
         '<td>' + petCv(32, v.hue, 0.55, 0.85).replace('petc', 'petc vprev') + '</td>' +
         '<td><span class="vname">' + v.n + '</span></td>' +
-        '<td><span class="kind-txt ' + (v.k === 'dynamic' ? 'dyn' : 'stat') + '">' + v.k + '</span></td>' +
-        '<td class="num"><div class="wcell" style="align-items:flex-end">' + wcell + '<div class="wbar"><i style="width:' + inr + '%"></i></div></div></td>' +
+        '<td><span class="kind-txt ' + kcls(v.k) + '">' + v.k + '</span></td>' +
+        '<td class="num">' + wcell + '</td>' +
         '<td class="num inr">' + inr.toFixed(1) + '%</td><td class="num ov">' + ov.toFixed(1) + '%</td>' +
         '<td>' + (locked || ig.variants.length <= 1 ? '' : '<button class="rowdel" data-i="' + i + '" data-tip="Delete ' + v.n + '" aria-label="Delete ' + v.n + '">' + ICON.del + '</button>') + '</td></tr>';
     }).join('');
@@ -733,11 +847,13 @@
   }
 
   function setT(t, c) { document.getElementById('detailTitle').textContent = t; document.getElementById('detailCount').textContent = c; }
+  var DICO = { cookbook: 'cook', recipe: 'recipe', ingredient: 'ing' };
   function renderDetail() {
     var body = document.getElementById('detailBody'), t = state.type;
     document.getElementById('viewTag').textContent = VTAG[t];
+    document.getElementById('detailIcon').innerHTML = ICON[DICO[t]];
     if (t === 'cookbook') {
-      setT(COOK.name + '.cbk', COOK.recipes.length + ' recipes');
+      setT(COOK.name, COOK.recipes.length + ' recipes');
       body.innerHTML = cookA();
     } else if (t === 'recipe') {
       var r = getRecipe(state.recipe);
@@ -798,29 +914,24 @@
 
   /* ---- inspector ---- */
   function prop(k, v, cls) { return '<div class="prop"><span class="k">' + k + '</span><span class="v ' + (cls || '') + '">' + v + '</span></div>'; }
-  function inspCook() {
-    var r0 = COOK.recipes[0];
-    var head = '<div class="insp-prev">' + petCv(66, r0.ings[0].variants[0].hue, 0.5, 0.86) + '<div><div class="t">' + COOK.name + '<span style="color:var(--accent-text)">.cbk</span></div><div class="s">cookbook · ' + COOK.recipes.length + ' recipes</div></div></div>';
-    return head + '<div>' + prop('Recipes', COOK.recipes.length) + prop('Layers', layerCount()) + prop('Variants', variantCount()) + prop('Combinations', fmt(totalCombos())) + prop('Target supply', fmt(TARGET_SUPPLY)) + prop('Status', '● Valid', 'ok') + '</div>';
-  }
-  function inspRecipe(r) {
-    var head = '<div class="insp-prev">' + petCv(66, r.ings[0].variants[0].hue, 0.55, 0.86) + '<div><div class="t">' + r.n + '</div><div class="s">recipe · weight ' + r.w + '</div></div></div>';
-    return head + '<div>' + prop('Weight', r.w) + prop('Mint share', (r.w / weightSum() * 100).toFixed(0) + '%') + prop('Layers', r.ings.length) + prop('Variants', recipeVariants(r)) + prop('Combinations', fmt(recipeCombos(r))) + '</div>';
-  }
   function inspIng(ig) {
     var r = getRecipe(state.recipe), mint = r.w / weightSum();
     var sum = ig.variants.reduce(function (a, v) { return a + v.w; }, 0) || 1;
     var v = ig.variants[state.variant] || ig.variants[0]; var inr = v.w / sum * 100, ov = inr * mint;
-    var head = '<div class="insp-prev">' + petCv(66, v.hue, 0.55, 0.86) + '<div><div class="t">' + ig.n + '</div><div class="s">' + ig.kind + ' ingredient · ' + r.n + '</div></div></div>';
-    var props = '<div>' + prop('Kind', ig.kind, ig.kind === 'dynamic' ? 'dyn' : '') + (ig.kind === 'dynamic' ? prop('Colorization', 'HSV') : '') + prop('Variants', ig.variants.length) + '</div>';
-    var selB = '<div><div class="sub-h" style="margin-bottom:6px">Selected variant</div>' + prop('Name', v.n) + prop('Weight', v.w) + prop('In-recipe', inr.toFixed(1) + '%') + prop('Overall', ov.toFixed(1) + '%') + '</div>';
-    var strip = '<div class="colorroll"><div class="sub-h">' + (ig.kind === 'dynamic' ? 'Sampled colorways' : 'Variants') + '</div><div class="rollstrip">' +
-      ig.variants.map(function (vv) { return petCv(36, vv.hue, 0.58, 0.84, vv.n); }).join('') + '</div></div>';
-    return head + props + selB + strip;
+    var colorProp = ig.kind === 'dynamic' ? prop('Colorization', 'HSV · rolled', 'dyn')
+                  : ig.kind === 'custom' ? prop('Colorization', 'none · as-is', 'cust')
+                  : prop('Colorization', 'HSV · fixed', 'stat');
+    var layer = '<div class="insp-sec"><div class="sub-h">Layer</div>' + prop('Kind', ig.kind, kcls(ig.kind)) + colorProp + prop('Variants', ig.variants.length) + '</div>';
+    var selB = '<div class="insp-sec"><div class="sub-h">Selected variant</div>' + prop('Name', v.n) + prop('Weight', v.w) + prop('In-recipe', inr.toFixed(1) + '%') + prop('Overall', ov.toFixed(1) + '%') + '</div>';
+    var rl = rulesFor(r, ig.n);
+    var rulesSec = '<div class="insp-sec"><div class="sub-h">Rules</div>' +
+      (rl.length ? '<div class="rules">' + rl.map(ruleRow).join('') + '</div>' : '<div class="rules-empty">None for this layer.</div>') + '</div>';
+    return layer + selB + rulesSec;
   }
   function renderInspector() {
-    var el = document.getElementById('inspBody'), t = state.type;
-    el.innerHTML = t === 'cookbook' ? inspCook() : t === 'recipe' ? inspRecipe(getRecipe(state.recipe)) : inspIng(getIng(state.recipe, state.ing));
+    var el = document.getElementById('inspBody');
+    if (state.type !== 'ingredient') { el.innerHTML = ''; return; }
+    el.innerHTML = inspIng(getIng(state.recipe, state.ing));
   }
 
   /* ---- toolbar + status ---- */
