@@ -79,17 +79,36 @@ public static class Generator
             traits.Add(new TraitSelection(ingId, ing.Manifest.Name, variantId, variant.Name));
 
             var srcImage = ing.VariantImages[variantId];
-            if (ing.Manifest.Kind == LayerKind.Dynamic && ing.Manifest.Colorization is { } col)
+            switch (ing.Manifest.Kind)
             {
-                var rolled = ColorRoller.Roll(col, rng);
-                colorRolls.Add(new ColorRoll(ingId, col.Model, rolled.H, rolled.S));
-                images.Add(Colorizer.Apply(srcImage, rolled.H, rolled.S, col.Model));
-                dnaParts.Add(new LayerSelection(ingId, variantId, rolled.H, rolled.S, col.HueQuantize, col.SatQuantize));
-            }
-            else
-            {
-                images.Add(srcImage.Clone());
-                dnaParts.Add(new LayerSelection(ingId, variantId, null, null, 1, 1));
+                case LayerKind.Dynamic:
+                {
+                    // Value-map recolored by a per-asset RNG roll over the layer's colorization.
+                    var col = ing.Manifest.Colorization!;
+                    var rolled = ColorRoller.Roll(col, rng);
+                    colorRolls.Add(new ColorRoll(ingId, LayerKind.Dynamic, col.Model, rolled.H, rolled.S));
+                    images.Add(Colorizer.Apply(srcImage, rolled.H, rolled.S, col.Model));
+                    dnaParts.Add(new LayerSelection(ingId, variantId, rolled.H, rolled.S, col.HueQuantize, col.SatQuantize));
+                    break;
+                }
+                case LayerKind.Static:
+                {
+                    // Value-map colorized with exactly one fixed color, resolved WITHOUT consuming RNG.
+                    var col = ing.Manifest.Colorization!;
+                    var fixedColor = ColorRoller.FromFixed(col.Entries[0].Fixed!, col.Model);
+                    colorRolls.Add(new ColorRoll(ingId, LayerKind.Static, col.Model, fixedColor.H, fixedColor.S));
+                    images.Add(Colorizer.Apply(srcImage, fixedColor.H, fixedColor.S, col.Model));
+                    dnaParts.Add(new LayerSelection(ingId, variantId, fixedColor.H, fixedColor.S, col.HueQuantize, col.SatQuantize));
+                    break;
+                }
+                default: // LayerKind.Custom
+                {
+                    // Full-color image composited as-is; never colorized.
+                    colorRolls.Add(new ColorRoll(ingId, LayerKind.Custom, null, null, null));
+                    images.Add(srcImage.Clone());
+                    dnaParts.Add(new LayerSelection(ingId, variantId, null, null, 1, 1));
+                    break;
+                }
             }
         }
 

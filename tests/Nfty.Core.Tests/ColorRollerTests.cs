@@ -15,6 +15,15 @@ public class ColorRollerTests
     }
 
     [Fact]
+    public void FromFixed_resolves_deterministically_without_rng()
+    {
+        // Static layers use this path: a single fixed color resolved with no RNG.
+        var r = ColorRoller.FromFixed("hsv:200,50,80", ColorModel.Hsv);
+        Assert.InRange(r.H, 199.0, 201.0);
+        Assert.InRange(r.S, 0.49, 0.51);
+    }
+
+    [Fact]
     public void Range_entry_samples_within_bounds()
     {
         var c = new Colorization(ColorModel.Hsv, 5, 5, new[] { new ColorEntry(1, new ColorRange(175, 195, 60, 90), null) });

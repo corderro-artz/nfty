@@ -6,7 +6,11 @@ namespace Nfty.Core.Generation;
 
 public record TraitSelection(string IngredientId, string IngredientName, string VariantId, string VariantName);
 
-public record ColorRoll(string LayerId, ColorModel Model, double H, double S);
+/// <summary>
+/// The resolved color of one layer, for the rich nfty metadata. Represents every kind:
+/// Dynamic and Static carry (Model, H, S); Custom carries none (all null, composited as-is).
+/// </summary>
+public record ColorRoll(string LayerId, LayerKind Kind, ColorModel? Model, double? H, double? S);
 
 public class GeneratedAsset
 {

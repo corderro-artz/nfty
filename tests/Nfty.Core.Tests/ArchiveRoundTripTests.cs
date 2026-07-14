@@ -9,7 +9,7 @@ public class ArchiveRoundTripTests
 {
     private static LoadedIngredient Ingredient(string id, params (string vid, Rgba32 fill)[] variants) => new()
     {
-        Manifest = new IngredientManifest(id, id, LayerKind.Static, null,
+        Manifest = new IngredientManifest(id, id, LayerKind.Custom, null,
             variants.Select(v => new Variant(v.vid, v.vid, 1)).ToList()),
         VariantImages = variants.ToDictionary(v => v.vid, v => new Image<Rgba32>(4, 4, v.fill)),
     };
