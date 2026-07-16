@@ -199,26 +199,22 @@ public static class Generator
             traits.Add(new TraitSelection(ingId, ing.Manifest.Name, variantId, variant.Name));
 
             var srcImage = ing.VariantImages[variantId];
-            switch (ing.Manifest.Kind)
+            var kind = ing.Manifest.Kind;
+            switch (kind)
             {
-                case LayerKind.Dynamic:
+                case LayerKind.Dynamic or LayerKind.Static:
                 {
-                    // Value-map recolored by a per-asset RNG roll over the layer's colorization.
+                    // Both kinds are grayscale value-maps colorized with an (H,S). The ONLY
+                    // difference is where that colour comes from: dynamic rolls it per asset,
+                    // static resolves its single fixed colour and consumes NO RNG (spec 5.3).
                     var col = ing.Manifest.Colorization!;
-                    var rolled = ColorRoller.Roll(col, rng);
-                    colorRolls.Add(new ColorRoll(ingId, LayerKind.Dynamic, col.Model, rolled.H, rolled.S));
-                    images.Add(Colorizer.Apply(srcImage, rolled.H, rolled.S, col.Model));
-                    dnaParts.Add(new LayerSelection(ingId, variantId, rolled.H, rolled.S, col.HueQuantize, col.SatQuantize));
-                    break;
-                }
-                case LayerKind.Static:
-                {
-                    // Value-map colorized with exactly one fixed color, resolved WITHOUT consuming RNG.
-                    var col = ing.Manifest.Colorization!;
-                    var fixedColor = ColorRoller.FromFixed(col.Entries[0].Fixed!, col.Model);
-                    colorRolls.Add(new ColorRoll(ingId, LayerKind.Static, col.Model, fixedColor.H, fixedColor.S));
-                    images.Add(Colorizer.Apply(srcImage, fixedColor.H, fixedColor.S, col.Model));
-                    dnaParts.Add(new LayerSelection(ingId, variantId, fixedColor.H, fixedColor.S, col.HueQuantize, col.SatQuantize));
+                    var color = kind == LayerKind.Dynamic
+                        ? ColorRoller.Roll(col, rng)
+                        : ColorRoller.FromFixed(col.Entries[0].Fixed!, col.Model);
+
+                    colorRolls.Add(new ColorRoll(ingId, kind, col.Model, color.H, color.S));
+                    images.Add(Colorizer.Apply(srcImage, color.H, color.S, col.Model));
+                    dnaParts.Add(new LayerSelection(ingId, variantId, color.H, color.S, col.HueQuantize, col.SatQuantize));
                     break;
                 }
                 default: // LayerKind.Custom
