@@ -31,6 +31,64 @@ public class SetWriterTests
             },
         });
 
+    /// <summary>A real .cbk on disk, so its hash is over actual archive bytes.</summary>
+    private static string WriteCookBook(string dir)
+    {
+        var path = Path.Combine(dir, "VaporPets.cbk");
+        var ing = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("bg", "Background", LayerKind.Custom, null,
+                new[] { new Variant("sunset", "Sunset", 1) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>>
+            {
+                ["sunset"] = new Image<Rgba32>(2, 2, new Rgba32(255, 128, 0, 255)),
+            },
+        };
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("cat", "Cat", new[] { "bg" }, Array.Empty<IncompatibilityRule>()),
+            Ingredients = new[] { ing },
+        };
+        CookBookArchive.Write(path,
+            new CookBookManifest("cb", "VaporPets", new Dimensions(2, 2),
+                new Collection("VaporPets", "d", "VP"),
+                new Dictionary<string, double> { ["cat"] = 1 }),
+            new[] { recipe });
+        return path;
+    }
+
+    [Fact]
+    public void Set_json_records_the_source_cookbook_hash()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        var cbkPath = WriteCookBook(dir);
+        var outDir = Path.Combine(dir, "out");
+
+        var book = CookBookArchive.Read(cbkPath);
+        var set = Generator.Generate(book, new GenerateOptions(1, "seed-1"));
+        SetWriter.Write(set, outDir, pack: false);
+        foreach (var a in set.Assets) a.Image.Dispose();
+
+        string expected = Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(cbkPath))).ToLowerInvariant();
+        using var doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(outDir, "set.json")));
+
+        Assert.Equal(expected, doc.RootElement.GetProperty("cookbookSha256").GetString());
+    }
+
+    [Fact]
+    public void Set_json_hash_is_null_for_a_cookbook_that_never_touched_disk()
+    {
+        // In-memory books (tests, and a GUI holding an unsaved cookbook) have no source file
+        // to hash. The field must be null rather than a hash of something invented.
+        var dir = Path.Combine(Directory.CreateTempSubdirectory().FullName, "out");
+        SetWriter.Write(MakeSet(), dir, pack: false);
+
+        using var doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, "set.json")));
+
+        Assert.Equal(JsonValueKind.Null, doc.RootElement.GetProperty("cookbookSha256").ValueKind);
+    }
+
     [Fact]
     public void Writes_images_and_set_manifest()
     {

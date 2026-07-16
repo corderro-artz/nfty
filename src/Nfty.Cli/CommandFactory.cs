@@ -26,28 +26,50 @@ public static class CommandFactory
 
     private static Command Inspect()
     {
-        var path = new Argument<string>("cookbook") { Description = "Path to a .cbk file" };
-        var cmd = new Command("inspect", "Print the tree of a cookbook") { path };
+        var path = new Argument<string>("file") { Description = "Path to a .cbk, .rcp or .igt file" };
+        var cmd = new Command("inspect", "Print the tree of a cookbook, recipe or ingredient") { path };
         cmd.SetAction(parse =>
         {
-            var cb = CookBookArchive.Read(parse.GetValue(path)!);
-            Console.WriteLine($"CookBook: {cb.Manifest.Name} ({cb.Manifest.Canvas.Width}x{cb.Manifest.Canvas.Height})");
-            foreach (var r in cb.Recipes)
+            string file = parse.GetValue(path)!;
+            switch (Archives.KindOf(file))
             {
-                double w = cb.Manifest.RecipeWeights.GetValueOrDefault(r.Manifest.Id);
-                Console.WriteLine($"  Recipe: {r.Manifest.Name} (weight={w})");
-                var byId = r.Ingredients.ToDictionary(i => i.Manifest.Id);
-                foreach (var layerId in r.Manifest.LayerOrder)
-                {
-                    var ing = byId[layerId];
-                    Console.WriteLine($"    Ingredient: {ing.Manifest.Name} [{ing.Manifest.Kind}]");
-                    foreach (var v in ing.Manifest.Variants)
-                        Console.WriteLine($"      Variant: {v.Name} (w={v.Weight})");
-                }
+                case ArchiveKind.CookBook:
+                    PrintCookBook(CookBookArchive.Read(file));
+                    break;
+                case ArchiveKind.Recipe:
+                    PrintRecipe(RecipeArchive.Read(file), weight: null, indent: "");
+                    break;
+                case ArchiveKind.Ingredient:
+                    PrintIngredient(IngredientArchive.Read(file), indent: "");
+                    break;
             }
             return 0;
         });
         return cmd;
+    }
+
+    private static void PrintCookBook(LoadedCookBook cb)
+    {
+        Console.WriteLine($"CookBook: {cb.Manifest.Name} ({cb.Manifest.Canvas.Width}x{cb.Manifest.Canvas.Height})");
+        foreach (var r in cb.Recipes)
+            PrintRecipe(r, cb.Manifest.RecipeWeights.GetValueOrDefault(r.Manifest.Id), "  ");
+    }
+
+    private static void PrintRecipe(LoadedRecipe recipe, double? weight, string indent)
+    {
+        string suffix = weight is double w ? $" (weight={w})" : string.Empty;
+        Console.WriteLine($"{indent}Recipe: {recipe.Manifest.Name}{suffix}");
+
+        var byId = recipe.Ingredients.ToDictionary(i => i.Manifest.Id);
+        foreach (var layerId in recipe.Manifest.LayerOrder)
+            PrintIngredient(byId[layerId], indent + "  ");
+    }
+
+    private static void PrintIngredient(LoadedIngredient ing, string indent)
+    {
+        Console.WriteLine($"{indent}Ingredient: {ing.Manifest.Name} [{ing.Manifest.Kind}]");
+        foreach (var v in ing.Manifest.Variants)
+            Console.WriteLine($"{indent}  Variant: {v.Name} (w={v.Weight})");
     }
 
     private static Command Validate()
@@ -121,9 +143,8 @@ public static class CommandFactory
         {
             var book = CookBookArchive.Read(parse.GetValue(path)!);
             var opts = new GenerateOptions(parse.GetValue(count), parse.GetValue(seed)!, parse.GetValue(recipe));
-            var set = Generator.Generate(book, opts);
+            using var set = Generator.Generate(book, opts);
             SetWriter.Write(set, parse.GetValue(outDir)!, parse.GetValue(pack));
-            foreach (var a in set.Assets) a.Image.Dispose();
             Console.WriteLine($"Generated {set.Assets.Count} → {parse.GetValue(outDir)}");
             return 0;
         });
@@ -144,10 +165,9 @@ public static class CommandFactory
             int have = existing.NextNumber - 1;
             int need = parse.GetValue(to) - have;
             if (need <= 0) { Console.WriteLine($"Already at {have}."); return 0; }
-            var more = Generator.Generate(book, new GenerateOptions(need, parse.GetValue(seed)!),
+            using var more = Generator.Generate(book, new GenerateOptions(need, parse.GetValue(seed)!),
                 existing.Dnas, existing.NextNumber);
             SetWriter.Write(more, parse.GetValue(dir)!, pack: false);
-            foreach (var a in more.Assets) a.Image.Dispose();
             Console.WriteLine($"Extended by {need} → {parse.GetValue(to)} total.");
             return 0;
         });

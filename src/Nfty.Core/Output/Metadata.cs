@@ -35,6 +35,8 @@ public record SetManifest(
     string Name,
     int Count,
     string Seed,
+    /// <summary>SHA-256 of the source .cbk; null when the cookbook never came from a file.</summary>
+    string? CookbookSha256,
     string GeneratorVersion,
     IReadOnlyList<RecipeCount> Distribution,
     IReadOnlyList<RarityAttribute> Rarity);

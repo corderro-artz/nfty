@@ -62,8 +62,60 @@ public class GeneratorTests
 
     [Fact]
     public void Exhausted_space_throws() =>
-        Assert.Throws<InvalidOperationException>(
+        Assert.Throws<UniqueSpaceExhaustedException>(
             () => Generator.Generate(OneRecipeBook(), new GenerateOptions(5, "seed-1")));
+
+    [Fact]
+    public void Exhausted_space_error_states_the_true_maximum()
+    {
+        // OneRecipeBook allows exactly 4 unique DNA (2 bg x 2 body, both custom).
+        var ex = Assert.Throws<UniqueSpaceExhaustedException>(
+            () => Generator.Generate(OneRecipeBook(), new GenerateOptions(5, "seed-1")));
+
+        Assert.Equal(4, ex.Available);
+        Assert.Equal(5, ex.Requested);
+        Assert.True(ex.IsExact);
+        Assert.Contains("4", ex.Message);
+    }
+
+    [Fact]
+    public void Exhausted_space_max_counts_only_the_chosen_recipe_in_single_recipe_mode()
+    {
+        // TwoRecipeBook's recipes are 1 unique each; restricting to 'robot' caps the max at 1.
+        var ex = Assert.Throws<UniqueSpaceExhaustedException>(
+            () => Generator.Generate(TwoRecipeBook(), new GenerateOptions(2, "s", RecipeId: "robot")));
+
+        Assert.Equal(1, ex.Available);
+    }
+
+    [Fact]
+    public void Unsatisfiable_rules_report_a_conflict_not_exhaustion()
+    {
+        // The only body excludes the only hat, so no combination is legal.
+        var rules = new[]
+        {
+            new IncompatibilityRule(RuleType.Exclude,
+                new RuleTarget("body", "fox"),
+                new[] { new RuleTarget("hat", "cap") }),
+        };
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("cat", "Cat", new[] { "body", "hat" }, rules),
+            Ingredients = new[] { Ing("body", "fox"), Ing("hat", "cap") },
+        };
+        var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "VaporPets", new Dimensions(2, 2),
+                new Collection("VaporPets", "d", "VP"), new Dictionary<string, double> { ["cat"] = 1 }),
+            Recipes = new[] { recipe },
+        };
+
+        var ex = Assert.Throws<RuleConflictException>(
+            () => Generator.Generate(book, new GenerateOptions(1, "seed-1")));
+
+        Assert.Contains("cat", ex.Message);
+        Assert.Contains("cat", ex.RecipeIds);
+    }
 
     [Fact]
     public void Numbering_is_sequential_from_start()

@@ -20,4 +20,11 @@ public class LoadedCookBook
 {
     public required CookBookManifest Manifest { get; init; }
     public required IReadOnlyList<LoadedRecipe> Recipes { get; init; }
+
+    /// <summary>
+    /// SHA-256 of the <c>.cbk</c> this was read from, recorded into a generated Set so an
+    /// output can be traced back to the exact archive that produced it. Null for a book that
+    /// never came from a file (built in memory, or still unsaved in an editor).
+    /// </summary>
+    public string? SourceSha256 { get; init; }
 }
