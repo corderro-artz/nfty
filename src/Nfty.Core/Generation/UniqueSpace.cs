@@ -126,11 +126,11 @@ public static class UniqueSpace
                 continue;
             }
 
-            // A range covers every bucket its endpoints span, inclusive — mirroring how
-            // Dna.Compute floors a rolled colour into its bucket.
+            // A range covers every bucket reachable by ColorRoller.Roll, which samples
+            // Min + r*(Max-Min) with r in [0,1) — so Max itself is never rolled.
             var r = entry.Range!;
-            long h0 = (long)Math.Floor(r.HueMin / hueQ), h1 = (long)Math.Floor(r.HueMax / hueQ);
-            long s0 = (long)Math.Floor(r.SatMin / satQ), s1 = (long)Math.Floor(r.SatMax / satQ);
+            var (h0, h1) = BucketSpan(r.HueMin, r.HueMax, hueQ);
+            var (s0, s1) = BucketSpan(r.SatMin, r.SatMax, satQ);
 
             for (long h = h0; h <= h1; h++)
                 for (long s = s0; s <= s1; s++)
@@ -141,6 +141,21 @@ public static class UniqueSpace
         }
 
         return (seen.Count, true);
+    }
+
+    /// <summary>
+    /// The inclusive bucket span reachable on one axis. <see cref="ColorRoller.Roll"/> samples
+    /// <c>Min + r*(Max-Min)</c> with <c>r ∈ [0,1)</c>, so the reachable interval is <c>[Min, Max)</c>
+    /// and the bucket containing Max is only reachable when Max lands strictly inside it.
+    /// A degenerate range (Min == Max) reaches exactly its endpoint, so it keeps that one bucket.
+    /// </summary>
+    private static (long Lo, long Hi) BucketSpan(double min, double max, int q)
+    {
+        long lo = (long)Math.Floor(min / q);
+        if (max <= min) return (lo, lo);
+        // Ceiling(max/q) - 1 drops the bucket Max opens but never enters; when Max falls
+        // strictly inside a bucket, Ceiling rounds up into it and the -1 lands back on it.
+        return (lo, (long)Math.Ceiling(max / q) - 1);
     }
 
     private static long Multiply(long a, long b, long cap)
