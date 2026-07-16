@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 dotnet build nfty.sln                       # build everything
 dotnet test nfty.sln                        # run all tests
-dotnet test tests/Nfty.Core.Tests           # one test project
+dotnet test tests/Nfty.Core.Tests           # one test project (also: tests/Nfty.Cli.Tests)
 dotnet test --filter FullyQualifiedName~DnaTests           # one test class
 dotnet test --filter FullyQualifiedName~DnaTests.SameSelectionSameHash   # one test method
 dotnet run --project src/Nfty.Cli -- <command> [args]      # run the CLI
