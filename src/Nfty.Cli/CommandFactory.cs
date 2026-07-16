@@ -12,9 +12,20 @@ namespace Nfty.Cli;
 
 public static class CommandFactory
 {
+    /// <summary>
+    /// Recursive, so it works on any subcommand rather than only before one. Read by
+    /// <c>Program</c> when a command throws, to decide whether the trace is wanted.
+    /// </summary>
+    public static Option<bool> VerboseOption { get; } = new("--verbose")
+    {
+        Description = "On error, print the full stack trace as well as the message.",
+        Recursive = true,
+    };
+
     public static RootCommand Build()
     {
         var root = new RootCommand("nfty — layered NFT asset generator");
+        root.Options.Add(VerboseOption);
         root.Subcommands.Add(Inspect());
         root.Subcommands.Add(Validate());
         root.Subcommands.Add(Stats());
