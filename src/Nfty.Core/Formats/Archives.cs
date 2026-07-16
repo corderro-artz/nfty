@@ -33,11 +33,11 @@ public static class Archives
             CookBookExtension => ArchiveKind.CookBook,
             RecipeExtension => ArchiveKind.Recipe,
             IngredientExtension => ArchiveKind.Ingredient,
+            "" => throw new NotSupportedException($"'{path}' has no extension; {Expected}"),
             var other => throw new NotSupportedException(
-                string.IsNullOrEmpty(other)
-                    ? $"'{path}' has no extension; expected one of "
-                      + $"{CookBookExtension}, {RecipeExtension}, {IngredientExtension}."
-                    : $"Unknown archive extension '{other}'; expected one of "
-                      + $"{CookBookExtension}, {RecipeExtension}, {IngredientExtension}."),
+                $"Unknown archive extension '{other}'; {Expected}"),
         };
+
+    private static string Expected =>
+        $"expected one of {CookBookExtension}, {RecipeExtension}, {IngredientExtension}.";
 }
