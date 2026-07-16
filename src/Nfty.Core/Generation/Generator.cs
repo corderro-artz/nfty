@@ -111,6 +111,12 @@ public static class Generator
             GeneratedAsset? asset = null;
             for (int attempt = 0; attempt < opts.MaxRerollsPerAsset; attempt++)
             {
+                // Checked per ATTEMPT, not just per asset: one asset can burn the whole reroll
+                // budget on roll+colorize+composite cycles, so a per-asset check alone lets a
+                // cancel sit unobserved for minutes and lose the race to the budget — surfacing
+                // as UniqueSpaceExhaustedException instead of OperationCanceledException.
+                cancellationToken.ThrowIfCancellationRequested();
+
                 string recipeId = WeightedRoller.Roll(recipeWeights, rng);
                 var candidate = RollOne(book.Manifest.Canvas, recipeById[recipeId], rng, number);
                 if (candidate is null) continue;             // rule violation → reroll

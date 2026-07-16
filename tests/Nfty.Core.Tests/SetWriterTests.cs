@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Nfty.Core.Formats;
 using Nfty.Core.Generation;
@@ -87,6 +88,71 @@ public class SetWriterTests
         using var doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, "set.json")));
 
         Assert.Equal(JsonValueKind.Null, doc.RootElement.GetProperty("cookbookSha256").ValueKind);
+    }
+
+    /// <summary>
+    /// A set whose trait types and recipe ids sort differently under a Swedish collation than an
+    /// English one: sv-SE orders 'z' before 'ä', en-US the reverse.
+    /// </summary>
+    private static GeneratedSet CultureSensitiveSet() => new(
+        "VaporPets", "desc", "VP", "seed-1",
+        new[]
+        {
+            new GeneratedAsset
+            {
+                SetNumber = 1, Dna = "abc", RecipeId = "zebra", RecipeName = "Zebra",
+                Image = new Image<Rgba32>(2, 2, new Rgba32(1, 2, 3, 255)),
+                Traits = new[]
+                {
+                    new TraitSelection("z", "zebra", "zv", "zink"),
+                    new TraitSelection("a", "änd", "av", "ätt"),
+                },
+                ColorRolls = new[]
+                {
+                    new ColorRoll("z", LayerKind.Custom, null, null, null),
+                    new ColorRoll("a", LayerKind.Custom, null, null, null),
+                },
+            },
+            new GeneratedAsset
+            {
+                SetNumber = 2, Dna = "def", RecipeId = "änd", RecipeName = "And",
+                Image = new Image<Rgba32>(2, 2, new Rgba32(4, 5, 6, 255)),
+                Traits = new[]
+                {
+                    new TraitSelection("z", "zebra", "zv", "zink"),
+                    new TraitSelection("a", "änd", "av", "ätt"),
+                },
+                ColorRolls = new[]
+                {
+                    new ColorRoll("z", LayerKind.Custom, null, null, null),
+                    new ColorRoll("a", LayerKind.Custom, null, null, null),
+                },
+            },
+        });
+
+    private static string WriteSetJsonUnderCulture(string cultureName)
+    {
+        var original = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = new CultureInfo(cultureName);
+            var dir = Path.Combine(Directory.CreateTempSubdirectory().FullName, "out");
+            using var set = CultureSensitiveSet();
+            SetWriter.Write(set, dir, pack: false);
+            return File.ReadAllText(Path.Combine(dir, "set.json"));
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = original;
+        }
+    }
+
+    [Fact]
+    public void Set_json_is_byte_identical_across_cultures()
+    {
+        // Spec 5.5: same cookbook + same seed => byte-identical output. A current-culture sort
+        // makes that a lie — the machine's locale leaks into the artefact.
+        Assert.Equal(WriteSetJsonUnderCulture("en-US"), WriteSetJsonUnderCulture("sv-SE"));
     }
 
     [Fact]

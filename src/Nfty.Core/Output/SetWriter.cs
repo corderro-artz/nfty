@@ -234,7 +234,10 @@ public static class SetWriter
             .Concat(set.Assets.Select(a => a.RecipeId))
             .GroupBy(id => id)
             .Select(g => new RecipeCount(g.Key, g.Count(), rarity.Percent(g.Count())))
-            .OrderBy(d => d.Recipe).ToList();
+            // Ordinal: the default comparer sorts by CURRENT CULTURE, so the same book and seed
+            // would emit different set.json bytes on an en-US box than a sv-SE one (spec 5.5
+            // promises byte-identical output).
+            .OrderBy(d => d.Recipe, StringComparer.Ordinal).ToList();
 
         return new SetManifest(set.CollectionName, rarity.Total, set.Seed,
             set.CookbookSha256, GeneratorVersion, distribution, rarity.Table());
@@ -289,7 +292,10 @@ public static class SetWriter
 
         public IReadOnlyList<RarityAttribute> Table() =>
             counts.Keys.Select(k => For(k.TraitType, k.Value))
-                .OrderBy(r => r.Trait_type).ThenBy(r => r.Value).ToList();
+                // Ordinal for the same reason as the recipe distribution above: culture must
+                // never reach the output bytes.
+                .OrderBy(r => r.Trait_type, StringComparer.Ordinal)
+                .ThenBy(r => r.Value, StringComparer.Ordinal).ToList();
 
         private void Bump(string traitType, string value) =>
             counts[(traitType, value)] = counts.GetValueOrDefault((traitType, value)) + 1;

@@ -105,6 +105,39 @@ public class GenerationLifecycleTests
                 progress: progress, cancellationToken: cts.Token));
     }
 
+    /// <summary>A book with exactly one possible asset: 1 recipe, 1 layer, 1 variant, no colour.</summary>
+    private static LoadedCookBook SingleDnaBook() => new()
+    {
+        Manifest = new CookBookManifest("cb", "One", new Dimensions(2, 2),
+            new Collection("One", "d", "O"), new Dictionary<string, double> { ["cat"] = 1 }),
+        Recipes = new[]
+        {
+            new LoadedRecipe
+            {
+                Manifest = new RecipeManifest("cat", "Cat", new[] { "bg" },
+                    Array.Empty<IncompatibilityRule>()),
+                Ingredients = new[] { Ing("bg", "only") },
+            },
+        },
+    };
+
+    [Fact]
+    public void Cancellation_beats_the_reroll_budget()
+    {
+        // Only 1 unique DNA exists, so the 2nd asset rerolls until its budget runs out. With a
+        // budget this large that is effectively forever, so the ONLY way to finish promptly with
+        // OperationCanceledException is to observe the token inside the attempt loop. Checking
+        // it once per asset lets exhaustion win the race and misreports a cancel as
+        // UniqueSpaceExhaustedException.
+        using var cts = new CancellationTokenSource();
+        cts.CancelAfter(TimeSpan.FromMilliseconds(200));
+
+        var opts = new GenerateOptions(2, "seed-1", MaxRerollsPerAsset: int.MaxValue);
+
+        Assert.Throws<OperationCanceledException>(
+            () => Generator.Generate(SingleDnaBook(), opts, cancellationToken: cts.Token));
+    }
+
     [Fact]
     public async Task GenerateAsync_matches_the_sync_result_for_the_same_seed()
     {
