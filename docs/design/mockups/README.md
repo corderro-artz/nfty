@@ -8,13 +8,14 @@ brand (light + dark), oxblood accent `#a11f31`, neo-Japanese material restraint.
 
 The primary screen: an OpenIV-style **Explorer** — Contents tree ▸ type-aware detail, inside a
 custom frameless window (own titlebar / toolbar / status bar). Each node type carries its own **icon**
-beside the name (in the tree, breadcrumb, and content-pane header) — no stylized file extensions. The
-**Inspector** is scoped to the Ingredient view only — that's the one place it carries information the
-main pane doesn't (kind / colorization, selected-variant detail, layer-scoped rules). For Cookbook and
-Recipe the pane collapses to two columns and the detail view expands to fill the space. Selecting a
-node renders a curated per-type view:
+beside the name (in the tree, breadcrumb, and content-pane header) — no stylized file extensions. Every
+view is two-column (Contents ▸ detail); the Recipe and Ingredient details each carry a **right rail**
+(≈⅓) as a full-height panel: the Recipe rail lists its **Rules**, the Ingredient rail is **Colorways** —
+*how the selected layer is colorized* (a dynamic hue range, a static fixed colour, or a custom as-is
+image), the one thing the main pane doesn't carry. Selecting a node renders a curated per-type view:
 
-- **Cookbook** — an identity header (icon + name, description, symbol / canvas / target-supply chips)
+- **Cookbook** — an identity header (icon + name, description, symbol / canvas / **colorize-model** /
+  target-supply chips; `colorize HSV` names how grayscale value-maps are recoloured collection-wide)
   above a two-column composition band: metrics (2×2, incl. **Unique DNA**) + mint distribution on the
   left, the per-recipe **DNA-space** breakdown (factor chips `4 × 3 × 5 × 6 = 360` colored by kind +
   share bars) on the right; Cook footer.
@@ -23,10 +24,12 @@ node renders a curated per-type view:
   (`[4] × [3] × [5] × [6] = 360`) that wrap for many-layer recipes. Rules are table-ized rows — a typed
   operator badge (`✕` never-together / `→` always-together) beside the two stacked trait chips — so the
   list scales and scrolls; empty-state when a recipe has none.
-- **Ingredient** — an art hero strip (selected variant image + name + in-recipe/overall rarity meters,
-  updating live as you pick a variant) above a sortable variant table, with the **Inspector** alongside
-  (Layer / Selected variant / **Rules** sections — rules scoped to the layer in view). Unlock
-  (top-right) to edit variant weights inline.
+- **Ingredient** — a main column (art hero strip with selected variant image + name + in-recipe/overall
+  rarity meters, updating live as you pick a variant, above a sortable variant table) beside the
+  **Colorways rail** (kind-aware: dynamic hue-band + H/S ranges, static fixed colour, or custom as-is —
+  value always from the grayscale map). The hero shows a compact **`⚑ N rules`** flag *only* when the layer
+  participates in a rule; clicking it jumps to the Recipe's full Rules rail (the single home for the
+  complete rule set). Unlock (top-right) to edit variant weights inline.
 
 Every ingredient (layer) is one of **three kinds**, each with its own badge colour (tree marker,
 kind text, factor chip): **dynamic** (blue — value-map, colour *rolled* per asset), **static** (amber

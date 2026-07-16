@@ -16,5 +16,8 @@ TestResults/
 # Claude Code local worktrees (transient)
 .claude/worktrees/
 
+# Superpowers brainstorm companion (transient session files)
+.superpowers/
+
 # Six Labors license (account-specific; never commit)
 sixlabors.lic
