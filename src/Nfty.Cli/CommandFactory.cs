@@ -34,14 +34,23 @@ public static class CommandFactory
             switch (Archives.KindOf(file))
             {
                 case ArchiveKind.CookBook:
-                    PrintCookBook(CookBookArchive.Read(file));
+                {
+                    using var cb = CookBookArchive.Read(file);
+                    PrintCookBook(cb);
                     break;
+                }
                 case ArchiveKind.Recipe:
-                    PrintRecipe(RecipeArchive.Read(file), weight: null, indent: "");
+                {
+                    using var recipe = RecipeArchive.Read(file);
+                    PrintRecipe(recipe, weight: null, indent: "");
                     break;
+                }
                 case ArchiveKind.Ingredient:
-                    PrintIngredient(IngredientArchive.Read(file), indent: "");
+                {
+                    using var ing = IngredientArchive.Read(file);
+                    PrintIngredient(ing, indent: "");
                     break;
+                }
             }
             return 0;
         });
@@ -78,7 +87,8 @@ public static class CommandFactory
         var cmd = new Command("validate", "Validate a cookbook") { path };
         cmd.SetAction(parse =>
         {
-            var problems = Validator.Validate(CookBookArchive.Read(parse.GetValue(path)!));
+            using var cb = CookBookArchive.Read(parse.GetValue(path)!);
+            var problems = Validator.Validate(cb);
             if (problems.Count == 0) { Console.WriteLine("OK — no problems."); return 0; }
             foreach (var p in problems) Console.Error.WriteLine(p);
             return 1;
@@ -92,7 +102,8 @@ public static class CommandFactory
         var cmd = new Command("stats", "Show rarity breakdown") { path };
         cmd.SetAction(parse =>
         {
-            var report = RarityCalculator.Compute(CookBookArchive.Read(parse.GetValue(path)!));
+            using var cb = CookBookArchive.Read(parse.GetValue(path)!);
+            var report = RarityCalculator.Compute(cb);
             Console.WriteLine("Recipes:");
             foreach (var r in report.Recipes)
                 Console.WriteLine($"  {r.RecipeName,-16} {r.Percent,6:0.00}%");
@@ -114,7 +125,7 @@ public static class CommandFactory
         var cmd = new Command("preview", "Render a value-map variant with a chosen color") { path, variant, color, model, outp };
         cmd.SetAction(parse =>
         {
-            var ing = IngredientArchive.Read(parse.GetValue(path)!);
+            using var ing = IngredientArchive.Read(parse.GetValue(path)!);
             var image = ing.VariantImages[parse.GetValue(variant)!];
             var rgb = ColorSpec.Parse(parse.GetValue(color)!);
             var m = parse.GetValue(model)!.Equals("hsl", StringComparison.OrdinalIgnoreCase)
@@ -141,7 +152,7 @@ public static class CommandFactory
         var cmd = new Command("generate", "Generate a set") { path, count, seed, outDir, pack, recipe };
         cmd.SetAction(parse =>
         {
-            var book = CookBookArchive.Read(parse.GetValue(path)!);
+            using var book = CookBookArchive.Read(parse.GetValue(path)!);
             var opts = new GenerateOptions(parse.GetValue(count), parse.GetValue(seed)!, parse.GetValue(recipe));
             using var set = Generator.Generate(book, opts);
             SetWriter.Write(set, parse.GetValue(outDir)!, parse.GetValue(pack));
@@ -160,7 +171,7 @@ public static class CommandFactory
         var cmd = new Command("extend", "Grow an existing set to a new count") { path, dir, to, seed };
         cmd.SetAction(parse =>
         {
-            var book = CookBookArchive.Read(parse.GetValue(path)!);
+            using var book = CookBookArchive.Read(parse.GetValue(path)!);
             var existing = SetWriter.ReadExisting(parse.GetValue(dir)!);
             int have = existing.NextNumber - 1;
             int need = parse.GetValue(to) - have;
