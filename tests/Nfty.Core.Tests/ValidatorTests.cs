@@ -425,6 +425,29 @@ public class ValidatorTests
                  && p.Contains("cat", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void Ingredient_missing_from_layerOrder_reported()
+    {
+        // Generation only rolls layerOrder, so an ingredient the archive carries but layerOrder
+        // omits is dead weight the author almost certainly meant to include.
+        var book = BookOf(Rec("cat", Ing("bg", new Variant("a", "A", 1))));
+        var orphan = Ing("orphan", new Variant("z", "Z", 1));
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("cat", "cat", new[] { "bg" }, Array.Empty<IncompatibilityRule>()),
+            Ingredients = book.Recipes[0].Ingredients.Append(orphan).ToList(),
+        };
+        var withOrphan = new LoadedCookBook
+        {
+            Manifest = book.Manifest,
+            Recipes = new[] { recipe },
+        };
+
+        Assert.Contains(Validator.Validate(withOrphan),
+            p => p.Contains("orphan", StringComparison.Ordinal)
+                 && p.Contains("layerOrder", StringComparison.OrdinalIgnoreCase));
+    }
+
     // --- colour spec parsing (finding 4, spec section 9) ---
 
     [Fact]

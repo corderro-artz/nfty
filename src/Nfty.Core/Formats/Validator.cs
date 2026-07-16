@@ -39,6 +39,14 @@ public static class Validator
                 if (!ingById.ContainsKey(layerId))
                     problems.Add($"Recipe '{r.Manifest.Id}' layerOrder references unknown ingredient '{layerId}'.");
 
+            // The mirror of the check above: generation only ever rolls layerOrder, so an
+            // ingredient the archive carries but layerOrder omits is never composited.
+            var ordered = r.Manifest.LayerOrder.ToHashSet(StringComparer.Ordinal);
+            foreach (var ing in r.Ingredients)
+                if (!ordered.Contains(ing.Manifest.Id))
+                    problems.Add($"Recipe '{r.Manifest.Id}' has ingredient '{ing.Manifest.Id}' "
+                        + "that is missing from its layerOrder, so it is never rolled.");
+
             foreach (var ing in r.Ingredients)
             {
                 if (ing.Manifest.Variants.Count == 0)
