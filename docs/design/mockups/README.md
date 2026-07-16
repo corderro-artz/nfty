@@ -44,16 +44,48 @@ this term consistent across UX and code.
 Everything is inline (CSS + JS + procedural `<canvas>` "pet" that demonstrates dynamic HSV
 recoloring) — no external resources, theme-aware via `prefers-color-scheme` + a `data-theme` toggle.
 
+## landing.html
+
+The **default view** — what the app opens on before a cookbook is loaded (the VS Code "Welcome tab"
+equivalent). A two-column split inside the same frameless window: the wordmark at front-door scale
+(46px) + tagline + a **Start** action stack on the left, **Recent** on the right.
+
+- **Start** — `+ New CookBook` (accent) and `↗ Open CookBook…`, both carrying `⌘N` / `⌘O` hints, plus
+  a **dashed, muted** `↗ Open a cooked .set…`. The buttons act on **CookBooks** (`.cbk`), never Sets —
+  a Set is what *comes out* of pressing Cook.
+- **Recent** — rows of `name` + `N recipes · N unique DNA` + path. The metrics are the same
+  **unique DNA** term the Cookbook view headlines. First run shows a dashed zero state ("Nothing here
+  yet") pointing back at **New CookBook**; toggle it with the **Recents** button above the window.
+- **No toolbar.** With nothing open, search / Add / Delete / Import / lock are all meaningless, so the
+  toolbar is *omitted rather than greyed* — it returns when a cookbook opens. The titlebar keeps its
+  shape via a muted `— nothing open —` in the breadcrumb slot, and the statusbar reads
+  `No cookbook open` (no `● Valid`, no counts — nothing to validate or count).
+
+> The dashed `.set` action is **deliberately inert**: it reserves the shape for a Set browser that
+> isn't built yet. When that view lands, the action goes live and the dashed treatment — which is what
+> marks it as not-yet-real — should be reconsidered. A **Learn / docs** entry point is the other
+> expected addition here, pending the help-page design.
+
+Design spec: [`docs/superpowers/specs/2026-07-16-nfty-landing-view-design.md`](../../superpowers/specs/2026-07-16-nfty-landing-view-design.md).
+The token block is copied **verbatim** from `explorer.html` — every colour is a `var()`, and a new hex
+value anywhere is the signal that the style has drifted.
+
 ### Preview locally
 
-The file has no `<!doctype>/<html>/<head>/<body>` — the publish host wraps it with a skeleton that
-supplies `<meta charset="utf-8">` and a minimal CSS reset. To view it faithfully on your own
-machine, wrap it first (otherwise glyphs like `×`, `›`, `⌘K`, tree carets render as mojibake):
+Neither file has a `<!doctype>/<html>/<head>/<body>` — the publish host wraps them with a skeleton
+that supplies `<meta charset="utf-8">` and a minimal CSS reset. To view one faithfully on your own
+machine, wrap it first (otherwise glyphs like `×`, `›`, `⌘K`, `↗`, tree carets render as mojibake):
 
 ```bash
-{ printf '<!doctype html><html><head><meta charset="utf-8"><style>*{box-sizing:border-box}html,body{margin:0}</style></head><body>'; cat explorer.html; printf '</body></html>'; } > /tmp/preview.html
+F=explorer.html   # or landing.html
+{ printf '<!doctype html><html><head><meta charset="utf-8"><style>*{box-sizing:border-box}html,body{margin:0}</style></head><body>'; cat $F; printf '</body></html>'; } > /tmp/preview.html
 python3 -m http.server 8000   # then open http://localhost:8000/tmp/preview.html
 ```
 
-Published (private) artifact, same URL across redeploys:
-<https://claude.ai/code/artifact/04b18798-3fca-4bde-a434-1d848a8116c5>
+Published (private) artifacts — same URL across redeploys (pass the URL as `url` to the Artifact tool
+from a later session, or a new one gets minted):
+
+| Mockup | Artifact |
+|--------|----------|
+| `explorer.html` | <https://claude.ai/code/artifact/04b18798-3fca-4bde-a434-1d848a8116c5> |
+| `landing.html`  | <https://claude.ai/code/artifact/6bfa007e-b4a6-48e4-8ec8-90f1d193e35f> |
