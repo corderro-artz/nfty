@@ -354,4 +354,127 @@ public class ValidatorTests
     public void Range_spanning_the_full_axes_has_no_problems() =>
         // The inclusive bounds are legal; only crossing them is not.
         Assert.Empty(ValidateRange(new ColorRange(0, 360, 0, 100)));
+
+    // --- id uniqueness (finding 3) ---
+
+    private static LoadedIngredient Ing(string id, params Variant[] variants)
+    {
+        // Built duplicate-tolerantly: these fixtures deliberately carry duplicate variant ids,
+        // and the throw under test belongs in Validator, not in the fixture.
+        var images = new Dictionary<string, Image<Rgba32>>();
+        foreach (var v in variants) images[v.Id] = new Image<Rgba32>(4, 4, new Rgba32(0, 0, 0, 255));
+        return new LoadedIngredient
+        {
+            Manifest = new IngredientManifest(id, id, LayerKind.Custom, null, variants),
+            VariantImages = images,
+        };
+    }
+
+    private static LoadedCookBook BookOf(params LoadedRecipe[] recipes) => new()
+    {
+        Manifest = new CookBookManifest("cb", "Book", new Dimensions(4, 4),
+            new Collection("B", "", "B"), recipes.ToDictionary(r => r.Manifest.Id, _ => 1.0)),
+        Recipes = recipes,
+    };
+
+    private static LoadedRecipe Rec(string id, params LoadedIngredient[] ings) => new()
+    {
+        Manifest = new RecipeManifest(id, id, ings.Select(i => i.Manifest.Id).Distinct().ToList(),
+            Array.Empty<IncompatibilityRule>()),
+        Ingredients = ings,
+    };
+
+    [Fact]
+    public void Duplicate_ingredient_ids_reported_not_thrown()
+    {
+        // Validator must REPORT this, never throw — `nfty validate` exists to explain a broken
+        // book, so crashing on one defeats its whole purpose.
+        var book = BookOf(Rec("cat", Ing("bg", new Variant("a", "A", 1)), Ing("bg", new Variant("b", "B", 1))));
+
+        Assert.Contains(Validator.Validate(book),
+            p => p.Contains("duplicate", StringComparison.OrdinalIgnoreCase)
+                 && p.Contains("bg", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Duplicate_variant_ids_reported()
+    {
+        var book = BookOf(Rec("cat", Ing("bg", new Variant("a", "A", 1), new Variant("a", "A2", 1))));
+
+        Assert.Contains(Validator.Validate(book),
+            p => p.Contains("duplicate", StringComparison.OrdinalIgnoreCase)
+                 && p.Contains("'a'", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Duplicate_recipe_ids_reported()
+    {
+        var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "Book", new Dimensions(4, 4),
+                new Collection("B", "", "B"), new Dictionary<string, double> { ["cat"] = 1.0 }),
+            Recipes = new[]
+            {
+                Rec("cat", Ing("bg", new Variant("a", "A", 1))),
+                Rec("cat", Ing("bg", new Variant("b", "B", 1))),
+            },
+        };
+
+        Assert.Contains(Validator.Validate(book),
+            p => p.Contains("duplicate", StringComparison.OrdinalIgnoreCase)
+                 && p.Contains("cat", StringComparison.Ordinal));
+    }
+
+    // --- colour spec parsing (finding 4, spec section 9) ---
+
+    [Fact]
+    public void Unprefixed_fixed_colour_reported()
+    {
+        // "d6249f" without a prefix must be a validation error, never guessed.
+        var book = Wrap(new IngredientManifest("s", "S", LayerKind.Static,
+            Fixed("d6249f"), new[] { new Variant("v", "v", 1) }));
+
+        Assert.Contains(Validator.Validate(book),
+            p => p.Contains("prefix", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Unknown_colour_prefix_reported()
+    {
+        var book = Wrap(new IngredientManifest("s", "S", LayerKind.Static,
+            Fixed("cmyk:1,2,3"), new[] { new Variant("v", "v", 1) }));
+
+        Assert.Contains(Validator.Validate(book),
+            p => p.Contains("prefix", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Malformed_fixed_colour_on_a_dynamic_entry_reported()
+    {
+        var book = Wrap(new IngredientManifest("d", "D", LayerKind.Dynamic,
+            new Colorization(ColorModel.Hsv, 5, 5, new[] { new ColorEntry(1, null, "hex:zzz") }),
+            new[] { new Variant("v", "v", 1) }));
+
+        Assert.Contains(Validator.Validate(book),
+            p => p.Contains("hex", StringComparison.OrdinalIgnoreCase));
+    }
+
+    // --- dynamic entries (finding 5, spec sections 4.1 / 5.1) ---
+
+    [Fact]
+    public void Dynamic_with_empty_entries_reported() =>
+        Assert.Contains(
+            Validator.Validate(Wrap(new IngredientManifest("d", "D", LayerKind.Dynamic,
+                new Colorization(ColorModel.Hsv, 5, 5, Array.Empty<ColorEntry>()),
+                new[] { new Variant("v", "v", 1) }))),
+            p => p.Contains("at least one", StringComparison.OrdinalIgnoreCase));
+
+    [Fact]
+    public void Dynamic_with_zero_total_entry_weight_reported() =>
+        Assert.Contains(
+            Validator.Validate(Wrap(new IngredientManifest("d", "D", LayerKind.Dynamic,
+                new Colorization(ColorModel.Hsv, 5, 5,
+                    new[] { new ColorEntry(0, new ColorRange(0, 10, 0, 10), null) }),
+                new[] { new Variant("v", "v", 1) }))),
+            p => p.Contains("zero total", StringComparison.OrdinalIgnoreCase));
 }

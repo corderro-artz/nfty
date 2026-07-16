@@ -1,3 +1,4 @@
+using Nfty.Core.Imaging;
 using Nfty.Core.Model;
 
 namespace Nfty.Core.Formats;
@@ -10,6 +11,11 @@ public static class Validator
         var canvas = cb.Manifest.Canvas;
         var recipeIds = cb.Recipes.Select(r => r.Manifest.Id).ToHashSet();
 
+        // Id uniqueness comes first: every ToDictionary below would throw on a duplicate, and
+        // a validator that crashes cannot report anything.
+        foreach (var dup in Duplicates(cb.Recipes.Select(r => r.Manifest.Id)))
+            problems.Add($"CookBook has duplicate recipe id '{dup}'.");
+
         if (cb.Manifest.RecipeWeights.Values.Sum() <= 0)
             problems.Add("CookBook has zero total recipe weight.");
         foreach (var id in cb.Manifest.RecipeWeights.Keys)
@@ -21,7 +27,13 @@ public static class Validator
 
         foreach (var r in cb.Recipes)
         {
-            var ingById = r.Ingredients.ToDictionary(i => i.Manifest.Id);
+            foreach (var dup in Duplicates(r.Ingredients.Select(i => i.Manifest.Id)))
+                problems.Add($"Recipe '{r.Manifest.Id}' has duplicate ingredient id '{dup}'.");
+
+            // Built duplicate-tolerantly (last wins) so a duplicate is reported above rather
+            // than thrown here; the rest of the checks still run and report what they find.
+            var ingById = new Dictionary<string, LoadedIngredient>();
+            foreach (var i in r.Ingredients) ingById[i.Manifest.Id] = i;
 
             foreach (var layerId in r.Manifest.LayerOrder)
                 if (!ingById.ContainsKey(layerId))
@@ -33,6 +45,8 @@ public static class Validator
                     problems.Add($"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}' has no variants.");
                 if (ing.Manifest.Variants.Sum(v => v.Weight) <= 0)
                     problems.Add($"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}' has zero total variant weight.");
+                foreach (var dup in Duplicates(ing.Manifest.Variants.Select(v => v.Id)))
+                    problems.Add($"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}' has duplicate variant id '{dup}'.");
                 string where = $"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}'";
                 var col = ing.Manifest.Colorization;
                 switch (ing.Manifest.Kind)
@@ -56,20 +70,46 @@ public static class Validator
                     case LayerKind.Dynamic:
                         // Value-map rolled from one or more weighted entries.
                         if (col is null)
+                        {
                             problems.Add($"{where} is dynamic but has no colorization.");
+                        }
                         else
+                        {
+                            // Spec 4.1: dynamic needs >=1 entries. Spec 5.1: non-zero total weight.
+                            // Without both, the roll has nothing to pick from.
+                            if (col.Entries.Count == 0)
+                                problems.Add($"{where} is dynamic but has no colorization entries; dynamic requires at least one.");
+                            else if (col.Entries.Sum(e => e.Weight) <= 0)
+                                problems.Add($"{where} is dynamic but its colorization entries have zero total weight.");
+
                             foreach (var entry in col.Entries)
                                 if ((entry.Fixed is null) == (entry.Range is null))
                                     problems.Add($"{where} has a colorization entry that must have exactly one of fixed or range.");
+                        }
                         break;
                 }
 
-                // Ranges are sampled ascending and never wrap, so an inverted or out-of-axis
-                // range is author error — the roller would silently sample nonsense.
                 if (col is not null)
                     foreach (var entry in col.Entries)
+                    {
+                        // Ranges are sampled ascending and never wrap, so an inverted or
+                        // out-of-axis range is author error — the roller would silently
+                        // sample nonsense.
                         if (entry.Range is { } range)
                             CheckRange(problems, where, range);
+
+                        // Spec 9: a colour spec must carry an explicit prefix and is never
+                        // guessed. Parsing here is what makes `validate` catch it instead of
+                        // Generate throwing FormatException later.
+                        if (entry.Fixed is { } spec)
+                        {
+                            try { ColorSpec.Parse(spec); }
+                            catch (FormatException ex)
+                            {
+                                problems.Add($"{where} has an invalid fixed color '{spec}': {ex.Message}");
+                            }
+                        }
+                    }
 
                 foreach (var v in ing.Manifest.Variants)
                 {
@@ -93,6 +133,12 @@ public static class Validator
 
         return problems;
     }
+
+    /// <summary>Each id that appears more than once, in first-seen order.</summary>
+    private static IEnumerable<string> Duplicates(IEnumerable<string> ids) =>
+        ids.GroupBy(id => id, StringComparer.Ordinal)
+           .Where(g => g.Count() > 1)
+           .Select(g => g.Key);
 
     /// <summary>
     /// A colorization range must run ascending and stay on its axis. Hue is 0..360 degrees and
