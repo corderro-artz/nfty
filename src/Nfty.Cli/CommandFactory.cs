@@ -126,16 +126,18 @@ public static class CommandFactory
         cmd.SetAction(parse =>
         {
             using var ing = IngredientArchive.Read(parse.GetValue(path)!);
+            string outPath = parse.GetValue(outp)!;
             var image = ing.VariantImages[parse.GetValue(variant)!];
-            var rgb = ColorSpec.Parse(parse.GetValue(color)!);
             var m = parse.GetValue(model)!.Equals("hsl", StringComparison.OrdinalIgnoreCase)
                 ? ColorModel.Hsl : ColorModel.Hsv;
-            var (h, s, _) = m == ColorModel.Hsv
-                ? ColorConvert.RgbToHsv(rgb)
-                : ColorConvert.RgbToHsl(rgb);
+
+            // The same spec→(H,S) resolution a static layer gets, so a preview shows exactly
+            // what generation would render rather than a second, drifting implementation.
+            var (h, s) = ColorRoller.FromFixed(parse.GetValue(color)!, m);
+
             using var img = Colorizer.Apply(image, h, s, m);
-            img.Save(parse.GetValue(outp)!, new PngEncoder());
-            Console.WriteLine($"Wrote {parse.GetValue(outp)}");
+            img.Save(outPath, new PngEncoder());
+            Console.WriteLine($"Wrote {outPath}");
             return 0;
         });
         return cmd;
@@ -153,10 +155,11 @@ public static class CommandFactory
         cmd.SetAction(parse =>
         {
             using var book = CookBookArchive.Read(parse.GetValue(path)!);
+            string dir = parse.GetValue(outDir)!;
             var opts = new GenerateOptions(parse.GetValue(count), parse.GetValue(seed)!, parse.GetValue(recipe));
             using var set = Generator.Generate(book, opts);
-            SetWriter.Write(set, parse.GetValue(outDir)!, parse.GetValue(pack));
-            Console.WriteLine($"Generated {set.Assets.Count} → {parse.GetValue(outDir)}");
+            SetWriter.Write(set, dir, parse.GetValue(pack));
+            Console.WriteLine($"Generated {set.Assets.Count} → {dir}");
             return 0;
         });
         return cmd;
@@ -172,14 +175,18 @@ public static class CommandFactory
         cmd.SetAction(parse =>
         {
             using var book = CookBookArchive.Read(parse.GetValue(path)!);
-            var existing = SetWriter.ReadExisting(parse.GetValue(dir)!);
+            string setDir = parse.GetValue(dir)!;
+            int target = parse.GetValue(to);
+
+            var existing = SetWriter.ReadExisting(setDir);
             int have = existing.NextNumber - 1;
-            int need = parse.GetValue(to) - have;
+            int need = target - have;
             if (need <= 0) { Console.WriteLine($"Already at {have}."); return 0; }
+
             using var more = Generator.Generate(book, new GenerateOptions(need, parse.GetValue(seed)!),
                 existing.Dnas, existing.NextNumber);
-            SetWriter.Write(more, parse.GetValue(dir)!, pack: false);
-            Console.WriteLine($"Extended by {need} → {parse.GetValue(to)} total.");
+            SetWriter.Write(more, setDir, pack: false);
+            Console.WriteLine($"Extended by {need} → {target} total.");
             return 0;
         });
         return cmd;

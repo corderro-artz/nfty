@@ -21,7 +21,8 @@ public static class ColorRoller
 
     /// <summary>
     /// Resolves a single fixed color spec to its (H, S) deterministically, consuming NO RNG.
-    /// Used by Static layers, which colorize with exactly one fixed color and no per-asset roll.
+    /// Used by Static layers, which colorize with exactly one fixed color and no per-asset roll,
+    /// and by <c>preview</c>, so a rendered preview resolves colour exactly as generation does.
     /// </summary>
     public static RolledColor FromFixed(string fixedSpec, ColorModel model)
     {
