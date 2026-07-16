@@ -35,6 +35,11 @@ public static class Validator
             var ingById = new Dictionary<string, LoadedIngredient>();
             foreach (var i in r.Ingredients) ingById[i.Manifest.Id] = i;
 
+            // No layers means nothing to composite: every asset would be fully transparent.
+            if (r.Manifest.LayerOrder.Count == 0)
+                problems.Add($"Recipe '{r.Manifest.Id}' has an empty layerOrder, so it would "
+                    + "generate a fully-transparent asset.");
+
             foreach (var layerId in r.Manifest.LayerOrder)
                 if (!ingById.ContainsKey(layerId))
                     problems.Add($"Recipe '{r.Manifest.Id}' layerOrder references unknown ingredient '{layerId}'.");

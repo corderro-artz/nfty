@@ -155,6 +155,50 @@ public class SetWriterTests
         Assert.Equal(WriteSetJsonUnderCulture("en-US"), WriteSetJsonUnderCulture("sv-SE"));
     }
 
+    /// <summary>A second batch landing in the same directory — the shape `extend` writes.</summary>
+    private static GeneratedSet SecondBatch() => new(
+        "VaporPets", "desc", "VP", "seed-2",
+        new[]
+        {
+            new GeneratedAsset
+            {
+                SetNumber = 2, Dna = "def", RecipeId = "cat", RecipeName = "Cat",
+                Image = new Image<Rgba32>(2, 2, new Rgba32(9, 9, 9, 255)),
+                Traits = new[] { new TraitSelection("bg", "Background", "dawn", "Dawn") },
+                ColorRolls = new[] { new ColorRoll("bg", LayerKind.Custom, null, null, null) },
+            },
+        });
+
+    [Fact]
+    public void Extend_over_a_set_missing_an_opensea_sibling_names_the_file()
+    {
+        // A set pairs every nfty/NNNN.json with a metadata/NNNN.json. If the sibling is gone the
+        // set is corrupt; a raw FileNotFoundException makes the user guess what nfty was doing.
+        var dir = Path.Combine(Directory.CreateTempSubdirectory().FullName, "out");
+        SetWriter.Write(MakeSet(), dir, pack: false);
+        File.Delete(Path.Combine(dir, "metadata", "0001.json"));
+
+        using var more = SecondBatch();
+        var ex = Assert.Throws<CorruptSetException>(() => SetWriter.Write(more, dir, pack: false));
+
+        Assert.Contains("0001.json", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("metadata", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExtendAsync_over_a_set_missing_an_opensea_sibling_names_the_file()
+    {
+        var dir = Path.Combine(Directory.CreateTempSubdirectory().FullName, "out");
+        SetWriter.Write(MakeSet(), dir, pack: false);
+        File.Delete(Path.Combine(dir, "metadata", "0001.json"));
+
+        using var more = SecondBatch();
+        var ex = await Assert.ThrowsAsync<CorruptSetException>(
+            () => SetWriter.WriteAsync(more, dir, pack: false));
+
+        Assert.Contains("0001.json", ex.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Writes_images_and_set_manifest()
     {

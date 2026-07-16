@@ -130,9 +130,9 @@ public static class CommandFactory
             var rgb = ColorSpec.Parse(parse.GetValue(color)!);
             var m = parse.GetValue(model)!.Equals("hsl", StringComparison.OrdinalIgnoreCase)
                 ? ColorModel.Hsl : ColorModel.Hsv;
-            var (h, s) = m == ColorModel.Hsv
-                ? (ColorConvert.RgbToHsv(rgb).H, ColorConvert.RgbToHsv(rgb).S)
-                : (ColorConvert.RgbToHsl(rgb).H, ColorConvert.RgbToHsl(rgb).S);
+            var (h, s, _) = m == ColorModel.Hsv
+                ? ColorConvert.RgbToHsv(rgb)
+                : ColorConvert.RgbToHsl(rgb);
             using var img = Colorizer.Apply(image, h, s, m);
             img.Save(parse.GetValue(outp)!, new PngEncoder());
             Console.WriteLine($"Wrote {parse.GetValue(outp)}");

@@ -26,9 +26,10 @@ public static class ColorRoller
     public static RolledColor FromFixed(string fixedSpec, ColorModel model)
     {
         var rgb = ColorSpec.Parse(fixedSpec);
-        return model == ColorModel.Hsv
-            ? new RolledColor(ColorConvert.RgbToHsv(rgb).H, ColorConvert.RgbToHsv(rgb).S)
-            : new RolledColor(ColorConvert.RgbToHsl(rgb).H, ColorConvert.RgbToHsl(rgb).S);
+        var (h, s, _) = model == ColorModel.Hsv
+            ? ColorConvert.RgbToHsv(rgb)
+            : ColorConvert.RgbToHsl(rgb);
+        return new RolledColor(h, s);
     }
 
     private static ColorEntry PickEntry(IReadOnlyList<ColorEntry> entries, IRng rng)

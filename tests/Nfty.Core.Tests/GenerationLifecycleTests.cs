@@ -60,11 +60,34 @@ public class GenerationLifecycleTests
     [Fact]
     public void Streaming_yields_only_what_is_enumerated()
     {
-        // Taking 2 of a 4-asset request must not roll (or allocate) the other two.
-        var taken = Generator.GenerateStreaming(Book(), new GenerateOptions(4, "seed-1")).Take(2).ToList();
+        // Taking 2 of a 4-asset request must not roll (or allocate) the other two. Counting the
+        // assets PRODUCED is what proves that: asserting taken.Count == 2 alone passes just as
+        // happily against a fully eager implementation that rolled all four first.
+        int produced = 0;
+        var progress = new SynchronousProgress<GenerationProgress>(_ => produced++);
+
+        var taken = Generator
+            .GenerateStreaming(Book(), new GenerateOptions(4, "seed-1"), progress: progress)
+            .Take(2).ToList();
 
         Assert.Equal(2, taken.Count);
+        Assert.Equal(2, produced);
         foreach (var a in taken) a.Dispose();
+    }
+
+    [Fact]
+    public void Streaming_rolls_nothing_until_enumeration_begins()
+    {
+        // The IEnumerable itself must be cold: merely building it must not generate.
+        int produced = 0;
+        var progress = new SynchronousProgress<GenerationProgress>(_ => produced++);
+
+        var lazy = Generator.GenerateStreaming(Book(), new GenerateOptions(4, "seed-1"), progress: progress);
+
+        Assert.Equal(0, produced);
+
+        foreach (var a in lazy.Take(1)) a.Dispose();
+        Assert.Equal(1, produced);
     }
 
     [Fact]

@@ -179,6 +179,7 @@ public static class SetWriter
             if (newNumbers.Contains(nfty.SetNumber)) continue;
 
             var openFile = Path.Combine(layout.MetaDir, Path.GetFileName(nftyFile));
+            RequireSibling(openFile, nftyFile);
             var open = JsonSerializer.Deserialize<OpenSeaMetadata>(
                 await File.ReadAllTextAsync(openFile, ct), Json.Options)!;
             existing.Add(new ExistingItem(nftyFile, nfty.SetNumber, nfty.Recipe, open.Attributes, nfty));
@@ -193,8 +194,22 @@ public static class SetWriter
         if (newNumbers.Contains(nfty.SetNumber)) return null;
 
         var openFile = Path.Combine(layout.MetaDir, Path.GetFileName(nftyFile));
+        RequireSibling(openFile, nftyFile);
         var open = JsonSerializer.Deserialize<OpenSeaMetadata>(readText(openFile), Json.Options)!;
         return new ExistingItem(nftyFile, nfty.SetNumber, nfty.Recipe, open.Attributes, nfty);
+    }
+
+    /// <summary>
+    /// A Set pairs every rich nfty/NNNN.json with a standards-pure metadata/NNNN.json. A missing
+    /// sibling means the Set is corrupt, which is a domain fact — not the raw FileNotFoundException
+    /// the JSON read would otherwise throw from somewhere deep inside extend.
+    /// </summary>
+    private static void RequireSibling(string openFile, string nftyFile)
+    {
+        if (File.Exists(openFile)) return;
+        throw new CorruptSetException(openFile,
+            $"Set is missing '{openFile}', the OpenSea metadata paired with '{nftyFile}'. "
+            + "Every nfty/NNNN.json needs its metadata/NNNN.json sibling to extend this set.");
     }
 
     private static OpenSeaMetadata BuildOpenSea(GeneratedSet set, GeneratedAsset asset)

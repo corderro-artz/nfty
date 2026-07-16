@@ -14,15 +14,25 @@ namespace Nfty.Core.Generation;
 /// every combination, or it has no reachable colour buckets); only this figure distinguishes them,
 /// so a caller must never read a zero total as a rule conflict.
 /// </param>
+/// <param name="PerRecipeExact">
+/// Per recipe, whether its count is the real figure rather than a floor — as decided while
+/// counting, when whether the combinations or the buckets gave up was still known.
+/// </param>
 public record UniqueSpaceCount(
     long Total,
     bool IsExact,
     IReadOnlyDictionary<string, long> PerRecipe,
     long Cap,
-    IReadOnlyDictionary<string, long> PerRecipeCombos)
+    IReadOnlyDictionary<string, long> PerRecipeCombos,
+    IReadOnlyDictionary<string, bool> PerRecipeExact)
 {
-    /// <summary>A per-recipe count that reached the cap is a floor, not the real figure.</summary>
-    public bool IsRecipeExact(string recipeId) => PerRecipe.GetValueOrDefault(recipeId) < Cap;
+    /// <summary>
+    /// A per-recipe count that reached the cap is a floor, not the real figure. Reads the flag
+    /// recorded during counting rather than re-deriving it from the total: a saturated (inexact)
+    /// combination count multiplied by zero buckets lands back under the cap, which would make a
+    /// re-derived "total &lt; Cap" call an abandoned count exact.
+    /// </summary>
+    public bool IsRecipeExact(string recipeId) => PerRecipeExact.GetValueOrDefault(recipeId);
 }
 
 /// <summary>
@@ -41,6 +51,7 @@ public static class UniqueSpace
         bool exact = true;
         var perRecipe = new Dictionary<string, long>();
         var perRecipeCombos = new Dictionary<string, long>();
+        var perRecipeExact = new Dictionary<string, bool>();
 
         foreach (var recipe in book.Recipes)
         {
@@ -52,12 +63,13 @@ public static class UniqueSpace
 
             perRecipe[recipe.Manifest.Id] = recipeTotal;
             perRecipeCombos[recipe.Manifest.Id] = combos;
+            perRecipeExact[recipe.Manifest.Id] = recipeExact;
             total = Saturate(total + recipeTotal, cap);
             exact &= recipeExact;
         }
 
         if (total >= cap) { total = cap; exact = false; }
-        return new UniqueSpaceCount(total, exact, perRecipe, cap, perRecipeCombos);
+        return new UniqueSpaceCount(total, exact, perRecipe, cap, perRecipeCombos, perRecipeExact);
     }
 
     /// <summary>Variant combinations that satisfy the recipe's rules.</summary>

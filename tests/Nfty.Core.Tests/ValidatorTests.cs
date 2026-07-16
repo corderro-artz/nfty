@@ -448,6 +448,30 @@ public class ValidatorTests
                  && p.Contains("layerOrder", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public void Empty_layerOrder_reported()
+    {
+        // A recipe with no layers composites nothing and generates a fully-transparent asset.
+        var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "Book", new Dimensions(4, 4),
+                new Collection("B", "", "B"), new Dictionary<string, double> { ["cat"] = 1.0 }),
+            Recipes = new[]
+            {
+                new LoadedRecipe
+                {
+                    Manifest = new RecipeManifest("cat", "cat", Array.Empty<string>(),
+                        Array.Empty<IncompatibilityRule>()),
+                    Ingredients = Array.Empty<LoadedIngredient>(),
+                },
+            },
+        };
+
+        Assert.Contains(Validator.Validate(book),
+            p => p.Contains("layerOrder", StringComparison.OrdinalIgnoreCase)
+                 && p.Contains("empty", StringComparison.OrdinalIgnoreCase));
+    }
+
     // --- colour spec parsing (finding 4, spec section 9) ---
 
     [Fact]

@@ -259,6 +259,32 @@ public class UniqueSpaceTests
     }
 
     [Fact]
+    public void A_recipe_whose_combinations_saturated_is_never_reported_exact()
+    {
+        // Combinations saturate the cap (inexact), but a dynamic layer with no entries has zero
+        // buckets, so the product falls back to 0 — under the cap. Re-deriving exactness as
+        // "total < cap" then claims the count is exact when the count itself already gave up.
+        var many = Enumerable.Range(0, 40).Select(i => $"v{i}").ToArray();
+        var empty = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("aura", "aura", LayerKind.Dynamic,
+                new Colorization(ColorModel.Hsv, 30, 10, Array.Empty<ColorEntry>()),
+                new[] { new Variant("glow", "glow", 1) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>>
+            {
+                ["glow"] = new Image<Rgba32>(2, 2, new Rgba32(1, 2, 3, 255)),
+            },
+        };
+        var book = Book(Recipe("cat", Array.Empty<IncompatibilityRule>(),
+            Custom("bg", many), Custom("body", many), empty));
+
+        var count = UniqueSpace.Count(book, cap: 500);
+
+        Assert.Equal(0, count.PerRecipe["cat"]);
+        Assert.False(count.IsRecipeExact("cat"));
+    }
+
+    [Fact]
     public void Huge_space_is_capped_and_reported_inexact()
     {
         // 40 hue buckets x 100 sat buckets x 40 variants across two dynamic layers
