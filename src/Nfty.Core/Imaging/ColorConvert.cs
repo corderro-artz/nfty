@@ -6,28 +6,28 @@ public static class ColorConvert
 
     public static RgbColor HsvToRgb(double h, double s, double v)
     {
-        h = ((h % 360) + 360) % 360;
+        h = Wrap(h);
         double c = v * s;
-        double x = c * (1 - Math.Abs((h / 60.0 % 2) - 1));
-        double m = v - c;
-        (double r, double g, double b) = h switch
-        {
-            < 60  => (c, x, 0.0),
-            < 120 => (x, c, 0.0),
-            < 180 => (0.0, c, x),
-            < 240 => (0.0, x, c),
-            < 300 => (x, 0.0, c),
-            _     => (c, 0.0, x),
-        };
-        return new RgbColor(B(r + m), B(g + m), B(b + m));
+        return FromChroma(h, c, v - c);
     }
 
     public static RgbColor HslToRgb(double h, double s, double l)
     {
-        h = ((h % 360) + 360) % 360;
+        h = Wrap(h);
         double c = (1 - Math.Abs(2 * l - 1)) * s;
+        return FromChroma(h, c, l - c / 2);
+    }
+
+    private static double Wrap(double h) => ((h % 360) + 360) % 360;
+
+    /// <summary>
+    /// The shared tail of both conversions: place chroma <paramref name="c"/> in the RGB sector
+    /// that hue <paramref name="h"/> (already wrapped to 0..360) falls in, then lift by the
+    /// model's match value <paramref name="m"/>. Only c and m differ between HSV and HSL.
+    /// </summary>
+    private static RgbColor FromChroma(double h, double c, double m)
+    {
         double x = c * (1 - Math.Abs((h / 60.0 % 2) - 1));
-        double m = l - c / 2;
         (double r, double g, double b) = h switch
         {
             < 60  => (c, x, 0.0),

@@ -154,14 +154,16 @@ public static class SetWriter
     /// </summary>
     private static List<ExistingItem> LoadExisting(Layout layout, GeneratedSet set)
     {
-        var newNumbers = set.Assets.Select(a => a.SetNumber).ToHashSet();
+        var newNumbers = NewNumbers(set);
         var existing = new List<ExistingItem>();
 
         foreach (var nftyFile in Directory.EnumerateFiles(layout.NftyDir, "*.json"))
         {
-            var item = ReadExistingItem(layout, nftyFile, File.ReadAllText(nftyFile),
-                path => File.ReadAllText(path), newNumbers);
-            if (item is not null) existing.Add(item);
+            var nfty = Deserialize<NftyMetadata>(File.ReadAllText(nftyFile));
+            if (newNumbers.Contains(nfty.SetNumber)) continue;
+
+            var open = Deserialize<OpenSeaMetadata>(File.ReadAllText(SiblingOf(layout, nftyFile)));
+            existing.Add(ToExistingItem(nftyFile, nfty, open));
         }
         return existing;
     }
@@ -169,44 +171,36 @@ public static class SetWriter
     private static async Task<List<ExistingItem>> LoadExistingAsync(
         Layout layout, GeneratedSet set, CancellationToken ct)
     {
-        var newNumbers = set.Assets.Select(a => a.SetNumber).ToHashSet();
+        var newNumbers = NewNumbers(set);
         var existing = new List<ExistingItem>();
 
         foreach (var nftyFile in Directory.EnumerateFiles(layout.NftyDir, "*.json"))
         {
-            string nftyJson = await File.ReadAllTextAsync(nftyFile, ct);
-            var nfty = JsonSerializer.Deserialize<NftyMetadata>(nftyJson, Json.Options)!;
+            var nfty = Deserialize<NftyMetadata>(await File.ReadAllTextAsync(nftyFile, ct));
             if (newNumbers.Contains(nfty.SetNumber)) continue;
 
-            var openFile = Path.Combine(layout.MetaDir, Path.GetFileName(nftyFile));
-            RequireSibling(openFile, nftyFile);
-            var open = JsonSerializer.Deserialize<OpenSeaMetadata>(
-                await File.ReadAllTextAsync(openFile, ct), Json.Options)!;
-            existing.Add(new ExistingItem(nftyFile, nfty.SetNumber, nfty.Recipe, open.Attributes, nfty));
+            var open = Deserialize<OpenSeaMetadata>(
+                await File.ReadAllTextAsync(SiblingOf(layout, nftyFile), ct));
+            existing.Add(ToExistingItem(nftyFile, nfty, open));
         }
         return existing;
     }
 
-    private static ExistingItem? ReadExistingItem(
-        Layout layout, string nftyFile, string nftyJson, Func<string, string> readText, HashSet<int> newNumbers)
-    {
-        var nfty = JsonSerializer.Deserialize<NftyMetadata>(nftyJson, Json.Options)!;
-        if (newNumbers.Contains(nfty.SetNumber)) return null;
+    private static HashSet<int> NewNumbers(GeneratedSet set) =>
+        set.Assets.Select(a => a.SetNumber).ToHashSet();
 
-        var openFile = Path.Combine(layout.MetaDir, Path.GetFileName(nftyFile));
-        RequireSibling(openFile, nftyFile);
-        var open = JsonSerializer.Deserialize<OpenSeaMetadata>(readText(openFile), Json.Options)!;
-        return new ExistingItem(nftyFile, nfty.SetNumber, nfty.Recipe, open.Attributes, nfty);
-    }
+    private static ExistingItem ToExistingItem(string nftyFile, NftyMetadata nfty, OpenSeaMetadata open) =>
+        new(nftyFile, nfty.SetNumber, nfty.Recipe, open.Attributes, nfty);
 
     /// <summary>
-    /// A Set pairs every rich nfty/NNNN.json with a standards-pure metadata/NNNN.json. A missing
-    /// sibling means the Set is corrupt, which is a domain fact — not the raw FileNotFoundException
-    /// the JSON read would otherwise throw from somewhere deep inside extend.
+    /// The standards-pure metadata/NNNN.json paired with a rich nfty/NNNN.json. A missing sibling
+    /// means the Set is corrupt, which is a domain fact — not the raw FileNotFoundException the
+    /// JSON read would otherwise throw from somewhere deep inside extend.
     /// </summary>
-    private static void RequireSibling(string openFile, string nftyFile)
+    private static string SiblingOf(Layout layout, string nftyFile)
     {
-        if (File.Exists(openFile)) return;
+        var openFile = Path.Combine(layout.MetaDir, Path.GetFileName(nftyFile));
+        if (File.Exists(openFile)) return openFile;
         throw new CorruptSetException(openFile,
             $"Set is missing '{openFile}', the OpenSea metadata paired with '{nftyFile}'. "
             + "Every nfty/NNNN.json needs its metadata/NNNN.json sibling to extend this set.");
@@ -266,6 +260,8 @@ public static class SetWriter
     }
 
     private static string Serialize<T>(T value) => JsonSerializer.Serialize(value, Json.Options);
+
+    private static T Deserialize<T>(string json) => JsonSerializer.Deserialize<T>(json, Json.Options)!;
 
     private static LayerColor ToLayerColor(ColorRoll c) => new(
         Layer: c.LayerId,
