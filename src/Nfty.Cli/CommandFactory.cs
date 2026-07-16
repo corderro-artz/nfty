@@ -26,28 +26,59 @@ public static class CommandFactory
 
     private static Command Inspect()
     {
-        var path = new Argument<string>("cookbook") { Description = "Path to a .cbk file" };
-        var cmd = new Command("inspect", "Print the tree of a cookbook") { path };
+        var path = new Argument<string>("file") { Description = "Path to a .cbk, .rcp or .igt file" };
+        var cmd = new Command("inspect", "Print the tree of a cookbook, recipe or ingredient") { path };
         cmd.SetAction(parse =>
         {
-            var cb = CookBookArchive.Read(parse.GetValue(path)!);
-            Console.WriteLine($"CookBook: {cb.Manifest.Name} ({cb.Manifest.Canvas.Width}x{cb.Manifest.Canvas.Height})");
-            foreach (var r in cb.Recipes)
+            string file = parse.GetValue(path)!;
+            switch (Archives.KindOf(file))
             {
-                double w = cb.Manifest.RecipeWeights.GetValueOrDefault(r.Manifest.Id);
-                Console.WriteLine($"  Recipe: {r.Manifest.Name} (weight={w})");
-                var byId = r.Ingredients.ToDictionary(i => i.Manifest.Id);
-                foreach (var layerId in r.Manifest.LayerOrder)
+                case ArchiveKind.CookBook:
                 {
-                    var ing = byId[layerId];
-                    Console.WriteLine($"    Ingredient: {ing.Manifest.Name} [{ing.Manifest.Kind}]");
-                    foreach (var v in ing.Manifest.Variants)
-                        Console.WriteLine($"      Variant: {v.Name} (w={v.Weight})");
+                    using var cb = CookBookArchive.Read(file);
+                    PrintCookBook(cb);
+                    break;
+                }
+                case ArchiveKind.Recipe:
+                {
+                    using var recipe = RecipeArchive.Read(file);
+                    PrintRecipe(recipe, weight: null, indent: "");
+                    break;
+                }
+                case ArchiveKind.Ingredient:
+                {
+                    using var ing = IngredientArchive.Read(file);
+                    PrintIngredient(ing, indent: "");
+                    break;
                 }
             }
             return 0;
         });
         return cmd;
+    }
+
+    private static void PrintCookBook(LoadedCookBook cb)
+    {
+        Console.WriteLine($"CookBook: {cb.Manifest.Name} ({cb.Manifest.Canvas.Width}x{cb.Manifest.Canvas.Height})");
+        foreach (var r in cb.Recipes)
+            PrintRecipe(r, cb.Manifest.RecipeWeights.GetValueOrDefault(r.Manifest.Id), "  ");
+    }
+
+    private static void PrintRecipe(LoadedRecipe recipe, double? weight, string indent)
+    {
+        string suffix = weight is double w ? $" (weight={w})" : string.Empty;
+        Console.WriteLine($"{indent}Recipe: {recipe.Manifest.Name}{suffix}");
+
+        var byId = recipe.Ingredients.ToDictionary(i => i.Manifest.Id);
+        foreach (var layerId in recipe.Manifest.LayerOrder)
+            PrintIngredient(byId[layerId], indent + "  ");
+    }
+
+    private static void PrintIngredient(LoadedIngredient ing, string indent)
+    {
+        Console.WriteLine($"{indent}Ingredient: {ing.Manifest.Name} [{ing.Manifest.Kind}]");
+        foreach (var v in ing.Manifest.Variants)
+            Console.WriteLine($"{indent}  Variant: {v.Name} (w={v.Weight})");
     }
 
     private static Command Validate()
@@ -56,7 +87,8 @@ public static class CommandFactory
         var cmd = new Command("validate", "Validate a cookbook") { path };
         cmd.SetAction(parse =>
         {
-            var problems = Validator.Validate(CookBookArchive.Read(parse.GetValue(path)!));
+            using var cb = CookBookArchive.Read(parse.GetValue(path)!);
+            var problems = Validator.Validate(cb);
             if (problems.Count == 0) { Console.WriteLine("OK — no problems."); return 0; }
             foreach (var p in problems) Console.Error.WriteLine(p);
             return 1;
@@ -70,7 +102,8 @@ public static class CommandFactory
         var cmd = new Command("stats", "Show rarity breakdown") { path };
         cmd.SetAction(parse =>
         {
-            var report = RarityCalculator.Compute(CookBookArchive.Read(parse.GetValue(path)!));
+            using var cb = CookBookArchive.Read(parse.GetValue(path)!);
+            var report = RarityCalculator.Compute(cb);
             Console.WriteLine("Recipes:");
             foreach (var r in report.Recipes)
                 Console.WriteLine($"  {r.RecipeName,-16} {r.Percent,6:0.00}%");
@@ -92,17 +125,19 @@ public static class CommandFactory
         var cmd = new Command("preview", "Render a value-map variant with a chosen color") { path, variant, color, model, outp };
         cmd.SetAction(parse =>
         {
-            var ing = IngredientArchive.Read(parse.GetValue(path)!);
+            using var ing = IngredientArchive.Read(parse.GetValue(path)!);
+            string outPath = parse.GetValue(outp)!;
             var image = ing.VariantImages[parse.GetValue(variant)!];
-            var rgb = ColorSpec.Parse(parse.GetValue(color)!);
             var m = parse.GetValue(model)!.Equals("hsl", StringComparison.OrdinalIgnoreCase)
                 ? ColorModel.Hsl : ColorModel.Hsv;
-            var (h, s) = m == ColorModel.Hsv
-                ? (ColorConvert.RgbToHsv(rgb).H, ColorConvert.RgbToHsv(rgb).S)
-                : (ColorConvert.RgbToHsl(rgb).H, ColorConvert.RgbToHsl(rgb).S);
+
+            // The same spec→(H,S) resolution a static layer gets, so a preview shows exactly
+            // what generation would render rather than a second, drifting implementation.
+            var (h, s) = ColorRoller.FromFixed(parse.GetValue(color)!, m);
+
             using var img = Colorizer.Apply(image, h, s, m);
-            img.Save(parse.GetValue(outp)!, new PngEncoder());
-            Console.WriteLine($"Wrote {parse.GetValue(outp)}");
+            img.Save(outPath, new PngEncoder());
+            Console.WriteLine($"Wrote {outPath}");
             return 0;
         });
         return cmd;
@@ -119,12 +154,12 @@ public static class CommandFactory
         var cmd = new Command("generate", "Generate a set") { path, count, seed, outDir, pack, recipe };
         cmd.SetAction(parse =>
         {
-            var book = CookBookArchive.Read(parse.GetValue(path)!);
+            using var book = CookBookArchive.Read(parse.GetValue(path)!);
+            string dir = parse.GetValue(outDir)!;
             var opts = new GenerateOptions(parse.GetValue(count), parse.GetValue(seed)!, parse.GetValue(recipe));
-            var set = Generator.Generate(book, opts);
-            SetWriter.Write(set, parse.GetValue(outDir)!, parse.GetValue(pack));
-            foreach (var a in set.Assets) a.Image.Dispose();
-            Console.WriteLine($"Generated {set.Assets.Count} → {parse.GetValue(outDir)}");
+            using var set = Generator.Generate(book, opts);
+            SetWriter.Write(set, dir, parse.GetValue(pack));
+            Console.WriteLine($"Generated {set.Assets.Count} → {dir}");
             return 0;
         });
         return cmd;
@@ -139,16 +174,19 @@ public static class CommandFactory
         var cmd = new Command("extend", "Grow an existing set to a new count") { path, dir, to, seed };
         cmd.SetAction(parse =>
         {
-            var book = CookBookArchive.Read(parse.GetValue(path)!);
-            var existing = SetWriter.ReadExisting(parse.GetValue(dir)!);
+            using var book = CookBookArchive.Read(parse.GetValue(path)!);
+            string setDir = parse.GetValue(dir)!;
+            int target = parse.GetValue(to);
+
+            var existing = SetWriter.ReadExisting(setDir);
             int have = existing.NextNumber - 1;
-            int need = parse.GetValue(to) - have;
+            int need = target - have;
             if (need <= 0) { Console.WriteLine($"Already at {have}."); return 0; }
-            var more = Generator.Generate(book, new GenerateOptions(need, parse.GetValue(seed)!),
+
+            using var more = Generator.Generate(book, new GenerateOptions(need, parse.GetValue(seed)!),
                 existing.Dnas, existing.NextNumber);
-            SetWriter.Write(more, parse.GetValue(dir)!, pack: false);
-            foreach (var a in more.Assets) a.Image.Dispose();
-            Console.WriteLine($"Extended by {need} → {parse.GetValue(to)} total.");
+            SetWriter.Write(more, setDir, pack: false);
+            Console.WriteLine($"Extended by {need} → {target} total.");
             return 0;
         });
         return cmd;

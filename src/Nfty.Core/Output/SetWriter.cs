@@ -4,9 +4,14 @@ using Nfty.Core.Formats;
 using Nfty.Core.Generation;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.PixelFormats;
 
 namespace Nfty.Core.Output;
+
+/// <summary>How far a set write has got. <see cref="Fraction"/> suits a progress bar.</summary>
+public readonly record struct WriteProgress(int Completed, int Total)
+{
+    public double Fraction => Total <= 0 ? 0 : (double)Completed / Total;
+}
 
 public static class SetWriter
 {
@@ -19,108 +24,244 @@ public static class SetWriter
     private record ExistingItem(string NftyPath, int SetNumber, string Recipe,
         IReadOnlyList<MetadataAttribute> Attributes, NftyMetadata Nfty);
 
+    private record Layout(string OutDir, string ImagesDir, string MetaDir, string NftyDir);
+
     public static void Write(GeneratedSet set, string outDir, bool pack)
     {
-        Directory.CreateDirectory(Path.Combine(outDir, "images"));
-        var metaDir = Path.Combine(outDir, "metadata");
+        var layout = Prepare(outDir);
+        var existing = LoadExisting(layout, set);
+        var rarity = new Rarity(existing, set);
+
+        foreach (var asset in set.Assets)
+        {
+            var (imagePath, metaPath, nftyPath) = PathsFor(layout, asset.SetNumber);
+            asset.Image.Save(imagePath, new PngEncoder());
+            File.WriteAllText(metaPath, Serialize(BuildOpenSea(set, asset)));
+            File.WriteAllText(nftyPath, Serialize(BuildNfty(set, asset, rarity)));
+        }
+
+        foreach (var item in existing)
+            File.WriteAllText(item.NftyPath, Serialize(Regraded(item, rarity)));
+
+        File.WriteAllText(Path.Combine(outDir, "set.json"),
+            Serialize(BuildSetManifest(set, existing, rarity)));
+
+        if (pack) Pack(outDir);
+    }
+
+    /// <summary>
+    /// Writes the set with genuinely async I/O, reporting one <see cref="WriteProgress"/> per
+    /// asset. Behaves exactly as <see cref="Write"/> — same files, same bytes.
+    /// </summary>
+    public static async Task WriteAsync(
+        GeneratedSet set,
+        string outDir,
+        bool pack,
+        IProgress<WriteProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var layout = Prepare(outDir);
+        var existing = await LoadExistingAsync(layout, set, cancellationToken);
+        var rarity = new Rarity(existing, set);
+
+        int done = 0;
+        foreach (var asset in set.Assets)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var (imagePath, metaPath, nftyPath) = PathsFor(layout, asset.SetNumber);
+            await asset.Image.SaveAsync(imagePath, new PngEncoder(), cancellationToken);
+            await File.WriteAllTextAsync(metaPath, Serialize(BuildOpenSea(set, asset)), cancellationToken);
+            await File.WriteAllTextAsync(nftyPath, Serialize(BuildNfty(set, asset, rarity)), cancellationToken);
+
+            progress?.Report(new WriteProgress(++done, set.Assets.Count));
+        }
+
+        foreach (var item in existing)
+            await File.WriteAllTextAsync(item.NftyPath, Serialize(Regraded(item, rarity)), cancellationToken);
+
+        await File.WriteAllTextAsync(Path.Combine(outDir, "set.json"),
+            Serialize(BuildSetManifest(set, existing, rarity)), cancellationToken);
+
+        // ZipFile has no async API; keep the UI thread free rather than pretend.
+        if (pack) await Task.Run(() => Pack(outDir), cancellationToken);
+    }
+
+    public static ExistingSet ReadExisting(string outDir)
+    {
         var nftyDir = Path.Combine(outDir, "nfty");
-        Directory.CreateDirectory(metaDir);
-        Directory.CreateDirectory(nftyDir);
+        if (!Directory.Exists(nftyDir)) return new ExistingSet(Array.Empty<string>(), 1);
 
-        // Existing items not being overwritten by this batch, so rarity/count/distribution can
-        // be recomputed over the whole collection rather than just this batch.
-        var newNumbers = new HashSet<int>(set.Assets.Select(a => a.SetNumber));
+        var dnas = new List<string>();
+        int maxNumber = 0;
+        foreach (var file in Directory.EnumerateFiles(nftyDir, "*.json"))
+        {
+            var (dna, number) = ReadDnaAndNumber(File.ReadAllText(file));
+            dnas.Add(dna);
+            maxNumber = Math.Max(maxNumber, number);
+        }
+        return new ExistingSet(dnas, maxNumber + 1);
+    }
+
+    public static async Task<ExistingSet> ReadExistingAsync(
+        string outDir, CancellationToken cancellationToken = default)
+    {
+        var nftyDir = Path.Combine(outDir, "nfty");
+        if (!Directory.Exists(nftyDir)) return new ExistingSet(Array.Empty<string>(), 1);
+
+        var dnas = new List<string>();
+        int maxNumber = 0;
+        foreach (var file in Directory.EnumerateFiles(nftyDir, "*.json"))
+        {
+            var (dna, number) = ReadDnaAndNumber(await File.ReadAllTextAsync(file, cancellationToken));
+            dnas.Add(dna);
+            maxNumber = Math.Max(maxNumber, number);
+        }
+        return new ExistingSet(dnas, maxNumber + 1);
+    }
+
+    private static (string Dna, int SetNumber) ReadDnaAndNumber(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        return (doc.RootElement.GetProperty("dna").GetString()!,
+                doc.RootElement.GetProperty("setNumber").GetInt32());
+    }
+
+    private static Layout Prepare(string outDir)
+    {
+        var layout = new Layout(outDir,
+            Path.Combine(outDir, "images"),
+            Path.Combine(outDir, "metadata"),
+            Path.Combine(outDir, "nfty"));
+
+        Directory.CreateDirectory(layout.ImagesDir);
+        Directory.CreateDirectory(layout.MetaDir);
+        Directory.CreateDirectory(layout.NftyDir);
+        return layout;
+    }
+
+    private static (string Image, string Meta, string Nfty) PathsFor(Layout layout, int setNumber)
+    {
+        string stem = setNumber.ToString("D4");
+        return (Path.Combine(layout.ImagesDir, $"{stem}.png"),
+                Path.Combine(layout.MetaDir, $"{stem}.json"),
+                Path.Combine(layout.NftyDir, $"{stem}.json"));
+    }
+
+    /// <summary>
+    /// Items from earlier batches that this write is not overwriting. They still count toward
+    /// rarity, which is a property of the whole collection rather than of one run.
+    /// </summary>
+    private static List<ExistingItem> LoadExisting(Layout layout, GeneratedSet set)
+    {
+        var newNumbers = NewNumbers(set);
         var existing = new List<ExistingItem>();
-        foreach (var nftyFile in Directory.EnumerateFiles(nftyDir, "*.json"))
+
+        foreach (var nftyFile in Directory.EnumerateFiles(layout.NftyDir, "*.json"))
         {
-            var nfty = JsonSerializer.Deserialize<NftyMetadata>(File.ReadAllText(nftyFile), Json.Options)!;
+            var nfty = Deserialize<NftyMetadata>(File.ReadAllText(nftyFile));
             if (newNumbers.Contains(nfty.SetNumber)) continue;
-            var openFile = Path.Combine(metaDir, Path.GetFileName(nftyFile));
-            var open = JsonSerializer.Deserialize<OpenSeaMetadata>(File.ReadAllText(openFile), Json.Options)!;
-            existing.Add(new ExistingItem(nftyFile, nfty.SetNumber, nfty.Recipe, open.Attributes, nfty));
-        }
 
-        // Observed frequencies across the whole collection (existing ∪ this batch).
-        var counts = new Dictionary<(string, string), int>();
-        void Bump(string traitType, string value) =>
-            counts[(traitType, value)] = counts.GetValueOrDefault((traitType, value)) + 1;
-        foreach (var item in existing)
-            foreach (var attr in item.Attributes) Bump(attr.Trait_type, attr.Value);
-        foreach (var a in set.Assets)
+            var open = Deserialize<OpenSeaMetadata>(File.ReadAllText(SiblingOf(layout, nftyFile)));
+            existing.Add(ToExistingItem(nftyFile, nfty, open));
+        }
+        return existing;
+    }
+
+    private static async Task<List<ExistingItem>> LoadExistingAsync(
+        Layout layout, GeneratedSet set, CancellationToken ct)
+    {
+        var newNumbers = NewNumbers(set);
+        var existing = new List<ExistingItem>();
+
+        foreach (var nftyFile in Directory.EnumerateFiles(layout.NftyDir, "*.json"))
         {
-            Bump(TypeTrait, a.RecipeName);
-            foreach (var t in a.Traits) Bump(t.IngredientName, t.VariantName);
+            var nfty = Deserialize<NftyMetadata>(await File.ReadAllTextAsync(nftyFile, ct));
+            if (newNumbers.Contains(nfty.SetNumber)) continue;
+
+            var open = Deserialize<OpenSeaMetadata>(
+                await File.ReadAllTextAsync(SiblingOf(layout, nftyFile), ct));
+            existing.Add(ToExistingItem(nftyFile, nfty, open));
         }
+        return existing;
+    }
 
-        int total = existing.Count + set.Assets.Count;
-        double n = Math.Max(1, total);
-        RarityAttribute Rar(string traitType, string value) =>
-            new(traitType, value, Math.Round(counts.GetValueOrDefault((traitType, value)) / n * 100, 2));
+    private static HashSet<int> NewNumbers(GeneratedSet set) =>
+        set.Assets.Select(a => a.SetNumber).ToHashSet();
 
-        foreach (var a in set.Assets)
-        {
-            string stem = a.SetNumber.ToString("D4");
-            a.Image.Save(Path.Combine(outDir, "images", $"{stem}.png"), new PngEncoder());
+    private static ExistingItem ToExistingItem(string nftyFile, NftyMetadata nfty, OpenSeaMetadata open) =>
+        new(nftyFile, nfty.SetNumber, nfty.Recipe, open.Attributes, nfty);
 
-            var attributes = new List<MetadataAttribute> { new(TypeTrait, a.RecipeName) };
-            attributes.AddRange(a.Traits.Select(t => new MetadataAttribute(t.IngredientName, t.VariantName)));
+    /// <summary>
+    /// The standards-pure metadata/NNNN.json paired with a rich nfty/NNNN.json. A missing sibling
+    /// means the Set is corrupt, which is a domain fact — not the raw FileNotFoundException the
+    /// JSON read would otherwise throw from somewhere deep inside extend.
+    /// </summary>
+    private static string SiblingOf(Layout layout, string nftyFile)
+    {
+        var openFile = Path.Combine(layout.MetaDir, Path.GetFileName(nftyFile));
+        if (File.Exists(openFile)) return openFile;
+        throw new CorruptSetException(openFile,
+            $"Set is missing '{openFile}', the OpenSea metadata paired with '{nftyFile}'. "
+            + "Every nfty/NNNN.json needs its metadata/NNNN.json sibling to extend this set.");
+    }
 
-            // (a) Standards-pure OpenSea / ERC-721 file.
-            var openSea = new OpenSeaMetadata(
-                Name: $"{set.CollectionName} #{a.SetNumber}",
-                Description: set.Description,
-                Image: $"images/{stem}.png",
-                Attributes: attributes);
-            File.WriteAllText(Path.Combine(metaDir, $"{stem}.json"),
-                JsonSerializer.Serialize(openSea, Json.Options));
+    private static OpenSeaMetadata BuildOpenSea(GeneratedSet set, GeneratedAsset asset)
+    {
+        var attributes = new List<MetadataAttribute> { new(TypeTrait, asset.RecipeName) };
+        attributes.AddRange(asset.Traits.Select(t => new MetadataAttribute(t.IngredientName, t.VariantName)));
 
-            // (b) Rich nfty file with the extras and every layer's resolved color.
-            var rarity = new List<RarityAttribute> { Rar(TypeTrait, a.RecipeName) };
-            rarity.AddRange(a.Traits.Select(t => Rar(t.IngredientName, t.VariantName)));
+        return new OpenSeaMetadata(
+            Name: $"{set.CollectionName} #{asset.SetNumber}",
+            Description: set.Description,
+            Image: $"images/{asset.SetNumber:D4}.png",
+            Attributes: attributes);
+    }
 
-            var nfty = new NftyMetadata(
-                SetNumber: a.SetNumber,
-                Recipe: a.RecipeId,
-                Dna: a.Dna,
-                Seed: set.Seed,
-                Rarity: rarity,
-                Layers: a.ColorRolls.Select(ToLayerColor).ToList());
-            File.WriteAllText(Path.Combine(nftyDir, $"{stem}.json"),
-                JsonSerializer.Serialize(nfty, Json.Options));
-        }
+    private static NftyMetadata BuildNfty(GeneratedSet set, GeneratedAsset asset, Rarity rarity)
+    {
+        var table = new List<RarityAttribute> { rarity.For(TypeTrait, asset.RecipeName) };
+        table.AddRange(asset.Traits.Select(t => rarity.For(t.IngredientName, t.VariantName)));
 
-        // Rewrite existing items' rarity (in their nfty files) to reflect the whole collection.
-        foreach (var item in existing)
-        {
-            var updated = item.Nfty with
-            {
-                Rarity = item.Attributes.Select(a => Rar(a.Trait_type, a.Value)).ToList(),
-            };
-            File.WriteAllText(item.NftyPath, JsonSerializer.Serialize(updated, Json.Options));
-        }
+        return new NftyMetadata(
+            SetNumber: asset.SetNumber,
+            Recipe: asset.RecipeId,
+            Dna: asset.Dna,
+            Seed: set.Seed,
+            Rarity: table,
+            Layers: asset.ColorRolls.Select(ToLayerColor).ToList());
+    }
 
+    /// <summary>An existing item with its rarity restated against the enlarged collection.</summary>
+    private static NftyMetadata Regraded(ExistingItem item, Rarity rarity) =>
+        item.Nfty with { Rarity = item.Attributes.Select(a => rarity.For(a.Trait_type, a.Value)).ToList() };
+
+    private static SetManifest BuildSetManifest(
+        GeneratedSet set, IReadOnlyList<ExistingItem> existing, Rarity rarity)
+    {
         var distribution = existing.Select(e => e.Recipe)
             .Concat(set.Assets.Select(a => a.RecipeId))
             .GroupBy(id => id)
-            .Select(g => new RecipeCount(g.Key, g.Count(), Math.Round(g.Count() / n * 100, 2)))
-            .OrderBy(d => d.Recipe).ToList();
+            .Select(g => new RecipeCount(g.Key, g.Count(), rarity.Percent(g.Count())))
+            // Ordinal: the default comparer sorts by CURRENT CULTURE, so the same book and seed
+            // would emit different set.json bytes on an en-US box than a sv-SE one (spec 5.5
+            // promises byte-identical output).
+            .OrderBy(d => d.Recipe, StringComparer.Ordinal).ToList();
 
-        var rarityTable = counts.Keys
-            .Select(k => Rar(k.Item1, k.Item2))
-            .OrderBy(r => r.Trait_type).ThenBy(r => r.Value).ToList();
-
-        var setManifest = new SetManifest(set.CollectionName, total, set.Seed,
-            GeneratorVersion, distribution, rarityTable);
-        File.WriteAllText(Path.Combine(outDir, "set.json"),
-            JsonSerializer.Serialize(setManifest, Json.Options));
-
-        if (pack)
-        {
-            string archivePath = outDir + ".set";
-            if (File.Exists(archivePath)) File.Delete(archivePath);
-            ZipFile.CreateFromDirectory(outDir, archivePath);
-        }
+        return new SetManifest(set.CollectionName, rarity.Total, set.Seed,
+            set.CookbookSha256, GeneratorVersion, distribution, rarity.Table());
     }
+
+    private static void Pack(string outDir)
+    {
+        string archivePath = outDir + ".set";
+        if (File.Exists(archivePath)) File.Delete(archivePath);
+        ZipFile.CreateFromDirectory(outDir, archivePath);
+    }
+
+    private static string Serialize<T>(T value) => JsonSerializer.Serialize(value, Json.Options);
+
+    private static T Deserialize<T>(string json) => JsonSerializer.Deserialize<T>(json, Json.Options)!;
 
     private static LayerColor ToLayerColor(ColorRoll c) => new(
         Layer: c.LayerId,
@@ -129,20 +270,45 @@ public static class SetWriter
         H: c.H is double h ? Math.Round(h, 1) : null,
         S: c.S is double s ? Math.Round(s, 3) : null);
 
-    public static ExistingSet ReadExisting(string outDir)
+    /// <summary>
+    /// Observed trait frequencies across the whole collection — the items already on disk plus
+    /// the batch being written. Rarity is collection-wide, so it cannot be derived from one run.
+    /// </summary>
+    private sealed class Rarity
     {
-        var nftyDir = Path.Combine(outDir, "nfty");
-        if (!Directory.Exists(nftyDir))
-            return new ExistingSet(Array.Empty<string>(), 1);
+        private readonly Dictionary<(string TraitType, string Value), int> counts = new();
+        private readonly double denominator;
 
-        var dnas = new List<string>();
-        int maxNumber = 0;
-        foreach (var file in Directory.EnumerateFiles(nftyDir, "*.json"))
+        public int Total { get; }
+
+        public Rarity(IReadOnlyList<ExistingItem> existing, GeneratedSet set)
         {
-            using var doc = JsonDocument.Parse(File.ReadAllText(file));
-            dnas.Add(doc.RootElement.GetProperty("dna").GetString()!);
-            maxNumber = Math.Max(maxNumber, doc.RootElement.GetProperty("setNumber").GetInt32());
+            foreach (var item in existing)
+                foreach (var attr in item.Attributes) Bump(attr.Trait_type, attr.Value);
+
+            foreach (var asset in set.Assets)
+            {
+                Bump(TypeTrait, asset.RecipeName);
+                foreach (var t in asset.Traits) Bump(t.IngredientName, t.VariantName);
+            }
+
+            Total = existing.Count + set.Assets.Count;
+            denominator = Math.Max(1, Total);
         }
-        return new ExistingSet(dnas, maxNumber + 1);
+
+        public RarityAttribute For(string traitType, string value) =>
+            new(traitType, value, Percent(counts.GetValueOrDefault((traitType, value))));
+
+        public double Percent(int count) => Math.Round(count / denominator * 100, 2);
+
+        public IReadOnlyList<RarityAttribute> Table() =>
+            counts.Keys.Select(k => For(k.TraitType, k.Value))
+                // Ordinal for the same reason as the recipe distribution above: culture must
+                // never reach the output bytes.
+                .OrderBy(r => r.Trait_type, StringComparer.Ordinal)
+                .ThenBy(r => r.Value, StringComparer.Ordinal).ToList();
+
+        private void Bump(string traitType, string value) =>
+            counts[(traitType, value)] = counts.GetValueOrDefault((traitType, value)) + 1;
     }
 }

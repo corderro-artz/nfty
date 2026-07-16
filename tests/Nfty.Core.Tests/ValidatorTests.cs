@@ -317,4 +317,235 @@ public class ValidatorTests
         Assert.Empty(Validator.Validate(Wrap(new IngredientManifest("d", "D", LayerKind.Dynamic,
             new Colorization(ColorModel.Hsv, 5, 5, new[] { new ColorEntry(1, new ColorRange(0, 10, 0, 10), null) }),
             new[] { new Variant("v", "v", 1) }))));
+
+    // Wraps a dynamic colorization range into an otherwise-valid book.
+    private static IReadOnlyList<string> ValidateRange(ColorRange range) =>
+        Validator.Validate(Wrap(new IngredientManifest("d", "D", LayerKind.Dynamic,
+            new Colorization(ColorModel.Hsv, 5, 5, new[] { new ColorEntry(1, range, null) }),
+            new[] { new Variant("v", "v", 1) })));
+
+    [Fact]
+    public void Inverted_hue_range_reported() =>
+        // The roller samples Min..Max ascending; nothing in the spec grants wrap-around,
+        // so hue 350..10 is author error, not a feature.
+        Assert.Contains(ValidateRange(new ColorRange(350, 10, 0, 100)),
+            p => p.Contains("hueMin", StringComparison.Ordinal)
+                 && p.Contains("greater than", StringComparison.OrdinalIgnoreCase));
+
+    [Fact]
+    public void Inverted_sat_range_reported() =>
+        Assert.Contains(ValidateRange(new ColorRange(0, 360, 80, 20)),
+            p => p.Contains("satMin", StringComparison.Ordinal)
+                 && p.Contains("greater than", StringComparison.OrdinalIgnoreCase));
+
+    [Fact]
+    public void Hue_range_outside_axis_bounds_reported() =>
+        Assert.Contains(ValidateRange(new ColorRange(-5, 400, 0, 100)),
+            p => p.Contains("hue", StringComparison.OrdinalIgnoreCase)
+                 && p.Contains("0..360", StringComparison.Ordinal));
+
+    [Fact]
+    public void Sat_range_outside_axis_bounds_reported() =>
+        Assert.Contains(ValidateRange(new ColorRange(0, 360, -1, 120)),
+            p => p.Contains("sat", StringComparison.OrdinalIgnoreCase)
+                 && p.Contains("0..100", StringComparison.Ordinal));
+
+    [Fact]
+    public void Range_spanning_the_full_axes_has_no_problems() =>
+        // The inclusive bounds are legal; only crossing them is not.
+        Assert.Empty(ValidateRange(new ColorRange(0, 360, 0, 100)));
+
+    // --- id uniqueness (finding 3) ---
+
+    private static LoadedIngredient Ing(string id, params Variant[] variants)
+    {
+        // Built duplicate-tolerantly: these fixtures deliberately carry duplicate variant ids,
+        // and the throw under test belongs in Validator, not in the fixture.
+        var images = new Dictionary<string, Image<Rgba32>>();
+        foreach (var v in variants) images[v.Id] = new Image<Rgba32>(4, 4, new Rgba32(0, 0, 0, 255));
+        return new LoadedIngredient
+        {
+            Manifest = new IngredientManifest(id, id, LayerKind.Custom, null, variants),
+            VariantImages = images,
+        };
+    }
+
+    private static LoadedCookBook BookOf(params LoadedRecipe[] recipes) => new()
+    {
+        Manifest = new CookBookManifest("cb", "Book", new Dimensions(4, 4),
+            new Collection("B", "", "B"), recipes.ToDictionary(r => r.Manifest.Id, _ => 1.0)),
+        Recipes = recipes,
+    };
+
+    private static LoadedRecipe Rec(string id, params LoadedIngredient[] ings) => new()
+    {
+        Manifest = new RecipeManifest(id, id, ings.Select(i => i.Manifest.Id).Distinct().ToList(),
+            Array.Empty<IncompatibilityRule>()),
+        Ingredients = ings,
+    };
+
+    [Fact]
+    public void Duplicate_ingredient_ids_reported_not_thrown()
+    {
+        // Validator must REPORT this, never throw — `nfty validate` exists to explain a broken
+        // book, so crashing on one defeats its whole purpose.
+        var book = BookOf(Rec("cat", Ing("bg", new Variant("a", "A", 1)), Ing("bg", new Variant("b", "B", 1))));
+
+        Assert.Contains(Validator.Validate(book),
+            p => p.Contains("duplicate", StringComparison.OrdinalIgnoreCase)
+                 && p.Contains("bg", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Duplicate_variant_ids_reported()
+    {
+        var book = BookOf(Rec("cat", Ing("bg", new Variant("a", "A", 1), new Variant("a", "A2", 1))));
+
+        Assert.Contains(Validator.Validate(book),
+            p => p.Contains("duplicate", StringComparison.OrdinalIgnoreCase)
+                 && p.Contains("'a'", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A_duplicated_variant_id_reports_its_image_problem_once()
+    {
+        // Duplicate ids resolve to the same image, so checking per variant ENTRY says the same
+        // thing twice. The duplicate id is already reported on its own; repeating the
+        // consequence just pads the list a human has to read.
+        var wrongSize = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("bg", "bg", LayerKind.Custom, null,
+                new[] { new Variant("a", "A", 1), new Variant("a", "A2", 1) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>>
+            {
+                ["a"] = new Image<Rgba32>(2, 2, new Rgba32(0, 0, 0, 255)),   // canvas is 4x4
+            },
+        };
+        var book = BookOf(Rec("cat", wrongSize));
+
+        var dimensionProblems = Validator.Validate(book)
+            .Where(p => p.Contains("dimensions", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        Assert.Single(dimensionProblems);
+    }
+
+    [Fact]
+    public void Duplicate_recipe_ids_reported()
+    {
+        var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "Book", new Dimensions(4, 4),
+                new Collection("B", "", "B"), new Dictionary<string, double> { ["cat"] = 1.0 }),
+            Recipes = new[]
+            {
+                Rec("cat", Ing("bg", new Variant("a", "A", 1))),
+                Rec("cat", Ing("bg", new Variant("b", "B", 1))),
+            },
+        };
+
+        Assert.Contains(Validator.Validate(book),
+            p => p.Contains("duplicate", StringComparison.OrdinalIgnoreCase)
+                 && p.Contains("cat", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Ingredient_missing_from_layerOrder_reported()
+    {
+        // Generation only rolls layerOrder, so an ingredient the archive carries but layerOrder
+        // omits is dead weight the author almost certainly meant to include.
+        var book = BookOf(Rec("cat", Ing("bg", new Variant("a", "A", 1))));
+        var orphan = Ing("orphan", new Variant("z", "Z", 1));
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("cat", "cat", new[] { "bg" }, Array.Empty<IncompatibilityRule>()),
+            Ingredients = book.Recipes[0].Ingredients.Append(orphan).ToList(),
+        };
+        var withOrphan = new LoadedCookBook
+        {
+            Manifest = book.Manifest,
+            Recipes = new[] { recipe },
+        };
+
+        Assert.Contains(Validator.Validate(withOrphan),
+            p => p.Contains("orphan", StringComparison.Ordinal)
+                 && p.Contains("layerOrder", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Empty_layerOrder_reported()
+    {
+        // A recipe with no layers composites nothing and generates a fully-transparent asset.
+        var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "Book", new Dimensions(4, 4),
+                new Collection("B", "", "B"), new Dictionary<string, double> { ["cat"] = 1.0 }),
+            Recipes = new[]
+            {
+                new LoadedRecipe
+                {
+                    Manifest = new RecipeManifest("cat", "cat", Array.Empty<string>(),
+                        Array.Empty<IncompatibilityRule>()),
+                    Ingredients = Array.Empty<LoadedIngredient>(),
+                },
+            },
+        };
+
+        Assert.Contains(Validator.Validate(book),
+            p => p.Contains("layerOrder", StringComparison.OrdinalIgnoreCase)
+                 && p.Contains("empty", StringComparison.OrdinalIgnoreCase));
+    }
+
+    // --- colour spec parsing (finding 4, spec section 9) ---
+
+    [Fact]
+    public void Unprefixed_fixed_colour_reported()
+    {
+        // "d6249f" without a prefix must be a validation error, never guessed.
+        var book = Wrap(new IngredientManifest("s", "S", LayerKind.Static,
+            Fixed("d6249f"), new[] { new Variant("v", "v", 1) }));
+
+        Assert.Contains(Validator.Validate(book),
+            p => p.Contains("prefix", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Unknown_colour_prefix_reported()
+    {
+        var book = Wrap(new IngredientManifest("s", "S", LayerKind.Static,
+            Fixed("cmyk:1,2,3"), new[] { new Variant("v", "v", 1) }));
+
+        Assert.Contains(Validator.Validate(book),
+            p => p.Contains("prefix", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Malformed_fixed_colour_on_a_dynamic_entry_reported()
+    {
+        var book = Wrap(new IngredientManifest("d", "D", LayerKind.Dynamic,
+            new Colorization(ColorModel.Hsv, 5, 5, new[] { new ColorEntry(1, null, "hex:zzz") }),
+            new[] { new Variant("v", "v", 1) }));
+
+        Assert.Contains(Validator.Validate(book),
+            p => p.Contains("hex", StringComparison.OrdinalIgnoreCase));
+    }
+
+    // --- dynamic entries (finding 5, spec sections 4.1 / 5.1) ---
+
+    [Fact]
+    public void Dynamic_with_empty_entries_reported() =>
+        Assert.Contains(
+            Validator.Validate(Wrap(new IngredientManifest("d", "D", LayerKind.Dynamic,
+                new Colorization(ColorModel.Hsv, 5, 5, Array.Empty<ColorEntry>()),
+                new[] { new Variant("v", "v", 1) }))),
+            p => p.Contains("at least one", StringComparison.OrdinalIgnoreCase));
+
+    [Fact]
+    public void Dynamic_with_zero_total_entry_weight_reported() =>
+        Assert.Contains(
+            Validator.Validate(Wrap(new IngredientManifest("d", "D", LayerKind.Dynamic,
+                new Colorization(ColorModel.Hsv, 5, 5,
+                    new[] { new ColorEntry(0, new ColorRange(0, 10, 0, 10), null) }),
+                new[] { new Variant("v", "v", 1) }))),
+            p => p.Contains("zero total", StringComparison.OrdinalIgnoreCase));
 }

@@ -4,6 +4,8 @@
 **Status:** Approved (design phase) — **Model A revision**
 **Scope of this spec:** Headless core library + CLI. The Avalonia GUI is a separate later sub-project built on `Nfty.Core`.
 
+> **Revision note (§4, manifest shapes):** §4.1/§4.3/§4.4 were corrected to match the **shipped v1 format**, which is the truth: archives exist and `schemaVersion: 1` is enforced, so the code did not move to the doc. Corrected: `hueQuantize`/`satQuantize` (was `quantize:{hue,sat}`), `range:{hueMin,hueMax,satMin,satMax}` (was `hueRange:[..]`/`satRange:[..]`), `canvas:{width,height}` (was `{w,h}`), and rule `targets:[...]` for both `exclude` and `require` (was `forbid`/`force`). Each shape was confirmed against a real `manifest.json` dumped from a generated archive.
+>
 > **Revision note:** This design was updated from "Model B" (Recipe = one layer) to **Model A** (Recipe = a whole template). A CookBook is now an *uncooked Set*: a container of Recipes, where each Recipe is a complete character/type template. Generating a CookBook produces a mixed Set, rolling a Recipe per asset by weight.
 
 ---
@@ -75,14 +77,20 @@ manifest.json
     kind: "dynamic" | "static" | "custom",
     colorization: {                     # present for "dynamic" and "static"; MUST be null for "custom"
       model: "hsv" | "hsl",
-      quantize: { hue: <int deg>, sat: <int pct> },   # DNA precision for this layer
-      entries: [                        # dynamic: ≥1 entries (fixed and/or range)
-        { weight, fixed: "hex:d6249f" },              # any color spec (§4.5)
-        { weight, hueRange:[h0,h1], satRange:[s0,s1] } # degrees / percent
+      hueQuantize: <int deg>,           # DNA precision for this layer
+      satQuantize: <int pct>,
+      entries: [                        # dynamic: ≥1 entries, non-zero total weight (fixed and/or range)
+        { weight, range: null, fixed: "hex:d6249f" },   # any color spec (§4.5)
+        { weight, range: { hueMin, hueMax, satMin, satMax }, fixed: null }  # degrees / percent
       ]                                 # static: EXACTLY ONE entry, and it must be `fixed` (no ranges)
     },
     variants: [ { id, name, weight }, ... ]           # the measurements are these weights
   }
+```
+Each entry carries **both** `range` and `fixed` keys, exactly one of them non-null. A `range` runs
+ascending (`hueMin ≤ hueMax`, `satMin ≤ satMax`) and stays on its axis (hue `0..360`, sat `0..100`);
+ranges do **not** wrap around, and an inverted or out-of-axis range is a validation error.
+```
 variants/
   <variantId>.png    # dynamic & static: grayscale value-map (alpha preserved) · custom: full RGBA
   ...
@@ -106,7 +114,7 @@ ingredients/
 manifest.json
   {
     schemaVersion, id, name,
-    canvas: { w, h },
+    canvas: { width, height },
     collection: { name, description, symbol },
     recipeWeights: { "<recipeId>": <weight:number>, ... }   # selection weight per type
   }
@@ -116,11 +124,14 @@ recipes/
 ```
 
 ### 4.4 Incompatibility rule shape
-Declarative, references ingredients (layers) and variants by id, scoped to a single Recipe:
+Declarative, references ingredients (layers) and variants by id, scoped to a single Recipe. Both
+rule types use the same `when` / `targets` shape — `targets` is always a list:
 ```
-{ type: "exclude", when: {ingredient, variant}, forbid: [ {ingredient, variant}, ... ] }
-{ type: "require", when: {ingredient, variant}, force:  {ingredient, variant} }
+{ type: "exclude", when: { ingredientId, variantId }, targets: [ { ingredientId, variantId }, ... ] }
+{ type: "require", when: { ingredientId, variantId }, targets: [ { ingredientId, variantId }, ... ] }
 ```
+When `when` is selected, `exclude` rejects the roll if **any** target is also selected, and `require`
+rejects it unless **every** target is selected. A rule whose `when` is not selected never fires.
 Rules are checked at generation; an illegal roll is rejected and re-rolled.
 
 ### 4.5 Color spec syntax
@@ -170,7 +181,7 @@ Both dynamic and static layers colorize a grayscale value-map; they differ only 
 Documented edges: `g = 0` → black for any hue; in HSL, `g = 1` → white; in HSV, `V = 1` stays colored. Intended, matching standard color-space behavior.
 
 ### 5.4 DNA & deduplication
-DNA = SHA-256 over: the **recipe id**, then (sorted by ingredient id) each layer's selected **variant id**, plus the resolved `(H, S)` **quantized** per that layer's `colorization.quantize` for **dynamic and static** layers (custom layers contribute variant id only). Quantizing color into the DNA means the explosive dynamic color space still contributes to uniqueness; a static layer's fixed color is constant, so it does not add cross-asset uniqueness but is recorded for correctness. Duplicate DNA ⇒ re-roll. If the legal unique space is exhausted before `N`, emit an error stating how many unique assets were possible.
+DNA = SHA-256 over: the **recipe id**, then (sorted by ingredient id) each layer's selected **variant id**, plus the resolved `(H, S)` **quantized** per that layer's `colorization.hueQuantize` / `satQuantize` for **dynamic and static** layers (custom layers contribute variant id only). Quantizing color into the DNA means the explosive dynamic color space still contributes to uniqueness; a static layer's fixed color is constant, so it does not add cross-asset uniqueness but is recorded for correctness. Duplicate DNA ⇒ re-roll. If the legal unique space is exhausted before `N`, emit an error stating how many unique assets were possible.
 
 ### 5.5 Determinism
 A single string seed drives a SplitMix64 RNG, recorded in the Set manifest. Same cookbook + seed ⇒ identical output.

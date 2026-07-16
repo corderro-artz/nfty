@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Nfty.Core.Formats;
 using Nfty.Core.Generation;
@@ -30,6 +31,173 @@ public class SetWriterTests
                 },
             },
         });
+
+    /// <summary>A real .cbk on disk, so its hash is over actual archive bytes.</summary>
+    private static string WriteCookBook(string dir)
+    {
+        var path = Path.Combine(dir, "VaporPets.cbk");
+        var ing = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("bg", "Background", LayerKind.Custom, null,
+                new[] { new Variant("sunset", "Sunset", 1) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>>
+            {
+                ["sunset"] = new Image<Rgba32>(2, 2, new Rgba32(255, 128, 0, 255)),
+            },
+        };
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("cat", "Cat", new[] { "bg" }, Array.Empty<IncompatibilityRule>()),
+            Ingredients = new[] { ing },
+        };
+        CookBookArchive.Write(path,
+            new CookBookManifest("cb", "VaporPets", new Dimensions(2, 2),
+                new Collection("VaporPets", "d", "VP"),
+                new Dictionary<string, double> { ["cat"] = 1 }),
+            new[] { recipe });
+        return path;
+    }
+
+    [Fact]
+    public void Set_json_records_the_source_cookbook_hash()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        var cbkPath = WriteCookBook(dir);
+        var outDir = Path.Combine(dir, "out");
+
+        var book = CookBookArchive.Read(cbkPath);
+        var set = Generator.Generate(book, new GenerateOptions(1, "seed-1"));
+        SetWriter.Write(set, outDir, pack: false);
+        foreach (var a in set.Assets) a.Image.Dispose();
+
+        string expected = Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(cbkPath))).ToLowerInvariant();
+        using var doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(outDir, "set.json")));
+
+        Assert.Equal(expected, doc.RootElement.GetProperty("cookbookSha256").GetString());
+    }
+
+    [Fact]
+    public void Set_json_hash_is_null_for_a_cookbook_that_never_touched_disk()
+    {
+        // In-memory books (tests, and a GUI holding an unsaved cookbook) have no source file
+        // to hash. The field must be null rather than a hash of something invented.
+        var dir = Path.Combine(Directory.CreateTempSubdirectory().FullName, "out");
+        SetWriter.Write(MakeSet(), dir, pack: false);
+
+        using var doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, "set.json")));
+
+        Assert.Equal(JsonValueKind.Null, doc.RootElement.GetProperty("cookbookSha256").ValueKind);
+    }
+
+    /// <summary>
+    /// A set whose trait types and recipe ids sort differently under a Swedish collation than an
+    /// English one: sv-SE orders 'z' before 'ä', en-US the reverse.
+    /// </summary>
+    private static GeneratedSet CultureSensitiveSet() => new(
+        "VaporPets", "desc", "VP", "seed-1",
+        new[]
+        {
+            new GeneratedAsset
+            {
+                SetNumber = 1, Dna = "abc", RecipeId = "zebra", RecipeName = "Zebra",
+                Image = new Image<Rgba32>(2, 2, new Rgba32(1, 2, 3, 255)),
+                Traits = new[]
+                {
+                    new TraitSelection("z", "zebra", "zv", "zink"),
+                    new TraitSelection("a", "änd", "av", "ätt"),
+                },
+                ColorRolls = new[]
+                {
+                    new ColorRoll("z", LayerKind.Custom, null, null, null),
+                    new ColorRoll("a", LayerKind.Custom, null, null, null),
+                },
+            },
+            new GeneratedAsset
+            {
+                SetNumber = 2, Dna = "def", RecipeId = "änd", RecipeName = "And",
+                Image = new Image<Rgba32>(2, 2, new Rgba32(4, 5, 6, 255)),
+                Traits = new[]
+                {
+                    new TraitSelection("z", "zebra", "zv", "zink"),
+                    new TraitSelection("a", "änd", "av", "ätt"),
+                },
+                ColorRolls = new[]
+                {
+                    new ColorRoll("z", LayerKind.Custom, null, null, null),
+                    new ColorRoll("a", LayerKind.Custom, null, null, null),
+                },
+            },
+        });
+
+    private static string WriteSetJsonUnderCulture(string cultureName)
+    {
+        var original = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = new CultureInfo(cultureName);
+            var dir = Path.Combine(Directory.CreateTempSubdirectory().FullName, "out");
+            using var set = CultureSensitiveSet();
+            SetWriter.Write(set, dir, pack: false);
+            return File.ReadAllText(Path.Combine(dir, "set.json"));
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = original;
+        }
+    }
+
+    [Fact]
+    public void Set_json_is_byte_identical_across_cultures()
+    {
+        // Spec 5.5: same cookbook + same seed => byte-identical output. A current-culture sort
+        // makes that a lie — the machine's locale leaks into the artefact.
+        Assert.Equal(WriteSetJsonUnderCulture("en-US"), WriteSetJsonUnderCulture("sv-SE"));
+    }
+
+    /// <summary>A second batch landing in the same directory — the shape `extend` writes.</summary>
+    private static GeneratedSet SecondBatch() => new(
+        "VaporPets", "desc", "VP", "seed-2",
+        new[]
+        {
+            new GeneratedAsset
+            {
+                SetNumber = 2, Dna = "def", RecipeId = "cat", RecipeName = "Cat",
+                Image = new Image<Rgba32>(2, 2, new Rgba32(9, 9, 9, 255)),
+                Traits = new[] { new TraitSelection("bg", "Background", "dawn", "Dawn") },
+                ColorRolls = new[] { new ColorRoll("bg", LayerKind.Custom, null, null, null) },
+            },
+        });
+
+    [Fact]
+    public void Extend_over_a_set_missing_an_opensea_sibling_names_the_file()
+    {
+        // A set pairs every nfty/NNNN.json with a metadata/NNNN.json. If the sibling is gone the
+        // set is corrupt; a raw FileNotFoundException makes the user guess what nfty was doing.
+        var dir = Path.Combine(Directory.CreateTempSubdirectory().FullName, "out");
+        SetWriter.Write(MakeSet(), dir, pack: false);
+        File.Delete(Path.Combine(dir, "metadata", "0001.json"));
+
+        using var more = SecondBatch();
+        var ex = Assert.Throws<CorruptSetException>(() => SetWriter.Write(more, dir, pack: false));
+
+        Assert.Contains("0001.json", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("metadata", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExtendAsync_over_a_set_missing_an_opensea_sibling_names_the_file()
+    {
+        var dir = Path.Combine(Directory.CreateTempSubdirectory().FullName, "out");
+        SetWriter.Write(MakeSet(), dir, pack: false);
+        File.Delete(Path.Combine(dir, "metadata", "0001.json"));
+
+        using var more = SecondBatch();
+        var ex = await Assert.ThrowsAsync<CorruptSetException>(
+            () => SetWriter.WriteAsync(more, dir, pack: false));
+
+        Assert.Contains("0001.json", ex.Message, StringComparison.Ordinal);
+    }
 
     [Fact]
     public void Writes_images_and_set_manifest()

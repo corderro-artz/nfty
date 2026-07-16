@@ -21,14 +21,16 @@ public static class ColorRoller
 
     /// <summary>
     /// Resolves a single fixed color spec to its (H, S) deterministically, consuming NO RNG.
-    /// Used by Static layers, which colorize with exactly one fixed color and no per-asset roll.
+    /// Used by Static layers, which colorize with exactly one fixed color and no per-asset roll,
+    /// and by <c>preview</c>, so a rendered preview resolves colour exactly as generation does.
     /// </summary>
     public static RolledColor FromFixed(string fixedSpec, ColorModel model)
     {
         var rgb = ColorSpec.Parse(fixedSpec);
-        return model == ColorModel.Hsv
-            ? new RolledColor(ColorConvert.RgbToHsv(rgb).H, ColorConvert.RgbToHsv(rgb).S)
-            : new RolledColor(ColorConvert.RgbToHsl(rgb).H, ColorConvert.RgbToHsl(rgb).S);
+        var (h, s, _) = model == ColorModel.Hsv
+            ? ColorConvert.RgbToHsv(rgb)
+            : ColorConvert.RgbToHsl(rgb);
+        return new RolledColor(h, s);
     }
 
     private static ColorEntry PickEntry(IReadOnlyList<ColorEntry> entries, IRng rng)

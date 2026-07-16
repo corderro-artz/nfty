@@ -35,4 +35,34 @@ public static class IngredientArchive
         using var zip = ZipFile.OpenRead(path);
         return Read(zip);
     }
+
+    public static async Task WriteAsync(ZipArchive zip, IngredientManifest manifest,
+        IReadOnlyDictionary<string, Image<Rgba32>> variantImages, CancellationToken ct = default)
+    {
+        await ArchiveIo.WriteManifestAsync(zip, manifest, ct);
+        foreach (var v in manifest.Variants)
+            await ArchiveIo.WriteImageAsync(zip, $"variants/{v.Id}.png", variantImages[v.Id], ct);
+    }
+
+    public static async Task<LoadedIngredient> ReadAsync(ZipArchive zip, CancellationToken ct = default)
+    {
+        var manifest = await ArchiveIo.ReadManifestAsync<IngredientManifest>(zip, ct);
+        var images = new Dictionary<string, Image<Rgba32>>(manifest.Variants.Count);
+        foreach (var v in manifest.Variants)
+            images[v.Id] = await ArchiveIo.ReadImageAsync(zip, $"variants/{v.Id}.png", ct);
+        return new LoadedIngredient { Manifest = manifest, VariantImages = images };
+    }
+
+    public static async Task WriteAsync(string path, IngredientManifest manifest,
+        IReadOnlyDictionary<string, Image<Rgba32>> variantImages, CancellationToken ct = default)
+    {
+        using var zip = ZipFile.Open(path, ZipArchiveMode.Create);
+        await WriteAsync(zip, manifest, variantImages, ct);
+    }
+
+    public static async Task<LoadedIngredient> ReadAsync(string path, CancellationToken ct = default)
+    {
+        using var zip = ZipFile.OpenRead(path);
+        return await ReadAsync(zip, ct);
+    }
 }

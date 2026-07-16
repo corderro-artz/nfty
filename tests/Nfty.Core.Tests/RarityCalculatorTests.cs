@@ -51,4 +51,54 @@ public class RarityCalculatorTests
         Assert.Equal(80.0, catA.WithinRecipePercent);
         Assert.Equal(60.0, catA.OverallPercent); // 75% * 80%
     }
+
+    [Fact]
+    public void Ingredients_missing_from_layerOrder_are_not_reported()
+    {
+        // Generation only ever rolls layerOrder, so an ingredient absent from it contributes
+        // nothing to any asset. Reporting odds for it invents traits that cannot occur.
+        var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "B", new Dimensions(1, 1),
+                new Collection("B", "", "B"), new Dictionary<string, double> { ["cat"] = 100 }),
+            Recipes = new[]
+            {
+                new LoadedRecipe
+                {
+                    Manifest = new RecipeManifest("cat", "Cat", new[] { "bg" },
+                        Array.Empty<IncompatibilityRule>()),
+                    Ingredients = new[] { Ing("bg", ("a", 100)), Ing("orphan", ("z", 100)) },
+                },
+            },
+        };
+
+        var report = RarityCalculator.Compute(book);
+
+        Assert.DoesNotContain(report.Traits, t => t.IngredientId == "orphan");
+        Assert.Contains(report.Traits, t => t.IngredientId == "bg");
+    }
+
+    [Fact]
+    public void Rarity_follows_layerOrder_sequence()
+    {
+        // Traits are emitted in composite order, not archive order.
+        var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "B", new Dimensions(1, 1),
+                new Collection("B", "", "B"), new Dictionary<string, double> { ["cat"] = 100 }),
+            Recipes = new[]
+            {
+                new LoadedRecipe
+                {
+                    Manifest = new RecipeManifest("cat", "Cat", new[] { "body", "bg" },
+                        Array.Empty<IncompatibilityRule>()),
+                    Ingredients = new[] { Ing("bg", ("a", 100)), Ing("body", ("x", 100)) },
+                },
+            },
+        };
+
+        var report = RarityCalculator.Compute(book);
+
+        Assert.Equal(new[] { "body", "bg" }, report.Traits.Select(t => t.IngredientId));
+    }
 }

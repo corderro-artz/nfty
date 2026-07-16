@@ -5,4 +5,4 @@ public record RecipeManifest(
     string Name,
     IReadOnlyList<string> LayerOrder,
     IReadOnlyList<IncompatibilityRule> Rules,
-    int SchemaVersion = 1);
+    int SchemaVersion = Schema.Current) : ISchemaVersioned;

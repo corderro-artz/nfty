@@ -6,4 +6,4 @@ public record CookBookManifest(
     Dimensions Canvas,
     Collection Collection,
     IReadOnlyDictionary<string, double> RecipeWeights,
-    int SchemaVersion = 1);
+    int SchemaVersion = Schema.Current) : ISchemaVersioned;

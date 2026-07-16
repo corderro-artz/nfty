@@ -26,8 +26,15 @@ public static class RarityCalculator
             double recipePct = recipeTotal > 0 ? recipeWeight / recipeTotal * 100 : 0;
             recipes.Add(new RecipeOdds(r.Manifest.Id, r.Manifest.Name, Math.Round(recipePct, 2)));
 
-            foreach (var ing in r.Ingredients)
+            // Driven by LayerOrder, exactly as Generator rolls: an ingredient present in the
+            // archive but absent from layerOrder is never rolled, so reporting odds for it
+            // would invent traits that cannot occur. (Validator reports such an orphan.)
+            var ingById = new Dictionary<string, LoadedIngredient>();
+            foreach (var i in r.Ingredients) ingById[i.Manifest.Id] = i;
+
+            foreach (var layerId in r.Manifest.LayerOrder)
             {
+                if (!ingById.TryGetValue(layerId, out var ing)) continue;
                 double layerTotal = ing.Manifest.Variants.Sum(v => v.Weight);
                 foreach (var v in ing.Manifest.Variants)
                 {

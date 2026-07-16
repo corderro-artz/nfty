@@ -6,4 +6,4 @@ public record IngredientManifest(
     LayerKind Kind,
     Colorization? Colorization,
     IReadOnlyList<Variant> Variants,
-    int SchemaVersion = 1);
+    int SchemaVersion = Schema.Current) : ISchemaVersioned;
