@@ -8,7 +8,18 @@ namespace Nfty.Core.Generation;
 /// space was too large to count and <see cref="Total"/> saturated at the cap — the real
 /// figure is "more than Total", never less.
 /// </summary>
-public record UniqueSpaceCount(long Total, bool IsExact, IReadOnlyDictionary<string, long> PerRecipe, long Cap)
+/// <param name="PerRecipeCombos">
+/// Per recipe, the legal variant combinations alone — <see cref="PerRecipe"/> without the colour
+/// buckets folded in. A recipe's total can be zero for two unrelated reasons (its rules exclude
+/// every combination, or it has no reachable colour buckets); only this figure distinguishes them,
+/// so a caller must never read a zero total as a rule conflict.
+/// </param>
+public record UniqueSpaceCount(
+    long Total,
+    bool IsExact,
+    IReadOnlyDictionary<string, long> PerRecipe,
+    long Cap,
+    IReadOnlyDictionary<string, long> PerRecipeCombos)
 {
     /// <summary>A per-recipe count that reached the cap is a floor, not the real figure.</summary>
     public bool IsRecipeExact(string recipeId) => PerRecipe.GetValueOrDefault(recipeId) < Cap;
@@ -29,6 +40,7 @@ public static class UniqueSpace
         long total = 0;
         bool exact = true;
         var perRecipe = new Dictionary<string, long>();
+        var perRecipeCombos = new Dictionary<string, long>();
 
         foreach (var recipe in book.Recipes)
         {
@@ -39,12 +51,13 @@ public static class UniqueSpace
             bool recipeExact = combosExact && bucketsExact && recipeTotal < cap;
 
             perRecipe[recipe.Manifest.Id] = recipeTotal;
+            perRecipeCombos[recipe.Manifest.Id] = combos;
             total = Saturate(total + recipeTotal, cap);
             exact &= recipeExact;
         }
 
         if (total >= cap) { total = cap; exact = false; }
-        return new UniqueSpaceCount(total, exact, perRecipe, cap);
+        return new UniqueSpaceCount(total, exact, perRecipe, cap, perRecipeCombos);
     }
 
     /// <summary>Variant combinations that satisfy the recipe's rules.</summary>

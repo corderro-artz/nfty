@@ -317,4 +317,41 @@ public class ValidatorTests
         Assert.Empty(Validator.Validate(Wrap(new IngredientManifest("d", "D", LayerKind.Dynamic,
             new Colorization(ColorModel.Hsv, 5, 5, new[] { new ColorEntry(1, new ColorRange(0, 10, 0, 10), null) }),
             new[] { new Variant("v", "v", 1) }))));
+
+    // Wraps a dynamic colorization range into an otherwise-valid book.
+    private static IReadOnlyList<string> ValidateRange(ColorRange range) =>
+        Validator.Validate(Wrap(new IngredientManifest("d", "D", LayerKind.Dynamic,
+            new Colorization(ColorModel.Hsv, 5, 5, new[] { new ColorEntry(1, range, null) }),
+            new[] { new Variant("v", "v", 1) })));
+
+    [Fact]
+    public void Inverted_hue_range_reported() =>
+        // The roller samples Min..Max ascending; nothing in the spec grants wrap-around,
+        // so hue 350..10 is author error, not a feature.
+        Assert.Contains(ValidateRange(new ColorRange(350, 10, 0, 100)),
+            p => p.Contains("hueMin", StringComparison.Ordinal)
+                 && p.Contains("greater than", StringComparison.OrdinalIgnoreCase));
+
+    [Fact]
+    public void Inverted_sat_range_reported() =>
+        Assert.Contains(ValidateRange(new ColorRange(0, 360, 80, 20)),
+            p => p.Contains("satMin", StringComparison.Ordinal)
+                 && p.Contains("greater than", StringComparison.OrdinalIgnoreCase));
+
+    [Fact]
+    public void Hue_range_outside_axis_bounds_reported() =>
+        Assert.Contains(ValidateRange(new ColorRange(-5, 400, 0, 100)),
+            p => p.Contains("hue", StringComparison.OrdinalIgnoreCase)
+                 && p.Contains("0..360", StringComparison.Ordinal));
+
+    [Fact]
+    public void Sat_range_outside_axis_bounds_reported() =>
+        Assert.Contains(ValidateRange(new ColorRange(0, 360, -1, 120)),
+            p => p.Contains("sat", StringComparison.OrdinalIgnoreCase)
+                 && p.Contains("0..100", StringComparison.Ordinal));
+
+    [Fact]
+    public void Range_spanning_the_full_axes_has_no_problems() =>
+        // The inclusive bounds are legal; only crossing them is not.
+        Assert.Empty(ValidateRange(new ColorRange(0, 360, 0, 100)));
 }

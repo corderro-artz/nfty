@@ -140,8 +140,11 @@ public static class Generator
             : new List<string> { opts.RecipeId };
 
         // Every recipe this run could roll is ruled out entirely: the space is empty, not small.
-        var dead = inPlay.Where(id => space.PerRecipe.GetValueOrDefault(id) == 0).ToList();
-        if (dead.Count == inPlay.Count)
+        // Keyed off legal COMBINATIONS, never the total — a total can also hit zero because a
+        // layer has no reachable colour buckets, which is not a rule conflict and must not be
+        // reported as one (a rules-free recipe would otherwise be blamed on rules that do not exist).
+        var dead = inPlay.Where(id => space.PerRecipeCombos.GetValueOrDefault(id) == 0).ToList();
+        if (dead.Count == inPlay.Count && dead.Count > 0)
             return new RuleConflictException(dead,
                 $"No legal variant combination exists for {Describe(dead)}: "
                 + "the incompatibility rules exclude every combination.");

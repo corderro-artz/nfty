@@ -64,6 +64,13 @@ public static class Validator
                         break;
                 }
 
+                // Ranges are sampled ascending and never wrap, so an inverted or out-of-axis
+                // range is author error — the roller would silently sample nonsense.
+                if (col is not null)
+                    foreach (var entry in col.Entries)
+                        if (entry.Range is { } range)
+                            CheckRange(problems, where, range);
+
                 foreach (var v in ing.Manifest.Variants)
                 {
                     if (!ing.VariantImages.TryGetValue(v.Id, out var img))
@@ -85,5 +92,27 @@ public static class Validator
         }
 
         return problems;
+    }
+
+    /// <summary>
+    /// A colorization range must run ascending and stay on its axis. Hue is 0..360 degrees and
+    /// saturation 0..100 percent, both inclusive; wrap-around is not a feature (the roller
+    /// samples <c>Min + r*(Max-Min)</c>, so an inverted range walks backwards off the range).
+    /// </summary>
+    private static void CheckRange(List<string> problems, string where, ColorRange range)
+    {
+        if (range.HueMin > range.HueMax)
+            problems.Add($"{where} has a colorization range whose hueMin ({range.HueMin}) is "
+                + $"greater than its hueMax ({range.HueMax}); ranges do not wrap around.");
+        if (range.SatMin > range.SatMax)
+            problems.Add($"{where} has a colorization range whose satMin ({range.SatMin}) is "
+                + $"greater than its satMax ({range.SatMax}); ranges do not wrap around.");
+
+        if (range.HueMin < 0 || range.HueMin > 360 || range.HueMax < 0 || range.HueMax > 360)
+            problems.Add($"{where} has a colorization hue range {range.HueMin}..{range.HueMax} "
+                + "outside the hue axis 0..360.");
+        if (range.SatMin < 0 || range.SatMin > 100 || range.SatMax < 0 || range.SatMax > 100)
+            problems.Add($"{where} has a colorization sat range {range.SatMin}..{range.SatMax} "
+                + "outside the saturation axis 0..100.");
     }
 }

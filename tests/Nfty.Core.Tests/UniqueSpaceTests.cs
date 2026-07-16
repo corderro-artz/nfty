@@ -210,6 +210,55 @@ public class UniqueSpaceTests
     }
 
     [Fact]
+    public void Zero_buckets_are_not_reported_as_zero_legal_combinations()
+    {
+        // A dynamic layer with no colour entries has no reachable buckets, so the total is 0.
+        // The recipe has NO rules, so its legal combinations must still count 1 — conflating the
+        // two zeroes makes Generator blame rules that do not exist.
+        var ing = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("aura", "aura", LayerKind.Dynamic,
+                new Colorization(ColorModel.Hsv, 30, 10, Array.Empty<ColorEntry>()),
+                new[] { new Variant("glow", "glow", 1) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>>
+            {
+                ["glow"] = new Image<Rgba32>(2, 2, new Rgba32(1, 2, 3, 255)),
+            },
+        };
+        var book = Book(Recipe("cat", Array.Empty<IncompatibilityRule>(), ing));
+
+        var count = UniqueSpace.Count(book);
+        Assert.Equal(0, count.Total);
+        Assert.Equal(1, count.PerRecipeCombos["cat"]);
+    }
+
+    [Fact]
+    public void Inverted_range_does_not_collapse_the_space_to_zero()
+    {
+        // An inverted range is author error that Validator rejects outright. UniqueSpace must
+        // still not report a self-contradicting empty space for it, since Generator reads a
+        // zero total on a rules-free recipe as "rules exclude everything".
+        var book = Book(Recipe("cat", Array.Empty<IncompatibilityRule>(),
+            Dynamic("aura", new ColorRange(350, 10, 0, 0), hueQ: 30, satQ: 10, "glow")));
+
+        Assert.NotEqual(0, UniqueSpace.Count(book).Total);
+    }
+
+    [Fact]
+    public void Zero_legal_combinations_are_surfaced_as_zero_combos()
+    {
+        var rules = new[]
+        {
+            new IncompatibilityRule(RuleType.Exclude,
+                new RuleTarget("body", "fox"),
+                new[] { new RuleTarget("hat", "cap") }),
+        };
+        var book = Book(Recipe("cat", rules, Custom("body", "fox"), Custom("hat", "cap")));
+
+        Assert.Equal(0, UniqueSpace.Count(book).PerRecipeCombos["cat"]);
+    }
+
+    [Fact]
     public void Huge_space_is_capped_and_reported_inexact()
     {
         // 40 hue buckets x 100 sat buckets x 40 variants across two dynamic layers
