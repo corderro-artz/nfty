@@ -407,6 +407,30 @@ public class ValidatorTests
     }
 
     [Fact]
+    public void A_duplicated_variant_id_reports_its_image_problem_once()
+    {
+        // Duplicate ids resolve to the same image, so checking per variant ENTRY says the same
+        // thing twice. The duplicate id is already reported on its own; repeating the
+        // consequence just pads the list a human has to read.
+        var wrongSize = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("bg", "bg", LayerKind.Custom, null,
+                new[] { new Variant("a", "A", 1), new Variant("a", "A2", 1) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>>
+            {
+                ["a"] = new Image<Rgba32>(2, 2, new Rgba32(0, 0, 0, 255)),   // canvas is 4x4
+            },
+        };
+        var book = BookOf(Rec("cat", wrongSize));
+
+        var dimensionProblems = Validator.Validate(book)
+            .Where(p => p.Contains("dimensions", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        Assert.Single(dimensionProblems);
+    }
+
+    [Fact]
     public void Duplicate_recipe_ids_reported()
     {
         var book = new LoadedCookBook

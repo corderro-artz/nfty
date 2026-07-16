@@ -229,7 +229,7 @@ public class UniqueSpaceTests
 
         var count = UniqueSpace.Count(book);
         Assert.Equal(0, count.Total);
-        Assert.Equal(1, count.PerRecipeCombos["cat"]);
+        Assert.Equal(1, count["cat"].Combos);
     }
 
     [Fact]
@@ -255,7 +255,7 @@ public class UniqueSpaceTests
         };
         var book = Book(Recipe("cat", rules, Custom("body", "fox"), Custom("hat", "cap")));
 
-        Assert.Equal(0, UniqueSpace.Count(book).PerRecipeCombos["cat"]);
+        Assert.Equal(0, UniqueSpace.Count(book)["cat"].Combos);
     }
 
     [Fact]
@@ -280,8 +280,8 @@ public class UniqueSpaceTests
 
         var count = UniqueSpace.Count(book, cap: 500);
 
-        Assert.Equal(0, count.PerRecipe["cat"]);
-        Assert.False(count.IsRecipeExact("cat"));
+        Assert.Equal(0, count["cat"].Total);
+        Assert.False(count["cat"].IsExact);
     }
 
     [Fact]

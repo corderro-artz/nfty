@@ -168,7 +168,9 @@ public static class Validator
     private static void CheckVariantImages(
         List<string> problems, LoadedRecipe r, LoadedIngredient ing, Dimensions canvas)
     {
-        foreach (var v in ing.Manifest.Variants)
+        // By id, not by entry: duplicate ids share one image, so checking each entry would say
+        // the same thing twice. The duplicate id itself is reported separately.
+        foreach (var v in ing.Manifest.Variants.DistinctBy(v => v.Id, StringComparer.Ordinal))
         {
             if (!ing.VariantImages.TryGetValue(v.Id, out var img))
             {

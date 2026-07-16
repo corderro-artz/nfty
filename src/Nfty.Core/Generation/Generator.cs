@@ -149,7 +149,7 @@ public static class Generator
         // Keyed off legal COMBINATIONS, never the total — a total can also hit zero because a
         // layer has no reachable colour buckets, which is not a rule conflict and must not be
         // reported as one (a rules-free recipe would otherwise be blamed on rules that do not exist).
-        var dead = inPlay.Where(id => space.PerRecipeCombos.GetValueOrDefault(id) == 0).ToList();
+        var dead = inPlay.Where(id => space[id].Combos == 0).ToList();
         if (dead.Count == inPlay.Count && dead.Count > 0)
             return new RuleConflictException(dead,
                 $"No legal variant combination exists for {Describe(dead)}: "
@@ -159,8 +159,8 @@ public static class Generator
         bool exact = true;
         foreach (var id in inPlay)
         {
-            available += space.PerRecipe.GetValueOrDefault(id);
-            exact &= space.IsRecipeExact(id);
+            available += space[id].Total;
+            exact &= space[id].IsExact;
         }
         if (available >= space.Cap) { available = space.Cap; exact = false; }
 

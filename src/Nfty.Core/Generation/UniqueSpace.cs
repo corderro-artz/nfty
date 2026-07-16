@@ -3,36 +3,36 @@ using Nfty.Core.Model;
 
 namespace Nfty.Core.Generation;
 
+/// <summary>One recipe's share of the space.</summary>
+/// <param name="Total">Legal combinations times reachable colour buckets.</param>
+/// <param name="Combos">
+/// The legal variant combinations alone, without colour buckets folded in. <see cref="Total"/>
+/// can be zero for two unrelated reasons — the rules exclude every combination, or a layer has
+/// no reachable colour buckets — and only this figure tells them apart. A caller must never read
+/// a zero <see cref="Total"/> as a rule conflict.
+/// </param>
+/// <param name="IsExact">
+/// Whether <see cref="Total"/> is the real figure rather than a floor. Decided while counting,
+/// where it was still known whether the combinations or the buckets gave up: a saturated
+/// combination count multiplied by zero buckets lands back under the cap, so this cannot be
+/// re-derived afterwards from <c>Total &lt; Cap</c>.
+/// </param>
+public record RecipeSpace(long Total, long Combos, bool IsExact);
+
 /// <summary>
 /// How many distinct DNA a cookbook can produce. <see cref="IsExact"/> is false when the
 /// space was too large to count and <see cref="Total"/> saturated at the cap — the real
 /// figure is "more than Total", never less.
 /// </summary>
-/// <param name="PerRecipeCombos">
-/// Per recipe, the legal variant combinations alone — <see cref="PerRecipe"/> without the colour
-/// buckets folded in. A recipe's total can be zero for two unrelated reasons (its rules exclude
-/// every combination, or it has no reachable colour buckets); only this figure distinguishes them,
-/// so a caller must never read a zero total as a rule conflict.
-/// </param>
-/// <param name="PerRecipeExact">
-/// Per recipe, whether its count is the real figure rather than a floor — as decided while
-/// counting, when whether the combinations or the buckets gave up was still known.
-/// </param>
 public record UniqueSpaceCount(
     long Total,
     bool IsExact,
-    IReadOnlyDictionary<string, long> PerRecipe,
     long Cap,
-    IReadOnlyDictionary<string, long> PerRecipeCombos,
-    IReadOnlyDictionary<string, bool> PerRecipeExact)
+    IReadOnlyDictionary<string, RecipeSpace> Recipes)
 {
-    /// <summary>
-    /// A per-recipe count that reached the cap is a floor, not the real figure. Reads the flag
-    /// recorded during counting rather than re-deriving it from the total: a saturated (inexact)
-    /// combination count multiplied by zero buckets lands back under the cap, which would make a
-    /// re-derived "total &lt; Cap" call an abandoned count exact.
-    /// </summary>
-    public bool IsRecipeExact(string recipeId) => PerRecipeExact.GetValueOrDefault(recipeId);
+    /// <summary>An unknown recipe id has no space at all, and no space is exactly known.</summary>
+    public RecipeSpace this[string recipeId] =>
+        Recipes.GetValueOrDefault(recipeId) ?? new RecipeSpace(0, 0, true);
 }
 
 /// <summary>
@@ -49,9 +49,7 @@ public static class UniqueSpace
     {
         long total = 0;
         bool exact = true;
-        var perRecipe = new Dictionary<string, long>();
-        var perRecipeCombos = new Dictionary<string, long>();
-        var perRecipeExact = new Dictionary<string, bool>();
+        var recipes = new Dictionary<string, RecipeSpace>();
 
         foreach (var recipe in book.Recipes)
         {
@@ -61,15 +59,13 @@ public static class UniqueSpace
             long recipeTotal = Saturate(Multiply(combos, buckets, cap), cap);
             bool recipeExact = combosExact && bucketsExact && recipeTotal < cap;
 
-            perRecipe[recipe.Manifest.Id] = recipeTotal;
-            perRecipeCombos[recipe.Manifest.Id] = combos;
-            perRecipeExact[recipe.Manifest.Id] = recipeExact;
+            recipes[recipe.Manifest.Id] = new RecipeSpace(recipeTotal, combos, recipeExact);
             total = Saturate(total + recipeTotal, cap);
             exact &= recipeExact;
         }
 
         if (total >= cap) { total = cap; exact = false; }
-        return new UniqueSpaceCount(total, exact, perRecipe, cap, perRecipeCombos, perRecipeExact);
+        return new UniqueSpaceCount(total, exact, cap, recipes);
     }
 
     /// <summary>Variant combinations that satisfy the recipe's rules.</summary>
