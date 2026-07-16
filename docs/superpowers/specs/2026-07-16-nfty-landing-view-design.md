@@ -54,7 +54,11 @@ change, out of scope for a GUI mockup.
 > Nothing here yet
 > Cookbooks you open will collect here. Start with **New CookBook**.
 
-Both states — populated and zero — must be represented in the mockup.
+Both states — populated and zero — must be reachable in the mockup. **One window, toggled**,
+not two windows stacked: `explorer.html` is a single live window and `landing.html` must
+read the same way. The toggle is a `.ghost` button in `.pitch`, beside the existing theme
+toggle, swapping the Recent column between populated and zero. (The brainstorming
+composite stacked two windows; that was a comparison device for review, not the design.)
 
 ### 4. Chrome — titlebar + statusbar, no toolbar
 
@@ -78,7 +82,9 @@ Both states — populated and zero — must be represented in the mockup.
 
 ### 5. Copy
 
-- Wordmark: `n<b>f</b>ty`, large (~46px), mono, with the `f` in `--accent-text`.
+- Wordmark: `n<b>f</b>ty` — `font-size: 46px`, `--font-mono`, weight 700,
+  `letter-spacing: -.025em`, with the `f` in `--accent-text`. This reuses the `.wordmark`
+  markup but not its 15px titlebar sizing; the landing wordmark is its own class.
 - Tagline: **"Asset Generator"**.
 - Actions: `+ New CookBook` (accent), `↗ Open CookBook…` (plain), `↗ Open a cooked .set…`
   (dashed, muted).
