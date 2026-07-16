@@ -9,11 +9,11 @@ dotnet build nfty.sln                       # build everything
 dotnet test nfty.sln                        # run all tests
 dotnet test tests/Nfty.Core.Tests           # one test project (also: tests/Nfty.Cli.Tests)
 dotnet test --filter FullyQualifiedName~DnaTests           # one test class
-dotnet test --filter FullyQualifiedName~DnaTests.SameSelectionSameHash   # one test method
+dotnet test --filter FullyQualifiedName~DnaTests.Same_selection_same_dna   # one test method
 dotnet run --project src/Nfty.Cli -- <command> [args]      # run the CLI
 ```
 
-Targets **.NET 10**; tests are **xUnit**. There is no lint step. ImageSharp is pinned to **3.1.11** on purpose (4.0.0 requires a build-time license key) — do not upgrade it. `sixlabors.lic` is gitignored and account-specific; never commit it.
+Targets **.NET 10**; tests are **xUnit**, named `Snake_case_sentences` (`Same_selection_same_dna`), which is what the `--filter` above must match. There is no lint step. ImageSharp is pinned to **3.1.11** on purpose (4.0.0 requires a build-time license key) — do not upgrade it. `sixlabors.lic` is gitignored and account-specific; never commit it.
 
 ## Big picture
 
@@ -39,18 +39,21 @@ Per asset: **roll recipe** (by cookbook weight) → **roll each layer's variant*
 
 - **Determinism:** a single string seed drives a **SplitMix64** RNG (`Rng.cs`), recorded in the Set. Same cookbook + same seed ⇒ byte-identical output.
 - **DNA** (`Dna.cs`): SHA-256 over the recipe id + each layer's variant id, plus — for dynamic (rolled) and static (fixed) layers — the `(H,S)` **quantized** per that layer's config (custom layers contribute variant id only). Quantizing folds the explosive color space into uniqueness. Duplicate DNA ⇒ re-roll; exhausting the legal unique space before `N` is an error stating the true maximum.
-- **Extend** (`extend` command / `SetWriter.ReadExisting`): re-opens an existing Set, loads its DNAs + numbering, rolls only new non-colliding assets, and **recomputes rarity across the whole collection** (rewriting existing items' `rarity` field) since rarity is collection-wide.
+- **Extend** (`extend` command / `SetWriter.ReadExisting`): re-opens an existing Set, loads its DNAs + numbering, rolls only new non-colliding assets, and **recomputes rarity across the whole collection** (rewriting existing items' `rarity` field) since rarity is collection-wide. Extend is not a second pipeline — it is the same `Generator.Generate` call with its `existingDnas` / `startNumber` parameters supplied. Keep new work behind that seam rather than forking the generator.
+- `Generator.Generate` **validates the cookbook itself** and throws on any problem, so callers never need to pre-validate; the `validate` command exists for humans, not as a required pre-step.
 
 ### Project layout
 
 - **`Nfty.Core`** — the entire engine, organized by concern so the planned Avalonia GUI can consume it directly:
   - `Model/` — immutable domain records (manifests, variants, rules, colorization).
   - `Formats/` — ZIP + manifest readers/writers (`ArchiveIo` is the shared low-level helper), plus `Validator`.
+    - **Manifest ≠ what the engine consumes.** `Loaded.cs` defines `LoadedCookBook`/`LoadedRecipe`/`LoadedIngredient`, each pairing a `Model/` manifest record with its eagerly-decoded `Image<Rgba32>` variants. `Generator` and `Validator` take `Loaded*`, never bare manifests — so reading an archive is also what pulls every PNG into memory.
+    - **All manifest JSON goes through `Json.Options`** (camelCase properties, enums as camelCase strings). Serializing a manifest with default options silently breaks round-trips; reuse the shared options for any new manifest field.
   - `Imaging/` — color conversion, color-spec parsing, value-map colorization, compositing (ImageSharp).
   - `Generation/` — RNG, weighted roller, color roller, DNA, rules engine, orchestrator.
   - `Output/` — dual per-item metadata (standards-pure OpenSea `metadata/NNNN.json` + rich `nfty/NNNN.json` with dna/seed/rarity/per-layer color) + set writer + extend loader.
   - `Stats/` — rarity computation.
-- **`Nfty.Cli`** — thin `System.CommandLine` wiring. All command definitions live in `CommandFactory.cs`; `Program.cs` just invokes it. Commands: `inspect`, `validate`, `stats`, `preview`, `generate`, `extend`.
+- **`Nfty.Cli`** — thin `System.CommandLine` wiring. All command definitions live in `CommandFactory.cs`; `Program.cs` just invokes it. Commands: `inspect`, `validate`, `stats`, `preview`, `generate`, `extend`. `Nfty.Cli.Tests` only asserts the command surface parses (subcommands exist, unknown ones error) — behavior is covered in `Nfty.Core.Tests`, so put real assertions there.
 
 **Callers own image disposal.** `Nfty.Core` returns live `Image<Rgba32>` objects; the CLI disposes them after use (see `generate`/`extend` in `CommandFactory.cs`). Follow this when adding new consumers.
 
@@ -61,5 +64,5 @@ Anywhere a user enters a color it must carry an explicit prefix — `hex:`, `rgb
 ## Conventions
 
 - **PR-per-task, one fresh agent per major task.** Work lands on a local feature branch merged into `main` — see `docs/superpowers/` for the design spec and implementation plans.
-- The **Avalonia GUI** is the next sub-project (cross-platform incl. mobile), built on `Nfty.Core`; an early design mockup lives in `docs/design/mockups/`. Keep `Nfty.Core` free of UI/CLI dependencies so both front-ends can share it.
+- The **Avalonia GUI** is the next sub-project (cross-platform incl. mobile), built on `Nfty.Core`; design mockups live in `docs/design/mockups/` — `explorer.html` (the primary screen) and `landing.html` (the pre-open default view), each with a spec in `docs/superpowers/specs/`. Their style is **locked**: the token block is shared verbatim, so a new hex literal in either file means the design has drifted. Keep `Nfty.Core` free of UI/CLI dependencies so both front-ends can share it.
 - When changing behavior, mirror the existing test style: seeded **distribution** tests for rollers, **exact-pixel** tests for colorization, **round-trip** tests for archives, and **golden-image** tests for compositing.
