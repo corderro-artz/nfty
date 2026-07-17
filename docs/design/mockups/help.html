@@ -1,0 +1,345 @@
+<title>nfty — Help</title>
+<style>
+  /* ===== Vaporsoft brand tokens (corderro-artz/vaporsoft-themes) — copied verbatim from explorer.html ===== */
+  :root {
+    --bg: #f4efe8;      --bg-alt: #f1ece4;   --bg-alt2: #ede7df;  --panel: #f8f3ed;
+    --fg: #121318;      --fg-muted: #121418b8;
+    --line: #1214181f;  --line-strong: #12141833;
+    --guide: #1214182b; --guide-hi: #12141859;
+    --accent: #a11f31;  --accent-hover: #b92f44;  --accent-text: #97192a; --on-accent: #f7f2ec;
+    --success: #3d6b52; --warning: #6a4a25;  --info: #3b5b6f; --custom: #6d4f9c;
+    --accent-wash: #a11f3114; --accent-line: #a11f3140;
+    --tile: #ece5db;
+    --shadow: 0 1px 2px #12141810, 0 18px 48px -24px #12141833;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "SF Mono", "JetBrains Mono", "Cascadia Code", ui-monospace, Menlo, Consolas, monospace;
+    --r-win: 10px; --r-lg: 8px; --r-md: 6px; --r-sm: 5px; --r-xs: 4px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #07080b;      --bg-alt: #0a0b10;   --bg-alt2: #0f1118;  --panel: #0b0c10;
+      --fg: #f2ede6;      --fg-muted: #f2ede6c7;
+      --line: #f2ede624;  --line-strong: #f2ede633;
+      --guide: #f2ede61f; --guide-hi: #f2ede63d;
+      --accent: #a11f31;  --accent-hover: #ba3447;  --accent-text: #e0788a; --on-accent: #f7f2ec;
+      --success: #a6c08a; --warning: #e0c28c;  --info: #7fb0c4; --custom: #c3a6ea;
+      --accent-wash: #a11f3126; --accent-line: #a11f3166;
+      --tile: #12141c;
+      --shadow: 0 1px 2px #00000060, 0 22px 60px -28px #000000;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f4efe8; --bg-alt: #f1ece4; --bg-alt2: #ede7df; --panel: #f8f3ed;
+    --fg: #121318; --fg-muted: #121418b8; --line: #1214181f; --line-strong: #12141833;
+    --guide: #1214182b; --guide-hi: #12141859;
+    --accent: #a11f31; --accent-hover: #b92f44; --accent-text: #97192a; --on-accent: #f7f2ec;
+    --success: #3d6b52; --warning: #6a4a25; --info: #3b5b6f; --custom: #6d4f9c;
+    --accent-wash: #a11f3114; --accent-line: #a11f3140; --tile: #ece5db;
+    --shadow: 0 1px 2px #12141810, 0 18px 48px -24px #12141833;
+  }
+  :root[data-theme="dark"] {
+    --bg: #07080b; --bg-alt: #0a0b10; --bg-alt2: #0f1118; --panel: #0b0c10;
+    --fg: #f2ede6; --fg-muted: #f2ede6c7; --line: #f2ede624; --line-strong: #f2ede633;
+    --guide: #f2ede61f; --guide-hi: #f2ede63d;
+    --accent: #a11f31; --accent-hover: #ba3447; --accent-text: #e0788a; --on-accent: #f7f2ec;
+    --success: #a6c08a; --warning: #e0c28c; --info: #7fb0c4; --custom: #c3a6ea;
+    --accent-wash: #a11f3126; --accent-line: #a11f3166; --tile: #12141c;
+    --shadow: 0 1px 2px #00000060, 0 22px 60px -28px #000000;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  :where(a, button, input, [tabindex]):focus-visible {
+    outline: 2px solid var(--accent-text); outline-offset: 2px;
+  }
+  .stage {
+    background: var(--bg-alt); color: var(--fg); font-family: var(--font-sans);
+    min-height: 100vh; padding: 30px clamp(12px, 3vw, 48px) 56px;
+    -webkit-font-smoothing: antialiased; line-height: 1.5;
+  }
+
+  .pitch { max-width: 1180px; margin: 0 auto 20px; display: flex; align-items: flex-end;
+           justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+  .pitch h1 { font-family: var(--font-mono); font-size: 14px; font-weight: 600; margin: 0;
+              letter-spacing: .14em; text-transform: uppercase; color: var(--fg-muted); }
+  .pitch p { margin: 6px 0 0; max-width: 66ch; font-size: 14px; color: var(--fg-muted); }
+  .pitch .a { color: var(--accent-text); }
+  .pitch p b { color: var(--fg); font-weight: 600; }
+  .ghost { font: inherit; font-size: 13px; border: 1px solid var(--line-strong); background: var(--panel);
+           color: var(--fg); height: 38px; padding: 0 14px; border-radius: var(--r-lg); cursor: pointer;
+           display: inline-flex; align-items: center; gap: 8px; }
+  .ghost:hover { border-color: var(--accent-line); }
+
+  /* app window — same chrome as explorer.html; the help sheet floats over it */
+  .frame { overflow-x: auto; padding-bottom: 4px; }
+  .window { width: 1180px; margin: 0 auto; background: var(--bg); border: 1px solid var(--line-strong);
+            border-radius: var(--r-win); box-shadow: var(--shadow); overflow: hidden; }
+
+  .titlebar { display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 10px 0 12px;
+              background: linear-gradient(var(--panel), var(--bg-alt)); border-bottom: 1px solid var(--line);
+              box-shadow: inset 0 1px 0 color-mix(in srgb, var(--fg) 6%, transparent);
+              cursor: default; user-select: none; }
+  .brand { display: flex; align-items: center; gap: 9px; flex: 0 0 auto; }
+  .brandtile { width: 24px; height: 24px; border-radius: var(--r-sm); display: grid; place-items: center;
+               background: var(--accent-wash); border: 1px solid var(--accent-line); }
+  .brandtile .sq { width: 9px; height: 9px; background: var(--accent); border-radius: 2px; transform: rotate(45deg); }
+  .wordmark { font-family: var(--font-mono); font-weight: 700; font-size: 15px; letter-spacing: -.01em; }
+  .wordmark b { color: var(--accent-text); }
+  .tdiv { width: 1px; height: 18px; background: var(--line-strong); flex: 0 0 auto; }
+  .crumbs { font-family: var(--font-mono); font-size: 12.5px; color: var(--fg-muted); display: flex;
+            gap: 4px; align-items: center; flex: 1; min-width: 0; overflow: hidden; }
+  .crumbs .sep { opacity: .45; } .crumbs .ext { color: var(--accent-text); }
+  .wctl { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
+  .wc { width: 34px; height: 30px; border: 0; background: transparent; border-radius: var(--r-sm);
+        color: var(--fg-muted); cursor: pointer; display: grid; place-items: center;
+        transition: background .12s, color .12s, transform .08s; }
+  .wc svg { width: 14px; height: 14px; }
+  .wc:hover { background: var(--bg-alt2); color: var(--fg); }
+  .wc.close:hover { background: var(--accent); color: var(--on-accent); }
+
+  /* the dimmed app underneath, so the sheet reads as an overlay summoned in place */
+  .winbody { position: relative; }
+  .exp-toolbar { display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+                 border-bottom: 1px solid var(--line); background: var(--bg-alt); }
+  .search { flex: 1; min-width: 180px; max-width: 360px; display: flex; align-items: center; gap: 8px;
+            background: var(--panel); border: 1px solid var(--line-strong); border-radius: var(--r-md);
+            padding: 8px 11px; color: var(--fg-muted); font-family: var(--font-mono); font-size: 12.5px; }
+  .search svg { width: 13px; height: 13px; flex: 0 0 auto; }
+  .search kbd { margin-left: auto; font-family: var(--font-mono); font-size: 10.5px; border: 1px solid var(--line);
+                border-radius: var(--r-xs); padding: 1px 5px; background: var(--bg-alt2); }
+  .tbtn { font: inherit; font-size: 12.5px; display: inline-flex; align-items: center; gap: 7px;
+          background: var(--panel); border: 1px solid var(--line-strong); color: var(--fg);
+          border-radius: var(--r-md); padding: 8px 12px; }
+  .tbtn.accent { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .tbtn svg { width: 14px; height: 14px; }
+  .lock-toggle { margin-left: auto; }
+
+  .panes { display: grid; grid-template-columns: 286px minmax(392px, 1fr) 336px; min-height: 392px; }
+  .pane { border-right: 1px solid var(--line); min-width: 0; }
+  .pane:last-child { border-right: 0; }
+  .pane-h { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase;
+            color: var(--fg-muted); height: 41px; padding: 0 16px; display: flex; align-items: center; gap: 8px;
+            border-bottom: 1px solid var(--line); }
+  .ghost-rows { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+  .gr { height: 9px; border-radius: 3px; background: var(--line); }
+
+  .scrim { position: absolute; inset: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 52%, transparent); }
+  .overlay { position: absolute; inset: 0; z-index: 6; display: grid; place-items: center; padding: 22px; }
+
+  /* status bar — same as explorer, plus the ? summon affordance at the far right */
+  .statusbar { display: flex; align-items: center; gap: 14px; padding: 8px 16px; border-top: 1px solid var(--line);
+               background: var(--bg-alt); font-family: var(--font-mono); font-size: 11.5px; color: var(--fg-muted);
+               font-variant-numeric: tabular-nums; }
+  .statusbar .ok { color: var(--success); }
+  .zoomctl { margin-left: auto; display: inline-flex; align-items: center; gap: 2px; }
+  .zoomctl button { font: inherit; font-family: var(--font-mono); border: 1px solid var(--line-strong);
+                    background: var(--panel); color: var(--fg); width: 24px; height: 24px; border-radius: var(--r-sm);
+                    line-height: 1; }
+  .zoomctl .pct { min-width: 46px; text-align: center; }
+  .helpbtn { margin-left: 8px; font-family: var(--font-mono); font-size: 13px; line-height: 1;
+             width: 24px; height: 24px; border-radius: var(--r-sm); display: inline-grid; place-items: center;
+             cursor: pointer; color: var(--accent-text); background: var(--accent-wash);
+             border: 1px solid var(--accent-line); }
+
+  /* ===================== the help sheet ===================== */
+  .sheet { width: 780px; max-width: 100%; background: var(--panel); color: var(--fg);
+           border: 1px solid var(--line-strong); border-radius: var(--r-lg); box-shadow: var(--shadow);
+           overflow: hidden; }
+  .sheet .sh-h { display: flex; align-items: center; gap: 11px; padding: 15px 20px; border-bottom: 1px solid var(--line); }
+  .sheet .slbl { font-family: var(--font-mono); font-size: 11px; font-weight: 600; margin: 0;
+                 letter-spacing: .14em; text-transform: uppercase; color: var(--fg-muted); }
+  .sheet .esc { margin-left: auto; font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em;
+                text-transform: uppercase; color: var(--fg-muted); border: 1px solid var(--line);
+                border-radius: var(--r-xs); padding: 3px 8px; flex: none; }
+
+  .sheet .sh-b { display: grid; grid-template-columns: 1.35fr 1fr .82fr; }
+  .sheet .col { padding: 18px 20px 20px; }
+  .sheet .col + .col { border-left: 1px solid var(--line); }
+  .sheet .col .slbl { margin-bottom: 14px; }
+  .sheet .col .slbl + .slbl { margin-top: 20px; }
+
+  /* one strict 20px glyph gutter — every term aligns down the page */
+  .sheet .e { display: grid; grid-template-columns: 20px 1fr; gap: 10px; align-items: start; margin-bottom: 11px; }
+  .sheet .e:last-child { margin-bottom: 0; }
+  .sheet .g { display: grid; place-items: center; height: 16px; }
+  .sheet .ti { width: 16px; height: 16px; color: var(--fg-muted); }
+  .sheet .km { font-family: var(--font-mono); font-weight: 700; font-size: 12px; line-height: 1; }
+  .sheet .km.d { color: var(--info); } .sheet .km.s { color: var(--warning); } .sheet .km.c { color: var(--custom); }
+  .sheet .rop { font-family: var(--font-mono); font-size: 11px; line-height: 1; }
+  .sheet .rop.ex { color: var(--accent-text); } .sheet .rop.rq { color: var(--success); }
+  .sheet .gl { font-size: 12px; line-height: 1; color: var(--fg-muted); }
+  .sheet .gl.ok { color: var(--success); }
+
+  .sheet .t { font-size: 12.5px; font-weight: 600; letter-spacing: .005em; line-height: 1.25; }
+  .sheet .t .x { font-family: var(--font-mono); font-size: 9.5px; font-weight: 400; color: var(--accent-text);
+                 margin-left: 6px; letter-spacing: .02em; }
+  .sheet .t.plain { font-weight: 400; font-size: 11.5px; color: var(--fg-muted); padding-top: 1px; }
+  .sheet .s { display: block; margin-top: 3px; font-size: 11.5px; line-height: 1.5; color: var(--fg-muted); }
+  .sheet .s em { font-style: normal; color: var(--fg); }
+  .sheet .s b { color: var(--accent-text); font-weight: 600; }
+
+  .sheet .k { font-family: var(--font-mono); font-size: 10.5px; color: var(--fg-muted);
+              border: 1px solid var(--line); border-radius: var(--r-xs); padding: 2px 0; min-width: 30px;
+              display: inline-grid; place-items: center; background: var(--bg-alt); }
+  .sheet .kline { display: grid; grid-template-columns: 38px 1fr; gap: 10px; align-items: center;
+                  margin-bottom: 9px; font-size: 11.5px; color: var(--fg-muted); }
+  .sheet .cs { display: flex; gap: 7px; align-items: baseline; margin-bottom: 7px; font-family: var(--font-mono); font-size: 10.5px; }
+  .sheet .cs i { color: var(--accent-text); font-style: normal; }
+  .sheet .cs em { color: var(--fg-muted); font-style: normal; }
+  .sheet .fine { font-size: 10.5px; line-height: 1.5; color: var(--fg-muted); margin-top: 10px; }
+
+  .sheet .sh-f { display: flex; align-items: center; gap: 12px; padding: 12px 20px;
+                 border-top: 1px solid var(--line); background: var(--bg-alt); }
+  .sheet .dna { font-size: 11.5px; color: var(--fg-muted); line-height: 1.5; margin: 0; }
+  .sheet .dna b { color: var(--fg); font-weight: 600; }
+  .sheet .dnaeq { font-family: var(--font-mono); font-size: 10.5px; color: var(--fg-muted); margin-left: auto;
+                  flex: none; border: 1px solid var(--line); border-radius: var(--r-xs); padding: 3px 9px; background: var(--panel); }
+  .sheet .dnaeq b { color: var(--accent-text); font-weight: 400; }
+
+  .note { max-width: 1180px; margin: 16px auto 0; font-size: 12.5px; color: var(--fg-muted);
+          display: flex; gap: 10px; align-items: flex-start; }
+  .note .k { font-family: var(--font-mono); color: var(--accent-text); flex: 0 0 auto; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation: none !important; }
+  }
+</style>
+
+<div class="stage">
+  <div class="pitch">
+    <div>
+      <h1>nfty · help</h1>
+      <p>A single-screen <b>quick reference</b>, summoned over whatever you're doing and dismissed with
+        <span class="a">Esc</span>. It defines the five domain words, the three layer kinds, the rule and state
+        glyphs, the keys, and the colour-spec prefixes — everything the vocabulary rests on, in one glance.</p>
+    </div>
+    <button class="ghost" id="theme" title="Toggle light / dark">◐ Theme</button>
+  </div>
+
+  <div class="frame">
+    <div class="window">
+      <div class="titlebar">
+        <div class="brand"><span class="brandtile"><span class="sq"></span></span><span class="wordmark">nft<b>y</b></span></div>
+        <span class="tdiv"></span>
+        <div class="crumbs"><span>VaporPets</span><span class="sep">›</span><span>cat</span><span class="sep">›</span><span>aura</span></div>
+        <span class="tdiv"></span>
+        <div class="wctl">
+          <button class="wc" aria-label="Minimize"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6 12h12" stroke-linecap="round"/></svg></button>
+          <button class="wc" aria-label="Maximize"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg></button>
+          <button class="wc close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" stroke-linecap="round"/></svg></button>
+        </div>
+      </div>
+
+      <div class="winbody">
+        <div class="exp-toolbar">
+          <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4" stroke-linecap="round"/></svg> Find recipe, ingredient, variant… <kbd>⌘K</kbd></div>
+          <button class="tbtn accent">+ Add variant</button>
+          <button class="tbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13" stroke-linecap="round" stroke-linejoin="round"/></svg> Delete</button>
+          <button class="tbtn lock-toggle">Unlock to edit</button>
+        </div>
+
+        <div class="panes">
+          <div class="pane"><div class="pane-h">Contents</div><div class="ghost-rows"><div class="gr" style="width:70%"></div><div class="gr" style="width:52%"></div><div class="gr" style="width:61%"></div><div class="gr" style="width:44%"></div></div></div>
+          <div class="pane"><div class="pane-h">Ingredient · aura</div><div class="ghost-rows"><div class="gr" style="width:88%"></div><div class="gr" style="width:74%"></div><div class="gr" style="width:80%"></div></div></div>
+          <div class="pane"><div class="pane-h">Colorways</div><div class="ghost-rows"><div class="gr" style="width:66%"></div><div class="gr" style="width:58%"></div></div></div>
+        </div>
+
+        <div class="scrim"></div>
+        <div class="overlay">
+          <div class="sheet" role="dialog" aria-label="Quick reference">
+            <div class="sh-h">
+              <span class="brandtile"><span class="sq"></span></span>
+              <span class="wordmark">nft<b>y</b></span>
+              <span class="tdiv"></span>
+              <p class="slbl">Quick reference</p>
+              <span class="esc">Esc</span>
+            </div>
+
+            <div class="sh-b">
+              <div class="col">
+                <p class="slbl">The five words</p>
+                <div class="e">
+                  <span class="g"><svg class="ti" viewBox="0 0 24 24" fill="none"><path d="M6 3.5h11.4a.7.7 0 0 1 .7.7V20a.7.7 0 0 1-.7.7H6.3A2.3 2.3 0 0 1 4 18.4V5.8A2.3 2.3 0 0 1 6.3 3.5Z" fill="var(--panel)" stroke="currentColor" stroke-width="1.3"/><path d="M4.4 18.1a2.3 2.3 0 0 1 1.9-1h11.8" stroke="currentColor" stroke-width="1.3"/><path d="M9.4 3.5h3.4v5.2l-1.7-1.2-1.7 1.2z" fill="var(--accent)"/></svg></span>
+                  <span class="t">CookBook<span class="x">.cbk</span><span class="s">An <em>uncooked</em> Set — holds the recipes, the canvas size, the collection.</span></span>
+                </div>
+                <div class="e">
+                  <span class="g"><svg class="ti" viewBox="0 0 24 24" fill="none"><path d="M6 3.6h7.4L18.6 8v11.7a.7.7 0 0 1-.7.7H6a.7.7 0 0 1-.7-.7V4.3A.7.7 0 0 1 6 3.6Z" fill="var(--panel)" stroke="currentColor" stroke-width="1.3"/><path d="M13.1 3.8V8.1h4.5" stroke="currentColor" stroke-width="1.3"/><path d="M7.8 12h7M7.8 15h7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity=".7"/><circle cx="15.2" cy="18" r="1.5" fill="var(--accent)"/></svg></span>
+                  <span class="t">Recipe<span class="x">.rcp</span><span class="s">One character <em>type</em> — an ordered stack of layers, plus its rules.</span></span>
+                </div>
+                <div class="e">
+                  <span class="g"><svg class="ti" viewBox="0 0 24 24" fill="none"><path d="M12 3.4 3.4 8 12 12.6 20.6 8 12 3.4Z" fill="var(--accent-wash)" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M3.4 12 12 16.6 20.6 12" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M3.4 16 12 20.6 20.6 16" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" opacity=".8"/></svg></span>
+                  <span class="t">Ingredient<span class="x">.igt</span><span class="s">One layer — its kind, its colouring, its weighted variants.</span></span>
+                </div>
+                <div class="e">
+                  <span class="g"><svg class="ti" viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="14" rx="1.7" fill="var(--panel)" stroke="currentColor" stroke-width="1.3"/><circle cx="8.8" cy="9.3" r="1.7" fill="var(--accent)"/><path d="M5 17.2 10 11.6l3 3.1 2.4-2.6L19 16.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                  <span class="t">Variant<span class="s">One image and a weight, inside an ingredient.</span></span>
+                </div>
+                <div class="e">
+                  <span class="g"><svg class="ti" viewBox="0 0 24 24" fill="none"><rect x="3.8" y="3.8" width="7.4" height="7.4" rx="1.5" fill="var(--accent-wash)" stroke="currentColor" stroke-width="1.3"/><rect x="12.8" y="3.8" width="7.4" height="7.4" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="3.8" y="12.8" width="7.4" height="7.4" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="12.8" y="12.8" width="7.4" height="7.4" rx="1.5" fill="var(--accent)"/></svg></span>
+                  <span class="t">Set<span class="x">.set</span><span class="s">What <b>Cook</b> produces: images, metadata, rarity, seed.</span></span>
+                </div>
+              </div>
+
+              <div class="col">
+                <p class="slbl">Layer kinds</p>
+                <div class="e"><span class="g"><span class="km d">D</span></span><span class="t">dynamic<span class="s">Grey value-map. Colour <em>rolled</em> per asset.</span></span></div>
+                <div class="e"><span class="g"><span class="km s">S</span></span><span class="t">static<span class="s">Grey value-map. One <em>fixed</em> colour.</span></span></div>
+                <div class="e"><span class="g"><span class="km c">C</span></span><span class="t">custom<span class="s">Full colour, composited <em>as-is</em>.</span></span></div>
+
+                <p class="slbl">Rules &amp; state</p>
+                <div class="e"><span class="g"><span class="rop ex">✕</span></span><span class="t plain">never together</span></div>
+                <div class="e"><span class="g"><span class="rop rq">→</span></span><span class="t plain">always together</span></div>
+                <div class="e"><span class="g"><span class="gl">⚑</span></span><span class="t plain">this layer is in a rule</span></div>
+                <div class="e"><span class="g"><span class="gl ok">●</span></span><span class="t plain">cookbook is valid</span></div>
+              </div>
+
+              <div class="col">
+                <p class="slbl">Keys</p>
+                <div class="kline"><span class="k">⌘/</span><span>this sheet</span></div>
+                <div class="kline"><span class="k">⌘K</span><span>search</span></div>
+                <div class="kline"><span class="k">⌘N</span><span>new cookbook</span></div>
+                <div class="kline"><span class="k">⌘O</span><span>open</span></div>
+
+                <p class="slbl">Colour</p>
+                <div class="cs"><i>hex:</i><em>d6249f</em></div>
+                <div class="cs"><i>rgb:</i><em>214,36,159</em></div>
+                <div class="cs"><i>hsl:</i><em>322,72,49</em></div>
+                <div class="cs"><i>hsv:</i><em>322,83,84</em></div>
+                <p class="fine">The prefix is required — a colour is never guessed.</p>
+              </div>
+            </div>
+
+            <div class="sh-f">
+              <p class="dna"><b>Unique DNA</b> — one recipe, its rolled variants, their colours. It's what makes an asset distinct, and what a collection is counted in.</p>
+              <span class="dnaeq">4 × 3 × 5 × 6 <b>=</b> 360</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="statusbar">
+        <span class="ok">● Valid</span>
+        <span>3 recipes</span><span>· 11 ingredients</span><span>· 47 variants</span>
+        <span class="zoomctl">
+          <button aria-label="Zoom out">−</button>
+          <span class="pct">100%</span>
+          <button aria-label="Zoom in">+</button>
+        </span>
+        <button class="helpbtn" aria-label="Help (⌘/)" title="Help — ⌘/">?</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <span class="k">Summoned from</span>
+    <span>the <b style="color:var(--accent-text)">?</b> at the right of the status bar, the <b style="color:var(--accent-text)">Learn</b>
+      link on the landing view, or <b style="color:var(--accent-text)">⌘/</b> anywhere — all open this one sheet; Esc closes it.</span>
+  </div>
+</div>
+
+<script>
+  var root = document.documentElement;
+  document.getElementById('theme').addEventListener('click', function () {
+    var cur = root.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    root.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+  });
+</script>

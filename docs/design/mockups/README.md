@@ -70,6 +70,28 @@ Design spec: [`docs/superpowers/specs/2026-07-16-nfty-landing-view-design.md`](.
 The token block is copied **verbatim** from `explorer.html` — every colour is a `var()`, and a new hex
 value anywhere is the signal that the style has drifted.
 
+## help.html
+
+The built-in **quick reference** — a legend, not a docs site. A modal sheet summoned over a dimmed app
+window and dismissed with `Esc`, defining the vocabulary the rest of the UI rests on in one glance:
+
+- **The five words** — CookBook / Recipe / Ingredient / Variant / Set, each `icon → term → extension →
+  one-line gloss`. The icon *is* the glossary bullet, so every symbol is defined exactly once. Two new
+  icons join the family here: **Variant** (a single framed image — the singular counterpart to the
+  Ingredient's layer stack) and **Set** (a 2×2 grid — input is a book, output is a grid).
+- **Layer kinds + Rules & state** — the D/S/C kind letters in their hues, then `✕` never-together,
+  `→` always-together, `⚑` layer-in-a-rule, `●` valid.
+- **Keys + Colour** — the keyboard chords (`⌘/` opens this sheet), then the four colour-spec prefixes.
+- **Unique DNA** spans the footer with the factor equation `4 × 3 × 5 × 6 = 360` pinned right.
+
+Every glyph sits in one strict 20px gutter so all terms align; hairlines divide the columns, no boxes.
+**Summoned from** the `?` at the far-right of the status bar, the **Learn** link on the landing view, or
+`⌘/` anywhere — all open the one sheet. This **resolves** the landing view's reserved "Learn / docs"
+entry point (below): that link is one of the three summon points.
+
+Design spec: [`docs/superpowers/specs/2026-07-17-nfty-help-view-design.md`](../../superpowers/specs/2026-07-17-nfty-help-view-design.md).
+Token block copied **verbatim** from `explorer.html`.
+
 ### Preview locally
 
 Neither file has a `<!doctype>/<html>/<head>/<body>` — the publish host wraps them with a skeleton
@@ -77,7 +99,7 @@ that supplies `<meta charset="utf-8">` and a minimal CSS reset. To view one fait
 machine, wrap it first (otherwise glyphs like `×`, `›`, `⌘K`, `↗`, tree carets render as mojibake):
 
 ```bash
-F=explorer.html   # or landing.html
+F=explorer.html   # or landing.html, help.html
 { printf '<!doctype html><html><head><meta charset="utf-8"><style>*{box-sizing:border-box}html,body{margin:0}</style></head><body>'; cat $F; printf '</body></html>'; } > /tmp/preview.html
 python3 -m http.server 8000   # then open http://localhost:8000/tmp/preview.html
 ```
@@ -89,3 +111,4 @@ from a later session, or a new one gets minted):
 |--------|----------|
 | `explorer.html` | <https://claude.ai/code/artifact/04b18798-3fca-4bde-a434-1d848a8116c5> |
 | `landing.html`  | <https://claude.ai/code/artifact/6bfa007e-b4a6-48e4-8ec8-90f1d193e35f> |
+| `help.html`     | <https://claude.ai/code/artifact/4b0a9a36-c264-4a28-94cb-99e06fa3d0d5> |
