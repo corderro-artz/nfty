@@ -101,12 +101,20 @@ The user has confirmed the Set view is planned as separate later work. When it l
 this action becomes live and its dashed treatment should be reconsidered — the dashed,
 muted styling is what marks it as not-yet-real.
 
-## Known future addition — Learn / docs
+## Learn / docs entry point — added 2026-07-17
 
-A **Learn** link (e.g. "The cooking metaphor →") under Recent was explored and
-deliberately cut. The built-in help/docs page is the next design task after this one;
-this landing view is the likely home for an entry point to it. Left off now to avoid
-smuggling in a docs surface without designing it.
+The help/docs page has since been designed (`docs/design/mockups/help.html`, spec
+`2026-07-17-nfty-help-view-design.md`), so this view's entry point to it is now live:
+
+- A quiet **Learn** link — "New to nfty? **The cooking metaphor** →" — below the Start
+  action stack in the left column. Placed there (rather than the originally-explored
+  "under Recent" position) because that is where a first-run user's attention lands, and
+  it pairs "what you can do" with "how it thinks."
+- The same **`?`** the help spec puts at the far-right of every view's status bar, for a
+  trigger that is consistent whether or not a cookbook is open.
+
+Both open the one quick-reference sheet (as does `⌘/`). Like the other landing actions in
+this mockup, they are inert placement affordances — wiring them is Avalonia work.
 
 ## Style constraints
 

@@ -137,6 +137,15 @@
   .tbtn.accent .khint { border-color: color-mix(in srgb, var(--on-accent) 35%, transparent);
                         background: color-mix(in srgb, var(--on-accent) 12%, transparent); color: var(--on-accent); }
 
+  /* the docs/help entry point — a quiet link into the quick-reference sheet */
+  .learn { margin-top: 22px; display: inline-flex; align-items: baseline; gap: 6px; font: inherit;
+           font-size: 12.5px; color: var(--fg-muted); background: transparent; border: 0; padding: 2px 0;
+           cursor: pointer; text-align: left; }
+  .learn:hover { color: var(--fg); }
+  .learn b { color: var(--fg); font-weight: 600; }
+  .learn:hover b { color: var(--accent-text); }
+  .learn .g { color: var(--accent-text); font-family: var(--font-mono); }
+
   /* recent */
   .rrow { display: flex; align-items: center; gap: 10px; padding: 8px 9px; border-radius: var(--r-xs);
           cursor: pointer; transition: background .12s; width: 100%; text-align: left; border: 0;
@@ -168,6 +177,11 @@
                     cursor: pointer; line-height: 1; }
   .zoomctl button:hover { border-color: var(--accent-line); }
   .zoomctl .pct { min-width: 46px; text-align: center; }
+  /* the always-present help trigger — same idiom in explorer.html / help.html */
+  .helpbtn { margin-left: 8px; font-family: var(--font-mono); font-size: 13px; line-height: 1;
+             width: 24px; height: 24px; border-radius: var(--r-sm); display: inline-grid; place-items: center;
+             cursor: pointer; color: var(--accent-text); background: var(--accent-wash);
+             border: 1px solid var(--accent-line); }
 
   /* tooltip */
   .tip { position: fixed; z-index: 60; background: var(--fg); color: var(--bg); font-family: var(--font-mono);
@@ -225,6 +239,7 @@
             <button class="tbtn"><span class="g">↗</span> Open CookBook… <span class="khint">⌘O</span></button>
             <button class="tbtn soon" data-tip="The Set browser is not built yet"><span class="g">↗</span> Open a cooked .set…</button>
           </div>
+          <button class="learn" id="learn" data-tip="Open the quick reference — ⌘/">New to nfty? <b>The cooking metaphor</b> <span class="g">→</span></button>
         </div>
         <div class="col">
           <p class="slbl">Recent</p>
@@ -239,6 +254,7 @@
           <span class="pct" id="zPct" aria-live="polite">100%</span>
           <button id="zIn" data-tip="Zoom in (Ctrl +)" aria-label="Zoom in">+</button>
         </span>
+        <button class="helpbtn" id="help" data-tip="Quick reference — ⌘/" aria-label="Quick reference (⌘/)">?</button>
       </div>
     </div>
   </div>
@@ -247,7 +263,8 @@
     <span class="k">try it →</span>
     <span>Toggle <b>Recents</b>, top-right, to see the first-run empty state a new user actually meets.
       The dashed <b>Open a cooked .set…</b> action is deliberately inert — it reserves the shape for the
-      Set browser, which isn't built yet.</span>
+      Set browser, which isn't built yet. <b>The cooking metaphor</b> and the <b>?</b> in the status bar
+      both open the quick-reference sheet (also <b>⌘/</b>).</span>
   </div>
 </div>
 
