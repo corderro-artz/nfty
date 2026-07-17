@@ -61,10 +61,14 @@ equivalent). A two-column split inside the same frameless window: the wordmark a
   shape via a muted `— nothing open —` in the breadcrumb slot, and the statusbar reads
   `No cookbook open` (no `● Valid`, no counts — nothing to validate or count).
 
+A quiet **Learn** link — "New to nfty? *The cooking metaphor* →" — sits below the Start stack, and a
+`?` anchors the far-right of the status bar; both open `help.html`'s quick-reference sheet (as does
+`⌘/`), so the help view is reachable whether or not a cookbook is open.
+
 > The dashed `.set` action is **deliberately inert**: it reserves the shape for a Set browser that
 > isn't built yet. When that view lands, the action goes live and the dashed treatment — which is what
-> marks it as not-yet-real — should be reconsidered. A **Learn / docs** entry point is the other
-> expected addition here, pending the help-page design.
+> marks it as not-yet-real — should be reconsidered. (The Learn / docs entry point that used to be
+> listed here is now built — see the Learn link and status-bar `?` above.)
 
 Design spec: [`docs/superpowers/specs/2026-07-16-nfty-landing-view-design.md`](../../superpowers/specs/2026-07-16-nfty-landing-view-design.md).
 The token block is copied **verbatim** from `explorer.html` — every colour is a `var()`, and a new hex
