@@ -62,7 +62,7 @@ composite stacked two windows; that was a comparison device for review, not the 
 
 ### 4. Chrome — titlebar + statusbar, no toolbar
 
-- **Titlebar:** unchanged from the Explorer — brandtile, `n<b>f</b>ty` wordmark, window
+- **Titlebar:** unchanged from the Explorer — brandtile, `nft<b>y</b>` wordmark, window
   controls. The breadcrumb slot shows a muted `— nothing open —`, preserving the
   titlebar's shape.
 - **Toolbar:** **omitted entirely**, not disabled. With no cookbook open, search / Add /
@@ -82,8 +82,8 @@ composite stacked two windows; that was a comparison device for review, not the 
 
 ### 5. Copy
 
-- Wordmark: `n<b>f</b>ty` — `font-size: 46px`, `--font-mono`, weight 700,
-  `letter-spacing: -.025em`, with the `f` in `--accent-text`. This reuses the `.wordmark`
+- Wordmark: `nft<b>y</b>` — `font-size: 46px`, `--font-mono`, weight 700,
+  `letter-spacing: -.025em`, with the **`y`** in `--accent-text`. This reuses the `.wordmark`
   markup but not its 15px titlebar sizing; the landing wordmark is its own class.
 - Tagline: **"Asset Generator"**.
 - Actions: `+ New CookBook` (accent), `↗ Open CookBook…` (plain), `↗ Open a cooked .set…`
