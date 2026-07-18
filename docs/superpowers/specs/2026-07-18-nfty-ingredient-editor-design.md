@@ -117,13 +117,16 @@ requirement that ingredient size derive from existing cookbook sizes.
 
 ### 8. Entry points
 
-The editor is reached from affordances already reserved in the Explorer mockup:
+The editor opens from two places. **Neither affordance exists yet** — the editor screen is new, so nothing
+references it today; adding these is downstream wiring (below), not part of this cycle's editor mockup:
 
-- The Explorer's context-aware **`+ Add ingredient`** toolbar button opens the editor on a **new** draft
-  (inheriting the cookbook canvas, §7).
-- An **edit (pencil)** affordance on a selected Ingredient's hero **re-opens** that ingredient for editing.
+- **From the Explorer** — a context-aware **`+ New ingredient`** action (the existing Add path) opens the editor
+  on a **new** draft inheriting the open cookbook's canvas (§7); an **edit / pencil** affordance on a selected
+  Ingredient **re-opens** that ingredient for editing.
+- **From the Landing view** — a **`+ New ingredient`** entry alongside the existing New / Open CookBook actions,
+  for starting an ingredient with **no cookbook open** (the standalone-size case, §7).
 
-Both open the same editor. (Wiring is Avalonia work; the mockup shows placement.)
+Both open the same editor.
 
 ## Library — `Nfty.Core.Editing`
 
@@ -212,6 +215,9 @@ is a `.ghost` button in `.pitch`, outside the `.window`; 1180px window width.
   it lands it produces a `Custom` ingredient (full-colour RGBA, `Colorization` null, composited as-is) and the
   canvas drops its grayscale constraint.
 - **Canvas modifier keys** — ctrl-drag straight line, shift-lock aspect (§4).
+- **Entry-point wiring.** The `explorer.html` and `landing.html` mockups don't reference this editor today;
+  adding the `+ New ingredient` affordances (Explorer toolbar/ingredient hero, Landing action stack) to them is a
+  follow-up once this editor mockup is locked — and touches their locked style, so it's its own small task.
 - **Avalonia implementation** of the editor UI on top of `Nfty.Core.Editing`.
 - The separate **literalization epic** (a literal-core / stylized-surface split) is explicitly *not* pursued —
   the metaphor stays on the five identities.
