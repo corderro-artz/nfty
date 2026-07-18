@@ -51,4 +51,12 @@ public class ColorizedPreviewTests
         // A Static preview must not advance the RNG (generator uses FromFixed, no draw).
         Assert.Equal(new SplitMix64Rng(7).NextDouble(), rng.NextDouble());
     }
+
+    [Fact]
+    public void Custom_returns_the_value_map_unchanged()
+    {
+        using Image<Rgba32> preview = ColorizedPreview.Render(
+            Gray(128), LayerKind.Custom, colorization: null, new SplitMix64Rng(1));
+        Assert.Equal(new Rgba32(128, 128, 128, 255), preview[0, 0]);
+    }
 }

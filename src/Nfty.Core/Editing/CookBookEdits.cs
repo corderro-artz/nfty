@@ -1,4 +1,5 @@
 using Nfty.Core.Formats;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Nfty.Core.Editing;
@@ -12,6 +13,9 @@ public static class CookBookEdits
 {
     public static LoadedCookBook UpsertIngredient(LoadedCookBook book, string recipeId, LoadedIngredient ingredient)
     {
+        if (!book.Recipes.Any(r => r.Manifest.Id == recipeId))
+            throw new KeyNotFoundException($"No recipe '{recipeId}' in cookbook '{book.Manifest.Id}'.");
+
         var recipes = book.Recipes.Select(r =>
         {
             if (r.Manifest.Id != recipeId) return r;

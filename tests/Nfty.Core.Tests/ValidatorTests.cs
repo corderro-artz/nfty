@@ -585,4 +585,35 @@ public class ValidatorTests
         Assert.Contains(problems, p => p.Contains("grayscale", StringComparison.OrdinalIgnoreCase));
         Assert.Single(problems);
     }
+
+    [Fact]
+    public void Non_grayscale_custom_variant_is_allowed()
+    {
+        // Custom layers are full-colour RGBA composited as-is, never colorized, so the
+        // Kind != Custom exemption should let a genuinely non-grayscale image through clean.
+        var ing = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("cus", "Custom", LayerKind.Custom, null,
+                new[] { new Variant("a", "A", 10) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>>
+            {
+                ["a"] = new Image<Rgba32>(8, 8, new Rgba32(200, 10, 10, 255)),
+            },
+        };
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("test", "Test", new[] { "cus" }, Array.Empty<IncompatibilityRule>()),
+            Ingredients = new[] { ing },
+        };
+        var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "Book", new Dimensions(8, 8),
+                new Collection("B", "", "B"), new Dictionary<string, double> { ["test"] = 10 }),
+            Recipes = new[] { recipe },
+        };
+
+        var problems = Validator.Validate(book);
+
+        Assert.DoesNotContain(problems, p => p.Contains("grayscale", StringComparison.OrdinalIgnoreCase));
+    }
 }

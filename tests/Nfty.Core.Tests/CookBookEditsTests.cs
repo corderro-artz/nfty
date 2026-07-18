@@ -55,4 +55,11 @@ public class CookBookEditsTests
         Assert.Single(recipe.Ingredients);
         Assert.Equal(new[] { "body" }, recipe.Manifest.LayerOrder);
     }
+
+    [Fact]
+    public void Unknown_recipe_id_throws()
+    {
+        Assert.Throws<System.Collections.Generic.KeyNotFoundException>(
+            () => CookBookEdits.UpsertIngredient(OneRecipeBook(), "nope", Ing("ears")));
+    }
 }
