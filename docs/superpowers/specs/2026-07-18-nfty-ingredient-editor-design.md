@@ -88,8 +88,11 @@ as you go. It is a control surface, not an information panel:
 - **Mode — a segmented toggle: `Static` | `Dynamic`.** Switching it swaps the controls below and changes the
   Ingredient's `LayerKind`.
 - **Dynamic** (colour *rolled* per asset): a **hue-range** dual-handle slider over a hue track + numeric
-  min/max, a **saturation-range** dual-handle slider + numeric min/max, and a compact **quantize** row (hue /
-  sat bucket steppers — the DNA color granularity). `Value` is a locked read-out: **`← from grayscale`**.
+  min/max, a **saturation-range** dual-handle slider + numeric min/max, and a compact **quantize step** control
+  (degrees-per-hue-bucket / percent-per-sat-bucket). Quantize is **granularity, not a count**: it sets how coarsely
+  a rolled `(H,S)` is snapped when computing **DNA**, which changes the size of the unique-DNA space and the minimum
+  colour gap between two assets — it does **not** change the appearance of any single asset (pixels always use the
+  exact continuous rolled colour). `Value` is a locked read-out: **`← from grayscale`**.
 - **Static** (one *fixed* colour, deterministic): a **single** hue slider + saturation slider (or a swatch that
   opens a picker) yielding one colour; `Value` again **`← from grayscale`**.
 
