@@ -171,8 +171,12 @@ depends back on it, so it stays an isolated, testable leaf.
    later (the Explorer already has an **Import .igt** path).
 
 Grayscale and canvas size are guaranteed by construction, so a saved ingredient always passes the existing
-`Formats.Validator` (which additionally **could** gain an explicit grayscale check for dynamic/static variants —
-a small hardening noted for the plan, since nothing enforces it today).
+`Formats.Validator`. That validator now **enforces** grayscale for dynamic/static variants (implemented this
+cycle): any variant whose pixels aren't `R==G==B` is reported. Because `Generator.Generate` runs the validator
+and throws on any problem, this is a **compatibility-affecting tightening** — a pre-existing `.cbk` whose
+dynamic/static value-maps were not strictly grayscale will now fail generation instead of silently colorizing off
+the red channel alone. That is intended (such an archive was already relying on undefined behaviour), but it is a
+narrowing worth recording. Custom variants are exempt (full-colour by design).
 
 ## Style constraints
 
