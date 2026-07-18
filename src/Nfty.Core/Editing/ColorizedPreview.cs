@@ -8,8 +8,10 @@ namespace Nfty.Core.Editing;
 
 /// <summary>
 /// Renders what the cook produces from a variant's grayscale value-map: custom (or no colorization)
-/// is returned as-is; dynamic/static roll (H,S) via the real <see cref="ColorRoller"/> and colorize via
-/// the real <see cref="Colorizer"/>, so the preview matches generation. Returned image is live.
+/// is returned as-is; dynamic/static resolve (H,S) via the real <see cref="ColorRoller"/> and colorize
+/// via the real <see cref="Colorizer"/>, so the preview matches generation. Mirrors the cook path's
+/// branch exactly: dynamic rolls per-asset (consumes RNG); static resolves its single fixed colour
+/// (consumes no RNG). Returned image is live.
 /// </summary>
 public static class ColorizedPreview
 {
@@ -21,7 +23,11 @@ public static class ColorizedPreview
 
         using (valueImg)
         {
-            var rolled = ColorRoller.Roll(colorization, rng);
+            // Match the generator's cook path: Dynamic rolls per-asset (consumes RNG);
+            // Static resolves its single fixed colour and consumes NO RNG (see Generator.cs).
+            var rolled = kind == LayerKind.Dynamic
+                ? ColorRoller.Roll(colorization, rng)
+                : ColorRoller.FromFixed(colorization.Entries[0].Fixed!, colorization.Model);
             return Colorizer.Apply(valueImg, rolled.H, rolled.S, colorization.Model);
         }
     }

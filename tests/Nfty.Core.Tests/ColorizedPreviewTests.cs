@@ -40,4 +40,15 @@ public class ColorizedPreviewTests
         using var b = ColorizedPreview.Render(Gray(128), LayerKind.Dynamic, colorization, new SplitMix64Rng(42));
         Assert.Equal(a[0, 0], b[0, 0]);
     }
+
+    [Fact]
+    public void Static_consumes_no_rng_matching_the_cook_path()
+    {
+        var colorization = new Colorization(ColorModel.Hsv, 1, 1,
+            new[] { new ColorEntry(1, null, "hsv:200,50,50") });
+        var rng = new SplitMix64Rng(7);
+        using (ColorizedPreview.Render(Gray(128), LayerKind.Static, colorization, rng)) { }
+        // A Static preview must not advance the RNG (generator uses FromFixed, no draw).
+        Assert.Equal(new SplitMix64Rng(7).NextDouble(), rng.NextDouble());
+    }
 }
