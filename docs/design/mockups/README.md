@@ -44,6 +44,10 @@ this term consistent across UX and code.
 Everything is inline (CSS + JS + procedural `<canvas>` "pet" that demonstrates dynamic HSV
 recoloring) — no external resources, theme-aware via `prefers-color-scheme` + a `data-theme` toggle.
 
+Design spec: [`docs/superpowers/specs/2026-07-15-nfty-explorer-view-design.md`](../../superpowers/specs/2026-07-15-nfty-explorer-view-design.md).
+This file **defines** the token block the other two mockups copy verbatim — every colour is a `var()`, and
+a new hex value anywhere (here or in a sibling) is the signal that the style has drifted.
+
 ## landing.html
 
 The **default view** — what the app opens on before a cookbook is loaded (the VS Code "Welcome tab"
