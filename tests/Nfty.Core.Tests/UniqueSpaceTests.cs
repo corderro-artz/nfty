@@ -20,7 +20,7 @@ public class UniqueSpaceTests
         Manifest = new IngredientManifest(id, id, LayerKind.Static,
             new Colorization(ColorModel.Hsv, 10, 10, new[] { new ColorEntry(1, null, "hex:d6249f") }),
             variantIds.Select(v => new Variant(v, v, 1)).ToList()),
-        VariantImages = variantIds.ToDictionary(v => v, _ => new Image<Rgba32>(2, 2, new Rgba32(1, 2, 3, 255))),
+        VariantImages = variantIds.ToDictionary(v => v, _ => new Image<Rgba32>(2, 2, new Rgba32(2, 2, 2, 255))),
     };
 
     private static LoadedIngredient Dynamic(string id, ColorRange range, int hueQ, int satQ, params string[] variantIds) => new()
@@ -28,7 +28,7 @@ public class UniqueSpaceTests
         Manifest = new IngredientManifest(id, id, LayerKind.Dynamic,
             new Colorization(ColorModel.Hsv, hueQ, satQ, new[] { new ColorEntry(1, range, null) }),
             variantIds.Select(v => new Variant(v, v, 1)).ToList()),
-        VariantImages = variantIds.ToDictionary(v => v, _ => new Image<Rgba32>(2, 2, new Rgba32(1, 2, 3, 255))),
+        VariantImages = variantIds.ToDictionary(v => v, _ => new Image<Rgba32>(2, 2, new Rgba32(2, 2, 2, 255))),
     };
 
     private static LoadedRecipe Recipe(string id, IReadOnlyList<IncompatibilityRule> rules, params LoadedIngredient[] ings) => new()
@@ -222,7 +222,7 @@ public class UniqueSpaceTests
                 new[] { new Variant("glow", "glow", 1) }),
             VariantImages = new Dictionary<string, Image<Rgba32>>
             {
-                ["glow"] = new Image<Rgba32>(2, 2, new Rgba32(1, 2, 3, 255)),
+                ["glow"] = new Image<Rgba32>(2, 2, new Rgba32(2, 2, 2, 255)),
             },
         };
         var book = Book(Recipe("cat", Array.Empty<IncompatibilityRule>(), ing));
@@ -272,7 +272,7 @@ public class UniqueSpaceTests
                 new[] { new Variant("glow", "glow", 1) }),
             VariantImages = new Dictionary<string, Image<Rgba32>>
             {
-                ["glow"] = new Image<Rgba32>(2, 2, new Rgba32(1, 2, 3, 255)),
+                ["glow"] = new Image<Rgba32>(2, 2, new Rgba32(2, 2, 2, 255)),
             },
         };
         var book = Book(Recipe("cat", Array.Empty<IncompatibilityRule>(),

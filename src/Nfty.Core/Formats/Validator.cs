@@ -1,5 +1,7 @@
 using Nfty.Core.Imaging;
 using Nfty.Core.Model;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Nfty.Core.Formats;
 
@@ -181,7 +183,32 @@ public static class Validator
                 problems.Add(
                     $"Variant '{v.Id}' in '{ing.Manifest.Id}'/'{r.Manifest.Id}' has dimensions "
                     + $"{img.Width}x{img.Height}, expected canvas {canvas.Width}x{canvas.Height}.");
+
+            if (ing.Manifest.Kind != LayerKind.Custom && !IsGrayscale(img))
+                problems.Add(
+                    $"Variant '{v.Id}' in '{ing.Manifest.Id}'/'{r.Manifest.Id}' is not grayscale; "
+                    + "dynamic/static value-maps must have R=G=B.");
         }
+    }
+
+    /// <summary>Every pixel must have R==G==B: dynamic/static layers are grayscale value-maps
+    /// colorized at generation time, so a coloured pixel here would be silently misinterpreted.</summary>
+    private static bool IsGrayscale(Image<Rgba32> img)
+    {
+        bool gray = true;
+        img.ProcessPixelRows(accessor =>
+        {
+            for (int y = 0; y < accessor.Height && gray; y++)
+            {
+                Span<Rgba32> row = accessor.GetRowSpan(y);
+                for (int x = 0; x < row.Length; x++)
+                {
+                    var p = row[x];
+                    if (p.R != p.G || p.G != p.B) { gray = false; break; }
+                }
+            }
+        });
+        return gray;
     }
 
     /// <summary>Each id that appears more than once, in first-seen order.</summary>
