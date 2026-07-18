@@ -446,7 +446,7 @@ public sealed class BrushStroke : RegionEditCommand
                 {
                     int x = cx + dx, y = cy + dy;
                     if (!map.InBounds(x, y)) continue;
-                    if (d > 1 && dx * dx + dy * dy > r * r) continue; // round brush; size 1 = single pixel
+                    if (dx * dx + dy * dy > r * r) continue; // round disc; size 1 (r=0.5) collapses to one pixel
                     if (seen.Add((x, y)))
                         pixels.Add((x, y, _brush.Value, (byte)255));
                 }
@@ -547,7 +547,7 @@ public sealed class EraseStroke : RegionEditCommand
                 {
                     int x = cx + dx, y = cy + dy;
                     if (!map.InBounds(x, y)) continue;
-                    if (d > 1 && dx * dx + dy * dy > r * r) continue;
+                    if (dx * dx + dy * dy > r * r) continue; // round disc; size 1 (r=0.5) collapses to one pixel
                     if (seen.Add((x, y)))
                         pixels.Add((x, y, map.GetValue(x, y), (byte)0));
                 }
