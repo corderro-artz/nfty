@@ -100,6 +100,24 @@ entry point (below): that link is one of the three summon points.
 Design spec: [`docs/superpowers/specs/2026-07-17-nfty-help-view-design.md`](../../superpowers/specs/2026-07-17-nfty-help-view-design.md).
 Token block copied **verbatim** from `explorer.html`.
 
+## ingredient-editor.html
+
+The authoring counterpart to the Explorer: a graphical editor for **creating and editing one Ingredient** — painting
+the grayscale **value-maps** of its Variants and configuring how they colorize at cook time. It reuses the Explorer's
+own tree ▸ detail ▸ rail rhythm (direction B) as a three-pane window: a left **Variants** filmstrip (thumbnail +
+name + editable weight + rarity, `+ Add variant`), a center tool strip (brush · eraser │ rectangle · circle ·
+triangle │ select-region · fill │ value ramp │ undo · redo) over a grayscale canvas on a transparency checker, and a
+right **Colorize** rail of **live** controls — a segmented **Static | Dynamic** toggle that swaps a dual hue-range
+and saturation-range slider (Dynamic) for a single hue + saturation pair (Static), a locked **Value ← from
+grayscale** read-out, and **Quantize step** steppers with the derived colour count. Unlike the Explorer, this screen
+is **always in edit mode** — there is no lock toggle anywhere; the titlebar breadcrumb instead carries an `editing
+value-map` state marker. A corner **preview blip** sits pinned on the canvas, showing the real colorized output of
+the current grayscale variant with an integrated overlay strip (reroll / enlarge / fill-pane).
+
+Design spec: [`docs/superpowers/specs/2026-07-18-nfty-ingredient-editor-design.md`](../../superpowers/specs/2026-07-18-nfty-ingredient-editor-design.md).
+The token block is copied **verbatim** from `explorer.html`; every colour is a `var()`, and a new hex value anywhere
+is the signal that the style has drifted.
+
 ### Preview locally
 
 Neither file has a `<!doctype>/<html>/<head>/<body>` — the publish host wraps them with a skeleton

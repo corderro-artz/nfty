@@ -1,0 +1,491 @@
+<title>nfty — Ingredient Editor</title>
+<style>
+  /* ===== Vaporsoft brand tokens (corderro-artz/vaporsoft-themes) — copied verbatim from explorer.html ===== */
+  :root {
+    --bg: #f4efe8;      --bg-alt: #f1ece4;   --bg-alt2: #ede7df;  --panel: #f8f3ed;
+    --fg: #121318;      --fg-muted: #121418b8;
+    --line: #1214181f;  --line-strong: #12141833;
+    --guide: #1214182b; --guide-hi: #12141859;
+    --accent: #a11f31;  --accent-hover: #b92f44;  --accent-text: #97192a; --on-accent: #f7f2ec;
+    --success: #3d6b52; --warning: #6a4a25;  --info: #3b5b6f; --custom: #6d4f9c;
+    --accent-wash: #a11f3114; --accent-line: #a11f3140;
+    --tile: #ece5db;
+    --shadow: 0 1px 2px #12141810, 0 18px 48px -24px #12141833;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "SF Mono", "JetBrains Mono", "Cascadia Code", ui-monospace, Menlo, Consolas, monospace;
+    --r-win: 10px; --r-lg: 8px; --r-md: 6px; --r-sm: 5px; --r-xs: 4px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #07080b;      --bg-alt: #0a0b10;   --bg-alt2: #0f1118;  --panel: #0b0c10;
+      --fg: #f2ede6;      --fg-muted: #f2ede6c7;
+      --line: #f2ede624;  --line-strong: #f2ede633;
+      --guide: #f2ede61f; --guide-hi: #f2ede63d;
+      --accent: #a11f31;  --accent-hover: #ba3447;  --accent-text: #e0788a; --on-accent: #f7f2ec;
+      --success: #a6c08a; --warning: #e0c28c;  --info: #7fb0c4; --custom: #c3a6ea;
+      --accent-wash: #a11f3126; --accent-line: #a11f3166;
+      --tile: #12141c;
+      --shadow: 0 1px 2px #00000060, 0 22px 60px -28px #000000;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f4efe8; --bg-alt: #f1ece4; --bg-alt2: #ede7df; --panel: #f8f3ed;
+    --fg: #121318; --fg-muted: #121418b8; --line: #1214181f; --line-strong: #12141833;
+    --guide: #1214182b; --guide-hi: #12141859;
+    --accent: #a11f31; --accent-hover: #b92f44; --accent-text: #97192a; --on-accent: #f7f2ec;
+    --success: #3d6b52; --warning: #6a4a25; --info: #3b5b6f; --custom: #6d4f9c;
+    --accent-wash: #a11f3114; --accent-line: #a11f3140; --tile: #ece5db;
+    --shadow: 0 1px 2px #12141810, 0 18px 48px -24px #12141833;
+  }
+  :root[data-theme="dark"] {
+    --bg: #07080b; --bg-alt: #0a0b10; --bg-alt2: #0f1118; --panel: #0b0c10;
+    --fg: #f2ede6; --fg-muted: #f2ede6c7; --line: #f2ede624; --line-strong: #f2ede633;
+    --guide: #f2ede61f; --guide-hi: #f2ede63d;
+    --accent: #a11f31; --accent-hover: #ba3447; --accent-text: #e0788a; --on-accent: #f7f2ec;
+    --success: #a6c08a; --warning: #e0c28c; --info: #7fb0c4; --custom: #c3a6ea;
+    --accent-wash: #a11f3126; --accent-line: #a11f3166; --tile: #12141c;
+    --shadow: 0 1px 2px #00000060, 0 22px 60px -28px #000000;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  /* consistent, theme-legible keyboard focus (mouse clicks stay clean) */
+  :where(a, button, input, [tabindex], .vcard, .seg .b, .ttool):focus-visible {
+    outline: 2px solid var(--accent-text); outline-offset: 2px;
+  }
+  .stage {
+    background: var(--bg-alt); color: var(--fg); font-family: var(--font-sans);
+    min-height: 100vh; padding: 30px clamp(12px, 3vw, 48px) 56px;
+    -webkit-font-smoothing: antialiased; line-height: 1.5;
+  }
+
+  .pitch { max-width: 1180px; margin: 0 auto 20px; display: flex; align-items: flex-end;
+           justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+  .pitch h1 { font-family: var(--font-mono); font-size: 14px; font-weight: 600; margin: 0;
+              letter-spacing: .14em; text-transform: uppercase; color: var(--fg-muted); }
+  .pitch p { margin: 6px 0 0; max-width: 66ch; font-size: 14px; color: var(--fg-muted); }
+  .pitch .a { color: var(--accent-text); }
+  .pitch p b { color: var(--fg); font-weight: 600; }
+  .ghost { font: inherit; font-size: 13px; border: 1px solid var(--line-strong); background: var(--panel);
+           color: var(--fg); height: 38px; padding: 0 14px; border-radius: var(--r-lg); cursor: pointer;
+           display: inline-flex; align-items: center; gap: 8px; }
+  .ghost:hover { border-color: var(--accent-line); }
+
+  /* app window — same chrome as explorer.html */
+  .frame { overflow-x: auto; padding-bottom: 4px; }
+  .window { width: 1180px; margin: 0 auto; background: var(--bg); border: 1px solid var(--line-strong);
+            border-radius: var(--r-win); box-shadow: var(--shadow); overflow: hidden; }
+
+  .titlebar { display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 10px 0 12px;
+              background: linear-gradient(var(--panel), var(--bg-alt)); border-bottom: 1px solid var(--line);
+              box-shadow: inset 0 1px 0 color-mix(in srgb, var(--fg) 6%, transparent);
+              cursor: default; user-select: none; }
+  .brand { display: flex; align-items: center; gap: 9px; flex: 0 0 auto; }
+  .brandtile { width: 24px; height: 24px; border-radius: var(--r-sm); display: grid; place-items: center;
+               background: var(--accent-wash); border: 1px solid var(--accent-line); }
+  .brandtile .sq { width: 9px; height: 9px; background: var(--accent); border-radius: 2px; transform: rotate(45deg); }
+  .wordmark { font-family: var(--font-mono); font-weight: 700; font-size: 15px; letter-spacing: -.01em; }
+  .wordmark b { color: var(--accent-text); }
+  .tdiv { width: 1px; height: 18px; background: var(--line-strong); flex: 0 0 auto; }
+  .crumbs { font-family: var(--font-mono); font-size: 12.5px; color: var(--fg-muted); display: flex;
+            gap: 4px; align-items: center; flex: 1; min-width: 0; overflow: hidden; }
+  .cseg { padding: 3px 7px; border-radius: var(--r-xs); white-space: nowrap; overflow: hidden;
+          text-overflow: ellipsis; cursor: default; }
+  .cseg.active { color: var(--fg); font-weight: 600; }
+  .crumbs .sep { opacity: .45; flex: 0 0 auto; }
+  .editmark { color: var(--accent-text); font-weight: 600; white-space: nowrap; flex: 0 0 auto; }
+  .wctl { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
+  .wc { width: 34px; height: 30px; border: 0; background: transparent; border-radius: var(--r-sm);
+        color: var(--fg-muted); cursor: pointer; display: grid; place-items: center;
+        transition: background .12s, color .12s, transform .08s; }
+  .wc svg { width: 14px; height: 14px; }
+  .wc:hover { background: var(--bg-alt2); color: var(--fg); }
+  .wc.close:hover { background: var(--accent); color: var(--on-accent); }
+  .wc:active { transform: translateY(.5px); }
+
+  /* ---- panes shell (reused grammar from explorer.html) ---- */
+  .panes-scroll { overflow-x: auto; }
+  .epanes { display: grid; grid-template-columns: 262px minmax(540px, 1fr) 300px; min-height: 480px; }
+  @media (max-width: 900px) { .epanes { min-width: 1040px; } }
+  .pane { border-right: 1px solid var(--line); min-width: 0; display: flex; flex-direction: column; }
+  .pane:last-child { border-right: 0; }
+  .pane-h { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase;
+            color: var(--fg-muted); height: 41px; padding: 0 16px; display: flex; align-items: center; gap: 8px;
+            border-bottom: 1px solid var(--line); flex: 0 0 auto; }
+  .hcount { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--fg-muted); }
+
+  /* ---- Variants filmstrip (left pane) ---- */
+  .vfilm { padding: 10px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1; }
+  .vcard { display: flex; gap: 10px; align-items: center; padding: 9px; border: 1px solid var(--line);
+           border-radius: var(--r-md); background: var(--bg-alt2); cursor: pointer;
+           transition: background .12s, border-color .12s; }
+  .vcard:hover { border-color: var(--accent-line); }
+  .vcard.sel { background: var(--accent-wash); border-color: var(--accent-line); box-shadow: inset 2px 0 0 var(--accent); }
+  .vthumb { width: 38px; height: 38px; border-radius: var(--r-sm); border: 1px solid var(--line);
+            background: var(--tile); flex: 0 0 auto; display: block; }
+  .vmeta { min-width: 0; flex: 1; }
+  .vname { font-weight: 600; font-size: 12.5px; }
+  .vsub { font-size: 10.5px; color: var(--fg-muted); margin-top: 4px; display: flex; align-items: center;
+          gap: 6px; font-family: var(--font-mono); }
+  .vw { font: inherit; font-family: var(--font-mono); font-size: 11px; width: 40px; text-align: right;
+        background: var(--bg); border: 1px solid var(--accent-line); border-radius: var(--r-sm);
+        padding: 3px 6px; color: var(--fg); }
+  .vw:focus { outline: 2px solid var(--accent-line); outline-offset: 1px; }
+  .vaddbtn { margin: 0 10px 12px; font: inherit; font-size: 11.5px; color: var(--fg-muted);
+             border: 1px dashed var(--line-strong); border-radius: var(--r-md); padding: 9px;
+             text-align: center; cursor: pointer; background: transparent; }
+  .vaddbtn:hover { border-color: var(--accent-line); color: var(--accent-text); }
+
+  /* ---- tool strip + canvas (center pane) ---- */
+  .toolstrip { display: flex; align-items: center; gap: 6px; padding: 9px 12px; border-bottom: 1px solid var(--line);
+               background: var(--bg-alt); flex-wrap: wrap; flex: 0 0 auto; }
+  .ttool { width: 30px; height: 30px; border: 1px solid var(--line-strong); background: var(--panel);
+           border-radius: var(--r-sm); display: grid; place-items: center; color: var(--fg); cursor: pointer; }
+  .ttool svg { width: 16px; height: 16px; }
+  .ttool:hover { border-color: var(--accent-line); }
+  .ttool.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .tsep { width: 1px; height: 20px; background: var(--line-strong); flex: 0 0 auto; margin: 0 2px; }
+  .tlabel { font-family: var(--font-mono); font-size: 10.5px; color: var(--fg-muted); }
+  .ramp { width: 96px; height: 16px; border-radius: var(--r-sm); border: 1px solid var(--line-strong);
+          background: linear-gradient(90deg, #111, #fff); position: relative; }
+  .ramp .pin { position: absolute; top: -3px; left: 62%; width: 2px; height: 22px; background: var(--accent); border-radius: 2px; }
+  .swatch { width: 20px; height: 20px; border-radius: var(--r-xs); border: 1px solid var(--line-strong); background: #9e9e9e; }
+
+  .canvas-wrap { flex: 1; position: relative; display: grid; place-items: center; padding: 26px;
+                 background-image: repeating-conic-gradient(color-mix(in srgb, var(--fg) 6%, transparent) 0 25%, transparent 0 50%);
+                 background-size: 18px 18px; }
+  .canvas-art { width: 320px; height: 320px; border-radius: var(--r-lg); border: 1px solid var(--line-strong);
+                background: var(--tile); display: block; box-shadow: 0 10px 28px -16px #00000055; }
+
+  .blip { position: absolute; right: 26px; bottom: 26px; width: 104px; height: 104px; border-radius: var(--r-lg);
+          overflow: hidden; border: 1px solid var(--line-strong); box-shadow: 0 14px 30px -14px rgba(0,0,0,.55);
+          background: var(--tile); }
+  .blip .pv { width: 100%; height: 100%; display: block; }
+  .blip .ov { position: absolute; left: 0; right: 0; bottom: 0; height: 26px; display: flex; align-items: center;
+              gap: 2px; padding: 0 5px 0 8px; background: linear-gradient(transparent, rgba(8,6,6,.62)); }
+  .blip .lb { font-family: var(--font-mono); font-size: 8px; letter-spacing: .13em; text-transform: uppercase;
+              color: rgba(255,255,255,.85); margin-right: auto; }
+  .blip .g { width: 18px; height: 18px; display: grid; place-items: center; border-radius: var(--r-xs);
+             color: rgba(255,255,255,.92); cursor: pointer; border: 0; background: transparent; padding: 0; }
+  .blip .g:hover { background: rgba(255,255,255,.16); }
+  .blip .g svg { width: 12px; height: 12px; display: block; }
+  .blip .g.spin svg { animation: rr .45s ease; }
+  @keyframes rr { from { transform: rotate(0); } to { transform: rotate(-360deg); } }
+
+  /* ---- Colorize rail (right pane) — live controls ---- */
+  .rbody { padding: 13px 13px 16px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; flex: 1; }
+  .plabel { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--fg-muted); margin-bottom: 8px; }
+  .seg { display: flex; padding: 3px; gap: 3px; background: var(--bg-alt2); border: 1px solid var(--line); border-radius: var(--r-md); }
+  .seg .b { flex: 1; text-align: center; font-size: 11.5px; padding: 7px 4px; border-radius: var(--r-sm);
+            color: var(--fg-muted); cursor: pointer; user-select: none; }
+  .seg .b.on { background: var(--accent); color: var(--on-accent); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.15); }
+  .ctlrow + .ctlrow { margin-top: 15px; }
+  .ctl-h { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 9px; }
+  .ctl-h .plabel { margin-bottom: 0; }
+  .ctl-h .cv { font-family: var(--font-mono); font-size: 11px; color: var(--fg); font-weight: 600; }
+  .dual { position: relative; height: 18px; margin: 0 6px; }
+  .track { position: absolute; top: 50%; left: 0; right: 0; height: 6px; transform: translateY(-50%);
+           border-radius: 999px; border: 1px solid var(--line); }
+  .handle { position: absolute; top: 50%; width: 14px; height: 14px; transform: translate(-50%, -50%);
+            border-radius: 50%; background: var(--panel); border: 2px solid var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,.4);
+            cursor: grab; }
+  .ends { display: flex; justify-content: space-between; margin-top: 9px; }
+  .nin { font: inherit; font-family: var(--font-mono); font-size: 11px; width: 58px; text-align: center;
+         padding: 3px 6px; border: 1px solid var(--line-strong); border-radius: var(--r-xs); background: var(--bg); color: var(--fg); }
+  .nin:focus { outline: 2px solid var(--accent-line); outline-offset: 1px; }
+  .vlock { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--fg-muted);
+           border: 1px dashed var(--line-strong); border-radius: var(--r-sm); padding: 8px 9px; }
+  .vlock svg { width: 12px; height: 12px; flex: 0 0 auto; }
+  .qrow { display: flex; gap: 16px; margin-top: 2px; }
+  .step { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--fg-muted); }
+  .sbtn { font: inherit; width: 19px; height: 19px; border: 1px solid var(--line-strong); border-radius: var(--r-xs);
+          display: grid; place-items: center; background: var(--panel); color: var(--fg); cursor: pointer; }
+  .sbtn:hover { border-color: var(--accent-line); }
+  .sval { min-width: 24px; text-align: center; color: var(--fg); font-weight: 600; font-family: var(--font-mono); }
+  .swatch-lg { width: 34px; height: 34px; border-radius: var(--r-md); border: 1px solid var(--line-strong); flex: 0 0 auto; }
+
+  /* ---- status bar ---- */
+  .statusbar { display: flex; align-items: center; gap: 14px; padding: 8px 16px; border-top: 1px solid var(--line);
+               background: var(--bg-alt); font-family: var(--font-mono); font-size: 11.5px; color: var(--fg-muted);
+               font-variant-numeric: tabular-nums; flex-wrap: wrap; }
+  .statusbar .ok { color: var(--success); }
+  .statusbar .state { display: inline-flex; align-items: center; gap: 6px; }
+  .statusbar .state svg { width: 12px; height: 12px; }
+  .statusbar .state.editing { color: var(--accent); }
+  .zoomctl { margin-left: auto; display: inline-flex; align-items: center; gap: 2px; }
+  .zoomctl button { font: inherit; font-family: var(--font-mono); border: 1px solid var(--line-strong);
+                    background: var(--panel); color: var(--fg); width: 24px; height: 24px; border-radius: var(--r-sm);
+                    cursor: pointer; line-height: 1; }
+  .zoomctl button:hover { border-color: var(--accent-line); }
+  .zoomctl .pct { min-width: 46px; text-align: center; }
+
+  .note { max-width: 1180px; margin: 16px auto 0; font-size: 12.5px; color: var(--fg-muted);
+          display: flex; gap: 10px; align-items: flex-start; }
+  .note .k { font-family: var(--font-mono); color: var(--accent-text); flex: 0 0 auto; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+  }
+</style>
+
+<div class="stage">
+  <div class="pitch">
+    <div>
+      <h1>nfty · ingredient editor</h1>
+      <p>The authoring counterpart to the Explorer: paint one Ingredient's grayscale <b>value-maps</b> and tune how
+        they colorize at cook time. Unlike the Explorer, this screen has <span class="a">no lock</span> — it exists
+        only to edit, so every control is live: variant weights are inputs, the tools are always armed, and the
+        <b>Colorize</b> rail updates its preview as you drag.</p>
+    </div>
+    <button class="ghost" id="theme" title="Toggle light / dark">◐ Theme</button>
+  </div>
+
+  <div class="frame">
+    <div class="window">
+      <div class="titlebar">
+        <div class="brand"><span class="brandtile"><span class="sq"></span></span><span class="wordmark">nft<b>y</b></span></div>
+        <span class="tdiv"></span>
+        <div class="crumbs">
+          <span class="cseg">VaporPets</span><span class="sep">›</span>
+          <span class="cseg">Aurora</span><span class="sep">›</span>
+          <span class="cseg active">Body</span>
+          <span class="sep">·</span>
+          <span class="editmark">editing value-map</span>
+        </div>
+        <span class="tdiv"></span>
+        <div class="wctl">
+          <button class="wc" aria-label="Minimize"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6 12h12" stroke-linecap="round"/></svg></button>
+          <button class="wc" aria-label="Maximize"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg></button>
+          <button class="wc close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" stroke-linecap="round"/></svg></button>
+        </div>
+      </div>
+
+      <div class="panes-scroll">
+        <div class="epanes">
+
+          <!-- ===== Variants filmstrip ===== -->
+          <div class="pane">
+            <div class="pane-h">Variants <span class="hcount" id="vCount">4</span></div>
+            <div class="vfilm">
+              <div class="vcard sel">
+                <svg class="vthumb" viewBox="0 0 40 40"><ellipse cx="14" cy="15" rx="4.5" ry="5" fill="#9a9a9a"/><ellipse cx="26" cy="15" rx="4.5" ry="5" fill="#9a9a9a"/><ellipse cx="20" cy="24" rx="11" ry="9" fill="#bcbcbc"/><ellipse cx="20" cy="27" rx="5.5" ry="4.5" fill="#dcdcdc"/><circle cx="16.5" cy="22" r="1.4" fill="#333"/><circle cx="23.5" cy="22" r="1.4" fill="#333"/></svg>
+                <div class="vmeta"><div class="vname">Slime</div><div class="vsub">weight <input class="vw" value="40"><span>· 32%</span></div></div>
+              </div>
+              <div class="vcard">
+                <svg class="vthumb" viewBox="0 0 40 40"><path d="M9 16q5-8 11 0" fill="#9a9a9a"/><path d="M20 16q6-8 11 0" fill="#9a9a9a"/><ellipse cx="20" cy="24" rx="11" ry="9" fill="#c6c6c6"/><ellipse cx="20" cy="27" rx="5.5" ry="4.5" fill="#e2e2e2"/><circle cx="16.5" cy="22" r="1.4" fill="#333"/><circle cx="23.5" cy="22" r="1.4" fill="#333"/></svg>
+                <div class="vmeta"><div class="vname">Fluff</div><div class="vsub">weight <input class="vw" value="25"><span>· 20%</span></div></div>
+              </div>
+              <div class="vcard">
+                <svg class="vthumb" viewBox="0 0 40 40"><rect x="9" y="10" width="6" height="7" rx="1" fill="#8f8f8f"/><rect x="25" y="10" width="6" height="7" rx="1" fill="#8f8f8f"/><ellipse cx="20" cy="24" rx="11" ry="9" fill="#a8a8a8"/><ellipse cx="20" cy="27" rx="5.5" ry="4.5" fill="#cfcfcf"/><circle cx="16.5" cy="22" r="1.4" fill="#333"/><circle cx="23.5" cy="22" r="1.4" fill="#333"/></svg>
+                <div class="vmeta"><div class="vname">Chitin</div><div class="vsub">weight <input class="vw" value="20"><span>· 16%</span></div></div>
+              </div>
+              <div class="vcard">
+                <svg class="vthumb" viewBox="0 0 40 40"><ellipse cx="14" cy="15" rx="4" ry="5" fill="#cfcfcf"/><ellipse cx="26" cy="15" rx="4" ry="5" fill="#cfcfcf"/><ellipse cx="20" cy="24" rx="11" ry="9" fill="#e6e6e6"/><ellipse cx="20" cy="27" rx="5.5" ry="4.5" fill="#f2f2f2"/><circle cx="16.5" cy="22" r="1.4" fill="#555"/><circle cx="23.5" cy="22" r="1.4" fill="#555"/></svg>
+                <div class="vmeta"><div class="vname">Ghostly</div><div class="vsub">weight <input class="vw" value="15"><span>· 12%</span></div></div>
+              </div>
+            </div>
+            <button class="vaddbtn">+ Add variant</button>
+          </div>
+
+          <!-- ===== Tool strip + canvas ===== -->
+          <div class="pane">
+            <div class="toolstrip">
+              <span class="ttool on" title="Brush"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l4 4"/><path d="M4 20l4-1L19 8a2 2 0 0 0-3-3L5 16z"/></svg></span>
+              <span class="ttool" title="Eraser (writes alpha)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21h10"/><path d="M5 13l6-6 7 7-5 5H8z"/></svg></span>
+              <span class="tsep"></span>
+              <span class="ttool" title="Rectangle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="4.5" y="6.5" width="15" height="11" rx="1.5"/></svg></span>
+              <span class="ttool" title="Circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="7.5"/></svg></span>
+              <span class="ttool" title="Triangle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M12 4.8 20 18.5 4 18.5Z"/></svg></span>
+              <span class="tsep"></span>
+              <span class="ttool" title="Select region (marquee + move)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="1.5" stroke-dasharray="3 2.6"/></svg></span>
+              <span class="ttool" title="Fill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l7-7 7 7-7 7z"/><path d="M18 14c1.5 2 2 3 0 3s-1.5-1 0-3z"/></svg></span>
+              <span class="tsep"></span>
+              <span class="tlabel">value</span><span class="ramp"><span class="pin"></span></span><span class="swatch" title="Current value swatch"></span>
+              <span class="tsep"></span>
+              <span class="ttool" title="Undo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7L4 12l5 5"/><path d="M4 12h11a5 5 0 0 1 0 10h-1"/></svg></span>
+              <span class="ttool" title="Redo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7l5 5-5 5"/><path d="M20 12H9a5 5 0 0 0 0 10h1"/></svg></span>
+            </div>
+            <div class="canvas-wrap">
+              <svg class="canvas-art" viewBox="0 0 40 40"><ellipse cx="14" cy="15" rx="4.5" ry="5" fill="#9a9a9a"/><ellipse cx="26" cy="15" rx="4.5" ry="5" fill="#9a9a9a"/><ellipse cx="20" cy="24" rx="11" ry="9" fill="#bcbcbc"/><ellipse cx="20" cy="27" rx="5.5" ry="4.5" fill="#dcdcdc"/><circle cx="16.5" cy="22" r="1.5" fill="#333"/><circle cx="23.5" cy="22" r="1.5" fill="#333"/></svg>
+              <div class="blip">
+                <svg class="pv" viewBox="0 0 40 40"><ellipse cx="14" cy="15" rx="4.5" ry="5" fill="#2f8497"/><ellipse cx="26" cy="15" rx="4.5" ry="5" fill="#2f8497"/><ellipse cx="20" cy="24" rx="11" ry="9" fill="#3aa0b8"/><ellipse cx="20" cy="27" rx="5.5" ry="4.5" fill="#7fc8d6"/><circle cx="16.5" cy="22" r="1.5" fill="#14343a"/><circle cx="23.5" cy="22" r="1.5" fill="#14343a"/></svg>
+                <div class="ov">
+                  <span class="lb">preview</span>
+                  <button class="g" id="rerollBtn" title="Reroll sampled colour" aria-label="Reroll sampled colour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 5v6h-6"/></svg></button>
+                  <button class="g" title="Enlarge preview" aria-label="Enlarge preview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg></button>
+                  <button class="g" title="Fill pane with preview" aria-label="Fill pane with preview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/></svg></button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== Colorize rail — live controls ===== -->
+          <div class="pane">
+            <div class="pane-h">Colorize</div>
+            <div class="rbody">
+              <div class="ctlrow">
+                <div class="plabel">Mode</div>
+                <div class="seg" id="modeSeg">
+                  <span class="b" data-mode="static">Static</span>
+                  <span class="b on" data-mode="dynamic">Dynamic</span>
+                </div>
+              </div>
+
+              <div id="dynamicControls">
+                <div class="ctlrow">
+                  <div class="ctl-h"><span class="plabel">Hue range</span><span class="cv">196–348°</span></div>
+                  <div class="dual">
+                    <div class="track" style="background:linear-gradient(90deg,#b8443f,#b89a3f,#4f9a55,#3aa0b8,#3f6bb8,#9a5abd,#b8443f)"></div>
+                    <div class="handle" style="left:54%"></div><div class="handle" style="left:97%"></div>
+                  </div>
+                  <div class="ends"><input class="nin" value="196°"><input class="nin" value="348°"></div>
+                </div>
+                <div class="ctlrow">
+                  <div class="ctl-h"><span class="plabel">Saturation range</span><span class="cv">45–70%</span></div>
+                  <div class="dual">
+                    <div class="track" style="background:linear-gradient(90deg,#9a9a9a,#3aa0b8)"></div>
+                    <div class="handle" style="left:45%"></div><div class="handle" style="left:70%"></div>
+                  </div>
+                  <div class="ends"><input class="nin" value="45%"><input class="nin" value="70%"></div>
+                </div>
+              </div>
+
+              <div id="staticControls" hidden>
+                <div class="ctlrow">
+                  <div class="ctl-h"><span class="plabel">Hue</span><span class="cv">204°</span></div>
+                  <div class="dual">
+                    <div class="track" style="background:linear-gradient(90deg,#b8443f,#b89a3f,#4f9a55,#3aa0b8,#3f6bb8,#9a5abd,#b8443f)"></div>
+                    <div class="handle" style="left:52%"></div>
+                  </div>
+                </div>
+                <div class="ctlrow">
+                  <div class="ctl-h"><span class="plabel">Saturation</span><span class="cv">60%</span></div>
+                  <div class="dual">
+                    <div class="track" style="background:linear-gradient(90deg,#9a9a9a,#3d7f8f)"></div>
+                    <div class="handle" style="left:60%"></div>
+                  </div>
+                </div>
+                <div class="ctlrow" style="display:flex; align-items:center; gap:10px;">
+                  <span class="swatch-lg" style="background:#3d7f8f"></span>
+                  <span class="tlabel">hsv:204,60,— · one fixed colour on every asset</span>
+                </div>
+              </div>
+
+              <div class="ctlrow">
+                <div class="ctl-h"><span class="plabel">Value</span></div>
+                <div class="vlock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke-linecap="round"/></svg> ← from grayscale — not editable</div>
+              </div>
+
+              <div class="ctlrow" id="quantizeRow">
+                <div class="ctl-h"><span class="plabel">Quantize step</span><span class="cv" id="qcount">≈ 91 colors</span></div>
+                <div class="qrow">
+                  <div class="step">Hue <button class="sbtn">−</button><span class="sval" id="qHue">12°</span><button class="sbtn">+</button></div>
+                  <div class="step">Sat <button class="sbtn">−</button><span class="sval" id="qSat">4%</span><button class="sbtn">+</button></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="statusbar">
+        <span class="ok">● grayscale value-map</span>
+        <span class="state editing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M15 5l4 4"/><path d="M4 20l4-1L19 8a2 2 0 0 0-3-3L5 16z"/></svg> editing</span>
+        <span>1000 × 1000</span><span>brush 24px · value 0.62</span><span>Dynamic · 4 variants</span>
+        <span class="zoomctl">
+          <button id="zOut" aria-label="Zoom out">−</button>
+          <span class="pct" id="zPct" aria-live="polite">100%</span>
+          <button id="zIn" aria-label="Zoom in">+</button>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <span class="k">try it →</span>
+    <span>Click a variant card to switch which value-map you're painting, drag the Colorize rail's range handles,
+      flip the <b style="color:var(--fg)">Static ⇄ Dynamic</b> segmented toggle to see the controls swap, and step
+      the quantize buckets. The corner preview always shows what the <b style="color:var(--fg)">cook</b> path
+      would render — reroll it to sample a new colour.</span>
+  </div>
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement;
+
+  /* theme toggle */
+  document.getElementById('theme').addEventListener('click', function () {
+    var cur = root.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    root.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+  });
+
+  /* variant selection */
+  document.querySelectorAll('.vcard').forEach(function (card) {
+    card.addEventListener('click', function (e) {
+      if (e.target.classList.contains('vw')) return;
+      document.querySelectorAll('.vcard').forEach(function (c) { c.classList.remove('sel'); });
+      card.classList.add('sel');
+    });
+  });
+
+  /* tool groups — each cluster is an exclusive single-select */
+  var toolGroups = [
+    ['Brush', 'Eraser (writes alpha)'],
+    ['Rectangle', 'Circle', 'Triangle'],
+    ['Select region (marquee + move)', 'Fill']
+  ];
+  toolGroups.forEach(function (titles) {
+    var els = titles.map(function (t) { return document.querySelector('.ttool[title="' + t + '"]'); }).filter(Boolean);
+    els.forEach(function (el) {
+      el.addEventListener('click', function () {
+        els.forEach(function (e2) { e2.classList.remove('on'); });
+        el.classList.add('on');
+      });
+    });
+  });
+
+  /* mode toggle — swaps Colorize rail controls */
+  var segBtns = document.querySelectorAll('#modeSeg .b');
+  var dyn = document.getElementById('dynamicControls');
+  var stat = document.getElementById('staticControls');
+  var qrow = document.getElementById('quantizeRow');
+  segBtns.forEach(function (b) {
+    b.addEventListener('click', function () {
+      segBtns.forEach(function (x) { x.classList.remove('on'); });
+      b.classList.add('on');
+      var dynamic = b.getAttribute('data-mode') === 'dynamic';
+      dyn.hidden = !dynamic;
+      stat.hidden = dynamic;
+      qrow.hidden = !dynamic;
+    });
+  });
+
+  /* quantize steppers */
+  document.querySelectorAll('.sbtn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var span = btn.parentElement.querySelector('.sval');
+      var unit = span.textContent.replace(/[0-9.\-]/g, '');
+      var n = parseInt(span.textContent, 10) || 0;
+      n = Math.max(0, n + (btn.textContent === '+' ? 1 : -1));
+      span.textContent = n + unit;
+    });
+  });
+
+  /* zoom control */
+  var zoomPct = 100;
+  document.getElementById('zIn').addEventListener('click', function () {
+    zoomPct = Math.min(300, zoomPct + 5); document.getElementById('zPct').textContent = zoomPct + '%';
+  });
+  document.getElementById('zOut').addEventListener('click', function () {
+    zoomPct = Math.max(50, zoomPct - 5); document.getElementById('zPct').textContent = zoomPct + '%';
+  });
+
+  /* preview blip: reroll spin */
+  var reroll = document.getElementById('rerollBtn');
+  reroll.addEventListener('click', function () {
+    reroll.classList.add('spin');
+    setTimeout(function () { reroll.classList.remove('spin'); }, 450);
+  });
+})();
+</script>
