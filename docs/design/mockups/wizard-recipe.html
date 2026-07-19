@@ -1,0 +1,242 @@
+<style>
+  .nfty-scope {
+    --bg:#f4efe8; --bg-alt:#f1ece4; --bg-alt2:#ede7df; --panel:#f8f3ed;
+    --fg:#121318; --fg-muted:#121418b8; --line:#1214181f; --line-strong:#12141833;
+    --accent:#a11f31; --accent-text:#97192a; --on-accent:#f7f2ec;
+    --accent-wash:#a11f3114; --accent-line:#a11f3140; --tile:#ece5db;
+    --info:#3b5b6f; --font-mono:"SF Mono","JetBrains Mono",ui-monospace,Menlo,Consolas,monospace; color:var(--fg);
+  }
+  @media (prefers-color-scheme: dark) {
+    .nfty-scope { --bg:#07080b; --bg-alt:#0a0b10; --bg-alt2:#0f1118; --panel:#0b0c10;
+      --fg:#f2ede6; --fg-muted:#f2ede6c7; --line:#f2ede624; --line-strong:#f2ede633;
+      --accent:#a11f31; --accent-text:#e0788a; --on-accent:#f7f2ec;
+      --accent-wash:#a11f3126; --accent-line:#a11f3166; --tile:#12141c; --info:#7fb0c4; }
+  }
+  .nw { border:1px solid var(--line-strong); border-radius:10px; overflow:hidden; background:var(--bg);
+        box-shadow:0 1px 2px #12141810, 0 18px 48px -24px #12141833; font-family:var(--font-mono); }
+  .nw-tb { display:flex; align-items:center; gap:10px; height:38px; padding:0 10px 0 12px;
+           background:linear-gradient(var(--panel),var(--bg-alt)); border-bottom:1px solid var(--line); }
+  .btile { width:20px; height:20px; border-radius:5px; display:grid; place-items:center; background:var(--accent-wash); border:1px solid var(--accent-line); }
+  .btile i { width:8px; height:8px; background:var(--accent); border-radius:2px; transform:rotate(45deg); display:block; }
+  .wm { font-weight:700; font-size:13px; } .wm b { color:var(--accent-text); }
+  /* persistent workspace root — the open Kitchen. Fixed for every item below it;
+     changes only when you close this Kitchen and open another, so it sits apart
+     from the per-item breadcrumb rather than repeating as a path segment. */
+  .kroot { display:flex; align-items:center; gap:6px; flex:0 0 auto; font-family:var(--font-mono);
+           font-size:11.5px; color:var(--fg); padding:3px 9px 3px 7px; border-radius:5px; /* no --r-* token in this block */
+           background:var(--accent-wash); border:1px solid var(--accent-line); }
+  .kroot svg { width:14px; height:14px; color:var(--accent-text); flex:0 0 auto; }
+  .kroot b { font-weight:600; }
+  .div { width:1px; height:16px; background:var(--line-strong); }
+  .crumbs { font-size:11.5px; color:var(--fg-muted); display:flex; gap:5px; align-items:center; flex:1; }
+  .cseg { padding:3px 7px; border-radius:4px; white-space:nowrap; overflow:hidden;
+          text-overflow:ellipsis; transition:background .12s, color .12s; cursor:pointer; }
+  .cseg:hover { background:var(--bg-alt2); color:var(--fg); }
+  .cseg.active { color:var(--fg); font-weight:600; }
+  .crumbs .sep { opacity:.45; }
+  .wc { width:26px; height:22px; border:0; background:transparent; border-radius:5px; color:var(--fg-muted); display:grid; place-items:center; font-size:12px; cursor:pointer; }
+  .wc svg { width:12px; height:12px; }
+  .wc:hover { background:var(--bg-alt2); color:var(--fg); }
+  .wc.close:hover { background:var(--accent); color:var(--on-accent); }
+
+  .body { min-height:404px; display:flex; flex-direction:column; align-items:center; justify-content:center;
+          padding:30px 24px; background:
+            radial-gradient(120% 90% at 50% 0%, var(--accent-wash) 0%, transparent 55%), var(--bg); }
+  .pane { width:100%; max-width:432px; }
+  .kicker { font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--fg-muted);
+            display:flex; align-items:center; gap:7px; }
+  .kicker .dot { width:4px; height:4px; border-radius:50%; background:var(--accent); display:block; }
+  .m-h { font-weight:700; font-size:19px; letter-spacing:-.015em; margin-top:7px; }
+  .m-sub { font-size:11.5px; color:var(--fg-muted); margin-top:4px; }
+  .m-sub b { color:var(--fg); }
+
+  .form { margin-top:19px; display:flex; flex-direction:column; gap:14px; }
+  .fld { display:flex; flex-direction:column; gap:6px; }
+  .fld label { font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--fg-muted); display:flex; align-items:center; }
+  .in { height:32px; border:1px solid var(--line-strong); border-radius:6px; background:var(--panel); padding:0 11px;
+        display:flex; align-items:center; font-size:12.5px; color:var(--fg); }
+  .in.focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-wash); }
+
+  .q { width:13px; height:13px; border-radius:50%; border:1px solid var(--line-strong); color:var(--fg-muted);
+       font-size:9px; line-height:1; display:inline-grid; place-items:center; cursor:help; position:relative;
+       background:var(--panel); margin-left:5px; flex:0 0 auto; }
+  .q:hover { border-color:var(--accent-line); color:var(--accent-text); background:var(--accent-wash); }
+  .q .tip { position:absolute; left:50%; bottom:calc(100% + 7px); transform:translateX(-50%);
+            width:222px; padding:8px 10px; border:1px solid var(--line-strong); border-radius:6px;
+            background:var(--panel); color:var(--fg); font-size:10.5px; line-height:1.45; letter-spacing:0;
+            text-transform:none; font-weight:400; box-shadow:0 8px 22px -10px #12141866; opacity:0; visibility:hidden;
+            transition:opacity .12s; z-index:5; text-align:left; }
+  .q .tip b { color:var(--accent-text); }
+  .q:hover .tip { opacity:1; visibility:visible; }
+
+  .num { display:flex; align-items:stretch; border:1px solid var(--line-strong); border-radius:6px; overflow:hidden; background:var(--panel); height:32px; width:96px; }
+  .num .v { display:flex; align-items:center; padding:0 11px; font-size:12.5px; font-variant-numeric:tabular-nums; flex:1; }
+  .stepr { display:flex; flex-direction:column; border-left:1px solid var(--line-strong); }
+  .stepr button { font:inherit; width:20px; flex:1; border:0; background:var(--bg-alt); color:var(--fg-muted); font-size:8px; cursor:pointer; }
+  .stepr button:first-child { border-bottom:1px solid var(--line); }
+  .stepr button svg { width:9px; height:9px; }
+
+  /* live share readout — what the weight actually buys you */
+  .share { flex:1; border:1px solid var(--line); border-radius:6px; background:var(--bg-alt); padding:8px 10px; }
+  .share-h { font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--fg-muted); margin-bottom:6px; }
+  .bar { display:flex; height:7px; border-radius:3px; overflow:hidden; background:var(--tile); }
+  .bar span { display:block; }
+  .bar .me { background:var(--accent); }
+  .bar .other { background:color-mix(in srgb, var(--fg-muted) 32%, transparent); border-left:1px solid var(--bg-alt); }
+  .legend { display:flex; flex-direction:column; gap:3px; margin-top:7px; font-size:10.5px; color:var(--fg-muted); }
+  .legend div { display:flex; align-items:center; gap:6px; }
+  .legend i { width:6px; height:6px; border-radius:2px; display:block; flex:0 0 auto; }
+  .legend .pct { margin-left:auto; font-variant-numeric:tabular-nums; }
+  .legend .cur { color:var(--fg); font-weight:600; }
+  .legend .cur i { background:var(--accent); }
+  .legend .sib i { background:color-mix(in srgb, var(--fg-muted) 32%, transparent); }
+
+  /* destination picker — where the new .rcp actually lands */
+  .dest { display:flex; gap:8px; }
+  .dopt { flex:1; display:flex; gap:8px; align-items:flex-start; padding:8px 10px; border:1px solid var(--line-strong);
+          border-radius:6px; background:var(--panel); cursor:pointer; }
+  .dopt .dot { width:13px; height:13px; border-radius:50%; border:1px solid var(--line-strong); flex:0 0 auto; margin-top:1px;
+               display:grid; place-items:center; }
+  .dopt.on { border-color:var(--accent-line); background:var(--accent-wash); }
+  .dopt.on .dot { border-color:var(--accent); }
+  .dopt.on .dot::after { content:''; width:7px; height:7px; border-radius:50%; background:var(--accent); display:block; }
+  .dopt .dt { font-size:12px; color:var(--fg); }
+  .dopt.on .dt { color:var(--accent-text); font-weight:600; }
+  .dopt .dt small { display:block; font-size:10px; color:var(--fg-muted); margin-top:2px; font-weight:400; line-height:1.35; }
+  .muted { opacity:.42; pointer-events:none; }
+  .why { font-size:10.5px; color:var(--info); display:block; margin-top:7px; line-height:1.5; }
+
+  .derived { margin-top:15px; font-size:10.5px; color:var(--fg-muted); display:flex; align-items:center; gap:7px;
+             border-top:1px dashed var(--line-strong); padding-top:11px; }
+  .derived code { font-family:var(--font-mono); color:var(--fg); background:var(--tile); border:1px solid var(--line);
+                  border-radius:4px; padding:1px 6px; }
+
+  .foot { display:flex; align-items:center; gap:14px; padding:10px 16px; border-top:1px solid var(--line); background:var(--bg-alt); }
+  .keys { display:flex; gap:14px; font-size:11px; color:var(--fg-muted); }
+  .keys kbd { font-family:var(--font-mono); font-size:10px; border:1px solid var(--line-strong); border-radius:4px; padding:1px 5px; background:var(--panel); margin-right:4px; }
+  .acts { margin-left:auto; display:flex; gap:8px; }
+  .btn { font-size:12px; border-radius:6px; padding:7px 14px; display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line-strong); background:var(--panel); color:var(--fg); cursor:pointer; }
+  .btn.ghost { color:var(--fg-muted); }
+  .btn.accent { background:var(--accent); border-color:var(--accent); color:var(--on-accent); }
+  .btn svg { width:13px; height:13px; flex:0 0 auto; }
+
+  /* ---- status bar (copied from docs/design/mockups/landing.html; --r-sm inlined as 5px,
+         since the locked .nfty-scope token block carries no radius tokens) ---- */
+  .statusbar { display:flex; align-items:center; gap:14px; padding:8px 16px; border-top:1px solid var(--line);
+               background:var(--bg-alt); font-family:var(--font-mono); font-size:11.5px; color:var(--fg-muted);
+               font-variant-numeric:tabular-nums; flex-wrap:wrap; }
+  .zoomctl { margin-left:auto; display:inline-flex; align-items:center; gap:2px; }
+  .zoomctl button { font:inherit; font-family:var(--font-mono); border:1px solid var(--line-strong);
+                    background:var(--panel); color:var(--fg); width:24px; height:24px; border-radius:5px;
+                    cursor:pointer; line-height:1; display:inline-grid; place-items:center; }
+  .zoomctl button:hover { border-color:var(--accent-line); }
+  .zoomctl button svg { width:13px; height:13px; }
+  .zoomctl .pct { min-width:46px; text-align:center; }
+  .helpbtn { margin-left:8px; font-family:var(--font-mono); font-size:13px; line-height:1;
+             width:24px; height:24px; border-radius:5px; display:inline-grid; place-items:center;
+             cursor:pointer; color:var(--accent-text); background:var(--accent-wash);
+             border:1px solid var(--accent-line); }
+  .helpbtn svg { width:13px; height:13px; }
+</style>
+
+<h2>New Recipe — single pane</h2>
+<p class="subtitle">Two fields, because that is all a Recipe owns at birth. The weight is mandatory:
+  a Recipe with no entry in <code>recipeWeights</code> fails validation.</p>
+
+<div class="nfty-scope">
+  <div class="nw">
+    <div class="nw-tb">
+      <span class="btile"><i></i></span><span class="wm">nft<b>y</b></span><span class="div"></span>
+      <span class="kroot" title="Open workspace — the Kitchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="1.8" fill="var(--panel)"/><path d="M3.5 9.2h17"/><path d="M7 3.6v2.2M12 3.6v2.2" stroke-linecap="round"/><rect x="6.6" y="12" width="4" height="4" rx="1" fill="var(--accent)" stroke="none"/></svg><b>VaporStudio</b></span><span class="div"></span>
+      <span class="crumbs"><span class="cseg">VaporPets</span><span class="sep">›</span><span class="cseg active">New Recipe</span></span>
+      <span class="div"></span>
+      <button class="wc" aria-label="Minimize"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6 12h12" stroke-linecap="round"/></svg></button><button class="wc" aria-label="Maximize"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg></button><button class="wc close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" stroke-linecap="round"/></svg></button>
+    </div>
+
+    <div class="body">
+      <div class="pane">
+        <div class="kicker"><span class="dot"></span> Create · <span id="kickerCtx">in VaporPets</span></div>
+        <div class="m-h">New Recipe</div>
+        <div class="m-sub">A template for one kind of character. Layers get painted in after.</div>
+
+        <div class="form">
+          <div class="fld"><label>Name</label><div class="in focus">Fox</div></div>
+
+          <div class="fld">
+            <label>Save to
+              <span class="q">?<span class="tip">A Recipe inside a CookBook is stored as
+                <b>recipes/fox.rcp</b> within the <b>.cbk</b>. A Kitchen Recipe is a loose
+                <b>.rcp</b> file you can import into any book later.</span></span>
+            </label>
+            <div class="dest">
+              <div class="dopt on" id="dCbk" onclick="pick('cbk')"><span class="dot"></span>
+                <span class="dt">This CookBook<small>VaporPets</small></span></div>
+              <div class="dopt" id="dKit" onclick="pick('kit')"><span class="dot"></span>
+                <span class="dt">The Kitchen<small>loose · import later</small></span></div>
+            </div>
+          </div>
+
+          <div class="fld" id="weightFld">
+            <label>Selection weight
+              <span class="q">?<span class="tip">How often this Recipe is rolled, <b>relative</b> to its siblings —
+                not a percentage. Any positive number works; the book normalises them.</span></span>
+            </label>
+            <div style="display:flex; gap:12px; align-items:stretch;">
+              <div class="num"><span class="v">30</span><span class="stepr"><button aria-label="Increase"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m7 14 5-5 5 5" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button aria-label="Decrease"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m7 10 5 5 5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></span></div>
+              <div class="share">
+                <div class="share-h">Resulting mix</div>
+                <div class="bar">
+                  <span class="me" style="width:30%"></span>
+                  <span class="other" style="width:45%"></span>
+                  <span class="other" style="width:25%"></span>
+                </div>
+                <div class="legend">
+                  <div class="cur"><i></i> Fox <span class="pct">30%</span></div>
+                  <div class="sib"><i></i> Cat <span class="pct">45%</span></div>
+                  <div class="sib"><i></i> Owl <span class="pct">25%</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="why" id="why" style="display:none">↳ Weight is stored by the <b>CookBook</b>, not the Recipe —
+            you'll set it when this <code>.rcp</code> is imported into one.</div>
+        </div>
+
+        <div class="derived">Identifier <code>fox</code> <span style="opacity:.75">— derived from the name</span>
+          <span style="margin-left:auto" id="outPath">recipes/fox.rcp</span></div>
+      </div>
+    </div>
+
+    <div class="foot">
+      <div class="keys"><span><kbd>Tab</kbd>move fields</span><span><kbd>Enter</kbd>create</span><span><kbd>Esc</kbd>cancel</span></div>
+      <div class="acts"><button class="btn ghost">Cancel</button><button class="btn accent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Create Recipe</button></div>
+    </div>
+
+    <div class="statusbar">
+      <span>New Recipe — not yet saved</span>
+      <span class="zoomctl">
+        <button data-tip="Zoom out (Ctrl −)" aria-label="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 12h12" stroke-linecap="round"/></svg></button>
+        <span class="pct" aria-live="polite">100%</span>
+        <button data-tip="Zoom in (Ctrl +)" aria-label="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 6v12M6 12h12" stroke-linecap="round"/></svg></button>
+      </span>
+      <button class="helpbtn" data-tip="Quick reference — ⌘/" aria-label="Quick reference (⌘/)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.1 2.4c-.5.2-.8.7-.8 1.2v.6" stroke-linecap="round"/><circle cx="12" cy="16.7" r="1" fill="currentColor" stroke="none"/></svg></button>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:16px;">Click <strong>The Kitchen</strong> to see the loose case: the weight field
+  goes inert (nothing can store it yet) and the output path changes to a standalone file.</p>
+
+<script>
+  (function(){
+    window.pick = function(w){
+      var cbk = w === 'cbk';
+      document.getElementById('dCbk').className = 'dopt' + (cbk ? ' on' : '');
+      document.getElementById('dKit').className = 'dopt' + (cbk ? '' : ' on');
+      document.getElementById('weightFld').className = 'fld' + (cbk ? '' : ' muted');
+      document.getElementById('why').style.display = cbk ? 'none' : 'block';
+      document.getElementById('outPath').textContent = cbk ? 'recipes/fox.rcp' : 'Kitchen / fox.rcp';
+      document.getElementById('kickerCtx').textContent = cbk ? 'in VaporPets' : 'loose in the Kitchen';
+    };
+  })();
+</script>
