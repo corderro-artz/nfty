@@ -69,6 +69,7 @@
            color: var(--fg); height: 38px; padding: 0 14px; border-radius: var(--r-lg); cursor: pointer;
            display: inline-flex; align-items: center; gap: 8px; }
   .ghost:hover { border-color: var(--accent-line); }
+  .ghost svg { width: 15px; height: 15px; flex: 0 0 auto; }
 
   /* app window — same chrome as explorer.html; the help sheet floats over it */
   .frame { overflow-x: auto; padding-bottom: 4px; }
@@ -85,10 +86,22 @@
   .brandtile .sq { width: 9px; height: 9px; background: var(--accent); border-radius: 2px; transform: rotate(45deg); }
   .wordmark { font-family: var(--font-mono); font-weight: 700; font-size: 15px; letter-spacing: -.01em; }
   .wordmark b { color: var(--accent-text); }
+  /* persistent workspace root — the open Kitchen. Fixed for every item below it;
+     changes only when you close this Kitchen and open another, so it sits apart
+     from the per-item breadcrumb rather than repeating as a path segment. */
+  .kroot { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; font-family: var(--font-mono);
+           font-size: 12.5px; color: var(--fg); padding: 3px 9px 3px 7px; border-radius: var(--r-sm);
+           background: var(--accent-wash); border: 1px solid var(--accent-line); }
+  .kroot svg { width: 14px; height: 14px; color: var(--accent-text); flex: 0 0 auto; }
+  .kroot b { font-weight: 600; }
   .tdiv { width: 1px; height: 18px; background: var(--line-strong); flex: 0 0 auto; }
   .crumbs { font-family: var(--font-mono); font-size: 12.5px; color: var(--fg-muted); display: flex;
             gap: 4px; align-items: center; flex: 1; min-width: 0; overflow: hidden; }
-  .crumbs .sep { opacity: .45; } .crumbs .ext { color: var(--accent-text); }
+  .cseg { padding: 3px 7px; border-radius: var(--r-xs); white-space: nowrap; overflow: hidden;
+          text-overflow: ellipsis; transition: background .12s, color .12s; cursor: pointer; }
+  .cseg:hover { background: var(--bg-alt2); color: var(--fg); }
+  .cseg.active { color: var(--fg); font-weight: 600; }
+  .crumbs .sep { opacity: .45; flex: 0 0 auto; } .crumbs .ext { color: var(--accent-text); }
   .wctl { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
   .wc { width: 34px; height: 30px; border: 0; background: transparent; border-radius: var(--r-sm);
         color: var(--fg-muted); cursor: pointer; display: grid; place-items: center;
@@ -96,6 +109,7 @@
   .wc svg { width: 14px; height: 14px; }
   .wc:hover { background: var(--bg-alt2); color: var(--fg); }
   .wc.close:hover { background: var(--accent); color: var(--on-accent); }
+  .wc:active { transform: translateY(.5px); }
 
   /* the dimmed app underneath, so the sheet reads as an overlay summoned in place */
   .winbody { position: relative; }
@@ -129,17 +143,20 @@
   /* status bar — same as explorer, plus the ? summon affordance at the far right */
   .statusbar { display: flex; align-items: center; gap: 14px; padding: 8px 16px; border-top: 1px solid var(--line);
                background: var(--bg-alt); font-family: var(--font-mono); font-size: 11.5px; color: var(--fg-muted);
-               font-variant-numeric: tabular-nums; }
+               font-variant-numeric: tabular-nums; flex-wrap: wrap; }
   .statusbar .ok { color: var(--success); }
   .zoomctl { margin-left: auto; display: inline-flex; align-items: center; gap: 2px; }
   .zoomctl button { font: inherit; font-family: var(--font-mono); border: 1px solid var(--line-strong);
                     background: var(--panel); color: var(--fg); width: 24px; height: 24px; border-radius: var(--r-sm);
-                    line-height: 1; }
+                    cursor: pointer; line-height: 1; display: inline-grid; place-items: center; }
+  .zoomctl button:hover { border-color: var(--accent-line); }
+  .zoomctl button svg { width: 13px; height: 13px; }
   .zoomctl .pct { min-width: 46px; text-align: center; }
   .helpbtn { margin-left: 8px; font-family: var(--font-mono); font-size: 13px; line-height: 1;
              width: 24px; height: 24px; border-radius: var(--r-sm); display: inline-grid; place-items: center;
              cursor: pointer; color: var(--accent-text); background: var(--accent-wash);
              border: 1px solid var(--accent-line); }
+  .helpbtn svg { width: 13px; height: 13px; }
 
   /* ===================== the help sheet ===================== */
   .sheet { width: 780px; max-width: 100%; background: var(--panel); color: var(--fg);
@@ -168,6 +185,9 @@
   .sheet .rop { font-family: var(--font-mono); font-size: 11px; line-height: 1; }
   .sheet .rop.ex { color: var(--accent-text); } .sheet .rop.rq { color: var(--success); }
   .sheet .gl { font-size: 12px; line-height: 1; color: var(--fg-muted); }
+  /* rule marks — same 13px svg as the live rows in explorer.html, so the legend
+     documents the mark the app actually draws */
+  .sheet .rop svg, .sheet .gl svg { width: 13px; height: 13px; display: block; }
   .sheet .gl.ok { color: var(--success); }
 
   .sheet .t { font-size: 12.5px; font-weight: 600; letter-spacing: .005em; line-height: 1.25; }
@@ -212,7 +232,7 @@
         <span class="a">Esc</span>. It defines the five domain words, the three layer kinds, the rule and state
         glyphs, the keys, and the colour-spec prefixes — everything the vocabulary rests on, in one glance.</p>
     </div>
-    <button class="ghost" id="theme" title="Toggle light / dark">◐ Theme</button>
+    <button class="ghost" id="theme" title="Toggle light / dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/></svg> Theme</button>
   </div>
 
   <div class="frame">
@@ -220,7 +240,9 @@
       <div class="titlebar">
         <div class="brand"><span class="brandtile"><span class="sq"></span></span><span class="wordmark">nft<b>y</b></span></div>
         <span class="tdiv"></span>
-        <div class="crumbs"><span>VaporPets</span><span class="sep">›</span><span>cat</span><span class="sep">›</span><span>aura</span></div>
+        <span class="kroot" title="Open workspace — the Kitchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="1.8" fill="var(--panel)"/><path d="M3.5 9.2h17"/><path d="M7 3.6v2.2M12 3.6v2.2" stroke-linecap="round"/><rect x="6.6" y="12" width="4" height="4" rx="1" fill="var(--accent)" stroke="none"/></svg><b>VaporStudio</b></span>
+        <span class="tdiv"></span>
+        <div class="crumbs"><span class="cseg">VaporPets</span><span class="sep">›</span><span class="cseg">Aurora</span><span class="sep">›</span><span class="cseg active">Body</span></div>
         <span class="tdiv"></span>
         <div class="wctl">
           <button class="wc" aria-label="Minimize"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6 12h12" stroke-linecap="round"/></svg></button>
@@ -259,7 +281,7 @@
                 <p class="slbl">The five words</p>
                 <div class="e">
                   <span class="g"><svg class="ti" viewBox="0 0 24 24" fill="none"><path d="M6 3.5h11.4a.7.7 0 0 1 .7.7V20a.7.7 0 0 1-.7.7H6.3A2.3 2.3 0 0 1 4 18.4V5.8A2.3 2.3 0 0 1 6.3 3.5Z" fill="var(--panel)" stroke="currentColor" stroke-width="1.3"/><path d="M4.4 18.1a2.3 2.3 0 0 1 1.9-1h11.8" stroke="currentColor" stroke-width="1.3"/><path d="M9.4 3.5h3.4v5.2l-1.7-1.2-1.7 1.2z" fill="var(--accent)"/></svg></span>
-                  <span class="t">CookBook<span class="x">.cbk</span><span class="s">An <em>uncooked</em> Set — holds the recipes, the canvas size, the collection.</span></span>
+                  <span class="t">CookBook<span class="x">.cbk</span><span class="s">An <em>uncooked</em> Set — holds the Recipes, the canvas size, the collection.</span></span>
                 </div>
                 <div class="e">
                   <span class="g"><svg class="ti" viewBox="0 0 24 24" fill="none"><path d="M6 3.6h7.4L18.6 8v11.7a.7.7 0 0 1-.7.7H6a.7.7 0 0 1-.7-.7V4.3A.7.7 0 0 1 6 3.6Z" fill="var(--panel)" stroke="currentColor" stroke-width="1.3"/><path d="M13.1 3.8V8.1h4.5" stroke="currentColor" stroke-width="1.3"/><path d="M7.8 12h7M7.8 15h7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity=".7"/><circle cx="15.2" cy="18" r="1.5" fill="var(--accent)"/></svg></span>
@@ -286,17 +308,17 @@
                 <div class="e"><span class="g"><span class="km c">C</span></span><span class="t">custom<span class="s">Full colour, composited <em>as-is</em>.</span></span></div>
 
                 <p class="slbl">Rules &amp; state</p>
-                <div class="e"><span class="g"><span class="rop ex">✕</span></span><span class="t plain">never together</span></div>
-                <div class="e"><span class="g"><span class="rop rq">→</span></span><span class="t plain">always together</span></div>
-                <div class="e"><span class="g"><span class="gl">⚑</span></span><span class="t plain">this layer is in a rule</span></div>
-                <div class="e"><span class="g"><span class="gl ok">●</span></span><span class="t plain">cookbook is valid</span></div>
+                <div class="e"><span class="g"><span class="rop ex"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" stroke-linecap="round"/></svg></span></span><span class="t plain">never together</span></div>
+                <div class="e"><span class="g"><span class="rop rq"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" aria-hidden="true"><path d="M5 12h12M12.5 7l5 5-5 5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span><span class="t plain">always together</span></div>
+                <div class="e"><span class="g"><span class="gl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6.5 20.5V4.2" stroke-linecap="round"/><path d="M6.5 5h9.8l-1.8 3.4 1.8 3.4H6.5z" fill="var(--accent-wash)" stroke-linejoin="round"/></svg></span></span><span class="t plain">this layer is in a rule</span></div>
+                <div class="e"><span class="g"><span class="gl ok">●</span></span><span class="t plain">CookBook is valid</span></div>
               </div>
 
               <div class="col">
                 <p class="slbl">Keys</p>
                 <div class="kline"><span class="k">⌘/</span><span>this sheet</span></div>
                 <div class="kline"><span class="k">⌘K</span><span>search</span></div>
-                <div class="kline"><span class="k">⌘N</span><span>new cookbook</span></div>
+                <div class="kline"><span class="k">⌘N</span><span>new CookBook</span></div>
                 <div class="kline"><span class="k">⌘O</span><span>open</span></div>
 
                 <p class="slbl">Colour</p>
@@ -309,7 +331,7 @@
             </div>
 
             <div class="sh-f">
-              <p class="dna"><b>Unique DNA</b> — one recipe, its rolled variants, their colours. It's what makes an asset distinct, and what a collection is counted in.</p>
+              <p class="dna"><b>Unique DNA</b> — one Recipe, its rolled Variants, their colours. It's what makes an asset distinct, and what a collection is counted in.</p>
               <span class="dnaeq">4 × 3 × 5 × 6 <b>=</b> 360</span>
             </div>
           </div>
@@ -318,20 +340,20 @@
 
       <div class="statusbar">
         <span class="ok">● Valid</span>
-        <span>3 recipes</span><span>· 11 ingredients</span><span>· 47 variants</span>
+        <span>3 recipes</span><span>· 12 ingredients</span><span>· 50 variants</span>
         <span class="zoomctl">
-          <button aria-label="Zoom out">−</button>
+          <button aria-label="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 12h12" stroke-linecap="round"/></svg></button>
           <span class="pct">100%</span>
-          <button aria-label="Zoom in">+</button>
+          <button aria-label="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 6v12M6 12h12" stroke-linecap="round"/></svg></button>
         </span>
-        <button class="helpbtn" aria-label="Help (⌘/)" title="Help — ⌘/">?</button>
+        <button class="helpbtn" aria-label="Help (⌘/)" title="Help — ⌘/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.1 2.4c-.5.2-.8.7-.8 1.2v.6" stroke-linecap="round"/><circle cx="12" cy="16.7" r="1" fill="currentColor" stroke="none"/></svg></button>
       </div>
     </div>
   </div>
 
   <div class="note">
     <span class="k">Summoned from</span>
-    <span>the <b style="color:var(--accent-text)">?</b> at the right of the status bar, the <b style="color:var(--accent-text)">Learn</b>
+    <span>the <b style="color:var(--accent-text)">help</b> button at the right of the status bar, the <b style="color:var(--accent-text)">Learn</b>
       link on the landing view, or <b style="color:var(--accent-text)">⌘/</b> anywhere — all open this one sheet; Esc closes it.</span>
   </div>
 </div>

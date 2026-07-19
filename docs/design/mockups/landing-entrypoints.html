@@ -1,0 +1,157 @@
+<style>
+  .nfty-scope {
+    --bg:#f4efe8; --bg-alt:#f1ece4; --bg-alt2:#ede7df; --panel:#f8f3ed;
+    --fg:#121318; --fg-muted:#121418b8; --line:#1214181f; --line-strong:#12141833;
+    --accent:#a11f31; --accent-text:#97192a; --on-accent:#f7f2ec;
+    --accent-wash:#a11f3114; --accent-line:#a11f3140; --tile:#ece5db;
+    --info:#3b5b6f; --font-mono:"SF Mono","JetBrains Mono",ui-monospace,Menlo,Consolas,monospace; color:var(--fg);
+  }
+  @media (prefers-color-scheme: dark) {
+    .nfty-scope { --bg:#07080b; --bg-alt:#0a0b10; --bg-alt2:#0f1118; --panel:#0b0c10;
+      --fg:#f2ede6; --fg-muted:#f2ede6c7; --line:#f2ede624; --line-strong:#f2ede633;
+      --accent:#a11f31; --accent-text:#e0788a; --on-accent:#f7f2ec;
+      --accent-wash:#a11f3126; --accent-line:#a11f3166; --tile:#12141c; --info:#7fb0c4; }
+  }
+  .nw { border:1px solid var(--line-strong); border-radius:10px; overflow:hidden; background:var(--bg);
+        box-shadow:0 1px 2px #12141810, 0 18px 48px -24px #12141833; font-family:var(--font-mono); }
+  .nw-tb { display:flex; align-items:center; gap:10px; height:38px; padding:0 10px 0 12px;
+           background:linear-gradient(var(--panel),var(--bg-alt)); border-bottom:1px solid var(--line); }
+  .btile { width:20px; height:20px; border-radius:5px; display:grid; place-items:center; background:var(--accent-wash); border:1px solid var(--accent-line); }
+  .btile i { width:8px; height:8px; background:var(--accent); border-radius:2px; transform:rotate(45deg); display:block; }
+  .wm { font-weight:700; font-size:13px; } .wm b { color:var(--accent-text); }
+  .div { width:1px; height:16px; background:var(--line-strong); }
+  .noopen { font-size:11.5px; color:var(--fg-muted); flex:1; }
+  .wc { width:26px; height:22px; border:0; background:transparent; border-radius:5px; color:var(--fg-muted); display:grid; place-items:center; font-size:12px; cursor:pointer; }
+  .wc svg { width:12px; height:12px; }
+  .wc:hover { background:var(--bg-alt2); color:var(--fg); }
+  .wc.close:hover { background:var(--accent); color:var(--on-accent); }
+
+  .land { display:grid; grid-template-columns:1fr 1fr; gap:34px; padding:34px 38px; min-height:396px; background:var(--bg); }
+  .lwordmark { font-size:30px; font-weight:700; letter-spacing:-.02em; margin:0; } .lwordmark b { color:var(--accent-text); }
+  .tagline { font-size:11.5px; color:var(--fg-muted); margin:3px 0 0; letter-spacing:.02em; }
+  .slbl { font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--fg-muted); margin:0 0 8px; }
+
+  .actions { display:flex; flex-direction:column; gap:7px; max-width:272px; }
+  .tbtn { display:flex; align-items:center; gap:9px; padding:9px 12px; font:inherit; font-size:12px;
+          border:1px solid var(--line-strong); border-radius:6px; background:var(--panel); color:var(--fg);
+          cursor:pointer; text-align:left; width:100%; }
+  .tbtn .g { font-family:var(--font-mono); flex:0 0 auto; color:var(--fg-muted); width:13px; text-align:center; }
+  .tbtn .g svg { width:13px; height:13px; display:block; }
+  .tbtn.accent { background:var(--accent); border-color:var(--accent); color:var(--on-accent); font-weight:600; }
+  .tbtn.accent .g { color:var(--on-accent); }
+  .khint { margin-left:auto; font-size:10px; color:var(--fg-muted); }
+  .tbtn.accent .khint { color:var(--on-accent); opacity:.72; }
+  /* an action whose destination does not exist yet */
+  .tbtn.soon { border-style:dashed; color:var(--fg-muted); background:transparent; }
+  .tbtn.soon .g { opacity:.6; }
+  .grp { margin-top:20px; }
+
+  /* secondary tier: the two smaller creatables */
+  .subrow { display:flex; gap:7px; max-width:272px; }
+  .subrow .tbtn { padding:7px 10px; font-size:11.5px; }
+
+  .rlist { display:flex; flex-direction:column; gap:2px; }
+  .rrow { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:6px; border:1px solid transparent;
+          background:transparent; font:inherit; text-align:left; width:100%; cursor:pointer; }
+  .rrow:hover { background:var(--bg-alt); border-color:var(--line); }
+  .rico { width:22px; height:22px; border-radius:5px; background:var(--accent-wash); border:1px solid var(--accent-line);
+          display:grid; place-items:center; flex:0 0 auto; color:var(--accent-text); font-size:10px; }
+  .rico svg { width:14px; height:14px; display:block; }
+  .rname { font-size:12px; color:var(--fg); display:block; }
+  .rmeta { font-size:10px; color:var(--fg-muted); display:block; margin-top:1px; }
+  .rpath { margin-left:auto; font-size:10px; color:var(--fg-muted); opacity:.7; }
+
+  .learn { margin-top:22px; display:inline-flex; align-items:center; gap:7px; font:inherit; font-size:11.5px;
+           background:transparent; border:0; color:var(--fg-muted); cursor:pointer; padding:0; }
+  .learn b { color:var(--accent-text); }
+
+  /* ---- status bar (copied from docs/design/mockups/landing.html; --r-sm inlined as 5px,
+         since the locked .nfty-scope token block carries no radius tokens) ---- */
+  .statusbar { display:flex; align-items:center; gap:14px; padding:8px 16px; border-top:1px solid var(--line);
+               background:var(--bg-alt); font-family:var(--font-mono); font-size:11.5px; color:var(--fg-muted);
+               font-variant-numeric:tabular-nums; flex-wrap:wrap; }
+  .zoomctl { margin-left:auto; display:inline-flex; align-items:center; gap:2px; }
+  .zoomctl button { font:inherit; font-family:var(--font-mono); border:1px solid var(--line-strong);
+                    background:var(--panel); color:var(--fg); width:24px; height:24px; border-radius:5px;
+                    cursor:pointer; line-height:1; display:inline-grid; place-items:center; }
+  .zoomctl button:hover { border-color:var(--accent-line); }
+  .zoomctl button svg { width:13px; height:13px; }
+  .zoomctl .pct { min-width:46px; text-align:center; }
+  .helpbtn { margin-left:8px; font-family:var(--font-mono); font-size:13px; line-height:1;
+             width:24px; height:24px; border-radius:5px; display:inline-grid; place-items:center;
+             cursor:pointer; color:var(--accent-text); background:var(--accent-wash);
+             border:1px solid var(--accent-line); }
+  .helpbtn svg { width:13px; height:13px; }
+</style>
+
+<h2>Landing — expanded entry points</h2>
+<p class="subtitle">Two groups: <strong>Create</strong> (four vessels) and <strong>Open</strong> (existing files, plus
+  <strong>Import</strong> for any loose <code>.rcp</code>/<code>.igt</code>). Kitchen is dashed — reserved, next task.</p>
+
+<div class="nfty-scope">
+  <div class="nw">
+    <div class="nw-tb">
+      <span class="btile"><i></i></span><span class="wm">nft<b>y</b></span><span class="div"></span>
+      <span class="noopen">— nothing open —</span>
+      <span class="div"></span>
+      <button class="wc" aria-label="Minimize"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6 12h12" stroke-linecap="round"/></svg></button><button class="wc" aria-label="Maximize"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg></button><button class="wc close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" stroke-linecap="round"/></svg></button>
+    </div>
+
+    <div class="land">
+      <div>
+        <p class="lwordmark">nft<b>y</b></p>
+        <p class="tagline">Asset Generator</p>
+
+        <div class="grp">
+          <p class="slbl">Create</p>
+          <div class="actions">
+            <button class="tbtn accent"><span class="g"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg></span> New CookBook <span class="khint">⌘N</span></button>
+            <button class="tbtn soon" title="The Kitchen is not built yet"><span class="g"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg></span> New Kitchen…</button>
+          </div>
+          <div class="subrow" style="margin-top:7px;">
+            <button class="tbtn"><span class="g"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg></span> Recipe</button>
+            <button class="tbtn"><span class="g"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg></span> Ingredient</button>
+          </div>
+        </div>
+
+        <div class="grp">
+          <p class="slbl">Open</p>
+          <div class="actions">
+            <button class="tbtn"><span class="g"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M13.5 5.5H18.5V10.5M18.5 5.5 11 13" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 14.5v3.2a.8.8 0 0 1-.8.8H6.3a.8.8 0 0 1-.8-.8V7.8a.8.8 0 0 1 .8-.8h3.2" stroke-linecap="round"/></svg></span> Open CookBook… <span class="khint">⌘O</span></button>
+            <button class="tbtn"><span class="g"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 4v10M8.2 10.4 12 14.2l3.8-3.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 16.5v2a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2" stroke-linecap="round"/></svg></span> Import… <span class="khint">⌘I</span></button>
+            <button class="tbtn soon" title="The Set browser is not built yet"><span class="g"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M13.5 5.5H18.5V10.5M18.5 5.5 11 13" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 14.5v3.2a.8.8 0 0 1-.8.8H6.3a.8.8 0 0 1-.8-.8V7.8a.8.8 0 0 1 .8-.8h3.2" stroke-linecap="round"/></svg></span> Open a cooked .set…</button>
+          </div>
+        </div>
+
+        <button class="learn">New to nfty? <b>The cooking metaphor</b> <span>→</span></button>
+      </div>
+
+      <div>
+        <p class="slbl">Recent</p>
+        <div class="rlist">
+          <button class="rrow"><span class="rico"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 3.5h11.4a.7.7 0 0 1 .7.7V20a.7.7 0 0 1-.7.7H6.3A2.3 2.3 0 0 1 4 18.4V5.8A2.3 2.3 0 0 1 6.3 3.5Z" fill="var(--panel)" stroke="currentColor" stroke-width="1.3"/><path d="M4.4 18.1a2.3 2.3 0 0 1 1.9-1h11.8" stroke="currentColor" stroke-width="1.3"/><path d="M9.4 3.5h3.4v5.2l-1.7-1.2-1.7 1.2z" fill="var(--accent)"/></svg></span><span><span class="rname">VaporPets</span>
+            <span class="rmeta">3 recipes · 1000×1000</span></span><span class="rpath">~/art/vaporpets.cbk</span></button>
+          <button class="rrow"><span class="rico"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 3.5h11.4a.7.7 0 0 1 .7.7V20a.7.7 0 0 1-.7.7H6.3A2.3 2.3 0 0 1 4 18.4V5.8A2.3 2.3 0 0 1 6.3 3.5Z" fill="var(--panel)" stroke="currentColor" stroke-width="1.3"/><path d="M4.4 18.1a2.3 2.3 0 0 1 1.9-1h11.8" stroke="currentColor" stroke-width="1.3"/><path d="M9.4 3.5h3.4v5.2l-1.7-1.2-1.7 1.2z" fill="var(--accent)"/></svg></span><span><span class="rname">NeonKoi</span>
+            <span class="rmeta">1 recipe · 512×512</span></span><span class="rpath">~/art/neonkoi.cbk</span></button>
+          <button class="rrow"><span class="rico" style="background:var(--tile); border-color:var(--line-strong); color:var(--fg-muted)"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.4 3.4 8 12 12.6 20.6 8 12 3.4Z" fill="var(--accent-wash)" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M3.4 12 12 16.6 20.6 12" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M3.4 16 12 20.6 20.6 16" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" opacity=".8"/></svg></span>
+            <span><span class="rname">aura.igt</span><span class="rmeta">loose ingredient · 4 variants</span></span>
+            <span class="rpath">Kitchen</span></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="statusbar">
+      <span>No CookBook open</span>
+      <span class="zoomctl">
+        <button data-tip="Zoom out (Ctrl −)" aria-label="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 12h12" stroke-linecap="round"/></svg></button>
+        <span class="pct" aria-live="polite">100%</span>
+        <button data-tip="Zoom in (Ctrl +)" aria-label="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 6v12M6 12h12" stroke-linecap="round"/></svg></button>
+      </span>
+      <button class="helpbtn" data-tip="Quick reference — ⌘/" aria-label="Quick reference (⌘/)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.1 2.4c-.5.2-.8.7-.8 1.2v.6" stroke-linecap="round"/><circle cx="12" cy="16.7" r="1" fill="currentColor" stroke="none"/></svg></button>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:16px;"><strong>Import…</strong> takes any <code>.cbk</code>/<code>.rcp</code>/<code>.igt</code>
+  — <code>Archives.KindOf</code> already resolves the kind from the extension and refuses unknown ones, so one action
+  covers all three. Recents now mixes loose Kitchen items with CookBooks.</p>
