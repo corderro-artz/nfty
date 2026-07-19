@@ -118,6 +118,48 @@ Design spec: [`docs/superpowers/specs/2026-07-18-nfty-ingredient-editor-design.m
 The token block is copied **verbatim** from `explorer.html`; every colour is a `var()`, and a new hex value anywhere
 is the signal that the style has drifted.
 
+## Creation flows — wizards + expanded landing
+
+The authoring entry points: creating a CookBook, Recipe, or Ingredient from nothing. Each is a
+**single centered pane** (no sidebar — the one deliberate exception to the shared-rail layout, because
+the field sets are 2–5 items). **Every field is grounded in `Nfty.Core`** — a wizard collects only what
+a manifest stores or the `Validator` requires. Full rationale in the spec:
+[`docs/superpowers/specs/2026-07-19-nfty-creation-flows-design.md`](../../superpowers/specs/2026-07-19-nfty-creation-flows-design.md).
+
+- **`wizard-cookbook.html`** — New CookBook. Name, Symbol (1–255 bytes, empty allowed; 3–5 ticker is
+  hover advice), Canvas W×H with an aspect-lock chain-link, Description. Two phantom fields cut: colorize
+  model (lives on the Ingredient) and target supply (chosen at generate time, stored nowhere).
+- **`wizard-recipe.html`** — New Recipe. Name + **mandatory** selection weight (a Recipe absent from
+  `RecipeWeights` fails validation) with a live "Resulting mix" bar.
+- **`wizard-ingredient.html`** — New Ingredient. Name, a 3-way **Kind** radio-card group, and a
+  kind-dependent zone matching `Validator.CheckKind`: Dynamic → dual-handle Hue/Saturation
+  `ColorRange` sliders (half-open, animated saturation preview); Static → one fixed-colour swatch;
+  Custom → none.
+- **`landing-entrypoints.html`** — the expanded Landing: **Create** (New CookBook / New Kitchen /
+  Recipe / Ingredient) and **Open** (Open CookBook / **Import…** / cooked `.set`) groups. Import is
+  kind-agnostic — `Archives.KindOf` resolves `.cbk`/`.rcp`/`.igt` from the extension.
+
+All screens share the unified chrome: SVG icons, a persistent **`.kroot` Kitchen workspace chip** in the
+titlebar (VS-Code title:path model — the workspace root, absent only on the Landing), a statusbar on
+every screen, and lowercase counts (`3 recipes`) with type-names capitalized in prose.
+
+## gallery.html — the tabbed review page
+
+`gallery.html` stacks every mockup above behind a left-rail tab switcher, each in its own sandboxed
+iframe at the app's **minimum window** (1180×760), theme-synced. Open it to see the whole design set at
+once — the fast way to review a freshly-drafted mockup against its siblings. Keys `1`…`8` jump, `↑`/`↓`
+step.
+
+Regenerate after adding or editing a mockup:
+
+```bash
+python3 docs/design/mockups/build-gallery.py   # rewrites gallery.html
+```
+
+To add a mockup: drop the file in this directory and add one row to `SCREENS` in `build-gallery.py`.
+(The generator base64-embeds each mockup so its inline `<script>` survives intact, and injects a
+theme/layout normalizer that works across both token architectures — see the script's header.)
+
 ### Preview locally
 
 Neither file has a `<!doctype>/<html>/<head>/<body>` — the publish host wraps them with a skeleton
@@ -138,3 +180,4 @@ from a later session, or a new one gets minted):
 | `explorer.html` | <https://claude.ai/code/artifact/04b18798-3fca-4bde-a434-1d848a8116c5> |
 | `landing.html`  | <https://claude.ai/code/artifact/6bfa007e-b4a6-48e4-8ec8-90f1d193e35f> |
 | `help.html`     | <https://claude.ai/code/artifact/4b0a9a36-c264-4a28-94cb-99e06fa3d0d5> |
+| `gallery.html` (all 8, tabbed) | <https://claude.ai/code/artifact/c8f1c7bb-d238-49a5-bd25-c8173e5c8c14> |
