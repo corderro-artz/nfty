@@ -70,11 +70,13 @@
            color: var(--fg); height: 38px; padding: 0 14px; border-radius: var(--r-lg); cursor: pointer;
            display: inline-flex; align-items: center; gap: 8px; }
   .ghost:hover { border-color: var(--accent-line); }
+  .ghost svg { width: 15px; height: 15px; flex: 0 0 auto; }
 
   /* app window (zoom applied here) */
   .frame { overflow-x: auto; padding-bottom: 4px; }
   .window { width: 1180px; margin: 0 auto; background: var(--bg); border: 1px solid var(--line-strong);
-            border-radius: var(--r-win); box-shadow: var(--shadow); overflow: hidden; }
+            border-radius: var(--r-win); box-shadow: var(--shadow); overflow: hidden;
+            display: flex; flex-direction: column; min-height: 760px; }
 
   /* custom frameless chrome (our own titlebar; OS frame removed in the real app) */
   .titlebar { display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 10px 0 12px;
@@ -87,6 +89,14 @@
   .brandtile .sq { width: 9px; height: 9px; background: var(--accent); border-radius: 2px; transform: rotate(45deg); }
   .wordmark { font-family: var(--font-mono); font-weight: 700; font-size: 15px; letter-spacing: -.01em; }
   .wordmark b { color: var(--accent-text); }
+  /* persistent workspace root — the open Kitchen. Fixed for every item below it;
+     changes only when you close this Kitchen and open another, so it sits apart
+     from the per-item breadcrumb rather than repeating as a path segment. */
+  .kroot { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; font-family: var(--font-mono);
+           font-size: 12.5px; color: var(--fg); padding: 3px 9px 3px 7px; border-radius: var(--r-sm);
+           background: var(--accent-wash); border: 1px solid var(--accent-line); }
+  .kroot svg { width: 14px; height: 14px; color: var(--accent-text); flex: 0 0 auto; }
+  .kroot b { font-weight: 600; }
   .tdiv { width: 1px; height: 18px; background: var(--line-strong); flex: 0 0 auto; }
   .crumbs { font-family: var(--font-mono); font-size: 12.5px; color: var(--fg-muted); display: flex;
             gap: 4px; align-items: center; flex: 1; min-width: 0; overflow: hidden; }
@@ -154,11 +164,12 @@
   .lock-toggle.editing { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 
   /* panes */
-  .panes-scroll { overflow-x: auto; }
-  .panes { display: grid; grid-template-columns: 286px minmax(392px, 1fr) 336px; min-height: 440px; }
+  .panes-scroll { overflow-x: auto; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+  .panes { display: grid; grid-template-columns: 286px minmax(392px, 1fr) 336px; grid-template-rows: 1fr;
+           min-height: 440px; flex: 1 1 auto; }
   .panes.two { grid-template-columns: 286px minmax(560px, 1fr); }
   @media (max-width: 900px) { .panes { min-width: 1000px; } }
-  .pane { border-right: 1px solid var(--line); min-width: 0; }
+  .pane { border-right: 1px solid var(--line); min-width: 0; min-height: 0; overflow-y: auto; }
   .pane:last-child { border-right: 0; }
   .pane-h { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase;
             color: var(--fg-muted); height: 41px; padding: 0 16px; display: flex; align-items: center; gap: 8px;
@@ -257,8 +268,6 @@
   .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; }
   .vprev { width: 32px; height: 32px; border-radius: var(--r-sm); border: 1px solid var(--line); display: block; background: var(--tile); }
   .vname { font-weight: 600; }
-  .ext2 { color: var(--fg-muted); font-family: var(--font-mono); font-size: 11px; margin-left: 4px; }
-  .wcell { display: flex; flex-direction: column; gap: 5px; }
   .wbar { height: 5px; border-radius: 999px; background: var(--bg-alt2); overflow: hidden; width: 84px; }
   .wbar i { display: block; height: 100%; background: var(--accent); border-radius: 999px; transition: width .18s ease; }
   .winput { font: inherit; font-family: var(--font-mono); font-size: 12.5px; width: 58px; text-align: right;
@@ -269,15 +278,6 @@
             border-radius: var(--r-sm); opacity: 0; }
   tr:hover .rowdel { opacity: 1; } .rowdel:hover, .rowdel:focus-visible { opacity: 1; color: var(--accent-text); background: var(--accent-wash); }
   .rowdel svg { width: 15px; height: 15px; display: block; }
-  .roster tfoot td { font-family: var(--font-mono); color: var(--fg-muted); border-bottom: 0;
-                     border-top: 1px solid var(--line-strong); }
-  .roster tfoot tr { cursor: default; }
-  .roster tfoot tr:hover td { background: transparent; }
-  .stpill { font-family: var(--font-mono); font-size: 10.5px; display: inline-flex; align-items: center; gap: 6px;
-            padding: 2px 8px; border-radius: var(--r-xs); border: 1px solid transparent; }
-  .stpill::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
-  .stpill.ok { color: var(--success); background: color-mix(in srgb, var(--success) 12%, transparent);
-               border-color: color-mix(in srgb, var(--success) 26%, transparent); }
 
   /* ---- recipe · portrait hero + layer table ---- */
   .rhero { display: flex; gap: 16px; align-items: center; padding: 14px 16px; border: 1px solid var(--line);
@@ -371,6 +371,7 @@
   .rrow:last-child { border-bottom: 0; padding-bottom: 2px; }
   .rop { flex: 0 0 auto; width: 20px; height: 20px; display: grid; place-items: center; border-radius: var(--r-xs);
          font-family: var(--font-mono); font-size: 12px; font-weight: 700; margin-top: 1px; cursor: default; }
+  .rop svg { width: 13px; height: 13px; display: block; }
   .rop.exclude { color: var(--accent-text); background: var(--accent-wash); border: 1px solid var(--accent-line); }
   .rop.require { color: var(--info); background: color-mix(in srgb, var(--info) 12%, transparent); border: 1px solid color-mix(in srgb, var(--info) 28%, transparent); }
   .rpair { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
@@ -390,9 +391,13 @@
              color: var(--fg-muted); border: 1px solid var(--line-strong); border-radius: var(--r-xs); padding: 2px 7px; }
   .hueband { height: 34px; border-radius: var(--r-sm); border: 1px solid var(--line);
              box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fg) 4%, transparent); }
-  .cwranges { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 13px; font-size: 12px; color: var(--fg-muted); }
-  .cwranges span { font-family: var(--font-mono); font-size: 11.5px; }
-  .cwranges b { color: var(--fg); font-weight: 600; margin-left: 4px; font-variant-numeric: tabular-nums; }
+  .cwaxes { margin-top: 14px; display: flex; flex-direction: column; }
+  .cwaxis { display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+            padding: 8px 0; border-top: 1px solid var(--line); }
+  .cwaxis:first-child { border-top: 0; padding-top: 4px; }
+  .cwaxis .ax { font-family: var(--font-mono); font-size: 10px; letter-spacing: .11em; text-transform: uppercase; color: var(--fg-muted); }
+  .cwaxis .av { font-family: var(--font-mono); font-size: 12.5px; color: var(--fg); font-variant-numeric: tabular-nums; }
+  .cwaxis .av.der { color: var(--fg-muted); font-style: italic; font-variant-numeric: normal; }
   .cwcustom { display: flex; align-items: center; gap: 14px; }
   .cwcustom canvas { width: 56px; height: 56px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--tile); flex: 0 0 auto; }
   .cwcustom .cwnote { margin-top: 0; }
@@ -405,6 +410,7 @@
            border-radius: 999px; padding: 3px 9px; cursor: pointer; white-space: nowrap; align-self: flex-start;
            transition: background .12s, border-color .12s; }
   .hflag:hover { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+  .hflag svg { width: 13px; height: 13px; flex: 0 0 auto; }
   .vhero .htop { display: flex; align-items: center; gap: 10px; }
   .vhero .htop .hname { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
@@ -419,9 +425,16 @@
   .zoomctl { margin-left: auto; display: inline-flex; align-items: center; gap: 2px; }
   .zoomctl button { font: inherit; font-family: var(--font-mono); border: 1px solid var(--line-strong);
                     background: var(--panel); color: var(--fg); width: 24px; height: 24px; border-radius: var(--r-sm);
-                    cursor: pointer; line-height: 1; }
+                    cursor: pointer; line-height: 1; display: inline-grid; place-items: center; }
   .zoomctl button:hover { border-color: var(--accent-line); }
+  .zoomctl button svg { width: 13px; height: 13px; }
   .zoomctl .pct { min-width: 46px; text-align: center; }
+  /* the always-present help trigger — same idiom in landing.html / help.html */
+  .helpbtn { margin-left: 8px; font-family: var(--font-mono); font-size: 13px; line-height: 1;
+             width: 24px; height: 24px; border-radius: var(--r-sm); display: inline-grid; place-items: center;
+             cursor: pointer; color: var(--accent-text); background: var(--accent-wash);
+             border: 1px solid var(--accent-line); }
+  .helpbtn svg { width: 13px; height: 13px; }
 
   /* tooltip */
   .tip { position: fixed; z-index: 60; background: var(--fg); color: var(--bg); font-family: var(--font-mono);
@@ -442,18 +455,20 @@
   <div class="pitch">
     <div>
       <h1>nfty · explorer</h1>
-      <p>Browse a cookbook the way you'd browse a filesystem. Select any node in <b>Contents</b> and the center pane
-        <span class="a">adapts to what it is</span>: a cookbook lays out its identity, composition and DNA space, a
-        recipe pairs a sample roll with its layer stack and rules, and an ingredient opens a sortable variant table
+      <p>Browse a CookBook the way you'd browse a filesystem. Select any node in <b>Contents</b> and the center pane
+        <span class="a">adapts to what it is</span>: a CookBook lays out its identity, composition and DNA space, a
+        Recipe pairs a sample roll with its layer stack and rules, and an Ingredient opens a sortable Variant table
         beside a live <b>Colorways</b> panel showing how that layer is colorized. Unlock, top-right, to edit.</p>
     </div>
-    <button class="ghost" id="theme" title="Toggle light / dark">◐ Theme</button>
+    <button class="ghost" id="theme" title="Toggle light / dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/></svg> Theme</button>
   </div>
 
   <div class="frame">
     <div class="window" id="window">
       <div class="titlebar">
         <div class="brand"><span class="brandtile"><span class="sq"></span></span><span class="wordmark">nft<b>y</b></span></div>
+        <span class="tdiv"></span>
+        <span class="kroot" title="Open workspace — the Kitchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="1.8" fill="var(--panel)"/><path d="M3.5 9.2h17"/><path d="M7 3.6v2.2M12 3.6v2.2" stroke-linecap="round"/><rect x="6.6" y="12" width="4" height="4" rx="1" fill="var(--accent)" stroke="none"/></svg><b>VaporStudio</b></span>
         <span class="tdiv"></span>
         <div class="crumbs" id="crumbs"></div>
         <span class="lockflag" id="lockflag"></span>
@@ -469,7 +484,7 @@
         <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4" stroke-linecap="round"/></svg> Find recipe, ingredient, variant… <kbd>⌘K</kbd></div>
         <button class="tbtn accent" id="addBtn" disabled></button>
         <button class="tbtn" id="delBtn" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13" stroke-linecap="round" stroke-linejoin="round"/></svg> Delete</button>
-        <button class="tbtn" id="importBtn" disabled>Import .igt</button>
+        <button class="tbtn" id="importBtn" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 4v10M8.2 10.4 12 14.2l3.8-3.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 16.5v2a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2" stroke-linecap="round"/></svg> Import…</button>
         <button class="tbtn lock-toggle" id="lockToggle"></button>
       </div>
 
@@ -499,18 +514,19 @@
         <span class="state" id="stateFlag"></span>
         <span id="rTotal"></span><span id="iTotal"></span><span id="varTotal"></span>
         <span class="zoomctl">
-          <button id="zOut" data-tip="Zoom out (Ctrl −)" aria-label="Zoom out">−</button>
+          <button id="zOut" data-tip="Zoom out (Ctrl −)" aria-label="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 12h12" stroke-linecap="round"/></svg></button>
           <span class="pct" id="zPct" aria-live="polite">100%</span>
-          <button id="zIn" data-tip="Zoom in (Ctrl +)" aria-label="Zoom in">+</button>
+          <button id="zIn" data-tip="Zoom in (Ctrl +)" aria-label="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 6v12M6 12h12" stroke-linecap="round"/></svg></button>
         </span>
+        <button class="helpbtn" data-tip="Quick reference — ⌘/" aria-label="Quick reference (⌘/)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.1 2.4c-.5.2-.8.7-.8 1.2v.6" stroke-linecap="round"/><circle cx="12" cy="16.7" r="1" fill="currentColor" stroke="none"/></svg></button>
       </div>
     </div>
   </div>
 
   <div class="note">
     <span class="k">try it →</span>
-    <span>Expand the tree with the carets, then pick a recipe or ingredient. Unlock (top-right) to edit variant weights
-      inline and watch rarity update live. Reroll the recipe portrait to sample a new pet, or sort the variant table by
+    <span>Expand the tree with the carets, then pick a Recipe or Ingredient. Unlock (top-right) to edit Variant weights
+      inline and watch rarity update live. Reroll the Recipe portrait to sample a new pet, or sort the Variant table by
       any column.</span>
   </div>
 </div>
@@ -532,13 +548,20 @@
     cook_go: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 12h13M12 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     dice: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3.4" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="9" r="1.5" fill="currentColor"/><circle cx="15" cy="9" r="1.5" fill="currentColor"/><circle cx="9" cy="15" r="1.5" fill="currentColor"/><circle cx="15" cy="15" r="1.5" fill="currentColor"/></svg>'
   };
+  /* rule marks — these three are documented verbatim by the help.html legend.
+     Change one, change the other, or the legend stops describing the app. */
+  var MARK = {
+    exclude: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" stroke-linecap="round"/></svg>',
+    require: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" aria-hidden="true"><path d="M5 12h12M12.5 7l5 5-5 5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    flag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6.5 20.5V4.2" stroke-linecap="round"/><path d="M6.5 5h9.8l-1.8 3.4 1.8 3.4H6.5z" fill="var(--accent-wash)" stroke-linejoin="round"/></svg>'
+  };
 
   /* ---------- data model ---------- */
   function vs(kind, defs) { return defs.map(function (d) { return { n: d[0], k: kind, w: d[1], hue: d[2] }; }); }
   var COOK = {
     name: 'VaporPets',
     symbol: 'VPET',
-    description: 'A collection of neon companions, each one hatched from its own recipe.',
+    description: 'A collection of neon companions, each one hatched from its own Recipe.',
     canvas: { w: 1000, h: 1000 },
     colorModel: 'HSV',
     satRange: [45, 70],
@@ -716,12 +739,12 @@
   }
 
   /* ---- detail: one curated view per type ---- */
-  var VTAG = { cookbook: 'Cookbook', recipe: 'Recipe', ingredient: 'Ingredient' };
+  var VTAG = { cookbook: 'CookBook', recipe: 'Recipe', ingredient: 'Ingredient' };
   function mulberry(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
   function pickW(list, rnd) { var s = list.reduce(function (a, v) { return a + v.w; }, 0) * rnd(); for (var i = 0; i < list.length; i++) { s -= list[i].w; if (s <= 0) return list[i]; } return list[list.length - 1]; }
   function sampleBodyHue(r, seed) { var rnd = mulberry(r.n.length * 97 + seed * 131 + 7); return pickW(r.ings[0].variants, rnd).hue; }
   function statband(items, cls) { return '<div class="statband' + (cls ? ' ' + cls : '') + '">' + items.map(function (m) { return '<div class="metric' + (m[2] ? ' accent' : '') + '"' + (m[3] ? ' data-tip="' + m[3] + '"' : '') + '><div class="mv">' + m[0] + '</div><div class="ml">' + m[1] + '</div></div>'; }).join('') + '</div>'; }
-  function cookFooter() { return '<div class="cookbar"><div class="ci">Target supply <b>' + fmt(TARGET_SUPPLY) + '</b> of ' + fmt(totalCombos()) + ' unique DNA</div><button class="tbtn accent">' + ICON.cook_go + ' Cook set</button></div>'; }
+  function cookFooter() { return '<div class="cookbar"><div class="ci">Target supply <b>' + fmt(TARGET_SUPPLY) + '</b> of ' + fmt(totalCombos()) + ' unique DNA</div><button class="tbtn accent">' + ICON.cook_go + ' Cook Set</button></div>'; }
 
   function combospace() {
     var recs = COOK.recipes, tot = totalCombos();
@@ -754,7 +777,7 @@
     return '<div class="dist"><div class="sub-h">Mint distribution</div><div class="distbar">' + segs + '</div><div class="distlegend">' + legend + '</div></div>';
   }
   function cookA() {
-    var stat = statband([[COOK.recipes.length, 'Recipes'], [layerCount(), 'Layers'], [fmt(variantCount()), 'Variants'], [fmt(totalCombos()), 'Unique DNA', true, 'Distinct assets the cookbook can generate — one DNA per recipe + variant + color combination']], 'two2');
+    var stat = statband([[COOK.recipes.length, 'Recipes'], [layerCount(), 'Layers'], [fmt(variantCount()), 'Variants'], [fmt(totalCombos()), 'Unique DNA', true, 'Distinct assets the CookBook can generate — one DNA per Recipe + Variant + color roll']], 'two2');
     return cbkIdentity() +
       '<div class="cbk-cols"><div class="cbk-left">' + stat + mintDist() + '</div>' +
       '<div class="cbk-right">' + combospace() + '</div></div>' +
@@ -766,8 +789,8 @@
     var mk = function (glyph, cls, tip, a, b) {
       return '<div class="rrow"><span class="rop ' + cls + '" data-tip="' + tip + '">' + glyph + '</span><div class="rpair">' + ruleChip(a) + ruleChip(b) + '</div></div>';
     };
-    if (ru.type === 'exclude') return ru.forbid.map(function (x) { return mk('✕', 'exclude', 'Never together', ru.when, x); }).join('');
-    return mk('→', 'require', 'Always together', ru.when, ru.force);
+    if (ru.type === 'exclude') return ru.forbid.map(function (x) { return mk(MARK.exclude, 'exclude', 'Never together', ru.when, x); }).join('');
+    return mk(MARK.require, 'require', 'Always together', ru.when, ru.force);
   }
   function rulesFor(r, ingName) {
     return (r.rules || []).filter(function (ru) {
@@ -817,7 +840,7 @@
     var sum = ig.variants.reduce(function (a, v) { return a + v.w; }, 0) || 1;
     var v = ig.variants[state.variant] || ig.variants[0]; var inr = v.w / sum * 100, ov = inr * mint;
     var rl = rulesFor(r, ig.n);
-    var flag = rl.length ? '<button class="hflag" id="heroFlag" data-tip="See rules in the recipe" aria-label="' + rl.length + (rl.length === 1 ? ' rule' : ' rules') + ' — view in recipe">⚑ ' + rl.length + (rl.length === 1 ? ' rule' : ' rules') + '</button>' : '';
+    var flag = rl.length ? '<button class="hflag" id="heroFlag" data-tip="See rules in the recipe" aria-label="' + rl.length + (rl.length === 1 ? ' rule' : ' rules') + ' — view in recipe">' + MARK.flag + ' ' + rl.length + (rl.length === 1 ? ' rule' : ' rules') + '</button>' : '';
     return '<div class="vhero" id="vhero">' + petCv(84, v.hue, 0.58, 0.86) +
       '<div class="hbody"><div class="htop"><div class="hname">' + v.n + '</div>' + flag + '</div>' +
       '<div class="hsub"><span class="kind-txt ' + kcls(v.k) + '">' + v.k + '</span> · variant ' + (state.variant + 1) + ' of ' + ig.variants.length + '</div>' +
@@ -946,14 +969,22 @@
       var sh = ig.variants[0].hue, ss = 55;
       body = '<div class="cwtop"><span class="kind-txt stat">static</span><span class="cwmodel">' + model + ' · fixed</span></div>' +
         '<div class="hueband" style="background:' + valueGradient(sh, ss) + '"></div>' +
-        '<div class="cwranges"><span>Hue<b>' + sh + '°</b></span><span>Sat<b>' + ss + '%</b></span><span>Value<b>← value-map</b></span></div>' +
-        '<div class="cwnote">One fixed colour for <b>every</b> asset — applied deterministically, no roll.</div>';
+        '<div class="cwaxes">' +
+          '<div class="cwaxis"><span class="ax">Hue</span><span class="av">' + sh + '°</span></div>' +
+          '<div class="cwaxis"><span class="ax">Saturation</span><span class="av">' + ss + '%</span></div>' +
+          '<div class="cwaxis"><span class="ax">Value</span><span class="av der">from value-map</span></div>' +
+        '</div>' +
+        '<div class="cwnote">One fixed colour on <b>every</b> asset — applied deterministically, no roll.</div>';
     } else {
       var sp = hueSpan(ig), sr = COOK.satRange;
       body = '<div class="cwtop"><span class="kind-txt dyn">dynamic</span><span class="cwmodel">' + model + ' · rolled</span></div>' +
         '<div class="hueband" style="background:' + hueGradient(sp[0], sp[1]) + '"></div>' +
-        '<div class="cwranges"><span>Hue<b>' + sp[0] + '–' + sp[1] + '°</b></span><span>Sat<b>' + sr[0] + '–' + sr[1] + '%</b></span><span>Value<b>← value-map</b></span></div>' +
-        '<div class="cwnote">Colour <b>rolled per asset</b> across this range; the grayscale value-map keeps each pixel\'s lightness.</div>';
+        '<div class="cwaxes">' +
+          '<div class="cwaxis"><span class="ax">Hue</span><span class="av">' + sp[0] + '° – ' + sp[1] + '°</span></div>' +
+          '<div class="cwaxis"><span class="ax">Saturation</span><span class="av">' + sr[0] + '% – ' + sr[1] + '%</span></div>' +
+          '<div class="cwaxis"><span class="ax">Value</span><span class="av der">from value-map</span></div>' +
+        '</div>' +
+        '<div class="cwnote"><b>One colour rolled per asset</b> from this range; the value-map keeps each pixel\'s lightness.</div>';
     }
     return '<div class="cw-panel" id="cwPanel"><div class="cw-h"><span class="sub-h">Colorways</span></div>' + body + '</div>';
   }
@@ -961,7 +992,7 @@
 
   /* ---- toolbar + status ---- */
   function renderToolbar() {
-    var lbl = state.type === 'cookbook' ? 'Add recipe' : state.type === 'recipe' ? 'Add ingredient' : 'Add variant';
+    var lbl = state.type === 'cookbook' ? 'Add Recipe' : state.type === 'recipe' ? 'Add Ingredient' : 'Add Variant';
     document.getElementById('addBtn').innerHTML = ICON.plus + ' ' + lbl;
   }
   function renderStatus() {

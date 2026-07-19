@@ -70,11 +70,13 @@
            color: var(--fg); height: 38px; padding: 0 14px; border-radius: var(--r-lg); cursor: pointer;
            display: inline-flex; align-items: center; gap: 8px; }
   .ghost:hover { border-color: var(--accent-line); }
+  .ghost svg { width: 15px; height: 15px; flex: 0 0 auto; }
 
   /* app window — same chrome as explorer.html */
   .frame { overflow-x: auto; padding-bottom: 4px; }
   .window { width: 1180px; margin: 0 auto; background: var(--bg); border: 1px solid var(--line-strong);
-            border-radius: var(--r-win); box-shadow: var(--shadow); overflow: hidden; }
+            border-radius: var(--r-win); box-shadow: var(--shadow); overflow: hidden;
+            display: flex; flex-direction: column; min-height: 760px; }
 
   .titlebar { display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 10px 0 12px;
               background: linear-gradient(var(--panel), var(--bg-alt)); border-bottom: 1px solid var(--line);
@@ -86,6 +88,14 @@
   .brandtile .sq { width: 9px; height: 9px; background: var(--accent); border-radius: 2px; transform: rotate(45deg); }
   .wordmark { font-family: var(--font-mono); font-weight: 700; font-size: 15px; letter-spacing: -.01em; }
   .wordmark b { color: var(--accent-text); }
+  /* persistent workspace root — the open Kitchen. Fixed for every item below it;
+     changes only when you close this Kitchen and open another, so it sits apart
+     from the per-item breadcrumb rather than repeating as a path segment. */
+  .kroot { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; font-family: var(--font-mono);
+           font-size: 12.5px; color: var(--fg); padding: 3px 9px 3px 7px; border-radius: var(--r-sm);
+           background: var(--accent-wash); border: 1px solid var(--accent-line); }
+  .kroot svg { width: 14px; height: 14px; color: var(--accent-text); flex: 0 0 auto; }
+  .kroot b { font-weight: 600; }
   .tdiv { width: 1px; height: 18px; background: var(--line-strong); flex: 0 0 auto; }
   .crumbs { font-family: var(--font-mono); font-size: 12.5px; color: var(--fg-muted); display: flex;
             gap: 4px; align-items: center; flex: 1; min-width: 0; overflow: hidden; }
@@ -104,10 +114,11 @@
   .wc:active { transform: translateY(.5px); }
 
   /* ---- panes shell (reused grammar from explorer.html) ---- */
-  .panes-scroll { overflow-x: auto; }
-  .epanes { display: grid; grid-template-columns: 262px minmax(540px, 1fr) 300px; min-height: 480px; }
+  .panes-scroll { overflow-x: auto; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+  .epanes { display: grid; grid-template-columns: 262px minmax(540px, 1fr) 300px; grid-template-rows: 1fr;
+            min-height: 480px; flex: 1 1 auto; }
   @media (max-width: 900px) { .epanes { min-width: 1040px; } }
-  .pane { border-right: 1px solid var(--line); min-width: 0; display: flex; flex-direction: column; }
+  .pane { border-right: 1px solid var(--line); min-width: 0; min-height: 0; display: flex; flex-direction: column; }
   .pane:last-child { border-right: 0; }
   .pane-h { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase;
             color: var(--fg-muted); height: 41px; padding: 0 16px; display: flex; align-items: center; gap: 8px;
@@ -133,7 +144,9 @@
   .vw:focus { outline: 2px solid var(--accent-line); outline-offset: 1px; }
   .vaddbtn { margin: 0 10px 12px; font: inherit; font-size: 11.5px; color: var(--fg-muted);
              border: 1px dashed var(--line-strong); border-radius: var(--r-md); padding: 9px;
-             text-align: center; cursor: pointer; background: transparent; }
+             text-align: center; cursor: pointer; background: transparent;
+             display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .vaddbtn svg { width: 12px; height: 12px; flex: 0 0 auto; }
   .vaddbtn:hover { border-color: var(--accent-line); color: var(--accent-text); }
 
   /* ---- tool strip + canvas (center pane) ---- */
@@ -201,6 +214,7 @@
   .sbtn { font: inherit; width: 19px; height: 19px; border: 1px solid var(--line-strong); border-radius: var(--r-xs);
           display: grid; place-items: center; background: var(--panel); color: var(--fg); cursor: pointer; }
   .sbtn:hover { border-color: var(--accent-line); }
+  .sbtn svg { width: 11px; height: 11px; }
   .sval { min-width: 24px; text-align: center; color: var(--fg); font-weight: 600; font-family: var(--font-mono); }
   .swatch-lg { width: 34px; height: 34px; border-radius: var(--r-md); border: 1px solid var(--line-strong); flex: 0 0 auto; }
 
@@ -215,9 +229,16 @@
   .zoomctl { margin-left: auto; display: inline-flex; align-items: center; gap: 2px; }
   .zoomctl button { font: inherit; font-family: var(--font-mono); border: 1px solid var(--line-strong);
                     background: var(--panel); color: var(--fg); width: 24px; height: 24px; border-radius: var(--r-sm);
-                    cursor: pointer; line-height: 1; }
+                    cursor: pointer; line-height: 1; display: inline-grid; place-items: center; }
   .zoomctl button:hover { border-color: var(--accent-line); }
+  .zoomctl button svg { width: 13px; height: 13px; }
   .zoomctl .pct { min-width: 46px; text-align: center; }
+  /* the always-present help trigger — same idiom in landing.html / help.html */
+  .helpbtn { margin-left: 8px; font-family: var(--font-mono); font-size: 13px; line-height: 1;
+             width: 24px; height: 24px; border-radius: var(--r-sm); display: inline-grid; place-items: center;
+             cursor: pointer; color: var(--accent-text); background: var(--accent-wash);
+             border: 1px solid var(--accent-line); }
+  .helpbtn svg { width: 13px; height: 13px; }
 
   .note { max-width: 1180px; margin: 16px auto 0; font-size: 12.5px; color: var(--fg-muted);
           display: flex; gap: 10px; align-items: flex-start; }
@@ -233,16 +254,18 @@
       <h1>nfty · ingredient editor</h1>
       <p>The authoring counterpart to the Explorer: paint one Ingredient's grayscale <b>value-maps</b> and tune how
         they colorize at cook time. Unlike the Explorer, this screen has <span class="a">no lock</span> — it exists
-        only to edit, so every control is live: variant weights are inputs, the tools are always armed, and the
+        only to edit, so every control is live: Variant weights are inputs, the tools are always armed, and the
         <b>Colorize</b> rail updates its preview as you drag.</p>
     </div>
-    <button class="ghost" id="theme" title="Toggle light / dark">◐ Theme</button>
+    <button class="ghost" id="theme" title="Toggle light / dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/></svg> Theme</button>
   </div>
 
   <div class="frame">
     <div class="window">
       <div class="titlebar">
         <div class="brand"><span class="brandtile"><span class="sq"></span></span><span class="wordmark">nft<b>y</b></span></div>
+        <span class="tdiv"></span>
+        <span class="kroot" title="Open workspace — the Kitchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="1.8" fill="var(--panel)"/><path d="M3.5 9.2h17"/><path d="M7 3.6v2.2M12 3.6v2.2" stroke-linecap="round"/><rect x="6.6" y="12" width="4" height="4" rx="1" fill="var(--accent)" stroke="none"/></svg><b>VaporStudio</b></span>
         <span class="tdiv"></span>
         <div class="crumbs">
           <span class="cseg">VaporPets</span><span class="sep">›</span>
@@ -283,7 +306,7 @@
                 <div class="vmeta"><div class="vname">Ghostly</div><div class="vsub">weight <input class="vw" value="15"><span>· 12%</span></div></div>
               </div>
             </div>
-            <button class="vaddbtn">+ Add variant</button>
+            <button class="vaddbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg> Add Variant</button>
           </div>
 
           <!-- ===== Tool strip + canvas ===== -->
@@ -378,8 +401,8 @@
               <div class="ctlrow" id="quantizeRow">
                 <div class="ctl-h"><span class="plabel">Quantize step</span><span class="cv" id="qcount">≈ 91 colors</span></div>
                 <div class="qrow">
-                  <div class="step">Hue <button class="sbtn">−</button><span class="sval" id="qHue">12°</span><button class="sbtn">+</button></div>
-                  <div class="step">Sat <button class="sbtn">−</button><span class="sval" id="qSat">4%</span><button class="sbtn">+</button></div>
+                  <div class="step">Hue <button class="sbtn" data-step="down" aria-label="Decrease hue quantize step"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 12h12" stroke-linecap="round"/></svg></button><span class="sval" id="qHue">12°</span><button class="sbtn" data-step="up" aria-label="Increase hue quantize step"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 6v12M6 12h12" stroke-linecap="round"/></svg></button></div>
+                  <div class="step">Sat <button class="sbtn" data-step="down" aria-label="Decrease saturation quantize step"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 12h12" stroke-linecap="round"/></svg></button><span class="sval" id="qSat">4%</span><button class="sbtn" data-step="up" aria-label="Increase saturation quantize step"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 6v12M6 12h12" stroke-linecap="round"/></svg></button></div>
                 </div>
               </div>
             </div>
@@ -393,17 +416,18 @@
         <span class="state editing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M15 5l4 4"/><path d="M4 20l4-1L19 8a2 2 0 0 0-3-3L5 16z"/></svg> editing</span>
         <span>1000 × 1000</span><span>brush 24px · value 0.62</span><span>Dynamic · 4 variants</span>
         <span class="zoomctl">
-          <button id="zOut" aria-label="Zoom out">−</button>
+          <button id="zOut" aria-label="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 12h12" stroke-linecap="round"/></svg></button>
           <span class="pct" id="zPct" aria-live="polite">100%</span>
-          <button id="zIn" aria-label="Zoom in">+</button>
+          <button id="zIn" aria-label="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 6v12M6 12h12" stroke-linecap="round"/></svg></button>
         </span>
+        <button class="helpbtn" data-tip="Quick reference — ⌘/" aria-label="Quick reference (⌘/)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.1 2.4c-.5.2-.8.7-.8 1.2v.6" stroke-linecap="round"/><circle cx="12" cy="16.7" r="1" fill="currentColor" stroke="none"/></svg></button>
       </div>
     </div>
   </div>
 
   <div class="note">
     <span class="k">try it →</span>
-    <span>Click a variant card to switch which value-map you're painting, drag the Colorize rail's range handles,
+    <span>Click a Variant card to switch which value-map you're painting, drag the Colorize rail's range handles,
       flip the <b style="color:var(--fg)">Static ⇄ Dynamic</b> segmented toggle to see the controls swap, and step
       the quantize buckets. The corner preview always shows what the <b style="color:var(--fg)">cook</b> path
       would render — reroll it to sample a new colour.</span>
@@ -467,7 +491,7 @@
       var span = btn.parentElement.querySelector('.sval');
       var unit = span.textContent.replace(/[0-9.\-]/g, '');
       var n = parseInt(span.textContent, 10) || 0;
-      n = Math.max(0, n + (btn.textContent === '+' ? 1 : -1));
+      n = Math.max(0, n + (btn.getAttribute('data-step') === 'up' ? 1 : -1));
       span.textContent = n + unit;
     });
   });
