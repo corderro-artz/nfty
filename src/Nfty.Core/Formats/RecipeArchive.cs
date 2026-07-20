@@ -16,10 +16,19 @@ public static class RecipeArchive
     public static LoadedRecipe Read(ZipArchive zip)
     {
         var manifest = ArchiveIo.ReadManifest<RecipeManifest>(zip);
-        var ingredients = ArchiveIo.EntryNamesUnder(zip, "ingredients/")
-            .OrderBy(n => n, StringComparer.Ordinal)
-            .Select(n => ArchiveIo.ReadNested(zip, n, IngredientArchive.Read))
-            .ToList();
+        var ingredients = new List<LoadedIngredient>();
+        try
+        {
+            foreach (var name in ArchiveIo.EntryNamesUnder(zip, "ingredients/").OrderBy(n => n, StringComparer.Ordinal))
+                ingredients.Add(ArchiveIo.ReadNested(zip, name, IngredientArchive.Read));
+        }
+        catch
+        {
+            // Ingredients already decoded (each owning its own variant images) before a later
+            // one threw have no other owner yet — dispose them before the exception propagates.
+            foreach (var ing in ingredients) ing.Dispose();
+            throw;
+        }
         return new LoadedRecipe { Manifest = manifest, Ingredients = ingredients };
     }
 
@@ -48,8 +57,16 @@ public static class RecipeArchive
     {
         var manifest = await ArchiveIo.ReadManifestAsync<RecipeManifest>(zip, ct);
         var ingredients = new List<LoadedIngredient>();
-        foreach (var name in ArchiveIo.EntryNamesUnder(zip, "ingredients/").OrderBy(n => n, StringComparer.Ordinal))
-            ingredients.Add(await ArchiveIo.ReadNestedAsync(zip, name, IngredientArchive.ReadAsync, ct));
+        try
+        {
+            foreach (var name in ArchiveIo.EntryNamesUnder(zip, "ingredients/").OrderBy(n => n, StringComparer.Ordinal))
+                ingredients.Add(await ArchiveIo.ReadNestedAsync(zip, name, IngredientArchive.ReadAsync, ct));
+        }
+        catch
+        {
+            foreach (var ing in ingredients) ing.Dispose();
+            throw;
+        }
         return new LoadedRecipe { Manifest = manifest, Ingredients = ingredients };
     }
 

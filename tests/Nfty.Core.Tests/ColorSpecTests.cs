@@ -23,4 +23,29 @@ public class ColorSpecTests
     [Fact]
     public void Unknown_prefix_throws() =>
         Assert.Throws<FormatException>(() => ColorSpec.Parse("cmyk:1,2,3,4"));
+
+    // --- hex parsing (finding 3) ---
+
+    [Fact]
+    public void Invalid_hex_digits_throw_a_hand_written_message_not_the_framework_one()
+    {
+        var ex = Assert.Throws<FormatException>(() => ColorSpec.Parse("hex:zzzzzz"));
+
+        Assert.Contains("zzzzzz", ex.Message, StringComparison.Ordinal);
+        // .NET's own byte.Parse wording, which every sibling validation message is hand-written
+        // to avoid leaking to a user.
+        Assert.DoesNotContain("was not in a correct format", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Eight_digit_hex_with_alpha_is_rejected_not_silently_truncated() =>
+        Assert.Throws<FormatException>(() => ColorSpec.Parse("hex:d6249fff"));
+
+    [Fact]
+    public void Eight_digit_hex_rejection_explains_that_alpha_is_unused()
+    {
+        var ex = Assert.Throws<FormatException>(() => ColorSpec.Parse("hex:d6249fff"));
+
+        Assert.Contains("alpha", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
 }

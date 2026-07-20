@@ -2,18 +2,64 @@ namespace Nfty.Core.Generation;
 
 public static class WeightedRoller
 {
-    public static string Roll(IReadOnlyDictionary<string, double> weights, IRng rng)
+    /// <summary>
+    /// A weight table with its ordering and running totals already resolved. Both are fixed
+    /// properties of the cookbook, so a caller that rolls the same table repeatedly should
+    /// <see cref="Prepare"/> it once and roll the result, instead of re-sorting and re-summing
+    /// on every draw.
+    /// </summary>
+    public readonly struct WeightTable
     {
+        internal WeightTable(string[] keys, double[] cumulative)
+        {
+            Keys = keys;
+            Cumulative = cumulative;
+        }
+
+        /// <summary>Keys in ordinal order — the order the draw walks, and why it is locale-independent.</summary>
+        internal string[] Keys { get; }
+
+        /// <summary>Running total of the weights in <see cref="Keys"/> order; the last entry is the total.</summary>
+        internal double[] Cumulative { get; }
+
+        internal double Total => Cumulative.Length == 0 ? 0 : Cumulative[^1];
+    }
+
+    /// <summary>
+    /// Resolves the draw order and running totals of a weight table. Pure: an unusable table
+    /// (zero or negative total) is not rejected here but on the <see cref="Roll(WeightTable, IRng)"/>
+    /// that tries to use it, so preparing a table early cannot move where the error surfaces.
+    /// </summary>
+    public static WeightTable Prepare(IReadOnlyDictionary<string, double> weights)
+    {
+        // Ordinal, not the default culture-sensitive comparison: the draw order decides which key
+        // a given random number lands on, so a culture-dependent order would make the same seed
+        // produce different output on different machines.
         var ordered = weights.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToList();
-        double total = ordered.Sum(kv => kv.Value);
+        var keys = new string[ordered.Count];
+        var cumulative = new double[ordered.Count];
+        double acc = 0;
+        for (int i = 0; i < ordered.Count; i++)
+        {
+            keys[i] = ordered[i].Key;
+            acc += ordered[i].Value;
+            cumulative[i] = acc;
+        }
+        return new WeightTable(keys, cumulative);
+    }
+
+    public static string Roll(IReadOnlyDictionary<string, double> weights, IRng rng) =>
+        Roll(Prepare(weights), rng);
+
+    public static string Roll(WeightTable table, IRng rng)
+    {
+        double total = table.Total;
         if (total <= 0) throw new InvalidOperationException("Total weight must be positive.");
 
-        double r = rng.NextDouble() * total, acc = 0;
-        foreach (var kv in ordered)
-        {
-            acc += kv.Value;
-            if (r < acc) return kv.Key;
-        }
-        return ordered[^1].Key;
+        double r = rng.NextDouble() * total;
+        var cumulative = table.Cumulative;
+        for (int i = 0; i < cumulative.Length; i++)
+            if (r < cumulative[i]) return table.Keys[i];
+        return table.Keys[^1];
     }
 }

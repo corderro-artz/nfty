@@ -89,6 +89,31 @@ public class GeneratorTests
     }
 
     [Fact]
+    public void Exhausted_space_max_ignores_a_recipe_weighted_zero()
+    {
+        // 'robot' is weighted zero, so WeightedRoller can never return it: its 4 combinations are
+        // unreachable and must not be added to the maximum this run could have produced. Only
+        // 'cat' is in play, and cat allows exactly 1.
+        var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "VaporPets", new Dimensions(2, 2),
+                new Collection("VaporPets", "d", "VP"),
+                new Dictionary<string, double> { ["cat"] = 1, ["robot"] = 0 }),
+            Recipes = new[]
+            {
+                Recipe("cat", Ing("bg", "a"), Ing("body", "x")),
+                Recipe("robot", Ing("bg", "a", "b"), Ing("body", "x", "y")),
+            },
+        };
+
+        var ex = Assert.Throws<UniqueSpaceExhaustedException>(
+            () => Generator.Generate(book, new GenerateOptions(2, "seed-1")));
+
+        Assert.Equal(1, ex.Available);
+        Assert.True(ex.IsExact);
+    }
+
+    [Fact]
     public void Unsatisfiable_rules_report_a_conflict_not_exhaustion()
     {
         // The only body excludes the only hat, so no combination is legal.
@@ -138,5 +163,55 @@ public class GeneratorTests
     {
         var set = Generator.Generate(TwoRecipeBook(), new GenerateOptions(1, "s", RecipeId: "robot"));
         Assert.Equal("robot", set.Assets.Single().RecipeId);
+    }
+
+    [Fact]
+    public void Negative_count_is_rejected_by_generate()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => Generator.Generate(OneRecipeBook(), new GenerateOptions(-5, "seed-1")));
+        Assert.Contains("-5", ex.Message);
+    }
+
+    [Fact]
+    public void Zero_count_is_rejected_by_generate()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => Generator.Generate(OneRecipeBook(), new GenerateOptions(0, "seed-1")));
+        Assert.Contains("0", ex.Message);
+    }
+
+    [Fact]
+    public async Task Negative_count_is_rejected_by_generate_async()
+    {
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => Generator.GenerateAsync(OneRecipeBook(), new GenerateOptions(-5, "seed-1")));
+        Assert.Contains("-5", ex.Message);
+    }
+
+    [Fact]
+    public async Task Zero_count_is_rejected_by_generate_async()
+    {
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => Generator.GenerateAsync(OneRecipeBook(), new GenerateOptions(0, "seed-1")));
+        Assert.Contains("0", ex.Message);
+    }
+
+    [Fact]
+    public void Negative_count_is_rejected_by_generate_streaming_at_call_time()
+    {
+        // GenerateStreaming's validation lives in a non-iterator wrapper so it runs when the
+        // method is CALLED, not on first MoveNext. Asserting the throw happens on the call
+        // itself (never touching the returned IEnumerable) is what catches a regression where
+        // the check got moved inside the iterator body instead.
+        Assert.Throws<InvalidOperationException>(
+            () => Generator.GenerateStreaming(OneRecipeBook(), new GenerateOptions(-5, "seed-1")));
+    }
+
+    [Fact]
+    public void Zero_count_is_rejected_by_generate_streaming_at_call_time()
+    {
+        Assert.Throws<InvalidOperationException>(
+            () => Generator.GenerateStreaming(OneRecipeBook(), new GenerateOptions(0, "seed-1")));
     }
 }

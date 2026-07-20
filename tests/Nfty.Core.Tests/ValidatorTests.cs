@@ -496,6 +496,73 @@ public class ValidatorTests
                  && p.Contains("empty", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public void Duplicate_layerOrder_entry_reported()
+    {
+        // Generation iterates layerOrder, so a repeated entry rolls the layer twice: two trait
+        // selections for one category, doubled rarity counts, and only the last roll reaching
+        // the rules. A repeat has no coherent meaning, so it is rejected rather than defined.
+        var ing = Ing("bg", new Variant("a", "A", 1));
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("cat", "cat", new[] { "bg", "bg" },
+                Array.Empty<IncompatibilityRule>()),
+            Ingredients = new[] { ing },
+        };
+        var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "Book", new Dimensions(4, 4),
+                new Collection("B", "", "B"), new Dictionary<string, double> { ["cat"] = 1.0 }),
+            Recipes = new[] { recipe },
+        };
+
+        Assert.Contains(Validator.Validate(book),
+            p => p.Contains("more than once", StringComparison.OrdinalIgnoreCase)
+                 && p.Contains("layerOrder", StringComparison.OrdinalIgnoreCase)
+                 && p.Contains("'bg'", StringComparison.Ordinal));
+    }
+
+    // --- negative weights (weights are zero-or-greater; zero shelves, negative corrupts) ---
+
+    [Fact]
+    public void Negative_variant_weight_reported()
+    {
+        // The roller accumulates weights in order, so a negative one walks the running total
+        // backwards and steals the share of every variant after it. The total can still be
+        // positive, so the zero-total check alone never sees this.
+        var book = BookOf(Rec("cat", Ing("bg",
+            new Variant("a", "A", 1), new Variant("b", "B", -1), new Variant("c", "C", 1))));
+
+        Assert.Contains(Validator.Validate(book),
+            p => p.Contains("negative", StringComparison.OrdinalIgnoreCase)
+                 && p.Contains("'b'", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Negative_recipe_weight_reported() =>
+        Assert.Contains(Validator.Validate(Book(4, 4, 10, -1)),
+            p => p.Contains("negative", StringComparison.OrdinalIgnoreCase)
+                 && p.Contains("recipe weight", StringComparison.OrdinalIgnoreCase));
+
+    [Fact]
+    public void Negative_colorization_entry_weight_reported() =>
+        Assert.Contains(
+            Validator.Validate(Wrap(new IngredientManifest("d", "D", LayerKind.Dynamic,
+                new Colorization(ColorModel.Hsv, 5, 5, new[]
+                {
+                    new ColorEntry(1, new ColorRange(0, 10, 0, 10), null),
+                    new ColorEntry(-1, new ColorRange(20, 30, 0, 10), null),
+                }),
+                new[] { new Variant("v", "v", 1) }))),
+            p => p.Contains("negative weight", StringComparison.OrdinalIgnoreCase));
+
+    [Fact]
+    public void Zero_weight_variant_alongside_a_rollable_one_is_not_a_problem() =>
+        // Zero is how an author shelves a variant without deleting it. It is the counting code's
+        // job to stop promising it, not the validator's job to outlaw it.
+        Assert.Empty(Validator.Validate(BookOf(Rec("cat", Ing("bg",
+            new Variant("a", "A", 1), new Variant("b", "B", 0))))));
+
     // --- colour spec parsing (finding 4, spec section 9) ---
 
     [Fact]
@@ -548,6 +615,32 @@ public class ValidatorTests
                     new[] { new ColorEntry(0, new ColorRange(0, 10, 0, 10), null) }),
                 new[] { new Variant("v", "v", 1) }))),
             p => p.Contains("zero total", StringComparison.OrdinalIgnoreCase));
+
+    // --- quantize fields (finding 2) ---
+
+    [Fact]
+    public void Zero_hueQuantize_reported() =>
+        Assert.Contains(
+            Validator.Validate(Wrap(new IngredientManifest("d", "D", LayerKind.Dynamic,
+                new Colorization(ColorModel.Hsv, 0, 5, new[] { new ColorEntry(1, new ColorRange(0, 10, 0, 10), null) }),
+                new[] { new Variant("v", "v", 1) }))),
+            p => p.Contains("hueQuantize", StringComparison.Ordinal));
+
+    [Fact]
+    public void Negative_satQuantize_reported() =>
+        Assert.Contains(
+            Validator.Validate(Wrap(new IngredientManifest("d", "D", LayerKind.Dynamic,
+                new Colorization(ColorModel.Hsv, 5, -3, new[] { new ColorEntry(1, new ColorRange(0, 10, 0, 10), null) }),
+                new[] { new Variant("v", "v", 1) }))),
+            p => p.Contains("satQuantize", StringComparison.Ordinal));
+
+    [Fact]
+    public void Positive_quantize_values_have_no_quantize_problem() =>
+        Assert.DoesNotContain(
+            Validator.Validate(Wrap(new IngredientManifest("d", "D", LayerKind.Dynamic,
+                new Colorization(ColorModel.Hsv, 5, 5, new[] { new ColorEntry(1, new ColorRange(0, 10, 0, 10), null) }),
+                new[] { new Variant("v", "v", 1) }))),
+            p => p.Contains("Quantize", StringComparison.Ordinal));
 
     // --- grayscale value-maps (Task 12) ---
 

@@ -15,6 +15,16 @@ public class UniqueSpaceTests
         VariantImages = variantIds.ToDictionary(v => v, _ => new Image<Rgba32>(2, 2, new Rgba32(1, 2, 3, 255))),
     };
 
+    // A custom ingredient whose variants carry explicit weights, so a shelved (zero-weight)
+    // variant can be told apart from a rollable one.
+    private static LoadedIngredient CustomWeighted(string id, params (string Id, double Weight)[] variants) => new()
+    {
+        Manifest = new IngredientManifest(id, id, LayerKind.Custom, null,
+            variants.Select(v => new Variant(v.Id, v.Id, v.Weight)).ToList()),
+        VariantImages = variants.ToDictionary(
+            v => v.Id, _ => new Image<Rgba32>(2, 2, new Rgba32(1, 2, 3, 255))),
+    };
+
     private static LoadedIngredient StaticIng(string id, params string[] variantIds) => new()
     {
         Manifest = new IngredientManifest(id, id, LayerKind.Static,
@@ -282,6 +292,138 @@ public class UniqueSpaceTests
 
         Assert.Equal(0, count["cat"].Total);
         Assert.False(count["cat"].IsExact);
+    }
+
+    // --- weights the rollers can never land on ---
+
+    [Fact]
+    public void Zero_weight_variant_is_not_counted()
+    {
+        // WeightedRoller returns the first variant whose running weight total passes the sample,
+        // so a zero-weight variant never advances that total and can never be rolled. Counting it
+        // promises DNA that does not exist.
+        var book = Book(Recipe("cat", Array.Empty<IncompatibilityRule>(),
+            CustomWeighted("bg", ("a", 1), ("b", 1), ("c", 0))));
+
+        Assert.Equal(2, UniqueSpace.Count(book).Total);
+        Assert.Equal(2, RollDistinctDna(book, 10_000));
+    }
+
+    [Fact]
+    public void Generating_the_counted_space_of_a_book_with_a_shelved_variant_succeeds()
+    {
+        // The count is a promise, and a shelved variant must not inflate it: 2 must generate,
+        // and asking for the third must name 2 as the true maximum rather than contradict itself.
+        var book = Book(Recipe("cat", Array.Empty<IncompatibilityRule>(),
+            CustomWeighted("bg", ("a", 1), ("b", 1), ("c", 0))));
+
+        using (var set = Generator.Generate(book, new GenerateOptions(2, "seed")))
+            Assert.Equal(2, set.Assets.Select(a => a.Dna).Distinct().Count());
+
+        var ex = Assert.Throws<UniqueSpaceExhaustedException>(
+            () => Generator.Generate(book, new GenerateOptions(3, "seed")));
+
+        Assert.Equal(2, ex.Available);
+        Assert.True(ex.IsExact);
+    }
+
+    [Fact]
+    public void Zero_weight_colour_entry_contributes_no_buckets()
+    {
+        // ColorRoller.PickEntry accumulates weights the same way, so a zero-weight entry is
+        // unreachable and its buckets belong to no asset. Only the hue 0..90 entry can be rolled
+        // (3 buckets at quantize 30); the shelved 180..270 entry would have added 3 more.
+        var ing = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("aura", "aura", LayerKind.Dynamic,
+                new Colorization(ColorModel.Hsv, 30, 10, new[]
+                {
+                    new ColorEntry(1, new ColorRange(0, 90, 0, 0), null),
+                    new ColorEntry(0, new ColorRange(180, 270, 0, 0), null),
+                }),
+                new[] { new Variant("glow", "glow", 1) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>>
+            {
+                ["glow"] = new Image<Rgba32>(2, 2, new Rgba32(2, 2, 2, 255)),
+            },
+        };
+        var book = Book(Recipe("cat", Array.Empty<IncompatibilityRule>(), ing));
+
+        Assert.Equal(3, UniqueSpace.Count(book).Total);
+        Assert.Equal(3, RollDistinctDna(book, 200_000));
+    }
+
+    [Fact]
+    public void A_variant_list_that_is_entirely_shelved_is_still_a_validation_problem()
+    {
+        // Zero-weight variants are legal individually, so nothing may quietly reduce an
+        // ingredient to no rollable variants at all — that is a broken book, and it is the
+        // zero-total-weight check that must catch it rather than the space collapsing to 0.
+        var book = Book(Recipe("cat", Array.Empty<IncompatibilityRule>(),
+            CustomWeighted("bg", ("a", 0), ("b", 0))));
+
+        Assert.Contains(Validator.Validate(book),
+            p => p.Contains("zero total variant weight", StringComparison.OrdinalIgnoreCase));
+    }
+
+    // --- Count must never throw on a mid-edit, transiently invalid book (finding 1) ---
+
+    [Fact]
+    public void Duplicate_ingredient_id_does_not_throw_and_resolves_last_one_wins()
+    {
+        // Two ingredients sharing id "bg". Count must not throw ArgumentException the way a bare
+        // ToDictionary would; it resolves duplicate-tolerantly (last wins), same house style as
+        // Validator.CheckRecipe's own ingById.
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("cat", "cat", new[] { "bg" }, Array.Empty<IncompatibilityRule>()),
+            Ingredients = new[] { Custom("bg", "a"), Custom("bg", "b") },
+        };
+        var book = Book(recipe);
+
+        Assert.Equal(1, UniqueSpace.Count(book).Total);
+    }
+
+    [Fact]
+    public void Dangling_layerOrder_reference_does_not_throw_and_reports_uncountable()
+    {
+        // layerOrder names an ingredient the recipe does not carry. Count must not throw
+        // KeyNotFoundException the way ingById[id] would; it reports the recipe as uncountable
+        // (zero total, zero combos, not exact) rather than crashing or claiming an honest zero.
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("cat", "cat", new[] { "missing" }, Array.Empty<IncompatibilityRule>()),
+            Ingredients = Array.Empty<LoadedIngredient>(),
+        };
+        var book = Book(recipe);
+
+        var count = UniqueSpace.Count(book);
+
+        Assert.Equal(0, count.Total);
+        Assert.False(count.IsExact);
+        Assert.Equal(0, count["cat"].Combos);
+        Assert.False(count["cat"].IsExact);
+    }
+
+    [Fact]
+    public void Duplicate_variant_id_is_counted_once_not_once_per_entry()
+    {
+        // Two variant entries sharing id "a" roll to the same DNA regardless of which entry the
+        // roller lands on (Dna records the variant id, not the entry). Counting both promises
+        // one more distinct DNA than the id space actually holds.
+        var ing = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("bg", "bg", LayerKind.Custom, null,
+                new[] { new Variant("a", "A1", 1), new Variant("a", "A2", 1), new Variant("b", "B", 1) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>>
+            {
+                ["a"] = new Image<Rgba32>(2, 2, new Rgba32(1, 2, 3, 255)),
+                ["b"] = new Image<Rgba32>(2, 2, new Rgba32(1, 2, 3, 255)),
+            },
+        };
+        var book = Book(Recipe("cat", Array.Empty<IncompatibilityRule>(), ing));
+
+        Assert.Equal(2, UniqueSpace.Count(book).Total);
     }
 
     [Fact]

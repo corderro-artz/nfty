@@ -15,7 +15,10 @@ namespace Nfty.Core.Generation;
 /// Whether <see cref="Total"/> is the real figure rather than a floor. Decided while counting,
 /// where it was still known whether the combinations or the buckets gave up: a saturated
 /// combination count multiplied by zero buckets lands back under the cap, so this cannot be
-/// re-derived afterwards from <c>Total &lt; Cap</c>.
+/// re-derived afterwards from <c>Total &lt; Cap</c>. Also false — with <see cref="Total"/> and
+/// <see cref="Combos"/> both zero — when the recipe itself could not be resolved (a layerOrder
+/// entry naming a missing ingredient): that recipe's real space is undefined until the book is
+/// fixed, not honestly zero, so it must never be read as a rule conflict either.
 /// </param>
 public record RecipeSpace(long Total, long Combos, bool IsExact);
 
@@ -71,12 +74,13 @@ public static class UniqueSpace
     /// <summary>Variant combinations that satisfy the recipe's rules.</summary>
     private static (long Count, bool Exact) LegalCombinations(LoadedRecipe recipe, long cap)
     {
-        var ingById = recipe.Ingredients.ToDictionary(i => i.Manifest.Id);
-        var layers = recipe.Manifest.LayerOrder.Select(id => ingById[id]).ToList();
+        if (!TryResolveLayers(recipe, out var resolved))
+            return (0, false);
+        var layers = resolved.Select(Reachable).ToList();
 
         long product = 1;
         foreach (var layer in layers)
-            product = Multiply(product, layer.Manifest.Variants.Count, cap);
+            product = Multiply(product, layer.Variants.Count, cap);
 
         // No rules: every combination is legal, so the product is the answer.
         if (recipe.Manifest.Rules.Count == 0)
@@ -98,28 +102,81 @@ public static class UniqueSpace
                 return;
             }
             var layer = layers[depth];
-            foreach (var v in layer.Manifest.Variants)
+            foreach (var v in layer.Variants)
             {
-                selection[layer.Manifest.Id] = v.Id;
+                selection[layer.Id] = v.Id;
                 Walk(depth + 1);
             }
-            selection.Remove(layer.Manifest.Id);
+            selection.Remove(layer.Id);
         }
 
         Walk(0);
         return (legal, true);
     }
 
+    /// <summary>One layer reduced to the variants a roll can actually land on.</summary>
+    private record ReachableLayer(string Id, IReadOnlyList<Variant> Variants);
+
+    /// <summary>
+    /// The variants of an ingredient that <see cref="WeightedRoller.Roll"/> can return. It walks
+    /// the entries accumulating weight and returns the first whose running total passes the
+    /// sample, so a zero-weight variant never advances that total past its predecessor and is
+    /// unreachable — a deliberate way for an author to shelve a variant without deleting it.
+    /// Counting it would promise DNA that can never be rolled. Also collapsed to one entry per
+    /// id: two variants sharing an id resolve to the same DNA regardless of which one the roller
+    /// lands on (<see cref="Dna"/> records the variant id, not which entry produced it), so
+    /// counting both separately would promise more DNA than the id space actually holds.
+    /// Validator rejects a duplicate variant id outright, so this only guards the same class of
+    /// latent bug <see cref="TryResolveLayers"/> guards for ingredient ids.
+    /// </summary>
+    private static ReachableLayer Reachable(LoadedIngredient ing) =>
+        new(ing.Manifest.Id, ing.Manifest.Variants
+            .Where(v => v.Weight > 0)
+            .DistinctBy(v => v.Id, StringComparer.Ordinal)
+            .ToList());
+
+    /// <summary>
+    /// Resolves a recipe's layerOrder to its ingredients, in order. <see cref="Count"/> is a
+    /// public API the planned GUI calls live while a CookBook is mid-edit — a transiently invalid
+    /// book (a duplicate ingredient id, or a layerOrder entry naming a removed ingredient) is a
+    /// normal state to see there, not a crash. So this never throws: ingredient ids are resolved
+    /// duplicate-tolerantly (last one wins, same as <c>Validator.CheckRecipe</c>'s own ingById),
+    /// and a layerOrder entry with no matching ingredient fails the whole recipe back to the
+    /// caller as "unresolved" rather than indexing a missing key. Deciding what makes a book
+    /// legal is Validator's job, not this one's — this only has to avoid throwing on an illegal
+    /// one.
+    /// </summary>
+    private static bool TryResolveLayers(LoadedRecipe recipe, out List<LoadedIngredient> layers)
+    {
+        var ingById = new Dictionary<string, LoadedIngredient>();
+        foreach (var i in recipe.Ingredients) ingById[i.Manifest.Id] = i;
+
+        var resolved = new List<LoadedIngredient>(recipe.Manifest.LayerOrder.Count);
+        foreach (var id in recipe.Manifest.LayerOrder)
+        {
+            if (!ingById.TryGetValue(id, out var ing))
+            {
+                layers = new List<LoadedIngredient>();
+                return false;
+            }
+            resolved.Add(ing);
+        }
+
+        layers = resolved;
+        return true;
+    }
+
     /// <summary>The product of every dynamic layer's distinct quantized (H,S) buckets.</summary>
     private static (long Count, bool Exact) ColourBuckets(LoadedRecipe recipe, long cap)
     {
-        var ingById = recipe.Ingredients.ToDictionary(i => i.Manifest.Id);
+        if (!TryResolveLayers(recipe, out var layers))
+            return (0, false);
+
         long product = 1;
         bool exact = true;
 
-        foreach (var layerId in recipe.Manifest.LayerOrder)
+        foreach (var ing in layers)
         {
-            var ing = ingById[layerId];
             // Static and custom layers resolve to one constant bucket each.
             if (ing.Manifest.Kind != LayerKind.Dynamic) continue;
 
@@ -140,6 +197,10 @@ public static class UniqueSpace
 
         foreach (var entry in col.Entries)
         {
+            // ColorRoller.PickEntry accumulates weight exactly as WeightedRoller does, so a
+            // zero-weight entry is never picked and contributes no bucket.
+            if (entry.Weight <= 0) continue;
+
             if (entry.Fixed is not null)
             {
                 var c = ColorRoller.FromFixed(entry.Fixed, col.Model);

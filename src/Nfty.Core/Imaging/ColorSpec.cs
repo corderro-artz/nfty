@@ -27,9 +27,27 @@ public static class ColorSpec
 
     private static RgbColor Hex(string body)
     {
-        if (body.Length != 6 && body.Length != 8)
-            throw new FormatException($"hex expects rrggbb or rrggbbaa, got '{body}'.");
-        byte P(int start) => byte.Parse(body.Substring(start, 2), NumberStyles.HexNumber);
+        // The 8-digit rrggbbaa form used to be accepted and then quietly threw the alpha pair
+        // away: RgbColor has no alpha field, and a colorization only ever takes H/S from a fixed
+        // color (value comes from the grayscale value-map), so there is nowhere for it to go.
+        // Silently accepting a value that is then ignored is worse than rejecting it, so reject.
+        if (body.Length == 8)
+            throw new FormatException($"hex color '{body}' has 8 digits (rrggbbaa), but only hue "
+                + "and saturation are ever taken from a color here — the alpha pair would be "
+                + "parsed and then silently discarded. Use 6-digit rrggbb instead.");
+        if (body.Length != 6)
+            throw new FormatException(
+                $"hex color '{body}' must be exactly 6 hex digits (rrggbb); got {body.Length}.");
+
+        byte P(int start)
+        {
+            if (!byte.TryParse(body.AsSpan(start, 2), NumberStyles.HexNumber,
+                    CultureInfo.InvariantCulture, out byte value))
+                throw new FormatException(
+                    $"hex color '{body}' has a non-hex digit at position {start + 1}.");
+            return value;
+        }
+
         return new RgbColor(P(0), P(2), P(4));
     }
 

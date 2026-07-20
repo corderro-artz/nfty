@@ -26,6 +26,15 @@ public static class Validator
         if (cb.Manifest.RecipeWeights.Values.Sum() <= 0)
             problems.Add("CookBook has zero total recipe weight.");
 
+        // A weight of zero shelves a recipe without deleting it, which is legitimate. A NEGATIVE
+        // weight is not: the roller accumulates weights in order and returns the first entry whose
+        // running total passes the sample, so a negative one silently steals the share of the
+        // entries after it and makes the counted space unreachable.
+        foreach (var (id, weight) in cb.Manifest.RecipeWeights)
+            if (weight < 0)
+                problems.Add($"Recipe '{id}' has a negative recipe weight ({weight}); "
+                    + "weights must be zero or greater, and zero means never rolled.");
+
         var recipeIds = cb.Recipes.Select(r => r.Manifest.Id).ToHashSet();
         foreach (var id in cb.Manifest.RecipeWeights.Keys)
             if (!recipeIds.Contains(id))
@@ -58,9 +67,10 @@ public static class Validator
     }
 
     /// <summary>
-    /// layerOrder and the ingredient list must name exactly the same set: generation only ever
-    /// rolls layerOrder, so an ingredient missing from it is never composited, and a layerOrder
-    /// entry with no ingredient has nothing to roll.
+    /// layerOrder and the ingredient list must name exactly the same set, each id once:
+    /// generation only ever rolls layerOrder, so an ingredient missing from it is never
+    /// composited, a layerOrder entry with no ingredient has nothing to roll, and a repeated
+    /// entry rolls the same layer twice.
     /// </summary>
     private static void CheckLayerOrder(
         List<string> problems, LoadedRecipe r, Dictionary<string, LoadedIngredient> ingById)
@@ -73,6 +83,14 @@ public static class Validator
         foreach (var layerId in r.Manifest.LayerOrder)
             if (!ingById.ContainsKey(layerId))
                 problems.Add($"Recipe '{r.Manifest.Id}' layerOrder references unknown ingredient '{layerId}'.");
+
+        // A repeated entry rolls that layer once per appearance: the asset gets two selections
+        // for one trait category, its rarity is counted twice, and only the last roll is what
+        // the incompatibility rules ever see. There is no reading of a repeat that makes sense,
+        // so it is rejected rather than given semantics.
+        foreach (var dup in Duplicates(r.Manifest.LayerOrder))
+            problems.Add($"Recipe '{r.Manifest.Id}' lists ingredient '{dup}' more than once in its "
+                + "layerOrder, so that layer would be rolled more than once per asset.");
 
         var ordered = r.Manifest.LayerOrder.ToHashSet(StringComparer.Ordinal);
         foreach (var ing in r.Ingredients)
@@ -92,6 +110,11 @@ public static class Validator
             problems.Add($"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}' has zero total variant weight.");
         foreach (var dup in Duplicates(ing.Manifest.Variants.Select(v => v.Id)))
             problems.Add($"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}' has duplicate variant id '{dup}'.");
+
+        // Zero is a legitimate way to shelve a variant; negative is not — see CheckCookBook.
+        foreach (var v in ing.Manifest.Variants.Where(v => v.Weight < 0))
+            problems.Add($"Variant '{v.Id}' in '{ing.Manifest.Id}'/'{r.Manifest.Id}' has a negative "
+                + $"weight ({v.Weight}); weights must be zero or greater, and zero means never rolled.");
 
         CheckKind(problems, where, ing.Manifest.Kind, ing.Manifest.Colorization);
         CheckColorEntries(problems, where, ing.Manifest.Colorization);
@@ -146,8 +169,29 @@ public static class Validator
     {
         if (col is null) return;
 
+        // Dna.cs and UniqueSpace.cs both floor a non-positive quantize up to 1 via Math.Max(1, q)
+        // so the count-versus-generate promise stays intact — but that coercion is silent, and a
+        // quantize of 0 is a plausible hand-edit or a GUI spinner bottoming out. Left unreported,
+        // the author asked for one bucket width and generation silently used another. Report it
+        // here instead, since Validator is the one place that decides what a legal book is.
+        if (col.HueQuantize <= 0)
+            problems.Add($"{where} has a hueQuantize of {col.HueQuantize}; it must be a positive "
+                + "integer (the bucket width in hue degrees). A value of zero or less is silently "
+                + "treated as 1 during generation, producing a far finer colour space than the "
+                + "author most likely intended.");
+        if (col.SatQuantize <= 0)
+            problems.Add($"{where} has a satQuantize of {col.SatQuantize}; it must be a positive "
+                + "integer (the bucket width in saturation percent). A value of zero or less is "
+                + "silently treated as 1 during generation, producing a far finer colour space "
+                + "than the author most likely intended.");
+
         foreach (var entry in col.Entries)
         {
+            // Zero is a legitimate way to shelve a colour entry; negative is not — see CheckCookBook.
+            if (entry.Weight < 0)
+                problems.Add($"{where} has a colorization entry with a negative weight "
+                    + $"({entry.Weight}); weights must be zero or greater, and zero means never rolled.");
+
             // Ranges are sampled ascending and never wrap, so an inverted or out-of-axis range
             // is author error — the roller would silently sample nonsense.
             if (entry.Range is { } range)

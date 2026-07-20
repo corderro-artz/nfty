@@ -18,10 +18,20 @@ public static class CookBookArchive
     {
         using var zip = ZipFile.OpenRead(path);
         var manifest = ArchiveIo.ReadManifest<CookBookManifest>(zip);
-        var recipes = ArchiveIo.EntryNamesUnder(zip, "recipes/")
-            .OrderBy(n => n, StringComparer.Ordinal)
-            .Select(n => ArchiveIo.ReadNested(zip, n, RecipeArchive.Read))
-            .ToList();
+        var recipes = new List<LoadedRecipe>();
+        try
+        {
+            foreach (var name in ArchiveIo.EntryNamesUnder(zip, "recipes/").OrderBy(n => n, StringComparer.Ordinal))
+                recipes.Add(ArchiveIo.ReadNested(zip, name, RecipeArchive.Read));
+        }
+        catch
+        {
+            // Recipes already decoded (each owning its ingredients and their variant images)
+            // before a later one threw have no other owner yet — dispose them before the
+            // original exception propagates.
+            foreach (var r in recipes) r.Dispose();
+            throw;
+        }
         return new LoadedCookBook
         {
             Manifest = manifest,
@@ -48,8 +58,16 @@ public static class CookBookArchive
         using (var zip = ZipFile.OpenRead(path))
         {
             manifest = await ArchiveIo.ReadManifestAsync<CookBookManifest>(zip, ct);
-            foreach (var name in ArchiveIo.EntryNamesUnder(zip, "recipes/").OrderBy(n => n, StringComparer.Ordinal))
-                recipes.Add(await ArchiveIo.ReadNestedAsync(zip, name, RecipeArchive.ReadAsync, ct));
+            try
+            {
+                foreach (var name in ArchiveIo.EntryNamesUnder(zip, "recipes/").OrderBy(n => n, StringComparer.Ordinal))
+                    recipes.Add(await ArchiveIo.ReadNestedAsync(zip, name, RecipeArchive.ReadAsync, ct));
+            }
+            catch
+            {
+                foreach (var r in recipes) r.Dispose();
+                throw;
+            }
         }
 
         return new LoadedCookBook
