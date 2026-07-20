@@ -55,6 +55,14 @@ public class UniqueSpaceTests
         Recipes = recipes,
     };
 
+    private static LoadedCookBook BookWithWeights(
+        IReadOnlyDictionary<string, double> weights, params LoadedRecipe[] recipes) => new()
+    {
+        Manifest = new CookBookManifest("cb", "Book", new Dimensions(2, 2),
+            new Collection("B", "d", "B"), weights),
+        Recipes = recipes,
+    };
+
     [Fact]
     public void Custom_layers_multiply_variant_counts()
     {
@@ -73,6 +81,32 @@ public class UniqueSpaceTests
             Recipe("robot", Array.Empty<IncompatibilityRule>(), Custom("bg", "x", "y", "z")));
 
         Assert.Equal(5, UniqueSpace.Count(book).Total);
+    }
+
+    [Fact]
+    public void Zero_weight_recipe_is_excluded_from_the_cookbook_total()
+    {
+        // Same two recipes as Recipes_sum_together (2 + 3 = 5), but the second is shelved with a
+        // zero weight, so the cookbook can never roll it: the total counts only the rollable one.
+        var book = BookWithWeights(
+            new Dictionary<string, double> { ["cat"] = 1.0, ["robot"] = 0.0 },
+            Recipe("cat", Array.Empty<IncompatibilityRule>(), Custom("bg", "a", "b")),
+            Recipe("robot", Array.Empty<IncompatibilityRule>(), Custom("bg", "x", "y", "z")));
+
+        Assert.Equal(2, UniqueSpace.Count(book).Total);
+    }
+
+    [Fact]
+    public void Zero_weight_recipe_still_reports_its_own_space()
+    {
+        // The total excludes a shelved recipe, but its per-recipe space is still recorded so a
+        // caller can see what it would contribute if enabled.
+        var book = BookWithWeights(
+            new Dictionary<string, double> { ["cat"] = 1.0, ["robot"] = 0.0 },
+            Recipe("cat", Array.Empty<IncompatibilityRule>(), Custom("bg", "a", "b")),
+            Recipe("robot", Array.Empty<IncompatibilityRule>(), Custom("bg", "x", "y", "z")));
+
+        Assert.Equal(3, UniqueSpace.Count(book)["robot"].Total);
     }
 
     [Fact]

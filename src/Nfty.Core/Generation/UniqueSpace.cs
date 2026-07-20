@@ -4,7 +4,11 @@ using Nfty.Core.Model;
 namespace Nfty.Core.Generation;
 
 /// <summary>One recipe's share of the space.</summary>
-/// <param name="Total">Legal combinations times reachable colour buckets.</param>
+/// <param name="Total">
+/// Legal combinations times reachable colour buckets. This is the recipe's space in isolation and
+/// is recorded even for a shelved (zero-weight) recipe; whether the cookbook can actually roll it
+/// is a separate question the cookbook-level <see cref="UniqueSpaceCount.Total"/> answers.
+/// </param>
 /// <param name="Combos">
 /// The legal variant combinations alone, without colour buckets folded in. <see cref="Total"/>
 /// can be zero for two unrelated reasons — the rules exclude every combination, or a layer has
@@ -23,7 +27,9 @@ namespace Nfty.Core.Generation;
 public record RecipeSpace(long Total, long Combos, bool IsExact);
 
 /// <summary>
-/// How many distinct DNA a cookbook can produce. <see cref="IsExact"/> is false when the
+/// How many distinct DNA a cookbook can produce. Counts only rollable recipes — a zero-weight
+/// recipe is shelved and never rolled, so its space is excluded from <see cref="Total"/> even
+/// though it still appears in <see cref="Recipes"/>. <see cref="IsExact"/> is false when the
 /// space was too large to count and <see cref="Total"/> saturated at the cap — the real
 /// figure is "more than Total", never less.
 /// </summary>
@@ -62,7 +68,14 @@ public static class UniqueSpace
             long recipeTotal = Saturate(Multiply(combos, buckets, cap), cap);
             bool recipeExact = combosExact && bucketsExact && recipeTotal < cap;
 
+            // Each recipe's own space is always recorded, so a caller inspecting a shelved recipe
+            // still sees what it would contribute if enabled. But the cookbook total counts only
+            // rollable recipes: the cookbook rolls a recipe by weight exactly as a layer rolls a
+            // variant, so a zero-weight recipe is never rolled and produces no DNA — mirroring the
+            // weight>0 filter WeightedRoller applies and Generator.DescribeFailure re-derives.
             recipes[recipe.Manifest.Id] = new RecipeSpace(recipeTotal, combos, recipeExact);
+            if (book.Manifest.RecipeWeights.GetValueOrDefault(recipe.Manifest.Id) <= 0)
+                continue;
             total = Saturate(total + recipeTotal, cap);
             exact &= recipeExact;
         }
