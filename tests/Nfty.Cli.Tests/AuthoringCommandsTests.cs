@@ -188,4 +188,77 @@ public class AuthoringCommandsTests
         }
         finally { tmp.Delete(recursive: true); }
     }
+
+    // Builds a .rcp at <dir>/{id}.rcp from the given ingredient ids (each already an {id}.igt in ingDir).
+    private void BuildRcp(string dir, string ingDir, string id, params string[] layerOrder)
+    {
+        var recipe = new RecipeManifest(id, id, layerOrder, Array.Empty<IncompatibilityRule>());
+        string manifestPath = WriteJson(dir, $"{id}.recipe.json", recipe);
+        int code = Run("new", "recipe", Path.Combine(dir, $"{id}.rcp"),
+            "--manifest", manifestPath, "--ingredients", ingDir);
+        Assert.Equal(0, code);
+    }
+
+    [Fact]
+    public void New_cookbook_pipeline_produces_a_generatable_book()
+    {
+        var tmp = Directory.CreateTempSubdirectory();
+        try
+        {
+            string ings = Path.Combine(tmp.FullName, "ings");
+            Directory.CreateDirectory(ings);
+            BuildIgt(ings, "bg", LayerKind.Dynamic, Hsv(), "sky");
+            BuildIgt(ings, "aura", LayerKind.Dynamic, Hsv(), "glow");
+
+            string rcps = Path.Combine(tmp.FullName, "rcps");
+            Directory.CreateDirectory(rcps);
+            BuildRcp(rcps, ings, "cat", "bg", "aura");
+
+            var cbk = new CookBookManifest("cb", "Book", new Dimensions(4, 4),
+                new Nfty.Core.Model.Collection("Book", "", "BK"),
+                new Dictionary<string, double> { ["cat"] = 100 });
+            string cbkPath = WriteJson(tmp.FullName, "book.json", cbk);
+
+            string outPath = Path.Combine(tmp.FullName, "book.cbk");
+            int code = Run("new", "cookbook", outPath, "--manifest", cbkPath, "--recipes", rcps);
+            Assert.Equal(0, code);
+
+            // The produced .cbk must generate a Set — full parity with a hand-built book.
+            using var book = CookBookArchive.Read(outPath);
+            using var set = Nfty.Core.Generation.Generator.Generate(book,
+                new Nfty.Core.Generation.GenerateOptions(2, "seed"));
+            Assert.Equal(2, set.Assets.Count);
+        }
+        finally { tmp.Delete(recursive: true); }
+    }
+
+    [Fact]
+    public void New_cookbook_refuses_an_invalid_book_but_force_writes_it()
+    {
+        var tmp = Directory.CreateTempSubdirectory();
+        try
+        {
+            string ings = Path.Combine(tmp.FullName, "ings");
+            Directory.CreateDirectory(ings);
+            BuildIgt(ings, "bg", LayerKind.Dynamic, Hsv(), "sky"); // variant PNGs are 4x4
+
+            string rcps = Path.Combine(tmp.FullName, "rcps");
+            Directory.CreateDirectory(rcps);
+            BuildRcp(rcps, ings, "cat", "bg");
+
+            // Canvas 8x8 disagrees with the 4x4 variant images -> invalid book.
+            var cbk = new CookBookManifest("cb", "Book", new Dimensions(8, 8),
+                new Nfty.Core.Model.Collection("Book", "", "BK"),
+                new Dictionary<string, double> { ["cat"] = 100 });
+            string cbkPath = WriteJson(tmp.FullName, "book.json", cbk);
+            string outPath = Path.Combine(tmp.FullName, "book.cbk");
+
+            Assert.Equal(1, Run("new", "cookbook", outPath, "--manifest", cbkPath, "--recipes", rcps));
+            Assert.False(File.Exists(outPath));
+
+            Assert.Equal(0, Run("new", "cookbook", outPath, "--manifest", cbkPath, "--recipes", rcps, "--force"));
+            Assert.True(File.Exists(outPath));
+        }
+        finally { tmp.Delete(recursive: true); }
+    }
 }

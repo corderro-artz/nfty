@@ -15,6 +15,7 @@ public static partial class CommandFactory
         var group = new Command("new", "Create a new .igt / .rcp / .cbk from a manifest and its parts.");
         group.Subcommands.Add(NewIngredient());
         group.Subcommands.Add(NewRecipe());
+        group.Subcommands.Add(NewCookbook());
         return group;
     }
 
@@ -100,6 +101,63 @@ public static partial class CommandFactory
             finally
             {
                 foreach (var ing in loaded) ing.Dispose();
+            }
+        });
+        return cmd;
+    }
+
+    private static Command NewCookbook()
+    {
+        var outPath = new Argument<string>("out") { Description = "Output .cbk path to create." };
+        var manifest = new Option<string>("--manifest")
+        {
+            Description = "Path to a CookBookManifest JSON (id, name, canvas, collection, recipeWeights).",
+            Required = true,
+        };
+        var recipes = new Option<string>("--recipes")
+        {
+            Description = "Directory of .rcp files; each recipeWeights key resolves to <dir>/{id}.rcp.",
+            Required = true,
+        };
+        var force = new Option<bool>("--force")
+        {
+            Description = "Write even if validation reports problems (they are printed as warnings). "
+                + "Use only for deliberate work-in-progress; generate will still refuse the book.",
+        };
+        var cmd = new Command("cookbook",
+            "Assemble a .cbk from a cookbook manifest and one .rcp per recipeWeights key (named {id}.rcp).")
+            { outPath, manifest, recipes, force };
+        cmd.SetAction(parse =>
+        {
+            var m = ManifestFile.Read<CookBookManifest>(parse.GetValue(manifest)!);
+            string dir = parse.GetValue(recipes)!;
+            var loaded = new List<LoadedRecipe>();
+            try
+            {
+                foreach (var id in m.RecipeWeights.Keys.Distinct(StringComparer.Ordinal))
+                {
+                    string rcp = Path.Combine(dir, $"{id}.rcp");
+                    if (!File.Exists(rcp))
+                        throw new FileNotFoundException($"No recipe '{id}': expected {rcp}", rcp);
+                    loaded.Add(RecipeArchive.Read(rcp));
+                }
+
+                var book = new LoadedCookBook { Manifest = m, Recipes = loaded, SourceSha256 = null };
+                var problems = Validator.Validate(book);
+                if (problems.Count > 0)
+                {
+                    Report(problems);
+                    if (!parse.GetValue(force)) return 1;
+                    Console.Error.WriteLine("--force: writing despite the problems above.");
+                }
+
+                CookBookArchive.Write(parse.GetValue(outPath)!, m, loaded);
+                Console.WriteLine($"Wrote {parse.GetValue(outPath)} ({loaded.Count} recipes)");
+                return 0;
+            }
+            finally
+            {
+                foreach (var r in loaded) r.Dispose();
             }
         });
         return cmd;
