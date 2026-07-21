@@ -253,7 +253,9 @@ Collection-level: `name`, `count`, `seed`, `cookbookSha256`, `generatorVersion`,
 | `nfty generate <cbk> --count N --seed S --out <dir> [--pack] [--recipe <id>]` | Cook a Set (optionally restricted to one recipe/type) |
 | `nfty extend <cbk> <set-dir> --to N [--seed S]` | Grow an existing Set to a new count |
 
-Authoring commands (`new`, `add`) that scaffold/append archives are a deferred thin follow-up (formats + validation already support them).
+Authoring commands `new ingredient|recipe|cookbook` and `add variant|ingredient|recipe` build and
+mutate archives from manifest JSON plus PNGs (import-based; the GUI owns draw-based authoring). See
+`2026-07-21-nfty-authoring-cli-design.md`.
 
 ---
 
