@@ -168,6 +168,7 @@ public static partial class CommandFactory
     {
         var group = new Command("add", "Append a variant / ingredient / recipe to an existing archive.");
         group.Subcommands.Add(AddVariant());
+        group.Subcommands.Add(AddIngredient());
         return group;
     }
 
@@ -211,6 +212,57 @@ public static partial class CommandFactory
                 return 0;
             }
             finally { newImg.Dispose(); }
+        });
+        return cmd;
+    }
+
+    private static Command AddIngredient()
+    {
+        var rcpPath = new Argument<string>("rcp") { Description = "Path to the .rcp to modify in place." };
+        var igt = new Option<string>("--igt") { Description = "Path to the .igt to add as a layer.", Required = true };
+        var index = new Option<int?>("--index")
+        {
+            Description = "0-based position in layerOrder to insert at (default: end).",
+        };
+        index.Validators.Add(r =>
+        {
+            var v = r.GetValueOrDefault<int?>();
+            if (v is < 0) r.AddError("--index must be zero or greater.");
+        });
+        var cmd = new Command("ingredient", "Add an .igt as a layer of an existing .rcp.")
+            { rcpPath, igt, index };
+        cmd.SetAction(parse =>
+        {
+            string path = parse.GetValue(rcpPath)!;
+            using var recipe = RecipeArchive.Read(path);
+            using var newIng = IngredientArchive.Read(parse.GetValue(igt)!);
+            string id = newIng.Manifest.Id;
+
+            if (recipe.Manifest.LayerOrder.Contains(id, StringComparer.Ordinal)
+                || recipe.Ingredients.Any(i => string.Equals(i.Manifest.Id, id, StringComparison.Ordinal)))
+                throw new InvalidOperationException(
+                    $"Recipe '{recipe.Manifest.Id}' already has an ingredient '{id}'.");
+
+            var order = recipe.Manifest.LayerOrder.ToList();
+            int at = parse.GetValue(index) ?? order.Count;
+            if (at > order.Count)
+                throw new InvalidOperationException(
+                    $"--index {at} is past the end; layerOrder has {order.Count} layer(s).");
+            order.Insert(at, id);
+
+            var ingredients = recipe.Ingredients.Append(newIng).ToList();
+            var manifest = recipe.Manifest with { LayerOrder = order };
+            var merged = new LoadedRecipe { Manifest = manifest, Ingredients = ingredients };
+            var problems = Validator.ValidateRecipe(merged);
+            if (problems.Count > 0) { Report(problems); return 1; }
+
+            // Read(path) closed its file handle before returning, so it's safe to replace the
+            // file now. RecipeArchive.Write opens in ZipArchiveMode.Create, which throws if the
+            // target already exists, so we write to a sibling temp file and move it into place
+            // rather than deleting the original first.
+            WriteReplacing(path, p => RecipeArchive.Write(p, manifest, ingredients));
+            Console.WriteLine($"Added ingredient '{id}' to {path} at index {at}");
+            return 0;
         });
         return cmd;
     }

@@ -311,4 +311,74 @@ public class AuthoringCommandsTests
         }
         finally { tmp.Delete(recursive: true); }
     }
+
+    [Fact]
+    public void Add_ingredient_inserts_a_layer_at_the_given_index()
+    {
+        var tmp = Directory.CreateTempSubdirectory();
+        try
+        {
+            string ings = Path.Combine(tmp.FullName, "ings");
+            Directory.CreateDirectory(ings);
+            BuildIgt(ings, "bg", LayerKind.Dynamic, Hsv(), "sky");
+            BuildIgt(ings, "aura", LayerKind.Dynamic, Hsv(), "glow");
+            BuildIgt(ings, "mid", LayerKind.Dynamic, Hsv(), "m");
+
+            string rcps = Path.Combine(tmp.FullName, "rcps");
+            Directory.CreateDirectory(rcps);
+            BuildRcp(rcps, ings, "cat", "bg", "aura");
+            string rcp = Path.Combine(rcps, "cat.rcp");
+
+            int code = Run("add", "ingredient", rcp, "--igt", Path.Combine(ings, "mid.igt"), "--index", "1");
+            Assert.Equal(0, code);
+
+            using var loaded = RecipeArchive.Read(rcp);
+            Assert.Equal(new[] { "bg", "mid", "aura" }, loaded.Manifest.LayerOrder);
+            Assert.Equal(3, loaded.Ingredients.Count);
+        }
+        finally { tmp.Delete(recursive: true); }
+    }
+
+    [Fact]
+    public void Add_ingredient_appends_when_no_index_given()
+    {
+        var tmp = Directory.CreateTempSubdirectory();
+        try
+        {
+            string ings = Path.Combine(tmp.FullName, "ings");
+            Directory.CreateDirectory(ings);
+            BuildIgt(ings, "bg", LayerKind.Dynamic, Hsv(), "sky");
+            BuildIgt(ings, "aura", LayerKind.Dynamic, Hsv(), "glow");
+            string rcps = Path.Combine(tmp.FullName, "rcps");
+            Directory.CreateDirectory(rcps);
+            BuildRcp(rcps, ings, "cat", "bg");
+            string rcp = Path.Combine(rcps, "cat.rcp");
+
+            Assert.Equal(0, Run("add", "ingredient", rcp, "--igt", Path.Combine(ings, "aura.igt")));
+            using var loaded = RecipeArchive.Read(rcp);
+            Assert.Equal(new[] { "bg", "aura" }, loaded.Manifest.LayerOrder);
+        }
+        finally { tmp.Delete(recursive: true); }
+    }
+
+    [Fact]
+    public void Add_ingredient_rejects_a_duplicate_layer()
+    {
+        var tmp = Directory.CreateTempSubdirectory();
+        try
+        {
+            string ings = Path.Combine(tmp.FullName, "ings");
+            Directory.CreateDirectory(ings);
+            BuildIgt(ings, "bg", LayerKind.Dynamic, Hsv(), "sky");
+            string rcps = Path.Combine(tmp.FullName, "rcps");
+            Directory.CreateDirectory(rcps);
+            BuildRcp(rcps, ings, "cat", "bg");
+            string rcp = Path.Combine(rcps, "cat.rcp");
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                Run("add", "ingredient", rcp, "--igt", Path.Combine(ings, "bg.igt")));
+            Assert.Contains("bg", ex.Message);
+        }
+        finally { tmp.Delete(recursive: true); }
+    }
 }
