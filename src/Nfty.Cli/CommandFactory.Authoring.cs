@@ -14,6 +14,7 @@ public static partial class CommandFactory
     {
         var group = new Command("new", "Create a new .igt / .rcp / .cbk from a manifest and its parts.");
         group.Subcommands.Add(NewIngredient());
+        group.Subcommands.Add(NewRecipe());
         return group;
     }
 
@@ -52,6 +53,53 @@ public static partial class CommandFactory
             {
                 // These images have no other owner: the LoadedIngredient above only wraps them.
                 foreach (var img in loaded.Values) img.Dispose();
+            }
+        });
+        return cmd;
+    }
+
+    private static Command NewRecipe()
+    {
+        var outPath = new Argument<string>("out") { Description = "Output .rcp path to create." };
+        var manifest = new Option<string>("--manifest")
+        {
+            Description = "Path to a RecipeManifest JSON (id, name, layerOrder, rules).",
+            Required = true,
+        };
+        var ingredients = new Option<string>("--ingredients")
+        {
+            Description = "Directory of .igt files; each layerOrder id resolves to <dir>/{id}.igt.",
+            Required = true,
+        };
+        var cmd = new Command("recipe",
+            "Build a .rcp from a recipe manifest and one .igt per layerOrder id (named {id}.igt).")
+            { outPath, manifest, ingredients };
+        cmd.SetAction(parse =>
+        {
+            var m = ManifestFile.Read<RecipeManifest>(parse.GetValue(manifest)!);
+            string dir = parse.GetValue(ingredients)!;
+            var loaded = new List<LoadedIngredient>();
+            try
+            {
+                foreach (var id in m.LayerOrder.Distinct(StringComparer.Ordinal))
+                {
+                    string igt = Path.Combine(dir, $"{id}.igt");
+                    if (!File.Exists(igt))
+                        throw new FileNotFoundException($"No ingredient for layer '{id}': expected {igt}", igt);
+                    loaded.Add(IngredientArchive.Read(igt));
+                }
+
+                var recipe = new LoadedRecipe { Manifest = m, Ingredients = loaded };
+                var problems = Validator.ValidateRecipe(recipe);
+                if (problems.Count > 0) { Report(problems); return 1; }
+
+                RecipeArchive.Write(parse.GetValue(outPath)!, m, loaded);
+                Console.WriteLine($"Wrote {parse.GetValue(outPath)} ({loaded.Count} ingredients)");
+                return 0;
+            }
+            finally
+            {
+                foreach (var ing in loaded) ing.Dispose();
             }
         });
         return cmd;

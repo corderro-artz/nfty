@@ -124,4 +124,68 @@ public class AuthoringCommandsTests
         }
         finally { tmp.Delete(recursive: true); }
     }
+
+    // Builds an .igt at <dir>/{id}.igt via the new ingredient command. Grayscale so dynamic passes.
+    private void BuildIgt(string dir, string id, LayerKind kind, Colorization? col, params string[] variantIds)
+    {
+        var manifest = new IngredientManifest(id, id, kind, col,
+            variantIds.Select(v => new Variant(v, v, 1)).ToArray());
+        string manifestPath = WriteJson(dir, $"{id}.manifest.json", manifest);
+        string images = Path.Combine(dir, $"{id}.img");
+        Directory.CreateDirectory(images);
+        foreach (var v in variantIds) WritePng(images, $"{v}.png", new Rgba32(120, 120, 120, 255));
+        int code = Run("new", "ingredient", Path.Combine(dir, $"{id}.igt"),
+            "--manifest", manifestPath, "--images", images);
+        Assert.Equal(0, code);
+    }
+
+    private static Colorization Hsv() =>
+        new(ColorModel.Hsv, 12, 4, new[] { new ColorEntry(1, new ColorRange(0, 360, 40, 100), null) });
+
+    [Fact]
+    public void New_recipe_composes_igts_into_a_readable_rcp()
+    {
+        var tmp = Directory.CreateTempSubdirectory();
+        try
+        {
+            string ings = Path.Combine(tmp.FullName, "ings");
+            Directory.CreateDirectory(ings);
+            BuildIgt(ings, "bg", LayerKind.Dynamic, Hsv(), "sky");
+            BuildIgt(ings, "aura", LayerKind.Dynamic, Hsv(), "glow");
+
+            var recipe = new RecipeManifest("cat", "Cat",
+                new[] { "bg", "aura" }, Array.Empty<IncompatibilityRule>());
+            string recipePath = WriteJson(tmp.FullName, "cat.json", recipe);
+
+            string outPath = Path.Combine(tmp.FullName, "cat.rcp");
+            int code = Run("new", "recipe", outPath, "--manifest", recipePath, "--ingredients", ings);
+
+            Assert.Equal(0, code);
+            using var loaded = RecipeArchive.Read(outPath);
+            Assert.Equal(new[] { "bg", "aura" }, loaded.Manifest.LayerOrder);
+            Assert.Equal(2, loaded.Ingredients.Count);
+        }
+        finally { tmp.Delete(recursive: true); }
+    }
+
+    [Fact]
+    public void New_recipe_names_a_missing_ingredient_igt()
+    {
+        var tmp = Directory.CreateTempSubdirectory();
+        try
+        {
+            string ings = Path.Combine(tmp.FullName, "ings");
+            Directory.CreateDirectory(ings);
+            BuildIgt(ings, "bg", LayerKind.Dynamic, Hsv(), "sky"); // aura.igt intentionally absent
+
+            var recipe = new RecipeManifest("cat", "Cat",
+                new[] { "bg", "aura" }, Array.Empty<IncompatibilityRule>());
+            string recipePath = WriteJson(tmp.FullName, "cat.json", recipe);
+
+            var ex = Assert.Throws<FileNotFoundException>(() => Run("new", "recipe",
+                Path.Combine(tmp.FullName, "cat.rcp"), "--manifest", recipePath, "--ingredients", ings));
+            Assert.Contains("aura", ex.Message);
+        }
+        finally { tmp.Delete(recursive: true); }
+    }
 }
