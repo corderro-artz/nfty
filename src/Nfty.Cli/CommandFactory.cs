@@ -10,7 +10,7 @@ using SixLabors.ImageSharp.Formats.Png;
 
 namespace Nfty.Cli;
 
-public static class CommandFactory
+public static partial class CommandFactory
 {
     /// <summary>
     /// Recursive, so it works on any subcommand rather than only before one. Read by
@@ -32,6 +32,7 @@ public static class CommandFactory
         root.Subcommands.Add(Preview());
         root.Subcommands.Add(Generate());
         root.Subcommands.Add(Extend());
+        root.Subcommands.Add(NewGroup());
         return root;
     }
 
