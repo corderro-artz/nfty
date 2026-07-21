@@ -52,4 +52,15 @@ public readonly record struct GenerationProgress(int Completed, int Total)
     public double Fraction => Total <= 0 ? 0 : (double)Completed / Total;
 }
 
-public record GenerateOptions(int Count, string Seed, string? RecipeId = null, int MaxRerollsPerAsset = 10000);
+/// <param name="EnforceUniqueDna">
+/// When true (the default), every asset must have distinct DNA: a roll colliding with one already
+/// produced is discarded and re-rolled, and a run that cannot fill its quota from the unique space
+/// fails with <see cref="UniqueSpaceExhaustedException"/>. When false, every roll is accepted even
+/// if its DNA repeats, and identity is carried by the sequential token id (the output number) as
+/// ERC-721 defines it — so any Count is producible regardless of the unique space. This skips both
+/// the dedup bookkeeping and the space-counting, which is the expensive part of a large run on a
+/// slow machine. Incompatibility rules are still enforced either way.
+/// </param>
+public record GenerateOptions(
+    int Count, string Seed, string? RecipeId = null, int MaxRerollsPerAsset = 10000,
+    bool EnforceUniqueDna = true);

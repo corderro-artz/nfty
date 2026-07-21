@@ -136,6 +136,12 @@ public static class Generator
                 var candidate = RollOne(
                     book.Manifest.Canvas, recipeById[recipeId], layerPlans[recipeId], rng, number);
                 if (candidate is null) continue;             // rule violation → reroll
+
+                // With uniqueness off, a repeated DNA is accepted: identity comes from the token
+                // id, not the DNA, so there is nothing to dedup and nothing to exhaust. Rules were
+                // already honoured above, so the first non-violating roll is the asset.
+                if (!opts.EnforceUniqueDna) { asset = candidate; break; }
+
                 if (seen.Add(candidate.Dna)) { asset = candidate; break; }
                 candidate.Dispose();                         // duplicate → discard
             }
@@ -177,6 +183,18 @@ public static class Generator
             return new RuleConflictException(dead,
                 $"No legal variant combination exists for {Describe(dead)}: "
                 + "the incompatibility rules exclude every combination.");
+
+        // With uniqueness off, a repeated DNA is never rejected, so exhausting the reroll budget
+        // can only mean the incompatibility rules rejected every roll — the unique space is not the
+        // constraint and must not be blamed. (An empty space was already caught as a rule conflict.)
+        if (!opts.EnforceUniqueDna)
+        {
+            string ruleScope = opts.RecipeId is null ? "this cookbook" : $"recipe '{opts.RecipeId}'";
+            return new InvalidOperationException(
+                $"Could not produce a legal asset for {ruleScope} after {opts.MaxRerollsPerAsset} "
+                + $"attempts ({produced} of {opts.Count} generated): the incompatibility rules "
+                + "rejected every roll. Loosen the rules or raise the reroll budget.");
+        }
 
         long available = 0;
         bool exact = true;

@@ -264,12 +264,21 @@ public static class CommandFactory
                 + "run inspect on the CookBook to find it), instead of rolling a Recipe per "
                 + "asset by the CookBook's own weights.",
         };
-        var cmd = new Command("generate", "Generate a new Set of assets from a CookBook.") { path, count, seed, outDir, pack, recipe };
+        var unlimited = new Option<bool>("--unlimited")
+        {
+            Description = "Accept every roll instead of requiring each asset to have unique DNA. "
+                + "Identity is carried by the sequential token id, per the ERC-721 standard, so "
+                + "assets may repeat and any --count is producible regardless of the unique space. "
+                + "Skips the dedup and space-counting work — use it for large runs on slow "
+                + "machines. Incompatibility rules are still enforced.",
+        };
+        var cmd = new Command("generate", "Generate a new Set of assets from a CookBook.") { path, count, seed, outDir, pack, recipe, unlimited };
         cmd.SetAction(parse =>
         {
             using var book = CookBookArchive.Read(parse.GetValue(path)!);
             string dir = parse.GetValue(outDir)!;
-            var opts = new GenerateOptions(parse.GetValue(count), parse.GetValue(seed)!, parse.GetValue(recipe));
+            var opts = new GenerateOptions(parse.GetValue(count), parse.GetValue(seed)!,
+                parse.GetValue(recipe), EnforceUniqueDna: !parse.GetValue(unlimited));
             using var set = Generator.Generate(book, opts);
             SetWriter.Write(set, dir, parse.GetValue(pack));
             Console.WriteLine($"Generated {set.Assets.Count} → {dir}");
@@ -296,7 +305,14 @@ public static class CommandFactory
                 + "are left untouched, aside from their recomputed rarity.",
             DefaultValueFactory = _ => "nfty-extend",
         };
-        var cmd = new Command("extend", "Grow an existing Set to a new total asset count, using the same CookBook.") { path, dir, to, seed };
+        var unlimited = new Option<bool>("--unlimited")
+        {
+            Description = "Accept every new roll instead of requiring unique DNA, including against "
+                + "the existing Set's DNA. Identity is carried by the sequential token id, per the "
+                + "ERC-721 standard. Skips the dedup and space-counting work — use it for large "
+                + "extensions on slow machines. Incompatibility rules are still enforced.",
+        };
+        var cmd = new Command("extend", "Grow an existing Set to a new total asset count, using the same CookBook.") { path, dir, to, seed, unlimited };
         cmd.SetAction(parse =>
         {
             using var book = CookBookArchive.Read(parse.GetValue(path)!);
@@ -308,7 +324,8 @@ public static class CommandFactory
             int need = target - have;
             if (need <= 0) { Console.WriteLine($"Already at {have}."); return 0; }
 
-            using var more = Generator.Generate(book, new GenerateOptions(need, parse.GetValue(seed)!),
+            using var more = Generator.Generate(book,
+                new GenerateOptions(need, parse.GetValue(seed)!, EnforceUniqueDna: !parse.GetValue(unlimited)),
                 existing.Dnas, existing.NextNumber);
             SetWriter.Write(more, setDir, pack: false);
             Console.WriteLine($"Extended by {need} → {target} total.");
