@@ -204,15 +204,38 @@ public static partial class CommandFactory
 
                 // Read(path) closed its file handle before returning, so it's safe to replace the
                 // file now. IngredientArchive.Write opens in ZipArchiveMode.Create, which throws
-                // if the target already exists, so the old file must go first.
-                File.Delete(path);
-                IngredientArchive.Write(path, manifest, images);
+                // if the target already exists, so we write to a sibling temp file and move it
+                // into place rather than deleting the original first.
+                WriteReplacing(path, p => IngredientArchive.Write(p, manifest, images));
                 Console.WriteLine($"Added variant '{vid}' to {path}");
                 return 0;
             }
             finally { newImg.Dispose(); }
         });
         return cmd;
+    }
+
+    /// <summary>
+    /// Overwrites <paramref name="path"/> atomically: writes via <paramref name="write"/> to a
+    /// sibling temp file, then replaces the target with a single move. If the write fails, the
+    /// original file is left untouched — the Core archive writers open with ZipArchiveMode.Create
+    /// (which refuses an existing file), so a plain in-place overwrite would otherwise have to
+    /// delete first and lose the original on any mid-write failure. Reused by every `add` command.
+    /// </summary>
+    private static void WriteReplacing(string path, Action<string> write)
+    {
+        string tmp = path + ".tmp";
+        if (File.Exists(tmp)) File.Delete(tmp);
+        try
+        {
+            write(tmp);
+            File.Move(tmp, path, overwrite: true);
+        }
+        catch
+        {
+            if (File.Exists(tmp)) File.Delete(tmp);
+            throw;
+        }
     }
 
     /// <summary>Loads one PNG per distinct variant id, by the {id}.png convention.</summary>
