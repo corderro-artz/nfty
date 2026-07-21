@@ -381,4 +381,64 @@ public class AuthoringCommandsTests
         }
         finally { tmp.Delete(recursive: true); }
     }
+
+    [Fact]
+    public void Add_recipe_adds_a_recipe_and_weight_to_a_cookbook()
+    {
+        var tmp = Directory.CreateTempSubdirectory();
+        try
+        {
+            string ings = Path.Combine(tmp.FullName, "ings");
+            Directory.CreateDirectory(ings);
+            BuildIgt(ings, "bg", LayerKind.Dynamic, Hsv(), "sky");
+            BuildIgt(ings, "aura", LayerKind.Dynamic, Hsv(), "glow");
+
+            string rcps = Path.Combine(tmp.FullName, "rcps");
+            Directory.CreateDirectory(rcps);
+            BuildRcp(rcps, ings, "cat", "bg");
+            BuildRcp(rcps, ings, "dog", "aura");
+
+            var cbk = new CookBookManifest("cb", "Book", new Dimensions(4, 4),
+                new Nfty.Core.Model.Collection("Book", "", "BK"),
+                new Dictionary<string, double> { ["cat"] = 100 });
+            string cbkPath = WriteJson(tmp.FullName, "book.json", cbk);
+            string outPath = Path.Combine(tmp.FullName, "book.cbk");
+            Assert.Equal(0, Run("new", "cookbook", outPath, "--manifest", cbkPath, "--recipes", rcps));
+
+            int code = Run("add", "recipe", outPath, "--rcp", Path.Combine(rcps, "dog.rcp"), "--weight", "50");
+            Assert.Equal(0, code);
+
+            using var book = CookBookArchive.Read(outPath);
+            Assert.Equal(2, book.Recipes.Count);
+            Assert.Equal(50, book.Manifest.RecipeWeights["dog"]);
+        }
+        finally { tmp.Delete(recursive: true); }
+    }
+
+    [Fact]
+    public void Add_recipe_rejects_a_duplicate_recipe_id()
+    {
+        var tmp = Directory.CreateTempSubdirectory();
+        try
+        {
+            string ings = Path.Combine(tmp.FullName, "ings");
+            Directory.CreateDirectory(ings);
+            BuildIgt(ings, "bg", LayerKind.Dynamic, Hsv(), "sky");
+            string rcps = Path.Combine(tmp.FullName, "rcps");
+            Directory.CreateDirectory(rcps);
+            BuildRcp(rcps, ings, "cat", "bg");
+
+            var cbk = new CookBookManifest("cb", "Book", new Dimensions(4, 4),
+                new Nfty.Core.Model.Collection("Book", "", "BK"),
+                new Dictionary<string, double> { ["cat"] = 100 });
+            string cbkPath = WriteJson(tmp.FullName, "book.json", cbk);
+            string outPath = Path.Combine(tmp.FullName, "book.cbk");
+            Assert.Equal(0, Run("new", "cookbook", outPath, "--manifest", cbkPath, "--recipes", rcps));
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                Run("add", "recipe", outPath, "--rcp", Path.Combine(rcps, "cat.rcp"), "--weight", "10"));
+            Assert.Contains("cat", ex.Message);
+        }
+        finally { tmp.Delete(recursive: true); }
+    }
 }

@@ -169,6 +169,7 @@ public static partial class CommandFactory
         var group = new Command("add", "Append a variant / ingredient / recipe to an existing archive.");
         group.Subcommands.Add(AddVariant());
         group.Subcommands.Add(AddIngredient());
+        group.Subcommands.Add(AddRecipe());
         return group;
     }
 
@@ -262,6 +263,53 @@ public static partial class CommandFactory
             // rather than deleting the original first.
             WriteReplacing(path, p => RecipeArchive.Write(p, manifest, ingredients));
             Console.WriteLine($"Added ingredient '{id}' to {path} at index {at}");
+            return 0;
+        });
+        return cmd;
+    }
+
+    private static Command AddRecipe()
+    {
+        var cbkPath = new Argument<string>("cbk") { Description = "Path to the .cbk to modify in place." };
+        var rcp = new Option<string>("--rcp") { Description = "Path to the .rcp to add.", Required = true };
+        var weight = new Option<double>("--weight") { Description = "Recipe roll weight (zero or greater).", Required = true };
+        var force = new Option<bool>("--force")
+        {
+            Description = "Write even if validation reports problems (printed as warnings).",
+        };
+        var cmd = new Command("recipe", "Add a .rcp to an existing .cbk with a roll weight.")
+            { cbkPath, rcp, weight, force };
+        cmd.SetAction(parse =>
+        {
+            string path = parse.GetValue(cbkPath)!;
+            using var book = CookBookArchive.Read(path);
+            using var newRcp = RecipeArchive.Read(parse.GetValue(rcp)!);
+            string id = newRcp.Manifest.Id;
+
+            if (book.Recipes.Any(r => string.Equals(r.Manifest.Id, id, StringComparison.Ordinal))
+                || book.Manifest.RecipeWeights.ContainsKey(id))
+                throw new InvalidOperationException(
+                    $"CookBook '{book.Manifest.Id}' already has a recipe '{id}'.");
+
+            var weights = new Dictionary<string, double>(book.Manifest.RecipeWeights) { [id] = parse.GetValue(weight) };
+            var recipes = book.Recipes.Append(newRcp).ToList();
+            var manifest = book.Manifest with { RecipeWeights = weights };
+            var merged = new LoadedCookBook { Manifest = manifest, Recipes = recipes, SourceSha256 = null };
+
+            var problems = Validator.Validate(merged);
+            if (problems.Count > 0)
+            {
+                Report(problems);
+                if (!parse.GetValue(force)) return 1;
+                Console.Error.WriteLine("--force: writing despite the problems above.");
+            }
+
+            // Read(path) closed its file handle before returning, so it's safe to replace the
+            // file now. CookBookArchive.Write opens in ZipArchiveMode.Create, which throws if the
+            // target already exists, so we write to a sibling temp file and move it into place
+            // rather than deleting the original first.
+            WriteReplacing(path, p => CookBookArchive.Write(p, manifest, recipes));
+            Console.WriteLine($"Added recipe '{id}' (weight {parse.GetValue(weight)}) to {path}");
             return 0;
         });
         return cmd;
