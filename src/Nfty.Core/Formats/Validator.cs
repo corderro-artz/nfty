@@ -16,6 +16,37 @@ public static class Validator
         return problems;
     }
 
+    /// <summary>
+    /// Validates a standalone ingredient — every check that does NOT need a canvas. The canvas is a
+    /// property of the CookBook, so "does this variant match the canvas?" cannot be answered here;
+    /// <see cref="Validate(LoadedCookBook)"/> remains the authoritative whole-book gate. Used by the
+    /// CLI's <c>new ingredient</c> / <c>add variant</c>, which build an .igt before a canvas exists.
+    /// </summary>
+    public static IReadOnlyList<string> ValidateIngredient(LoadedIngredient ing)
+    {
+        var problems = new List<string>();
+        string where = $"Ingredient '{ing.Manifest.Id}'";
+        CheckIngredient(problems, where, ing);
+        CheckUniformSize(problems, where, ing.VariantImages.Values);
+        return problems;
+    }
+
+    /// <summary>
+    /// Validates a standalone recipe — every canvas-independent check, plus that all variant images
+    /// across all its ingredients share one size, so they could match some future canvas. Used by
+    /// the CLI's <c>new recipe</c> / <c>add ingredient</c>.
+    /// </summary>
+    public static IReadOnlyList<string> ValidateRecipe(LoadedRecipe r)
+    {
+        var problems = new List<string>();
+        CheckRecipeStructure(problems, r);
+        foreach (var ing in r.Ingredients)
+            CheckIngredient(problems, $"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}'", ing);
+        CheckUniformSize(problems, $"Recipe '{r.Manifest.Id}'",
+            r.Ingredients.SelectMany(i => i.VariantImages.Values));
+        return problems;
+    }
+
     private static void CheckCookBook(List<string> problems, LoadedCookBook cb)
     {
         // Id uniqueness comes first: every ToDictionary below would throw on a duplicate, and
@@ -56,18 +87,27 @@ public static class Validator
 
     private static void CheckRecipe(List<string> problems, LoadedRecipe r, Dimensions canvas)
     {
+        CheckRecipeStructure(problems, r);
+        foreach (var ing in r.Ingredients)
+        {
+            string where = $"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}'";
+            CheckIngredient(problems, where, ing);
+            CheckVariantImagesCanvas(problems, where, ing, canvas);
+        }
+    }
+
+    /// <summary>Recipe checks that need no canvas: id uniqueness, layerOrder, and rule references.</summary>
+    private static void CheckRecipeStructure(List<string> problems, LoadedRecipe r)
+    {
         foreach (var dup in Duplicates(r.Ingredients.Select(i => i.Manifest.Id)))
             problems.Add($"Recipe '{r.Manifest.Id}' has duplicate ingredient id '{dup}'.");
 
-        // Built duplicate-tolerantly (last wins) so a duplicate is reported above rather
-        // than thrown here; the rest of the checks still run and report what they find.
+        // Built duplicate-tolerantly (last wins) so a duplicate is reported above rather than
+        // thrown here; the rest of the checks still run and report what they find.
         var ingById = new Dictionary<string, LoadedIngredient>();
         foreach (var i in r.Ingredients) ingById[i.Manifest.Id] = i;
 
         CheckLayerOrder(problems, r, ingById);
-
-        foreach (var ing in r.Ingredients)
-            CheckIngredient(problems, r, ing, canvas);
 
         foreach (var rule in r.Manifest.Rules)
             foreach (var t in rule.Targets.Append(rule.When))
@@ -108,26 +148,25 @@ public static class Validator
                     + "that is missing from its layerOrder, so it is never rolled.");
     }
 
-    private static void CheckIngredient(
-        List<string> problems, LoadedRecipe r, LoadedIngredient ing, Dimensions canvas)
+    /// <summary>The canvas-independent per-ingredient checks. <paramref name="where"/> carries the
+    /// caller's context ("Ingredient 'x'" standalone, or "…in 'r'" inside a recipe).</summary>
+    private static void CheckIngredient(List<string> problems, string where, LoadedIngredient ing)
     {
-        string where = $"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}'";
-
         if (ing.Manifest.Variants.Count == 0)
-            problems.Add($"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}' has no variants.");
+            problems.Add($"{where} has no variants.");
         if (ing.Manifest.Variants.Sum(v => v.Weight) <= 0)
-            problems.Add($"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}' has zero total variant weight.");
+            problems.Add($"{where} has zero total variant weight.");
         foreach (var dup in Duplicates(ing.Manifest.Variants.Select(v => v.Id)))
-            problems.Add($"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}' has duplicate variant id '{dup}'.");
+            problems.Add($"{where} has duplicate variant id '{dup}'.");
 
         // Zero is a legitimate way to shelve a variant; negative is not — see CheckCookBook.
         foreach (var v in ing.Manifest.Variants.Where(v => v.Weight < 0))
-            problems.Add($"Variant '{v.Id}' in '{ing.Manifest.Id}'/'{r.Manifest.Id}' has a negative "
-                + $"weight ({v.Weight}); weights must be zero or greater, and zero means never rolled.");
+            problems.Add($"{where} has variant '{v.Id}' with a negative weight ({v.Weight}); "
+                + "weights must be zero or greater, and zero means never rolled.");
 
         CheckKind(problems, where, ing.Manifest.Kind, ing.Manifest.Colorization);
         CheckColorEntries(problems, where, ing.Manifest.Colorization);
-        CheckVariantImages(problems, r, ing, canvas);
+        CheckVariantImagesPresentAndGray(problems, where, ing);
     }
 
     /// <summary>Each layer kind admits exactly one shape of colorization — see spec 4.1.</summary>
@@ -219,28 +258,50 @@ public static class Validator
         }
     }
 
-    /// <summary>Every variant needs an image, and the CookBook canvas is the only legal size.</summary>
-    private static void CheckVariantImages(
-        List<string> problems, LoadedRecipe r, LoadedIngredient ing, Dimensions canvas)
+    /// <summary>Presence of every variant's image and grayscale for dynamic/static — no canvas needed.</summary>
+    private static void CheckVariantImagesPresentAndGray(List<string> problems, string where, LoadedIngredient ing)
     {
-        // By id, not by entry: duplicate ids share one image, so checking each entry would say
-        // the same thing twice. The duplicate id itself is reported separately.
         foreach (var v in ing.Manifest.Variants.DistinctBy(v => v.Id, StringComparer.Ordinal))
         {
             if (!ing.VariantImages.TryGetValue(v.Id, out var img))
             {
-                problems.Add($"Variant '{v.Id}' in '{ing.Manifest.Id}' has no image.");
+                problems.Add($"{where} variant '{v.Id}' has no image.");
                 continue;
             }
-            if (img.Width != canvas.Width || img.Height != canvas.Height)
-                problems.Add(
-                    $"Variant '{v.Id}' in '{ing.Manifest.Id}'/'{r.Manifest.Id}' has dimensions "
-                    + $"{img.Width}x{img.Height}, expected canvas {canvas.Width}x{canvas.Height}.");
-
             if (ing.Manifest.Kind != LayerKind.Custom && !IsGrayscale(img))
-                problems.Add(
-                    $"Variant '{v.Id}' in '{ing.Manifest.Id}'/'{r.Manifest.Id}' is not grayscale; "
+                problems.Add($"{where} variant '{v.Id}' is not grayscale; "
                     + "dynamic/static value-maps must have R=G=B.");
+        }
+    }
+
+    /// <summary>The canvas-dependent half: every present variant image must match the CookBook canvas.</summary>
+    private static void CheckVariantImagesCanvas(
+        List<string> problems, string where, LoadedIngredient ing, Dimensions canvas)
+    {
+        foreach (var v in ing.Manifest.Variants.DistinctBy(v => v.Id, StringComparer.Ordinal))
+        {
+            if (!ing.VariantImages.TryGetValue(v.Id, out var img)) continue; // presence reported elsewhere
+            if (img.Width != canvas.Width || img.Height != canvas.Height)
+                problems.Add($"{where} variant '{v.Id}' has dimensions {img.Width}x{img.Height}, "
+                    + $"expected canvas {canvas.Width}x{canvas.Height}.");
+        }
+    }
+
+    /// <summary>
+    /// Every image in the set must share one size. Without a canvas (ingredient/recipe authoring),
+    /// this is the closest reachable check: images that already differ from each other can never all
+    /// match a single future canvas.
+    /// </summary>
+    private static void CheckUniformSize(List<string> problems, string where, IEnumerable<Image<Rgba32>> images)
+    {
+        var sizes = images.Select(i => (i.Width, i.Height)).Distinct().ToList();
+        if (sizes.Count > 1)
+        {
+            string list = string.Join(", ", sizes
+                .OrderBy(s => s.Width).ThenBy(s => s.Height)
+                .Select(s => $"{s.Width}x{s.Height}"));
+            problems.Add($"{where} has variant images of differing sizes ({list}); every image must "
+                + "share one size so they can all match the CookBook canvas.");
         }
     }
 

@@ -730,4 +730,93 @@ public class ValidatorTests
             p => p.Contains("canvas", StringComparison.OrdinalIgnoreCase)
                  && p.Contains("positive", StringComparison.OrdinalIgnoreCase));
     }
+
+    // --- per-level validation (authoring CLI) ---
+
+    private static LoadedIngredient DynIng(string id, Colorization col, params (string id, Rgba32 fill, int w, int h)[] vs)
+    {
+        var images = new Dictionary<string, Image<Rgba32>>();
+        foreach (var v in vs) images[v.id] = new Image<Rgba32>(v.w, v.h, v.fill);
+        return new LoadedIngredient
+        {
+            Manifest = new IngredientManifest(id, id, LayerKind.Dynamic, col,
+                vs.Select(v => new Variant(v.id, v.id, 1)).ToArray()),
+            VariantImages = images,
+        };
+    }
+
+    private static Colorization Range() =>
+        new(ColorModel.Hsv, 5, 5, new[] { new ColorEntry(1, new ColorRange(0, 10, 0, 10), null) });
+
+    [Fact]
+    public void ValidateIngredient_passes_a_clean_grayscale_dynamic_ingredient() =>
+        Assert.Empty(Validator.ValidateIngredient(
+            DynIng("d", Range(), ("a", new Rgba32(120, 120, 120, 255), 4, 4))));
+
+    [Fact]
+    public void ValidateIngredient_reports_a_non_grayscale_dynamic_variant() =>
+        Assert.Contains(
+            Validator.ValidateIngredient(DynIng("d", Range(), ("a", new Rgba32(200, 10, 10, 255), 4, 4))),
+            p => p.Contains("grayscale", StringComparison.OrdinalIgnoreCase));
+
+    [Fact]
+    public void ValidateIngredient_reports_variant_images_of_differing_sizes() =>
+        Assert.Contains(
+            Validator.ValidateIngredient(DynIng("d", Range(),
+                ("a", new Rgba32(120, 120, 120, 255), 4, 4),
+                ("b", new Rgba32(120, 120, 120, 255), 8, 8))),
+            p => p.Contains("differing sizes", StringComparison.OrdinalIgnoreCase));
+
+    [Fact]
+    public void ValidateIngredient_reports_a_custom_layer_carrying_a_colorization() =>
+        Assert.Contains(
+            Validator.ValidateIngredient(new LoadedIngredient
+            {
+                Manifest = new IngredientManifest("c", "C", LayerKind.Custom, Range(),
+                    new[] { new Variant("a", "A", 1) }),
+                VariantImages = new Dictionary<string, Image<Rgba32>>
+                    { ["a"] = new Image<Rgba32>(4, 4, new Rgba32(0, 0, 0, 255)) },
+            }),
+            p => p.Contains("custom", StringComparison.OrdinalIgnoreCase));
+
+    [Fact]
+    public void ValidateRecipe_passes_a_clean_single_layer_recipe()
+    {
+        var ing = DynIng("d", Range(), ("a", new Rgba32(120, 120, 120, 255), 4, 4));
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("r", "R", new[] { "d" }, Array.Empty<IncompatibilityRule>()),
+            Ingredients = new[] { ing },
+        };
+        Assert.Empty(Validator.ValidateRecipe(recipe));
+    }
+
+    [Fact]
+    public void ValidateRecipe_reports_cross_ingredient_size_mismatch()
+    {
+        var a = DynIng("a", Range(), ("x", new Rgba32(120, 120, 120, 255), 4, 4));
+        var b = DynIng("b", Range(), ("y", new Rgba32(120, 120, 120, 255), 8, 8));
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("r", "R", new[] { "a", "b" }, Array.Empty<IncompatibilityRule>()),
+            Ingredients = new[] { a, b },
+        };
+        Assert.Contains(Validator.ValidateRecipe(recipe),
+            p => p.Contains("differing sizes", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void ValidateRecipe_reports_a_dangling_rule_reference()
+    {
+        var ing = DynIng("d", Range(), ("a", new Rgba32(120, 120, 120, 255), 4, 4));
+        var rule = new IncompatibilityRule(RuleType.Exclude,
+            new RuleTarget("nope", "x"), new[] { new RuleTarget("d", "a") });
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("r", "R", new[] { "d" }, new[] { rule }),
+            Ingredients = new[] { ing },
+        };
+        Assert.Contains(Validator.ValidateRecipe(recipe),
+            p => p.Contains("rule references unknown", StringComparison.OrdinalIgnoreCase));
+    }
 }
