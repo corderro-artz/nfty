@@ -1,0 +1,5 @@
+# Frozen test fixtures — hashed byte-for-byte by FixtureFreezeTests. Never convert
+# line endings on checkout: with core.autocrlf=true, git would otherwise smudge
+# README.md's LF to CRLF on a fresh Windows clone and break its pinned SHA-256,
+# failing the suite out of the box. Treat the whole directory as opaque/binary.
+tests/fixtures/** -text

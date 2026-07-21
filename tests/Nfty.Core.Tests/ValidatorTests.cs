@@ -709,4 +709,25 @@ public class ValidatorTests
 
         Assert.DoesNotContain(problems, p => p.Contains("grayscale", StringComparison.OrdinalIgnoreCase));
     }
+
+    // --- canvas dimensions ---
+
+    [Fact]
+    public void Non_positive_canvas_dimension_reported()
+    {
+        // Canvas is the single source of truth for every image size, and the GUI feeds it from
+        // user input, so a zero (or negative) dimension must be named for what it is rather than
+        // surfacing only as a downstream variant-size mismatch or an allocation throw.
+        var ing = Ing("bg", new Variant("a", "A", 1));
+        var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "Book", new Dimensions(0, 4),
+                new Collection("B", "", "B"), new Dictionary<string, double> { ["cat"] = 1.0 }),
+            Recipes = new[] { Rec("cat", ing) },
+        };
+
+        Assert.Contains(Validator.Validate(book),
+            p => p.Contains("canvas", StringComparison.OrdinalIgnoreCase)
+                 && p.Contains("positive", StringComparison.OrdinalIgnoreCase));
+    }
 }

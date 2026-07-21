@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -29,6 +30,13 @@ public static class SeedHash
     public static ulong ToUlong(string seed)
     {
         byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(seed));
-        return BitConverter.ToUInt64(hash, 0);
+
+        // Read the first 8 bytes in a FIXED byte order, not the machine's. BitConverter.ToUInt64
+        // reads in native endianness, so the same seed would seed the RNG differently — and thus
+        // generate a different collection — on a big-endian CPU than a little-endian one, silently
+        // breaking the same-seed-same-output contract across architectures. Little-endian is chosen
+        // because it equals what BitConverter produced on the little-endian machines every existing
+        // Set was generated on, so this hardening changes no output that has ever been produced.
+        return BinaryPrimitives.ReadUInt64LittleEndian(hash);
     }
 }

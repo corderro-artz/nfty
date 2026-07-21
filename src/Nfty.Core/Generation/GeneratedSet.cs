@@ -62,5 +62,11 @@ public readonly record struct GenerationProgress(int Completed, int Total)
 /// slow machine. Incompatibility rules are still enforced either way.
 /// </param>
 public record GenerateOptions(
-    int Count, string Seed, string? RecipeId = null, int MaxRerollsPerAsset = 10000,
-    bool EnforceUniqueDna = true);
+    int Count, string Seed, string? RecipeId = null,
+    int MaxRerollsPerAsset = GenerateOptions.DefaultMaxRerolls,
+    bool EnforceUniqueDna = true)
+{
+    /// <summary>The reroll budget when a caller does not set one. Shared with the CLI's
+    /// <c>--max-rerolls</c> default so the two cannot drift apart.</summary>
+    public const int DefaultMaxRerolls = 10000;
+}

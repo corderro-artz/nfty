@@ -91,9 +91,17 @@ public static class CommandFactory
         string suffix = weight is double w ? $" (weight={w})" : string.Empty;
         Console.WriteLine($"{indent}Recipe: {recipe.Manifest.Name} [{recipe.Manifest.Id}]{suffix}");
 
-        var byId = recipe.Ingredients.ToDictionary(i => i.Manifest.Id);
+        // inspect is a diagnostic run on any file, including a malformed one — the very case a
+        // user reaches for it. So resolve tolerantly (last id wins, like Validator) and name a
+        // dangling layerOrder entry rather than throwing a raw KeyNotFoundException at someone
+        // trying to see what is wrong.
+        var byId = new Dictionary<string, LoadedIngredient>();
+        foreach (var i in recipe.Ingredients) byId[i.Manifest.Id] = i;
         foreach (var layerId in recipe.Manifest.LayerOrder)
-            PrintIngredient(byId[layerId], indent + "  ");
+        {
+            if (byId.TryGetValue(layerId, out var ing)) PrintIngredient(ing, indent + "  ");
+            else Console.WriteLine($"{indent}  Ingredient: <missing '{layerId}'>");
+        }
     }
 
     private static void PrintIngredient(LoadedIngredient ing, string indent)
@@ -142,6 +150,12 @@ public static class CommandFactory
             Console.WriteLine("Traits (overall):");
             foreach (var t in report.Traits)
                 Console.WriteLine($"  {t.RecipeName,-12} {t.IngredientName,-14} {t.VariantName,-14} {t.OverallPercent,6:0.00}%");
+
+            // The largest number of unique-DNA assets this CookBook can produce — the same figure
+            // generate would report only on failure. Surfaced here so an author can size a run
+            // before starting it. Saturates at the counter's cap, reported as "more than N".
+            var space = UniqueSpace.Count(cb);
+            Console.WriteLine($"Unique DNA space: {(space.IsExact ? space.Total.ToString() : $"more than {space.Total}")}");
             return 0;
         });
         return cmd;
@@ -272,13 +286,18 @@ public static class CommandFactory
                 + "Skips the dedup and space-counting work — use it for large runs on slow "
                 + "machines. Incompatibility rules are still enforced.",
         };
-        var cmd = new Command("generate", "Generate a new Set of assets from a CookBook.") { path, count, seed, outDir, pack, recipe, unlimited };
+        var maxRerolls = MaxRerollsOption();
+        var cmd = new Command("generate", "Generate a new Set of assets from a CookBook.") { path, count, seed, outDir, pack, recipe, unlimited, maxRerolls };
         cmd.SetAction(parse =>
         {
             using var book = CookBookArchive.Read(parse.GetValue(path)!);
             string dir = parse.GetValue(outDir)!;
-            var opts = new GenerateOptions(parse.GetValue(count), parse.GetValue(seed)!,
-                parse.GetValue(recipe), EnforceUniqueDna: !parse.GetValue(unlimited));
+            var opts = new GenerateOptions(
+                Count: parse.GetValue(count),
+                Seed: parse.GetValue(seed)!,
+                RecipeId: parse.GetValue(recipe),
+                MaxRerollsPerAsset: parse.GetValue(maxRerolls),
+                EnforceUniqueDna: !parse.GetValue(unlimited));
             using var set = Generator.Generate(book, opts);
             SetWriter.Write(set, dir, parse.GetValue(pack));
             Console.WriteLine($"Generated {set.Assets.Count} → {dir}");
@@ -312,7 +331,13 @@ public static class CommandFactory
                 + "ERC-721 standard. Skips the dedup and space-counting work — use it for large "
                 + "extensions on slow machines. Incompatibility rules are still enforced.",
         };
-        var cmd = new Command("extend", "Grow an existing Set to a new total asset count, using the same CookBook.") { path, dir, to, seed, unlimited };
+        var pack = new Option<bool>("--pack")
+        {
+            Description = "Also repackage the extended Set directory into a single .set archive, "
+                + "as generate --pack does.",
+        };
+        var maxRerolls = MaxRerollsOption();
+        var cmd = new Command("extend", "Grow an existing Set to a new total asset count, using the same CookBook.") { path, dir, to, seed, unlimited, pack, maxRerolls };
         cmd.SetAction(parse =>
         {
             using var book = CookBookArchive.Read(parse.GetValue(path)!);
@@ -325,12 +350,36 @@ public static class CommandFactory
             if (need <= 0) { Console.WriteLine($"Already at {have}."); return 0; }
 
             using var more = Generator.Generate(book,
-                new GenerateOptions(need, parse.GetValue(seed)!, EnforceUniqueDna: !parse.GetValue(unlimited)),
+                new GenerateOptions(need, parse.GetValue(seed)!,
+                    MaxRerollsPerAsset: parse.GetValue(maxRerolls),
+                    EnforceUniqueDna: !parse.GetValue(unlimited)),
                 existing.Dnas, existing.NextNumber);
-            SetWriter.Write(more, setDir, pack: false);
+            SetWriter.Write(more, setDir, parse.GetValue(pack));
             Console.WriteLine($"Extended by {need} → {target} total.");
             return 0;
         });
         return cmd;
+    }
+
+    /// <summary>
+    /// A fresh <c>--max-rerolls</c> option. Built per command rather than shared, since an Option
+    /// instance belongs to one command's symbol tree. The default tracks
+    /// <see cref="GenerateOptions.DefaultMaxRerolls"/> so the CLI and library never disagree on it.
+    /// </summary>
+    private static Option<int> MaxRerollsOption()
+    {
+        var opt = new Option<int>("--max-rerolls")
+        {
+            Description = "Per-asset reroll budget before generation gives up finding a legal, "
+                + "unique roll. Raise it when a run reports the reroll budget ran out before the "
+                + "unique space did; the default suits most CookBooks.",
+            DefaultValueFactory = _ => GenerateOptions.DefaultMaxRerolls,
+        };
+        opt.Validators.Add(result =>
+        {
+            if (result.GetValueOrDefault<int>() < 1)
+                result.AddError("--max-rerolls must be a positive integer.");
+        });
+        return opt;
     }
 }

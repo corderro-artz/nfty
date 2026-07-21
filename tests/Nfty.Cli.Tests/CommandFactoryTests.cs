@@ -156,6 +156,105 @@ public class CommandFactoryTests
         }
     }
 
+    // --- generate/extend: --max-rerolls exposes the reroll budget the error messages tell users to raise ---
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("-5")]
+    public void Generate_max_rerolls_rejects_a_non_positive_budget(string value)
+    {
+        var result = CommandFactory.Build().Parse(
+            $"generate book.cbk --count 5 --out out --max-rerolls {value}");
+
+        Assert.Contains(result.Errors, e => e.Message.Contains("--max-rerolls"));
+    }
+
+    [Fact]
+    public void Generate_max_rerolls_accepts_a_positive_budget()
+    {
+        var result = CommandFactory.Build().Parse(
+            "generate book.cbk --count 5 --out out --max-rerolls 500");
+
+        Assert.Empty(result.Errors);
+    }
+
+    [Fact]
+    public void Generate_max_rerolls_is_optional_and_defaults_to_the_library_default()
+    {
+        var result = CommandFactory.Build().Parse("generate book.cbk --count 5 --out out");
+
+        Assert.Empty(result.Errors);
+        Assert.Equal(Nfty.Core.Generation.GenerateOptions.DefaultMaxRerolls,
+            result.GetValue<int>("--max-rerolls"));
+    }
+
+    [Fact]
+    public void Extend_accepts_max_rerolls_and_pack()
+    {
+        var result = CommandFactory.Build().Parse("extend book.cbk out --to 10 --max-rerolls 200 --pack");
+
+        Assert.Empty(result.Errors);
+    }
+
+    // --- stats: surfaces the unique-DNA space, otherwise reachable only through a failed generate ---
+
+    [Fact]
+    public void Stats_reports_the_unique_dna_space()
+    {
+        var tmp = Directory.CreateTempSubdirectory();
+        try
+        {
+            string cookbook = Path.Combine(tmp.FullName, "VaporPets.cbk");
+            WriteSelfContainedCookBook(cookbook);
+
+            string output = RunAndCaptureStdout(() =>
+                CommandFactory.Build().Parse(["stats", cookbook]).Invoke(NonThrowingConfig));
+
+            Assert.Contains("Unique DNA space:", output);
+        }
+        finally
+        {
+            tmp.Delete(recursive: true);
+        }
+    }
+
+    // --- inspect: a dangling layerOrder entry is named, not crashed on ---
+
+    [Fact]
+    public void Inspect_names_a_dangling_layerOrder_entry_instead_of_throwing()
+    {
+        var tmp = Directory.CreateTempSubdirectory();
+        try
+        {
+            using var glow = new Image<Rgba32>(1, 1, new Rgba32(200, 200, 200, 255));
+            var aura = new LoadedIngredient
+            {
+                Manifest = new IngredientManifest("aura", "Aura", LayerKind.Custom, null,
+                    [new Variant("glow", "Glow", 1)]),
+                VariantImages = new Dictionary<string, Image<Rgba32>> { ["glow"] = glow },
+            };
+            // layerOrder names "ghost", which no ingredient supplies — a malformed archive, and
+            // exactly the kind of file a user runs inspect on to find out what is wrong.
+            var recipe = new LoadedRecipe
+            {
+                Manifest = new RecipeManifest("cat", "Cat", ["aura", "ghost"], []),
+                Ingredients = [aura],
+            };
+            string rcp = Path.Combine(tmp.FullName, "cat.rcp");
+            RecipeArchive.Write(rcp, recipe.Manifest, recipe.Ingredients);
+
+            string output = RunAndCaptureStdout(() =>
+                CommandFactory.Build().Parse(["inspect", rcp]).Invoke(NonThrowingConfig));
+
+            Assert.Contains("missing", output);
+            Assert.Contains("ghost", output);
+        }
+        finally
+        {
+            tmp.Delete(recursive: true);
+        }
+    }
+
     private static readonly InvocationConfiguration NonThrowingConfig = new() { EnableDefaultExceptionHandler = false };
 
     private static string RunAndCaptureStdout(Action act)

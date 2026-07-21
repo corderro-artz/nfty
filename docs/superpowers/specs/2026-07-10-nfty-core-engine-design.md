@@ -184,7 +184,7 @@ Documented edges: `g = 0` → black for any hue; in HSL, `g = 1` → white; in H
 DNA = SHA-256 over: the **recipe id**, then (sorted by ingredient id) each layer's selected **variant id**, plus the resolved `(H, S)` **quantized** per that layer's `colorization.hueQuantize` / `satQuantize` for **dynamic and static** layers (custom layers contribute variant id only). Quantizing color into the DNA means the explosive dynamic color space still contributes to uniqueness; a static layer's fixed color is constant, so it does not add cross-asset uniqueness but is recorded for correctness. Duplicate DNA ⇒ re-roll. If the legal unique space is exhausted before `N`, emit an error stating how many unique assets were possible.
 
 ### 5.5 Determinism
-A single string seed drives a SplitMix64 RNG, recorded in the Set manifest. Same cookbook + seed ⇒ identical output.
+A single string seed drives a SplitMix64 RNG, recorded in the Set manifest. Same cookbook + seed ⇒ identical output, independent of both machine locale and CPU architecture. The seed is mapped to the RNG's 64-bit state by hashing it with SHA-256 and reading the first 8 bytes **little-endian** (a fixed byte order, not the platform's), so the same seed yields the same stream on any CPU.
 
 ### 5.6 Extend
 `extend` re-opens an existing Set with its cookbook, loads recorded DNAs and item numbering, then rolls only new, non-colliding assets up to the new `N`, preserving existing items' images, traits, DNA, and numbering exactly. Because rarity is derived from the whole collection, `extend` **recomputes** every item's `rarity` and the `set.json` count/distribution/aggregate rarity over the full collection (existing on-disk items + new additions), rewriting existing items' `rarity` field only.

@@ -26,6 +26,15 @@ public static class Validator
         if (cb.Manifest.RecipeWeights.Values.Sum() <= 0)
             problems.Add("CookBook has zero total recipe weight.");
 
+        // Canvas is the single source of truth for every image size. A non-positive dimension
+        // is an impossible collection — ImageSharp cannot allocate a zero- or negative-sized
+        // image — and left unchecked it surfaces only as a confusing per-variant size mismatch
+        // (or an allocation throw deep in Compositor). The GUI feeds this straight from user
+        // input, so reject it here where the message can name the real problem.
+        if (cb.Manifest.Canvas.Width <= 0 || cb.Manifest.Canvas.Height <= 0)
+            problems.Add($"CookBook canvas is {cb.Manifest.Canvas.Width}x{cb.Manifest.Canvas.Height}; "
+                + "both canvas dimensions must be positive.");
+
         // A weight of zero shelves a recipe without deleting it, which is legitimate. A NEGATIVE
         // weight is not: the roller accumulates weights in order and returns the first entry whose
         // running total passes the sample, so a negative one silently steals the share of the

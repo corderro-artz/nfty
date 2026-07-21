@@ -1,6 +1,4 @@
 using Nfty.Core.Formats;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Nfty.Core.Editing;
 
