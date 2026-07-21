@@ -261,4 +261,54 @@ public class AuthoringCommandsTests
         }
         finally { tmp.Delete(recursive: true); }
     }
+
+    [Fact]
+    public void Add_variant_appends_a_variant_and_image_to_an_igt()
+    {
+        var tmp = Directory.CreateTempSubdirectory();
+        try
+        {
+            string ings = Path.Combine(tmp.FullName, "ings");
+            Directory.CreateDirectory(ings);
+            BuildIgt(ings, "aura", LayerKind.Dynamic, Hsv(), "glow");
+            string igt = Path.Combine(ings, "aura.igt");
+
+            string sparkPng = Path.Combine(tmp.FullName, "spark.png");
+            using (var img = new Image<Rgba32>(4, 4, new Rgba32(150, 150, 150, 255)))
+                img.Save(sparkPng, new PngEncoder());
+
+            int code = Run("add", "variant", igt, "--id", "spark", "--name", "Spark",
+                "--weight", "2", "--image", sparkPng);
+            Assert.Equal(0, code);
+
+            using var loaded = IngredientArchive.Read(igt);
+            Assert.Equal(2, loaded.Manifest.Variants.Count);
+            var spark = loaded.Manifest.Variants.Single(v => v.Id == "spark");
+            Assert.Equal("Spark", spark.Name);
+            Assert.Equal(2, spark.Weight);
+            Assert.True(loaded.VariantImages.ContainsKey("spark"));
+        }
+        finally { tmp.Delete(recursive: true); }
+    }
+
+    [Fact]
+    public void Add_variant_rejects_a_duplicate_id()
+    {
+        var tmp = Directory.CreateTempSubdirectory();
+        try
+        {
+            string ings = Path.Combine(tmp.FullName, "ings");
+            Directory.CreateDirectory(ings);
+            BuildIgt(ings, "aura", LayerKind.Dynamic, Hsv(), "glow");
+            string igt = Path.Combine(ings, "aura.igt");
+            string png = Path.Combine(tmp.FullName, "glow.png");
+            using (var img = new Image<Rgba32>(4, 4, new Rgba32(150, 150, 150, 255)))
+                img.Save(png, new PngEncoder());
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                Run("add", "variant", igt, "--id", "glow", "--weight", "1", "--image", png));
+            Assert.Contains("glow", ex.Message);
+        }
+        finally { tmp.Delete(recursive: true); }
+    }
 }

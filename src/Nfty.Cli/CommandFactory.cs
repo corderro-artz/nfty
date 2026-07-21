@@ -33,6 +33,7 @@ public static partial class CommandFactory
         root.Subcommands.Add(Generate());
         root.Subcommands.Add(Extend());
         root.Subcommands.Add(NewGroup());
+        root.Subcommands.Add(AddGroup());
         return root;
     }
 

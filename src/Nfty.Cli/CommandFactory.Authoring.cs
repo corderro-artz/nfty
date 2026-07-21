@@ -163,6 +163,58 @@ public static partial class CommandFactory
         return cmd;
     }
 
+    /// <summary>The `add` command group: append a single item into an existing archive.</summary>
+    public static Command AddGroup()
+    {
+        var group = new Command("add", "Append a variant / ingredient / recipe to an existing archive.");
+        group.Subcommands.Add(AddVariant());
+        return group;
+    }
+
+    private static Command AddVariant()
+    {
+        var igtPath = new Argument<string>("igt") { Description = "Path to the .igt to modify in place." };
+        var id = new Option<string>("--id") { Description = "New variant id (must be unique in the ingredient).", Required = true };
+        var name = new Option<string?>("--name") { Description = "Display name (defaults to the id)." };
+        var weight = new Option<double>("--weight") { Description = "Variant weight (zero or greater).", Required = true };
+        var image = new Option<string>("--image") { Description = "PNG for this variant.", Required = true };
+        var cmd = new Command("variant", "Add one variant (id, weight, image) to an existing .igt.")
+            { igtPath, id, name, weight, image };
+        cmd.SetAction(parse =>
+        {
+            string path = parse.GetValue(igtPath)!;
+            string vid = parse.GetValue(id)!;
+            using var existing = IngredientArchive.Read(path);
+            if (existing.Manifest.Variants.Any(v => string.Equals(v.Id, vid, StringComparison.Ordinal)))
+                throw new InvalidOperationException(
+                    $"Ingredient '{existing.Manifest.Id}' already has a variant '{vid}'.");
+
+            var newImg = Image.Load<Rgba32>(parse.GetValue(image)!);
+            try
+            {
+                var images = new Dictionary<string, Image<Rgba32>>(existing.VariantImages) { [vid] = newImg };
+                var variants = existing.Manifest.Variants
+                    .Append(new Variant(vid, parse.GetValue(name) ?? vid, parse.GetValue(weight)))
+                    .ToList();
+                var manifest = existing.Manifest with { Variants = variants };
+
+                var merged = new LoadedIngredient { Manifest = manifest, VariantImages = images };
+                var problems = Validator.ValidateIngredient(merged);
+                if (problems.Count > 0) { Report(problems); return 1; }
+
+                // Read(path) closed its file handle before returning, so it's safe to replace the
+                // file now. IngredientArchive.Write opens in ZipArchiveMode.Create, which throws
+                // if the target already exists, so the old file must go first.
+                File.Delete(path);
+                IngredientArchive.Write(path, manifest, images);
+                Console.WriteLine($"Added variant '{vid}' to {path}");
+                return 0;
+            }
+            finally { newImg.Dispose(); }
+        });
+        return cmd;
+    }
+
     /// <summary>Loads one PNG per distinct variant id, by the {id}.png convention.</summary>
     private static Dictionary<string, Image<Rgba32>> LoadVariantImages(IngredientManifest m, string imagesDir)
     {
