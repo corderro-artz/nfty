@@ -21,9 +21,10 @@ public static class ServiceRegistration
         services.AddTransient<NewCookBookViewModel>();
         services.AddTransient<NewRecipeViewModel>();
         services.AddTransient<NewIngredientViewModel>();
+        services.AddTransient<LandingViewModel>();
 
-        // Further VM registrations (LandingViewModel, ExplorerViewModel, etc.) are added
-        // incrementally by the task that creates each ViewModel (see Tasks 6-13).
+        // Further VM registrations (ExplorerViewModel, etc.) are added incrementally by
+        // the task that creates each ViewModel (see Tasks 7-13).
 
         return services;
     }

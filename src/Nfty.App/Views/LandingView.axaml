@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             xmlns:m="using:Nfty.App.Models"
+             x:Class="Nfty.App.Views.LandingView"
+             x:DataType="vm:LandingViewModel">
+  <Grid ColumnDefinitions="*,*" Margin="38,34">
+    <StackPanel Grid.Column="0" Spacing="7" MaxWidth="272">
+      <TextBlock Text="nfty" FontSize="30" FontWeight="Bold" />
+      <TextBlock Text="Asset Generator" Classes="muted" />
+      <TextBlock Text="CREATE" Classes="muted" Margin="0,12,0,4" />
+      <Button Classes="accent" Content="＋ New CookBook  ⌘N" Command="{Binding NewCookBookCommand}" />
+      <Button Classes="tbtn" Content="＋ New Kitchen…" Command="{Binding NewKitchenCommand}" />
+      <StackPanel Orientation="Horizontal" Spacing="7">
+        <Button Classes="tbtn" Content="Recipe" Command="{Binding NewRecipeCommand}" />
+        <Button Classes="tbtn" Content="Ingredient" Command="{Binding NewIngredientCommand}" />
+      </StackPanel>
+      <TextBlock Text="OPEN" Classes="muted" Margin="0,12,0,4" />
+      <Button Classes="tbtn" Content="↗ Open CookBook…  ⌘O" Command="{Binding OpenCookBookCommand}" />
+      <Button Classes="tbtn" Content="↧ Import…  ⌘I" Command="{Binding ImportCommand}" />
+      <Button Classes="tbtn" Content="↗ Open a cooked .set…" Command="{Binding OpenSetCommand}" />
+      <Button Classes="tbtn" Content="New to nfty? The cooking metaphor →" Command="{Binding ShowHelpCommand}" />
+    </StackPanel>
+    <StackPanel Grid.Column="1" Spacing="2">
+      <TextBlock Text="RECENT" Classes="muted" />
+      <ItemsControl ItemsSource="{Binding Recents}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="m:RecentItem">
+            <Button Classes="tbtn" HorizontalAlignment="Stretch"
+                    Command="{Binding $parent[ItemsControl].((vm:LandingViewModel)DataContext).OpenRecentCommand}"
+                    CommandParameter="{Binding}">
+              <StackPanel>
+                <TextBlock Text="{Binding Name}" />
+                <TextBlock Text="{Binding Meta}" Classes="muted" />
+              </StackPanel>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+  </Grid>
+</UserControl>
