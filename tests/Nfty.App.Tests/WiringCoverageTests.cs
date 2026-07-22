@@ -22,6 +22,9 @@ public class WiringCoverageTests
     [Fact]
     public void Explorer_exposes_every_mapped_command()
     {
+        // §6.2's "expand" row is intentionally not a VM command: tree expand/collapse is handled by
+        // Avalonia's native TreeView expander, so a ToggleExpand command would be vestigial. This
+        // test covers the row via that documented decision rather than a command assertion.
         var vm = new ExplorerViewModel(new FakeNav(), new FakeDialogs(), new FakeNotYetWired());
         foreach (var c in new[] { "ToggleLockCommand","SearchCommand","AddCommand","DeleteSelectedCommand",
                                   "ImportCommand","SelectNodeCommand","OpenIngredientCommand" })
@@ -35,7 +38,7 @@ public class WiringCoverageTests
         foreach (var c in new[] { "SelectToolCommand","UndoCommand","RedoCommand","AddVariantCommand",
                                   "DuplicateVariantCommand","DeleteVariantCommand","ApplyStrokeCommand",
                                   "RerollPreviewCommand","EnlargePreviewCommand","FillPanePreviewCommand",
-                                  "SaveCommand","BackCommand" })
+                                  "SaveCommand","BackCommand","SelectVariantCommand" })
             Assert.True(HasCommand(vm, c), $"Editor missing {c}");
     }
 }

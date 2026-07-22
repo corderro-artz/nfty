@@ -4,16 +4,35 @@
              x:Class="Nfty.App.Views.IngredientEditorView"
              x:DataType="vm:IngredientEditorViewModel">
   <Grid RowDefinitions="Auto,*,Auto" Margin="12">
-    <!-- Variant filmstrip -->
+    <!-- Variant filmstrip toolbar -->
     <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
       <Button Content="Add variant" Command="{Binding AddVariantCommand}" Classes="tbtn" />
       <Button Content="Duplicate" Command="{Binding DuplicateVariantCommand}" Classes="tbtn" />
       <Button Content="Delete" Command="{Binding DeleteVariantCommand}" Classes="tbtn" />
     </StackPanel>
 
-    <Grid Grid.Row="1" ColumnDefinitions="180,*,260">
-      <!-- Tool strip -->
+    <Grid Grid.Row="1" ColumnDefinitions="160,180,*,260">
+      <!-- Variant filmstrip -->
       <StackPanel Grid.Column="0" Spacing="6" Margin="0,0,12,0">
+        <TextBlock Text="Variants" Classes="muted" />
+        <ItemsControl ItemsSource="{Binding Variants}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:EditorVariant">
+              <Button Classes="tbtn" HorizontalAlignment="Stretch" Margin="0,0,0,4"
+                      Command="{Binding $parent[ItemsControl].((vm:IngredientEditorViewModel)DataContext).SelectVariantCommand}"
+                      CommandParameter="{Binding}">
+                <StackPanel>
+                  <TextBlock Text="{Binding Name}" />
+                  <TextBlock Text="{Binding Weight}" Classes="muted" />
+                </StackPanel>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <!-- Tool strip -->
+      <StackPanel Grid.Column="1" Spacing="6" Margin="0,0,12,0">
         <Button Content="Brush" Command="{Binding SelectToolCommand}"
                 CommandParameter="{x:Static vm:EditorTool.Brush}" Classes="tbtn" HorizontalAlignment="Stretch" />
         <Button Content="Eraser" Command="{Binding SelectToolCommand}"
@@ -39,11 +58,11 @@
       </StackPanel>
 
       <!-- Canvas placeholder -->
-      <Border Grid.Column="1" Name="Canvas" Background="{DynamicResource TileBrush}"
+      <Border Grid.Column="2" Name="Canvas" Background="{DynamicResource TileBrush}"
               BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1" CornerRadius="6" />
 
       <!-- Colorize rail -->
-      <StackPanel Grid.Column="2" Spacing="8" Margin="12,0,0,0">
+      <StackPanel Grid.Column="3" Spacing="8" Margin="12,0,0,0">
         <TextBlock Text="Colorize" FontWeight="Bold" />
         <StackPanel Orientation="Horizontal" Spacing="16">
           <RadioButton Content="Dynamic" GroupName="Mode" IsChecked="{Binding IsModeDynamic}" />

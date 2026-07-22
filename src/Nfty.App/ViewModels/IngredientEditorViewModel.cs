@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Services;
@@ -6,6 +7,10 @@ using Nfty.Core.Model;
 namespace Nfty.App.ViewModels;
 
 public enum EditorTool { Brush, Eraser, Rectangle, Circle, Triangle, Select, Fill }
+
+/// <summary>Phase-1 in-memory stand-in for a variant card in the editor's filmstrip. Real variant
+/// drafts (backed by <c>Nfty.Core</c> loaded variants) arrive in Phase 2.</summary>
+public record EditorVariant(string Id, string Name, double Weight);
 
 /// <summary>Phase-1 Ingredient Editor: the canvas/colorize/preview screen reached from an Ingredient's
 /// detail pane. Painting, undo/redo, and variant editing are stubs — Phase 2 wires real pixel editing
@@ -21,6 +26,16 @@ public partial class IngredientEditorViewModel : ViewModelBase
     [ObservableProperty] private double _hueMin, _hueMax = 360, _satMin = 40, _satMax = 100;
     [ObservableProperty] private int _hueQuantize = 12, _satQuantize = 4;
     [ObservableProperty] private string _fixedColor = "hex:d6249f";
+
+    /// <summary>Left-hand filmstrip: the variants belonging to this ingredient. Phase-1 in-memory
+    /// list — real persistence arrives with Phase 2 draft editing.</summary>
+    public ObservableCollection<EditorVariant> Variants { get; } =
+    [
+        new("glow", "Glow", 1),
+        new("spark", "Spark", 1),
+    ];
+
+    [ObservableProperty] private EditorVariant? _selectedVariant;
 
     /// <summary>Dynamic layers roll a colour per asset from a hue/sat range.</summary>
     public bool ShowColourRange => Mode == LayerKind.Dynamic;
@@ -42,7 +57,8 @@ public partial class IngredientEditorViewModel : ViewModelBase
         set { if (value) Mode = LayerKind.Dynamic; }
     }
 
-    public IngredientEditorViewModel(INavigationService nav, INotYetWired notify) { _nav = nav; _notify = notify; }
+    public IngredientEditorViewModel(INavigationService nav, INotYetWired notify)
+    { _nav = nav; _notify = notify; SelectedVariant = Variants.Count > 0 ? Variants[0] : null; }
 
     partial void OnModeChanged(LayerKind value)
     {
@@ -55,9 +71,35 @@ public partial class IngredientEditorViewModel : ViewModelBase
     [RelayCommand] private void SelectTool(EditorTool tool) => ActiveTool = tool;
     [RelayCommand] private void Undo() { /* EditHistory in P2 */ }
     [RelayCommand] private void Redo() { /* EditHistory in P2 */ }
-    [RelayCommand] private void AddVariant() { /* in-memory drafts in P2 */ }
-    [RelayCommand] private void DuplicateVariant() { /* P2 */ }
-    [RelayCommand] private void DeleteVariant() { /* P2 */ }
+
+    [RelayCommand]
+    private void SelectVariant(EditorVariant v) => SelectedVariant = v;
+
+    [RelayCommand]
+    private void AddVariant()
+    {
+        var added = new EditorVariant($"v{Variants.Count + 1}", "New", 1);
+        Variants.Add(added);
+        SelectedVariant = added;
+    }
+
+    [RelayCommand]
+    private void DuplicateVariant()
+    {
+        if (SelectedVariant is not { } source) return;
+        var copy = source with { Id = $"{source.Id}-copy{Variants.Count}" };
+        Variants.Add(copy);
+        SelectedVariant = copy;
+    }
+
+    [RelayCommand]
+    private void DeleteVariant()
+    {
+        if (SelectedVariant is not { } victim) return;
+        Variants.Remove(victim);
+        SelectedVariant = Variants.Count > 0 ? Variants[0] : null;
+    }
+
     [RelayCommand] private void ApplyStroke() => _notify.Report("Paint");
     [RelayCommand] private void RerollPreview() => _notify.Report("Preview roll");
     [RelayCommand] private void EnlargePreview() { /* ui-state P2 */ }

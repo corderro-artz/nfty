@@ -32,4 +32,13 @@ public class IngredientEditorViewModelTests
         vm.ApplyStrokeCommand.Execute(null); Assert.Equal("Paint", n.Last);
         vm.SaveCommand.Execute(null); Assert.Equal("Save ingredient", n.Last);
     }
+
+    [Fact]
+    public void Select_variant_sets_the_selected_variant()
+    {
+        var vm = Make(out _, out _);
+        var second = vm.Variants[1];
+        vm.SelectVariantCommand.Execute(second);
+        Assert.Same(second, vm.SelectedVariant);
+    }
 }
