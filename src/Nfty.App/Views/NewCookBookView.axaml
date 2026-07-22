@@ -1,0 +1,25 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             x:Class="Nfty.App.Views.NewCookBookView"
+             x:DataType="vm:NewCookBookViewModel">
+  <Border Background="{DynamicResource PanelBrush}" CornerRadius="10" Padding="28" Width="440"
+          BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1">
+    <StackPanel Spacing="10">
+      <TextBlock Text="New CookBook" FontWeight="Bold" />
+      <TextBox Watermark="Name" Text="{Binding Name}" />
+      <TextBlock Text="{Binding DerivedId}" Classes="muted" />
+      <TextBox Watermark="Symbol (optional)" Text="{Binding Symbol}" MaxLength="255" />
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <NumericUpDown Value="{Binding Width}" Minimum="1" Width="120" />
+        <ToggleButton IsChecked="{Binding AspectLocked}" Content="🔗" />
+        <NumericUpDown Value="{Binding Height}" Minimum="1" Width="120" />
+      </StackPanel>
+      <TextBox Watermark="Description" Text="{Binding Description}" AcceptsReturn="True" Height="70" />
+      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+        <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="tbtn" />
+        <Button Content="Create" Command="{Binding CreateCommand}" Classes="accent" />
+      </StackPanel>
+    </StackPanel>
+  </Border>
+</UserControl>

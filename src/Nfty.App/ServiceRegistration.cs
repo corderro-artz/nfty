@@ -18,6 +18,7 @@ public static class ServiceRegistration
 
         services.AddSingleton<ShellViewModel>();
         services.AddTransient<HelpViewModel>();
+        services.AddTransient<NewCookBookViewModel>();
 
         // Further VM registrations (LandingViewModel, ExplorerViewModel, etc.) are added
         // incrementally by the task that creates each ViewModel (see Tasks 6-13).
