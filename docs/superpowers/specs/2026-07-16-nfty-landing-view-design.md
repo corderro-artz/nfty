@@ -5,6 +5,13 @@
 **Deliverable:** `docs/design/mockups/landing.html` — a new self-contained HTML mockup
 **Companion to:** `docs/design/mockups/explorer.html` (the locked Explorer, ~iteration 22)
 
+> **Update (2026-07-22):** the two-column Start / Recent landing described here was expanded into
+> **Create** / **Open** action groups (with Recent alongside, an empty "Nothing here yet" state on
+> first run) per [`2026-07-19-nfty-creation-flows-design.md`](2026-07-19-nfty-creation-flows-design.md).
+> That expanded design was prototyped as `landing-entrypoints.html` and has now been **folded into the
+> single `landing.html`** — the separate first-run zero-state mockup is retired. The chrome, token, and
+> "no toolbar when nothing is open" rules in this spec still hold.
+
 ## Purpose
 
 The view the app opens on, before any cookbook is loaded — the VS Code "Welcome tab"

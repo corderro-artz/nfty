@@ -6,7 +6,7 @@
 - `wizard-single-pane.html` — New CookBook (→ `wizard-cookbook.html` on move)
 - `wizard-recipe.html` — New Recipe
 - `wizard-ingredient.html` — New Ingredient
-- `landing-entrypoints.html` — the expanded Landing (supersedes the Create section of `landing.html`)
+- `landing-entrypoints.html` — the expanded Landing, since **folded into `landing.html`** (it supersedes and replaces the old zero-state landing)
 
 **Companion to:** `docs/design/mockups/{explorer,landing,help,ingredient-editor}.html` — this set copies their
 token block and chrome verbatim.
@@ -146,7 +146,7 @@ soften art the DNA was built on. (An upsert on id collision must also *not* sile
 
 ### 9. Expanded Landing — Create / Open groups
 
-`landing-entrypoints.html` reworks the Landing's action area into two labelled groups:
+The Landing (`landing.html`, prototyped as `landing-entrypoints.html`) reworks its action area into two labelled groups:
 - **Create** — New CookBook (accent, `⌘N`), New Kitchen (dashed — reserved, next task), and a compact
   Recipe + Ingredient subrow.
 - **Open** — Open CookBook… (`⌘O`), **Import…** (`⌘I`), and the dashed "Open a cooked .set…" (Set browser

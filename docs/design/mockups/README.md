@@ -50,31 +50,30 @@ a new hex value anywhere (here or in a sibling) is the signal that the style has
 
 ## landing.html
 
-The **default view** — what the app opens on before a cookbook is loaded (the VS Code "Welcome tab"
-equivalent). A two-column split inside the same frameless window: the wordmark at front-door scale
-(46px) + tagline + a **Start** action stack on the left, **Recent** on the right.
+The **default view** — the single screen the app opens on before a CookBook is loaded (the VS Code
+"Welcome tab" equivalent). A two-column split inside the frameless window: wordmark + tagline + the
+**Create** and **Open** action groups on the left, **Recent** on the right. This absorbs the former
+separate zero-state mockup — the first-run case is simply an empty Recent (illustrated beneath the
+window), not a distinct screen.
 
-- **Start** — `+ New CookBook` (accent) and `↗ Open CookBook…`, both carrying `⌘N` / `⌘O` hints, plus
-  a **dashed, muted** `↗ Open a cooked .set…`. The buttons act on **CookBooks** (`.cbk`), never Sets —
-  a Set is what *comes out* of pressing Cook.
-- **Recent** — rows of `name` + `N recipes · N unique DNA` + path. The metrics are the same
-  **unique DNA** term the Cookbook view headlines. First run shows a dashed zero state ("Nothing here
-  yet") pointing back at **New CookBook**; toggle it with the **Recents** button above the window.
-- **No toolbar.** With nothing open, search / Add / Delete / Import / lock are all meaningless, so the
-  toolbar is *omitted rather than greyed* — it returns when a cookbook opens. The titlebar keeps its
-  shape via a muted `— nothing open —` in the breadcrumb slot, and the statusbar reads
-  `No cookbook open` (no `● Valid`, no counts — nothing to validate or count).
+- **Create** — `+ New CookBook` (accent, `⌘N`) and a dashed **New Kitchen…** (reserved), then a
+  secondary row of `Recipe` and `Ingredient` — the three authoring vessels the `nfty new` CLI
+  commands build.
+- **Open** — `↗ Open CookBook…` (`⌘O`), `↧ Import…` (`⌘I`, kind-agnostic — `Archives.KindOf` resolves
+  `.cbk`/`.rcp`/`.igt` from the extension), and a **dashed, muted** `↗ Open a cooked .set…` reserving
+  the shape for a Set browser that isn't built yet.
+- **Recent** — rows of `name` + metrics + path, mixing loose Kitchen items with CookBooks. First run
+  shows a dashed **"Nothing here yet"** zero state pointing back at **New CookBook**.
+- **No toolbar.** With nothing open, search / Add / Delete / lock are all meaningless, so the toolbar
+  is *omitted rather than greyed* — it returns when a cookbook opens. The titlebar breadcrumb reads a
+  muted `— nothing open —` and the statusbar `No CookBook open`.
 
-A quiet **Learn** link — "New to nfty? *The cooking metaphor* →" — sits below the Start stack, and a
-`?` anchors the far-right of the status bar; both open `help.html`'s quick-reference sheet (as does
-`⌘/`), so the help view is reachable whether or not a cookbook is open.
+A quiet **Learn** link — "New to nfty? *The cooking metaphor* →" — sits below the actions, and a `?`
+anchors the far-right of the status bar; both open `help.html`'s quick-reference sheet (as does `⌘/`).
 
-> The dashed `.set` action is **deliberately inert**: it reserves the shape for a Set browser that
-> isn't built yet. When that view lands, the action goes live and the dashed treatment — which is what
-> marks it as not-yet-real — should be reconsidered. (The Learn / docs entry point that used to be
-> listed here is now built — see the Learn link and status-bar `?` above.)
-
-Design spec: [`docs/superpowers/specs/2026-07-16-nfty-landing-view-design.md`](../../superpowers/specs/2026-07-16-nfty-landing-view-design.md).
+Design specs: [`2026-07-16-nfty-landing-view-design.md`](../../superpowers/specs/2026-07-16-nfty-landing-view-design.md)
+(the base landing) and [`2026-07-19-nfty-creation-flows-design.md`](../../superpowers/specs/2026-07-19-nfty-creation-flows-design.md)
+(the expanded Create/Open entry points, folded in here).
 The token block is copied **verbatim** from `explorer.html` — every colour is a `var()`, and a new hex
 value anywhere is the signal that the style has drifted.
 
@@ -118,7 +117,7 @@ Design spec: [`docs/superpowers/specs/2026-07-18-nfty-ingredient-editor-design.m
 The token block is copied **verbatim** from `explorer.html`; every colour is a `var()`, and a new hex value anywhere
 is the signal that the style has drifted.
 
-## Creation flows — wizards + expanded landing
+## Creation flows — the wizards
 
 The authoring entry points: creating a CookBook, Recipe, or Ingredient from nothing. Each is a
 **single centered pane** (no sidebar — the one deliberate exception to the shared-rail layout, because
@@ -135,9 +134,10 @@ a manifest stores or the `Validator` requires. Full rationale in the spec:
   kind-dependent zone matching `Validator.CheckKind`: Dynamic → dual-handle Hue/Saturation
   `ColorRange` sliders (half-open, animated saturation preview); Static → one fixed-colour swatch;
   Custom → none.
-- **`landing-entrypoints.html`** — the expanded Landing: **Create** (New CookBook / New Kitchen /
-  Recipe / Ingredient) and **Open** (Open CookBook / **Import…** / cooked `.set`) groups. Import is
-  kind-agnostic — `Archives.KindOf` resolves `.cbk`/`.rcp`/`.igt` from the extension.
+The **Create** / **Open** entry points that launch these wizards (New CookBook / New Kitchen / Recipe /
+Ingredient · Open CookBook / Import… / cooked `.set`) live on the Landing itself — see the
+`landing.html` section above. (They were prototyped in a separate `landing-entrypoints.html`, now folded
+into `landing.html`.)
 
 All screens share the unified chrome: SVG icons, a persistent **`.kroot` Kitchen workspace chip** in the
 titlebar (VS-Code title:path model — the workspace root, absent only on the Landing), a statusbar on

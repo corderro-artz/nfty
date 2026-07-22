@@ -34,14 +34,13 @@ W, H = 1180, 760
 
 # (file, tab name, one-line descriptor) — order is the review order.
 SCREENS = [
-    ("landing-entrypoints.html", "Landing", "Entry points — Create · Open · Import"),
+    ("landing.html",             "Landing", "Create · Open · Import · Recent (empty on first run)"),
     ("wizard-cookbook.html",     "New CookBook", "Single pane · 5 grounded fields"),
     ("wizard-recipe.html",       "New Recipe", "Name + mandatory weight · live mix"),
     ("wizard-ingredient.html",   "New Ingredient", "Kind radios · colour-range sliders"),
     ("explorer.html",            "Explorer", "The primary screen · tree + detail"),
     ("ingredient-editor.html",   "Ingredient Editor", "Paint a value-map · Colorize rail"),
     ("help.html",                "Help", "Quick-reference sheet"),
-    ("landing.html",             "Landing · zero state", "First-run empty state"),
 ]
 
 DATA = [base64.b64encode((HERE / f).read_text(encoding="utf-8").encode("utf-8")).decode("ascii")
