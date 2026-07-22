@@ -171,13 +171,3 @@ F=explorer.html   # or landing.html, help.html
 { printf '<!doctype html><html><head><meta charset="utf-8"><style>*{box-sizing:border-box}html,body{margin:0}</style></head><body>'; cat $F; printf '</body></html>'; } > /tmp/preview.html
 python3 -m http.server 8000   # then open http://localhost:8000/tmp/preview.html
 ```
-
-Published (private) artifacts — same URL across redeploys (pass the URL as `url` to the Artifact tool
-from a later session, or a new one gets minted):
-
-| Mockup | Artifact |
-|--------|----------|
-| `explorer.html` | <https://claude.ai/code/artifact/04b18798-3fca-4bde-a434-1d848a8116c5> |
-| `landing.html`  | <https://claude.ai/code/artifact/6bfa007e-b4a6-48e4-8ec8-90f1d193e35f> |
-| `help.html`     | <https://claude.ai/code/artifact/4b0a9a36-c264-4a28-94cb-99e06fa3d0d5> |
-| `gallery.html` (all 8, tabbed) | <https://claude.ai/code/artifact/c8f1c7bb-d238-49a5-bd25-c8173e5c8c14> |
