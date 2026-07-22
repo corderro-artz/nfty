@@ -3,6 +3,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
 using Nfty.App;
+using Nfty.App.ViewModels;
 
 namespace Nfty.Desktop;
 
@@ -13,8 +14,11 @@ public partial class App : Application
     public override void OnFrameworkInitializationCompleted()
     {
         var services = new ServiceCollection().AddNftyApp().BuildServiceProvider();
+        var shell = services.GetRequiredService<ShellViewModel>();
+        // TODO(Task 6): navigate to LandingViewModel as the initial page —
+        // services.GetRequiredService<INavigationService>().To(services.GetRequiredService<LandingViewModel>());
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-            desktop.MainWindow = new MainWindow();  // DataContext set in Task 5
+            desktop.MainWindow = new MainWindow { DataContext = shell };
         base.OnFrameworkInitializationCompleted();
     }
 }

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Nfty.App.Services;
+using Nfty.App.ViewModels;
 
 namespace Nfty.App;
 
@@ -15,8 +16,10 @@ public static class ServiceRegistration
         services.AddSingleton<IRecentsService, RecentsService>();
         services.AddSingleton<IThemeService, ThemeService>();
 
-        // VM registrations (ShellViewModel, LandingViewModel, ExplorerViewModel, etc.) are added
-        // incrementally by the task that creates each ViewModel (see Tasks 5-13).
+        services.AddSingleton<ShellViewModel>();
+
+        // Further VM registrations (LandingViewModel, ExplorerViewModel, etc.) are added
+        // incrementally by the task that creates each ViewModel (see Tasks 6-13).
 
         return services;
     }
