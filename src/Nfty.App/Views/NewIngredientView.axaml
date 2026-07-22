@@ -1,0 +1,48 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             x:Class="Nfty.App.Views.NewIngredientView"
+             x:DataType="vm:NewIngredientViewModel">
+  <Border Background="{DynamicResource PanelBrush}" CornerRadius="10" Padding="28" Width="440"
+          BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1">
+    <StackPanel Spacing="10">
+      <TextBlock Text="New Ingredient" FontWeight="Bold" />
+      <TextBox Watermark="Name" Text="{Binding Name}" />
+
+      <StackPanel Orientation="Horizontal" Spacing="16">
+        <RadioButton Content="Dynamic" GroupName="Kind" IsChecked="{Binding IsKindDynamic}" />
+        <RadioButton Content="Static" GroupName="Kind" IsChecked="{Binding IsKindStatic}" />
+        <RadioButton Content="Custom" GroupName="Kind" IsChecked="{Binding IsKindCustom}" />
+      </StackPanel>
+
+      <StackPanel Spacing="6" IsVisible="{Binding ShowColourRange}">
+        <TextBlock Text="Hue range" Classes="muted" />
+        <Slider Value="{Binding HueMin}" Minimum="0" Maximum="360" />
+        <Slider Value="{Binding HueMax}" Minimum="0" Maximum="360" />
+        <TextBlock Text="Saturation range" Classes="muted" />
+        <Slider Value="{Binding SatMin}" Minimum="0" Maximum="100" />
+        <Slider Value="{Binding SatMax}" Minimum="0" Maximum="100" />
+      </StackPanel>
+
+      <StackPanel Spacing="6" IsVisible="{Binding ShowFixedColour}">
+        <TextBlock Text="Fixed colour" Classes="muted" />
+        <TextBox Watermark="hex:d6249f" Text="{Binding FixedColor}" />
+      </StackPanel>
+
+      <StackPanel Orientation="Horizontal" Spacing="16">
+        <RadioButton Content="Into CookBook" GroupName="Destination" IsChecked="{Binding IsIntoCookBook}" />
+        <RadioButton Content="Loose (Kitchen)" GroupName="Destination" IsChecked="{Binding IsLooseKitchen}" />
+      </StackPanel>
+
+      <StackPanel Spacing="6" IsVisible="{Binding ShowCanvas}">
+        <TextBlock Text="Canvas" Classes="muted" />
+        <TextBox Watermark="Canvas size (e.g. 1000x1000)" />
+      </StackPanel>
+
+      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+        <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="tbtn" />
+        <Button Content="Create" Command="{Binding CreateCommand}" Classes="accent" />
+      </StackPanel>
+    </StackPanel>
+  </Border>
+</UserControl>
