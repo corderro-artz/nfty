@@ -1,0 +1,21 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             x:Class="Nfty.App.Views.HelpView"
+             x:DataType="vm:HelpViewModel">
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Escape" Command="{Binding CloseCommand}" />
+  </UserControl.KeyBindings>
+  <Border Background="{DynamicResource PanelBrush}" CornerRadius="10" Padding="28" MaxWidth="820"
+          BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1">
+    <StackPanel Spacing="8">
+      <StackPanel Orientation="Horizontal" Spacing="10">
+        <TextBlock Text="nfty" FontWeight="Bold" />
+        <TextBlock Text="Quick reference" Classes="muted" />
+        <Button Content="Esc" Command="{Binding CloseCommand}" Classes="tbtn" HorizontalAlignment="Right" />
+      </StackPanel>
+      <TextBlock TextWrapping="Wrap" Classes="muted"
+        Text="CookBook .cbk · Recipe .rcp · Ingredient .igt · Variant · Set .set.  Kinds: Dynamic / Static / Custom.  Rules: ✕ never-together, → always-together, ⚑ layer-in-a-rule, ● valid.  Keys: ⌘N new, ⌘O open, ⌘I import, ⌘/ this sheet.  Colour: hex: rgb: hsl: hsv:.  Unique DNA = 4 × 3 × 5 × 6 = 360." />
+    </StackPanel>
+  </Border>
+</UserControl>

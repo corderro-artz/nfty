@@ -17,6 +17,7 @@ public static class ServiceRegistration
         services.AddSingleton<IThemeService, ThemeService>();
 
         services.AddSingleton<ShellViewModel>();
+        services.AddTransient<HelpViewModel>();
 
         // Further VM registrations (LandingViewModel, ExplorerViewModel, etc.) are added
         // incrementally by the task that creates each ViewModel (see Tasks 6-13).
