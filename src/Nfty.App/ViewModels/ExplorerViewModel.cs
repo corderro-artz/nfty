@@ -15,6 +15,7 @@ public partial class ExplorerViewModel : ViewModelBase
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(DeleteSelectedCommand))]
     private bool _isEditing;
+    [ObservableProperty] private ViewModelBase? _currentDetail;
 
     public ExplorerNode Root { get; } = Sample();
 
@@ -29,7 +30,19 @@ public partial class ExplorerViewModel : ViewModelBase
     public ExplorerViewModel(INavigationService nav, IDialogService dialogs, INotYetWired notify)
     { _nav = nav; _dialogs = dialogs; _notify = notify; }
 
-    partial void OnSelectedNodeChanged(ExplorerNode? value) => OnPropertyChanged(nameof(AddLabel));
+    partial void OnSelectedNodeChanged(ExplorerNode? value)
+    {
+        OnPropertyChanged(nameof(AddLabel));
+        CurrentDetail = value?.Kind switch
+        {
+            ExplorerNodeKind.CookBook => new CookBookDetailViewModel(_notify),
+            ExplorerNodeKind.Recipe => new RecipeDetailViewModel(_notify, id => OpenIngredientCommand.Execute(id)),
+            ExplorerNodeKind.Ingredient => new IngredientDetailViewModel(_notify,
+                () => _notify.Report("Edit ingredient"),   // TODO(Task 13): _nav.To(new IngredientEditorViewModel(_nav, _notify))
+                () => IsEditing),
+            _ => null,
+        };
+    }
 
     [RelayCommand] private void ToggleLock() => IsEditing = !IsEditing;
     [RelayCommand] private void Search() => _notify.Report("Search (⌘K)");
