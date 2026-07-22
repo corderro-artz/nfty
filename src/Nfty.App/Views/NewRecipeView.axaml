@@ -1,0 +1,28 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             x:Class="Nfty.App.Views.NewRecipeView"
+             x:DataType="vm:NewRecipeViewModel">
+  <Border Background="{DynamicResource PanelBrush}" CornerRadius="10" Padding="28" Width="440"
+          BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1">
+    <StackPanel Spacing="10">
+      <TextBlock Text="New Recipe" FontWeight="Bold" />
+      <TextBox Watermark="Name" Text="{Binding Name}" />
+
+      <TextBlock Text="Weight" Classes="muted" />
+      <NumericUpDown Value="{Binding Weight}" Minimum="0" IsEnabled="{Binding WeightEnabled}" />
+      <TextBlock Text="Resulting mix" Classes="muted" />
+      <ProgressBar Value="{Binding Weight}" Minimum="0" Maximum="100" IsEnabled="{Binding WeightEnabled}" />
+
+      <StackPanel Orientation="Horizontal" Spacing="16">
+        <RadioButton Content="Into CookBook" GroupName="Destination" IsChecked="{Binding IsIntoCookBook}" />
+        <RadioButton Content="Loose (Kitchen)" GroupName="Destination" IsChecked="{Binding IsLooseKitchen}" />
+      </StackPanel>
+
+      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+        <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="tbtn" />
+        <Button Content="Create" Command="{Binding CreateCommand}" Classes="accent" />
+      </StackPanel>
+    </StackPanel>
+  </Border>
+</UserControl>
