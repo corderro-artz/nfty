@@ -1,0 +1,54 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!--
+    Locked colour tokens, ported verbatim from the mockups' shared token block
+    (docs/design/mockups/explorer.html, the `.nfty-scope`/`:root` light block and the
+    `prefers-color-scheme: dark` block). The mockup is the source of truth for these
+    values — do not edit a hex here without first updating the mockup's token block.
+  -->
+  <ResourceDictionary.ThemeDictionaries>
+    <ResourceDictionary x:Key="Light">
+      <SolidColorBrush x:Key="BgBrush" Color="#f4efe8" />
+      <SolidColorBrush x:Key="BgAltBrush" Color="#f1ece4" />
+      <SolidColorBrush x:Key="BgAlt2Brush" Color="#ede7df" />
+      <SolidColorBrush x:Key="PanelBrush" Color="#f8f3ed" />
+      <SolidColorBrush x:Key="TileBrush" Color="#ece5db" />
+      <SolidColorBrush x:Key="FgBrush" Color="#121318" />
+      <SolidColorBrush x:Key="FgMutedBrush" Color="#121418b8" />
+      <SolidColorBrush x:Key="LineBrush" Color="#1214181f" />
+      <SolidColorBrush x:Key="LineStrongBrush" Color="#12141833" />
+      <SolidColorBrush x:Key="AccentBrush" Color="#a11f31" />
+      <SolidColorBrush x:Key="AccentTextBrush" Color="#97192a" />
+      <SolidColorBrush x:Key="OnAccentBrush" Color="#f7f2ec" />
+      <SolidColorBrush x:Key="AccentWashBrush" Color="#a11f3114" />
+      <SolidColorBrush x:Key="AccentLineBrush" Color="#a11f3140" />
+      <SolidColorBrush x:Key="KindDynamicBrush" Color="#3b5b6f" />
+      <SolidColorBrush x:Key="KindStaticBrush" Color="#6a4a25" />
+      <SolidColorBrush x:Key="KindCustomBrush" Color="#6d4f9c" />
+    </ResourceDictionary>
+    <ResourceDictionary x:Key="Dark">
+      <SolidColorBrush x:Key="BgBrush" Color="#07080b" />
+      <SolidColorBrush x:Key="BgAltBrush" Color="#0a0b10" />
+      <SolidColorBrush x:Key="BgAlt2Brush" Color="#0f1118" />
+      <SolidColorBrush x:Key="PanelBrush" Color="#0b0c10" />
+      <SolidColorBrush x:Key="TileBrush" Color="#12141c" />
+      <SolidColorBrush x:Key="FgBrush" Color="#f2ede6" />
+      <SolidColorBrush x:Key="FgMutedBrush" Color="#f2ede6c7" />
+      <SolidColorBrush x:Key="LineBrush" Color="#f2ede624" />
+      <SolidColorBrush x:Key="LineStrongBrush" Color="#f2ede633" />
+      <SolidColorBrush x:Key="AccentBrush" Color="#a11f31" />
+      <SolidColorBrush x:Key="AccentTextBrush" Color="#e0788a" />
+      <SolidColorBrush x:Key="OnAccentBrush" Color="#f7f2ec" />
+      <SolidColorBrush x:Key="AccentWashBrush" Color="#a11f3126" />
+      <SolidColorBrush x:Key="AccentLineBrush" Color="#a11f3166" />
+      <SolidColorBrush x:Key="KindDynamicBrush" Color="#7fb0c4" />
+      <SolidColorBrush x:Key="KindStaticBrush" Color="#e0c28c" />
+      <SolidColorBrush x:Key="KindCustomBrush" Color="#c3a6ea" />
+    </ResourceDictionary>
+  </ResourceDictionary.ThemeDictionaries>
+
+  <FontFamily x:Key="MonoFontFamily">Consolas, Menlo, monospace</FontFamily>
+  <x:Double x:Key="RadiusWin">10</x:Double>
+  <x:Double x:Key="RadiusMd">8</x:Double>
+  <x:Double x:Key="RadiusSm">5</x:Double>
+</ResourceDictionary>
