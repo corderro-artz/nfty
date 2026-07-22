@@ -1,0 +1,6 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Nfty.Desktop.MainWindow"
+        Width="1180" Height="720" Title="nfty">
+  <TextBlock Name="BootText" Text="nfty" HorizontalAlignment="Center" VerticalAlignment="Center" />
+</Window>
