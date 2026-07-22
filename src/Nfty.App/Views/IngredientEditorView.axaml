@@ -1,0 +1,93 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             x:Class="Nfty.App.Views.IngredientEditorView"
+             x:DataType="vm:IngredientEditorViewModel">
+  <Grid RowDefinitions="Auto,*,Auto" Margin="12">
+    <!-- Variant filmstrip -->
+    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+      <Button Content="Add variant" Command="{Binding AddVariantCommand}" Classes="tbtn" />
+      <Button Content="Duplicate" Command="{Binding DuplicateVariantCommand}" Classes="tbtn" />
+      <Button Content="Delete" Command="{Binding DeleteVariantCommand}" Classes="tbtn" />
+    </StackPanel>
+
+    <Grid Grid.Row="1" ColumnDefinitions="180,*,260">
+      <!-- Tool strip -->
+      <StackPanel Grid.Column="0" Spacing="6" Margin="0,0,12,0">
+        <Button Content="Brush" Command="{Binding SelectToolCommand}"
+                CommandParameter="{x:Static vm:EditorTool.Brush}" Classes="tbtn" HorizontalAlignment="Stretch" />
+        <Button Content="Eraser" Command="{Binding SelectToolCommand}"
+                CommandParameter="{x:Static vm:EditorTool.Eraser}" Classes="tbtn" HorizontalAlignment="Stretch" />
+        <Button Content="Rectangle" Command="{Binding SelectToolCommand}"
+                CommandParameter="{x:Static vm:EditorTool.Rectangle}" Classes="tbtn" HorizontalAlignment="Stretch" />
+        <Button Content="Circle" Command="{Binding SelectToolCommand}"
+                CommandParameter="{x:Static vm:EditorTool.Circle}" Classes="tbtn" HorizontalAlignment="Stretch" />
+        <Button Content="Triangle" Command="{Binding SelectToolCommand}"
+                CommandParameter="{x:Static vm:EditorTool.Triangle}" Classes="tbtn" HorizontalAlignment="Stretch" />
+        <Button Content="Select" Command="{Binding SelectToolCommand}"
+                CommandParameter="{x:Static vm:EditorTool.Select}" Classes="tbtn" HorizontalAlignment="Stretch" />
+        <Button Content="Fill" Command="{Binding SelectToolCommand}"
+                CommandParameter="{x:Static vm:EditorTool.Fill}" Classes="tbtn" HorizontalAlignment="Stretch" />
+
+        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,8,0,0">
+          <Button Content="↶" Command="{Binding UndoCommand}" Classes="tbtn" />
+          <Button Content="↷" Command="{Binding RedoCommand}" Classes="tbtn" />
+        </StackPanel>
+
+        <TextBlock Text="Value" Classes="muted" Margin="0,8,0,0" />
+        <Slider Value="{Binding BrushValue}" Minimum="0" Maximum="255" />
+      </StackPanel>
+
+      <!-- Canvas placeholder -->
+      <Border Grid.Column="1" Name="Canvas" Background="{DynamicResource TileBrush}"
+              BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1" CornerRadius="6" />
+
+      <!-- Colorize rail -->
+      <StackPanel Grid.Column="2" Spacing="8" Margin="12,0,0,0">
+        <TextBlock Text="Colorize" FontWeight="Bold" />
+        <StackPanel Orientation="Horizontal" Spacing="16">
+          <RadioButton Content="Dynamic" GroupName="Mode" IsChecked="{Binding IsModeDynamic}" />
+          <RadioButton Content="Static" GroupName="Mode" IsChecked="{Binding IsModeStatic}" />
+        </StackPanel>
+
+        <StackPanel Spacing="6" IsVisible="{Binding ShowColourRange}">
+          <TextBlock Text="Hue range" Classes="muted" />
+          <Slider Value="{Binding HueMin}" Minimum="0" Maximum="360" />
+          <Slider Value="{Binding HueMax}" Minimum="0" Maximum="360" />
+          <TextBlock Text="Saturation range" Classes="muted" />
+          <Slider Value="{Binding SatMin}" Minimum="0" Maximum="100" />
+          <Slider Value="{Binding SatMax}" Minimum="0" Maximum="100" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <StackPanel Spacing="2">
+              <TextBlock Text="Hue buckets" Classes="muted" />
+              <NumericUpDown Value="{Binding HueQuantize}" Minimum="1" Width="110" />
+            </StackPanel>
+            <StackPanel Spacing="2">
+              <TextBlock Text="Sat buckets" Classes="muted" />
+              <NumericUpDown Value="{Binding SatQuantize}" Minimum="1" Width="110" />
+            </StackPanel>
+          </StackPanel>
+        </StackPanel>
+
+        <StackPanel Spacing="6" IsVisible="{Binding ShowFixedColour}">
+          <TextBlock Text="Fixed colour" Classes="muted" />
+          <TextBox Watermark="hex:d6249f" Text="{Binding FixedColor}" />
+        </StackPanel>
+
+        <TextBlock Text="Preview" FontWeight="Bold" Margin="0,8,0,0" />
+        <Border Height="120" Background="{DynamicResource TileBrush}" CornerRadius="6"
+                BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1" />
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <Button Content="Reroll" Command="{Binding RerollPreviewCommand}" Classes="tbtn" />
+          <Button Content="Enlarge" Command="{Binding EnlargePreviewCommand}" Classes="tbtn" />
+          <Button Content="Fill pane" Command="{Binding FillPanePreviewCommand}" Classes="tbtn" />
+        </StackPanel>
+      </StackPanel>
+    </Grid>
+
+    <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,8,0,0">
+      <Button Content="Back" Command="{Binding BackCommand}" Classes="tbtn" />
+      <Button Content="Save" Command="{Binding SaveCommand}" Classes="accent" />
+    </StackPanel>
+  </Grid>
+</UserControl>

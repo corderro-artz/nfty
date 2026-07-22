@@ -19,6 +19,10 @@ public partial class ExplorerViewModel : ViewModelBase
 
     public ExplorerNode Root { get; } = Sample();
 
+    /// <summary>Wraps the single Root as a one-element sequence so a TreeView (which binds to a
+    /// collection of roots) can display it.</summary>
+    public IReadOnlyList<ExplorerNode> Roots => [Root];
+
     public string AddLabel => SelectedNode?.Kind switch
     {
         ExplorerNodeKind.CookBook => "Add recipe",
@@ -38,7 +42,7 @@ public partial class ExplorerViewModel : ViewModelBase
             ExplorerNodeKind.CookBook => new CookBookDetailViewModel(_notify),
             ExplorerNodeKind.Recipe => new RecipeDetailViewModel(_notify, id => OpenIngredientCommand.Execute(id)),
             ExplorerNodeKind.Ingredient => new IngredientDetailViewModel(_notify,
-                () => _notify.Report("Edit ingredient"),   // TODO(Task 13): _nav.To(new IngredientEditorViewModel(_nav, _notify))
+                () => _nav.To(new IngredientEditorViewModel(_nav, _notify)),
                 () => IsEditing),
             _ => null,
         };

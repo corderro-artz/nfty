@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             x:Class="Nfty.App.Views.RecipeDetailView"
+             x:DataType="vm:RecipeDetailViewModel">
+  <StackPanel Spacing="12" Margin="16">
+    <TextBlock Text="Recipe" FontWeight="Bold" />
+    <StackPanel Orientation="Horizontal" Spacing="8">
+      <Button Content="Reroll" Command="{Binding RerollCommand}" Classes="tbtn" />
+      <TextBlock Text="{Binding RollSeed, StringFormat='Seed {0}'}" Classes="muted" VerticalAlignment="Center" />
+    </StackPanel>
+
+    <TextBlock Text="Layers" Classes="muted" />
+    <Button Content="Aura" Command="{Binding OpenIngredientCommand}" CommandParameter="aura"
+            Classes="tbtn" HorizontalAlignment="Left" />
+  </StackPanel>
+</UserControl>

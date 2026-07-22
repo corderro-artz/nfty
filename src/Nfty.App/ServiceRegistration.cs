@@ -23,6 +23,7 @@ public static class ServiceRegistration
         services.AddTransient<NewIngredientViewModel>();
         services.AddTransient<LandingViewModel>();
         services.AddTransient<ExplorerViewModel>();
+        services.AddTransient<IngredientEditorViewModel>();
 
         // Further VM registrations are added incrementally by the task that creates each
         // ViewModel (see Tasks 12-13).
