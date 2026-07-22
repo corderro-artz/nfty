@@ -26,6 +26,20 @@ public class NewCookBookViewModelTests
     }
 
     [Fact]
+    public void Aspect_lock_scales_width_when_height_changes()
+    {
+        var vm = Make(out _, out _);
+        // AspectLocked defaults to true (locked-by-default wizard), so toggle off then back on to
+        // force a genuine false->true transition — CommunityToolkit's generated OnXxxChanged hooks
+        // only fire on an actual value change, so re-assigning "true" while already true is a no-op.
+        vm.AspectLocked = false;
+        vm.Width = 800; vm.Height = 600;
+        vm.AspectLocked = true;                                    // lock captures 800:600 = 4:3
+        vm.Height = 300;
+        Assert.Equal(400, vm.Width);                               // 300 * (800/600) = 400
+    }
+
+    [Fact]
     public void Create_reports_not_yet_wired_and_closes()
     {
         var vm = Make(out var dialogs, out var notify);

@@ -25,13 +25,34 @@ public partial class NewCookBookViewModel : WizardViewModelBase
 
     partial void OnNameChanged(string value) => OnPropertyChanged(nameof(DerivedId));
 
-    partial void OnWidthChanged(int value)
+    partial void OnAspectLockedChanged(bool value)
     {
-        if (AspectLocked && _height > 0 && !_syncing) { _syncing = true; Height = (int)Math.Round(value / _ratio); _syncing = false; }
-        else if (!AspectLocked && _height > 0) _ratio = (double)value / _height;
+        if (value && _height > 0) _ratio = (double)_width / _height;   // W:H captured when locking
     }
 
-    partial void OnHeightChanged(int value) { if (value > 0 && !_syncing) _ratio = (double)_width / value; }
+    partial void OnWidthChanged(int value)
+    {
+        if (_syncing) return;
+        if (AspectLocked && _ratio > 0)
+        {
+            _syncing = true;
+            Height = Math.Max(1, (int)Math.Round(value / _ratio));
+            _syncing = false;
+        }
+        else if (_height > 0) _ratio = (double)value / _height;        // unlocked: track the current ratio
+    }
+
+    partial void OnHeightChanged(int value)
+    {
+        if (_syncing) return;
+        if (AspectLocked && _ratio > 0)
+        {
+            _syncing = true;
+            Width = Math.Max(1, (int)Math.Round(value * _ratio));
+            _syncing = false;
+        }
+        else if (value > 0) _ratio = (double)_width / value;
+    }
 
     [RelayCommand] private void Create() { Notify.Report("Create CookBook"); Dialogs.Close(null); }
 }
