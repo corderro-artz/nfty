@@ -16,7 +16,7 @@ public class ExplorerViewModelTests
         LoadedIngredient Ing(string id) => new()
         {
             Manifest = new IngredientManifest(id, id, LayerKind.Custom, null, new[] { new Variant("a", "A", 1) }),
-            VariantImages = new Dictionary<string, Image<Rgba32>> { ["a"] = new Image<Rgba32>(4, 4) },
+            VariantImages = new Dictionary<string, Image<Rgba32>> { ["a"] = new Image<Rgba32>(8, 8) },
         };
         LoadedRecipe Rec(string id, params string[] layers) => new()
         {

@@ -63,7 +63,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         CurrentDetail = value?.Kind switch
         {
             ExplorerNodeKind.CookBook => new CookBookDetailViewModel(_book, _notify),
-            ExplorerNodeKind.Recipe => new RecipeDetailViewModel((LoadedRecipe)value!.Domain!, _book, _notify,
+            ExplorerNodeKind.Recipe => new RecipeDetailViewModel((LoadedRecipe)value!.Domain!, _book, _bridge, _notify,
                 id => OpenIngredientCommand.Execute(id)),
             ExplorerNodeKind.Ingredient => value!.Domain is (LoadedRecipe r, LoadedIngredient i)
                 ? new IngredientDetailViewModel(i, r, _book, _bridge, _notify, () => _notify.Report("Edit ingredient"), () => IsEditing)

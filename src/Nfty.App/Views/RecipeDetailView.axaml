@@ -11,6 +11,8 @@
       <TextBlock Text="{Binding RollSeed, StringFormat='Seed {0}'}" Classes="muted" VerticalAlignment="Center" />
     </StackPanel>
 
+    <Image Source="{Binding Hero}" Width="92" Height="92" HorizontalAlignment="Left" />
+
     <TextBlock Text="Layers" Classes="muted" Margin="0,8,0,0" />
     <ItemsControl ItemsSource="{Binding Layers}">
       <ItemsControl.ItemTemplate>
