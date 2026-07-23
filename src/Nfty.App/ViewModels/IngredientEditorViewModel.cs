@@ -85,16 +85,19 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         if (Canvas is null) RebuildSurfaces();
     }
 
-    private Image<Rgba32> SelectedMap => _ing.VariantImages[(SelectedVariant ?? Variants[0]).Id];
+    private Image<Rgba32> SelectedMap => _ing.VariantImages[SelectedVariant!.Id];
 
     private Bitmap RenderCanvas() =>
-        VariantImagery.RenderWith(_bridge, SelectedMap, Mode == LayerKind.Dynamic,
-            HueMin, HueMax, SatMin, SatMax, FixedColor, _previewSalt);
+        _ing.Manifest.Colorization is null
+            ? _bridge.ToBitmap(SelectedMap)   // custom — raw, never colorized (mirrors VariantImagery.Render)
+            : VariantImagery.RenderWith(_bridge, SelectedMap, Mode == LayerKind.Dynamic,
+                HueMin, HueMax, SatMin, SatMax, FixedColor, _previewSalt);
 
     private Bitmap RenderPreview() => RenderCanvas();   // same source; preview is the small companion
 
     private void RebuildSurfaces()
     {
+        if (SelectedVariant is null) return;   // nothing to render (zero-variant ingredient)
         var oldCanvas = Canvas; var oldPreview = Preview;
         Canvas = RenderCanvas();
         Preview = RenderPreview();

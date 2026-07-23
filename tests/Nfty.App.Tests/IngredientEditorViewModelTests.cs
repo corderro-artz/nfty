@@ -1,4 +1,6 @@
+using Avalonia;
 using Avalonia.Headless.XUnit;
+using Avalonia.Platform;
 using Nfty.App.Services;
 using Nfty.App.ViewModels;
 using Nfty.Core.Formats;
@@ -145,5 +147,45 @@ public class IngredientEditorViewModelTests
         var before = vm.Preview;
         vm.RerollPreviewCommand.Execute(null);
         Assert.NotSame(before, vm.Preview);
+    }
+
+    [AvaloniaFact]
+    public void Custom_ingredient_canvas_is_the_raw_image_not_colorized()
+    {
+        var (_, recipe, book) = Real();
+        var map = new Image<Rgba32>(8, 8);
+        map[0, 0] = new Rgba32(10, 200, 40, 255);   // distinct R/G/B — colorize would collapse G/B
+        var customIng = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("bg", "Background", LayerKind.Custom, null,
+                new[] { new Variant("a", "A", 1) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>> { ["a"] = map },
+        };
+        using var vm = new IngredientEditorViewModel(customIng, recipe, book, new ImageBridge(),
+            new FakeNav(), new FakeNotYetWired());
+
+        var buffer = new byte[8 * 8 * 4];
+        unsafe
+        {
+            fixed (byte* p = buffer)
+                vm.Canvas.CopyPixels(new PixelRect(0, 0, 8, 8), (nint)p, buffer.Length, 8 * 4);
+        }
+        Assert.Equal(10, buffer[0]); Assert.Equal(200, buffer[1]); Assert.Equal(40, buffer[2]); Assert.Equal(255, buffer[3]);
+    }
+
+    [AvaloniaFact]
+    public void Zero_variant_ingredient_does_not_crash_the_editor()
+    {
+        var (_, recipe, book) = Real();
+        var emptyIng = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("empty", "Empty", LayerKind.Dynamic, null,
+                Array.Empty<Variant>()),
+            VariantImages = new Dictionary<string, Image<Rgba32>>(),
+        };
+        using var vm = new IngredientEditorViewModel(emptyIng, recipe, book, new ImageBridge(),
+            new FakeNav(), new FakeNotYetWired());
+        Assert.Empty(vm.Variants);
+        Assert.Null(vm.SelectedVariant);
     }
 }
