@@ -1,3 +1,5 @@
+using Avalonia.Headless.XUnit;
+using Nfty.App.Services;
 using Nfty.App.ViewModels;
 using Nfty.Core.Formats;
 using Nfty.Core.Model;
@@ -9,30 +11,43 @@ namespace Nfty.App.Tests;
 
 public class RecipeDetailViewModelTests
 {
-    [Fact]
+    [AvaloniaFact]
     public void Layer_table_follows_layer_order()
     {
         var book = ExplorerViewModelTests.TwoRecipeBook();
         var cat = book.Recipes.First(r => r.Manifest.Id == "cat");
-        var vm = new RecipeDetailViewModel(cat, book, new FakeNotYetWired(), _ => { });
+        using var vm = new RecipeDetailViewModel(cat, book, new ImageBridge(), new FakeNotYetWired(), _ => { });
         Assert.Equal(new[] { "bg", "aura" }, vm.Layers.Select(l => l.Layer));
         Assert.Equal(new[] { "bg", "aura" }, vm.Layers.Select(l => l.Id));   // Id drives OpenIngredient, not the display name
         Assert.All(vm.Layers, l => Assert.Equal(1, l.VariantCount));
         Assert.Empty(vm.Rules);   // TwoRecipeBook has no rules
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void Reroll_changes_the_roll_seed_and_open_ingredient_invokes_callback()
     {
         var book = ExplorerViewModelTests.TwoRecipeBook();
         var cat = book.Recipes.First(r => r.Manifest.Id == "cat");
         string? opened = null;
-        var vm = new RecipeDetailViewModel(cat, book, new FakeNotYetWired(), id => opened = id);
+        using var vm = new RecipeDetailViewModel(cat, book, new ImageBridge(), new FakeNotYetWired(), id => opened = id);
         var before = vm.RollSeed; vm.RerollCommand.Execute(null); Assert.NotEqual(before, vm.RollSeed);
         vm.OpenIngredientCommand.Execute("aura"); Assert.Equal("aura", opened);
     }
 
-    [Fact]
+    [AvaloniaFact]
+    public void Hero_is_built_and_reroll_rebuilds_it()
+    {
+        var book = ExplorerViewModelTests.TwoRecipeBook();
+        var cat = book.Recipes.First(r => r.Manifest.Id == "cat");
+        using var vm = new RecipeDetailViewModel(cat, book, new ImageBridge(), new FakeNotYetWired(), _ => { });
+        Assert.NotNull(vm.Hero);
+        var before = vm.RollSeed;
+        vm.RerollCommand.Execute(null);
+        Assert.NotEqual(before, vm.RollSeed);
+        Assert.NotNull(vm.Hero);   // rebuilt; old disposed internally
+    }
+
+    [AvaloniaFact]
     public void Rules_render_exclude_and_require_with_their_operators()
     {
         var rules = new[]
@@ -60,7 +75,7 @@ public class RecipeDetailViewModelTests
             Recipes = new[] { recipe },
         };
 
-        var vm = new RecipeDetailViewModel(recipe, book, new FakeNotYetWired(), _ => { });
+        using var vm = new RecipeDetailViewModel(recipe, book, new ImageBridge(), new FakeNotYetWired(), _ => { });
 
         Assert.Equal(2, vm.Rules.Count);
         Assert.Contains(vm.Rules, r => r.Text.Contains("✕") && r.Text.Contains("bg:day") && r.Text.Contains("aura:none"));

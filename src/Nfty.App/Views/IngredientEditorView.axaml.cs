@@ -9,7 +9,7 @@ public partial class IngredientEditorView : UserControl
     public IngredientEditorView()
     {
         InitializeComponent();
-        var canvas = this.FindControl<Border>("Canvas")!;
+        var canvas = this.FindControl<Border>("CanvasHost")!;
         canvas.PointerPressed += (_, _) =>
         {
             if (DataContext is IngredientEditorViewModel vm)

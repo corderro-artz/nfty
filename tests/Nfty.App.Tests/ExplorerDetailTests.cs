@@ -1,3 +1,5 @@
+using Avalonia.Headless.XUnit;
+using Nfty.App.Services;
 using Nfty.App.ViewModels;
 using Nfty.Core.Formats;
 using Nfty.Core.Model;
@@ -41,11 +43,12 @@ public class ExplorerDetailTests
         return (book, recipe, aura);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void Sort_sets_the_active_column()
     {
         var (book, recipe, ing) = Fixture();
-        var vm = new IngredientDetailViewModel(ing, recipe, book, new FakeNotYetWired(), () => { }, () => false);
+        using var vm = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(),
+            new FakeNotYetWired(), () => { }, () => false);
         vm.SortByCommand.Execute("Weight");
         Assert.Equal("Weight", vm.SortColumn);
     }

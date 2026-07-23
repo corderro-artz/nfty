@@ -1,3 +1,4 @@
+using Avalonia.Headless.XUnit;
 using Nfty.App.Services;
 using Nfty.App.ViewModels;
 using Xunit;
@@ -15,7 +16,7 @@ public class WiringCoverageTests
         var nav = new FakeNav(); var dialogs = new FakeDialogs(); var notify = new FakeNotYetWired();
         var vm = new LandingViewModel(nav, dialogs, notify,
             new FilePickerService(), new RecentsService(), new CookBookSession(),
-            book => new ExplorerViewModel(book, nav, dialogs, notify));
+            book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav)));
         foreach (var c in new[] { "NewCookBookCommand","NewKitchenCommand","NewRecipeCommand","NewIngredientCommand",
                                   "OpenCookBookCommand","ImportCommand","OpenSetCommand","OpenRecentCommand","ShowHelpCommand" })
             Assert.True(HasCommand(vm, c), $"Landing missing {c}");
@@ -27,16 +28,18 @@ public class WiringCoverageTests
         // §6.2's "expand" row is intentionally not a VM command: tree expand/collapse is handled by
         // Avalonia's native TreeView expander, so a ToggleExpand command would be vestigial. This
         // test covers the row via that documented decision rather than a command assertion.
-        var vm = new ExplorerViewModel(ExplorerViewModelTests.TwoRecipeBook(), new FakeNav(), new FakeDialogs(), new FakeNotYetWired());
+        var nav = new FakeNav();
+        using var vm = new ExplorerViewModel(ExplorerViewModelTests.TwoRecipeBook(), nav, new FakeDialogs(), new FakeNotYetWired(), new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav));
         foreach (var c in new[] { "ToggleLockCommand","SearchCommand","AddCommand","DeleteSelectedCommand",
                                   "ImportCommand","SelectNodeCommand","OpenIngredientCommand" })
             Assert.True(HasCommand(vm, c), $"Explorer missing {c}");
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void Editor_exposes_every_mapped_command()
     {
-        var vm = new IngredientEditorViewModel(new FakeNav(), new FakeNotYetWired());
+        var (ing, recipe, book) = IngredientEditorViewModelTests.Real();
+        using var vm = new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(), new FakeNav(), new FakeNotYetWired());
         foreach (var c in new[] { "SelectToolCommand","UndoCommand","RedoCommand","AddVariantCommand",
                                   "DuplicateVariantCommand","DeleteVariantCommand","ApplyStrokeCommand",
                                   "RerollPreviewCommand","EnlargePreviewCommand","FillPanePreviewCommand",

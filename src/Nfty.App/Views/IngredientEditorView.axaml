@@ -22,6 +22,7 @@
                       Command="{Binding $parent[ItemsControl].((vm:IngredientEditorViewModel)DataContext).SelectVariantCommand}"
                       CommandParameter="{Binding}">
                 <StackPanel>
+                  <Image Source="{Binding Thumbnail}" Width="32" Height="32" />
                   <TextBlock Text="{Binding Name}" />
                   <TextBlock Text="{Binding Weight}" Classes="muted" />
                 </StackPanel>
@@ -57,9 +58,11 @@
         <Slider Value="{Binding BrushValue}" Minimum="0" Maximum="255" />
       </StackPanel>
 
-      <!-- Canvas placeholder -->
-      <Border Grid.Column="2" Name="Canvas" Background="{DynamicResource TileBrush}"
-              BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1" CornerRadius="6" />
+      <!-- Canvas -->
+      <Border Grid.Column="2" Name="CanvasHost" Background="{DynamicResource TileBrush}"
+              BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1" CornerRadius="6">
+        <Image Source="{Binding Canvas}" Stretch="Uniform" Margin="12" />
+      </Border>
 
       <!-- Colorize rail -->
       <StackPanel Grid.Column="3" Spacing="8" Margin="12,0,0,0">
@@ -95,7 +98,9 @@
 
         <TextBlock Text="Preview" FontWeight="Bold" Margin="0,8,0,0" />
         <Border Height="120" Background="{DynamicResource TileBrush}" CornerRadius="6"
-                BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1" />
+                BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1">
+          <Image Source="{Binding Preview}" Stretch="Uniform" Margin="6" />
+        </Border>
         <StackPanel Orientation="Horizontal" Spacing="6">
           <Button Content="Reroll" Command="{Binding RerollPreviewCommand}" Classes="tbtn" />
           <Button Content="Enlarge" Command="{Binding EnlargePreviewCommand}" Classes="tbtn" />

@@ -13,7 +13,7 @@ public class LandingViewModelTests
         var nav = new FakeNav(); var d = dialogs; var no = notify;
         return new LandingViewModel(nav, dialogs, notify,
             new FilePickerService(), new RecentsService(), new CookBookSession(),
-            book => new ExplorerViewModel(book, nav, d, no));
+            book => new ExplorerViewModel(book, nav, d, no, new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav)));
     }
 
     [Fact]
