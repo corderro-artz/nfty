@@ -25,7 +25,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(Variants))]
     private string _sortColumn = "Variant";
 
-    [ObservableProperty] private Bitmap _hero;
+    [ObservableProperty] private Bitmap? _hero;
 
     public string Name { get; }
     public string KindText { get; }
@@ -59,8 +59,19 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
                 VariantImagery.Render(bridge, ing, v.Id));
         }).ToList();
 
-        Colorways = VariantImagery.Colorways(bridge, ing);
-        _hero = VariantImagery.Render(bridge, ing, ing.Manifest.Variants[0].Id);
+        // A zero-variant ingredient is invalid per Validator, but CookBookArchive.Read doesn't
+        // validate, so a hand-built/mid-authoring book can open one — mirror the editor's
+        // handling of this exact case rather than indexing Variants[0] and crashing browsing.
+        if (ing.Manifest.Variants.Count == 0)
+        {
+            Colorways = Array.Empty<Bitmap>();
+            _hero = null;
+        }
+        else
+        {
+            Colorways = VariantImagery.Colorways(bridge, ing);
+            _hero = VariantImagery.Render(bridge, ing, ing.Manifest.Variants[0].Id);
+        }
     }
 
     private static string ColorwaysLabel(IngredientManifest m) => m.Kind switch
@@ -79,7 +90,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     {
         var old = Hero;
         Hero = VariantImagery.Render(_bridge, _ing, id);
-        old.Dispose();
+        old?.Dispose();
     }
 
     [RelayCommand(CanExecute = nameof(CanEdit))] private void DeleteVariant() => _notify.Report("Delete variant");
@@ -89,7 +100,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
 
     public void Dispose()
     {
-        Hero.Dispose();
+        Hero?.Dispose();
         foreach (var v in _variants) v.Thumbnail.Dispose();
         foreach (var b in Colorways) b.Dispose();
     }

@@ -98,6 +98,35 @@ public class IngredientDetailViewModelTests
     }
 
     [AvaloniaFact]
+    public void Zero_variant_ingredient_does_not_crash_the_detail_pane()
+    {
+        var aura = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("aura", "Aura", LayerKind.Custom, null,
+                Array.Empty<Variant>()),
+            VariantImages = new Dictionary<string, Image<Rgba32>>(),
+        };
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("cat", "Cat", new[] { "aura" }, Array.Empty<IncompatibilityRule>()),
+            Ingredients = new[] { aura },
+        };
+        var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "Book", new Dimensions(4, 4),
+                new Collection("Book", "", "B"), new Dictionary<string, double> { ["cat"] = 100 }),
+            Recipes = new[] { recipe },
+        };
+
+        using var vm = new IngredientDetailViewModel(aura, recipe, book, new ImageBridge(),
+            new FakeNotYetWired(), () => { }, () => false);
+
+        Assert.Empty(vm.Variants);
+        Assert.Null(vm.Hero);
+        Assert.Empty(vm.Colorways);
+    }
+
+    [AvaloniaFact]
     public void Selecting_a_variant_swaps_the_hero()
     {
         var (book, recipe, ing) = Fixture();
