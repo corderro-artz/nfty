@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Nfty.App.Services;
 using Nfty.App.ViewModels;
+using Nfty.Core.Formats;
 
 namespace Nfty.App;
 
@@ -15,6 +16,7 @@ public static class ServiceRegistration
         services.AddSingleton<IFilePickerService, FilePickerService>();
         services.AddSingleton<IRecentsService, RecentsService>();
         services.AddSingleton<IThemeService, ThemeService>();
+        services.AddSingleton<ICookBookSession, CookBookSession>();
 
         services.AddSingleton<ShellViewModel>();
         services.AddTransient<HelpViewModel>();
@@ -22,8 +24,13 @@ public static class ServiceRegistration
         services.AddTransient<NewRecipeViewModel>();
         services.AddTransient<NewIngredientViewModel>();
         services.AddTransient<LandingViewModel>();
-        services.AddTransient<ExplorerViewModel>();
         services.AddTransient<IngredientEditorViewModel>();
+
+        services.AddSingleton<Func<LoadedCookBook, ExplorerViewModel>>(sp =>
+            book => new ExplorerViewModel(book,
+                sp.GetRequiredService<INavigationService>(),
+                sp.GetRequiredService<IDialogService>(),
+                sp.GetRequiredService<INotYetWired>()));
 
         // Further VM registrations are added incrementally by the task that creates each
         // ViewModel (see Tasks 12-13).

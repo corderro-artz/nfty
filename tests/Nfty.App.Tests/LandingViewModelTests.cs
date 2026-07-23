@@ -10,8 +10,10 @@ public class LandingViewModelTests
     {
         notify = new FakeNotYetWired();
         dialogs = new FakeDialogs();
-        return new LandingViewModel(new FakeNav(), dialogs, notify,
-            new FilePickerService(), new RecentsService());
+        var nav = new FakeNav(); var d = dialogs; var no = notify;
+        return new LandingViewModel(nav, dialogs, notify,
+            new FilePickerService(), new RecentsService(), new CookBookSession(),
+            book => new ExplorerViewModel(book, nav, d, no));
     }
 
     [Fact]
@@ -20,14 +22,6 @@ public class LandingViewModelTests
         var vm = Make(out _, out var dialogs);
         vm.NewCookBookCommand.Execute(null);
         Assert.IsType<NewCookBookViewModel>(dialogs.Active);
-    }
-
-    [Fact]
-    public void Open_cookbook_reports_not_yet_wired()
-    {
-        var vm = Make(out var notify, out _);
-        vm.OpenCookBookCommand.Execute(null);
-        Assert.Equal("Open CookBook", notify.Last);
     }
 
     [Fact]

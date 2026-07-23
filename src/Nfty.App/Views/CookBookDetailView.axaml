@@ -1,10 +1,27 @@
-<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:Nfty.App.ViewModels"
-             x:Class="Nfty.App.Views.CookBookDetailView"
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels" x:Class="Nfty.App.Views.CookBookDetailView"
              x:DataType="vm:CookBookDetailViewModel">
-  <StackPanel Spacing="12" Margin="16">
-    <TextBlock Text="CookBook" FontWeight="Bold" />
-    <Button Content="Cook" Command="{Binding CookCommand}" Classes="accent" />
+  <StackPanel Margin="20" Spacing="8">
+    <TextBlock Text="{Binding Name}" FontSize="20" FontWeight="Bold" />
+    <TextBlock Classes="muted" Text="{Binding CanvasText, StringFormat='canvas {0}'}" />
+    <StackPanel Orientation="Horizontal" Spacing="18">
+      <TextBlock Text="{Binding RecipeCount, StringFormat='{}{0} recipes'}" />
+      <TextBlock Text="{Binding LayerCount, StringFormat='{}{0} layers'}" />
+      <TextBlock Text="{Binding VariantCount, StringFormat='{}{0} variants'}" />
+      <TextBlock Foreground="{DynamicResource AccentTextBrush}" Text="{Binding UniqueDnaText, StringFormat='{}{0} unique DNA'}" />
+    </StackPanel>
+    <TextBlock Classes="muted" Text="Mint distribution" Margin="0,8,0,0" />
+    <ItemsControl ItemsSource="{Binding Recipes}">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:RecipeShareRow">
+          <StackPanel Orientation="Horizontal" Spacing="12">
+            <TextBlock Width="120" Text="{Binding Name}" />
+            <TextBlock Width="70" Text="{Binding SharePercent, StringFormat='{}{0}%'}" />
+            <TextBlock Classes="muted" Text="{Binding DnaSpaceText, StringFormat='{}{0} DNA'}" />
+          </StackPanel>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <Button Content="Cook set" Command="{Binding CookCommand}" Classes="accent" HorizontalAlignment="Left" Margin="0,8,0,0" />
   </StackPanel>
 </UserControl>

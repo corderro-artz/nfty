@@ -18,8 +18,9 @@ public class SmokeTests
         var nav = new FakeNav();
         ViewModelBase[] vms =
         [
-            new LandingViewModel(nav, dialogs, notify, new FilePickerService(), new RecentsService()),
-            new ExplorerViewModel(nav, dialogs, notify),
+            new LandingViewModel(nav, dialogs, notify, new FilePickerService(), new RecentsService(),
+                new CookBookSession(), book => new ExplorerViewModel(book, nav, dialogs, notify)),
+            new ExplorerViewModel(ExplorerViewModelTests.TwoRecipeBook(), nav, dialogs, notify),
             new IngredientEditorViewModel(nav, notify),
             new HelpViewModel(dialogs),
             new NewCookBookViewModel(dialogs, notify),
@@ -38,8 +39,10 @@ public class SmokeTests
     public void Landing_new_cookbook_opens_then_cancel_closes()
     {
         var dialogs = new DialogService();
-        var vm = new LandingViewModel(new FakeNav(), dialogs, new FakeNotYetWired(),
-            new FilePickerService(), new RecentsService());
+        var nav = new FakeNav(); var notify = new FakeNotYetWired();
+        var vm = new LandingViewModel(nav, dialogs, notify,
+            new FilePickerService(), new RecentsService(), new CookBookSession(),
+            book => new ExplorerViewModel(book, nav, dialogs, notify));
         vm.NewCookBookCommand.Execute(null);
         Assert.IsType<NewCookBookViewModel>(dialogs.Active);
         ((NewCookBookViewModel)dialogs.Active!).CancelCommand.Execute(null);

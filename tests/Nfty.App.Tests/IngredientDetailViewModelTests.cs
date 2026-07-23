@@ -7,17 +7,8 @@ using Xunit;
 
 namespace Nfty.App.Tests;
 
-public class ExplorerDetailTests
+public class IngredientDetailViewModelTests
 {
-    // Cook_reports_not_yet_wired moved to CookBookDetailViewModelTests, which now
-    // constructs CookBookDetailViewModel with a real LoadedCookBook (Task 3).
-
-    // Reroll_changes_the_roll_seed moved to RecipeDetailViewModelTests, which now
-    // constructs RecipeDetailViewModel with a real LoadedRecipe/LoadedCookBook (Task 4).
-
-    // Delete_variant_enabled_only_when_editing moved to IngredientDetailViewModelTests, which now
-    // constructs IngredientDetailViewModel with a real LoadedIngredient/LoadedRecipe/LoadedCookBook (Task 5).
-
     private static (LoadedCookBook book, LoadedRecipe recipe, LoadedIngredient ing) Fixture()
     {
         LoadedIngredient Ing(string id, params (string vid, string name, double w)[] vs) => new()
@@ -26,7 +17,7 @@ public class ExplorerDetailTests
                 vs.Select(v => new Variant(v.vid, v.name, v.w)).ToArray()),
             VariantImages = vs.ToDictionary(v => v.vid, _ => new Image<Rgba32>(4, 4)),
         };
-        var aura = Ing("aura", ("glow", "Glow", 3), ("spark", "Spark", 1));
+        var aura = Ing("aura", ("glow", "Glow", 3), ("spark", "Spark", 1));   // 75% / 25% within
         var recipe = new LoadedRecipe
         {
             Manifest = new RecipeManifest("cat", "Cat", new[] { "aura" }, Array.Empty<IncompatibilityRule>()),
@@ -42,11 +33,23 @@ public class ExplorerDetailTests
     }
 
     [Fact]
-    public void Sort_sets_the_active_column()
+    public void Variant_rows_carry_within_recipe_rarity()
     {
         var (book, recipe, ing) = Fixture();
         var vm = new IngredientDetailViewModel(ing, recipe, book, new FakeNotYetWired(), () => { }, () => false);
-        vm.SortByCommand.Execute("Weight");
-        Assert.Equal("Weight", vm.SortColumn);
+        Assert.Equal(2, vm.Variants.Count);
+        var glow = vm.Variants.Single(v => v.Name == "Glow");
+        Assert.Equal(75.0, glow.WithinPercent, 1);   // 3/(3+1)
+    }
+
+    [Fact]
+    public void Delete_variant_enabled_only_when_editing()
+    {
+        var (book, recipe, ing) = Fixture();
+        bool editing = false;
+        var vm = new IngredientDetailViewModel(ing, recipe, book, new FakeNotYetWired(), () => { }, () => editing);
+        Assert.False(vm.DeleteVariantCommand.CanExecute(null));
+        editing = true; vm.RaiseCanExecuteChanged();
+        Assert.True(vm.DeleteVariantCommand.CanExecute(null));
     }
 }

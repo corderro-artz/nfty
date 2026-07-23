@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             x:Class="Nfty.App.Views.ErrorDialogView"
+             x:DataType="vm:ErrorDialogViewModel">
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Escape" Command="{Binding CloseCommand}" />
+  </UserControl.KeyBindings>
+  <Border Background="{DynamicResource PanelBrush}" CornerRadius="10" Padding="24" MaxWidth="420"
+          BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1">
+    <StackPanel Spacing="10">
+      <TextBlock Text="{Binding Title}" FontWeight="Bold" Foreground="{DynamicResource AccentTextBrush}" />
+      <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Classes="muted" />
+      <Button Content="OK" Command="{Binding CloseCommand}" Classes="accent" HorizontalAlignment="Right" />
+    </StackPanel>
+  </Border>
+</UserControl>
