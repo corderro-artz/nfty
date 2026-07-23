@@ -14,7 +14,10 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        var services = new ServiceCollection().AddNftyApp().BuildServiceProvider();
+        var services = new ServiceCollection()
+            .AddNftyApp()
+            .AddSingleton<IFilePickerService, DesktopFilePicker>()
+            .BuildServiceProvider();
         var shell = services.GetRequiredService<ShellViewModel>();
         services.GetRequiredService<INavigationService>().To(services.GetRequiredService<LandingViewModel>());
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
