@@ -19,7 +19,7 @@ public class SmokeTests
         ViewModelBase[] vms =
         [
             new LandingViewModel(nav, dialogs, notify, new FilePickerService(), new RecentsService()),
-            new ExplorerViewModel(nav, dialogs, notify),
+            new ExplorerViewModel(ExplorerViewModelTests.TwoRecipeBook(), nav, dialogs, notify),
             new IngredientEditorViewModel(nav, notify),
             new HelpViewModel(dialogs),
             new NewCookBookViewModel(dialogs, notify),
