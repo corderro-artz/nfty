@@ -1,17 +1,43 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Nfty.App.ViewModels"
+             xmlns:conv="using:Nfty.App.Converters"
              x:Class="Nfty.App.Views.RecipeDetailView"
              x:DataType="vm:RecipeDetailViewModel">
   <StackPanel Spacing="12" Margin="16">
-    <TextBlock Text="Recipe" FontWeight="Bold" />
+    <TextBlock Text="{Binding Name}" FontSize="20" FontWeight="Bold" />
     <StackPanel Orientation="Horizontal" Spacing="8">
       <Button Content="Reroll" Command="{Binding RerollCommand}" Classes="tbtn" />
       <TextBlock Text="{Binding RollSeed, StringFormat='Seed {0}'}" Classes="muted" VerticalAlignment="Center" />
     </StackPanel>
 
-    <TextBlock Text="Layers" Classes="muted" />
-    <Button Content="Aura" Command="{Binding OpenIngredientCommand}" CommandParameter="aura"
-            Classes="tbtn" HorizontalAlignment="Left" />
+    <TextBlock Text="Layers" Classes="muted" Margin="0,8,0,0" />
+    <ItemsControl ItemsSource="{Binding Layers}">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:LayerRow">
+          <Button Classes="tbtn" HorizontalAlignment="Stretch"
+                  Command="{Binding $parent[ItemsControl].((vm:RecipeDetailViewModel)DataContext).OpenIngredientCommand}"
+                  CommandParameter="{Binding Layer}">
+            <Grid ColumnDefinitions="30,*,100,90">
+              <TextBlock Grid.Column="0" Text="{Binding Index}" />
+              <TextBlock Grid.Column="1" Text="{Binding Layer}" />
+              <TextBlock Grid.Column="2" Classes="muted" Text="{Binding Kind}" />
+              <TextBlock Grid.Column="3" Classes="muted" Text="{Binding VariantCount, StringFormat='{}{0} variants'}" />
+            </Grid>
+          </Button>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+
+    <TextBlock Text="Rules" Classes="muted" Margin="0,8,0,0" />
+    <ItemsControl ItemsSource="{Binding Rules}">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:RuleRow">
+          <TextBlock Text="{Binding Text}" />
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <TextBlock Classes="muted" Text="No incompatibility rules"
+               IsVisible="{Binding Rules, Converter={x:Static conv:CollectionConverters.IsEmpty}}" />
   </StackPanel>
 </UserControl>
