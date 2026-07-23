@@ -6,7 +6,7 @@ using Nfty.Core.Model;
 
 namespace Nfty.App.ViewModels;
 
-public record LayerRow(int Index, string Layer, string Kind, int VariantCount);
+public record LayerRow(int Index, string Id, string Layer, string Kind, int VariantCount);
 public record RuleRow(string Text);
 
 public partial class RecipeDetailViewModel : ViewModelBase
@@ -27,7 +27,7 @@ public partial class RecipeDetailViewModel : ViewModelBase
         var ingById = recipe.Ingredients.ToDictionary(i => i.Manifest.Id, StringComparer.Ordinal);
         Layers = recipe.Manifest.LayerOrder
             .Where(ingById.ContainsKey)
-            .Select((id, i) => new LayerRow(i + 1, ingById[id].Manifest.Name,
+            .Select((id, i) => new LayerRow(i + 1, id, ingById[id].Manifest.Name,
                 ingById[id].Manifest.Kind.ToString(), ingById[id].Manifest.Variants.Count))
             .ToList();
 

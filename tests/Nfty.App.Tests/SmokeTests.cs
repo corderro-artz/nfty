@@ -26,6 +26,7 @@ public class SmokeTests
             new NewCookBookViewModel(dialogs, notify),
             new NewRecipeViewModel(dialogs, notify),
             new NewIngredientViewModel(dialogs, notify),
+            new ErrorDialogViewModel(dialogs, "Error", "Could not open the cookbook."),
         ];
         foreach (var vm in vms)
         {

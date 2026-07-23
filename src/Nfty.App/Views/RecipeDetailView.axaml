@@ -17,7 +17,7 @@
         <DataTemplate x:DataType="vm:LayerRow">
           <Button Classes="tbtn" HorizontalAlignment="Stretch"
                   Command="{Binding $parent[ItemsControl].((vm:RecipeDetailViewModel)DataContext).OpenIngredientCommand}"
-                  CommandParameter="{Binding Layer}">
+                  CommandParameter="{Binding Id}">
             <Grid ColumnDefinitions="30,*,100,90">
               <TextBlock Grid.Column="0" Text="{Binding Index}" />
               <TextBlock Grid.Column="1" Text="{Binding Layer}" />
