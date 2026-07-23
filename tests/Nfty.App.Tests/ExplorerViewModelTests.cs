@@ -67,7 +67,8 @@ public class ExplorerViewModelTests
     public void Add_label_tracks_the_selected_node_kind()
     {
         var vm = Make(out _);
-        vm.SelectNodeCommand.Execute(new ExplorerNode("r", "Cat", ExplorerNodeKind.Recipe, [], null));
+        var cat = TwoRecipeBook().Recipes.First(r => r.Manifest.Id == "cat");
+        vm.SelectNodeCommand.Execute(new ExplorerNode("r", "Cat", ExplorerNodeKind.Recipe, [], cat));
         Assert.Equal("Add ingredient", vm.AddLabel);
         vm.SelectNodeCommand.Execute(new ExplorerNode("i", "Aura", ExplorerNodeKind.Ingredient, [], null));
         Assert.Equal("Add variant", vm.AddLabel);

@@ -8,14 +8,8 @@ public class ExplorerDetailTests
     // Cook_reports_not_yet_wired moved to CookBookDetailViewModelTests, which now
     // constructs CookBookDetailViewModel with a real LoadedCookBook (Task 3).
 
-    [Fact]
-    public void Reroll_changes_the_roll_seed()
-    {
-        var vm = new RecipeDetailViewModel(new FakeNotYetWired(), _ => { });
-        var before = vm.RollSeed;
-        vm.RerollCommand.Execute(null);
-        Assert.NotEqual(before, vm.RollSeed);
-    }
+    // Reroll_changes_the_roll_seed moved to RecipeDetailViewModelTests, which now
+    // constructs RecipeDetailViewModel with a real LoadedRecipe/LoadedCookBook (Task 4).
 
     [Fact]
     public void Sort_sets_the_active_column()
