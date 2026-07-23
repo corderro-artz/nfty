@@ -13,6 +13,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     private readonly INotYetWired _notify;
     private readonly IImageBridge _bridge;
     private readonly LoadedCookBook _book;
+    private readonly Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel> _editorFactory;
 
     [ObservableProperty] private ExplorerNode? _selectedNode;
     [ObservableProperty] private ViewModelBase? _currentDetail;
@@ -35,9 +36,11 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     };
 
     public ExplorerViewModel(LoadedCookBook book, INavigationService nav, IDialogService dialogs,
-        INotYetWired notify, IImageBridge bridge)
+        INotYetWired notify, IImageBridge bridge,
+        Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel> editorFactory)
     {
         _book = book; _nav = nav; _dialogs = dialogs; _notify = notify; _bridge = bridge;
+        _editorFactory = editorFactory;
         Root = BuildTree(book);
     }
 
@@ -66,7 +69,8 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
             ExplorerNodeKind.Recipe => new RecipeDetailViewModel((LoadedRecipe)value!.Domain!, _book, _bridge, _notify,
                 id => OpenIngredientCommand.Execute(id)),
             ExplorerNodeKind.Ingredient => value!.Domain is (LoadedRecipe r, LoadedIngredient i)
-                ? new IngredientDetailViewModel(i, r, _book, _bridge, _notify, () => _notify.Report("Edit ingredient"), () => IsEditing)
+                ? new IngredientDetailViewModel(i, r, _book, _bridge, _notify,
+                    () => _nav.To(_editorFactory(i, r, _book)), () => IsEditing)
                 : null,
             _ => null,
         };

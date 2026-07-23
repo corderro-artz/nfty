@@ -22,7 +22,7 @@ public class LandingOpenFlowTests
         nav = new FakeNav(); dialogs = new FakeDialogs(); notify = new FakeNotYetWired(); session = new CookBookSession();
         var s = session; var n = nav; var d = dialogs; var no = notify;
         return new LandingViewModel(n, d, no, new StubPicker(pickerPath), new RecentsService(), s,
-            book => new ExplorerViewModel(book, n, d, no, new ImageBridge()));
+            book => new ExplorerViewModel(book, n, d, no, new ImageBridge(), ExplorerViewModelTests.EditorFactory(n)));
     }
 
     [Fact]

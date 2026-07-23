@@ -33,13 +33,23 @@ public class ExplorerViewModelTests
         };
     }
 
-    private static ExplorerViewModel Make(out FakeNotYetWired n)
-    { n = new FakeNotYetWired(); return new ExplorerViewModel(TwoRecipeBook(), new FakeNav(), new FakeDialogs(), n, new ImageBridge()); }
+    /// <summary>Shared stub editor factory for tests that construct an <see cref="ExplorerViewModel"/>
+    /// but don't exercise the Ingredient Editor navigation itself.</summary>
+    internal static Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel> EditorFactory(
+        INavigationService nav) => (i, r, b) => new IngredientEditorViewModel(i, r, b, new ImageBridge(), nav, new FakeNotYetWired());
 
-    [Fact]
+    private static ExplorerViewModel Make(out FakeNotYetWired n)
+    {
+        n = new FakeNotYetWired();
+        var nav = new FakeNav();
+        return new ExplorerViewModel(TwoRecipeBook(), nav, new FakeDialogs(), n, new ImageBridge(), EditorFactory(nav));
+    }
+
+    [AvaloniaFact]
     public void Tree_is_built_from_the_cookbook_recipes_and_ingredients()
     {
-        using var vm = new ExplorerViewModel(TwoRecipeBook(), new FakeNav(), new FakeDialogs(), new FakeNotYetWired(), new ImageBridge());
+        var nav = new FakeNav();
+        using var vm = new ExplorerViewModel(TwoRecipeBook(), nav, new FakeDialogs(), new FakeNotYetWired(), new ImageBridge(), EditorFactory(nav));
         Assert.Equal(ExplorerNodeKind.CookBook, vm.Root.Kind);
         Assert.Equal("VaporPets", vm.Root.Name);
         Assert.Equal(new[] { "cat", "dog" }, vm.Root.Children.Select(c => c.Id));

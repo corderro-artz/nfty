@@ -25,14 +25,20 @@ public static class ServiceRegistration
         services.AddTransient<NewRecipeViewModel>();
         services.AddTransient<NewIngredientViewModel>();
         services.AddTransient<LandingViewModel>();
-        services.AddTransient<IngredientEditorViewModel>();
+
+        services.AddSingleton<Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel>>(sp =>
+            (ing, recipe, book) => new IngredientEditorViewModel(ing, recipe, book,
+                sp.GetRequiredService<IImageBridge>(),
+                sp.GetRequiredService<INavigationService>(),
+                sp.GetRequiredService<INotYetWired>()));
 
         services.AddSingleton<Func<LoadedCookBook, ExplorerViewModel>>(sp =>
             book => new ExplorerViewModel(book,
                 sp.GetRequiredService<INavigationService>(),
                 sp.GetRequiredService<IDialogService>(),
                 sp.GetRequiredService<INotYetWired>(),
-                sp.GetRequiredService<IImageBridge>()));
+                sp.GetRequiredService<IImageBridge>(),
+                sp.GetRequiredService<Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel>>()));
 
         // Further VM registrations are added incrementally by the task that creates each
         // ViewModel (see Tasks 12-13).

@@ -1,60 +1,125 @@
+using Avalonia.Headless.XUnit;
+using Nfty.App.Services;
 using Nfty.App.ViewModels;
+using Nfty.Core.Formats;
 using Nfty.Core.Model;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 using Xunit;
 
 namespace Nfty.App.Tests;
 
 public class IngredientEditorViewModelTests
 {
-    private static IngredientEditorViewModel Make(out FakeNotYetWired n, out FakeNav nav)
-    { n = new FakeNotYetWired(); nav = new FakeNav(); return new IngredientEditorViewModel(nav, n); }
+    internal static (LoadedIngredient, LoadedRecipe, LoadedCookBook) Real()
+    {
+        var coloriz = new Colorization(ColorModel.Hsv, 12, 4,
+            new[] { new ColorEntry(1, new ColorRange(0, 360, 40, 100), null) });
+        var ing = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("aura", "Aura", LayerKind.Dynamic, coloriz,
+                new[] { new Variant("glow", "Glow", 1), new Variant("spark", "Spark", 1) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>>
+                { ["glow"] = new(8, 8), ["spark"] = new(8, 8) },
+        };
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("cat", "Cat", new[] { "aura" }, Array.Empty<IncompatibilityRule>()),
+            Ingredients = new[] { ing },
+        };
+        var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "Book", new Dimensions(8, 8),
+                new Collection("Book", "", "B"), new Dictionary<string, double> { ["cat"] = 100 }),
+            Recipes = new[] { recipe },
+        };
+        return (ing, recipe, book);
+    }
 
-    [Fact]
+    private static IngredientEditorViewModel Make(out FakeNotYetWired n, out FakeNav nav)
+    {
+        n = new FakeNotYetWired();
+        nav = new FakeNav();
+        var (ing, recipe, book) = Real();
+        return new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(), nav, n);
+    }
+
+    [AvaloniaFact]
+    public void Editor_filmstrip_reflects_the_real_variants_with_thumbnails()
+    {
+        var (ing, recipe, book) = Real();
+        using var vm = new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(),
+            new FakeNav(), new FakeNotYetWired());
+        Assert.Equal(new[] { "Glow", "Spark" }, vm.Variants.Select(v => v.Name));
+        Assert.All(vm.Variants, v => Assert.NotNull(v.Thumbnail));
+        Assert.NotNull(vm.SelectedVariant);
+    }
+
+    [AvaloniaFact]
     public void Select_tool_sets_the_active_tool()
     {
-        var vm = Make(out _, out _);
+        using var vm = Make(out _, out _);
         vm.SelectToolCommand.Execute(EditorTool.Fill);
         Assert.Equal(EditorTool.Fill, vm.ActiveTool);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void Mode_toggle_changes_the_layer_kind()
     {
-        var vm = Make(out _, out _);
+        using var vm = Make(out _, out _);
         vm.Mode = LayerKind.Static;
         Assert.Equal(LayerKind.Static, vm.Mode);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void Paint_and_save_report_not_yet_wired()
     {
-        var vm = Make(out var n, out _);
+        using var vm = Make(out var n, out _);
         vm.ApplyStrokeCommand.Execute(null); Assert.Equal("Paint", n.Last);
         vm.SaveCommand.Execute(null); Assert.Equal("Save ingredient", n.Last);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void Select_variant_sets_the_selected_variant()
     {
-        var vm = Make(out _, out _);
+        using var vm = Make(out _, out _);
         var second = vm.Variants[1];
         vm.SelectVariantCommand.Execute(second);
         Assert.Same(second, vm.SelectedVariant);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void Undo_and_redo_report_not_yet_wired()
     {
-        var vm = Make(out var n, out _);
+        using var vm = Make(out var n, out _);
         vm.UndoCommand.Execute(null); Assert.Equal("Undo", n.Last);
         vm.RedoCommand.Execute(null); Assert.Equal("Redo", n.Last);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void Enlarge_and_fill_pane_preview_report_not_yet_wired()
     {
-        var vm = Make(out var n, out _);
+        using var vm = Make(out var n, out _);
         vm.EnlargePreviewCommand.Execute(null); Assert.Equal("Enlarge preview", n.Last);
         vm.FillPanePreviewCommand.Execute(null); Assert.Equal("Fill pane", n.Last);
+    }
+
+    [AvaloniaFact]
+    public void Mode_defaults_to_the_ingredient_kind_and_custom_falls_back_to_dynamic()
+    {
+        var (ing, recipe, book) = Real();
+        using var vm = new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(),
+            new FakeNav(), new FakeNotYetWired());
+        Assert.Equal(LayerKind.Dynamic, vm.Mode);
+
+        var customIng = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("bg", "Background", LayerKind.Custom, null,
+                new[] { new Variant("a", "A", 1) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>> { ["a"] = new(8, 8) },
+        };
+        using var customVm = new IngredientEditorViewModel(customIng, recipe, book, new ImageBridge(),
+            new FakeNav(), new FakeNotYetWired());
+        Assert.Equal(LayerKind.Dynamic, customVm.Mode);
     }
 }
