@@ -15,6 +15,7 @@ public static class ServiceRegistration
         services.AddSingleton<IFilePickerService, FilePickerService>();
         services.AddSingleton<IRecentsService, RecentsService>();
         services.AddSingleton<IThemeService, ThemeService>();
+        services.AddSingleton<ICookBookSession, CookBookSession>();
 
         services.AddSingleton<ShellViewModel>();
         services.AddTransient<HelpViewModel>();
