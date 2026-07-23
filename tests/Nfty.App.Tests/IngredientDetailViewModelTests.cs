@@ -106,5 +106,6 @@ public class IngredientDetailViewModelTests
         var first = vm.Hero;
         vm.SelectVariantCommand.Execute(ing.Manifest.Variants[^1].Id);
         Assert.NotNull(vm.Hero);   // rebuilt; old disposed internally
+        Assert.NotSame(first, vm.Hero);   // each render builds a fresh Bitmap instance
     }
 }

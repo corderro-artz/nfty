@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Nfty.App.ViewModels"
+             xmlns:img="using:Avalonia.Media.Imaging"
              x:Class="Nfty.App.Views.IngredientDetailView"
              x:DataType="vm:IngredientDetailViewModel">
   <StackPanel Spacing="12" Margin="16">
@@ -41,7 +42,7 @@
         <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="6" /></ItemsPanelTemplate>
       </ItemsControl.ItemsPanel>
       <ItemsControl.ItemTemplate>
-        <DataTemplate><Image Source="{Binding}" Width="40" Height="40" /></DataTemplate>
+        <DataTemplate x:DataType="img:Bitmap"><Image Source="{Binding}" Width="40" Height="40" /></DataTemplate>
       </ItemsControl.ItemTemplate>
     </ItemsControl>
 
