@@ -43,6 +43,34 @@ public class IngredientDetailViewModelTests
     }
 
     [Fact]
+    public void Sorting_reorders_variants_by_the_chosen_column()
+    {
+        LoadedIngredient Ing(string id, params (string vid, string name, double w)[] vs) => new()
+        {
+            Manifest = new IngredientManifest(id, id, LayerKind.Custom, null,
+                vs.Select(v => new Variant(v.vid, v.name, v.w)).ToArray()),
+            VariantImages = vs.ToDictionary(v => v.vid, _ => new Image<Rgba32>(4, 4)),
+        };
+        var aura = Ing("aura", ("a", "Apple", 1), ("z", "Zephyr", 5));   // name order ≠ weight order
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("cat", "Cat", new[] { "aura" }, Array.Empty<IncompatibilityRule>()),
+            Ingredients = new[] { aura },
+        };
+        var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "Book", new Dimensions(4, 4),
+                new Collection("Book", "", "B"), new Dictionary<string, double> { ["cat"] = 100 }),
+            Recipes = new[] { recipe },
+        };
+        var vm = new IngredientDetailViewModel(aura, recipe, book, new FakeNotYetWired(), () => { }, () => false);
+
+        Assert.Equal(new[] { "Apple", "Zephyr" }, vm.Variants.Select(v => v.Name));   // default "Variant": by name
+        vm.SortByCommand.Execute("Weight");
+        Assert.Equal(new[] { "Zephyr", "Apple" }, vm.Variants.Select(v => v.Name));   // "Weight": heaviest first
+    }
+
+    [Fact]
     public void Delete_variant_enabled_only_when_editing()
     {
         var (book, recipe, ing) = Fixture();

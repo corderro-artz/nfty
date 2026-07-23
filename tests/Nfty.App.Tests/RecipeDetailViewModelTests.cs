@@ -16,6 +16,7 @@ public class RecipeDetailViewModelTests
         var cat = book.Recipes.First(r => r.Manifest.Id == "cat");
         var vm = new RecipeDetailViewModel(cat, book, new FakeNotYetWired(), _ => { });
         Assert.Equal(new[] { "bg", "aura" }, vm.Layers.Select(l => l.Layer));
+        Assert.Equal(new[] { "bg", "aura" }, vm.Layers.Select(l => l.Id));   // Id drives OpenIngredient, not the display name
         Assert.All(vm.Layers, l => Assert.Equal(1, l.VariantCount));
         Assert.Empty(vm.Rules);   // TwoRecipeBook has no rules
     }

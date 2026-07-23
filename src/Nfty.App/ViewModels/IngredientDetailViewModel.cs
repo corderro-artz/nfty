@@ -14,12 +14,21 @@ public partial class IngredientDetailViewModel : ViewModelBase
     private readonly INotYetWired _notify;
     private readonly Action _editIngredient;
     private readonly Func<bool> _isEditing;
-    [ObservableProperty] private string _sortColumn = "Variant";
+    private readonly IReadOnlyList<VariantRow> _variants;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Variants))]
+    private string _sortColumn = "Variant";
 
     public string Name { get; }
     public string KindText { get; }
     public string ColorwaysText { get; }
-    public IReadOnlyList<VariantRow> Variants { get; }
+
+    /// <summary>Variant rows ordered by the active sort column: "Weight" (heaviest first) or,
+    /// by default, "Variant" (name, ordinal).</summary>
+    public IReadOnlyList<VariantRow> Variants => SortColumn == "Weight"
+        ? _variants.OrderByDescending(v => v.Weight).ThenBy(v => v.Name, StringComparer.Ordinal).ToList()
+        : _variants.OrderBy(v => v.Name, StringComparer.Ordinal).ToList();
 
     public IngredientDetailViewModel(LoadedIngredient ing, LoadedRecipe recipe, LoadedCookBook book,
         INotYetWired notify, Action editIngredient, Func<bool> isEditing)
@@ -33,7 +42,7 @@ public partial class IngredientDetailViewModel : ViewModelBase
             .Where(t => t.RecipeId == recipe.Manifest.Id && t.IngredientId == ing.Manifest.Id)
             .ToDictionary(t => t.VariantId, StringComparer.Ordinal);
 
-        Variants = ing.Manifest.Variants.Select(v =>
+        _variants = ing.Manifest.Variants.Select(v =>
         {
             traits.TryGetValue(v.Id, out var t);
             return new VariantRow(v.Name, v.Weight,
