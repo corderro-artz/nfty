@@ -122,4 +122,28 @@ public class IngredientEditorViewModelTests
             new FakeNav(), new FakeNotYetWired());
         Assert.Equal(LayerKind.Dynamic, customVm.Mode);
     }
+
+    [AvaloniaFact]
+    public void Canvas_and_preview_render_and_update_on_colour_change()
+    {
+        var (ing, recipe, book) = Real();
+        using var vm = new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(),
+            new FakeNav(), new FakeNotYetWired());
+        Assert.NotNull(vm.Canvas);
+        Assert.NotNull(vm.Preview);
+        var before = vm.Preview;
+        vm.HueMin = 120;                 // change colour state
+        Assert.NotSame(before, vm.Preview);   // preview rebuilt (old disposed internally)
+    }
+
+    [AvaloniaFact]
+    public void Reroll_preview_rebuilds_the_preview()
+    {
+        var (ing, recipe, book) = Real();
+        using var vm = new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(),
+            new FakeNav(), new FakeNotYetWired());
+        var before = vm.Preview;
+        vm.RerollPreviewCommand.Execute(null);
+        Assert.NotSame(before, vm.Preview);
+    }
 }
