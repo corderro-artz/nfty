@@ -15,7 +15,7 @@ public class WiringCoverageTests
         var nav = new FakeNav(); var dialogs = new FakeDialogs(); var notify = new FakeNotYetWired();
         var vm = new LandingViewModel(nav, dialogs, notify,
             new FilePickerService(), new RecentsService(), new CookBookSession(),
-            book => new ExplorerViewModel(book, nav, dialogs, notify));
+            book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge()));
         foreach (var c in new[] { "NewCookBookCommand","NewKitchenCommand","NewRecipeCommand","NewIngredientCommand",
                                   "OpenCookBookCommand","ImportCommand","OpenSetCommand","OpenRecentCommand","ShowHelpCommand" })
             Assert.True(HasCommand(vm, c), $"Landing missing {c}");
@@ -27,7 +27,7 @@ public class WiringCoverageTests
         // §6.2's "expand" row is intentionally not a VM command: tree expand/collapse is handled by
         // Avalonia's native TreeView expander, so a ToggleExpand command would be vestigial. This
         // test covers the row via that documented decision rather than a command assertion.
-        var vm = new ExplorerViewModel(ExplorerViewModelTests.TwoRecipeBook(), new FakeNav(), new FakeDialogs(), new FakeNotYetWired());
+        using var vm = new ExplorerViewModel(ExplorerViewModelTests.TwoRecipeBook(), new FakeNav(), new FakeDialogs(), new FakeNotYetWired(), new ImageBridge());
         foreach (var c in new[] { "ToggleLockCommand","SearchCommand","AddCommand","DeleteSelectedCommand",
                                   "ImportCommand","SelectNodeCommand","OpenIngredientCommand" })
             Assert.True(HasCommand(vm, c), $"Explorer missing {c}");

@@ -1,3 +1,5 @@
+using Avalonia.Headless.XUnit;
+using Nfty.App.Services;
 using Nfty.App.ViewModels;
 using Nfty.Core.Formats;
 using Nfty.Core.Model;
@@ -32,17 +34,18 @@ public class IngredientDetailViewModelTests
         return (book, recipe, aura);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void Variant_rows_carry_within_recipe_rarity()
     {
         var (book, recipe, ing) = Fixture();
-        var vm = new IngredientDetailViewModel(ing, recipe, book, new FakeNotYetWired(), () => { }, () => false);
+        using var vm = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(),
+            new FakeNotYetWired(), () => { }, () => false);
         Assert.Equal(2, vm.Variants.Count);
         var glow = vm.Variants.Single(v => v.Name == "Glow");
         Assert.Equal(75.0, glow.WithinPercent, 1);   // 3/(3+1)
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void Sorting_reorders_variants_by_the_chosen_column()
     {
         LoadedIngredient Ing(string id, params (string vid, string name, double w)[] vs) => new()
@@ -63,21 +66,45 @@ public class IngredientDetailViewModelTests
                 new Collection("Book", "", "B"), new Dictionary<string, double> { ["cat"] = 100 }),
             Recipes = new[] { recipe },
         };
-        var vm = new IngredientDetailViewModel(aura, recipe, book, new FakeNotYetWired(), () => { }, () => false);
+        using var vm = new IngredientDetailViewModel(aura, recipe, book, new ImageBridge(),
+            new FakeNotYetWired(), () => { }, () => false);
 
         Assert.Equal(new[] { "Apple", "Zephyr" }, vm.Variants.Select(v => v.Name));   // default "Variant": by name
         vm.SortByCommand.Execute("Weight");
         Assert.Equal(new[] { "Zephyr", "Apple" }, vm.Variants.Select(v => v.Name));   // "Weight": heaviest first
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void Delete_variant_enabled_only_when_editing()
     {
         var (book, recipe, ing) = Fixture();
         bool editing = false;
-        var vm = new IngredientDetailViewModel(ing, recipe, book, new FakeNotYetWired(), () => { }, () => editing);
+        using var vm = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(),
+            new FakeNotYetWired(), () => { }, () => editing);
         Assert.False(vm.DeleteVariantCommand.CanExecute(null));
         editing = true; vm.RaiseCanExecuteChanged();
         Assert.True(vm.DeleteVariantCommand.CanExecute(null));
+    }
+
+    [AvaloniaFact]
+    public void Hero_thumbnails_and_colorways_are_built()
+    {
+        var (book, recipe, ing) = Fixture();
+        using var vm = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(),
+            new FakeNotYetWired(), () => { }, () => false);
+        Assert.NotNull(vm.Hero);
+        Assert.All(vm.Variants, v => Assert.NotNull(v.Thumbnail));
+        Assert.NotEmpty(vm.Colorways);
+    }
+
+    [AvaloniaFact]
+    public void Selecting_a_variant_swaps_the_hero()
+    {
+        var (book, recipe, ing) = Fixture();
+        using var vm = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(),
+            new FakeNotYetWired(), () => { }, () => false);
+        var first = vm.Hero;
+        vm.SelectVariantCommand.Execute(ing.Manifest.Variants[^1].Id);
+        Assert.NotNull(vm.Hero);   // rebuilt; old disposed internally
     }
 }

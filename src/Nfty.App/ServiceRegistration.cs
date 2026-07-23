@@ -31,7 +31,8 @@ public static class ServiceRegistration
             book => new ExplorerViewModel(book,
                 sp.GetRequiredService<INavigationService>(),
                 sp.GetRequiredService<IDialogService>(),
-                sp.GetRequiredService<INotYetWired>()));
+                sp.GetRequiredService<INotYetWired>(),
+                sp.GetRequiredService<IImageBridge>()));
 
         // Further VM registrations are added incrementally by the task that creates each
         // ViewModel (see Tasks 12-13).

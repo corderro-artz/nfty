@@ -6,11 +6,12 @@ using Nfty.Core.Formats;
 
 namespace Nfty.App.ViewModels;
 
-public partial class ExplorerViewModel : ViewModelBase
+public partial class ExplorerViewModel : ViewModelBase, IDisposable
 {
     private readonly INavigationService _nav;
     private readonly IDialogService _dialogs;
     private readonly INotYetWired _notify;
+    private readonly IImageBridge _bridge;
     private readonly LoadedCookBook _book;
 
     [ObservableProperty] private ExplorerNode? _selectedNode;
@@ -33,9 +34,10 @@ public partial class ExplorerViewModel : ViewModelBase
         _ => "Add",
     };
 
-    public ExplorerViewModel(LoadedCookBook book, INavigationService nav, IDialogService dialogs, INotYetWired notify)
+    public ExplorerViewModel(LoadedCookBook book, INavigationService nav, IDialogService dialogs,
+        INotYetWired notify, IImageBridge bridge)
     {
-        _book = book; _nav = nav; _dialogs = dialogs; _notify = notify;
+        _book = book; _nav = nav; _dialogs = dialogs; _notify = notify; _bridge = bridge;
         Root = BuildTree(book);
     }
 
@@ -57,13 +59,14 @@ public partial class ExplorerViewModel : ViewModelBase
     partial void OnSelectedNodeChanged(ExplorerNode? value)
     {
         OnPropertyChanged(nameof(AddLabel));
+        (CurrentDetail as IDisposable)?.Dispose();
         CurrentDetail = value?.Kind switch
         {
             ExplorerNodeKind.CookBook => new CookBookDetailViewModel(_book, _notify),
             ExplorerNodeKind.Recipe => new RecipeDetailViewModel((LoadedRecipe)value!.Domain!, _book, _notify,
                 id => OpenIngredientCommand.Execute(id)),
             ExplorerNodeKind.Ingredient => value!.Domain is (LoadedRecipe r, LoadedIngredient i)
-                ? new IngredientDetailViewModel(i, r, _book, _notify, () => _notify.Report("Edit ingredient"), () => IsEditing)
+                ? new IngredientDetailViewModel(i, r, _book, _bridge, _notify, () => _notify.Report("Edit ingredient"), () => IsEditing)
                 : null,
             _ => null,
         };
@@ -77,4 +80,6 @@ public partial class ExplorerViewModel : ViewModelBase
     [RelayCommand] private void SelectNode(ExplorerNode node) => SelectedNode = node;
     [RelayCommand] private void OpenIngredient(string id) => _notify.Report($"Open ingredient {id}");
     private bool CanEdit() => IsEditing;
+
+    public void Dispose() => (CurrentDetail as IDisposable)?.Dispose();
 }

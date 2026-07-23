@@ -1,4 +1,5 @@
 using Nfty.App.Models;
+using Nfty.App.Services;
 using Nfty.App.ViewModels;
 using Nfty.Core.Formats;
 using Nfty.Core.Model;
@@ -32,12 +33,12 @@ public class ExplorerViewModelTests
     }
 
     private static ExplorerViewModel Make(out FakeNotYetWired n)
-    { n = new FakeNotYetWired(); return new ExplorerViewModel(TwoRecipeBook(), new FakeNav(), new FakeDialogs(), n); }
+    { n = new FakeNotYetWired(); return new ExplorerViewModel(TwoRecipeBook(), new FakeNav(), new FakeDialogs(), n, new ImageBridge()); }
 
     [Fact]
     public void Tree_is_built_from_the_cookbook_recipes_and_ingredients()
     {
-        var vm = new ExplorerViewModel(TwoRecipeBook(), new FakeNav(), new FakeDialogs(), new FakeNotYetWired());
+        using var vm = new ExplorerViewModel(TwoRecipeBook(), new FakeNav(), new FakeDialogs(), new FakeNotYetWired(), new ImageBridge());
         Assert.Equal(ExplorerNodeKind.CookBook, vm.Root.Kind);
         Assert.Equal("VaporPets", vm.Root.Name);
         Assert.Equal(new[] { "cat", "dog" }, vm.Root.Children.Select(c => c.Id));
@@ -48,7 +49,7 @@ public class ExplorerViewModelTests
     [Fact]
     public void Opens_read_only_and_lock_toggles_editing()
     {
-        var vm = Make(out _);
+        using var vm = Make(out _);
         Assert.False(vm.IsEditing);
         vm.ToggleLockCommand.Execute(null);
         Assert.True(vm.IsEditing);
@@ -57,7 +58,7 @@ public class ExplorerViewModelTests
     [Fact]
     public void Delete_is_disabled_until_editing()
     {
-        var vm = Make(out _);
+        using var vm = Make(out _);
         Assert.False(vm.DeleteSelectedCommand.CanExecute(null));
         vm.ToggleLockCommand.Execute(null);
         Assert.True(vm.DeleteSelectedCommand.CanExecute(null));
@@ -66,7 +67,7 @@ public class ExplorerViewModelTests
     [Fact]
     public void Add_label_tracks_the_selected_node_kind()
     {
-        var vm = Make(out _);
+        using var vm = Make(out _);
         var cat = TwoRecipeBook().Recipes.First(r => r.Manifest.Id == "cat");
         vm.SelectNodeCommand.Execute(new ExplorerNode("r", "Cat", ExplorerNodeKind.Recipe, [], cat));
         Assert.Equal("Add ingredient", vm.AddLabel);
@@ -77,7 +78,7 @@ public class ExplorerViewModelTests
     [Fact]
     public void Search_and_import_report_not_yet_wired()
     {
-        var vm = Make(out var n);
+        using var vm = Make(out var n);
         vm.SearchCommand.Execute(null); Assert.Equal("Search (⌘K)", n.Last);
         vm.ImportCommand.Execute(null); Assert.Equal("Import", n.Last);
     }
