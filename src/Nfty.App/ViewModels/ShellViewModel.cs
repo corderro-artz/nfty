@@ -29,6 +29,7 @@ public partial class ShellViewModel : ViewModelBase
     }
 
     [RelayCommand] private void ShowHelp() => _dialogs.ShowAsync<object>(new HelpViewModel(_dialogs));
+    [RelayCommand] private void CloseDialog() => _dialogs.Close(null);
     [RelayCommand] private void ZoomIn() => Zoom = Math.Min(300, Zoom + 10);
     [RelayCommand] private void ZoomOut() => Zoom = Math.Max(50, Zoom - 10);
     [RelayCommand] private void ZoomReset() => Zoom = 100;

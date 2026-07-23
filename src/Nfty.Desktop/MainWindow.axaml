@@ -5,6 +5,14 @@
         x:DataType="vm:ShellViewModel"
         Width="1180" Height="720" Title="nfty"
         ExtendClientAreaToDecorationsHint="True" SystemDecorations="None">
+  <Window.KeyBindings>
+    <KeyBinding Gesture="Ctrl+OemQuestion" Command="{Binding ShowHelpCommand}" />
+    <KeyBinding Gesture="Ctrl+OemPlus" Command="{Binding ZoomInCommand}" />
+    <KeyBinding Gesture="Ctrl+Add" Command="{Binding ZoomInCommand}" />
+    <KeyBinding Gesture="Ctrl+OemMinus" Command="{Binding ZoomOutCommand}" />
+    <KeyBinding Gesture="Ctrl+Subtract" Command="{Binding ZoomOutCommand}" />
+    <KeyBinding Gesture="Ctrl+D0" Command="{Binding ZoomResetCommand}" />
+  </Window.KeyBindings>
   <Grid RowDefinitions="Auto,*,Auto">
     <!-- Titlebar -->
     <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Background="{DynamicResource PanelBrush}" Height="38">
@@ -22,7 +30,8 @@
     <!-- Page + dialog overlay -->
     <Panel Grid.Row="1">
       <ContentControl Content="{Binding CurrentPage}" />
-      <Panel IsVisible="{Binding ActiveDialog, Converter={x:Static ObjectConverters.IsNotNull}}"
+      <Panel Name="DialogScrim"
+             IsVisible="{Binding ActiveDialog, Converter={x:Static ObjectConverters.IsNotNull}}"
              Background="#88000000">
         <ContentControl Content="{Binding ActiveDialog}"
                         HorizontalAlignment="Center" VerticalAlignment="Center" />

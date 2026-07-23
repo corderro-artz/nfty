@@ -69,8 +69,8 @@ public partial class IngredientEditorViewModel : ViewModelBase
     }
 
     [RelayCommand] private void SelectTool(EditorTool tool) => ActiveTool = tool;
-    [RelayCommand] private void Undo() { /* EditHistory in P2 */ }
-    [RelayCommand] private void Redo() { /* EditHistory in P2 */ }
+    [RelayCommand] private void Undo() => _notify.Report("Undo");
+    [RelayCommand] private void Redo() => _notify.Report("Redo");
 
     [RelayCommand]
     private void SelectVariant(EditorVariant v) => SelectedVariant = v;
@@ -102,8 +102,8 @@ public partial class IngredientEditorViewModel : ViewModelBase
 
     [RelayCommand] private void ApplyStroke() => _notify.Report("Paint");
     [RelayCommand] private void RerollPreview() => _notify.Report("Preview roll");
-    [RelayCommand] private void EnlargePreview() { /* ui-state P2 */ }
-    [RelayCommand] private void FillPanePreview() { /* ui-state P2 */ }
+    [RelayCommand] private void EnlargePreview() => _notify.Report("Enlarge preview");
+    [RelayCommand] private void FillPanePreview() => _notify.Report("Fill pane");
     [RelayCommand] private void Save() => _notify.Report("Save ingredient");
     [RelayCommand] private void Back() => _nav.Back();
 }

@@ -3,7 +3,13 @@
              xmlns:vm="using:Nfty.App.ViewModels"
              xmlns:m="using:Nfty.App.Models"
              x:Class="Nfty.App.Views.LandingView"
-             x:DataType="vm:LandingViewModel">
+             x:DataType="vm:LandingViewModel"
+             Focusable="True">
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Ctrl+N" Command="{Binding NewCookBookCommand}" />
+    <KeyBinding Gesture="Ctrl+O" Command="{Binding OpenCookBookCommand}" />
+    <KeyBinding Gesture="Ctrl+I" Command="{Binding ImportCommand}" />
+  </UserControl.KeyBindings>
   <Grid ColumnDefinitions="*,*" Margin="38,34">
     <StackPanel Grid.Column="0" Spacing="7" MaxWidth="272">
       <TextBlock Text="nfty" FontSize="30" FontWeight="Bold" />

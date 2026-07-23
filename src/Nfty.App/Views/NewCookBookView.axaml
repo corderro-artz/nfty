@@ -2,7 +2,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Nfty.App.ViewModels"
              x:Class="Nfty.App.Views.NewCookBookView"
-             x:DataType="vm:NewCookBookViewModel">
+             x:DataType="vm:NewCookBookViewModel"
+             Focusable="True">
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Escape" Command="{Binding CancelCommand}" />
+  </UserControl.KeyBindings>
   <Border Background="{DynamicResource PanelBrush}" CornerRadius="10" Padding="28" Width="440"
           BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1">
     <StackPanel Spacing="10">

@@ -1,3 +1,4 @@
+using Nfty.App.Services;
 using Nfty.App.ViewModels;
 using Xunit;
 
@@ -35,5 +36,18 @@ public class ShellViewModelTests
         var shell = Make(out var notify);
         shell.OpenKitchenCommand.Execute(null);
         Assert.Equal("New Kitchen", notify.Last);
+    }
+
+    [Fact]
+    public void Close_dialog_clears_the_active_dialog()
+    {
+        var dialogs = new DialogService();
+        var shell = new ShellViewModel(new FakeNav(), dialogs, new FakeNotYetWired(), new StubTheme());
+        _ = dialogs.ShowAsync<object>(new HelpViewModel(dialogs));
+        Assert.NotNull(dialogs.Active);
+
+        shell.CloseDialogCommand.Execute(null);
+
+        Assert.Null(dialogs.Active);
     }
 }

@@ -41,4 +41,20 @@ public class IngredientEditorViewModelTests
         vm.SelectVariantCommand.Execute(second);
         Assert.Same(second, vm.SelectedVariant);
     }
+
+    [Fact]
+    public void Undo_and_redo_report_not_yet_wired()
+    {
+        var vm = Make(out var n, out _);
+        vm.UndoCommand.Execute(null); Assert.Equal("Undo", n.Last);
+        vm.RedoCommand.Execute(null); Assert.Equal("Redo", n.Last);
+    }
+
+    [Fact]
+    public void Enlarge_and_fill_pane_preview_report_not_yet_wired()
+    {
+        var vm = Make(out var n, out _);
+        vm.EnlargePreviewCommand.Execute(null); Assert.Equal("Enlarge preview", n.Last);
+        vm.FillPanePreviewCommand.Execute(null); Assert.Equal("Fill pane", n.Last);
+    }
 }
