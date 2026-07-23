@@ -149,3 +149,10 @@ Pure VM/service tests are `[Fact]`; anything constructing Avalonia controls uses
 - Any `Nfty.Core` change.
 - Visual-fidelity polish of the Explorer to the mockup (functional binding only; polish is its own pass).
 - Saving/writing archives (this slice only reads).
+
+> **Program requirement (recorded here, delivered later):** the *final* GUI must be a faithful
+> **visual mirror of the locked mockups** (`docs/design/mockups/*.html`) — chrome, layout, the
+> tree▸detail▸rail composition, typography, spacing, and the vaporsoft styling. A **dedicated
+> visual-fidelity pass** (its own slice, after the data behaviors land) delivers this against the
+> mockups as the pixel reference. This slice and the other Phase-2 behavior slices are deliberately
+> functional-binding-only; they must not be mistaken for the finished look.
