@@ -5,14 +5,8 @@ namespace Nfty.App.Tests;
 
 public class ExplorerDetailTests
 {
-    [Fact]
-    public void Cook_reports_not_yet_wired()
-    {
-        var n = new FakeNotYetWired();
-        var vm = new CookBookDetailViewModel(n);
-        vm.CookCommand.Execute(null);
-        Assert.Equal("Cook", n.Last);
-    }
+    // Cook_reports_not_yet_wired moved to CookBookDetailViewModelTests, which now
+    // constructs CookBookDetailViewModel with a real LoadedCookBook (Task 3).
 
     [Fact]
     public void Reroll_changes_the_roll_seed()

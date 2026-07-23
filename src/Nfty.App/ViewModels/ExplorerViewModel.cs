@@ -59,7 +59,7 @@ public partial class ExplorerViewModel : ViewModelBase
         OnPropertyChanged(nameof(AddLabel));
         CurrentDetail = value?.Kind switch
         {
-            ExplorerNodeKind.CookBook => new CookBookDetailViewModel(_notify),
+            ExplorerNodeKind.CookBook => new CookBookDetailViewModel(_book, _notify),
             ExplorerNodeKind.Recipe => new RecipeDetailViewModel(_notify, id => OpenIngredientCommand.Execute(id)),
             ExplorerNodeKind.Ingredient => new IngredientDetailViewModel(_notify,
                 () => _notify.Report("Edit ingredient"), () => IsEditing),
