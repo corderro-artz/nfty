@@ -47,7 +47,7 @@ public partial class ExplorerViewModel : ViewModelBase
             var ingNodes = r.Manifest.LayerOrder
                 .Where(ingById.ContainsKey)
                 .Select(id => new ExplorerNode(id, ingById[id].Manifest.Name,
-                    ExplorerNodeKind.Ingredient, Array.Empty<ExplorerNode>(), ingById[id]))
+                    ExplorerNodeKind.Ingredient, Array.Empty<ExplorerNode>(), (r, ingById[id])))
                 .ToList();
             return new ExplorerNode(r.Manifest.Id, r.Manifest.Name, ExplorerNodeKind.Recipe, ingNodes, r);
         }).ToList();
@@ -62,8 +62,9 @@ public partial class ExplorerViewModel : ViewModelBase
             ExplorerNodeKind.CookBook => new CookBookDetailViewModel(_book, _notify),
             ExplorerNodeKind.Recipe => new RecipeDetailViewModel((LoadedRecipe)value!.Domain!, _book, _notify,
                 id => OpenIngredientCommand.Execute(id)),
-            ExplorerNodeKind.Ingredient => new IngredientDetailViewModel(_notify,
-                () => _notify.Report("Edit ingredient"), () => IsEditing),
+            ExplorerNodeKind.Ingredient => value!.Domain is (LoadedRecipe r, LoadedIngredient i)
+                ? new IngredientDetailViewModel(i, r, _book, _notify, () => _notify.Report("Edit ingredient"), () => IsEditing)
+                : null,
             _ => null,
         };
     }
