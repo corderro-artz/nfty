@@ -21,7 +21,12 @@ public partial class App : Application
         var shell = services.GetRequiredService<ShellViewModel>();
         services.GetRequiredService<INavigationService>().To(services.GetRequiredService<LandingViewModel>());
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
             desktop.MainWindow = new MainWindow { DataContext = shell };
+            // The container owns the singleton ICookBookSession, which owns the open
+            // cookbook's decoded images; dispose it on exit so that cleanup runs.
+            desktop.Exit += (_, _) => services.Dispose();
+        }
         base.OnFrameworkInitializationCompleted();
     }
 }
