@@ -12,8 +12,10 @@ public class WiringCoverageTests
     [Fact]
     public void Landing_exposes_every_mapped_command()
     {
-        var vm = new LandingViewModel(new FakeNav(), new FakeDialogs(), new FakeNotYetWired(),
-            new FilePickerService(), new RecentsService());
+        var nav = new FakeNav(); var dialogs = new FakeDialogs(); var notify = new FakeNotYetWired();
+        var vm = new LandingViewModel(nav, dialogs, notify,
+            new FilePickerService(), new RecentsService(), new CookBookSession(),
+            book => new ExplorerViewModel(book, nav, dialogs, notify));
         foreach (var c in new[] { "NewCookBookCommand","NewKitchenCommand","NewRecipeCommand","NewIngredientCommand",
                                   "OpenCookBookCommand","ImportCommand","OpenSetCommand","OpenRecentCommand","ShowHelpCommand" })
             Assert.True(HasCommand(vm, c), $"Landing missing {c}");
