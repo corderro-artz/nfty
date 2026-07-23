@@ -1,3 +1,4 @@
+using Avalonia.Headless.XUnit;
 using Nfty.App.Models;
 using Nfty.App.Services;
 using Nfty.App.ViewModels;
@@ -64,7 +65,7 @@ public class ExplorerViewModelTests
         Assert.True(vm.DeleteSelectedCommand.CanExecute(null));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void Add_label_tracks_the_selected_node_kind()
     {
         using var vm = Make(out _);
