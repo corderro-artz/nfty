@@ -17,6 +17,7 @@ public static class ServiceRegistration
         services.AddSingleton<IRecentsService, RecentsService>();
         services.AddSingleton<IThemeService, ThemeService>();
         services.AddSingleton<ICookBookSession, CookBookSession>();
+        services.AddSingleton<IImageBridge, ImageBridge>();
 
         services.AddSingleton<ShellViewModel>();
         services.AddTransient<HelpViewModel>();
