@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
 using Avalonia.Styling;
@@ -29,5 +30,17 @@ public class ThemeResourceTests
         Assert.IsType<FontFamily>(Resolve("MonoFontFamily", ThemeVariant.Light));
         Assert.Equal(4d, Resolve("RadiusXs", ThemeVariant.Light));
         Assert.Equal(8d, Resolve("RadiusLg", ThemeVariant.Light));
+    }
+
+    [AvaloniaFact]
+    public void Base_text_is_sans_and_mono_class_is_mono()
+    {
+        var plain = StyledHost.Show(new TextBlock { Text = "body" });
+        var mono = StyledHost.Show(new TextBlock { Text = "id", Classes = { "mono" } });
+
+        var sans = (FontFamily)Application.Current!.FindResource("SansFontFamily")!;
+        var monoFam = (FontFamily)Application.Current!.FindResource("MonoFontFamily")!;
+        Assert.Equal(sans, plain.FontFamily);   // base default is sans, not mono
+        Assert.Equal(monoFam, mono.FontFamily);
     }
 }
