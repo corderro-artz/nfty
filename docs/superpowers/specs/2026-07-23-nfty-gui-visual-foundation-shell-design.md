@@ -29,8 +29,9 @@ exact Avalonia equivalent, approximate it as closely as the framework allows and
   mockup.
 - Fix the current base-font bug (whole window is mono; the mockups use **sans for body, mono only for
   IDs/headings/wordmark/crumbs/kind labels**).
-- Zero new palette colours — the locked token block is authoritative; only font/shadow/spacing
-  *resources* are added.
+- **Complete the token port faithfully** — the initial port into `Tokens.axaml` was partial; this slice
+  adds the mockup tokens it missed (see §2.1). No *invented* colours — every value comes verbatim from
+  the mockup's locked token block.
 
 **Non-goals (this slice)**
 - Per-screen **layouts**: Explorer tree/detail/rail, Landing hero/entrypoints, Help, Ingredient Editor,
@@ -41,18 +42,27 @@ exact Avalonia equivalent, approximate it as closely as the framework allows and
 
 ## 2. Components
 
-### 2.1 Token additions (`Themes/Tokens.axaml`)
-- `SansFontFamily` = `-apple-system, Segoe UI, Helvetica Neue, Arial, sans-serif` (the mockup
-  `--font-sans`, minus the macOS-only leaders Avalonia can't resolve on Windows — the trailing
-  `Segoe UI`/`Arial`/`sans-serif` still resolve correctly per-platform).
-- Update `MonoFontFamily` to the mockup `--font-mono` order:
-  `SF Mono, JetBrains Mono, Cascadia Code, Menlo, Consolas, monospace`.
-- A shared shadow resource (a `BoxShadow`/`BoxShadows` value) for panels/cards/frame, using a **neutral
-  black-alpha** colour (a shadow, not a palette hue — this is not token drift). The mockups use ~14
-  subtle shadows; one or two shared shadow tokens (e.g. a soft panel shadow and a stronger window
-  shadow) cover them.
-- Radii (`RadiusWin`=10, `RadiusMd`=8, `RadiusSm`=5) already exist; reuse. Add an `x:Double` for any
-  spacing constant used widely if it reduces repetition (optional, YAGNI).
+### 2.1 Token port completion (`Themes/Tokens.axaml`)
+The current `Tokens.axaml` is a **partial** port of the mockup's token block. Complete it — every value
+below is verbatim from the mockup (`docs/design/mockups/explorer.html`), added to **both** the `Light`
+and `Dark` `ThemeDictionaries`:
+
+- **Fonts:** add `SansFontFamily` = `-apple-system, Segoe UI, Helvetica Neue, Arial, sans-serif` (mockup
+  `--font-sans`; the macOS-only leaders still fall back correctly per-platform). Update `MonoFontFamily`
+  to the mockup `--font-mono` order: `SF Mono, JetBrains Mono, Cascadia Code, Menlo, Consolas, monospace`.
+- **Missing colour tokens (verbatim from the mockup block):**
+  - `AccentHoverBrush` — light `#b92f44`, dark `#ba3447` (needed for faithful button hover).
+  - `SuccessBrush` — light `#3d6b52`, dark `#a6c08a`.
+  - `GuideBrush` — light `#1214182b`, dark `#f2ede61f`; `GuideHiBrush` — light `#12141859`, dark
+    `#f2ede63d` (tree guide lines; foundational, consumed by the Explorer slice).
+- **Shadow:** port `--shadow` as an Avalonia multi-layer `BoxShadows` resource (`WinShadow`), verbatim:
+  light `0 1px 2px #12141810, 0 18px 48px -24px #12141833`; dark
+  `0 1px 2px #00000060, 0 22px 60px -28px #000000`. (Avalonia `BoxShadows` supports the multi-shadow
+  syntax; confirm the exact string form against Avalonia 11.2 docs when implementing.)
+- **Radii:** `RadiusWin`=10, `RadiusMd`=8, `RadiusSm`=5 already exist; add `RadiusXs`=4 and `RadiusLg`=8
+  (mockup `--r-xs`/`--r-lg`).
+- **Already correct, keep as-is:** `KindDynamicBrush`/`KindStaticBrush`/`KindCustomBrush` equal the
+  mockup's `--info`/`--warning`/`--custom` exactly (verified) — no duplicate `Info`/`Warning` tokens.
 
 The comment block in `Tokens.axaml` stays: the mockup is the source of truth; no hex is edited without
 first updating the mockup.
@@ -134,7 +144,9 @@ colours from `DynamicResource` token keys so both `ThemeVariant`s remain correct
 
 ## 6. Out of scope
 - `Nfty.Core`, ViewModels, services, commands, keybindings — unchanged.
-- New palette colours; new fonts beyond the two mockup stacks; a golden-image test harness.
+- **Invented** colours (colours not in the mockup token block); new fonts beyond the two mockup stacks;
+  a golden-image test harness. Completing the port with the mockup's own missed tokens (§2.1) is in
+  scope.
 - Per-screen layouts (this slice is the shared vocabulary + window chrome only).
 
 ## 7. Risks & escalation
