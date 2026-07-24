@@ -39,6 +39,96 @@ public class VisualCapture
         Child = Label(text, "kind-txt"),
     };
 
+    /// <summary>Mirrors MainWindow's titlebar + status bar chrome (brand tile, wordmark, borderless
+    /// window controls, zoom/help controls) so it can be visually captured — MainWindow itself can't
+    /// be instantiated headlessly (it's the desktop head's top-level Window). Keep this structurally
+    /// in sync with src/Nfty.Desktop/MainWindow.axaml's titlebar/status-bar markup.</summary>
+    private static IBrush Res(string key, ThemeVariant variant) =>
+        Application.Current!.TryGetResource(key, variant, out var v) ? (IBrush)v! : Brushes.Magenta;
+
+    private static Control ChromeStrip(ThemeVariant variant)
+    {
+        var radiusSm = Application.Current!.TryGetResource("RadiusSm", variant, out var r)
+            ? (CornerRadius)r!
+            : new CornerRadius(5);
+
+        var brandTile = new Border
+        {
+            Width = 24,
+            Height = 24,
+            CornerRadius = radiusSm,
+            Background = Res("AccentWashBrush", variant),
+            Child = new Border
+            {
+                Width = 9,
+                Height = 9,
+                CornerRadius = new CornerRadius(2),
+                Background = Res("AccentBrush", variant),
+                RenderTransform = new RotateTransform(45),
+            },
+        };
+
+        var titlebar = new Grid
+        {
+            Height = 46,
+            Background = Res("PanelBrush", variant),
+            ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"),
+        };
+        var brand = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Margin = new Thickness(12, 0, 0, 0),
+            VerticalAlignment = VerticalAlignment.Center,
+            Spacing = 9,
+            Children = { brandTile, Label("nfty", "wordmark") },
+        };
+        Grid.SetColumn(brand, 0);
+        var winControls = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 6, 0),
+            Children = { Btn("—", "icon"), Btn("▢", "icon"), Btn("✕", "icon") },
+        };
+        Grid.SetColumn(winControls, 2);
+        titlebar.Children.Add(brand);
+        titlebar.Children.Add(winControls);
+
+        var statusBar = new Grid
+        {
+            Height = 34,
+            Background = Res("BgAltBrush", variant),
+            ColumnDefinitions = new ColumnDefinitions("*,Auto"),
+        };
+        var statusText = Label("Ready · 1,024 assets", "muted");
+        statusText.Margin = new Thickness(16, 0);
+        statusText.VerticalAlignment = VerticalAlignment.Center;
+        Grid.SetColumn(statusText, 0);
+        var zoomGroup = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Margin = new Thickness(8, 0),
+            VerticalAlignment = VerticalAlignment.Center,
+            Spacing = 2,
+            Children =
+            {
+                Btn("−", "icon"),
+                new TextBlock { Text = "100%", Width = 46, TextAlignment = Avalonia.Media.TextAlignment.Center, VerticalAlignment = VerticalAlignment.Center },
+                Btn("+", "icon"),
+                Btn("?", "icon"),
+            },
+        };
+        Grid.SetColumn(zoomGroup, 1);
+        statusBar.Children.Add(statusText);
+        statusBar.Children.Add(zoomGroup);
+
+        return new StackPanel
+        {
+            Spacing = 0,
+            Children = { titlebar, statusBar },
+        };
+    }
+
     private static Control Gallery(ThemeVariant variant) => new Border
     {
         Background = Application.Current!.TryGetResource("BgBrush", variant, out var bg) ? (IBrush)bg! : Brushes.Magenta,
@@ -49,6 +139,7 @@ public class VisualCapture
             Spacing = 10,
             Children =
             {
+                ChromeStrip(variant),
                 Label("The quick brown fox — sans body text"),
                 Label("nfty", "wordmark"),
                 Label("CookBook › Recipe › Ingredient", "crumbs"),
