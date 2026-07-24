@@ -1,8 +1,15 @@
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Presenters;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Styling;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Xunit;
 
 namespace Nfty.App.Tests;
@@ -60,5 +67,52 @@ public class ThemeResourceTests
         Assert.Equal(
             ((ISolidColorBrush)Resolve("PanelBrush", ThemeVariant.Light)!).Color,
             ((ISolidColorBrush)tbtn.Background!).Color);
+    }
+
+    // Regression test for Fix 1: Fluent's own "^:pointerover /template/ ContentPresenter"
+    // style sets Background/BorderBrush/Foreground together on PART_ContentPresenter at
+    // StyleTrigger priority, so a hover BorderBrush setter placed on the outer Button (rather
+    // than on the /template/ ContentPresenter#PART_ContentPresenter selector) is silently
+    // overridden and never renders. This test drives an actual simulated pointer move via
+    // Avalonia.Headless's `Window.MouseMove` (see "Headless Testing Platform > Simulating user
+    // input > Mouse input" in the Avalonia 11.2 docs) to activate the real ":pointerover"
+    // pseudo-class, then reads the applied BorderBrush directly off the template part — so it
+    // fails if the hover setter regresses back onto the outer Button selector.
+    [AvaloniaFact]
+    public void Tbtn_hover_sets_border_brush_on_content_presenter_template_part()
+    {
+        var button = new Button
+        {
+            Classes = { "tbtn" },
+            Content = "Open",
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top,
+        };
+        var window = new Window { Content = button, Width = 200, Height = 100 };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var presenter = button.GetVisualDescendants()
+            .OfType<ContentPresenter>()
+            .First(p => p.Name == "PART_ContentPresenter");
+
+        // Sanity check: before any pointer movement, hover styling must not be active.
+        Assert.False(button.IsPointerOver);
+        var restBorder = (ISolidColorBrush)presenter.BorderBrush!;
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("LineStrongBrush", ThemeVariant.Light)!).Color,
+            restBorder.Color);
+
+        // Move the simulated mouse to a point inside the button's laid-out bounds to activate
+        // the ":pointerover" pseudo-class for real, rather than poking pseudo-classes directly.
+        var target = new Point(button.Bounds.Width / 2, button.Bounds.Height / 2);
+        window.MouseMove(target);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(button.IsPointerOver);
+        var hoverBorder = (ISolidColorBrush)presenter.BorderBrush!;
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("AccentLineBrush", ThemeVariant.Light)!).Color,
+            hoverBorder.Color);
     }
 }

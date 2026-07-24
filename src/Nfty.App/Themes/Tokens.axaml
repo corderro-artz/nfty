@@ -62,6 +62,6 @@
   <CornerRadius x:Key="RadiusXs">4</CornerRadius>
   <CornerRadius x:Key="RadiusWin">10</CornerRadius>
   <CornerRadius x:Key="RadiusLg">8</CornerRadius>
-  <CornerRadius x:Key="RadiusMd">8</CornerRadius>
+  <CornerRadius x:Key="RadiusMd">6</CornerRadius>
   <CornerRadius x:Key="RadiusSm">5</CornerRadius>
 </ResourceDictionary>

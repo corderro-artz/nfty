@@ -34,14 +34,15 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="Padding" Value="12,8" />
     <Setter Property="FontSize" Value="12.5" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
     <Setter Property="HorizontalContentAlignment" Value="Left" />
   </Style>
-  <Style Selector="Button.tbtn:pointerover">
-    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
-  </Style>
+  <!-- Fluent's ^:pointerover template style sets Background/BorderBrush/Foreground together
+       on PART_ContentPresenter at StyleTrigger priority, so a hover BorderBrush set on the
+       outer Button (not the template part) is ignored. Target the template part instead. -->
   <Style Selector="Button.tbtn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
   </Style>
   <Style Selector="Button.tbtn:pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
@@ -53,7 +54,7 @@
     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="Padding" Value="12,8" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
   </Style>
   <!-- FluentTheme's ControlTheme for Button defines its own nested "^.accent" style that paints
        PART_ContentPresenter's Background/BorderBrush/Foreground from AccentButtonBackground (blue)
@@ -85,6 +86,7 @@
   </Style>
   <Style Selector="Button.ghost:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
   </Style>
   <Style Selector="Button.ghost:pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
@@ -106,6 +108,7 @@
   </Style>
   <Style Selector="Button.icon:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
   <Style Selector="Button.icon:pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
@@ -122,12 +125,10 @@
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
-  <Style Selector="Button.dice:pointerover">
-    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
-    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
-  </Style>
   <Style Selector="Button.dice:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
   </Style>
   <Style Selector="Button.dice:pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
