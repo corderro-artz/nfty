@@ -140,7 +140,7 @@
 
   <Style Selector="Border.panel">
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
     <Setter Property="BoxShadow" Value="{DynamicResource WinShadow}" />
@@ -153,7 +153,7 @@
   </Style>
   <Style Selector="Border.card">
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
     <Setter Property="Padding" Value="14,12" />
@@ -167,7 +167,7 @@
   </Style>
   <Style Selector="Border.idchip">
     <Setter Property="Background" Value="{DynamicResource TileBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
     <Setter Property="Padding" Value="7,3" />
