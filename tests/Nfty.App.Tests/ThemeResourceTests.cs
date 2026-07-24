@@ -28,8 +28,8 @@ public class ThemeResourceTests
     {
         Assert.IsType<FontFamily>(Resolve("SansFontFamily", ThemeVariant.Light));
         Assert.IsType<FontFamily>(Resolve("MonoFontFamily", ThemeVariant.Light));
-        Assert.Equal(4d, Resolve("RadiusXs", ThemeVariant.Light));
-        Assert.Equal(8d, Resolve("RadiusLg", ThemeVariant.Light));
+        Assert.Equal(new Avalonia.CornerRadius(4), Resolve("RadiusXs", ThemeVariant.Light));
+        Assert.Equal(new Avalonia.CornerRadius(8), Resolve("RadiusLg", ThemeVariant.Light));
     }
 
     [AvaloniaFact]

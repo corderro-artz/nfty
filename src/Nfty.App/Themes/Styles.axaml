@@ -34,10 +34,7 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="Padding" Value="12,8" />
     <Setter Property="FontSize" Value="12.5" />
-    <!-- RadiusSm is an x:Double resource; CornerRadius can't consume it via DynamicResource
-         (no runtime type conversion), so the value (5) is inlined here, matching the existing
-         convention (e.g. MainWindow.axaml's brand-tile CornerRadius="5"). -->
-    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
     <Setter Property="HorizontalContentAlignment" Value="Left" />
   </Style>
   <Style Selector="Button.tbtn:pointerover">
@@ -56,10 +53,7 @@
     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="Padding" Value="12,8" />
-    <!-- RadiusSm is an x:Double resource; CornerRadius can't consume it via DynamicResource
-         (no runtime type conversion), so the value (5) is inlined here, matching the existing
-         convention (e.g. MainWindow.axaml's brand-tile CornerRadius="5"). -->
-    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
   </Style>
   <Style Selector="Button.accent:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
@@ -73,10 +67,7 @@
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Padding" Value="8,6" />
-    <!-- RadiusSm is an x:Double resource; CornerRadius can't consume it via DynamicResource
-         (no runtime type conversion), so the value (5) is inlined here, matching the existing
-         convention (e.g. MainWindow.axaml's brand-tile CornerRadius="5"). -->
-    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
   </Style>
   <Style Selector="Button.ghost:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
@@ -90,10 +81,7 @@
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Padding" Value="8,6" />
-    <!-- RadiusSm is an x:Double resource; CornerRadius can't consume it via DynamicResource
-         (no runtime type conversion), so the value (5) is inlined here, matching the existing
-         convention (e.g. MainWindow.axaml's brand-tile CornerRadius="5"). -->
-    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
   </Style>
   <Style Selector="Button.icon:pointerover /template/ ContentPresenter#PART_ContentPresenter">
@@ -110,10 +98,7 @@
     <Setter Property="Width" Value="27" />
     <Setter Property="Height" Value="27" />
     <Setter Property="Padding" Value="0" />
-    <!-- RadiusSm is an x:Double resource; CornerRadius can't consume it via DynamicResource
-         (no runtime type conversion), so the value (5) is inlined here, matching the existing
-         convention (e.g. MainWindow.axaml's brand-tile CornerRadius="5"). -->
-    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
