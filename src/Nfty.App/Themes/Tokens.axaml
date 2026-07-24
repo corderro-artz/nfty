@@ -14,22 +14,32 @@
       <SolidColorBrush x:Key="PanelBrush" Color="#f8f3ed" />
       <SolidColorBrush x:Key="TileBrush" Color="#ece5db" />
       <SolidColorBrush x:Key="FgBrush" Color="#121318" />
-      <SolidColorBrush x:Key="FgMutedBrush" Color="#121418b8" />
-      <SolidColorBrush x:Key="LineBrush" Color="#1214181f" />
-      <SolidColorBrush x:Key="LineStrongBrush" Color="#12141833" />
+      <!--
+        NOTE on 8-digit hex below: the mockup's CSS custom properties write alpha last
+        (#RRGGBBAA, CSS Color Module 4), but Avalonia's Color/BoxShadows hex grammar reads
+        8-digit hex alpha-first (#AARRGGBB, the .NET/WPF convention) — so every translucent
+        value here is the mockup's #RRGGBBAA with its last byte (alpha) rotated to the front.
+        E.g. mockup "#121418b8" (RGB 121418, alpha b8) is written here as "#b8121418". Do not
+        "restore" these to the mockup's literal digit order — that reintroduces the bug
+        (verified by ThemeResourceTests.Translucent_brush_channels_match_mockup_css_rgba_not_misparsed_argb
+        and .WinShadow_colours_match_mockup_css_rgba_not_misparsed_argb).
+      -->
+      <SolidColorBrush x:Key="FgMutedBrush" Color="#b8121418" />
+      <SolidColorBrush x:Key="LineBrush" Color="#1f121418" />
+      <SolidColorBrush x:Key="LineStrongBrush" Color="#33121418" />
       <SolidColorBrush x:Key="AccentBrush" Color="#a11f31" />
       <SolidColorBrush x:Key="AccentTextBrush" Color="#97192a" />
       <SolidColorBrush x:Key="OnAccentBrush" Color="#f7f2ec" />
-      <SolidColorBrush x:Key="AccentWashBrush" Color="#a11f3114" />
-      <SolidColorBrush x:Key="AccentLineBrush" Color="#a11f3140" />
+      <SolidColorBrush x:Key="AccentWashBrush" Color="#14a11f31" />
+      <SolidColorBrush x:Key="AccentLineBrush" Color="#40a11f31" />
       <SolidColorBrush x:Key="KindDynamicBrush" Color="#3b5b6f" />
       <SolidColorBrush x:Key="KindStaticBrush" Color="#6a4a25" />
       <SolidColorBrush x:Key="KindCustomBrush" Color="#6d4f9c" />
       <SolidColorBrush x:Key="AccentHoverBrush" Color="#b92f44" />
       <SolidColorBrush x:Key="SuccessBrush" Color="#3d6b52" />
-      <SolidColorBrush x:Key="GuideBrush" Color="#1214182b" />
-      <SolidColorBrush x:Key="GuideHiBrush" Color="#12141859" />
-      <BoxShadows x:Key="WinShadow">0 1 2 0 #12141810, 0 18 48 -24 #12141833</BoxShadows>
+      <SolidColorBrush x:Key="GuideBrush" Color="#2b121418" />
+      <SolidColorBrush x:Key="GuideHiBrush" Color="#59121418" />
+      <BoxShadows x:Key="WinShadow">0 1 2 0 #10121418, 0 18 48 -24 #33121418</BoxShadows>
     </ResourceDictionary>
     <ResourceDictionary x:Key="Dark">
       <SolidColorBrush x:Key="BgBrush" Color="#07080b" />
@@ -38,22 +48,24 @@
       <SolidColorBrush x:Key="PanelBrush" Color="#0b0c10" />
       <SolidColorBrush x:Key="TileBrush" Color="#12141c" />
       <SolidColorBrush x:Key="FgBrush" Color="#f2ede6" />
-      <SolidColorBrush x:Key="FgMutedBrush" Color="#f2ede6c7" />
-      <SolidColorBrush x:Key="LineBrush" Color="#f2ede624" />
-      <SolidColorBrush x:Key="LineStrongBrush" Color="#f2ede633" />
+      <!-- See the Light dictionary's note above: 8-digit hex here is the mockup's #RRGGBBAA
+           rotated to Avalonia's #AARRGGBB. -->
+      <SolidColorBrush x:Key="FgMutedBrush" Color="#c7f2ede6" />
+      <SolidColorBrush x:Key="LineBrush" Color="#24f2ede6" />
+      <SolidColorBrush x:Key="LineStrongBrush" Color="#33f2ede6" />
       <SolidColorBrush x:Key="AccentBrush" Color="#a11f31" />
       <SolidColorBrush x:Key="AccentTextBrush" Color="#e0788a" />
       <SolidColorBrush x:Key="OnAccentBrush" Color="#f7f2ec" />
-      <SolidColorBrush x:Key="AccentWashBrush" Color="#a11f3126" />
-      <SolidColorBrush x:Key="AccentLineBrush" Color="#a11f3166" />
+      <SolidColorBrush x:Key="AccentWashBrush" Color="#26a11f31" />
+      <SolidColorBrush x:Key="AccentLineBrush" Color="#66a11f31" />
       <SolidColorBrush x:Key="KindDynamicBrush" Color="#7fb0c4" />
       <SolidColorBrush x:Key="KindStaticBrush" Color="#e0c28c" />
       <SolidColorBrush x:Key="KindCustomBrush" Color="#c3a6ea" />
       <SolidColorBrush x:Key="AccentHoverBrush" Color="#ba3447" />
       <SolidColorBrush x:Key="SuccessBrush" Color="#a6c08a" />
-      <SolidColorBrush x:Key="GuideBrush" Color="#f2ede61f" />
-      <SolidColorBrush x:Key="GuideHiBrush" Color="#f2ede63d" />
-      <BoxShadows x:Key="WinShadow">0 1 2 0 #00000060, 0 22 60 -28 #000000</BoxShadows>
+      <SolidColorBrush x:Key="GuideBrush" Color="#1ff2ede6" />
+      <SolidColorBrush x:Key="GuideHiBrush" Color="#3df2ede6" />
+      <BoxShadows x:Key="WinShadow">0 1 2 0 #60000000, 0 22 60 -28 #000000</BoxShadows>
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 

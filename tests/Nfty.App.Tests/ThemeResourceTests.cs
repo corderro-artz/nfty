@@ -30,6 +30,52 @@ public class ThemeResourceTests
         Assert.IsAssignableFrom<IBrush>(Resolve(key, ThemeVariant.Dark));
     }
 
+    // Regression test for a hex-order bug found while verifying Task 4's surfaces: Tokens.axaml's
+    // translucent colours were ported verbatim from the mockup's CSS custom properties, which write
+    // 8-digit hex as RRGGBBAA (alpha last, CSS Color Module 4). Avalonia's Color.Parse (and
+    // BoxShadows.Parse, which shares the same colour grammar) reads 8-digit hex as AARRGGBB (alpha
+    // first, the .NET/WPF convention) — so every translucent brush was silently rendering as an
+    // opaque, wrong-hued colour (e.g. dark LineBrush "#f2ede624" parsed to A=242 R=237 G=230 B=36,
+    // an opaque yellow-gold, instead of the intended ~14%-alpha near-white). This asserts each
+    // affected brush's channels land where the mockup's CSS intended: RGB from the token's first 6
+    // hex digits, alpha from its last 2.
+    [AvaloniaTheory]
+    [InlineData("LineBrush", "Light", 0x12, 0x14, 0x18, 0x1f)]
+    [InlineData("LineStrongBrush", "Light", 0x12, 0x14, 0x18, 0x33)]
+    [InlineData("FgMutedBrush", "Light", 0x12, 0x14, 0x18, 0xb8)]
+    [InlineData("AccentWashBrush", "Light", 0xa1, 0x1f, 0x31, 0x14)]
+    [InlineData("AccentLineBrush", "Light", 0xa1, 0x1f, 0x31, 0x40)]
+    [InlineData("GuideBrush", "Light", 0x12, 0x14, 0x18, 0x2b)]
+    [InlineData("GuideHiBrush", "Light", 0x12, 0x14, 0x18, 0x59)]
+    [InlineData("LineBrush", "Dark", 0xf2, 0xed, 0xe6, 0x24)]
+    [InlineData("LineStrongBrush", "Dark", 0xf2, 0xed, 0xe6, 0x33)]
+    [InlineData("FgMutedBrush", "Dark", 0xf2, 0xed, 0xe6, 0xc7)]
+    [InlineData("AccentWashBrush", "Dark", 0xa1, 0x1f, 0x31, 0x26)]
+    [InlineData("AccentLineBrush", "Dark", 0xa1, 0x1f, 0x31, 0x66)]
+    [InlineData("GuideBrush", "Dark", 0xf2, 0xed, 0xe6, 0x1f)]
+    [InlineData("GuideHiBrush", "Dark", 0xf2, 0xed, 0xe6, 0x3d)]
+    public void Translucent_brush_channels_match_mockup_css_rgba_not_misparsed_argb(
+        string key, string variantName, byte r, byte g, byte b, byte a)
+    {
+        var variant = variantName == "Light" ? ThemeVariant.Light : ThemeVariant.Dark;
+        var color = ((ISolidColorBrush)Resolve(key, variant)!).Color;
+        Assert.Equal(new Avalonia.Media.Color(a, r, g, b), color);
+    }
+
+    // Same bug, but in the shared BoxShadows grammar: WinShadow's two hex colours per theme were
+    // also authored as CSS RRGGBBAA and need the same alpha-first correction.
+    [AvaloniaFact]
+    public void WinShadow_colours_match_mockup_css_rgba_not_misparsed_argb()
+    {
+        var light = (Avalonia.Media.BoxShadows)Resolve("WinShadow", ThemeVariant.Light)!;
+        Assert.Equal(new Avalonia.Media.Color(0x10, 0x12, 0x14, 0x18), light[0].Color);
+        Assert.Equal(new Avalonia.Media.Color(0x33, 0x12, 0x14, 0x18), light[1].Color);
+
+        var dark = (Avalonia.Media.BoxShadows)Resolve("WinShadow", ThemeVariant.Dark)!;
+        Assert.Equal(new Avalonia.Media.Color(0x60, 0x00, 0x00, 0x00), dark[0].Color);
+        Assert.Equal(new Avalonia.Media.Color(0xff, 0x00, 0x00, 0x00), dark[1].Color);
+    }
+
     [AvaloniaFact]
     public void Font_and_radius_tokens_resolve()
     {
