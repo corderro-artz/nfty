@@ -115,4 +115,23 @@ public class ThemeResourceTests
             ((ISolidColorBrush)Resolve("AccentLineBrush", ThemeVariant.Light)!).Color,
             hoverBorder.Color);
     }
+
+    // Uses the file's Resolve helper (explicit ThemeVariant) rather than
+    // Application.Current.FindResource(key) directly — see the comment on
+    // Accent_button_uses_accent_background_and_tbtn_uses_panel: FindResource without a
+    // variant resolves against ThemeVariant.Default, which never matches the "Light"/"Dark"
+    // keys under Tokens.axaml's ThemeDictionaries and always returns UnsetValue.
+    [AvaloniaFact]
+    public void Panel_uses_panel_brush_and_kind_chip_uses_kind_colour()
+    {
+        var panel = StyledHost.Show(new Border { Classes = { "panel" } });
+        var chip = StyledHost.Show(new Border { Classes = { "kind-dynamic" } });
+
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("PanelBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)panel.Background!).Color);
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("KindDynamicBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)chip.BorderBrush!).Color);
+    }
 }

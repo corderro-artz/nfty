@@ -32,6 +32,13 @@ public class VisualCapture
     private static Button Btn(string content, string cls) =>
         new() { Content = content, Classes = { cls }, Margin = new Thickness(0, 0, 8, 0) };
 
+    private static Border KindChip(string cls, string text) => new()
+    {
+        Classes = { cls },
+        Margin = new Thickness(0, 0, 8, 0),
+        Child = Label(text, "kind-txt"),
+    };
+
     private static Control Gallery(ThemeVariant variant) => new Border
     {
         Background = Application.Current!.TryGetResource("BgBrush", variant, out var bg) ? (IBrush)bg! : Brushes.Magenta,
@@ -50,6 +57,39 @@ public class VisualCapture
                 {
                     Orientation = Orientation.Horizontal,
                     Children = { Btn("Open CookBook", "tbtn"), Btn("Cook", "accent"), Btn("Ghost", "ghost"), Btn("✕", "icon"), Btn("⚄", "dice") },
+                },
+                new Border
+                {
+                    Classes = { "panel" },
+                    Padding = new Thickness(14, 12),
+                    Margin = new Thickness(0, 6, 0, 0),
+                    Child = Label("panel surface — shadow + border + r-md"),
+                },
+                new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Spacing = 10,
+                    Children =
+                    {
+                        new Border { Classes = { "card" }, Width = 140, Child = Label("card surface") },
+                        new Border { Classes = { "tile" }, Width = 120, Height = 44, Child = Label("tile surface") },
+                    },
+                },
+                new Border
+                {
+                    Classes = { "idchip" },
+                    HorizontalAlignment = HorizontalAlignment.Left,
+                    Child = Label("id: aura", "mono"),
+                },
+                new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Children =
+                    {
+                        KindChip("kind-dynamic", "dynamic"),
+                        KindChip("kind-static", "static"),
+                        KindChip("kind-custom", "custom"),
+                    },
                 },
             },
         },
