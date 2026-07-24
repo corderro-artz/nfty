@@ -43,4 +43,22 @@ public class ThemeResourceTests
         Assert.Equal(sans, plain.FontFamily);   // base default is sans, not mono
         Assert.Equal(monoFam, mono.FontFamily);
     }
+
+    [AvaloniaFact]
+    public void Accent_button_uses_accent_background_and_tbtn_uses_panel()
+    {
+        var accent = StyledHost.Show(new Button { Classes = { "accent" }, Content = "Cook" });
+        var tbtn = StyledHost.Show(new Button { Classes = { "tbtn" }, Content = "Open" });
+
+        // Application.Current.FindResource(key) (no theme-variant argument) resolves against
+        // ThemeVariant.Default, which doesn't match the "Light"/"Dark" keys under Tokens.axaml's
+        // ThemeDictionaries, so it always returns UnsetValue for these theme-scoped brushes.
+        // Use the file's Resolve helper (explicit ThemeVariant) instead, as the other tests here do.
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("AccentBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)accent.Background!).Color);
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("PanelBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)tbtn.Background!).Color);
+    }
 }

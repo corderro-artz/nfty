@@ -27,21 +27,107 @@
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="12" />
   </Style>
-  <Style Selector="Button.accent">
-    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
-    <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
-    <Setter Property="Padding" Value="12,9" />
-    <Setter Property="CornerRadius" Value="6" />
-  </Style>
   <Style Selector="Button.tbtn">
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="Padding" Value="12,9" />
-    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="12,8" />
+    <Setter Property="FontSize" Value="12.5" />
+    <!-- RadiusSm is an x:Double resource; CornerRadius can't consume it via DynamicResource
+         (no runtime type conversion), so the value (5) is inlined here, matching the existing
+         convention (e.g. MainWindow.axaml's brand-tile CornerRadius="5"). -->
+    <Setter Property="CornerRadius" Value="5" />
     <Setter Property="HorizontalContentAlignment" Value="Left" />
   </Style>
+  <Style Selector="Button.tbtn:pointerover">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+  <Style Selector="Button.tbtn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+  </Style>
+  <Style Selector="Button.tbtn:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+  </Style>
+
+  <Style Selector="Button.accent">
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="12,8" />
+    <!-- RadiusSm is an x:Double resource; CornerRadius can't consume it via DynamicResource
+         (no runtime type conversion), so the value (5) is inlined here, matching the existing
+         convention (e.g. MainWindow.axaml's brand-tile CornerRadius="5"). -->
+    <Setter Property="CornerRadius" Value="5" />
+  </Style>
+  <Style Selector="Button.accent:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+  </Style>
+  <Style Selector="Button.accent:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+  </Style>
+
+  <Style Selector="Button.ghost">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="8,6" />
+    <!-- RadiusSm is an x:Double resource; CornerRadius can't consume it via DynamicResource
+         (no runtime type conversion), so the value (5) is inlined here, matching the existing
+         convention (e.g. MainWindow.axaml's brand-tile CornerRadius="5"). -->
+    <Setter Property="CornerRadius" Value="5" />
+  </Style>
+  <Style Selector="Button.ghost:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+  </Style>
+  <Style Selector="Button.ghost:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+  </Style>
+
+  <Style Selector="Button.icon">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="8,6" />
+    <!-- RadiusSm is an x:Double resource; CornerRadius can't consume it via DynamicResource
+         (no runtime type conversion), so the value (5) is inlined here, matching the existing
+         convention (e.g. MainWindow.axaml's brand-tile CornerRadius="5"). -->
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.icon:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+  </Style>
+  <Style Selector="Button.icon:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+  </Style>
+
+  <Style Selector="Button.dice">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Width" Value="27" />
+    <Setter Property="Height" Value="27" />
+    <Setter Property="Padding" Value="0" />
+    <!-- RadiusSm is an x:Double resource; CornerRadius can't consume it via DynamicResource
+         (no runtime type conversion), so the value (5) is inlined here, matching the existing
+         convention (e.g. MainWindow.axaml's brand-tile CornerRadius="5"). -->
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.dice:pointerover">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+  <Style Selector="Button.dice:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+  </Style>
+  <Style Selector="Button.dice:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+  </Style>
+
   <Style Selector="TextBlock.muted">
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
