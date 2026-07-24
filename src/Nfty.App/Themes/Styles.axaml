@@ -55,11 +55,25 @@
     <Setter Property="Padding" Value="12,8" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
   </Style>
+  <!-- FluentTheme's ControlTheme for Button defines its own nested "^.accent" style that paints
+       PART_ContentPresenter's Background/BorderBrush/Foreground from AccentButtonBackground (blue)
+       at rest — that nested style wins over the plain Button.accent setters above because it
+       targets the actual template part. Override all three rest-state properties explicitly so
+       our crimson always wins over Fluent's built-in accent palette. -->
+  <Style Selector="Button.accent /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+  </Style>
   <Style Selector="Button.accent:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
   </Style>
   <Style Selector="Button.accent:pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
   </Style>
 
   <Style Selector="Button.ghost">
@@ -83,6 +97,12 @@
     <Setter Property="Padding" Value="8,6" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
+  </Style>
+  <!-- Explicit rest-state override so Fluent's default ButtonBackground/ButtonBorderBrush never
+       shows through PART_ContentPresenter — Button.icon must be a clean, borderless hit target. -->
+  <Style Selector="Button.icon /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
   </Style>
   <Style Selector="Button.icon:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
