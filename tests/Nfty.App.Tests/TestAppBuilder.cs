@@ -8,7 +8,7 @@ namespace Nfty.App.Tests;
 
 public static class TestAppBuilder
 {
-    public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<Avalonia.Application>()
+    public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<TestApp>()
         .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
         .UseSkia();
 }

@@ -25,6 +25,11 @@
       <SolidColorBrush x:Key="KindDynamicBrush" Color="#3b5b6f" />
       <SolidColorBrush x:Key="KindStaticBrush" Color="#6a4a25" />
       <SolidColorBrush x:Key="KindCustomBrush" Color="#6d4f9c" />
+      <SolidColorBrush x:Key="AccentHoverBrush" Color="#b92f44" />
+      <SolidColorBrush x:Key="SuccessBrush" Color="#3d6b52" />
+      <SolidColorBrush x:Key="GuideBrush" Color="#1214182b" />
+      <SolidColorBrush x:Key="GuideHiBrush" Color="#12141859" />
+      <BoxShadows x:Key="WinShadow">0 1 2 0 #12141810, 0 18 48 -24 #12141833</BoxShadows>
     </ResourceDictionary>
     <ResourceDictionary x:Key="Dark">
       <SolidColorBrush x:Key="BgBrush" Color="#07080b" />
@@ -44,11 +49,19 @@
       <SolidColorBrush x:Key="KindDynamicBrush" Color="#7fb0c4" />
       <SolidColorBrush x:Key="KindStaticBrush" Color="#e0c28c" />
       <SolidColorBrush x:Key="KindCustomBrush" Color="#c3a6ea" />
+      <SolidColorBrush x:Key="AccentHoverBrush" Color="#ba3447" />
+      <SolidColorBrush x:Key="SuccessBrush" Color="#a6c08a" />
+      <SolidColorBrush x:Key="GuideBrush" Color="#f2ede61f" />
+      <SolidColorBrush x:Key="GuideHiBrush" Color="#f2ede63d" />
+      <BoxShadows x:Key="WinShadow">0 1 2 0 #00000060, 0 22 60 -28 #000000</BoxShadows>
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 
-  <FontFamily x:Key="MonoFontFamily">Consolas, Menlo, monospace</FontFamily>
+  <FontFamily x:Key="SansFontFamily">-apple-system, Segoe UI, Helvetica Neue, Arial, sans-serif</FontFamily>
+  <FontFamily x:Key="MonoFontFamily">SF Mono, JetBrains Mono, Cascadia Code, Menlo, Consolas, monospace</FontFamily>
+  <x:Double x:Key="RadiusXs">4</x:Double>
   <x:Double x:Key="RadiusWin">10</x:Double>
+  <x:Double x:Key="RadiusLg">8</x:Double>
   <x:Double x:Key="RadiusMd">8</x:Double>
   <x:Double x:Key="RadiusSm">5</x:Double>
 </ResourceDictionary>
