@@ -16,12 +16,7 @@
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontWeight" Value="Bold" />
     <Setter Property="FontSize" Value="15" />
-  </Style>
-  <Style Selector="TextBlock.section-h">
-    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="FontSize" Value="12" />
-    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="LetterSpacing" Value="-0.15" />
   </Style>
   <Style Selector="TextBlock.crumbs">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
