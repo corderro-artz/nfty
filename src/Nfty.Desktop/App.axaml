@@ -10,6 +10,7 @@
     <ResourceDictionary>
       <ResourceDictionary.MergedDictionaries>
         <ResourceInclude Source="avares://Nfty.App/Themes/Tokens.axaml" />
+        <ResourceInclude Source="avares://Nfty.App/Themes/Controls.axaml" />
       </ResourceDictionary.MergedDictionaries>
     </ResourceDictionary>
   </Application.Resources>

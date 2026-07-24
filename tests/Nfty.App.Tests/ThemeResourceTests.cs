@@ -2,6 +2,7 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
+using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
@@ -179,5 +180,174 @@ public class ThemeResourceTests
         Assert.Equal(
             ((ISolidColorBrush)Resolve("KindDynamicBrush", ThemeVariant.Light)!).Color,
             ((ISolidColorBrush)chip.BorderBrush!).Color);
+    }
+
+    [AvaloniaFact]
+    public void TextBox_is_restyled_with_panel_background()
+    {
+        var tb = StyledHost.Show(new TextBox { Text = "x" });
+        // Uses the file's Resolve helper (explicit ThemeVariant) rather than
+        // Application.Current.FindResource(key) directly — see the comment on
+        // Accent_button_uses_accent_background_and_tbtn_uses_panel: FindResource without a
+        // variant resolves against ThemeVariant.Default, which never matches the "Light"/"Dark"
+        // keys under Tokens.axaml's ThemeDictionaries and always returns UnsetValue.
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("PanelBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)tb.Background!).Color);
+    }
+
+    [AvaloniaFact]
+    public void TextBox_rest_border_is_line_strong()
+    {
+        var tb = StyledHost.Show(new TextBox { Text = "x" });
+        var border = tb.GetVisualDescendants().OfType<Border>().First(b => b.Name == "PART_BorderElement");
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("LineStrongBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)border.BorderBrush!).Color);
+    }
+
+    // Regression-style test for the same lesson as Tbtn_hover_sets_border_brush_on_content_presenter_template_part:
+    // Fluent's own ":focus" style repaints Border#PART_BorderElement directly at Style priority, so a focus
+    // accent border only shows if our ControlTheme's nested ":focus /template/ Border#PART_BorderElement" style
+    // actually wins over the inherited one. Drives a real Focus() call rather than poking pseudo-classes.
+    [AvaloniaFact]
+    public void TextBox_focus_border_is_accent()
+    {
+        var textBox = new TextBox { Text = "x" };
+        var window = new Window { Content = textBox, Width = 200, Height = 100 };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var border = textBox.GetVisualDescendants().OfType<Border>().First(b => b.Name == "PART_BorderElement");
+        Assert.False(textBox.IsFocused);
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("LineStrongBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)border.BorderBrush!).Color);
+
+        textBox.Focus();
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(textBox.IsFocused);
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("AccentBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)border.BorderBrush!).Color);
+    }
+
+    [AvaloniaFact]
+    public void Slider_thumb_and_filled_track_use_accent()
+    {
+        var slider = StyledHost.Show(new Slider { Minimum = 0, Maximum = 1, Value = 0.6 });
+        var thumb = slider.GetVisualDescendants().OfType<Thumb>().First();
+        var decreaseButton = slider.GetVisualDescendants().OfType<RepeatButton>()
+            .First(b => b.Name == "PART_DecreaseButton");
+
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("AccentBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)thumb.Background!).Color);
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("AccentBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)decreaseButton.Background!).Color);
+    }
+
+    // Regression test for the ":not(:disabled)" technique used to reach the Thumb's rest-state
+    // Background (see the comment on the Slider ControlTheme in Controls.axaml): drives a real
+    // simulated pointer move so both the rest-state assertion above and the pointerover assertion
+    // here exercise the actual declaration-order tie-break between the two StyleTrigger-tier
+    // selectors, rather than assuming it from reading the XAML.
+    [AvaloniaFact]
+    public void Slider_thumb_hover_uses_accent_hover()
+    {
+        var slider = new Slider { Minimum = 0, Maximum = 1, Value = 0.6, Width = 200 };
+        var window = new Window { Content = slider, Width = 240, Height = 100 };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var thumb = slider.GetVisualDescendants().OfType<Thumb>().First();
+        Assert.False(thumb.IsPointerOver);
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("AccentBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)thumb.Background!).Color);
+
+        var target = thumb.TranslatePoint(new Point(thumb.Bounds.Width / 2, thumb.Bounds.Height / 2), window) ?? default;
+        window.MouseMove(target);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(thumb.IsPointerOver);
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("AccentHoverBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)thumb.Background!).Color);
+    }
+
+    [AvaloniaFact]
+    public void CheckBox_checked_square_and_glyph_use_accent()
+    {
+        var box = StyledHost.Show(new CheckBox { IsChecked = true, Content = "x" });
+        var square = box.GetVisualDescendants().OfType<Border>().First(b => b.Name == "NormalRectangle");
+        var glyph = box.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Path>().First(p => p.Name == "CheckGlyph");
+
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("AccentBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)square.Background!).Color);
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("OnAccentBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)glyph.Fill!).Color);
+    }
+
+    [AvaloniaFact]
+    public void RadioButton_checked_ring_and_dot_use_accent()
+    {
+        var radio = StyledHost.Show(new RadioButton { IsChecked = true, Content = "x" });
+        var ring = radio.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Ellipse>()
+            .First(e => e.Name == "CheckOuterEllipse");
+        var dot = radio.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Ellipse>()
+            .First(e => e.Name == "CheckGlyph");
+
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("AccentBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)ring.Stroke!).Color);
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("AccentBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)dot.Fill!).Color);
+    }
+
+    [AvaloniaFact]
+    public void NumericUpDown_is_restyled_with_panel_background()
+    {
+        var nud = StyledHost.Show(new NumericUpDown { Value = 12 });
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("PanelBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)nud.Background!).Color);
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("LineStrongBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)nud.BorderBrush!).Color);
+    }
+
+    [AvaloniaFact]
+    public void CheckBox_unchecked_square_uses_panel_and_line_strong()
+    {
+        var box = StyledHost.Show(new CheckBox { IsChecked = false, Content = "x" });
+        var square = box.GetVisualDescendants().OfType<Border>().First(b => b.Name == "NormalRectangle");
+
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("PanelBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)square.Background!).Color);
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("LineStrongBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)square.BorderBrush!).Color);
+    }
+
+    [AvaloniaFact]
+    public void RadioButton_unchecked_ring_uses_panel_and_line_strong()
+    {
+        var radio = StyledHost.Show(new RadioButton { IsChecked = false, Content = "x" });
+        var ring = radio.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Ellipse>()
+            .First(e => e.Name == "OuterEllipse");
+
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("PanelBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)ring.Fill!).Color);
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("LineStrongBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)ring.Stroke!).Color);
     }
 }

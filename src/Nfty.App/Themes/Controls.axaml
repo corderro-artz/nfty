@@ -1,0 +1,175 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!--
+    Input ControlThemes: each is BasedOn the built-in Fluent theme for that control (looked up via
+    the self-referencing "{StaticResource {x:Type X}}" pattern — a StaticResource lookup from
+    inside a dictionary entry skips the entry currently being defined, so it resolves to Fluent's
+    own registration of that key instead of looping back to this one; confirmed against the
+    Avalonia 11.2 docs' "restyle a built-in control" and "make all Buttons round" ControlTheme
+    examples). Being keyed by "{x:Type X}" (not an arbitrary name) makes each theme apply to every
+    instance of that control automatically — no Classes needed on call sites.
+
+    Colours pull from Tokens.axaml via DynamicResource so both ThemeVariants stay correct.
+
+    Mechanism notes (from reading the actual Fluent 11.2.3 theme XAML — see task-5-report.md for
+    the full doc-pull):
+      - TextBox / NumericUpDown / ButtonSpinner: Background/BorderBrush are TemplateBound straight
+        through from the control's own properties to the visible Border, so a plain property Setter
+        reaches the fill at rest. Fluent's own ":pointerover"/":focus" states repaint
+        Border#PART_BorderElement directly (bypassing the TemplateBinding) at Style priority, so
+        reaching those states needs a same-selector nested Style here, declared after the inherited
+        one so it wins on equal specificity (the same technique already used for Button.tbtn's hover
+        border in Styles.axaml).
+      - Slider: Foreground/Background TemplateBind through to the PART_DecreaseButton (filled track)
+        and PART_IncreaseButton (track) at rest, but the Thumb's Background and every hover/pressed
+        track colour are hardcoded DynamicResource references baked directly into Fluent's shared
+        ControlTemplate (not TemplateBound) — reached the same way, via same-selector nested Styles.
+      - CheckBox / RadioButton: the actual check glyph/box (Border#NormalRectangle,
+        Ellipse#CheckOuterEllipse, Path#CheckGlyph, Ellipse#CheckGlyph) are hardcoded DynamicResource
+        fills on shared template elements, not TemplateBound to the control's Background/Foreground
+        at all — a plain top-level Setter genuinely cannot reach them. These are the controls where
+        hand-authoring a full template would otherwise be tempting; nested Styles matching Fluent's
+        own selectors avoid that.
+  -->
+
+  <!-- ================= TextBox ================= -->
+  <ControlTheme x:Key="{x:Type TextBox}" TargetType="TextBox"
+                BasedOn="{StaticResource {x:Type TextBox}}">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+    <Setter Property="CaretBrush" Value="{DynamicResource FgBrush}" />
+    <Setter Property="SelectionBrush" Value="{DynamicResource AccentWashBrush}" />
+
+    <!-- PointerOver: accent-tinted border, panel background unchanged (mirrors Button.tbtn hover). -->
+    <Style Selector="^:pointerover /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    </Style>
+
+    <!-- Focused: full accent border. -->
+    <Style Selector="^:focus /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+  </ControlTheme>
+
+  <!-- ================= NumericUpDown ================= -->
+  <!-- Background/BorderBrush/CornerRadius TemplateBind through NumericUpDown -> ButtonSpinner
+       (PART_Spinner) -> the spinner's own Border, so property Setters are enough; the inner
+       PART_TextBox is hardcoded Background="Transparent" BorderBrush="Transparent" in Fluent's own
+       template (a local value, so it always wins over any Style/ControlTheme setter), which is what
+       keeps NumericUpDown from showing a double border. -->
+  <ControlTheme x:Key="{x:Type NumericUpDown}" TargetType="NumericUpDown"
+                BasedOn="{StaticResource {x:Type NumericUpDown}}">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+  </ControlTheme>
+
+  <!-- ================= Slider ================= -->
+  <ControlTheme x:Key="{x:Type Slider}" TargetType="Slider"
+                BasedOn="{StaticResource {x:Type Slider}}">
+    <!-- Foreground drives PART_DecreaseButton (the filled/value side of the track); Background
+         drives PART_IncreaseButton (the unfilled side) — both via TemplateBinding chains in
+         Fluent's own Slider template. -->
+    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+
+    <!-- Thumb background is hardcoded DynamicResource in Fluent's shared template, not
+         TemplateBound to Slider's own properties — it's assigned at Avalonia's "Template"
+         BindingPriority, which beats a plain (pseudo-class-free) Style setter, so
+         "^ /template/ Thumb" alone is silently no-op (confirmed — see task-5-report.md).
+         Only a pseudo-class-qualified selector runs at "StyleTrigger" priority, which does beat
+         Template — ":not(:disabled)" is the pseudo-class-qualified stand-in for "rest", declared
+         before (so lower tie-break priority than) the ":pointerover"/":pressed" overrides below. -->
+    <Style Selector="^:not(:disabled) /template/ Thumb">
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="^:pointerover /template/ Thumb">
+      <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+    </Style>
+    <Style Selector="^:pressed /template/ Thumb">
+      <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+    </Style>
+
+    <!-- Fluent's own :pointerover/:pressed styles repaint the track RepeatButtons with its own
+         (blue-tinted) resources at Style priority, bypassing the TemplateBinding above — override
+         with the same selectors so our accent (not Fluent's) wins in every state. -->
+    <Style Selector="^:pointerover /template/ RepeatButton#PART_DecreaseButton">
+      <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+    </Style>
+    <Style Selector="^:pointerover /template/ RepeatButton#PART_IncreaseButton">
+      <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    </Style>
+    <Style Selector="^:pressed /template/ RepeatButton#PART_DecreaseButton">
+      <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+    </Style>
+    <Style Selector="^:pressed /template/ RepeatButton#PART_IncreaseButton">
+      <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    </Style>
+  </ControlTheme>
+
+  <!-- ================= CheckBox ================= -->
+  <ControlTheme x:Key="{x:Type CheckBox}" TargetType="CheckBox"
+                BasedOn="{StaticResource {x:Type CheckBox}}">
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+
+    <!-- Unchecked box: panel fill, line-strong stroke. NormalRectangle's colours are hardcoded
+         DynamicResource in Fluent's shared template (Avalonia "Template" priority), not
+         TemplateBound, so a plain (pseudo-class-free) Style setter is silently a no-op here
+         (confirmed — see task-5-report.md); ":not(:disabled)" is pseudo-class-qualified so it
+         runs at the higher "StyleTrigger" priority that does win over Template, same technique
+         used for the Slider Thumb above. Declared before ":checked"/":indeterminate" below so
+         those still win on tie-break declaration order when active. -->
+    <Style Selector="^:not(:disabled) /template/ Border#NormalRectangle">
+      <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    </Style>
+
+    <!-- Checked box: accent fill, white glyph. -->
+    <Style Selector="^:checked /template/ Border#NormalRectangle">
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="^:checked /template/ Path#CheckGlyph">
+      <Setter Property="Fill" Value="{DynamicResource OnAccentBrush}" />
+    </Style>
+
+    <!-- Indeterminate box: same accent treatment as checked. -->
+    <Style Selector="^:indeterminate /template/ Border#NormalRectangle">
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="^:indeterminate /template/ Path#CheckGlyph">
+      <Setter Property="Fill" Value="{DynamicResource OnAccentBrush}" />
+    </Style>
+  </ControlTheme>
+
+  <!-- ================= RadioButton ================= -->
+  <ControlTheme x:Key="{x:Type RadioButton}" TargetType="RadioButton"
+                BasedOn="{StaticResource {x:Type RadioButton}}">
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+
+    <!-- Unchecked ring: panel fill, line-strong stroke. Same "Template priority beats a plain
+         Style setter" issue as CheckBox's NormalRectangle above — ":not(:disabled)" gets the
+         StyleTrigger priority needed to win; declared before ":checked" below so that still wins
+         on tie-break declaration order when active. -->
+    <Style Selector="^:not(:disabled) /template/ Ellipse#OuterEllipse">
+      <Setter Property="Fill" Value="{DynamicResource PanelBrush}" />
+      <Setter Property="Stroke" Value="{DynamicResource LineStrongBrush}" />
+    </Style>
+
+    <!-- Checked ring + inner dot: accent. -->
+    <Style Selector="^:checked /template/ Ellipse#CheckOuterEllipse">
+      <Setter Property="Fill" Value="{DynamicResource PanelBrush}" />
+      <Setter Property="Stroke" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="^:checked /template/ Ellipse#CheckGlyph">
+      <Setter Property="Fill" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Stroke" Value="{DynamicResource AccentBrush}" />
+    </Style>
+  </ControlTheme>
+</ResourceDictionary>

@@ -43,7 +43,7 @@ public class VisualCapture
     {
         Background = Application.Current!.TryGetResource("BgBrush", variant, out var bg) ? (IBrush)bg! : Brushes.Magenta,
         Padding = new Thickness(20),
-        Width = 520,
+        Width = 640,
         Child = new StackPanel
         {
             Spacing = 10,
@@ -89,6 +89,20 @@ public class VisualCapture
                         KindChip("kind-dynamic", "dynamic"),
                         KindChip("kind-static", "static"),
                         KindChip("kind-custom", "custom"),
+                    },
+                },
+                new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Spacing = 10,
+                    Margin = new Thickness(0, 6, 0, 0),
+                    Children =
+                    {
+                        new TextBox { Text = "aura", Watermark = "id", Width = 110 },
+                        new Slider { Minimum = 0, Maximum = 1, Value = 0.6, Width = 110 },
+                        new CheckBox { IsChecked = true, Content = "checked" },
+                        new RadioButton { IsChecked = true, Content = "picked" },
+                        new NumericUpDown { Value = 12, Width = 110 },
                     },
                 },
             },
