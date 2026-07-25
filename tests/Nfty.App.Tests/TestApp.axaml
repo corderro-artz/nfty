@@ -1,11 +1,7 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:app="using:Nfty.App"
-             x:Class="Nfty.Desktop.App"
+             x:Class="Nfty.App.Tests.TestApp"
              RequestedThemeVariant="Default">
-  <Application.DataTemplates>
-    <app:ViewLocator />
-  </Application.DataTemplates>
   <Application.Resources>
     <ResourceDictionary>
       <ResourceDictionary.MergedDictionaries>

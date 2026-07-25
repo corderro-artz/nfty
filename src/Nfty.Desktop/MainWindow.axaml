@@ -15,21 +15,30 @@
   </Window.KeyBindings>
   <Grid RowDefinitions="Auto,*,Auto">
     <!-- Titlebar -->
-    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Background="{DynamicResource PanelBrush}" Height="38">
-      <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="10,0" VerticalAlignment="Center" Spacing="8">
-        <Border Width="20" Height="20" CornerRadius="5" Background="{DynamicResource AccentWashBrush}" />
-        <TextBlock Text="nfty" FontWeight="Bold" />
+    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Background="{DynamicResource PanelBrush}" Height="46">
+      <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center" Spacing="9">
+        <Border Width="24" Height="24" CornerRadius="{DynamicResource RadiusSm}"
+                Background="{DynamicResource AccentWashBrush}">
+          <Border Width="9" Height="9" CornerRadius="2" Background="{DynamicResource AccentBrush}">
+            <Border.RenderTransform>
+              <RotateTransform Angle="45" />
+            </Border.RenderTransform>
+          </Border>
+        </Border>
+        <TextBlock Classes="wordmark" VerticalAlignment="Center"><Run Text="nft" /><Run Text="y" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
       </StackPanel>
-      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-        <Button Content="—" Command="{Binding MinimizeCommand}" Classes="tbtn" />
-        <Button Content="▢" Command="{Binding ToggleMaximizeCommand}" Classes="tbtn" />
-        <Button Content="✕" Command="{Binding CloseCommand}" Classes="tbtn" />
+      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
+        <Button Content="—" Command="{Binding MinimizeCommand}" Classes="icon" />
+        <Button Content="▢" Command="{Binding ToggleMaximizeCommand}" Classes="icon" />
+        <Button Content="✕" Command="{Binding CloseCommand}" Classes="icon danger" />
       </StackPanel>
     </Grid>
 
     <!-- Page + dialog overlay -->
     <Panel Grid.Row="1">
-      <ContentControl Content="{Binding CurrentPage}" />
+      <Border Classes="frame" Margin="8">
+        <ContentControl Content="{Binding CurrentPage}" />
+      </Border>
       <Panel Name="DialogScrim"
              IsVisible="{Binding ActiveDialog, Converter={x:Static ObjectConverters.IsNotNull}}"
              Background="#88000000">
@@ -43,11 +52,11 @@
       <TextBlock Grid.Column="0" Margin="16,0" VerticalAlignment="Center" Classes="muted"
                  Text="{Binding StatusMessage}" />
       <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0" VerticalAlignment="Center" Spacing="2">
-        <Button Content="−" Command="{Binding ZoomOutCommand}" Classes="tbtn" />
+        <Button Content="−" Command="{Binding ZoomOutCommand}" Classes="icon" />
         <TextBlock VerticalAlignment="Center" Width="46" TextAlignment="Center"
                    Text="{Binding Zoom, StringFormat='{}{0}%'}" />
-        <Button Content="+" Command="{Binding ZoomInCommand}" Classes="tbtn" />
-        <Button Content="?" Command="{Binding ShowHelpCommand}" Classes="tbtn" />
+        <Button Content="+" Command="{Binding ZoomInCommand}" Classes="icon" />
+        <Button Content="?" Command="{Binding ShowHelpCommand}" Classes="icon" />
       </StackPanel>
     </Grid>
   </Grid>
