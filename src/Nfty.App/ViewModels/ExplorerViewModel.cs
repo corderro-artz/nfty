@@ -52,7 +52,8 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
             var ingNodes = r.Manifest.LayerOrder
                 .Where(ingById.ContainsKey)
                 .Select(id => new ExplorerNode(id, ingById[id].Manifest.Name,
-                    ExplorerNodeKind.Ingredient, Array.Empty<ExplorerNode>(), (r, ingById[id])))
+                    ExplorerNodeKind.Ingredient, Array.Empty<ExplorerNode>(), (r, ingById[id]),
+                    ingById[id].Manifest.Kind))
                 .ToList();
             return new ExplorerNode(r.Manifest.Id, r.Manifest.Name, ExplorerNodeKind.Recipe, ingNodes, r);
         }).ToList();
