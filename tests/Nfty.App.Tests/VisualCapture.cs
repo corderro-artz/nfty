@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Documents;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Layout;
@@ -31,6 +32,27 @@ public class VisualCapture
 
     private static Button Btn(string content, string cls) =>
         new() { Content = content, Classes = { cls }, Margin = new Thickness(0, 0, 8, 0) };
+
+    private static Button Btn(string content, params string[] classes)
+    {
+        var btn = new Button { Content = content, Margin = new Thickness(0, 0, 8, 0) };
+        foreach (var cls in classes) btn.Classes.Add(cls);
+        return btn;
+    }
+
+    /// <summary>Mirrors MainWindow.axaml's wordmark TextBlock: "nft" in default foreground, "y" in
+    /// AccentTextBrush.</summary>
+    private static TextBlock Wordmark(ThemeVariant variant)
+    {
+        var tb = new TextBlock { Margin = new Thickness(0, 2) };
+        tb.Classes.Add("wordmark");
+        tb.Inlines = new InlineCollection
+        {
+            new Run("nft"),
+            new Run("y") { Foreground = Res("AccentTextBrush", variant) },
+        };
+        return tb;
+    }
 
     private static Border KindChip(string cls, string text) => new()
     {
@@ -80,15 +102,15 @@ public class VisualCapture
             Margin = new Thickness(12, 0, 0, 0),
             VerticalAlignment = VerticalAlignment.Center,
             Spacing = 9,
-            Children = { brandTile, Label("nfty", "wordmark") },
+            Children = { brandTile, Wordmark(variant) },
         };
         Grid.SetColumn(brand, 0);
         var winControls = new StackPanel
         {
             Orientation = Orientation.Horizontal,
             VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0, 0, 6, 0),
-            Children = { Btn("—", "icon"), Btn("▢", "icon"), Btn("✕", "icon") },
+            Margin = new Thickness(0, 0, 10, 0),
+            Children = { Btn("—", "icon"), Btn("▢", "icon"), Btn("✕", "icon", "danger") },
         };
         Grid.SetColumn(winControls, 2);
         titlebar.Children.Add(brand);

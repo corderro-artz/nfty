@@ -25,12 +25,12 @@
             </Border.RenderTransform>
           </Border>
         </Border>
-        <TextBlock Text="nfty" Classes="wordmark" VerticalAlignment="Center" />
+        <TextBlock Classes="wordmark" VerticalAlignment="Center"><Run Text="nft" /><Run Text="y" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
       </StackPanel>
-      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,6,0">
+      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
         <Button Content="—" Command="{Binding MinimizeCommand}" Classes="icon" />
         <Button Content="▢" Command="{Binding ToggleMaximizeCommand}" Classes="icon" />
-        <Button Content="✕" Command="{Binding CloseCommand}" Classes="icon" />
+        <Button Content="✕" Command="{Binding CloseCommand}" Classes="icon danger" />
       </StackPanel>
     </Grid>
 

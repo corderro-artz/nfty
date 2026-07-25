@@ -108,10 +108,21 @@
   </Style>
   <Style Selector="Button.icon:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
-    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
   </Style>
   <Style Selector="Button.icon:pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+  </Style>
+
+  <!-- Close window-control: danger hover beats the neutral Button.icon hover above (mockup
+       .wc.close:hover = accent bg + on-accent fg) since both selectors have equal specificity
+       and this style is declared later in document order. -->
+  <Style Selector="Button.icon.danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+  </Style>
+  <Style Selector="Button.icon.danger:pointerover">
+    <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
   </Style>
 
   <Style Selector="Button.dice">
