@@ -1,11 +1,13 @@
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Services;
 using Nfty.Core.Formats;
 using Nfty.Core.Generation;
+using Nfty.Core.Imaging;
 
 namespace Nfty.App.ViewModels;
 
-public record RecipeShareRow(string Name, double SharePercent, string DnaSpaceText);
+public record RecipeShareRow(string Name, double SharePercent, string DnaSpaceText, Color SegmentColor);
 
 public partial class CookBookDetailViewModel : ViewModelBase
 {
@@ -40,8 +42,15 @@ public partial class CookBookDetailViewModel : ViewModelBase
             double share = totalWeight > 0 ? w / totalWeight * 100 : 0;
             var rs = space[r.Manifest.Id];
             string dna = rs.IsExact ? rs.Total.ToString() : $"more than {rs.Total}";
-            return new RecipeShareRow(r.Manifest.Name, Math.Round(share, 1), dna);
+            return new RecipeShareRow(r.Manifest.Name, Math.Round(share, 1), dna, SegmentColorFor(r.Manifest.Id));
         }).ToList();
+    }
+
+    private static Color SegmentColorFor(string recipeId)
+    {
+        double hue = SeedHash.ToUlong(recipeId) % 360UL;
+        var rgb = ColorConvert.HsvToRgb(hue, 0.5, 0.72);
+        return Color.FromRgb(rgb.R, rgb.G, rgb.B);
     }
 
     [RelayCommand] private void Cook() => _notify.Report("Cook");
