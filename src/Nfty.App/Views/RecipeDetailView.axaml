@@ -48,7 +48,7 @@
                   <Grid ColumnDefinitions="40,*,110,90">
                     <TextBlock Grid.Column="0" Classes="data-row num" Text="{Binding Index}" />
                     <TextBlock Grid.Column="1" Classes="data-row" Text="{Binding Layer}" />
-                    <TextBlock Grid.Column="2" Classes="data-row kind-txt muted" Text="{Binding Kind}" />
+                    <TextBlock Grid.Column="2" Classes="data-row kind-txt" Classes.kdyn="{Binding IsDynamic}" Classes.kstat="{Binding IsStatic}" Classes.kcust="{Binding IsCustom}" Text="{Binding Kind}" />
                     <TextBlock Grid.Column="3" Classes="data-row num" Text="{Binding VariantCount}" />
                   </Grid>
                 </Border>

@@ -8,7 +8,12 @@ using Nfty.Core.Model;
 
 namespace Nfty.App.ViewModels;
 
-public record LayerRow(int Index, string Id, string Layer, string Kind, int VariantCount);
+public record LayerRow(int Index, string Id, string Layer, string Kind, int VariantCount)
+{
+    public bool IsDynamic => Kind == "Dynamic";
+    public bool IsStatic => Kind == "Static";
+    public bool IsCustom => Kind == "Custom";
+}
 public record RuleTargetRow(string Ingredient, string Variant);
 public record RuleRow(bool IsExclude, RuleTargetRow When, IReadOnlyList<RuleTargetRow> Targets);
 

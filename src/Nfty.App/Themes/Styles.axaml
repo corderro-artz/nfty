@@ -38,6 +38,9 @@
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="12" />
   </Style>
+  <Style Selector="TextBlock.kind-txt.kdyn"><Setter Property="Foreground" Value="{DynamicResource KindDynamicBrush}" /></Style>
+  <Style Selector="TextBlock.kind-txt.kstat"><Setter Property="Foreground" Value="{DynamicResource KindStaticBrush}" /></Style>
+  <Style Selector="TextBlock.kind-txt.kcust"><Setter Property="Foreground" Value="{DynamicResource KindCustomBrush}" /></Style>
   <Style Selector="Button.tbtn">
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
