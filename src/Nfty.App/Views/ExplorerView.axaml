@@ -12,7 +12,7 @@
     <!-- Crumbs bar -->
     <ItemsControl Grid.Row="0" ItemsSource="{Binding Crumbs}" Margin="14,10,14,0">
       <ItemsControl.ItemsPanel>
-        <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="2" /></ItemsPanelTemplate>
+        <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="4" /></ItemsPanelTemplate>
       </ItemsControl.ItemsPanel>
       <ItemsControl.ItemTemplate>
         <DataTemplate x:DataType="vm:Crumb">
@@ -25,7 +25,7 @@
     </ItemsControl>
 
     <!-- Context toolbar (.exp-toolbar): gap 10, padding 10/14, bottom hairline -->
-    <Border Grid.Row="1" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,0,1" Padding="14,10">
+    <Border Grid.Row="1" Background="{DynamicResource BgAltBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,0,1" Padding="14,10">
       <StackPanel Orientation="Horizontal" Spacing="10">
         <Button Content="🔍" Command="{Binding SearchCommand}" Classes="icon" ToolTip.Tip="Search (Ctrl+K)" />
         <Button Content="{Binding AddLabel}" Command="{Binding AddCommand}" Classes="accent" />
