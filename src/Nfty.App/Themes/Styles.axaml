@@ -249,4 +249,210 @@
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
+
+  <!-- ====================================================================
+       Task 4: shared detail-body styles, consumed by the recipe/ingredient/
+       cookbook detail views (tasks 5-7). This task only adds the styles
+       plus a style-load guard (ThemeResourceTests); there is no view yet.
+
+       LetterSpacing values below are computed as em * font-size, the same
+       conversion already used above for TextBlock.wordmark (mockup "-.01em"
+       at 15px maps to -0.15): Avalonia's LetterSpacing is an absolute
+       (device pixel) value, not an em multiplier.
+
+       Two mockup approximations, both consistent with this file already
+       omitting a per-surface box-shadow on Border.panel/.card/.frame:
+         - .metric/.rules-panel/.cw-panel/.rhero/.vhero skip the mockup's
+           "box-shadow: inset 0 1px 0 color-mix(in srgb, fg 5% percent, transparent)"
+           top highlight; there is no color-mix equivalent/token for it.
+         - .rhero/.vhero use a flat PanelBrush background rather than the
+           mockup's linear-gradient from bg-alt2 to panel; no
+           LinearGradientBrush resource exists for this token pair, and the
+           two colours are close enough that a flat fill reads the same at
+           this tile's size.
+       Where mockup text is uppercase (.ml, .data-h, .rcl, .ax), Avalonia has
+       no text-transform: the sizing/letter-spacing/colour is set here, and
+       the consuming view is expected to supply already-uppercased text. -->
+
+  <!-- metric band tile (explorer.html:210-216) -->
+  <Style Selector="Border.metric">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="Padding" Value="12,11" />
+  </Style>
+  <Style Selector="TextBlock.mv">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="19" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LetterSpacing" Value="-0.19" />
+  </Style>
+  <Style Selector="TextBlock.ml">
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="LetterSpacing" Value="1.0" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="Margin" Value="0,3,0,0" />
+  </Style>
+  <Style Selector="Border.metric.accent">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+  </Style>
+  <Style Selector="Border.metric.accent TextBlock.mv">
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+
+  <!-- distribution bar + legend (explorer.html:219-225) -->
+  <Style Selector="Border.distbar">
+    <Setter Property="Height" Value="16" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Border.sw">
+    <Setter Property="Width" Value="10" />
+    <Setter Property="Height" Value="10" />
+    <Setter Property="CornerRadius" Value="2" />
+  </Style>
+  <Style Selector="TextBlock.pc">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+
+  <!-- Reusable "table" row classes for a Grid/ItemsControl in place of DataGrid
+       (explorer.html:259-267, table.data th/td). Dual-purpose class names: the
+       Border selector styles a row's chrome (border/background/padding); the
+       TextBlock selector styles its cell text. Apply the same class to both the
+       row container and its cell TextBlocks. -->
+  <Style Selector="Border.data-h">
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="10,7" />
+  </Style>
+  <Style Selector="TextBlock.data-h">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="LetterSpacing" Value="1.05" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="TextBlock.data-h.num">
+    <Setter Property="TextAlignment" Value="Right" />
+  </Style>
+  <Style Selector="Border.data-row">
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="10,12" />
+  </Style>
+  <Style Selector="Border.data-row:pointerover">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+  </Style>
+  <Style Selector="Border.data-row.sel">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+  </Style>
+  <Style Selector="TextBlock.data-row">
+    <Setter Property="FontSize" Value="13" />
+  </Style>
+
+  <!-- incompatibility-rules panel (recipe rail + ingredient inspector; explorer.html:365-381) -->
+  <Style Selector="Border.rules-panel">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="Padding" Value="13,12" />
+  </Style>
+  <Style Selector="Border.rop">
+    <Setter Property="Width" Value="20" />
+    <Setter Property="Height" Value="20" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+  </Style>
+  <Style Selector="TextBlock.rop">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontWeight" Value="Bold" />
+  </Style>
+  <Style Selector="Border.rop.exclude">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="TextBlock.rop.exclude">
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+  <!-- .require: no low-alpha "info wash" token exists (only KindDynamicBrush itself is
+       defined, no tinted background/border variant of it), so this is approximated as a
+       KindDynamicBrush foreground + KindDynamicBrush border on a transparent background,
+       rather than the mockup's true tinted wash. -->
+  <Style Selector="Border.rop.require">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource KindDynamicBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="TextBlock.rop.require">
+    <Setter Property="Foreground" Value="{DynamicResource KindDynamicBrush}" />
+  </Style>
+  <Style Selector="Border.rchip">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="Padding" Value="9,4" />
+  </Style>
+  <Style Selector="TextBlock.rcl">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="9.5" />
+    <Setter Property="LetterSpacing" Value="0.38" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="TextBlock.rcv">
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <!-- colorways rail panel (ingredient inspector; explorer.html:385-400) -->
+  <Style Selector="Border.cw-panel">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="Padding" Value="13,12" />
+  </Style>
+  <Style Selector="Border.cwaxis">
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="Padding" Value="0,8" />
+  </Style>
+  <Style Selector="TextBlock.ax">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="LetterSpacing" Value="1.1" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="TextBlock.av">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+  </Style>
+  <Style Selector="TextBlock.av.der">
+    <Setter Property="FontStyle" Value="Italic" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+
+  <!-- recipe portrait hero / variant hero tiles (explorer.html:283-296, 313-321) -->
+  <Style Selector="Border.rhero">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="Padding" Value="16,14" />
+  </Style>
+  <Style Selector="Border.vhero">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="Padding" Value="16,14" />
+  </Style>
 </Styles>
