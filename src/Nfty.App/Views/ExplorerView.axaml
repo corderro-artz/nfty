@@ -38,6 +38,7 @@
 
     <Grid Grid.Row="2" ColumnDefinitions="260,*">
       <TreeView Grid.Column="0" Name="Tree" ItemsSource="{Binding Roots}"
+                SelectedItem="{Binding SelectedNode, Mode=TwoWay}"
                 Background="{DynamicResource PanelBrush}" Margin="12,10,12,12">
         <TreeView.ItemTemplate>
           <TreeDataTemplate x:DataType="models:ExplorerNode" ItemsSource="{Binding Children}">
