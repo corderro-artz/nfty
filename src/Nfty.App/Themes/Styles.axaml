@@ -23,6 +23,17 @@
     <Setter Property="FontSize" Value="12.5" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
+  <Style Selector="TextBlock.cseg">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="Padding" Value="7,3" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.cseg.active">
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
   <Style Selector="TextBlock.kind-txt">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="12" />
