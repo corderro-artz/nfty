@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Models;
@@ -5,6 +7,8 @@ using Nfty.App.Services;
 using Nfty.Core.Formats;
 
 namespace Nfty.App.ViewModels;
+
+public record Crumb(string Text, bool Active, bool Leading);
 
 public partial class ExplorerViewModel : ViewModelBase, IDisposable
 {
@@ -27,6 +31,8 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     /// collection of roots) can display it.</summary>
     public IReadOnlyList<ExplorerNode> Roots => new[] { Root };
 
+    public IReadOnlyList<Crumb> Crumbs { get; private set; } = Array.Empty<Crumb>();
+
     public string AddLabel => SelectedNode?.Kind switch
     {
         ExplorerNodeKind.CookBook => "Add recipe",
@@ -42,6 +48,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         _book = book; _nav = nav; _dialogs = dialogs; _notify = notify; _bridge = bridge;
         _editorFactory = editorFactory;
         Root = BuildTree(book);
+        RebuildCrumbs();
     }
 
     private static ExplorerNode BuildTree(LoadedCookBook book)
@@ -75,6 +82,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
                 : null,
             _ => null,
         };
+        RebuildCrumbs();
     }
 
     [RelayCommand] private void ToggleLock() => IsEditing = !IsEditing;
@@ -85,6 +93,23 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     [RelayCommand] private void SelectNode(ExplorerNode node) => SelectedNode = node;
     [RelayCommand] private void OpenIngredient(string id) => _notify.Report($"Open ingredient {id}");
     private bool CanEdit() => IsEditing;
+
+    private void RebuildCrumbs()
+    {
+        var parts = new List<string> { Root.Name };
+        switch (SelectedNode?.Kind)
+        {
+            case ExplorerNodeKind.Recipe:
+                parts.Add(SelectedNode.Name);
+                break;
+            case ExplorerNodeKind.Ingredient when SelectedNode.Domain is (LoadedRecipe r, LoadedIngredient i):
+                parts.Add(r.Manifest.Name);
+                parts.Add(i.Manifest.Name);
+                break;
+        }
+        Crumbs = parts.Select((t, idx) => new Crumb(t, idx == parts.Count - 1, idx > 0)).ToList();
+        OnPropertyChanged(nameof(Crumbs));
+    }
 
     public void Dispose() => (CurrentDetail as IDisposable)?.Dispose();
 }
