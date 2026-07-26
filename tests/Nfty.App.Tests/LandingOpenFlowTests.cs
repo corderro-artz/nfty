@@ -8,12 +8,17 @@ namespace Nfty.App.Tests;
 
 public class LandingOpenFlowTests
 {
+    [Fact]
+    public async Task Stub_folder_picker_returns_null()
+        => Assert.Null(await new FilePickerService().PickFolderAsync("x"));
+
     private sealed class StubPicker : IFilePickerService
     {
         private readonly string? _path;
         public StubPicker(string? path) => _path = path;
         public Task<string?> OpenFileAsync(string title, params string[] extensions) => Task.FromResult(_path);
         public Task<string?> SaveFileAsync(string title, string defaultExtension) => Task.FromResult<string?>(null);
+        public Task<string?> PickFolderAsync(string title) => Task.FromResult<string?>(null);
     }
 
     private static LandingViewModel Make(string? pickerPath, out FakeNav nav, out FakeDialogs dialogs,

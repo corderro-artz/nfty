@@ -6,10 +6,12 @@ public interface IFilePickerService
 {
     Task<string?> OpenFileAsync(string title, params string[] extensions);
     Task<string?> SaveFileAsync(string title, string defaultExtension);
+    Task<string?> PickFolderAsync(string title);
 }
 
 public sealed class FilePickerService : IFilePickerService
 {
     public Task<string?> OpenFileAsync(string title, params string[] extensions) => Task.FromResult<string?>(null);
     public Task<string?> SaveFileAsync(string title, string defaultExtension) => Task.FromResult<string?>(null);
+    public Task<string?> PickFolderAsync(string title) => Task.FromResult<string?>(null);
 }
