@@ -30,6 +30,18 @@ public sealed class DesktopFilePicker : IFilePickerService
 
     public Task<string?> SaveFileAsync(string title, string defaultExtension) => Task.FromResult<string?>(null);
 
+    public async Task<string?> PickFolderAsync(string title)
+    {
+        var top = TopLevel;
+        if (top is null) return null;
+        var folders = await top.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = title,
+            AllowMultiple = false,
+        });
+        return folders.Count > 0 ? folders[0].TryGetLocalPath() : null;
+    }
+
     private static TopLevel? TopLevel =>
         (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
 }

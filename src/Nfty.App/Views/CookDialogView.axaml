@@ -1,0 +1,44 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             x:Class="Nfty.App.Views.CookDialogView"
+             x:DataType="vm:CookDialogViewModel">
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Escape" Command="{Binding CloseCommand}" />
+  </UserControl.KeyBindings>
+  <Border Background="{DynamicResource PanelBrush}" CornerRadius="10" Padding="24" Width="380"
+          BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1">
+    <StackPanel Spacing="10">
+      <TextBlock Text="Cook" FontWeight="Bold" />
+
+      <StackPanel Spacing="10" IsVisible="{Binding ShowForm}" IsEnabled="{Binding ShowForm}">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <TextBlock Text="Count" VerticalAlignment="Center" Classes="muted" Width="60" />
+          <NumericUpDown Value="{Binding Count}" Minimum="1" Width="140" />
+        </StackPanel>
+        <TextBox Watermark="Seed" Text="{Binding Seed}" />
+        <CheckBox Content="Pack into a single .set" IsChecked="{Binding Pack}" />
+      </StackPanel>
+
+      <StackPanel Spacing="8" IsVisible="{Binding IsRunning}">
+        <ProgressBar Minimum="0" Maximum="1" Value="{Binding Progress}" />
+        <TextBlock Text="{Binding PhaseText}" Classes="muted" />
+        <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="tbtn" HorizontalAlignment="Right" />
+      </StackPanel>
+
+      <StackPanel Spacing="8" IsVisible="{Binding IsDone}">
+        <TextBlock Text="{Binding ResultText}" TextWrapping="Wrap" Classes="muted" />
+        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+          <Button Content="Reveal" Command="{Binding RevealCommand}" Classes="tbtn" />
+          <Button Content="Close" Command="{Binding CloseCommand}" Classes="tbtn" />
+        </StackPanel>
+      </StackPanel>
+
+      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right"
+                  IsVisible="{Binding ShowForm}">
+        <Button Content="Close" Command="{Binding CloseCommand}" Classes="tbtn" />
+        <Button Content="Cook" Command="{Binding CookCommand}" Classes="accent" />
+      </StackPanel>
+    </StackPanel>
+  </Border>
+</UserControl>

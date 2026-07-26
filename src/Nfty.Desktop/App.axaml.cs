@@ -17,6 +17,7 @@ public partial class App : Application
         var services = new ServiceCollection()
             .AddNftyApp()
             .AddSingleton<IFilePickerService, DesktopFilePicker>()
+            .AddSingleton<IFolderRevealer, DesktopFolderRevealer>()
             .BuildServiceProvider();
         var shell = services.GetRequiredService<ShellViewModel>();
         services.GetRequiredService<INavigationService>().To(services.GetRequiredService<LandingViewModel>());

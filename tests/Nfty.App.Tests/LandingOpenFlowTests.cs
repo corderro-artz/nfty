@@ -8,12 +8,17 @@ namespace Nfty.App.Tests;
 
 public class LandingOpenFlowTests
 {
+    [Fact]
+    public async Task Stub_folder_picker_returns_null()
+        => Assert.Null(await new FilePickerService().PickFolderAsync("x"));
+
     private sealed class StubPicker : IFilePickerService
     {
         private readonly string? _path;
         public StubPicker(string? path) => _path = path;
         public Task<string?> OpenFileAsync(string title, params string[] extensions) => Task.FromResult(_path);
         public Task<string?> SaveFileAsync(string title, string defaultExtension) => Task.FromResult<string?>(null);
+        public Task<string?> PickFolderAsync(string title) => Task.FromResult<string?>(null);
     }
 
     private static LandingViewModel Make(string? pickerPath, out FakeNav nav, out FakeDialogs dialogs,
@@ -22,7 +27,8 @@ public class LandingOpenFlowTests
         nav = new FakeNav(); dialogs = new FakeDialogs(); notify = new FakeNotYetWired(); session = new CookBookSession();
         var s = session; var n = nav; var d = dialogs; var no = notify;
         return new LandingViewModel(n, d, no, new StubPicker(pickerPath), new RecentsService(), s,
-            book => new ExplorerViewModel(book, n, d, no, new ImageBridge(), ExplorerViewModelTests.EditorFactory(n)));
+            book => new ExplorerViewModel(book, n, d, no, new ImageBridge(), ExplorerViewModelTests.EditorFactory(n),
+                ExplorerViewModelTests.CookFactory(d)));
     }
 
     [Fact]
