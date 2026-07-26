@@ -22,7 +22,7 @@ public partial class CookDialogViewModel : ViewModelBase
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(CookCommand))] private int _count = 50;
     [ObservableProperty] private string _seed = Guid.NewGuid().ToString("N")[..8];
     [ObservableProperty] private bool _pack;
-    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(CookCommand))] [NotifyCanExecuteChangedFor(nameof(CancelCommand))] [NotifyPropertyChangedFor(nameof(ShowForm))] private bool _isRunning;
+    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(CookCommand))] [NotifyCanExecuteChangedFor(nameof(CancelCommand))] [NotifyCanExecuteChangedFor(nameof(CloseCommand))] [NotifyPropertyChangedFor(nameof(ShowForm))] private bool _isRunning;
     [ObservableProperty] private double _progress;
     [ObservableProperty] private string _phaseText = "";
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(RevealCommand))] [NotifyPropertyChangedFor(nameof(ShowForm))] private bool _isDone;
@@ -77,5 +77,6 @@ public partial class CookDialogViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanReveal))] private void Reveal() { if (_outDir is not null) _revealer.Reveal(_outDir); }
     private bool CanReveal() => IsDone;
 
-    [RelayCommand] private void Close() => _dialogs.Close(null);
+    [RelayCommand(CanExecute = nameof(CanClose))] private void Close() => _dialogs.Close(null);
+    private bool CanClose() => !IsRunning;
 }
