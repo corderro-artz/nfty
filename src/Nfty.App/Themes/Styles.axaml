@@ -354,6 +354,10 @@
   <Style Selector="TextBlock.data-row">
     <Setter Property="FontSize" Value="13" />
   </Style>
+  <Style Selector="TextBlock.num">
+    <Setter Property="TextAlignment" Value="Right" />
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+  </Style>
 
   <!-- incompatibility-rules panel (recipe rail + ingredient inspector; explorer.html:365-381) -->
   <Style Selector="Border.rules-panel">
