@@ -93,4 +93,36 @@ public class ExplorerViewModelTests
         vm.SearchCommand.Execute(null); Assert.Equal("Search (⌘K)", n.Last);
         vm.ImportCommand.Execute(null); Assert.Equal("Import", n.Last);
     }
+
+    [AvaloniaFact]
+    public void Ingredient_nodes_carry_their_layer_kind()
+    {
+        var nav = new FakeNav();
+        using var vm = new ExplorerViewModel(TwoRecipeBook(), nav, new FakeDialogs(), new FakeNotYetWired(), new ImageBridge(), EditorFactory(nav));
+        var recipe = vm.Root.Children[0];
+        var ingredient = recipe.Children[0];
+        Assert.Null(vm.Root.LayerKind);            // cookbook node
+        Assert.Null(recipe.LayerKind);             // recipe node
+        Assert.Equal(Nfty.Core.Model.LayerKind.Custom, ingredient.LayerKind);  // TwoRecipeBook ingredients are Custom
+        Assert.True(ingredient.IsCustom);
+    }
+
+    [AvaloniaFact]
+    public void Crumbs_follow_the_selected_node_path()
+    {
+        var nav = new FakeNav();
+        using var vm = new ExplorerViewModel(TwoRecipeBook(), nav, new FakeDialogs(), new FakeNotYetWired(), new ImageBridge(), EditorFactory(nav));
+
+        // nothing selected → just the cookbook, active
+        Assert.Equal(new[] { (vm.Root.Name, true, false) }, vm.Crumbs.Select(c => (c.Text, c.Active, c.Leading)));
+
+        var recipe = vm.Root.Children[0];
+        vm.SelectNodeCommand.Execute(recipe);
+        Assert.Equal(new[] { (vm.Root.Name, false, false), (recipe.Name, true, true) }, vm.Crumbs.Select(c => (c.Text, c.Active, c.Leading)));
+
+        var ingredient = recipe.Children[0];
+        vm.SelectNodeCommand.Execute(ingredient);
+        Assert.Equal(new[] { (vm.Root.Name, false, false), (recipe.Name, false, true), (ingredient.Name, true, true) },
+            vm.Crumbs.Select(c => (c.Text, c.Active, c.Leading)));
+    }
 }

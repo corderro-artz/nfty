@@ -2,27 +2,56 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Nfty.App.ViewModels"
              xmlns:models="using:Nfty.App.Models"
+             xmlns:conv="using:Avalonia.Data.Converters"
              x:Class="Nfty.App.Views.ExplorerView"
              x:DataType="vm:ExplorerViewModel"
              Focusable="True">
   <UserControl.KeyBindings>
     <KeyBinding Gesture="Ctrl+K" Command="{Binding SearchCommand}" />
   </UserControl.KeyBindings>
-  <Grid RowDefinitions="Auto,*">
-    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="12">
-      <Button Content="🔍" Command="{Binding SearchCommand}" Classes="tbtn" ToolTip.Tip="Search" />
-      <Button Content="{Binding AddLabel}" Command="{Binding AddCommand}" Classes="accent" />
-      <Button Content="Delete" Command="{Binding DeleteSelectedCommand}" Classes="tbtn" />
-      <Button Content="Import" Command="{Binding ImportCommand}" Classes="tbtn" />
-      <Button Content="🔒" Command="{Binding ToggleLockCommand}" Classes="tbtn" ToolTip.Tip="Toggle lock" />
-    </StackPanel>
+  <Grid RowDefinitions="Auto,Auto,*">
+    <!-- Crumbs bar -->
+    <ItemsControl Grid.Row="0" ItemsSource="{Binding Crumbs}" Margin="14,10,14,0">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="4" /></ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:Crumb">
+          <StackPanel Orientation="Horizontal" Spacing="2">
+            <TextBlock Text="›" Classes="cseg" Opacity="0.45" IsVisible="{Binding Leading}" />
+            <TextBlock Text="{Binding Text}" Classes="cseg" Classes.active="{Binding Active}" />
+          </StackPanel>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
 
-    <Grid Grid.Row="1" ColumnDefinitions="260,*">
+    <!-- Context toolbar (.exp-toolbar): gap 10, padding 10/14, bottom hairline -->
+    <Border Grid.Row="1" Background="{DynamicResource BgAltBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,0,1" Padding="14,10">
+      <StackPanel Orientation="Horizontal" Spacing="10">
+        <Button Content="🔍" Command="{Binding SearchCommand}" Classes="icon" ToolTip.Tip="Search (Ctrl+K)" />
+        <Button Content="{Binding AddLabel}" Command="{Binding AddCommand}" Classes="accent" />
+        <Button Content="Delete" Command="{Binding DeleteSelectedCommand}" Classes="tbtn" />
+        <Button Content="Import" Command="{Binding ImportCommand}" Classes="tbtn" />
+        <Button Content="🔒" Command="{Binding ToggleLockCommand}" Classes="icon" ToolTip.Tip="Toggle lock" />
+      </StackPanel>
+    </Border>
+
+    <Grid Grid.Row="2" ColumnDefinitions="260,*">
       <TreeView Grid.Column="0" Name="Tree" ItemsSource="{Binding Roots}"
-                Background="{DynamicResource PanelBrush}" Margin="12,0,12,12">
+                SelectedItem="{Binding SelectedNode, Mode=TwoWay}"
+                Background="{DynamicResource PanelBrush}" Margin="12,10,12,12">
         <TreeView.ItemTemplate>
           <TreeDataTemplate x:DataType="models:ExplorerNode" ItemsSource="{Binding Children}">
-            <TextBlock Text="{Binding Name}" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Border Classes="guide" IsVisible="{Binding !IsRoot}" />
+              <TextBlock Classes="kmark"
+                         Classes.kdyn="{Binding IsDynamic}"
+                         Classes.kstat="{Binding IsStatic}"
+                         Classes.kcust="{Binding IsCustom}"
+                         Text="{Binding KindMark}"
+                         IsVisible="{Binding LayerKind, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
+              <TextBlock Text="{Binding Name}" Classes.root="{Binding IsRoot}" VerticalAlignment="Center" />
+            </StackPanel>
           </TreeDataTemplate>
         </TreeView.ItemTemplate>
       </TreeView>

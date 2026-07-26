@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
@@ -9,6 +10,10 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
+using Nfty.App;
+using Nfty.App.Services;
+using Nfty.App.ViewModels;
 using Xunit;
 
 namespace Nfty.App.Tests;
@@ -248,6 +253,48 @@ public class VisualCapture
             Assert.NotNull(frame);
             var path = Path.Combine(Dir!, $"gallery-{variant.Key.ToString()!.ToLowerInvariant()}.png");
             frame!.Save(path);
+        }
+    }
+
+    /// <summary>Renders the real <see cref="Views.ExplorerView"/> bound to an
+    /// <see cref="ExplorerViewModel"/> (with an ingredient node selected) so visual parity with
+    /// docs/design/mockups/explorer.html can be checked from an actual rendered frame — not
+    /// imagined from XAML.</summary>
+    [AvaloniaFact]
+    public void Capture_explorer()
+    {
+        if (Dir is null) return;   // inert unless explicitly capturing
+
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            var nav = new FakeNav();
+            var vm = new ExplorerViewModel(ExplorerViewModelTests.TwoRecipeBook(), nav, new FakeDialogs(),
+                new FakeNotYetWired(), new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav));
+            var view = new Views.ExplorerView { DataContext = vm };
+            var window = new Window { RequestedThemeVariant = variant, Content = view, Width = 900, Height = 560 };
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+
+            // A TreeViewItem starts collapsed (default IsExpanded=false), so the ingredient row
+            // isn't realised — and can't show a selection highlight — until its ancestors are
+            // expanded. Drive the real Tree control the way a user's clicks would, rather than
+            // just setting the ViewModel's SelectedNode (which the tree can't visually reflect
+            // for a row it hasn't realised yet).
+            var tree = view.FindControl<TreeView>("Tree")!;
+            var rootContainer = tree.GetVisualDescendants().OfType<TreeViewItem>()
+                .Single(c => ReferenceEquals(c.DataContext, vm.Root));
+            rootContainer.IsExpanded = true;
+            Dispatcher.UIThread.RunJobs();
+            var recipeContainer = tree.GetVisualDescendants().OfType<TreeViewItem>()
+                .Single(c => ReferenceEquals(c.DataContext, vm.Root.Children[0]));
+            recipeContainer.IsExpanded = true;
+            Dispatcher.UIThread.RunJobs();
+
+            vm.SelectNodeCommand.Execute(vm.Root.Children[0].Children[0]);   // select an ingredient
+            Dispatcher.UIThread.RunJobs();
+
+            window.CaptureRenderedFrame()!.Save(Path.Combine(Dir!, $"explorer-{variant.Key.ToString()!.ToLowerInvariant()}.png"));
+            vm.Dispose();
         }
     }
 }
