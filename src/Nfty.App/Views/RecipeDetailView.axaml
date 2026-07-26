@@ -35,7 +35,7 @@
     <ItemsControl ItemsSource="{Binding Rules}">
       <ItemsControl.ItemTemplate>
         <DataTemplate x:DataType="vm:RuleRow">
-          <TextBlock Text="{Binding Text}" />
+          <TextBlock Text="{Binding When.Ingredient}" />
         </DataTemplate>
       </ItemsControl.ItemTemplate>
     </ItemsControl>

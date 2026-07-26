@@ -48,7 +48,7 @@ public class RecipeDetailViewModelTests
     }
 
     [AvaloniaFact]
-    public void Rules_render_exclude_and_require_with_their_operators()
+    public void Rules_expose_operator_and_traits()
     {
         var rules = new[]
         {
@@ -78,7 +78,15 @@ public class RecipeDetailViewModelTests
         using var vm = new RecipeDetailViewModel(recipe, book, new ImageBridge(), new FakeNotYetWired(), _ => { });
 
         Assert.Equal(2, vm.Rules.Count);
-        Assert.Contains(vm.Rules, r => r.Text.Contains("✕") && r.Text.Contains("bg:day") && r.Text.Contains("aura:none"));
-        Assert.Contains(vm.Rules, r => r.Text.Contains("→") && r.Text.Contains("bg:night") && r.Text.Contains("aura:glow"));
+        var exclude = vm.Rules.Single(r => r.IsExclude);
+        var require = vm.Rules.Single(r => !r.IsExclude);
+
+        Assert.Equal("bg", exclude.When.Ingredient);
+        Assert.Equal("day", exclude.When.Variant);
+        Assert.Contains(exclude.Targets, t => t.Ingredient == "aura" && t.Variant == "none");
+
+        Assert.Equal("bg", require.When.Ingredient);
+        Assert.Equal("night", require.When.Variant);
+        Assert.Contains(require.Targets, t => t.Ingredient == "aura" && t.Variant == "glow");
     }
 }
