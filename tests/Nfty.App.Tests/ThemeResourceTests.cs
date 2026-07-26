@@ -378,7 +378,7 @@ public class ThemeResourceTests
                 (node, _) =>
                 {
                     var guide = new Border { Classes = { "guide" }, IsVisible = !node.IsRoot };
-                    var kmark = new Border { Classes = { "kmark" }, IsVisible = node.LayerKind is not null };
+                    var kmark = new TextBlock { Classes = { "kmark" }, Text = node.KindMark, IsVisible = node.LayerKind is not null };
                     if (node.IsDynamic) kmark.Classes.Add("kdyn");
                     if (node.IsStatic) kmark.Classes.Add("kstat");
                     if (node.IsCustom) kmark.Classes.Add("kcust");
@@ -417,5 +417,14 @@ public class ThemeResourceTests
             ((ISolidColorBrush)Resolve("AccentWashBrush", ThemeVariant.Light)!).Color,
             ((ISolidColorBrush)layoutRoot.Background!).Color);
         Assert.True(layoutRoot.BoxShadow.Count > 0 && layoutRoot.BoxShadow[0].IsInset);
+
+        // The Dynamic child's kind glyph resolves the dynamic kind colour (guards the
+        // TextBlock.kmark.kdyn selector + KindDynamicBrush token).
+        var kmark = childContainer.GetVisualDescendants().OfType<TextBlock>()
+            .First(t => t.Classes.Contains("kmark"));
+        Assert.Equal("D", kmark.Text);
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("KindDynamicBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)kmark.Foreground!).Color);
     }
 }
