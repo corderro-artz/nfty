@@ -1,27 +1,102 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:Nfty.App.ViewModels" x:Class="Nfty.App.Views.CookBookDetailView"
+             xmlns:vm="using:Nfty.App.ViewModels" xmlns:conv="using:Nfty.App.Converters"
+             x:Class="Nfty.App.Views.CookBookDetailView"
              x:DataType="vm:CookBookDetailViewModel">
-  <StackPanel Margin="20" Spacing="8">
-    <TextBlock Text="{Binding Name}" FontSize="20" FontWeight="Bold" />
-    <TextBlock Classes="muted" Text="{Binding CanvasText, StringFormat='canvas {0}'}" />
-    <StackPanel Orientation="Horizontal" Spacing="18">
-      <TextBlock Text="{Binding RecipeCount, StringFormat='{}{0} recipes'}" />
-      <TextBlock Text="{Binding LayerCount, StringFormat='{}{0} layers'}" />
-      <TextBlock Text="{Binding VariantCount, StringFormat='{}{0} variants'}" />
-      <TextBlock Foreground="{DynamicResource AccentTextBrush}" Text="{Binding UniqueDnaText, StringFormat='{}{0} unique DNA'}" />
+  <StackPanel Margin="20" Spacing="0">
+    <!-- id-chips: explorer.html:765-771 (.cbk-id .idchips) -->
+    <StackPanel Orientation="Horizontal" Spacing="7">
+      <Border Classes="idchip">
+        <TextBlock Classes="mono" Text="{Binding Name}" />
+      </Border>
+      <Border Classes="idchip">
+        <TextBlock Classes="mono" Text="{Binding Symbol}" />
+      </Border>
+      <Border Classes="idchip">
+        <TextBlock Classes="mono" Text="{Binding CanvasText, StringFormat='canvas {0}'}" />
+      </Border>
     </StackPanel>
-    <TextBlock Classes="muted" Text="Mint distribution" Margin="0,8,0,0" />
-    <ItemsControl ItemsSource="{Binding Recipes}">
+
+    <!-- metric band: explorer.html:780, statband(...,'two2') -> 2x2 grid (.statband.two2) -->
+    <Grid Margin="0,14,0,0" ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+      <Border Grid.Row="0" Grid.Column="0" Classes="metric" Margin="0,0,5,5">
+        <StackPanel>
+          <TextBlock Classes="mv" Text="{Binding RecipeCount}" />
+          <TextBlock Classes="ml" Text="RECIPES" />
+        </StackPanel>
+      </Border>
+      <Border Grid.Row="0" Grid.Column="1" Classes="metric" Margin="5,0,0,5">
+        <StackPanel>
+          <TextBlock Classes="mv" Text="{Binding LayerCount}" />
+          <TextBlock Classes="ml" Text="LAYERS" />
+        </StackPanel>
+      </Border>
+      <Border Grid.Row="1" Grid.Column="0" Classes="metric" Margin="0,5,5,0">
+        <StackPanel>
+          <TextBlock Classes="mv" Text="{Binding VariantCount}" />
+          <TextBlock Classes="ml" Text="VARIANTS" />
+        </StackPanel>
+      </Border>
+      <Border Grid.Row="1" Grid.Column="1" Classes="metric accent" Margin="5,5,0,0">
+        <StackPanel>
+          <TextBlock Classes="mv" Text="{Binding UniqueDnaText}" />
+          <TextBlock Classes="ml" Text="UNIQUE DNA" />
+        </StackPanel>
+      </Border>
+    </Grid>
+
+    <!-- mint distribution: explorer.html:773-777 (.dist/.sub-h/.distbar/.distlegend).
+         No shared ".section-h"/".sub-h" style exists in Styles.axaml (Task 4 did not add one),
+         so the heading's mono/uppercase/letter-spaced/muted look is set inline here rather than
+         inventing an unshared class from a view-only task. -->
+    <TextBlock Classes="mono muted" Text="MINT DISTRIBUTION" FontSize="10.5" LetterSpacing="1.26"
+               Margin="0,16,0,9" />
+
+    <!-- PROPORTIONAL WIDTHS: each segment's Width is bound through PercentToWidthConverter
+         (SharePercent * 5.6) inside a fixed Width="560" Border.distbar, so segment widths stay
+         proportional to SharePercent without a Grid built from a variable number of star columns
+         (Recipes.Count isn't known until runtime). See Converters/PercentToWidthConverter.cs. -->
+    <Border Classes="distbar" Width="560" HorizontalAlignment="Left">
+      <ItemsControl ItemsSource="{Binding Recipes}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Orientation="Horizontal" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:RecipeShareRow">
+            <Border Height="16" Width="{Binding SharePercent, Converter={x:Static conv:PercentToWidthConverter.ForBarWidth560}}">
+              <Border.Background>
+                <SolidColorBrush Color="{Binding SegmentColor}" />
+              </Border.Background>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </Border>
+
+    <ItemsControl ItemsSource="{Binding Recipes}" Margin="0,10,0,0">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <WrapPanel />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
       <ItemsControl.ItemTemplate>
         <DataTemplate x:DataType="vm:RecipeShareRow">
-          <StackPanel Orientation="Horizontal" Spacing="12">
-            <TextBlock Width="120" Text="{Binding Name}" />
-            <TextBlock Width="70" Text="{Binding SharePercent, StringFormat='{}{0}%'}" />
-            <TextBlock Classes="muted" Text="{Binding DnaSpaceText, StringFormat='{}{0} DNA'}" />
+          <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,0,14,0" VerticalAlignment="Center">
+            <Border Classes="sw">
+              <Border.Background>
+                <SolidColorBrush Color="{Binding SegmentColor}" />
+              </Border.Background>
+            </Border>
+            <TextBlock FontSize="12" Text="{Binding Name}" />
+            <TextBlock Classes="pc" FontSize="12" Text="{Binding SharePercent, StringFormat='{}{0}%'}" />
           </StackPanel>
         </DataTemplate>
       </ItemsControl.ItemTemplate>
     </ItemsControl>
-    <Button Content="Cook set" Command="{Binding CookCommand}" Classes="accent" HorizontalAlignment="Left" Margin="0,8,0,0" />
+
+    <!-- Cook: explorer.html cookFooter() accent button -->
+    <Button Content="Cook set" Command="{Binding CookCommand}" Classes="accent" HorizontalAlignment="Left"
+            Margin="0,18,0,0" />
   </StackPanel>
 </UserControl>

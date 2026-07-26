@@ -1,3 +1,4 @@
+using Avalonia.Headless.XUnit;
 using Nfty.App.ViewModels;
 using Nfty.Core.Formats;
 using Nfty.Core.Model;
@@ -31,5 +32,17 @@ public class CookBookDetailViewModelTests
         var n = new FakeNotYetWired();
         new CookBookDetailViewModel(ExplorerViewModelTests.TwoRecipeBook(), n).CookCommand.Execute(null);
         Assert.Equal("Cook", n.Last);
+    }
+
+    [AvaloniaFact]
+    public void Recipe_segment_colour_is_deterministic_per_id()
+    {
+        var book = ExplorerViewModelTests.TwoRecipeBook();
+        var vm1 = new CookBookDetailViewModel(book, new FakeNotYetWired());
+        var vm2 = new CookBookDetailViewModel(book, new FakeNotYetWired());
+        // same recipe ids ⇒ identical segment colours across instances
+        Assert.Equal(vm1.Recipes.Select(r => r.SegmentColor), vm2.Recipes.Select(r => r.SegmentColor));
+        // distinct recipes ⇒ distinct hues (2-recipe fixture)
+        Assert.NotEqual(vm1.Recipes[0].SegmentColor, vm1.Recipes[1].SegmentColor);
     }
 }

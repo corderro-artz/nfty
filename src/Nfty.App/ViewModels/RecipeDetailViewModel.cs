@@ -8,8 +8,14 @@ using Nfty.Core.Model;
 
 namespace Nfty.App.ViewModels;
 
-public record LayerRow(int Index, string Id, string Layer, string Kind, int VariantCount);
-public record RuleRow(string Text);
+public record LayerRow(int Index, string Id, string Layer, string Kind, int VariantCount)
+{
+    public bool IsDynamic => Kind == "Dynamic";
+    public bool IsStatic => Kind == "Static";
+    public bool IsCustom => Kind == "Custom";
+}
+public record RuleTargetRow(string Ingredient, string Variant);
+public record RuleRow(bool IsExclude, RuleTargetRow When, IReadOnlyList<RuleTargetRow> Targets);
 
 public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
 {
@@ -39,7 +45,7 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
                 ingById[id].Manifest.Kind.ToString(), ingById[id].Manifest.Variants.Count))
             .ToList();
 
-        Rules = recipe.Manifest.Rules.Select(RuleText).ToList();
+        Rules = recipe.Manifest.Rules.Select(MapRule).ToList();
         _hero = BuildHero();
     }
 
@@ -51,12 +57,10 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
         return _bridge.ToBitmap(asset.Image);
     }
 
-    private static RuleRow RuleText(IncompatibilityRule rule)
-    {
-        string op = rule.Type == RuleType.Exclude ? "✕ never with" : "→ always with";
-        string targets = string.Join(", ", rule.Targets.Select(t => $"{t.IngredientId}:{t.VariantId}"));
-        return new RuleRow($"{rule.When.IngredientId}:{rule.When.VariantId}  {op}  {targets}");
-    }
+    private static RuleRow MapRule(IncompatibilityRule rule) => new(
+        rule.Type == RuleType.Exclude,
+        new RuleTargetRow(rule.When.IngredientId, rule.When.VariantId),
+        rule.Targets.Select(t => new RuleTargetRow(t.IngredientId, t.VariantId)).ToList());
 
     [RelayCommand]
     private void Reroll()

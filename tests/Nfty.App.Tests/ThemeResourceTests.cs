@@ -427,4 +427,39 @@ public class ThemeResourceTests
             ((ISolidColorBrush)Resolve("KindDynamicBrush", ThemeVariant.Light)!).Color,
             ((ISolidColorBrush)kmark.Foreground!).Color);
     }
+
+    // Style-load guard for Task 4's shared detail-body styles (Border.metric/.mv/.rules-panel,
+    // explorer.html:210-216 metric band + :365 rules-panel). Guards that every selector in the
+    // new style block resolves without an unresolvable DynamicResource token throwing, and
+    // spot-checks a representative brush per surface so a wrong token (not just a missing one)
+    // fails here too, not just a silent no-op.
+    [AvaloniaFact]
+    public void Metric_accent_and_rules_panel_styles_resolve_without_throwing()
+    {
+        var metric = StyledHost.Show(new Border
+        {
+            Classes = { "metric", "accent" },
+            Child = new TextBlock { Classes = { "mv" }, Text = "128" },
+        });
+        var rulesPanel = StyledHost.Show(new Border { Classes = { "rules-panel" } });
+
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("AccentWashBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)metric.Background!).Color);
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("AccentLineBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)metric.BorderBrush!).Color);
+
+        var mv = (TextBlock)metric.Child!;
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("AccentTextBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)mv.Foreground!).Color);
+
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("BgAlt2Brush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)rulesPanel.Background!).Color);
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("LineBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)rulesPanel.BorderBrush!).Color);
+    }
 }

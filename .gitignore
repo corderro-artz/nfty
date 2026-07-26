@@ -21,3 +21,4 @@ TestResults/
 
 # Six Labors license (account-specific; never commit)
 sixlabors.lic
+build-output.txt
