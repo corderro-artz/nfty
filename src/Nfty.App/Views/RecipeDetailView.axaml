@@ -12,7 +12,7 @@
       <Border Classes="rhero">
         <Grid ColumnDefinitions="Auto,*">
           <Border Grid.Column="0" Width="92" Height="92" CornerRadius="{DynamicResource RadiusMd}"
-                  ClipToBounds="True" Margin="0,0,16,0">
+                  Background="{DynamicResource TileBrush}" ClipToBounds="True" Margin="0,0,16,0">
             <Image Source="{Binding Hero}" Stretch="UniformToFill" />
           </Border>
           <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center">

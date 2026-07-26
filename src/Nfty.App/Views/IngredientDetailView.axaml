@@ -86,9 +86,16 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:ColorwayAxis">
               <Border Classes="cwaxis">
-                <Grid ColumnDefinitions="*,Auto">
-                  <TextBlock Grid.Column="0" Classes="ax" Text="{Binding Label}" VerticalAlignment="Center" />
-                  <TextBlock Grid.Column="1" Classes="av" Classes.der="{Binding Derived}" Text="{Binding Value}" VerticalAlignment="Center" />
+                <!-- Auto,* (not *,Auto): the label ("Hue"/"Colour"/…) is always short, while a
+                     custom-kind Value can be a full sentence ("no colorize · composited as-is") —
+                     giving Value the star column plus wrap lets it flow onto extra lines instead
+                     of forcing the label column to near-zero width and overlapping it (a real
+                     overlap seen when this row was rendered with *,Auto). -->
+                <Grid ColumnDefinitions="Auto,*">
+                  <TextBlock Grid.Column="0" Classes="ax" Text="{Binding Label}" VerticalAlignment="Center"
+                             Margin="0,0,12,0" />
+                  <TextBlock Grid.Column="1" Classes="av" Classes.der="{Binding Derived}" Text="{Binding Value}"
+                             VerticalAlignment="Center" TextAlignment="Right" TextWrapping="Wrap" />
                 </Grid>
               </Border>
             </DataTemplate>

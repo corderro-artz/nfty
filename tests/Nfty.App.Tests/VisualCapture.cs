@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Avalonia;
@@ -14,6 +15,10 @@ using Avalonia.VisualTree;
 using Nfty.App;
 using Nfty.App.Services;
 using Nfty.App.ViewModels;
+using Nfty.Core.Formats;
+using Nfty.Core.Model;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 using Xunit;
 
 namespace Nfty.App.Tests;
@@ -296,5 +301,79 @@ public class VisualCapture
             window.CaptureRenderedFrame()!.Save(Path.Combine(Dir!, $"explorer-{variant.Key.ToString()!.ToLowerInvariant()}.png"));
             vm.Dispose();
         }
+    }
+
+    /// <summary>Builds a small recipe (+ owning cookbook) with one Exclude and one Require rule, so a
+    /// capture of <see cref="Views.RecipeDetailView"/> exercises the rules rail — mirrors
+    /// <see cref="RecipeDetailViewModelTests.Rules_expose_operator_and_traits"/>'s fixture.</summary>
+    private static (LoadedCookBook book, LoadedRecipe recipe) RecipeWithRules()
+    {
+        var rules = new[]
+        {
+            new IncompatibilityRule(RuleType.Exclude, new RuleTarget("bg", "day"),
+                new[] { new RuleTarget("aura", "none") }),
+            new IncompatibilityRule(RuleType.Require, new RuleTarget("bg", "night"),
+                new[] { new RuleTarget("aura", "glow") }),
+        };
+        LoadedIngredient Ing(string id, params string[] variantIds) => new()
+        {
+            Manifest = new IngredientManifest(id, id, LayerKind.Custom, null,
+                variantIds.Select(v => new Variant(v, v, 1)).ToArray()),
+            VariantImages = variantIds.ToDictionary(v => v, _ => new Image<Rgba32>(4, 4)),
+        };
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("cat", "Cat", new[] { "bg", "aura" }, rules),
+            Ingredients = new[] { Ing("bg", "day", "night"), Ing("aura", "none", "glow") },
+        };
+        var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "Book", new Dimensions(4, 4),
+                new Collection("Book", "", "B"), new Dictionary<string, double> { ["cat"] = 100 }),
+            Recipes = new[] { recipe },
+        };
+        return (book, recipe);
+    }
+
+    /// <summary>Renders the three real Explorer detail-body views (<see cref="Views.CookBookDetailView"/>,
+    /// <see cref="Views.RecipeDetailView"/>, <see cref="Views.IngredientDetailView"/>) bound to fixture
+    /// VMs, so visual parity with docs/design/mockups/explorer.html's CookBook/Recipe/Ingredient bodies
+    /// can be checked from actual rendered frames — not imagined from XAML.</summary>
+    [AvaloniaFact]
+    public void Capture_detail_bodies()
+    {
+        if (Dir is null) return;   // inert unless explicitly capturing
+
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            var key = variant.Key.ToString()!.ToLowerInvariant();
+
+            var cookBook = ExplorerViewModelTests.TwoRecipeBook();
+            var cookBookVm = new CookBookDetailViewModel(cookBook, new FakeNotYetWired());
+            Capture(new Views.CookBookDetailView { DataContext = cookBookVm }, variant, $"cookbook-detail-{key}.png");
+
+            var (ruleBook, ruleRecipe) = RecipeWithRules();
+            using (var vm = new RecipeDetailViewModel(ruleRecipe, ruleBook, new ImageBridge(), new FakeNotYetWired(), _ => { }))
+            {
+                Capture(new Views.RecipeDetailView { DataContext = vm }, variant, $"recipe-detail-{key}.png");
+            }
+
+            var ingredientBook = ExplorerViewModelTests.TwoRecipeBook();
+            var catRecipe = ingredientBook.Recipes.First(r => r.Manifest.Id == "cat");
+            var firstIngredient = catRecipe.Ingredients[0];
+            using (var vm = new IngredientDetailViewModel(firstIngredient, catRecipe, ingredientBook, new ImageBridge(),
+                new FakeNotYetWired(), () => { }, () => false))
+            {
+                Capture(new Views.IngredientDetailView { DataContext = vm }, variant, $"ingredient-detail-{key}.png");
+            }
+        }
+    }
+
+    private static void Capture(Control view, ThemeVariant variant, string fileName)
+    {
+        var window = new Window { RequestedThemeVariant = variant, Content = view, Width = 900, Height = 600 };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        window.CaptureRenderedFrame()!.Save(Path.Combine(Dir!, fileName));
     }
 }
