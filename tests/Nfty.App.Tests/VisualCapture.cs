@@ -273,8 +273,10 @@ public class VisualCapture
         foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
         {
             var nav = new FakeNav();
-            var vm = new ExplorerViewModel(ExplorerViewModelTests.TwoRecipeBook(), nav, new FakeDialogs(),
-                new FakeNotYetWired(), new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav));
+            var dialogs = new FakeDialogs();
+            var vm = new ExplorerViewModel(ExplorerViewModelTests.TwoRecipeBook(), nav, dialogs,
+                new FakeNotYetWired(), new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav),
+                ExplorerViewModelTests.CookFactory(dialogs));
             var view = new Views.ExplorerView { DataContext = vm };
             var window = new Window { RequestedThemeVariant = variant, Content = view, Width = 900, Height = 560 };
             window.Show();
@@ -349,7 +351,7 @@ public class VisualCapture
             var key = variant.Key.ToString()!.ToLowerInvariant();
 
             var cookBook = ExplorerViewModelTests.TwoRecipeBook();
-            var cookBookVm = new CookBookDetailViewModel(cookBook, new FakeNotYetWired());
+            var cookBookVm = new CookBookDetailViewModel(cookBook, new FakeNotYetWired(), () => { });
             Capture(new Views.CookBookDetailView { DataContext = cookBookVm }, variant, $"cookbook-detail-{key}.png");
 
             var (ruleBook, ruleRecipe) = RecipeWithRules();
@@ -383,7 +385,7 @@ public class VisualCapture
             var vm = new LandingViewModel(nav, dialogs, notify, new FilePickerService(), new RecentsService(),
                 new CookBookSession(),
                 book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(),
-                    ExplorerViewModelTests.EditorFactory(nav)));
+                    ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs)));
             Capture(new Views.LandingView { DataContext = vm }, variant, $"landing-{key}.png");
         }
     }

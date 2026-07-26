@@ -12,6 +12,7 @@ public record RecipeShareRow(string Name, double SharePercent, string DnaSpaceTe
 public partial class CookBookDetailViewModel : ViewModelBase
 {
     private readonly INotYetWired _notify;
+    private readonly Action _cook;
 
     public string Name { get; }
     public string Symbol { get; }
@@ -22,9 +23,10 @@ public partial class CookBookDetailViewModel : ViewModelBase
     public string UniqueDnaText { get; }
     public IReadOnlyList<RecipeShareRow> Recipes { get; }
 
-    public CookBookDetailViewModel(LoadedCookBook book, INotYetWired notify)
+    public CookBookDetailViewModel(LoadedCookBook book, INotYetWired notify, Action cook)
     {
         _notify = notify;
+        _cook = cook;
         Name = book.Manifest.Name;
         Symbol = book.Manifest.Collection.Symbol;
         CanvasText = $"{book.Manifest.Canvas.Width}x{book.Manifest.Canvas.Height}";
@@ -53,5 +55,5 @@ public partial class CookBookDetailViewModel : ViewModelBase
         return Color.FromRgb(rgb.R, rgb.G, rgb.B);
     }
 
-    [RelayCommand] private void Cook() => _notify.Report("Cook");
+    [RelayCommand] private void Cook() => _cook();
 }

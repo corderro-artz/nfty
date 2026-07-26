@@ -18,6 +18,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     private readonly IImageBridge _bridge;
     private readonly LoadedCookBook _book;
     private readonly Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel> _editorFactory;
+    private readonly Func<LoadedCookBook, CookDialogViewModel> _cookFactory;
 
     [ObservableProperty] private ExplorerNode? _selectedNode;
     [ObservableProperty] private ViewModelBase? _currentDetail;
@@ -43,10 +44,12 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
 
     public ExplorerViewModel(LoadedCookBook book, INavigationService nav, IDialogService dialogs,
         INotYetWired notify, IImageBridge bridge,
-        Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel> editorFactory)
+        Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel> editorFactory,
+        Func<LoadedCookBook, CookDialogViewModel> cookFactory)
     {
         _book = book; _nav = nav; _dialogs = dialogs; _notify = notify; _bridge = bridge;
         _editorFactory = editorFactory;
+        _cookFactory = cookFactory;
         Root = BuildTree(book);
         RebuildCrumbs();
     }
@@ -73,7 +76,8 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         (CurrentDetail as IDisposable)?.Dispose();
         CurrentDetail = value?.Kind switch
         {
-            ExplorerNodeKind.CookBook => new CookBookDetailViewModel(_book, _notify),
+            ExplorerNodeKind.CookBook => new CookBookDetailViewModel(_book, _notify,
+                () => _dialogs.ShowAsync<object>(_cookFactory(_book))),
             ExplorerNodeKind.Recipe => new RecipeDetailViewModel((LoadedRecipe)value!.Domain!, _book, _bridge, _notify,
                 id => OpenIngredientCommand.Execute(id)),
             ExplorerNodeKind.Ingredient => value!.Domain is (LoadedRecipe r, LoadedIngredient i)

@@ -33,13 +33,20 @@ public static class ServiceRegistration
                 sp.GetRequiredService<INavigationService>(),
                 sp.GetRequiredService<INotYetWired>()));
 
+        services.AddSingleton<Func<LoadedCookBook, CookDialogViewModel>>(sp =>
+            book => new CookDialogViewModel(book,
+                sp.GetRequiredService<IFilePickerService>(),
+                sp.GetRequiredService<IFolderRevealer>(),
+                sp.GetRequiredService<IDialogService>()));
+
         services.AddSingleton<Func<LoadedCookBook, ExplorerViewModel>>(sp =>
             book => new ExplorerViewModel(book,
                 sp.GetRequiredService<INavigationService>(),
                 sp.GetRequiredService<IDialogService>(),
                 sp.GetRequiredService<INotYetWired>(),
                 sp.GetRequiredService<IImageBridge>(),
-                sp.GetRequiredService<Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel>>()));
+                sp.GetRequiredService<Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel>>(),
+                sp.GetRequiredService<Func<LoadedCookBook, CookDialogViewModel>>()));
 
         // Further VM registrations are added incrementally by the task that creates each
         // ViewModel (see Tasks 12-13).

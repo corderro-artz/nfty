@@ -14,7 +14,7 @@ public class CookBookDetailViewModelTests
     public void Exposes_identity_counts_and_unique_dna()
     {
         var book = ExplorerViewModelTests.TwoRecipeBook();   // cat[bg,aura]+dog[body], custom kind, 1 variant each
-        var vm = new CookBookDetailViewModel(book, new FakeNotYetWired());
+        var vm = new CookBookDetailViewModel(book, new FakeNotYetWired(), () => { });
         Assert.Equal("VaporPets", vm.Name);
         Assert.Equal("8x8", vm.CanvasText);
         Assert.Equal(2, vm.RecipeCount);
@@ -26,20 +26,21 @@ public class CookBookDetailViewModelTests
         Assert.False(string.IsNullOrEmpty(vm.UniqueDnaText));
     }
 
-    [Fact]
-    public void Cook_still_reports_not_yet_wired()
+    [AvaloniaFact]
+    public void Cook_invokes_the_cook_action()
     {
-        var n = new FakeNotYetWired();
-        new CookBookDetailViewModel(ExplorerViewModelTests.TwoRecipeBook(), n).CookCommand.Execute(null);
-        Assert.Equal("Cook", n.Last);
+        bool cooked = false;
+        var vm = new CookBookDetailViewModel(ExplorerViewModelTests.TwoRecipeBook(), new FakeNotYetWired(), () => cooked = true);
+        vm.CookCommand.Execute(null);
+        Assert.True(cooked);
     }
 
     [AvaloniaFact]
     public void Recipe_segment_colour_is_deterministic_per_id()
     {
         var book = ExplorerViewModelTests.TwoRecipeBook();
-        var vm1 = new CookBookDetailViewModel(book, new FakeNotYetWired());
-        var vm2 = new CookBookDetailViewModel(book, new FakeNotYetWired());
+        var vm1 = new CookBookDetailViewModel(book, new FakeNotYetWired(), () => { });
+        var vm2 = new CookBookDetailViewModel(book, new FakeNotYetWired(), () => { });
         // same recipe ids ⇒ identical segment colours across instances
         Assert.Equal(vm1.Recipes.Select(r => r.SegmentColor), vm2.Recipes.Select(r => r.SegmentColor));
         // distinct recipes ⇒ distinct hues (2-recipe fixture)

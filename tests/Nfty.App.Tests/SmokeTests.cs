@@ -17,13 +17,14 @@ public class SmokeTests
         var notify = new FakeNotYetWired();
         var nav = new FakeNav();
         var editorFactory = ExplorerViewModelTests.EditorFactory(nav);
+        var cookFactory = ExplorerViewModelTests.CookFactory(dialogs);
         var smokeBook = ExplorerViewModelTests.TwoRecipeBook();
         var cat = smokeBook.Recipes.First(r => r.Manifest.Id == "cat");
         ViewModelBase[] vms =
         [
             new LandingViewModel(nav, dialogs, notify, new FilePickerService(), new RecentsService(),
-                new CookBookSession(), book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(), editorFactory)),
-            new ExplorerViewModel(smokeBook, nav, dialogs, notify, new ImageBridge(), editorFactory),
+                new CookBookSession(), book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(), editorFactory, cookFactory)),
+            new ExplorerViewModel(smokeBook, nav, dialogs, notify, new ImageBridge(), editorFactory, cookFactory),
             editorFactory(cat.Ingredients[0], cat, smokeBook),
             new HelpViewModel(dialogs),
             new NewCookBookViewModel(dialogs, notify),
@@ -47,7 +48,8 @@ public class SmokeTests
         var nav = new FakeNav(); var notify = new FakeNotYetWired();
         var vm = new LandingViewModel(nav, dialogs, notify,
             new FilePickerService(), new RecentsService(), new CookBookSession(),
-            book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav)));
+            book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav),
+                ExplorerViewModelTests.CookFactory(dialogs)));
         vm.NewCookBookCommand.Execute(null);
         Assert.IsType<NewCookBookViewModel>(dialogs.Active);
         ((NewCookBookViewModel)dialogs.Active!).CancelCommand.Execute(null);
