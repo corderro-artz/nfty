@@ -213,17 +213,19 @@
     <Setter Property="Padding" Value="6,2" />
   </Style>
 
-  <!-- Explorer tree: kind-coloured dot on ingredient nodes (mockup .kmark, explorer.html:123-127). -->
-  <Style Selector="Border.kmark">
-    <Setter Property="Width" Value="8" />
-    <Setter Property="Height" Value="8" />
-    <Setter Property="CornerRadius" Value="8" />
+  <!-- Explorer tree: kind-coloured glyph (D/S/C) on ingredient nodes (mockup .kmark, explorer.html:123-127). -->
+  <Style Selector="TextBlock.kmark">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Width" Value="13" />
+    <Setter Property="TextAlignment" Value="Center" />
     <Setter Property="VerticalAlignment" Value="Center" />
-    <Setter Property="Background" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
-  <Style Selector="Border.kmark.kdyn"><Setter Property="Background" Value="{DynamicResource KindDynamicBrush}" /></Style>
-  <Style Selector="Border.kmark.kstat"><Setter Property="Background" Value="{DynamicResource KindStaticBrush}" /></Style>
-  <Style Selector="Border.kmark.kcust"><Setter Property="Background" Value="{DynamicResource KindCustomBrush}" /></Style>
+  <Style Selector="TextBlock.kmark.kdyn"><Setter Property="Foreground" Value="{DynamicResource KindDynamicBrush}" /></Style>
+  <Style Selector="TextBlock.kmark.kstat"><Setter Property="Foreground" Value="{DynamicResource KindStaticBrush}" /></Style>
+  <Style Selector="TextBlock.kmark.kcust"><Setter Property="Foreground" Value="{DynamicResource KindCustomBrush}" /></Style>
 
   <!-- Explorer tree: branch guide line (mockup .branch border-left, explorer.html:186-190). Fluent's
        TreeViewItem template (confirmed against the 11.2.3 source) wraps children in a bare

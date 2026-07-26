@@ -43,11 +43,12 @@
           <TreeDataTemplate x:DataType="models:ExplorerNode" ItemsSource="{Binding Children}">
             <StackPanel Orientation="Horizontal" Spacing="8">
               <Border Classes="guide" IsVisible="{Binding !IsRoot}" />
-              <Border Classes="kmark"
-                      Classes.kdyn="{Binding IsDynamic}"
-                      Classes.kstat="{Binding IsStatic}"
-                      Classes.kcust="{Binding IsCustom}"
-                      IsVisible="{Binding LayerKind, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
+              <TextBlock Classes="kmark"
+                         Classes.kdyn="{Binding IsDynamic}"
+                         Classes.kstat="{Binding IsStatic}"
+                         Classes.kcust="{Binding IsCustom}"
+                         Text="{Binding KindMark}"
+                         IsVisible="{Binding LayerKind, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
               <TextBlock Text="{Binding Name}" Classes.root="{Binding IsRoot}" VerticalAlignment="Center" />
             </StackPanel>
           </TreeDataTemplate>
