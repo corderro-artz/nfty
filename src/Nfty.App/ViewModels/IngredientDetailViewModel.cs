@@ -88,21 +88,21 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     private static IReadOnlyList<ColorwayAxis> BuildAxes(IngredientManifest m)
     {
         if (m.Colorization is null)
-            return new[] { new ColorwayAxis("Colour", "no colorize · composited as-is", true) };
+            return new[] { new ColorwayAxis("COLOUR", "no colorize · composited as-is", true) };
         var c = m.Colorization;
         var range = c.Entries.FirstOrDefault(e => e.Range is not null)?.Range;
         var list = new List<ColorwayAxis>();
         if (range is not null)
         {
-            list.Add(new ColorwayAxis("Hue", $"{range.HueMin:0}–{range.HueMax:0}°", false));
-            list.Add(new ColorwayAxis("Sat", $"{range.SatMin:0}–{range.SatMax:0}%", false));
+            list.Add(new ColorwayAxis("HUE", $"{range.HueMin:0}–{range.HueMax:0}°", false));
+            list.Add(new ColorwayAxis("SAT", $"{range.SatMin:0}–{range.SatMax:0}%", false));
         }
         else
         {
             var fixedSpec = c.Entries.FirstOrDefault(e => e.Fixed is not null)?.Fixed;
-            if (fixedSpec is not null) list.Add(new ColorwayAxis("Colour", fixedSpec, false));
+            if (fixedSpec is not null) list.Add(new ColorwayAxis("COLOUR", fixedSpec, false));
         }
-        list.Add(new ColorwayAxis("Value", "← value-map", true));
+        list.Add(new ColorwayAxis("VALUE", "← value-map", true));
         return list;
     }
 
