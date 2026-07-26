@@ -30,6 +30,7 @@ public class SmokeTests
             new NewRecipeViewModel(dialogs, notify),
             new NewIngredientViewModel(dialogs, notify),
             new ErrorDialogViewModel(dialogs, "Error", "Could not open the cookbook."),
+            new CookDialogViewModel(smokeBook, new FilePickerService(), new NoopFolderRevealer(), dialogs),
         ];
         foreach (var vm in vms)
         {
