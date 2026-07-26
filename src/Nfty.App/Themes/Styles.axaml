@@ -212,4 +212,39 @@
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
     <Setter Property="Padding" Value="6,2" />
   </Style>
+
+  <!-- Explorer tree: kind-coloured dot on ingredient nodes (mockup .kmark, explorer.html:123-127). -->
+  <Style Selector="Border.kmark">
+    <Setter Property="Width" Value="8" />
+    <Setter Property="Height" Value="8" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Background" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="Border.kmark.kdyn"><Setter Property="Background" Value="{DynamicResource KindDynamicBrush}" /></Style>
+  <Style Selector="Border.kmark.kstat"><Setter Property="Background" Value="{DynamicResource KindStaticBrush}" /></Style>
+  <Style Selector="Border.kmark.kcust"><Setter Property="Background" Value="{DynamicResource KindCustomBrush}" /></Style>
+
+  <!-- Explorer tree: branch guide line (mockup .branch border-left, explorer.html:186-190). Fluent's
+       TreeViewItem template (confirmed against the 11.2.3 source) wraps children in a bare
+       ItemsPresenter with no bordered container to style, so this is realised as a leading Border
+       in the node's own DataTemplate (ExplorerView.axaml) instead of a template-part override —
+       one guide segment per non-root row rather than a recursive per-depth stack, which is enough
+       for this tree's two-level (Recipe/Ingredient) nesting. The "TreeViewItem:pointerover" prefix
+       is a plain descendant selector (not "/template/"), so it reaches into the row's own
+       DataTemplate content the same way any "Parent:state Child" selector would. -->
+  <Style Selector="Border.guide">
+    <Setter Property="Width" Value="1" />
+    <Setter Property="VerticalAlignment" Value="Stretch" />
+    <Setter Property="Background" Value="{DynamicResource GuideBrush}" />
+  </Style>
+  <Style Selector="TreeViewItem:pointerover Border.guide">
+    <Setter Property="Background" Value="{DynamicResource GuideHiBrush}" />
+  </Style>
+
+  <!-- Explorer tree: root (CookBook) node label (mockup .node.root .nlabel, explorer.html:200). -->
+  <Style Selector="TextBlock.root">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
 </Styles>

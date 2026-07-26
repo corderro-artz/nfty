@@ -172,4 +172,48 @@
       <Setter Property="Stroke" Value="{DynamicResource AccentBrush}" />
     </Style>
   </ControlTheme>
+
+  <!-- ================= TreeViewItem ================= -->
+  <!-- Mechanism confirmed by reading the actual Fluent 11.2.3 source (not just the generic
+       treeview-how-to.md doc example), pulled from
+       github.com/AvaloniaUI/Avalonia/blob/11.2.3/src/Avalonia.Themes.Fluent/Controls/TreeViewItem.xaml:
+       the template is
+         StackPanel > { Border#PART_LayoutRoot > Grid#PART_Header { Panel#PART_ExpandCollapseChevronContainer
+           > ToggleButton#PART_ExpandCollapseChevron, ContentPresenter#PART_HeaderPresenter },
+           ItemsPresenter#PART_ItemsPresenter }
+       Background/BorderBrush/CornerRadius are TemplateBound onto Border#PART_LayoutRoot at rest,
+       but Fluent's own nested Styles repaint that same Border's Background/BorderBrush at Style
+       priority for :pointerover/:selected/:pressed/:disabled (PART_HeaderPresenter only ever gets
+       a Foreground change) — so, exactly like Button's PART_ContentPresenter elsewhere in this
+       file, our state overrides must target Border#PART_LayoutRoot, not a bare
+       "TreeViewItem:selected" selector (which would be silently beaten by Fluent's own part-level
+       style). CornerRadius reaches PART_LayoutRoot via a plain TemplateBinding, so a top-level
+       Setter is enough for that one property. The 2px left accent bar is realised as an inset
+       BoxShadow on the same Border/state — Avalonia's BoxShadow grammar accepts a leading "inset"
+       keyword (confirmed in the docs), the same technique the mockup itself uses
+       (the mockup's own "box-shadow: inset 2px 0 0" on its accent colour), so no DataTemplate workaround was needed for
+       the bar. (The branch guide line *does* need a DataTemplate workaround — see the "Border.guide"
+       style in Styles.axaml — because Fluent's PART_ItemsPresenter has no bordered wrapper to
+       style.) Indentation and the expander toggle are left untouched: PART_Header's Margin
+       (bound to Level via Fluent's own MarginMultiplierConverter) and PART_ExpandCollapseChevron
+       already match the mockup's indentation/caret closely enough with no override needed. -->
+  <ControlTheme x:Key="{x:Type TreeViewItem}" TargetType="TreeViewItem"
+                BasedOn="{StaticResource {x:Type TreeViewItem}}">
+    <Setter Property="Padding" Value="8,6" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="Background" Value="Transparent" />
+
+    <Style Selector="^ /template/ Border#PART_LayoutRoot:pointerover">
+      <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    </Style>
+
+    <Style Selector="^:selected /template/ Border#PART_LayoutRoot">
+      <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+      <Setter Property="BoxShadow" Value="{DynamicResource AccentBarShadow}" />
+    </Style>
+    <Style Selector="^:selected /template/ Border#PART_LayoutRoot:pointerover">
+      <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+      <Setter Property="BoxShadow" Value="{DynamicResource AccentBarShadow}" />
+    </Style>
+  </ControlTheme>
 </ResourceDictionary>

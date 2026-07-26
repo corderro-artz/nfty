@@ -1,8 +1,10 @@
+using System;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
 using Avalonia.Controls.Primitives;
+using Avalonia.Controls.Templates;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
@@ -11,6 +13,8 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Nfty.App.Models;
+using Nfty.Core.Model;
 using Xunit;
 
 namespace Nfty.App.Tests;
@@ -349,5 +353,69 @@ public class ThemeResourceTests
         Assert.Equal(
             ((ISolidColorBrush)Resolve("LineStrongBrush", ThemeVariant.Light)!).Color,
             ((ISolidColorBrush)ring.Stroke!).Color);
+    }
+
+    // Style-load guard for Task 4's TreeViewItem ControlTheme (Controls.axaml) + node-row styles
+    // (Styles.axaml Border.guide/Border.kmark/TextBlock.root). Mirrors ExplorerView's node
+    // DataTemplate with a code-built FuncTreeDataTemplate (rather than parsing the XAML view,
+    // which needs a full ExplorerViewModel) so the same Classes end up on the same element types
+    // Fluent's TreeViewItem template actually contains — a bad selector or an unresolvable
+    // DynamicResource token in either file throws here instead of silently no-op-ing. Selecting
+    // the child item also exercises the ControlTheme's ":selected /template/ Border#PART_LayoutRoot"
+    // override (the accent-wash background + inset accent-bar BoxShadow), not just the rest state.
+    [AvaloniaFact]
+    public void Tree_with_kind_marks_and_guide_renders_and_selects_without_throwing()
+    {
+        var child = new ExplorerNode("igt1", "Aura", ExplorerNodeKind.Ingredient,
+            Array.Empty<ExplorerNode>(), null, LayerKind.Dynamic);
+        var root = new ExplorerNode("cbk1", "VaporPets", ExplorerNodeKind.CookBook,
+            new[] { child }, null);
+
+        var tree = new TreeView
+        {
+            ItemsSource = new[] { root },
+            ItemTemplate = new FuncTreeDataTemplate<ExplorerNode>(
+                (node, _) =>
+                {
+                    var guide = new Border { Classes = { "guide" }, IsVisible = !node.IsRoot };
+                    var kmark = new Border { Classes = { "kmark" }, IsVisible = node.LayerKind is not null };
+                    if (node.IsDynamic) kmark.Classes.Add("kdyn");
+                    if (node.IsStatic) kmark.Classes.Add("kstat");
+                    if (node.IsCustom) kmark.Classes.Add("kcust");
+                    var label = new TextBlock { Text = node.Name, VerticalAlignment = VerticalAlignment.Center };
+                    if (node.IsRoot) label.Classes.Add("root");
+
+                    var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+                    panel.Children.Add(guide);
+                    panel.Children.Add(kmark);
+                    panel.Children.Add(label);
+                    return panel;
+                },
+                node => node.Children),
+        };
+
+        StyledHost.Show(tree);
+
+        // The root container starts collapsed (default IsExpanded=false), so the child isn't
+        // realised until it's expanded.
+        var rootContainer = tree.GetVisualDescendants().OfType<TreeViewItem>().Single();
+        rootContainer.IsExpanded = true;
+        Dispatcher.UIThread.RunJobs();
+
+        var containers = tree.GetVisualDescendants().OfType<TreeViewItem>().ToList();
+        Assert.Equal(2, containers.Count);
+
+        tree.SelectedItem = child;
+        Dispatcher.UIThread.RunJobs();
+
+        var childContainer = containers.Single(c => ReferenceEquals(c.DataContext, child));
+        var layoutRoot = childContainer.GetVisualDescendants().OfType<Border>()
+            .First(b => b.Name == "PART_LayoutRoot");
+
+        Assert.True(childContainer.IsSelected);
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("AccentWashBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)layoutRoot.Background!).Color);
+        Assert.True(layoutRoot.BoxShadow.Count > 0 && layoutRoot.BoxShadow[0].IsInset);
     }
 }

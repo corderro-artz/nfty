@@ -13,4 +13,8 @@ public record ExplorerNode(string Id, string Name, ExplorerNodeKind Kind,
     public bool IsDynamic => LayerKind == Nfty.Core.Model.LayerKind.Dynamic;
     public bool IsStatic => LayerKind == Nfty.Core.Model.LayerKind.Static;
     public bool IsCustom => LayerKind == Nfty.Core.Model.LayerKind.Custom;
+
+    /// <summary>True for the single top-level CookBook node. Drives the mono/SemiBold root label
+    /// style and hides the branch guide line (a root has no parent branch to hang a guide off).</summary>
+    public bool IsRoot => Kind == ExplorerNodeKind.CookBook;
 }
