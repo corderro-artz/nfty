@@ -12,6 +12,8 @@ namespace Nfty.App.ViewModels;
 
 public record VariantRow(string Id, string Name, double Weight, double WithinPercent, double OverallPercent, Bitmap Thumbnail);
 
+public record ColorwayAxis(string Label, string Value, bool Derived);
+
 public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
 {
     private readonly INotYetWired _notify;
@@ -31,6 +33,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     public string KindText { get; }
     public string ColorwaysText { get; }
     public IReadOnlyList<Bitmap> Colorways { get; }
+    public IReadOnlyList<ColorwayAxis> ColorwayAxes { get; }
 
     /// <summary>Variant rows ordered by the active sort column: "Weight" (heaviest first) or,
     /// by default, "Variant" (name, ordinal).</summary>
@@ -46,6 +49,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
         Name = ing.Manifest.Name;
         KindText = ing.Manifest.Kind.ToString();
         ColorwaysText = ColorwaysLabel(ing.Manifest);
+        ColorwayAxes = BuildAxes(ing.Manifest);
 
         var traits = RarityCalculator.Compute(book).Traits
             .Where(t => t.RecipeId == recipe.Manifest.Id && t.IngredientId == ing.Manifest.Id)
@@ -80,6 +84,27 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
         LayerKind.Static => "HSV · fixed  (value ← value-map)",
         _ => "no colorize · composited as-is",
     };
+
+    private static IReadOnlyList<ColorwayAxis> BuildAxes(IngredientManifest m)
+    {
+        if (m.Colorization is null)
+            return new[] { new ColorwayAxis("Colour", "no colorize · composited as-is", true) };
+        var c = m.Colorization;
+        var range = c.Entries.FirstOrDefault(e => e.Range is not null)?.Range;
+        var list = new List<ColorwayAxis>();
+        if (range is not null)
+        {
+            list.Add(new ColorwayAxis("Hue", $"{range.HueMin:0}–{range.HueMax:0}°", false));
+            list.Add(new ColorwayAxis("Sat", $"{range.SatMin:0}–{range.SatMax:0}%", false));
+        }
+        else
+        {
+            var fixedSpec = c.Entries.FirstOrDefault(e => e.Fixed is not null)?.Fixed;
+            if (fixedSpec is not null) list.Add(new ColorwayAxis("Colour", fixedSpec, false));
+        }
+        list.Add(new ColorwayAxis("Value", "← value-map", true));
+        return list;
+    }
 
     public void RaiseCanExecuteChanged() => DeleteVariantCommand.NotifyCanExecuteChanged();
 

@@ -137,4 +137,14 @@ public class IngredientDetailViewModelTests
         Assert.NotNull(vm.Hero);   // rebuilt; old disposed internally
         Assert.NotSame(first, vm.Hero);   // each render builds a fresh Bitmap instance
     }
+
+    [AvaloniaFact]
+    public void Colorway_axes_reflect_the_kind()
+    {
+        var (book, recipe, ing) = Fixture();
+        using var vm = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(),
+            new FakeNotYetWired(), () => { }, () => false);
+        // custom → a single "composited as-is" axis (no H/S)
+        Assert.Contains(vm.ColorwayAxes, a => a.Value.Contains("composited as-is"));
+    }
 }
