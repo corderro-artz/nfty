@@ -32,4 +32,11 @@ public class ServiceTests
         Assert.Equal("Open CookBook", n.Last);
         Assert.Equal("Open CookBook", seen);
     }
+
+    [Fact]
+    public void NoopFolderRevealer_Reveal_does_not_throw()
+    {
+        var revealer = new NoopFolderRevealer();
+        revealer.Reveal("x");  // Must not throw
+    }
 }
