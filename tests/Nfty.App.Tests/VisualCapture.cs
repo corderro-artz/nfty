@@ -369,6 +369,25 @@ public class VisualCapture
         }
     }
 
+    [AvaloniaFact]
+    public void Capture_landing()
+    {
+        if (Dir is null) return;   // inert unless explicitly capturing
+
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            var key = variant.Key.ToString()!.ToLowerInvariant();
+            var nav = new FakeNav();
+            var dialogs = new FakeDialogs();
+            var notify = new FakeNotYetWired();
+            var vm = new LandingViewModel(nav, dialogs, notify, new FilePickerService(), new RecentsService(),
+                new CookBookSession(),
+                book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(),
+                    ExplorerViewModelTests.EditorFactory(nav)));
+            Capture(new Views.LandingView { DataContext = vm }, variant, $"landing-{key}.png");
+        }
+    }
+
     private static void Capture(Control view, ThemeVariant variant, string fileName)
     {
         var window = new Window { RequestedThemeVariant = variant, Content = view, Width = 900, Height = 600 };

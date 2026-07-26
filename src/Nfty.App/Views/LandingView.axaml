@@ -11,21 +11,46 @@
     <KeyBinding Gesture="Ctrl+I" Command="{Binding ImportCommand}" />
   </UserControl.KeyBindings>
   <Grid ColumnDefinitions="*,*" Margin="38,34">
-    <StackPanel Grid.Column="0" Spacing="7" MaxWidth="272">
+    <StackPanel Grid.Column="0" Spacing="7" MaxWidth="300">
       <TextBlock Text="nfty" FontSize="30" FontWeight="Bold" />
       <TextBlock Text="Asset Generator" Classes="muted" />
+
       <TextBlock Text="CREATE" Classes="muted" Margin="0,12,0,4" />
-      <Button Classes="accent" Content="＋ New CookBook  ⌘N" Command="{Binding NewCookBookCommand}" />
-      <Button Classes="tbtn" Content="＋ New Kitchen…" Command="{Binding NewKitchenCommand}" />
-      <StackPanel Orientation="Horizontal" Spacing="7">
-        <Button Classes="tbtn" Content="Recipe" Command="{Binding NewRecipeCommand}" />
-        <Button Classes="tbtn" Content="Ingredient" Command="{Binding NewIngredientCommand}" />
-      </StackPanel>
+      <Button Classes="landing accent" Command="{Binding NewCookBookCommand}">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0" Classes="lbl" Text="＋  New CookBook" />
+          <TextBlock Grid.Column="1" Classes="hk on-accent" Text="⌘N" />
+        </Grid>
+      </Button>
+      <Button Classes="landing tbtn" Command="{Binding NewKitchenCommand}">
+        <Grid ColumnDefinitions="*,Auto"><TextBlock Grid.Column="0" Classes="lbl" Text="＋  New Kitchen…" /></Grid>
+      </Button>
+      <Button Classes="landing tbtn" Command="{Binding NewRecipeCommand}">
+        <Grid ColumnDefinitions="*,Auto"><TextBlock Grid.Column="0" Classes="lbl" Text="＋  New Recipe" /></Grid>
+      </Button>
+      <Button Classes="landing tbtn" Command="{Binding NewIngredientCommand}">
+        <Grid ColumnDefinitions="*,Auto"><TextBlock Grid.Column="0" Classes="lbl" Text="＋  New Ingredient" /></Grid>
+      </Button>
+
       <TextBlock Text="OPEN" Classes="muted" Margin="0,12,0,4" />
-      <Button Classes="tbtn" Content="↗ Open CookBook…  ⌘O" Command="{Binding OpenCookBookCommand}" />
-      <Button Classes="tbtn" Content="↧ Import…  ⌘I" Command="{Binding ImportCommand}" />
-      <Button Classes="tbtn" Content="↗ Open a cooked .set…" Command="{Binding OpenSetCommand}" />
-      <Button Classes="tbtn" Content="New to nfty? The cooking metaphor →" Command="{Binding ShowHelpCommand}" />
+      <Button Classes="landing tbtn" Command="{Binding OpenCookBookCommand}">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0" Classes="lbl" Text="↗  Open CookBook…" />
+          <TextBlock Grid.Column="1" Classes="hk" Text="⌘O" />
+        </Grid>
+      </Button>
+      <Button Classes="landing tbtn" Command="{Binding ImportCommand}">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0" Classes="lbl" Text="↧  Import…" />
+          <TextBlock Grid.Column="1" Classes="hk" Text="⌘I" />
+        </Grid>
+      </Button>
+      <Button Classes="landing tbtn" Command="{Binding OpenSetCommand}">
+        <Grid ColumnDefinitions="*,Auto"><TextBlock Grid.Column="0" Classes="lbl" Text="↗  Open a cooked .set…" /></Grid>
+      </Button>
+      <Button Classes="landing tbtn" Command="{Binding ShowHelpCommand}">
+        <Grid ColumnDefinitions="*,Auto"><TextBlock Grid.Column="0" Classes="lbl" Text="New to nfty? The cooking metaphor  →" /></Grid>
+      </Button>
     </StackPanel>
     <StackPanel Grid.Column="1" Spacing="2">
       <TextBlock Text="RECENT" Classes="muted" />
