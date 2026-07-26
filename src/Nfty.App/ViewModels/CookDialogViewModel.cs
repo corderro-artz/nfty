@@ -22,14 +22,16 @@ public partial class CookDialogViewModel : ViewModelBase
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(CookCommand))] private int _count = 50;
     [ObservableProperty] private string _seed = Guid.NewGuid().ToString("N")[..8];
     [ObservableProperty] private bool _pack;
-    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(CookCommand))] [NotifyCanExecuteChangedFor(nameof(CancelCommand))] private bool _isRunning;
+    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(CookCommand))] [NotifyCanExecuteChangedFor(nameof(CancelCommand))] [NotifyPropertyChangedFor(nameof(ShowForm))] private bool _isRunning;
     [ObservableProperty] private double _progress;
     [ObservableProperty] private string _phaseText = "";
-    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(RevealCommand))] private bool _isDone;
+    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(RevealCommand))] [NotifyPropertyChangedFor(nameof(ShowForm))] private bool _isDone;
     [ObservableProperty] private string _resultText = "";
 
     public CookDialogViewModel(LoadedCookBook book, IFilePickerService picker, IFolderRevealer revealer, IDialogService dialogs)
     { _book = book; _picker = picker; _revealer = revealer; _dialogs = dialogs; }
+
+    public bool ShowForm => !IsRunning && !IsDone;
 
     private bool CanCook() => !IsRunning && Count > 0;
 
