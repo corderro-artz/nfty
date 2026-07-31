@@ -30,6 +30,13 @@
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
+
+        <TextBlock Text="Name" Classes="muted" Margin="0,8,0,0" />
+        <TextBox Text="{Binding SelectedName}"
+                 IsEnabled="{Binding SelectedVariant, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        <TextBlock Text="Weight" Classes="muted" Margin="0,6,0,0" />
+        <NumericUpDown Value="{Binding SelectedWeight}" Minimum="0.01" Increment="1"
+                       IsEnabled="{Binding SelectedVariant, Converter={x:Static ObjectConverters.IsNotNull}}" />
       </StackPanel>
 
       <!-- Tool strip -->
