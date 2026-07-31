@@ -212,9 +212,12 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     private void SyncSelectedFields()
     {
         _syncingSelection = true;
-        SelectedName = SelectedVariant?.Name ?? "";
-        SelectedWeight = SelectedVariant?.Weight ?? 1;
-        _syncingSelection = false;
+        try
+        {
+            SelectedName = SelectedVariant?.Name ?? "";
+            SelectedWeight = SelectedVariant?.Weight ?? 1;
+        }
+        finally { _syncingSelection = false; }   // never latch the guard on if an assignment throws
     }
 
     partial void OnHueMinChanged(double value) => RebuildSurfaces();
