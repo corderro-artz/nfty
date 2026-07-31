@@ -60,6 +60,13 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private Bitmap _preview = default!;
     private int _previewSalt;
 
+    // Inline rename/reweight of the selected variant. Mirror the selection; write valid changes
+    // through to the draft + filmstrip. _syncingSelection suppresses write-back while we push a new
+    // selection's values into these fields.
+    private bool _syncingSelection;
+    [ObservableProperty] private string _selectedName = "";
+    [ObservableProperty] private double _selectedWeight = 1;
+
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
     private bool _isDirty;
@@ -179,7 +186,37 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         UndoCommand?.NotifyCanExecuteChanged();
         RedoCommand?.NotifyCanExecuteChanged();
         DuplicateVariantCommand?.NotifyCanExecuteChanged();
+        SyncSelectedFields();
     }
+
+    partial void OnSelectedNameChanged(string value)
+    {
+        if (_syncingSelection) return;
+        if (ActiveDraft is not { } d) return;
+        if (string.IsNullOrWhiteSpace(value)) { SyncSelectedFields(); return; }   // reject → restore
+        d.Name = value;
+        SelectedVariant!.Name = value;      // observable → filmstrip updates in place
+        IsDirty = true;
+    }
+
+    partial void OnSelectedWeightChanged(double value)
+    {
+        if (_syncingSelection) return;
+        if (ActiveDraft is not { } d) return;
+        if (value <= 0) { SyncSelectedFields(); return; }                         // reject → restore
+        d.Weight = value;
+        SelectedVariant!.Weight = value;    // observable → filmstrip updates in place
+        IsDirty = true;
+    }
+
+    private void SyncSelectedFields()
+    {
+        _syncingSelection = true;
+        SelectedName = SelectedVariant?.Name ?? "";
+        SelectedWeight = SelectedVariant?.Weight ?? 1;
+        _syncingSelection = false;
+    }
+
     partial void OnHueMinChanged(double value) => RebuildSurfaces();
     partial void OnHueMaxChanged(double value) => RebuildSurfaces();
     partial void OnSatMinChanged(double value) => RebuildSurfaces();

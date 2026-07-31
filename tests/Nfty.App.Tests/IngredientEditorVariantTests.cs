@@ -115,6 +115,52 @@ public class IngredientEditorVariantTests
         finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
     }
 
+    [AvaloniaFact]
+    public void Rename_writes_through_to_draft_and_filmstrip_and_rejects_empty()
+    {
+        var vm = Editor(out var session, out var path);
+        try
+        {
+            vm.SelectedName = "Glowy";
+            Assert.Equal("Glowy", vm.SelectedVariant!.Name);        // filmstrip updated
+            Assert.True(vm.IsDirty);
+            vm.SelectedName = "   ";                                // invalid → rejected
+            Assert.Equal("Glowy", vm.SelectedVariant!.Name);       // unchanged
+        }
+        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
+    }
+
+    [AvaloniaFact]
+    public void Reweight_writes_through_and_rejects_non_positive()
+    {
+        var vm = Editor(out var session, out var path);
+        try
+        {
+            vm.SelectedWeight = 3.5;
+            Assert.Equal(3.5, vm.SelectedVariant!.Weight);
+            Assert.True(vm.IsDirty);
+            vm.SelectedWeight = 0;                                  // invalid → rejected
+            Assert.Equal(3.5, vm.SelectedVariant!.Weight);
+        }
+        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
+    }
+
+    [AvaloniaFact]
+    public void Selecting_a_variant_syncs_the_name_and_weight_fields_without_dirtying()
+    {
+        var vm = Editor(out var session, out var path);
+        try
+        {
+            vm.AddVariantCommand.Execute(null);        // adds + selects "Variant 2" (dirties)
+            vm.IsDirty = false;                         // reset to observe selection sync
+            vm.SelectVariantCommand.Execute(vm.Variants[0]);
+            Assert.Equal(vm.Variants[0].Name, vm.SelectedName);
+            Assert.Equal(vm.Variants[0].Weight, vm.SelectedWeight);
+            Assert.False(vm.IsDirty);                   // pure selection sync must not dirty
+        }
+        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
+    }
+
     // Minimal confirm-returning dialog double (mirrors the one in IngredientEditorSaveTests).
     private sealed class ConfirmingDialogs : IDialogService
     {
