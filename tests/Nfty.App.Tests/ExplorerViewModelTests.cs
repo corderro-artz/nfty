@@ -1,3 +1,5 @@
+using System.IO;
+using System.Threading.Tasks;
 using Avalonia.Headless.XUnit;
 using Nfty.App.Models;
 using Nfty.App.Services;
@@ -135,5 +137,34 @@ public class ExplorerViewModelTests
         vm.SelectNodeCommand.Execute(ingredient);
         Assert.Equal(new[] { (vm.Root.Name, false, false), (recipe.Name, false, true), (ingredient.Name, true, true) },
             vm.Crumbs.Select(c => (c.Text, c.Active, c.Leading)));
+    }
+
+    [AvaloniaFact]
+    public async Task Editor_save_rebuilds_the_tree_and_reselects_the_ingredient()
+    {
+        // Dynamic on-disk book so Save is enabled (TwoRecipeBook is Custom → blocked).
+        var (path, session, recipe, ing) = IngredientEditorSaveTests.OnDisk();
+        try
+        {
+            var nav = new FakeNav();
+            var dialogs = new FakeDialogs();
+            var editorFactory = EditorFactory(nav, session, dialogs);
+            using var explorer = new ExplorerViewModel(session.Current!, nav, dialogs, new FakeNotYetWired(),
+                new ImageBridge(), editorFactory, CookFactory(dialogs));
+
+            // Select the ingredient, then open + save its editor the way the Explorer wires it.
+            var ingNode = explorer.Root.Children[0].Children[0];
+            explorer.SelectNodeCommand.Execute(ingNode);
+            var editor = editorFactory(ing, recipe, session.Current!);
+            editor.Saved += explorer.OnEditorSaved;
+            editor.ActiveTool = EditorTool.Fill; editor.BrushValue = 123;
+            editor.ApplyToolStroke(new[] { (0, 0) });
+            await editor.SaveCommand.ExecuteAsync(null);
+
+            Assert.Equal("aura", explorer.SelectedNode!.Id);          // same ingredient reselected
+            Assert.Same(session.Current, explorer.BookForTest);       // rebuilt against the saved graph
+            editor.Dispose();
+        }
+        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
     }
 }
