@@ -3,7 +3,7 @@
         xmlns:vm="using:Nfty.App.ViewModels"
         x:Class="Nfty.Desktop.MainWindow"
         x:DataType="vm:ShellViewModel"
-        Width="1180" Height="720" Title="nfty"
+        Width="1180" Height="720" MinWidth="900" MinHeight="580" Title="nfty"
         ExtendClientAreaToDecorationsHint="True" SystemDecorations="None">
   <Window.KeyBindings>
     <KeyBinding Gesture="Ctrl+OemQuestion" Command="{Binding ShowHelpCommand}" />
@@ -57,11 +57,15 @@
                    Text="{Binding Zoom, StringFormat='{}{0}%'}" />
         <Button Content="+" Command="{Binding ZoomInCommand}" Classes="icon" />
         <Button Content="?" Command="{Binding ShowHelpCommand}" Classes="icon" />
-        <!-- Bottom-right resize grip (SystemDecorations=None gives no OS resize border) -->
-        <Path x:Name="ResizeGrip" Width="14" Height="14" Margin="4,0,2,0"
-              VerticalAlignment="Center" Cursor="BottomRightCorner"
-              Stroke="{DynamicResource FgMutedBrush}" StrokeThickness="1"
-              Data="M12,4 L4,12 M12,8 L8,12" />
+        <!-- Bottom-right resize grip (SystemDecorations=None gives no OS resize border). A Border
+             with a filled Background is hit-testable across its whole rectangle — unlike a bare Path,
+             whose thin strokes are the only draggable pixels. -->
+        <Border x:Name="ResizeGrip" Width="26" Cursor="BottomRightCorner"
+                Background="Transparent" Margin="4,0,0,0">
+          <Path Width="12" Height="12" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                Margin="0,0,2,2" Stroke="{DynamicResource FgMutedBrush}" StrokeThickness="1"
+                Data="M11,4 L4,11 M11,8 L8,11" />
+        </Border>
       </StackPanel>
     </Grid>
   </Grid>
