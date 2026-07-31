@@ -19,9 +19,18 @@ namespace Nfty.App.ViewModels;
 
 public enum EditorTool { Brush, Eraser, Rectangle, Circle, Triangle, Select, Fill }
 
-/// <summary>A variant in the editor filmstrip, backed by a real loaded variant and its rendered
-/// thumbnail.</summary>
-public record EditorVariant(string Id, string Name, double Weight, Bitmap Thumbnail);
+/// <summary>A variant in the editor filmstrip. Observable so rename/reweight update the bound
+/// filmstrip entry in place (no collection-item replacement / selection churn).</summary>
+public partial class EditorVariant : ObservableObject
+{
+    public string Id { get; }
+    [ObservableProperty] private string _name;
+    [ObservableProperty] private double _weight;
+    [ObservableProperty] private Bitmap _thumbnail;
+
+    public EditorVariant(string id, string name, double weight, Bitmap thumbnail)
+    { Id = id; _name = name; _weight = weight; _thumbnail = thumbnail; }
+}
 
 /// <summary>Ingredient Editor: the canvas/colorize/preview screen reached from an Ingredient's
 /// detail pane. Wired to the real opened ingredient — the filmstrip is its actual variants with
@@ -169,6 +178,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         RebuildSurfaces();
         UndoCommand?.NotifyCanExecuteChanged();
         RedoCommand?.NotifyCanExecuteChanged();
+        DuplicateVariantCommand?.NotifyCanExecuteChanged();
     }
     partial void OnHueMinChanged(double value) => RebuildSurfaces();
     partial void OnHueMaxChanged(double value) => RebuildSurfaces();
@@ -234,11 +244,68 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private void SelectVariant(EditorVariant v) => SelectedVariant = v;
 
-    // Real draft-variant mutation (add/duplicate/delete against the ingredient's own variant
-    // list) is a later editor slice; these remain notify stubs for now.
-    [RelayCommand] private void AddVariant() => _notify.Report("Add variant");
-    [RelayCommand] private void DuplicateVariant() => _notify.Report("Duplicate variant");
-    [RelayCommand] private void DeleteVariant() => _notify.Report("Delete variant");
+    // Smallest unused "variant-N" over the draft's current ids (deterministic, no RNG).
+    private string NextVariantId()
+    {
+        for (int n = 1; ; n++) { var id = $"variant-{n}"; if (_draft.Variants.All(v => v.Id != id)) return id; }
+    }
+
+    // A filmstrip thumbnail for a draft variant's value-map — colorized like the preview for
+    // dynamic/static, grayscale for custom (a freshly added variant has no entry in
+    // _ing.VariantImages to render from, so render from the draft map like RenderPreview does).
+    private Bitmap RenderThumb(ValueMap map)
+    {
+        using var img = map.ToImage();
+        return _ing.Manifest.Colorization is null
+            ? _bridge.ToBitmap(img)
+            : VariantImagery.RenderWith(_bridge, img, Mode == LayerKind.Dynamic,
+                HueMin, HueMax, SatMin, SatMax, FixedColor, _previewSalt);
+    }
+
+    private bool CanMutateSelected() => SelectedVariant is not null;
+    private bool CanDeleteVariant() => Variants.Count > 1;
+
+    [RelayCommand]
+    private void AddVariant()
+    {
+        var vd = _draft.AddVariant(NextVariantId(), $"Variant {_draft.Variants.Count + 1}", 1);
+        _history[vd.Id] = new EditHistory();
+        var ev = new EditorVariant(vd.Id, vd.Name, vd.Weight, RenderThumb(vd.Map));
+        Variants.Add(ev);
+        SelectedVariant = ev;
+        IsDirty = true;
+        DeleteVariantCommand.NotifyCanExecuteChanged();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanMutateSelected))]
+    private void DuplicateVariant()
+    {
+        var src = ActiveDraft!;
+        var vd = _draft.DuplicateVariant(src.Id, NextVariantId(), $"{src.Name} copy");
+        _history[vd.Id] = new EditHistory();
+        var ev = new EditorVariant(vd.Id, vd.Name, vd.Weight, RenderThumb(vd.Map));
+        Variants.Add(ev);
+        SelectedVariant = ev;
+        IsDirty = true;
+        DeleteVariantCommand.NotifyCanExecuteChanged();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanDeleteVariant))]
+    private async Task DeleteVariant()
+    {
+        if (SelectedVariant is not { } target) return;
+        var ok = await _dialogs.ShowAsync<bool>(new ConfirmDialogViewModel(_dialogs,
+            "Delete variant?", $"Remove “{target.Name}” from this ingredient.", "Delete"));
+        if (!ok) return;
+        var idx = Variants.IndexOf(target);
+        _draft.RemoveVariant(target.Id);
+        _history.Remove(target.Id);
+        Variants.Remove(target);
+        target.Thumbnail.Dispose();
+        SelectedVariant = Variants.Count == 0 ? null : Variants[Math.Max(0, idx - 1)];
+        IsDirty = true;
+        DeleteVariantCommand.NotifyCanExecuteChanged();
+    }
 
     [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task Save()
