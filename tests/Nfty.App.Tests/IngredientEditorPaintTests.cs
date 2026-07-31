@@ -50,4 +50,40 @@ public class IngredientEditorPaintTests
         Assert.NotNull(vm.Preview);
         Assert.Equal(0, vm.ValueAt(2, 2));   // seeded from a blank 8x8 image → value 0
     }
+
+    [AvaloniaFact]
+    public void Brush_paints_and_undo_reverts()
+    {
+        using var vm = Editor();
+        vm.ActiveTool = EditorTool.Brush; vm.BrushValue = 200; vm.BrushSize = 1;
+        Assert.Equal(0, vm.ValueAt(4, 4));
+        vm.ApplyToolStroke(new[] { (4, 4) });
+        Assert.True(vm.ValueAt(4, 4) > 0);   // painted
+        Assert.True(vm.UndoCommand.CanExecute(null));
+        vm.UndoCommand.Execute(null);
+        Assert.Equal(0, vm.ValueAt(4, 4));   // reverted
+        Assert.True(vm.RedoCommand.CanExecute(null));
+        vm.RedoCommand.Execute(null);
+        Assert.True(vm.ValueAt(4, 4) > 0);   // re-applied
+    }
+
+    [AvaloniaFact]
+    public void Fill_changes_the_region()
+    {
+        using var vm = Editor();
+        vm.ActiveTool = EditorTool.Fill; vm.BrushValue = 150;
+        vm.ApplyToolStroke(new[] { (0, 0) });
+        Assert.Equal(150, vm.ValueAt(7, 7));   // flood filled the blank canvas
+    }
+
+    [AvaloniaFact]
+    public void History_is_per_variant()
+    {
+        using var vm = Editor();
+        vm.ActiveTool = EditorTool.Brush; vm.BrushValue = 200; vm.BrushSize = 1;
+        vm.ApplyToolStroke(new[] { (4, 4) });               // paint variant "glow"
+        Assert.True(vm.UndoCommand.CanExecute(null));
+        vm.SelectVariantCommand.Execute(vm.Variants[1]);    // switch to "spark"
+        Assert.False(vm.UndoCommand.CanExecute(null));      // spark has no history
+    }
 }

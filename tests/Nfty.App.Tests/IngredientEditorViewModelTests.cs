@@ -74,10 +74,9 @@ public class IngredientEditorViewModelTests
     }
 
     [AvaloniaFact]
-    public void Paint_and_save_report_not_yet_wired()
+    public void Save_reports_not_yet_wired()
     {
         using var vm = Make(out var n, out _);
-        vm.ApplyStrokeCommand.Execute(null); Assert.Equal("Paint", n.Last);
         vm.SaveCommand.Execute(null); Assert.Equal("Save ingredient", n.Last);
     }
 
@@ -91,11 +90,11 @@ public class IngredientEditorViewModelTests
     }
 
     [AvaloniaFact]
-    public void Undo_and_redo_report_not_yet_wired()
+    public void Undo_and_redo_are_disabled_with_no_history()
     {
-        using var vm = Make(out var n, out _);
-        vm.UndoCommand.Execute(null); Assert.Equal("Undo", n.Last);
-        vm.RedoCommand.Execute(null); Assert.Equal("Redo", n.Last);
+        using var vm = Make(out _, out _);
+        Assert.False(vm.UndoCommand.CanExecute(null));
+        Assert.False(vm.RedoCommand.CanExecute(null));
     }
 
     [AvaloniaFact]
