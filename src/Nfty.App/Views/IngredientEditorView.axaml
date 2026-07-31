@@ -56,12 +56,15 @@
 
         <TextBlock Text="Value" Classes="muted" Margin="0,8,0,0" />
         <Slider Value="{Binding BrushValue}" Minimum="0" Maximum="255" />
+
+        <TextBlock Text="Brush size" Classes="muted" Margin="0,8,0,0" />
+        <NumericUpDown Value="{Binding BrushSize}" Minimum="1" Width="110" HorizontalAlignment="Left" />
       </StackPanel>
 
       <!-- Canvas -->
       <Border Grid.Column="2" Name="CanvasHost" Background="{DynamicResource TileBrush}"
               BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1" CornerRadius="6">
-        <Image Source="{Binding Canvas}" Stretch="Uniform" Margin="12" />
+        <Image x:Name="CanvasImage" Source="{Binding Canvas}" Stretch="Uniform" Margin="12" />
       </Border>
 
       <!-- Colorize rail -->
