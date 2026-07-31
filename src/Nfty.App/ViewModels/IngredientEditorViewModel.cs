@@ -168,7 +168,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
             _ => null,   // Select — no-op this slice
         };
         if (cmd is null) return;
-        hist.Do(cmd, map);
+        if (!hist.Do(cmd, map)) return;   // no-op edit changed nothing — don't dirty history or rebuild
         RebuildSurfaces();
         UndoCommand.NotifyCanExecuteChanged();
         RedoCommand.NotifyCanExecuteChanged();
