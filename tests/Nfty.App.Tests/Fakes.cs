@@ -8,7 +8,8 @@ public sealed class FakeNav : INavigationService
     public ViewModelBase? Current { get; private set; }
     public event Action? Changed;
     public void To(ViewModelBase page) { Current = page; Changed?.Invoke(); }
-    public void Back() { }
+    public int BackCount { get; private set; }
+    public void Back() { BackCount++; }
 }
 
 public sealed class FakeDialogs : IDialogService

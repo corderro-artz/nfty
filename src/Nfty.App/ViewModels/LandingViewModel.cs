@@ -63,7 +63,7 @@ public partial class LandingViewModel : ViewModelBase
         LoadedCookBook book;
         try { book = CookBookArchive.Read(path); }
         catch (Exception ex) { ShowError("Could not open", ex.Message); return; }
-        _session.Open(book);
+        _session.Open(book, path);
         _nav.To(_explorerFactory(book));
     }
 

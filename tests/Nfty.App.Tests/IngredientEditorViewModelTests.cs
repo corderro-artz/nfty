@@ -43,7 +43,8 @@ public class IngredientEditorViewModelTests
         n = new FakeNotYetWired();
         nav = new FakeNav();
         var (ing, recipe, book) = Real();
-        return new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(), nav, n);
+        return new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(), nav, n,
+            new CookBookSession(), new FakeDialogs());
     }
 
     [AvaloniaFact]
@@ -51,7 +52,7 @@ public class IngredientEditorViewModelTests
     {
         var (ing, recipe, book) = Real();
         using var vm = new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(),
-            new FakeNav(), new FakeNotYetWired());
+            new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs());
         Assert.Equal(new[] { "Glow", "Spark" }, vm.Variants.Select(v => v.Name));
         Assert.All(vm.Variants, v => Assert.NotNull(v.Thumbnail));
         Assert.NotNull(vm.SelectedVariant);
@@ -74,10 +75,13 @@ public class IngredientEditorViewModelTests
     }
 
     [AvaloniaFact]
-    public void Save_reports_not_yet_wired()
+    public void Save_is_disabled_without_a_source_cbk()
     {
-        using var vm = Make(out var n, out _);
-        vm.SaveCommand.Execute(null); Assert.Equal("Save ingredient", n.Last);
+        // Make()'s CookBookSession was never Open()'d, so SourcePath is null: CanSave stays false
+        // and the command is gated off (Save round-trip itself is covered by IngredientEditorSaveTests).
+        using var vm = Make(out _, out _);
+        Assert.False(vm.CanSave);
+        Assert.False(vm.SaveCommand.CanExecute(null));
     }
 
     [AvaloniaFact]
@@ -110,7 +114,7 @@ public class IngredientEditorViewModelTests
     {
         var (ing, recipe, book) = Real();
         using var vm = new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(),
-            new FakeNav(), new FakeNotYetWired());
+            new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs());
         Assert.Equal(LayerKind.Dynamic, vm.Mode);
 
         var customIng = new LoadedIngredient
@@ -120,7 +124,7 @@ public class IngredientEditorViewModelTests
             VariantImages = new Dictionary<string, Image<Rgba32>> { ["a"] = new(8, 8) },
         };
         using var customVm = new IngredientEditorViewModel(customIng, recipe, book, new ImageBridge(),
-            new FakeNav(), new FakeNotYetWired());
+            new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs());
         Assert.Equal(LayerKind.Dynamic, customVm.Mode);
     }
 
@@ -129,7 +133,7 @@ public class IngredientEditorViewModelTests
     {
         var (ing, recipe, book) = Real();
         using var vm = new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(),
-            new FakeNav(), new FakeNotYetWired());
+            new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs());
         Assert.NotNull(vm.Canvas);
         Assert.NotNull(vm.Preview);
         var before = vm.Preview;
@@ -142,7 +146,7 @@ public class IngredientEditorViewModelTests
     {
         var (ing, recipe, book) = Real();
         using var vm = new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(),
-            new FakeNav(), new FakeNotYetWired());
+            new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs());
         var before = vm.Preview;
         vm.RerollPreviewCommand.Execute(null);
         Assert.NotSame(before, vm.Preview);
@@ -164,7 +168,7 @@ public class IngredientEditorViewModelTests
             VariantImages = new Dictionary<string, Image<Rgba32>> { ["a"] = map },
         };
         using var vm = new IngredientEditorViewModel(customIng, recipe, book, new ImageBridge(),
-            new FakeNav(), new FakeNotYetWired());
+            new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs());
 
         var buffer = new byte[8 * 8 * 4];
         unsafe
@@ -186,7 +190,7 @@ public class IngredientEditorViewModelTests
             VariantImages = new Dictionary<string, Image<Rgba32>>(),
         };
         using var vm = new IngredientEditorViewModel(emptyIng, recipe, book, new ImageBridge(),
-            new FakeNav(), new FakeNotYetWired());
+            new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs());
         Assert.Empty(vm.Variants);
         Assert.Null(vm.SelectedVariant);
     }

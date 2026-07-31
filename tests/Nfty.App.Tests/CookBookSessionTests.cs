@@ -56,4 +56,54 @@ public class CookBookSessionTests
         Assert.Equal(2, changes);   // open + close
         session.Dispose();
     }
+
+    private static LoadedCookBook OneRecipeBook()
+    {
+        var img = new Image<Rgba32>(2, 2, new Rgba32(80, 80, 80, 255));
+        var ing = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("bg", "BG", LayerKind.Custom, null, new[] { new Variant("a", "A", 1) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>> { ["a"] = img },
+        };
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("cat", "Cat", new[] { "bg" }, Array.Empty<IncompatibilityRule>()),
+            Ingredients = new[] { ing },
+        };
+        return new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "CB", new Dimensions(2, 2),
+                new Collection("CB", "", "X"), new Dictionary<string, double> { ["cat"] = 1 }),
+            Recipes = new[] { recipe },
+        };
+    }
+
+    [Fact]
+    public void Open_records_the_source_path_and_Close_clears_it()
+    {
+        using var session = new CookBookSession();
+        using var a = OneRecipeBook();           // existing helper in this test file
+        session.Open(a, "C:/books/a.cbk");
+        Assert.Equal("C:/books/a.cbk", session.SourcePath);
+        session.Close();
+        Assert.Null(session.SourcePath);
+    }
+
+    [Fact]
+    public void Replace_swaps_current_without_disposing_the_previous_book()
+    {
+        using var session = new CookBookSession();
+        var a = OneRecipeBook();
+        var b = OneRecipeBook();
+        session.Open(a, "C:/books/a.cbk");
+        int changed = 0; session.Changed += () => changed++;
+        session.Replace(b);
+        Assert.Same(b, session.Current);
+        Assert.Equal("C:/books/a.cbk", session.SourcePath);   // path preserved
+        Assert.Equal(1, changed);
+        // `a` was NOT disposed: its variant images are still usable.
+        var img = a.Recipes[0].Ingredients[0].VariantImages.Values.First();
+        Assert.True(img.Width > 0);                            // throws ObjectDisposedException if disposed
+        a.Dispose(); b.Dispose();
+    }
 }

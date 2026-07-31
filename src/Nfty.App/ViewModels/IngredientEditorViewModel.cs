@@ -1,5 +1,9 @@
+using System;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -28,7 +32,10 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     private readonly INavigationService _nav;
     private readonly INotYetWired _notify;
     private readonly IImageBridge _bridge;
-    private readonly LoadedIngredient _ing;
+    private readonly LoadedRecipe _recipe;
+    private readonly ICookBookSession _session;
+    private readonly IDialogService _dialogs;
+    private LoadedIngredient _ing;
     private readonly IngredientDraft _draft;
     private readonly Dictionary<string, EditHistory> _history = new(StringComparer.Ordinal);
 
@@ -43,6 +50,24 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private Bitmap _canvas = default!;
     [ObservableProperty] private Bitmap _preview = default!;
     private int _previewSalt;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    private bool _isDirty;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    private bool _isSaving;
+
+    /// <summary>Raised after a successful Save with the newly-spliced graph, so a listener
+    /// (Explorer) can rebuild its tree in place instead of reloading the whole archive.</summary>
+    public event Action<LoadedCookBook>? Saved;
+
+    /// <summary>Save is offered only for edited dynamic/static ingredients with a known source file.
+    /// Custom (full-colour) layers are blocked: the draft is a grayscale value-map and would overwrite
+    /// their colour PNGs.</summary>
+    public bool CanSave => IsDirty && _session.SourcePath is not null
+        && _ing.Manifest.Kind != LayerKind.Custom && !IsSaving;
 
     /// <summary>Left-hand filmstrip: the ingredient's real variants, rendered the way the cook
     /// path would (colorized for dynamic/static, raw for custom).</summary>
@@ -69,9 +94,11 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     }
 
     public IngredientEditorViewModel(LoadedIngredient ing, LoadedRecipe recipe, LoadedCookBook book,
-        IImageBridge bridge, INavigationService nav, INotYetWired notify)
+        IImageBridge bridge, INavigationService nav, INotYetWired notify, ICookBookSession session,
+        IDialogService dialogs)
     {
         _ing = ing; _bridge = bridge; _nav = nav; _notify = notify;
+        _recipe = recipe; _session = session; _dialogs = dialogs;
 
         _draft = new IngredientDraft(ing.Manifest.Id, ing.Manifest.Name, ing.Manifest.Kind, ing.Manifest.Colorization,
             book.Manifest.Canvas,
@@ -169,6 +196,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         };
         if (cmd is null) return;
         hist.Do(cmd, map);
+        IsDirty = true;
         RebuildSurfaces();
         UndoCommand.NotifyCanExecuteChanged();
         RedoCommand.NotifyCanExecuteChanged();
@@ -212,8 +240,63 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     [RelayCommand] private void DuplicateVariant() => _notify.Report("Duplicate variant");
     [RelayCommand] private void DeleteVariant() => _notify.Report("Delete variant");
 
-    [RelayCommand] private void Save() => _notify.Report("Save ingredient");
-    [RelayCommand] private void Back() => _nav.Back();
+    [RelayCommand(CanExecute = nameof(CanSave))]
+    private async Task Save()
+    {
+        // Guarded by CanSave; belt-and-suspenders against a bypassed CanExecute (never export a
+        // grayscale value-map over a Custom layer's full-colour PNGs).
+        if (_session.SourcePath is not string dest || _ing.Manifest.Kind == LayerKind.Custom) return;
+        IsSaving = true;
+        var tmp = dest + ".tmp";
+        try
+        {
+            // 1. Export the draft → a loaded ingredient (we own the images until Upsert adopts them).
+            var (manifest, images) = IngredientDraftExporter.Export(_draft);
+            var newIng = new LoadedIngredient { Manifest = manifest, VariantImages = images };
+
+            // 2. Splice into the live book.
+            var book2 = CookBookEdits.UpsertIngredient(_session.Current!, _recipe.Manifest.Id, newIng);
+
+            // 3. Crash-safe write: sibling temp, then atomic replace.
+            await CookBookArchive.WriteAsync(tmp, book2.Manifest, book2.Recipes);
+            File.Move(tmp, dest, overwrite: true);
+
+            // 4. Recompute the archive hash in-app (mirrors ArchiveIo.HashFile exactly).
+            string sha;
+            using (var s = File.OpenRead(dest)) sha = Convert.ToHexString(SHA256.HashData(s)).ToLowerInvariant();
+            // LoadedCookBook is a class with init-only props (not a record) — construct explicitly.
+            var book3 = new LoadedCookBook { Manifest = book2.Manifest, Recipes = book2.Recipes, SourceSha256 = sha };
+
+            // 5. Swap the in-memory graph (no dispose — book3 shares the other ingredients' images),
+            //    then free the replaced ingredient's now-orphaned images exactly once.
+            var replaced = _ing;
+            _session.Replace(book3);
+            _ing = newIng;                                     // subsequent saves target the new ingredient
+            foreach (var img in replaced.VariantImages.Values) img.Dispose();
+
+            IsDirty = false;
+            Saved?.Invoke(book3);
+        }
+        catch (Exception ex)
+        {
+            if (File.Exists(tmp)) { try { File.Delete(tmp); } catch { /* best effort */ } }
+            await _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, "Could not save", ex.Message));
+        }
+        finally { IsSaving = false; }
+    }
+
+    [RelayCommand]
+    private async Task Back()
+    {
+        if (IsDirty)
+        {
+            var ok = await _dialogs.ShowAsync<bool>(
+                new ConfirmDialogViewModel(_dialogs, "Discard edits?",
+                    "You have unsaved changes to this ingredient.", "Discard"));
+            if (!ok) return;
+        }
+        _nav.Back();
+    }
 
     [RelayCommand] private void RerollPreview() { _previewSalt++; RebuildSurfaces(); }
     [RelayCommand] private void EnlargePreview() => _notify.Report("Enlarge preview");
@@ -221,6 +304,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
 
     public void Dispose()
     {
+        Saved = null;   // release any subscriber (e.g. the Explorer) when the editor is navigated away
         foreach (var v in Variants) v.Thumbnail.Dispose();
         Canvas?.Dispose(); Preview?.Dispose();
     }

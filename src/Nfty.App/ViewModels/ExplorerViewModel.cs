@@ -16,7 +16,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     private readonly IDialogService _dialogs;
     private readonly INotYetWired _notify;
     private readonly IImageBridge _bridge;
-    private readonly LoadedCookBook _book;
+    private LoadedCookBook _book;
     private readonly Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel> _editorFactory;
     private readonly Func<LoadedCookBook, CookDialogViewModel> _cookFactory;
 
@@ -26,11 +26,16 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     [NotifyCanExecuteChangedFor(nameof(DeleteSelectedCommand))]
     private bool _isEditing;
 
-    public ExplorerNode Root { get; }
+    [ObservableProperty] private ExplorerNode _root = default!;
 
     /// <summary>Wraps the single Root as a one-element sequence so a TreeView (which binds to a
     /// collection of roots) can display it.</summary>
     public IReadOnlyList<ExplorerNode> Roots => new[] { Root };
+
+    partial void OnRootChanged(ExplorerNode value) => OnPropertyChanged(nameof(Roots));
+
+    /// <summary>Test hook: the cookbook the tree is currently built from (swapped on editor save).</summary>
+    internal LoadedCookBook BookForTest => _book;
 
     public IReadOnlyList<Crumb> Crumbs { get; private set; } = Array.Empty<Crumb>();
 
@@ -82,12 +87,33 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
                 id => OpenIngredientCommand.Execute(id)),
             ExplorerNodeKind.Ingredient => value!.Domain is (LoadedRecipe r, LoadedIngredient i)
                 ? new IngredientDetailViewModel(i, r, _book, _bridge, _notify,
-                    () => _nav.To(_editorFactory(i, r, _book)), () => IsEditing)
+                    () => OpenEditor(i, r), () => IsEditing)
                 : null,
             _ => null,
         };
         RebuildCrumbs();
     }
+
+    private void OpenEditor(LoadedIngredient i, LoadedRecipe r)
+    {
+        var editor = _editorFactory(i, r, _book);
+        editor.Saved += OnEditorSaved;
+        _nav.To(editor);
+    }
+
+    /// <summary>The editor persisted an ingredient; the session now holds the spliced graph. Rebuild
+    /// the tree from it and reselect the same ingredient so its detail/thumbnails refresh in place.</summary>
+    internal void OnEditorSaved(LoadedCookBook book)
+    {
+        _book = book;
+        Root = BuildTree(book);
+        var id = SelectedNode?.Id;
+        var reselected = id is null ? null : FindIngredientNode(Root, id);
+        SelectedNode = reselected ?? Root;   // fall back to the cookbook root if it vanished (it won't)
+    }
+
+    private static ExplorerNode? FindIngredientNode(ExplorerNode root, string id) =>
+        root.Children.SelectMany(r => r.Children).FirstOrDefault(n => n.Id == id);
 
     [RelayCommand] private void ToggleLock() => IsEditing = !IsEditing;
     [RelayCommand] private void Search() => _notify.Report("Search (⌘K)");

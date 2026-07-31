@@ -436,7 +436,8 @@ public class VisualCapture
             var book = ExplorerViewModelTests.TwoRecipeBook();
             var cat = book.Recipes.First(r => r.Manifest.Id == "cat");
             var ing = cat.Ingredients[0];
-            var vm = new IngredientEditorViewModel(ing, cat, book, new ImageBridge(), new FakeNav(), new FakeNotYetWired());
+            var vm = new IngredientEditorViewModel(ing, cat, book, new ImageBridge(), new FakeNav(), new FakeNotYetWired(),
+                new CookBookSession(), new FakeDialogs());
             vm.ActiveTool = EditorTool.Fill;
             vm.BrushValue = 200;
             vm.ApplyToolStroke(new[] { (0, 0) });   // flood the blank value-map so the canvas visibly changes
