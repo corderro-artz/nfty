@@ -421,6 +421,30 @@ public class VisualCapture
         }
     }
 
+    /// <summary>Renders the real <see cref="Views.IngredientEditorView"/> bound to an
+    /// <see cref="IngredientEditorViewModel"/> after a Fill stroke, so visual parity of the editor
+    /// (filmstrip + tools + painted canvas + colorize rail + preview) can be checked from an actual
+    /// rendered frame — and that the canvas reflects a committed paint edit — not imagined from XAML.</summary>
+    [AvaloniaFact]
+    public void Capture_editor_paint()
+    {
+        if (Dir is null) return;   // inert unless explicitly capturing
+
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            var key = variant.Key.ToString()!.ToLowerInvariant();
+            var book = ExplorerViewModelTests.TwoRecipeBook();
+            var cat = book.Recipes.First(r => r.Manifest.Id == "cat");
+            var ing = cat.Ingredients[0];
+            var vm = new IngredientEditorViewModel(ing, cat, book, new ImageBridge(), new FakeNav(), new FakeNotYetWired());
+            vm.ActiveTool = EditorTool.Fill;
+            vm.BrushValue = 200;
+            vm.ApplyToolStroke(new[] { (0, 0) });   // flood the blank value-map so the canvas visibly changes
+            Capture(new Views.IngredientEditorView { DataContext = vm }, variant, $"editor-paint-{key}.png");
+            vm.Dispose();
+        }
+    }
+
     private static void Capture(Control view, ThemeVariant variant, string fileName)
     {
         var window = new Window { RequestedThemeVariant = variant, Content = view, Width = 900, Height = 600 };
