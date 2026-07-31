@@ -32,4 +32,24 @@ public sealed class IngredientDraft
         Variants.Add(v);
         return v;
     }
+
+    /// <summary>Appends a copy of an existing variant (same weight, cloned pixels) under a new id/name.</summary>
+    public VariantDraft DuplicateVariant(string sourceId, string newId, string newName)
+    {
+        var src = Variants.FirstOrDefault(v => v.Id == sourceId)
+            ?? throw new InvalidOperationException($"No variant '{sourceId}' in ingredient '{Id}'.");
+        if (Variants.Any(v => v.Id == newId))
+            throw new InvalidOperationException($"Variant id '{newId}' already exists in ingredient '{Id}'.");
+        var copy = new VariantDraft(newId, newName, src.Weight, src.Map.Clone());
+        Variants.Add(copy);
+        return copy;
+    }
+
+    /// <summary>Removes a variant by id. Throws if it is absent (the caller enforces any minimum count).</summary>
+    public void RemoveVariant(string id)
+    {
+        var v = Variants.FirstOrDefault(x => x.Id == id)
+            ?? throw new InvalidOperationException($"No variant '{id}' in ingredient '{Id}'.");
+        Variants.Remove(v);
+    }
 }

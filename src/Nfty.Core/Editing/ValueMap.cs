@@ -29,6 +29,15 @@ public sealed class ValueMap
 
     public static ValueMap ForCanvas(Dimensions canvas) => new(canvas.Width, canvas.Height);
 
+    /// <summary>An independent deep copy — cloned value/alpha buffers, same dimensions.</summary>
+    public ValueMap Clone()
+    {
+        var c = new ValueMap(Width, Height);
+        Array.Copy(_value, c._value, _value.Length);
+        Array.Copy(_alpha, c._alpha, _alpha.Length);
+        return c;
+    }
+
     private int Index(int x, int y) => y * Width + x;
     public bool InBounds(int x, int y) => x >= 0 && x < Width && y >= 0 && y < Height;
 
