@@ -150,11 +150,14 @@ public class IngredientEditorViewModelTests
     }
 
     [AvaloniaFact]
-    public void Custom_ingredient_canvas_is_the_raw_image_not_colorized()
+    public void Custom_ingredient_canvas_is_the_draft_value_map_not_colorized()
     {
+        // Known limitation (editor-paint spec §6): the editor's paint target is a grayscale
+        // ValueMap built via ValueMap.FromImage, which reduces a full-colour custom image to its
+        // R channel (value) + alpha — G/B are not preserved. The canvas still isn't colorized.
         var (_, recipe, book) = Real();
         var map = new Image<Rgba32>(8, 8);
-        map[0, 0] = new Rgba32(10, 200, 40, 255);   // distinct R/G/B — colorize would collapse G/B
+        map[0, 0] = new Rgba32(10, 200, 40, 255);
         var customIng = new LoadedIngredient
         {
             Manifest = new IngredientManifest("bg", "Background", LayerKind.Custom, null,
@@ -170,7 +173,7 @@ public class IngredientEditorViewModelTests
             fixed (byte* p = buffer)
                 vm.Canvas.CopyPixels(new PixelRect(0, 0, 8, 8), (nint)p, buffer.Length, 8 * 4);
         }
-        Assert.Equal(10, buffer[0]); Assert.Equal(200, buffer[1]); Assert.Equal(40, buffer[2]); Assert.Equal(255, buffer[3]);
+        Assert.Equal(10, buffer[0]); Assert.Equal(10, buffer[1]); Assert.Equal(10, buffer[2]); Assert.Equal(255, buffer[3]);
     }
 
     [AvaloniaFact]
