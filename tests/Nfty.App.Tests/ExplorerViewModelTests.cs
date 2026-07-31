@@ -36,7 +36,12 @@ public class ExplorerViewModelTests
     /// <summary>Shared stub editor factory for tests that construct an <see cref="ExplorerViewModel"/>
     /// but don't exercise the Ingredient Editor navigation itself.</summary>
     internal static Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel> EditorFactory(
-        INavigationService nav) => (i, r, b) => new IngredientEditorViewModel(i, r, b, new ImageBridge(), nav, new FakeNotYetWired());
+        INavigationService nav, ICookBookSession? session = null, IDialogService? dialogs = null)
+    {
+        var s = session ?? new CookBookSession();
+        var d = dialogs ?? new FakeDialogs();
+        return (i, r, b) => new IngredientEditorViewModel(i, r, b, new ImageBridge(), nav, new FakeNotYetWired(), s, d);
+    }
 
     /// <summary>Shared stub cook factory for tests that construct an <see cref="ExplorerViewModel"/>
     /// but don't exercise the Cook dialog flow itself.</summary>

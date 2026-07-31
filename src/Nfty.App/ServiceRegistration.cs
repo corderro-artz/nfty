@@ -32,7 +32,9 @@ public static class ServiceRegistration
             (ing, recipe, book) => new IngredientEditorViewModel(ing, recipe, book,
                 sp.GetRequiredService<IImageBridge>(),
                 sp.GetRequiredService<INavigationService>(),
-                sp.GetRequiredService<INotYetWired>()));
+                sp.GetRequiredService<INotYetWired>(),
+                sp.GetRequiredService<ICookBookSession>(),
+                sp.GetRequiredService<IDialogService>()));
 
         services.AddSingleton<Func<LoadedCookBook, CookDialogViewModel>>(sp =>
             book => new CookDialogViewModel(book,
