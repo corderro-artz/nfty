@@ -44,10 +44,12 @@
                 <DataTemplate x:DataType="vm:SetItemRow">
                   <Button Classes="ghost" Padding="6" HorizontalContentAlignment="Center">
                     <StackPanel Spacing="6" HorizontalAlignment="Center">
-                      <Border Classes="tile" Width="120" Height="120" ClipToBounds="True">
+                      <Border Classes="tile" Classes.sel="{Binding IsSelected}" Width="120" Height="120"
+                              ClipToBounds="True">
                         <Image Source="{Binding Thumbnail}" Width="120" Height="120" Stretch="UniformToFill" />
                       </Border>
-                      <TextBlock Classes="mono muted" FontSize="11" HorizontalAlignment="Center"
+                      <TextBlock Classes="mono" FontSize="11" HorizontalAlignment="Center"
+                                 Classes.muted="{Binding !IsSelected}"
                                  Text="{Binding Number, StringFormat='#{0:D4}'}" />
                     </StackPanel>
                   </Button>

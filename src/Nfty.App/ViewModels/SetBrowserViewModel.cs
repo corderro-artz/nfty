@@ -4,7 +4,25 @@ using Nfty.Core.Output;
 
 namespace Nfty.App.ViewModels;
 
-public record SetItemRow(int Number, Bitmap Thumbnail, SetItem Item);
+/// <summary>One grid tile's data plus its own selection flag, so the view can paint a selected-tile
+/// indicator (accent border/wash) via a bound "sel" style class rather than relying solely on the
+/// detail rail to show what's selected.</summary>
+public partial class SetItemRow : ObservableObject
+{
+    public int Number { get; }
+    public Bitmap Thumbnail { get; }
+    public SetItem Item { get; }
+
+    [ObservableProperty]
+    private bool _isSelected;
+
+    public SetItemRow(int number, Bitmap thumbnail, SetItem item)
+    {
+        Number = number;
+        Thumbnail = thumbnail;
+        Item = item;
+    }
+}
 
 /// <summary>Read-only browsing surface over a cooked Set: the collection header (name/count/seed)
 /// plus per-item rows with a decoded thumbnail, and the currently selected item's detail
@@ -40,6 +58,13 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     {
         using var fs = File.OpenRead(path);
         return Bitmap.DecodeToWidth(fs, ThumbW);   // small downscaled thumbnail
+    }
+
+    // Keep each row's own IsSelected in sync so the grid can paint a selected-tile indicator —
+    // the detail rail alone doesn't show which tile is selected once the grid has many rows.
+    partial void OnSelectedItemChanged(SetItemRow? value)
+    {
+        foreach (var r in Items) r.IsSelected = ReferenceEquals(r, value);
     }
 
     public string SelectedNumber => SelectedItem is null ? "" : $"#{SelectedItem.Number:D4}";
