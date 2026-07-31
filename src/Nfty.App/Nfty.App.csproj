@@ -15,4 +15,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Nfty.Core\Nfty.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Nfty.App.Tests" />
+  </ItemGroup>
 </Project>

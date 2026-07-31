@@ -44,8 +44,10 @@ public class WiringCoverageTests
     {
         var (ing, recipe, book) = IngredientEditorViewModelTests.Real();
         using var vm = new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(), new FakeNav(), new FakeNotYetWired());
+        // ApplyStroke is no longer a mapped command: painting commits via vm.ApplyToolStroke(points),
+        // a plain method called by the view's pointer handlers (Task 3) with the gesture's pixel path.
         foreach (var c in new[] { "SelectToolCommand","UndoCommand","RedoCommand","AddVariantCommand",
-                                  "DuplicateVariantCommand","DeleteVariantCommand","ApplyStrokeCommand",
+                                  "DuplicateVariantCommand","DeleteVariantCommand",
                                   "RerollPreviewCommand","EnlargePreviewCommand","FillPanePreviewCommand",
                                   "SaveCommand","BackCommand","SelectVariantCommand" })
             Assert.True(HasCommand(vm, c), $"Editor missing {c}");

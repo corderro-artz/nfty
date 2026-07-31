@@ -1,9 +1,11 @@
 using System.Collections.ObjectModel;
+using System.Linq;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Imaging;
 using Nfty.App.Services;
+using Nfty.Core.Editing;
 using Nfty.Core.Formats;
 using Nfty.Core.Model;
 using SixLabors.ImageSharp;
@@ -27,9 +29,12 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     private readonly INotYetWired _notify;
     private readonly IImageBridge _bridge;
     private readonly LoadedIngredient _ing;
+    private readonly IngredientDraft _draft;
+    private readonly Dictionary<string, EditHistory> _history = new(StringComparer.Ordinal);
 
     [ObservableProperty] private EditorTool _activeTool = EditorTool.Brush;
     [ObservableProperty] private int _brushValue = 128;
+    [ObservableProperty] private int _brushSize = 8;
     [ObservableProperty] private LayerKind _mode;
     [ObservableProperty] private double _hueMin, _hueMax = 360, _satMin = 40, _satMax = 100;
     [ObservableProperty] private int _hueQuantize = 12, _satQuantize = 4;
@@ -68,6 +73,12 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     {
         _ing = ing; _bridge = bridge; _nav = nav; _notify = notify;
 
+        _draft = new IngredientDraft(ing.Manifest.Id, ing.Manifest.Name, ing.Manifest.Kind, ing.Manifest.Colorization,
+            book.Manifest.Canvas,
+            ing.Manifest.Variants.Select(v => new VariantDraft(v.Id, v.Name, v.Weight,
+                ValueMap.FromImage(ing.VariantImages[v.Id]))));
+        foreach (var v in _draft.Variants) _history[v.Id] = new EditHistory();
+
         foreach (var v in ing.Manifest.Variants)
             Variants.Add(new EditorVariant(v.Id, v.Name, v.Weight, VariantImagery.Render(bridge, ing, v.Id)));
         // Set BEFORE Mode below: OnSelectedVariantChanged's RebuildSurfaces() needs Variants
@@ -85,15 +96,28 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         if (Canvas is null) RebuildSurfaces();
     }
 
-    private Image<Rgba32> SelectedMap => _ing.VariantImages[SelectedVariant!.Id];
+    private VariantDraft? ActiveDraft =>
+        SelectedVariant is null ? null : _draft.Variants.FirstOrDefault(d => d.Id == SelectedVariant.Id);
+    private ValueMap? ActiveMap => ActiveDraft?.Map;
+    internal byte ValueAt(int x, int y) => ActiveMap!.GetValue(x, y);   // test hook
 
-    private Bitmap RenderCanvas() =>
-        _ing.Manifest.Colorization is null
-            ? _bridge.ToBitmap(SelectedMap)   // custom — raw, never colorized (mirrors VariantImagery.Render)
-            : VariantImagery.RenderWith(_bridge, SelectedMap, Mode == LayerKind.Dynamic,
+    // Canvas shows the grayscale VALUE-MAP being painted; Preview shows the colorized companion.
+    // Custom (Colorization is null) layers are reduced to value/alpha by ValueMap.FromImage — a known
+    // limitation (spec §6): full-colour custom painting is out of scope for this slice.
+    private Bitmap RenderCanvas()
+    {
+        using var img = ActiveMap!.ToImage();
+        return _bridge.ToBitmap(img);
+    }
+
+    private Bitmap RenderPreview()
+    {
+        using var img = ActiveMap!.ToImage();
+        return _ing.Manifest.Colorization is null
+            ? _bridge.ToBitmap(img)
+            : VariantImagery.RenderWith(_bridge, img, Mode == LayerKind.Dynamic,
                 HueMin, HueMax, SatMin, SatMax, FixedColor, _previewSalt);
-
-    private Bitmap RenderPreview() => RenderCanvas();   // same source; preview is the small companion
+    }
 
     private void RebuildSurfaces()
     {
@@ -113,7 +137,12 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         RebuildSurfaces();
     }
 
-    partial void OnSelectedVariantChanged(EditorVariant? value) => RebuildSurfaces();
+    partial void OnSelectedVariantChanged(EditorVariant? value)
+    {
+        RebuildSurfaces();
+        UndoCommand?.NotifyCanExecuteChanged();
+        RedoCommand?.NotifyCanExecuteChanged();
+    }
     partial void OnHueMinChanged(double value) => RebuildSurfaces();
     partial void OnHueMaxChanged(double value) => RebuildSurfaces();
     partial void OnSatMinChanged(double value) => RebuildSurfaces();
@@ -121,8 +150,58 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     partial void OnFixedColorChanged(string value) => RebuildSurfaces();
 
     [RelayCommand] private void SelectTool(EditorTool tool) => ActiveTool = tool;
-    [RelayCommand] private void Undo() => _notify.Report("Undo");
-    [RelayCommand] private void Redo() => _notify.Report("Redo");
+
+    /// <summary>Commit one completed gesture as a Core edit command against the active variant.</summary>
+    public void ApplyToolStroke(IReadOnlyList<(int x, int y)> points)
+    {
+        if (ActiveDraft is null || points.Count == 0) return;
+        var map = ActiveDraft.Map;
+        var hist = _history[ActiveDraft.Id];
+        IEditCommand? cmd = ActiveTool switch
+        {
+            EditorTool.Brush => new BrushStroke(new Brush(BrushSize, (byte)BrushValue), points),
+            EditorTool.Eraser => new EraseStroke(BrushSize, points),
+            EditorTool.Fill => new FloodFill(points[0].x, points[0].y, (byte)BrushValue),
+            EditorTool.Rectangle => new DrawShape(ShapeKind.Rectangle, BoundsOf(points), (byte)BrushValue),
+            EditorTool.Circle => new DrawShape(ShapeKind.Ellipse, BoundsOf(points), (byte)BrushValue),
+            EditorTool.Triangle => new DrawShape(ShapeKind.Triangle, BoundsOf(points), (byte)BrushValue),
+            _ => null,   // Select — no-op this slice
+        };
+        if (cmd is null) return;
+        hist.Do(cmd, map);
+        RebuildSurfaces();
+        UndoCommand.NotifyCanExecuteChanged();
+        RedoCommand.NotifyCanExecuteChanged();
+    }
+
+    private static PixelRect BoundsOf(IReadOnlyList<(int x, int y)> pts)
+    {
+        var (ax, ay) = pts[0]; var (bx, by) = pts[^1];
+        int x = System.Math.Min(ax, bx), y = System.Math.Min(ay, by);
+        int w = System.Math.Abs(bx - ax) + 1, h = System.Math.Abs(by - ay) + 1;
+        return new PixelRect(x, y, w, h);
+    }
+
+    private bool CanUndo() => ActiveDraft is not null && _history[ActiveDraft.Id].CanUndo;
+    private bool CanRedo() => ActiveDraft is not null && _history[ActiveDraft.Id].CanRedo;
+
+    [RelayCommand(CanExecute = nameof(CanUndo))]
+    private void Undo()
+    {
+        _history[ActiveDraft!.Id].Undo(ActiveDraft.Map);
+        RebuildSurfaces();
+        UndoCommand.NotifyCanExecuteChanged();
+        RedoCommand.NotifyCanExecuteChanged();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRedo))]
+    private void Redo()
+    {
+        _history[ActiveDraft!.Id].Redo(ActiveDraft.Map);
+        RebuildSurfaces();
+        UndoCommand.NotifyCanExecuteChanged();
+        RedoCommand.NotifyCanExecuteChanged();
+    }
 
     [RelayCommand]
     private void SelectVariant(EditorVariant v) => SelectedVariant = v;
@@ -133,7 +212,6 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     [RelayCommand] private void DuplicateVariant() => _notify.Report("Duplicate variant");
     [RelayCommand] private void DeleteVariant() => _notify.Report("Delete variant");
 
-    [RelayCommand] private void ApplyStroke() => _notify.Report("Paint");
     [RelayCommand] private void Save() => _notify.Report("Save ingredient");
     [RelayCommand] private void Back() => _nav.Back();
 
