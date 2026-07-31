@@ -352,41 +352,26 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     {
         // Guarded by CanSave; belt-and-suspenders against a bypassed CanExecute (never export a
         // grayscale value-map over a Custom layer's full-colour PNGs).
-        if (_session.SourcePath is not string dest || _ing.Manifest.Kind == LayerKind.Custom) return;
+        if (_session.SourcePath is null || _ing.Manifest.Kind == LayerKind.Custom) return;
         IsSaving = true;
-        var tmp = dest + ".tmp";
         try
         {
-            // 1. Export the draft → a loaded ingredient (we own the images until Upsert adopts them).
+            // Export the draft → a loaded ingredient (we own its images until Upsert adopts them),
+            // splice it into the live book, then persist (temp write → atomic move → rehash → Replace).
             var (manifest, images) = IngredientDraftExporter.Export(_draft);
             var newIng = new LoadedIngredient { Manifest = manifest, VariantImages = images };
-
-            // 2. Splice into the live book.
             var book2 = CookBookEdits.UpsertIngredient(_session.Current!, _recipe.Manifest.Id, newIng);
 
-            // 3. Crash-safe write: sibling temp, then atomic replace.
-            await CookBookArchive.WriteAsync(tmp, book2.Manifest, book2.Recipes);
-            File.Move(tmp, dest, overwrite: true);
-
-            // 4. Recompute the archive hash in-app (mirrors ArchiveIo.HashFile exactly).
-            string sha;
-            using (var s = File.OpenRead(dest)) sha = Convert.ToHexString(SHA256.HashData(s)).ToLowerInvariant();
-            // LoadedCookBook is a class with init-only props (not a record) — construct explicitly.
-            var book3 = new LoadedCookBook { Manifest = book2.Manifest, Recipes = book2.Recipes, SourceSha256 = sha };
-
-            // 5. Swap the in-memory graph (no dispose — book3 shares the other ingredients' images),
-            //    then free the replaced ingredient's now-orphaned images exactly once.
             var replaced = _ing;
-            _session.Replace(book3);
+            var book3 = await CookBookPersistence.PersistAsync(_session, book2);
             _ing = newIng;                                     // subsequent saves target the new ingredient
-            foreach (var img in replaced.VariantImages.Values) img.Dispose();
+            foreach (var img in replaced.VariantImages.Values) img.Dispose();   // free the orphaned images
 
             IsDirty = false;
             Saved?.Invoke(book3);
         }
         catch (Exception ex)
         {
-            if (File.Exists(tmp)) { try { File.Delete(tmp); } catch { /* best effort */ } }
             await _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, "Could not save", ex.Message));
         }
         finally { IsSaving = false; }
