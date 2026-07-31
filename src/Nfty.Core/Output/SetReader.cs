@@ -35,32 +35,38 @@ public static class SetReader
             dir = temp;
         }
 
-        string setJson = Path.Combine(dir, "set.json");
-        if (!File.Exists(setJson))
+        try
+        {
+            string setJson = Path.Combine(dir, "set.json");
+            if (!File.Exists(setJson))
+                throw new FileNotFoundException($"Not a cooked Set — 'set.json' was not found in {path}.");
+
+            var manifest = JsonSerializer.Deserialize<SetManifest>(File.ReadAllText(setJson), Json.Options)
+                ?? throw new InvalidOperationException($"Could not read the Set manifest in {path}.");
+
+            string nftyDir = Path.Combine(dir, "nfty");
+            string imagesDir = Path.Combine(dir, "images");
+            var items = new List<SetItem>();
+            if (Directory.Exists(nftyDir))
+            {
+                foreach (var file in Directory.EnumerateFiles(nftyDir, "*.json")
+                             .OrderBy(f => f, StringComparer.Ordinal))
+                {
+                    var m = JsonSerializer.Deserialize<NftyMetadata>(File.ReadAllText(file), Json.Options);
+                    if (m is null) continue;
+                    string stem = m.SetNumber.ToString("D4");
+                    items.Add(new SetItem(m.SetNumber, Path.Combine(imagesDir, $"{stem}.png"),
+                        m.Dna, m.Recipe, m.Rarity, m.Layers));
+                }
+            }
+
+            return new LoadedSet { Manifest = manifest, Items = items, TempDir = temp };
+        }
+        catch
         {
             if (temp is not null) try { Directory.Delete(temp, recursive: true); } catch { }
-            throw new FileNotFoundException($"Not a cooked Set — 'set.json' was not found in {path}.");
+            throw;
         }
-        var manifest = JsonSerializer.Deserialize<SetManifest>(File.ReadAllText(setJson), Json.Options)
-            ?? throw new InvalidOperationException($"Could not read the Set manifest in {path}.");
-
-        string nftyDir = Path.Combine(dir, "nfty");
-        string imagesDir = Path.Combine(dir, "images");
-        var items = new List<SetItem>();
-        if (Directory.Exists(nftyDir))
-        {
-            foreach (var file in Directory.EnumerateFiles(nftyDir, "*.json")
-                         .OrderBy(f => f, StringComparer.Ordinal))
-            {
-                var m = JsonSerializer.Deserialize<NftyMetadata>(File.ReadAllText(file), Json.Options);
-                if (m is null) continue;
-                string stem = m.SetNumber.ToString("D4");
-                items.Add(new SetItem(m.SetNumber, Path.Combine(imagesDir, $"{stem}.png"),
-                    m.Dna, m.Recipe, m.Rarity, m.Layers));
-            }
-        }
-
-        return new LoadedSet { Manifest = manifest, Items = items, TempDir = temp };
     }
 
     public static Task<LoadedSet> ReadAsync(string path, CancellationToken ct = default) =>
