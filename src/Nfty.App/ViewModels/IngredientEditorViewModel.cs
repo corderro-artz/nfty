@@ -283,7 +283,18 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         finally { IsSaving = false; }
     }
 
-    [RelayCommand] private void Back() => _nav.Back();
+    [RelayCommand]
+    private async Task Back()
+    {
+        if (IsDirty)
+        {
+            var ok = await _dialogs.ShowAsync<bool>(
+                new ConfirmDialogViewModel(_dialogs, "Discard edits?",
+                    "You have unsaved changes to this ingredient.", "Discard"));
+            if (!ok) return;
+        }
+        _nav.Back();
+    }
 
     [RelayCommand] private void RerollPreview() { _previewSalt++; RebuildSurfaces(); }
     [RelayCommand] private void EnlargePreview() => _notify.Report("Enlarge preview");

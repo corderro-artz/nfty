@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -82,5 +83,55 @@ public class IngredientEditorSaveTests
             vm.Dispose();
         }
         finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
+    }
+
+    [AvaloniaFact]
+    public async Task Back_when_dirty_confirms_before_navigating()
+    {
+        var (path, session, recipe, ing) = OnDisk();
+        try
+        {
+            var nav = new FakeNav();
+            var dialogs = new FakeConfirmingDialogs(confirm: false);   // user cancels the discard
+            var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
+                nav, new FakeNotYetWired(), session, dialogs);
+            vm.ActiveTool = EditorTool.Fill; vm.BrushValue = 10;
+            vm.ApplyToolStroke(new[] { (0, 0) });
+            await vm.BackCommand.ExecuteAsync(null);
+            Assert.True(dialogs.Shown);            // a confirm was shown
+            Assert.Equal(0, nav.BackCount);        // cancelled → did not navigate
+            vm.Dispose();
+        }
+        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
+    }
+
+    [AvaloniaFact]
+    public async Task Back_when_clean_navigates_without_a_dialog()
+    {
+        var (path, session, recipe, ing) = OnDisk();
+        try
+        {
+            var nav = new FakeNav();
+            var dialogs = new FakeConfirmingDialogs(confirm: true);
+            var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
+                nav, new FakeNotYetWired(), session, dialogs);
+            await vm.BackCommand.ExecuteAsync(null);
+            Assert.False(dialogs.Shown);           // clean → no confirm
+            Assert.Equal(1, nav.BackCount);        // navigated straight back
+            vm.Dispose();
+        }
+        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
+    }
+
+    private sealed class FakeConfirmingDialogs : IDialogService
+    {
+        private readonly bool _confirm;
+        public bool Shown { get; private set; }
+        public FakeConfirmingDialogs(bool confirm) => _confirm = confirm;
+        public ViewModelBase? Active => null;
+        public event Action? Changed { add { } remove { } }
+        public Task<TResult?> ShowAsync<TResult>(ViewModelBase dialog)
+        { Shown = true; return Task.FromResult((TResult?)(object?)_confirm); }
+        public void Close(object? result) { }
     }
 }

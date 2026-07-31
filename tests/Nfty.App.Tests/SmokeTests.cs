@@ -41,6 +41,7 @@ public class SmokeTests
             new NewRecipeViewModel(dialogs, notify),
             new NewIngredientViewModel(dialogs, notify),
             new ErrorDialogViewModel(dialogs, "Error", "Could not open the cookbook."),
+            new ConfirmDialogViewModel(dialogs, "Discard?", "You have unsaved edits.", "Discard"),
             new CookDialogViewModel(smokeBook, new FilePickerService(), new NoopFolderRevealer(), dialogs),
             new SetBrowserViewModel(loadedSet),
         ];
