@@ -1,4 +1,6 @@
+using Avalonia;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Nfty.Core.Output;
 
@@ -56,8 +58,17 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
 
     private static Bitmap Decode(string path)
     {
-        using var fs = File.OpenRead(path);
-        return Bitmap.DecodeToWidth(fs, ThumbW);   // small downscaled thumbnail
+        try
+        {
+            using var fs = File.OpenRead(path);
+            return Bitmap.DecodeToWidth(fs, ThumbW);   // small downscaled thumbnail
+        }
+        catch
+        {
+            // Tolerant placeholder: 1x1 transparent bitmap if image is missing/corrupt.
+            return new WriteableBitmap(new PixelSize(1, 1), new Vector(96, 96),
+                PixelFormat.Bgra8888, AlphaFormat.Unpremul);
+        }
     }
 
     // Keep each row's own IsSelected in sync so the grid can paint a selected-tile indicator —

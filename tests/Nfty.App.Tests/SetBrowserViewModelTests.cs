@@ -32,4 +32,21 @@ public class SetBrowserViewModelTests
         vm.Dispose();
         Directory.Delete(dir, recursive: true);
     }
+
+    [AvaloniaFact]
+    public void Tolerates_missing_item_image()
+    {
+        var loaded = CookedSet(out var dir);
+        // Delete one image file to simulate corruption/missing file.
+        File.Delete(loaded.Items[0].ImagePath);
+
+        // Must not throw despite missing image.
+        var vm = new SetBrowserViewModel(loaded);
+
+        Assert.Equal(2, vm.Items.Count);
+        Assert.All(vm.Items, r => Assert.NotNull(r.Thumbnail));
+
+        vm.Dispose();
+        Directory.Delete(dir, recursive: true);
+    }
 }
