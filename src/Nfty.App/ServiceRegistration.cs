@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Nfty.App.Services;
 using Nfty.App.ViewModels;
 using Nfty.Core.Formats;
+using Nfty.Core.Output;
 
 namespace Nfty.App;
 
@@ -47,6 +48,8 @@ public static class ServiceRegistration
                 sp.GetRequiredService<IImageBridge>(),
                 sp.GetRequiredService<Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel>>(),
                 sp.GetRequiredService<Func<LoadedCookBook, CookDialogViewModel>>()));
+
+        services.AddSingleton<Func<LoadedSet, SetBrowserViewModel>>(sp => set => new SetBrowserViewModel(set));
 
         // Further VM registrations are added incrementally by the task that creates each
         // ViewModel (see Tasks 12-13).

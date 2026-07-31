@@ -385,7 +385,8 @@ public class VisualCapture
             var vm = new LandingViewModel(nav, dialogs, notify, new FilePickerService(), new RecentsService(),
                 new CookBookSession(),
                 book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(),
-                    ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs)));
+                    ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs)),
+                set => new SetBrowserViewModel(set));
             Capture(new Views.LandingView { DataContext = vm }, variant, $"landing-{key}.png");
         }
     }

@@ -2,12 +2,14 @@ using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Models;
 using Nfty.App.Services;
 using Nfty.Core.Formats;
+using Nfty.Core.Output;
 
 namespace Nfty.App.ViewModels;
 
 /// <summary>The pre-open default screen: Create/Open groups plus a Recent list. Open/Import read a
 /// real archive off disk and hand it to the <see cref="ICookBookSession"/>, then navigate into the
-/// Explorer; the remaining actions (New Kitchen, Open .set, Open recent) are not-yet-wired stubs.</summary>
+/// Explorer; Open .set reads a cooked Set and navigates to the Set browser. The remaining actions
+/// (New Kitchen, Open recent) are not-yet-wired stubs.</summary>
 public partial class LandingViewModel : ViewModelBase
 {
     private readonly INavigationService _nav;
@@ -17,15 +19,17 @@ public partial class LandingViewModel : ViewModelBase
     private readonly IRecentsService _recents;
     private readonly ICookBookSession _session;
     private readonly Func<LoadedCookBook, ExplorerViewModel> _explorerFactory;
+    private readonly Func<LoadedSet, SetBrowserViewModel> _setBrowserFactory;
 
     public IReadOnlyList<RecentItem> Recents => _recents.Items;
 
     public LandingViewModel(INavigationService nav, IDialogService dialogs, INotYetWired notify,
         IFilePickerService picker, IRecentsService recents, ICookBookSession session,
-        Func<LoadedCookBook, ExplorerViewModel> explorerFactory)
+        Func<LoadedCookBook, ExplorerViewModel> explorerFactory,
+        Func<LoadedSet, SetBrowserViewModel> setBrowserFactory)
     {
         _nav = nav; _dialogs = dialogs; _notify = notify; _picker = picker; _recents = recents;
-        _session = session; _explorerFactory = explorerFactory;
+        _session = session; _explorerFactory = explorerFactory; _setBrowserFactory = setBrowserFactory;
     }
 
     [RelayCommand] private void NewCookBook() => _dialogs.ShowAsync<object>(new NewCookBookViewModel(_dialogs, _notify));
@@ -66,7 +70,21 @@ public partial class LandingViewModel : ViewModelBase
     private void ShowError(string title, string message) =>
         _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, title, message));
 
-    [RelayCommand(CanExecute = nameof(Never))] private void OpenSet() => _notify.Report("Open .set");
+    [RelayCommand]
+    private async Task OpenSet()
+    {
+        var path = await _picker.OpenFileAsync("Open a cooked .set", ".set");
+        if (path is null) return;
+        LoadedSet set;
+        try { set = SetReader.Read(path); }
+        catch (Exception ex)
+        {
+            await _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, "Could not open the set", ex.Message));
+            return;
+        }
+        _nav.To(_setBrowserFactory(set));
+    }
+
     [RelayCommand] private void OpenRecent(RecentItem item) => _notify.Report($"Open recent: {item.Name}");
     [RelayCommand] private void ShowHelp() => _dialogs.ShowAsync<object>(new HelpViewModel(_dialogs));
 
