@@ -37,4 +37,18 @@ public class ValueMapTests
         Assert.Equal(150, m.GetValue(0, 0));
         Assert.Equal(90, m.GetAlpha(0, 0));
     }
+
+    [Fact]
+    public void Clone_is_an_independent_deep_copy()
+    {
+        var a = new ValueMap(4, 4);
+        a.Set(1, 2, 200, 255);
+        var b = a.Clone();
+        Assert.Equal(200, b.GetValue(1, 2));
+        Assert.Equal(255, b.GetAlpha(1, 2));
+        b.Set(1, 2, 10, 10);                  // mutate the clone
+        Assert.Equal(200, a.GetValue(1, 2));  // source untouched
+        a.Set(0, 0, 50, 50);                  // mutate the source
+        Assert.Equal(0, b.GetValue(0, 0));    // clone untouched
+    }
 }
