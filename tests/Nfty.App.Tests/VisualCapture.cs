@@ -441,6 +441,7 @@ public class VisualCapture
             vm.ActiveTool = EditorTool.Fill;
             vm.BrushValue = 200;
             vm.ApplyToolStroke(new[] { (0, 0) });   // flood the blank value-map so the canvas visibly changes
+            vm.AddVariantCommand.Execute(null);     // second filmstrip entry + populated name/weight editors
             Capture(new Views.IngredientEditorView { DataContext = vm }, variant, $"editor-paint-{key}.png");
             vm.Dispose();
         }
