@@ -243,7 +243,9 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task Save()
     {
-        if (_session.SourcePath is not string dest) return;   // guarded by CanSave; belt-and-suspenders
+        // Guarded by CanSave; belt-and-suspenders against a bypassed CanExecute (never export a
+        // grayscale value-map over a Custom layer's full-colour PNGs).
+        if (_session.SourcePath is not string dest || _ing.Manifest.Kind == LayerKind.Custom) return;
         IsSaving = true;
         var tmp = dest + ".tmp";
         try
@@ -302,6 +304,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
 
     public void Dispose()
     {
+        Saved = null;   // release any subscriber (e.g. the Explorer) when the editor is navigated away
         foreach (var v in Variants) v.Thumbnail.Dispose();
         Canvas?.Dispose(); Preview?.Dispose();
     }
