@@ -9,11 +9,15 @@ public sealed class EditHistory
     public bool CanUndo => _undo.Count > 0;
     public bool CanRedo => _redo.Count > 0;
 
-    public void Do(IEditCommand cmd, ValueMap map)
+    /// <summary>Applies <paramref name="cmd"/> and records it for undo. A no-op edit (Apply reports
+    /// no pixel changed) is not recorded and returns false, so CanUndo does not light for an edit
+    /// that produced nothing.</summary>
+    public bool Do(IEditCommand cmd, ValueMap map)
     {
-        cmd.Apply(map);
+        if (!cmd.Apply(map)) return false;
         _undo.Push(cmd);
         _redo.Clear();
+        return true;
     }
 
     public void Undo(ValueMap map)

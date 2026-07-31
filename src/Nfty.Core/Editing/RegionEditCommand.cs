@@ -9,6 +9,7 @@ public abstract class RegionEditCommand : IEditCommand
 {
     private (int x, int y, byte v, byte a)[]? _after;
     private (int x, int y, byte v, byte a)[]? _before;
+    private bool _changed;
 
     /// <summary>Target pixels and their new (value, alpha). Only in-bounds pixels; computed before mutation.</summary>
     protected abstract IReadOnlyList<(int x, int y, byte value, byte alpha)> ComputePixels(ValueMap map);
@@ -43,24 +44,28 @@ public abstract class RegionEditCommand : IEditCommand
         return pixels;
     }
 
-    public void Apply(ValueMap map)
+    public bool Apply(ValueMap map)
     {
         if (_after is null)
         {
             var px = ComputePixels(map);
             var after = new (int, int, byte, byte)[px.Count];
             var before = new (int, int, byte, byte)[px.Count];
+            bool changed = false;
             for (int i = 0; i < px.Count; i++)
             {
                 var (x, y, v, a) = px[i];
                 after[i] = (x, y, v, a);
                 before[i] = (x, y, map.GetValue(x, y), map.GetAlpha(x, y));
+                if (before[i] != after[i]) changed = true; // a stamped pixel already at (v,a) is not a change
             }
             _after = after;
             _before = before;
+            _changed = changed;
         }
         foreach (var (x, y, v, a) in _after)
             map.Set(x, y, v, a);
+        return _changed;
     }
 
     public void Undo(ValueMap map)

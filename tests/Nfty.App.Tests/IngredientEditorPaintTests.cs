@@ -78,6 +78,19 @@ public class IngredientEditorPaintTests
     }
 
     [AvaloniaFact]
+    public void No_op_edit_leaves_history_untouched()
+    {
+        using var vm = Editor();
+        vm.ActiveTool = EditorTool.Fill; vm.BrushValue = 150;
+        vm.ApplyToolStroke(new[] { (0, 0) });               // fills the blank canvas to 150
+        Assert.True(vm.UndoCommand.CanExecute(null));
+        vm.ApplyToolStroke(new[] { (0, 0) });               // fill 150 again → no-op, must not be recorded
+        vm.UndoCommand.Execute(null);                       // a single undo restores blank...
+        Assert.Equal(0, vm.ValueAt(7, 7));                  // ...so only the first fill was ever on the stack
+        Assert.False(vm.UndoCommand.CanExecute(null));
+    }
+
+    [AvaloniaFact]
     public void History_is_per_variant()
     {
         using var vm = Editor();
