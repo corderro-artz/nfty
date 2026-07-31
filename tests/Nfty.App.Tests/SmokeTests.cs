@@ -1,8 +1,11 @@
+using System.IO;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Nfty.App;
 using Nfty.App.Services;
 using Nfty.App.ViewModels;
+using Nfty.Core.Generation;
+using Nfty.Core.Output;
 using Xunit;
 
 namespace Nfty.App.Tests;
@@ -20,6 +23,12 @@ public class SmokeTests
         var cookFactory = ExplorerViewModelTests.CookFactory(dialogs);
         var smokeBook = ExplorerViewModelTests.TwoRecipeBook();
         var cat = smokeBook.Recipes.First(r => r.Manifest.Id == "cat");
+
+        var setDir = Directory.CreateTempSubdirectory().FullName;
+        using var generated = Generator.Generate(CoreTestBook.Tiny(), new GenerateOptions(2, "seed1"));
+        SetWriter.Write(generated, setDir, pack: false);
+        var loadedSet = SetReader.Read(setDir);   // ownership passes to SetBrowserViewModel below
+
         ViewModelBase[] vms =
         [
             new LandingViewModel(nav, dialogs, notify, new FilePickerService(), new RecentsService(),
@@ -32,6 +41,7 @@ public class SmokeTests
             new NewIngredientViewModel(dialogs, notify),
             new ErrorDialogViewModel(dialogs, "Error", "Could not open the cookbook."),
             new CookDialogViewModel(smokeBook, new FilePickerService(), new NoopFolderRevealer(), dialogs),
+            new SetBrowserViewModel(loadedSet),
         ];
         foreach (var vm in vms)
         {
@@ -39,6 +49,10 @@ public class SmokeTests
             Assert.False(control is TextBlock tb && tb.Text!.StartsWith("View not found"),
                 $"No view for {vm.GetType().Name}");
         }
+
+        foreach (var vm in vms.OfType<IDisposable>())
+            vm.Dispose();
+        Directory.Delete(setDir, recursive: true);
     }
 
     [AvaloniaFact]
