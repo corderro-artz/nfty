@@ -28,7 +28,8 @@ public class LandingOpenFlowTests
         var s = session; var n = nav; var d = dialogs; var no = notify;
         return new LandingViewModel(n, d, no, new StubPicker(pickerPath), new RecentsService(), s,
             book => new ExplorerViewModel(book, n, d, no, new ImageBridge(), ExplorerViewModelTests.EditorFactory(n),
-                ExplorerViewModelTests.CookFactory(d)));
+                ExplorerViewModelTests.CookFactory(d)),
+            set => new SetBrowserViewModel(set));
     }
 
     [Fact]

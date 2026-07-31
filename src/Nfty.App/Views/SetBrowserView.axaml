@@ -1,0 +1,99 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             xmlns:core="using:Nfty.Core.Output"
+             xmlns:conv="using:Avalonia.Data.Converters"
+             xmlns:appconv="using:Nfty.App.Converters"
+             x:Class="Nfty.App.Views.SetBrowserView"
+             x:DataType="vm:SetBrowserViewModel">
+  <!-- Set browser: header (name/count/seed) over a 2-column body — a virtualized thumbnail
+       grid (main) + a selected-item detail rail (~300, explorer.html-style .rules-panel look).
+
+       Virtualization (doc-pull, Context7 /avaloniaui/avalonia-docs, cross-checked against the
+       actual Avalonia 11.2.3 assembly this project has pinned — see RowChunkConverter.cs for the
+       full reasoning): the docs recommend ItemsRepeater + UniformGridLayout for a virtualized
+       wrapping grid, but neither type exists in the installed 11.2.3 package (confirmed by
+       reading Avalonia.Controls.dll's metadata directly — the XAML compiler also fails to resolve
+       ItemsRepeater against this project's references). The only control that virtualizes here is
+       ListBox (default ItemsPanel = VirtualizingStackPanel, vertical), which has no wrap support;
+       the only wrapping panel, WrapPanel, implements no virtualizing-panel interface and disables
+       virtualization outright. So the grid is realized as a virtualizing ListBox of fixed-size
+       "rows" (RowChunkConverter.By4), each row a horizontal run of tiles — ListBox virtualizes
+       per row, keeping a large Set cheap to render, while each row still shows several thumbnails.
+       ListBox's own selection is unused (its unit is a row, not a tile); tile clicks are wired via
+       one bubbled Button.Click handler in SetBrowserView.axaml.cs instead. -->
+  <Grid RowDefinitions="Auto,*" Margin="16">
+    <!-- Header row -->
+    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12" Margin="0,0,0,14">
+      <TextBlock Classes="mono" FontSize="17" FontWeight="Bold" Text="{Binding Name}" />
+      <TextBlock Classes="muted" VerticalAlignment="Center" Text="{Binding Count, StringFormat='{}{0} items'}" />
+      <TextBlock Classes="muted" VerticalAlignment="Center" Text="{Binding Seed, StringFormat='Seed {0}'}" />
+    </StackPanel>
+
+    <Grid Grid.Row="1" ColumnDefinitions="*,300">
+      <!-- Main: virtualized thumbnail grid (ListBox virtualizes per row; see note above) -->
+      <ListBox Grid.Column="0" Margin="0,0,16,0" Background="Transparent"
+                ItemsSource="{Binding Items, Converter={x:Static appconv:RowChunkConverter.By4}}">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="appconv:TileRow">
+            <ItemsControl ItemsSource="{Binding Tiles}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="10" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:SetItemRow">
+                  <Button Classes="ghost" Padding="6" HorizontalContentAlignment="Center">
+                    <StackPanel Spacing="6" HorizontalAlignment="Center">
+                      <Border Classes="tile" Classes.sel="{Binding IsSelected}" Width="120" Height="120"
+                              ClipToBounds="True">
+                        <Image Source="{Binding Thumbnail}" Width="120" Height="120" Stretch="UniformToFill" />
+                      </Border>
+                      <TextBlock Classes="mono" FontSize="11" HorizontalAlignment="Center"
+                                 Classes.muted="{Binding !IsSelected}"
+                                 Text="{Binding Number, StringFormat='#{0:D4}'}" />
+                    </StackPanel>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+
+      <!-- Detail rail -->
+      <Border Grid.Column="1" Classes="rules-panel" VerticalAlignment="Stretch"
+              IsVisible="{Binding SelectedItem, Converter={x:Static conv:ObjectConverters.IsNotNull}}">
+        <StackPanel Spacing="10">
+          <TextBlock Classes="mono" FontSize="14" FontWeight="Bold" Text="{Binding SelectedNumber}" />
+          <TextBlock Classes="muted" Text="{Binding SelectedRecipe}" />
+          <TextBlock Classes="mono muted" FontSize="11" TextWrapping="Wrap" Text="{Binding SelectedDna}" />
+
+          <TextBlock Classes="mono muted" FontSize="10.5" LetterSpacing="1.05" Text="RARITY"
+                     Margin="0,8,0,0" />
+          <StackPanel Spacing="0">
+            <Border Classes="data-h">
+              <Grid ColumnDefinitions="*,Auto,Auto">
+                <TextBlock Grid.Column="0" Classes="data-h" Text="TRAIT" />
+                <TextBlock Grid.Column="1" Classes="data-h" Text="VALUE" Margin="8,0" />
+                <TextBlock Grid.Column="2" Classes="data-h num" Text="%" />
+              </Grid>
+            </Border>
+            <ItemsControl ItemsSource="{Binding SelectedRarity}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="core:RarityAttribute">
+                  <Border Classes="data-row">
+                    <Grid ColumnDefinitions="*,Auto,Auto">
+                      <TextBlock Grid.Column="0" Classes="data-row" Text="{Binding Trait_type}" />
+                      <TextBlock Grid.Column="1" Classes="data-row muted" Text="{Binding Value}" Margin="8,0" />
+                      <TextBlock Grid.Column="2" Classes="data-row num" Text="{Binding RarityPct, StringFormat='{}{0}%'}" />
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Grid>
+  </Grid>
+</UserControl>

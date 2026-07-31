@@ -197,6 +197,15 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
   </Style>
+  <!-- Set-browser grid tile: selected-tile indicator (accent border + wash), since the tile grid
+       is a plain ItemsControl over rows (see SetBrowserView.axaml's note on ListBox virtualization)
+       rather than a real ListBox/ListBoxItem, so there is no native :selected pseudo-class to
+       style — selection is instead exposed as a bound "sel" class per SetItemRow.IsSelected. -->
+  <Style Selector="Border.tile.sel">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
   <Style Selector="Border.card">
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />

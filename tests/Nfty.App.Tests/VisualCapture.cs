@@ -16,7 +16,9 @@ using Nfty.App;
 using Nfty.App.Services;
 using Nfty.App.ViewModels;
 using Nfty.Core.Formats;
+using Nfty.Core.Generation;
 using Nfty.Core.Model;
+using Nfty.Core.Output;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using Xunit;
@@ -385,8 +387,37 @@ public class VisualCapture
             var vm = new LandingViewModel(nav, dialogs, notify, new FilePickerService(), new RecentsService(),
                 new CookBookSession(),
                 book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(),
-                    ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs)));
+                    ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs)),
+                set => new SetBrowserViewModel(set));
             Capture(new Views.LandingView { DataContext = vm }, variant, $"landing-{key}.png");
+        }
+    }
+
+    /// <summary>Renders the real <see cref="Views.SetBrowserView"/> bound to a
+    /// <see cref="SetBrowserViewModel"/> over a cooked Set (an item selected) so visual parity with
+    /// the Set-browser design intent can be checked from an actual rendered frame — not imagined
+    /// from XAML. Cooks a tiny 6-item set to a temp dir per theme, reads it back, renders, then
+    /// disposes the VM and deletes the temp dir.</summary>
+    [AvaloniaFact]
+    public void Capture_set_browser()
+    {
+        if (Dir is null) return;   // inert unless explicitly capturing
+
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            var key = variant.Key.ToString()!.ToLowerInvariant();
+            var dir = Directory.CreateTempSubdirectory().FullName;
+            try
+            {
+                using var generated = Generator.Generate(CoreTestBook.Tiny(), new GenerateOptions(6, "seed1"));
+                SetWriter.Write(generated, dir, pack: false);
+                var loaded = SetReader.Read(dir);
+                var vm = new SetBrowserViewModel(loaded);
+                vm.SelectedItem = vm.Items[0];
+                Capture(new Views.SetBrowserView { DataContext = vm }, variant, $"set-browser-{key}.png");
+                vm.Dispose();
+            }
+            finally { Directory.Delete(dir, recursive: true); }
         }
     }
 

@@ -1,8 +1,11 @@
+using System.IO;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Nfty.App;
 using Nfty.App.Services;
 using Nfty.App.ViewModels;
+using Nfty.Core.Generation;
+using Nfty.Core.Output;
 using Xunit;
 
 namespace Nfty.App.Tests;
@@ -20,10 +23,17 @@ public class SmokeTests
         var cookFactory = ExplorerViewModelTests.CookFactory(dialogs);
         var smokeBook = ExplorerViewModelTests.TwoRecipeBook();
         var cat = smokeBook.Recipes.First(r => r.Manifest.Id == "cat");
+
+        var setDir = Directory.CreateTempSubdirectory().FullName;
+        using var generated = Generator.Generate(CoreTestBook.Tiny(), new GenerateOptions(2, "seed1"));
+        SetWriter.Write(generated, setDir, pack: false);
+        var loadedSet = SetReader.Read(setDir);   // ownership passes to SetBrowserViewModel below
+
         ViewModelBase[] vms =
         [
             new LandingViewModel(nav, dialogs, notify, new FilePickerService(), new RecentsService(),
-                new CookBookSession(), book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(), editorFactory, cookFactory)),
+                new CookBookSession(), book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(), editorFactory, cookFactory),
+                set => new SetBrowserViewModel(set)),
             new ExplorerViewModel(smokeBook, nav, dialogs, notify, new ImageBridge(), editorFactory, cookFactory),
             editorFactory(cat.Ingredients[0], cat, smokeBook),
             new HelpViewModel(dialogs),
@@ -32,6 +42,7 @@ public class SmokeTests
             new NewIngredientViewModel(dialogs, notify),
             new ErrorDialogViewModel(dialogs, "Error", "Could not open the cookbook."),
             new CookDialogViewModel(smokeBook, new FilePickerService(), new NoopFolderRevealer(), dialogs),
+            new SetBrowserViewModel(loadedSet),
         ];
         foreach (var vm in vms)
         {
@@ -39,6 +50,10 @@ public class SmokeTests
             Assert.False(control is TextBlock tb && tb.Text!.StartsWith("View not found"),
                 $"No view for {vm.GetType().Name}");
         }
+
+        foreach (var vm in vms.OfType<IDisposable>())
+            vm.Dispose();
+        Directory.Delete(setDir, recursive: true);
     }
 
     [AvaloniaFact]
@@ -49,7 +64,8 @@ public class SmokeTests
         var vm = new LandingViewModel(nav, dialogs, notify,
             new FilePickerService(), new RecentsService(), new CookBookSession(),
             book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav),
-                ExplorerViewModelTests.CookFactory(dialogs)));
+                ExplorerViewModelTests.CookFactory(dialogs)),
+            set => new SetBrowserViewModel(set));
         vm.NewCookBookCommand.Execute(null);
         Assert.IsType<NewCookBookViewModel>(dialogs.Active);
         ((NewCookBookViewModel)dialogs.Active!).CancelCommand.Execute(null);
