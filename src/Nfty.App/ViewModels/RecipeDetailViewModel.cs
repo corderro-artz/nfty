@@ -1,3 +1,4 @@
+using System;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -5,6 +6,8 @@ using Nfty.App.Services;
 using Nfty.Core.Formats;
 using Nfty.Core.Generation;
 using Nfty.Core.Model;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Nfty.App.ViewModels;
 
@@ -51,10 +54,21 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
 
     private Bitmap BuildHero()
     {
-        var opts = new GenerateOptions(Count: 1, Seed: RollSeed.ToString(),
-            RecipeId: _recipe.Manifest.Id, EnforceUniqueDna: false);
-        using var asset = Generator.GenerateStreaming(_book, opts).First();
-        return _bridge.ToBitmap(asset.Image);
+        try
+        {
+            var opts = new GenerateOptions(Count: 1, Seed: RollSeed.ToString(),
+                RecipeId: _recipe.Manifest.Id, EnforceUniqueDna: false);
+            using var asset = Generator.GenerateStreaming(_book, opts).First();
+            return _bridge.ToBitmap(asset.Image);
+        }
+        catch (Exception)
+        {
+            // The book isn't generatable yet — e.g. a freshly-added empty recipe with no layers (its
+            // detail is selected right after Add), or another recipe is empty (Generator validates the
+            // whole book). Show a blank canvas-sized placeholder rather than crash the detail view.
+            using var blank = new Image<Rgba32>(_book.Manifest.Canvas.Width, _book.Manifest.Canvas.Height);
+            return _bridge.ToBitmap(blank);
+        }
     }
 
     private static RuleRow MapRule(IncompatibilityRule rule) => new(

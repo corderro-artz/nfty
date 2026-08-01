@@ -58,6 +58,23 @@ public static class CookBookEdits
         return new LoadedCookBook { Manifest = book.Manifest, Recipes = recipes, SourceSha256 = book.SourceSha256 };
     }
 
+    /// <summary>Adds a recipe to a cookbook (or replaces one with the same id) and sets its selection
+    /// weight. Reuses every other recipe/image by reference; disposes nothing.</summary>
+    public static LoadedCookBook UpsertRecipe(LoadedCookBook book, LoadedRecipe recipe, double weight)
+    {
+        var recipes = book.Recipes.Where(r => r.Manifest.Id != recipe.Manifest.Id).Append(recipe).ToList();
+        var weights = book.Manifest.RecipeWeights
+            .Where(kv => kv.Key != recipe.Manifest.Id)
+            .ToDictionary(kv => kv.Key, kv => kv.Value);
+        weights[recipe.Manifest.Id] = weight;
+        return new LoadedCookBook
+        {
+            Manifest = book.Manifest with { RecipeWeights = weights },
+            Recipes = recipes,
+            SourceSha256 = book.SourceSha256,
+        };
+    }
+
     /// <summary>Removes a recipe from a cookbook (and its selection-weight entry). Reuses every surviving
     /// image; the caller owns the removed recipe's ingredient images.</summary>
     public static LoadedCookBook RemoveRecipe(LoadedCookBook book, string recipeId)
