@@ -28,7 +28,7 @@ public class LandingOpenSetTests
             new RecentsService(Directory.CreateTempSubdirectory().FullName), new CookBookSession(),
             book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(),
                 ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs), new CookBookSession(),
-                new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs)),
+                new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs), new StatusService()),
             s => new SetBrowserViewModel(s),
                 (_, _, _) => null!);
     }

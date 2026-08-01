@@ -30,7 +30,7 @@ public class LandingOpenFlowTests
             new RecentsService(Directory.CreateTempSubdirectory().FullName), s,
             book => new ExplorerViewModel(book, n, d, no, new ImageBridge(), ExplorerViewModelTests.EditorFactory(n),
                 ExplorerViewModelTests.CookFactory(d), new CookBookSession(),
-                new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(n, new CookBookSession(), d)),
+                new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(n, new CookBookSession(), d), new StatusService()),
             set => new SetBrowserViewModel(set),
                 (_, _, _) => null!);
     }

@@ -26,7 +26,7 @@ public class ExplorerSearchTests
         var session = new CookBookSession();
         return new ExplorerViewModel(book ?? ExplorerViewModelTests.TwoRecipeBook(), nav, dialogs, n, new ImageBridge(),
             ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs), session,
-            new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs));
+            new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs), new StatusService());
     }
 
     /// <summary>A book whose one ingredient has a variant name/id that never appears anywhere else in

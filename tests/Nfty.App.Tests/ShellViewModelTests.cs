@@ -11,7 +11,7 @@ public class ShellViewModelTests
         notify = new FakeNotYetWired();
         var nav = new FakeNav();
         var dialogs = new FakeDialogs();
-        var shell = new ShellViewModel(nav, dialogs, notify, new StubTheme());
+        var shell = new ShellViewModel(nav, dialogs, notify, new StubTheme(), new StatusService());
         return shell;
     }
 
@@ -42,7 +42,7 @@ public class ShellViewModelTests
     public void Close_dialog_clears_the_active_dialog()
     {
         var dialogs = new DialogService();
-        var shell = new ShellViewModel(new FakeNav(), dialogs, new FakeNotYetWired(), new StubTheme());
+        var shell = new ShellViewModel(new FakeNav(), dialogs, new FakeNotYetWired(), new StubTheme(), new StatusService());
         _ = dialogs.ShowAsync<object>(new HelpViewModel(dialogs));
         Assert.NotNull(dialogs.Active);
 

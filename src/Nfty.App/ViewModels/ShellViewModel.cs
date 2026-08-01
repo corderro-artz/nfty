@@ -20,12 +20,16 @@ public partial class ShellViewModel : ViewModelBase
     public event Action? ToggleMaximizeRequested;
     public event Action? CloseRequested;
 
-    public ShellViewModel(INavigationService nav, IDialogService dialogs, INotYetWired notify, IThemeService theme)
+    public ShellViewModel(INavigationService nav, IDialogService dialogs, INotYetWired notify, IThemeService theme,
+        IStatusService status)
     {
         _nav = nav; _dialogs = dialogs; _notify = notify; _theme = theme;
         _nav.Changed += () => CurrentPage = _nav.Current;
         _dialogs.Changed += () => ActiveDialog = _dialogs.Active;
+        // Two channels on purpose: Report is for buttons that genuinely do nothing yet, Say is for
+        // real guidance. Routing guidance through Report told users a working feature was unbuilt.
         _notify.Reported += a => StatusMessage = $"Not wired yet: {a}";
+        status.Said += m => StatusMessage = m;
     }
 
     [RelayCommand] private void ShowHelp() => _dialogs.ShowAsync<object>(new HelpViewModel(_dialogs));

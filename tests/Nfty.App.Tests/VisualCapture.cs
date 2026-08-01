@@ -279,7 +279,7 @@ public class VisualCapture
             var vm = new ExplorerViewModel(ExplorerViewModelTests.TwoRecipeBook(), nav, dialogs,
                 new FakeNotYetWired(), new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav),
                 ExplorerViewModelTests.CookFactory(dialogs), new CookBookSession(),
-                new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs));
+                new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs), new StatusService());
             var view = new Views.ExplorerView { DataContext = vm };
             var window = new Window { RequestedThemeVariant = variant, Content = view, Width = 900, Height = 560 };
             window.Show();
@@ -390,7 +390,7 @@ public class VisualCapture
                 new CookBookSession(),
                 book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(),
                     ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs), new CookBookSession(),
-                    new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs)),
+                    new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs), new StatusService()),
                 set => new SetBrowserViewModel(set),
                 (_, _, _) => null!);
             Capture(new Views.LandingView { DataContext = vm }, variant, $"landing-{key}.png");

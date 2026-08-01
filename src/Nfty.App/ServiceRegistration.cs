@@ -14,6 +14,7 @@ public static class ServiceRegistration
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IDialogService, DialogService>();
         services.AddSingleton<INotYetWired, NotYetWired>();
+        services.AddSingleton<IStatusService, StatusService>();
         services.AddSingleton<IFilePickerService, FilePickerService>();
         services.AddSingleton<IRecentsService, RecentsService>();
         services.AddSingleton<IThemeService, ThemeService>();
@@ -63,7 +64,8 @@ public static class ServiceRegistration
                 sp.GetRequiredService<Func<LoadedCookBook, CookDialogViewModel>>(),
                 sp.GetRequiredService<ICookBookSession>(),
                 sp.GetRequiredService<IFilePickerService>(),
-                sp.GetRequiredService<Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel>>()));
+                sp.GetRequiredService<Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel>>(),
+                sp.GetRequiredService<IStatusService>()));
 
         services.AddSingleton<Func<LoadedSet, SetBrowserViewModel>>(sp => set => new SetBrowserViewModel(set));
 

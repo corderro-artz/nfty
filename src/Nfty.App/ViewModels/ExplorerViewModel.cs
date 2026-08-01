@@ -25,6 +25,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     private readonly Func<LoadedCookBook, CookDialogViewModel> _cookFactory;
     private readonly ICookBookSession _session;
     private readonly IFilePickerService _picker;
+    private readonly IStatusService _status;
     private readonly Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> _looseEditorFactory;
 
     [ObservableProperty] private ExplorerNode? _selectedNode;
@@ -63,13 +64,15 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel> editorFactory,
         Func<LoadedCookBook, CookDialogViewModel> cookFactory, ICookBookSession session,
         IFilePickerService picker,
-        Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> looseEditorFactory)
+        Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> looseEditorFactory,
+        IStatusService status)
     {
         _book = book; _nav = nav; _dialogs = dialogs; _notify = notify; _bridge = bridge;
         _editorFactory = editorFactory;
         _cookFactory = cookFactory;
         _session = session;
         _picker = picker;
+        _status = status;
         _looseEditorFactory = looseEditorFactory;
         _fullRoot = BuildTree(book);
         Root = _fullRoot;
@@ -212,14 +215,31 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private async Task Add()
     {
-        // Add is wired for a recipe (add ingredient) and the cookbook root (add recipe), when editing
-        // with a source file; other cases stay notify stubs.
-        if (!IsEditing || _session.SourcePath is null) { _notify.Report(AddLabel); return; }
+        // Adding is GATED, not unbuilt — say why, rather than routing through the not-wired channel
+        // (which prefixes "Not wired yet:" and told users a working feature didn't exist).
+        if (!IsEditing)
+        {
+            _status.Say("Editing is locked. Use the lock button to unlock, then add.");
+            return;
+        }
+        if (_session.SourcePath is null)
+        {
+            _status.Say("This view is read-only because it isn't backed by a .cbk file on disk.");
+            return;
+        }
         switch (SelectedNode?.Domain)
         {
             case LoadedRecipe recipe: await AddIngredientTo(recipe); return;
             case LoadedCookBook: await AddRecipe(); return;
-            default: _notify.Report(AddLabel); return;
+            // Variants belong to the ingredient editor, which owns the draft + undo history — so
+            // "Add variant" opens it there rather than pretending the action doesn't exist.
+            case (LoadedRecipe r, LoadedIngredient i):
+                _status.Say($"Add variants to “{i.Manifest.Name}” in the editor.");
+                OpenEditor(i, r);
+                return;
+            default:
+                _status.Say("Select a cookbook, recipe or ingredient to add to.");
+                return;
         }
     }
 
@@ -363,9 +383,19 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
 
     private Task ShowError(string title, string message) =>
         _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, title, message));
-    [RelayCommand] private void Import() => _notify.Report("Import");
+    /// <summary>Importing a loose file opens it as its own document, which is a start-screen action;
+    /// importing INTO the open cookbook isn't built yet, so say that rather than nothing.</summary>
+    [RelayCommand] private void Import() =>
+        _status.Say("Importing into an open cookbook isn't available yet - use Import on the start screen to open a loose file.");
     [RelayCommand] private void SelectNode(ExplorerNode node) => SelectedNode = node;
-    [RelayCommand] private void OpenIngredient(string id) => _notify.Report($"Open ingredient {id}");
+    /// <summary>Clicking a layer in the recipe detail jumps to that ingredient in the tree.</summary>
+    [RelayCommand]
+    private void OpenIngredient(string id)
+    {
+        var node = FindNode(Root, id);
+        if (node is not null) SelectedNode = node;
+        else _status.Say($"“{id}” isn't in the current view (a filter may be hiding it).");
+    }
 
     // Delete needs edit-mode ON, a source .cbk to write to, and a recipe/ingredient selected
     // (the cookbook root is never deletable — close the book instead).
