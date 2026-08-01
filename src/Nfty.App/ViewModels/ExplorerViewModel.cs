@@ -7,6 +7,7 @@ using Nfty.App.Models;
 using Nfty.App.Services;
 using Nfty.Core.Editing;
 using Nfty.Core.Formats;
+using Nfty.Core.Model;
 
 namespace Nfty.App.ViewModels;
 
@@ -137,14 +138,56 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private async Task Add()
     {
-        // Only "Add ingredient" (a recipe selected, editing, with a source file) is wired this slice;
-        // other kinds stay notify stubs.
-        if (SelectedNode?.Domain is not LoadedRecipe recipe || !IsEditing || _session.SourcePath is null)
+        // Add is wired for a recipe (add ingredient) and the cookbook root (add recipe), when editing
+        // with a source file; other cases stay notify stubs.
+        if (!IsEditing || _session.SourcePath is null) { _notify.Report(AddLabel); return; }
+        switch (SelectedNode?.Domain)
         {
-            _notify.Report(AddLabel);
+            case LoadedRecipe recipe: await AddIngredientTo(recipe); return;
+            case LoadedCookBook: await AddRecipe(); return;
+            default: _notify.Report(AddLabel); return;
+        }
+    }
+
+    private async Task AddRecipe()
+    {
+        var wizard = new NewRecipeViewModel(_dialogs, _notify);
+        var result = await _dialogs.ShowAsync<NewRecipeViewModel>(wizard);
+        if (result is null) return;   // cancelled
+        if (string.IsNullOrWhiteSpace(result.DerivedId))
+        {
+            await ShowError("Invalid recipe", "The recipe needs a name.");
             return;
         }
+        if (_book.Recipes.Any(r => r.Manifest.Id == result.DerivedId))
+        {
+            await ShowError("Duplicate recipe", $"A recipe “{result.DerivedId}” already exists.");
+            return;
+        }
+        try
+        {
+            // A fresh recipe is intentionally empty; it is not yet generatable (ValidateRecipe would
+            // flag the empty layerOrder), so it is NOT validated here — the user fills it via
+            // "Add ingredient" next, and the cook path validates the whole book at generation time.
+            var recipe = new LoadedRecipe
+            {
+                Manifest = new RecipeManifest(result.DerivedId, result.Name,
+                    Array.Empty<string>(), Array.Empty<IncompatibilityRule>()),
+                Ingredients = Array.Empty<LoadedIngredient>(),
+            };
 
+            var book2 = CookBookEdits.UpsertRecipe(_book, recipe, result.Weight);
+            var book3 = await CookBookPersistence.PersistAsync(_session, book2);
+            ApplyBook(book3, recipe.Manifest.Id);   // select the new (empty) recipe
+        }
+        catch (Exception ex)
+        {
+            await ShowError("Could not add recipe", ex.Message);
+        }
+    }
+
+    private async Task AddIngredientTo(LoadedRecipe recipe)
+    {
         var wizard = new NewIngredientViewModel(_dialogs, _notify);
         var result = await _dialogs.ShowAsync<NewIngredientViewModel>(wizard);
         if (result is null) return;   // cancelled

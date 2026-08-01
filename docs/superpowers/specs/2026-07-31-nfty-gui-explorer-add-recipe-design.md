@@ -18,8 +18,8 @@ patterns. One small `Nfty.Core.Editing` addition (`CookBookEdits.UpsertRecipe`),
 **Goals**
 - The Explorer's **Add** button, with the **CookBook root** selected (label "Add recipe"), opens the New
   Recipe wizard. On **Create** the wizard closes returning itself; the Explorer builds an **empty**
-  `LoadedRecipe` (`RecipeManifest(DerivedId, Name, [], [])`, no ingredients), validates
-  (`Validator.ValidateRecipe` — an empty recipe is legal), splices it via a new
+  `LoadedRecipe` (`RecipeManifest(DerivedId, Name, [], [])`, no ingredients) — **not** validated (an
+  empty recipe is intentionally not-yet-generatable), splices it via a new
   `CookBookEdits.UpsertRecipe(book, recipe, weight)` (adding `RecipeWeights[id] = weight`), persists via
   `CookBookPersistence.PersistAsync`, refreshes the tree (`ApplyBook`), and **selects the new recipe**.
 - The new recipe starts empty; the user then adds ingredients to it via A2b. No editor opens (recipes are
@@ -64,8 +64,12 @@ patterns. One small `Nfty.Core.Editing` addition (`CookBookEdits.UpsertRecipe`),
      exists."; return; }`
   4. `var recipe = new LoadedRecipe { Manifest = new RecipeManifest(result.DerivedId, result.Name,
      Array.Empty<string>(), Array.Empty<IncompatibilityRule>()), Ingredients = Array.Empty<LoadedIngredient>() };`
-  5. `var problems = Validator.ValidateRecipe(recipe); if (problems.Count > 0) { error joined; return; }`
-     (an empty recipe passes; the check guards against future surprises).
+  5. **No `ValidateRecipe` at add time.** A fresh recipe is intentionally empty, and
+     `Validator.ValidateRecipe` rejects an empty `layerOrder` ("would generate a fully-transparent
+     asset") — so validating here would make adding a recipe impossible. The empty recipe is persisted
+     as-is (it round-trips through `CookBookArchive`); the user fills it via "Add ingredient" next, and
+     the cook path validates the whole book at generation time (same "empty states allowed, caught at
+     generation" philosophy as A2a delete).
   6. `var book2 = CookBookEdits.UpsertRecipe(_book, recipe, result.Weight);`
   7. `var book3 = await CookBookPersistence.PersistAsync(_session, book2);`
   8. `ApplyBook(book3, recipe.Manifest.Id);` — selects the new (empty) recipe node.
@@ -112,10 +116,11 @@ Add (CookBook root selected, editing, source file)
   Save → reopen to confirm; try a duplicate/blank name → error.
 
 ## 6. Risks & escalation
-- **Empty recipe semantics:** a 0-ingredient recipe is legal to persist but not generatable; the cook path
-  (`Validator.Validate` at generation) already reports it, so no silent breakage. Confirm `ValidateRecipe`
-  passes the empty recipe in a test (it does — `CheckRecipeStructure` only checks dup ids / layer order /
-  rule references, all vacuous when empty).
+- **Empty recipe semantics:** a 0-ingredient recipe is legal to *persist* but **not** legal to
+  *generate* — `Validator.ValidateRecipe` flags its empty `layerOrder` (`CheckLayerOrder`). So the add
+  flow deliberately does **not** call `ValidateRecipe` (it would block every add); the empty recipe is
+  written as-is and the cook path reports it at generation time. It round-trips through
+  `CookBookArchive` (a `.rcp` with a manifest and zero ingredient entries).
 - **`RecipeWeights` consistency:** `UpsertRecipe` must add the weight entry so the recipe participates in
   the cookbook's weighted roll; a recipe present in `Recipes` but absent from `RecipeWeights` would be a
   latent inconsistency — the test asserts both.
