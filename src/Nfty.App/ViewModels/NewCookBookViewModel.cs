@@ -4,8 +4,9 @@ using Nfty.App.Services;
 
 namespace Nfty.App.ViewModels;
 
-/// <summary>Phase-1 New CookBook wizard: collects the fields a CookBook manifest needs (name, symbol,
-/// canvas size, description). Create is a stub — Phase 2 builds the manifest and writes the .cbk.</summary>
+/// <summary>New CookBook wizard: collects the fields a CookBook manifest needs (name, symbol, canvas
+/// size, description) and, on Create, closes the dialog with itself so the caller can build the
+/// manifest and write the .cbk.</summary>
 public partial class NewCookBookViewModel : WizardViewModelBase
 {
     [ObservableProperty] private string _name = "";
@@ -23,7 +24,11 @@ public partial class NewCookBookViewModel : WizardViewModelBase
 
     public NewCookBookViewModel(IDialogService dialogs, INotYetWired notify) : base(dialogs, notify) { }
 
-    partial void OnNameChanged(string value) => OnPropertyChanged(nameof(DerivedId));
+    partial void OnNameChanged(string value)
+    {
+        OnPropertyChanged(nameof(DerivedId));
+        CreateCommand.NotifyCanExecuteChanged();
+    }
 
     partial void OnAspectLockedChanged(bool value)
     {
@@ -54,5 +59,8 @@ public partial class NewCookBookViewModel : WizardViewModelBase
         else if (value > 0) _ratio = (double)_width / value;
     }
 
-    [RelayCommand] private void Create() { Notify.Report("Create CookBook"); Dialogs.Close(null); }
+    private bool CanCreate() => !string.IsNullOrWhiteSpace(DerivedId);
+
+    [RelayCommand(CanExecute = nameof(CanCreate))]
+    private void Create() => Dialogs.Close(this);
 }
