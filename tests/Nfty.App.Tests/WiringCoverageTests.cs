@@ -37,7 +37,7 @@ public class WiringCoverageTests
         using var vm = new ExplorerViewModel(ExplorerViewModelTests.TwoRecipeBook(), nav, dialogs, new FakeNotYetWired(), new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav),
             ExplorerViewModelTests.CookFactory(dialogs), new CookBookSession(),
             new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs));
-        foreach (var c in new[] { "ToggleLockCommand","SearchCommand","AddCommand","DeleteSelectedCommand",
+        foreach (var c in new[] { "ToggleLockCommand","AddCommand","DeleteSelectedCommand",
                                   "ImportCommand","SelectNodeCommand","OpenIngredientCommand" })
             Assert.True(HasCommand(vm, c), $"Explorer missing {c}");
     }

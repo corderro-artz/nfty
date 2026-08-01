@@ -20,6 +20,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     private readonly INotYetWired _notify;
     private readonly IImageBridge _bridge;
     private LoadedCookBook _book;
+    private ExplorerNode _fullRoot = default!;
     private readonly Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel> _editorFactory;
     private readonly Func<LoadedCookBook, CookDialogViewModel> _cookFactory;
     private readonly ICookBookSession _session;
@@ -33,6 +34,10 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     private bool _isEditing;
 
     [ObservableProperty] private ExplorerNode _root = default!;
+
+    [ObservableProperty] private string _searchQuery = "";
+
+    partial void OnSearchQueryChanged(string value) => ApplyFilter();
 
     /// <summary>Wraps the single Root as a one-element sequence so a TreeView (which binds to a
     /// collection of roots) can display it.</summary>
@@ -66,7 +71,8 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         _session = session;
         _picker = picker;
         _looseEditorFactory = looseEditorFactory;
-        Root = BuildTree(book);
+        _fullRoot = BuildTree(book);
+        Root = _fullRoot;
         RebuildCrumbs();
     }
 
@@ -122,7 +128,9 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     private void ApplyBook(LoadedCookBook book, string? selectId)
     {
         _book = book;
-        Root = BuildTree(book);
+        _fullRoot = BuildTree(book);
+        Root = Filter(_fullRoot, SearchQuery);
+        OnPropertyChanged(nameof(SearchSummary));
         SelectedNode = FindNode(Root, selectId) ?? Root;
     }
 
@@ -139,8 +147,58 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         return null;
     }
 
+    /// <summary>Recompute the visible tree from the unfiltered one, keeping the selection only if it
+    /// survived (a filtered-away selection would leave the detail pane — and the mutating commands —
+    /// pointing at a node the user can no longer see).</summary>
+    private void ApplyFilter()
+    {
+        var selectedId = SelectedNode?.Id;
+        Root = Filter(_fullRoot, SearchQuery);
+        OnPropertyChanged(nameof(SearchSummary));
+        SelectedNode = FindNode(Root, selectedId) ?? Root;
+    }
+
+    /// <summary>Match count for the current query ("" when not filtering), so a zero-result query
+    /// reads as such instead of an unexplained empty tree.</summary>
+    public string SearchSummary
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(SearchQuery)) return "";
+            int n = Root.Children.Count + Root.Children.Sum(r => r.Children.Count);
+            return n == 1 ? "1 match" : $"{n} matches";
+        }
+    }
+
+    private static ExplorerNode Filter(ExplorerNode root, string query)
+    {
+        if (string.IsNullOrWhiteSpace(query)) return root;
+        var q = query.Trim();
+        var recipes = new List<ExplorerNode>();
+        foreach (var r in root.Children)
+        {
+            bool recipeMatches = Matches(r, q);
+            var kept = recipeMatches ? r.Children.ToList() : r.Children.Where(i => Matches(i, q)).ToList();
+            if (recipeMatches || kept.Count > 0)
+                recipes.Add(r with { Children = kept });
+        }
+        return root with { Children = recipes };
+    }
+
+    /// <summary>Name or id, case-insensitive; an ingredient also matches on its variants' ids/names
+    /// (variants aren't tree nodes, so this only decides whether the ingredient is shown).</summary>
+    private static bool Matches(ExplorerNode n, string q)
+    {
+        if (n.Id.Contains(q, StringComparison.OrdinalIgnoreCase)
+            || n.Name.Contains(q, StringComparison.OrdinalIgnoreCase)) return true;
+        if (n.Domain is (LoadedRecipe, LoadedIngredient ing))
+            return ing.Manifest.Variants.Any(v =>
+                v.Id.Contains(q, StringComparison.OrdinalIgnoreCase)
+                || v.Name.Contains(q, StringComparison.OrdinalIgnoreCase));
+        return false;
+    }
+
     [RelayCommand] private void ToggleLock() => IsEditing = !IsEditing;
-    [RelayCommand] private void Search() => _notify.Report("Search (⌘K)");
     [RelayCommand]
     private async Task Add()
     {
