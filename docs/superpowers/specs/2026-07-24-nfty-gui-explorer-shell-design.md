@@ -55,7 +55,7 @@ field. This adds no command and no behavioural effect — it is a derived label.
 Restyle the existing toolbar row (`ExplorerView.axaml`: Search / Add / Delete / Import / lock) to the
 mockup's `.exp-toolbar` (flex, gap 10, padding `10,14`, bottom hairline `LineBrush`): **Add** = `accent`
 button showing the context-aware `AddLabel` (already bound); **Delete**/**Import** = `tbtn`; **search**
-and **lock** = `icon` buttons. Keep every `Command` binding exactly as-is (`SearchCommand`, `AddCommand`,
+and **lock** = `icon` buttons. Keep every `Command` binding exactly as-is (`AddCommand`,
 `DeleteSelectedCommand`, `ImportCommand`, `ToggleLockCommand`) and the `Ctrl+K` keybinding. No VM change.
 
 ### 2.3 Styled tree

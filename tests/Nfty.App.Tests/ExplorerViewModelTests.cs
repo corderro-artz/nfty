@@ -115,10 +115,9 @@ public class ExplorerViewModelTests
     }
 
     [Fact]
-    public void Search_and_import_report_not_yet_wired()
+    public void Import_reports_not_yet_wired()
     {
         using var vm = Make(out var n);
-        vm.SearchCommand.Execute(null); Assert.Equal("Search (⌘K)", n.Last);
         vm.ImportCommand.Execute(null); Assert.Equal("Import", n.Last);
     }
 

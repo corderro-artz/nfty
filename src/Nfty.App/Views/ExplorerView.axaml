@@ -6,9 +6,6 @@
              x:Class="Nfty.App.Views.ExplorerView"
              x:DataType="vm:ExplorerViewModel"
              Focusable="True">
-  <UserControl.KeyBindings>
-    <KeyBinding Gesture="Ctrl+K" Command="{Binding SearchCommand}" />
-  </UserControl.KeyBindings>
   <Grid RowDefinitions="Auto,Auto,*">
     <!-- Crumbs bar -->
     <ItemsControl Grid.Row="0" ItemsSource="{Binding Crumbs}" Margin="14,10,14,0">
@@ -28,7 +25,9 @@
     <!-- Context toolbar (.exp-toolbar): gap 10, padding 10/14, bottom hairline -->
     <Border Grid.Row="1" Background="{DynamicResource BgAltBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,0,1" Padding="14,10">
       <StackPanel Orientation="Horizontal" Spacing="10">
-        <Button Content="🔍" Command="{Binding SearchCommand}" Classes="icon" ToolTip.Tip="Search (Ctrl+K)" />
+        <TextBox x:Name="SearchBox" Width="220" Text="{Binding SearchQuery}"
+                 Watermark="Find recipe, ingredient, variant…" ToolTip.Tip="Search (Ctrl+K)" />
+        <TextBlock Text="{Binding SearchSummary}" Classes="muted" VerticalAlignment="Center" />
         <Button Content="{Binding AddLabel}" Command="{Binding AddCommand}" Classes="accent" />
         <Button Content="Delete" Command="{Binding DeleteSelectedCommand}" Classes="tbtn" />
         <Button Content="Import" Command="{Binding ImportCommand}" Classes="tbtn" />
