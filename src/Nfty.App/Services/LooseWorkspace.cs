@@ -31,4 +31,21 @@ public static class LooseWorkspace
             Recipes = new[] { recipe },
         };
     }
+
+    /// <summary>Wraps a standalone (loose) recipe in a throwaway single-recipe cookbook so the Explorer
+    /// can browse it. The recipe is kept as-is (its own id, layer order, rules, ingredients);
+    /// <c>RecipeWeights</c> keys the recipe's real id so the synthetic book is internally consistent. The
+    /// returned book owns the recipe → its ingredients → their images.</summary>
+    public static LoadedCookBook WrapRecipe(LoadedRecipe recipe)
+    {
+        var img = recipe.Ingredients.SelectMany(i => i.VariantImages.Values).FirstOrDefault();
+        var canvas = img is null ? new Dimensions(512, 512) : new Dimensions(img.Width, img.Height);
+        return new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("loose", recipe.Manifest.Name, canvas,
+                new Collection(recipe.Manifest.Name, "", "L"),
+                new Dictionary<string, double> { [recipe.Manifest.Id] = 100 }),
+            Recipes = new[] { recipe },
+        };
+    }
 }

@@ -59,7 +59,18 @@ public partial class LandingViewModel : ViewModelBase
 
         if (kind == ArchiveKind.CookBook) { OpenPath(path); return; }
         if (kind == ArchiveKind.Ingredient) { OpenLooseIngredient(path); return; }
-        _notify.Report("Importing a loose recipe needs the Kitchen (coming soon)");   // .rcp → later slice
+        if (kind == ArchiveKind.Recipe) { OpenLooseRecipe(path); return; }
+        _notify.Report("This file type can't be imported.");   // guard (unreachable for the three known kinds)
+    }
+
+    private void OpenLooseRecipe(string path)
+    {
+        LoadedRecipe recipe;
+        try { recipe = RecipeArchive.Read(path); }
+        catch (Exception ex) { ShowError("Could not open", ex.Message); return; }
+        var book = LooseWorkspace.WrapRecipe(recipe);
+        _session.Open(book, null);            // no source .cbk → the Explorer is read-only; session owns `book`
+        _nav.To(_explorerFactory(book));
     }
 
     private void OpenLooseIngredient(string path)
