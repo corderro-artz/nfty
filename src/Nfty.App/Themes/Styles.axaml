@@ -62,6 +62,49 @@
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
   </Style>
 
+  <!-- Disabled: the mockup disables by OPACITY only, keeping the panel surface underneath
+       (explorer.html `.tbtn:disabled{opacity:.38}`) — but Fluent's own ":disabled" template style
+       repaints PART_ContentPresenter's Background/BorderBrush/Foreground from its own
+       (grey) disabled resources at Style priority, same mechanism as :pointerover/:pressed above,
+       so a disabled Button.tbtn/.accent rendered as an opaque grey slab (audit finding: the entire
+       ingredient-editor tool column when CanPaint is false). Reset the three properties back to
+       each variant's normal-state brushes so the Opacity rule below dims the *real* colours instead
+       of Fluent's substituted ones. -->
+  <Style Selector="Button.tbtn:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+  </Style>
+  <Style Selector="Button.accent:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+  </Style>
+  <Style Selector="Button:disabled">
+    <Setter Property="Opacity" Value="0.38" />
+  </Style>
+
+  <!-- Landing's "not built yet" tier (mockup `.tbtn.soon`: dashed border, muted, transparent bg —
+       landing.html:45-46, applied to "New Kitchen…"/"Open a cooked .set…"). Avalonia's Border (and
+       therefore ButtonBase's ContentPresenter chrome) has no dash-pattern property — StrokeDashArray
+       only exists on Shape elements (Rectangle/Line/Polygon), not Border — so the dashed stroke is
+       approximated here as a solid muted line rather than pulling in a full custom Button template
+       for one wizard-adjacent affordance. Declared after Button.tbtn so it wins the rest-state tie
+       (equal single-class specificity, later declaration wins); the :disabled compound selector below
+       additionally wins over the plain Button.tbtn:disabled rule above for a "soon" button that is
+       also genuinely disabled (NewKitchenCommand's CanExecute is permanently false) — more classes
+       matched, so it takes precedence, and would otherwise be masked by the disabled-state reset. -->
+  <Style Selector="Button.soon">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="Button.tbtn.soon:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+
   <Style Selector="Button.accent">
     <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
@@ -168,6 +211,20 @@
   <Style Selector="Button.landing TextBlock.lbl">
     <Setter Property="FontSize" Value="14" />
     <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- The label is a literal Grid>TextBlock (not the ContentPresenter's implicit content
+       TextBlock), so it never inherits the Button's own Foreground: the global "TextBlock" style
+       above sets Foreground unconditionally at Style priority, which beats Inherited regardless of
+       what the ancestor Button.Foreground is (Avalonia priority order Style > Inherited) — the same
+       reason TextBlock.hk needed its own on-accent override below rather than relying on
+       inheritance. Left unfixed, "New CookBook"'s label rendered near-black FgBrush text on the
+       accent maroon fill (illegible) and a "soon" button's label stayed full-strength FgBrush
+       instead of muted. -->
+  <Style Selector="Button.landing.accent TextBlock.lbl">
+    <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+  </Style>
+  <Style Selector="Button.soon TextBlock.lbl">
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
   <Style Selector="Button.landing TextBlock.hk">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />

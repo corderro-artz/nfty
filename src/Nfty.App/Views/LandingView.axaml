@@ -22,7 +22,7 @@
           <TextBlock Grid.Column="1" Classes="hk on-accent" Text="⌘N" />
         </Grid>
       </Button>
-      <Button Classes="landing tbtn" Command="{Binding NewKitchenCommand}">
+      <Button Classes="landing tbtn soon" Command="{Binding NewKitchenCommand}">
         <Grid ColumnDefinitions="*,Auto"><TextBlock Grid.Column="0" Classes="lbl" Text="＋  New Kitchen…" /></Grid>
       </Button>
       <Button Classes="landing tbtn" Command="{Binding NewRecipeCommand}">
@@ -45,7 +45,7 @@
           <TextBlock Grid.Column="1" Classes="hk" Text="⌘I" />
         </Grid>
       </Button>
-      <Button Classes="landing tbtn" Command="{Binding OpenSetCommand}">
+      <Button Classes="landing tbtn soon" Command="{Binding OpenSetCommand}">
         <Grid ColumnDefinitions="*,Auto"><TextBlock Grid.Column="0" Classes="lbl" Text="↗  Open a cooked .set…" /></Grid>
       </Button>
       <Button Classes="landing tbtn" Command="{Binding ShowHelpCommand}">

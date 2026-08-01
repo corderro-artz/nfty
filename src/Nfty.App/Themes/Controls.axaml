@@ -173,6 +173,50 @@
     </Style>
   </ControlTheme>
 
+  <!-- ================= ToggleButton ================= -->
+  <!-- ToggleButton is a ButtonBase (same lineage as Button), and Fluent's own default ToggleButton
+       template follows the same ContentPresenter#PART_ContentPresenter idiom as Button (confirmed
+       against the Avalonia docs' own restyle walkthroughs — a plain ContentPresenter#PART_ContentPresenter
+       is the template's content host for every ButtonBase-derived control). Left un-themed, a bare
+       ToggleButton falls through to Fluent's SystemAccentColor (stock #0078d7 blue) for its checked
+       state — the aspect-lock toggle in NewCookBookView is the one place this app uses a raw
+       ToggleButton, and it painted Fluent blue in both themes (audit finding: wizard-cookbook-*.png).
+       Sized 22x22 to match the mockup's `.link .lk` (wizard-cookbook.html:91-93). -->
+  <ControlTheme x:Key="{x:Type ToggleButton}" TargetType="ToggleButton"
+                BasedOn="{StaticResource {x:Type ToggleButton}}">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="Width" Value="22" />
+    <Setter Property="Height" Value="22" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+
+    <!-- Checked: accent wash/line/text, mirroring the mockup's `.link.on .lk` rule. -->
+    <Style Selector="^:checked /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+    </Style>
+  </ControlTheme>
+
+  <!-- ================= ProgressBar ================= -->
+  <!-- ProgressBar's PART_Indicator Border is TemplateBound to Foreground (the filled portion) and
+       the track to Background, so plain property Setters reach both without needing a template
+       part override (confirmed against the Avalonia docs' ProgressBar styling page: "Set Foreground
+       and Background properties directly to change the indicator and track colors"). Left
+       un-themed, ProgressBar falls through to Fluent's SystemAccentColor — the recipe wizard's
+       weight-preview bar painted Fluent blue in both themes (audit finding: wizard-recipe-*.png).
+       This is the finding's simpler fallback fix (a ControlTheme) rather than replacing the control
+       with a segmented bar + legend, which belongs to the later wizard-restructure slice. -->
+  <ControlTheme x:Key="{x:Type ProgressBar}" TargetType="ProgressBar"
+                BasedOn="{StaticResource {x:Type ProgressBar}}">
+    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+  </ControlTheme>
+
   <!-- ================= TreeViewItem ================= -->
   <!-- Mechanism confirmed by reading the actual Fluent 11.2.3 source (not just the generic
        treeview-how-to.md doc example), pulled from
