@@ -7,7 +7,16 @@
   <!-- Ingredient detail body: 2-column layout (explorer.html .ing-main / .ing-rail).
        Main column: variant hero (.vhero, explorer.html:313-321) + variant table (table.data vtable, explorer.html:881-885).
        Rail column: colorways panel (.cw-panel/.cwaxis, explorer.html:385-400). -->
-  <Grid Margin="16" ColumnDefinitions="*,280">
+  <!-- Rail column: Auto+MinWidth(208) rather than a fixed 280 (mirrors explorer.html's
+       `.ing-grid{grid-template-columns:minmax(0,2fr) minmax(208px,1fr)}`) — a fixed 280 rail plus
+       the table's 328px of fixed columns below overflowed the ~300px main column this pane gets
+       inside ExplorerView's 260+* split at 900px (audit finding: OVERALL sliced off, colorways
+       axis value colliding with the row rule). -->
+  <Grid Margin="16">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*" />
+      <ColumnDefinition Width="Auto" MinWidth="208" />
+    </Grid.ColumnDefinitions>
     <StackPanel Grid.Column="0" Spacing="14" Margin="0,0,16,0">
       <Border Classes="vhero">
         <Grid ColumnDefinitions="Auto,*,Auto">
@@ -16,9 +25,9 @@
             <Image Source="{Binding Hero}" Stretch="UniformToFill" />
           </Border>
           <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
-            <TextBlock Classes="mono" FontSize="17" FontWeight="Bold" Text="{Binding Name}" />
-            <TextBlock Classes="muted" Text="{Binding KindText}" />
-            <TextBlock Classes="muted" Text="{Binding ColorwaysText}" />
+            <TextBlock Classes="mono" FontSize="17" FontWeight="Bold" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+            <TextBlock Classes="muted" Text="{Binding KindText}" TextTrimming="CharacterEllipsis" />
+            <TextBlock Classes="muted" Text="{Binding ColorwaysText}" TextTrimming="CharacterEllipsis" />
           </StackPanel>
           <Button Grid.Column="2" Content="✏" Command="{Binding EditIngredientCommand}" Classes="accent" VerticalAlignment="Top" />
         </Grid>
@@ -26,7 +35,7 @@
 
       <StackPanel Spacing="0">
         <Border Classes="data-h">
-          <Grid ColumnDefinitions="48,*,80,100,100">
+          <Grid ColumnDefinitions="48,*,Auto,Auto,Auto">
             <TextBlock Grid.Column="0" Classes="data-h" Text="" />
             <Button Grid.Column="1" Classes="ghost" Padding="0" HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Left" Command="{Binding SortByCommand}" CommandParameter="Variant">
@@ -34,10 +43,10 @@
             </Button>
             <Button Grid.Column="2" Classes="ghost" Padding="0" HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Right" Command="{Binding SortByCommand}" CommandParameter="Weight">
-              <TextBlock Classes="data-h num" Text="WEIGHT" />
+              <TextBlock Classes="data-h num" Text="WEIGHT" MinWidth="80" />
             </Button>
-            <TextBlock Grid.Column="3" Classes="data-h num" Text="IN RECIPE" />
-            <TextBlock Grid.Column="4" Classes="data-h num" Text="OVERALL" />
+            <TextBlock Grid.Column="3" Classes="data-h num" Text="IN RECIPE" MinWidth="100" />
+            <TextBlock Grid.Column="4" Classes="data-h num" Text="OVERALL" MinWidth="100" />
           </Grid>
         </Border>
 
@@ -45,12 +54,12 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:VariantRow">
               <Border Classes="data-row">
-                <Grid ColumnDefinitions="48,*,80,100,100">
+                <Grid ColumnDefinitions="48,*,Auto,Auto,Auto">
                   <Image Grid.Column="0" Source="{Binding Thumbnail}" Width="32" Height="32" VerticalAlignment="Center" />
-                  <TextBlock Grid.Column="1" Classes="data-row" Text="{Binding Name}" VerticalAlignment="Center" Margin="10,0,0,0" />
-                  <TextBlock Grid.Column="2" Classes="data-row num" Text="{Binding Weight}" VerticalAlignment="Center" />
-                  <TextBlock Grid.Column="3" Classes="data-row num" Text="{Binding WithinPercent, StringFormat='{}{0}%'}" VerticalAlignment="Center" />
-                  <TextBlock Grid.Column="4" Classes="data-row num" Text="{Binding OverallPercent, StringFormat='{}{0}%'}" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Classes="data-row" Text="{Binding Name}" VerticalAlignment="Center" Margin="10,0,0,0" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="2" Classes="data-row num" Text="{Binding Weight}" VerticalAlignment="Center" MinWidth="80" />
+                  <TextBlock Grid.Column="3" Classes="data-row num" Text="{Binding WithinPercent, StringFormat='{}{0}%'}" VerticalAlignment="Center" MinWidth="100" />
+                  <TextBlock Grid.Column="4" Classes="data-row num" Text="{Binding OverallPercent, StringFormat='{}{0}%'}" VerticalAlignment="Center" MinWidth="100" />
                 </Grid>
               </Border>
             </DataTemplate>

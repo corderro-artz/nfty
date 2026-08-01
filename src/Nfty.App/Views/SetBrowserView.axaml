@@ -17,23 +17,37 @@
        ItemsRepeater against this project's references). The only control that virtualizes here is
        ListBox (default ItemsPanel = VirtualizingStackPanel, vertical), which has no wrap support;
        the only wrapping panel, WrapPanel, implements no virtualizing-panel interface and disables
-       virtualization outright. So the grid is realized as a virtualizing ListBox of fixed-size
-       "rows" (RowChunkConverter.By4), each row a horizontal run of tiles — ListBox virtualizes
-       per row, keeping a large Set cheap to render, while each row still shows several thumbnails.
+       virtualization outright. So the grid is realized as a virtualizing ListBox of rows
+       (RowChunkConverter, sized to the pane's current width — see its own doc comment), each row a
+       horizontal run of tiles — ListBox virtualizes per row, keeping a large Set cheap to render,
+       while each row still shows several thumbnails.
        ListBox's own selection is unused (its unit is a row, not a tile); tile clicks are wired via
        one bubbled Button.Click handler in SetBrowserView.axaml.cs instead. -->
   <Grid RowDefinitions="Auto,*" Margin="16">
-    <!-- Header row -->
-    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12" Margin="0,0,0,14">
-      <TextBlock Classes="mono" FontSize="17" FontWeight="Bold" Text="{Binding Name}" />
-      <TextBlock Classes="muted" VerticalAlignment="Center" Text="{Binding Count, StringFormat='{}{0} items'}" />
-      <TextBlock Classes="muted" VerticalAlignment="Center" Text="{Binding Seed, StringFormat='Seed {0}'}" />
+    <!-- Header row: idchip-wrapped metadata (mirrors CookBookDetailView's .idchip usage, matching
+         explorer.html's shared "chip/label grammar" instead of the bare TextBlocks the audit found
+         here — set-browser-*.png). -->
+    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10" Margin="0,0,0,14">
+      <TextBlock Classes="mono" FontSize="17" FontWeight="Bold" Text="{Binding Name}" VerticalAlignment="Center" />
+      <Border Classes="idchip">
+        <TextBlock Classes="mono" Text="{Binding Count, StringFormat='{}{0} items'}" />
+      </Border>
+      <Border Classes="idchip">
+        <TextBlock Classes="mono" Text="{Binding Seed, StringFormat='Seed {0}'}" />
+      </Border>
     </StackPanel>
 
     <Grid Grid.Row="1" ColumnDefinitions="*,300">
-      <!-- Main: virtualized thumbnail grid (ListBox virtualizes per row; see note above) -->
-      <ListBox Grid.Column="0" Margin="0,0,16,0" Background="Transparent"
-                ItemsSource="{Binding Items, Converter={x:Static appconv:RowChunkConverter.By4}}">
+      <!-- Main: virtualized thumbnail grid (ListBox virtualizes per row; see RowChunkConverter's
+           note above). Row width is a MultiBinding over [Items, Bounds.Width] so the chunk size
+           recomputes on resize instead of clipping a fixed 4-wide row (audit finding). -->
+      <ListBox Grid.Column="0" x:Name="TilesList" Margin="0,0,16,0" Background="Transparent">
+        <ListBox.ItemsSource>
+          <MultiBinding Converter="{x:Static appconv:RowChunkConverter.Instance}">
+            <Binding Path="Items" />
+            <Binding ElementName="TilesList" Path="Bounds.Width" />
+          </MultiBinding>
+        </ListBox.ItemsSource>
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="appconv:TileRow">
             <ItemsControl ItemsSource="{Binding Tiles}">
