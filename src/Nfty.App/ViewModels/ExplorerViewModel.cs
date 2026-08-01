@@ -92,17 +92,25 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         return new ExplorerNode(book.Manifest.Id, book.Manifest.Name, ExplorerNodeKind.CookBook, recipeNodes, book);
     }
 
-    partial void OnSelectedNodeChanged(ExplorerNode? value)
+    partial void OnSelectedNodeChanged(ExplorerNode? oldValue, ExplorerNode? newValue)
     {
+        // Filtering rebuilds every kept node via `record with`, so the same logical node arrives as a
+        // NEW instance on each keystroke. Rebuilding the detail then costs a full generation pass per
+        // character (RecipeDetail renders a hero) and resets the user's Reroll seed — so re-selecting
+        // the same domain object under the same id is a no-op. A real graph swap (ApplyBook) builds new
+        // domain objects, so it still rebuilds.
+        if (oldValue is not null && newValue is not null
+            && oldValue.Id == newValue.Id && ReferenceEquals(oldValue.Domain, newValue.Domain)) return;
+
         OnPropertyChanged(nameof(AddLabel));
         (CurrentDetail as IDisposable)?.Dispose();
-        CurrentDetail = value?.Kind switch
+        CurrentDetail = newValue?.Kind switch
         {
             ExplorerNodeKind.CookBook => new CookBookDetailViewModel(_book, _notify,
                 () => _dialogs.ShowAsync<object>(_cookFactory(_book))),
-            ExplorerNodeKind.Recipe => new RecipeDetailViewModel((LoadedRecipe)value!.Domain!, _book, _bridge, _notify,
+            ExplorerNodeKind.Recipe => new RecipeDetailViewModel((LoadedRecipe)newValue!.Domain!, _book, _bridge, _notify,
                 id => OpenIngredientCommand.Execute(id)),
-            ExplorerNodeKind.Ingredient => value!.Domain is (LoadedRecipe r, LoadedIngredient i)
+            ExplorerNodeKind.Ingredient => newValue!.Domain is (LoadedRecipe r, LoadedIngredient i)
                 ? new IngredientDetailViewModel(i, r, _book, _bridge, _notify,
                     () => OpenEditor(i, r), () => IsEditing)
                 : null,
@@ -155,7 +163,9 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         var selectedId = SelectedNode?.Id;
         Root = Filter(_fullRoot, SearchQuery);
         OnPropertyChanged(nameof(SearchSummary));
-        SelectedNode = FindNode(Root, selectedId) ?? Root;
+        // Only re-home an EXISTING selection; typing must not select the root out of nowhere (which
+        // would also flip AddLabel and populate the detail pane as a side effect of searching).
+        if (selectedId is not null) SelectedNode = FindNode(Root, selectedId) ?? Root;
     }
 
     /// <summary>Match count for the current query ("" when not filtering), so a zero-result query

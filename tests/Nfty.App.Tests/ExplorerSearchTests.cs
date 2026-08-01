@@ -151,4 +151,34 @@ public class ExplorerSearchTests
         Assert.Equal("cat", vm.SearchQuery);
         Assert.Equal(new[] { "cat" }, vm.Root.Children.Select(c => c.Id));
     }
+
+    /// <summary>Filtering rebuilds kept nodes via `record with`, so the "same" node arrives as a new
+    /// instance each keystroke. Without a guard that re-selection tore down and rebuilt CurrentDetail
+    /// per character — a full generation pass + canvas-sized bitmap for a recipe, and it reset the
+    /// user's Reroll seed. Assert the detail survives typing.</summary>
+    [AvaloniaFact]
+    public void Typing_does_not_rebuild_the_detail_pane()
+    {
+        using var vm = Make(out _);
+        vm.SelectNodeCommand.Execute(vm.Root);            // cookbook root selected
+        var detail = vm.CurrentDetail;
+        Assert.NotNull(detail);
+
+        foreach (var q in new[] { "c", "ca", "cat" })
+            vm.SearchQuery = q;
+
+        Assert.Same(detail, vm.CurrentDetail);            // same instance — never rebuilt
+    }
+
+    /// <summary>Typing must not invent a selection where there was none (it would also flip AddLabel
+    /// and populate the detail pane as a side effect of searching).</summary>
+    [AvaloniaFact]
+    public void Typing_with_nothing_selected_does_not_select_the_root()
+    {
+        using var vm = Make(out _);
+        Assert.Null(vm.SelectedNode);
+        vm.SearchQuery = "cat";
+        Assert.Null(vm.SelectedNode);
+        Assert.Null(vm.CurrentDetail);
+    }
 }
