@@ -62,14 +62,19 @@ public class ExplorerViewModelTests
         n = new FakeNotYetWired();
         var nav = new FakeNav();
         var dialogs = new FakeDialogs();
-        return new ExplorerViewModel(TwoRecipeBook(), nav, dialogs, n, new ImageBridge(), EditorFactory(nav), CookFactory(dialogs), new CookBookSession());
+        var session = new CookBookSession();
+        return new ExplorerViewModel(TwoRecipeBook(), nav, dialogs, n, new ImageBridge(), EditorFactory(nav), CookFactory(dialogs), session,
+            new FilePickerService(), LooseEditorFactory(nav, session, dialogs));
     }
 
     [AvaloniaFact]
     public void Tree_is_built_from_the_cookbook_recipes_and_ingredients()
     {
         var nav = new FakeNav();
-        using var vm = new ExplorerViewModel(TwoRecipeBook(), nav, new FakeDialogs(), new FakeNotYetWired(), new ImageBridge(), EditorFactory(nav), CookFactory(new FakeDialogs()), new CookBookSession());
+        var dialogs = new FakeDialogs();
+        var session = new CookBookSession();
+        using var vm = new ExplorerViewModel(TwoRecipeBook(), nav, dialogs, new FakeNotYetWired(), new ImageBridge(), EditorFactory(nav), CookFactory(dialogs), session,
+            new FilePickerService(), LooseEditorFactory(nav, session, dialogs));
         Assert.Equal(ExplorerNodeKind.CookBook, vm.Root.Kind);
         Assert.Equal("VaporPets", vm.Root.Name);
         Assert.Equal(new[] { "cat", "dog" }, vm.Root.Children.Select(c => c.Id));
@@ -120,7 +125,10 @@ public class ExplorerViewModelTests
     public void Ingredient_nodes_carry_their_layer_kind()
     {
         var nav = new FakeNav();
-        using var vm = new ExplorerViewModel(TwoRecipeBook(), nav, new FakeDialogs(), new FakeNotYetWired(), new ImageBridge(), EditorFactory(nav), CookFactory(new FakeDialogs()), new CookBookSession());
+        var dialogs = new FakeDialogs();
+        var session = new CookBookSession();
+        using var vm = new ExplorerViewModel(TwoRecipeBook(), nav, dialogs, new FakeNotYetWired(), new ImageBridge(), EditorFactory(nav), CookFactory(dialogs), session,
+            new FilePickerService(), LooseEditorFactory(nav, session, dialogs));
         var recipe = vm.Root.Children[0];
         var ingredient = recipe.Children[0];
         Assert.Null(vm.Root.LayerKind);            // cookbook node
@@ -133,7 +141,10 @@ public class ExplorerViewModelTests
     public void Crumbs_follow_the_selected_node_path()
     {
         var nav = new FakeNav();
-        using var vm = new ExplorerViewModel(TwoRecipeBook(), nav, new FakeDialogs(), new FakeNotYetWired(), new ImageBridge(), EditorFactory(nav), CookFactory(new FakeDialogs()), new CookBookSession());
+        var dialogs = new FakeDialogs();
+        var session = new CookBookSession();
+        using var vm = new ExplorerViewModel(TwoRecipeBook(), nav, dialogs, new FakeNotYetWired(), new ImageBridge(), EditorFactory(nav), CookFactory(dialogs), session,
+            new FilePickerService(), LooseEditorFactory(nav, session, dialogs));
 
         // nothing selected → just the cookbook, active
         Assert.Equal(new[] { (vm.Root.Name, true, false) }, vm.Crumbs.Select(c => (c.Text, c.Active, c.Leading)));
@@ -159,7 +170,8 @@ public class ExplorerViewModelTests
             var dialogs = new FakeDialogs();
             var editorFactory = EditorFactory(nav, session, dialogs);
             using var explorer = new ExplorerViewModel(session.Current!, nav, dialogs, new FakeNotYetWired(),
-                new ImageBridge(), editorFactory, CookFactory(dialogs), session);
+                new ImageBridge(), editorFactory, CookFactory(dialogs), session,
+                new FilePickerService(), LooseEditorFactory(nav, session, dialogs));
 
             // Select the ingredient, then open + save its editor the way the Explorer wires it.
             var ingNode = explorer.Root.Children[0].Children[0];

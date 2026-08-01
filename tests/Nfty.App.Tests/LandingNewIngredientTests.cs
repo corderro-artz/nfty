@@ -48,7 +48,8 @@ public class LandingNewIngredientTests
         var vm = new LandingViewModel(nav, dialogs, notify, picker, new RecentsService(), session,
             book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(),
                 ExplorerViewModelTests.EditorFactory(nav, session, dialogs),
-                ExplorerViewModelTests.CookFactory(dialogs), session),
+                ExplorerViewModelTests.CookFactory(dialogs), session,
+                new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs)),
             set => new SetBrowserViewModel(set),
             ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs));
         return (vm, nav);
