@@ -453,6 +453,32 @@ public class VisualCapture
         }
     }
 
+    /// <summary>Renders the Help view and the three wizards, so every screen with a locked mockup
+    /// has a real frame to audit against (help.html, wizard-cookbook/recipe/ingredient.html).</summary>
+    [AvaloniaFact]
+    public void Capture_help_and_wizards()
+    {
+        if (Dir is null) return;   // inert unless explicitly capturing
+
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            var key = variant.Key.ToString()!.ToLowerInvariant();
+            var dialogs = new FakeDialogs();
+            var notify = new FakeNotYetWired();
+
+            Capture(new Views.HelpView { DataContext = new HelpViewModel(dialogs) }, variant, $"help-{key}.png");
+
+            Capture(new Views.NewCookBookView { DataContext = new NewCookBookViewModel(dialogs, notify) { Name = "Vapor Pets", Symbol = "VP", Description = "A cosy little collection." } },
+                variant, $"wizard-cookbook-{key}.png");
+
+            Capture(new Views.NewRecipeView { DataContext = new NewRecipeViewModel(dialogs, notify) { Name = "Cat" } },
+                variant, $"wizard-recipe-{key}.png");
+
+            Capture(new Views.NewIngredientView { DataContext = new NewIngredientViewModel(dialogs, notify) { Name = "Aura" } },
+                variant, $"wizard-ingredient-{key}.png");
+        }
+    }
+
     private static void Capture(Control view, ThemeVariant variant, string fileName)
     {
         var window = new Window { RequestedThemeVariant = variant, Content = view, Width = 900, Height = 600 };
