@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Text.Json;
 using Nfty.App.Models;
 
@@ -29,7 +30,12 @@ public sealed class RecentsService : IRecentsService
         try
         {
             if (File.Exists(_file))
-                _items = JsonSerializer.Deserialize<List<RecentItem>>(File.ReadAllText(_file), Json) ?? new();
+                // Well-formed JSON of the wrong shape ([null], [{}]) deserialises "successfully" —
+                // drop anything without a usable path so a later Add can't NRE on it.
+                _items = (JsonSerializer.Deserialize<List<RecentItem?>>(File.ReadAllText(_file), Json) ?? new())
+                    .Where(i => i is not null && !string.IsNullOrWhiteSpace(i.Path))
+                    .Select(i => i!)
+                    .ToList();
         }
         catch { _items = new(); }   // corrupt/unreadable → start empty, never throw
     }
@@ -48,7 +54,10 @@ public sealed class RecentsService : IRecentsService
 
     public void Remove(string path)
     {
-        _items.RemoveAll(i => string.Equals(i.Path, path, StringComparison.Ordinal));
+        // Add stores full paths, so normalise here too or a raw/relative path silently no-ops.
+        string full;
+        try { full = Path.GetFullPath(path); } catch { full = path; }
+        _items.RemoveAll(i => string.Equals(i.Path, full, StringComparison.Ordinal));
         Save();
     }
 

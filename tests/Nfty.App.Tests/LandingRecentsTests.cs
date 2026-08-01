@@ -1,5 +1,8 @@
 using System.IO;
 using System.Threading.Tasks;
+using Avalonia.Controls;
+using Avalonia.Data;
+using Avalonia.Threading;
 using Avalonia.Headless.XUnit;
 using Nfty.App.Models;
 using Nfty.App.Services;
@@ -138,5 +141,33 @@ public class LandingRecentsTests
             Directory.Delete(dir, recursive: true);
             Directory.Delete(storageDir, recursive: true);
         }
+    }
+
+    /// <summary>The removal must reach the SCREEN, not just the view-model. Bindings short-circuit
+    /// when a property returns the same instance, so a live-list Recents made OnPropertyChanged inert
+    /// and the dead row stayed visible. Asserted through a real bound ItemsControl, because a
+    /// vm.Recents assertion cannot see this class of bug.</summary>
+    [AvaloniaFact]
+    public async Task Removing_a_missing_recent_updates_the_bound_list()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            var (vm, _, _, recents) = Landing(new StubPicker(null), dir);
+            recents.Add(new RecentItem("Gone", "1 recipe", Path.Combine(dir, "gone.cbk"), false));
+
+            var list = new ItemsControl();
+            list.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(vm.Recents)) { Source = vm });
+            var window = new Window { Content = list };
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(1, list.ItemCount);                       // the dead row is on screen
+
+            vm.OpenRecentCommand.Execute(vm.Recents[0]);           // file doesn't exist → removed
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(0, list.ItemCount);                       // ...and it left the screen
+            await Task.CompletedTask;
+        }
+        finally { Directory.Delete(dir, recursive: true); }
     }
 }

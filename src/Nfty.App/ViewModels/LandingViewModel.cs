@@ -24,7 +24,10 @@ public partial class LandingViewModel : ViewModelBase
     private readonly Func<LoadedSet, SetBrowserViewModel> _setBrowserFactory;
     private readonly Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> _looseEditorFactory;
 
-    public IReadOnlyList<RecentItem> Recents => _recents.Items;
+    /// <summary>A snapshot, not the service's live list: bindings short-circuit when a property
+    /// returns the same instance, so returning the live list would make OnPropertyChanged inert and
+    /// a removed row would stay on screen.</summary>
+    public IReadOnlyList<RecentItem> Recents => _recents.Items.ToArray();
 
     public LandingViewModel(INavigationService nav, IDialogService dialogs, INotYetWired notify,
         IFilePickerService picker, IRecentsService recents, ICookBookSession session,
@@ -197,7 +200,7 @@ public partial class LandingViewModel : ViewModelBase
     [RelayCommand]
     private void OpenRecent(RecentItem item)
     {
-        if (!File.Exists(item.Path))
+        if (!File.Exists(item.Path) && !Directory.Exists(item.Path))   // a Set may be a folder
         {
             _recents.Remove(item.Path);
             OnPropertyChanged(nameof(Recents));
