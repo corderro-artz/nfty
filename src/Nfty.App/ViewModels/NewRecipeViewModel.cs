@@ -1,3 +1,4 @@
+using System;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Services;
@@ -42,5 +43,18 @@ public partial class NewRecipeViewModel : WizardViewModelBase
         OnPropertyChanged(nameof(IsLooseKitchen));
     }
 
-    [RelayCommand] private void Create() { Notify.Report("Create Recipe"); Dialogs.Close(null); }
+    partial void OnNameChanged(string value)
+    {
+        OnPropertyChanged(nameof(DerivedId));
+        CreateCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>The recipe id derived from the name: lower-case, spaces to dashes.</summary>
+    public string DerivedId => string.Join('-',
+        Name.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+
+    private bool CanCreate() => !string.IsNullOrWhiteSpace(DerivedId);
+
+    [RelayCommand(CanExecute = nameof(CanCreate))]
+    private void Create() => Dialogs.Close(this);
 }

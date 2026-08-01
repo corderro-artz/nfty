@@ -1,3 +1,4 @@
+using Nfty.App.Services;
 using Nfty.App.ViewModels;
 using Xunit;
 
@@ -19,12 +20,30 @@ public class NewRecipeViewModelTests
     }
 
     [Fact]
-    public void Create_reports_not_yet_wired()
+    public void DerivedId_slugs_the_name()
     {
-        var vm = Make(out var d, out var n);
-        d.ShowAsync<object>(vm);
+        var vm = Make(out _, out _); vm.Name = "Night Sky";
+        Assert.Equal("night-sky", vm.DerivedId);
+    }
+
+    [Fact]
+    public void Create_is_disabled_until_the_name_yields_a_non_blank_id()
+    {
+        var vm = Make(out _, out _);
+        Assert.False(vm.CreateCommand.CanExecute(null));
+        vm.Name = "  ";
+        Assert.False(vm.CreateCommand.CanExecute(null));
+        vm.Name = "Bird";
+        Assert.True(vm.CreateCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async System.Threading.Tasks.Task Create_closes_the_dialog_with_the_vm()
+    {
+        var real = new DialogService();
+        var vm = new NewRecipeViewModel(real, new FakeNotYetWired()) { Name = "Bird" };
+        var task = real.ShowAsync<NewRecipeViewModel>(vm);
         vm.CreateCommand.Execute(null);
-        Assert.Equal("Create Recipe", n.Last);
-        Assert.Null(d.Active);
+        Assert.Same(vm, await task);
     }
 }
