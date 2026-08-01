@@ -1,4 +1,8 @@
+using System.Linq;
+using Avalonia.Headless.XUnit;
+using Nfty.App.Services;
 using Nfty.App.ViewModels;
+using Nfty.Core.Editing;
 using Nfty.Core.Model;
 using Xunit;
 
@@ -27,10 +31,51 @@ public class NewIngredientViewModelTests
     }
 
     [Fact]
-    public void Create_reports_not_yet_wired()
+    public void DerivedId_slugs_the_name()
     {
-        var vm = Make(out var d, out var n);
-        d.ShowAsync<object>(vm); vm.CreateCommand.Execute(null);
-        Assert.Equal("Create Ingredient", n.Last);
+        var vm = Make(out _, out _); vm.Name = "Left Ear";
+        Assert.Equal("left-ear", vm.DerivedId);
+    }
+
+    [Fact]
+    public void BuildColorization_matches_the_kind()
+    {
+        var vm = Make(out _, out _);
+        vm.Kind = LayerKind.Dynamic; vm.HueMin = 10; vm.HueMax = 200; vm.SatMin = 30; vm.SatMax = 90;
+        var dyn = vm.BuildColorization()!;
+        Assert.Equal(ColorModel.Hsv, dyn.Model);
+        Assert.Equal(12, dyn.HueQuantize); Assert.Equal(4, dyn.SatQuantize);
+        var range = dyn.Entries.Single().Range!;
+        Assert.Equal(10, range.HueMin); Assert.Equal(200, range.HueMax);
+        Assert.Equal(30, range.SatMin); Assert.Equal(90, range.SatMax);
+
+        vm.Kind = LayerKind.Static; vm.FixedColor = "hex:d6249f";
+        Assert.Equal("hex:d6249f", vm.BuildColorization()!.Entries.Single().Fixed);
+
+        vm.Kind = LayerKind.Custom;
+        Assert.Null(vm.BuildColorization());
+    }
+
+    [AvaloniaFact]
+    public void Build_makes_an_ingredient_with_one_blank_starter_variant()
+    {
+        var vm = Make(out _, out _); vm.Name = "Hat"; vm.Kind = LayerKind.Dynamic;
+        using var ing = vm.Build(new Dimensions(8, 8));
+        Assert.Equal("hat", ing.Manifest.Id);
+        var v = Assert.Single(ing.Manifest.Variants);
+        Assert.Equal("variant-1", v.Id);
+        Assert.Equal(8, ing.VariantImages["variant-1"].Width);
+        Assert.Equal(0, ValueMap.FromImage(ing.VariantImages["variant-1"]).GetValue(4, 4));  // blank
+        Assert.NotNull(ing.Manifest.Colorization);
+    }
+
+    [Fact]
+    public void Create_closes_the_dialog_with_the_vm()
+    {
+        var real = new DialogService();
+        var vm = new NewIngredientViewModel(real, new FakeNotYetWired()) { Name = "Hat" };
+        var task = real.ShowAsync<NewIngredientViewModel>(vm);
+        vm.CreateCommand.Execute(null);
+        Assert.Same(vm, task.Result);
     }
 }

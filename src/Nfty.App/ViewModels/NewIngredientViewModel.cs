@@ -1,7 +1,13 @@
+using System;
+using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Services;
+using Nfty.Core.Editing;
+using Nfty.Core.Formats;
 using Nfty.Core.Model;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Nfty.App.ViewModels;
 
@@ -79,5 +85,35 @@ public partial class NewIngredientViewModel : WizardViewModelBase
         OnPropertyChanged(nameof(IsLooseKitchen));
     }
 
-    [RelayCommand] private void Create() { Notify.Report("Create Ingredient"); Dialogs.Close(null); }
+    partial void OnNameChanged(string value) => OnPropertyChanged(nameof(DerivedId));
+
+    /// <summary>The ingredient id derived from the name: lower-case, spaces to dashes.</summary>
+    public string DerivedId => string.Join('-',
+        Name.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+
+    /// <summary>Build the colorization config from the wizard fields (quantize defaults 12/4).</summary>
+    public Colorization? BuildColorization() => Kind switch
+    {
+        LayerKind.Dynamic => new Colorization(ColorModel.Hsv, 12, 4,
+            new[] { new ColorEntry(1, new ColorRange(HueMin, HueMax, SatMin, SatMax), null) }),
+        LayerKind.Static => new Colorization(ColorModel.Hsv, 12, 4,
+            new[] { new ColorEntry(1, null, FixedColor) }),
+        _ => null,   // Custom — composited as-is
+    };
+
+    /// <summary>Turn the wizard into a loaded ingredient with one blank starter variant at the given
+    /// canvas size. The caller owns the returned image until the book adopts it.</summary>
+    public LoadedIngredient Build(Dimensions canvas)
+    {
+        const string variantId = "variant-1";
+        var manifest = new IngredientManifest(DerivedId, Name, Kind, BuildColorization(),
+            new[] { new Variant(variantId, "Variant 1", 1) });
+        var images = new Dictionary<string, Image<Rgba32>>(StringComparer.Ordinal)
+        {
+            [variantId] = ValueMap.ForCanvas(canvas).ToImage(),
+        };
+        return new LoadedIngredient { Manifest = manifest, VariantImages = images };
+    }
+
+    [RelayCommand] private void Create() => Dialogs.Close(this);
 }
