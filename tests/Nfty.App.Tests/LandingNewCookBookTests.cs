@@ -68,11 +68,41 @@ public class LandingNewCookBookTests
             {
                 Assert.Equal("vapor-pets", reread.Manifest.Id);
                 Assert.Equal(64, reread.Manifest.Canvas.Width);
+                // Collection is (Name, Description, Symbol) — assert each so a swapped mapping,
+                // which would silently write a wrong archive, can't pass.
+                Assert.Equal("Vapor Pets", reread.Manifest.Collection.Name);
+                Assert.Equal("d", reread.Manifest.Collection.Description);
+                Assert.Equal("VP", reread.Manifest.Collection.Symbol);
                 Assert.Empty(reread.Recipes);                     // empty starting book
             }
             Assert.IsType<ExplorerViewModel>(nav.Current);        // opened in the Explorer
             Assert.NotNull(session.Current);
             Assert.Equal(path, session.SourcePath);               // source set → Add/Save/Cook enabled
+        }
+        finally { session.Dispose(); Directory.Delete(dir, recursive: true); }
+    }
+
+    /// <summary>A newly-created cookbook is EMPTY, and the first thing the user sees is its root
+    /// detail — which eagerly computes the unique-DNA space. The sibling A2c slice had exactly this
+    /// bug for an empty recipe (selecting it threw), so pin the zero-recipe case: the tree renders,
+    /// the root detail builds, and the book is immediately authorable (Add enabled with a source).</summary>
+    [AvaloniaFact]
+    public async Task A_new_empty_cookbook_renders_and_is_immediately_authorable()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        var path = Path.Combine(dir, "vapor.cbk");
+        var dialogs = new WizardDialogs("Vapor Pets");
+        var (vm, nav, session) = Landing(dialogs, new SavePicker(path));
+        try
+        {
+            await vm.NewCookBookCommand.ExecuteAsync(null);
+            var explorer = Assert.IsType<ExplorerViewModel>(nav.Current);
+            Assert.Empty(explorer.Root.Children);                       // zero recipes
+            explorer.SelectNodeCommand.Execute(explorer.Root);          // eager unique-space computation
+            Assert.IsType<CookBookDetailViewModel>(explorer.CurrentDetail);
+            explorer.ToggleLockCommand.Execute(null);
+            Assert.True(explorer.AddCommand.CanExecute(null));          // can Add recipe straight away
+            explorer.Dispose();
         }
         finally { session.Dispose(); Directory.Delete(dir, recursive: true); }
     }
