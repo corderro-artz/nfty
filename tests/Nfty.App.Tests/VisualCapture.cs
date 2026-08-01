@@ -385,7 +385,8 @@ public class VisualCapture
             var nav = new FakeNav();
             var dialogs = new FakeDialogs();
             var notify = new FakeNotYetWired();
-            var vm = new LandingViewModel(nav, dialogs, notify, new FilePickerService(), new RecentsService(),
+            var vm = new LandingViewModel(nav, dialogs, notify, new FilePickerService(),
+                new RecentsService(Directory.CreateTempSubdirectory().FullName),
                 new CookBookSession(),
                 book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(),
                     ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs), new CookBookSession(),
