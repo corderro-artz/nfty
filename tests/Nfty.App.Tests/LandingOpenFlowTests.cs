@@ -68,14 +68,17 @@ public class LandingOpenFlowTests
         Assert.Null(session.Current);
     }
 
-    // A loose .rcp still routes to the "Kitchen (coming soon)" stub (a loose .igt now opens the
-    // editor instead — covered by LandingImportIgtTests).
+    // A loose .rcp now opens read-only into the Explorer (B2 — covered end-to-end with a real archive
+    // in LandingImportRcpTests); here a bad/nonexistent path shows the error dialog and leaves the
+    // session/nav untouched, same shape as the bad-.cbk-path case above.
     [Fact]
-    public void Import_of_a_loose_rcp_reports_the_kitchen_message()
+    public void Import_of_a_bad_rcp_path_shows_the_error_dialog_and_does_not_navigate()
     {
-        var vm = Make("thing.rcp", out _, out _, out var notify, out _);
+        var vm = Make("does-not-exist.rcp", out var nav, out var dialogs, out _, out var session);
         vm.ImportCommand.Execute(null);
-        Assert.Contains("Kitchen", notify.Last);
+        Assert.IsType<ErrorDialogViewModel>(dialogs.Active);
+        Assert.Null(nav.Current);
+        Assert.Null(session.Current);
     }
 
     /// <summary>
