@@ -41,7 +41,7 @@ public class ExplorerAddLooseTests
         public void Close(object? result) { }
     }
 
-    private static (ExplorerViewModel vm, CookBookSession session, string cbkDir, FakeNav nav) Explorer(
+    private static (ExplorerViewModel vm, CookBookSession session, string cbkPath, FakeNav nav) Explorer(
         IDialogService dialogs, IFilePickerService picker)
     {
         (var cbkPath, var session, _, _) = IngredientEditorSaveTests.OnDisk();
@@ -50,7 +50,17 @@ public class ExplorerAddLooseTests
             ExplorerViewModelTests.EditorFactory(nav, session, dialogs),
             ExplorerViewModelTests.CookFactory(dialogs), session,
             picker, ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs));
-        return (vm, session, Path.GetDirectoryName(cbkPath)!, nav);
+        return (vm, session, cbkPath, nav);
+    }
+
+    /// <summary>The cookbook must be untouched by any loose operation — asserted against the things an
+    /// accidental upsert/persist WOULD move: the session's live book and the .cbk on disk. (The tree's
+    /// Root is a pre-add snapshot unless ApplyBook runs, so asserting only on it can't fail.)</summary>
+    private static void AssertCookBookUntouched(CookBookSession session, string cbkPath, int expected)
+    {
+        Assert.Equal(expected, session.Current!.Recipes[0].Ingredients.Count);
+        using var onDisk = CookBookArchive.Read(cbkPath);
+        Assert.Equal(expected, onDisk.Recipes[0].Ingredients.Count);
     }
 
     [AvaloniaFact]
@@ -58,11 +68,10 @@ public class ExplorerAddLooseTests
     {
         var igtDir = Directory.CreateTempSubdirectory().FullName;
         var igtPath = Path.Combine(igtDir, "hat.igt");
-        var (vm, session, cbkDir, nav) = Explorer(new LooseWizardDialogs("Hat", "8x8"), new SavePicker(igtPath));
+        var (vm, session, cbkPath, nav) = Explorer(new LooseWizardDialogs("Hat", "8x8"), new SavePicker(igtPath));
         try
         {
-            var recipe = (LoadedRecipe)vm.Root.Children[0].Domain!;
-            var before = recipe.Ingredients.Count;
+            var before = session.Current!.Recipes[0].Ingredients.Count;
             vm.ToggleLockCommand.Execute(null);
             vm.SelectNodeCommand.Execute(vm.Root.Children[0]);   // recipe "cat"
             await vm.AddCommand.ExecuteAsync(null);
@@ -72,26 +81,86 @@ public class ExplorerAddLooseTests
             Assert.Equal("hat", reread.Manifest.Id);
             Assert.Equal(8, reread.VariantImages["variant-1"].Width);
             Assert.IsType<IngredientEditorViewModel>(nav.Current);   // opened a (loose) editor
-            Assert.Equal(before, ((LoadedRecipe)vm.Root.Children[0].Domain!).Ingredients.Count);   // cookbook NOT mutated
+            AssertCookBookUntouched(session, cbkPath, before);        // the cookbook was NOT mutated
             vm.Dispose();
         }
-        finally { session.Dispose(); Directory.Delete(cbkDir, recursive: true); Directory.Delete(igtDir, recursive: true); }
+        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(cbkPath)!, recursive: true); Directory.Delete(igtDir, recursive: true); }
     }
 
     [AvaloniaFact]
     public async Task Add_loose_cancelled_picker_writes_nothing_and_leaves_the_cookbook_untouched()
     {
-        var (vm, session, cbkDir, nav) = Explorer(new LooseWizardDialogs("Hat", "8x8"), new SavePicker(null));
+        var (vm, session, cbkPath, nav) = Explorer(new LooseWizardDialogs("Hat", "8x8"), new SavePicker(null));
         try
         {
-            var before = ((LoadedRecipe)vm.Root.Children[0].Domain!).Ingredients.Count;
+            var before = session.Current!.Recipes[0].Ingredients.Count;
             vm.ToggleLockCommand.Execute(null);
             vm.SelectNodeCommand.Execute(vm.Root.Children[0]);
             await vm.AddCommand.ExecuteAsync(null);
             Assert.Null(nav.Current);
-            Assert.Equal(before, ((LoadedRecipe)vm.Root.Children[0].Domain!).Ingredients.Count);
+            AssertCookBookUntouched(session, cbkPath, before);
             vm.Dispose();
         }
-        finally { session.Dispose(); Directory.Delete(cbkDir, recursive: true); }
+        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(cbkPath)!, recursive: true); }
+    }
+
+    [AvaloniaFact]
+    public async Task Add_loose_write_failure_reports_and_leaves_the_cookbook_untouched()
+    {
+        var igtDir = Directory.CreateTempSubdirectory().FullName;
+        var badPath = Path.Combine(igtDir, "nope", "hat.igt");   // parent dir missing → write throws
+        var dialogs = new LooseWizardDialogs("Hat", "8x8");
+        var (vm, session, cbkPath, nav) = Explorer(dialogs, new SavePicker(badPath));
+        try
+        {
+            var before = session.Current!.Recipes[0].Ingredients.Count;
+            vm.ToggleLockCommand.Execute(null);
+            vm.SelectNodeCommand.Execute(vm.Root.Children[0]);
+            await vm.AddCommand.ExecuteAsync(null);
+            Assert.NotNull(dialogs.ErrorTitle);      // error surfaced
+            Assert.False(File.Exists(badPath));      // nothing written
+            Assert.Null(nav.Current);                // editor not opened
+            AssertCookBookUntouched(session, cbkPath, before);
+            vm.Dispose();
+        }
+        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(cbkPath)!, recursive: true); Directory.Delete(igtDir, recursive: true); }
+    }
+
+    [AvaloniaFact]
+    public async Task Add_loose_huge_canvas_is_rejected_before_the_save_prompt()
+    {
+        var dialogs = new LooseWizardDialogs("Hat", "50000x50000");   // beyond the pixel cap
+        var (vm, session, cbkPath, nav) = Explorer(dialogs, new SavePicker("unused.igt"));
+        try
+        {
+            vm.ToggleLockCommand.Execute(null);
+            vm.SelectNodeCommand.Execute(vm.Root.Children[0]);
+            await vm.AddCommand.ExecuteAsync(null);
+            Assert.Equal("Invalid canvas", dialogs.ErrorTitle);
+            Assert.Null(nav.Current);
+            Assert.False(File.Exists("unused.igt"));
+            vm.Dispose();
+        }
+        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(cbkPath)!, recursive: true); }
+    }
+
+    [AvaloniaFact]
+    public async Task Add_loose_overwrites_an_existing_igt()
+    {
+        var igtDir = Directory.CreateTempSubdirectory().FullName;
+        var igtPath = Path.Combine(igtDir, "hat.igt");
+        File.WriteAllText(igtPath, "stale");   // a file already at the chosen path
+        var (vm, session, cbkPath, nav) = Explorer(new LooseWizardDialogs("Hat", "8x8"), new SavePicker(igtPath));
+        try
+        {
+            vm.ToggleLockCommand.Execute(null);
+            vm.SelectNodeCommand.Execute(vm.Root.Children[0]);
+            await vm.AddCommand.ExecuteAsync(null);
+            using var reread = IngredientArchive.Read(igtPath);   // replaced, not rejected
+            Assert.Equal("hat", reread.Manifest.Id);
+            Assert.False(File.Exists(igtPath + ".tmp"));          // temp cleaned up
+            vm.Dispose();
+        }
+        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(cbkPath)!, recursive: true); Directory.Delete(igtDir, recursive: true); }
     }
 }

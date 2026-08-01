@@ -255,21 +255,42 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
             await ShowError("Invalid canvas", "Enter a canvas size like 512x512.");
             return;
         }
-        var path = await _picker.SaveFileAsync("Save new ingredient", ".igt");
+        string? path;
+        try { path = await _picker.SaveFileAsync("Save new ingredient", ".igt"); }
+        catch (Exception ex) { await ShowError("Could not save", ex.Message); return; }
         if (path is null) return;   // cancelled
 
         LoadedIngredient built;
         try { built = result.Build(canvas); }   // Build allocates the raster — guard it (OOM on a huge canvas)
         catch (Exception ex) { await ShowError("Could not save", ex.Message); return; }
-        try { IngredientArchive.Write(path, built.Manifest, built.VariantImages); }
-        catch (Exception ex) { await ShowError("Could not save", ex.Message); built.Dispose(); return; }
-        built.Dispose();
 
-        LoadedIngredient ing;
-        try { ing = IngredientArchive.Read(path); }
-        catch (Exception ex) { await ShowError("Could not open", ex.Message); return; }
-        var book = LooseWorkspace.WrapIngredient(ing);   // the loose editor owns + disposes this
-        _nav.To(_looseEditorFactory(ing, book, path));
+        try
+        {
+            // Validate + atomically write (replaces an existing file rather than throwing).
+            var problems = LooseWorkspace.WriteIngredient(path, built);
+            if (problems.Count > 0)
+            {
+                await ShowError("Invalid ingredient", string.Join("\n", problems));
+                return;
+            }
+        }
+        catch (Exception ex) { await ShowError("Could not save", ex.Message); return; }
+        finally { built.Dispose(); }
+
+        // Open the new .igt in a loose editor (a fresh copy; the editor owns the wrapper book).
+        LoadedIngredient? ing = null;
+        try
+        {
+            ing = IngredientArchive.Read(path);
+            var book = LooseWorkspace.WrapIngredient(ing);   // the loose editor owns + disposes this
+            _nav.To(_looseEditorFactory(ing, book, path));
+            ing = null;   // ownership handed to the editor
+        }
+        catch (Exception ex)
+        {
+            ing?.Dispose();   // never reached the editor — free it
+            await ShowError("Could not open", ex.Message);
+        }
     }
 
     private Task ShowError(string title, string message) =>

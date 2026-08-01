@@ -61,9 +61,19 @@ public partial class LandingViewModel : ViewModelBase
         LoadedIngredient built;
         try { built = result.Build(canvas); }   // Build allocates the raster — guard it (OOM on a huge canvas)
         catch (Exception ex) { ShowError("Could not save", ex.Message); return; }
-        try { IngredientArchive.Write(path, built.Manifest, built.VariantImages); }
-        catch (Exception ex) { ShowError("Could not save", ex.Message); built.Dispose(); return; }
-        built.Dispose();
+
+        try
+        {
+            // Validate + atomically write (replaces an existing file rather than throwing).
+            var problems = LooseWorkspace.WriteIngredient(path, built);
+            if (problems.Count > 0)
+            {
+                ShowError("Invalid ingredient", string.Join("\n", problems));
+                return;
+            }
+        }
+        catch (Exception ex) { ShowError("Could not save", ex.Message); return; }
+        finally { built.Dispose(); }
 
         OpenLooseIngredient(path);   // B1: reads it back + opens the editor with a loose-save path
     }
