@@ -149,6 +149,12 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         var result = await _dialogs.ShowAsync<NewIngredientViewModel>(wizard);
         if (result is null) return;   // cancelled
 
+        if (string.IsNullOrWhiteSpace(result.DerivedId))   // authoritative: never persist an empty id
+        {
+            await ShowError("Invalid ingredient", "The ingredient needs a name.");
+            return;
+        }
+
         var newIng = result.Build(_book.Manifest.Canvas);   // owns the blank image until adopted
         var adopted = false;                                 // true once the persisted book owns its image
         try

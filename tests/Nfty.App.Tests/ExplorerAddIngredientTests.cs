@@ -80,6 +80,25 @@ public class ExplorerAddIngredientTests
     }
 
     [AvaloniaFact]
+    public async Task Add_with_a_blank_name_reports_an_error_and_writes_nothing()
+    {
+        var dialogs = new AddDialogs("   ", LayerKind.Dynamic);   // whitespace name → blank id
+        var (vm, session, path, nav) = Explorer(dialogs);
+        try
+        {
+            vm.ToggleLockCommand.Execute(null);
+            vm.SelectNodeCommand.Execute(vm.Root.Children[0]);
+            var before = CookBookArchive.Read(path).Recipes[0].Ingredients.Count;
+            await vm.AddCommand.ExecuteAsync(null);
+            Assert.NotNull(dialogs.ErrorTitle);                   // error surfaced
+            using var reread = CookBookArchive.Read(path);
+            Assert.Equal(before, reread.Recipes[0].Ingredients.Count);   // nothing written
+            vm.Dispose();
+        }
+        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
+    }
+
+    [AvaloniaFact]
     public async Task Add_on_a_recipe_without_editing_is_a_no_op_stub()
     {
         var dialogs = new AddDialogs("Hat", LayerKind.Dynamic);

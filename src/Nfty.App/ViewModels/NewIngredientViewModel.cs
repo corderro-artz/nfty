@@ -85,7 +85,11 @@ public partial class NewIngredientViewModel : WizardViewModelBase
         OnPropertyChanged(nameof(IsLooseKitchen));
     }
 
-    partial void OnNameChanged(string value) => OnPropertyChanged(nameof(DerivedId));
+    partial void OnNameChanged(string value)
+    {
+        OnPropertyChanged(nameof(DerivedId));
+        CreateCommand.NotifyCanExecuteChanged();
+    }
 
     /// <summary>The ingredient id derived from the name: lower-case, spaces to dashes.</summary>
     public string DerivedId => string.Join('-',
@@ -115,5 +119,8 @@ public partial class NewIngredientViewModel : WizardViewModelBase
         return new LoadedIngredient { Manifest = manifest, VariantImages = images };
     }
 
-    [RelayCommand] private void Create() => Dialogs.Close(this);
+    private bool CanCreate() => !string.IsNullOrWhiteSpace(DerivedId);
+
+    [RelayCommand(CanExecute = nameof(CanCreate))]
+    private void Create() => Dialogs.Close(this);
 }
