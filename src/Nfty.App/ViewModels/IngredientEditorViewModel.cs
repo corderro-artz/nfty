@@ -89,10 +89,10 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// (Explorer) can rebuild its tree in place instead of reloading the whole archive.</summary>
     public event Action<LoadedCookBook>? Saved;
 
-    /// <summary>Save is offered only for edited dynamic/static ingredients with a known source file.
-    /// Custom (full-colour) layers are blocked: the draft is a grayscale value-map and would overwrite
-    /// their colour PNGs.</summary>
-    public bool CanSave => IsDirty && !IsSaving && _ing.Manifest.Kind != LayerKind.Custom
+    /// <summary>Save is offered for any edited ingredient with a known source file. Custom is
+    /// additionally gated so a session-added variant that was never imported into can't save a blank
+    /// raster (every variant must have an effective image — imported or original).</summary>
+    public bool CanSave => IsDirty && !IsSaving && (!IsCustom || AllCustomVariantsHaveImages)
         && (_looseSavePath is not null || _session.SourcePath is not null);
 
     /// <summary>Custom (full-colour, composited-as-is) ingredients are import-only — painting them
@@ -108,6 +108,10 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         _importedCustom.TryGetValue(variantId, out var imported) ? imported
         : _ing.VariantImages.TryGetValue(variantId, out var original) ? original
         : null;
+
+    /// <summary>Custom Save gate: every draft variant (including any added this session) must have an
+    /// effective image, so Save never writes a blank raster into the archive.</summary>
+    private bool AllCustomVariantsHaveImages => _draft.Variants.All(v => EffectiveCustomImage(v.Id) is not null);
 
     /// <summary>Left-hand filmstrip: the ingredient's real variants, rendered the way the cook
     /// path would (colorized for dynamic/static, raw for custom).</summary>
@@ -455,35 +459,42 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task Save()
     {
-        // Guarded by CanSave; belt-and-suspenders against a bypassed CanExecute (never export a
-        // grayscale value-map over a Custom layer's full-colour PNGs; need a save target).
-        if (_ing.Manifest.Kind == LayerKind.Custom) return;
+        // Guarded by CanSave; belt-and-suspenders against a bypassed CanExecute (need a save target).
         if (_looseSavePath is null && _session.SourcePath is null) return;
         IsSaving = true;
         try
         {
+            var (manifest, images) = IngredientDraftExporter.Export(_draft);
+            if (IsCustom)
+            {
+                // The exporter's images are a grayscale ValueMap round-trip of the draft — never what
+                // Custom writes. Discard them and rebuild the image set from each variant's effective
+                // full-colour image (this session's import, else the original), one fresh clone we own.
+                foreach (var i in images.Values) i.Dispose();
+                images = _draft.Variants.ToDictionary(v => v.Id,
+                    v => EffectiveCustomImage(v.Id)!.Clone(), StringComparer.Ordinal);
+            }
+
             // Loose (.igt) save: write the ingredient straight back to its own archive.
             if (_looseSavePath is string loosePath)
             {
-                var (m, imgs) = IngredientDraftExporter.Export(_draft);
                 var tmp = loosePath + ".tmp";
                 try
                 {
-                    await IngredientArchive.WriteAsync(tmp, m, imgs);
+                    await IngredientArchive.WriteAsync(tmp, manifest, images);
                     File.Move(tmp, loosePath, overwrite: true);
                 }
                 finally
                 {
                     if (File.Exists(tmp)) { try { File.Delete(tmp); } catch { /* best effort */ } }
-                    foreach (var i in imgs.Values) i.Dispose();   // exporter copies — ours to free
+                    foreach (var i in images.Values) i.Dispose();   // our copies — ours to free
                 }
                 IsDirty = false;
                 return;   // loose has no cookbook/session/Explorer to refresh
             }
 
-            // Export the draft → a loaded ingredient (we own its images until Upsert adopts them),
-            // splice it into the live book, then persist (temp write → atomic move → rehash → Replace).
-            var (manifest, images) = IngredientDraftExporter.Export(_draft);
+            // Splice a loaded ingredient over the draft's export into the live book (we own its images
+            // until Upsert adopts them), then persist (temp write → atomic move → rehash → Replace).
             var newIng = new LoadedIngredient { Manifest = manifest, VariantImages = images };
             var book2 = CookBookEdits.UpsertIngredient(_session.Current!, _recipe.Manifest.Id, newIng);
 

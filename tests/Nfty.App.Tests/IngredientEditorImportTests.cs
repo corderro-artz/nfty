@@ -221,4 +221,54 @@ public class IngredientEditorImportTests
         }
         finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
     }
+
+    // The headline guarantee: a CUSTOM ingredient's imported image must survive Save in full colour —
+    // it must never round-trip through ValueMap (grayscale by construction). Re-reading the archive and
+    // finding R != G != B at a known pixel proves no value-map round-trip happened.
+    [AvaloniaFact]
+    public async Task Custom_save_round_trips_full_colour()
+    {
+        var (path, session, recipe, ing) = IngredientEditorSaveTests.OnDisk(LayerKind.Custom);
+        var pngPath = WritePng(8, 8, 10, 200, 40);
+        try
+        {
+            var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
+                new FakeNav(), new FakeNotYetWired(), session, new FakeDialogs(), new OpenPicker(pngPath));
+            await vm.ImportImageCommand.ExecuteAsync(null);
+            Assert.True(vm.CanSave);
+
+            await vm.SaveCommand.ExecuteAsync(null);
+            Assert.False(vm.IsDirty);
+            Assert.False(File.Exists(path + ".tmp"));
+
+            using var reread = CookBookArchive.Read(path);
+            var rip = reread.Recipes[0].Ingredients.Single(i => i.Manifest.Id == "aura");
+            var pixel = rip.VariantImages["glow"][4, 4];
+            Assert.Equal(10, pixel.R); Assert.Equal(200, pixel.G); Assert.Equal(40, pixel.B); Assert.Equal(255, pixel.A);
+            Assert.NotEqual(pixel.R, pixel.G);   // R != G != B — proves this did NOT go through ValueMap
+            vm.Dispose();
+        }
+        finally
+        {
+            session.Dispose();
+            Directory.Delete(Path.GetDirectoryName(path)!, recursive: true);
+            Directory.Delete(Path.GetDirectoryName(pngPath)!, recursive: true);
+        }
+    }
+
+    [AvaloniaFact]
+    public void Custom_save_is_blocked_when_a_variant_has_no_image()
+    {
+        var (path, session, recipe, ing) = IngredientEditorSaveTests.OnDisk(LayerKind.Custom);
+        try
+        {
+            var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
+                new FakeNav(), new FakeNotYetWired(), session, new FakeDialogs(), new OpenPicker(null));
+            vm.AddVariantCommand.Execute(null);   // the new variant has no original and no import
+            Assert.True(vm.IsDirty);
+            Assert.False(vm.CanSave);             // gated: not every custom variant has an image
+            vm.Dispose();
+        }
+        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
+    }
 }
