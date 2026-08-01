@@ -80,8 +80,21 @@
     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
   </Style>
+  <!-- A "soon" button is ALREADY muted by its own foreground/border; letting the blanket disabled
+       opacity stack on top double-dimmed it to 1.73:1 (effectively invisible). Opt it out. -->
+  <!-- The disabled fix above was Button-only, leaving Fluent's opaque grey slab on the editor's
+       NumericUpDown/TextBox (the audit's #c7c3be / #3c3d40). Dim inputs the same way: opacity over
+       the real surface, never a grey fill. -->
+  <Style Selector="NumericUpDown:disabled, TextBox:disabled, Slider:disabled">
+    <Setter Property="Opacity" Value="0.38" />
+  </Style>
+
   <Style Selector="Button:disabled">
     <Setter Property="Opacity" Value="0.38" />
+  </Style>
+
+  <Style Selector="Button.soon:disabled">
+    <Setter Property="Opacity" Value="1" />
   </Style>
 
   <!-- Landing's "not built yet" tier (mockup `.tbtn.soon`: dashed border, muted, transparent bg —

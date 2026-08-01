@@ -35,18 +35,18 @@
 
       <StackPanel Spacing="0">
         <Border Classes="data-h">
-          <Grid ColumnDefinitions="48,*,Auto,Auto,Auto">
+          <Grid ColumnDefinitions="40,*,Auto,Auto,Auto">
             <TextBlock Grid.Column="0" Classes="data-h" Text="" />
             <Button Grid.Column="1" Classes="ghost" Padding="0" HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Left" Command="{Binding SortByCommand}" CommandParameter="Variant">
-              <TextBlock Classes="data-h" Text="VARIANT" />
+              <TextBlock Classes="data-h" Text="VARIANT" TextTrimming="CharacterEllipsis" />
             </Button>
             <Button Grid.Column="2" Classes="ghost" Padding="0" HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Right" Command="{Binding SortByCommand}" CommandParameter="Weight">
-              <TextBlock Classes="data-h num" Text="WEIGHT" MinWidth="80" />
+              <TextBlock Classes="data-h num" Text="WEIGHT" MinWidth="44" Margin="8,0,0,0" />
             </Button>
-            <TextBlock Grid.Column="3" Classes="data-h num" Text="IN RECIPE" MinWidth="100" />
-            <TextBlock Grid.Column="4" Classes="data-h num" Text="OVERALL" MinWidth="100" />
+            <TextBlock Grid.Column="3" Classes="data-h num" Text="IN RECIPE" MinWidth="56" Margin="8,0,0,0" />
+            <TextBlock Grid.Column="4" Classes="data-h num" Text="OVERALL" MinWidth="52" Margin="8,0,0,0" />
           </Grid>
         </Border>
 
@@ -54,12 +54,12 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:VariantRow">
               <Border Classes="data-row">
-                <Grid ColumnDefinitions="48,*,Auto,Auto,Auto">
+                <Grid ColumnDefinitions="40,*,Auto,Auto,Auto">
                   <Image Grid.Column="0" Source="{Binding Thumbnail}" Width="32" Height="32" VerticalAlignment="Center" />
                   <TextBlock Grid.Column="1" Classes="data-row" Text="{Binding Name}" VerticalAlignment="Center" Margin="10,0,0,0" TextTrimming="CharacterEllipsis" />
-                  <TextBlock Grid.Column="2" Classes="data-row num" Text="{Binding Weight}" VerticalAlignment="Center" MinWidth="80" />
-                  <TextBlock Grid.Column="3" Classes="data-row num" Text="{Binding WithinPercent, StringFormat='{}{0}%'}" VerticalAlignment="Center" MinWidth="100" />
-                  <TextBlock Grid.Column="4" Classes="data-row num" Text="{Binding OverallPercent, StringFormat='{}{0}%'}" VerticalAlignment="Center" MinWidth="100" />
+                  <TextBlock Grid.Column="2" Classes="data-row num" Text="{Binding Weight}" VerticalAlignment="Center" MinWidth="44" Margin="8,0,0,0" />
+                  <TextBlock Grid.Column="3" Classes="data-row num" Text="{Binding WithinPercent, StringFormat='{}{0}%'}" VerticalAlignment="Center" MinWidth="56" Margin="8,0,0,0" />
+                  <TextBlock Grid.Column="4" Classes="data-row num" Text="{Binding OverallPercent, StringFormat='{}{0}%'}" VerticalAlignment="Center" MinWidth="52" Margin="8,0,0,0" />
                 </Grid>
               </Border>
             </DataTemplate>

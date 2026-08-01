@@ -29,7 +29,7 @@
       </StackPanel>
 
       <StackPanel Spacing="6" IsVisible="{Binding ShowFixedColour}">
-        <TextBlock Text="Fixed colour" Classes="plabel" />
+        <TextBlock Text="FIXED COLOUR" Classes="plabel" />
         <TextBox Watermark="hex:d6249f" Text="{Binding FixedColor}" />
       </StackPanel>
 
@@ -39,7 +39,7 @@
       </StackPanel>
 
       <StackPanel Spacing="6" IsVisible="{Binding ShowCanvas}">
-        <TextBlock Text="Canvas" Classes="plabel" />
+        <TextBlock Text="CANVAS" Classes="plabel" />
         <TextBox Watermark="Canvas size (e.g. 1000x1000)" Text="{Binding CanvasSize}" />
       </StackPanel>
 

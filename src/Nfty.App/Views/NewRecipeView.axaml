@@ -13,9 +13,9 @@
       <TextBlock Text="New Recipe" FontWeight="Bold" />
       <TextBox Watermark="Name" Text="{Binding Name}" />
 
-      <TextBlock Text="Weight" Classes="plabel" />
+      <TextBlock Text="WEIGHT" Classes="plabel" />
       <NumericUpDown Value="{Binding Weight}" Minimum="0" IsEnabled="{Binding WeightEnabled}" />
-      <TextBlock Text="Resulting mix" Classes="plabel" />
+      <TextBlock Text="RESULTING MIX" Classes="plabel" />
       <ProgressBar Value="{Binding Weight}" Minimum="0" Maximum="100" IsEnabled="{Binding WeightEnabled}" />
 
       <StackPanel Orientation="Horizontal" Spacing="16">

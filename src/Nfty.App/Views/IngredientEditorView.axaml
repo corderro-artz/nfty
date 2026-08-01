@@ -15,7 +15,7 @@
     <Grid Grid.Row="1" ColumnDefinitions="160,180,*,260">
       <!-- Variant filmstrip -->
       <StackPanel Grid.Column="0" Spacing="6" Margin="0,0,12,0">
-        <TextBlock Text="Variants" Classes="plabel" />
+        <TextBlock Text="VARIANTS" Classes="pane-h" />
         <ItemsControl ItemsSource="{Binding Variants}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:EditorVariant">
@@ -32,10 +32,10 @@
           </ItemsControl.ItemTemplate>
         </ItemsControl>
 
-        <TextBlock Text="Name" Classes="plabel" Margin="0,8,0,0" />
+        <TextBlock Text="NAME" Classes="plabel" Margin="0,8,0,0" />
         <TextBox Text="{Binding SelectedName}"
                  IsEnabled="{Binding SelectedVariant, Converter={x:Static ObjectConverters.IsNotNull}}" />
-        <TextBlock Text="Weight" Classes="plabel" Margin="0,6,0,0" />
+        <TextBlock Text="WEIGHT" Classes="plabel" Margin="0,6,0,0" />
         <NumericUpDown Value="{Binding SelectedWeight}" Minimum="0.01" Increment="1"
                        IsEnabled="{Binding SelectedVariant, Converter={x:Static ObjectConverters.IsNotNull}}" />
       </StackPanel>
@@ -62,10 +62,10 @@
           <Button Content="↷" Command="{Binding RedoCommand}" Classes="tbtn" />
         </StackPanel>
 
-        <TextBlock Text="Value" Classes="plabel" Margin="0,8,0,0" />
+        <TextBlock Text="VALUE" Classes="plabel" Margin="0,8,0,0" />
         <Slider Value="{Binding BrushValue}" Minimum="0" Maximum="255" />
 
-        <TextBlock Text="Brush size" Classes="plabel" Margin="0,8,0,0" />
+        <TextBlock Text="BRUSH SIZE" Classes="plabel" Margin="0,8,0,0" />
         <NumericUpDown Value="{Binding BrushSize}" Minimum="1" Width="110" HorizontalAlignment="Left" />
       </StackPanel>
 
@@ -83,37 +83,37 @@
 
       <!-- Colorize rail -->
       <StackPanel Grid.Column="3" Spacing="8" Margin="12,0,0,0">
-        <TextBlock Text="Colorize" FontWeight="Bold" />
+        <TextBlock Text="COLORIZE" Classes="pane-h" />
         <StackPanel Orientation="Horizontal" Spacing="16">
           <RadioButton Content="Dynamic" GroupName="Mode" IsChecked="{Binding IsModeDynamic}" />
           <RadioButton Content="Static" GroupName="Mode" IsChecked="{Binding IsModeStatic}" />
         </StackPanel>
 
         <StackPanel Spacing="6" IsVisible="{Binding ShowColourRange}">
-          <TextBlock Text="Hue range" Classes="plabel" />
+          <TextBlock Text="HUE RANGE" Classes="plabel" />
           <Slider Value="{Binding HueMin}" Minimum="0" Maximum="360" />
           <Slider Value="{Binding HueMax}" Minimum="0" Maximum="360" />
-          <TextBlock Text="Saturation range" Classes="plabel" />
+          <TextBlock Text="SATURATION RANGE" Classes="plabel" />
           <Slider Value="{Binding SatMin}" Minimum="0" Maximum="100" />
           <Slider Value="{Binding SatMax}" Minimum="0" Maximum="100" />
           <StackPanel Orientation="Horizontal" Spacing="8">
             <StackPanel Spacing="2">
-              <TextBlock Text="Hue buckets" Classes="plabel" />
+              <TextBlock Text="HUE BUCKETS" Classes="plabel" />
               <NumericUpDown Value="{Binding HueQuantize}" Minimum="1" Width="110" />
             </StackPanel>
             <StackPanel Spacing="2">
-              <TextBlock Text="Sat buckets" Classes="plabel" />
+              <TextBlock Text="SAT BUCKETS" Classes="plabel" />
               <NumericUpDown Value="{Binding SatQuantize}" Minimum="1" Width="110" />
             </StackPanel>
           </StackPanel>
         </StackPanel>
 
         <StackPanel Spacing="6" IsVisible="{Binding ShowFixedColour}">
-          <TextBlock Text="Fixed colour" Classes="plabel" />
+          <TextBlock Text="FIXED COLOUR" Classes="plabel" />
           <TextBox Watermark="hex:d6249f" Text="{Binding FixedColor}" />
         </StackPanel>
 
-        <TextBlock Text="Preview" FontWeight="Bold" Margin="0,8,0,0" />
+        <TextBlock Text="PREVIEW" Classes="pane-h" Margin="0,8,0,0" />
         <Border Height="{Binding PreviewHeight}" Background="{DynamicResource TileBrush}" CornerRadius="6"
                 BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1">
           <Image Source="{Binding Preview}" Stretch="Uniform" Margin="6" />
