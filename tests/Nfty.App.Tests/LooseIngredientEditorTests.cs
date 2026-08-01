@@ -107,15 +107,21 @@ public class LooseIngredientEditorTests
         }
     }
 
+    // C2 changed this contract: a custom ingredient is no longer save-blocked outright — it is
+    // import-only. Painting can't dirty it (CanPaint is false), so Save stays disabled until an
+    // image is imported. The savable path (import → full-colour round-trip) is covered by
+    // IngredientEditorImportTests.
     [AvaloniaFact]
-    public void Loose_custom_cannot_save()
+    public void Loose_custom_is_import_only_so_painting_leaves_save_disabled()
     {
         var (path, ing) = OnDiskIgt(LayerKind.Custom);
         try
         {
             var vm = LooseEditor(ing, path);
-            vm.ApplyToolStroke(new[] { (0, 0) });           // dirty
-            Assert.False(vm.CanSave);                       // custom blocked even when dirty
+            Assert.False(vm.CanPaint);                      // custom can't be painted
+            vm.ApplyToolStroke(new[] { (0, 0) });           // ...so this is a no-op
+            Assert.False(vm.IsDirty);                       // and cannot dirty the draft
+            Assert.False(vm.CanSave);                       // hence nothing to save yet
             vm.Dispose();
         }
         finally { Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
