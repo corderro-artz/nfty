@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Models;
 using Nfty.App.Services;
 using Nfty.Core.Formats;
+using Nfty.Core.Model;
 using Nfty.Core.Output;
 
 namespace Nfty.App.ViewModels;
@@ -35,7 +36,31 @@ public partial class LandingViewModel : ViewModelBase
         _looseEditorFactory = looseEditorFactory;
     }
 
-    [RelayCommand] private void NewCookBook() => _dialogs.ShowAsync<object>(new NewCookBookViewModel(_dialogs, _notify));
+    [RelayCommand]
+    private async Task NewCookBook()
+    {
+        var wizard = new NewCookBookViewModel(_dialogs, _notify);
+        var result = await _dialogs.ShowAsync<NewCookBookViewModel>(wizard);
+        if (result is null) return;   // cancelled
+        if (string.IsNullOrWhiteSpace(result.DerivedId))
+        {
+            ShowError("Invalid cookbook", "The cookbook needs a name.");
+            return;
+        }
+        string? path;
+        try { path = await _picker.SaveFileAsync("Save new cookbook", ".cbk"); }
+        catch (Exception ex) { ShowError("Could not save", ex.Message); return; }
+        if (path is null) return;   // cancelled the picker
+
+        var manifest = new CookBookManifest(result.DerivedId, result.Name,
+            new Dimensions(result.Width, result.Height),
+            new Collection(result.Name, result.Description, result.Symbol),
+            new Dictionary<string, double>());   // no recipes yet
+        try { CookBookPersistence.WriteNew(path, manifest, Array.Empty<LoadedRecipe>()); }
+        catch (Exception ex) { ShowError("Could not save", ex.Message); return; }
+
+        OpenPath(path);   // reads it back (fresh hash), session.Open(book, path), → Explorer
+    }
     [RelayCommand(CanExecute = nameof(Never))] private void NewKitchen() => _notify.Report("New Kitchen");
     [RelayCommand] private void NewRecipe() => _dialogs.ShowAsync<object>(new NewRecipeViewModel(_dialogs, _notify));
     [RelayCommand]
