@@ -34,7 +34,8 @@ public static class ServiceRegistration
                 sp.GetRequiredService<INavigationService>(),
                 sp.GetRequiredService<INotYetWired>(),
                 sp.GetRequiredService<ICookBookSession>(),
-                sp.GetRequiredService<IDialogService>()));
+                sp.GetRequiredService<IDialogService>(),
+                sp.GetRequiredService<IFilePickerService>()));
 
         // Loose (.igt) editor: same editor, but with a save-straight-to-.igt path and the synthetic
         // wrapper book it owns. Built directly (not via the cookbook editor factory) so it can pass
@@ -43,7 +44,8 @@ public static class ServiceRegistration
             (ing, book, path) => new IngredientEditorViewModel(ing, book.Recipes[0], book,
                 sp.GetRequiredService<IImageBridge>(), sp.GetRequiredService<INavigationService>(),
                 sp.GetRequiredService<INotYetWired>(), sp.GetRequiredService<ICookBookSession>(),
-                sp.GetRequiredService<IDialogService>(), looseSavePath: path));
+                sp.GetRequiredService<IDialogService>(), sp.GetRequiredService<IFilePickerService>(),
+                looseSavePath: path));
 
         services.AddSingleton<Func<LoadedCookBook, CookDialogViewModel>>(sp =>
             book => new CookDialogViewModel(book,

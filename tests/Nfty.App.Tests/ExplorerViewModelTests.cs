@@ -42,7 +42,8 @@ public class ExplorerViewModelTests
     {
         var s = session ?? new CookBookSession();
         var d = dialogs ?? new FakeDialogs();
-        return (i, r, b) => new IngredientEditorViewModel(i, r, b, new ImageBridge(), nav, new FakeNotYetWired(), s, d);
+        return (i, r, b) => new IngredientEditorViewModel(i, r, b, new ImageBridge(), nav, new FakeNotYetWired(), s, d,
+            new FilePickerService());
     }
 
     /// <summary>Shared stub loose-editor factory (for a standalone .igt): builds the editor over a
@@ -50,7 +51,7 @@ public class ExplorerViewModelTests
     internal static Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> LooseEditorFactory(
         INavigationService nav, ICookBookSession session, IDialogService dialogs) =>
         (ing, book, path) => new IngredientEditorViewModel(ing, book.Recipes[0], book, new ImageBridge(),
-            nav, new FakeNotYetWired(), session, dialogs, looseSavePath: path);
+            nav, new FakeNotYetWired(), session, dialogs, new FilePickerService(), looseSavePath: path);
 
     /// <summary>Shared stub cook factory for tests that construct an <see cref="ExplorerViewModel"/>
     /// but don't exercise the Cook dialog flow itself.</summary>

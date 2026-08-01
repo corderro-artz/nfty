@@ -44,6 +44,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     private readonly LoadedRecipe _recipe;
     private readonly ICookBookSession _session;
     private readonly IDialogService _dialogs;
+    private readonly IFilePickerService _picker;
     private readonly string? _looseSavePath;   // set → save straight to this .igt, not into a cookbook
     private readonly LoadedCookBook? _ownedBook;   // the synthetic wrapper book, owned only on the loose path
     private LoadedIngredient _ing;
@@ -75,6 +76,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ImportImageCommand))]
     private bool _isSaving;
 
     /// <summary>Raised after a successful Save with the newly-spliced graph, so a listener
@@ -113,10 +115,10 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
 
     public IngredientEditorViewModel(LoadedIngredient ing, LoadedRecipe recipe, LoadedCookBook book,
         IImageBridge bridge, INavigationService nav, INotYetWired notify, ICookBookSession session,
-        IDialogService dialogs, string? looseSavePath = null)
+        IDialogService dialogs, IFilePickerService picker, string? looseSavePath = null)
     {
         _ing = ing; _bridge = bridge; _nav = nav; _notify = notify;
-        _recipe = recipe; _session = session; _dialogs = dialogs;
+        _recipe = recipe; _session = session; _dialogs = dialogs; _picker = picker;
         _looseSavePath = looseSavePath;
         // A loose (standalone .igt) editor owns its synthetic wrapper book — dispose it with the editor.
         if (looseSavePath is not null) _ownedBook = book;
@@ -191,6 +193,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         UndoCommand?.NotifyCanExecuteChanged();
         RedoCommand?.NotifyCanExecuteChanged();
         DuplicateVariantCommand?.NotifyCanExecuteChanged();
+        ImportImageCommand?.NotifyCanExecuteChanged();
         SyncSelectedFields();
     }
 
@@ -232,6 +235,62 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     partial void OnFixedColorChanged(string value) => RebuildSurfaces();
 
     [RelayCommand] private void SelectTool(EditorTool tool) => ActiveTool = tool;
+
+    private bool CanImport() => SelectedVariant is not null && !IsSaving;
+
+    /// <summary>Replaces the selected variant's raster from a PNG on disk. Dynamic/static: the PNG
+    /// becomes the variant's value-map (clearing its undo history — the old snapshots describe pixels
+    /// that no longer exist). Custom: handled by an override in Task 2.</summary>
+    [RelayCommand(CanExecute = nameof(CanImport))]
+    private async Task ImportImage()
+    {
+        if (ActiveDraft is not { } target) return;
+        string? path;
+        try { path = await _picker.OpenFileAsync("Import variant image", ".png"); }
+        catch (Exception ex) { await ShowErrorAsync("Could not import", ex.Message); return; }
+        if (path is null) return;   // cancelled
+
+        Image<Rgba32> img;
+        try { img = Image.Load<Rgba32>(path); }
+        catch (Exception ex) { await ShowErrorAsync("Could not import", ex.Message); return; }
+        try
+        {
+            var canvas = _draft.Canvas;
+            if (img.Width != canvas.Width || img.Height != canvas.Height)
+            {
+                await ShowErrorAsync("Wrong size",
+                    $"This image is {img.Width}×{img.Height}; the canvas is {canvas.Width}×{canvas.Height}.");
+                return;
+            }
+
+            // Dynamic/static: the PNG becomes the variant's value-map.
+            var src = ValueMap.FromImage(img);
+            for (int y = 0; y < canvas.Height; y++)
+                for (int x = 0; x < canvas.Width; x++)
+                    target.Map.Set(x, y, src.GetValue(x, y), src.GetAlpha(x, y));
+            _history[target.Id] = new EditHistory();   // old snapshots describe pixels that are gone
+            UndoCommand.NotifyCanExecuteChanged();
+            RedoCommand.NotifyCanExecuteChanged();
+            IsDirty = true;
+            RebuildSurfaces();
+            RefreshThumbnail(target.Id);
+        }
+        finally { img.Dispose(); }
+    }
+
+    private async Task ShowErrorAsync(string title, string message) =>
+        await _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, title, message));
+
+    /// <summary>Re-render one filmstrip entry's thumbnail after its pixels changed.</summary>
+    private void RefreshThumbnail(string variantId)
+    {
+        var entry = Variants.FirstOrDefault(v => v.Id == variantId);
+        var vd = _draft.Variants.FirstOrDefault(v => v.Id == variantId);
+        if (entry is null || vd is null) return;
+        var old = entry.Thumbnail;
+        entry.Thumbnail = RenderThumb(vd.Map);
+        old.Dispose();
+    }
 
     /// <summary>Commit one completed gesture as a Core edit command against the active variant.</summary>
     public void ApplyToolStroke(IReadOnlyList<(int x, int y)> points)

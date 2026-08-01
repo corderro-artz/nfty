@@ -34,7 +34,8 @@ public class LooseIngredientEditorTests
     {
         var book = LooseWorkspace.WrapIngredient(ing);
         return new IngredientEditorViewModel(ing, book.Recipes[0], book, new ImageBridge(),
-            new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs(), looseSavePath: path);
+            new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs(), new FilePickerService(),
+            looseSavePath: path);
     }
 
     [AvaloniaFact]
@@ -87,7 +88,8 @@ public class LooseIngredientEditorTests
             // Open a loose .igt editor built with the SAME (live) session.
             var book = LooseWorkspace.WrapIngredient(ing);
             var vm = new IngredientEditorViewModel(ing, book.Recipes[0], book, new ImageBridge(),
-                new FakeNav(), new FakeNotYetWired(), session, new FakeDialogs(), looseSavePath: igtPath);
+                new FakeNav(), new FakeNotYetWired(), session, new FakeDialogs(), new FilePickerService(),
+                looseSavePath: igtPath);
             vm.ActiveTool = EditorTool.Fill; vm.BrushValue = 111;
             vm.ApplyToolStroke(new[] { (0, 0) });
             await vm.SaveCommand.ExecuteAsync(null);
