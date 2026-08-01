@@ -89,4 +89,23 @@ public class NewIngredientViewModelTests
         vm.CreateCommand.Execute(null);
         Assert.Same(vm, await task);
     }
+
+    [Fact]
+    public void TryGetCanvas_parses_WxH_and_rejects_bad_input()
+    {
+        var vm = Make(out _, out _);
+        vm.CanvasSize = "512x512";
+        Assert.True(vm.TryGetCanvas(out var c));
+        Assert.Equal(512, c.Width); Assert.Equal(512, c.Height);
+
+        vm.CanvasSize = " 8 x 8 ";
+        Assert.True(vm.TryGetCanvas(out var c2));
+        Assert.Equal(8, c2.Width); Assert.Equal(8, c2.Height);
+
+        foreach (var bad in new[] { "", "abc", "0x8", "8", "8x", "-4x4", "8xY" })
+        {
+            vm.CanvasSize = bad;
+            Assert.False(vm.TryGetCanvas(out _), $"expected '{bad}' to be rejected");
+        }
+    }
 }
