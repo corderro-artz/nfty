@@ -93,8 +93,37 @@ public class LandingNewIngredientTests
     [AvaloniaFact]
     public async Task Cancelling_the_save_picker_writes_nothing()
     {
-        var (vm, nav) = Landing(new WizardDialogs("Hat", "8x8"), new SavePicker(null));   // picker cancelled
+        var dialogs = new WizardDialogs("Hat", "8x8");
+        var (vm, nav) = Landing(dialogs, new SavePicker(null));   // picker cancelled
         await vm.NewIngredientCommand.ExecuteAsync(null);
+        Assert.Null(nav.Current);
+        Assert.Null(dialogs.ErrorTitle);   // clean cancel — no error dialog
+    }
+
+    [AvaloniaFact]
+    public async Task Write_failure_shows_an_error_and_opens_nothing()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        var badPath = Path.Combine(dir, "nope", "hat.igt");   // parent dir doesn't exist → Write throws
+        var dialogs = new WizardDialogs("Hat", "8x8");
+        var (vm, nav) = Landing(dialogs, new SavePicker(badPath));
+        try
+        {
+            await vm.NewIngredientCommand.ExecuteAsync(null);
+            Assert.NotNull(dialogs.ErrorTitle);        // error surfaced
+            Assert.False(File.Exists(badPath));        // nothing written
+            Assert.Null(nav.Current);                  // editor not opened
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [AvaloniaFact]
+    public async Task A_huge_canvas_is_rejected_before_the_save_prompt()
+    {
+        var dialogs = new WizardDialogs("Hat", "50000x50000");   // > 100M px cap
+        var (vm, nav) = Landing(dialogs, new SavePicker("unused.igt"));
+        await vm.NewIngredientCommand.ExecuteAsync(null);
+        Assert.Equal("Invalid canvas", dialogs.ErrorTitle);   // rejected by TryGetCanvas
         Assert.Null(nav.Current);
     }
 }

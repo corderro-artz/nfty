@@ -104,6 +104,7 @@ public partial class NewIngredientViewModel : WizardViewModelBase
         if (parts.Length != 2) return false;
         if (!int.TryParse(parts[0].Trim(), out var w) || !int.TryParse(parts[1].Trim(), out var h)) return false;
         if (w <= 0 || h <= 0) return false;
+        if ((long)w * h > 100_000_000) return false;   // cap pixels: avoids int-overflow / OOM allocating the raster
         canvas = new Dimensions(w, h);
         return true;
     }

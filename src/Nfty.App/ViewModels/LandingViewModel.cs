@@ -58,7 +58,9 @@ public partial class LandingViewModel : ViewModelBase
         var path = await _picker.SaveFileAsync("Save new ingredient", ".igt");
         if (path is null) return;   // cancelled the picker
 
-        var built = result.Build(canvas);   // manifest + one blank variant (we own its images)
+        LoadedIngredient built;
+        try { built = result.Build(canvas); }   // Build allocates the raster — guard it (OOM on a huge canvas)
+        catch (Exception ex) { ShowError("Could not save", ex.Message); return; }
         try { IngredientArchive.Write(path, built.Manifest, built.VariantImages); }
         catch (Exception ex) { ShowError("Could not save", ex.Message); built.Dispose(); return; }
         built.Dispose();
