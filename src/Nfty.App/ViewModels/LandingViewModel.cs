@@ -38,7 +38,35 @@ public partial class LandingViewModel : ViewModelBase
     [RelayCommand] private void NewCookBook() => _dialogs.ShowAsync<object>(new NewCookBookViewModel(_dialogs, _notify));
     [RelayCommand(CanExecute = nameof(Never))] private void NewKitchen() => _notify.Report("New Kitchen");
     [RelayCommand] private void NewRecipe() => _dialogs.ShowAsync<object>(new NewRecipeViewModel(_dialogs, _notify));
-    [RelayCommand] private void NewIngredient() => _dialogs.ShowAsync<object>(new NewIngredientViewModel(_dialogs, _notify));
+    [RelayCommand]
+    private async Task NewIngredient()
+    {
+        var wizard = new NewIngredientViewModel(_dialogs, _notify) { Destination = RecipeDestination.LooseKitchen };
+        var result = await _dialogs.ShowAsync<NewIngredientViewModel>(wizard);
+        if (result is null) return;   // cancelled
+
+        if (result.Destination == RecipeDestination.IntoCookBook)
+        {
+            ShowError("No cookbook open", "Open or create a cookbook, then add ingredients from the Explorer.");
+            return;
+        }
+        if (!result.TryGetCanvas(out var canvas))
+        {
+            ShowError("Invalid canvas", "Enter a canvas size like 512x512.");
+            return;
+        }
+        var path = await _picker.SaveFileAsync("Save new ingredient", ".igt");
+        if (path is null) return;   // cancelled the picker
+
+        LoadedIngredient built;
+        try { built = result.Build(canvas); }   // Build allocates the raster — guard it (OOM on a huge canvas)
+        catch (Exception ex) { ShowError("Could not save", ex.Message); return; }
+        try { IngredientArchive.Write(path, built.Manifest, built.VariantImages); }
+        catch (Exception ex) { ShowError("Could not save", ex.Message); built.Dispose(); return; }
+        built.Dispose();
+
+        OpenLooseIngredient(path);   // B1: reads it back + opens the editor with a loose-save path
+    }
 
     [RelayCommand]
     private async Task OpenCookBook()

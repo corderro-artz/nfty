@@ -40,7 +40,7 @@
 
       <StackPanel Spacing="6" IsVisible="{Binding ShowCanvas}">
         <TextBlock Text="Canvas" Classes="muted" />
-        <TextBox Watermark="Canvas size (e.g. 1000x1000)" />
+        <TextBox Watermark="Canvas size (e.g. 1000x1000)" Text="{Binding CanvasSize}" />
       </StackPanel>
 
       <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">

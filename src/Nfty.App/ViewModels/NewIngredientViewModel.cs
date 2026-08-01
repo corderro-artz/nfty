@@ -21,6 +21,7 @@ public partial class NewIngredientViewModel : WizardViewModelBase
     [ObservableProperty] private RecipeDestination _destination = RecipeDestination.IntoCookBook;
     [ObservableProperty] private double _hueMin, _hueMax = 360, _satMin = 40, _satMax = 100;
     [ObservableProperty] private string _fixedColor = "hex:d6249f";
+    [ObservableProperty] private string _canvasSize = "512x512";
 
     /// <summary>Dynamic layers roll a colour per asset from a hue/sat range.</summary>
     public bool ShowColourRange => Kind == LayerKind.Dynamic;
@@ -94,6 +95,19 @@ public partial class NewIngredientViewModel : WizardViewModelBase
     /// <summary>The ingredient id derived from the name: lower-case, spaces to dashes.</summary>
     public string DerivedId => string.Join('-',
         Name.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+
+    /// <summary>Parse the CanvasSize field ("{W}x{H}") into positive dimensions.</summary>
+    public bool TryGetCanvas(out Dimensions canvas)
+    {
+        canvas = default!;
+        var parts = CanvasSize.Split('x', 'X');
+        if (parts.Length != 2) return false;
+        if (!int.TryParse(parts[0].Trim(), out var w) || !int.TryParse(parts[1].Trim(), out var h)) return false;
+        if (w <= 0 || h <= 0) return false;
+        if ((long)w * h > 100_000_000) return false;   // cap pixels: avoids int-overflow / OOM allocating the raster
+        canvas = new Dimensions(w, h);
+        return true;
+    }
 
     /// <summary>Build the colorization config from the wizard fields (quantize defaults 12/4).</summary>
     public Colorization? BuildColorization() => Kind switch
