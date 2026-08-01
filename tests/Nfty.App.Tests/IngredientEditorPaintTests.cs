@@ -40,7 +40,7 @@ public class IngredientEditorPaintTests
     {
         var (ing, recipe, book) = Fixture();
         return new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(), new FakeNav(), new FakeNotYetWired(),
-            new CookBookSession(), new FakeDialogs());
+            new CookBookSession(), new FakeDialogs(), new FilePickerService());
     }
 
     [AvaloniaFact]

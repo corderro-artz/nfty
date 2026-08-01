@@ -18,15 +18,22 @@ namespace Nfty.App.Tests;
 public class IngredientEditorSaveTests
 {
     // Build a dynamic (value-map) 1-recipe cookbook on disk, return (path, session opened over it).
-    internal static (string path, CookBookSession session, LoadedRecipe recipe, LoadedIngredient ing) OnDisk()
+    internal static (string path, CookBookSession session, LoadedRecipe recipe, LoadedIngredient ing) OnDisk() =>
+        OnDisk(LayerKind.Dynamic);
+
+    // As above, but lets a test build a CUSTOM (full-colour, un-colorized) fixture instead of the
+    // default dynamic (value-map) one. Custom ingredients carry no Colorization (CLAUDE.md: "Colorization
+    // must be null" for custom).
+    internal static (string path, CookBookSession session, LoadedRecipe recipe, LoadedIngredient ing) OnDisk(LayerKind kind)
     {
         var dir = Directory.CreateTempSubdirectory().FullName;
         var path = Path.Combine(dir, "book.cbk");
-        var coloriz = new Colorization(ColorModel.Hsv, 12, 4,
-            new[] { new ColorEntry(1, new ColorRange(0, 360, 40, 100), null) });
+        var coloriz = kind == LayerKind.Custom ? null
+            : new Colorization(ColorModel.Hsv, 12, 4,
+                new[] { new ColorEntry(1, new ColorRange(0, 360, 40, 100), null) });
         var ing = new LoadedIngredient
         {
-            Manifest = new IngredientManifest("aura", "Aura", LayerKind.Dynamic, coloriz,
+            Manifest = new IngredientManifest("aura", "Aura", kind, coloriz,
                 new[] { new Variant("glow", "Glow", 1) }),
             VariantImages = new Dictionary<string, Image<Rgba32>> { ["glow"] = new(8, 8) },
         };
@@ -52,7 +59,7 @@ public class IngredientEditorSaveTests
         try
         {
             var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
-                new FakeNav(), new FakeNotYetWired(), session, new FakeDialogs());
+                new FakeNav(), new FakeNotYetWired(), session, new FakeDialogs(), new FilePickerService());
             vm.ActiveTool = EditorTool.Fill; vm.BrushValue = 200;
             vm.ApplyToolStroke(new[] { (0, 0) });          // flood the blank value-map to 200
             Assert.True(vm.CanSave);
@@ -75,7 +82,7 @@ public class IngredientEditorSaveTests
         try
         {
             var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
-                new FakeNav(), new FakeNotYetWired(), session, new FakeDialogs());
+                new FakeNav(), new FakeNotYetWired(), session, new FakeDialogs(), new FilePickerService());
             Assert.False(vm.CanSave);                      // clean → disabled
             vm.ActiveTool = EditorTool.Fill; vm.BrushValue = 50;
             vm.ApplyToolStroke(new[] { (0, 0) });
@@ -94,7 +101,7 @@ public class IngredientEditorSaveTests
             var nav = new FakeNav();
             var dialogs = new FakeConfirmingDialogs(confirm: false);   // user cancels the discard
             var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
-                nav, new FakeNotYetWired(), session, dialogs);
+                nav, new FakeNotYetWired(), session, dialogs, new FilePickerService());
             vm.ActiveTool = EditorTool.Fill; vm.BrushValue = 10;
             vm.ApplyToolStroke(new[] { (0, 0) });
             await vm.BackCommand.ExecuteAsync(null);
@@ -114,7 +121,7 @@ public class IngredientEditorSaveTests
             var nav = new FakeNav();
             var dialogs = new FakeConfirmingDialogs(confirm: true);
             var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
-                nav, new FakeNotYetWired(), session, dialogs);
+                nav, new FakeNotYetWired(), session, dialogs, new FilePickerService());
             await vm.BackCommand.ExecuteAsync(null);
             Assert.False(dialogs.Shown);           // clean → no confirm
             Assert.Equal(1, nav.BackCount);        // navigated straight back

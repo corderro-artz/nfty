@@ -34,7 +34,8 @@ public class LooseIngredientEditorTests
     {
         var book = LooseWorkspace.WrapIngredient(ing);
         return new IngredientEditorViewModel(ing, book.Recipes[0], book, new ImageBridge(),
-            new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs(), looseSavePath: path);
+            new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs(), new FilePickerService(),
+            looseSavePath: path);
     }
 
     [AvaloniaFact]
@@ -87,7 +88,8 @@ public class LooseIngredientEditorTests
             // Open a loose .igt editor built with the SAME (live) session.
             var book = LooseWorkspace.WrapIngredient(ing);
             var vm = new IngredientEditorViewModel(ing, book.Recipes[0], book, new ImageBridge(),
-                new FakeNav(), new FakeNotYetWired(), session, new FakeDialogs(), looseSavePath: igtPath);
+                new FakeNav(), new FakeNotYetWired(), session, new FakeDialogs(), new FilePickerService(),
+                looseSavePath: igtPath);
             vm.ActiveTool = EditorTool.Fill; vm.BrushValue = 111;
             vm.ApplyToolStroke(new[] { (0, 0) });
             await vm.SaveCommand.ExecuteAsync(null);
@@ -105,15 +107,21 @@ public class LooseIngredientEditorTests
         }
     }
 
+    // C2 changed this contract: a custom ingredient is no longer save-blocked outright — it is
+    // import-only. Painting can't dirty it (CanPaint is false), so Save stays disabled until an
+    // image is imported. The savable path (import → full-colour round-trip) is covered by
+    // IngredientEditorImportTests.
     [AvaloniaFact]
-    public void Loose_custom_cannot_save()
+    public void Loose_custom_is_import_only_so_painting_leaves_save_disabled()
     {
         var (path, ing) = OnDiskIgt(LayerKind.Custom);
         try
         {
             var vm = LooseEditor(ing, path);
-            vm.ApplyToolStroke(new[] { (0, 0) });           // dirty
-            Assert.False(vm.CanSave);                       // custom blocked even when dirty
+            Assert.False(vm.CanPaint);                      // custom can't be painted
+            vm.ApplyToolStroke(new[] { (0, 0) });           // ...so this is a no-op
+            Assert.False(vm.IsDirty);                       // and cannot dirty the draft
+            Assert.False(vm.CanSave);                       // hence nothing to save yet
             vm.Dispose();
         }
         finally { Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }

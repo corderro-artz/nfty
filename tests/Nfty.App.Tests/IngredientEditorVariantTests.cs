@@ -18,7 +18,7 @@ public class IngredientEditorVariantTests
     {
         (path, session, var recipe, var ing) = IngredientEditorSaveTests.OnDisk();
         return new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
-            new FakeNav(), new FakeNotYetWired(), session, dialogs ?? new FakeDialogs());
+            new FakeNav(), new FakeNotYetWired(), session, dialogs ?? new FakeDialogs(), new FilePickerService());
     }
 
     [AvaloniaFact]
