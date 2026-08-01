@@ -445,6 +445,8 @@ public class VisualCapture
             vm.BrushValue = 200;
             vm.ApplyToolStroke(new[] { (0, 0) });   // flood the blank value-map so the canvas visibly changes
             vm.AddVariantCommand.Execute(null);     // second filmstrip entry + populated name/weight editors
+            vm.SelectVariantCommand.Execute(vm.Variants[0]);   // back to the painted variant
+            vm.FillPanePreviewCommand.Execute(null);   // C1: preview takes over the canvas pane
             Capture(new Views.IngredientEditorView { DataContext = vm }, variant, $"editor-paint-{key}.png");
             vm.Dispose();
         }

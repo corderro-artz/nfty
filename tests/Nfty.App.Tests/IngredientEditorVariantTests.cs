@@ -161,6 +161,38 @@ public class IngredientEditorVariantTests
         finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
     }
 
+    [AvaloniaFact]
+    public void Preview_toggles_are_independent_and_do_not_touch_the_draft()
+    {
+        var vm = Editor(out var session, out var path);
+        try
+        {
+            var canvas = vm.Canvas; var preview = vm.Preview;
+
+            Assert.Equal(120, vm.PreviewHeight);          // inset by default
+            Assert.True(vm.ShowPaintCanvas);
+
+            vm.EnlargePreviewCommand.Execute(null);
+            Assert.Equal(320, vm.PreviewHeight);          // enlarged in place
+            Assert.True(vm.ShowPaintCanvas);              // independent of fill-pane
+            vm.EnlargePreviewCommand.Execute(null);
+            Assert.Equal(120, vm.PreviewHeight);          // toggles back
+
+            vm.FillPanePreviewCommand.Execute(null);
+            Assert.True(vm.PreviewFillsPane);
+            Assert.False(vm.ShowPaintCanvas);             // preview took over the pane
+            Assert.Equal(120, vm.PreviewHeight);          // independent of enlarge
+            vm.FillPanePreviewCommand.Execute(null);
+            Assert.True(vm.ShowPaintCanvas);              // toggles back
+
+            Assert.False(vm.IsDirty);                     // presentation only — no draft edit
+            Assert.Same(canvas, vm.Canvas);               // and no re-render
+            Assert.Same(preview, vm.Preview);
+            vm.Dispose();
+        }
+        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
+    }
+
     // Minimal confirm-returning dialog double (mirrors the one in IngredientEditorSaveTests).
     private sealed class ConfirmingDialogs : IDialogService
     {
