@@ -26,7 +26,8 @@ public class LandingOpenSetTests
         var notify = new FakeNotYetWired();
         return new LandingViewModel(nav, dialogs, notify, picker, new RecentsService(), new CookBookSession(),
             book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(),
-                ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs), new CookBookSession()),
+                ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs), new CookBookSession(),
+                new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs)),
             s => new SetBrowserViewModel(s),
                 (_, _, _) => null!);
     }

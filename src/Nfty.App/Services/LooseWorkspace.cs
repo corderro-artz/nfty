@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Nfty.Core.Formats;
 using Nfty.Core.Model;
@@ -30,6 +31,29 @@ public static class LooseWorkspace
                 new Dictionary<string, double> { ["loose"] = 100 }),
             Recipes = new[] { recipe },
         };
+    }
+
+    /// <summary>Validates then atomically writes a loose ingredient to its <c>.igt</c>: a sibling temp
+    /// plus <see cref="File.Move(string,string,bool)"/>, so an existing file is replaced rather than
+    /// rejected (IngredientArchive.Write alone opens CreateNew and throws on an existing path). Returns
+    /// the validation problems and writes nothing when there are any; throws on an IO failure. Shared by
+    /// every create-loose entry point so they all apply the same standard.</summary>
+    public static IReadOnlyList<string> WriteIngredient(string path, LoadedIngredient ing)
+    {
+        var problems = Validator.ValidateIngredient(ing);
+        if (problems.Count > 0) return problems;
+
+        var tmp = path + ".tmp";
+        try
+        {
+            IngredientArchive.Write(tmp, ing.Manifest, ing.VariantImages);
+            File.Move(tmp, path, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(tmp)) { try { File.Delete(tmp); } catch { /* best effort */ } }
+        }
+        return Array.Empty<string>();
     }
 
     /// <summary>Wraps a standalone (loose) recipe in a throwaway single-recipe cookbook so the Explorer
