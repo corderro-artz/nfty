@@ -33,7 +33,8 @@ public class SmokeTests
         [
             new LandingViewModel(nav, dialogs, notify, new FilePickerService(), new RecentsService(),
                 new CookBookSession(), book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(), editorFactory, cookFactory, new CookBookSession()),
-                set => new SetBrowserViewModel(set)),
+                set => new SetBrowserViewModel(set),
+                (_, _, _) => null!),
             new ExplorerViewModel(smokeBook, nav, dialogs, notify, new ImageBridge(), editorFactory, cookFactory, new CookBookSession()),
             editorFactory(cat.Ingredients[0], cat, smokeBook),
             new HelpViewModel(dialogs),
@@ -66,7 +67,8 @@ public class SmokeTests
             new FilePickerService(), new RecentsService(), new CookBookSession(),
             book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav),
                 ExplorerViewModelTests.CookFactory(dialogs), new CookBookSession()),
-            set => new SetBrowserViewModel(set));
+            set => new SetBrowserViewModel(set),
+                (_, _, _) => null!);
         vm.NewCookBookCommand.Execute(null);
         Assert.IsType<NewCookBookViewModel>(dialogs.Active);
         ((NewCookBookViewModel)dialogs.Active!).CancelCommand.Execute(null);
