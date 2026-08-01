@@ -70,6 +70,17 @@ public class NewIngredientViewModelTests
     }
 
     [Fact]
+    public void Create_is_disabled_until_the_name_yields_a_non_blank_id()
+    {
+        var vm = Make(out _, out _);
+        Assert.False(vm.CreateCommand.CanExecute(null));   // empty name
+        vm.Name = "   ";
+        Assert.False(vm.CreateCommand.CanExecute(null));   // whitespace → blank id
+        vm.Name = "Hat";
+        Assert.True(vm.CreateCommand.CanExecute(null));
+    }
+
+    [Fact]
     public async System.Threading.Tasks.Task Create_closes_the_dialog_with_the_vm()
     {
         var real = new DialogService();
