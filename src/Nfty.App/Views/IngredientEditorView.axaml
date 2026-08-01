@@ -9,6 +9,7 @@
       <Button Content="Add variant" Command="{Binding AddVariantCommand}" Classes="tbtn" />
       <Button Content="Duplicate" Command="{Binding DuplicateVariantCommand}" Classes="tbtn" />
       <Button Content="Delete" Command="{Binding DeleteVariantCommand}" Classes="tbtn" />
+      <Button Content="Import…" Command="{Binding ImportImageCommand}" Classes="tbtn" />
     </StackPanel>
 
     <Grid Grid.Row="1" ColumnDefinitions="160,180,*,260">
@@ -39,8 +40,8 @@
                        IsEnabled="{Binding SelectedVariant, Converter={x:Static ObjectConverters.IsNotNull}}" />
       </StackPanel>
 
-      <!-- Tool strip -->
-      <StackPanel Grid.Column="1" Spacing="6" Margin="0,0,12,0">
+      <!-- Tool strip: disabled for custom ingredients (import-only, cannot round-trip a paint edit). -->
+      <StackPanel Grid.Column="1" Spacing="6" Margin="0,0,12,0" IsEnabled="{Binding CanPaint}">
         <Button Content="Brush" Command="{Binding SelectToolCommand}"
                 CommandParameter="{x:Static vm:EditorTool.Brush}" Classes="tbtn" HorizontalAlignment="Stretch" />
         <Button Content="Eraser" Command="{Binding SelectToolCommand}"
