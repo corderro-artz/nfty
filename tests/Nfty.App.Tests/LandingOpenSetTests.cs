@@ -27,7 +27,8 @@ public class LandingOpenSetTests
         return new LandingViewModel(nav, dialogs, notify, picker, new RecentsService(), new CookBookSession(),
             book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(),
                 ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs), new CookBookSession()),
-            s => new SetBrowserViewModel(s));
+            s => new SetBrowserViewModel(s),
+                (_, _, _) => null!);
     }
 
     private static string CookTinySet()

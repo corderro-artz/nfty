@@ -29,7 +29,8 @@ public class LandingOpenFlowTests
         return new LandingViewModel(n, d, no, new StubPicker(pickerPath), new RecentsService(), s,
             book => new ExplorerViewModel(book, n, d, no, new ImageBridge(), ExplorerViewModelTests.EditorFactory(n),
                 ExplorerViewModelTests.CookFactory(d), new CookBookSession()),
-            set => new SetBrowserViewModel(set));
+            set => new SetBrowserViewModel(set),
+                (_, _, _) => null!);
     }
 
     [Fact]
@@ -67,10 +68,12 @@ public class LandingOpenFlowTests
         Assert.Null(session.Current);
     }
 
+    // A loose .rcp still routes to the "Kitchen (coming soon)" stub (a loose .igt now opens the
+    // editor instead — covered by LandingImportIgtTests).
     [Fact]
-    public void Import_of_a_loose_igt_reports_the_kitchen_message()
+    public void Import_of_a_loose_rcp_reports_the_kitchen_message()
     {
-        var vm = Make("thing.igt", out _, out _, out var notify, out _);
+        var vm = Make("thing.rcp", out _, out _, out var notify, out _);
         vm.ImportCommand.Execute(null);
         Assert.Contains("Kitchen", notify.Last);
     }

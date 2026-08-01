@@ -20,16 +20,19 @@ public partial class LandingViewModel : ViewModelBase
     private readonly ICookBookSession _session;
     private readonly Func<LoadedCookBook, ExplorerViewModel> _explorerFactory;
     private readonly Func<LoadedSet, SetBrowserViewModel> _setBrowserFactory;
+    private readonly Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> _looseEditorFactory;
 
     public IReadOnlyList<RecentItem> Recents => _recents.Items;
 
     public LandingViewModel(INavigationService nav, IDialogService dialogs, INotYetWired notify,
         IFilePickerService picker, IRecentsService recents, ICookBookSession session,
         Func<LoadedCookBook, ExplorerViewModel> explorerFactory,
-        Func<LoadedSet, SetBrowserViewModel> setBrowserFactory)
+        Func<LoadedSet, SetBrowserViewModel> setBrowserFactory,
+        Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> looseEditorFactory)
     {
         _nav = nav; _dialogs = dialogs; _notify = notify; _picker = picker; _recents = recents;
         _session = session; _explorerFactory = explorerFactory; _setBrowserFactory = setBrowserFactory;
+        _looseEditorFactory = looseEditorFactory;
     }
 
     [RelayCommand] private void NewCookBook() => _dialogs.ShowAsync<object>(new NewCookBookViewModel(_dialogs, _notify));
@@ -54,8 +57,23 @@ public partial class LandingViewModel : ViewModelBase
         try { kind = Archives.KindOf(path); }
         catch (Exception ex) { ShowError("Could not import", ex.Message); return; }
 
-        if (kind == ArchiveKind.CookBook) OpenPath(path);
-        else _notify.Report("Importing a loose recipe/ingredient needs the Kitchen (coming soon)");
+        if (kind == ArchiveKind.CookBook) { OpenPath(path); return; }
+        if (kind == ArchiveKind.Ingredient) { OpenLooseIngredient(path); return; }
+        _notify.Report("Importing a loose recipe needs the Kitchen (coming soon)");   // .rcp → later slice
+    }
+
+    private void OpenLooseIngredient(string path)
+    {
+        LoadedIngredient ing;
+        try { ing = IngredientArchive.Read(path); }
+        catch (Exception ex) { ShowError("Could not open", ex.Message); return; }
+        if (ing.VariantImages.Count == 0)
+        {
+            ShowError("Can't open", "This ingredient has no variants to edit.");
+            ing.Dispose(); return;
+        }
+        var book = LooseWorkspace.WrapIngredient(ing);   // the editor owns + disposes this
+        _nav.To(_looseEditorFactory(ing, book, path));
     }
 
     private void OpenPath(string path)

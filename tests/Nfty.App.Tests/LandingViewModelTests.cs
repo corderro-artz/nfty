@@ -15,7 +15,8 @@ public class LandingViewModelTests
             new FilePickerService(), new RecentsService(), new CookBookSession(),
             book => new ExplorerViewModel(book, nav, d, no, new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav),
                 ExplorerViewModelTests.CookFactory(d), new CookBookSession()),
-            set => new SetBrowserViewModel(set));
+            set => new SetBrowserViewModel(set),
+                (_, _, _) => null!);
     }
 
     [Fact]

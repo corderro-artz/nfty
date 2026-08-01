@@ -18,7 +18,8 @@ public class WiringCoverageTests
             new FilePickerService(), new RecentsService(), new CookBookSession(),
             book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav),
                 ExplorerViewModelTests.CookFactory(dialogs), new CookBookSession()),
-            set => new SetBrowserViewModel(set));
+            set => new SetBrowserViewModel(set),
+                (_, _, _) => null!);
         foreach (var c in new[] { "NewCookBookCommand","NewKitchenCommand","NewRecipeCommand","NewIngredientCommand",
                                   "OpenCookBookCommand","ImportCommand","OpenSetCommand","OpenRecentCommand","ShowHelpCommand" })
             Assert.True(HasCommand(vm, c), $"Landing missing {c}");
