@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 using Nfty.App.Models;
 using Nfty.App.ViewModels;
@@ -28,5 +29,17 @@ public partial class ExplorerView : UserControl
     {
         base.OnAttachedToVisualTree(e);
         Focus();
+    }
+
+    // Ctrl+K can't be a <KeyBinding Command="..."/> because focusing a control isn't a command — it
+    // has to happen here, where the actual TextBox instance is reachable.
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        if (e.Key == Key.K && e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        {
+            this.FindControl<TextBox>("SearchBox")?.Focus();
+            e.Handled = true;
+        }
+        base.OnKeyDown(e);
     }
 }
