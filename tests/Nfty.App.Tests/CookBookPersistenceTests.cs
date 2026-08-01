@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -5,12 +6,51 @@ using Avalonia.Headless.XUnit;
 using Nfty.App.Services;
 using Nfty.Core.Editing;
 using Nfty.Core.Formats;
+using Nfty.Core.Model;
 using Xunit;
 
 namespace Nfty.App.Tests;
 
 public class CookBookPersistenceTests
 {
+    private static CookBookManifest EmptyManifest() => new("vp", "VaporPets",
+        new Dimensions(64, 64), new Collection("VaporPets", "desc", "VP"),
+        new Dictionary<string, double>());
+
+    [AvaloniaFact]
+    public void WriteNew_writes_a_readable_empty_cookbook()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        var path = Path.Combine(dir, "book.cbk");
+        try
+        {
+            CookBookPersistence.WriteNew(path, EmptyManifest(), System.Array.Empty<LoadedRecipe>());
+            Assert.False(File.Exists(path + ".tmp"));
+            using var reread = CookBookArchive.Read(path);
+            Assert.Equal("vp", reread.Manifest.Id);
+            Assert.Equal("VaporPets", reread.Manifest.Name);
+            Assert.Equal(64, reread.Manifest.Canvas.Width);
+            Assert.Equal("VP", reread.Manifest.Collection.Symbol);
+            Assert.Empty(reread.Recipes);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [AvaloniaFact]
+    public void WriteNew_replaces_an_existing_file()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        var path = Path.Combine(dir, "book.cbk");
+        try
+        {
+            File.WriteAllText(path, "stale");
+            CookBookPersistence.WriteNew(path, EmptyManifest(), System.Array.Empty<LoadedRecipe>());
+            using var reread = CookBookArchive.Read(path);   // replaced, not rejected
+            Assert.Equal("vp", reread.Manifest.Id);
+            Assert.False(File.Exists(path + ".tmp"));
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
     [AvaloniaFact]
     public async Task PersistAsync_writes_the_spliced_book_and_replaces_the_session()
     {

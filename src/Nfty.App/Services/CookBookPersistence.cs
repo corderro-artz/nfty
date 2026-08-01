@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Nfty.Core.Formats;
+using Nfty.Core.Model;
 
 namespace Nfty.App.Services;
 
@@ -33,6 +35,23 @@ public static class CookBookPersistence
         {
             if (File.Exists(tmp)) { try { File.Delete(tmp); } catch { /* best effort */ } }
             throw;
+        }
+    }
+
+    /// <summary>Writes a cookbook to a user-chosen path, replacing an existing file: sibling temp plus an
+    /// atomic move (CookBookArchive.Write opens CreateNew and would throw on an existing path). Used when
+    /// creating a new .cbk.</summary>
+    public static void WriteNew(string path, CookBookManifest manifest, IReadOnlyList<LoadedRecipe> recipes)
+    {
+        var tmp = path + ".tmp";
+        try
+        {
+            CookBookArchive.Write(tmp, manifest, recipes);
+            File.Move(tmp, path, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(tmp)) { try { File.Delete(tmp); } catch { /* best effort */ } }
         }
     }
 }

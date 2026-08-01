@@ -1,3 +1,4 @@
+using Nfty.App.Services;
 using Nfty.App.ViewModels;
 using Xunit;
 
@@ -40,13 +41,24 @@ public class NewCookBookViewModelTests
     }
 
     [Fact]
-    public void Create_reports_not_yet_wired_and_closes()
+    public void Create_is_disabled_until_the_name_yields_a_non_blank_id()
     {
-        var vm = Make(out var dialogs, out var notify);
-        dialogs.ShowAsync<object>(vm);
+        var vm = Make(out _, out _);
+        Assert.False(vm.CreateCommand.CanExecute(null));
+        vm.Name = "   ";
+        Assert.False(vm.CreateCommand.CanExecute(null));
+        vm.Name = "Vapor Pets";
+        Assert.True(vm.CreateCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async System.Threading.Tasks.Task Create_closes_the_dialog_with_the_vm()
+    {
+        var real = new DialogService();
+        var vm = new NewCookBookViewModel(real, new FakeNotYetWired()) { Name = "Vapor Pets" };
+        var task = real.ShowAsync<NewCookBookViewModel>(vm);
         vm.CreateCommand.Execute(null);
-        Assert.Equal("Create CookBook", notify.Last);
-        Assert.Null(dialogs.Active);
+        Assert.Same(vm, await task);
     }
 
     [Fact]
