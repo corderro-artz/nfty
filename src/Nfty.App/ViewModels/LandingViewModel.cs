@@ -1,3 +1,4 @@
+using System.IO;
 using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Models;
 using Nfty.App.Services;
@@ -134,6 +135,7 @@ public partial class LandingViewModel : ViewModelBase
         var book = LooseWorkspace.WrapRecipe(recipe);
         _session.Open(book, null);            // no source .cbk → the Explorer is read-only; session owns `book`
         _nav.To(_explorerFactory(book));
+        RecordRecent(new RecentItem(recipe.Manifest.Name, $"loose recipe · {recipe.Ingredients.Count} ingredients", path, true));
     }
 
     private void OpenLooseIngredient(string path)
@@ -148,6 +150,7 @@ public partial class LandingViewModel : ViewModelBase
         }
         var book = LooseWorkspace.WrapIngredient(ing);   // the editor owns + disposes this
         _nav.To(_looseEditorFactory(ing, book, path));
+        RecordRecent(new RecentItem(ing.Manifest.Name, $"loose ingredient · {ing.Manifest.Variants.Count} variants", path, true));
     }
 
     private void OpenPath(string path)
@@ -157,6 +160,8 @@ public partial class LandingViewModel : ViewModelBase
         catch (Exception ex) { ShowError("Could not open", ex.Message); return; }
         _session.Open(book, path);
         _nav.To(_explorerFactory(book));
+        RecordRecent(new RecentItem(book.Manifest.Name,
+            $"{book.Recipes.Count} recipes · {book.Manifest.Canvas.Width}×{book.Manifest.Canvas.Height}", path, false));
     }
 
     private void ShowError(string title, string message) =>
@@ -167,17 +172,52 @@ public partial class LandingViewModel : ViewModelBase
     {
         var path = await _picker.OpenFileAsync("Open a cooked .set", ".set");
         if (path is null) return;
+        OpenSetPath(path);
+    }
+
+    private void OpenSetPath(string path)
+    {
         LoadedSet set;
         try { set = SetReader.Read(path); }
         catch (Exception ex)
         {
-            await _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, "Could not open the set", ex.Message));
+            ShowError("Could not open the set", ex.Message);
             return;
         }
         _nav.To(_setBrowserFactory(set));
+        RecordRecent(new RecentItem(set.Manifest.Name, $"set · {set.Manifest.Count} assets", path, false));
     }
 
-    [RelayCommand] private void OpenRecent(RecentItem item) => _notify.Report($"Open recent: {item.Name}");
+    private void RecordRecent(RecentItem item)
+    {
+        _recents.Add(item);
+        OnPropertyChanged(nameof(Recents));
+    }
+
+    [RelayCommand]
+    private void OpenRecent(RecentItem item)
+    {
+        if (!File.Exists(item.Path))
+        {
+            _recents.Remove(item.Path);
+            OnPropertyChanged(nameof(Recents));
+            ShowError("Missing file", $"“{item.Path}” is no longer there, so it was removed from Recents.");
+            return;
+        }
+        if (string.Equals(Path.GetExtension(item.Path), ".set", StringComparison.OrdinalIgnoreCase))
+        { OpenSetPath(item.Path); return; }
+
+        ArchiveKind kind;
+        try { kind = Archives.KindOf(item.Path); }
+        catch (Exception ex) { ShowError("Can't open", ex.Message); return; }
+        switch (kind)
+        {
+            case ArchiveKind.CookBook: OpenPath(item.Path); return;
+            case ArchiveKind.Ingredient: OpenLooseIngredient(item.Path); return;
+            case ArchiveKind.Recipe: OpenLooseRecipe(item.Path); return;
+        }
+    }
+
     [RelayCommand] private void ShowHelp() => _dialogs.ShowAsync<object>(new HelpViewModel(_dialogs));
 
     private bool Never() => false;
