@@ -49,7 +49,8 @@ public static class ServiceRegistration
                 sp.GetRequiredService<INotYetWired>(),
                 sp.GetRequiredService<IImageBridge>(),
                 sp.GetRequiredService<Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel>>(),
-                sp.GetRequiredService<Func<LoadedCookBook, CookDialogViewModel>>()));
+                sp.GetRequiredService<Func<LoadedCookBook, CookDialogViewModel>>(),
+                sp.GetRequiredService<ICookBookSession>()));
 
         services.AddSingleton<Func<LoadedSet, SetBrowserViewModel>>(sp => set => new SetBrowserViewModel(set));
 

@@ -62,4 +62,54 @@ public class CookBookEditsTests
         Assert.Throws<System.Collections.Generic.KeyNotFoundException>(
             () => CookBookEdits.UpsertIngredient(OneRecipeBook(), "nope", Ing("ears")));
     }
+
+    private static LoadedCookBook TwoRecipeBook()
+    {
+        var cat = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("cat", "Cat", new List<string> { "bg", "aura" },
+                System.Array.Empty<IncompatibilityRule>()),
+            Ingredients = new List<LoadedIngredient> { Ing("bg"), Ing("aura") },
+        };
+        var dog = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("dog", "Dog", new List<string> { "bg" },
+                System.Array.Empty<IncompatibilityRule>()),
+            Ingredients = new List<LoadedIngredient> { Ing("bg") },
+        };
+        return new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "Book", new Dimensions(8, 8),
+                new Collection("Book", "", "B"), new Dictionary<string, double> { ["cat"] = 60, ["dog"] = 40 }),
+            Recipes = new List<LoadedRecipe> { cat, dog },
+        };
+    }
+
+    [Fact]
+    public void RemoveIngredient_drops_it_from_ingredients_and_layer_order_keeping_others()
+    {
+        var b = CookBookEdits.RemoveIngredient(TwoRecipeBook(), "cat", "aura");
+        var cat = b.Recipes.Single(r => r.Manifest.Id == "cat");
+        Assert.DoesNotContain(cat.Ingredients, i => i.Manifest.Id == "aura");
+        Assert.DoesNotContain("aura", cat.Manifest.LayerOrder);
+        Assert.Contains(cat.Ingredients, i => i.Manifest.Id == "bg");   // sibling kept
+        Assert.Equal(2, b.Recipes.Count);                               // other recipe untouched
+    }
+
+    [Fact]
+    public void RemoveRecipe_drops_the_recipe_and_its_weight()
+    {
+        var b = CookBookEdits.RemoveRecipe(TwoRecipeBook(), "dog");
+        Assert.DoesNotContain(b.Recipes, r => r.Manifest.Id == "dog");
+        Assert.False(b.Manifest.RecipeWeights.ContainsKey("dog"));
+        Assert.Single(b.Recipes);
+    }
+
+    [Fact]
+    public void Remove_rejects_absent_ids()
+    {
+        Assert.Throws<KeyNotFoundException>(() => CookBookEdits.RemoveIngredient(TwoRecipeBook(), "cat", "nope"));
+        Assert.Throws<KeyNotFoundException>(() => CookBookEdits.RemoveIngredient(TwoRecipeBook(), "nope", "bg"));
+        Assert.Throws<KeyNotFoundException>(() => CookBookEdits.RemoveRecipe(TwoRecipeBook(), "nope"));
+    }
 }

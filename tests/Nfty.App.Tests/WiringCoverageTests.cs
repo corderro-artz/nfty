@@ -17,7 +17,7 @@ public class WiringCoverageTests
         var vm = new LandingViewModel(nav, dialogs, notify,
             new FilePickerService(), new RecentsService(), new CookBookSession(),
             book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav),
-                ExplorerViewModelTests.CookFactory(dialogs)),
+                ExplorerViewModelTests.CookFactory(dialogs), new CookBookSession()),
             set => new SetBrowserViewModel(set));
         foreach (var c in new[] { "NewCookBookCommand","NewKitchenCommand","NewRecipeCommand","NewIngredientCommand",
                                   "OpenCookBookCommand","ImportCommand","OpenSetCommand","OpenRecentCommand","ShowHelpCommand" })
@@ -33,7 +33,7 @@ public class WiringCoverageTests
         var nav = new FakeNav();
         var dialogs = new FakeDialogs();
         using var vm = new ExplorerViewModel(ExplorerViewModelTests.TwoRecipeBook(), nav, dialogs, new FakeNotYetWired(), new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav),
-            ExplorerViewModelTests.CookFactory(dialogs));
+            ExplorerViewModelTests.CookFactory(dialogs), new CookBookSession());
         foreach (var c in new[] { "ToggleLockCommand","SearchCommand","AddCommand","DeleteSelectedCommand",
                                   "ImportCommand","SelectNodeCommand","OpenIngredientCommand" })
             Assert.True(HasCommand(vm, c), $"Explorer missing {c}");

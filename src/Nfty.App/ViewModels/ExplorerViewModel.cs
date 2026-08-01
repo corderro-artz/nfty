@@ -1,9 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Models;
 using Nfty.App.Services;
+using Nfty.Core.Editing;
 using Nfty.Core.Formats;
 
 namespace Nfty.App.ViewModels;
@@ -19,6 +21,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     private LoadedCookBook _book;
     private readonly Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel> _editorFactory;
     private readonly Func<LoadedCookBook, CookDialogViewModel> _cookFactory;
+    private readonly ICookBookSession _session;
 
     [ObservableProperty] private ExplorerNode? _selectedNode;
     [ObservableProperty] private ViewModelBase? _currentDetail;
@@ -50,11 +53,12 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     public ExplorerViewModel(LoadedCookBook book, INavigationService nav, IDialogService dialogs,
         INotYetWired notify, IImageBridge bridge,
         Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel> editorFactory,
-        Func<LoadedCookBook, CookDialogViewModel> cookFactory)
+        Func<LoadedCookBook, CookDialogViewModel> cookFactory, ICookBookSession session)
     {
         _book = book; _nav = nav; _dialogs = dialogs; _notify = notify; _bridge = bridge;
         _editorFactory = editorFactory;
         _cookFactory = cookFactory;
+        _session = session;
         Root = BuildTree(book);
         RebuildCrumbs();
     }
@@ -92,6 +96,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
             _ => null,
         };
         RebuildCrumbs();
+        DeleteSelectedCommand.NotifyCanExecuteChanged();
     }
 
     private void OpenEditor(LoadedIngredient i, LoadedRecipe r)
@@ -103,26 +108,76 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
 
     /// <summary>The editor persisted an ingredient; the session now holds the spliced graph. Rebuild
     /// the tree from it and reselect the same ingredient so its detail/thumbnails refresh in place.</summary>
-    internal void OnEditorSaved(LoadedCookBook book)
+    internal void OnEditorSaved(LoadedCookBook book) => ApplyBook(book, SelectedNode?.Id);
+
+    /// <summary>Rebuild the tree from a swapped-in book and select the node with <paramref name="selectId"/>
+    /// (root, a recipe, or an ingredient), falling back to the cookbook root.</summary>
+    private void ApplyBook(LoadedCookBook book, string? selectId)
     {
         _book = book;
         Root = BuildTree(book);
-        var id = SelectedNode?.Id;
-        var reselected = id is null ? null : FindIngredientNode(Root, id);
-        SelectedNode = reselected ?? Root;   // fall back to the cookbook root if it vanished (it won't)
+        SelectedNode = FindNode(Root, selectId) ?? Root;
     }
 
-    private static ExplorerNode? FindIngredientNode(ExplorerNode root, string id) =>
-        root.Children.SelectMany(r => r.Children).FirstOrDefault(n => n.Id == id);
+    private static ExplorerNode? FindNode(ExplorerNode root, string? id)
+    {
+        if (id is null) return null;
+        if (root.Id == id) return root;
+        foreach (var r in root.Children)
+        {
+            if (r.Id == id) return r;
+            var hit = r.Children.FirstOrDefault(n => n.Id == id);
+            if (hit is not null) return hit;
+        }
+        return null;
+    }
 
     [RelayCommand] private void ToggleLock() => IsEditing = !IsEditing;
     [RelayCommand] private void Search() => _notify.Report("Search (⌘K)");
     [RelayCommand] private void Add() => _notify.Report(AddLabel);
-    [RelayCommand(CanExecute = nameof(CanEdit))] private void DeleteSelected() => _notify.Report("Delete");
     [RelayCommand] private void Import() => _notify.Report("Import");
     [RelayCommand] private void SelectNode(ExplorerNode node) => SelectedNode = node;
     [RelayCommand] private void OpenIngredient(string id) => _notify.Report($"Open ingredient {id}");
-    private bool CanEdit() => IsEditing;
+
+    // Delete needs edit-mode ON, a source .cbk to write to, and a recipe/ingredient selected
+    // (the cookbook root is never deletable — close the book instead).
+    private bool CanDeleteSelected() =>
+        IsEditing && _session.SourcePath is not null
+        && SelectedNode?.Kind is ExplorerNodeKind.Recipe or ExplorerNodeKind.Ingredient;
+
+    [RelayCommand(CanExecute = nameof(CanDeleteSelected))]
+    private async Task DeleteSelected()
+    {
+        if (SelectedNode is not { } node) return;
+        var ok = await _dialogs.ShowAsync<bool>(new ConfirmDialogViewModel(_dialogs,
+            "Delete?", $"Delete “{node.Name}” — this can’t be undone.", "Delete"));
+        if (!ok) return;
+        try
+        {
+            LoadedCookBook book2;
+            string? parentId;
+            IDisposable removed;
+            if (node.Domain is (LoadedRecipe r, LoadedIngredient i))
+            {
+                book2 = CookBookEdits.RemoveIngredient(_book, r.Manifest.Id, i.Manifest.Id);
+                parentId = r.Manifest.Id; removed = i;
+            }
+            else if (node.Domain is LoadedRecipe rr)
+            {
+                book2 = CookBookEdits.RemoveRecipe(_book, rr.Manifest.Id);
+                parentId = Root.Id; removed = rr;
+            }
+            else return;   // cookbook root — not deletable (also gated by CanExecute)
+
+            var book3 = await CookBookPersistence.PersistAsync(_session, book2);
+            removed.Dispose();                 // free the orphaned subtree's images (recipe cascades)
+            ApplyBook(book3, parentId);
+        }
+        catch (Exception ex)
+        {
+            await _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, "Could not delete", ex.Message));
+        }
+    }
 
     private void RebuildCrumbs()
     {
