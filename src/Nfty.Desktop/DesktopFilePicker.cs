@@ -7,7 +7,7 @@ using Nfty.App.Services;
 namespace Nfty.Desktop;
 
 /// <summary>Real file picker over Avalonia's StorageProvider. Head-specific: it needs the window's
-/// TopLevel. Save is not exercised this slice, so it stays a null stub.</summary>
+/// TopLevel, so it is not headless-testable — verified by manual smoke.</summary>
 public sealed class DesktopFilePicker : IFilePickerService
 {
     public async Task<string?> OpenFileAsync(string title, params string[] extensions)
@@ -28,7 +28,20 @@ public sealed class DesktopFilePicker : IFilePickerService
         return files.Count > 0 ? files[0].TryGetLocalPath() : null;
     }
 
-    public Task<string?> SaveFileAsync(string title, string defaultExtension) => Task.FromResult<string?>(null);
+    public async Task<string?> SaveFileAsync(string title, string defaultExtension)
+    {
+        var top = TopLevel;
+        if (top is null) return null;
+
+        var ext = defaultExtension.StartsWith('.') ? defaultExtension : "." + defaultExtension;
+        var file = await top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = title,
+            DefaultExtension = ext.TrimStart('.'),
+            FileTypeChoices = new[] { new FilePickerFileType("nfty") { Patterns = new[] { "*" + ext } } },
+        });
+        return file?.TryGetLocalPath();
+    }
 
     public async Task<string?> PickFolderAsync(string title)
     {
