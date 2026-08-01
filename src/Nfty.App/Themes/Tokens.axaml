@@ -12,6 +12,9 @@
       <SolidColorBrush x:Key="BgAltBrush" Color="#f1ece4" />
       <SolidColorBrush x:Key="BgAlt2Brush" Color="#ede7df" />
       <SolidColorBrush x:Key="PanelBrush" Color="#f8f3ed" />
+      <!-- Modal scrim: a 52% veil of the page background (mockup `.scrim`), so a light-theme dialog
+           sits on a lightened wash rather than a heavy black veil. Avalonia is #AARRGGBB. -->
+      <SolidColorBrush x:Key="ScrimBrush" Color="#85f4efe8" />
       <SolidColorBrush x:Key="TileBrush" Color="#ece5db" />
       <SolidColorBrush x:Key="FgBrush" Color="#121318" />
       <!--
@@ -48,6 +51,7 @@
       <SolidColorBrush x:Key="BgAltBrush" Color="#0a0b10" />
       <SolidColorBrush x:Key="BgAlt2Brush" Color="#0f1118" />
       <SolidColorBrush x:Key="PanelBrush" Color="#0b0c10" />
+      <SolidColorBrush x:Key="ScrimBrush" Color="#8507080b" />
       <SolidColorBrush x:Key="TileBrush" Color="#12141c" />
       <SolidColorBrush x:Key="FgBrush" Color="#f2ede6" />
       <!-- See the Light dictionary's note above: 8-digit hex here is the mockup's #RRGGBBAA

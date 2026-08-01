@@ -41,7 +41,7 @@
       </Border>
       <Panel Name="DialogScrim"
              IsVisible="{Binding ActiveDialog, Converter={x:Static ObjectConverters.IsNotNull}}"
-             Background="#88000000">
+             Background="{DynamicResource ScrimBrush}">
         <ContentControl Content="{Binding ActiveDialog}"
                         HorizontalAlignment="Center" VerticalAlignment="Center" />
       </Panel>
