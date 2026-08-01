@@ -102,11 +102,13 @@ public class IngredientEditorViewModelTests
     }
 
     [AvaloniaFact]
-    public void Enlarge_and_fill_pane_preview_report_not_yet_wired()
+    // Both preview buttons are now real toggles (C1); the behaviour is asserted in detail by
+    // IngredientEditorVariantTests.Preview_toggles_are_independent_and_do_not_touch_the_draft.
+    public void Enlarge_and_fill_pane_preview_toggle_presentation_state()
     {
-        using var vm = Make(out var n, out _);
-        vm.EnlargePreviewCommand.Execute(null); Assert.Equal("Enlarge preview", n.Last);
-        vm.FillPanePreviewCommand.Execute(null); Assert.Equal("Fill pane", n.Last);
+        using var vm = Make(out _, out _);
+        vm.EnlargePreviewCommand.Execute(null); Assert.True(vm.PreviewEnlarged);
+        vm.FillPanePreviewCommand.Execute(null); Assert.True(vm.PreviewFillsPane);
     }
 
     [AvaloniaFact]

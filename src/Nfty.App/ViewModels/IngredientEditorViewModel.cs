@@ -416,8 +416,25 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand] private void RerollPreview() { _previewSalt++; RebuildSurfaces(); }
-    [RelayCommand] private void EnlargePreview() => _notify.Report("Enlarge preview");
-    [RelayCommand] private void FillPanePreview() => _notify.Report("Fill pane");
+
+    // Preview presentation state (no effect on the draft or the rendered bitmaps). Both buttons are
+    // toggles: the mockup gives them no separate "restore" affordance, so each undoes itself.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PreviewHeight))]
+    private bool _previewEnlarged;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowPaintCanvas))]
+    private bool _previewFillsPane;
+
+    /// <summary>Height of the colorize-rail preview: normal inset, or enlarged in place.</summary>
+    public double PreviewHeight => PreviewEnlarged ? 320 : 120;
+
+    /// <summary>The canvas pane shows the paint canvas unless the preview has taken it over.</summary>
+    public bool ShowPaintCanvas => !PreviewFillsPane;
+
+    [RelayCommand] private void EnlargePreview() => PreviewEnlarged = !PreviewEnlarged;
+    [RelayCommand] private void FillPanePreview() => PreviewFillsPane = !PreviewFillsPane;
 
     public void Dispose()
     {
