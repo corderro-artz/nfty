@@ -53,6 +53,8 @@ public class ExplorerAddRecipeTests
             Assert.Contains(reread.Recipes, r => r.Manifest.Id == "bird");
             Assert.Equal(25, reread.Manifest.RecipeWeights["bird"]);
             Assert.Equal("bird", vm.SelectedNode!.Id);       // new recipe selected
+            Assert.Null(dialogs.ErrorTitle);                 // success path: no spurious error dialog
+            Assert.IsType<RecipeDetailViewModel>(vm.CurrentDetail);  // detail built (empty recipe tolerated)
             vm.Dispose();
         }
         finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
