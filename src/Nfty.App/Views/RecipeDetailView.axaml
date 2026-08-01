@@ -26,7 +26,7 @@
         </Grid>
       </Border>
 
-      <TextBlock Classes="mono muted" FontSize="10.5" LetterSpacing="1.05" Text="LAYERS" Margin="2,0,0,0" />
+      <TextBlock Classes="sub-h" Text="LAYERS" Margin="2,0,0,0" />
 
       <StackPanel Spacing="0">
         <Border Classes="data-h">
@@ -61,7 +61,7 @@
 
     <Border Grid.Column="1" Classes="rules-panel" VerticalAlignment="Stretch">
       <StackPanel Spacing="10">
-        <TextBlock Classes="mono muted" FontSize="10.5" LetterSpacing="1.05" Text="RULES" />
+        <TextBlock Classes="sub-h" Text="RULES" />
 
         <TextBlock Classes="muted" Text="No incompatibility rules"
                    IsVisible="{Binding Rules, Converter={x:Static conv:CollectionConverters.IsEmpty}}" />

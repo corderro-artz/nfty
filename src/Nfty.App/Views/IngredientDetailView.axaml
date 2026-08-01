@@ -66,7 +66,7 @@
 
     <Border Grid.Column="1" Classes="cw-panel" VerticalAlignment="Stretch">
       <StackPanel Spacing="10">
-        <TextBlock Classes="mono muted" FontSize="10.5" LetterSpacing="1.05" Text="COLORWAYS" />
+        <TextBlock Classes="sub-h" Text="COLORWAYS" />
 
         <ItemsControl ItemsSource="{Binding Colorways}">
           <ItemsControl.ItemsPanel>

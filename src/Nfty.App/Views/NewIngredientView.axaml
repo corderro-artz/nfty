@@ -20,16 +20,16 @@
       </StackPanel>
 
       <StackPanel Spacing="6" IsVisible="{Binding ShowColourRange}">
-        <TextBlock Text="Hue range" Classes="muted" />
+        <TextBlock Text="Hue range" Classes="plabel" />
         <Slider Value="{Binding HueMin}" Minimum="0" Maximum="360" />
         <Slider Value="{Binding HueMax}" Minimum="0" Maximum="360" />
-        <TextBlock Text="Saturation range" Classes="muted" />
+        <TextBlock Text="Saturation range" Classes="plabel" />
         <Slider Value="{Binding SatMin}" Minimum="0" Maximum="100" />
         <Slider Value="{Binding SatMax}" Minimum="0" Maximum="100" />
       </StackPanel>
 
       <StackPanel Spacing="6" IsVisible="{Binding ShowFixedColour}">
-        <TextBlock Text="Fixed colour" Classes="muted" />
+        <TextBlock Text="Fixed colour" Classes="plabel" />
         <TextBox Watermark="hex:d6249f" Text="{Binding FixedColor}" />
       </StackPanel>
 
@@ -39,7 +39,7 @@
       </StackPanel>
 
       <StackPanel Spacing="6" IsVisible="{Binding ShowCanvas}">
-        <TextBlock Text="Canvas" Classes="muted" />
+        <TextBlock Text="Canvas" Classes="plabel" />
         <TextBox Watermark="Canvas size (e.g. 1000x1000)" Text="{Binding CanvasSize}" />
       </StackPanel>
 

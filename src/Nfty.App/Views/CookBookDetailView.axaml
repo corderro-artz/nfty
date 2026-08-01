@@ -48,8 +48,7 @@
          No shared ".section-h"/".sub-h" style exists in Styles.axaml (Task 4 did not add one),
          so the heading's mono/uppercase/letter-spaced/muted look is set inline here rather than
          inventing an unshared class from a view-only task. -->
-    <TextBlock Classes="mono muted" Text="MINT DISTRIBUTION" FontSize="10.5" LetterSpacing="1.26"
-               Margin="0,16,0,9" />
+    <TextBlock Classes="sub-h" Text="MINT DISTRIBUTION" Margin="0,16,0,9" />
 
     <!-- PROPORTIONAL WIDTHS: each segment's Width is bound through PercentToWidthConverter
          (SharePercent * 5.6) inside a fixed Width="560" Border.distbar, so segment widths stay

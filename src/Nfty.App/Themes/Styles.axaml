@@ -241,6 +241,42 @@
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
 
+  <!-- Small-label type scale (audit finding: this scale did not exist, so every section heading
+       rendered at Avalonia's default ~14px with zero tracking instead of the mockups' 10-11.5px
+       uppercase-tracked look — landing.html/ingredient-editor.html/wizard-recipe.html/explorer.html
+       token values, ported verbatim below). Where mockup text is uppercase, Avalonia has no
+       text-transform: the sizing/letter-spacing/colour is set here, and the consuming view supplies
+       already-uppercased text where that matters (see TextBlock.data-h above for the existing
+       convention this follows). -->
+  <Style Selector="TextBlock.slbl">
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="LetterSpacing" Value="1.4" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="Margin" Value="0,0,0,8" />
+  </Style>
+  <Style Selector="TextBlock.pane-h">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="LetterSpacing" Value="1.47" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="TextBlock.plabel">
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="LetterSpacing" Value="1.0" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="Margin" Value="0,0,0,8" />
+  </Style>
+  <Style Selector="TextBlock.tagline">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="TextBlock.sub-h">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="LetterSpacing" Value="1.26" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+
   <Style Selector="Border.panel">
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />

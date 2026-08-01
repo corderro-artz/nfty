@@ -68,8 +68,7 @@
           <TextBlock Classes="muted" Text="{Binding SelectedRecipe}" />
           <TextBlock Classes="mono muted" FontSize="11" TextWrapping="Wrap" Text="{Binding SelectedDna}" />
 
-          <TextBlock Classes="mono muted" FontSize="10.5" LetterSpacing="1.05" Text="RARITY"
-                     Margin="0,8,0,0" />
+          <TextBlock Classes="sub-h" Text="RARITY" Margin="0,8,0,0" />
           <StackPanel Spacing="0">
             <Border Classes="data-h">
               <Grid ColumnDefinitions="*,Auto,Auto">
