@@ -150,23 +150,25 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         if (result is null) return;   // cancelled
 
         var newIng = result.Build(_book.Manifest.Canvas);   // owns the blank image until adopted
+        var adopted = false;                                 // true once the persisted book owns its image
         try
         {
             if (recipe.Ingredients.Any(i => i.Manifest.Id == newIng.Manifest.Id))
             {
                 await ShowError("Duplicate ingredient",
                     $"An ingredient “{newIng.Manifest.Id}” already exists in “{recipe.Manifest.Name}”.");
-                newIng.Dispose(); return;
+                return;
             }
             var problems = Validator.ValidateIngredient(newIng);
             if (problems.Count > 0)
             {
                 await ShowError("Invalid ingredient", string.Join("\n", problems));
-                newIng.Dispose(); return;
+                return;
             }
 
             var book2 = CookBookEdits.UpsertIngredient(_book, recipe.Manifest.Id, newIng);
-            var book3 = await CookBookPersistence.PersistAsync(_session, book2);   // newIng now owned by book3
+            var book3 = await CookBookPersistence.PersistAsync(_session, book2);
+            adopted = true;   // book3 now owns newIng's image — don't dispose it below
             ApplyBook(book3, newIng.Manifest.Id);
 
             var recipe3 = book3.Recipes.First(r => r.Manifest.Id == recipe.Manifest.Id);
@@ -175,8 +177,11 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            newIng.Dispose();   // never adopted — free it
             await ShowError("Could not add ingredient", ex.Message);
+        }
+        finally
+        {
+            if (!adopted) newIng.Dispose();   // cancelled early / validation failed / write failed → free it
         }
     }
 

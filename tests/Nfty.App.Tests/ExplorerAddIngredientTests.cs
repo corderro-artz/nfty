@@ -73,7 +73,7 @@ public class ExplorerAddIngredientTests
             await vm.AddCommand.ExecuteAsync(null);
             Assert.NotNull(dialogs.ErrorTitle);                    // error surfaced
             using var reread = CookBookArchive.Read(path);
-            Assert.Single(reread.Recipes[0].Ingredients.Where(i => i.Manifest.Id == "aura"));  // still one
+            Assert.Single(reread.Recipes[0].Ingredients, i => i.Manifest.Id == "aura");  // still one
             vm.Dispose();
         }
         finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }

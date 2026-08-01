@@ -70,12 +70,12 @@ public class NewIngredientViewModelTests
     }
 
     [Fact]
-    public void Create_closes_the_dialog_with_the_vm()
+    public async System.Threading.Tasks.Task Create_closes_the_dialog_with_the_vm()
     {
         var real = new DialogService();
         var vm = new NewIngredientViewModel(real, new FakeNotYetWired()) { Name = "Hat" };
         var task = real.ShowAsync<NewIngredientViewModel>(vm);
         vm.CreateCommand.Execute(null);
-        Assert.Same(vm, task.Result);
+        Assert.Same(vm, await task);
     }
 }
