@@ -18,15 +18,22 @@ namespace Nfty.App.Tests;
 public class IngredientEditorSaveTests
 {
     // Build a dynamic (value-map) 1-recipe cookbook on disk, return (path, session opened over it).
-    internal static (string path, CookBookSession session, LoadedRecipe recipe, LoadedIngredient ing) OnDisk()
+    internal static (string path, CookBookSession session, LoadedRecipe recipe, LoadedIngredient ing) OnDisk() =>
+        OnDisk(LayerKind.Dynamic);
+
+    // As above, but lets a test build a CUSTOM (full-colour, un-colorized) fixture instead of the
+    // default dynamic (value-map) one. Custom ingredients carry no Colorization (CLAUDE.md: "Colorization
+    // must be null" for custom).
+    internal static (string path, CookBookSession session, LoadedRecipe recipe, LoadedIngredient ing) OnDisk(LayerKind kind)
     {
         var dir = Directory.CreateTempSubdirectory().FullName;
         var path = Path.Combine(dir, "book.cbk");
-        var coloriz = new Colorization(ColorModel.Hsv, 12, 4,
-            new[] { new ColorEntry(1, new ColorRange(0, 360, 40, 100), null) });
+        var coloriz = kind == LayerKind.Custom ? null
+            : new Colorization(ColorModel.Hsv, 12, 4,
+                new[] { new ColorEntry(1, new ColorRange(0, 360, 40, 100), null) });
         var ing = new LoadedIngredient
         {
-            Manifest = new IngredientManifest("aura", "Aura", LayerKind.Dynamic, coloriz,
+            Manifest = new IngredientManifest("aura", "Aura", kind, coloriz,
                 new[] { new Variant("glow", "Glow", 1) }),
             VariantImages = new Dictionary<string, Image<Rgba32>> { ["glow"] = new(8, 8) },
         };

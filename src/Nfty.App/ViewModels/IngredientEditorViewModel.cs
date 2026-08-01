@@ -51,6 +51,12 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     private readonly IngredientDraft _draft;
     private readonly Dictionary<string, EditHistory> _history = new(StringComparer.Ordinal);
 
+    // Custom-kind imports: VM-owned full-colour images, keyed by variant id. Never routed through
+    // ValueMap (which is grayscale by construction) — this is what keeps a custom import's colour
+    // intact end to end. Disposed on replace and in Dispose; the originals in _ing.VariantImages are
+    // never disposed here (the session/loose wrapper owns them).
+    private readonly Dictionary<string, Image<Rgba32>> _importedCustom = new(StringComparer.Ordinal);
+
     [ObservableProperty] private EditorTool _activeTool = EditorTool.Brush;
     [ObservableProperty] private int _brushValue = 128;
     [ObservableProperty] private int _brushSize = 8;
@@ -88,6 +94,20 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// their colour PNGs.</summary>
     public bool CanSave => IsDirty && !IsSaving && _ing.Manifest.Kind != LayerKind.Custom
         && (_looseSavePath is not null || _session.SourcePath is not null);
+
+    /// <summary>Custom (full-colour, composited-as-is) ingredients are import-only — painting them
+    /// would require routing through the grayscale <see cref="ValueMap"/>, silently destroying colour.</summary>
+    private bool IsCustom => _ing.Manifest.Kind == LayerKind.Custom;
+
+    /// <summary>Backs the view's tool-strip <c>IsEnabled</c>: false for custom ingredients.</summary>
+    public bool CanPaint => !IsCustom;
+
+    /// <summary>The full-colour image a custom variant currently shows: this session's import if any,
+    /// else its original archive image. Null only for a session-added variant never imported into.</summary>
+    private Image<Rgba32>? EffectiveCustomImage(string variantId) =>
+        _importedCustom.TryGetValue(variantId, out var imported) ? imported
+        : _ing.VariantImages.TryGetValue(variantId, out var original) ? original
+        : null;
 
     /// <summary>Left-hand filmstrip: the ingredient's real variants, rendered the way the cook
     /// path would (colorized for dynamic/static, raw for custom).</summary>
@@ -152,16 +172,21 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     internal byte ValueAt(int x, int y) => ActiveMap!.GetValue(x, y);   // test hook
 
     // Canvas shows the grayscale VALUE-MAP being painted; Preview shows the colorized companion.
-    // Custom (Colorization is null) layers are reduced to value/alpha by ValueMap.FromImage — a known
-    // limitation (spec §6): full-colour custom painting is out of scope for this slice.
+    // Custom ingredients are import-only: both surfaces render the effective full-colour image
+    // (this session's import, else the original) rather than a value-map round-trip, so nothing
+    // reduces their colour to grayscale.
     private Bitmap RenderCanvas()
     {
+        if (IsCustom && EffectiveCustomImage(SelectedVariant!.Id) is { } eff)
+            return _bridge.ToBitmap(eff);
         using var img = ActiveMap!.ToImage();
         return _bridge.ToBitmap(img);
     }
 
     private Bitmap RenderPreview()
     {
+        if (IsCustom && EffectiveCustomImage(SelectedVariant!.Id) is { } eff)
+            return _bridge.ToBitmap(eff);
         using var img = ActiveMap!.ToImage();
         return _ing.Manifest.Colorization is null
             ? _bridge.ToBitmap(img)
@@ -238,9 +263,10 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
 
     private bool CanImport() => SelectedVariant is not null && !IsSaving;
 
-    /// <summary>Replaces the selected variant's raster from a PNG on disk. Dynamic/static: the PNG
-    /// becomes the variant's value-map (clearing its undo history — the old snapshots describe pixels
-    /// that no longer exist). Custom: handled by an override in Task 2.</summary>
+    /// <summary>Replaces the selected variant's raster from a PNG on disk. Custom: the image is kept
+    /// verbatim, full colour, in the VM-owned <see cref="_importedCustom"/> dict — never routed through
+    /// <see cref="ValueMap"/>. Dynamic/static: the PNG becomes the variant's value-map (clearing its
+    /// undo history — the old snapshots describe pixels that no longer exist).</summary>
     [RelayCommand(CanExecute = nameof(CanImport))]
     private async Task ImportImage()
     {
@@ -261,6 +287,17 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
                 await ShowErrorAsync("Wrong size",
                     $"This image is {img.Width}×{img.Height}; the canvas is {canvas.Width}×{canvas.Height}.");
                 return;
+            }
+
+            if (IsCustom)
+            {
+                if (_importedCustom.TryGetValue(target.Id, out var prev))
+                { _importedCustom.Remove(target.Id); prev.Dispose(); }
+                _importedCustom[target.Id] = img.Clone();   // VM owns this copy
+                IsDirty = true;
+                RebuildSurfaces();
+                RefreshThumbnail(target.Id);
+                return;   // img itself is disposed by the finally below
             }
 
             // Dynamic/static: the PNG becomes the variant's value-map.
@@ -285,16 +322,20 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     private void RefreshThumbnail(string variantId)
     {
         var entry = Variants.FirstOrDefault(v => v.Id == variantId);
-        var vd = _draft.Variants.FirstOrDefault(v => v.Id == variantId);
-        if (entry is null || vd is null) return;
+        if (entry is null) return;
+        Bitmap? next = IsCustom
+            ? (EffectiveCustomImage(variantId) is { } eff ? _bridge.ToBitmap(eff) : null)
+            : (_draft.Variants.FirstOrDefault(v => v.Id == variantId) is { } vd ? RenderThumb(vd.Map) : null);
+        if (next is null) return;
         var old = entry.Thumbnail;
-        entry.Thumbnail = RenderThumb(vd.Map);
+        entry.Thumbnail = next;
         old.Dispose();
     }
 
     /// <summary>Commit one completed gesture as a Core edit command against the active variant.</summary>
     public void ApplyToolStroke(IReadOnlyList<(int x, int y)> points)
     {
+        if (IsCustom) return;   // import-only — painting would route through the grayscale ValueMap
         if (ActiveDraft is null || points.Count == 0) return;
         var map = ActiveDraft.Map;
         var hist = _history[ActiveDraft.Id];
@@ -499,6 +540,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     {
         Saved = null;   // release any subscriber (e.g. the Explorer) when the editor is navigated away
         foreach (var v in Variants) v.Thumbnail.Dispose();
+        foreach (var i in _importedCustom.Values) i.Dispose();
         Canvas?.Dispose(); Preview?.Dispose();
         _ownedBook?.Dispose();   // loose path only: free the synthetic wrapper book (→ the ingredient)
     }

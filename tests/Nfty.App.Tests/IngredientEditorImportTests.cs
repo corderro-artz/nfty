@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Headless.XUnit;
 using Nfty.App.Services;
 using Nfty.App.ViewModels;
@@ -157,6 +158,65 @@ public class IngredientEditorImportTests
 
             Assert.Equal(0, vm.ValueAt(4, 4));
             Assert.False(vm.IsDirty);
+            vm.Dispose();
+        }
+        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
+    }
+
+    // Reads the pixel at (x, y) off a rendered Bitmap of known size w×h.
+    private static (byte r, byte g, byte b, byte a) ReadPixel(Avalonia.Media.Imaging.Bitmap bmp, int w, int h, int x, int y)
+    {
+        var buffer = new byte[w * h * 4];
+        unsafe
+        {
+            fixed (byte* p = buffer)
+                bmp.CopyPixels(new PixelRect(0, 0, w, h), (nint)p, buffer.Length, w * 4);
+        }
+        int i = (y * w + x) * 4;
+        return (buffer[i], buffer[i + 1], buffer[i + 2], buffer[i + 3]);
+    }
+
+    [AvaloniaFact]
+    public async Task Import_into_a_custom_variant_keeps_full_colour()
+    {
+        var (path, session, recipe, ing) = IngredientEditorSaveTests.OnDisk(LayerKind.Custom);
+        var pngPath = WritePng(8, 8, 10, 200, 40);   // a distinctly non-gray colour
+        try
+        {
+            var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
+                new FakeNav(), new FakeNotYetWired(), session, new FakeDialogs(), new OpenPicker(pngPath));
+
+            await vm.ImportImageCommand.ExecuteAsync(null);
+
+            var (r, g, b, a) = ReadPixel(vm.Canvas, 8, 8, 4, 4);
+            Assert.Equal(10, r); Assert.Equal(200, g); Assert.Equal(40, b); Assert.Equal(255, a);
+            Assert.NotEqual(r, g);   // proves this is full colour, not a grayscale value-map
+            Assert.True(vm.IsDirty);
+            vm.Dispose();
+        }
+        finally
+        {
+            session.Dispose();
+            Directory.Delete(Path.GetDirectoryName(path)!, recursive: true);
+            Directory.Delete(Path.GetDirectoryName(pngPath)!, recursive: true);
+        }
+    }
+
+    [AvaloniaFact]
+    public void Custom_cannot_be_painted()
+    {
+        var (path, session, recipe, ing) = IngredientEditorSaveTests.OnDisk(LayerKind.Custom);
+        try
+        {
+            var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
+                new FakeNav(), new FakeNotYetWired(), session, new FakeDialogs(), new OpenPicker(null));
+
+            Assert.False(vm.CanPaint);
+            vm.ActiveTool = EditorTool.Fill; vm.BrushValue = 200;
+            vm.ApplyToolStroke(new[] { (0, 0) });   // must be a no-op for a custom layer
+
+            Assert.False(vm.IsDirty);
+            Assert.False(vm.UndoCommand.CanExecute(null));
             vm.Dispose();
         }
         finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
