@@ -27,7 +27,8 @@ public class LandingImportRcpTests
     {
         var nav = new FakeNav(); var dialogs = new FakeDialogs(); var notify = new FakeNotYetWired();
         var session = new CookBookSession();
-        var vm = new LandingViewModel(nav, dialogs, notify, picker, new RecentsService(), session,
+        var vm = new LandingViewModel(nav, dialogs, notify, picker,
+            new RecentsService(Directory.CreateTempSubdirectory().FullName), session,
             book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(),
                 ExplorerViewModelTests.EditorFactory(nav, session, dialogs),
                 ExplorerViewModelTests.CookFactory(dialogs), session,

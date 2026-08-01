@@ -24,7 +24,8 @@ public class LandingOpenSetTests
     private static LandingViewModel MakeLanding(FakeNav nav, FakeDialogs dialogs, IFilePickerService picker)
     {
         var notify = new FakeNotYetWired();
-        return new LandingViewModel(nav, dialogs, notify, picker, new RecentsService(), new CookBookSession(),
+        return new LandingViewModel(nav, dialogs, notify, picker,
+            new RecentsService(Directory.CreateTempSubdirectory().FullName), new CookBookSession(),
             book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(),
                 ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs), new CookBookSession(),
                 new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs)),

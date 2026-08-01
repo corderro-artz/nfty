@@ -1,3 +1,5 @@
+using System.Linq;
+using System.Text.Json;
 using Nfty.App.Models;
 
 namespace Nfty.App.Services;
@@ -6,18 +8,66 @@ public interface IRecentsService
 {
     IReadOnlyList<RecentItem> Items { get; }
     void Add(RecentItem item);
+    void Remove(string path);
 }
 
-/// <summary>Phase-1 recents: seeded with the mockup's sample rows so the Landing renders its list;
-/// persistence lands in Phase 2.</summary>
+/// <summary>Most-recently-opened files, persisted as JSON under the user's app-data folder. Purely
+/// convenience state: a corrupt store loads as empty and a failed save is swallowed, so recents can
+/// never block or crash the app. The storage directory is injectable so tests never touch %APPDATA%.</summary>
 public sealed class RecentsService : IRecentsService
 {
-    private readonly List<RecentItem> _items =
-    [
-        new("VaporPets", "3 recipes · 1000×1000", "~/art/vaporpets.cbk", false),
-        new("NeonKoi", "1 recipe · 512×512", "~/art/neonkoi.cbk", false),
-        new("aura.igt", "loose ingredient · 4 variants", "Kitchen", true),
-    ];
+    private const int Cap = 10;
+    private static readonly JsonSerializerOptions Json = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
+
+    private readonly string _file;
+    private readonly List<RecentItem> _items = new();
+
+    public RecentsService(string? storageDir = null)
+    {
+        var dir = storageDir ?? Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "nfty");
+        _file = Path.Combine(dir, "recents.json");
+        try
+        {
+            if (File.Exists(_file))
+                // Well-formed JSON of the wrong shape ([null], [{}]) deserialises "successfully" —
+                // drop anything without a usable path so a later Add can't NRE on it.
+                _items = (JsonSerializer.Deserialize<List<RecentItem?>>(File.ReadAllText(_file), Json) ?? new())
+                    .Where(i => i is not null && !string.IsNullOrWhiteSpace(i.Path))
+                    .Select(i => i!)
+                    .ToList();
+        }
+        catch { _items = new(); }   // corrupt/unreadable → start empty, never throw
+    }
+
     public IReadOnlyList<RecentItem> Items => _items;
-    public void Add(RecentItem item) => _items.Insert(0, item);
+
+    public void Add(RecentItem item)
+    {
+        var full = Path.GetFullPath(item.Path);
+        var entry = item with { Path = full };
+        _items.RemoveAll(i => string.Equals(i.Path, full, StringComparison.Ordinal));
+        _items.Insert(0, entry);
+        if (_items.Count > Cap) _items.RemoveRange(Cap, _items.Count - Cap);
+        Save();
+    }
+
+    public void Remove(string path)
+    {
+        // Add stores full paths, so normalise here too or a raw/relative path silently no-ops.
+        string full;
+        try { full = Path.GetFullPath(path); } catch { full = path; }
+        _items.RemoveAll(i => string.Equals(i.Path, full, StringComparison.Ordinal));
+        Save();
+    }
+
+    private void Save()
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(_file)!);
+            File.WriteAllText(_file, JsonSerializer.Serialize(_items, Json));
+        }
+        catch { /* convenience state — never surface */ }
+    }
 }

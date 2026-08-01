@@ -31,7 +31,8 @@ public class SmokeTests
 
         ViewModelBase[] vms =
         [
-            new LandingViewModel(nav, dialogs, notify, new FilePickerService(), new RecentsService(),
+            new LandingViewModel(nav, dialogs, notify, new FilePickerService(),
+                new RecentsService(Directory.CreateTempSubdirectory().FullName),
                 new CookBookSession(), book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(), editorFactory, cookFactory, new CookBookSession(),
                     new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs)),
                 set => new SetBrowserViewModel(set),
@@ -66,7 +67,7 @@ public class SmokeTests
         var dialogs = new DialogService();
         var nav = new FakeNav(); var notify = new FakeNotYetWired();
         var vm = new LandingViewModel(nav, dialogs, notify,
-            new FilePickerService(), new RecentsService(), new CookBookSession(),
+            new FilePickerService(), new RecentsService(Directory.CreateTempSubdirectory().FullName), new CookBookSession(),
             book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav),
                 ExplorerViewModelTests.CookFactory(dialogs), new CookBookSession(),
                 new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs)),
