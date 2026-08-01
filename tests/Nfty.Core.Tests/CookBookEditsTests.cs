@@ -112,4 +112,35 @@ public class CookBookEditsTests
         Assert.Throws<KeyNotFoundException>(() => CookBookEdits.RemoveIngredient(TwoRecipeBook(), "nope", "bg"));
         Assert.Throws<KeyNotFoundException>(() => CookBookEdits.RemoveRecipe(TwoRecipeBook(), "nope"));
     }
+
+    [Fact]
+    public void UpsertRecipe_adds_a_new_recipe_with_its_weight()
+    {
+        var newRecipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("bird", "Bird", new List<string>(),
+                System.Array.Empty<IncompatibilityRule>()),
+            Ingredients = new List<LoadedIngredient>(),
+        };
+        var b = CookBookEdits.UpsertRecipe(TwoRecipeBook(), newRecipe, 25);
+        Assert.Contains(b.Recipes, r => r.Manifest.Id == "bird");
+        Assert.Equal(25, b.Manifest.RecipeWeights["bird"]);
+        Assert.Equal(3, b.Recipes.Count);                        // cat, dog, bird
+        Assert.Contains(b.Recipes, r => r.Manifest.Id == "cat"); // existing kept
+    }
+
+    [Fact]
+    public void UpsertRecipe_replaces_an_existing_recipe_and_updates_its_weight()
+    {
+        var replacement = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("dog", "Dog2", new List<string>(),
+                System.Array.Empty<IncompatibilityRule>()),
+            Ingredients = new List<LoadedIngredient>(),
+        };
+        var b = CookBookEdits.UpsertRecipe(TwoRecipeBook(), replacement, 5);
+        Assert.Equal(2, b.Recipes.Count);                        // still cat, dog (replaced)
+        Assert.Equal("Dog2", b.Recipes.Single(r => r.Manifest.Id == "dog").Manifest.Name);
+        Assert.Equal(5, b.Manifest.RecipeWeights["dog"]);
+    }
 }
