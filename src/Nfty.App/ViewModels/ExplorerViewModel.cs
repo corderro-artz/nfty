@@ -134,7 +134,59 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
 
     [RelayCommand] private void ToggleLock() => IsEditing = !IsEditing;
     [RelayCommand] private void Search() => _notify.Report("Search (⌘K)");
-    [RelayCommand] private void Add() => _notify.Report(AddLabel);
+    [RelayCommand]
+    private async Task Add()
+    {
+        // Only "Add ingredient" (a recipe selected, editing, with a source file) is wired this slice;
+        // other kinds stay notify stubs.
+        if (SelectedNode?.Domain is not LoadedRecipe recipe || !IsEditing || _session.SourcePath is null)
+        {
+            _notify.Report(AddLabel);
+            return;
+        }
+
+        var wizard = new NewIngredientViewModel(_dialogs, _notify);
+        var result = await _dialogs.ShowAsync<NewIngredientViewModel>(wizard);
+        if (result is null) return;   // cancelled
+
+        var newIng = result.Build(_book.Manifest.Canvas);   // owns the blank image until adopted
+        var adopted = false;                                 // true once the persisted book owns its image
+        try
+        {
+            if (recipe.Ingredients.Any(i => i.Manifest.Id == newIng.Manifest.Id))
+            {
+                await ShowError("Duplicate ingredient",
+                    $"An ingredient “{newIng.Manifest.Id}” already exists in “{recipe.Manifest.Name}”.");
+                return;
+            }
+            var problems = Validator.ValidateIngredient(newIng);
+            if (problems.Count > 0)
+            {
+                await ShowError("Invalid ingredient", string.Join("\n", problems));
+                return;
+            }
+
+            var book2 = CookBookEdits.UpsertIngredient(_book, recipe.Manifest.Id, newIng);
+            var book3 = await CookBookPersistence.PersistAsync(_session, book2);
+            adopted = true;   // book3 now owns newIng's image — don't dispose it below
+            ApplyBook(book3, newIng.Manifest.Id);
+
+            var recipe3 = book3.Recipes.First(r => r.Manifest.Id == recipe.Manifest.Id);
+            var ing3 = recipe3.Ingredients.First(i => i.Manifest.Id == newIng.Manifest.Id);
+            OpenEditor(ing3, recipe3);   // paint the blank variant; the editor's Save persists
+        }
+        catch (Exception ex)
+        {
+            await ShowError("Could not add ingredient", ex.Message);
+        }
+        finally
+        {
+            if (!adopted) newIng.Dispose();   // cancelled early / validation failed / write failed → free it
+        }
+    }
+
+    private Task ShowError(string title, string message) =>
+        _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, title, message));
     [RelayCommand] private void Import() => _notify.Report("Import");
     [RelayCommand] private void SelectNode(ExplorerNode node) => SelectedNode = node;
     [RelayCommand] private void OpenIngredient(string id) => _notify.Report($"Open ingredient {id}");
