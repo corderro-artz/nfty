@@ -44,6 +44,8 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     private readonly LoadedRecipe _recipe;
     private readonly ICookBookSession _session;
     private readonly IDialogService _dialogs;
+    private readonly string? _looseSavePath;   // set → save straight to this .igt, not into a cookbook
+    private readonly LoadedCookBook? _ownedBook;   // the synthetic wrapper book, owned only on the loose path
     private LoadedIngredient _ing;
     private readonly IngredientDraft _draft;
     private readonly Dictionary<string, EditHistory> _history = new(StringComparer.Ordinal);
@@ -82,8 +84,8 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// <summary>Save is offered only for edited dynamic/static ingredients with a known source file.
     /// Custom (full-colour) layers are blocked: the draft is a grayscale value-map and would overwrite
     /// their colour PNGs.</summary>
-    public bool CanSave => IsDirty && _session.SourcePath is not null
-        && _ing.Manifest.Kind != LayerKind.Custom && !IsSaving;
+    public bool CanSave => IsDirty && !IsSaving && _ing.Manifest.Kind != LayerKind.Custom
+        && (_looseSavePath is not null || _session.SourcePath is not null);
 
     /// <summary>Left-hand filmstrip: the ingredient's real variants, rendered the way the cook
     /// path would (colorized for dynamic/static, raw for custom).</summary>
@@ -111,10 +113,13 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
 
     public IngredientEditorViewModel(LoadedIngredient ing, LoadedRecipe recipe, LoadedCookBook book,
         IImageBridge bridge, INavigationService nav, INotYetWired notify, ICookBookSession session,
-        IDialogService dialogs)
+        IDialogService dialogs, string? looseSavePath = null)
     {
         _ing = ing; _bridge = bridge; _nav = nav; _notify = notify;
         _recipe = recipe; _session = session; _dialogs = dialogs;
+        _looseSavePath = looseSavePath;
+        // A loose (standalone .igt) editor owns its synthetic wrapper book — dispose it with the editor.
+        if (looseSavePath is not null) _ownedBook = book;
 
         _draft = new IngredientDraft(ing.Manifest.Id, ing.Manifest.Name, ing.Manifest.Kind, ing.Manifest.Colorization,
             book.Manifest.Canvas,
@@ -351,11 +356,31 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     private async Task Save()
     {
         // Guarded by CanSave; belt-and-suspenders against a bypassed CanExecute (never export a
-        // grayscale value-map over a Custom layer's full-colour PNGs).
-        if (_session.SourcePath is null || _ing.Manifest.Kind == LayerKind.Custom) return;
+        // grayscale value-map over a Custom layer's full-colour PNGs; need a save target).
+        if (_ing.Manifest.Kind == LayerKind.Custom) return;
+        if (_looseSavePath is null && _session.SourcePath is null) return;
         IsSaving = true;
         try
         {
+            // Loose (.igt) save: write the ingredient straight back to its own archive.
+            if (_looseSavePath is string loosePath)
+            {
+                var (m, imgs) = IngredientDraftExporter.Export(_draft);
+                var tmp = loosePath + ".tmp";
+                try
+                {
+                    await IngredientArchive.WriteAsync(tmp, m, imgs);
+                    File.Move(tmp, loosePath, overwrite: true);
+                }
+                finally
+                {
+                    if (File.Exists(tmp)) { try { File.Delete(tmp); } catch { /* best effort */ } }
+                    foreach (var i in imgs.Values) i.Dispose();   // exporter copies — ours to free
+                }
+                IsDirty = false;
+                return;   // loose has no cookbook/session/Explorer to refresh
+            }
+
             // Export the draft → a loaded ingredient (we own its images until Upsert adopts them),
             // splice it into the live book, then persist (temp write → atomic move → rehash → Replace).
             var (manifest, images) = IngredientDraftExporter.Export(_draft);
@@ -399,5 +424,6 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         Saved = null;   // release any subscriber (e.g. the Explorer) when the editor is navigated away
         foreach (var v in Variants) v.Thumbnail.Dispose();
         Canvas?.Dispose(); Preview?.Dispose();
+        _ownedBook?.Dispose();   // loose path only: free the synthetic wrapper book (→ the ingredient)
     }
 }
