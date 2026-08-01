@@ -111,7 +111,26 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
 
     /// <summary>Custom Save gate: every draft variant (including any added this session) must have an
     /// effective image, so Save never writes a blank raster into the archive.</summary>
-    private bool AllCustomVariantsHaveImages => _draft.Variants.All(v => EffectiveCustomImage(v.Id) is not null);
+    private bool AllCustomVariantsHaveImages => FirstCustomVariantWithoutImage is null;
+
+    /// <summary>The first custom variant still missing an image, so the UI can say which one blocks
+    /// Save instead of just greying the button out.</summary>
+    private VariantDraft? FirstCustomVariantWithoutImage =>
+        _draft.Variants.FirstOrDefault(v => EffectiveCustomImage(v.Id) is null);
+
+    /// <summary>Why Save is unavailable on a custom ingredient, or null when it is available.
+    /// (Custom Save depends on the per-variant image set, which changes on import/add/duplicate/delete —
+    /// every one of those must re-notify <see cref="SaveCommand"/>.)</summary>
+    public string? SaveBlockedReason => IsCustom && FirstCustomVariantWithoutImage is { } v
+        ? $"Import an image for “{v.Name}” before saving."
+        : null;
+
+    /// <summary>Re-evaluate Save's availability after anything that changes the custom image set.</summary>
+    private void NotifySaveAvailability()
+    {
+        SaveCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(SaveBlockedReason));
+    }
 
     /// <summary>Left-hand filmstrip: the ingredient's real variants, rendered the way the cook
     /// path would (colorized for dynamic/static, raw for custom).</summary>
@@ -301,6 +320,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
                 IsDirty = true;
                 RebuildSurfaces();
                 RefreshThumbnail(target.Id);
+                NotifySaveAvailability();   // an import can satisfy the custom Save gate
                 return;   // img itself is disposed by the finally below
             }
 
@@ -315,6 +335,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
             IsDirty = true;
             RebuildSurfaces();
             RefreshThumbnail(target.Id);
+            NotifySaveAvailability();
         }
         finally { img.Dispose(); }
     }
@@ -402,6 +423,11 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     // A filmstrip thumbnail for a draft variant's value-map — colorized like the preview for
     // dynamic/static, grayscale for custom (a freshly added variant has no entry in
     // _ing.VariantImages to render from, so render from the draft map like RenderPreview does).
+    /// <summary>Thumbnail for a variant that may not have a filmstrip entry yet (add/duplicate):
+    /// custom renders its effective full-colour image, everything else its value-map.</summary>
+    private Bitmap RenderThumbFor(VariantDraft vd) =>
+        IsCustom && EffectiveCustomImage(vd.Id) is { } eff ? _bridge.ToBitmap(eff) : RenderThumb(vd.Map);
+
     private Bitmap RenderThumb(ValueMap map)
     {
         using var img = map.ToImage();
@@ -419,11 +445,12 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     {
         var vd = _draft.AddVariant(NextVariantId(), $"Variant {_draft.Variants.Count + 1}", 1);
         _history[vd.Id] = new EditHistory();
-        var ev = new EditorVariant(vd.Id, vd.Name, vd.Weight, RenderThumb(vd.Map));
+        var ev = new EditorVariant(vd.Id, vd.Name, vd.Weight, RenderThumbFor(vd));
         Variants.Add(ev);
         SelectedVariant = ev;
         IsDirty = true;
         DeleteVariantCommand.NotifyCanExecuteChanged();
+        NotifySaveAvailability();   // a custom variant with no image yet blocks Save
     }
 
     [RelayCommand(CanExecute = nameof(CanMutateSelected))]
@@ -432,11 +459,17 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         var src = ActiveDraft!;
         var vd = _draft.DuplicateVariant(src.Id, NextVariantId(), $"{src.Name} copy");
         _history[vd.Id] = new EditHistory();
-        var ev = new EditorVariant(vd.Id, vd.Name, vd.Weight, RenderThumb(vd.Map));
+        // A custom variant's pixels live in the image set, not the (grayscale) value-map the draft
+        // copied — so duplicate the effective image too, or the copy would render a grey ghost and
+        // silently block Save.
+        if (IsCustom && EffectiveCustomImage(src.Id) is { } srcImage)
+            _importedCustom[vd.Id] = srcImage.Clone();
+        var ev = new EditorVariant(vd.Id, vd.Name, vd.Weight, RenderThumbFor(vd));
         Variants.Add(ev);
         SelectedVariant = ev;
         IsDirty = true;
         DeleteVariantCommand.NotifyCanExecuteChanged();
+        NotifySaveAvailability();
     }
 
     [RelayCommand(CanExecute = nameof(CanDeleteVariant))]
@@ -449,11 +482,15 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         var idx = Variants.IndexOf(target);
         _draft.RemoveVariant(target.Id);
         _history.Remove(target.Id);
+        // NextVariantId reuses the smallest free id, so a stale import would be inherited by the
+        // next added variant — drop it with the variant.
+        if (_importedCustom.Remove(target.Id, out var droppedImage)) droppedImage.Dispose();
         Variants.Remove(target);
         target.Thumbnail.Dispose();
         SelectedVariant = Variants.Count == 0 ? null : Variants[Math.Max(0, idx - 1)];
         IsDirty = true;
         DeleteVariantCommand.NotifyCanExecuteChanged();
+        NotifySaveAvailability();   // removing an image-less custom variant can unblock Save
     }
 
     [RelayCommand(CanExecute = nameof(CanSave))]
@@ -471,6 +508,8 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
                 // Custom writes. Discard them and rebuild the image set from each variant's effective
                 // full-colour image (this session's import, else the original), one fresh clone we own.
                 foreach (var i in images.Values) i.Dispose();
+                if (FirstCustomVariantWithoutImage is { } missing)
+                    throw new InvalidOperationException($"Import an image for “{missing.Name}” before saving.");
                 images = _draft.Variants.ToDictionary(v => v.Id,
                     v => EffectiveCustomImage(v.Id)!.Clone(), StringComparer.Ordinal);
             }

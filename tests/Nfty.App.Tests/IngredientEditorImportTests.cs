@@ -271,4 +271,127 @@ public class IngredientEditorImportTests
         }
         finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
     }
+
+    // ---- Review regressions (C2 whole-branch review) ----
+
+    /// <summary>Custom Save depends on the per-variant image set, which import/add/duplicate/delete all
+    /// change while IsDirty is already true — so the [NotifyCanExecuteChangedFor(IsDirty)] wiring never
+    /// fires. Assert the COMMAND's notification, not just the CanSave property: the property is computed
+    /// live and passes even when the bound button is stale.</summary>
+    [AvaloniaFact]
+    public async Task Custom_save_availability_is_notified_when_the_image_set_changes()
+    {
+        var (path, session, recipe, ing) = IngredientEditorSaveTests.OnDisk(LayerKind.Custom);
+        var pngPath = WritePng(8, 8, 10, 200, 40);
+        try
+        {
+            var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
+                new FakeNav(), new FakeNotYetWired(), session, new FakeDialogs(), new OpenPicker(pngPath));
+            int notifications = 0;
+            vm.SaveCommand.CanExecuteChanged += (_, _) => notifications++;
+
+            vm.AddVariantCommand.Execute(null);          // image-less custom variant → Save blocked
+            Assert.False(vm.CanSave);
+            Assert.NotNull(vm.SaveBlockedReason);        // and the UI can say which variant
+            notifications = 0;
+
+            await vm.ImportImageCommand.ExecuteAsync(null);   // now it has an image → Save becomes valid
+            Assert.True(vm.CanSave);
+            Assert.Null(vm.SaveBlockedReason);
+            Assert.True(notifications > 0, "SaveCommand never raised CanExecuteChanged, so the button stays stale");
+            vm.Dispose();
+        }
+        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); Directory.Delete(Path.GetDirectoryName(pngPath)!, recursive: true); }
+    }
+
+    /// <summary>NextVariantId reuses the smallest free id, so a deleted variant's import must be dropped
+    /// with it — otherwise the next added variant inherits the dead variant's art and Save writes it.</summary>
+    [AvaloniaFact]
+    public async Task Deleting_a_custom_variant_drops_its_import_so_a_reused_id_starts_blank()
+    {
+        var (path, session, recipe, ing) = IngredientEditorSaveTests.OnDisk(LayerKind.Custom);
+        var pngPath = WritePng(8, 8, 10, 200, 40);
+        try
+        {
+            var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
+                new FakeNav(), new FakeNotYetWired(), session, new ConfirmingDialogsStub(), new OpenPicker(pngPath));
+            vm.AddVariantCommand.Execute(null);
+            await vm.ImportImageCommand.ExecuteAsync(null);   // the added variant now has art
+            Assert.True(vm.CanSave);
+
+            await vm.DeleteVariantCommand.ExecuteAsync(null); // delete it (frees its id)
+            vm.AddVariantCommand.Execute(null);               // re-adds with the SAME id
+            Assert.False(vm.CanSave);                         // must be blank again, not the ghost
+            Assert.NotNull(vm.SaveBlockedReason);
+            vm.Dispose();
+        }
+        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); Directory.Delete(Path.GetDirectoryName(pngPath)!, recursive: true); }
+    }
+
+    /// <summary>Duplicate copies the draft's (grayscale) ValueMap, which is not where a custom variant's
+    /// pixels live — so the copy must inherit the effective image, or it renders a grey ghost and
+    /// silently blocks Save.</summary>
+    [AvaloniaFact]
+    public async Task Duplicating_a_custom_variant_carries_its_image()
+    {
+        var (path, session, recipe, ing) = IngredientEditorSaveTests.OnDisk(LayerKind.Custom);
+        var pngPath = WritePng(8, 8, 10, 200, 40);
+        try
+        {
+            var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
+                new FakeNav(), new FakeNotYetWired(), session, new FakeDialogs(), new OpenPicker(pngPath));
+            await vm.ImportImageCommand.ExecuteAsync(null);
+            vm.DuplicateVariantCommand.Execute(null);
+
+            var (r, g, b, _) = ReadPixel(vm.Canvas, 8, 8, 4, 4);   // the copy is selected
+            Assert.Equal(10, r); Assert.Equal(200, g); Assert.Equal(40, b);   // colour carried, not grey
+            Assert.True(vm.CanSave);                                          // and Save stays available
+            vm.Dispose();
+        }
+        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); Directory.Delete(Path.GetDirectoryName(pngPath)!, recursive: true); }
+    }
+
+    /// <summary>The loose (.igt) custom save path is the one whose export clones are DISPOSED rather
+    /// than adopted — the seam the spec called sharp. Prove colour survives, twice.</summary>
+    [AvaloniaFact]
+    public async Task Loose_custom_save_round_trips_full_colour_twice()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        var igt = Path.Combine(dir, "art.igt");
+        var pngPath = WritePng(8, 8, 10, 200, 40);
+        try
+        {
+            var manifest = new IngredientManifest("art", "Art", LayerKind.Custom, null,
+                new[] { new Variant("v1", "V1", 1) });
+            var seed = new Dictionary<string, Image<Rgba32>> { ["v1"] = new(8, 8) };
+            IngredientArchive.Write(igt, manifest, seed);
+            foreach (var i in seed.Values) i.Dispose();
+
+            for (int pass = 0; pass < 2; pass++)
+            {
+                var loaded = IngredientArchive.Read(igt);
+                var book = LooseWorkspace.WrapIngredient(loaded);
+                var vm = new IngredientEditorViewModel(loaded, book.Recipes[0], book, new ImageBridge(),
+                    new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs(),
+                    new OpenPicker(pngPath), looseSavePath: igt);
+                await vm.ImportImageCommand.ExecuteAsync(null);
+                await vm.SaveCommand.ExecuteAsync(null);
+                vm.Dispose();
+
+                using var reread = IngredientArchive.Read(igt);
+                var px = reread.VariantImages["v1"][4, 4];
+                Assert.Equal(10, px.R); Assert.Equal(200, px.G); Assert.Equal(40, px.B);
+                Assert.NotEqual(px.R, px.G);   // never round-tripped through the grayscale ValueMap
+            }
+        }
+        finally { Directory.Delete(dir, recursive: true); Directory.Delete(Path.GetDirectoryName(pngPath)!, recursive: true); }
+    }
+
+    private sealed class ConfirmingDialogsStub : IDialogService
+    {
+        public ViewModelBase? Active => null;
+        public event Action? Changed { add { } remove { } }
+        public Task<TResult?> ShowAsync<TResult>(ViewModelBase d) => Task.FromResult((TResult?)(object?)true);
+        public void Close(object? result) { }
+    }
 }

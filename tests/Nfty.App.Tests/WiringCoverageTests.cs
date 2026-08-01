@@ -53,7 +53,7 @@ public class WiringCoverageTests
         foreach (var c in new[] { "SelectToolCommand","UndoCommand","RedoCommand","AddVariantCommand",
                                   "DuplicateVariantCommand","DeleteVariantCommand",
                                   "RerollPreviewCommand","EnlargePreviewCommand","FillPanePreviewCommand",
-                                  "SaveCommand","BackCommand","SelectVariantCommand" })
+                                  "SaveCommand","BackCommand","SelectVariantCommand","ImportImageCommand" })
             Assert.True(HasCommand(vm, c), $"Editor missing {c}");
     }
 }
