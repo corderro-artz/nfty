@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Headless.XUnit;
 using Nfty.App.Services;
@@ -70,6 +71,38 @@ public class LooseIngredientEditorTests
             vm.Dispose();
         }
         finally { Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
+    }
+
+    [AvaloniaFact]
+    public async Task Loose_save_does_not_disturb_a_separately_open_cookbook_session()
+    {
+        // A real cookbook is open in the session (its own temp dir + .cbk).
+        (var cbkPath, var session, _, _) = IngredientEditorSaveTests.OnDisk();
+        var (igtPath, ing) = OnDiskIgt();
+        try
+        {
+            var openBook = session.Current!;
+            int changed = 0; session.Changed += () => changed++;
+
+            // Open a loose .igt editor built with the SAME (live) session.
+            var book = LooseWorkspace.WrapIngredient(ing);
+            var vm = new IngredientEditorViewModel(ing, book.Recipes[0], book, new ImageBridge(),
+                new FakeNav(), new FakeNotYetWired(), session, new FakeDialogs(), looseSavePath: igtPath);
+            vm.ActiveTool = EditorTool.Fill; vm.BrushValue = 111;
+            vm.ApplyToolStroke(new[] { (0, 0) });
+            await vm.SaveCommand.ExecuteAsync(null);
+            vm.Dispose();   // disposes only the loose wrapper book, not the session's cookbook
+
+            Assert.Same(openBook, session.Current);   // session's book untouched
+            Assert.Equal(0, changed);                 // no Changed raised
+            Assert.True(openBook.Recipes[0].Ingredients[0].VariantImages.Values.First().Width > 0);  // not disposed
+        }
+        finally
+        {
+            session.Dispose();
+            Directory.Delete(Path.GetDirectoryName(cbkPath)!, recursive: true);
+            Directory.Delete(Path.GetDirectoryName(igtPath)!, recursive: true);
+        }
     }
 
     [AvaloniaFact]
