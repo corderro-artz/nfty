@@ -1,0 +1,160 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             x:Class="Nfty.App.Views.ShellChromeView"
+             x:DataType="vm:ShellViewModel">
+  <!--
+    The application shell: window frame, titlebar and status bar. This lives in Nfty.App rather than
+    in the desktop head so that it is ordinary, head-agnostic UI - which means the visual-capture
+    harness renders THIS control, the same one the app runs. It previously lived in
+    Nfty.Desktop/MainWindow.axaml, where the tests could not reach it, and was mirrored by a
+    hand-written C# replica in VisualCapture; the screenshots therefore showed the replica rather
+    than the shell, and nothing detected the two drifting apart.
+
+    The head keeps only what needs a Window: drag-to-move and resize are wired by MainWindow.axaml.cs
+    against the TitlebarArea / ResizeGripArea properties below, and minimise/maximise/close go through
+    ShellViewModel's events.
+  -->
+
+    <!-- The window itself is transparent (SystemDecorations=None gives no OS frame to draw a shadow
+         against); this Border is the mockup's `.window` — border + radius + shadow — and the sole
+         chrome frame. Margin gives WinShadow's blur room to render inside the transparent window
+         surface without being clipped at the OS window's edge. ClipToBounds keeps the titlebar's own
+         square corners from poking out past the rounded corners below. -->
+    <Border Classes="frame" Margin="12" ClipToBounds="True">
+      <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Titlebar (drag to move, double-click to maximize/restore — wired in code-behind) -->
+        <!-- x:Name lives on this Border (not the inner Grid) because the Border is what carries the
+             opaque gradient Background — MainWindow.axaml.cs wires PointerPressed here for drag-to-move,
+             and a click on the Grid's own unfilled cells would otherwise hit-test straight through to
+             this Border without ever reaching a Grid-level handler. -->
+        <Border x:Name="Titlebar" Grid.Row="0" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,0,1"
+                BoxShadow="{DynamicResource TitlebarHighlightShadow}">
+          <Border.Background>
+            <LinearGradientBrush StartPoint="50%,0%" EndPoint="50%,100%">
+              <GradientStop Color="{DynamicResource PanelColor}" Offset="0" />
+              <GradientStop Color="{DynamicResource BgAltColor}" Offset="1" />
+            </LinearGradientBrush>
+          </Border.Background>
+          <Grid ColumnDefinitions="Auto,*,Auto,Auto" Height="46">
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center" Spacing="9">
+              <Border Width="24" Height="24" CornerRadius="{DynamicResource RadiusSm}"
+                      Background="{DynamicResource AccentWashBrush}"
+                      BorderBrush="{DynamicResource AccentLineBrush}" BorderThickness="1">
+                <Border Width="9" Height="9" CornerRadius="2" Background="{DynamicResource AccentBrush}">
+                  <Border.RenderTransform>
+                    <RotateTransform Angle="45" />
+                  </Border.RenderTransform>
+                </Border>
+              </Border>
+              <TextBlock Classes="wordmark" VerticalAlignment="Center"><Run Text="nft" /><Run Text="y" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
+              <!-- Kitchen chip: only the open-Explorer page has a workspace to name (mockup landing
+                   titlebar has none of this either — compare landing.html's slimmer .nw-tb). -->
+              <StackPanel Orientation="Horizontal" Spacing="9"
+                          IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <Border Width="1" Height="18" Background="{DynamicResource LineStrongBrush}" />
+                <Border Classes="kroot" ToolTip.Tip="Open workspace — the Kitchen">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Path Classes="ico" Data="{StaticResource IconKitchen}" />
+                    <TextBlock Classes="kroot-txt" Text="Kitchen" />
+                  </StackPanel>
+                </Border>
+                <Border Width="1" Height="18" Background="{DynamicResource LineStrongBrush}" />
+              </StackPanel>
+            </StackPanel>
+
+            <!-- Per-item breadcrumb (explorer.html .crumbs) — bound through ShellViewModel.CurrentExplorer
+                 since the titlebar is shared chrome outside any one page's own view-model. -->
+            <ItemsControl Grid.Column="1" ItemsSource="{Binding CurrentExplorer.Crumbs}" VerticalAlignment="Center">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="4" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:Crumb">
+                  <StackPanel Orientation="Horizontal" Spacing="2">
+                    <TextBlock Text="›" Classes="cseg" Opacity="0.45" IsVisible="{Binding Leading}" />
+                    <TextBlock Text="{Binding Text}" Classes="cseg" Classes.active="{Binding Active}" />
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Border Grid.Column="2" Classes="lockflag" VerticalAlignment="Center"
+                    IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Path Classes="ico xs" Data="{StaticResource IconLock}" IsVisible="{Binding !CurrentExplorer.IsEditing}" />
+                <Path Classes="ico xs" Data="{StaticResource IconUnlock}" IsVisible="{Binding CurrentExplorer.IsEditing}" />
+                <TextBlock Classes="lockflag-txt" Text="{Binding CurrentExplorer.LockStateText}" />
+              </StackPanel>
+            </Border>
+
+            <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
+              <Border Width="1" Height="18" Background="{DynamicResource LineStrongBrush}" Margin="0,0,10,0" />
+              <Button Command="{Binding MinimizeCommand}" Classes="icon" ToolTip.Tip="Minimise"><Path Classes="ico" Data="{StaticResource IconMinimise}" /></Button>
+              <Button Command="{Binding ToggleMaximizeCommand}" Classes="icon" ToolTip.Tip="Maximise"><Path Classes="ico" Data="{StaticResource IconMaximise}" /></Button>
+              <Button Command="{Binding CloseCommand}" Classes="icon danger" ToolTip.Tip="Close"><Path Classes="ico" Data="{StaticResource IconClose}" /></Button>
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <!-- Page + dialog overlay: flush under the titlebar, no second bordered/shadowed frame here
+             (that inner "card inside a card" look was the audit's double-chrome finding). -->
+        <Panel Grid.Row="1">
+          <Border Background="{DynamicResource BgBrush}">
+            <ContentControl Content="{Binding CurrentPage}" />
+          </Border>
+          <Panel Name="DialogScrim"
+                 IsVisible="{Binding ActiveDialog, Converter={x:Static ObjectConverters.IsNotNull}}"
+                 Background="{DynamicResource ScrimBrush}">
+            <ContentControl Content="{Binding ActiveDialog}"
+                            HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Panel>
+        </Panel>
+
+        <!-- Status bar -->
+        <Border Grid.Row="2" Background="{DynamicResource BgAltBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0">
+          <Grid ColumnDefinitions="*,Auto" Height="34">
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="14" Margin="16,0" VerticalAlignment="Center">
+              <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                <Ellipse Width="6" Height="6" Fill="{DynamicResource SuccessBrush}" VerticalAlignment="Center" />
+                <TextBlock Classes="sbar" Foreground="{DynamicResource SuccessBrush}" Text="Valid" />
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"
+                          IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <Path Classes="ico sm" Data="{StaticResource IconLock}" IsVisible="{Binding !CurrentExplorer.IsEditing}" />
+                <Path Classes="ico sm" Data="{StaticResource IconUnlock}" IsVisible="{Binding CurrentExplorer.IsEditing}" />
+                <TextBlock Classes="sbar" Text="{Binding CurrentExplorer.LockStateText}" />
+              </StackPanel>
+              <TextBlock Classes="sbar" Text="{Binding CurrentExplorer.RecipeCountText}"
+                         IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}" />
+              <TextBlock Classes="sbar" Text="{Binding CurrentExplorer.IngredientCountText}"
+                         IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}" />
+              <TextBlock Classes="sbar" Text="{Binding CurrentExplorer.VariantCountText}"
+                         IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}" />
+              <!-- Beyond the mockup's static bar: the app's real gating/guidance feed (StatusMessage,
+                   e.g. "Editing unlocked…", "Not wired yet: …") has no mockup counterpart, but dropping
+                   it would regress real UX the shell relies on — shown only when non-empty. -->
+              <TextBlock Classes="sbar" Text="{Binding StatusMessage}"
+                         IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0" VerticalAlignment="Center" Spacing="2">
+              <Button Command="{Binding ZoomOutCommand}" Classes="zoomctl" ToolTip.Tip="Zoom out"><Path Classes="ico sm" Data="{StaticResource IconZoomOut}" /></Button>
+              <TextBlock Classes="sbar" VerticalAlignment="Center" Width="46" TextAlignment="Center"
+                         Text="{Binding Zoom, StringFormat='{}{0}%'}" />
+              <Button Command="{Binding ZoomInCommand}" Classes="zoomctl" ToolTip.Tip="Zoom in"><Path Classes="ico sm" Data="{StaticResource IconZoomIn}" /></Button>
+              <Button Command="{Binding ShowHelpCommand}" Classes="helpbtn" ToolTip.Tip="Help"><Path Classes="ico sm" Data="{StaticResource IconHelp}" /></Button>
+              <!-- Bottom-right resize grip (SystemDecorations=None gives no OS resize border). A Border
+                   with a filled Background is hit-testable across its whole rectangle — unlike a bare Path,
+                   whose thin strokes are the only draggable pixels. -->
+              <Border x:Name="ResizeGrip" Width="26" Cursor="BottomRightCorner"
+                      Background="Transparent" Margin="4,0,0,0">
+                <Path Width="12" Height="12" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                      Margin="0,0,2,2" Stroke="{DynamicResource FgMutedBrush}" StrokeThickness="1"
+                      Data="M11,4 L4,11 M11,8 L8,11" />
+              </Border>
+            </StackPanel>
+          </Grid>
+        </Border>
+      </Grid>
+    </Border>
+</UserControl>

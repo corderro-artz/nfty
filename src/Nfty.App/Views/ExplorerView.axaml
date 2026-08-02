@@ -6,24 +6,11 @@
              x:Class="Nfty.App.Views.ExplorerView"
              x:DataType="vm:ExplorerViewModel"
              Focusable="True">
-  <Grid RowDefinitions="Auto,Auto,*">
-    <!-- Crumbs bar -->
-    <ItemsControl Grid.Row="0" ItemsSource="{Binding Crumbs}" Margin="14,10,14,0">
-      <ItemsControl.ItemsPanel>
-        <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="4" /></ItemsPanelTemplate>
-      </ItemsControl.ItemsPanel>
-      <ItemsControl.ItemTemplate>
-        <DataTemplate x:DataType="vm:Crumb">
-          <StackPanel Orientation="Horizontal" Spacing="2">
-            <TextBlock Text="›" Classes="cseg" Opacity="0.45" IsVisible="{Binding Leading}" />
-            <TextBlock Text="{Binding Text}" Classes="cseg" Classes.active="{Binding Active}" />
-          </StackPanel>
-        </DataTemplate>
-      </ItemsControl.ItemTemplate>
-    </ItemsControl>
-
-    <!-- Context toolbar (.exp-toolbar): gap 10, padding 10/14, bottom hairline -->
-    <Border Grid.Row="1" Background="{DynamicResource BgAltBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,0,1" Padding="14,10">
+  <Grid RowDefinitions="Auto,*">
+    <!-- Context toolbar (.exp-toolbar): gap 10, padding 10/14, bottom hairline. Crumbs live in the
+         titlebar now (MainWindow.axaml, bound through ShellViewModel.CurrentExplorer) rather than as
+         a row here, so the page host is flush under the titlebar instead of double-chromed. -->
+    <Border Grid.Row="0" Background="{DynamicResource BgAltBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,0,1" Padding="14,10">
       <StackPanel Orientation="Horizontal" Spacing="10">
         <TextBox x:Name="SearchBox" Width="220" Text="{Binding SearchQuery}"
                  Watermark="Find recipe, ingredient, variant…" ToolTip.Tip="Search (Ctrl+K)" />
@@ -41,7 +28,7 @@
       </StackPanel>
     </Border>
 
-    <Grid Grid.Row="2" ColumnDefinitions="260,*">
+    <Grid Grid.Row="1" ColumnDefinitions="260,*">
       <TreeView Grid.Column="0" Name="Tree" ItemsSource="{Binding Roots}"
                 SelectedItem="{Binding SelectedNode, Mode=TwoWay}"
                 Background="{DynamicResource PanelBrush}" Margin="12,10,12,12">

@@ -58,4 +58,11 @@
   <StreamGeometry x:Key="IconZoomOut">M6 12h12</StreamGeometry>
   <StreamGeometry x:Key="IconZoomIn">M12 5v14M5 12h14</StreamGeometry>
   <StreamGeometry x:Key="IconHelp">M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0zM9.6 9.4a2.5 2.5 0 1 1 3.1 2.4c-.5.2-.8.7-.8 1.2v.6M12 16.6v.4</StreamGeometry>
+
+  <!-- explorer.html titlebar: the persistent "Kitchen" workspace chip (<rect x=3.5 y=5 w=17 h=14 rx=1.8>
+       plus a divider line and two spiral-binder ticks). The mockup also fills a small accent square
+       inside the box (rect x=6.6 y=12 w=4 h=4, filled with the accent colour) - StreamGeometry/Path.ico
+       is single-stroke only (one Fill/Stroke pair), so that two-tone accent tab is dropped here, same
+       approximation already used for Border.rop.require in Styles.axaml. -->
+  <StreamGeometry x:Key="IconKitchen">M5.3 5h13.4a1.8 1.8 0 0 1 1.8 1.8v10.4a1.8 1.8 0 0 1-1.8 1.8H5.3a1.8 1.8 0 0 1-1.8-1.8V6.8A1.8 1.8 0 0 1 5.3 5zM3.5 9.2h17M7 3.6v2.2M12 3.6v2.2</StreamGeometry>
 </ResourceDictionary>

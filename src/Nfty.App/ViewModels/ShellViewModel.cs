@@ -16,6 +16,13 @@ public partial class ShellViewModel : ViewModelBase
     [ObservableProperty] private int _zoom = 100;
     [ObservableProperty] private string _statusMessage = "";
 
+    /// <summary>The titlebar's Kitchen chip / crumbs / lock flag are Explorer-specific (the mockup's
+    /// landing titlebar has none of them), so the shared shell chrome binds through this rather than
+    /// exposing crumbs/lock state on ShellViewModel itself — null on any other page.</summary>
+    public ExplorerViewModel? CurrentExplorer => CurrentPage as ExplorerViewModel;
+
+    partial void OnCurrentPageChanged(ViewModelBase? value) => OnPropertyChanged(nameof(CurrentExplorer));
+
     public event Action? MinimizeRequested;
     public event Action? ToggleMaximizeRequested;
     public event Action? CloseRequested;

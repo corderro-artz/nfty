@@ -166,13 +166,30 @@
        icon is a Path stroked with the current text colour, never a font glyph — emoji injected
        off-palette colour and missing glyphs rendered as tofu. Stretch=Uniform maps the 24-unit
        geometry into the box below. -->
+  <!--
+    Icons are authored in the mockups' 24x24 SVG viewBox (see Icons.axaml) and must be scaled the way
+    an <svg viewBox> scales them: by that shared 24-unit box, NOT by each glyph's own bounds.
+
+    Stretch="Uniform" does the latter, which is wrong twice over. Cosmetically it sizes every glyph to
+    fill 14px regardless of how much of the 24-box it actually occupies, so a wide-and-short glyph
+    renders larger than a square one and the set loses its common rhythm. Fatally, it divides by the
+    geometry's height: a single-axis glyph such as IconMinimise/IconZoomOut ("M6 12h12") has zero-height
+    bounds, so the scale degenerates and the icon collapsed to a dot - minimise and zoom-out rendered
+    as an empty button.
+
+    So: draw at raw 24-unit coordinates (Stretch=None) and scale by exactly size/24 about the top-left
+    corner, which maps the 24-box onto the icon box the way the viewBox does. StrokeThickness is in
+    pre-transform units, so it is the mockup's own stroke-width and scales down with the glyph.
+  -->
   <Style Selector="Path.ico">
     <Setter Property="Width" Value="14" />
     <Setter Property="Height" Value="14" />
-    <Setter Property="Stretch" Value="Uniform" />
+    <Setter Property="Stretch" Value="None" />
+    <Setter Property="RenderTransformOrigin" Value="0%,0%" />
+    <Setter Property="RenderTransform" Value="scale(0.5833)" />   <!-- 14/24 -->
     <Setter Property="Fill" Value="Transparent" />
     <Setter Property="Stroke" Value="{DynamicResource FgMutedBrush}" />
-    <Setter Property="StrokeThickness" Value="1.6" />
+    <Setter Property="StrokeThickness" Value="2" />
     <Setter Property="StrokeLineCap" Value="Round" />
     <Setter Property="StrokeJoin" Value="Round" />
     <Setter Property="VerticalAlignment" Value="Center" />
@@ -186,8 +203,18 @@
     <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
   </Style>
 
-  <Style Selector="Path.ico.sm"><Setter Property="Width" Value="13" /><Setter Property="Height" Value="13" /></Style>
-  <Style Selector="Path.ico.lg"><Setter Property="Width" Value="18" /><Setter Property="Height" Value="18" /></Style>
+  <Style Selector="Path.ico.xs">
+    <Setter Property="Width" Value="12" /><Setter Property="Height" Value="12" />
+    <Setter Property="RenderTransform" Value="scale(0.5)" />      <!-- 12/24 -->
+  </Style>
+  <Style Selector="Path.ico.sm">
+    <Setter Property="Width" Value="13" /><Setter Property="Height" Value="13" />
+    <Setter Property="RenderTransform" Value="scale(0.5417)" />   <!-- 13/24 -->
+  </Style>
+  <Style Selector="Path.ico.lg">
+    <Setter Property="Width" Value="18" /><Setter Property="Height" Value="18" />
+    <Setter Property="RenderTransform" Value="scale(0.75)" />     <!-- 18/24 -->
+  </Style>
   <!-- On an accent fill the icon must switch to the on-accent ink, like the label does. -->
   <Style Selector="Button.accent Path.ico"><Setter Property="Stroke" Value="{DynamicResource OnAccentBrush}" /></Style>
   <!-- Strong-ink icons (window chrome, primary affordances) -->
@@ -628,5 +655,100 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
     <Setter Property="Padding" Value="16,14" />
+  </Style>
+
+  <!-- ====================================================================
+       Application shell (titlebar + status bar), explorer.html .kroot /
+       .lockflag / .statusbar / .zoomctl / .helpbtn. -->
+
+  <!-- persistent workspace-root chip (explorer.html .kroot) -->
+  <Style Selector="Border.kroot">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="Padding" Value="7,3,9,3" />
+  </Style>
+  <Style Selector="Border.kroot Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+  <Style Selector="TextBlock.kroot-txt">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <!-- edit-lock state pill (explorer.html .lockflag) -->
+  <Style Selector="Border.lockflag">
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="999" />
+    <Setter Property="Padding" Value="10,4" />
+  </Style>
+  <Style Selector="TextBlock.lockflag-txt">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+
+  <!-- status bar text (explorer.html .statusbar: mono 11.5px, tabular numerals) -->
+  <Style Selector="TextBlock.sbar">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontFeatures" Value="+tnum" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- status bar zoom controls: bordered 24x24 squares (explorer.html .zoomctl button) -->
+  <Style Selector="Button.zoomctl">
+    <Setter Property="Width" Value="24" />
+    <Setter Property="Height" Value="24" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.zoomctl /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+  </Style>
+  <Style Selector="Button.zoomctl:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+  <Style Selector="Button.zoomctl:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+  </Style>
+
+  <!-- status bar help trigger: accent-wash tile (explorer.html .helpbtn) -->
+  <Style Selector="Button.helpbtn">
+    <Setter Property="Width" Value="24" />
+    <Setter Property="Height" Value="24" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Margin" Value="8,0,0,0" />
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.helpbtn /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+  <Style Selector="Button.helpbtn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+  <Style Selector="Button.helpbtn:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+  </Style>
+  <Style Selector="Button.helpbtn Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
   </Style>
 </Styles>

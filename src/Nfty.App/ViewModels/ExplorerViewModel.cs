@@ -33,6 +33,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(DeleteSelectedCommand))]
     [NotifyPropertyChangedFor(nameof(LockTip))]
+    [NotifyPropertyChangedFor(nameof(LockStateText))]
     private bool _isEditing;
 
     [ObservableProperty] private ExplorerNode _root = default!;
@@ -51,6 +52,26 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     internal LoadedCookBook BookForTest => _book;
 
     public IReadOnlyList<Crumb> Crumbs { get; private set; } = Array.Empty<Crumb>();
+
+    /// <summary>Status bar's lock-state label (explorer.html .statusbar .state: "read-only"/"editing"),
+    /// distinct from <see cref="LockTip"/> which phrases the same state as a click instruction.</summary>
+    public string LockStateText => IsEditing ? "editing" : "read-only";
+
+    /// <summary>Status bar counts (explorer.html #rTotal/#iTotal/#varTotal), recomputed from
+    /// <see cref="_book"/> — refreshed via <see cref="RefreshCounts"/> whenever the book is swapped.</summary>
+    public string RecipeCountText => Pluralize(_book.Recipes.Count, "recipe");
+    public string IngredientCountText => Pluralize(_book.Recipes.Sum(r => r.Ingredients.Count), "ingredient");
+    public string VariantCountText =>
+        Pluralize(_book.Recipes.Sum(r => r.Ingredients.Sum(i => i.Manifest.Variants.Count)), "variant");
+
+    private static string Pluralize(int count, string noun) => $"{count} {noun}{(count == 1 ? "" : "s")}";
+
+    private void RefreshCounts()
+    {
+        OnPropertyChanged(nameof(RecipeCountText));
+        OnPropertyChanged(nameof(IngredientCountText));
+        OnPropertyChanged(nameof(VariantCountText));
+    }
 
     public string AddLabel => SelectedNode?.Kind switch
     {
@@ -147,6 +168,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         _fullRoot = BuildTree(book);
         Root = Filter(_fullRoot, SearchQuery);
         OnPropertyChanged(nameof(SearchSummary));
+        RefreshCounts();
         SelectedNode = FindNode(Root, selectId) ?? Root;
     }
 

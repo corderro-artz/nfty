@@ -73,94 +73,40 @@ public class VisualCapture
         Child = Label(text, "kind-txt"),
     };
 
-    /// <summary>Mirrors MainWindow's titlebar + status bar chrome (brand tile, wordmark, borderless
-    /// window controls, zoom/help controls) so it can be visually captured — MainWindow itself can't
-    /// be instantiated headlessly (it's the desktop head's top-level Window). Keep this structurally
-    /// in sync with src/Nfty.Desktop/MainWindow.axaml's titlebar/status-bar markup.</summary>
+    /// <summary>Theme-resource lookups for the synthetic swatches below; magenta marks a miss.</summary>
     private static IBrush Res(string key, ThemeVariant variant) =>
         Application.Current!.TryGetResource(key, variant, out var v) ? (IBrush)v! : Brushes.Magenta;
 
-    private static Control ChromeStrip(ThemeVariant variant)
+    private static Avalonia.Media.Color ResColor(string key, ThemeVariant variant) =>
+        Application.Current!.TryGetResource(key, variant, out var v) ? (Avalonia.Media.Color)v! : Colors.Magenta;
+
+    /// <summary>The real application shell — ShellChromeView is the very control MainWindow hosts,
+    /// so this frame shows the shipped titlebar and status bar rather than a replica of them. It is
+    /// captured with an Explorer as the current page, since the Kitchen chip, crumbs and lock flag
+    /// are bound through ShellViewModel.CurrentExplorer and are absent on every other page.</summary>
+    [AvaloniaFact]
+    public void Capture_shell()
     {
-        var radiusSm = Application.Current!.TryGetResource("RadiusSm", variant, out var r)
-            ? (CornerRadius)r!
-            : new CornerRadius(5);
+        if (Dir is null) return;   // inert unless explicitly capturing
 
-        var brandTile = new Border
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
         {
-            Width = 24,
-            Height = 24,
-            CornerRadius = radiusSm,
-            Background = Res("AccentWashBrush", variant),
-            Child = new Border
-            {
-                Width = 9,
-                Height = 9,
-                CornerRadius = new CornerRadius(2),
-                Background = Res("AccentBrush", variant),
-                RenderTransform = new RotateTransform(45),
-            },
-        };
+            var nav = new FakeNav();
+            var dialogs = new FakeDialogs();
+            var session = new CookBookSession();
+            using var explorer = new ExplorerViewModel(ExplorerViewModelTests.TwoRecipeBook(), nav, dialogs,
+                new FakeNotYetWired(), new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav),
+                ExplorerViewModelTests.CookFactory(dialogs), session, new FilePickerService(),
+                ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs), new StatusService());
 
-        var titlebar = new Grid
-        {
-            Height = 46,
-            Background = Res("PanelBrush", variant),
-            ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"),
-        };
-        var brand = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Margin = new Thickness(12, 0, 0, 0),
-            VerticalAlignment = VerticalAlignment.Center,
-            Spacing = 9,
-            Children = { brandTile, Wordmark(variant) },
-        };
-        Grid.SetColumn(brand, 0);
-        var winControls = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0, 0, 10, 0),
-            Children = { Btn("—", "icon"), Btn("▢", "icon"), Btn("✕", "icon", "danger") },
-        };
-        Grid.SetColumn(winControls, 2);
-        titlebar.Children.Add(brand);
-        titlebar.Children.Add(winControls);
+            var shell = new ShellViewModel(nav, dialogs, new FakeNotYetWired(), new ThemeService(), new StatusService());
+            nav.To(explorer);                             // drives ShellViewModel.CurrentPage
+            explorer.SelectNodeCommand.Execute(explorer.Root.Children[0]);   // a crumb trail to show
+            explorer.ToggleLockCommand.Execute(null);                        // unlocked lock flag
 
-        var statusBar = new Grid
-        {
-            Height = 34,
-            Background = Res("BgAltBrush", variant),
-            ColumnDefinitions = new ColumnDefinitions("*,Auto"),
-        };
-        var statusText = Label("Ready · 1,024 assets", "muted");
-        statusText.Margin = new Thickness(16, 0);
-        statusText.VerticalAlignment = VerticalAlignment.Center;
-        Grid.SetColumn(statusText, 0);
-        var zoomGroup = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Margin = new Thickness(8, 0),
-            VerticalAlignment = VerticalAlignment.Center,
-            Spacing = 2,
-            Children =
-            {
-                Btn("−", "icon"),
-                new TextBlock { Text = "100%", Width = 46, TextAlignment = Avalonia.Media.TextAlignment.Center, VerticalAlignment = VerticalAlignment.Center },
-                Btn("+", "icon"),
-                Btn("?", "icon"),
-            },
-        };
-        Grid.SetColumn(zoomGroup, 1);
-        statusBar.Children.Add(statusText);
-        statusBar.Children.Add(zoomGroup);
-
-        return new StackPanel
-        {
-            Spacing = 0,
-            Children = { titlebar, statusBar },
-        };
+            Capture(new Views.ShellChromeView { DataContext = shell }, variant,
+                $"shell-{variant.Key.ToString()!.ToLowerInvariant()}.png");
+        }
     }
 
     private static Control Gallery(ThemeVariant variant) => new Border
@@ -173,7 +119,6 @@ public class VisualCapture
             Spacing = 10,
             Children =
             {
-                ChromeStrip(variant),
                 Label("The quick brown fox — sans body text"),
                 Label("nfty", "wordmark"),
                 Label("CookBook › Recipe › Ingredient", "crumbs"),
