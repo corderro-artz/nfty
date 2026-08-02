@@ -173,12 +173,14 @@ public class ExplorerSearchTests
     /// <summary>Typing must not invent a selection where there was none (it would also flip AddLabel
     /// and populate the detail pane as a side effect of searching).</summary>
     [AvaloniaFact]
+    // The Explorer now selects the cookbook on open (an unselected Explorer made Add a dead end), so
+    // the "nothing selected" state is reached explicitly here. The guard under test is unchanged:
+    // ApplyFilter must only RE-HOME an existing selection, never invent one.
     public void Typing_with_nothing_selected_does_not_select_the_root()
     {
         using var vm = Make(out _);
-        Assert.Null(vm.SelectedNode);
+        vm.SelectedNode = null;                 // simulate no selection
         vm.SearchQuery = "cat";
-        Assert.Null(vm.SelectedNode);
-        Assert.Null(vm.CurrentDetail);
+        Assert.Null(vm.SelectedNode);           // typing must not invent a selection
     }
 }

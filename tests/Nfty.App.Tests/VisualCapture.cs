@@ -301,6 +301,7 @@ public class VisualCapture
             Dispatcher.UIThread.RunJobs();
 
             vm.SelectNodeCommand.Execute(vm.Root.Children[0].Children[0]);   // select an ingredient
+            vm.ToggleLockCommand.Execute(null);   // unlocked: the lock must LOOK different
             Dispatcher.UIThread.RunJobs();
 
             window.CaptureRenderedFrame()!.Save(Path.Combine(Dir!, $"explorer-{variant.Key.ToString()!.ToLowerInvariant()}.png"));

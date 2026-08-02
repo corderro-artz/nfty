@@ -11,6 +11,9 @@ public record RecipeShareRow(string Name, double SharePercent, string DnaSpaceTe
 
 public partial class CookBookDetailViewModel : ViewModelBase
 {
+    /// <summary>Shown where a count cannot be computed (an unvalidatable book).</summary>
+    private const string Unknown = "—";
+
     private readonly INotYetWired _notify;
     private readonly Action _cook;
 
@@ -34,16 +37,28 @@ public partial class CookBookDetailViewModel : ViewModelBase
         LayerCount = book.Recipes.Sum(r => r.Ingredients.Count);
         VariantCount = book.Recipes.Sum(r => r.Ingredients.Sum(i => i.Manifest.Variants.Count));
 
-        var space = UniqueSpace.Count(book);
-        UniqueDnaText = space.IsExact ? space.Total.ToString() : $"more than {space.Total}";
+        // Best-effort: the Explorer opens whatever archive it is handed, and reading one does NOT
+        // validate it, so a book that Validator would reject can reach this pane (e.g. a hand-edited
+        // manifest with kind "dynamic" but no colorization block - UniqueSpace dereferences it). The
+        // counts are informational; a book we cannot measure must still open and show its structure.
+        UniqueSpaceCount? space = null;
+        try { space = UniqueSpace.Count(book); }
+        catch { /* fall through to Unknown below */ }
+
+        UniqueDnaText = space is null ? Unknown
+            : space.IsExact ? space.Total.ToString() : $"more than {space.Total}";
 
         double totalWeight = book.Manifest.RecipeWeights.Values.Sum();
         Recipes = book.Recipes.Select(r =>
         {
             double w = book.Manifest.RecipeWeights.GetValueOrDefault(r.Manifest.Id);
             double share = totalWeight > 0 ? w / totalWeight * 100 : 0;
-            var rs = space[r.Manifest.Id];
-            string dna = rs.IsExact ? rs.Total.ToString() : $"more than {rs.Total}";
+            string dna = Unknown;
+            if (space is not null)
+            {
+                var rs = space[r.Manifest.Id];
+                dna = rs.IsExact ? rs.Total.ToString() : $"more than {rs.Total}";
+            }
             return new RecipeShareRow(r.Manifest.Name, Math.Round(share, 1), dna, SegmentColorFor(r.Manifest.Id));
         }).ToList();
     }

@@ -31,7 +31,13 @@
         <Button Content="{Binding AddLabel}" Command="{Binding AddCommand}" Classes="accent" />
         <Button Content="Delete" Command="{Binding DeleteSelectedCommand}" Classes="tbtn" />
         <Button Content="Import" Command="{Binding ImportCommand}" Classes="tbtn" />
-        <Button Command="{Binding ToggleLockCommand}" Classes="icon" ToolTip.Tip="Toggle lock"><Path Classes="ico" Data="{StaticResource IconLock}" /></Button>
+        <Button Command="{Binding ToggleLockCommand}" Classes="icon" Classes.unlocked="{Binding IsEditing}"
+                ToolTip.Tip="{Binding LockTip}">
+          <Panel>
+            <Path Classes="ico" Data="{StaticResource IconLock}" IsVisible="{Binding !IsEditing}" />
+            <Path Classes="ico" Data="{StaticResource IconUnlock}" IsVisible="{Binding IsEditing}" />
+          </Panel>
+        </Button>
       </StackPanel>
     </Border>
 

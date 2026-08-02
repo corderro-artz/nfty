@@ -32,6 +32,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private ViewModelBase? _currentDetail;
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(DeleteSelectedCommand))]
+    [NotifyPropertyChangedFor(nameof(LockTip))]
     private bool _isEditing;
 
     [ObservableProperty] private ExplorerNode _root = default!;
@@ -76,6 +77,10 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         _looseEditorFactory = looseEditorFactory;
         _fullRoot = BuildTree(book);
         Root = _fullRoot;
+        // Select the cookbook on open. Without this nothing is selected, so AddLabel is a bare "Add"
+        // and Add itself has no target - it fell through to the stub and reported "not wired", which
+        // is exactly the dead end a user hits the moment they open a cookbook.
+        SelectedNode = Root;
         RebuildCrumbs();
     }
 
@@ -211,7 +216,21 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         return false;
     }
 
-    [RelayCommand] private void ToggleLock() => IsEditing = !IsEditing;
+    /// <summary>The edit lock had no visible state at all (static padlock, no active styling), so a
+    /// working toggle read as a dead button. Flip it, restyle it, and say so on the status line.</summary>
+    [RelayCommand]
+    private void ToggleLock()
+    {
+        IsEditing = !IsEditing;
+        _status.Say(IsEditing
+            ? "Editing unlocked - you can add, delete and edit."
+            : "Editing locked - unlock to make changes.");
+    }
+
+    /// <summary>Tooltip that states the CURRENT state and what clicking will do.</summary>
+    public string LockTip => IsEditing
+        ? "Editing unlocked - click to lock"
+        : "Editing locked - click to unlock";
     [RelayCommand]
     private async Task Add()
     {

@@ -78,4 +78,40 @@ public class ExplorerAddGuidanceTests
         }
         finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
     }
+
+    /// <summary>Opening a cookbook used to leave NOTHING selected, so the Add button read a bare
+    /// "Add", had no target, and fell through to the not-wired stub - the dead end reported from a
+    /// real run. The cookbook is now selected on open, so Add is immediately meaningful.</summary>
+    [AvaloniaFact]
+    public void A_freshly_opened_explorer_selects_the_cookbook_so_add_has_a_target()
+    {
+        var (vm, notify, status, session, path) = Explorer();
+        try
+        {
+            Assert.NotNull(vm.SelectedNode);
+            Assert.Equal(vm.Root.Id, vm.SelectedNode!.Id);
+            Assert.Equal("Add recipe", vm.AddLabel);   // not a bare "Add"
+            Assert.Null(notify.Last);
+            vm.Dispose();
+        }
+        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
+    }
+
+    /// <summary>The edit lock is a toggle with real state: the tooltip states the current mode and the
+    /// status line confirms the change (it previously had no visible state at all).</summary>
+    [AvaloniaFact]
+    public void Toggling_the_lock_announces_and_describes_the_new_state()
+    {
+        var (vm, notify, status, session, path) = Explorer();
+        try
+        {
+            Assert.Contains("locked", vm.LockTip, System.StringComparison.OrdinalIgnoreCase);
+            vm.ToggleLockCommand.Execute(null);
+            Assert.True(vm.IsEditing);
+            Assert.Contains("unlocked", vm.LockTip, System.StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("unlocked", status.Last!, System.StringComparison.OrdinalIgnoreCase);
+            vm.Dispose();
+        }
+        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
+    }
 }
