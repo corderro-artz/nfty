@@ -25,4 +25,8 @@ public record ExplorerNode(string Id, string Name, ExplorerNodeKind Kind,
     /// <summary>True for the single top-level CookBook node. Drives the mono/SemiBold root label
     /// style and hides the branch guide line (a root has no parent branch to hang a guide off).</summary>
     public bool IsRoot => Kind == ExplorerNodeKind.CookBook;
+
+    /// <summary>Kind predicates for the tree's 18px type mark, which every node carries.</summary>
+    public bool IsRecipe => Kind == ExplorerNodeKind.Recipe;
+    public bool IsIngredient => Kind == ExplorerNodeKind.Ingredient;
 }

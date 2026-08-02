@@ -243,9 +243,25 @@
        already match the mockup's indentation/caret closely enough with no override needed. -->
   <ControlTheme x:Key="{x:Type TreeViewItem}" TargetType="TreeViewItem"
                 BasedOn="{StaticResource {x:Type TreeViewItem}}">
-    <Setter Property="Padding" Value="8,6" />
+    <!-- Horizontal padding only. The mockup's guide (.branch border-left) is one continuous line down
+         a whole branch, but ours is drawn per row inside the item template, so any VERTICAL padding
+         here becomes a gap between one row's segment and the next - which is exactly how the guide
+         came to render as disconnected stubs. The 6px of vertical breathing room moves into the row
+         content instead (see ExplorerView.axaml), leaving the row's full height to the guide, so
+         consecutive segments abut into a single line. -->
+    <Setter Property="Padding" Value="8,0" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
     <Setter Property="Background" Value="Transparent" />
+
+    <!-- The mockup's caret (.tw) is a 13px box holding a 9px glyph; Fluent's default chevron is
+         roughly half again that and reads as the loudest thing in the row. -->
+    <Style Selector="^ /template/ ToggleButton#PART_ExpandCollapseChevron">
+      <Setter Property="Width" Value="13" />
+      <Setter Property="Height" Value="13" />
+      <Setter Property="FontSize" Value="9" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Margin" Value="0,0,4,0" />
+    </Style>
 
     <Style Selector="^ /template/ Border#PART_LayoutRoot:pointerover">
       <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />

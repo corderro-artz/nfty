@@ -226,7 +226,9 @@ public class VisualCapture
                 ExplorerViewModelTests.CookFactory(dialogs), new CookBookSession(),
                 new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs), new StatusService());
             var view = new Views.ExplorerView { DataContext = vm };
-            var window = new Window { RequestedThemeVariant = variant, Content = view, Width = 900, Height = 560 };
+            // MainWindow's own default size. The mockup's pane track alone needs 286+392+336 = 1014px, so
+            // capturing the Explorer at less than that judges it in a squeeze the app never ships in.
+            var window = new Window { RequestedThemeVariant = variant, Content = view, Width = 1180, Height = 720 };
             window.Show();
             Dispatcher.UIThread.RunJobs();
 
@@ -427,7 +429,7 @@ public class VisualCapture
 
     private static void Capture(Control view, ThemeVariant variant, string fileName)
     {
-        var window = new Window { RequestedThemeVariant = variant, Content = view, Width = 900, Height = 600 };
+        var window = new Window { RequestedThemeVariant = variant, Content = view, Width = 1180, Height = 720 };
         window.Show();
         Dispatcher.UIThread.RunJobs();
         window.CaptureRenderedFrame()!.Save(Path.Combine(Dir!, fileName));

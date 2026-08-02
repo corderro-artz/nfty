@@ -207,6 +207,12 @@
     <Setter Property="Width" Value="12" /><Setter Property="Height" Value="12" />
     <Setter Property="RenderTransform" Value="scale(0.5)" />      <!-- 12/24 -->
   </Style>
+  <!-- explorer.html .ti — the 18px tree type mark -->
+  <Style Selector="Path.ico.ti">
+    <Setter Property="Width" Value="18" /><Setter Property="Height" Value="18" />
+    <Setter Property="RenderTransform" Value="scale(0.75)" />     <!-- 18/24 -->
+    <Setter Property="StrokeThickness" Value="1.3" />             <!-- the mockup's own .ti stroke -->
+  </Style>
   <Style Selector="Path.ico.sm">
     <Setter Property="Width" Value="13" /><Setter Property="Height" Value="13" />
     <Setter Property="RenderTransform" Value="scale(0.5417)" />   <!-- 13/24 -->
@@ -331,6 +337,73 @@
     <Setter Property="LetterSpacing" Value="1.47" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
+  <!-- explorer.html .pane-h: a 41px header row opening each pane, closed by a hairline. The panes
+       themselves are full-bleed regions on the page background divided by 1px line rules; there is
+       no floating card. -->
+  <Style Selector="Border.pane">
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,1,0" />
+  </Style>
+  <Style Selector="Border.pane.last">
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="Border.pane-hrow">
+    <Setter Property="Height" Value="41" />
+    <Setter Property="Padding" Value="16,0" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+  <!-- .hcount: the right-aligned count that trails a pane header. -->
+  <Style Selector="TextBlock.hcount">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- explorer.html .search: a flexing pill, not a fixed-width box - magnifier, watermark, then a
+       right-aligned shortcut chip. -->
+  <Style Selector="Border.search">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="Padding" Value="11,8" />
+    <Setter Property="MinWidth" Value="180" />
+    <Setter Property="MaxWidth" Value="360" />
+  </Style>
+  <!-- .search kbd -->
+  <Style Selector="Border.kbd">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="Padding" Value="5,1" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.kbd > TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+
+  <!-- The TextBox that sits INSIDE Border.search: the pill already draws the chrome, so this must
+       draw none of its own. Fluent paints the border on the TextBox's own template parts, hence the
+       part-level selectors rather than a bare TextBox setter. -->
+  <Style Selector="TextBox.bare">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBox.bare /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
   <Style Selector="TextBlock.plabel">
     <Setter Property="FontSize" Value="10" />
     <Setter Property="LetterSpacing" Value="1.0" />

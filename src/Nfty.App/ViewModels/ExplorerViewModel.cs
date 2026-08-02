@@ -71,6 +71,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(RecipeCountText));
         OnPropertyChanged(nameof(IngredientCountText));
         OnPropertyChanged(nameof(VariantCountText));
+        OnPropertyChanged(nameof(TreeCountText));
     }
 
     public string AddLabel => SelectedNode?.Kind switch
@@ -168,6 +169,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         _fullRoot = BuildTree(book);
         Root = Filter(_fullRoot, SearchQuery);
         OnPropertyChanged(nameof(SearchSummary));
+        OnPropertyChanged(nameof(TreeCountText));
         RefreshCounts();
         SelectedNode = FindNode(Root, selectId) ?? Root;
     }
@@ -193,9 +195,23 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         var selectedId = SelectedNode?.Id;
         Root = Filter(_fullRoot, SearchQuery);
         OnPropertyChanged(nameof(SearchSummary));
+        OnPropertyChanged(nameof(TreeCountText));
         // Only re-home an EXISTING selection; typing must not select the root out of nowhere (which
         // would also flip AddLabel and populate the detail pane as a side effect of searching).
         if (selectedId is not null) SelectedNode = FindNode(Root, selectedId) ?? Root;
+    }
+
+    /// <summary>The CONTENTS pane header count (the mockup's .hcount). While filtering it reports
+    /// the match count, so a query that matches nothing reads as "0 matches" rather than as an
+    /// unexplained empty tree; otherwise it reports the recipe count the header stands for.</summary>
+    public string TreeCountText
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(SearchQuery)) return SearchSummary;
+            int n = Root.Children.Count;
+            return n == 1 ? "1 recipe" : $"{n} recipes";
+        }
     }
 
     /// <summary>Match count for the current query ("" when not filtering), so a zero-result query
