@@ -29,6 +29,11 @@ public partial class LandingViewModel : ViewModelBase
     /// a removed row would stay on screen.</summary>
     public IReadOnlyList<RecentItem> Recents => _recents.Items.ToArray();
 
+    /// <summary>Drives the first-run empty state. Without it the whole right half of the start
+    /// screen is blank on a fresh install, which reads as a failed load rather than as "no history
+    /// yet".</summary>
+    public bool HasNoRecents => Recents.Count == 0;
+
     public LandingViewModel(INavigationService nav, IDialogService dialogs, INotYetWired notify,
         IFilePickerService picker, IRecentsService recents, ICookBookSession session,
         Func<LoadedCookBook, ExplorerViewModel> explorerFactory,
@@ -195,6 +200,7 @@ public partial class LandingViewModel : ViewModelBase
     {
         _recents.Add(item);
         OnPropertyChanged(nameof(Recents));
+        OnPropertyChanged(nameof(HasNoRecents));
     }
 
     [RelayCommand]
@@ -204,6 +210,7 @@ public partial class LandingViewModel : ViewModelBase
         {
             _recents.Remove(item.Path);
             OnPropertyChanged(nameof(Recents));
+            OnPropertyChanged(nameof(HasNoRecents));
             ShowError("Missing file", $"“{item.Path}” is no longer there, so it was removed from Recents.");
             return;
         }

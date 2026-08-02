@@ -10,9 +10,12 @@
     <KeyBinding Gesture="Ctrl+O" Command="{Binding OpenCookBookCommand}" />
     <KeyBinding Gesture="Ctrl+I" Command="{Binding ImportCommand}" />
   </UserControl.KeyBindings>
-  <Grid ColumnDefinitions="*,*" Margin="38,34">
-    <StackPanel Grid.Column="0" Spacing="7" MaxWidth="300">
-      <TextBlock Text="nfty" FontSize="30" FontWeight="Bold" />
+  <!-- landing.html .land: two equal columns, 34px gutter, 34/38 padding. -->
+  <Grid ColumnDefinitions="*,34,*" Margin="38,34">
+    <!-- .actions is left-aligned at 272px. Stretching it inside the column centres the button
+         stack, which is what made the whole screen read as a centred splash. -->
+    <StackPanel Grid.Column="0" Spacing="7" MaxWidth="272" HorizontalAlignment="Left">
+      <TextBlock Classes="lwordmark"><Run Text="nft" /><Run Text="y" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
       <TextBlock Text="Asset Generator" Classes="tagline" />
 
       <TextBlock Text="CREATE" Classes="slbl" Margin="0,12,0,4" />
@@ -25,14 +28,18 @@
       <Button Classes="landing tbtn soon" Command="{Binding NewKitchenCommand}">
         <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconPlus}" /><TextBlock Classes="lbl" Text="New Kitchen…" /></StackPanel></Grid>
       </Button>
-      <Button Classes="landing tbtn" Command="{Binding NewRecipeCommand}">
-        <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconPlus}" /><TextBlock Classes="lbl" Text="New Recipe" /></StackPanel></Grid>
-      </Button>
-      <Button Classes="landing tbtn" Command="{Binding NewIngredientCommand}">
-        <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconPlus}" /><TextBlock Classes="lbl" Text="New Ingredient" /></StackPanel></Grid>
-      </Button>
 
-      <TextBlock Text="OPEN" Classes="slbl" Margin="0,12,0,4" />
+      <!-- .subrow: the two smaller creatables sit side by side under the primary tier. -->
+      <Grid ColumnDefinitions="*,7,*">
+        <Button Grid.Column="0" Classes="landing sub tbtn" Command="{Binding NewRecipeCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconPlus}" /><TextBlock Classes="lbl" Text="Recipe" /></StackPanel>
+        </Button>
+        <Button Grid.Column="2" Classes="landing sub tbtn" Command="{Binding NewIngredientCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconPlus}" /><TextBlock Classes="lbl" Text="Ingredient" /></StackPanel>
+        </Button>
+      </Grid>
+
+      <TextBlock Text="OPEN" Classes="slbl" Margin="0,20,0,4" />
       <Button Classes="landing tbtn" Command="{Binding OpenCookBookCommand}">
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconOpen}" /><TextBlock Classes="lbl" Text="Open CookBook…" /></StackPanel>
@@ -48,26 +55,52 @@
       <Button Classes="landing tbtn soon" Command="{Binding OpenSetCommand}">
         <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconOpen}" /><TextBlock Classes="lbl" Text="Open a cooked .set…" /></StackPanel></Grid>
       </Button>
-      <Button Classes="landing tbtn" Command="{Binding ShowHelpCommand}">
-        <Grid ColumnDefinitions="*,Auto"><TextBlock Grid.Column="0" Classes="lbl" Text="New to nfty? The cooking metaphor  →" /></Grid>
+
+      <Button Classes="learn" Command="{Binding ShowHelpCommand}">
+        <StackPanel Orientation="Horizontal" Spacing="7">
+          <TextBlock><Run Text="New to nfty? " /><Run Text="The cooking metaphor" Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold" /></TextBlock>
+          <Path Classes="ico sm" Data="{StaticResource IconArrowRight}" />
+        </StackPanel>
       </Button>
     </StackPanel>
-    <StackPanel Grid.Column="1" Spacing="2">
-      <TextBlock Text="RECENT" Classes="slbl" />
+
+    <StackPanel Grid.Column="2" Spacing="2">
+      <TextBlock Text="RECENT" Classes="slbl" Margin="0,0,0,8" />
       <ItemsControl ItemsSource="{Binding Recents}">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="m:RecentItem">
-            <Button Classes="tbtn" HorizontalAlignment="Stretch"
+            <Button Classes="rrow"
                     Command="{Binding $parent[ItemsControl].((vm:LandingViewModel)DataContext).OpenRecentCommand}"
-                    CommandParameter="{Binding}">
-              <StackPanel>
-                <TextBlock Text="{Binding Name}" />
-                <TextBlock Text="{Binding Meta}" Classes="muted" />
-              </StackPanel>
+                    CommandParameter="{Binding}"
+                    ToolTip.Tip="{Binding Path}">
+              <Grid ColumnDefinitions="22,*,Auto" >
+                <Border Grid.Column="0" Classes="rico">
+                  <Panel>
+                    <Path Classes="ico sm" Stroke="{DynamicResource AccentTextBrush}"
+                          Data="{StaticResource IconTypeIngredient}" IsVisible="{Binding Loose}" />
+                    <Path Classes="ico sm" Stroke="{DynamicResource AccentTextBrush}"
+                          Data="{StaticResource IconTypeCookBook}" IsVisible="{Binding !Loose}" />
+                  </Panel>
+                </Border>
+                <StackPanel Grid.Column="1" Margin="10,0" VerticalAlignment="Center">
+                  <TextBlock Text="{Binding Name}" Classes="rname" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Text="{Binding Meta}" Classes="rmeta" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <TextBlock Grid.Column="2" Text="{Binding Path}" Classes="rpath" TextTrimming="CharacterEllipsis" MaxWidth="150" />
+              </Grid>
             </Button>
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
+
+      <!-- .rzero: first run has no recents, and an unexplained blank half-screen reads as broken. -->
+      <Panel IsVisible="{Binding HasNoRecents}" Margin="0,4,0,0">
+        <Rectangle Classes="dashed" />
+        <StackPanel Margin="20,28" HorizontalAlignment="Center" VerticalAlignment="Center">
+          <TextBlock Text="Nothing here yet" Classes="zh" />
+          <TextBlock Classes="zp"><Run Text="Cookbooks you open will collect here. Start with " /><Run Text="New CookBook" Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold" /><Run Text="." /></TextBlock>
+        </StackPanel>
+      </Panel>
     </StackPanel>
   </Grid>
 </UserControl>

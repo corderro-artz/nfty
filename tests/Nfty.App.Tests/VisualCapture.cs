@@ -327,14 +327,26 @@ public class VisualCapture
     {
         if (Dir is null) return;   // inert unless explicitly capturing
 
-        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        foreach (var (variant, empty) in
+                 from v in new[] { ThemeVariant.Light, ThemeVariant.Dark }
+                 from e in new[] { false, true }
+                 select (v, e))
         {
-            var key = variant.Key.ToString()!.ToLowerInvariant();
+            var key = variant.Key.ToString()!.ToLowerInvariant() + (empty ? "-empty" : "");
             var nav = new FakeNav();
             var dialogs = new FakeDialogs();
             var notify = new FakeNotYetWired();
+            // Two frames per theme: the populated rows AND the first-run empty state. Capturing only
+            // the empty one left the .rrow template (icon tile, name/meta stack, path column) with no
+            // rendered evidence at all.
+            var recents = new RecentsService(Directory.CreateTempSubdirectory().FullName);
+            if (!empty)
+            {
+                recents.Add(new Models.RecentItem("VaporPets", "cookbook · 2 recipes", @"D:\art\VaporPets.cbk", false));
+                recents.Add(new Models.RecentItem("aura", "ingredient · 3 variants", @"D:\art\parts\aura.igt", true));
+            }
             var vm = new LandingViewModel(nav, dialogs, notify, new FilePickerService(),
-                new RecentsService(Directory.CreateTempSubdirectory().FullName),
+                recents,
                 new CookBookSession(),
                 book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(),
                     ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs), new CookBookSession(),

@@ -280,14 +280,111 @@
   </Style>
 
   <!-- Landing action buttons: uniform full-width, label left + hotkey right, slightly larger. -->
+  <!-- landing.html .lwordmark -->
+  <Style Selector="TextBlock.lwordmark">
+    <Setter Property="FontSize" Value="30" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LetterSpacing" Value="-0.6" />
+  </Style>
   <Style Selector="Button.landing">
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-    <Setter Property="Padding" Value="14,10" />
+    <Setter Property="Padding" Value="12,9" />
   </Style>
   <Style Selector="Button.landing TextBlock.lbl">
-    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- landing.html .subrow .tbtn: the secondary Create tier is two SMALLER side-by-side buttons,
+       not two more full-width rows. Declared after Button.landing so it wins on the shared
+       properties. -->
+  <Style Selector="Button.landing.sub">
+    <Setter Property="Padding" Value="10,7" />
+  </Style>
+  <Style Selector="Button.landing.sub TextBlock.lbl">
+    <Setter Property="FontSize" Value="11.5" />
+  </Style>
+
+  <!-- landing.html .learn: a bare text link, not a bordered button. -->
+  <Style Selector="Button.learn">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Margin" Value="0,22,0,0" />
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+  </Style>
+  <Style Selector="Button.learn /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <!-- landing.html .rrow: a borderless recents row that only gains chrome on hover. -->
+  <Style Selector="Button.rrow">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="Padding" Value="10,8" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Button.rrow /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.rrow:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+  </Style>
+  <!-- .rico: the 22px accent-wash type tile leading each row. -->
+  <Style Selector="Border.rico">
+    <Setter Property="Width" Value="22" />
+    <Setter Property="Height" Value="22" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.rname">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+  </Style>
+  <Style Selector="TextBlock.rmeta">
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="Margin" Value="0,1,0,0" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="TextBlock.rpath">
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="Opacity" Value="0.7" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- .rzero first-run empty state. The dashed stroke is a Rectangle, not the Border's own
+       BorderBrush: Avalonia's Border draws a solid edge only and has no dash array. -->
+  <Style Selector="Rectangle.dashed">
+    <Setter Property="Stroke" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="StrokeThickness" Value="1" />
+    <Setter Property="StrokeDashArray" Value="4,3" />
+    <Setter Property="RadiusX" Value="8" />
+    <Setter Property="RadiusY" Value="8" />
+  </Style>
+  <Style Selector="TextBlock.zh">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.zp">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="LineHeight" Value="19.2" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="Margin" Value="0,5,0,0" />
   </Style>
   <!-- The label is a literal Grid>TextBlock (not the ContentPresenter's implicit content
        TextBlock), so it never inherits the Button's own Foreground: the global "TextBlock" style
