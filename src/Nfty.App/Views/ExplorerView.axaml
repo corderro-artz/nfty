@@ -31,7 +31,7 @@
         <Button Content="{Binding AddLabel}" Command="{Binding AddCommand}" Classes="accent" />
         <Button Content="Delete" Command="{Binding DeleteSelectedCommand}" Classes="tbtn" />
         <Button Content="Import" Command="{Binding ImportCommand}" Classes="tbtn" />
-        <Button Content="🔒" Command="{Binding ToggleLockCommand}" Classes="icon" ToolTip.Tip="Toggle lock" />
+        <Button Command="{Binding ToggleLockCommand}" Classes="icon" ToolTip.Tip="Toggle lock"><Path Classes="ico" Data="{StaticResource IconLock}" /></Button>
       </StackPanel>
     </Border>
 

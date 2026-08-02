@@ -28,9 +28,9 @@
         <TextBlock Classes="wordmark" VerticalAlignment="Center"><Run Text="nft" /><Run Text="y" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
       </StackPanel>
       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
-        <Button Content="—" Command="{Binding MinimizeCommand}" Classes="icon" />
-        <Button Content="▢" Command="{Binding ToggleMaximizeCommand}" Classes="icon" />
-        <Button Content="✕" Command="{Binding CloseCommand}" Classes="icon danger" />
+        <Button Command="{Binding MinimizeCommand}" Classes="icon" ToolTip.Tip="Minimise"><Path Classes="ico" Data="{StaticResource IconMinimise}" /></Button>
+        <Button Command="{Binding ToggleMaximizeCommand}" Classes="icon" ToolTip.Tip="Maximise"><Path Classes="ico" Data="{StaticResource IconMaximise}" /></Button>
+        <Button Command="{Binding CloseCommand}" Classes="icon danger" ToolTip.Tip="Close"><Path Classes="ico" Data="{StaticResource IconClose}" /></Button>
       </StackPanel>
     </Grid>
 
@@ -52,11 +52,11 @@
       <TextBlock Grid.Column="0" Margin="16,0" VerticalAlignment="Center" Classes="muted"
                  Text="{Binding StatusMessage}" />
       <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0" VerticalAlignment="Center" Spacing="2">
-        <Button Content="−" Command="{Binding ZoomOutCommand}" Classes="icon" />
+        <Button Command="{Binding ZoomOutCommand}" Classes="icon" ToolTip.Tip="Zoom out"><Path Classes="ico  sm" Data="{StaticResource IconZoomOut}" /></Button>
         <TextBlock VerticalAlignment="Center" Width="46" TextAlignment="Center"
                    Text="{Binding Zoom, StringFormat='{}{0}%'}" />
-        <Button Content="+" Command="{Binding ZoomInCommand}" Classes="icon" />
-        <Button Content="?" Command="{Binding ShowHelpCommand}" Classes="icon" />
+        <Button Command="{Binding ZoomInCommand}" Classes="icon" ToolTip.Tip="Zoom in"><Path Classes="ico  sm" Data="{StaticResource IconZoomIn}" /></Button>
+        <Button Command="{Binding ShowHelpCommand}" Classes="icon" ToolTip.Tip="Help"><Path Classes="ico  sm" Data="{StaticResource IconHelp}" /></Button>
         <!-- Bottom-right resize grip (SystemDecorations=None gives no OS resize border). A Border
              with a filled Background is hit-testable across its whole rectangle — unlike a bare Path,
              whose thin strokes are the only draggable pixels. -->

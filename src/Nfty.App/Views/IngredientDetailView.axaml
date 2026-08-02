@@ -29,7 +29,7 @@
             <TextBlock Classes="muted" Text="{Binding KindText}" TextTrimming="CharacterEllipsis" />
             <TextBlock Classes="muted" Text="{Binding ColorwaysText}" TextTrimming="CharacterEllipsis" />
           </StackPanel>
-          <Button Grid.Column="2" Content="✏" Command="{Binding EditIngredientCommand}" Classes="accent" VerticalAlignment="Top" />
+          <Button Grid.Column="2" Command="{Binding EditIngredientCommand}" Classes="accent" VerticalAlignment="Top" ToolTip.Tip="Edit ingredient"><Path Classes="ico" Data="{StaticResource IconPencil}" /></Button>
         </Grid>
       </Border>
 

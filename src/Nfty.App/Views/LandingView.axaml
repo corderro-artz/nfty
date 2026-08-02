@@ -18,35 +18,35 @@
       <TextBlock Text="CREATE" Classes="slbl" Margin="0,12,0,4" />
       <Button Classes="landing accent" Command="{Binding NewCookBookCommand}">
         <Grid ColumnDefinitions="*,Auto">
-          <TextBlock Grid.Column="0" Classes="lbl" Text="＋  New CookBook" />
+          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconPlus}" /><TextBlock Classes="lbl" Text="New CookBook" /></StackPanel>
           <TextBlock Grid.Column="1" Classes="hk on-accent" Text="⌘N" />
         </Grid>
       </Button>
       <Button Classes="landing tbtn soon" Command="{Binding NewKitchenCommand}">
-        <Grid ColumnDefinitions="*,Auto"><TextBlock Grid.Column="0" Classes="lbl" Text="＋  New Kitchen…" /></Grid>
+        <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconPlus}" /><TextBlock Classes="lbl" Text="New Kitchen…" /></StackPanel></Grid>
       </Button>
       <Button Classes="landing tbtn" Command="{Binding NewRecipeCommand}">
-        <Grid ColumnDefinitions="*,Auto"><TextBlock Grid.Column="0" Classes="lbl" Text="＋  New Recipe" /></Grid>
+        <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconPlus}" /><TextBlock Classes="lbl" Text="New Recipe" /></StackPanel></Grid>
       </Button>
       <Button Classes="landing tbtn" Command="{Binding NewIngredientCommand}">
-        <Grid ColumnDefinitions="*,Auto"><TextBlock Grid.Column="0" Classes="lbl" Text="＋  New Ingredient" /></Grid>
+        <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconPlus}" /><TextBlock Classes="lbl" Text="New Ingredient" /></StackPanel></Grid>
       </Button>
 
       <TextBlock Text="OPEN" Classes="slbl" Margin="0,12,0,4" />
       <Button Classes="landing tbtn" Command="{Binding OpenCookBookCommand}">
         <Grid ColumnDefinitions="*,Auto">
-          <TextBlock Grid.Column="0" Classes="lbl" Text="↗  Open CookBook…" />
+          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconOpen}" /><TextBlock Classes="lbl" Text="Open CookBook…" /></StackPanel>
           <TextBlock Grid.Column="1" Classes="hk" Text="⌘O" />
         </Grid>
       </Button>
       <Button Classes="landing tbtn" Command="{Binding ImportCommand}">
         <Grid ColumnDefinitions="*,Auto">
-          <TextBlock Grid.Column="0" Classes="lbl" Text="↧  Import…" />
+          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconImport}" /><TextBlock Classes="lbl" Text="Import…" /></StackPanel>
           <TextBlock Grid.Column="1" Classes="hk" Text="⌘I" />
         </Grid>
       </Button>
       <Button Classes="landing tbtn soon" Command="{Binding OpenSetCommand}">
-        <Grid ColumnDefinitions="*,Auto"><TextBlock Grid.Column="0" Classes="lbl" Text="↗  Open a cooked .set…" /></Grid>
+        <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconOpen}" /><TextBlock Classes="lbl" Text="Open a cooked .set…" /></StackPanel></Grid>
       </Button>
       <Button Classes="landing tbtn" Command="{Binding ShowHelpCommand}">
         <Grid ColumnDefinitions="*,Auto"><TextBlock Grid.Column="0" Classes="lbl" Text="New to nfty? The cooking metaphor  →" /></Grid>

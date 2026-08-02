@@ -20,7 +20,7 @@
             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
               <TextBlock Classes="muted" VerticalAlignment="Center"
                          Text="{Binding RollSeed, StringFormat='Seed {0}'}" />
-              <Button Classes="dice" Content="⚄" Command="{Binding RerollCommand}" />
+              <Button Classes="dice" Command="{Binding RerollCommand}" ToolTip.Tip="Reroll"><Path Classes="ico" Data="{StaticResource IconReroll}" /></Button>
             </StackPanel>
           </StackPanel>
         </Grid>

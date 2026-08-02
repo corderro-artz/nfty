@@ -162,6 +162,28 @@
     <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
   </Style>
 
+  <!-- Icon system (audit Critical #1): the mockups draw glyphs as 24-unit stroked SVG paths, so an
+       icon is a Path stroked with the current text colour, never a font glyph — emoji injected
+       off-palette colour and missing glyphs rendered as tofu. Stretch=Uniform maps the 24-unit
+       geometry into the box below. -->
+  <Style Selector="Path.ico">
+    <Setter Property="Width" Value="14" />
+    <Setter Property="Height" Value="14" />
+    <Setter Property="Stretch" Value="Uniform" />
+    <Setter Property="Fill" Value="Transparent" />
+    <Setter Property="Stroke" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="StrokeThickness" Value="1.6" />
+    <Setter Property="StrokeLineCap" Value="Round" />
+    <Setter Property="StrokeJoin" Value="Round" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Path.ico.sm"><Setter Property="Width" Value="13" /><Setter Property="Height" Value="13" /></Style>
+  <Style Selector="Path.ico.lg"><Setter Property="Width" Value="18" /><Setter Property="Height" Value="18" /></Style>
+  <!-- On an accent fill the icon must switch to the on-accent ink, like the label does. -->
+  <Style Selector="Button.accent Path.ico"><Setter Property="Stroke" Value="{DynamicResource OnAccentBrush}" /></Style>
+  <!-- Strong-ink icons (window chrome, primary affordances) -->
+  <Style Selector="Path.ico.strong"><Setter Property="Stroke" Value="{DynamicResource FgBrush}" /></Style>
+
   <Style Selector="Button.icon">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />

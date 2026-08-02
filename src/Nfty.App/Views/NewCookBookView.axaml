@@ -16,7 +16,7 @@
       <TextBox Watermark="Symbol (optional)" Text="{Binding Symbol}" MaxLength="255" />
       <StackPanel Orientation="Horizontal" Spacing="8">
         <NumericUpDown Value="{Binding Width}" Minimum="1" Width="120" />
-        <ToggleButton IsChecked="{Binding AspectLocked}" Content="🔗" />
+        <ToggleButton IsChecked="{Binding AspectLocked}" ToolTip.Tip="Lock aspect ratio"><Path Classes="ico" Data="{StaticResource IconLink}" /></ToggleButton>
         <NumericUpDown Value="{Binding Height}" Minimum="1" Width="120" />
       </StackPanel>
       <TextBox Watermark="Description" Text="{Binding Description}" AcceptsReturn="True" Height="70" />
