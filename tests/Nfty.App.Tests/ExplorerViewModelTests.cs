@@ -115,10 +115,14 @@ public class ExplorerViewModelTests
     }
 
     [Fact]
-    public void Import_reports_not_yet_wired()
+    // Contract changed deliberately: Explorer Import no longer claims to be unwired (importing INTO
+    // an open cookbook isn't built, but importing a loose file IS — from the start screen), so it now
+    // says something true through the status channel instead. See ExplorerAddGuidanceTests.
+    public void Import_explains_itself_instead_of_claiming_to_be_unwired()
     {
         using var vm = Make(out var n);
-        vm.ImportCommand.Execute(null); Assert.Equal("Import", n.Last);
+        vm.ImportCommand.Execute(null);
+        Assert.Null(n.Last);   // not the "not wired" channel
     }
 
     [AvaloniaFact]
