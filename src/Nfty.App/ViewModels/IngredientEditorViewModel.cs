@@ -13,6 +13,7 @@ using Nfty.Core.Editing;
 using Nfty.Core.Formats;
 using Nfty.Core.Model;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.PixelFormats;
 
 namespace Nfty.App.ViewModels;
@@ -265,11 +266,11 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         RebuildSurfaces();
     }
 
-    partial void OnSelectedVariantChanged(EditorVariant? oldValue, EditorVariant? value)
+    partial void OnSelectedVariantChanged(EditorVariant? oldValue, EditorVariant? newValue)
     {
         // The filmstrip is an ItemsControl, so the selected treatment rides on the item.
         if (oldValue is not null) oldValue.IsSelected = false;
-        if (value is not null) value.IsSelected = true;
+        if (newValue is not null) newValue.IsSelected = true;
         RebuildSurfaces();
         UndoCommand?.NotifyCanExecuteChanged();
         RedoCommand?.NotifyCanExecuteChanged();
@@ -375,19 +376,17 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
                 return;   // img itself is disposed by the finally below
             }
 
-            // Dynamic/static: the PNG becomes the variant's value-map. A value-map is grayscale by
-            // construction, so any colour in the source is discarded - and ValueMap.FromImage takes
-            // the RED channel as the value rather than a perceptual luminance, so a saturated blue
-            // imports as near-black. Silently swallowing that loses the user's art with no signal, so
-            // say it plainly, once, at the moment it happens.
-            if (HasColour(img))
-            {
-                await ShowErrorAsync("Colour discarded",
-                    "This layer is a value-map: it stores lightness only, and its colour is chosen at "
-                    + "generation time. The imported image has colour, and only its red channel was "
-                    + "kept as the value - so strongly coloured areas may import much darker than they "
-                    + "look. Import into a custom layer instead to keep the image exactly as-is.");
-            }
+            // Dynamic/static: the PNG becomes the variant's value-map, which stores lightness only,
+            // so a colour source has to be collapsed to one channel.
+            //
+            // Desaturate FIRST rather than handing the colour image straight to ValueMap.FromImage.
+            // FromImage reads the RED channel - exact and lossless for its real job, round-tripping
+            // this layer's own already-grayscale PNG, but arbitrary for foreign art: pure green would
+            // import as pure BLACK and pure red as pure WHITE, though both read as mid-bright to the
+            // eye. Grayscale() is ITU-R BT.709 luminance, so R==G==B afterwards and FromImage's own
+            // contract is left exactly as it was.
+            bool hadColour = HasColour(img);
+            if (hadColour) img.Mutate(x => x.Grayscale());
 
             var src = ValueMap.FromImage(img);
             for (int y = 0; y < canvas.Height; y++)
@@ -395,6 +394,15 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
                     target.Map.Set(x, y, src.GetValue(x, y), src.GetAlpha(x, y));
             _history[target.Id] = new EditHistory();   // old snapshots describe pixels that are gone
             UndoCommand.NotifyCanExecuteChanged();
+
+            if (hadColour)
+            {
+                await ShowErrorAsync("Colour flattened",
+                    "This layer is a value-map: it stores lightness only, and its colour is chosen at "
+                    + "generation time. The imported image was converted to its lightness, so its own "
+                    + "colours are gone. Import into a custom layer instead to keep the image exactly "
+                    + "as-is.");
+            }
             RedoCommand.NotifyCanExecuteChanged();
             IsDirty = true;
             RebuildSurfaces();

@@ -52,10 +52,13 @@ document what remains.
    **ring handle** (the visible half) is done.
 3. **Dual-range control** — Avalonia has none. Two sliders are laid over a gradient band with
    transparent tracks so only their ring handles show. Close to the mockup; not a real dual control.
-4. **`ValueMap.FromImage` keeps the RED channel**, not luminance (`src/Nfty.Core/Editing/ValueMap.cs`).
-   A colour import therefore darkens saturated hues. The GUI now **warns accurately** at import;
-   the Core conversion was deliberately left alone (Core change, would alter existing art).
-   **Open question for the user.**
+4. ~~`ValueMap.FromImage` keeps the RED channel~~ — **RESOLVED 2026-08-02.** `FromImage` still reads
+   R, which is exact and lossless for its real job (round-tripping this layer's own grayscale PNG).
+   The colour-import path in the editor now desaturates with ImageSharp `Grayscale()` (BT.709)
+   *before* calling it, so foreign art collapses by luminance rather than by "how red is it" — pure
+   green used to import as pure black. Fixed at the caller, so Core's contract and its test are
+   untouched. Note the earlier claim that changing this would alter existing art was wrong: existing
+   `.igt`s already store converted grayscale, and for grayscale input R equals luminance.
 5. Icons traced from multi-path SVGs drop fill-only accent details (cookbook bookmark tab, recipe
    corner dot, marquee dash) — `StreamGeometry` is single-stroke. Noted per icon in `Icons.axaml`.
 

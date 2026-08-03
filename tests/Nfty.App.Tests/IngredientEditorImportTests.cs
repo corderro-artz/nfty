@@ -388,13 +388,16 @@ public class IngredientEditorImportTests
     }
 
     [AvaloniaFact]
-    // A value-map stores lightness only, and the conversion keeps the RED channel - so a saturated
-    // blue imports as near-black. That is a surprising, unrecoverable loss of the user's art, so the
-    // import must say so rather than silently swallow it.
-    public async Task Importing_a_colour_image_into_a_value_map_warns_that_colour_was_discarded()
+    // A value-map stores lightness only, so a colour source must be collapsed to one channel. Handing
+    // it straight to ValueMap.FromImage would keep the RED channel - fine for round-tripping this
+    // layer's own grayscale PNG, but arbitrary for foreign art. The import desaturates first, and says
+    // that the colour is gone.
+    public async Task Importing_a_colour_image_into_a_value_map_uses_luminance_and_says_so()
     {
         var (path, session, recipe, ing) = IngredientEditorSaveTests.OnDisk();   // dynamic 8x8
-        var pngPath = WritePng(8, 8, 20, 40, 220);                               // saturated blue
+        // Pure green is the case that exposes the difference: the red channel calls it BLACK, while
+        // it is the brightest of the three primaries to the eye.
+        var pngPath = WritePng(8, 8, 0, 255, 0);
         var dialogs = new RecordingDialogs();
         try
         {
@@ -403,16 +406,17 @@ public class IngredientEditorImportTests
 
             await vm.ImportImageCommand.ExecuteAsync(null);
 
-            Assert.Equal("Colour discarded", dialogs.ErrorTitle);
-            Assert.Contains("red channel", dialogs.ErrorMessage);
-            Assert.Equal(20, vm.ValueAt(4, 4));   // and the value really is the red channel, not luminance
+            Assert.Equal("Colour flattened", dialogs.ErrorTitle);
+            // BT.709 luminance of pure green is ~182. The red channel would have given 0.
+            Assert.InRange(vm.ValueAt(4, 4), 175, 190);
             vm.Dispose();
         }
         finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
     }
 
     [AvaloniaFact]
-    // The counterpart: a genuinely grayscale source loses nothing, so it must NOT nag.
+    // The counterpart: a genuinely grayscale source loses nothing, so it must NOT nag - and must
+    // still round-trip EXACTLY, since desaturating an already-grey pixel has to be a no-op.
     public async Task Importing_a_grayscale_image_into_a_value_map_does_not_warn()
     {
         var (path, session, recipe, ing) = IngredientEditorSaveTests.OnDisk();
