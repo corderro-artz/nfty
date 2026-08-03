@@ -28,6 +28,10 @@ public partial class EditorVariant : ObservableObject
     [ObservableProperty] private double _weight;
     [ObservableProperty] private Bitmap _thumbnail;
 
+    /// <summary>Drives the .vcard selected treatment. The filmstrip is an ItemsControl (not a
+    /// Selector), so selection has to travel on the item itself.</summary>
+    [ObservableProperty] private bool _isSelected;
+
     public EditorVariant(string id, string name, double weight, Bitmap thumbnail)
     { Id = id; _name = name; _weight = weight; _thumbnail = thumbnail; }
 }
@@ -156,6 +160,32 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         set { if (value) Mode = LayerKind.Dynamic; }
     }
 
+    /// <summary>Per-tool flags for the toolstrip's active state. The old vertical text-button column
+    /// showed no selection at all, so the user could not tell which tool was armed.</summary>
+    public bool IsToolBrush => ActiveTool == EditorTool.Brush;
+    public bool IsToolEraser => ActiveTool == EditorTool.Eraser;
+    public bool IsToolRectangle => ActiveTool == EditorTool.Rectangle;
+    public bool IsToolCircle => ActiveTool == EditorTool.Circle;
+    public bool IsToolTriangle => ActiveTool == EditorTool.Triangle;
+    public bool IsToolSelect => ActiveTool == EditorTool.Select;
+    public bool IsToolFill => ActiveTool == EditorTool.Fill;
+
+    partial void OnActiveToolChanged(EditorTool value)
+    {
+        OnPropertyChanged(nameof(IsToolBrush));
+        OnPropertyChanged(nameof(IsToolEraser));
+        OnPropertyChanged(nameof(IsToolRectangle));
+        OnPropertyChanged(nameof(IsToolCircle));
+        OnPropertyChanged(nameof(IsToolTriangle));
+        OnPropertyChanged(nameof(IsToolSelect));
+        OnPropertyChanged(nameof(IsToolFill));
+    }
+
+    /// <summary>The segmented Dynamic/Static control is two Buttons, not two RadioButtons, so it
+    /// needs commands rather than two-way IsChecked bindings.</summary>
+    [RelayCommand] private void SetModeDynamic() => Mode = LayerKind.Dynamic;
+    [RelayCommand] private void SetModeStatic() => Mode = LayerKind.Static;
+
     public IngredientEditorViewModel(LoadedIngredient ing, LoadedRecipe recipe, LoadedCookBook book,
         IImageBridge bridge, INavigationService nav, INotYetWired notify, ICookBookSession session,
         IDialogService dialogs, IFilePickerService picker, string? looseSavePath = null)
@@ -235,8 +265,11 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         RebuildSurfaces();
     }
 
-    partial void OnSelectedVariantChanged(EditorVariant? value)
+    partial void OnSelectedVariantChanged(EditorVariant? oldValue, EditorVariant? value)
     {
+        // The filmstrip is an ItemsControl, so the selected treatment rides on the item.
+        if (oldValue is not null) oldValue.IsSelected = false;
+        if (value is not null) value.IsSelected = true;
         RebuildSurfaces();
         UndoCommand?.NotifyCanExecuteChanged();
         RedoCommand?.NotifyCanExecuteChanged();
@@ -276,11 +309,29 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         finally { _syncingSelection = false; }   // never latch the guard on if an assignment throws
     }
 
-    partial void OnHueMinChanged(double value) => RebuildSurfaces();
-    partial void OnHueMaxChanged(double value) => RebuildSurfaces();
-    partial void OnSatMinChanged(double value) => RebuildSurfaces();
-    partial void OnSatMaxChanged(double value) => RebuildSurfaces();
+    partial void OnHueMinChanged(double value) { RebuildSurfaces(); OnPropertyChanged(nameof(HueRangeText)); }
+    partial void OnHueMaxChanged(double value) { RebuildSurfaces(); OnPropertyChanged(nameof(HueRangeText)); }
+    partial void OnSatMinChanged(double value) { RebuildSurfaces(); OnPropertyChanged(nameof(SatRangeText)); }
+    partial void OnSatMaxChanged(double value) { RebuildSurfaces(); OnPropertyChanged(nameof(SatRangeText)); }
     partial void OnFixedColorChanged(string value) => RebuildSurfaces();
+    partial void OnHueQuantizeChanged(int value) => OnPropertyChanged(nameof(ApproxColorsText));
+    partial void OnSatQuantizeChanged(int value) => OnPropertyChanged(nameof(ApproxColorsText));
+    partial void OnBrushValueChanged(int value) => OnPropertyChanged(nameof(BrushSwatch));
+
+    /// <summary>Live readouts beside each range control (mockup .cv), so the sliders' current span is
+    /// legible without reading the handles' positions off the track.</summary>
+    public string HueRangeText => $"{HueMin:0}–{HueMax:0}°";
+    public string SatRangeText => $"{SatMin:0}–{SatMax:0}%";
+
+    /// <summary>How many distinct colours the quantize settings actually admit - the product of the
+    /// two bucket counts. This is the number that decides how much of the colour space survives into
+    /// DNA, so the editor states it rather than leaving the user to multiply two steppers.</summary>
+    public string ApproxColorsText => $"≈ {HueQuantize * SatQuantize} colors";
+
+    /// <summary>The paint value as a swatch (mockup .swatch). A value-map is grayscale, so the brush
+    /// swatch is the grey it will actually lay down.</summary>
+    public Avalonia.Media.Color BrushSwatch =>
+        Avalonia.Media.Color.FromRgb((byte)BrushValue, (byte)BrushValue, (byte)BrushValue);
 
     [RelayCommand] private void SelectTool(EditorTool tool) => ActiveTool = tool;
 

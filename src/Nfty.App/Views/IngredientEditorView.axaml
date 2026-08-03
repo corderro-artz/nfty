@@ -3,132 +3,341 @@
              xmlns:vm="using:Nfty.App.ViewModels"
              x:Class="Nfty.App.Views.IngredientEditorView"
              x:DataType="vm:IngredientEditorViewModel">
-  <Grid RowDefinitions="Auto,*,Auto" Margin="12">
-    <!-- Variant filmstrip toolbar -->
-    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
-      <Button Content="Add variant" Command="{Binding AddVariantCommand}" Classes="tbtn" />
-      <Button Content="Duplicate" Command="{Binding DuplicateVariantCommand}" Classes="tbtn" />
-      <Button Content="Delete" Command="{Binding DeleteVariantCommand}" Classes="tbtn" />
-      <Button Content="Import…" Command="{Binding ImportImageCommand}" Classes="tbtn" />
-    </StackPanel>
+  <!-- ingredient-editor.html .epanes: variants rail / canvas / colorize rail, full-bleed and divided
+       by 1px rules, each opening with a 41px pane header. This screen was previously a functional
+       skeleton - stacked default primitives in three fixed columns - rather than the designed one. -->
+  <Grid RowDefinitions="*,Auto">
+    <Grid Grid.Row="0" ColumnDefinitions="262,*,300">
 
-    <Grid Grid.Row="1" ColumnDefinitions="160,180,*,260">
-      <!-- Variant filmstrip -->
-      <StackPanel Grid.Column="0" Spacing="6" Margin="0,0,12,0">
-        <TextBlock Text="VARIANTS" Classes="pane-h" />
-        <ItemsControl ItemsSource="{Binding Variants}">
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:EditorVariant">
-              <Button Classes="tbtn" HorizontalAlignment="Stretch" Margin="0,0,0,4"
-                      Command="{Binding $parent[ItemsControl].((vm:IngredientEditorViewModel)DataContext).SelectVariantCommand}"
-                      CommandParameter="{Binding}">
-                <StackPanel>
-                  <Image Source="{Binding Thumbnail}" Width="32" Height="32" />
-                  <TextBlock Text="{Binding Name}" />
-                  <TextBlock Text="{Binding Weight}" Classes="muted" />
+      <!-- ============ Variants rail ============ -->
+      <Border Grid.Column="0" Classes="pane">
+        <Grid RowDefinitions="Auto,*">
+          <Border Grid.Row="0" Classes="pane-hrow">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Grid.Column="0" Text="VARIANTS" Classes="pane-h" VerticalAlignment="Center" />
+              <TextBlock Grid.Column="1" Classes="hcount" Text="{Binding Variants.Count}" />
+            </Grid>
+          </Border>
+
+          <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="12" Spacing="7">
+              <ItemsControl ItemsSource="{Binding Variants}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:EditorVariant">
+                    <!-- .vcard: thumb + name + weight, horizontal, with a real selected state. -->
+                    <Button Classes="vcard" Margin="0,0,0,7"
+                            Classes.sel="{Binding IsSelected}"
+                            Command="{Binding $parent[ItemsControl].((vm:IngredientEditorViewModel)DataContext).SelectVariantCommand}"
+                            CommandParameter="{Binding}">
+                      <Grid ColumnDefinitions="38,*">
+                        <Border Grid.Column="0" Width="38" Height="38" CornerRadius="{DynamicResource RadiusSm}"
+                                Background="{DynamicResource TileBrush}" ClipToBounds="True">
+                          <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+                        </Border>
+                        <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Spacing="2">
+                          <TextBlock Text="{Binding Name}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Text="{Binding Weight, StringFormat='weight {0}'}" Classes="rmeta" />
+                        </StackPanel>
+                      </Grid>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <!-- .vaddbtn: the dashed footer that adds a variant. -->
+              <Panel>
+                <Rectangle Classes="dashed btn" />
+                <Button Command="{Binding AddVariantCommand}" Classes="soon tbtn"
+                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
+                  <StackPanel Orientation="Horizontal" Spacing="7">
+                    <Path Classes="ico sm" Data="{StaticResource IconPlus}" />
+                    <TextBlock Text="Add Variant" />
+                  </StackPanel>
+                </Button>
+              </Panel>
+
+              <StackPanel Spacing="6" Margin="0,8,0,0"
+                          IsEnabled="{Binding SelectedVariant, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <TextBlock Text="NAME" Classes="plabel" />
+                <TextBox Text="{Binding SelectedName}" />
+                <TextBlock Text="WEIGHT" Classes="plabel" Margin="0,6,0,0" />
+                <NumericUpDown Value="{Binding SelectedWeight}" Minimum="0.01" Increment="1" />
+              </StackPanel>
+
+              <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,4,0,0">
+                <Button Content="Duplicate" Command="{Binding DuplicateVariantCommand}" Classes="tbtn" />
+                <Button Content="Delete" Command="{Binding DeleteVariantCommand}" Classes="tbtn" />
+              </StackPanel>
+              <Button Command="{Binding ImportImageCommand}" Classes="tbtn" HorizontalAlignment="Stretch"
+                      HorizontalContentAlignment="Center">
+                <StackPanel Orientation="Horizontal" Spacing="7">
+                  <Path Classes="ico sm" Data="{StaticResource IconImport}" />
+                  <TextBlock Text="Import image…" />
                 </StackPanel>
               </Button>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-
-        <TextBlock Text="NAME" Classes="plabel" Margin="0,8,0,0" />
-        <TextBox Text="{Binding SelectedName}"
-                 IsEnabled="{Binding SelectedVariant, Converter={x:Static ObjectConverters.IsNotNull}}" />
-        <TextBlock Text="WEIGHT" Classes="plabel" Margin="0,6,0,0" />
-        <NumericUpDown Value="{Binding SelectedWeight}" Minimum="0.01" Increment="1"
-                       IsEnabled="{Binding SelectedVariant, Converter={x:Static ObjectConverters.IsNotNull}}" />
-      </StackPanel>
-
-      <!-- Tool strip: disabled for custom ingredients (import-only, cannot round-trip a paint edit). -->
-      <StackPanel Grid.Column="1" Spacing="6" Margin="0,0,12,0" IsEnabled="{Binding CanPaint}">
-        <Button Content="Brush" Command="{Binding SelectToolCommand}"
-                CommandParameter="{x:Static vm:EditorTool.Brush}" Classes="tbtn" HorizontalAlignment="Stretch" />
-        <Button Content="Eraser" Command="{Binding SelectToolCommand}"
-                CommandParameter="{x:Static vm:EditorTool.Eraser}" Classes="tbtn" HorizontalAlignment="Stretch" />
-        <Button Content="Rectangle" Command="{Binding SelectToolCommand}"
-                CommandParameter="{x:Static vm:EditorTool.Rectangle}" Classes="tbtn" HorizontalAlignment="Stretch" />
-        <Button Content="Circle" Command="{Binding SelectToolCommand}"
-                CommandParameter="{x:Static vm:EditorTool.Circle}" Classes="tbtn" HorizontalAlignment="Stretch" />
-        <Button Content="Triangle" Command="{Binding SelectToolCommand}"
-                CommandParameter="{x:Static vm:EditorTool.Triangle}" Classes="tbtn" HorizontalAlignment="Stretch" />
-        <Button Content="Select" Command="{Binding SelectToolCommand}"
-                CommandParameter="{x:Static vm:EditorTool.Select}" Classes="tbtn" HorizontalAlignment="Stretch" />
-        <Button Content="Fill" Command="{Binding SelectToolCommand}"
-                CommandParameter="{x:Static vm:EditorTool.Fill}" Classes="tbtn" HorizontalAlignment="Stretch" />
-
-        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,8,0,0">
-          <Button Command="{Binding UndoCommand}" Classes="tbtn" ToolTip.Tip="Undo"><Path Classes="ico" Data="{StaticResource IconUndo}" /></Button>
-          <Button Command="{Binding RedoCommand}" Classes="tbtn" ToolTip.Tip="Redo"><Path Classes="ico" Data="{StaticResource IconRedo}" /></Button>
-        </StackPanel>
-
-        <TextBlock Text="VALUE" Classes="plabel" Margin="0,8,0,0" />
-        <Slider Value="{Binding BrushValue}" Minimum="0" Maximum="255" />
-
-        <TextBlock Text="BRUSH SIZE" Classes="plabel" Margin="0,8,0,0" />
-        <NumericUpDown Value="{Binding BrushSize}" Minimum="1" Width="110" HorizontalAlignment="Left" />
-      </StackPanel>
-
-      <!-- Canvas -->
-      <Border Grid.Column="2" Name="CanvasHost" Background="{DynamicResource TileBrush}"
-              BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1" CornerRadius="6">
-        <Grid>
-          <Image x:Name="CanvasImage" Source="{Binding Canvas}" Stretch="Uniform" Margin="12"
-                 IsVisible="{Binding ShowPaintCanvas}" />
-          <!-- "Fill pane with preview": the colorized result takes over the canvas pane. -->
-          <Image Source="{Binding Preview}" Stretch="Uniform" Margin="12"
-                 IsVisible="{Binding PreviewFillsPane}" />
+            </StackPanel>
+          </ScrollViewer>
         </Grid>
       </Border>
 
-      <!-- Colorize rail -->
-      <StackPanel Grid.Column="3" Spacing="8" Margin="12,0,0,0">
-        <TextBlock Text="COLORIZE" Classes="pane-h" />
-        <StackPanel Orientation="Horizontal" Spacing="16">
-          <RadioButton Content="Dynamic" GroupName="Mode" IsChecked="{Binding IsModeDynamic}" />
-          <RadioButton Content="Static" GroupName="Mode" IsChecked="{Binding IsModeStatic}" />
-        </StackPanel>
+      <!-- ============ Canvas ============ -->
+      <Border Grid.Column="1" Classes="pane">
+        <Grid RowDefinitions="Auto,*">
+          <!-- .toolstrip: horizontal 30px icon bar with an ACTIVE tool, a value ramp and a swatch. -->
+          <Border Grid.Row="0" Classes="pane-hrow" Padding="12,0" IsEnabled="{Binding CanPaint}">
+            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+              <Button Classes="ttool" Classes.on="{Binding IsToolBrush}" ToolTip.Tip="Brush"
+                      Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Brush}">
+                <Path Classes="ico sm" Data="{StaticResource IconPencil}" /></Button>
+              <Button Classes="ttool" Classes.on="{Binding IsToolEraser}" ToolTip.Tip="Eraser (writes alpha)"
+                      Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Eraser}">
+                <Path Classes="ico sm" Data="{StaticResource IconEraser}" /></Button>
+              <Button Classes="ttool" Classes.on="{Binding IsToolFill}" ToolTip.Tip="Fill"
+                      Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Fill}">
+                <Path Classes="ico sm" Data="{StaticResource IconFill}" /></Button>
 
-        <StackPanel Spacing="6" IsVisible="{Binding ShowColourRange}">
-          <TextBlock Text="HUE RANGE" Classes="plabel" />
-          <Slider Value="{Binding HueMin}" Minimum="0" Maximum="360" />
-          <Slider Value="{Binding HueMax}" Minimum="0" Maximum="360" />
-          <TextBlock Text="SATURATION RANGE" Classes="plabel" />
-          <Slider Value="{Binding SatMin}" Minimum="0" Maximum="100" />
-          <Slider Value="{Binding SatMax}" Minimum="0" Maximum="100" />
-          <StackPanel Orientation="Horizontal" Spacing="8">
-            <StackPanel Spacing="2">
-              <TextBlock Text="HUE BUCKETS" Classes="plabel" />
-              <NumericUpDown Value="{Binding HueQuantize}" Minimum="1" Width="110" />
+              <Border Classes="tsep" />
+
+              <Button Classes="ttool" Classes.on="{Binding IsToolRectangle}" ToolTip.Tip="Rectangle"
+                      Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Rectangle}">
+                <Path Classes="ico sm" Data="{StaticResource IconRect}" /></Button>
+              <Button Classes="ttool" Classes.on="{Binding IsToolCircle}" ToolTip.Tip="Circle"
+                      Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Circle}">
+                <Path Classes="ico sm" Data="{StaticResource IconCircle}" /></Button>
+              <Button Classes="ttool" Classes.on="{Binding IsToolTriangle}" ToolTip.Tip="Triangle"
+                      Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Triangle}">
+                <Path Classes="ico sm" Data="{StaticResource IconTriangle}" /></Button>
+              <Button Classes="ttool" Classes.on="{Binding IsToolSelect}" ToolTip.Tip="Select region"
+                      Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Select}">
+                <Path Classes="ico sm" Data="{StaticResource IconSelect}" /></Button>
+
+              <Border Classes="tsep" />
+
+              <Button Classes="ttool" Command="{Binding UndoCommand}" ToolTip.Tip="Undo">
+                <Path Classes="ico sm" Data="{StaticResource IconUndo}" /></Button>
+              <Button Classes="ttool" Command="{Binding RedoCommand}" ToolTip.Tip="Redo">
+                <Path Classes="ico sm" Data="{StaticResource IconRedo}" /></Button>
+
+              <Border Classes="tsep" />
+
+              <!-- .ramp: the value gradient the brush samples, and the grey it will lay down. -->
+              <Panel Width="96" VerticalAlignment="Center">
+                <Border Classes="ramp">
+                  <Border.Background>
+                    <LinearGradientBrush StartPoint="0%,50%" EndPoint="100%,50%">
+                      <GradientStop Color="#FF000000" Offset="0" />
+                      <GradientStop Color="#FFFFFFFF" Offset="1" />
+                    </LinearGradientBrush>
+                  </Border.Background>
+                </Border>
+                <Slider Value="{Binding BrushValue}" Minimum="0" Maximum="255"
+                        Classes="overlay" ToolTip.Tip="Paint value" />
+              </Panel>
+              <Border Classes="swatch">
+                <Border.Background><SolidColorBrush Color="{Binding BrushSwatch}" /></Border.Background>
+              </Border>
+
+              <Border Classes="tsep" />
+              <!-- No "SIZE" caption: the strip's full contents already exceed the canvas pane at the
+                   window's default width, and a clipped stepper is worse than an implicit one. The
+                   tooltip carries the meaning. -->
+              <NumericUpDown Value="{Binding BrushSize}" Minimum="1" Width="96"
+                             ToolTip.Tip="Brush size (px)" />
             </StackPanel>
-            <StackPanel Spacing="2">
-              <TextBlock Text="SAT BUCKETS" Classes="plabel" />
-              <NumericUpDown Value="{Binding SatQuantize}" Minimum="1" Width="110" />
+          </Border>
+
+          <!-- .canvas-wrap: checkerboard backdrop, 320px art tile, blip preview over the corner. -->
+          <Panel Grid.Row="1">
+            <Panel.Background>
+              <!-- The mockup's 18px repeating-conic checkerboard. -->
+              <DrawingBrush TileMode="Tile" SourceRect="0,0,36,36" DestinationRect="0,0,36,36">
+                <DrawingBrush.Drawing>
+                  <DrawingGroup>
+                    <GeometryDrawing Brush="{DynamicResource BgAltBrush}" Geometry="M0,0 H36 V36 H0 Z" />
+                    <GeometryDrawing Brush="{DynamicResource BgAlt2Brush}" Geometry="M0,0 H18 V18 H0 Z" />
+                    <GeometryDrawing Brush="{DynamicResource BgAlt2Brush}" Geometry="M18,18 H36 V36 H18 Z" />
+                  </DrawingGroup>
+                </DrawingBrush.Drawing>
+              </DrawingBrush>
+            </Panel.Background>
+
+            <Border Name="CanvasHost" Width="320" Height="320" CornerRadius="10"
+                    BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1"
+                    BoxShadow="{DynamicResource WinShadow}" ClipToBounds="True"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+              <Panel>
+                <Image x:Name="CanvasImage" Source="{Binding Canvas}" Stretch="Uniform"
+                       IsVisible="{Binding ShowPaintCanvas}" />
+                <!-- "Fill pane with preview": the colorized result takes over the tile. -->
+                <Image Source="{Binding Preview}" Stretch="Uniform" IsVisible="{Binding PreviewFillsPane}" />
+              </Panel>
+            </Border>
+
+            <!-- .blip: the colorized preview sits ON the canvas' bottom-right corner rather than
+                 stacked in the rail under the controls. -->
+            <Border Width="104" Height="104" CornerRadius="10" ClipToBounds="True"
+                    BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1"
+                    Background="{DynamicResource TileBrush}" BoxShadow="{DynamicResource WinShadow}"
+                    HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,26,26"
+                    IsVisible="{Binding ShowPaintCanvas}">
+              <Panel>
+                <Image Source="{Binding Preview}" Stretch="UniformToFill" />
+                <Border VerticalAlignment="Bottom" Height="26" Background="{DynamicResource ScrimBrush}">
+                  <Grid ColumnDefinitions="*,Auto,Auto" Margin="7,0">
+                    <TextBlock Grid.Column="0" Text="PREVIEW" Classes="plabel" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Classes="icon" Padding="2" Command="{Binding RerollPreviewCommand}"
+                            ToolTip.Tip="Reroll sampled colour">
+                      <Path Classes="ico xs" Data="{StaticResource IconReroll}" /></Button>
+                    <Button Grid.Column="2" Classes="icon" Padding="2" Command="{Binding FillPanePreviewCommand}"
+                            ToolTip.Tip="Fill pane with preview">
+                      <Path Classes="ico xs" Data="{StaticResource IconFillPane}" /></Button>
+                  </Grid>
+                </Border>
+              </Panel>
+            </Border>
+          </Panel>
+        </Grid>
+      </Border>
+
+      <!-- ============ Colorize rail ============ -->
+      <Border Grid.Column="2" Classes="pane last">
+        <Grid RowDefinitions="Auto,*">
+          <Border Grid.Row="0" Classes="pane-hrow">
+            <TextBlock Text="COLORIZE" Classes="pane-h" VerticalAlignment="Center" />
+          </Border>
+
+          <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="14" Spacing="14">
+              <!-- .seg: a segmented tray, not two loose radio buttons. -->
+              <Border Classes="seg">
+                <Grid ColumnDefinitions="*,3,*">
+                  <Button Grid.Column="0" Classes="seg-b" Classes.on="{Binding IsModeDynamic}"
+                          Content="Dynamic" Command="{Binding SetModeDynamicCommand}" />
+                  <Button Grid.Column="2" Classes="seg-b" Classes.on="{Binding IsModeStatic}"
+                          Content="Static" Command="{Binding SetModeStaticCommand}" />
+                </Grid>
+              </Border>
+
+              <StackPanel Spacing="14" IsVisible="{Binding ShowColourRange}">
+                <!-- .dual (hue): two ring handles over the hue rainbow, with a live readout. -->
+                <StackPanel Spacing="7">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Text="HUE RANGE" Classes="plabel" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Classes="cv" Text="{Binding HueRangeText}" />
+                  </Grid>
+                  <Panel>
+                    <Border Classes="dualtrack">
+                      <Border.Background>
+                        <LinearGradientBrush StartPoint="0%,50%" EndPoint="100%,50%">
+                          <GradientStop Color="#FFFF0000" Offset="0" />
+                          <GradientStop Color="#FFFFFF00" Offset="0.167" />
+                          <GradientStop Color="#FF00FF00" Offset="0.333" />
+                          <GradientStop Color="#FF00FFFF" Offset="0.5" />
+                          <GradientStop Color="#FF0000FF" Offset="0.667" />
+                          <GradientStop Color="#FFFF00FF" Offset="0.833" />
+                          <GradientStop Color="#FFFF0000" Offset="1" />
+                        </LinearGradientBrush>
+                      </Border.Background>
+                    </Border>
+                    <Slider Classes="overlay" Value="{Binding HueMin}" Minimum="0" Maximum="360" />
+                    <Slider Classes="overlay" Value="{Binding HueMax}" Minimum="0" Maximum="360" />
+                  </Panel>
+                  <StackPanel Orientation="Horizontal" Spacing="7">
+                    <TextBox Classes="nin" Text="{Binding HueMin}" />
+                    <TextBlock Classes="ftimes" Text="—" VerticalAlignment="Center" />
+                    <TextBox Classes="nin" Text="{Binding HueMax}" />
+                  </StackPanel>
+                </StackPanel>
+
+                <!-- .dual (saturation): grey to full chroma -->
+                <StackPanel Spacing="7">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Text="SATURATION RANGE" Classes="plabel" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Classes="cv" Text="{Binding SatRangeText}" />
+                  </Grid>
+                  <Panel>
+                    <Border Classes="dualtrack">
+                      <Border.Background>
+                        <LinearGradientBrush StartPoint="0%,50%" EndPoint="100%,50%">
+                          <GradientStop Color="#FF9E9E9E" Offset="0" />
+                          <GradientStop Color="#FFD6249F" Offset="1" />
+                        </LinearGradientBrush>
+                      </Border.Background>
+                    </Border>
+                    <Slider Classes="overlay" Value="{Binding SatMin}" Minimum="0" Maximum="100" />
+                    <Slider Classes="overlay" Value="{Binding SatMax}" Minimum="0" Maximum="100" />
+                  </Panel>
+                  <StackPanel Orientation="Horizontal" Spacing="7">
+                    <TextBox Classes="nin" Text="{Binding SatMin}" />
+                    <TextBlock Classes="ftimes" Text="—" VerticalAlignment="Center" />
+                    <TextBox Classes="nin" Text="{Binding SatMax}" />
+                  </StackPanel>
+                </StackPanel>
+
+                <!-- .qrow: compact steppers plus what the two bucket counts actually add up to. -->
+                <StackPanel Spacing="7">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Text="QUANTIZE" Classes="plabel" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Classes="cv" Text="{Binding ApproxColorsText}" />
+                  </Grid>
+                  <StackPanel Orientation="Horizontal" Spacing="10">
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                      <TextBlock Text="Hue" Classes="cshare" VerticalAlignment="Center" />
+                      <NumericUpDown Value="{Binding HueQuantize}" Minimum="1" Width="112" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                      <TextBlock Text="Sat" Classes="cshare" VerticalAlignment="Center" />
+                      <NumericUpDown Value="{Binding SatQuantize}" Minimum="1" Width="112" />
+                    </StackPanel>
+                  </StackPanel>
+                </StackPanel>
+              </StackPanel>
+
+              <!-- Static: a fixed colour, shown as a swatch rather than only as hex text. -->
+              <StackPanel Spacing="7" IsVisible="{Binding ShowFixedColour}">
+                <TextBlock Text="FIXED COLOUR" Classes="plabel" />
+                <StackPanel Orientation="Horizontal" Spacing="9">
+                  <Border Width="34" Height="34" CornerRadius="{DynamicResource RadiusSm}"
+                          BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1"
+                          Background="{DynamicResource TileBrush}" ClipToBounds="True">
+                    <Image Source="{Binding Preview}" Stretch="UniformToFill" />
+                  </Border>
+                  <TextBox Text="{Binding FixedColor}" Watermark="hex:d6249f" Width="150" VerticalAlignment="Center" />
+                </StackPanel>
+              </StackPanel>
+
+              <!-- .vlock: value is not editable here; it comes from the grayscale map. -->
+              <Panel Margin="0,4,0,0">
+                <Rectangle Classes="dashed btn" />
+                <Grid ColumnDefinitions="Auto,*" Margin="10,9">
+                  <Path Grid.Column="0" Classes="ico xs" Data="{StaticResource IconLock}"
+                        VerticalAlignment="Top" Margin="0,1,8,0" />
+                  <TextBlock Grid.Column="1" Classes="vlock"
+                             Text="Value comes from the grayscale map — colour only sets hue and saturation." />
+                </Grid>
+              </Panel>
             </StackPanel>
-          </StackPanel>
-        </StackPanel>
-
-        <StackPanel Spacing="6" IsVisible="{Binding ShowFixedColour}">
-          <TextBlock Text="FIXED COLOUR" Classes="plabel" />
-          <TextBox Watermark="hex:d6249f" Text="{Binding FixedColor}" />
-        </StackPanel>
-
-        <TextBlock Text="PREVIEW" Classes="pane-h" Margin="0,8,0,0" />
-        <Border Height="{Binding PreviewHeight}" Background="{DynamicResource TileBrush}" CornerRadius="6"
-                BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1">
-          <Image Source="{Binding Preview}" Stretch="Uniform" Margin="6" />
-        </Border>
-        <StackPanel Orientation="Horizontal" Spacing="6">
-          <Button Content="Reroll" Command="{Binding RerollPreviewCommand}" Classes="tbtn" />
-          <Button Content="Enlarge" Command="{Binding EnlargePreviewCommand}" Classes="tbtn" />
-          <Button Content="Fill pane" Command="{Binding FillPanePreviewCommand}" Classes="tbtn" />
-        </StackPanel>
-      </StackPanel>
+          </ScrollViewer>
+        </Grid>
+      </Border>
     </Grid>
 
-    <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,8,0,0">
-      <Button Content="Back" Command="{Binding BackCommand}" Classes="tbtn" />
-      <Button Content="Save" Command="{Binding SaveCommand}" Classes="accent" />
-    </StackPanel>
+    <!-- Footer actions -->
+    <Border Grid.Row="1" Classes="modal-foot">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Grid.Column="0" Classes="cshare" VerticalAlignment="Center"
+                   Text="{Binding SaveBlockedReason}"
+                   IsVisible="{Binding SaveBlockedReason, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+          <Button Content="Back" Command="{Binding BackCommand}" Classes="tbtn ghost" />
+          <Button Command="{Binding SaveCommand}" Classes="accent">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Path Classes="ico sm" Data="{StaticResource IconCheck}" />
+              <TextBlock Text="Save" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+      </Grid>
+    </Border>
   </Grid>
 </UserControl>
