@@ -157,8 +157,11 @@ public partial class LandingViewModel : ViewModelBase
             ing.Dispose(); return;
         }
         var book = LooseWorkspace.WrapIngredient(ing);   // the editor owns + disposes this
+        // The loose-editor factory records the recent itself (see ServiceRegistration) so that every
+        // route into a loose editor does, not just this one.
         _nav.To(_looseEditorFactory(ing, book, path));
-        RecordRecent(new RecentItem(ing.Manifest.Name, $"loose ingredient · {ing.Manifest.Variants.Count} variants", path, true));
+        OnPropertyChanged(nameof(Recents));
+        OnPropertyChanged(nameof(HasNoRecents));
     }
 
     private void OpenPath(string path)

@@ -324,7 +324,20 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
                 return;   // img itself is disposed by the finally below
             }
 
-            // Dynamic/static: the PNG becomes the variant's value-map.
+            // Dynamic/static: the PNG becomes the variant's value-map. A value-map is grayscale by
+            // construction, so any colour in the source is discarded - and ValueMap.FromImage takes
+            // the RED channel as the value rather than a perceptual luminance, so a saturated blue
+            // imports as near-black. Silently swallowing that loses the user's art with no signal, so
+            // say it plainly, once, at the moment it happens.
+            if (HasColour(img))
+            {
+                await ShowErrorAsync("Colour discarded",
+                    "This layer is a value-map: it stores lightness only, and its colour is chosen at "
+                    + "generation time. The imported image has colour, and only its red channel was "
+                    + "kept as the value - so strongly coloured areas may import much darker than they "
+                    + "look. Import into a custom layer instead to keep the image exactly as-is.");
+            }
+
             var src = ValueMap.FromImage(img);
             for (int y = 0; y < canvas.Height; y++)
                 for (int x = 0; x < canvas.Width; x++)
@@ -338,6 +351,26 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
             NotifySaveAvailability();
         }
         finally { img.Dispose(); }
+    }
+
+    /// <summary>True if any pixel carries colour (channels not all equal). Used only to warn on a
+    /// value-map import; a fully transparent pixel cannot show colour, so it is skipped.</summary>
+    private static bool HasColour(Image<Rgba32> img)
+    {
+        bool found = false;
+        img.ProcessPixelRows(accessor =>
+        {
+            for (int y = 0; y < accessor.Height && !found; y++)
+            {
+                Span<Rgba32> row = accessor.GetRowSpan(y);
+                for (int x = 0; x < row.Length; x++)
+                {
+                    var p = row[x];
+                    if (p.A != 0 && (p.R != p.G || p.G != p.B)) { found = true; break; }
+                }
+            }
+        });
+        return found;
     }
 
     private async Task ShowErrorAsync(string title, string message) =>

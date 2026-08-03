@@ -73,8 +73,8 @@
                 <StackPanel Orientation="Horizontal" Spacing="9">
                   <Border Classes="rop" Classes.exclude="{Binding IsExclude}" Classes.require="{Binding !IsExclude}">
                     <Panel>
-                      <TextBlock Classes="rop exclude" Text="✕" IsVisible="{Binding IsExclude}" />
-                      <TextBlock Classes="rop require" Text="→" IsVisible="{Binding !IsExclude}" />
+                      <Path Classes="ico xs rop exclude" Data="{StaticResource IconMarkExclude}" IsVisible="{Binding IsExclude}" />
+                      <Path Classes="ico xs rop require" Data="{StaticResource IconMarkRequire}" IsVisible="{Binding !IsExclude}" />
                     </Panel>
                   </Border>
                   <StackPanel Spacing="5">

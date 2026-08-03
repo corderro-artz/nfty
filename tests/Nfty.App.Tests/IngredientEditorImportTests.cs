@@ -387,6 +387,51 @@ public class IngredientEditorImportTests
         finally { Directory.Delete(dir, recursive: true); Directory.Delete(Path.GetDirectoryName(pngPath)!, recursive: true); }
     }
 
+    [AvaloniaFact]
+    // A value-map stores lightness only, and the conversion keeps the RED channel - so a saturated
+    // blue imports as near-black. That is a surprising, unrecoverable loss of the user's art, so the
+    // import must say so rather than silently swallow it.
+    public async Task Importing_a_colour_image_into_a_value_map_warns_that_colour_was_discarded()
+    {
+        var (path, session, recipe, ing) = IngredientEditorSaveTests.OnDisk();   // dynamic 8x8
+        var pngPath = WritePng(8, 8, 20, 40, 220);                               // saturated blue
+        var dialogs = new RecordingDialogs();
+        try
+        {
+            var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
+                new FakeNav(), new FakeNotYetWired(), session, dialogs, new OpenPicker(pngPath));
+
+            await vm.ImportImageCommand.ExecuteAsync(null);
+
+            Assert.Equal("Colour discarded", dialogs.ErrorTitle);
+            Assert.Contains("red channel", dialogs.ErrorMessage);
+            Assert.Equal(20, vm.ValueAt(4, 4));   // and the value really is the red channel, not luminance
+            vm.Dispose();
+        }
+        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
+    }
+
+    [AvaloniaFact]
+    // The counterpart: a genuinely grayscale source loses nothing, so it must NOT nag.
+    public async Task Importing_a_grayscale_image_into_a_value_map_does_not_warn()
+    {
+        var (path, session, recipe, ing) = IngredientEditorSaveTests.OnDisk();
+        var pngPath = WritePng(8, 8, 180, 180, 180);
+        var dialogs = new RecordingDialogs();
+        try
+        {
+            var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
+                new FakeNav(), new FakeNotYetWired(), session, dialogs, new OpenPicker(pngPath));
+
+            await vm.ImportImageCommand.ExecuteAsync(null);
+
+            Assert.Null(dialogs.ErrorTitle);
+            Assert.Equal(180, vm.ValueAt(4, 4));
+            vm.Dispose();
+        }
+        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
+    }
+
     private sealed class ConfirmingDialogsStub : IDialogService
     {
         public ViewModelBase? Active => null;

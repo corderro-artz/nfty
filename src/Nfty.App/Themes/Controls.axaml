@@ -231,16 +231,19 @@
        a Foreground change) — so, exactly like Button's PART_ContentPresenter elsewhere in this
        file, our state overrides must target Border#PART_LayoutRoot, not a bare
        "TreeViewItem:selected" selector (which would be silently beaten by Fluent's own part-level
-       style). CornerRadius reaches PART_LayoutRoot via a plain TemplateBinding, so a top-level
-       Setter is enough for that one property. The 2px left accent bar is realised as an inset
-       BoxShadow on the same Border/state — Avalonia's BoxShadow grammar accepts a leading "inset"
-       keyword (confirmed in the docs), the same technique the mockup itself uses
-       (the mockup's own "box-shadow: inset 2px 0 0" on its accent colour), so no DataTemplate workaround was needed for
-       the bar. (The branch guide line *does* need a DataTemplate workaround — see the "Border.guide"
-       style in Styles.axaml — because Fluent's PART_ItemsPresenter has no bordered wrapper to
-       style.) Indentation and the expander toggle are left untouched: PART_Header's Margin
-       (bound to Level via Fluent's own MarginMultiplierConverter) and PART_ExpandCollapseChevron
-       already match the mockup's indentation/caret closely enough with no override needed. -->
+       style).
+
+       Both the highlight and the branch guide are drawn by the ITEM TEMPLATE (Border.node and
+       Border.guide in Styles.axaml) rather than by this theme, because PART_LayoutRoot spans the
+       row's whole width — indent included — and Fluent's PART_ItemsPresenter has no bordered wrapper
+       to hang a guide off. The rules below only neutralise Fluent's own state paints so the two do
+       not stack; the 2px accent bar rides along on Border.node as an inset BoxShadow (Avalonia's
+       BoxShadow grammar accepts a leading "inset" keyword, the same technique the mockup uses with
+       its own "box-shadow: inset 2px 0 0").
+
+       Indentation is left to Fluent (PART_Header's Margin, bound to Level via its own
+       MarginMultiplierConverter); the caret IS overridden, because Fluent's default is around half
+       again the mockup's 13px box and reads as the loudest thing in the row. -->
   <ControlTheme x:Key="{x:Type TreeViewItem}" TargetType="TreeViewItem"
                 BasedOn="{StaticResource {x:Type TreeViewItem}}">
     <!-- Horizontal padding only. The mockup's guide (.branch border-left) is one continuous line down
@@ -249,8 +252,7 @@
          came to render as disconnected stubs. The 6px of vertical breathing room moves into the row
          content instead (see ExplorerView.axaml), leaving the row's full height to the guide, so
          consecutive segments abut into a single line. -->
-    <Setter Property="Padding" Value="8,0" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="Padding" Value="0" />
     <Setter Property="Background" Value="Transparent" />
 
     <!-- The mockup's caret (.tw) is a 13px box holding a 9px glyph; Fluent's default chevron is
@@ -263,17 +265,26 @@
       <Setter Property="Margin" Value="0,0,4,0" />
     </Style>
 
-    <Style Selector="^ /template/ Border#PART_LayoutRoot:pointerover">
-      <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
-    </Style>
+    <!-- Hover and selection are painted by Border.node in the item template, NOT here. PART_LayoutRoot
+         spans the row's whole width, indent included, so a wash on it sat behind the indent and put
+         the 2px accent bar against the pane's left edge instead of against the node. The mockup nests
+         .node inside .branch, so the highlight begins after the guide - which only the item template
+         can express.
 
+         These overrides are load-bearing rather than redundant: simply NOT painting the container
+         hands the state back to Fluent's own :pointerover/:selected styles, which repaint
+         PART_LayoutRoot with its stock blue. Each state is pinned to Transparent so the node box is
+         the only thing that lights up. -->
+    <Style Selector="^ /template/ Border#PART_LayoutRoot:pointerover">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
     <Style Selector="^:selected /template/ Border#PART_LayoutRoot">
-      <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
-      <Setter Property="BoxShadow" Value="{DynamicResource AccentBarShadow}" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
     <Style Selector="^:selected /template/ Border#PART_LayoutRoot:pointerover">
-      <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
-      <Setter Property="BoxShadow" Value="{DynamicResource AccentBarShadow}" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
   </ControlTheme>
 </ResourceDictionary>

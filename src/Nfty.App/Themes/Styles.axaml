@@ -97,20 +97,24 @@
     <Setter Property="Opacity" Value="1" />
   </Style>
 
-  <!-- Landing's "not built yet" tier (mockup `.tbtn.soon`: dashed border, muted, transparent bg —
-       landing.html:45-46, applied to "New Kitchen…"/"Open a cooked .set…"). Avalonia's Border (and
-       therefore ButtonBase's ContentPresenter chrome) has no dash-pattern property — StrokeDashArray
-       only exists on Shape elements (Rectangle/Line/Polygon), not Border — so the dashed stroke is
-       approximated here as a solid muted line rather than pulling in a full custom Button template
-       for one wizard-adjacent affordance. Declared after Button.tbtn so it wins the rest-state tie
-       (equal single-class specificity, later declaration wins); the :disabled compound selector below
-       additionally wins over the plain Button.tbtn:disabled rule above for a "soon" button that is
-       also genuinely disabled (NewKitchenCommand's CanExecute is permanently false) — more classes
-       matched, so it takes precedence, and would otherwise be masked by the disabled-state reset. -->
+  <!-- An action whose destination does not exist yet. The mockup marks these with a DASHED edge
+       (.tbtn.soon{border-style:dashed}); Avalonia's Border/Button draw a solid edge only, so the
+       button's own border is switched off and a Rectangle.dashed.btn is laid over it by the caller.
+       Everything else (transparent fill, muted ink) is the mockup's.
+
+       Declared after Button.tbtn so it wins the rest-state tie (equal single-class specificity, later
+       declaration wins); the :disabled compound selector below additionally wins over the plain
+       Button.tbtn:disabled rule for a "soon" button that is also genuinely disabled (NewKitchen's
+       CanExecute is permanently false) - more classes matched, so it takes precedence, and would
+       otherwise be masked by the disabled-state reset. -->
   <Style Selector="Button.soon">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="Button.soon /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderThickness" Value="0" />
   </Style>
   <Style Selector="Button.tbtn.soon:disabled /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
@@ -372,6 +376,10 @@
     <Setter Property="RadiusX" Value="8" />
     <Setter Property="RadiusY" Value="8" />
   </Style>
+  <Style Selector="Rectangle.dashed.btn">
+    <Setter Property="RadiusX" Value="6" />   <!-- RadiusMd, matching Button.tbtn -->
+    <Setter Property="RadiusY" Value="6" />
+  </Style>
   <Style Selector="TextBlock.zh">
     <Setter Property="FontSize" Value="13" />
     <Setter Property="FontWeight" Value="SemiBold" />
@@ -602,6 +610,22 @@
        for this tree's two-level (Recipe/Ingredient) nesting. The "TreeViewItem:pointerover" prefix
        is a plain descendant selector (not "/template/"), so it reaches into the row's own
        DataTemplate content the same way any "Parent:state Child" selector would. -->
+  <!-- explorer.html .node: the actual highlightable row box, which sits to the RIGHT of the branch
+       guide. It carries the hover wash, the selected accent wash and the inset 2px accent bar. -->
+  <Style Selector="Border.node">
+    <Setter Property="Padding" Value="8,6" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Border.node:pointerover">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+  </Style>
+  <Style Selector="Border.node.sel">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource AccentBarShadow}" />
+  </Style>
+
   <Style Selector="Border.guide">
     <Setter Property="Width" Value="1" />
     <Setter Property="VerticalAlignment" Value="Stretch" />
@@ -739,18 +763,15 @@
     <Setter Property="Height" Value="20" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
   </Style>
-  <Style Selector="TextBlock.rop">
-    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="12" />
-    <Setter Property="FontWeight" Value="Bold" />
-  </Style>
+  <!-- The mark is line art (Icons.axaml IconMark*), not a text glyph, so its colour is a Stroke.
+       Declared after Path.ico so these win over the default muted stroke. -->
   <Style Selector="Border.rop.exclude">
     <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
     <Setter Property="BorderThickness" Value="1" />
   </Style>
-  <Style Selector="TextBlock.rop.exclude">
-    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+  <Style Selector="Path.rop.exclude">
+    <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
   </Style>
   <!-- .require: no low-alpha "info wash" token exists (only KindDynamicBrush itself is
        defined, no tinted background/border variant of it), so this is approximated as a
@@ -761,8 +782,8 @@
     <Setter Property="BorderBrush" Value="{DynamicResource KindDynamicBrush}" />
     <Setter Property="BorderThickness" Value="1" />
   </Style>
-  <Style Selector="TextBlock.rop.require">
-    <Setter Property="Foreground" Value="{DynamicResource KindDynamicBrush}" />
+  <Style Selector="Path.rop.require">
+    <Setter Property="Stroke" Value="{DynamicResource KindDynamicBrush}" />
   </Style>
   <Style Selector="Border.rchip">
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />

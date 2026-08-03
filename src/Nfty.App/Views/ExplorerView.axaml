@@ -69,7 +69,11 @@
                      content carries the 6px inset. -->
                 <Grid ColumnDefinitions="Auto,*">
                   <Border Grid.Column="0" Classes="guide" IsVisible="{Binding !IsRoot}" />
-                  <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="12,6,0,6">
+                  <!-- The node box, and only it, takes the hover/selected wash - so the highlight
+                       starts after the guide rather than behind the indent. -->
+                  <Border Grid.Column="1" Classes="node" Margin="12,0,0,0"
+                          Classes.sel="{Binding $parent[TreeViewItem].IsSelected}">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
                     <!-- .ti type mark, on every node -->
                     <Path Classes="ico ti" Data="{StaticResource IconTypeCookBook}" IsVisible="{Binding IsRoot}" />
                     <Path Classes="ico ti" Data="{StaticResource IconTypeRecipe}" IsVisible="{Binding IsRecipe}" />
@@ -83,6 +87,7 @@
                     <TextBlock Text="{Binding Name}" Classes.root="{Binding IsRoot}" VerticalAlignment="Center"
                                TextTrimming="CharacterEllipsis" />
                   </StackPanel>
+                  </Border>
                 </Grid>
               </TreeDataTemplate>
             </TreeView.ItemTemplate>

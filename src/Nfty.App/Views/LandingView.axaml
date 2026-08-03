@@ -25,9 +25,13 @@
           <TextBlock Grid.Column="1" Classes="hk on-accent" Text="⌘N" />
         </Grid>
       </Button>
-      <Button Classes="landing tbtn soon" Command="{Binding NewKitchenCommand}">
-        <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconPlus}" /><TextBlock Classes="lbl" Text="New Kitchen…" /></StackPanel></Grid>
-      </Button>
+      <!-- Dashed edge = "not built yet"; the Rectangle draws it because a Button cannot. -->
+      <Panel>
+        <Rectangle Classes="dashed btn" />
+        <Button Classes="landing tbtn soon" Command="{Binding NewKitchenCommand}">
+          <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconPlus}" /><TextBlock Classes="lbl" Text="New Kitchen…" /></StackPanel></Grid>
+        </Button>
+      </Panel>
 
       <!-- .subrow: the two smaller creatables sit side by side under the primary tier. -->
       <Grid ColumnDefinitions="*,7,*">
@@ -52,9 +56,12 @@
           <TextBlock Grid.Column="1" Classes="hk" Text="⌘I" />
         </Grid>
       </Button>
-      <Button Classes="landing tbtn soon" Command="{Binding OpenSetCommand}">
-        <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconOpen}" /><TextBlock Classes="lbl" Text="Open a cooked .set…" /></StackPanel></Grid>
-      </Button>
+      <Panel>
+        <Rectangle Classes="dashed btn" />
+        <Button Classes="landing tbtn soon" Command="{Binding OpenSetCommand}">
+          <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconOpen}" /><TextBlock Classes="lbl" Text="Open a cooked .set…" /></StackPanel></Grid>
+        </Button>
+      </Panel>
 
       <Button Classes="learn" Command="{Binding ShowHelpCommand}">
         <StackPanel Orientation="Horizontal" Spacing="7">
