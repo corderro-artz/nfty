@@ -2,100 +2,152 @@
              xmlns:vm="using:Nfty.App.ViewModels" xmlns:conv="using:Nfty.App.Converters"
              x:Class="Nfty.App.Views.CookBookDetailView"
              x:DataType="vm:CookBookDetailViewModel">
-  <StackPanel Margin="20" Spacing="0">
-    <!-- id-chips: explorer.html:765-771 (.cbk-id .idchips) -->
-    <StackPanel Orientation="Horizontal" Spacing="7">
-      <Border Classes="idchip">
-        <TextBlock Classes="mono" Text="{Binding Name}" />
-      </Border>
-      <Border Classes="idchip">
-        <TextBlock Classes="mono" Text="{Binding Symbol}" />
-      </Border>
-      <Border Classes="idchip">
-        <TextBlock Classes="mono" Text="{Binding CanvasText, StringFormat='canvas {0}'}" />
-      </Border>
-    </StackPanel>
-
-    <!-- metric band: explorer.html:780, statband(...,'two2') -> 2x2 grid (.statband.two2) -->
-    <Grid Margin="0,14,0,0" ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
-      <Border Grid.Row="0" Grid.Column="0" Classes="metric" Margin="0,0,5,5">
-        <StackPanel>
-          <TextBlock Classes="mv" Text="{Binding RecipeCount}" />
-          <TextBlock Classes="ml" Text="RECIPES" />
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+  <StackPanel Margin="20">
+    <!-- .cbk-id: the identity card. The chips used to float here with no card around them. -->
+    <Border Classes="cbk-id">
+      <StackPanel Spacing="9">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <Path Classes="ico ti" Data="{StaticResource IconTypeCookBook}" VerticalAlignment="Center" />
+          <TextBlock Classes="idname" Text="{Binding Name}" />
         </StackPanel>
-      </Border>
-      <Border Grid.Row="0" Grid.Column="1" Classes="metric" Margin="5,0,0,5">
-        <StackPanel>
-          <TextBlock Classes="mv" Text="{Binding LayerCount}" />
-          <TextBlock Classes="ml" Text="LAYERS" />
+        <TextBlock Classes="iddesc" Text="{Binding Description}"
+                   IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        <!-- id-chips: explorer.html .cbk-id .idchips -->
+        <StackPanel Orientation="Horizontal" Spacing="7">
+          <Border Classes="idchip"><TextBlock Classes="mono" Text="{Binding Name}" /></Border>
+          <Border Classes="idchip"><TextBlock Classes="mono" Text="{Binding Symbol}" /></Border>
+          <Border Classes="idchip"><TextBlock Classes="mono" Text="{Binding CanvasText, StringFormat='canvas {0}'}" /></Border>
         </StackPanel>
-      </Border>
-      <Border Grid.Row="1" Grid.Column="0" Classes="metric" Margin="0,5,5,0">
-        <StackPanel>
-          <TextBlock Classes="mv" Text="{Binding VariantCount}" />
-          <TextBlock Classes="ml" Text="VARIANTS" />
-        </StackPanel>
-      </Border>
-      <Border Grid.Row="1" Grid.Column="1" Classes="metric accent" Margin="5,5,0,0">
-        <StackPanel>
-          <TextBlock Classes="mv" Text="{Binding UniqueDnaText}" />
-          <TextBlock Classes="ml" Text="UNIQUE DNA" />
-        </StackPanel>
-      </Border>
-    </Grid>
-
-    <!-- mint distribution: explorer.html:773-777 (.dist/.sub-h/.distbar/.distlegend).
-         No shared ".section-h"/".sub-h" style exists in Styles.axaml (Task 4 did not add one),
-         so the heading's mono/uppercase/letter-spaced/muted look is set inline here rather than
-         inventing an unshared class from a view-only task. -->
-    <TextBlock Classes="sub-h" Text="MINT DISTRIBUTION" Margin="0,16,0,9" />
-
-    <!-- PROPORTIONAL WIDTHS: each segment's Width is bound through PercentToWidthConverter
-         (SharePercent * 5.6) inside a fixed Width="560" Border.distbar, so segment widths stay
-         proportional to SharePercent without a Grid built from a variable number of star columns
-         (Recipes.Count isn't known until runtime). See Converters/PercentToWidthConverter.cs. -->
-    <Border Classes="distbar" Width="560" HorizontalAlignment="Left">
-      <ItemsControl ItemsSource="{Binding Recipes}">
-        <ItemsControl.ItemsPanel>
-          <ItemsPanelTemplate>
-            <StackPanel Orientation="Horizontal" />
-          </ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
-        <ItemsControl.ItemTemplate>
-          <DataTemplate x:DataType="vm:RecipeShareRow">
-            <Border Height="16" Width="{Binding SharePercent, Converter={x:Static conv:PercentToWidthConverter.ForBarWidth560}}">
-              <Border.Background>
-                <SolidColorBrush Color="{Binding SegmentColor}" />
-              </Border.Background>
-            </Border>
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
+      </StackPanel>
     </Border>
 
-    <ItemsControl ItemsSource="{Binding Recipes}" Margin="0,10,0,0">
-      <ItemsControl.ItemsPanel>
-        <ItemsPanelTemplate>
-          <WrapPanel />
-        </ItemsPanelTemplate>
-      </ItemsControl.ItemsPanel>
-      <ItemsControl.ItemTemplate>
-        <DataTemplate x:DataType="vm:RecipeShareRow">
-          <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,0,14,0" VerticalAlignment="Center">
-            <Border Classes="sw">
-              <Border.Background>
-                <SolidColorBrush Color="{Binding SegmentColor}" />
-              </Border.Background>
-            </Border>
-            <TextBlock FontSize="12" Text="{Binding Name}" />
-            <TextBlock Classes="pc" FontSize="12" Text="{Binding SharePercent, StringFormat='{}{0}%'}" />
-          </StackPanel>
-        </DataTemplate>
-      </ItemsControl.ItemTemplate>
-    </ItemsControl>
+    <!-- .cbk-cols: metrics + distribution left, combination space right. -->
+    <Grid ColumnDefinitions="0.82*,24,1.18*" Margin="0,17,0,0">
+      <StackPanel Grid.Column="0">
+        <!-- metric band: statband two2 -->
+        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+          <Border Grid.Row="0" Grid.Column="0" Classes="metric" Margin="0,0,5,5">
+            <StackPanel><TextBlock Classes="mv" Text="{Binding RecipeCount}" /><TextBlock Classes="ml" Text="RECIPES" /></StackPanel>
+          </Border>
+          <Border Grid.Row="0" Grid.Column="1" Classes="metric" Margin="5,0,0,5">
+            <StackPanel><TextBlock Classes="mv" Text="{Binding LayerCount}" /><TextBlock Classes="ml" Text="LAYERS" /></StackPanel>
+          </Border>
+          <Border Grid.Row="1" Grid.Column="0" Classes="metric" Margin="0,5,5,0">
+            <StackPanel><TextBlock Classes="mv" Text="{Binding VariantCount}" /><TextBlock Classes="ml" Text="VARIANTS" /></StackPanel>
+          </Border>
+          <Border Grid.Row="1" Grid.Column="1" Classes="metric accent" Margin="5,5,0,0">
+            <StackPanel><TextBlock Classes="mv" Text="{Binding UniqueDnaText}" /><TextBlock Classes="ml" Text="UNIQUE DNA" /></StackPanel>
+          </Border>
+        </Grid>
 
-    <!-- Cook: explorer.html cookFooter() accent button -->
-    <Button Content="Cook set" Command="{Binding CookCommand}" Classes="accent" HorizontalAlignment="Left"
-            Margin="0,18,0,0" />
+        <TextBlock Classes="sub-h" Text="MINT DISTRIBUTION" Margin="0,16,0,9" />
+
+        <!-- PROPORTIONAL WIDTHS: each segment's Width is bound through PercentToWidthConverter
+             (SharePercent * 3.1) inside a fixed-width Border.distbar, so segment widths stay
+             proportional to SharePercent without a Grid built from a variable number of star
+             columns (Recipes.Count isn't known until runtime). -->
+        <Border Classes="distbar" Width="310" HorizontalAlignment="Left">
+          <ItemsControl ItemsSource="{Binding Recipes}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:RecipeShareRow">
+                <Border Height="16" Width="{Binding SharePercent, Converter={x:Static conv:PercentToWidthConverter.ForBarWidth310}}">
+                  <Border.Background><SolidColorBrush Color="{Binding SegmentColor}" /></Border.Background>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Border>
+
+        <ItemsControl ItemsSource="{Binding Recipes}" Margin="0,10,0,0">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:RecipeShareRow">
+              <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,0,14,4" VerticalAlignment="Center">
+                <Border Classes="sw"><Border.Background><SolidColorBrush Color="{Binding SegmentColor}" /></Border.Background></Border>
+                <TextBlock FontSize="12" Text="{Binding Name}" />
+                <TextBlock Classes="pc" FontSize="12" Text="{Binding SharePercent, StringFormat='{}{0}%'}" />
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <!-- .cspace: how each recipe's combination count is arrived at, layer by layer. -->
+      <StackPanel Grid.Column="2">
+        <TextBlock Classes="sub-h" Text="COMBINATION SPACE" Margin="0,0,0,2" />
+        <ItemsControl ItemsSource="{Binding Recipes}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:RecipeShareRow">
+              <Border Classes="crow">
+                <StackPanel Spacing="9">
+                  <Grid ColumnDefinitions="Auto,Auto,*">
+                    <Border Grid.Column="0" Classes="cdot" Margin="0,0,10,0">
+                      <Border.Background><SolidColorBrush Color="{Binding SegmentColor}" /></Border.Background>
+                    </Border>
+                    <TextBlock Grid.Column="1" Classes="cname" Text="{Binding Name}" />
+                    <!-- factors x factors = total -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="5"
+                                HorizontalAlignment="Right" VerticalAlignment="Center">
+                      <ItemsControl ItemsSource="{Binding Factors}">
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="5" /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:FactorChip">
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                              <TextBlock Classes="ftimes" Text="×" IsVisible="{Binding ShowTimes}" />
+                              <Border Classes="fchip"
+                                      Classes.kdyn="{Binding IsDynamic}"
+                                      Classes.kstat="{Binding IsStatic}"
+                                      Classes.kcust="{Binding IsCustom}"
+                                      ToolTip.Tip="{Binding Tip}">
+                                <TextBlock Text="{Binding VariantCount}" />
+                              </Border>
+                            </StackPanel>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                      <TextBlock Classes="ceq" Text="=" />
+                      <TextBlock Classes="cnum" Text="{Binding DnaSpaceText}" />
+                    </StackPanel>
+                  </Grid>
+                  <Grid ColumnDefinitions="*,12,Auto">
+                    <Border Grid.Column="0" Classes="cbar">
+                      <Border HorizontalAlignment="Left" CornerRadius="999"
+                              Width="{Binding SharePercent, Converter={x:Static conv:PercentToWidthConverter.ForBarWidth310}}">
+                        <Border.Background><SolidColorBrush Color="{Binding SegmentColor}" /></Border.Background>
+                      </Border>
+                    </Border>
+                    <TextBlock Grid.Column="2" Classes="cshare" Text="{Binding SharePercent, StringFormat='{}{0}% of mints'}" />
+                  </Grid>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </Grid>
+
+    <!-- .cookbar: the footer that states what cooking will produce, then the action. -->
+    <Border BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0"
+            Margin="0,18,0,0" Padding="0,15,0,0">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Grid.Column="0" Classes="cshare" VerticalAlignment="Center"
+                   Text="{Binding UniqueDnaText, StringFormat='{}{0} unique DNA available'}" />
+        <Button Grid.Column="1" Command="{Binding CookCommand}" Classes="accent">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <Path Classes="ico sm" Data="{StaticResource IconArrowRight}" />
+            <TextBlock Text="Cook Set" />
+          </StackPanel>
+        </Button>
+      </Grid>
+    </Border>
   </StackPanel>
+  </ScrollViewer>
 </UserControl>

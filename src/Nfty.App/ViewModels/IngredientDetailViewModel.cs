@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -6,6 +7,7 @@ using Nfty.App.Imaging;
 using Nfty.App.Services;
 using Nfty.Core.Formats;
 using Nfty.Core.Model;
+using Nfty.Core.Imaging;
 using Nfty.Core.Stats;
 
 namespace Nfty.App.ViewModels;
@@ -30,8 +32,20 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private Bitmap? _hero;
 
     public string Name { get; }
+
+    /// <summary>Lowercase, because the hero renders it as one running sentence
+    /// ("custom · no colorize · composited as-is") with only this word kind-coloured.</summary>
     public string KindText { get; }
+    public bool IsDynamic { get; }
+    public bool IsStatic { get; }
+    public bool IsCustom { get; }
     public string ColorwaysText { get; }
+
+    /// <summary>Hue sweep for the colorways band, or null when this kind has no rolled hue (static
+    /// and custom layers). Rendered as a gradient rather than as variant thumbnails, which showed
+    /// the source art instead of the colour space the layer actually spans.</summary>
+    public IReadOnlyList<Color>? HueBandStops { get; }
+    public bool HasHueBand => HueBandStops is not null;
     public IReadOnlyList<Bitmap> Colorways { get; }
     public IReadOnlyList<ColorwayAxis> ColorwayAxes { get; }
 
@@ -47,8 +61,12 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
         _ing = ing; _bridge = bridge;
         _notify = notify; _editIngredient = editIngredient; _isEditing = isEditing;
         Name = ing.Manifest.Name;
-        KindText = ing.Manifest.Kind.ToString();
+        KindText = ing.Manifest.Kind.ToString().ToLowerInvariant();
+        IsDynamic = ing.Manifest.Kind == LayerKind.Dynamic;
+        IsStatic = ing.Manifest.Kind == LayerKind.Static;
+        IsCustom = ing.Manifest.Kind == LayerKind.Custom;
         ColorwaysText = ColorwaysLabel(ing.Manifest);
+        HueBandStops = BuildHueBand(ing.Manifest);
         ColorwayAxes = BuildAxes(ing.Manifest);
 
         var traits = RarityCalculator.Compute(book).Traits
@@ -84,6 +102,27 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
         LayerKind.Static => "HSV · fixed  (value ← value-map)",
         _ => "no colorize · composited as-is",
     };
+
+    /// <summary>Samples the layer's hue range into gradient stops. Only a dynamic layer rolls a hue,
+    /// so every other kind returns null and the band is hidden rather than shown as a lie.</summary>
+    private static IReadOnlyList<Color>? BuildHueBand(IngredientManifest m)
+    {
+        if (m.Kind != LayerKind.Dynamic || m.Colorization is null) return null;
+        var entry = m.Colorization.Entries.FirstOrDefault(e => e.Weight > 0);
+        if (entry?.Range is not { } range) return null;
+
+        const int steps = 12;
+        var stops = new List<Color>(steps);
+        for (int i = 0; i < steps; i++)
+        {
+            double t = steps == 1 ? 0 : i / (double)(steps - 1);
+            double hue = range.HueMin + (range.HueMax - range.HueMin) * t;
+            double sat = (range.SatMin + range.SatMax) / 2.0 / 100.0;
+            var rgb = ColorConvert.HsvToRgb(hue, sat, 0.72);
+            stops.Add(Color.FromRgb(rgb.R, rgb.G, rgb.B));
+        }
+        return stops;
+    }
 
     private static IReadOnlyList<ColorwayAxis> BuildAxes(IngredientManifest m)
     {

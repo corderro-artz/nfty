@@ -863,6 +863,161 @@
   <Style Selector="Path.rop.require">
     <Setter Property="Stroke" Value="{DynamicResource KindDynamicBrush}" />
   </Style>
+  <!-- explorer.html .fchip: a tinted mono count badge, kind-coloured. Used by the cookbook's
+       combination-space rows and the recipe hero's factor arithmetic. -->
+  <!-- explorer.html .cbk-id: the identity card the name/description/chips live in. They were
+       previously orphaned at the top of the pane with no card around them. -->
+  <!-- explorer.html .rtotal / .rlabel: the recipe hero's headline number and its caption. -->
+  <!-- explorer.html .hueband / .cwmodel: the colorways rail's hue sweep and its model chip. -->
+  <!-- explorer.html .rarity .rt: the per-variant share tracks under the ingredient hero. -->
+  <Style Selector="Border.rt">
+    <Setter Property="Height" Value="7" />
+    <Setter Property="Width" Value="120" />
+    <Setter Property="CornerRadius" Value="999" />
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="ClipToBounds" Value="True" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.rt > Border">
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="CornerRadius" Value="999" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+  </Style>
+
+  <Style Selector="Border.hueband">
+    <Setter Property="Height" Value="34" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="Border.cwmodel">
+    <Setter Property="Background" Value="{DynamicResource TileBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="Padding" Value="6,2" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.cwmodel > TextBlock">
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock.rtotal">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="FontSize" Value="20" />
+  </Style>
+  <Style Selector="TextBlock.rlabel">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+
+  <Style Selector="Border.cbk-id">
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="Padding" Value="16,14" />
+    <Setter Property="Background">
+      <LinearGradientBrush StartPoint="50%,0%" EndPoint="50%,100%">
+        <GradientStop Color="{DynamicResource BgAlt2Color}" Offset="0" />
+        <GradientStop Color="{DynamicResource PanelColor}" Offset="1" />
+      </LinearGradientBrush>
+    </Setter>
+  </Style>
+  <Style Selector="TextBlock.idname">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="FontSize" Value="18" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.iddesc">
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="MaxWidth" Value="460" />
+  </Style>
+  <!-- .crow: one recipe's combination-space line -->
+  <Style Selector="Border.crow">
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="0,11" />
+  </Style>
+  <Style Selector="Border.cdot">
+    <Setter Property="Width" Value="8" />
+    <Setter Property="Height" Value="8" />
+    <Setter Property="CornerRadius" Value="2" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="RenderTransform" Value="rotate(45deg)" />
+  </Style>
+  <Style Selector="TextBlock.cname">
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- .cbar: the per-recipe share track -->
+  <Style Selector="Border.cbar">
+    <Setter Property="Height" Value="6" />
+    <Setter Property="CornerRadius" Value="999" />
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="TextBlock.cshare">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Border.fchip">
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="Padding" Value="6,3" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.fchip > TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="LineHeight" Value="11" />
+  </Style>
+  <Style Selector="Border.fchip.kdyn">
+    <Setter Property="Background" Value="{DynamicResource KindDynamicWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource KindDynamicLineBrush}" />
+  </Style>
+  <Style Selector="Border.fchip.kdyn > TextBlock"><Setter Property="Foreground" Value="{DynamicResource KindDynamicBrush}" /></Style>
+  <Style Selector="Border.fchip.kstat">
+    <Setter Property="Background" Value="{DynamicResource KindStaticWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource KindStaticLineBrush}" />
+  </Style>
+  <Style Selector="Border.fchip.kstat > TextBlock"><Setter Property="Foreground" Value="{DynamicResource KindStaticBrush}" /></Style>
+  <Style Selector="Border.fchip.kcust">
+    <Setter Property="Background" Value="{DynamicResource KindCustomWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource KindCustomLineBrush}" />
+  </Style>
+  <Style Selector="Border.fchip.kcust > TextBlock"><Setter Property="Foreground" Value="{DynamicResource KindCustomBrush}" /></Style>
+  <!-- the x and = that separate the factors -->
+  <Style Selector="TextBlock.ftimes">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="Opacity" Value="0.5" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.ceq">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="Margin" Value="3,0" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.cnum">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="FontSize" Value="13.5" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
   <Style Selector="Border.rchip">
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />

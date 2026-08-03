@@ -259,6 +259,35 @@ public class VisualCapture
     /// <summary>Builds a small recipe (+ owning cookbook) with one Exclude and one Require rule, so a
     /// capture of <see cref="Views.RecipeDetailView"/> exercises the rules rail — mirrors
     /// <see cref="RecipeDetailViewModelTests.Rules_expose_operator_and_traits"/>'s fixture.</summary>
+    /// <summary>A DYNAMIC ingredient with a real hue range. TwoRecipeBook's layers are all Custom,
+    /// so the colorways hue band - which only a dynamic layer has - had no frame proving it renders.</summary>
+    private static (LoadedCookBook book, LoadedRecipe recipe, LoadedIngredient ing) DynamicIngredient()
+    {
+        var colorization = new Colorization(ColorModel.Hsv, HueQuantize: 24, SatQuantize: 6,
+            new[] { new ColorEntry(1, new ColorRange(190, 320, 55, 95), null) });
+        var ing = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("aura", "Aura", LayerKind.Dynamic, colorization,
+                new[] { new Variant("soft", "Soft", 3), new Variant("glow", "Glow", 1) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>>
+            {
+                ["soft"] = new Image<Rgba32>(8, 8), ["glow"] = new Image<Rgba32>(8, 8),
+            },
+        };
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("cat", "Cat", new[] { "aura" }, Array.Empty<IncompatibilityRule>()),
+            Ingredients = new[] { ing },
+        };
+        var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "Book", new Dimensions(8, 8),
+                new Collection("Book", "", "B"), new Dictionary<string, double> { ["cat"] = 100 }),
+            Recipes = new[] { recipe },
+        };
+        return (book, recipe, ing);
+    }
+
     private static (LoadedCookBook book, LoadedRecipe recipe) RecipeWithRules()
     {
         var rules = new[]
@@ -319,6 +348,14 @@ public class VisualCapture
             {
                 Capture(new Views.IngredientDetailView { DataContext = vm }, variant, $"ingredient-detail-{key}.png");
             }
+
+            var (dynBook, dynRecipe, dynIng) = DynamicIngredient();
+            using (var vm = new IngredientDetailViewModel(dynIng, dynRecipe, dynBook, new ImageBridge(),
+                new FakeNotYetWired(), () => { }, () => false))
+            {
+                Capture(new Views.IngredientDetailView { DataContext = vm }, variant, $"ingredient-detail-dynamic-{key}.png");
+            }
+            dynBook.Dispose();
         }
     }
 

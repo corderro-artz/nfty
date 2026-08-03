@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Nfty.App.ViewModels"
              xmlns:img="using:Avalonia.Media.Imaging"
+             xmlns:conv="using:Nfty.App.Converters"
              x:Class="Nfty.App.Views.IngredientDetailView"
              x:DataType="vm:IngredientDetailViewModel">
   <!-- Ingredient detail body: 2-column layout (explorer.html .ing-main / .ing-rail).
@@ -19,17 +20,47 @@
     </Grid.ColumnDefinitions>
     <StackPanel Grid.Column="0" Spacing="14" Margin="0,0,16,0">
       <Border Classes="vhero">
-        <Grid ColumnDefinitions="Auto,*,Auto">
+        <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto">
           <Border Grid.Column="0" Width="84" Height="84" CornerRadius="{DynamicResource RadiusMd}"
                   Background="{DynamicResource TileBrush}" ClipToBounds="True" Margin="0,0,16,0">
             <Image Source="{Binding Hero}" Stretch="UniformToFill" />
           </Border>
           <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
             <TextBlock Classes="mono" FontSize="17" FontWeight="Bold" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-            <TextBlock Classes="muted" Text="{Binding KindText}" TextTrimming="CharacterEllipsis" />
-            <TextBlock Classes="muted" Text="{Binding ColorwaysText}" TextTrimming="CharacterEllipsis" />
+            <!-- .hsub is ONE line - "custom · no colorize · composited as-is" - with only the kind
+                 word carrying the kind colour. It used to be two stacked neutral lines, which lost
+                 the colour-coding the tree and the layer table both apply. -->
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Classes="kind-txt"
+                         Classes.kdyn="{Binding IsDynamic}"
+                         Classes.kstat="{Binding IsStatic}"
+                         Classes.kcust="{Binding IsCustom}"
+                         Text="{Binding KindText}" />
+              <TextBlock Classes="muted" Text="·" />
+              <TextBlock Classes="muted" Text="{Binding ColorwaysText}" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
           </StackPanel>
           <Button Grid.Column="2" Command="{Binding EditIngredientCommand}" Classes="accent" VerticalAlignment="Top" ToolTip.Tip="Edit ingredient"><Path Classes="ico" Data="{StaticResource IconPencil}" /></Button>
+
+          <!-- .rarity: how the layer's weight actually splits, at a glance. The table below carries
+               the same numbers, but a column of percentages does not show the SHAPE of the split. -->
+          <ItemsControl Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" ItemsSource="{Binding Variants}"
+                        Margin="0,13,0,0">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:VariantRow">
+                <StackPanel Orientation="Horizontal" Spacing="9" Margin="0,0,30,11" VerticalAlignment="Center">
+                  <TextBlock Classes="cshare" Text="{Binding Name}" MinWidth="52" TextTrimming="CharacterEllipsis" />
+                  <Border Classes="rt">
+                    <Border Width="{Binding OverallPercent, Converter={x:Static conv:PercentToWidthConverter.ForBarWidth120}}" />
+                  </Border>
+                  <TextBlock Classes="cshare" Text="{Binding OverallPercent, StringFormat='{}{0}%'}" MinWidth="34" />
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
         </Grid>
       </Border>
 
@@ -77,19 +108,32 @@
       <StackPanel Spacing="10">
         <TextBlock Classes="sub-h" Text="COLORWAYS" />
 
-        <ItemsControl ItemsSource="{Binding Colorways}">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="img:Bitmap">
-              <Border Width="40" Height="40" CornerRadius="{DynamicResource RadiusSm}"
-                      Background="{DynamicResource TileBrush}" ClipToBounds="True" Margin="0,0,6,6">
-                <Image Source="{Binding}" Stretch="UniformToFill" />
-              </Border>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
+        <!-- .cwtop: what the layer's colour model IS, before the band that shows its span. -->
+        <StackPanel Orientation="Horizontal" Spacing="7">
+          <TextBlock Classes="kind-txt"
+                     Classes.kdyn="{Binding IsDynamic}"
+                     Classes.kstat="{Binding IsStatic}"
+                     Classes.kcust="{Binding IsCustom}"
+                     Text="{Binding KindText}" VerticalAlignment="Center" />
+          <Border Classes="cwmodel"><TextBlock Text="{Binding ColorwaysText}" /></Border>
+        </StackPanel>
+
+        <!-- .hueband: the hue sweep this layer rolls within. Shown only for a dynamic layer - the
+             others roll no hue, and the thumbnails that used to sit here showed the SOURCE art
+             rather than the colour space, which is the one thing this rail exists to convey. -->
+        <Border Classes="hueband" IsVisible="{Binding HasHueBand}">
+          <Border.Background>
+            <LinearGradientBrush StartPoint="0%,50%" EndPoint="100%,50%">
+              <GradientStops>
+                <GradientStop Color="{Binding HueBandStops[0]}" Offset="0" />
+                <GradientStop Color="{Binding HueBandStops[3]}" Offset="0.27" />
+                <GradientStop Color="{Binding HueBandStops[6]}" Offset="0.55" />
+                <GradientStop Color="{Binding HueBandStops[9]}" Offset="0.82" />
+                <GradientStop Color="{Binding HueBandStops[11]}" Offset="1" />
+              </GradientStops>
+            </LinearGradientBrush>
+          </Border.Background>
+        </Border>
 
         <ItemsControl ItemsSource="{Binding ColorwayAxes}">
           <ItemsControl.ItemTemplate>

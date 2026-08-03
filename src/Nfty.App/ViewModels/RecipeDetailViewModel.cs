@@ -35,6 +35,19 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
     public IReadOnlyList<LayerRow> Layers { get; }
     public IReadOnlyList<RuleRow> Rules { get; }
 
+    /// <summary>The hero's factor arithmetic (mockup .rfactors): one kind-tinted chip per layer,
+    /// multiplied together to reach <see cref="TotalText"/>.</summary>
+    public IReadOnlyList<FactorChip> Factors { get; }
+
+    /// <summary>Product of the layers' variant counts - the combinations this recipe's art alone can
+    /// make, before colour. Deliberately NOT UniqueSpace.Count: that folds in each dynamic layer's
+    /// quantized colour buckets, and this line exists to explain the chips beside it, which are
+    /// variant counts. The colour-inclusive figure is the cookbook detail's business.</summary>
+    public string TotalText { get; }
+    public string LayerCountText { get; }
+    public string VariantCountText { get; }
+    public string RuleCountText { get; }
+
     public RecipeDetailViewModel(LoadedRecipe recipe, LoadedCookBook book, IImageBridge bridge,
         INotYetWired notify, Action<string> openIngredient)
     {
@@ -49,6 +62,20 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
             .ToList();
 
         Rules = recipe.Manifest.Rules.Select(MapRule).ToList();
+
+        var ordered = recipe.Manifest.LayerOrder.Where(ingById.ContainsKey).Select(id => ingById[id]).ToList();
+        Factors = ordered
+            .Select((ing, idx) => new FactorChip(ing.Manifest.Name, ing.Manifest.Variants.Count,
+                                                 ing.Manifest.Kind, ShowTimes: idx > 0))
+            .ToList();
+        // long, not int: a dozen 5-variant layers already overflows int.
+        long total = ordered.Aggregate(1L, (acc, ing) => acc * Math.Max(1, ing.Manifest.Variants.Count));
+        TotalText = total.ToString("N0");
+        LayerCountText = Layers.Count == 1 ? "1 layer" : $"{Layers.Count} layers";
+        int variants = ordered.Sum(i => i.Manifest.Variants.Count);
+        VariantCountText = variants == 1 ? "1 variant" : $"{variants} variants";
+        RuleCountText = Rules.Count == 1 ? "1 rule" : $"{Rules.Count} rules";
+
         _hero = BuildHero();
     }
 
