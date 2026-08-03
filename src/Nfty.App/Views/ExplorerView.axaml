@@ -34,8 +34,19 @@
             <TextBlock Text="{Binding AddLabel}" />
           </StackPanel>
         </Button>
-        <Button Grid.Column="2" Content="Delete" Command="{Binding DeleteSelectedCommand}" Classes="tbtn" Margin="0,0,10,0" />
-        <Button Grid.Column="3" Content="Import" Command="{Binding ImportCommand}" Classes="tbtn" Margin="0,0,10,0" />
+        <!-- The mockup's toolbar buttons all carry a leading 14px glyph, not text alone. -->
+        <Button Grid.Column="2" Command="{Binding DeleteSelectedCommand}" Classes="tbtn" Margin="0,0,10,0">
+          <StackPanel Orientation="Horizontal" Spacing="7">
+            <Path Classes="ico sm" Data="{StaticResource IconTrash}" />
+            <TextBlock Text="Delete" />
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="3" Command="{Binding ImportCommand}" Classes="tbtn" Margin="0,0,10,0">
+          <StackPanel Orientation="Horizontal" Spacing="7">
+            <Path Classes="ico sm" Data="{StaticResource IconImport}" />
+            <TextBlock Text="Import" />
+          </StackPanel>
+        </Button>
         <Button Grid.Column="4" Command="{Binding ToggleLockCommand}" Classes="icon" Classes.unlocked="{Binding IsEditing}"
                 ToolTip.Tip="{Binding LockTip}">
           <Panel>

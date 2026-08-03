@@ -73,6 +73,9 @@
   <StreamGeometry x:Key="IconSelect">M5.5 4h13A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13A1.5 1.5 0 0 1 5.5 4z</StreamGeometry>
   <StreamGeometry x:Key="IconFill">M4 12l7-7 7 7-7 7zM18 14c1.5 2 2 3 0 3s-1.5-1 0-3z</StreamGeometry>
 
+  <!-- explorer.html ICON.del: the Delete affordance -->
+  <StreamGeometry x:Key="IconTrash">M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13</StreamGeometry>
+
   <!-- wizard-*.html: the tick on the accent Create button -->
   <StreamGeometry x:Key="IconCheck">M5 12.5l4.5 4.5L19 7.5</StreamGeometry>
 
