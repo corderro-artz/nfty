@@ -37,9 +37,16 @@
                 BasedOn="{StaticResource {x:Type TextBox}}">
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
     <Setter Property="CaretBrush" Value="{DynamicResource FgBrush}" />
+    <!-- The mockups' .in: a uniform 32px field at 12.5px. Fluent's default is ~40px at 14px, which
+         made every form read a size too large. MinHeight (not Height) so a multi-line Description
+         box can still grow. -->
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="Padding" Value="11,0" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="SelectionBrush" Value="{DynamicResource AccentWashBrush}" />
 
     <!-- PointerOver: accent-tinted border, panel background unchanged (mirrors Button.tbtn hover). -->
@@ -65,8 +72,37 @@
                 BasedOn="{StaticResource {x:Type NumericUpDown}}">
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="FontSize" Value="12.5" />
+
+    <Style Selector="^ /template/ ButtonSpinner">
+      <Setter Property="MinHeight" Value="32" />
+    </Style>
+  </ControlTheme>
+
+  <!-- ================= ButtonSpinner ================= -->
+  <!-- The spinner buttons live inside ButtonSpinner's OWN template, so they cannot be reached from
+       the NumericUpDown theme: Avalonia rejects a selector that crosses two template boundaries
+       ("ControlTemplate styles cannot contain multiple template selectors"). Hence a second theme,
+       keyed by type so it applies wherever a spinner appears.
+
+       KNOWN GAP: the mockups' .stepr is a 20px-wide COLUMN of 9px chevrons; ours remains Fluent's
+       wide side-by-side pair. Both the buttons' width and the panel that stacks them are fixed inside
+       Fluent's own ButtonSpinner template at a priority a Style setter does not beat - Width setters
+       here (tried both bare "RepeatButton" and the named PART_Increase/DecreaseButton selectors) were
+       verified against a rendered frame and changed nothing. Closing it means hand-authoring the full
+       ButtonSpinner ControlTemplate, which is out of proportion to the gap; the height and ink below
+       DO take effect and are what this theme is for. -->
+  <ControlTheme x:Key="{x:Type ButtonSpinner}" TargetType="ButtonSpinner"
+                BasedOn="{StaticResource {x:Type ButtonSpinner}}">
+    <Setter Property="MinHeight" Value="32" />
+    <Style Selector="^ /template/ RepeatButton">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    </Style>
   </ControlTheme>
 
   <!-- ================= Slider ================= -->
@@ -109,6 +145,26 @@
     </Style>
     <Style Selector="^:pressed /template/ RepeatButton#PART_IncreaseButton">
       <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    </Style>
+
+    <!-- The mockup's handle is a 14px RING (panel fill, 2px accent stroke), not Fluent's solid dot.
+         Retemplating the Thumb reaches it.
+
+         KNOWN GAP, same shape as the ButtonSpinner one above: the mockup's TRACK is a 6px rounded bar
+         with a hairline border, and ours stays Fluent's ~2px line. Height/CornerRadius setters aimed
+         at both Border#TrackBackground and the two track RepeatButtons were tried and verified
+         against a rendered frame - Fluent's Slider template fixes the track geometry at a priority a
+         Style setter does not beat. Closing it means hand-authoring the Slider template. -->
+    <Style Selector="^ /template/ Thumb">
+      <Setter Property="Width" Value="14" />
+      <Setter Property="Height" Value="14" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Ellipse Width="14" Height="14"
+                   Fill="{DynamicResource PanelBrush}"
+                   Stroke="{DynamicResource AccentBrush}" StrokeThickness="2" />
+        </ControlTemplate>
+      </Setter>
     </Style>
   </ControlTheme>
 

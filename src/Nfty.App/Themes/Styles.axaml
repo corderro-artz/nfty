@@ -509,6 +509,84 @@
     <Setter Property="BorderThickness" Value="0" />
   </Style>
 
+  <!-- ===================== Wizard / modal form grammar =====================
+       All three New* wizards share this skeleton (wizard-{cookbook,recipe,ingredient}.html):
+       kicker, heading, sub, labelled fields, a derived-identifier strip, and a footer band with
+       keyboard hints. Before this the wizards were a bare stack of watermarked TextBoxes. -->
+  <Style Selector="Border.modal">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="ClipToBounds" Value="True" />   <!-- so the foot band respects the radius -->
+    <!-- Wide enough for the footer to carry all three key hints AND both actions without them
+         overlapping; the mockup's footer spans a full-window wizard screen, ours is a dialog card. -->
+    <Setter Property="Width" Value="560" />
+    <!-- Hug the content. Without this the card stretches to whatever hosts it and the form floats in
+         a tall empty panel. -->
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <!-- The tallest wizard (New Ingredient, with both colour ranges open) is taller than a small
+         window: without a ceiling the card overflowed and took the footer - and therefore Create -
+         off screen entirely. The body scrolls inside this instead. -->
+    <Setter Property="MaxHeight" Value="620" />
+  </Style>
+  <!-- .body's accent glow: a soft radial wash from the top edge. -->
+  <Style Selector="Border.modal-body">
+    <Setter Property="Padding" Value="24,30" />
+    <Setter Property="Background">
+      <RadialGradientBrush Center="50%,0%" GradientOrigin="50%,0%" RadiusX="120%" RadiusY="90%">
+        <GradientStop Color="{DynamicResource AccentWashColor}" Offset="0" />
+        <GradientStop Color="{DynamicResource AccentWashFadeColor}" Offset="0.55" />
+      </RadialGradientBrush>
+    </Setter>
+  </Style>
+  <Style Selector="Border.modal-foot">
+    <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="Padding" Value="16,10" />
+  </Style>
+  <!-- .kicker dot -->
+  <Style Selector="Ellipse.kdot">
+    <Setter Property="Width" Value="4" />
+    <Setter Property="Height" Value="4" />
+    <Setter Property="Fill" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.m-h">
+    <Setter Property="FontSize" Value="19" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LetterSpacing" Value="-0.29" />   <!-- -.015em at 19px -->
+    <Setter Property="Margin" Value="0,7,0,0" />
+  </Style>
+  <Style Selector="TextBlock.m-sub">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="Margin" Value="0,4,0,0" />
+  </Style>
+  <!-- .derived: dashed rule above, then "Identifier <code>" -->
+  <Style Selector="TextBlock.derived">
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- .keys kbd - the footer hint chips. Distinct from Border.kbd (the search pill's shortcut chip):
+       the mockup gives these a panel fill and the stronger line. -->
+  <Style Selector="Border.kbd.keys">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+  </Style>
+  <Style Selector="Border.kbd.keys > TextBlock">
+    <Setter Property="FontSize" Value="10" />
+  </Style>
+  <Style Selector="TextBlock.keyhint">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
   <Style Selector="TextBlock.plabel">
     <Setter Property="FontSize" Value="10" />
     <Setter Property="LetterSpacing" Value="1.0" />

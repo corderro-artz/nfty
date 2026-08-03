@@ -51,6 +51,11 @@
            needs a Color resource, and PanelBrush/BgAltBrush are opaque so these simply mirror them. -->
       <Color x:Key="PanelColor">#f8f3ed</Color>
       <Color x:Key="BgAltColor">#f1ece4</Color>
+      <!-- Gradient stops take a Color, not a Brush, so the wizard's accent glow needs these two.
+           The fade stop is the SAME rgb at zero alpha rather than Transparent: interpolating toward
+           #00000000 walks the colour through black and leaves a grey halo. -->
+      <Color x:Key="AccentWashColor">#14a11f31</Color>
+      <Color x:Key="AccentWashFadeColor">#00a11f31</Color>
     </ResourceDictionary>
     <ResourceDictionary x:Key="Dark">
       <SolidColorBrush x:Key="BgBrush" Color="#07080b" />
@@ -82,6 +87,8 @@
       <BoxShadows x:Key="TitlebarHighlightShadow">inset 0 1 0 0 #0ff2ede6</BoxShadows>
       <Color x:Key="PanelColor">#0b0c10</Color>
       <Color x:Key="BgAltColor">#0a0b10</Color>
+      <Color x:Key="AccentWashColor">#26a11f31</Color>
+      <Color x:Key="AccentWashFadeColor">#00a11f31</Color>
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 
