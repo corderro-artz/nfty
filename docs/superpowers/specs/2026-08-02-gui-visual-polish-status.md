@@ -4,12 +4,12 @@ Living handoff for `feature/gui-visual-polish`. Read this **with**
 `2026-08-01-nfty-gui-visual-audit.md`, which is the source of truth for what each slice must
 achieve. This file only records where the work has got to.
 
-Last updated: 2026-08-03, after Slice 10 + the value-map import fix.
+Last updated: 2026-08-03, after Slice 11.
 
 ## State
 
-- Branch: `feature/gui-visual-polish`, **20 commits ahead of `main`, not merged**. Clean tree.
-- Build: 0 warnings, 0 errors. Tests: **Cli 42 / App 244 / Core 549**, all green.
+- Branch: `feature/gui-visual-polish`, **22 commits ahead of `main`, not merged**. Clean tree.
+- Build: 0 warnings, 0 errors. Tests: **Cli 42 / App 251 / Core 549**, all green.
 - The locked mockups in `docs/design/mockups/` are **untouched** by this branch and must stay that
   way — they are the 1:1 reference. Verified with `git diff main...HEAD -- docs/design/mockups/`
   (empty). All 8 mockup HTMLs plus `gallery.html`, `README.md` and `build-gallery.py` are present.
@@ -26,7 +26,7 @@ Last updated: 2026-08-03, after Slice 10 + the value-map import fix.
    ```
    28 PNGs land in `<tmp>` (light+dark for each screen, plus `landing-*-empty` and
    `ingredient-detail-dynamic-*`).
-4. Work Slice 11, then Slice 12. Commit per slice; keep the suite green and warnings at zero.
+4. Work Slice 12, the last one. Commit per slice; keep the suite green and warnings at zero.
 
 ## Slices
 
@@ -42,30 +42,35 @@ Last updated: 2026-08-03, after Slice 10 + the value-map import fix.
 | 8 | Wizard form grammar + input sizing | done |
 | 9 | Detail views | done |
 | 10 | Ingredient editor rebuild | done |
-| 11 | **Help sheet** | **not started** |
+| 11 | Help sheet | done |
 | 12 | **Final sweep** | **not started** |
 
-### Slice 11 — Help sheet (the audit's last open Critical)
-`Views/HelpView.axaml` is **21 lines**: one bordered box holding a single run-on paragraph, so the
-rendered sheet is ~3 lines of text in 80% empty panel. Confirmed still true on 2026-08-03.
+### Slice 11 — Help sheet (done)
+`Views/HelpView.axaml` went from 21 lines (one run-on paragraph in a box) to the mockup's 780px
+three-column card: `.sh-h` header (brandtile + accent-`y` wordmark + divider + label + Esc chip),
+`.sh-b` body at `1.35* / * / 0.82*` with left hairlines, five labelled sections, one strict 20px
+glyph gutter down every entry, and the `.sh-f` footer band with the DNA sentence and its
+`4 × 3 × 5 × 6 = 360` chip. Verified from rendered frames in both themes and pixel-measured against
+the mockup's DOM: sheet 780 wide, columns 331/245/200 (mockup 331.3/245.4/201.3), header 54px of
+content, footer 60px. Every other frame is byte-identical to the pre-slice capture.
 
-The mockup (`help.html`) is a 780px three-column sheet. Its own class names, for tracing:
-`.sheet` / `.sh-h` (header: `.brandtile` + `.wordmark` + `.tdiv` + `.slbl` + `.esc` chip) /
-`.sh-b` (`grid-template-columns: 1.35fr 1fr .82fr`, with `.col + .col` taking a left hairline) /
-`.e` (the strict `20px 1fr` glyph gutter) / `.kline` (kbd rows) / `.cs` (colour-prefix rows) /
-`.sh-f` (footer with the DNA sentence and `.dnaeq` "4 × 3 × 5 × 6 = 360"). Five sections: *The five
-words*, *Layer kinds*, *Rules & state*, *Keys*, *Colour*.
-
-Two things to get right:
-- The legend documents the three rule marks **verbatim**, so it must use `IconMarkExclude` /
-  `IconMarkRequire` / `IconMarkFlag` from `Themes/Icons.axaml` — not the visually similar
-  `IconClose` / `IconArrowRight`. Changing one without the other makes the legend stop describing
-  the app; that is why those keys exist separately.
-- HelpView still contains literal `→ ✕ ⚑ ●` characters (the only glyph substitutes left in any
-  view). They are Slice 11's to replace.
-
-Most of the styles needed already exist: `Border.idchip`, `TextBlock.slbl`, `Border.kbd.keys`,
-`TextBlock.kind-txt.kdyn/.kstat/.kcust`, `Border.fchip`, `TextBlock.wordmark`.
+Notes for whoever touches it next:
+- The three rule marks read from `IconMarkExclude` / `IconMarkRequire` / `IconMarkFlag`, never the
+  identical-looking `IconClose` / `IconArrowRight`. `HelpSheetTests` pins this by **resource
+  reference identity** — the geometry strings are the same, so no screenshot and no string
+  comparison could tell a wrongly-wired legend from a correct one.
+- `IconTypeVariant` and `IconTypeSet` are new, traced from help.html:295/299. Both were `<rect>`
+  only, so the rounded rects are written out by hand; per deviation 5 the accent sun and the
+  accent-filled fourth square are dropped (the square is still *stroked*, since omitting it would
+  break the 2x2 silhouette).
+- New size class `Path.ico.ti-sh` (16px) for the sheet's type marks; all other new grammar is the
+  `sh-`-prefixed block at the end of `Styles.axaml`, scoped that way because the sheet reuses several
+  mockup class NAMES (`.slbl`, `.t`, `.s`, `.k`) at its own sizes.
+- `Grid.ColumnSpacing` does not exist in Avalonia 11.2.3 (it landed in 11.3), so every "gap" in the
+  sheet is a left margin on the content column. The compiler catches this; the API docs do not.
+- Avalonia's `ArrangeCore` positions `Stretch` like `Center` once an explicit `Height` is set, so
+  the 16px gutter cell needs `VerticalAlignment="Top"` or the glyph floats down beside the subtitle.
+  This was visible only in the frame.
 
 ### Slice 12 — Final sweep
 Re-render every frame and diff against the mockups; confirm no off-palette colour; close or document
@@ -83,8 +88,10 @@ A sweep worth running, since it caught real things before:
 grep -rnE '"#[0-9a-fA-F]{3,8}"' src/Nfty.App/Views src/Nfty.App/Themes/Styles.axaml src/Nfty.Desktop   # raw hex outside Tokens
 grep -rnE 'Classes="ico[^"]*"[^/]*(Width|Height)=' src/Nfty.App/Views/*.axaml                          # inline icon sizes (breaks viewBox scaling)
 ```
-Plus a non-ASCII scan of the views for leftover glyph substitutes — after Slice 11 the only
-non-ASCII left should be genuine typography (`·` `—` `…` `›` `⌘` `×`), never an icon stand-in.
+Plus a non-ASCII scan of the views for leftover glyph substitutes. **Run after Slice 11 and clean:**
+what remains across `Views/`, `Themes/` and `Nfty.Desktop` is `—` `›` `×` `⌘` `·` `…` plus one `●`
+that appears only in a HelpView comment explaining why the mockup's dot is drawn as an `Ellipse`.
+No icon stand-ins left.
 
 ## Known deviations (documented in code, deliberately open)
 
@@ -104,7 +111,14 @@ non-ASCII left should be genuine typography (`·` `—` `…` `›` `⌘` `×`),
    untouched. Note the earlier claim that changing this would alter existing art was wrong: existing
    `.igt`s already store converted grayscale, and for grayscale input R equals luminance.
 5. Icons traced from multi-path SVGs drop fill-only accent details (cookbook bookmark tab, recipe
-   corner dot, marquee dash) — `StreamGeometry` is single-stroke. Noted per icon in `Icons.axaml`.
+   corner dot, marquee dash, and now the Variant sun and the Set's accent-filled square) —
+   `StreamGeometry` is single-stroke. Noted per icon in `Icons.axaml`.
+6. **The Help sheet's `Esc` is a Button, the mockup's is a static span.** Escape (a `KeyBinding`) is
+   otherwise the sheet's only way out and the scrim behind it does not dismiss, so the chip stays
+   clickable; it is styled to the mockup's `.esc` exactly, with Fluent's hover/pressed neutralised.
+7. **The Help sheet scrolls below a ~474px page area** (i.e. at MainWindow's `MinHeight="580"`),
+   which the mockup does not — at 480px tall it would otherwise lose its footer band by six pixels.
+   Inert at every larger size; verified by rendering at 874x474.
 
 ## Failure modes this branch actually hit
 

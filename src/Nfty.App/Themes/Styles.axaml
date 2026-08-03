@@ -217,6 +217,13 @@
     <Setter Property="RenderTransform" Value="scale(0.75)" />     <!-- 18/24 -->
     <Setter Property="StrokeThickness" Value="1.3" />             <!-- the mockup's own .ti stroke -->
   </Style>
+  <!-- help.html `.sheet .ti` — the quick-reference sheet draws the same type marks as the tree, at
+       16px rather than 18px. Declared after Path.ico.ti so it wins the Width/Height/scale tie. -->
+  <Style Selector="Path.ico.ti-sh">
+    <Setter Property="Width" Value="16" /><Setter Property="Height" Value="16" />
+    <Setter Property="RenderTransform" Value="scale(0.6667)" />   <!-- 16/24 -->
+    <Setter Property="StrokeThickness" Value="1.3" />             <!-- the mockup's own .ti stroke -->
+  </Style>
   <Style Selector="Path.ico.sm">
     <Setter Property="Width" Value="13" /><Setter Property="Height" Value="13" />
     <Setter Property="RenderTransform" Value="scale(0.5417)" />   <!-- 13/24 -->
@@ -1325,5 +1332,179 @@
   </Style>
   <Style Selector="Button.helpbtn Path.ico">
     <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+
+  <!-- ===================== Quick-reference sheet (help.html) =====================
+       A fixed 780px three-column card, summoned over whatever the user is doing. Every class below
+       is scoped `sh-` because the sheet re-uses several mockup class NAMES (.slbl, .t, .s, .k) at
+       its own sizes; the shared ones stay whatever the rest of the app already made them. -->
+  <Style Selector="Border.sheet">
+    <Setter Property="Width" Value="780" />
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusLg}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource WinShadow}" />
+    <Setter Property="ClipToBounds" Value="True" />   <!-- so the footer band respects the radius -->
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.sh-h">
+    <Setter Property="Padding" Value="20,15" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+  <!-- .sheet .slbl is its OWN scale — mono 11px/600, not the app-wide sans 10px TextBlock.slbl.
+       Declared after it so the overrides win; the margin is the column-label one (14px), which the
+       header and second-in-column labels override inline, mirroring the mockup's `.slbl + .slbl`. -->
+  <Style Selector="TextBlock.slbl.sh">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LetterSpacing" Value="1.54" />   <!-- .14em at 11px -->
+    <Setter Property="Margin" Value="0,0,0,14" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- .esc — a chip in the mockup, a Button here: Escape (the KeyBinding) is otherwise the sheet's
+       ONLY way out, and the scrim behind it does not dismiss. Fluent's hover/pressed fills are
+       neutralised explicitly rather than left unset, which would hand the states back to its blue. -->
+  <Style Selector="Button.esc">
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="Padding" Value="8,3" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.esc /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+  </Style>
+  <Style Selector="Button.esc:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+  </Style>
+  <Style Selector="Button.esc:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+  </Style>
+  <!-- LetterSpacing is a TextBlock property, not an attached one, so the tracked label has to be a
+       real TextBlock inside the button rather than a Content string. -->
+  <Style Selector="Button.esc > TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="LetterSpacing" Value="1.0" />   <!-- .1em at 10px -->
+  </Style>
+
+  <!-- .col / .col + .col: the reference columns, divided by a left hairline. -->
+  <Style Selector="Border.sh-col">
+    <Setter Property="Padding" Value="20,18,20,20" />
+  </Style>
+  <Style Selector="Border.sh-col.div">
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1,0,0,0" />
+  </Style>
+
+  <!-- .e — one strict 20px glyph gutter (its ColumnDefinitions stay in the view; a Setter would
+       share one ColumnDefinitions instance across every entry). .g is the 16px-tall gutter cell:
+       Path.ico sets an explicit Width, which under the default Stretch alignment would pin the
+       glyph to the cell's left edge rather than centring it in the 20px column. -->
+  <Style Selector="Grid.sh-e">
+    <Setter Property="Margin" Value="0,0,0,11" />
+  </Style>
+  <Style Selector="Grid.sh-kline">
+    <Setter Property="Margin" Value="0,0,0,9" />
+  </Style>
+  <!-- The 10px gap between gutter and content. Grid.ColumnSpacing only arrived in Avalonia 11.3 and
+       this app targets 11.2.3, so the gap is a left margin on whatever occupies the content column.
+       Declared before the .sh-t/.sh-kdesc rules below and never re-set by them, so nothing competes
+       for Margin on those elements — the rules variant's 1px nudge is a Padding, as in the CSS. -->
+  <Style Selector="Grid.sh-e > StackPanel, Grid.sh-e > TextBlock, Grid.sh-kline > TextBlock">
+    <Setter Property="Margin" Value="10,0,0,0" />
+  </Style>
+  <!-- `align-items:start`. Avalonia's ArrangeCore treats Stretch as Center once an explicit Height
+       is set, so without this the 16px gutter cell floats to the middle of a two-line entry and the
+       glyph sits beside the SUBTITLE rather than beside its term. -->
+  <Style Selector="Panel.sh-g">
+    <Setter Property="Height" Value="16" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+  </Style>
+  <Style Selector="Panel.sh-g > Path, Panel.sh-g > TextBlock, Panel.sh-g > Ellipse">
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- .t / .t.plain / .s — the term, the weight-400 rules variant, and the explanatory line. -->
+  <Style Selector="TextBlock.sh-t">
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LineHeight" Value="15.6" />   <!-- 1.25 -->
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector="TextBlock.sh-t.plain">
+    <Setter Property="FontWeight" Value="Normal" />
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="Padding" Value="0,1,0,0" />
+  </Style>
+  <Style Selector="TextBlock.sh-s">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="LineHeight" Value="17.25" />   <!-- 1.5 -->
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="Margin" Value="0,3,0,0" />
+  </Style>
+
+  <!-- .kline / .k — the keyboard rows. Border.kbd already carries the chip's border, radius and
+       mono 10.5 ink; only the fill, the flatter padding and the centred glyph differ here. -->
+  <Style Selector="Border.kbd.sh-k">
+    <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
+    <Setter Property="Padding" Value="0,2" />
+  </Style>
+  <Style Selector="Border.kbd.sh-k > TextBlock">
+    <Setter Property="TextAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.sh-kdesc">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- .cs / .fine — the colour-spec rows and the note under them. -->
+  <Style Selector="TextBlock.sh-cs">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="TextBlock.sh-cs.pre">
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+  <Style Selector="TextBlock.sh-fine">
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="LineHeight" Value="15.75" />   <!-- 1.5 -->
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="Margin" Value="0,10,0,0" />
+  </Style>
+
+  <!-- .sh-f / .dna / .dnaeq — the footer band. -->
+  <Style Selector="Border.sh-f">
+    <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="Padding" Value="20,12" />
+  </Style>
+  <Style Selector="TextBlock.sh-dna">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="LineHeight" Value="17.25" />   <!-- 1.5 -->
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.kbd.sh-eq">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="Padding" Value="9,3" />
+    <Setter Property="Margin" Value="12,0,0,0" />
   </Style>
 </Styles>
