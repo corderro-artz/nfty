@@ -56,6 +56,33 @@ public static class LooseWorkspace
         return Array.Empty<string>();
     }
 
+    /// <summary>Writes a standalone (loose) recipe as a .rcp, atomically, mirroring
+    /// <see cref="WriteIngredient"/>. Returns validation problems and writes nothing when there are any.
+    ///
+    /// A recipe created by the wizard is intentionally EMPTY — the user fills it with "Add ingredient"
+    /// next — and <c>Validator.ValidateRecipe</c> rejects an empty layer order, so an empty one is
+    /// allowed through here for the same reason the in-book path does not validate a fresh recipe.
+    /// Anything with layers is held to the full standard.</summary>
+    public static IReadOnlyList<string> WriteRecipe(string path, LoadedRecipe recipe)
+    {
+        var problems = recipe.Manifest.LayerOrder.Count == 0
+            ? Array.Empty<string>()
+            : Validator.ValidateRecipe(recipe);
+        if (problems.Count > 0) return problems;
+
+        var tmp = path + ".tmp";
+        try
+        {
+            RecipeArchive.Write(tmp, recipe.Manifest, recipe.Ingredients);
+            File.Move(tmp, path, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(tmp)) { try { File.Delete(tmp); } catch { /* best effort */ } }
+        }
+        return Array.Empty<string>();
+    }
+
     /// <summary>Wraps a standalone (loose) recipe in a throwaway single-recipe cookbook so the Explorer
     /// can browse it. The recipe is kept as-is (its own id, layer order, rules, ingredients);
     /// <c>RecipeWeights</c> keys the recipe's real id so the synthetic book is internally consistent. The

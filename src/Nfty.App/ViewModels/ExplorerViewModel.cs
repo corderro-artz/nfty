@@ -403,6 +403,14 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
             await ShowError("Invalid recipe", "The recipe needs a name.");
             return;
         }
+        // The wizard offers "The Kitchen" as a destination and this branch used to be missing
+        // entirely, so choosing it silently added the recipe to the CookBook anyway - a user choice
+        // accepted and then discarded, which is worse than not offering it.
+        if (result.Destination == RecipeDestination.LooseKitchen)
+        {
+            await CreateLooseRecipe(result);
+            return;
+        }
         if (_book.Recipes.Any(r => r.Manifest.Id == result.DerivedId))
         {
             await ShowError("Duplicate recipe", $"A recipe “{result.DerivedId}” already exists.");
@@ -486,6 +494,37 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
 
     /// <summary>The "Loose (Kitchen)" destination: write a standalone .igt (never touching the open
     /// cookbook) and open it in a loose editor — mirrors LandingViewModel.NewIngredient's B3a steps.</summary>
+    /// <summary>Saves a new Recipe as a loose .rcp rather than adding it to the open CookBook.
+    /// Mirrors <see cref="CreateLooseIngredient"/>: pick a path, write atomically, report problems
+    /// rather than throwing. The recipe is empty by design - it is filled by opening it and adding
+    /// ingredients - so it is not added to the recents list as something already useful.</summary>
+    private async Task CreateLooseRecipe(NewRecipeViewModel result)
+    {
+        string? path;
+        try { path = await _picker.SaveFileAsync("Save new recipe", ".rcp"); }
+        catch (Exception ex) { await ShowError("Could not save", ex.Message); return; }
+        if (path is null) return;   // cancelled
+
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest(result.DerivedId, result.Name,
+                Array.Empty<string>(), Array.Empty<IncompatibilityRule>()),
+            Ingredients = Array.Empty<LoadedIngredient>(),
+        };
+
+        try
+        {
+            var problems = LooseWorkspace.WriteRecipe(path, recipe);
+            if (problems.Count > 0)
+            {
+                await ShowError("Invalid recipe", string.Join("\n", problems));
+                return;
+            }
+            _status.Say($"Saved “{result.Name}” to {path}. Open it to add ingredients.");
+        }
+        catch (Exception ex) { await ShowError("Could not save", ex.Message); }
+    }
+
     private async Task CreateLooseIngredient(NewIngredientViewModel result)
     {
         if (!result.TryGetCanvas(out var canvas))
