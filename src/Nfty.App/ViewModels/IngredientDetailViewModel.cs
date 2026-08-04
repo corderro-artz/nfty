@@ -20,6 +20,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
 {
     private readonly INotYetWired _notify;
     private readonly Action _editIngredient;
+    private readonly Action? _jumpToRecipe;
     private readonly Func<bool> _isEditing;
     private readonly IImageBridge _bridge;
     private readonly LoadedIngredient _ing;
@@ -61,11 +62,23 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     /// an ingredient with no variants, which the view treats as nothing to draw.</summary>
     public Bitmap? SelectedThumb => _variants.Count > 0 ? _variants[0].Thumbnail : null;
 
+    /// <summary>How many of the recipe's incompatibility rules mention this layer, on either side.
+    /// The mockup's .hflag pill exists to answer "is this layer entangled?" at a glance, which is
+    /// otherwise only discoverable by opening the recipe and reading its rules.</summary>
+    public int RuleCount { get; }
+    public bool HasRules => RuleCount > 0;
+    public string RuleFlagText => RuleCount == 1 ? "1 rule" : $"{RuleCount} rules";
+
     public IngredientDetailViewModel(LoadedIngredient ing, LoadedRecipe recipe, LoadedCookBook book,
-        IImageBridge bridge, INotYetWired notify, Action editIngredient, Func<bool> isEditing)
+        IImageBridge bridge, INotYetWired notify, Action editIngredient, Func<bool> isEditing,
+        Action? jumpToRecipe = null)
     {
         _ing = ing; _bridge = bridge;
         _notify = notify; _editIngredient = editIngredient; _isEditing = isEditing;
+        _jumpToRecipe = jumpToRecipe;
+
+        RuleCount = recipe.Manifest.Rules.Count(r =>
+            r.When.IngredientId == ing.Manifest.Id || r.Targets.Any(t => t.IngredientId == ing.Manifest.Id));
         Name = ing.Manifest.Name;
         KindText = ing.Manifest.Kind.ToString().ToLowerInvariant();
         IsDynamic = ing.Manifest.Kind == LayerKind.Dynamic;
@@ -181,7 +194,11 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand(CanExecute = nameof(CanEdit))] private void DeleteVariant() => _notify.Report("Delete variant");
-    [RelayCommand] private void JumpToRules() { /* nav within the recipe rail */ }
+    /// <summary>Selects the owning recipe, whose Rules panel is where this layer's rules live. Used
+    /// to be an empty body behind a permanently-visible "Jump to rules" button - a control that
+    /// looked available and did nothing. It is now the .hflag pill, shown only when there is
+    /// something to jump to.</summary>
+    [RelayCommand] private void JumpToRules() => _jumpToRecipe?.Invoke();
     [RelayCommand] private void EditIngredient() => _editIngredient();
     private bool CanEdit() => _isEditing();
 

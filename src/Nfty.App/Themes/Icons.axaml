@@ -89,6 +89,14 @@
   <StreamGeometry x:Key="IconSelect">M5.5 4h13A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13A1.5 1.5 0 0 1 5.5 4z</StreamGeometry>
   <StreamGeometry x:Key="IconFill">M4 12l7-7 7 7-7 7zM18 14c1.5 2 2 3 0 3s-1.5-1 0-3z</StreamGeometry>
 
+  <!-- explorer.html ICON.dice: the recipe portrait's reroll button. A literal die face - a rounded
+       square with four pips. The mockup draws it as a <rect> plus four filled <circle>s; both are
+       written out as paths here since StreamGeometry expresses neither. The pips are stroked rather
+       than filled (a Path.ico is one stroke), so they read as four small rings at 15px - close
+       enough that the glyph is unmistakably a die, which the circular-arrow IconReroll it replaces
+       was not. -->
+  <StreamGeometry x:Key="IconDiceFace">M7.4 4h9.2A3.4 3.4 0 0 1 20 7.4v9.2a3.4 3.4 0 0 1-3.4 3.4H7.4A3.4 3.4 0 0 1 4 16.6V7.4A3.4 3.4 0 0 1 7.4 4zM10.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zM16.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zM10.5 15a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zM16.5 15a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z</StreamGeometry>
+
   <!-- explorer.html ICON.del: the Delete affordance -->
   <StreamGeometry x:Key="IconTrash">M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13</StreamGeometry>
 

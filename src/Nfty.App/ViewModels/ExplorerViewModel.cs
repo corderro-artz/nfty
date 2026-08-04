@@ -199,7 +199,10 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
                 id => OpenIngredientCommand.Execute(id)),
             ExplorerNodeKind.Ingredient => newValue!.Domain is (LoadedRecipe r, LoadedIngredient i)
                 ? new IngredientDetailViewModel(i, r, _book, _bridge, _notify,
-                    () => OpenEditor(i, r), () => IsEditing)
+                    () => OpenEditor(i, r), () => IsEditing,
+                    // The rule-count pill jumps to the owning recipe, whose Rules panel is where
+                    // this layer's rules actually live.
+                    () => SelectedNode = FindNode(Root, r.Manifest.Id) ?? SelectedNode)
                 : null,
             _ => null,
         };

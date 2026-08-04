@@ -1308,6 +1308,29 @@
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
 
+  <!-- .hflag: the hero's accent rule-count pill. Fully rounded, accent ink on accent wash. -->
+  <Style Selector="Button.hflag">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="999" />
+    <Setter Property="Padding" Value="9,3" />
+  </Style>
+  <Style Selector="Button.hflag /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.hflag:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+  </Style>
+  <Style Selector="Button.hflag TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+  <Style Selector="Button.hflag Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+
   <!-- .cwcustom: the 56px art swatch and its note, shown instead of a hue band for a Custom layer. -->
   <Style Selector="Border.cwsw">
     <Setter Property="Width" Value="56" />

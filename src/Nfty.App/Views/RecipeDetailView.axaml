@@ -20,7 +20,9 @@
             </Border>
             <Button Classes="dice" Command="{Binding RerollCommand}" ToolTip.Tip="Reroll sample"
                     HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,6,6">
-              <Path Classes="ico sm" Data="{StaticResource IconReroll}" />
+              <!-- A die face, per the mockup's .dice button. IconReroll (a circular arrow) is the
+                   ingredient editor's "reroll sampled colour" glyph and was borrowed here. -->
+              <Path Classes="ico sm" Data="{StaticResource IconDiceFace}" />
             </Button>
           </Panel>
 
