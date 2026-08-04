@@ -449,6 +449,23 @@ public class VisualCapture
             vm.FillPanePreviewCommand.Execute(null);   // C1: preview takes over the canvas pane
             Capture(new Views.IngredientEditorView { DataContext = vm }, variant, $"editor-paint-{key}.png");
             vm.Dispose();
+
+            // TwoRecipeBook's layers are ALL LayerKind.Custom, and the editor gates painting on
+            // CanPaint => !IsCustom. So the frames above render the entire toolstrip - tools,
+            // undo/redo, value ramp, swatch, brush size - DISABLED, and the editor's whole reason to
+            // exist had no visual evidence at all. Same class of blind spot as the colorways hue
+            // band before ingredient-detail-dynamic-* existed: a frame that exercises no code is not
+            // evidence. This pair is the enabled editor.
+            var (dynBook, dynRecipe, dynIng) = DynamicIngredient();
+            var dynVm = new IngredientEditorViewModel(dynIng, dynRecipe, dynBook, new ImageBridge(),
+                new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs(),
+                new FilePickerService());
+            dynVm.ActiveTool = EditorTool.Fill;
+            dynVm.BrushValue = 200;
+            dynVm.ApplyToolStroke(new[] { (0, 0) });
+            Capture(new Views.IngredientEditorView { DataContext = dynVm }, variant, $"editor-enabled-{key}.png");
+            dynVm.Dispose();
+            dynBook.Dispose();
         }
     }
 

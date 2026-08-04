@@ -24,8 +24,12 @@ Last updated: 2026-08-03, after Slice 11.
    ```
    NFTY_CAPTURE=1 NFTY_CAPTURE_DIR=<tmp> dotnet test tests/Nfty.App.Tests --filter FullyQualifiedName~VisualCapture
    ```
-   28 PNGs land in `<tmp>` (light+dark for each screen, plus `landing-*-empty` and
-   `ingredient-detail-dynamic-*`).
+   **32** PNGs land in `<tmp>` — light+dark for each screen, plus the pairs that exist because a
+   default fixture cannot reach the state: `landing-*-empty`, `ingredient-detail-dynamic-*` (every
+   other ingredient fixture is Custom, so the colorways hue band had no evidence) and
+   `editor-enabled-*` (same cause: the editor gates painting on `CanPaint => !IsCustom`, so the
+   `editor-paint-*` pair renders the whole toolstrip **disabled** and never showed the blip preview
+   at all). If you add a state a fixture cannot reach, add a frame for it.
 4. Work Slice 12, the last one. Commit per slice; keep the suite green and warnings at zero.
 
 ## Slices
