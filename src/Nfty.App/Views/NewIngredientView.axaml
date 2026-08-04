@@ -23,7 +23,7 @@
           <StackPanel Spacing="14" Margin="0,19,0,0">
             <StackPanel Spacing="6">
               <TextBlock Text="NAME" Classes="plabel" />
-              <TextBox Text="{Binding Name}" Watermark="Aura" />
+              <TextBox Text="{Binding Name}" PlaceholderText="Aura" />
             </StackPanel>
 
             <StackPanel Spacing="6">
@@ -46,7 +46,7 @@
 
             <StackPanel Spacing="6" IsVisible="{Binding ShowFixedColour}">
               <TextBlock Text="FIXED COLOUR" Classes="plabel" />
-              <TextBox Watermark="hex:d6249f" Text="{Binding FixedColor}" />
+              <TextBox PlaceholderText="hex:d6249f" Text="{Binding FixedColor}" />
             </StackPanel>
 
             <StackPanel Spacing="6">
@@ -60,7 +60,7 @@
             <!-- A loose ingredient has no cookbook to inherit the canvas from, so it must state one. -->
             <StackPanel Spacing="6" IsVisible="{Binding ShowCanvas}">
               <TextBlock Text="CANVAS" Classes="plabel" />
-              <TextBox Watermark="512x512" Text="{Binding CanvasSize}" />
+              <TextBox PlaceholderText="512x512" Text="{Binding CanvasSize}" />
             </StackPanel>
           </StackPanel>
 

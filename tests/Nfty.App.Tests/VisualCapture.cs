@@ -9,6 +9,7 @@ using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -168,7 +169,7 @@ public class VisualCapture
                     Margin = new Thickness(0, 6, 0, 0),
                     Children =
                     {
-                        new TextBox { Text = "aura", Watermark = "id", Width = 110 },
+                        new TextBox { Text = "aura", PlaceholderText = "id", Width = 110 },
                         new Slider { Minimum = 0, Maximum = 1, Value = 0.6, Width = 110 },
                         new CheckBox { IsChecked = true, Content = "checked" },
                         new RadioButton { IsChecked = true, Content = "picked" },
@@ -204,7 +205,7 @@ public class VisualCapture
             var frame = window.CaptureRenderedFrame();
             Assert.NotNull(frame);
             var path = Path.Combine(Dir!, $"gallery-{variant.Key.ToString()!.ToLowerInvariant()}.png");
-            frame!.Save(path);
+            frame!.Save(path, PngBitmapEncoderOptions.Default);
         }
     }
 
@@ -251,7 +252,8 @@ public class VisualCapture
             vm.ToggleLockCommand.Execute(null);   // unlocked: the lock must LOOK different
             Dispatcher.UIThread.RunJobs();
 
-            window.CaptureRenderedFrame()!.Save(Path.Combine(Dir!, $"explorer-{variant.Key.ToString()!.ToLowerInvariant()}.png"));
+            window.CaptureRenderedFrame()!.Save(Path.Combine(Dir!, $"explorer-{variant.Key.ToString()!.ToLowerInvariant()}.png"),
+                PngBitmapEncoderOptions.Default);
             vm.Dispose();
         }
     }
@@ -481,6 +483,6 @@ public class VisualCapture
         var window = new Window { RequestedThemeVariant = variant, Content = view, Width = 1180, Height = 720 };
         window.Show();
         Dispatcher.UIThread.RunJobs();
-        window.CaptureRenderedFrame()!.Save(Path.Combine(Dir!, fileName));
+        window.CaptureRenderedFrame()!.Save(Path.Combine(Dir!, fileName), PngBitmapEncoderOptions.Default);
     }
 }

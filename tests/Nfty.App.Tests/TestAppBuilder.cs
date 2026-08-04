@@ -10,5 +10,7 @@ public static class TestAppBuilder
 {
     public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<TestApp>()
         .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
-        .UseSkia();
+        .UseSkia()
+        // v12 stopped implying a text shaper for anyone who selects the render backend by hand.
+        .UseHarfBuzz();
 }

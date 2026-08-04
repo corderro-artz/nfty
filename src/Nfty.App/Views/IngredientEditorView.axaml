@@ -302,7 +302,7 @@
                           Background="{DynamicResource TileBrush}" ClipToBounds="True">
                     <Image Source="{Binding Preview}" Stretch="UniformToFill" />
                   </Border>
-                  <TextBox Text="{Binding FixedColor}" Watermark="hex:d6249f" Width="150" VerticalAlignment="Center" />
+                  <TextBox Text="{Binding FixedColor}" PlaceholderText="hex:d6249f" Width="150" VerticalAlignment="Center" />
                 </StackPanel>
               </StackPanel>
 

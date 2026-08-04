@@ -23,11 +23,11 @@
           <StackPanel Spacing="14" Margin="0,19,0,0">
             <StackPanel Spacing="6">
               <TextBlock Text="NAME" Classes="plabel" />
-              <TextBox Text="{Binding Name}" Watermark="VaporPets" />
+              <TextBox Text="{Binding Name}" PlaceholderText="VaporPets" />
             </StackPanel>
             <StackPanel Spacing="6">
               <TextBlock Text="SYMBOL" Classes="plabel" />
-              <TextBox Text="{Binding Symbol}" MaxLength="255" Watermark="VP" />
+              <TextBox Text="{Binding Symbol}" MaxLength="255" PlaceholderText="VP" />
             </StackPanel>
 
             <StackPanel Spacing="6">
@@ -47,7 +47,7 @@
               <TextBlock Text="DESCRIPTION" Classes="plabel" />
               <TextBox Text="{Binding Description}" AcceptsReturn="True" Height="70"
                        VerticalContentAlignment="Top" Padding="11,7"
-                       Watermark="A collection of neon companions, each hatched from its own recipe…" />
+                       PlaceholderText="A collection of neon companions, each hatched from its own recipe…" />
             </StackPanel>
           </StackPanel>
 

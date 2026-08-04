@@ -6,7 +6,7 @@
         x:DataType="vm:ShellViewModel"
         Width="1180" Height="720" MinWidth="900" MinHeight="580" Title="nfty"
         Background="Transparent" TransparencyLevelHint="Transparent"
-        ExtendClientAreaToDecorationsHint="True" SystemDecorations="None">
+        ExtendClientAreaToDecorationsHint="True" WindowDecorations="None">
   <Window.KeyBindings>
     <KeyBinding Gesture="Ctrl+OemQuestion" Command="{Binding ShowHelpCommand}" />
     <KeyBinding Gesture="Ctrl+OemPlus" Command="{Binding ZoomInCommand}" />

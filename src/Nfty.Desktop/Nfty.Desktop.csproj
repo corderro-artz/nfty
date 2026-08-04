@@ -10,8 +10,10 @@
     <NuGetAuditMode>direct</NuGetAuditMode>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Avalonia.Desktop" Version="11.2.3" />
-    <PackageReference Include="Avalonia.Diagnostics" Version="11.2.3" Condition="'$(Configuration)'=='Debug'" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.1" />
+    <!-- v12 removed Avalonia.Diagnostics; AvaloniaUI.DiagnosticsSupport replaces it and versions
+         on its own track, so it does not move in lockstep with the Avalonia packages. -->
+    <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3" Condition="'$(Configuration)'=='Debug'" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Nfty.App\Nfty.App.csproj" />

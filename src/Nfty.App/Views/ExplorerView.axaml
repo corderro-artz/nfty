@@ -23,7 +23,7 @@
                  second one inside it. -->
             <TextBox Grid.Column="1" x:Name="SearchBox" Text="{Binding SearchQuery}" Classes="bare"
                      Margin="8,0" VerticalAlignment="Center"
-                     Watermark="Find recipe, ingredient, variant…" ToolTip.Tip="Search (Ctrl+K)" />
+                     PlaceholderText="Find recipe, ingredient, variant…" ToolTip.Tip="Search (Ctrl+K)" />
             <Border Grid.Column="2" Classes="kbd"><TextBlock Text="⌘K" /></Border>
           </Grid>
         </Border>
