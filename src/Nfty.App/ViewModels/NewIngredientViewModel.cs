@@ -92,6 +92,17 @@ public partial class NewIngredientViewModel : WizardViewModelBase
         CreateCommand.NotifyCanExecuteChanged();
     }
 
+    partial void OnHueMinChanged(double value) => OnPropertyChanged(nameof(HueRangeText));
+    partial void OnHueMaxChanged(double value) => OnPropertyChanged(nameof(HueRangeText));
+    partial void OnSatMinChanged(double value) => OnPropertyChanged(nameof(SatRangeText));
+    partial void OnSatMaxChanged(double value) => OnPropertyChanged(nameof(SatRangeText));
+
+    /// <summary>Live readouts beside each range control (mockup .cv), so the span the two handles
+    /// describe is legible without reading their positions off the track. Same shape as the
+    /// ingredient editor's, since the wizard now shows the same dual-range control.</summary>
+    public string HueRangeText => $"{HueMin:0}–{HueMax:0}°";
+    public string SatRangeText => $"{SatMin:0}–{SatMax:0}%";
+
     /// <summary>The ingredient id derived from the name: lower-case, spaces to dashes.</summary>
     public string DerivedId => string.Join('-',
         Name.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries));

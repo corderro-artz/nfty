@@ -29,6 +29,11 @@ public partial class LandingViewModel : ViewModelBase
     /// a removed row would stay on screen.</summary>
     public IReadOnlyList<RecentItem> Recents => _recents.Items.ToArray();
 
+    /// <summary>Drives the first-run empty state. Without it the whole right half of the start
+    /// screen is blank on a fresh install, which reads as a failed load rather than as "no history
+    /// yet".</summary>
+    public bool HasNoRecents => Recents.Count == 0;
+
     public LandingViewModel(INavigationService nav, IDialogService dialogs, INotYetWired notify,
         IFilePickerService picker, IRecentsService recents, ICookBookSession session,
         Func<LoadedCookBook, ExplorerViewModel> explorerFactory,
@@ -152,8 +157,11 @@ public partial class LandingViewModel : ViewModelBase
             ing.Dispose(); return;
         }
         var book = LooseWorkspace.WrapIngredient(ing);   // the editor owns + disposes this
+        // The loose-editor factory records the recent itself (see ServiceRegistration) so that every
+        // route into a loose editor does, not just this one.
         _nav.To(_looseEditorFactory(ing, book, path));
-        RecordRecent(new RecentItem(ing.Manifest.Name, $"loose ingredient · {ing.Manifest.Variants.Count} variants", path, true));
+        OnPropertyChanged(nameof(Recents));
+        OnPropertyChanged(nameof(HasNoRecents));
     }
 
     private void OpenPath(string path)
@@ -195,6 +203,7 @@ public partial class LandingViewModel : ViewModelBase
     {
         _recents.Add(item);
         OnPropertyChanged(nameof(Recents));
+        OnPropertyChanged(nameof(HasNoRecents));
     }
 
     [RelayCommand]
@@ -204,6 +213,7 @@ public partial class LandingViewModel : ViewModelBase
         {
             _recents.Remove(item.Path);
             OnPropertyChanged(nameof(Recents));
+            OnPropertyChanged(nameof(HasNoRecents));
             ShowError("Missing file", $"“{item.Path}” is no longer there, so it was removed from Recents.");
             return;
         }

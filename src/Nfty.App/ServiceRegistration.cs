@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Nfty.App.Models;
 using Nfty.App.Services;
 using Nfty.App.ViewModels;
 using Nfty.Core.Formats;
@@ -14,6 +15,7 @@ public static class ServiceRegistration
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IDialogService, DialogService>();
         services.AddSingleton<INotYetWired, NotYetWired>();
+        services.AddSingleton<IStatusService, StatusService>();
         services.AddSingleton<IFilePickerService, FilePickerService>();
         services.AddSingleton<IRecentsService, RecentsService>();
         services.AddSingleton<IThemeService, ThemeService>();
@@ -41,11 +43,22 @@ public static class ServiceRegistration
         // wrapper book it owns. Built directly (not via the cookbook editor factory) so it can pass
         // looseSavePath and the synthetic book.
         services.AddSingleton<Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel>>(sp =>
-            (ing, book, path) => new IngredientEditorViewModel(ing, book.Recipes[0], book,
-                sp.GetRequiredService<IImageBridge>(), sp.GetRequiredService<INavigationService>(),
-                sp.GetRequiredService<INotYetWired>(), sp.GetRequiredService<ICookBookSession>(),
-                sp.GetRequiredService<IDialogService>(), sp.GetRequiredService<IFilePickerService>(),
-                looseSavePath: path));
+            (ing, book, path) =>
+            {
+                // Recording the recent here, at the composition root, rather than in each caller:
+                // every route into a loose editor is an "open" the user expects to find again, but
+                // only Landing's remembered to record one - a loose ingredient created from the
+                // Explorer opened fine and then vanished from Recents. One rule beats N callers each
+                // having to remember, and it keeps IRecentsService out of the Explorer's constructor.
+                sp.GetRequiredService<IRecentsService>()
+                  .Add(new RecentItem(ing.Manifest.Name, $"loose ingredient · {ing.Manifest.Variants.Count} variants",
+                                      path, Loose: true));
+                return new IngredientEditorViewModel(ing, book.Recipes[0], book,
+                    sp.GetRequiredService<IImageBridge>(), sp.GetRequiredService<INavigationService>(),
+                    sp.GetRequiredService<INotYetWired>(), sp.GetRequiredService<ICookBookSession>(),
+                    sp.GetRequiredService<IDialogService>(), sp.GetRequiredService<IFilePickerService>(),
+                    looseSavePath: path);
+            });
 
         services.AddSingleton<Func<LoadedCookBook, CookDialogViewModel>>(sp =>
             book => new CookDialogViewModel(book,
@@ -63,7 +76,8 @@ public static class ServiceRegistration
                 sp.GetRequiredService<Func<LoadedCookBook, CookDialogViewModel>>(),
                 sp.GetRequiredService<ICookBookSession>(),
                 sp.GetRequiredService<IFilePickerService>(),
-                sp.GetRequiredService<Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel>>()));
+                sp.GetRequiredService<Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel>>(),
+                sp.GetRequiredService<IStatusService>()));
 
         services.AddSingleton<Func<LoadedSet, SetBrowserViewModel>>(sp => set => new SetBrowserViewModel(set));
 

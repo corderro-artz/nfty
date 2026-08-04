@@ -16,7 +16,7 @@
           <TextBlock Text="Count" VerticalAlignment="Center" Classes="muted" Width="60" />
           <NumericUpDown Value="{Binding Count}" Minimum="1" Width="140" />
         </StackPanel>
-        <TextBox Watermark="Seed" Text="{Binding Seed}" />
+        <TextBox PlaceholderText="Seed" Text="{Binding Seed}" />
         <CheckBox Content="Pack into a single .set" IsChecked="{Binding Pack}" />
       </StackPanel>
 

@@ -34,6 +34,52 @@ public class IngredientDetailViewModelTests
         return (book, recipe, aura);
     }
 
+    /// <summary>The hero's rule-count pill (mockup .hflag). It appears ONLY when the layer is named
+    /// in a rule, which is the question it exists to answer — so no capture fixture reaches it: the
+    /// explorer's book has no rules and this file's default fixture has none either. Same blind spot
+    /// as the Custom-only ingredients and the editor's disabled toolstrip, so it is pinned here.
+    ///
+    /// It replaced a permanently-visible "Jump to rules" button whose command body was empty.</summary>
+    [AvaloniaFact]
+    public void Rule_pill_counts_rules_on_either_side_and_hides_when_there_are_none()
+    {
+        var (book, recipe, ing) = Fixture();
+        using (var none = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(),
+            new FakeNotYetWired(), () => { }, () => false))
+        {
+            Assert.Equal(0, none.RuleCount);
+            Assert.False(none.HasRules);        // nothing to jump to, so the pill must not show
+        }
+
+        // One rule naming this layer as the CONDITION, one naming it as a TARGET. Both count: the
+        // question is "is this layer entangled", not "which side of the rule is it on".
+        var rules = new[]
+        {
+            new IncompatibilityRule(RuleType.Exclude, new RuleTarget("aura", "glow"),
+                new[] { new RuleTarget("other", "x") }),
+            new IncompatibilityRule(RuleType.Require, new RuleTarget("other", "y"),
+                new[] { new RuleTarget("aura", "spark") }),
+            new IncompatibilityRule(RuleType.Exclude, new RuleTarget("other", "y"),
+                new[] { new RuleTarget("unrelated", "z") }),   // mentions neither side - must not count
+        };
+        var withRules = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("cat", "Cat", new[] { "aura" }, rules),
+            Ingredients = recipe.Ingredients,
+        };
+        var jumped = false;
+        using var vm = new IngredientDetailViewModel(ing, withRules, book, new ImageBridge(),
+            new FakeNotYetWired(), () => { }, () => false, () => jumped = true);
+
+        Assert.Equal(2, vm.RuleCount);
+        Assert.True(vm.HasRules);
+        Assert.Equal("2 rules", vm.RuleFlagText);
+
+        // The command actually does something now.
+        vm.JumpToRulesCommand.Execute(null);
+        Assert.True(jumped);
+    }
+
     [AvaloniaFact]
     public void Variant_rows_carry_within_recipe_rarity()
     {
@@ -144,7 +190,15 @@ public class IngredientDetailViewModelTests
         var (book, recipe, ing) = Fixture();
         using var vm = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(),
             new FakeNotYetWired(), () => { }, () => false);
-        // custom → a single "composited as-is" axis (no H/S)
-        Assert.Contains(vm.ColorwayAxes, a => a.Value.Contains("composited as-is"));
+
+        // A Custom layer has NO axes. It used to report one synthetic
+        // ColorwayAxis("COLOUR", "no colorize · composited as-is"), which borrowed the axis-row
+        // shape to say "there are no axes" and put a full sentence in a column sized for "190–320°".
+        // The mockup gives Custom its own branch instead - a swatch of the art plus a note - so the
+        // rail must have nothing to lay out here.
+        Assert.True(vm.IsCustom);
+        Assert.Empty(vm.ColorwayAxes);
+        Assert.False(vm.HasHueBand);            // and no hue band either: it rolls no hue
+        Assert.NotNull(vm.SelectedThumb);       // the swatch the Custom branch draws instead
     }
 }

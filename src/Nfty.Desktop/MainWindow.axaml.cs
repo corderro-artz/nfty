@@ -3,6 +3,7 @@ using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 using Avalonia.VisualTree;
 using Nfty.App.ViewModels;
+using Nfty.App.Views;
 
 namespace Nfty.Desktop;
 
@@ -11,18 +12,14 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         AvaloniaXamlLoader.Load(this);
-        var scrim = this.FindControl<Panel>("DialogScrim")!;
-        scrim.PointerPressed += (sender, e) =>
-        {
-            // Only close when the click landed on the scrim itself, not bubbled up from the dialog content.
-            if (e.Source == sender && DataContext is ShellViewModel shell)
-                shell.CloseDialogCommand.Execute(null);
-        };
 
         // Custom chrome (SystemDecorations=None): titlebar drags the window and double-click
-        // toggles maximize; the corner grip resizes. The OS provides none of this here.
-        this.FindControl<Grid>("Titlebar")!.PointerPressed += OnTitlebarPointerPressed;
-        this.FindControl<Control>("ResizeGrip")!.PointerPressed += (_, e) =>
+        // toggles maximize; the corner grip resizes. The OS provides none of this here. The chrome
+        // itself is Nfty.App's ShellChromeView, which exposes these two surfaces as properties -
+        // FindControl cannot cross into a UserControl's own name scope.
+        var chrome = this.FindControl<ShellChromeView>("Chrome")!;
+        chrome.TitlebarArea.PointerPressed += OnTitlebarPointerPressed;
+        chrome.ResizeGripArea.PointerPressed += (_, e) =>
         {
             if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
                 BeginResizeDrag(WindowEdge.SouthEast, e);

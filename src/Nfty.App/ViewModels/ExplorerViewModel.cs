@@ -25,12 +25,15 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     private readonly Func<LoadedCookBook, CookDialogViewModel> _cookFactory;
     private readonly ICookBookSession _session;
     private readonly IFilePickerService _picker;
+    private readonly IStatusService _status;
     private readonly Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> _looseEditorFactory;
 
     [ObservableProperty] private ExplorerNode? _selectedNode;
     [ObservableProperty] private ViewModelBase? _currentDetail;
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(DeleteSelectedCommand))]
+    [NotifyPropertyChangedFor(nameof(LockTip))]
+    [NotifyPropertyChangedFor(nameof(LockStateText))]
     private bool _isEditing;
 
     [ObservableProperty] private ExplorerNode _root = default!;
@@ -50,6 +53,27 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
 
     public IReadOnlyList<Crumb> Crumbs { get; private set; } = Array.Empty<Crumb>();
 
+    /// <summary>Status bar's lock-state label (explorer.html .statusbar .state: "read-only"/"editing"),
+    /// distinct from <see cref="LockTip"/> which phrases the same state as a click instruction.</summary>
+    public string LockStateText => IsEditing ? "editing" : "read-only";
+
+    /// <summary>Status bar counts (explorer.html #rTotal/#iTotal/#varTotal), recomputed from
+    /// <see cref="_book"/> — refreshed via <see cref="RefreshCounts"/> whenever the book is swapped.</summary>
+    public string RecipeCountText => Pluralize(_book.Recipes.Count, "recipe");
+    public string IngredientCountText => Pluralize(_book.Recipes.Sum(r => r.Ingredients.Count), "ingredient");
+    public string VariantCountText =>
+        Pluralize(_book.Recipes.Sum(r => r.Ingredients.Sum(i => i.Manifest.Variants.Count)), "variant");
+
+    private static string Pluralize(int count, string noun) => $"{count} {noun}{(count == 1 ? "" : "s")}";
+
+    private void RefreshCounts()
+    {
+        OnPropertyChanged(nameof(RecipeCountText));
+        OnPropertyChanged(nameof(IngredientCountText));
+        OnPropertyChanged(nameof(VariantCountText));
+        OnPropertyChanged(nameof(TreeCountText));
+    }
+
     public string AddLabel => SelectedNode?.Kind switch
     {
         ExplorerNodeKind.CookBook => "Add recipe",
@@ -58,21 +82,83 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         _ => "Add",
     };
 
+    // ---- detail pane header (explorer.html .pane-h.detail-h) ----------------------------------
+    // The detail pane had no header at all, so its content started 25px above the Contents pane's
+    // and the two panes visibly failed to line up. Derived from the selection rather than from a
+    // surface each detail ViewModel implements: the Explorer already holds both the node and its
+    // domain object, and the mockup's own header is likewise a function of what is selected.
+
+    /// <summary>Drives which type glyph the header shows; null hides the whole band.</summary>
+    public ExplorerNodeKind? DetailKind => SelectedNode?.Kind;
+    public bool IsDetailCookBook => DetailKind == ExplorerNodeKind.CookBook;
+    public bool IsDetailRecipe => DetailKind == ExplorerNodeKind.Recipe;
+    public bool IsDetailIngredient => DetailKind == ExplorerNodeKind.Ingredient;
+
+    /// <summary>Mockup: the cookbook/recipe name, and for an ingredient "recipe › ingredient".
+    /// Uppercased here because Avalonia has no text-transform and the mockup's .pane-h applies
+    /// `text-transform: uppercase` to this band. That it is deliberate rather than incidental is
+    /// clear from .dcount, which explicitly opts back OUT with `text-transform: none` while the
+    /// title does not — confirmed against the rendered mockup, where "Aurora › Body" computes to
+    /// uppercase. Invariant casing so the display never varies by machine locale.</summary>
+    public string DetailTitle => (SelectedNode?.Domain switch
+    {
+        LoadedCookBook b => b.Manifest.Name,
+        LoadedRecipe r => r.Manifest.Name,
+        (LoadedRecipe r, LoadedIngredient i) => $"{r.Manifest.Name} › {i.Manifest.Name}",
+        _ => SelectedNode?.Name ?? "",
+    }).ToUpperInvariant();
+
+    /// <summary>Mockup: "N recipes" / "N layers" / "N variants" beside the title.</summary>
+    public string DetailCount => SelectedNode?.Domain switch
+    {
+        LoadedCookBook b => Pluralize(b.Recipes.Count, "recipe"),
+        LoadedRecipe r => Pluralize(r.Ingredients.Count, "layer"),
+        (LoadedRecipe, LoadedIngredient i) => Pluralize(i.Manifest.Variants.Count, "variant"),
+        _ => "",
+    };
+
+    /// <summary>The right-aligned .vtag chip. Written already-uppercased — Avalonia has no
+    /// text-transform, and the mockup uppercases this in CSS.</summary>
+    public string DetailTag => SelectedNode?.Kind switch
+    {
+        ExplorerNodeKind.CookBook => "COOKBOOK",
+        ExplorerNodeKind.Recipe => "RECIPE",
+        ExplorerNodeKind.Ingredient => "INGREDIENT",
+        _ => "",
+    };
+
+    private void RefreshDetailHeader()
+    {
+        OnPropertyChanged(nameof(DetailKind));
+        OnPropertyChanged(nameof(IsDetailCookBook));
+        OnPropertyChanged(nameof(IsDetailRecipe));
+        OnPropertyChanged(nameof(IsDetailIngredient));
+        OnPropertyChanged(nameof(DetailTitle));
+        OnPropertyChanged(nameof(DetailCount));
+        OnPropertyChanged(nameof(DetailTag));
+    }
+
     public ExplorerViewModel(LoadedCookBook book, INavigationService nav, IDialogService dialogs,
         INotYetWired notify, IImageBridge bridge,
         Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel> editorFactory,
         Func<LoadedCookBook, CookDialogViewModel> cookFactory, ICookBookSession session,
         IFilePickerService picker,
-        Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> looseEditorFactory)
+        Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> looseEditorFactory,
+        IStatusService status)
     {
         _book = book; _nav = nav; _dialogs = dialogs; _notify = notify; _bridge = bridge;
         _editorFactory = editorFactory;
         _cookFactory = cookFactory;
         _session = session;
         _picker = picker;
+        _status = status;
         _looseEditorFactory = looseEditorFactory;
         _fullRoot = BuildTree(book);
         Root = _fullRoot;
+        // Select the cookbook on open. Without this nothing is selected, so AddLabel is a bare "Add"
+        // and Add itself has no target - it fell through to the stub and reported "not wired", which
+        // is exactly the dead end a user hits the moment they open a cookbook.
+        SelectedNode = Root;
         RebuildCrumbs();
     }
 
@@ -103,6 +189,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
             && oldValue.Id == newValue.Id && ReferenceEquals(oldValue.Domain, newValue.Domain)) return;
 
         OnPropertyChanged(nameof(AddLabel));
+        RefreshDetailHeader();
         (CurrentDetail as IDisposable)?.Dispose();
         CurrentDetail = newValue?.Kind switch
         {
@@ -112,7 +199,10 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
                 id => OpenIngredientCommand.Execute(id)),
             ExplorerNodeKind.Ingredient => newValue!.Domain is (LoadedRecipe r, LoadedIngredient i)
                 ? new IngredientDetailViewModel(i, r, _book, _bridge, _notify,
-                    () => OpenEditor(i, r), () => IsEditing)
+                    () => OpenEditor(i, r), () => IsEditing,
+                    // The rule-count pill jumps to the owning recipe, whose Rules panel is where
+                    // this layer's rules actually live.
+                    () => SelectedNode = FindNode(Root, r.Manifest.Id) ?? SelectedNode)
                 : null,
             _ => null,
         };
@@ -139,6 +229,8 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         _fullRoot = BuildTree(book);
         Root = Filter(_fullRoot, SearchQuery);
         OnPropertyChanged(nameof(SearchSummary));
+        OnPropertyChanged(nameof(TreeCountText));
+        RefreshCounts();
         SelectedNode = FindNode(Root, selectId) ?? Root;
     }
 
@@ -163,9 +255,23 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         var selectedId = SelectedNode?.Id;
         Root = Filter(_fullRoot, SearchQuery);
         OnPropertyChanged(nameof(SearchSummary));
+        OnPropertyChanged(nameof(TreeCountText));
         // Only re-home an EXISTING selection; typing must not select the root out of nowhere (which
         // would also flip AddLabel and populate the detail pane as a side effect of searching).
         if (selectedId is not null) SelectedNode = FindNode(Root, selectedId) ?? Root;
+    }
+
+    /// <summary>The CONTENTS pane header count (the mockup's .hcount). While filtering it reports
+    /// the match count, so a query that matches nothing reads as "0 matches" rather than as an
+    /// unexplained empty tree; otherwise it reports the recipe count the header stands for.</summary>
+    public string TreeCountText
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(SearchQuery)) return SearchSummary;
+            int n = Root.Children.Count;
+            return n == 1 ? "1 recipe" : $"{n} recipes";
+        }
     }
 
     /// <summary>Match count for the current query ("" when not filtering), so a zero-result query
@@ -208,24 +314,59 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         return false;
     }
 
-    [RelayCommand] private void ToggleLock() => IsEditing = !IsEditing;
+    /// <summary>The edit lock had no visible state at all (static padlock, no active styling), so a
+    /// working toggle read as a dead button. Flip it, restyle it, and say so on the status line.</summary>
+    [RelayCommand]
+    private void ToggleLock()
+    {
+        IsEditing = !IsEditing;
+        _status.Say(IsEditing
+            ? "Editing unlocked - you can add, delete and edit."
+            : "Editing locked - unlock to make changes.");
+    }
+
+    /// <summary>Tooltip that states the CURRENT state and what clicking will do.</summary>
+    public string LockTip => IsEditing
+        ? "Editing unlocked - click to lock"
+        : "Editing locked - click to unlock";
     [RelayCommand]
     private async Task Add()
     {
-        // Add is wired for a recipe (add ingredient) and the cookbook root (add recipe), when editing
-        // with a source file; other cases stay notify stubs.
-        if (!IsEditing || _session.SourcePath is null) { _notify.Report(AddLabel); return; }
+        // Adding is GATED, not unbuilt — say why, rather than routing through the not-wired channel
+        // (which prefixes "Not wired yet:" and told users a working feature didn't exist).
+        if (!IsEditing)
+        {
+            _status.Say("Editing is locked. Use the lock button to unlock, then add.");
+            return;
+        }
+        if (_session.SourcePath is null)
+        {
+            _status.Say("This view is read-only because it isn't backed by a .cbk file on disk.");
+            return;
+        }
         switch (SelectedNode?.Domain)
         {
             case LoadedRecipe recipe: await AddIngredientTo(recipe); return;
             case LoadedCookBook: await AddRecipe(); return;
-            default: _notify.Report(AddLabel); return;
+            // Variants belong to the ingredient editor, which owns the draft + undo history — so
+            // "Add variant" opens it there rather than pretending the action doesn't exist.
+            case (LoadedRecipe r, LoadedIngredient i):
+                _status.Say($"Add variants to “{i.Manifest.Name}” in the editor.");
+                OpenEditor(i, r);
+                return;
+            default:
+                _status.Say("Select a cookbook, recipe or ingredient to add to.");
+                return;
         }
     }
 
     private async Task AddRecipe()
     {
-        var wizard = new NewRecipeViewModel(_dialogs, _notify);
+        // The wizard's "Resulting mix" needs the siblings the new weight will be normalised against.
+        var siblings = _book.Recipes
+            .Select(r => (r.Manifest.Name, Weight: _book.Manifest.RecipeWeights.GetValueOrDefault(r.Manifest.Id)))
+            .ToList();
+        var wizard = new NewRecipeViewModel(_dialogs, _notify, siblings);
         var result = await _dialogs.ShowAsync<NewRecipeViewModel>(wizard);
         if (result is null) return;   // cancelled
         if (string.IsNullOrWhiteSpace(result.DerivedId))
@@ -363,9 +504,19 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
 
     private Task ShowError(string title, string message) =>
         _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, title, message));
-    [RelayCommand] private void Import() => _notify.Report("Import");
+    /// <summary>Importing a loose file opens it as its own document, which is a start-screen action;
+    /// importing INTO the open cookbook isn't built yet, so say that rather than nothing.</summary>
+    [RelayCommand] private void Import() =>
+        _status.Say("Importing into an open cookbook isn't available yet - use Import on the start screen to open a loose file.");
     [RelayCommand] private void SelectNode(ExplorerNode node) => SelectedNode = node;
-    [RelayCommand] private void OpenIngredient(string id) => _notify.Report($"Open ingredient {id}");
+    /// <summary>Clicking a layer in the recipe detail jumps to that ingredient in the tree.</summary>
+    [RelayCommand]
+    private void OpenIngredient(string id)
+    {
+        var node = FindNode(Root, id);
+        if (node is not null) SelectedNode = node;
+        else _status.Say($"“{id}” isn't in the current view (a filter may be hiding it).");
+    }
 
     // Delete needs edit-mode ON, a source .cbk to write to, and a recipe/ingredient selected
     // (the cookbook root is never deletable — close the book instead).

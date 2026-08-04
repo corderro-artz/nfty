@@ -49,7 +49,7 @@ public class ExplorerAddLooseTests
         var vm = new ExplorerViewModel(session.Current!, nav, dialogs, new FakeNotYetWired(), new ImageBridge(),
             ExplorerViewModelTests.EditorFactory(nav, session, dialogs),
             ExplorerViewModelTests.CookFactory(dialogs), session,
-            picker, ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs));
+            picker, ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs), new StatusService());
         return (vm, session, cbkPath, nav);
     }
 

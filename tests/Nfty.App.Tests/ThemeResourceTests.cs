@@ -172,18 +172,25 @@ public class ThemeResourceTests
     // Accent_button_uses_accent_background_and_tbtn_uses_panel: FindResource without a
     // variant resolves against ThemeVariant.Default, which never matches the "Light"/"Dark"
     // keys under Tokens.axaml's ThemeDictionaries and always returns UnsetValue.
+    // The kind chip asserted against `Border.kind-dynamic`, a class Slice 9 replaced with
+    // `Border.fchip.kdyn` (wash background + kind-tinted border + kind-coloured label). Nothing in
+    // the app referenced `.kind-dynamic` any more — this test was the only thing keeping it alive,
+    // so it was guarding a style no screen could ever show. Retargeted at the shipped class.
     [AvaloniaFact]
     public void Panel_uses_panel_brush_and_kind_chip_uses_kind_colour()
     {
         var panel = StyledHost.Show(new Border { Classes = { "panel" } });
-        var chip = StyledHost.Show(new Border { Classes = { "kind-dynamic" } });
+        var chip = StyledHost.Show(new Border { Classes = { "fchip", "kdyn" } });
 
         Assert.Equal(
             ((ISolidColorBrush)Resolve("PanelBrush", ThemeVariant.Light)!).Color,
             ((ISolidColorBrush)panel.Background!).Color);
         Assert.Equal(
-            ((ISolidColorBrush)Resolve("KindDynamicBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)Resolve("KindDynamicLineBrush", ThemeVariant.Light)!).Color,
             ((ISolidColorBrush)chip.BorderBrush!).Color);
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("KindDynamicWashBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)chip.Background!).Color);
     }
 
     [AvaloniaFact]
@@ -361,8 +368,10 @@ public class ThemeResourceTests
     // which needs a full ExplorerViewModel) so the same Classes end up on the same element types
     // Fluent's TreeViewItem template actually contains — a bad selector or an unresolvable
     // DynamicResource token in either file throws here instead of silently no-op-ing. Selecting
-    // the child item also exercises the ControlTheme's ":selected /template/ Border#PART_LayoutRoot"
-    // override (the accent-wash background + inset accent-bar BoxShadow), not just the rest state.
+    // the child item also exercises the selected-state visuals (accent-wash background + inset
+    // accent-bar BoxShadow), which live on Border.node in the ITEM TEMPLATE rather than on the
+    // container's PART_LayoutRoot: the container spans the row's full width, so painting it put the
+    // wash behind the indent and the accent bar against the pane edge instead of against the node.
     [AvaloniaFact]
     public void Tree_with_kind_marks_and_guide_renders_and_selects_without_throwing()
     {
@@ -386,10 +395,18 @@ public class ThemeResourceTests
                     if (node.IsRoot) label.Classes.Add("root");
 
                     var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-                    panel.Children.Add(guide);
                     panel.Children.Add(kmark);
                     panel.Children.Add(label);
-                    return panel;
+
+                    // Mirrors the real template: guide beside a Border.node that carries the
+                    // selection classes.
+                    var box = new Border { Classes = { "node" }, Child = panel };
+                    var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*") };
+                    Grid.SetColumn(guide, 0);
+                    Grid.SetColumn(box, 1);
+                    row.Children.Add(guide);
+                    row.Children.Add(box);
+                    return row;
                 },
                 node => node.Children),
         };
@@ -409,14 +426,23 @@ public class ThemeResourceTests
         Dispatcher.UIThread.RunJobs();
 
         var childContainer = containers.Single(c => ReferenceEquals(c.DataContext, child));
-        var layoutRoot = childContainer.GetVisualDescendants().OfType<Border>()
-            .First(b => b.Name == "PART_LayoutRoot");
-
         Assert.True(childContainer.IsSelected);
+
+        // The highlight is on the node box, and the row-wide container stays unpainted - otherwise
+        // the two stack and the wash reaches back behind the indent.
+        var nodeBox = childContainer.GetVisualDescendants().OfType<Border>()
+            .First(b => b.Classes.Contains("node"));
+        nodeBox.Classes.Set("sel", true);          // what Classes.sel binds in the real template
+        Dispatcher.UIThread.RunJobs();
         Assert.Equal(
             ((ISolidColorBrush)Resolve("AccentWashBrush", ThemeVariant.Light)!).Color,
-            ((ISolidColorBrush)layoutRoot.Background!).Color);
-        Assert.True(layoutRoot.BoxShadow.Count > 0 && layoutRoot.BoxShadow[0].IsInset);
+            ((ISolidColorBrush)nodeBox.Background!).Color);
+        Assert.True(nodeBox.BoxShadow.Count > 0 && nodeBox.BoxShadow[0].IsInset);
+
+        var layoutRoot = childContainer.GetVisualDescendants().OfType<Border>()
+            .First(b => b.Name == "PART_LayoutRoot");
+        Assert.True(layoutRoot.Background is null
+            || ((ISolidColorBrush)layoutRoot.Background).Color.A == 0);
 
         // The Dynamic child's kind glyph resolves the dynamic kind colour (guards the
         // TextBlock.kmark.kdyn selector + KindDynamicBrush token).

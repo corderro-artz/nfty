@@ -1,10 +1,12 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Nfty.App.ViewModels"
+        xmlns:views="using:Nfty.App.Views"
         x:Class="Nfty.Desktop.MainWindow"
         x:DataType="vm:ShellViewModel"
         Width="1180" Height="720" MinWidth="900" MinHeight="580" Title="nfty"
-        ExtendClientAreaToDecorationsHint="True" SystemDecorations="None">
+        Background="Transparent" TransparencyLevelHint="Transparent"
+        ExtendClientAreaToDecorationsHint="True" WindowDecorations="None">
   <Window.KeyBindings>
     <KeyBinding Gesture="Ctrl+OemQuestion" Command="{Binding ShowHelpCommand}" />
     <KeyBinding Gesture="Ctrl+OemPlus" Command="{Binding ZoomInCommand}" />
@@ -13,60 +15,19 @@
     <KeyBinding Gesture="Ctrl+Subtract" Command="{Binding ZoomOutCommand}" />
     <KeyBinding Gesture="Ctrl+D0" Command="{Binding ZoomResetCommand}" />
   </Window.KeyBindings>
-  <Grid RowDefinitions="Auto,*,Auto">
-    <!-- Titlebar (drag to move, double-click to maximize/restore — wired in code-behind) -->
-    <Grid x:Name="Titlebar" Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Background="{DynamicResource PanelBrush}" Height="46">
-      <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center" Spacing="9">
-        <Border Width="24" Height="24" CornerRadius="{DynamicResource RadiusSm}"
-                Background="{DynamicResource AccentWashBrush}">
-          <Border Width="9" Height="9" CornerRadius="2" Background="{DynamicResource AccentBrush}">
-            <Border.RenderTransform>
-              <RotateTransform Angle="45" />
-            </Border.RenderTransform>
-          </Border>
-        </Border>
-        <TextBlock Classes="wordmark" VerticalAlignment="Center"><Run Text="nft" /><Run Text="y" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
-      </StackPanel>
-      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
-        <Button Content="—" Command="{Binding MinimizeCommand}" Classes="icon" />
-        <Button Content="▢" Command="{Binding ToggleMaximizeCommand}" Classes="icon" />
-        <Button Content="✕" Command="{Binding CloseCommand}" Classes="icon danger" />
-      </StackPanel>
-    </Grid>
 
-    <!-- Page + dialog overlay -->
-    <Panel Grid.Row="1">
-      <Border Classes="frame" Margin="8">
-        <ContentControl Content="{Binding CurrentPage}" />
-      </Border>
-      <Panel Name="DialogScrim"
-             IsVisible="{Binding ActiveDialog, Converter={x:Static ObjectConverters.IsNotNull}}"
-             Background="#88000000">
-        <ContentControl Content="{Binding ActiveDialog}"
-                        HorizontalAlignment="Center" VerticalAlignment="Center" />
-      </Panel>
-    </Panel>
-
-    <!-- Status bar -->
-    <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Background="{DynamicResource BgAltBrush}" Height="34">
-      <TextBlock Grid.Column="0" Margin="16,0" VerticalAlignment="Center" Classes="muted"
-                 Text="{Binding StatusMessage}" />
-      <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0" VerticalAlignment="Center" Spacing="2">
-        <Button Content="−" Command="{Binding ZoomOutCommand}" Classes="icon" />
-        <TextBlock VerticalAlignment="Center" Width="46" TextAlignment="Center"
-                   Text="{Binding Zoom, StringFormat='{}{0}%'}" />
-        <Button Content="+" Command="{Binding ZoomInCommand}" Classes="icon" />
-        <Button Content="?" Command="{Binding ShowHelpCommand}" Classes="icon" />
-        <!-- Bottom-right resize grip (SystemDecorations=None gives no OS resize border). A Border
-             with a filled Background is hit-testable across its whole rectangle — unlike a bare Path,
-             whose thin strokes are the only draggable pixels. -->
-        <Border x:Name="ResizeGrip" Width="26" Cursor="BottomRightCorner"
-                Background="Transparent" Margin="4,0,0,0">
-          <Path Width="12" Height="12" HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                Margin="0,0,2,2" Stroke="{DynamicResource FgMutedBrush}" StrokeThickness="1"
-                Data="M11,4 L4,11 M11,8 L8,11" />
-        </Border>
-      </StackPanel>
-    </Grid>
-  </Grid>
+  <Window.Styles>
+    <!-- A maximized window has no desktop around it to float in: the 12px shadow gutter would show
+         as a transparent gap on all four edges and the rounded corners would cut the screen edge.
+         Fill the screen instead, the way every OS-decorated window does. -->
+    <Style Selector="Window[WindowState=Maximized] Border.frame">
+      <Setter Property="Margin" Value="0" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="BoxShadow" Value="none" />
+    </Style>
+  </Window.Styles>
+  <!-- The shell chrome itself is head-agnostic UI and lives in Nfty.App so the visual-capture tests
+       can render the real thing; this head supplies only the window behaviour it needs a Window for. -->
+  <views:ShellChromeView x:Name="Chrome" />
 </Window>

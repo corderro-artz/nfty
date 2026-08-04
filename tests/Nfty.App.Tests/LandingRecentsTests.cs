@@ -37,7 +37,7 @@ public class LandingRecentsTests
             book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(),
                 ExplorerViewModelTests.EditorFactory(nav, session, dialogs),
                 ExplorerViewModelTests.CookFactory(dialogs), session,
-                picker, ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs)),
+                picker, ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs), new StatusService()),
             set => new SetBrowserViewModel(set),
             ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs));
         return (vm, nav, dialogs, recents);

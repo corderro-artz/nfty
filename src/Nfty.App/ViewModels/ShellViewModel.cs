@@ -16,16 +16,27 @@ public partial class ShellViewModel : ViewModelBase
     [ObservableProperty] private int _zoom = 100;
     [ObservableProperty] private string _statusMessage = "";
 
+    /// <summary>The titlebar's Kitchen chip / crumbs / lock flag are Explorer-specific (the mockup's
+    /// landing titlebar has none of them), so the shared shell chrome binds through this rather than
+    /// exposing crumbs/lock state on ShellViewModel itself — null on any other page.</summary>
+    public ExplorerViewModel? CurrentExplorer => CurrentPage as ExplorerViewModel;
+
+    partial void OnCurrentPageChanged(ViewModelBase? value) => OnPropertyChanged(nameof(CurrentExplorer));
+
     public event Action? MinimizeRequested;
     public event Action? ToggleMaximizeRequested;
     public event Action? CloseRequested;
 
-    public ShellViewModel(INavigationService nav, IDialogService dialogs, INotYetWired notify, IThemeService theme)
+    public ShellViewModel(INavigationService nav, IDialogService dialogs, INotYetWired notify, IThemeService theme,
+        IStatusService status)
     {
         _nav = nav; _dialogs = dialogs; _notify = notify; _theme = theme;
         _nav.Changed += () => CurrentPage = _nav.Current;
         _dialogs.Changed += () => ActiveDialog = _dialogs.Active;
+        // Two channels on purpose: Report is for buttons that genuinely do nothing yet, Say is for
+        // real guidance. Routing guidance through Report told users a working feature was unbuilt.
         _notify.Reported += a => StatusMessage = $"Not wired yet: {a}";
+        status.Said += m => StatusMessage = m;
     }
 
     [RelayCommand] private void ShowHelp() => _dialogs.ShowAsync<object>(new HelpViewModel(_dialogs));

@@ -1,32 +1,146 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Nfty.App.ViewModels"
+             xmlns:conv="using:Nfty.App.Converters"
              x:Class="Nfty.App.Views.NewRecipeView"
              x:DataType="vm:NewRecipeViewModel"
              Focusable="True">
   <UserControl.KeyBindings>
     <KeyBinding Gesture="Escape" Command="{Binding CancelCommand}" />
+    <KeyBinding Gesture="Enter" Command="{Binding CreateCommand}" />
   </UserControl.KeyBindings>
-  <Border Background="{DynamicResource PanelBrush}" CornerRadius="10" Padding="28" Width="440"
-          BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1">
-    <StackPanel Spacing="10">
-      <TextBlock Text="New Recipe" FontWeight="Bold" />
-      <TextBox Watermark="Name" Text="{Binding Name}" />
+  <Border Classes="modal monoform">
+    <Grid RowDefinitions="*,Auto">
+      <Border Grid.Row="0" Classes="modal-body">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel MaxWidth="432">
+          <StackPanel Orientation="Horizontal" Spacing="7">
+            <Ellipse Classes="kdot" />
+            <TextBlock Text="CREATE" Classes="slbl" />
+          </StackPanel>
+          <TextBlock Text="New Recipe" Classes="m-h" />
+          <TextBlock Classes="m-sub"><Run Text="A Recipe is a complete template for one " /><Run Text="type" Foreground="{DynamicResource FgBrush}" /><Run Text=" of image — its own ordered layer stack." /></TextBlock>
 
-      <TextBlock Text="Weight" Classes="muted" />
-      <NumericUpDown Value="{Binding Weight}" Minimum="0" IsEnabled="{Binding WeightEnabled}" />
-      <TextBlock Text="Resulting mix" Classes="muted" />
-      <ProgressBar Value="{Binding Weight}" Minimum="0" Maximum="100" IsEnabled="{Binding WeightEnabled}" />
+          <StackPanel Spacing="14" Margin="0,19,0,0">
+            <StackPanel Spacing="6">
+              <TextBlock Text="NAME" Classes="plabel" />
+              <TextBox Text="{Binding Name}" PlaceholderText="Cat" />
+            </StackPanel>
 
-      <StackPanel Orientation="Horizontal" Spacing="16">
-        <RadioButton Content="Into CookBook" GroupName="Destination" IsChecked="{Binding IsIntoCookBook}" />
-        <RadioButton Content="Loose (Kitchen)" GroupName="Destination" IsChecked="{Binding IsLooseKitchen}" />
-      </StackPanel>
+            <StackPanel Spacing="6">
+              <StackPanel Classes="plabel-row">
+                <TextBlock Text="WEIGHT" Classes="plabel" />
+                <Border Classes="qmark"
+                        ToolTip.Tip="How often this Recipe is rolled, relative to its siblings — not a percentage. Any positive number works; the book normalises them.">
+                  <TextBlock />
+                </Border>
+              </StackPanel>
+              <NumericUpDown Value="{Binding Weight}" Minimum="0" IsEnabled="{Binding WeightEnabled}" />
+            </StackPanel>
+            <!-- .share: what the weight actually buys. A weight is relative to its siblings and the
+                 book normalises the set, so the bare ProgressBar this replaces - bound
+                 Value=Weight Maximum=100 - drew a weight of 100 as a full bar and read as "100% of
+                 the collection" regardless of what the siblings weighed. Hidden for a loose Recipe,
+                 which has no collection to be a share of. -->
+            <Border Classes="share" IsVisible="{Binding ShowShare}">
+              <StackPanel Spacing="6">
+                <TextBlock Text="RESULTING MIX" Classes="share-h" />
+                <!-- Fixed-width track with converter-scaled segments, the same approach the CookBook
+                     detail's distribution bar uses: the recipe count is not known until runtime, so a
+                     Grid of star columns is not an option. -->
+                <Border Classes="mixbar" Width="270" HorizontalAlignment="Left">
+                  <ItemsControl ItemsSource="{Binding ShareRows}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:ShareRow">
+                        <Border Classes="seg-me" Classes.other="{Binding !IsCurrent}" Height="7"
+                                Width="{Binding Percent, Converter={x:Static conv:PercentToWidthConverter.ForBarWidth270}}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </Border>
+                <ItemsControl ItemsSource="{Binding ShareRows}" Margin="0,1,0,0">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ShareRow">
+                      <Grid ColumnDefinitions="6,*,Auto" ColumnSpacing="6" Margin="0,0,0,3">
+                        <Border Grid.Column="0" Classes="swatch-me" Classes.other="{Binding !IsCurrent}" />
+                        <TextBlock Grid.Column="1" Classes="lgn" Classes.cur="{Binding IsCurrent}"
+                                   Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="2" Classes="lgn" Classes.cur="{Binding IsCurrent}"
+                                   Text="{Binding Percent, StringFormat='{}{0:0}%'}" />
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Border>
 
-      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-        <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="tbtn" />
-        <Button Content="Create" Command="{Binding CreateCommand}" Classes="accent" />
-      </StackPanel>
-    </StackPanel>
+            <StackPanel Spacing="6">
+              <StackPanel Classes="plabel-row">
+                <TextBlock Text="DESTINATION" Classes="plabel" />
+                <Border Classes="qmark"
+                        ToolTip.Tip="A Recipe inside a CookBook is stored as recipes/fox.rcp within the .cbk. A Kitchen Recipe is a loose .rcp file you can import into any book later.">
+                  <TextBlock />
+                </Border>
+              </StackPanel>
+              <!-- .dest cards, copy from wizard-recipe.html. The mockup's first subtitle names the
+                   open cookbook ("VaporPets"); the wizard is not given it, so it states the effect. -->
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <RadioButton Grid.Column="0" Classes="choice" GroupName="Destination" IsChecked="{Binding IsIntoCookBook}">
+                  <StackPanel>
+                    <TextBlock Text="This CookBook" Classes="ct" />
+                    <TextBlock Text="adds to the open cookbook" Classes="csub" />
+                  </StackPanel>
+                </RadioButton>
+                <RadioButton Grid.Column="1" Classes="choice" GroupName="Destination" IsChecked="{Binding IsLooseKitchen}">
+                  <StackPanel>
+                    <TextBlock Text="The Kitchen" Classes="ct" />
+                    <TextBlock Text="loose · import later" Classes="csub" />
+                  </StackPanel>
+                </RadioButton>
+              </Grid>
+            </StackPanel>
+          </StackPanel>
+
+          <StackPanel Margin="0,15,0,0">
+            <Rectangle Height="1" HorizontalAlignment="Stretch" Stroke="{DynamicResource LineStrongBrush}"
+                       StrokeThickness="1" StrokeDashArray="3,3" />
+            <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,11,0,0">
+              <TextBlock Text="Identifier" Classes="derived" />
+              <Border Classes="idchip"><TextBlock Text="{Binding DerivedId}" Classes="mono" FontSize="10.5" /></Border>
+              <TextBlock Text="— derived from the name" Classes="derived" Opacity="0.75" />
+            </StackPanel>
+          </StackPanel>
+        </StackPanel>
+        </ScrollViewer>
+      </Border>
+
+      <Border Grid.Row="1" Classes="modal-foot">
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <Border Classes="kbd keys"><TextBlock Text="Tab" /></Border><TextBlock Text="move fields" Classes="keyhint" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <Border Classes="kbd keys"><TextBlock Text="Enter" /></Border><TextBlock Text="create" Classes="keyhint" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <Border Classes="kbd keys"><TextBlock Text="Esc" /></Border><TextBlock Text="cancel" Classes="keyhint" />
+            </StackPanel>
+          </StackPanel>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+            <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="tbtn ghost" />
+            <Button Command="{Binding CreateCommand}" Classes="accent">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Path Classes="ico sm" Data="{StaticResource IconCheck}" />
+                <TextBlock Text="Create Recipe" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
   </Border>
 </UserControl>

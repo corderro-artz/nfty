@@ -387,6 +387,55 @@ public class IngredientEditorImportTests
         finally { Directory.Delete(dir, recursive: true); Directory.Delete(Path.GetDirectoryName(pngPath)!, recursive: true); }
     }
 
+    [AvaloniaFact]
+    // A value-map stores lightness only, so a colour source must be collapsed to one channel. Handing
+    // it straight to ValueMap.FromImage would keep the RED channel - fine for round-tripping this
+    // layer's own grayscale PNG, but arbitrary for foreign art. The import desaturates first, and says
+    // that the colour is gone.
+    public async Task Importing_a_colour_image_into_a_value_map_uses_luminance_and_says_so()
+    {
+        var (path, session, recipe, ing) = IngredientEditorSaveTests.OnDisk();   // dynamic 8x8
+        // Pure green is the case that exposes the difference: the red channel calls it BLACK, while
+        // it is the brightest of the three primaries to the eye.
+        var pngPath = WritePng(8, 8, 0, 255, 0);
+        var dialogs = new RecordingDialogs();
+        try
+        {
+            var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
+                new FakeNav(), new FakeNotYetWired(), session, dialogs, new OpenPicker(pngPath));
+
+            await vm.ImportImageCommand.ExecuteAsync(null);
+
+            Assert.Equal("Colour flattened", dialogs.ErrorTitle);
+            // BT.709 luminance of pure green is ~182. The red channel would have given 0.
+            Assert.InRange(vm.ValueAt(4, 4), 175, 190);
+            vm.Dispose();
+        }
+        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
+    }
+
+    [AvaloniaFact]
+    // The counterpart: a genuinely grayscale source loses nothing, so it must NOT nag - and must
+    // still round-trip EXACTLY, since desaturating an already-grey pixel has to be a no-op.
+    public async Task Importing_a_grayscale_image_into_a_value_map_does_not_warn()
+    {
+        var (path, session, recipe, ing) = IngredientEditorSaveTests.OnDisk();
+        var pngPath = WritePng(8, 8, 180, 180, 180);
+        var dialogs = new RecordingDialogs();
+        try
+        {
+            var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
+                new FakeNav(), new FakeNotYetWired(), session, dialogs, new OpenPicker(pngPath));
+
+            await vm.ImportImageCommand.ExecuteAsync(null);
+
+            Assert.Null(dialogs.ErrorTitle);
+            Assert.Equal(180, vm.ValueAt(4, 4));
+            vm.Dispose();
+        }
+        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
+    }
+
     private sealed class ConfirmingDialogsStub : IDialogService
     {
         public ViewModelBase? Active => null;

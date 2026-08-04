@@ -18,11 +18,6 @@
     <Setter Property="FontSize" Value="15" />
     <Setter Property="LetterSpacing" Value="-0.15" />
   </Style>
-  <Style Selector="TextBlock.crumbs">
-    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="12.5" />
-    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
-  </Style>
   <Style Selector="TextBlock.cseg">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="12.5" />
@@ -60,6 +55,66 @@
   </Style>
   <Style Selector="Button.tbtn:pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+  </Style>
+
+  <!-- Disabled: the mockup disables by OPACITY only, keeping the panel surface underneath
+       (explorer.html `.tbtn:disabled{opacity:.38}`) — but Fluent's own ":disabled" template style
+       repaints PART_ContentPresenter's Background/BorderBrush/Foreground from its own
+       (grey) disabled resources at Style priority, same mechanism as :pointerover/:pressed above,
+       so a disabled Button.tbtn/.accent rendered as an opaque grey slab (audit finding: the entire
+       ingredient-editor tool column when CanPaint is false). Reset the three properties back to
+       each variant's normal-state brushes so the Opacity rule below dims the *real* colours instead
+       of Fluent's substituted ones. -->
+  <Style Selector="Button.tbtn:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+  </Style>
+  <Style Selector="Button.accent:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+  </Style>
+  <!-- A "soon" button is ALREADY muted by its own foreground/border; letting the blanket disabled
+       opacity stack on top double-dimmed it to 1.73:1 (effectively invisible). Opt it out. -->
+  <!-- The disabled fix above was Button-only, leaving Fluent's opaque grey slab on the editor's
+       NumericUpDown/TextBox (the audit's #c7c3be / #3c3d40). Dim inputs the same way: opacity over
+       the real surface, never a grey fill. -->
+  <Style Selector="NumericUpDown:disabled, TextBox:disabled, Slider:disabled">
+    <Setter Property="Opacity" Value="0.38" />
+  </Style>
+
+  <Style Selector="Button:disabled">
+    <Setter Property="Opacity" Value="0.38" />
+  </Style>
+
+  <Style Selector="Button.soon:disabled">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+
+  <!-- An action whose destination does not exist yet. The mockup marks these with a DASHED edge
+       (.tbtn.soon{border-style:dashed}); Avalonia's Border/Button draw a solid edge only, so the
+       button's own border is switched off and a Rectangle.dashed.btn is laid over it by the caller.
+       Everything else (transparent fill, muted ink) is the mockup's.
+
+       Declared after Button.tbtn so it wins the rest-state tie (equal single-class specificity, later
+       declaration wins); the :disabled compound selector below additionally wins over the plain
+       Button.tbtn:disabled rule for a "soon" button that is also genuinely disabled (NewKitchen's
+       CanExecute is permanently false) - more classes matched, so it takes precedence, and would
+       otherwise be masked by the disabled-state reset. -->
+  <Style Selector="Button.soon">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="Button.soon /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="Button.tbtn.soon:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
 
   <Style Selector="Button.accent">
@@ -106,6 +161,75 @@
     <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
   </Style>
 
+  <!-- Icon system (audit Critical #1): the mockups draw glyphs as 24-unit stroked SVG paths, so an
+       icon is a Path stroked with the current text colour, never a font glyph — emoji injected
+       off-palette colour and missing glyphs rendered as tofu. Stretch=Uniform maps the 24-unit
+       geometry into the box below. -->
+  <!--
+    Icons are authored in the mockups' 24x24 SVG viewBox (see Icons.axaml) and must be scaled the way
+    an <svg viewBox> scales them: by that shared 24-unit box, NOT by each glyph's own bounds.
+
+    Stretch="Uniform" does the latter, which is wrong twice over. Cosmetically it sizes every glyph to
+    fill 14px regardless of how much of the 24-box it actually occupies, so a wide-and-short glyph
+    renders larger than a square one and the set loses its common rhythm. Fatally, it divides by the
+    geometry's height: a single-axis glyph such as IconMinimise/IconZoomOut ("M6 12h12") has zero-height
+    bounds, so the scale degenerates and the icon collapsed to a dot - minimise and zoom-out rendered
+    as an empty button.
+
+    So: draw at raw 24-unit coordinates (Stretch=None) and scale by exactly size/24 about the top-left
+    corner, which maps the 24-box onto the icon box the way the viewBox does. StrokeThickness is in
+    pre-transform units, so it is the mockup's own stroke-width and scales down with the glyph.
+  -->
+  <Style Selector="Path.ico">
+    <Setter Property="Width" Value="14" />
+    <Setter Property="Height" Value="14" />
+    <Setter Property="Stretch" Value="None" />
+    <Setter Property="RenderTransformOrigin" Value="0%,0%" />
+    <Setter Property="RenderTransform" Value="scale(0.5833)" />   <!-- 14/24 -->
+    <Setter Property="Fill" Value="Transparent" />
+    <Setter Property="Stroke" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="StrokeThickness" Value="2" />
+    <Setter Property="StrokeLineCap" Value="Round" />
+    <Setter Property="StrokeJoin" Value="Round" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- The edit lock must read as ON at a glance: accent ink on an accent wash, matching the
+       mockup's active-affordance treatment. Without this the toggle was invisible.
+       The wash is NOT set here. A `Button.icon.unlocked { Background }` setter used to live at this
+       spot and was dead twice over: `Button.icon` sets Background="Transparent" and is declared
+       further down (last-one-wins at equal specificity), and the rest-state rule sets it on
+       PART_ContentPresenter directly, which beats any control-level setter regardless of ordering.
+       The wash therefore lives with the other template-part rules; see Button.icon.unlocked
+       /template/ ContentPresenter below. Only the icon's stroke is a control-level concern. -->
+  <Style Selector="Button.icon.unlocked Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+
+  <Style Selector="Path.ico.xs">
+    <Setter Property="Width" Value="12" /><Setter Property="Height" Value="12" />
+    <Setter Property="RenderTransform" Value="scale(0.5)" />      <!-- 12/24 -->
+  </Style>
+  <!-- explorer.html .ti — the 18px tree type mark -->
+  <Style Selector="Path.ico.ti">
+    <Setter Property="Width" Value="18" /><Setter Property="Height" Value="18" />
+    <Setter Property="RenderTransform" Value="scale(0.75)" />     <!-- 18/24 -->
+    <Setter Property="StrokeThickness" Value="1.3" />             <!-- the mockup's own .ti stroke -->
+  </Style>
+  <!-- help.html `.sheet .ti` — the quick-reference sheet draws the same type marks as the tree, at
+       16px rather than 18px. Declared after Path.ico.ti so it wins the Width/Height/scale tie. -->
+  <Style Selector="Path.ico.ti-sh">
+    <Setter Property="Width" Value="16" /><Setter Property="Height" Value="16" />
+    <Setter Property="RenderTransform" Value="scale(0.6667)" />   <!-- 16/24 -->
+    <Setter Property="StrokeThickness" Value="1.3" />             <!-- the mockup's own .ti stroke -->
+  </Style>
+  <Style Selector="Path.ico.sm">
+    <Setter Property="Width" Value="13" /><Setter Property="Height" Value="13" />
+    <Setter Property="RenderTransform" Value="scale(0.5417)" />   <!-- 13/24 -->
+  </Style>
+  <!-- On an accent fill the icon must switch to the on-accent ink, like the label does. -->
+  <Style Selector="Button.accent Path.ico"><Setter Property="Stroke" Value="{DynamicResource OnAccentBrush}" /></Style>
+  <!-- Strong-ink icons (window chrome, primary affordances) -->
+
   <Style Selector="Button.icon">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
@@ -123,6 +247,14 @@
   <Style Selector="Button.icon:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+  </Style>
+  <!-- The unlocked wash has to be set on the template part too. Setting it on the Button (the
+       Button.icon.unlocked rule above) is silently clobbered by the rest-state rule, which targets
+       PART_ContentPresenter directly and therefore wins whatever classes the Button carries — so
+       only the icon's stroke was changing and the toggle's "editing" wash never rendered at all.
+       Declared after the rest-state rule so it wins at equal specificity. -->
+  <Style Selector="Button.icon.unlocked /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
   </Style>
   <Style Selector="Button.icon:pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
@@ -160,14 +292,137 @@
   </Style>
 
   <!-- Landing action buttons: uniform full-width, label left + hotkey right, slightly larger. -->
+  <!-- landing.html .lwordmark -->
+  <Style Selector="TextBlock.lwordmark">
+    <Setter Property="FontSize" Value="30" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LetterSpacing" Value="-0.6" />
+  </Style>
   <Style Selector="Button.landing">
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-    <Setter Property="Padding" Value="14,10" />
+    <Setter Property="Padding" Value="12,9" />
   </Style>
   <Style Selector="Button.landing TextBlock.lbl">
-    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- landing.html .subrow .tbtn: the secondary Create tier is two SMALLER side-by-side buttons,
+       not two more full-width rows. Declared after Button.landing so it wins on the shared
+       properties. -->
+  <Style Selector="Button.landing.sub">
+    <Setter Property="Padding" Value="10,7" />
+  </Style>
+  <Style Selector="Button.landing.sub TextBlock.lbl">
+    <Setter Property="FontSize" Value="11.5" />
+  </Style>
+
+  <!-- landing.html .learn: a bare text link, not a bordered button. -->
+  <Style Selector="Button.learn">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Margin" Value="0,22,0,0" />
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+  </Style>
+  <Style Selector="Button.learn /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <!-- landing.html .rrow: a borderless recents row that only gains chrome on hover. -->
+  <Style Selector="Button.rrow">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="Padding" Value="10,8" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Button.rrow /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.rrow:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+  </Style>
+  <!-- .rico: the 22px accent-wash type tile leading each row. -->
+  <Style Selector="Border.rico">
+    <Setter Property="Width" Value="22" />
+    <Setter Property="Height" Value="22" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- A loose Kitchen ingredient gets a NEUTRAL tile, not the accent wash every other recent row
+       carries - landing.html overrides that row's .rico inline with
+       "background:tile; border-color:line-strong; color:fg-muted". It is the visual distinction
+       between "this collects into a CookBook" and "this is a loose item in the Kitchen". -->
+  <Style Selector="Border.rico.loose">
+    <Setter Property="Background" Value="{DynamicResource TileBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+  </Style>
+  <Style Selector="TextBlock.rname">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+  </Style>
+  <Style Selector="TextBlock.rmeta">
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="Margin" Value="0,1,0,0" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="TextBlock.rpath">
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="Opacity" Value="0.7" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- .rzero first-run empty state. The dashed stroke is a Rectangle, not the Border's own
+       BorderBrush: Avalonia's Border draws a solid edge only and has no dash array. -->
+  <Style Selector="Rectangle.dashed">
+    <Setter Property="Stroke" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="StrokeThickness" Value="1" />
+    <Setter Property="StrokeDashArray" Value="4,3" />
+    <Setter Property="RadiusX" Value="8" />
+    <Setter Property="RadiusY" Value="8" />
+  </Style>
+  <Style Selector="Rectangle.dashed.btn">
+    <Setter Property="RadiusX" Value="6" />   <!-- RadiusMd, matching Button.tbtn -->
+    <Setter Property="RadiusY" Value="6" />
+  </Style>
+  <Style Selector="TextBlock.zh">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.zp">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="LineHeight" Value="19.2" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="Margin" Value="0,5,0,0" />
+  </Style>
+  <!-- The label is a literal Grid>TextBlock (not the ContentPresenter's implicit content
+       TextBlock), so it never inherits the Button's own Foreground: the global "TextBlock" style
+       above sets Foreground unconditionally at Style priority, which beats Inherited regardless of
+       what the ancestor Button.Foreground is (Avalonia priority order Style > Inherited) — the same
+       reason TextBlock.hk needed its own on-accent override below rather than relying on
+       inheritance. Left unfixed, "New CookBook"'s label rendered near-black FgBrush text on the
+       accent maroon fill (illegible) and a "soon" button's label stayed full-strength FgBrush
+       instead of muted. -->
+  <Style Selector="Button.landing.accent TextBlock.lbl">
+    <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+  </Style>
+  <Style Selector="Button.soon TextBlock.lbl">
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
   <Style Selector="Button.landing TextBlock.hk">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
@@ -181,6 +436,313 @@
   </Style>
 
   <Style Selector="TextBlock.muted">
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+
+  <!-- Small-label type scale (audit finding: this scale did not exist, so every section heading
+       rendered at Avalonia's default ~14px with zero tracking instead of the mockups' 10-11.5px
+       uppercase-tracked look — landing.html/ingredient-editor.html/wizard-recipe.html/explorer.html
+       token values, ported verbatim below). Where mockup text is uppercase, Avalonia has no
+       text-transform: the sizing/letter-spacing/colour is set here, and the consuming view supplies
+       already-uppercased text where that matters (see TextBlock.data-h above for the existing
+       convention this follows). -->
+  <Style Selector="TextBlock.slbl">
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="LetterSpacing" Value="1.4" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="Margin" Value="0,0,0,8" />
+  </Style>
+  <Style Selector="TextBlock.pane-h">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="LetterSpacing" Value="1.47" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <!-- explorer.html .pane-h: a 41px header row opening each pane, closed by a hairline. The panes
+       themselves are full-bleed regions on the page background divided by 1px line rules; there is
+       no floating card. -->
+  <Style Selector="Border.pane">
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,1,0" />
+  </Style>
+  <Style Selector="Border.pane.last">
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="Border.pane-hrow">
+    <Setter Property="Height" Value="41" />
+    <Setter Property="Padding" Value="16,0" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+  <!-- .vtag: the detail header's right-aligned type chip. Text is written already-uppercased in the
+       ViewModel because Avalonia has no text-transform. -->
+  <Style Selector="Border.vtag">
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="Padding" Value="8,3" />
+  </Style>
+  <Style Selector="Border.vtag > TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="LetterSpacing" Value="1.0" />   <!-- .1em at 10px -->
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <!-- .hcount: the right-aligned count that trails a pane header. -->
+  <Style Selector="TextBlock.hcount">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- explorer.html .search: a flexing pill, not a fixed-width box - magnifier, watermark, then a
+       right-aligned shortcut chip. -->
+  <Style Selector="Border.search">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="Padding" Value="11,8" />
+    <Setter Property="MinWidth" Value="180" />
+    <Setter Property="MaxWidth" Value="360" />
+  </Style>
+  <!-- .search kbd -->
+  <Style Selector="Border.kbd">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="Padding" Value="5,1" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.kbd > TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+
+  <!-- The TextBox that sits INSIDE Border.search: the pill already draws the chrome, so this must
+       draw none of its own. Fluent paints the border on the TextBox's own template parts, hence the
+       part-level selectors rather than a bare TextBox setter. -->
+  <Style Selector="TextBox.bare">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBox.bare /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <!-- ===================== Wizard / modal form grammar =====================
+       All three New* wizards share this skeleton (wizard-{cookbook,recipe,ingredient}.html):
+       kicker, heading, sub, labelled fields, a derived-identifier strip, and a footer band with
+       keyboard hints. Before this the wizards were a bare stack of watermarked TextBoxes. -->
+  <Style Selector="Border.modal">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="ClipToBounds" Value="True" />   <!-- so the foot band respects the radius -->
+    <!-- Wide enough for the footer to carry all three key hints AND both actions without them
+         overlapping; the mockup's footer spans a full-window wizard screen, ours is a dialog card.
+         Widened from 560 when these views moved to mono: at 560 the hint row and the Cancel button
+         met with zero gap. Mono is wider than sans at the same size, and the footer is the tightest
+         row in the card, so it sets the card's minimum width. -->
+    <Setter Property="Width" Value="620" />
+    <!-- Hug the content. Without this the card stretches to whatever hosts it and the form floats in
+         a tall empty panel. -->
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <!-- The tallest wizard (New Ingredient, with both colour ranges open) is taller than a small
+         window: without a ceiling the card overflowed and took the footer - and therefore Create -
+         off screen entirely. The body scrolls inside this instead. -->
+    <Setter Property="MaxHeight" Value="620" />
+  </Style>
+  <!-- New Ingredient only. Declared AFTER Border.modal so it wins at equal specificity. 632 is what
+       the page area between the titlebar and the status bar actually allows at MainWindow's 720. -->
+  <Style Selector="Border.modal.tall">
+    <Setter Property="MaxHeight" Value="632" />
+  </Style>
+  <!-- .body's accent glow: a soft radial wash from the top edge. -->
+  <Style Selector="Border.modal-body">
+    <Setter Property="Padding" Value="24,30" />
+    <Setter Property="Background" Value="{DynamicResource ModalGlowBrush}" />
+  </Style>
+  <!-- Declared AFTER Border.modal-body: Avalonia is last-one-wins at equal specificity, so a
+       narrower opt-out placed above the blanket rule silently loses. New Ingredient only. -->
+  <Style Selector="Border.modal-body.tight">
+    <Setter Property="Padding" Value="24,18" />
+  </Style>
+  <Style Selector="Border.modal-foot">
+    <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="Padding" Value="16,10" />
+  </Style>
+  <!-- .kicker dot. The mockup's .kicker is a flex row with align-items:center, but centring the dot
+       on the TextBlock's LINE BOX puts it low: the label is all-caps, so its glyphs sit high in a box
+       that still reserves descender space below the baseline. Measured off a rendered frame the dot
+       landed 4.5px under the optical centre of "CREATE". The bottom margin lifts it by half its own
+       value, so 9 corrects the full 4.5. Only the three wizard kickers use this class, all at the
+       same label size, so the correction is safe to carry on the style itself. -->
+  <Style Selector="Ellipse.kdot">
+    <Setter Property="Width" Value="4" />
+    <Setter Property="Height" Value="4" />
+    <Setter Property="Fill" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Margin" Value="0,0,0,9" />
+  </Style>
+
+  <!-- .kind / .dopt choice cards. The wizards' Kind and Destination pickers are bordered cards with
+       a dot indicator, a label and a muted subtext line - not bare radio buttons. Retemplating a
+       RadioButton rather than hand-rolling toggles keeps single-select and keyboard behaviour for
+       free. The dot's filled pip is a real Ellipse because the mockup draws it with ::after, which
+       has no XAML equivalent. -->
+  <Style Selector="RadioButton.choice">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <!-- The mockup's .kinds/.dest are flex rows, whose default align-items:stretch gives every card
+         the height of the tallest. Without this the cards size to their own text and a two-line
+         subtitle leaves its neighbours visibly short. -->
+    <Setter Property="VerticalAlignment" Value="Stretch" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Card" Background="{DynamicResource PanelBrush}"
+                BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1"
+                CornerRadius="{DynamicResource RadiusMd}" Padding="10,9">
+          <Grid ColumnDefinitions="13,8,*">
+            <Border Name="Dot" Grid.Column="0" Width="13" Height="13" CornerRadius="7"
+                    BorderThickness="1" BorderBrush="{DynamicResource LineStrongBrush}"
+                    VerticalAlignment="Top" Margin="0,1,0,0">
+              <Ellipse Name="Pip" Width="7" Height="7" Fill="{DynamicResource AccentBrush}"
+                       IsVisible="False" />
+            </Border>
+            <ContentPresenter Name="PART_ContentPresenter" Grid.Column="2"
+                              Content="{TemplateBinding Content}" />
+          </Grid>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="RadioButton.choice:checked /template/ Border#Card">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+  <Style Selector="RadioButton.choice:checked /template/ Border#Dot">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+  </Style>
+  <Style Selector="RadioButton.choice:checked /template/ Ellipse#Pip">
+    <Setter Property="IsVisible" Value="True" />
+  </Style>
+  <Style Selector="RadioButton.choice:pointerover /template/ Border#Card">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+  <!-- Card title / subtitle. These live in the RadioButton's Content, so they are matched by a
+       plain descendant selector - no /template/ hop, which would be a second one and throw. -->
+  <Style Selector="RadioButton.choice TextBlock.ct">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+  </Style>
+  <Style Selector="RadioButton.choice:checked TextBlock.ct">
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="RadioButton.choice TextBlock.csub">
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="LineHeight" Value="13.5" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="Margin" Value="0,2,0,0" />
+  </Style>
+
+  <!-- .q — the 13px help badge beside a wizard field label. The mockup reveals a wide left-aligned
+       popover on hover; Avalonia's stock ToolTip is narrower and follows the pointer, so the
+       affordance and the copy are faithful but the popover's shape is not. Copy is verbatim from the
+       wizard mockups, which is the point: these explain domain rules (weights are relative, not
+       percentages; a colour spec is never guessed) that the form alone does not convey. -->
+  <Style Selector="Border.qmark">
+    <Setter Property="Width" Value="13" />
+    <Setter Property="Height" Value="13" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="ToolTip.ShowDelay" Value="250" />
+  </Style>
+  <Style Selector="Border.qmark:pointerover">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+  <Style Selector="Border.qmark > TextBlock">
+    <Setter Property="Text" Value="?" />
+    <Setter Property="FontSize" Value="9" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.qmark:pointerover > TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+  <!-- Label + badge sit on one row; the label keeps its own bottom margin off this wrapper. -->
+  <Style Selector="StackPanel.plabel-row">
+    <Setter Property="Orientation" Value="Horizontal" />
+    <Setter Property="Spacing" Value="6" />
+  </Style>
+  <Style Selector="StackPanel.plabel-row > TextBlock.plabel">
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.m-h">
+    <Setter Property="FontSize" Value="19" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LetterSpacing" Value="-0.29" />   <!-- -.015em at 19px -->
+    <Setter Property="Margin" Value="0,7,0,0" />
+  </Style>
+  <Style Selector="TextBlock.m-sub">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="Margin" Value="0,4,0,0" />
+  </Style>
+  <!-- .derived: dashed rule above, then "Identifier <code>" -->
+  <Style Selector="TextBlock.derived">
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- .keys kbd - the footer hint chips. Distinct from Border.kbd (the search pill's shortcut chip):
+       the mockup gives these a panel fill and the stronger line. -->
+  <Style Selector="Border.kbd.keys">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+  </Style>
+  <Style Selector="Border.kbd.keys > TextBlock">
+    <Setter Property="FontSize" Value="10" />
+  </Style>
+  <Style Selector="TextBlock.keyhint">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="TextBlock.plabel">
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="LetterSpacing" Value="1.0" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="Margin" Value="0,0,0,8" />
+  </Style>
+  <Style Selector="TextBlock.tagline">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="TextBlock.sub-h">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="LetterSpacing" Value="1.26" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
 
@@ -206,13 +768,6 @@
     <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
     <Setter Property="BorderThickness" Value="2" />
   </Style>
-  <Style Selector="Border.card">
-    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
-    <Setter Property="Padding" Value="14,12" />
-  </Style>
   <Style Selector="Border.frame">
     <Setter Property="Background" Value="{DynamicResource BgBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
@@ -227,23 +782,18 @@
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
     <Setter Property="Padding" Value="7,3" />
   </Style>
-  <Style Selector="Border.kind-dynamic">
-    <Setter Property="BorderBrush" Value="{DynamicResource KindDynamicBrush}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
-    <Setter Property="Padding" Value="6,2" />
+  <!-- The mockup's idchips are "muted label + bold value" (`symbol <b>VPET</b>`), not one flat run.
+       The label carries the meaning, so it must not read at the same weight as the value. -->
+  <Style Selector="Border.idchip TextBlock.ck">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
-  <Style Selector="Border.kind-static">
-    <Setter Property="BorderBrush" Value="{DynamicResource KindStaticBrush}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
-    <Setter Property="Padding" Value="6,2" />
-  </Style>
-  <Style Selector="Border.kind-custom">
-    <Setter Property="BorderBrush" Value="{DynamicResource KindCustomBrush}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
-    <Setter Property="Padding" Value="6,2" />
+  <Style Selector="Border.idchip TextBlock.cvl">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
   </Style>
 
   <!-- Explorer tree: kind-coloured glyph (D/S/C) on ingredient nodes (mockup .kmark, explorer.html:123-127). -->
@@ -268,6 +818,22 @@
        for this tree's two-level (Recipe/Ingredient) nesting. The "TreeViewItem:pointerover" prefix
        is a plain descendant selector (not "/template/"), so it reaches into the row's own
        DataTemplate content the same way any "Parent:state Child" selector would. -->
+  <!-- explorer.html .node: the actual highlightable row box, which sits to the RIGHT of the branch
+       guide. It carries the hover wash, the selected accent wash and the inset 2px accent bar. -->
+  <Style Selector="Border.node">
+    <Setter Property="Padding" Value="8,6" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Border.node:pointerover">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+  </Style>
+  <Style Selector="Border.node.sel">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource AccentBarShadow}" />
+  </Style>
+
   <Style Selector="Border.guide">
     <Setter Property="Width" Value="1" />
     <Setter Property="VerticalAlignment" Value="Stretch" />
@@ -405,18 +971,15 @@
     <Setter Property="Height" Value="20" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
   </Style>
-  <Style Selector="TextBlock.rop">
-    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="12" />
-    <Setter Property="FontWeight" Value="Bold" />
-  </Style>
+  <!-- The mark is line art (Icons.axaml IconMark*), not a text glyph, so its colour is a Stroke.
+       Declared after Path.ico so these win over the default muted stroke. -->
   <Style Selector="Border.rop.exclude">
     <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
     <Setter Property="BorderThickness" Value="1" />
   </Style>
-  <Style Selector="TextBlock.rop.exclude">
-    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+  <Style Selector="Path.rop.exclude">
+    <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
   </Style>
   <!-- .require: no low-alpha "info wash" token exists (only KindDynamicBrush itself is
        defined, no tinted background/border variant of it), so this is approximated as a
@@ -427,9 +990,306 @@
     <Setter Property="BorderBrush" Value="{DynamicResource KindDynamicBrush}" />
     <Setter Property="BorderThickness" Value="1" />
   </Style>
-  <Style Selector="TextBlock.rop.require">
-    <Setter Property="Foreground" Value="{DynamicResource KindDynamicBrush}" />
+  <Style Selector="Path.rop.require">
+    <Setter Property="Stroke" Value="{DynamicResource KindDynamicBrush}" />
   </Style>
+  <!-- explorer.html .fchip: a tinted mono count badge, kind-coloured. Used by the cookbook's
+       combination-space rows and the recipe hero's factor arithmetic. -->
+  <!-- explorer.html .cbk-id: the identity card the name/description/chips live in. They were
+       previously orphaned at the top of the pane with no card around them. -->
+  <!-- explorer.html .rtotal / .rlabel: the recipe hero's headline number and its caption. -->
+  <!-- explorer.html .hueband / .cwmodel: the colorways rail's hue sweep and its model chip. -->
+  <!-- explorer.html .rarity .rt: the per-variant share tracks under the ingredient hero. -->
+  <Style Selector="Border.rt">
+    <Setter Property="Height" Value="7" />
+    <Setter Property="Width" Value="120" />
+    <Setter Property="CornerRadius" Value="999" />
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="ClipToBounds" Value="True" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.rt > Border">
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="CornerRadius" Value="999" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+  </Style>
+
+  <!-- ===================== Ingredient editor ===================== -->
+  <!-- .toolstrip .ttool: a 30x30 icon button, horizontal, with a real ACTIVE state. The editor
+       previously showed seven full-width text buttons in a vertical column and gave no indication of
+       which tool was selected. -->
+  <Style Selector="Button.ttool">
+    <Setter Property="Width" Value="30" />
+    <Setter Property="Height" Value="30" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.ttool:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+  <Style Selector="Button.ttool.on /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+  </Style>
+  <Style Selector="Button.ttool.on Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource OnAccentBrush}" />
+  </Style>
+  <!-- .tsep: the hairline dividers grouping the strip -->
+  <Style Selector="Border.tsep">
+    <Setter Property="Width" Value="1" />
+    <Setter Property="Height" Value="20" />
+    <Setter Property="Background" Value="{DynamicResource LineBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Margin" Value="3,0" />
+  </Style>
+  <!-- .ramp: the 96x16 value gradient with its accent pin; .swatch: the resulting grey -->
+  <Style Selector="Border.ramp">
+    <Setter Property="Width" Value="96" />
+    <Setter Property="Height" Value="16" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.swatch">
+    <Setter Property="Width" Value="20" />
+    <Setter Property="Height" Value="20" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- .seg: a segmented tray, not two loose radio buttons -->
+  <Style Selector="Border.seg">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="Padding" Value="3" />
+  </Style>
+  <Style Selector="Button.seg-b">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="Padding" Value="4,7" />
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.seg-b /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.seg-b.on /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+  </Style>
+  <Style Selector="Button.seg-b.on">
+    <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <!-- .vcard: a horizontal variant row, selected = accent wash + inset bar -->
+  <Style Selector="Button.vcard">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="Padding" Value="9" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Button.vcard:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+  </Style>
+  <Style Selector="Button.vcard.sel /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource AccentBarShadow}" />
+  </Style>
+  <!-- .vlock: the dashed "value comes from the grayscale map" notice -->
+  <Style Selector="TextBlock.vlock">
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <!-- .nin: the mono end-inputs on a range control -->
+  <Style Selector="TextBox.nin">
+    <Setter Property="Width" Value="58" />
+    <Setter Property="MinHeight" Value="24" />
+    <Setter Property="Padding" Value="4,0" />
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="TextAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.cv">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- The gradient band a dual range is drawn over. -->
+  <Style Selector="Border.dualtrack">
+    <Setter Property="Height" Value="18" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <!-- A true dual-handle range control does not exist in Avalonia. Rather than hand-author one, the
+       two existing Sliders are laid OVER the gradient band with transparent tracks, so all they
+       contribute is their ring handles - which is what the mockup's .dual actually shows. -->
+  <Style Selector="Slider.overlay">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="Transparent" />
+    <Setter Property="Margin" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <!-- Do NOT pin a Height here, and do not pin one on the Panel this sits in. Fluent lays a
+         horizontal Slider out at roughly 40px against the mockup's ~20px range row, and both levers
+         were tried: an explicit Height on the Slider and a fixed Height on the containing Panel each
+         clipped the ring handles to their top arc, because the template keeps positioning the thumb
+         for the taller row it wants. The natural height is the only one that draws a whole handle,
+         so the extra row height is absorbed elsewhere in the form. Verified from rendered frames in
+         both the ingredient editor and the New Ingredient wizard. -->
+  </Style>
+  <!-- .sbtn: the 19px quantize steppers -->
+
+  <Style Selector="Border.hueband">
+    <Setter Property="Height" Value="34" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="Border.cwmodel">
+    <Setter Property="Background" Value="{DynamicResource TileBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="Padding" Value="6,2" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.cwmodel > TextBlock">
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock.rtotal">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="FontSize" Value="20" />
+  </Style>
+  <Style Selector="TextBlock.rlabel">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+
+  <Style Selector="Border.cbk-id">
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="Padding" Value="16,14" />
+    <Setter Property="Background" Value="{DynamicResource CardGradientBrush}" />
+  </Style>
+  <Style Selector="TextBlock.idname">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="FontSize" Value="18" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.iddesc">
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="MaxWidth" Value="460" />
+  </Style>
+  <!-- .crow: one recipe's combination-space line -->
+  <Style Selector="Border.crow">
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="0,11" />
+  </Style>
+  <Style Selector="Border.cdot">
+    <Setter Property="Width" Value="8" />
+    <Setter Property="Height" Value="8" />
+    <Setter Property="CornerRadius" Value="2" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="RenderTransform" Value="rotate(45deg)" />
+  </Style>
+  <Style Selector="TextBlock.cname">
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- .cbar: the per-recipe share track -->
+  <Style Selector="Border.cbar">
+    <Setter Property="Height" Value="6" />
+    <Setter Property="CornerRadius" Value="999" />
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="TextBlock.cshare">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Border.fchip">
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="Padding" Value="6,3" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.fchip > TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="LineHeight" Value="11" />
+  </Style>
+  <Style Selector="Border.fchip.kdyn">
+    <Setter Property="Background" Value="{DynamicResource KindDynamicWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource KindDynamicLineBrush}" />
+  </Style>
+  <Style Selector="Border.fchip.kdyn > TextBlock"><Setter Property="Foreground" Value="{DynamicResource KindDynamicBrush}" /></Style>
+  <Style Selector="Border.fchip.kstat">
+    <Setter Property="Background" Value="{DynamicResource KindStaticWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource KindStaticLineBrush}" />
+  </Style>
+  <Style Selector="Border.fchip.kstat > TextBlock"><Setter Property="Foreground" Value="{DynamicResource KindStaticBrush}" /></Style>
+  <Style Selector="Border.fchip.kcust">
+    <Setter Property="Background" Value="{DynamicResource KindCustomWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource KindCustomLineBrush}" />
+  </Style>
+  <Style Selector="Border.fchip.kcust > TextBlock"><Setter Property="Foreground" Value="{DynamicResource KindCustomBrush}" /></Style>
+  <!-- the x and = that separate the factors -->
+  <Style Selector="TextBlock.ftimes">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="Opacity" Value="0.5" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.ceq">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="Margin" Value="3,0" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.cnum">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="FontSize" Value="13.5" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
   <Style Selector="Border.rchip">
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
@@ -446,6 +1306,92 @@
   <Style Selector="TextBlock.rcv">
     <Setter Property="FontSize" Value="12.5" />
     <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <!-- .share: the New Recipe wizard's live "Resulting mix" readout. -->
+  <Style Selector="Border.share">
+    <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="Padding" Value="10,8" />
+  </Style>
+  <Style Selector="TextBlock.share-h">
+    <Setter Property="FontSize" Value="9.5" />
+    <Setter Property="LetterSpacing" Value="0.95" />   <!-- .1em at 9.5px -->
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="Border.mixbar">
+    <Setter Property="Height" Value="7" />
+    <Setter Property="CornerRadius" Value="3" />
+    <Setter Property="Background" Value="{DynamicResource TileBrush}" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <!-- The new Recipe is the accent segment; siblings are muted. Declared before the .other opt-out
+       so the narrower rule wins. -->
+  <Style Selector="Border.seg-me">
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+  </Style>
+  <Style Selector="Border.seg-me.other">
+    <Setter Property="Background" Value="{DynamicResource GuideHiBrush}" />
+  </Style>
+  <Style Selector="Border.swatch-me">
+    <Setter Property="Height" Value="6" />
+    <Setter Property="CornerRadius" Value="2" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+  </Style>
+  <Style Selector="Border.swatch-me.other">
+    <Setter Property="Background" Value="{DynamicResource GuideHiBrush}" />
+  </Style>
+  <Style Selector="TextBlock.lgn">
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="TextBlock.lgn.cur">
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <!-- .hflag: the hero's accent rule-count pill. Fully rounded, accent ink on accent wash. -->
+  <Style Selector="Button.hflag">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="999" />
+    <Setter Property="Padding" Value="9,3" />
+  </Style>
+  <Style Selector="Button.hflag /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.hflag:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+  </Style>
+  <Style Selector="Button.hflag TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+  <Style Selector="Button.hflag Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+
+  <!-- .cwcustom: the 56px art swatch and its note, shown instead of a hue band for a Custom layer. -->
+  <Style Selector="Border.cwsw">
+    <Setter Property="Width" Value="56" />
+    <Setter Property="Height" Value="56" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Background" Value="{DynamicResource TileBrush}" />
+    <Setter Property="ClipToBounds" Value="True" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.cwnote">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="LineHeight" Value="18" />   <!-- 1.5 -->
+    <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
 
   <!-- colorways rail panel (ingredient inspector; explorer.html:385-400) -->
@@ -491,5 +1437,310 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
     <Setter Property="Padding" Value="16,14" />
+  </Style>
+
+  <!-- ====================================================================
+       Application shell (titlebar + status bar), explorer.html .kroot /
+       .lockflag / .statusbar / .zoomctl / .helpbtn. -->
+
+  <!-- persistent workspace-root chip (explorer.html .kroot) -->
+  <Style Selector="Border.kroot">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="Padding" Value="7,3,9,3" />
+  </Style>
+  <Style Selector="Border.kroot Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+  <Style Selector="TextBlock.kroot-txt">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <!-- edit-lock state pill (explorer.html .lockflag) -->
+  <Style Selector="Border.lockflag">
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="999" />
+    <Setter Property="Padding" Value="10,4" />
+  </Style>
+  <Style Selector="TextBlock.lockflag-txt">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+
+  <!-- status bar text (explorer.html .statusbar: mono 11.5px, tabular numerals) -->
+  <Style Selector="TextBlock.sbar">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontFeatures" Value="+tnum" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- explorer.html: .statusbar .state.editing takes the accent colour. Declared after the blanket
+       .sbar rule, which sets Foreground explicitly and would otherwise win. -->
+  <Style Selector="TextBlock.sbar.editing">
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+  <Style Selector="Path.ico.editing">
+    <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+
+  <!-- status bar zoom controls: bordered 24x24 squares (explorer.html .zoomctl button) -->
+  <Style Selector="Button.zoomctl">
+    <Setter Property="Width" Value="24" />
+    <Setter Property="Height" Value="24" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.zoomctl /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+  </Style>
+  <Style Selector="Button.zoomctl:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+  <Style Selector="Button.zoomctl:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+  </Style>
+
+  <!-- status bar help trigger: accent-wash tile (explorer.html .helpbtn) -->
+  <Style Selector="Button.helpbtn">
+    <Setter Property="Width" Value="24" />
+    <Setter Property="Height" Value="24" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Margin" Value="8,0,0,0" />
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.helpbtn /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+  <Style Selector="Button.helpbtn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+  <Style Selector="Button.helpbtn:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+  </Style>
+  <Style Selector="Button.helpbtn Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+
+  <!-- ===================== Quick-reference sheet (help.html) =====================
+       A fixed 780px three-column card, summoned over whatever the user is doing. Every class below
+       is scoped `sh-` because the sheet re-uses several mockup class NAMES (.slbl, .t, .s, .k) at
+       its own sizes; the shared ones stay whatever the rest of the app already made them. -->
+  <Style Selector="Border.sheet">
+    <Setter Property="Width" Value="780" />
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusLg}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource WinShadow}" />
+    <Setter Property="ClipToBounds" Value="True" />   <!-- so the footer band respects the radius -->
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.sh-h">
+    <Setter Property="Padding" Value="20,15" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+  <!-- .sheet .slbl is its OWN scale — mono 11px/600, not the app-wide sans 10px TextBlock.slbl.
+       Declared after it so the overrides win; the margin is the column-label one (14px), which the
+       header and second-in-column labels override inline, mirroring the mockup's `.slbl + .slbl`. -->
+  <Style Selector="TextBlock.slbl.sh">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LetterSpacing" Value="1.54" />   <!-- .14em at 11px -->
+    <Setter Property="Margin" Value="0,0,0,14" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- .esc — a chip in the mockup, a Button here: Escape (the KeyBinding) is otherwise the sheet's
+       ONLY way out, and the scrim behind it does not dismiss. Fluent's hover/pressed fills are
+       neutralised explicitly rather than left unset, which would hand the states back to its blue. -->
+  <Style Selector="Button.esc">
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="Padding" Value="8,3" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.esc /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+  </Style>
+  <Style Selector="Button.esc:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+  </Style>
+  <Style Selector="Button.esc:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+  </Style>
+  <!-- Avalonia 12 makes LetterSpacing settable on the control (TemplatedControl.LetterSpacing, and
+       inheritable via TextElement), so the tracked label no longer has to be a real TextBlock inside
+       the button - a plain Content string now tracks correctly. -->
+  <Style Selector="Button.esc">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="LetterSpacing" Value="1.0" />   <!-- .1em at 10px -->
+  </Style>
+
+  <!-- .col / .col + .col: the reference columns, divided by a left hairline. -->
+  <Style Selector="Border.sh-col">
+    <Setter Property="Padding" Value="20,18,20,20" />
+  </Style>
+  <Style Selector="Border.sh-col.div">
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1,0,0,0" />
+  </Style>
+
+  <!-- .e — one strict 20px glyph gutter (its ColumnDefinitions stay in the view; a Setter would
+       share one ColumnDefinitions instance across every entry). .g is the 16px-tall gutter cell:
+       Path.ico sets an explicit Width, which under the default Stretch alignment would pin the
+       glyph to the cell's left edge rather than centring it in the 20px column. -->
+  <!-- The 10px gap between gutter and content is ColumnSpacing, set on the grid itself. It used to be
+       a left margin on whatever occupied the content column, because Grid.ColumnSpacing only arrived
+       in Avalonia 11.3 and this app was on 11.2.3; the app is on 12.1.1 now, so the workaround and
+       the rule that carried it are gone. -->
+  <Style Selector="Grid.sh-e">
+    <Setter Property="Margin" Value="0,0,0,11" />
+    <Setter Property="ColumnSpacing" Value="10" />
+  </Style>
+  <Style Selector="Grid.sh-kline">
+    <Setter Property="Margin" Value="0,0,0,9" />
+    <Setter Property="ColumnSpacing" Value="10" />
+  </Style>
+  <!-- `align-items:start`. Avalonia's ArrangeCore treats Stretch as Center once an explicit Height
+       is set, so without this the 16px gutter cell floats to the middle of a two-line entry and the
+       glyph sits beside the SUBTITLE rather than beside its term. -->
+  <Style Selector="Panel.sh-g">
+    <Setter Property="Height" Value="16" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+  </Style>
+  <Style Selector="Panel.sh-g > Path, Panel.sh-g > TextBlock, Panel.sh-g > Ellipse">
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- .t / .t.plain / .s — the term, the weight-400 rules variant, and the explanatory line. -->
+  <Style Selector="TextBlock.sh-t">
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LineHeight" Value="15.6" />   <!-- 1.25 -->
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector="TextBlock.sh-t.plain">
+    <Setter Property="FontWeight" Value="Normal" />
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="Padding" Value="0,1,0,0" />
+  </Style>
+  <Style Selector="TextBlock.sh-s">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="LineHeight" Value="17.25" />   <!-- 1.5 -->
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="Margin" Value="0,3,0,0" />
+  </Style>
+
+  <!-- .kline / .k — the keyboard rows. Border.kbd already carries the chip's border, radius and
+       mono 10.5 ink; only the fill, the flatter padding and the centred glyph differ here. -->
+  <Style Selector="Border.kbd.sh-k">
+    <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
+    <Setter Property="Padding" Value="0,2" />
+  </Style>
+  <Style Selector="Border.kbd.sh-k > TextBlock">
+    <Setter Property="TextAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.sh-kdesc">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- .cs / .fine — the colour-spec rows and the note under them. -->
+  <Style Selector="TextBlock.sh-cs">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="TextBlock.sh-cs.pre">
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+  <Style Selector="TextBlock.sh-fine">
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="LineHeight" Value="15.75" />   <!-- 1.5 -->
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="Margin" Value="0,10,0,0" />
+  </Style>
+
+  <!-- .sh-f / .dna / .dnaeq — the footer band. -->
+  <Style Selector="Border.sh-f">
+    <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="Padding" Value="20,12" />
+  </Style>
+  <Style Selector="TextBlock.sh-dna">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="LineHeight" Value="17.25" />   <!-- 1.5 -->
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.kbd.sh-eq">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="Padding" Value="9,3" />
+    <Setter Property="Margin" Value="12,0,0,0" />
+  </Style>
+
+  <!-- Mono-bodied screens. landing.html and the three wizard-*.html mockups declare only the mono
+       font token (no sans token exists at all in any of those four files) and set it on the window
+       container, so every descendant inherits mono. explorer.html / help.html / ingredient-editor.html
+       declare BOTH tokens and use sans for body with mono as an accent - which is what the blanket
+       TextBlock rule at the top of this file implements. The split is real and it is in the locked
+       mockups, so it is reproduced here rather than normalised away.
+
+       This must be declared AFTER the blanket "TextBlock" rule: that rule sets FontFamily explicitly,
+       which defeats normal inheritance, so setting FontFamily on an ancestor alone would not reach
+       the text. The descendant selector re-overrides it for these four views only.
+
+       The class is carried on each view's outermost CHILD (Grid / Border), not on the UserControl
+       root - a Classes attribute on a UserControl's own XAML root did not reach this selector,
+       whereas anchoring on a child element matches the pattern already used throughout this file
+       (Button.landing TextBlock.lbl, Border.metric.accent TextBlock.mv). -->
+  <Style Selector="Grid.monoform TextBlock, Border.monoform TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+  </Style>
+  <Style Selector="Grid.monoform TextBox, Border.monoform TextBox">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+  </Style>
+  <Style Selector="Grid.monoform Button, Border.monoform Button">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+  </Style>
+  <Style Selector="Grid.monoform NumericUpDown, Border.monoform NumericUpDown">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
   </Style>
 </Styles>

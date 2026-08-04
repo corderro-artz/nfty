@@ -20,7 +20,7 @@ public class ExplorerDeleteTests
         return new ExplorerViewModel(session.Current!, nav, dialogs, new FakeNotYetWired(), new ImageBridge(),
             ExplorerViewModelTests.EditorFactory(nav, session, dialogs),
             ExplorerViewModelTests.CookFactory(dialogs), session,
-            new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs));
+            new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs), new StatusService());
     }
 
     [AvaloniaFact]

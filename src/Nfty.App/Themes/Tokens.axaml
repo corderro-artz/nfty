@@ -12,6 +12,9 @@
       <SolidColorBrush x:Key="BgAltBrush" Color="#f1ece4" />
       <SolidColorBrush x:Key="BgAlt2Brush" Color="#ede7df" />
       <SolidColorBrush x:Key="PanelBrush" Color="#f8f3ed" />
+      <!-- Modal scrim: a 52% veil of the page background (mockup `.scrim`), so a light-theme dialog
+           sits on a lightened wash rather than a heavy black veil. Avalonia is #AARRGGBB. -->
+      <SolidColorBrush x:Key="ScrimBrush" Color="#85f4efe8" />
       <SolidColorBrush x:Key="TileBrush" Color="#ece5db" />
       <SolidColorBrush x:Key="FgBrush" Color="#121318" />
       <!--
@@ -35,6 +38,14 @@
       <SolidColorBrush x:Key="KindDynamicBrush" Color="#3b5b6f" />
       <SolidColorBrush x:Key="KindStaticBrush" Color="#6a4a25" />
       <SolidColorBrush x:Key="KindCustomBrush" Color="#6d4f9c" />
+      <!-- .fchip wash/border: the same kind colour at the mockup's 12-13% / 26-28% alpha
+           (color-mix in the CSS; Avalonia alpha leads, so #1F.. is 12% of the hue below). -->
+      <SolidColorBrush x:Key="KindDynamicWashBrush" Color="#1f3b5b6f" />
+      <SolidColorBrush x:Key="KindStaticWashBrush" Color="#216a4a25" />
+      <SolidColorBrush x:Key="KindCustomWashBrush" Color="#216d4f9c" />
+      <SolidColorBrush x:Key="KindDynamicLineBrush" Color="#423b5b6f" />
+      <SolidColorBrush x:Key="KindStaticLineBrush" Color="#476a4a25" />
+      <SolidColorBrush x:Key="KindCustomLineBrush" Color="#476d4f9c" />
       <SolidColorBrush x:Key="AccentHoverBrush" Color="#b92f44" />
       <SolidColorBrush x:Key="SuccessBrush" Color="#3d6b52" />
       <SolidColorBrush x:Key="GuideBrush" Color="#2b121418" />
@@ -42,12 +53,40 @@
       <BoxShadows x:Key="WinShadow">0 1 2 0 #10121418, 0 18 48 -24 #33121418</BoxShadows>
       <!-- Tree selection's 2px left accent bar (mockup: box-shadow: inset 2px 0 0, accent colour). -->
       <BoxShadows x:Key="AccentBarShadow">inset 2 0 0 0 #a11f31</BoxShadows>
+      <!-- Titlebar top inset highlight (mockup .titlebar box-shadow: inset 0 1px 0 color-mix(fg 6%, transparent)). -->
+      <BoxShadows x:Key="TitlebarHighlightShadow">inset 0 1 0 0 #0f121318</BoxShadows>
+      <!-- Raw Color (not Brush) pair backing the titlebar's LinearGradientBrush — GradientStop.Color
+           needs a Color resource, and PanelBrush/BgAltBrush are opaque so these simply mirror them. -->
+      <Color x:Key="PanelColor">#f8f3ed</Color>
+      <Color x:Key="BgAltColor">#f1ece4</Color>
+      <!-- Gradient stops take a Color, not a Brush, so the wizard's accent glow needs these two.
+           The fade stop is the SAME rgb at zero alpha rather than Transparent: interpolating toward
+           #00000000 walks the colour through black and leaves a grey halo. -->
+      <Color x:Key="BgAlt2Color">#ede7df</Color>
+      <Color x:Key="AccentWashColor">#14a11f31</Color>
+      <Color x:Key="AccentWashFadeColor">#00a11f31</Color>
+      <!-- Whole brushes, per theme. A gradient built inside a Style Setter with DynamicResource
+           GradientStops does NOT re-resolve when the theme flips - it is constructed once and shared,
+           and its stops keep the values they had when the Style was first applied. That shipped the
+           CookBook identity card with a light-theme gradient in dark mode, i.e. near-white text on
+           cream. Swapping the entire brush per dictionary is the mechanism every other brush here
+           already uses, and it cannot fail the same way. -->
+      <LinearGradientBrush x:Key="CardGradientBrush" StartPoint="50%,0%" EndPoint="50%,100%">
+        <GradientStop Color="#ede7df" Offset="0" />
+        <GradientStop Color="#f8f3ed" Offset="1" />
+      </LinearGradientBrush>
+      <RadialGradientBrush x:Key="ModalGlowBrush" Center="50%,0%" GradientOrigin="50%,0%"
+                           RadiusX="120%" RadiusY="90%">
+        <GradientStop Color="#14a11f31" Offset="0" />
+        <GradientStop Color="#00a11f31" Offset="0.55" />
+      </RadialGradientBrush>
     </ResourceDictionary>
     <ResourceDictionary x:Key="Dark">
       <SolidColorBrush x:Key="BgBrush" Color="#07080b" />
       <SolidColorBrush x:Key="BgAltBrush" Color="#0a0b10" />
       <SolidColorBrush x:Key="BgAlt2Brush" Color="#0f1118" />
       <SolidColorBrush x:Key="PanelBrush" Color="#0b0c10" />
+      <SolidColorBrush x:Key="ScrimBrush" Color="#8507080b" />
       <SolidColorBrush x:Key="TileBrush" Color="#12141c" />
       <SolidColorBrush x:Key="FgBrush" Color="#f2ede6" />
       <!-- See the Light dictionary's note above: 8-digit hex here is the mockup's #RRGGBBAA
@@ -63,12 +102,35 @@
       <SolidColorBrush x:Key="KindDynamicBrush" Color="#7fb0c4" />
       <SolidColorBrush x:Key="KindStaticBrush" Color="#e0c28c" />
       <SolidColorBrush x:Key="KindCustomBrush" Color="#c3a6ea" />
+      <SolidColorBrush x:Key="KindDynamicWashBrush" Color="#1f7fb0c4" />
+      <SolidColorBrush x:Key="KindStaticWashBrush" Color="#21e0c28c" />
+      <SolidColorBrush x:Key="KindCustomWashBrush" Color="#21c3a6ea" />
+      <SolidColorBrush x:Key="KindDynamicLineBrush" Color="#427fb0c4" />
+      <SolidColorBrush x:Key="KindStaticLineBrush" Color="#47e0c28c" />
+      <SolidColorBrush x:Key="KindCustomLineBrush" Color="#47c3a6ea" />
       <SolidColorBrush x:Key="AccentHoverBrush" Color="#ba3447" />
       <SolidColorBrush x:Key="SuccessBrush" Color="#a6c08a" />
       <SolidColorBrush x:Key="GuideBrush" Color="#1ff2ede6" />
       <SolidColorBrush x:Key="GuideHiBrush" Color="#3df2ede6" />
       <BoxShadows x:Key="WinShadow">0 1 2 0 #60000000, 0 22 60 -28 #000000</BoxShadows>
       <BoxShadows x:Key="AccentBarShadow">inset 2 0 0 0 #a11f31</BoxShadows>
+      <BoxShadows x:Key="TitlebarHighlightShadow">inset 0 1 0 0 #0ff2ede6</BoxShadows>
+      <Color x:Key="PanelColor">#0b0c10</Color>
+      <Color x:Key="BgAltColor">#0a0b10</Color>
+      <Color x:Key="BgAlt2Color">#0f1118</Color>
+      <Color x:Key="AccentWashColor">#26a11f31</Color>
+      <Color x:Key="AccentWashFadeColor">#00a11f31</Color>
+      <!-- See the light dictionary's note: these are whole brushes because a Setter-hosted gradient
+           does not re-resolve DynamicResource stops on a theme change. -->
+      <LinearGradientBrush x:Key="CardGradientBrush" StartPoint="50%,0%" EndPoint="50%,100%">
+        <GradientStop Color="#0f1118" Offset="0" />
+        <GradientStop Color="#0b0c10" Offset="1" />
+      </LinearGradientBrush>
+      <RadialGradientBrush x:Key="ModalGlowBrush" Center="50%,0%" GradientOrigin="50%,0%"
+                           RadiusX="120%" RadiusY="90%">
+        <GradientStop Color="#26a11f31" Offset="0" />
+        <GradientStop Color="#00a11f31" Offset="0.55" />
+      </RadialGradientBrush>
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 
@@ -79,4 +141,29 @@
   <CornerRadius x:Key="RadiusLg">8</CornerRadius>
   <CornerRadius x:Key="RadiusMd">6</CornerRadius>
   <CornerRadius x:Key="RadiusSm">5</CornerRadius>
+
+  <!-- Colour-range track fills. These are NOT palette colours and deliberately do not vary by theme:
+       a hue wheel is a hue wheel in the dark. They live here rather than inline in a view so the two
+       screens that show a colour range (the ingredient editor and the New Ingredient wizard) paint
+       the same ramp, and so the views stay free of raw hex per the house rule. -->
+  <LinearGradientBrush x:Key="HueSpectrumBrush" StartPoint="0%,50%" EndPoint="100%,50%">
+    <GradientStop Color="#FFFF0000" Offset="0" />
+    <GradientStop Color="#FFFFFF00" Offset="0.167" />
+    <GradientStop Color="#FF00FF00" Offset="0.333" />
+    <GradientStop Color="#FF00FFFF" Offset="0.5" />
+    <GradientStop Color="#FF0000FF" Offset="0.667" />
+    <GradientStop Color="#FFFF00FF" Offset="0.833" />
+    <GradientStop Color="#FFFF0000" Offset="1" />
+  </LinearGradientBrush>
+  <!-- Grey to full chroma. The end stop is the mockups' own worked example, hex:d6249f. -->
+  <LinearGradientBrush x:Key="SaturationRampBrush" StartPoint="0%,50%" EndPoint="100%,50%">
+    <GradientStop Color="#FF9E9E9E" Offset="0" />
+    <GradientStop Color="#FFD6249F" Offset="1" />
+  </LinearGradientBrush>
+  <!-- The value ramp the paint brush samples. Black to white is the value-map's own domain, not a
+       palette choice, so it does not vary by theme either. -->
+  <LinearGradientBrush x:Key="ValueRampBrush" StartPoint="0%,50%" EndPoint="100%,50%">
+    <GradientStop Color="#FF000000" Offset="0" />
+    <GradientStop Color="#FFFFFFFF" Offset="1" />
+  </LinearGradientBrush>
 </ResourceDictionary>

@@ -3,19 +3,231 @@
              xmlns:vm="using:Nfty.App.ViewModels"
              x:Class="Nfty.App.Views.HelpView"
              x:DataType="vm:HelpViewModel">
+  <!--
+    The quick-reference sheet (docs/design/mockups/help.html): a 780px three-column card summoned
+    over whatever the user is doing. It replaced a single run-on paragraph in a box.
+
+    Copy is the mockup's, verbatim. Where the mockup relies on CSS `text-transform: uppercase`
+    (.slbl, .esc) the text is written already-uppercased, since Avalonia has no text-transform —
+    the same convention as TextBlock.data-h elsewhere.
+
+    Every entry is the same strict `20px | 10px gap | rest` grid, so the terms align down the whole
+    page regardless of which glyph sits in the gutter. Column ratios and every surface colour come
+    from Styles.axaml/Tokens.axaml; nothing here carries a raw hex.
+  -->
   <UserControl.KeyBindings>
     <KeyBinding Gesture="Escape" Command="{Binding CloseCommand}" />
   </UserControl.KeyBindings>
-  <Border Background="{DynamicResource PanelBrush}" CornerRadius="10" Padding="28" MaxWidth="820"
-          BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1">
-    <StackPanel Spacing="8">
-      <StackPanel Orientation="Horizontal" Spacing="10">
-        <TextBlock Text="nfty" FontWeight="Bold" />
-        <TextBlock Text="Quick reference" Classes="muted" />
-        <Button Content="Esc" Command="{Binding CloseCommand}" Classes="tbtn" HorizontalAlignment="Right" />
-      </StackPanel>
-      <TextBlock TextWrapping="Wrap" Classes="muted"
-        Text="CookBook .cbk · Recipe .rcp · Ingredient .igt · Variant · Set .set.  Kinds: Dynamic / Static / Custom.  Rules: ✕ never-together, → always-together, ⚑ layer-in-a-rule, ● valid.  Keys: ⌘N new, ⌘O open, ⌘I import, ⌘/ this sheet.  Colour: hex: rgb: hsl: hsv:.  Unique DNA = 4 × 3 × 5 × 6 = 360." />
-    </StackPanel>
+
+  <!-- The sheet is ~480px tall and MainWindow allows a 580px window, which leaves the page area
+       ~474px — six pixels short, enough to slice the footer band off. The mockup has no scroller
+       (it never shrinks); this one only engages below that threshold, and centres exactly as a bare
+       Border would above it. -->
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+  <Border x:Name="Sheet" Classes="sheet">
+    <Grid RowDefinitions="Auto,Auto,Auto">
+
+      <!-- ===== .sh-h: brandtile, wordmark, divider, label, Esc ===== -->
+      <Border Grid.Row="0" Classes="sh-h">
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="11" VerticalAlignment="Center">
+            <Border Width="24" Height="24" CornerRadius="{DynamicResource RadiusSm}"
+                    Background="{DynamicResource AccentWashBrush}"
+                    BorderBrush="{DynamicResource AccentLineBrush}" BorderThickness="1">
+              <Border Width="9" Height="9" CornerRadius="2" Background="{DynamicResource AccentBrush}">
+                <Border.RenderTransform>
+                  <RotateTransform Angle="45" />
+                </Border.RenderTransform>
+              </Border>
+            </Border>
+            <TextBlock Classes="wordmark" VerticalAlignment="Center"><Run Text="nft" /><Run Text="y" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
+            <Border Width="1" Height="18" Background="{DynamicResource LineStrongBrush}" />
+            <TextBlock Classes="slbl sh" Text="QUICK REFERENCE" Margin="0" />
+          </StackPanel>
+          <Button Grid.Column="1" Classes="esc" Content="ESC" Command="{Binding CloseCommand}"
+                  ToolTip.Tip="Close — Esc" />
+        </Grid>
+      </Border>
+
+      <!-- ===== .sh-b: 1.35fr / 1fr / .82fr, hairline between ===== -->
+      <Grid x:Name="SheetBody" Grid.Row="1" ColumnDefinitions="1.35*,*,0.82*">
+
+        <!-- ===== The five words ===== -->
+        <Border Grid.Column="0" Classes="sh-col">
+          <StackPanel>
+            <TextBlock Classes="slbl sh" Text="THE FIVE WORDS" />
+
+            <Grid Classes="sh-e" ColumnDefinitions="20,*">
+              <Panel Grid.Column="0" Classes="sh-g">
+                <Path Classes="ico ti-sh" Data="{StaticResource IconTypeCookBook}" />
+              </Panel>
+              <StackPanel Grid.Column="1">
+                <TextBlock Classes="sh-t"><Run Text="CookBook" /><Run Text=" .cbk" FontFamily="{DynamicResource MonoFontFamily}" FontSize="9.5" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
+                <TextBlock Classes="sh-s"><Run Text="An " /><Run Text="uncooked" Foreground="{DynamicResource FgBrush}" /><Run Text=" Set — holds the Recipes, the canvas size, the collection." /></TextBlock>
+              </StackPanel>
+            </Grid>
+
+            <Grid Classes="sh-e" ColumnDefinitions="20,*">
+              <Panel Grid.Column="0" Classes="sh-g">
+                <Path Classes="ico ti-sh" Data="{StaticResource IconTypeRecipe}" />
+              </Panel>
+              <StackPanel Grid.Column="1">
+                <TextBlock Classes="sh-t"><Run Text="Recipe" /><Run Text=" .rcp" FontFamily="{DynamicResource MonoFontFamily}" FontSize="9.5" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
+                <TextBlock Classes="sh-s"><Run Text="One character " /><Run Text="type" Foreground="{DynamicResource FgBrush}" /><Run Text=" — an ordered stack of layers, plus its rules." /></TextBlock>
+              </StackPanel>
+            </Grid>
+
+            <Grid Classes="sh-e" ColumnDefinitions="20,*">
+              <Panel Grid.Column="0" Classes="sh-g">
+                <Path Classes="ico ti-sh" Data="{StaticResource IconTypeIngredient}" />
+              </Panel>
+              <StackPanel Grid.Column="1">
+                <TextBlock Classes="sh-t"><Run Text="Ingredient" /><Run Text=" .igt" FontFamily="{DynamicResource MonoFontFamily}" FontSize="9.5" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
+                <TextBlock Classes="sh-s" Text="One layer — its kind, its colouring, its weighted variants." />
+              </StackPanel>
+            </Grid>
+
+            <Grid Classes="sh-e" ColumnDefinitions="20,*">
+              <Panel Grid.Column="0" Classes="sh-g">
+                <Path Classes="ico ti-sh" Data="{StaticResource IconTypeVariant}" />
+              </Panel>
+              <StackPanel Grid.Column="1">
+                <TextBlock Classes="sh-t" Text="Variant" />
+                <TextBlock Classes="sh-s" Text="One image and a weight, inside an ingredient." />
+              </StackPanel>
+            </Grid>
+
+            <Grid Classes="sh-e" ColumnDefinitions="20,*" Margin="0">
+              <Panel Grid.Column="0" Classes="sh-g">
+                <Path Classes="ico ti-sh" Data="{StaticResource IconTypeSet}" />
+              </Panel>
+              <StackPanel Grid.Column="1">
+                <TextBlock Classes="sh-t"><Run Text="Set" /><Run Text=" .set" FontFamily="{DynamicResource MonoFontFamily}" FontSize="9.5" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
+                <TextBlock Classes="sh-s"><Run Text="What " /><Run Text="Cook" Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold" /><Run Text=" produces: images, metadata, rarity, seed." /></TextBlock>
+              </StackPanel>
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <!-- ===== Layer kinds + Rules and state ===== -->
+        <Border Grid.Column="1" Classes="sh-col div">
+          <StackPanel>
+            <TextBlock Classes="slbl sh" Text="LAYER KINDS" />
+
+            <Grid Classes="sh-e" ColumnDefinitions="20,*">
+              <Panel Grid.Column="0" Classes="sh-g"><TextBlock Classes="kmark kdyn" Text="D" /></Panel>
+              <StackPanel Grid.Column="1">
+                <TextBlock Classes="sh-t" Text="dynamic" />
+                <TextBlock Classes="sh-s"><Run Text="Grey value-map. Colour " /><Run Text="rolled" Foreground="{DynamicResource FgBrush}" /><Run Text=" per asset." /></TextBlock>
+              </StackPanel>
+            </Grid>
+
+            <Grid Classes="sh-e" ColumnDefinitions="20,*">
+              <Panel Grid.Column="0" Classes="sh-g"><TextBlock Classes="kmark kstat" Text="S" /></Panel>
+              <StackPanel Grid.Column="1">
+                <TextBlock Classes="sh-t" Text="static" />
+                <TextBlock Classes="sh-s"><Run Text="Grey value-map. One " /><Run Text="fixed" Foreground="{DynamicResource FgBrush}" /><Run Text=" colour." /></TextBlock>
+              </StackPanel>
+            </Grid>
+
+            <Grid Classes="sh-e" ColumnDefinitions="20,*" Margin="0">
+              <Panel Grid.Column="0" Classes="sh-g"><TextBlock Classes="kmark kcust" Text="C" /></Panel>
+              <StackPanel Grid.Column="1">
+                <TextBlock Classes="sh-t" Text="custom" />
+                <TextBlock Classes="sh-s"><Run Text="Full colour, composited " /><Run Text="as-is" Foreground="{DynamicResource FgBrush}" /><Run Text="." /></TextBlock>
+              </StackPanel>
+            </Grid>
+
+            <TextBlock Classes="slbl sh" Text="RULES &amp; STATE" Margin="0,20,0,14" />
+
+            <!-- The three marks MUST come from the IconMark* keys, not the visually identical
+                 IconClose / IconArrowRight: this legend is the published meaning of the mark the
+                 app draws, so a later change to the window chrome must not silently redefine a
+                 rule. See the note above these keys in Icons.axaml. -->
+            <Grid Classes="sh-e" ColumnDefinitions="20,*">
+              <Panel Grid.Column="0" Classes="sh-g">
+                <Path Classes="ico sm" Data="{StaticResource IconMarkExclude}" Stroke="{DynamicResource AccentTextBrush}" />
+              </Panel>
+              <TextBlock Grid.Column="1" Classes="sh-t plain" Text="never together" />
+            </Grid>
+
+            <Grid Classes="sh-e" ColumnDefinitions="20,*">
+              <Panel Grid.Column="0" Classes="sh-g">
+                <Path Classes="ico sm" Data="{StaticResource IconMarkRequire}" Stroke="{DynamicResource SuccessBrush}" />
+              </Panel>
+              <TextBlock Grid.Column="1" Classes="sh-t plain" Text="always together" />
+            </Grid>
+
+            <Grid Classes="sh-e" ColumnDefinitions="20,*">
+              <Panel Grid.Column="0" Classes="sh-g">
+                <Path Classes="ico sm" Data="{StaticResource IconMarkFlag}" />
+              </Panel>
+              <TextBlock Grid.Column="1" Classes="sh-t plain" Text="this layer is in a rule" />
+            </Grid>
+
+            <!-- The mockup's ● here is real typography, not a stand-in for an icon; drawn as an
+                 Ellipse the way the status bar's own validity dot and Ellipse.kdot already are. -->
+            <Grid Classes="sh-e" ColumnDefinitions="20,*" Margin="0">
+              <Panel Grid.Column="0" Classes="sh-g">
+                <Ellipse Width="7" Height="7" Fill="{DynamicResource SuccessBrush}" />
+              </Panel>
+              <TextBlock Grid.Column="1" Classes="sh-t plain" Text="CookBook is valid" />
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <!-- ===== Keys + Colour ===== -->
+        <Border Grid.Column="2" Classes="sh-col div">
+          <StackPanel>
+            <TextBlock Classes="slbl sh" Text="KEYS" />
+
+            <Grid Classes="sh-kline" ColumnDefinitions="38,*">
+              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="⌘/" /></Border>
+              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="this sheet" />
+            </Grid>
+            <Grid Classes="sh-kline" ColumnDefinitions="38,*">
+              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="⌘K" /></Border>
+              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="search" />
+            </Grid>
+            <Grid Classes="sh-kline" ColumnDefinitions="38,*">
+              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="⌘N" /></Border>
+              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="new CookBook" />
+            </Grid>
+            <Grid Classes="sh-kline" ColumnDefinitions="38,*">
+              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="⌘O" /></Border>
+              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="open" />
+            </Grid>
+
+            <TextBlock Classes="slbl sh" Text="COLOUR" Margin="0,20,0,14" />
+
+            <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,0,0,7">
+              <TextBlock Classes="sh-cs pre" Text="hex:" /><TextBlock Classes="sh-cs" Text="d6249f" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,0,0,7">
+              <TextBlock Classes="sh-cs pre" Text="rgb:" /><TextBlock Classes="sh-cs" Text="214,36,159" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,0,0,7">
+              <TextBlock Classes="sh-cs pre" Text="hsl:" /><TextBlock Classes="sh-cs" Text="322,72,49" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,0,0,7">
+              <TextBlock Classes="sh-cs pre" Text="hsv:" /><TextBlock Classes="sh-cs" Text="322,83,84" />
+            </StackPanel>
+
+            <TextBlock Classes="sh-fine" Text="The prefix is required — a colour is never guessed." />
+          </StackPanel>
+        </Border>
+      </Grid>
+
+      <!-- ===== .sh-f: the DNA sentence + its arithmetic chip ===== -->
+      <Border Grid.Row="2" Classes="sh-f">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0" Classes="sh-dna"><Run Text="Unique DNA" Foreground="{DynamicResource FgBrush}" FontWeight="SemiBold" /><Run Text=" — one Recipe, its rolled Variants, their colours. It's what makes an asset distinct, and what a collection is counted in." /></TextBlock>
+          <Border Grid.Column="1" Classes="kbd sh-eq">
+            <TextBlock><Run Text="4 × 3 × 5 × 6 " /><Run Text="=" Foreground="{DynamicResource AccentTextBrush}" /><Run Text=" 360" /></TextBlock>
+          </Border>
+        </Grid>
+      </Border>
+    </Grid>
   </Border>
+  </ScrollViewer>
 </UserControl>

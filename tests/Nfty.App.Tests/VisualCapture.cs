@@ -9,6 +9,7 @@ using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -35,10 +36,10 @@ public class VisualCapture
             ? null
             : (Environment.GetEnvironmentVariable("NFTY_CAPTURE_DIR") ?? Path.GetTempPath());
 
-    private static TextBlock Label(string text, string? cls = null)
+    private static TextBlock Label(string text, params string[] classes)
     {
         var tb = new TextBlock { Text = text, Margin = new Thickness(0, 2) };
-        if (cls is not null) tb.Classes.Add(cls);
+        foreach (var c in classes) tb.Classes.Add(c);
         return tb;
     }
 
@@ -66,101 +67,51 @@ public class VisualCapture
         return tb;
     }
 
-    private static Border KindChip(string cls, string text) => new()
+    /// <summary>A kind chip as the app actually draws it: `fchip` plus the kind modifier. The gallery
+    /// used to specimen a `kind-dynamic`/`kind-static`/`kind-custom` family that Slice 9 replaced —
+    /// so the design-system sheet was documenting a vocabulary no screen used, and those styles
+    /// survived a dead-class sweep only because the gallery still referenced them.</summary>
+    private static Border KindChip(string kindModifier, string text) => new()
     {
-        Classes = { cls },
+        Classes = { "fchip", kindModifier },
         Margin = new Thickness(0, 0, 8, 0),
-        Child = Label(text, "kind-txt"),
+        Child = Label(text, "kind-txt", kindModifier),
     };
 
-    /// <summary>Mirrors MainWindow's titlebar + status bar chrome (brand tile, wordmark, borderless
-    /// window controls, zoom/help controls) so it can be visually captured — MainWindow itself can't
-    /// be instantiated headlessly (it's the desktop head's top-level Window). Keep this structurally
-    /// in sync with src/Nfty.Desktop/MainWindow.axaml's titlebar/status-bar markup.</summary>
+    /// <summary>Theme-resource lookups for the synthetic swatches below; magenta marks a miss.</summary>
     private static IBrush Res(string key, ThemeVariant variant) =>
         Application.Current!.TryGetResource(key, variant, out var v) ? (IBrush)v! : Brushes.Magenta;
 
-    private static Control ChromeStrip(ThemeVariant variant)
+    private static Avalonia.Media.Color ResColor(string key, ThemeVariant variant) =>
+        Application.Current!.TryGetResource(key, variant, out var v) ? (Avalonia.Media.Color)v! : Colors.Magenta;
+
+    /// <summary>The real application shell — ShellChromeView is the very control MainWindow hosts,
+    /// so this frame shows the shipped titlebar and status bar rather than a replica of them. It is
+    /// captured with an Explorer as the current page, since the Kitchen chip, crumbs and lock flag
+    /// are bound through ShellViewModel.CurrentExplorer and are absent on every other page.</summary>
+    [AvaloniaFact]
+    public void Capture_shell()
     {
-        var radiusSm = Application.Current!.TryGetResource("RadiusSm", variant, out var r)
-            ? (CornerRadius)r!
-            : new CornerRadius(5);
+        if (Dir is null) return;   // inert unless explicitly capturing
 
-        var brandTile = new Border
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
         {
-            Width = 24,
-            Height = 24,
-            CornerRadius = radiusSm,
-            Background = Res("AccentWashBrush", variant),
-            Child = new Border
-            {
-                Width = 9,
-                Height = 9,
-                CornerRadius = new CornerRadius(2),
-                Background = Res("AccentBrush", variant),
-                RenderTransform = new RotateTransform(45),
-            },
-        };
+            var nav = new FakeNav();
+            var dialogs = new FakeDialogs();
+            var session = new CookBookSession();
+            using var explorer = new ExplorerViewModel(ExplorerViewModelTests.TwoRecipeBook(), nav, dialogs,
+                new FakeNotYetWired(), new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav),
+                ExplorerViewModelTests.CookFactory(dialogs), session, new FilePickerService(),
+                ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs), new StatusService());
 
-        var titlebar = new Grid
-        {
-            Height = 46,
-            Background = Res("PanelBrush", variant),
-            ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"),
-        };
-        var brand = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Margin = new Thickness(12, 0, 0, 0),
-            VerticalAlignment = VerticalAlignment.Center,
-            Spacing = 9,
-            Children = { brandTile, Wordmark(variant) },
-        };
-        Grid.SetColumn(brand, 0);
-        var winControls = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0, 0, 10, 0),
-            Children = { Btn("—", "icon"), Btn("▢", "icon"), Btn("✕", "icon", "danger") },
-        };
-        Grid.SetColumn(winControls, 2);
-        titlebar.Children.Add(brand);
-        titlebar.Children.Add(winControls);
+            var shell = new ShellViewModel(nav, dialogs, new FakeNotYetWired(), new ThemeService(), new StatusService());
+            nav.To(explorer);                             // drives ShellViewModel.CurrentPage
+            explorer.SelectNodeCommand.Execute(explorer.Root.Children[0]);   // a crumb trail to show
+            explorer.ToggleLockCommand.Execute(null);                        // unlocked lock flag
 
-        var statusBar = new Grid
-        {
-            Height = 34,
-            Background = Res("BgAltBrush", variant),
-            ColumnDefinitions = new ColumnDefinitions("*,Auto"),
-        };
-        var statusText = Label("Ready · 1,024 assets", "muted");
-        statusText.Margin = new Thickness(16, 0);
-        statusText.VerticalAlignment = VerticalAlignment.Center;
-        Grid.SetColumn(statusText, 0);
-        var zoomGroup = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Margin = new Thickness(8, 0),
-            VerticalAlignment = VerticalAlignment.Center,
-            Spacing = 2,
-            Children =
-            {
-                Btn("−", "icon"),
-                new TextBlock { Text = "100%", Width = 46, TextAlignment = Avalonia.Media.TextAlignment.Center, VerticalAlignment = VerticalAlignment.Center },
-                Btn("+", "icon"),
-                Btn("?", "icon"),
-            },
-        };
-        Grid.SetColumn(zoomGroup, 1);
-        statusBar.Children.Add(statusText);
-        statusBar.Children.Add(zoomGroup);
-
-        return new StackPanel
-        {
-            Spacing = 0,
-            Children = { titlebar, statusBar },
-        };
+            Capture(new Views.ShellChromeView { DataContext = shell }, variant,
+                $"shell-{variant.Key.ToString()!.ToLowerInvariant()}.png");
+        }
     }
 
     private static Control Gallery(ThemeVariant variant) => new Border
@@ -173,10 +124,9 @@ public class VisualCapture
             Spacing = 10,
             Children =
             {
-                ChromeStrip(variant),
                 Label("The quick brown fox — sans body text"),
                 Label("nfty", "wordmark"),
-                Label("CookBook › Recipe › Ingredient", "crumbs"),
+                Label("CookBook › Recipe › Ingredient", "cseg"),
                 Label("dna-0x9f3a  ·  mono 0123456789", "mono"),
                 new StackPanel
                 {
@@ -196,7 +146,7 @@ public class VisualCapture
                     Spacing = 10,
                     Children =
                     {
-                        new Border { Classes = { "card" }, Width = 140, Child = Label("card surface") },
+                        new Border { Classes = { "metric" }, Width = 140, Child = Label("metric surface") },
                         new Border { Classes = { "tile" }, Width = 120, Height = 44, Child = Label("tile surface") },
                     },
                 },
@@ -211,9 +161,9 @@ public class VisualCapture
                     Orientation = Orientation.Horizontal,
                     Children =
                     {
-                        KindChip("kind-dynamic", "dynamic"),
-                        KindChip("kind-static", "static"),
-                        KindChip("kind-custom", "custom"),
+                        KindChip("kdyn", "dynamic"),
+                        KindChip("kstat", "static"),
+                        KindChip("kcust", "custom"),
                     },
                 },
                 new StackPanel
@@ -223,7 +173,7 @@ public class VisualCapture
                     Margin = new Thickness(0, 6, 0, 0),
                     Children =
                     {
-                        new TextBox { Text = "aura", Watermark = "id", Width = 110 },
+                        new TextBox { Text = "aura", PlaceholderText = "id", Width = 110 },
                         new Slider { Minimum = 0, Maximum = 1, Value = 0.6, Width = 110 },
                         new CheckBox { IsChecked = true, Content = "checked" },
                         new RadioButton { IsChecked = true, Content = "picked" },
@@ -259,7 +209,7 @@ public class VisualCapture
             var frame = window.CaptureRenderedFrame();
             Assert.NotNull(frame);
             var path = Path.Combine(Dir!, $"gallery-{variant.Key.ToString()!.ToLowerInvariant()}.png");
-            frame!.Save(path);
+            frame!.Save(path, PngBitmapEncoderOptions.Default);
         }
     }
 
@@ -279,9 +229,11 @@ public class VisualCapture
             var vm = new ExplorerViewModel(ExplorerViewModelTests.TwoRecipeBook(), nav, dialogs,
                 new FakeNotYetWired(), new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav),
                 ExplorerViewModelTests.CookFactory(dialogs), new CookBookSession(),
-                new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs));
+                new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs), new StatusService());
             var view = new Views.ExplorerView { DataContext = vm };
-            var window = new Window { RequestedThemeVariant = variant, Content = view, Width = 900, Height = 560 };
+            // MainWindow's own default size. The mockup's pane track alone needs 286+392+336 = 1014px, so
+            // capturing the Explorer at less than that judges it in a squeeze the app never ships in.
+            var window = new Window { RequestedThemeVariant = variant, Content = view, Width = 1180, Height = 720 };
             window.Show();
             Dispatcher.UIThread.RunJobs();
 
@@ -301,9 +253,11 @@ public class VisualCapture
             Dispatcher.UIThread.RunJobs();
 
             vm.SelectNodeCommand.Execute(vm.Root.Children[0].Children[0]);   // select an ingredient
+            vm.ToggleLockCommand.Execute(null);   // unlocked: the lock must LOOK different
             Dispatcher.UIThread.RunJobs();
 
-            window.CaptureRenderedFrame()!.Save(Path.Combine(Dir!, $"explorer-{variant.Key.ToString()!.ToLowerInvariant()}.png"));
+            window.CaptureRenderedFrame()!.Save(Path.Combine(Dir!, $"explorer-{variant.Key.ToString()!.ToLowerInvariant()}.png"),
+                PngBitmapEncoderOptions.Default);
             vm.Dispose();
         }
     }
@@ -311,6 +265,35 @@ public class VisualCapture
     /// <summary>Builds a small recipe (+ owning cookbook) with one Exclude and one Require rule, so a
     /// capture of <see cref="Views.RecipeDetailView"/> exercises the rules rail — mirrors
     /// <see cref="RecipeDetailViewModelTests.Rules_expose_operator_and_traits"/>'s fixture.</summary>
+    /// <summary>A DYNAMIC ingredient with a real hue range. TwoRecipeBook's layers are all Custom,
+    /// so the colorways hue band - which only a dynamic layer has - had no frame proving it renders.</summary>
+    private static (LoadedCookBook book, LoadedRecipe recipe, LoadedIngredient ing) DynamicIngredient()
+    {
+        var colorization = new Colorization(ColorModel.Hsv, HueQuantize: 24, SatQuantize: 6,
+            new[] { new ColorEntry(1, new ColorRange(190, 320, 55, 95), null) });
+        var ing = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("aura", "Aura", LayerKind.Dynamic, colorization,
+                new[] { new Variant("soft", "Soft", 3), new Variant("glow", "Glow", 1) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>>
+            {
+                ["soft"] = new Image<Rgba32>(8, 8), ["glow"] = new Image<Rgba32>(8, 8),
+            },
+        };
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("cat", "Cat", new[] { "aura" }, Array.Empty<IncompatibilityRule>()),
+            Ingredients = new[] { ing },
+        };
+        var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "Book", new Dimensions(8, 8),
+                new Collection("Book", "", "B"), new Dictionary<string, double> { ["cat"] = 100 }),
+            Recipes = new[] { recipe },
+        };
+        return (book, recipe, ing);
+    }
+
     private static (LoadedCookBook book, LoadedRecipe recipe) RecipeWithRules()
     {
         var rules = new[]
@@ -371,6 +354,14 @@ public class VisualCapture
             {
                 Capture(new Views.IngredientDetailView { DataContext = vm }, variant, $"ingredient-detail-{key}.png");
             }
+
+            var (dynBook, dynRecipe, dynIng) = DynamicIngredient();
+            using (var vm = new IngredientDetailViewModel(dynIng, dynRecipe, dynBook, new ImageBridge(),
+                new FakeNotYetWired(), () => { }, () => false))
+            {
+                Capture(new Views.IngredientDetailView { DataContext = vm }, variant, $"ingredient-detail-dynamic-{key}.png");
+            }
+            dynBook.Dispose();
         }
     }
 
@@ -379,18 +370,30 @@ public class VisualCapture
     {
         if (Dir is null) return;   // inert unless explicitly capturing
 
-        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        foreach (var (variant, empty) in
+                 from v in new[] { ThemeVariant.Light, ThemeVariant.Dark }
+                 from e in new[] { false, true }
+                 select (v, e))
         {
-            var key = variant.Key.ToString()!.ToLowerInvariant();
+            var key = variant.Key.ToString()!.ToLowerInvariant() + (empty ? "-empty" : "");
             var nav = new FakeNav();
             var dialogs = new FakeDialogs();
             var notify = new FakeNotYetWired();
+            // Two frames per theme: the populated rows AND the first-run empty state. Capturing only
+            // the empty one left the .rrow template (icon tile, name/meta stack, path column) with no
+            // rendered evidence at all.
+            var recents = new RecentsService(Directory.CreateTempSubdirectory().FullName);
+            if (!empty)
+            {
+                recents.Add(new Models.RecentItem("VaporPets", "cookbook · 2 recipes", @"D:\art\VaporPets.cbk", false));
+                recents.Add(new Models.RecentItem("aura", "ingredient · 3 variants", @"D:\art\parts\aura.igt", true));
+            }
             var vm = new LandingViewModel(nav, dialogs, notify, new FilePickerService(),
-                new RecentsService(Directory.CreateTempSubdirectory().FullName),
+                recents,
                 new CookBookSession(),
                 book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(),
                     ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs), new CookBookSession(),
-                    new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs)),
+                    new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs), new StatusService()),
                 set => new SetBrowserViewModel(set),
                 (_, _, _) => null!);
             Capture(new Views.LandingView { DataContext = vm }, variant, $"landing-{key}.png");
@@ -450,14 +453,60 @@ public class VisualCapture
             vm.FillPanePreviewCommand.Execute(null);   // C1: preview takes over the canvas pane
             Capture(new Views.IngredientEditorView { DataContext = vm }, variant, $"editor-paint-{key}.png");
             vm.Dispose();
+
+            // TwoRecipeBook's layers are ALL LayerKind.Custom, and the editor gates painting on
+            // CanPaint => !IsCustom. So the frames above render the entire toolstrip - tools,
+            // undo/redo, value ramp, swatch, brush size - DISABLED, and the editor's whole reason to
+            // exist had no visual evidence at all. Same class of blind spot as the colorways hue
+            // band before ingredient-detail-dynamic-* existed: a frame that exercises no code is not
+            // evidence. This pair is the enabled editor.
+            var (dynBook, dynRecipe, dynIng) = DynamicIngredient();
+            var dynVm = new IngredientEditorViewModel(dynIng, dynRecipe, dynBook, new ImageBridge(),
+                new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs(),
+                new FilePickerService());
+            dynVm.ActiveTool = EditorTool.Fill;
+            dynVm.BrushValue = 200;
+            dynVm.ApplyToolStroke(new[] { (0, 0) });
+            Capture(new Views.IngredientEditorView { DataContext = dynVm }, variant, $"editor-enabled-{key}.png");
+            dynVm.Dispose();
+            dynBook.Dispose();
+        }
+    }
+
+    /// <summary>Renders the Help view and the three wizards, so every screen with a locked mockup
+    /// has a real frame to audit against (help.html, wizard-cookbook/recipe/ingredient.html).</summary>
+    [AvaloniaFact]
+    public void Capture_help_and_wizards()
+    {
+        if (Dir is null) return;   // inert unless explicitly capturing
+
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            var key = variant.Key.ToString()!.ToLowerInvariant();
+            var dialogs = new FakeDialogs();
+            var notify = new FakeNotYetWired();
+
+            Capture(new Views.HelpView { DataContext = new HelpViewModel(dialogs) }, variant, $"help-{key}.png");
+
+            Capture(new Views.NewCookBookView { DataContext = new NewCookBookViewModel(dialogs, notify) { Name = "Vapor Pets", Symbol = "VP", Description = "A cosy little collection." } },
+                variant, $"wizard-cookbook-{key}.png");
+
+            // Siblings, or the "Resulting mix" panel hides and the frame proves nothing about it -
+            // a weight is only meaningful RELATIVE to the recipes it is normalised against.
+            var siblings = new[] { ("Fox", 45d), ("Owl", 25d) };
+            Capture(new Views.NewRecipeView { DataContext = new NewRecipeViewModel(dialogs, notify, siblings) { Name = "Cat" } },
+                variant, $"wizard-recipe-{key}.png");
+
+            Capture(new Views.NewIngredientView { DataContext = new NewIngredientViewModel(dialogs, notify) { Name = "Aura" } },
+                variant, $"wizard-ingredient-{key}.png");
         }
     }
 
     private static void Capture(Control view, ThemeVariant variant, string fileName)
     {
-        var window = new Window { RequestedThemeVariant = variant, Content = view, Width = 900, Height = 600 };
+        var window = new Window { RequestedThemeVariant = variant, Content = view, Width = 1180, Height = 720 };
         window.Show();
         Dispatcher.UIThread.RunJobs();
-        window.CaptureRenderedFrame()!.Save(Path.Combine(Dir!, fileName));
+        window.CaptureRenderedFrame()!.Save(Path.Combine(Dir!, fileName), PngBitmapEncoderOptions.Default);
     }
 }

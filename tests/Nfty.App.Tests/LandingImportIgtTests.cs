@@ -32,7 +32,7 @@ public class LandingImportIgtTests
             book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(),
                 ExplorerViewModelTests.EditorFactory(nav, session, dialogs),
                 ExplorerViewModelTests.CookFactory(dialogs), session,
-                new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs)),
+                new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs), new StatusService()),
             set => new SetBrowserViewModel(set),
             ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs));
     }

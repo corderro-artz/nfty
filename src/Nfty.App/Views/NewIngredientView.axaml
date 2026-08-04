@@ -6,47 +6,189 @@
              Focusable="True">
   <UserControl.KeyBindings>
     <KeyBinding Gesture="Escape" Command="{Binding CancelCommand}" />
+    <KeyBinding Gesture="Enter" Command="{Binding CreateCommand}" />
   </UserControl.KeyBindings>
-  <Border Background="{DynamicResource PanelBrush}" CornerRadius="10" Padding="28" Width="440"
-          BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1">
-    <StackPanel Spacing="10">
-      <TextBlock Text="New Ingredient" FontWeight="Bold" />
-      <TextBox Watermark="Name" Text="{Binding Name}" />
+  <!-- .tall/.tight: this is the only wizard carrying two colour ranges AND two card pickers, and the
+       mockup's wizard is a full-window screen where that all fits comfortably. Ours is a dialog card
+       with a hard ceiling, so this one form gets a taller card and a tighter body. Without it the
+       card overflows and the ScrollViewer silently hides Destination, Canvas and the identifier -
+       see WizardFitsTests, which fails rather than letting that happen again. -->
+  <Border Classes="modal monoform tall">
+    <Grid RowDefinitions="*,Auto">
+      <Border Grid.Row="0" Classes="modal-body tight">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel MaxWidth="432">
+          <StackPanel Orientation="Horizontal" Spacing="7">
+            <Ellipse Classes="kdot" />
+            <TextBlock Text="CREATE" Classes="slbl" />
+          </StackPanel>
+          <TextBlock Text="New Ingredient" Classes="m-h" />
+          <TextBlock Classes="m-sub"><Run Text="One layer, one trait category. Its " /><Run Text="kind" Foreground="{DynamicResource FgBrush}" /><Run Text=" decides whether its colour is rolled, fixed, or baked into the art." /></TextBlock>
 
-      <StackPanel Orientation="Horizontal" Spacing="16">
-        <RadioButton Content="Dynamic" GroupName="Kind" IsChecked="{Binding IsKindDynamic}" />
-        <RadioButton Content="Static" GroupName="Kind" IsChecked="{Binding IsKindStatic}" />
-        <RadioButton Content="Custom" GroupName="Kind" IsChecked="{Binding IsKindCustom}" />
-      </StackPanel>
+          <!-- Tighter than the other two wizards' 14/19: this is the only form carrying two colour
+               range controls, and Fluent's Slider row is about twice the mockup's height (see
+               Slider.overlay in Styles.axaml). Without this the card overflowed and put DESTINATION,
+               CANVAS and the derived identifier behind an unsignposted scrollbar. -->
+          <StackPanel Spacing="8" Margin="0,14,0,0">
+            <StackPanel Spacing="6">
+              <TextBlock Text="NAME" Classes="plabel" />
+              <TextBox Text="{Binding Name}" PlaceholderText="Aura" />
+            </StackPanel>
 
-      <StackPanel Spacing="6" IsVisible="{Binding ShowColourRange}">
-        <TextBlock Text="Hue range" Classes="muted" />
-        <Slider Value="{Binding HueMin}" Minimum="0" Maximum="360" />
-        <Slider Value="{Binding HueMax}" Minimum="0" Maximum="360" />
-        <TextBlock Text="Saturation range" Classes="muted" />
-        <Slider Value="{Binding SatMin}" Minimum="0" Maximum="100" />
-        <Slider Value="{Binding SatMax}" Minimum="0" Maximum="100" />
-      </StackPanel>
+            <StackPanel Spacing="6">
+              <StackPanel Classes="plabel-row">
+                <TextBlock Text="KIND" Classes="plabel" />
+                <Border Classes="qmark"
+                        ToolTip.Tip="How this layer becomes pixels. Dynamic and Static are grayscale value-maps that get colorized; Custom is full-colour art composited untouched. This cannot be changed later without repainting.">
+                  <TextBlock />
+                </Border>
+              </StackPanel>
+              <!-- .kinds: three equal-width cards, copy verbatim from wizard-ingredient.html -->
+              <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                <RadioButton Grid.Column="0" Classes="choice" GroupName="Kind" IsChecked="{Binding IsKindDynamic}">
+                  <StackPanel>
+                    <TextBlock Text="Dynamic" Classes="ct" />
+                    <TextBlock Text="colour rolled per asset" Classes="csub" />
+                  </StackPanel>
+                </RadioButton>
+                <RadioButton Grid.Column="1" Classes="choice" GroupName="Kind" IsChecked="{Binding IsKindStatic}">
+                  <StackPanel>
+                    <TextBlock Text="Static" Classes="ct" />
+                    <TextBlock Text="one fixed colour" Classes="csub" />
+                  </StackPanel>
+                </RadioButton>
+                <RadioButton Grid.Column="2" Classes="choice" GroupName="Kind" IsChecked="{Binding IsKindCustom}">
+                  <StackPanel>
+                    <TextBlock Text="Custom" Classes="ct" />
+                    <TextBlock Text="full-colour, as-is" Classes="csub" />
+                  </StackPanel>
+                </RadioButton>
+              </Grid>
+            </StackPanel>
 
-      <StackPanel Spacing="6" IsVisible="{Binding ShowFixedColour}">
-        <TextBlock Text="Fixed colour" Classes="muted" />
-        <TextBox Watermark="hex:d6249f" Text="{Binding FixedColor}" />
-      </StackPanel>
+            <!-- wizard-ingredient.html .zone/.rng: two compact dual-handle rows over a gradient
+                 track, each with a live readout. This was four bare stock Sliders, which are so much
+                 taller than the mockup's ~20px rows that DESTINATION, CANVAS and the derived
+                 identifier all fell below the card's fold behind an unsignposted scrollbar. The
+                 control is the same one the ingredient editor already uses - a gradient Border with
+                 two transparent-track Sliders laid over it so only the ring handles show. -->
+            <StackPanel Spacing="8" IsVisible="{Binding ShowColourRange}">
+              <StackPanel Spacing="4">
+                <Grid ColumnDefinitions="*,Auto">
+                  <StackPanel Grid.Column="0" Classes="plabel-row">
+                    <TextBlock Text="HUE RANGE" Classes="plabel" />
+                    <Border Classes="qmark"
+                            ToolTip.Tip="The band hue and saturation are rolled from. Refine it — and add more weighted ranges — in the ingredient editor.">
+                      <TextBlock />
+                    </Border>
+                  </StackPanel>
+                  <TextBlock Grid.Column="1" Classes="cv" Text="{Binding HueRangeText}" />
+                </Grid>
+                <Panel>
+                  <Border Classes="dualtrack" Background="{StaticResource HueSpectrumBrush}" />
+                  <Slider Classes="overlay" Value="{Binding HueMin}" Minimum="0" Maximum="360" />
+                  <Slider Classes="overlay" Value="{Binding HueMax}" Minimum="0" Maximum="360" />
+                </Panel>
+              </StackPanel>
 
-      <StackPanel Orientation="Horizontal" Spacing="16">
-        <RadioButton Content="Into CookBook" GroupName="Destination" IsChecked="{Binding IsIntoCookBook}" />
-        <RadioButton Content="Loose (Kitchen)" GroupName="Destination" IsChecked="{Binding IsLooseKitchen}" />
-      </StackPanel>
+              <StackPanel Spacing="4">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Grid.Column="0" Text="SATURATION RANGE" Classes="plabel" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Classes="cv" Text="{Binding SatRangeText}" />
+                </Grid>
+                <Panel>
+                  <Border Classes="dualtrack" Background="{StaticResource SaturationRampBrush}" />
+                  <Slider Classes="overlay" Value="{Binding SatMin}" Minimum="0" Maximum="100" />
+                  <Slider Classes="overlay" Value="{Binding SatMax}" Minimum="0" Maximum="100" />
+                </Panel>
+              </StackPanel>
+            </StackPanel>
 
-      <StackPanel Spacing="6" IsVisible="{Binding ShowCanvas}">
-        <TextBlock Text="Canvas" Classes="muted" />
-        <TextBox Watermark="Canvas size (e.g. 1000x1000)" Text="{Binding CanvasSize}" />
-      </StackPanel>
+            <StackPanel Spacing="6" IsVisible="{Binding ShowFixedColour}">
+              <StackPanel Classes="plabel-row">
+                <TextBlock Text="FIXED COLOUR" Classes="plabel" />
+                <Border Classes="qmark"
+                        ToolTip.Tip="Needs an explicit prefix — hex:, rgb:, hsl: or hsv:. A bare value is rejected, never guessed.">
+                  <TextBlock />
+                </Border>
+              </StackPanel>
+              <TextBox PlaceholderText="hex:d6249f" Text="{Binding FixedColor}" />
+            </StackPanel>
 
-      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-        <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="tbtn" />
-        <Button Content="Create" Command="{Binding CreateCommand}" Classes="accent" />
-      </StackPanel>
-    </StackPanel>
+            <StackPanel Spacing="6">
+              <TextBlock Text="DESTINATION" Classes="plabel" />
+              <!-- "This Recipe" rather than the enum's IntoCookBook: ExplorerViewModel.AddIngredientTo
+                   takes a LoadedRecipe, so that branch really does add the layer to the open recipe.
+                   The mockup's subtitle carries live context ("Fox · canvas 1000×1000"); the wizard
+                   does not receive the recipe, so it states the effect instead. -->
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <RadioButton Grid.Column="0" Classes="choice" GroupName="Destination" IsChecked="{Binding IsIntoCookBook}">
+                  <StackPanel>
+                    <TextBlock Text="This Recipe" Classes="ct" />
+                    <TextBlock Text="adds to the open recipe" Classes="csub" />
+                  </StackPanel>
+                </RadioButton>
+                <RadioButton Grid.Column="1" Classes="choice" GroupName="Destination" IsChecked="{Binding IsLooseKitchen}">
+                  <StackPanel>
+                    <TextBlock Text="The Kitchen" Classes="ct" />
+                    <TextBlock Text="loose · import later" Classes="csub" />
+                  </StackPanel>
+                </RadioButton>
+              </Grid>
+            </StackPanel>
+
+            <!-- A loose ingredient has no cookbook to inherit the canvas from, so it must state one. -->
+            <StackPanel Spacing="6" IsVisible="{Binding ShowCanvas}">
+              <StackPanel Classes="plabel-row">
+                <TextBlock Text="CANVAS" Classes="plabel" />
+                <Border Classes="qmark"
+                        ToolTip.Tip="A loose Ingredient has no CookBook to inherit from, so you must choose. Import rejects a mismatch rather than resampling — resizing a value-map would soften the art the DNA was built on.">
+                  <TextBlock />
+                </Border>
+              </StackPanel>
+              <TextBox PlaceholderText="512x512" Text="{Binding CanvasSize}" />
+            </StackPanel>
+          </StackPanel>
+
+          <StackPanel Margin="0,6,0,0">
+            <Rectangle Height="1" HorizontalAlignment="Stretch" Stroke="{DynamicResource LineStrongBrush}"
+                       StrokeThickness="1" StrokeDashArray="3,3" />
+            <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,11,0,0">
+              <TextBlock Text="Identifier" Classes="derived" />
+              <Border Classes="idchip"><TextBlock Text="{Binding DerivedId}" Classes="mono" FontSize="10.5" /></Border>
+              <TextBlock Text="— derived from the name" Classes="derived" Opacity="0.75" />
+            </StackPanel>
+          </StackPanel>
+        </StackPanel>
+        </ScrollViewer>
+      </Border>
+
+      <Border Grid.Row="1" Classes="modal-foot">
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <Border Classes="kbd keys"><TextBlock Text="Tab" /></Border><TextBlock Text="move fields" Classes="keyhint" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <Border Classes="kbd keys"><TextBlock Text="Enter" /></Border><TextBlock Text="create &amp; paint" Classes="keyhint" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <Border Classes="kbd keys"><TextBlock Text="Esc" /></Border><TextBlock Text="cancel" Classes="keyhint" />
+            </StackPanel>
+          </StackPanel>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+            <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="tbtn ghost" />
+            <Button Command="{Binding CreateCommand}" Classes="accent">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Path Classes="ico sm" Data="{StaticResource IconCheck}" />
+                <!-- "Create & paint", not "Create Ingredient": this wizard hands straight to the
+                     ingredient editor, and the mockup's wording is what signals that. -->
+                <TextBlock Text="Create &amp; paint" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
   </Border>
 </UserControl>

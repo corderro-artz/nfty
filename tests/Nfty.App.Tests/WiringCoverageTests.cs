@@ -18,7 +18,7 @@ public class WiringCoverageTests
             new FilePickerService(), new RecentsService(System.IO.Directory.CreateTempSubdirectory().FullName), new CookBookSession(),
             book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav),
                 ExplorerViewModelTests.CookFactory(dialogs), new CookBookSession(),
-                new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs)),
+                new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs), new StatusService()),
             set => new SetBrowserViewModel(set),
                 (_, _, _) => null!);
         foreach (var c in new[] { "NewCookBookCommand","NewKitchenCommand","NewRecipeCommand","NewIngredientCommand",
@@ -36,7 +36,7 @@ public class WiringCoverageTests
         var dialogs = new FakeDialogs();
         using var vm = new ExplorerViewModel(ExplorerViewModelTests.TwoRecipeBook(), nav, dialogs, new FakeNotYetWired(), new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav),
             ExplorerViewModelTests.CookFactory(dialogs), new CookBookSession(),
-            new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs));
+            new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs), new StatusService());
         foreach (var c in new[] { "ToggleLockCommand","AddCommand","DeleteSelectedCommand",
                                   "ImportCommand","SelectNodeCommand","OpenIngredientCommand" })
             Assert.True(HasCommand(vm, c), $"Explorer missing {c}");

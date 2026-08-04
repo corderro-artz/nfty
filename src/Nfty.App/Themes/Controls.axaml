@@ -37,9 +37,16 @@
                 BasedOn="{StaticResource {x:Type TextBox}}">
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
     <Setter Property="CaretBrush" Value="{DynamicResource FgBrush}" />
+    <!-- The mockups' .in: a uniform 32px field at 12.5px. Fluent's default is ~40px at 14px, which
+         made every form read a size too large. MinHeight (not Height) so a multi-line Description
+         box can still grow. -->
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="Padding" Value="11,0" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="SelectionBrush" Value="{DynamicResource AccentWashBrush}" />
 
     <!-- PointerOver: accent-tinted border, panel background unchanged (mirrors Button.tbtn hover). -->
@@ -65,8 +72,37 @@
                 BasedOn="{StaticResource {x:Type NumericUpDown}}">
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="FontSize" Value="12.5" />
+
+    <Style Selector="^ /template/ ButtonSpinner">
+      <Setter Property="MinHeight" Value="32" />
+    </Style>
+  </ControlTheme>
+
+  <!-- ================= ButtonSpinner ================= -->
+  <!-- The spinner buttons live inside ButtonSpinner's OWN template, so they cannot be reached from
+       the NumericUpDown theme: Avalonia rejects a selector that crosses two template boundaries
+       ("ControlTemplate styles cannot contain multiple template selectors"). Hence a second theme,
+       keyed by type so it applies wherever a spinner appears.
+
+       KNOWN GAP: the mockups' .stepr is a 20px-wide COLUMN of 9px chevrons; ours remains Fluent's
+       wide side-by-side pair. Both the buttons' width and the panel that stacks them are fixed inside
+       Fluent's own ButtonSpinner template at a priority a Style setter does not beat - Width setters
+       here (tried both bare "RepeatButton" and the named PART_Increase/DecreaseButton selectors) were
+       verified against a rendered frame and changed nothing. Closing it means hand-authoring the full
+       ButtonSpinner ControlTemplate, which is out of proportion to the gap; the height and ink below
+       DO take effect and are what this theme is for. -->
+  <ControlTheme x:Key="{x:Type ButtonSpinner}" TargetType="ButtonSpinner"
+                BasedOn="{StaticResource {x:Type ButtonSpinner}}">
+    <Setter Property="MinHeight" Value="32" />
+    <Style Selector="^ /template/ RepeatButton">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    </Style>
   </ControlTheme>
 
   <!-- ================= Slider ================= -->
@@ -109,6 +145,26 @@
     </Style>
     <Style Selector="^:pressed /template/ RepeatButton#PART_IncreaseButton">
       <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    </Style>
+
+    <!-- The mockup's handle is a 14px RING (panel fill, 2px accent stroke), not Fluent's solid dot.
+         Retemplating the Thumb reaches it.
+
+         KNOWN GAP, same shape as the ButtonSpinner one above: the mockup's TRACK is a 6px rounded bar
+         with a hairline border, and ours stays Fluent's ~2px line. Height/CornerRadius setters aimed
+         at both Border#TrackBackground and the two track RepeatButtons were tried and verified
+         against a rendered frame - Fluent's Slider template fixes the track geometry at a priority a
+         Style setter does not beat. Closing it means hand-authoring the Slider template. -->
+    <Style Selector="^ /template/ Thumb">
+      <Setter Property="Width" Value="14" />
+      <Setter Property="Height" Value="14" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Ellipse Width="14" Height="14"
+                   Fill="{DynamicResource PanelBrush}"
+                   Stroke="{DynamicResource AccentBrush}" StrokeThickness="2" />
+        </ControlTemplate>
+      </Setter>
     </Style>
   </ControlTheme>
 
@@ -173,6 +229,50 @@
     </Style>
   </ControlTheme>
 
+  <!-- ================= ToggleButton ================= -->
+  <!-- ToggleButton is a ButtonBase (same lineage as Button), and Fluent's own default ToggleButton
+       template follows the same ContentPresenter#PART_ContentPresenter idiom as Button (confirmed
+       against the Avalonia docs' own restyle walkthroughs — a plain ContentPresenter#PART_ContentPresenter
+       is the template's content host for every ButtonBase-derived control). Left un-themed, a bare
+       ToggleButton falls through to Fluent's SystemAccentColor (stock #0078d7 blue) for its checked
+       state — the aspect-lock toggle in NewCookBookView is the one place this app uses a raw
+       ToggleButton, and it painted Fluent blue in both themes (audit finding: wizard-cookbook-*.png).
+       Sized 22x22 to match the mockup's `.link .lk` (wizard-cookbook.html:91-93). -->
+  <ControlTheme x:Key="{x:Type ToggleButton}" TargetType="ToggleButton"
+                BasedOn="{StaticResource {x:Type ToggleButton}}">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="Width" Value="22" />
+    <Setter Property="Height" Value="22" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+
+    <!-- Checked: accent wash/line/text, mirroring the mockup's `.link.on .lk` rule. -->
+    <Style Selector="^:checked /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+    </Style>
+  </ControlTheme>
+
+  <!-- ================= ProgressBar ================= -->
+  <!-- ProgressBar's PART_Indicator Border is TemplateBound to Foreground (the filled portion) and
+       the track to Background, so plain property Setters reach both without needing a template
+       part override (confirmed against the Avalonia docs' ProgressBar styling page: "Set Foreground
+       and Background properties directly to change the indicator and track colors"). Left
+       un-themed, ProgressBar falls through to Fluent's SystemAccentColor — the recipe wizard's
+       weight-preview bar painted Fluent blue in both themes (audit finding: wizard-recipe-*.png).
+       This is the finding's simpler fallback fix (a ControlTheme) rather than replacing the control
+       with a segmented bar + legend, which belongs to the later wizard-restructure slice. -->
+  <ControlTheme x:Key="{x:Type ProgressBar}" TargetType="ProgressBar"
+                BasedOn="{StaticResource {x:Type ProgressBar}}">
+    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+  </ControlTheme>
+
   <!-- ================= TreeViewItem ================= -->
   <!-- Mechanism confirmed by reading the actual Fluent 11.2.3 source (not just the generic
        treeview-how-to.md doc example), pulled from
@@ -187,33 +287,60 @@
        a Foreground change) — so, exactly like Button's PART_ContentPresenter elsewhere in this
        file, our state overrides must target Border#PART_LayoutRoot, not a bare
        "TreeViewItem:selected" selector (which would be silently beaten by Fluent's own part-level
-       style). CornerRadius reaches PART_LayoutRoot via a plain TemplateBinding, so a top-level
-       Setter is enough for that one property. The 2px left accent bar is realised as an inset
-       BoxShadow on the same Border/state — Avalonia's BoxShadow grammar accepts a leading "inset"
-       keyword (confirmed in the docs), the same technique the mockup itself uses
-       (the mockup's own "box-shadow: inset 2px 0 0" on its accent colour), so no DataTemplate workaround was needed for
-       the bar. (The branch guide line *does* need a DataTemplate workaround — see the "Border.guide"
-       style in Styles.axaml — because Fluent's PART_ItemsPresenter has no bordered wrapper to
-       style.) Indentation and the expander toggle are left untouched: PART_Header's Margin
-       (bound to Level via Fluent's own MarginMultiplierConverter) and PART_ExpandCollapseChevron
-       already match the mockup's indentation/caret closely enough with no override needed. -->
+       style).
+
+       Both the highlight and the branch guide are drawn by the ITEM TEMPLATE (Border.node and
+       Border.guide in Styles.axaml) rather than by this theme, because PART_LayoutRoot spans the
+       row's whole width — indent included — and Fluent's PART_ItemsPresenter has no bordered wrapper
+       to hang a guide off. The rules below only neutralise Fluent's own state paints so the two do
+       not stack; the 2px accent bar rides along on Border.node as an inset BoxShadow (Avalonia's
+       BoxShadow grammar accepts a leading "inset" keyword, the same technique the mockup uses with
+       its own "box-shadow: inset 2px 0 0").
+
+       Indentation is left to Fluent (PART_Header's Margin, bound to Level via its own
+       MarginMultiplierConverter); the caret IS overridden, because Fluent's default is around half
+       again the mockup's 13px box and reads as the loudest thing in the row. -->
   <ControlTheme x:Key="{x:Type TreeViewItem}" TargetType="TreeViewItem"
                 BasedOn="{StaticResource {x:Type TreeViewItem}}">
-    <Setter Property="Padding" Value="8,6" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <!-- Horizontal padding only. The mockup's guide (.branch border-left) is one continuous line down
+         a whole branch, but ours is drawn per row inside the item template, so any VERTICAL padding
+         here becomes a gap between one row's segment and the next - which is exactly how the guide
+         came to render as disconnected stubs. The 6px of vertical breathing room moves into the row
+         content instead (see ExplorerView.axaml), leaving the row's full height to the guide, so
+         consecutive segments abut into a single line. -->
+    <Setter Property="Padding" Value="0" />
     <Setter Property="Background" Value="Transparent" />
 
-    <Style Selector="^ /template/ Border#PART_LayoutRoot:pointerover">
-      <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <!-- The mockup's caret (.tw) is a 13px box holding a 9px glyph; Fluent's default chevron is
+         roughly half again that and reads as the loudest thing in the row. -->
+    <Style Selector="^ /template/ ToggleButton#PART_ExpandCollapseChevron">
+      <Setter Property="Width" Value="13" />
+      <Setter Property="Height" Value="13" />
+      <Setter Property="FontSize" Value="9" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Margin" Value="0,0,4,0" />
     </Style>
 
+    <!-- Hover and selection are painted by Border.node in the item template, NOT here. PART_LayoutRoot
+         spans the row's whole width, indent included, so a wash on it sat behind the indent and put
+         the 2px accent bar against the pane's left edge instead of against the node. The mockup nests
+         .node inside .branch, so the highlight begins after the guide - which only the item template
+         can express.
+
+         These overrides are load-bearing rather than redundant: simply NOT painting the container
+         hands the state back to Fluent's own :pointerover/:selected styles, which repaint
+         PART_LayoutRoot with its stock blue. Each state is pinned to Transparent so the node box is
+         the only thing that lights up. -->
+    <Style Selector="^ /template/ Border#PART_LayoutRoot:pointerover">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
     <Style Selector="^:selected /template/ Border#PART_LayoutRoot">
-      <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
-      <Setter Property="BoxShadow" Value="{DynamicResource AccentBarShadow}" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
     <Style Selector="^:selected /template/ Border#PART_LayoutRoot:pointerover">
-      <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
-      <Setter Property="BoxShadow" Value="{DynamicResource AccentBarShadow}" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
   </ControlTheme>
 </ResourceDictionary>
