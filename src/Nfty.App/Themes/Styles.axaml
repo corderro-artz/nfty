@@ -549,6 +549,11 @@
          off screen entirely. The body scrolls inside this instead. -->
     <Setter Property="MaxHeight" Value="620" />
   </Style>
+  <!-- New Ingredient only. Declared AFTER Border.modal so it wins at equal specificity. 632 is what
+       the page area between the titlebar and the status bar actually allows at MainWindow's 720. -->
+  <Style Selector="Border.modal.tall">
+    <Setter Property="MaxHeight" Value="632" />
+  </Style>
   <!-- .body's accent glow: a soft radial wash from the top edge. -->
   <Style Selector="Border.modal-body">
     <Setter Property="Padding" Value="24,30" />
@@ -558,6 +563,11 @@
         <GradientStop Color="{DynamicResource AccentWashFadeColor}" Offset="0.55" />
       </RadialGradientBrush>
     </Setter>
+  </Style>
+  <!-- Declared AFTER Border.modal-body: Avalonia is last-one-wins at equal specificity, so a
+       narrower opt-out placed above the blanket rule silently loses. New Ingredient only. -->
+  <Style Selector="Border.modal-body.tight">
+    <Setter Property="Padding" Value="24,18" />
   </Style>
   <Style Selector="Border.modal-foot">
     <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
@@ -577,6 +587,68 @@
     <Setter Property="Fill" Value="{DynamicResource AccentBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="Margin" Value="0,0,0,9" />
+  </Style>
+
+  <!-- .kind / .dopt choice cards. The wizards' Kind and Destination pickers are bordered cards with
+       a dot indicator, a label and a muted subtext line - not bare radio buttons. Retemplating a
+       RadioButton rather than hand-rolling toggles keeps single-select and keyboard behaviour for
+       free. The dot's filled pip is a real Ellipse because the mockup draws it with ::after, which
+       has no XAML equivalent. -->
+  <Style Selector="RadioButton.choice">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <!-- The mockup's .kinds/.dest are flex rows, whose default align-items:stretch gives every card
+         the height of the tallest. Without this the cards size to their own text and a two-line
+         subtitle leaves its neighbours visibly short. -->
+    <Setter Property="VerticalAlignment" Value="Stretch" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Card" Background="{DynamicResource PanelBrush}"
+                BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1"
+                CornerRadius="{DynamicResource RadiusMd}" Padding="10,9">
+          <Grid ColumnDefinitions="13,8,*">
+            <Border Name="Dot" Grid.Column="0" Width="13" Height="13" CornerRadius="7"
+                    BorderThickness="1" BorderBrush="{DynamicResource LineStrongBrush}"
+                    VerticalAlignment="Top" Margin="0,1,0,0">
+              <Ellipse Name="Pip" Width="7" Height="7" Fill="{DynamicResource AccentBrush}"
+                       IsVisible="False" />
+            </Border>
+            <ContentPresenter Name="PART_ContentPresenter" Grid.Column="2"
+                              Content="{TemplateBinding Content}" />
+          </Grid>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="RadioButton.choice:checked /template/ Border#Card">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+  <Style Selector="RadioButton.choice:checked /template/ Border#Dot">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+  </Style>
+  <Style Selector="RadioButton.choice:checked /template/ Ellipse#Pip">
+    <Setter Property="IsVisible" Value="True" />
+  </Style>
+  <Style Selector="RadioButton.choice:pointerover /template/ Border#Card">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+  <!-- Card title / subtitle. These live in the RadioButton's Content, so they are matched by a
+       plain descendant selector - no /template/ hop, which would be a second one and throw. -->
+  <Style Selector="RadioButton.choice TextBlock.ct">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+  </Style>
+  <Style Selector="RadioButton.choice:checked TextBlock.ct">
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="RadioButton.choice TextBlock.csub">
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="LineHeight" Value="13.5" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="Margin" Value="0,2,0,0" />
   </Style>
   <Style Selector="TextBlock.m-h">
     <Setter Property="FontSize" Value="19" />

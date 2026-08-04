@@ -37,10 +37,22 @@
 
             <StackPanel Spacing="6">
               <TextBlock Text="DESTINATION" Classes="plabel" />
-              <StackPanel Orientation="Horizontal" Spacing="16">
-                <RadioButton Content="Into CookBook" GroupName="Destination" IsChecked="{Binding IsIntoCookBook}" />
-                <RadioButton Content="Loose (Kitchen)" GroupName="Destination" IsChecked="{Binding IsLooseKitchen}" />
-              </StackPanel>
+              <!-- .dest cards, copy from wizard-recipe.html. The mockup's first subtitle names the
+                   open cookbook ("VaporPets"); the wizard is not given it, so it states the effect. -->
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <RadioButton Grid.Column="0" Classes="choice" GroupName="Destination" IsChecked="{Binding IsIntoCookBook}">
+                  <StackPanel>
+                    <TextBlock Text="This CookBook" Classes="ct" />
+                    <TextBlock Text="adds to the open cookbook" Classes="csub" />
+                  </StackPanel>
+                </RadioButton>
+                <RadioButton Grid.Column="1" Classes="choice" GroupName="Destination" IsChecked="{Binding IsLooseKitchen}">
+                  <StackPanel>
+                    <TextBlock Text="The Kitchen" Classes="ct" />
+                    <TextBlock Text="loose · import later" Classes="csub" />
+                  </StackPanel>
+                </RadioButton>
+              </Grid>
             </StackPanel>
           </StackPanel>
 

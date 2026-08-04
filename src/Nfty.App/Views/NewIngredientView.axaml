@@ -8,9 +8,14 @@
     <KeyBinding Gesture="Escape" Command="{Binding CancelCommand}" />
     <KeyBinding Gesture="Enter" Command="{Binding CreateCommand}" />
   </UserControl.KeyBindings>
-  <Border Classes="modal monoform">
+  <!-- .tall/.tight: this is the only wizard carrying two colour ranges AND two card pickers, and the
+       mockup's wizard is a full-window screen where that all fits comfortably. Ours is a dialog card
+       with a hard ceiling, so this one form gets a taller card and a tighter body. Without it the
+       card overflows and the ScrollViewer silently hides Destination, Canvas and the identifier -
+       see WizardFitsTests, which fails rather than letting that happen again. -->
+  <Border Classes="modal monoform tall">
     <Grid RowDefinitions="*,Auto">
-      <Border Grid.Row="0" Classes="modal-body">
+      <Border Grid.Row="0" Classes="modal-body tight">
         <ScrollViewer HorizontalScrollBarVisibility="Disabled">
         <StackPanel MaxWidth="432">
           <StackPanel Orientation="Horizontal" Spacing="7">
@@ -24,7 +29,7 @@
                range controls, and Fluent's Slider row is about twice the mockup's height (see
                Slider.overlay in Styles.axaml). Without this the card overflowed and put DESTINATION,
                CANVAS and the derived identifier behind an unsignposted scrollbar. -->
-          <StackPanel Spacing="11" Margin="0,14,0,0">
+          <StackPanel Spacing="8" Margin="0,14,0,0">
             <StackPanel Spacing="6">
               <TextBlock Text="NAME" Classes="plabel" />
               <TextBox Text="{Binding Name}" PlaceholderText="Aura" />
@@ -32,11 +37,27 @@
 
             <StackPanel Spacing="6">
               <TextBlock Text="KIND" Classes="plabel" />
-              <StackPanel Orientation="Horizontal" Spacing="16">
-                <RadioButton Content="Dynamic" GroupName="Kind" IsChecked="{Binding IsKindDynamic}" />
-                <RadioButton Content="Static" GroupName="Kind" IsChecked="{Binding IsKindStatic}" />
-                <RadioButton Content="Custom" GroupName="Kind" IsChecked="{Binding IsKindCustom}" />
-              </StackPanel>
+              <!-- .kinds: three equal-width cards, copy verbatim from wizard-ingredient.html -->
+              <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                <RadioButton Grid.Column="0" Classes="choice" GroupName="Kind" IsChecked="{Binding IsKindDynamic}">
+                  <StackPanel>
+                    <TextBlock Text="Dynamic" Classes="ct" />
+                    <TextBlock Text="colour rolled per asset" Classes="csub" />
+                  </StackPanel>
+                </RadioButton>
+                <RadioButton Grid.Column="1" Classes="choice" GroupName="Kind" IsChecked="{Binding IsKindStatic}">
+                  <StackPanel>
+                    <TextBlock Text="Static" Classes="ct" />
+                    <TextBlock Text="one fixed colour" Classes="csub" />
+                  </StackPanel>
+                </RadioButton>
+                <RadioButton Grid.Column="2" Classes="choice" GroupName="Kind" IsChecked="{Binding IsKindCustom}">
+                  <StackPanel>
+                    <TextBlock Text="Custom" Classes="ct" />
+                    <TextBlock Text="full-colour, as-is" Classes="csub" />
+                  </StackPanel>
+                </RadioButton>
+              </Grid>
             </StackPanel>
 
             <!-- wizard-ingredient.html .zone/.rng: two compact dual-handle rows over a gradient
@@ -78,10 +99,24 @@
 
             <StackPanel Spacing="6">
               <TextBlock Text="DESTINATION" Classes="plabel" />
-              <StackPanel Orientation="Horizontal" Spacing="16">
-                <RadioButton Content="Into CookBook" GroupName="Destination" IsChecked="{Binding IsIntoCookBook}" />
-                <RadioButton Content="Loose (Kitchen)" GroupName="Destination" IsChecked="{Binding IsLooseKitchen}" />
-              </StackPanel>
+              <!-- "This Recipe" rather than the enum's IntoCookBook: ExplorerViewModel.AddIngredientTo
+                   takes a LoadedRecipe, so that branch really does add the layer to the open recipe.
+                   The mockup's subtitle carries live context ("Fox · canvas 1000×1000"); the wizard
+                   does not receive the recipe, so it states the effect instead. -->
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <RadioButton Grid.Column="0" Classes="choice" GroupName="Destination" IsChecked="{Binding IsIntoCookBook}">
+                  <StackPanel>
+                    <TextBlock Text="This Recipe" Classes="ct" />
+                    <TextBlock Text="adds to the open recipe" Classes="csub" />
+                  </StackPanel>
+                </RadioButton>
+                <RadioButton Grid.Column="1" Classes="choice" GroupName="Destination" IsChecked="{Binding IsLooseKitchen}">
+                  <StackPanel>
+                    <TextBlock Text="The Kitchen" Classes="ct" />
+                    <TextBlock Text="loose · import later" Classes="csub" />
+                  </StackPanel>
+                </RadioButton>
+              </Grid>
             </StackPanel>
 
             <!-- A loose ingredient has no cookbook to inherit the canvas from, so it must state one. -->
@@ -91,7 +126,7 @@
             </StackPanel>
           </StackPanel>
 
-          <StackPanel Margin="0,11,0,0">
+          <StackPanel Margin="0,6,0,0">
             <Rectangle Height="1" HorizontalAlignment="Stretch" Stroke="{DynamicResource LineStrongBrush}"
                        StrokeThickness="1" StrokeDashArray="3,3" />
             <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,11,0,0">
