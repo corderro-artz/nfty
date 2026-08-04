@@ -8,8 +8,8 @@ Last updated: 2026-08-04, mid Slice 12.
 
 ## State
 
-- Branch: `feature/gui-visual-polish`, **28 commits ahead of `main`, not merged**. Clean tree.
-- Build: 0 warnings, 0 errors. Tests: **Cli 42 / App 253 / Core 549**, all green.
+- Branch: `feature/gui-visual-polish`, **35 commits ahead of `main`, not merged**. Clean tree.
+- Build: 0 warnings, 0 errors. Tests: **Cli 42 / App 256 / Core 549**, all green.
 - **Avalonia is 12.1.1** (was 11.2.3). Verified by pixel-diffing all frames against a pre-upgrade
   baseline: no ControlTheme broke, all 14 `/template/` part names still resolve. 11.3.18 was
   rejected — it loses the mono bold face, dropping 39% of the wordmark's ink to font fallback.
@@ -77,10 +77,50 @@ Last updated: 2026-08-04, mid Slice 12.
 
 ### Slice 12 — what is still open
 
-- The Explorer + detail-views diff pass (an audit was dispatched for it; its findings are not yet
-  folded in).
-- The nine `?` help badges the wizards' mockups show beside labelled fields — no `.q` badge exists
-  anywhere in the app.
+The Explorer + detail-views audit has run. Its findings are listed below with the ones already
+closed struck through; the rest are ranked and ready to pick up.
+
+**Closed from that audit:** the lock toggle's editing wash (it was set on the Button but silently
+clobbered by the rest-state rule targeting `PART_ContentPresenter` directly — measured 18 wash
+pixels before, 336 after); the status bar's editing state taking the accent colour; the
+theme-stuck card gradients (see the new Critical note under Known deviations); `DNA SPACE` wording;
+`8 × 8` canvas formatting; `SATURATION` spelled out; the `cwmodel` chip no longer repeating the
+value-map aside.
+
+**Still open, roughly worst first:**
+
+- **[High] The detail pane has no header row.** `ExplorerView.axaml` wraps `CurrentDetail` in a bare
+  `Border.pane last` with no `.pane-h`. The mockup's `.pane-h.detail-h` is a 41px band with a type
+  icon, the item title, an item count and a right-aligned view-tag chip
+  (`COOKBOOK`/`RECIPE`/`INGREDIENT`). Measured effect: the Contents pane's content starts at y=99
+  (below its 41px header) while the detail pane's starts at y=74, so paired panes are misaligned by
+  25px. Needs a small shared surface (title/icon/count/tag) on each detail ViewModel.
+- **[Medium] Identity chips.** Three render (`VaporPets`, `VP`, `canvas 8 × 8`) against the mockup's
+  five. The Name chip is redundant with the heading right above it and is not in the mockup at all;
+  `status ● Valid` is missing and needs no new data; `colorize` and `target supply` need modelling
+  first. Chips also lack the mockup's muted-label / bold-value split.
+- **[Medium] Recipe rules chip grammar.** Rows render synthetic `WHEN` / `THEN` / `WITH` labels; the
+  mockup has no such words — each rule is two stacked `.rchip`s, the ingredient name as a tiny
+  muted caption and the variant name as the bold headline, with the relationship carried by stacking
+  order plus the icon's tooltip. Also check `RuleTargetRow`: it binds `IngredientId`/`VariantId`, so
+  it shows raw ids, which happen to equal names only in the hand-authored fixture.
+- **[Medium] Custom-kind colorways.** Routed through the same axis-row template as Dynamic/Static.
+  The mockup gives Custom its own branch: a 56×56 swatch of the selected variant plus the sentence
+  "Full-colour image, composited as-is. Value-map colorization does not apply to this layer."
+- **[Low] Reroll uses `IconReroll`** (a circular arrow borrowed from the editor) where the mockup's
+  `.dice` button is a literal die face with four pips. Needs a new `IconDiceFace` geometry.
+- **[Low] The hero's `.hflag` rule-count pill is missing** — the mockup shows `⚑ N rules` only when
+  the ingredient is in a rule. The app instead shows an always-visible "Jump to rules" button whose
+  command is an empty stub.
+- **[Low, no action] The titlebar Kitchen chip is hardcoded "Kitchen".** Kitchens are not modelled
+  yet (`OpenKitchen` is a `_notify.Report` stub), so this is a defensible placeholder.
+
+Set browser was reviewed and found clean in both themes. Note it has no 1:1 mockup section to diff
+against — `explorer.html`'s tree never descends past Ingredient — so it was judged for internal
+consistency with the app's own `idchip`/`data-row` vocabulary.
+
+- The nine `?` help badges the wizards' mockups show beside labelled fields — **done**, eight exist
+  (the count was 8, not 9).
 - New Recipe's "Resulting mix" is still a bare `ProgressBar` bound `Value=Weight, Maximum=100`, so it
   reads as an absolute percentage. The mockup's `.share` is a segmented bar plus a legend naming
   every sibling Recipe with its %. **`NewRecipeViewModel` does not surface sibling recipes/weights**,
@@ -176,6 +216,25 @@ No icon stand-ins left.
 7. **The Help sheet scrolls below a ~474px page area** (i.e. at MainWindow's `MinHeight="580"`),
    which the mockup does not — at 480px tall it would otherwise lose its footer band by six pixels.
    Inert at every larger size; verified by rendering at 874x474.
+
+## A gradient in a Style Setter does not follow the theme
+
+Worth its own heading because it shipped a Critical and is invisible three ways over.
+
+A `LinearGradientBrush`/`RadialGradientBrush` built **inside a Style `Setter`** with
+`DynamicResource` GradientStops does **not** re-resolve when the theme flips. The brush is
+constructed once and shared, and its stops keep whatever values they had when the Style was first
+applied. `Border.cbk-id` therefore painted the *light* gradient in dark mode — near-white text on
+cream, functionally illegible — while every solid-brush token on the same card was correct.
+
+It is invisible in light mode, invisible in the markup, and invisible to any test that checks one
+theme. **Define the whole brush per theme dictionary instead** (`CardGradientBrush`,
+`ModalGlowBrush` in `Tokens.axaml`), which is the mechanism every other brush here already uses.
+`ThemedGradientTests` pins it: both keys must exist in both dictionaries and differ between them.
+
+Note `Border.modal-body` had the identical construction. Its gradient is a near-theme-invariant
+accent wash over a correctly-themed panel, so the symptom was *invisible rather than absent* — a
+good reminder that "it looks fine" is not evidence the construction is sound.
 
 ## Failure modes this branch actually hit
 
