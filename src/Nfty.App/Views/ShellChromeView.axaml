@@ -121,9 +121,12 @@
               </StackPanel>
               <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"
                           IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <!-- explorer.html's .statusbar .state.editing switches to the accent colour, so the
+                     unlocked state reads as a live mode rather than another muted count. -->
                 <Path Classes="ico sm" Data="{StaticResource IconLock}" IsVisible="{Binding !CurrentExplorer.IsEditing}" />
-                <Path Classes="ico sm" Data="{StaticResource IconUnlock}" IsVisible="{Binding CurrentExplorer.IsEditing}" />
-                <TextBlock Classes="sbar" Text="{Binding CurrentExplorer.LockStateText}" />
+                <Path Classes="ico sm editing" Data="{StaticResource IconUnlock}" IsVisible="{Binding CurrentExplorer.IsEditing}" />
+                <TextBlock Classes="sbar" Classes.editing="{Binding CurrentExplorer.IsEditing}"
+                           Text="{Binding CurrentExplorer.LockStateText}" />
               </StackPanel>
               <TextBlock Classes="sbar" Text="{Binding CurrentExplorer.RecipeCountText}"
                          IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}" />

@@ -115,7 +115,7 @@
                      Classes.kstat="{Binding IsStatic}"
                      Classes.kcust="{Binding IsCustom}"
                      Text="{Binding KindText}" VerticalAlignment="Center" />
-          <Border Classes="cwmodel"><TextBlock Text="{Binding ColorwaysText}" /></Border>
+          <Border Classes="cwmodel"><TextBlock Text="{Binding ColorwaysModelText}" /></Border>
         </StackPanel>
 
         <!-- .hueband: the hue sweep this layer rolls within. Shown only for a dynamic layer - the

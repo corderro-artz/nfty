@@ -1411,6 +1411,14 @@
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
+  <!-- explorer.html: .statusbar .state.editing takes the accent colour. Declared after the blanket
+       .sbar rule, which sets Foreground explicitly and would otherwise win. -->
+  <Style Selector="TextBlock.sbar.editing">
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+  <Style Selector="Path.ico.editing">
+    <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
 
   <!-- status bar zoom controls: bordered 24x24 squares (explorer.html .zoomctl button) -->
   <Style Selector="Button.zoomctl">
