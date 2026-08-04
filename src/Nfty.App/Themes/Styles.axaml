@@ -1481,6 +1481,22 @@
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
+  <!-- The validity pill. Not-valid is the WARNING colour, not the accent: accent means "editing" one
+       row over, and two different meanings sharing a colour in the same bar is worse than either.
+       .ok variants declared after the base so they win at equal specificity. -->
+  <Style Selector="Ellipse.vdot">
+    <Setter Property="Fill" Value="{DynamicResource WarningBrush}" />
+  </Style>
+  <Style Selector="Ellipse.vdot.ok">
+    <Setter Property="Fill" Value="{DynamicResource SuccessBrush}" />
+  </Style>
+  <Style Selector="TextBlock.vstate">
+    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+  </Style>
+  <Style Selector="TextBlock.vstate.ok">
+    <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" />
+  </Style>
+
   <!-- explorer.html: .statusbar .state.editing takes the accent colour. Declared after the blanket
        .sbar rule, which sets Foreground explicitly and would otherwise win. -->
   <Style Selector="TextBlock.sbar.editing">

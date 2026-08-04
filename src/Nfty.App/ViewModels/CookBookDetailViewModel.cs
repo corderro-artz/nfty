@@ -44,6 +44,13 @@ public partial class CookBookDetailViewModel : ViewModelBase
     /// A book of purely Custom layers colorizes nothing, hence the em-dash.</summary>
     public string ColorizeText { get; }
 
+    /// <summary>The mockup's "status &lt;b&gt;● Valid&lt;/b&gt;" chip — the real result, not a claim.
+    /// Reading an archive does not validate it, so this asks Validator, which reports rather than
+    /// throws precisely so a broken book can be opened and explained.</summary>
+    public bool IsValid { get; }
+    public string StatusText { get; }
+    public string? StatusTip { get; }
+
     public int RecipeCount { get; }
     public int LayerCount { get; }
     public int VariantCount { get; }
@@ -59,6 +66,11 @@ public partial class CookBookDetailViewModel : ViewModelBase
         Description = book.Manifest.Collection.Description;
         // "1000 × 1000" with a real multiplication sign and spaces, as the mockup renders it.
         CanvasText = $"{book.Manifest.Canvas.Width} × {book.Manifest.Canvas.Height}";
+
+        var problems = Validator.Validate(book);
+        IsValid = problems.Count == 0;
+        StatusText = IsValid ? "Valid" : problems.Count == 1 ? "1 problem" : $"{problems.Count} problems";
+        StatusTip = IsValid ? null : string.Join(Environment.NewLine, problems);
 
         var models = book.Recipes
             .SelectMany(r => r.Ingredients)

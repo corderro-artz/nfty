@@ -66,6 +66,32 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
 
     private static string Pluralize(int count, string noun) => $"{count} {noun}{(count == 1 ? "" : "s")}";
 
+    // ---- validity ------------------------------------------------------------------------------
+    // The status bar used to print a hardcoded green "Valid" for every book it was handed, without
+    // ever running Validator - so a book with a missing image or a rule pointing at a deleted layer
+    // still announced itself as fine. Reading an archive deliberately does NOT validate it (see the
+    // note on CookBookDetailViewModel's best-effort counting), so the shell has to ask.
+    private IReadOnlyList<string> _problems = Array.Empty<string>();
+
+    public bool IsValid => _problems.Count == 0;
+    public string ValidityText => IsValid
+        ? "Valid"
+        : _problems.Count == 1 ? "1 problem" : $"{_problems.Count} problems";
+
+    /// <summary>The problems themselves, on the status pill's tooltip - "3 problems" is only useful
+    /// if you can find out what they are without running the CLI's validate command.</summary>
+    public string? ValidityTip => IsValid ? null : string.Join(Environment.NewLine, _problems);
+
+    private void RefreshValidity()
+    {
+        // Validator REPORTS, never throws - that is its contract, precisely so a broken book can be
+        // opened and explained rather than being unopenable.
+        _problems = Validator.Validate(_book);
+        OnPropertyChanged(nameof(IsValid));
+        OnPropertyChanged(nameof(ValidityText));
+        OnPropertyChanged(nameof(ValidityTip));
+    }
+
     private void RefreshCounts()
     {
         OnPropertyChanged(nameof(RecipeCountText));
@@ -160,6 +186,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         // is exactly the dead end a user hits the moment they open a cookbook.
         SelectedNode = Root;
         RebuildCrumbs();
+        RefreshValidity();
     }
 
     private static ExplorerNode BuildTree(LoadedCookBook book)
@@ -231,6 +258,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(SearchSummary));
         OnPropertyChanged(nameof(TreeCountText));
         RefreshCounts();
+        RefreshValidity();   // the graph just changed; a save can fix or introduce a problem
         SelectedNode = FindNode(Root, selectId) ?? Root;
     }
 
