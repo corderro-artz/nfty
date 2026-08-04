@@ -1308,6 +1308,51 @@
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
 
+  <!-- .share: the New Recipe wizard's live "Resulting mix" readout. -->
+  <Style Selector="Border.share">
+    <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="Padding" Value="10,8" />
+  </Style>
+  <Style Selector="TextBlock.share-h">
+    <Setter Property="FontSize" Value="9.5" />
+    <Setter Property="LetterSpacing" Value="0.95" />   <!-- .1em at 9.5px -->
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="Border.mixbar">
+    <Setter Property="Height" Value="7" />
+    <Setter Property="CornerRadius" Value="3" />
+    <Setter Property="Background" Value="{DynamicResource TileBrush}" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <!-- The new Recipe is the accent segment; siblings are muted. Declared before the .other opt-out
+       so the narrower rule wins. -->
+  <Style Selector="Border.seg-me">
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+  </Style>
+  <Style Selector="Border.seg-me.other">
+    <Setter Property="Background" Value="{DynamicResource GuideHiBrush}" />
+  </Style>
+  <Style Selector="Border.swatch-me">
+    <Setter Property="Height" Value="6" />
+    <Setter Property="CornerRadius" Value="2" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+  </Style>
+  <Style Selector="Border.swatch-me.other">
+    <Setter Property="Background" Value="{DynamicResource GuideHiBrush}" />
+  </Style>
+  <Style Selector="TextBlock.lgn">
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="TextBlock.lgn.cur">
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
   <!-- .hflag: the hero's accent rule-count pill. Fully rounded, accent ink on accent wash. -->
   <Style Selector="Button.hflag">
     <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />

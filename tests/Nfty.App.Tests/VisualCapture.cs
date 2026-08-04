@@ -491,7 +491,10 @@ public class VisualCapture
             Capture(new Views.NewCookBookView { DataContext = new NewCookBookViewModel(dialogs, notify) { Name = "Vapor Pets", Symbol = "VP", Description = "A cosy little collection." } },
                 variant, $"wizard-cookbook-{key}.png");
 
-            Capture(new Views.NewRecipeView { DataContext = new NewRecipeViewModel(dialogs, notify) { Name = "Cat" } },
+            // Siblings, or the "Resulting mix" panel hides and the frame proves nothing about it -
+            // a weight is only meaningful RELATIVE to the recipes it is normalised against.
+            var siblings = new[] { ("Fox", 45d), ("Owl", 25d) };
+            Capture(new Views.NewRecipeView { DataContext = new NewRecipeViewModel(dialogs, notify, siblings) { Name = "Cat" } },
                 variant, $"wizard-recipe-{key}.png");
 
             Capture(new Views.NewIngredientView { DataContext = new NewIngredientViewModel(dialogs, notify) { Name = "Aura" } },

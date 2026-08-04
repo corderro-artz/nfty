@@ -16,4 +16,8 @@ public static class PercentToWidthConverter
     /// <summary>For the ingredient hero's rarity tracks (120px).</summary>
     public static readonly IValueConverter ForBarWidth120 =
         new FuncValueConverter<double, double>(share => share * 1.2);
+
+    /// <summary>For the New Recipe wizard's "Resulting mix" bar (270px inside the .share panel).</summary>
+    public static readonly IValueConverter ForBarWidth270 =
+        new FuncValueConverter<double, double>(share => share * 2.7);
 }

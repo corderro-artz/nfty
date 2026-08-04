@@ -362,7 +362,11 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
 
     private async Task AddRecipe()
     {
-        var wizard = new NewRecipeViewModel(_dialogs, _notify);
+        // The wizard's "Resulting mix" needs the siblings the new weight will be normalised against.
+        var siblings = _book.Recipes
+            .Select(r => (r.Manifest.Name, Weight: _book.Manifest.RecipeWeights.GetValueOrDefault(r.Manifest.Id)))
+            .ToList();
+        var wizard = new NewRecipeViewModel(_dialogs, _notify, siblings);
         var result = await _dialogs.ShowAsync<NewRecipeViewModel>(wizard);
         if (result is null) return;   // cancelled
         if (string.IsNullOrWhiteSpace(result.DerivedId))

@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Nfty.App.ViewModels"
+             xmlns:conv="using:Nfty.App.Converters"
              x:Class="Nfty.App.Views.NewRecipeView"
              x:DataType="vm:NewRecipeViewModel"
              Focusable="True">
@@ -36,10 +37,45 @@
               </StackPanel>
               <NumericUpDown Value="{Binding Weight}" Minimum="0" IsEnabled="{Binding WeightEnabled}" />
             </StackPanel>
-            <StackPanel Spacing="6">
-              <TextBlock Text="RESULTING MIX" Classes="plabel" />
-              <ProgressBar Value="{Binding Weight}" Minimum="0" Maximum="100" IsEnabled="{Binding WeightEnabled}" />
-            </StackPanel>
+            <!-- .share: what the weight actually buys. A weight is relative to its siblings and the
+                 book normalises the set, so the bare ProgressBar this replaces - bound
+                 Value=Weight Maximum=100 - drew a weight of 100 as a full bar and read as "100% of
+                 the collection" regardless of what the siblings weighed. Hidden for a loose Recipe,
+                 which has no collection to be a share of. -->
+            <Border Classes="share" IsVisible="{Binding ShowShare}">
+              <StackPanel Spacing="6">
+                <TextBlock Text="RESULTING MIX" Classes="share-h" />
+                <!-- Fixed-width track with converter-scaled segments, the same approach the CookBook
+                     detail's distribution bar uses: the recipe count is not known until runtime, so a
+                     Grid of star columns is not an option. -->
+                <Border Classes="mixbar" Width="270" HorizontalAlignment="Left">
+                  <ItemsControl ItemsSource="{Binding ShareRows}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:ShareRow">
+                        <Border Classes="seg-me" Classes.other="{Binding !IsCurrent}" Height="7"
+                                Width="{Binding Percent, Converter={x:Static conv:PercentToWidthConverter.ForBarWidth270}}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </Border>
+                <ItemsControl ItemsSource="{Binding ShareRows}" Margin="0,1,0,0">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ShareRow">
+                      <Grid ColumnDefinitions="6,*,Auto" ColumnSpacing="6" Margin="0,0,0,3">
+                        <Border Grid.Column="0" Classes="swatch-me" Classes.other="{Binding !IsCurrent}" />
+                        <TextBlock Grid.Column="1" Classes="lgn" Classes.cur="{Binding IsCurrent}"
+                                   Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="2" Classes="lgn" Classes.cur="{Binding IsCurrent}"
+                                   Text="{Binding Percent, StringFormat='{}{0:0}%'}" />
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Border>
 
             <StackPanel Spacing="6">
               <StackPanel Classes="plabel-row">
