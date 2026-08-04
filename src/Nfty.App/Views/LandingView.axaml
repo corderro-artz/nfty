@@ -11,7 +11,7 @@
     <KeyBinding Gesture="Ctrl+I" Command="{Binding ImportCommand}" />
   </UserControl.KeyBindings>
   <!-- landing.html .land: two equal columns, 34px gutter, 34/38 padding. -->
-  <Grid ColumnDefinitions="*,34,*" Margin="38,34">
+  <Grid Classes="monoform" ColumnDefinitions="*,34,*" Margin="38,34">
     <!-- .actions is left-aligned at 272px. Stretching it inside the column centres the button
          stack, which is what made the whole screen read as a centred splash. -->
     <StackPanel Grid.Column="0" Spacing="7" MaxWidth="272" HorizontalAlignment="Left">
@@ -81,9 +81,9 @@
                     CommandParameter="{Binding}"
                     ToolTip.Tip="{Binding Path}">
               <Grid ColumnDefinitions="22,*,Auto" >
-                <Border Grid.Column="0" Classes="rico">
+                <Border Grid.Column="0" Classes="rico" Classes.loose="{Binding Loose}">
                   <Panel>
-                    <Path Classes="ico sm" Stroke="{DynamicResource AccentTextBrush}"
+                    <Path Classes="ico sm" Stroke="{DynamicResource FgMutedBrush}"
                           Data="{StaticResource IconTypeIngredient}" IsVisible="{Binding Loose}" />
                     <Path Classes="ico sm" Stroke="{DynamicResource AccentTextBrush}"
                           Data="{StaticResource IconTypeCookBook}" IsVisible="{Binding !Loose}" />

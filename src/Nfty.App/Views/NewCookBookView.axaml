@@ -8,7 +8,7 @@
     <KeyBinding Gesture="Escape" Command="{Binding CancelCommand}" />
     <KeyBinding Gesture="Enter" Command="{Binding CreateCommand}" />
   </UserControl.KeyBindings>
-  <Border Classes="modal">
+  <Border Classes="modal monoform">
     <Grid RowDefinitions="*,Auto">
       <Border Grid.Row="0" Classes="modal-body">
         <ScrollViewer HorizontalScrollBarVisibility="Disabled">
@@ -25,27 +25,35 @@
               <TextBlock Text="NAME" Classes="plabel" />
               <TextBox Text="{Binding Name}" PlaceholderText="VaporPets" />
             </StackPanel>
-            <StackPanel Spacing="6">
-              <TextBlock Text="SYMBOL" Classes="plabel" />
-              <TextBox Text="{Binding Symbol}" MaxLength="255" PlaceholderText="VP" />
-            </StackPanel>
-
-            <StackPanel Spacing="6">
-              <TextBlock Text="CANVAS" Classes="plabel" />
-              <!-- Width / aspect lock / height, with the lock centred between the two fields. -->
-              <StackPanel Orientation="Horizontal" Spacing="8">
-                <NumericUpDown Value="{Binding Width}" Minimum="1" Width="130" />
-                <ToggleButton IsChecked="{Binding AspectLocked}" ToolTip.Tip="Lock aspect ratio"
-                              VerticalAlignment="Center">
-                  <Path Classes="ico xs" Data="{StaticResource IconLink}" />
-                </ToggleButton>
-                <NumericUpDown Value="{Binding Height}" Minimum="1" Width="130" />
+            <!-- wizard-cookbook.html puts SYMBOL (a fixed 132px field) and CANVAS (flex:1) on one
+                 .row rather than stacking them full width. -->
+            <Grid ColumnDefinitions="132,12,*">
+              <StackPanel Grid.Column="0" Spacing="6">
+                <TextBlock Text="SYMBOL" Classes="plabel" />
+                <TextBox Text="{Binding Symbol}" MaxLength="255" PlaceholderText="VP" />
               </StackPanel>
-            </StackPanel>
+
+              <StackPanel Grid.Column="2" Spacing="6">
+                <TextBlock Text="CANVAS" Classes="plabel" />
+                <!-- Width / aspect lock / height, with the lock centred between the two fields.
+                     Star-sized rather than fixed: Fluent's spinner is a wide side-by-side pair
+                     (Known deviation - the mockup's .stepr is a 20px column we cannot reach from a
+                     Style), so it eats most of a fixed field and clipped "1000" to "100(" in mono.
+                     Letting both fields take what is left keeps the value readable. -->
+                <Grid ColumnDefinitions="*,Auto,*">
+                  <NumericUpDown Grid.Column="0" Value="{Binding Width}" Minimum="1" />
+                  <ToggleButton Grid.Column="1" IsChecked="{Binding AspectLocked}" Margin="6,0"
+                                ToolTip.Tip="Lock aspect ratio" VerticalAlignment="Center">
+                    <Path Classes="ico xs" Data="{StaticResource IconLink}" />
+                  </ToggleButton>
+                  <NumericUpDown Grid.Column="2" Value="{Binding Height}" Minimum="1" />
+                </Grid>
+              </StackPanel>
+            </Grid>
 
             <StackPanel Spacing="6">
               <TextBlock Text="DESCRIPTION" Classes="plabel" />
-              <TextBox Text="{Binding Description}" AcceptsReturn="True" Height="70"
+              <TextBox Text="{Binding Description}" AcceptsReturn="True" Height="54"
                        VerticalContentAlignment="Top" Padding="11,7"
                        PlaceholderText="A collection of neon companions, each hatched from its own recipe…" />
             </StackPanel>

@@ -359,6 +359,14 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
+  <!-- A loose Kitchen ingredient gets a NEUTRAL tile, not the accent wash every other recent row
+       carries - landing.html overrides that row's .rico inline with
+       "background:tile; border-color:line-strong; color:fg-muted". It is the visual distinction
+       between "this collects into a CookBook" and "this is a loose item in the Kitchen". -->
+  <Style Selector="Border.rico.loose">
+    <Setter Property="Background" Value="{DynamicResource TileBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+  </Style>
   <Style Selector="TextBlock.rname">
     <Setter Property="FontSize" Value="12" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
@@ -527,8 +535,11 @@
     <Setter Property="CornerRadius" Value="10" />
     <Setter Property="ClipToBounds" Value="True" />   <!-- so the foot band respects the radius -->
     <!-- Wide enough for the footer to carry all three key hints AND both actions without them
-         overlapping; the mockup's footer spans a full-window wizard screen, ours is a dialog card. -->
-    <Setter Property="Width" Value="560" />
+         overlapping; the mockup's footer spans a full-window wizard screen, ours is a dialog card.
+         Widened from 560 when these views moved to mono: at 560 the hint row and the Cancel button
+         met with zero gap. Mono is wider than sans at the same size, and the footer is the tightest
+         row in the card, so it sets the card's minimum width. -->
+    <Setter Property="Width" Value="620" />
     <!-- Hug the content. Without this the card stretches to whatever hosts it and the form floats in
          a tall empty panel. -->
     <Setter Property="VerticalAlignment" Value="Center" />
@@ -554,12 +565,18 @@
     <Setter Property="BorderThickness" Value="0,1,0,0" />
     <Setter Property="Padding" Value="16,10" />
   </Style>
-  <!-- .kicker dot -->
+  <!-- .kicker dot. The mockup's .kicker is a flex row with align-items:center, but centring the dot
+       on the TextBlock's LINE BOX puts it low: the label is all-caps, so its glyphs sit high in a box
+       that still reserves descender space below the baseline. Measured off a rendered frame the dot
+       landed 4.5px under the optical centre of "CREATE". The bottom margin lifts it by half its own
+       value, so 9 corrects the full 4.5. Only the three wizard kickers use this class, all at the
+       same label size, so the correction is safe to carry on the style itself. -->
   <Style Selector="Ellipse.kdot">
     <Setter Property="Width" Value="4" />
     <Setter Property="Height" Value="4" />
     <Setter Property="Fill" Value="{DynamicResource AccentBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Margin" Value="0,0,0,9" />
   </Style>
   <Style Selector="TextBlock.m-h">
     <Setter Property="FontSize" Value="19" />
@@ -1506,5 +1523,33 @@
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
     <Setter Property="Padding" Value="9,3" />
     <Setter Property="Margin" Value="12,0,0,0" />
+  </Style>
+
+  <!-- Mono-bodied screens. landing.html and the three wizard-*.html mockups declare only the mono
+       font token (no sans token exists at all in any of those four files) and set it on the window
+       container, so every descendant inherits mono. explorer.html / help.html / ingredient-editor.html
+       declare BOTH tokens and use sans for body with mono as an accent - which is what the blanket
+       TextBlock rule at the top of this file implements. The split is real and it is in the locked
+       mockups, so it is reproduced here rather than normalised away.
+
+       This must be declared AFTER the blanket "TextBlock" rule: that rule sets FontFamily explicitly,
+       which defeats normal inheritance, so setting FontFamily on an ancestor alone would not reach
+       the text. The descendant selector re-overrides it for these four views only.
+
+       The class is carried on each view's outermost CHILD (Grid / Border), not on the UserControl
+       root - a Classes attribute on a UserControl's own XAML root did not reach this selector,
+       whereas anchoring on a child element matches the pattern already used throughout this file
+       (Button.landing TextBlock.lbl, Border.metric.accent TextBlock.mv). -->
+  <Style Selector="Grid.monoform TextBlock, Border.monoform TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+  </Style>
+  <Style Selector="Grid.monoform TextBox, Border.monoform TextBox">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+  </Style>
+  <Style Selector="Grid.monoform Button, Border.monoform Button">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+  </Style>
+  <Style Selector="Grid.monoform NumericUpDown, Border.monoform NumericUpDown">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
   </Style>
 </Styles>

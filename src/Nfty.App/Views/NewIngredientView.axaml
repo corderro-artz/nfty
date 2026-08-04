@@ -8,7 +8,7 @@
     <KeyBinding Gesture="Escape" Command="{Binding CancelCommand}" />
     <KeyBinding Gesture="Enter" Command="{Binding CreateCommand}" />
   </UserControl.KeyBindings>
-  <Border Classes="modal">
+  <Border Classes="modal monoform">
     <Grid RowDefinitions="*,Auto">
       <Border Grid.Row="0" Classes="modal-body">
         <ScrollViewer HorizontalScrollBarVisibility="Disabled">
