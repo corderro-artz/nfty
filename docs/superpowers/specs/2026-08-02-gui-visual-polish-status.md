@@ -4,12 +4,20 @@ Living handoff for `feature/gui-visual-polish`. Read this **with**
 `2026-08-01-nfty-gui-visual-audit.md`, which is the source of truth for what each slice must
 achieve. This file only records where the work has got to.
 
-Last updated: 2026-08-03, after Slice 11.
+Last updated: 2026-08-04, mid Slice 12.
 
 ## State
 
-- Branch: `feature/gui-visual-polish`, **22 commits ahead of `main`, not merged**. Clean tree.
-- Build: 0 warnings, 0 errors. Tests: **Cli 42 / App 251 / Core 549**, all green.
+- Branch: `feature/gui-visual-polish`, **28 commits ahead of `main`, not merged**. Clean tree.
+- Build: 0 warnings, 0 errors. Tests: **Cli 42 / App 253 / Core 549**, all green.
+- **Avalonia is 12.1.1** (was 11.2.3). Verified by pixel-diffing all frames against a pre-upgrade
+  baseline: no ControlTheme broke, all 14 `/template/` part names still resolve. 11.3.18 was
+  rejected — it loses the mono bold face, dropping 39% of the wordmark's ink to font fallback.
+  Side-effects worth knowing: `Avalonia.Diagnostics` no longer exists (now
+  `AvaloniaUI.DiagnosticsSupport`), the text shaper is opt-in (`Avalonia.HarfBuzz`) when the backend
+  is selected by hand, and **`Nfty.App.Tests` is on xunit.v3** while Cli/Core stay on v2.
+  `Grid.ColumnSpacing`/`RowSpacing` and control-level `LetterSpacing` are available now — prefer
+  them over margin-per-child and TextBlock-in-Button workarounds.
 - The locked mockups in `docs/design/mockups/` are **untouched** by this branch and must stay that
   way — they are the 1:1 reference. Verified with `git diff main...HEAD -- docs/design/mockups/`
   (empty). All 8 mockup HTMLs plus `gallery.html`, `README.md` and `build-gallery.py` are present.
@@ -47,7 +55,45 @@ Last updated: 2026-08-03, after Slice 11.
 | 9 | Detail views | done |
 | 10 | Ingredient editor rebuild | done |
 | 11 | Help sheet | done |
-| 12 | **Final sweep** | **not started** |
+| 12 | **Final sweep** | **in progress — see below** |
+
+### Slice 12 — what has been closed so far (2026-08-04)
+
+- **Mono type on Landing and the three wizards.** landing.html and the wizard mockups declare only a
+  mono font token — no sans token exists in those four files — and set it on the window container,
+  so everything inherits mono. explorer/help/ingredient-editor declare both and use sans body with
+  mono accents, which is what the blanket `TextBlock` rule implements. The split is real, is in the
+  locked mockups, and is now reproduced via a `monoform` class. **Note this contradicts CLAUDE.md's
+  claim that the mockups' token block is shared verbatim** — those four carry a trimmed block, also
+  missing shadow, guide and every radius token.
+- Kicker dot centring, the wizard footer collision (card 560 → 620), clipped canvas steppers,
+  Symbol+Canvas sharing a row, the 54px description box, the neutral loose-ingredient recents tile.
+- **New Ingredient's colour ranges** now use the editor's dual-range control instead of four bare
+  stock Sliders, which fixes the audit's remaining Critical: the card overflowed and the body
+  ScrollViewer silently hid Destination, Canvas and the derived identifier.
+- **Kind and Destination choice cards** replacing bare RadioButtons, with equal-height stretch.
+- `editor-enabled-*` frames (see the fixture note in "Start here").
+- The two Avalonia-11.2 workarounds retired (`ColumnSpacing`, `LetterSpacing`).
+
+### Slice 12 — what is still open
+
+- The Explorer + detail-views diff pass (an audit was dispatched for it; its findings are not yet
+  folded in).
+- The nine `?` help badges the wizards' mockups show beside labelled fields — no `.q` badge exists
+  anywhere in the app.
+- New Recipe's "Resulting mix" is still a bare `ProgressBar` bound `Value=Weight, Maximum=100`, so it
+  reads as an absolute percentage. The mockup's `.share` is a segmented bar plus a legend naming
+  every sibling Recipe with its %. **`NewRecipeViewModel` does not surface sibling recipes/weights**,
+  so the ViewModel needs that before the view can be built. The domain concept is a weight relative
+  to siblings, not a percentage.
+- Copy nits: New Ingredient's footer should read "create & paint" / "Create & paint →" (it opens the
+  editor next); the kickers should append the destination; the derived-identifier rows omit the
+  mockup's right-aligned output path.
+- The remaining `ColumnSpacing`/`RowSpacing` adoption sites: `CookBookDetailView.axaml:29-42`
+  (2×2 metric grid using complementary half-margins), `ExplorerView.axaml:18-49` (four toolbar
+  children each `Margin="0,0,10,0"`), literal spacer columns in CookBookDetailView / LandingView /
+  IngredientEditorView (each renumbers `Grid.Column`, so re-verify frames per edit), and repeated
+  `Margin="8,0,0,0"` data-table columns in the detail views.
 
 ### Slice 11 — Help sheet (done)
 `Views/HelpView.axaml` went from 21 lines (one run-on paragraph in a box) to the mockup's 780px
@@ -104,7 +150,14 @@ No icon stand-ins left.
    `Style` setter does not beat. Verified against rendered frames; setters that did nothing were
    removed rather than left in. See `Themes/Controls.axaml`.
 2. **Slider track** — mockup is a 6px rounded bar; ours stays Fluent's ~2px line, same cause. The
-   **ring handle** (the visible half) is done.
+   **ring handle** (the visible half) is done. **Do not try to compress the range row's height.**
+   Fluent lays a horizontal Slider out at ~40px against the mockup's ~20px `.rng`; both levers were
+   tried and reverted — an explicit `Height` on the Slider, and a fixed `Height` on the containing
+   `Panel`. Each clips the ring handles to their top arc, because the template keeps positioning the
+   thumb for the taller row it wants. The natural height is the only one that draws a whole handle,
+   so New Ingredient absorbs the cost with a taller card and tighter body (`.modal.tall`,
+   `.modal-body.tight`, both scoped to that view). `WizardFitsTests` fails if that budget is blown
+   again.
 3. **Dual-range control** — Avalonia has none. Two sliders are laid over a gradient band with
    transparent tracks so only their ring handles show. Close to the mockup; not a real dual control.
 4. ~~`ValueMap.FromImage` keeps the RED channel~~ — **RESOLVED 2026-08-02.** `FromImage` still reads
@@ -145,6 +198,17 @@ Recorded because each one shipped, or nearly shipped, a defect. They recur.
   work. Check the tree, don't take the summary.
 - **Asserting blast radius without measuring it.** The `ValueMap` note above was first written as
   "would alter existing art"; grepping the call sites showed that was false and changed the decision.
+- **Patching source with PowerShell.** `Get-Content -Raw` defaults to the ANSI codepage on
+  PowerShell 5.1, so reading a UTF-8 file and writing it back double-decodes every non-ASCII
+  character — `—` became `â€"`, `⌘` became `âŒ˜`. Silent: it builds, it tests green, and it only
+  shows up as garbage text in a rendered frame. **Use the Edit/Write tools for source edits.** Fast
+  check if you suspect it: grep the tree for `â€`.
+- **A `Classes` attribute that does nothing.** `<UserControl Classes="foo">` in a view's own XAML
+  root does NOT match `Style Selector="UserControl.foo TextBlock"` — the style was a silent no-op
+  and cost a full build/capture cycle. Anchor the class on the view's outermost **child** instead,
+  which is the pattern used throughout `Styles.axaml` (`Button.landing TextBlock.lbl`). Related: a
+  blanket type rule that sets a property defeats inheritance for it, so setting `FontFamily` on an
+  ancestor cannot reach text that `Style Selector="TextBlock"` already sets.
 
 ## Conventions this work established (do not regress)
 
