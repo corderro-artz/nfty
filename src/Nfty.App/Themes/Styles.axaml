@@ -1045,6 +1045,13 @@
     <Setter Property="Foreground" Value="Transparent" />
     <Setter Property="Margin" Value="0" />
     <Setter Property="MinHeight" Value="0" />
+    <!-- Do NOT pin a Height here, and do not pin one on the Panel this sits in. Fluent lays a
+         horizontal Slider out at roughly 40px against the mockup's ~20px range row, and both levers
+         were tried: an explicit Height on the Slider and a fixed Height on the containing Panel each
+         clipped the ring handles to their top arc, because the template keeps positioning the thumb
+         for the taller row it wants. The natural height is the only one that draws a whole handle,
+         so the extra row height is absorbed elsewhere in the form. Verified from rendered frames in
+         both the ingredient editor and the New Ingredient wizard. -->
   </Style>
   <!-- .sbtn: the 19px quantize steppers -->
   <Style Selector="Button.sbtn">

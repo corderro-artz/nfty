@@ -115,4 +115,23 @@
   <CornerRadius x:Key="RadiusLg">8</CornerRadius>
   <CornerRadius x:Key="RadiusMd">6</CornerRadius>
   <CornerRadius x:Key="RadiusSm">5</CornerRadius>
+
+  <!-- Colour-range track fills. These are NOT palette colours and deliberately do not vary by theme:
+       a hue wheel is a hue wheel in the dark. They live here rather than inline in a view so the two
+       screens that show a colour range (the ingredient editor and the New Ingredient wizard) paint
+       the same ramp, and so the views stay free of raw hex per the house rule. -->
+  <LinearGradientBrush x:Key="HueSpectrumBrush" StartPoint="0%,50%" EndPoint="100%,50%">
+    <GradientStop Color="#FFFF0000" Offset="0" />
+    <GradientStop Color="#FFFFFF00" Offset="0.167" />
+    <GradientStop Color="#FF00FF00" Offset="0.333" />
+    <GradientStop Color="#FF00FFFF" Offset="0.5" />
+    <GradientStop Color="#FF0000FF" Offset="0.667" />
+    <GradientStop Color="#FFFF00FF" Offset="0.833" />
+    <GradientStop Color="#FFFF0000" Offset="1" />
+  </LinearGradientBrush>
+  <!-- Grey to full chroma. The end stop is the mockups' own worked example, hex:d6249f. -->
+  <LinearGradientBrush x:Key="SaturationRampBrush" StartPoint="0%,50%" EndPoint="100%,50%">
+    <GradientStop Color="#FF9E9E9E" Offset="0" />
+    <GradientStop Color="#FFD6249F" Offset="1" />
+  </LinearGradientBrush>
 </ResourceDictionary>

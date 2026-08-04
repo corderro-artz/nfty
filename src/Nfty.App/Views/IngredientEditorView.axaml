@@ -226,19 +226,7 @@
                     <TextBlock Grid.Column="1" Classes="cv" Text="{Binding HueRangeText}" />
                   </Grid>
                   <Panel>
-                    <Border Classes="dualtrack">
-                      <Border.Background>
-                        <LinearGradientBrush StartPoint="0%,50%" EndPoint="100%,50%">
-                          <GradientStop Color="#FFFF0000" Offset="0" />
-                          <GradientStop Color="#FFFFFF00" Offset="0.167" />
-                          <GradientStop Color="#FF00FF00" Offset="0.333" />
-                          <GradientStop Color="#FF00FFFF" Offset="0.5" />
-                          <GradientStop Color="#FF0000FF" Offset="0.667" />
-                          <GradientStop Color="#FFFF00FF" Offset="0.833" />
-                          <GradientStop Color="#FFFF0000" Offset="1" />
-                        </LinearGradientBrush>
-                      </Border.Background>
-                    </Border>
+                    <Border Classes="dualtrack" Background="{StaticResource HueSpectrumBrush}" />
                     <Slider Classes="overlay" Value="{Binding HueMin}" Minimum="0" Maximum="360" />
                     <Slider Classes="overlay" Value="{Binding HueMax}" Minimum="0" Maximum="360" />
                   </Panel>
@@ -256,14 +244,7 @@
                     <TextBlock Grid.Column="1" Classes="cv" Text="{Binding SatRangeText}" />
                   </Grid>
                   <Panel>
-                    <Border Classes="dualtrack">
-                      <Border.Background>
-                        <LinearGradientBrush StartPoint="0%,50%" EndPoint="100%,50%">
-                          <GradientStop Color="#FF9E9E9E" Offset="0" />
-                          <GradientStop Color="#FFD6249F" Offset="1" />
-                        </LinearGradientBrush>
-                      </Border.Background>
-                    </Border>
+                    <Border Classes="dualtrack" Background="{StaticResource SaturationRampBrush}" />
                     <Slider Classes="overlay" Value="{Binding SatMin}" Minimum="0" Maximum="100" />
                     <Slider Classes="overlay" Value="{Binding SatMax}" Minimum="0" Maximum="100" />
                   </Panel>

@@ -20,7 +20,11 @@
           <TextBlock Text="New Ingredient" Classes="m-h" />
           <TextBlock Classes="m-sub"><Run Text="One layer, one trait category. Its " /><Run Text="kind" Foreground="{DynamicResource FgBrush}" /><Run Text=" decides whether its colour is rolled, fixed, or baked into the art." /></TextBlock>
 
-          <StackPanel Spacing="14" Margin="0,19,0,0">
+          <!-- Tighter than the other two wizards' 14/19: this is the only form carrying two colour
+               range controls, and Fluent's Slider row is about twice the mockup's height (see
+               Slider.overlay in Styles.axaml). Without this the card overflowed and put DESTINATION,
+               CANVAS and the derived identifier behind an unsignposted scrollbar. -->
+          <StackPanel Spacing="11" Margin="0,14,0,0">
             <StackPanel Spacing="6">
               <TextBlock Text="NAME" Classes="plabel" />
               <TextBox Text="{Binding Name}" PlaceholderText="Aura" />
@@ -35,13 +39,36 @@
               </StackPanel>
             </StackPanel>
 
-            <StackPanel Spacing="6" IsVisible="{Binding ShowColourRange}">
-              <TextBlock Text="HUE RANGE" Classes="plabel" />
-              <Slider Value="{Binding HueMin}" Minimum="0" Maximum="360" />
-              <Slider Value="{Binding HueMax}" Minimum="0" Maximum="360" />
-              <TextBlock Text="SATURATION RANGE" Classes="plabel" Margin="0,6,0,0" />
-              <Slider Value="{Binding SatMin}" Minimum="0" Maximum="100" />
-              <Slider Value="{Binding SatMax}" Minimum="0" Maximum="100" />
+            <!-- wizard-ingredient.html .zone/.rng: two compact dual-handle rows over a gradient
+                 track, each with a live readout. This was four bare stock Sliders, which are so much
+                 taller than the mockup's ~20px rows that DESTINATION, CANVAS and the derived
+                 identifier all fell below the card's fold behind an unsignposted scrollbar. The
+                 control is the same one the ingredient editor already uses - a gradient Border with
+                 two transparent-track Sliders laid over it so only the ring handles show. -->
+            <StackPanel Spacing="8" IsVisible="{Binding ShowColourRange}">
+              <StackPanel Spacing="4">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Grid.Column="0" Text="HUE RANGE" Classes="plabel" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Classes="cv" Text="{Binding HueRangeText}" />
+                </Grid>
+                <Panel>
+                  <Border Classes="dualtrack" Background="{StaticResource HueSpectrumBrush}" />
+                  <Slider Classes="overlay" Value="{Binding HueMin}" Minimum="0" Maximum="360" />
+                  <Slider Classes="overlay" Value="{Binding HueMax}" Minimum="0" Maximum="360" />
+                </Panel>
+              </StackPanel>
+
+              <StackPanel Spacing="4">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Grid.Column="0" Text="SATURATION RANGE" Classes="plabel" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Classes="cv" Text="{Binding SatRangeText}" />
+                </Grid>
+                <Panel>
+                  <Border Classes="dualtrack" Background="{StaticResource SaturationRampBrush}" />
+                  <Slider Classes="overlay" Value="{Binding SatMin}" Minimum="0" Maximum="100" />
+                  <Slider Classes="overlay" Value="{Binding SatMax}" Minimum="0" Maximum="100" />
+                </Panel>
+              </StackPanel>
             </StackPanel>
 
             <StackPanel Spacing="6" IsVisible="{Binding ShowFixedColour}">
@@ -64,7 +91,7 @@
             </StackPanel>
           </StackPanel>
 
-          <StackPanel Margin="0,15,0,0">
+          <StackPanel Margin="0,11,0,0">
             <Rectangle Height="1" HorizontalAlignment="Stretch" Stroke="{DynamicResource LineStrongBrush}"
                        StrokeThickness="1" StrokeDashArray="3,3" />
             <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,11,0,0">
