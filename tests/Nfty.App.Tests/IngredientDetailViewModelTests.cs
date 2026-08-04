@@ -144,7 +144,15 @@ public class IngredientDetailViewModelTests
         var (book, recipe, ing) = Fixture();
         using var vm = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(),
             new FakeNotYetWired(), () => { }, () => false);
-        // custom → a single "composited as-is" axis (no H/S)
-        Assert.Contains(vm.ColorwayAxes, a => a.Value.Contains("composited as-is"));
+
+        // A Custom layer has NO axes. It used to report one synthetic
+        // ColorwayAxis("COLOUR", "no colorize · composited as-is"), which borrowed the axis-row
+        // shape to say "there are no axes" and put a full sentence in a column sized for "190–320°".
+        // The mockup gives Custom its own branch instead - a swatch of the art plus a note - so the
+        // rail must have nothing to lay out here.
+        Assert.True(vm.IsCustom);
+        Assert.Empty(vm.ColorwayAxes);
+        Assert.False(vm.HasHueBand);            // and no hue band either: it rolls no hue
+        Assert.NotNull(vm.SelectedThumb);       // the swatch the Custom branch draws instead
     }
 }

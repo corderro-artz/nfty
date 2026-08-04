@@ -14,9 +14,14 @@
        inside ExplorerView's 260+* split at 900px (audit finding: OVERALL sliced off, colorways
        axis value colliding with the row rule). -->
   <Grid Margin="16">
+    <!-- Mockup .ing-grid: minmax(0, 2fr) / minmax(208px, 1fr). The rail used to be Auto, which sizes
+         to its CONTENT - so a long line in the rail (the Custom branch's note) grew the rail and
+         squeezed the main column until the hero subtitle clipped to "no colorize · compo…" and the
+         variant table's header truncated to "VAR…". Proportional columns keep the split fixed
+         regardless of what the rail happens to contain. -->
     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="*" />
-      <ColumnDefinition Width="Auto" MinWidth="208" />
+      <ColumnDefinition Width="2*" MinWidth="0" />
+      <ColumnDefinition Width="*" MinWidth="208" />
     </Grid.ColumnDefinitions>
     <StackPanel Grid.Column="0" Spacing="14" Margin="0,0,16,0">
       <Border Classes="vhero">
@@ -135,7 +140,23 @@
           </Border.Background>
         </Border>
 
-        <ItemsControl ItemsSource="{Binding ColorwayAxes}">
+        <!-- .cwcustom: a Custom layer gets its own branch, not the axis-row grammar. It rolls no
+             hue and no saturation, so an "axis" row with a sentence in the value column was
+             borrowing a shape that does not describe it. The mockup pairs a 56px swatch of the
+             selected variant with a plain-language note. -->
+        <!-- Grid, not a horizontal StackPanel: a StackPanel hands its child unbounded width, so the
+             note laid itself out on one line and ran past the rail instead of wrapping beside the
+             swatch. The star column is what makes TextWrapping mean anything here. -->
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14" IsVisible="{Binding IsCustom}">
+          <Border Grid.Column="0" Classes="cwsw">
+            <Image Source="{Binding SelectedThumb}" Stretch="UniformToFill" />
+          </Border>
+          <TextBlock Grid.Column="1" Classes="cwnote" VerticalAlignment="Center"><Run Text="Full-colour image, " /><Run
+            Text="composited as-is" FontWeight="SemiBold" Foreground="{DynamicResource FgBrush}" /><Run
+            Text=". Value-map colorization does not apply to this layer." /></TextBlock>
+        </Grid>
+
+        <ItemsControl ItemsSource="{Binding ColorwayAxes}" IsVisible="{Binding !IsCustom}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:ColorwayAxis">
               <Border Classes="cwaxis">

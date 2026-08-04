@@ -1308,6 +1308,24 @@
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
 
+  <!-- .cwcustom: the 56px art swatch and its note, shown instead of a hue band for a Custom layer. -->
+  <Style Selector="Border.cwsw">
+    <Setter Property="Width" Value="56" />
+    <Setter Property="Height" Value="56" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Background" Value="{DynamicResource TileBrush}" />
+    <Setter Property="ClipToBounds" Value="True" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.cwnote">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="LineHeight" Value="18" />   <!-- 1.5 -->
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
   <!-- colorways rail panel (ingredient inspector; explorer.html:385-400) -->
   <Style Selector="Border.cw-panel">
     <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />

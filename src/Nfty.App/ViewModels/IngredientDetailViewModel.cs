@@ -56,6 +56,11 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
         ? _variants.OrderByDescending(v => v.Weight).ThenBy(v => v.Name, StringComparer.Ordinal).ToList()
         : _variants.OrderBy(v => v.Name, StringComparer.Ordinal).ToList();
 
+    /// <summary>The 56px swatch the Custom branch of the colorways rail shows (mockup .cwcustom).
+    /// A Custom layer has no hue band to display, so the rail shows the art itself instead. Null for
+    /// an ingredient with no variants, which the view treats as nothing to draw.</summary>
+    public Bitmap? SelectedThumb => _variants.Count > 0 ? _variants[0].Thumbnail : null;
+
     public IngredientDetailViewModel(LoadedIngredient ing, LoadedRecipe recipe, LoadedCookBook book,
         IImageBridge bridge, INotYetWired notify, Action editIngredient, Func<bool> isEditing)
     {
@@ -140,8 +145,12 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
 
     private static IReadOnlyList<ColorwayAxis> BuildAxes(IngredientManifest m)
     {
-        if (m.Colorization is null)
-            return new[] { new ColorwayAxis("COLOUR", "no colorize · composited as-is", true) };
+        // No axes for an uncolorized layer. There used to be a single synthetic
+        // ColorwayAxis("COLOUR", "no colorize · composited as-is") here, which borrowed the
+        // axis-row shape to say "there are no axes" - and made a full sentence share a row template
+        // built for "HUE  190–320°". Custom now has its own branch in the view (mockup .cwcustom:
+        // a swatch of the art plus a plain-language note), so this returns nothing.
+        if (m.Colorization is null) return Array.Empty<ColorwayAxis>();
         var c = m.Colorization;
         var range = c.Entries.FirstOrDefault(e => e.Range is not null)?.Range;
         var list = new List<ColorwayAxis>();
