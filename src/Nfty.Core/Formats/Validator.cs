@@ -57,6 +57,14 @@ public static class Validator
         if (cb.Manifest.RecipeWeights.Values.Sum() <= 0)
             problems.Add("CookBook has zero total recipe weight.");
 
+        // Target supply is optional (absent on every schemaVersion-1 archive), but a book that
+        // states one must state a real one. Zero or negative is not "unset" - it is a number the
+        // author typed that cannot be minted, and it would otherwise sit in the UI looking deliberate.
+        // Whether the target is ACHIEVABLE is deliberately not checked here: that needs
+        // UniqueSpace.Count, which enumerates, and Validator must stay cheap enough to run on open.
+        if (cb.Manifest.TargetSupply is { } target && target < 1)
+            problems.Add($"CookBook target supply must be at least 1 (found {target}).");
+
         // Canvas is the single source of truth for every image size. A non-positive dimension
         // is an impossible collection — ImageSharp cannot allocate a zero- or negative-sized
         // image — and left unchecked it surfaces only as a confusing per-variant size mismatch
