@@ -115,9 +115,17 @@
         <Border Grid.Row="2" Background="{DynamicResource BgAltBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0">
           <Grid ColumnDefinitions="*,Auto" Height="34">
             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="14" Margin="16,0" VerticalAlignment="Center">
-              <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
-                <Ellipse Width="6" Height="6" Fill="{DynamicResource SuccessBrush}" VerticalAlignment="Center" />
-                <TextBlock Classes="sbar" Foreground="{DynamicResource SuccessBrush}" Text="Valid" />
+              <!-- This used to be a hardcoded green "Valid" shown for every book, without anything
+                   ever running Validator - the shell asserted a fact it had not checked. It now
+                   reports the real result, turns warning-coloured when there are problems, and lists
+                   them on the tooltip. Hidden with no cookbook open: there is nothing to validate. -->
+              <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center"
+                          IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}"
+                          ToolTip.Tip="{Binding CurrentExplorer.ValidityTip}">
+                <Ellipse Width="6" Height="6" VerticalAlignment="Center"
+                         Classes.ok="{Binding CurrentExplorer.IsValid}" Classes="vdot" />
+                <TextBlock Classes="sbar vstate" Classes.ok="{Binding CurrentExplorer.IsValid}"
+                           Text="{Binding CurrentExplorer.ValidityText}" />
               </StackPanel>
               <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"
                           IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}">

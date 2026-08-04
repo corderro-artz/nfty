@@ -36,6 +36,14 @@
               <TextBlock Classes="cvl" Text="{Binding ColorizeText}" />
             </StackPanel>
           </Border>
+          <Border Classes="idchip" ToolTip.Tip="{Binding StatusTip}">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <TextBlock Classes="ck" Text="status" />
+              <Ellipse Width="6" Height="6" VerticalAlignment="Center"
+                       Classes="vdot" Classes.ok="{Binding IsValid}" />
+              <TextBlock Classes="cvl vstate" Classes.ok="{Binding IsValid}" Text="{Binding StatusText}" />
+            </StackPanel>
+          </Border>
         </StackPanel>
       </StackPanel>
     </Border>
