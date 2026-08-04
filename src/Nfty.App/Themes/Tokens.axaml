@@ -160,4 +160,10 @@
     <GradientStop Color="#FF9E9E9E" Offset="0" />
     <GradientStop Color="#FFD6249F" Offset="1" />
   </LinearGradientBrush>
+  <!-- The value ramp the paint brush samples. Black to white is the value-map's own domain, not a
+       palette choice, so it does not vary by theme either. -->
+  <LinearGradientBrush x:Key="ValueRampBrush" StartPoint="0%,50%" EndPoint="100%,50%">
+    <GradientStop Color="#FF000000" Offset="0" />
+    <GradientStop Color="#FFFFFFFF" Offset="1" />
+  </LinearGradientBrush>
 </ResourceDictionary>

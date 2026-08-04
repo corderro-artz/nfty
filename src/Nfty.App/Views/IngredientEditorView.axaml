@@ -122,14 +122,7 @@
 
               <!-- .ramp: the value gradient the brush samples, and the grey it will lay down. -->
               <Panel Width="96" VerticalAlignment="Center">
-                <Border Classes="ramp">
-                  <Border.Background>
-                    <LinearGradientBrush StartPoint="0%,50%" EndPoint="100%,50%">
-                      <GradientStop Color="#FF000000" Offset="0" />
-                      <GradientStop Color="#FFFFFFFF" Offset="1" />
-                    </LinearGradientBrush>
-                  </Border.Background>
-                </Border>
+                <Border Classes="ramp" Background="{StaticResource ValueRampBrush}" />
                 <Slider Value="{Binding BrushValue}" Minimum="0" Maximum="255"
                         Classes="overlay" ToolTip.Tip="Paint value" />
               </Panel>
