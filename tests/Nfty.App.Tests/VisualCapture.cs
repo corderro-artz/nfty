@@ -36,10 +36,10 @@ public class VisualCapture
             ? null
             : (Environment.GetEnvironmentVariable("NFTY_CAPTURE_DIR") ?? Path.GetTempPath());
 
-    private static TextBlock Label(string text, string? cls = null)
+    private static TextBlock Label(string text, params string[] classes)
     {
         var tb = new TextBlock { Text = text, Margin = new Thickness(0, 2) };
-        if (cls is not null) tb.Classes.Add(cls);
+        foreach (var c in classes) tb.Classes.Add(c);
         return tb;
     }
 
@@ -67,11 +67,15 @@ public class VisualCapture
         return tb;
     }
 
-    private static Border KindChip(string cls, string text) => new()
+    /// <summary>A kind chip as the app actually draws it: `fchip` plus the kind modifier. The gallery
+    /// used to specimen a `kind-dynamic`/`kind-static`/`kind-custom` family that Slice 9 replaced —
+    /// so the design-system sheet was documenting a vocabulary no screen used, and those styles
+    /// survived a dead-class sweep only because the gallery still referenced them.</summary>
+    private static Border KindChip(string kindModifier, string text) => new()
     {
-        Classes = { cls },
+        Classes = { "fchip", kindModifier },
         Margin = new Thickness(0, 0, 8, 0),
-        Child = Label(text, "kind-txt"),
+        Child = Label(text, "kind-txt", kindModifier),
     };
 
     /// <summary>Theme-resource lookups for the synthetic swatches below; magenta marks a miss.</summary>
@@ -122,7 +126,7 @@ public class VisualCapture
             {
                 Label("The quick brown fox — sans body text"),
                 Label("nfty", "wordmark"),
-                Label("CookBook › Recipe › Ingredient", "crumbs"),
+                Label("CookBook › Recipe › Ingredient", "cseg"),
                 Label("dna-0x9f3a  ·  mono 0123456789", "mono"),
                 new StackPanel
                 {
@@ -142,7 +146,7 @@ public class VisualCapture
                     Spacing = 10,
                     Children =
                     {
-                        new Border { Classes = { "card" }, Width = 140, Child = Label("card surface") },
+                        new Border { Classes = { "metric" }, Width = 140, Child = Label("metric surface") },
                         new Border { Classes = { "tile" }, Width = 120, Height = 44, Child = Label("tile surface") },
                     },
                 },
@@ -157,9 +161,9 @@ public class VisualCapture
                     Orientation = Orientation.Horizontal,
                     Children =
                     {
-                        KindChip("kind-dynamic", "dynamic"),
-                        KindChip("kind-static", "static"),
-                        KindChip("kind-custom", "custom"),
+                        KindChip("kdyn", "dynamic"),
+                        KindChip("kstat", "static"),
+                        KindChip("kcust", "custom"),
                     },
                 },
                 new StackPanel

@@ -172,18 +172,25 @@ public class ThemeResourceTests
     // Accent_button_uses_accent_background_and_tbtn_uses_panel: FindResource without a
     // variant resolves against ThemeVariant.Default, which never matches the "Light"/"Dark"
     // keys under Tokens.axaml's ThemeDictionaries and always returns UnsetValue.
+    // The kind chip asserted against `Border.kind-dynamic`, a class Slice 9 replaced with
+    // `Border.fchip.kdyn` (wash background + kind-tinted border + kind-coloured label). Nothing in
+    // the app referenced `.kind-dynamic` any more — this test was the only thing keeping it alive,
+    // so it was guarding a style no screen could ever show. Retargeted at the shipped class.
     [AvaloniaFact]
     public void Panel_uses_panel_brush_and_kind_chip_uses_kind_colour()
     {
         var panel = StyledHost.Show(new Border { Classes = { "panel" } });
-        var chip = StyledHost.Show(new Border { Classes = { "kind-dynamic" } });
+        var chip = StyledHost.Show(new Border { Classes = { "fchip", "kdyn" } });
 
         Assert.Equal(
             ((ISolidColorBrush)Resolve("PanelBrush", ThemeVariant.Light)!).Color,
             ((ISolidColorBrush)panel.Background!).Color);
         Assert.Equal(
-            ((ISolidColorBrush)Resolve("KindDynamicBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)Resolve("KindDynamicLineBrush", ThemeVariant.Light)!).Color,
             ((ISolidColorBrush)chip.BorderBrush!).Color);
+        Assert.Equal(
+            ((ISolidColorBrush)Resolve("KindDynamicWashBrush", ThemeVariant.Light)!).Color,
+            ((ISolidColorBrush)chip.Background!).Color);
     }
 
     [AvaloniaFact]

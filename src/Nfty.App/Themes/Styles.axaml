@@ -18,11 +18,6 @@
     <Setter Property="FontSize" Value="15" />
     <Setter Property="LetterSpacing" Value="-0.15" />
   </Style>
-  <Style Selector="TextBlock.crumbs">
-    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="12.5" />
-    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
-  </Style>
   <Style Selector="TextBlock.cseg">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="12.5" />
@@ -199,10 +194,13 @@
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <!-- The edit lock must read as ON at a glance: accent ink on an accent wash, matching the
-       mockup's active-affordance treatment. Without this the toggle was invisible. -->
-  <Style Selector="Button.icon.unlocked">
-    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
-  </Style>
+       mockup's active-affordance treatment. Without this the toggle was invisible.
+       The wash is NOT set here. A `Button.icon.unlocked { Background }` setter used to live at this
+       spot and was dead twice over: `Button.icon` sets Background="Transparent" and is declared
+       further down (last-one-wins at equal specificity), and the rest-state rule sets it on
+       PART_ContentPresenter directly, which beats any control-level setter regardless of ordering.
+       The wash therefore lives with the other template-part rules; see Button.icon.unlocked
+       /template/ ContentPresenter below. Only the icon's stroke is a control-level concern. -->
   <Style Selector="Button.icon.unlocked Path.ico">
     <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
   </Style>
@@ -228,14 +226,9 @@
     <Setter Property="Width" Value="13" /><Setter Property="Height" Value="13" />
     <Setter Property="RenderTransform" Value="scale(0.5417)" />   <!-- 13/24 -->
   </Style>
-  <Style Selector="Path.ico.lg">
-    <Setter Property="Width" Value="18" /><Setter Property="Height" Value="18" />
-    <Setter Property="RenderTransform" Value="scale(0.75)" />     <!-- 18/24 -->
-  </Style>
   <!-- On an accent fill the icon must switch to the on-accent ink, like the label does. -->
   <Style Selector="Button.accent Path.ico"><Setter Property="Stroke" Value="{DynamicResource OnAccentBrush}" /></Style>
   <!-- Strong-ink icons (window chrome, primary affordances) -->
-  <Style Selector="Path.ico.strong"><Setter Property="Stroke" Value="{DynamicResource FgBrush}" /></Style>
 
   <Style Selector="Button.icon">
     <Setter Property="Background" Value="Transparent" />
@@ -761,13 +754,6 @@
     <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
     <Setter Property="BorderThickness" Value="2" />
   </Style>
-  <Style Selector="Border.card">
-    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
-    <Setter Property="Padding" Value="14,12" />
-  </Style>
   <Style Selector="Border.frame">
     <Setter Property="Background" Value="{DynamicResource BgBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
@@ -781,24 +767,6 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
     <Setter Property="Padding" Value="7,3" />
-  </Style>
-  <Style Selector="Border.kind-dynamic">
-    <Setter Property="BorderBrush" Value="{DynamicResource KindDynamicBrush}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
-    <Setter Property="Padding" Value="6,2" />
-  </Style>
-  <Style Selector="Border.kind-static">
-    <Setter Property="BorderBrush" Value="{DynamicResource KindStaticBrush}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
-    <Setter Property="Padding" Value="6,2" />
-  </Style>
-  <Style Selector="Border.kind-custom">
-    <Setter Property="BorderBrush" Value="{DynamicResource KindCustomBrush}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
-    <Setter Property="Padding" Value="6,2" />
   </Style>
 
   <!-- Explorer tree: kind-coloured glyph (D/S/C) on ingredient nodes (mockup .kmark, explorer.html:123-127). -->
@@ -1165,17 +1133,6 @@
          both the ingredient editor and the New Ingredient wizard. -->
   </Style>
   <!-- .sbtn: the 19px quantize steppers -->
-  <Style Selector="Button.sbtn">
-    <Setter Property="Width" Value="19" />
-    <Setter Property="Height" Value="19" />
-    <Setter Property="Padding" Value="0" />
-    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
-    <Setter Property="HorizontalContentAlignment" Value="Center" />
-    <Setter Property="VerticalContentAlignment" Value="Center" />
-  </Style>
 
   <Style Selector="Border.hueband">
     <Setter Property="Height" Value="34" />
