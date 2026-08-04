@@ -27,7 +27,13 @@
             </StackPanel>
 
             <StackPanel Spacing="6">
-              <TextBlock Text="WEIGHT" Classes="plabel" />
+              <StackPanel Classes="plabel-row">
+                <TextBlock Text="WEIGHT" Classes="plabel" />
+                <Border Classes="qmark"
+                        ToolTip.Tip="How often this Recipe is rolled, relative to its siblings — not a percentage. Any positive number works; the book normalises them.">
+                  <TextBlock />
+                </Border>
+              </StackPanel>
               <NumericUpDown Value="{Binding Weight}" Minimum="0" IsEnabled="{Binding WeightEnabled}" />
             </StackPanel>
             <StackPanel Spacing="6">
@@ -36,7 +42,13 @@
             </StackPanel>
 
             <StackPanel Spacing="6">
-              <TextBlock Text="DESTINATION" Classes="plabel" />
+              <StackPanel Classes="plabel-row">
+                <TextBlock Text="DESTINATION" Classes="plabel" />
+                <Border Classes="qmark"
+                        ToolTip.Tip="A Recipe inside a CookBook is stored as recipes/fox.rcp within the .cbk. A Kitchen Recipe is a loose .rcp file you can import into any book later.">
+                  <TextBlock />
+                </Border>
+              </StackPanel>
               <!-- .dest cards, copy from wizard-recipe.html. The mockup's first subtitle names the
                    open cookbook ("VaporPets"); the wizard is not given it, so it states the effect. -->
               <Grid ColumnDefinitions="*,*" ColumnSpacing="8">

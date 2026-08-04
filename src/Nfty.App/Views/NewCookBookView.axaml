@@ -29,12 +29,24 @@
                  .row rather than stacking them full width. -->
             <Grid ColumnDefinitions="132,12,*">
               <StackPanel Grid.Column="0" Spacing="6">
-                <TextBlock Text="SYMBOL" Classes="plabel" />
+                <StackPanel Classes="plabel-row">
+                  <TextBlock Text="SYMBOL" Classes="plabel" />
+                  <Border Classes="qmark"
+                          ToolTip.Tip="The collection's ticker. Convention is 3–5 uppercase characters (VPET, PUNK) — what marketplaces display well. Up to 255; may be left empty.">
+                    <TextBlock />
+                  </Border>
+                </StackPanel>
                 <TextBox Text="{Binding Symbol}" MaxLength="255" PlaceholderText="VP" />
               </StackPanel>
 
               <StackPanel Grid.Column="2" Spacing="6">
-                <TextBlock Text="CANVAS" Classes="plabel" />
+                <StackPanel Classes="plabel-row">
+                  <TextBlock Text="CANVAS" Classes="plabel" />
+                  <Border Classes="qmark"
+                          ToolTip.Tip="Every Recipe and painted layer is validated against this exact size. It can't change once art is added.">
+                    <TextBlock />
+                  </Border>
+                </StackPanel>
                 <!-- Width / aspect lock / height, with the lock centred between the two fields.
                      Star-sized rather than fixed: Fluent's spinner is a wide side-by-side pair
                      (Known deviation - the mockup's .stepr is a 20px column we cannot reach from a

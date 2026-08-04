@@ -36,7 +36,13 @@
             </StackPanel>
 
             <StackPanel Spacing="6">
-              <TextBlock Text="KIND" Classes="plabel" />
+              <StackPanel Classes="plabel-row">
+                <TextBlock Text="KIND" Classes="plabel" />
+                <Border Classes="qmark"
+                        ToolTip.Tip="How this layer becomes pixels. Dynamic and Static are grayscale value-maps that get colorized; Custom is full-colour art composited untouched. This cannot be changed later without repainting.">
+                  <TextBlock />
+                </Border>
+              </StackPanel>
               <!-- .kinds: three equal-width cards, copy verbatim from wizard-ingredient.html -->
               <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
                 <RadioButton Grid.Column="0" Classes="choice" GroupName="Kind" IsChecked="{Binding IsKindDynamic}">
@@ -69,7 +75,13 @@
             <StackPanel Spacing="8" IsVisible="{Binding ShowColourRange}">
               <StackPanel Spacing="4">
                 <Grid ColumnDefinitions="*,Auto">
-                  <TextBlock Grid.Column="0" Text="HUE RANGE" Classes="plabel" VerticalAlignment="Center" />
+                  <StackPanel Grid.Column="0" Classes="plabel-row">
+                    <TextBlock Text="HUE RANGE" Classes="plabel" />
+                    <Border Classes="qmark"
+                            ToolTip.Tip="The band hue and saturation are rolled from. Refine it — and add more weighted ranges — in the ingredient editor.">
+                      <TextBlock />
+                    </Border>
+                  </StackPanel>
                   <TextBlock Grid.Column="1" Classes="cv" Text="{Binding HueRangeText}" />
                 </Grid>
                 <Panel>
@@ -93,7 +105,13 @@
             </StackPanel>
 
             <StackPanel Spacing="6" IsVisible="{Binding ShowFixedColour}">
-              <TextBlock Text="FIXED COLOUR" Classes="plabel" />
+              <StackPanel Classes="plabel-row">
+                <TextBlock Text="FIXED COLOUR" Classes="plabel" />
+                <Border Classes="qmark"
+                        ToolTip.Tip="Needs an explicit prefix — hex:, rgb:, hsl: or hsv:. A bare value is rejected, never guessed.">
+                  <TextBlock />
+                </Border>
+              </StackPanel>
               <TextBox PlaceholderText="hex:d6249f" Text="{Binding FixedColor}" />
             </StackPanel>
 
@@ -121,7 +139,13 @@
 
             <!-- A loose ingredient has no cookbook to inherit the canvas from, so it must state one. -->
             <StackPanel Spacing="6" IsVisible="{Binding ShowCanvas}">
-              <TextBlock Text="CANVAS" Classes="plabel" />
+              <StackPanel Classes="plabel-row">
+                <TextBlock Text="CANVAS" Classes="plabel" />
+                <Border Classes="qmark"
+                        ToolTip.Tip="A loose Ingredient has no CookBook to inherit from, so you must choose. Import rejects a mismatch rather than resampling — resizing a value-map would soften the art the DNA was built on.">
+                  <TextBlock />
+                </Border>
+              </StackPanel>
               <TextBox PlaceholderText="512x512" Text="{Binding CanvasSize}" />
             </StackPanel>
           </StackPanel>
