@@ -1,15 +1,17 @@
 # GUI visual-polish — running status
 
-Living handoff for `feature/gui-visual-polish`. Read this **with**
-`2026-08-01-nfty-gui-visual-audit.md`, which is the source of truth for what each slice must
-achieve. This file only records where the work has got to.
+Record of the visual-polish pass (slice E). Read this **with**
+`2026-08-01-nfty-gui-visual-audit.md`, which is the source of truth for what each slice had to
+achieve. This file records where the work got to and, more usefully, what it cost to learn.
 
-Last updated: 2026-08-04, mid Slice 12.
+Last updated: 2026-08-04. **All 12 slices complete. Merged to `main` (45 commits).**
 
 ## State
 
-- Branch: `feature/gui-visual-polish`, **35 commits ahead of `main`, not merged**. Clean tree.
-- Build: 0 warnings, 0 errors. Tests: **Cli 42 / App 256 / Core 549**, all green.
+- **Done and merged.** Build: 0 warnings, 0 errors. Tests: **Cli 42 / App 262 / Core 549**.
+- What remains open is deliberate and listed under "Known deviations" plus the "Not done" list at
+  the end of the Slice 12 section. Nothing there is an unlogged defect.
+- The audit scored the app **~55%** at the start ("structurally recognisable but not close to 1:1").
 - **Avalonia is 12.1.1** (was 11.2.3). Verified by pixel-diffing all frames against a pre-upgrade
   baseline: no ControlTheme broke, all 14 `/template/` part names still resolve. 11.3.18 was
   rejected — it loses the mono bold face, dropping 39% of the wordmark's ink to font fallback.
@@ -55,7 +57,7 @@ Last updated: 2026-08-04, mid Slice 12.
 | 9 | Detail views | done |
 | 10 | Ingredient editor rebuild | done |
 | 11 | Help sheet | done |
-| 12 | **Final sweep** | **in progress — see below** |
+| 12 | Final sweep | done |
 
 ### Slice 12 — what has been closed so far (2026-08-04)
 
@@ -87,7 +89,22 @@ theme-stuck card gradients (see the new Critical note under Known deviations); `
 `8 × 8` canvas formatting; `SATURATION` spelled out; the `cwmodel` chip no longer repeating the
 value-map aside.
 
-**Still open, roughly worst first:**
+**All closed since.** The detail pane header (both pane hairlines now land at y=98, previously 98 and
+74); identity chips as label+value with `colorize` added and the redundant Name chip dropped; rule
+chips losing the invented WHEN/THEN/WITH and showing resolved **names** rather than raw ids; Custom
+colorways getting its own swatch-and-note branch; the die-face reroll glyph; the rule-count pill
+replacing a button whose command body was empty; and the New Recipe resulting-mix readout.
+
+### Not done, and why
+
+- **`target supply` chip** — nothing in the model carries a target supply. Needs modelling first.
+- **`status ● Valid` chip** — would need `Validator` wired into the detail pane. Note the status bar
+  *already* prints "Valid" unconditionally, without validating anything; that is worth fixing
+  together with this rather than adding a second unchecked claim.
+- **The mockup's wide left-aligned `?` popover** — Avalonia's stock ToolTip is narrower and follows
+  the pointer. The affordance and the copy are faithful; the popover's shape is not.
+
+**Superseded — the original list, kept for provenance:**
 
 - **[High] The detail pane has no header row.** `ExplorerView.axaml` wraps `CurrentDetail` in a bare
   `Border.pane last` with no `.pane-h`. The mockup's `.pane-h.detail-h` is a 41px band with a type
