@@ -474,6 +474,20 @@
     <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
     <Setter Property="BorderThickness" Value="0,0,0,1" />
   </Style>
+  <!-- .vtag: the detail header's right-aligned type chip. Text is written already-uppercased in the
+       ViewModel because Avalonia has no text-transform. -->
+  <Style Selector="Border.vtag">
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="Padding" Value="8,3" />
+  </Style>
+  <Style Selector="Border.vtag > TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="LetterSpacing" Value="1.0" />   <!-- .1em at 10px -->
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
   <!-- .hcount: the right-aligned count that trails a pane header. -->
   <Style Selector="TextBlock.hcount">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />

@@ -82,6 +82,62 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         _ => "Add",
     };
 
+    // ---- detail pane header (explorer.html .pane-h.detail-h) ----------------------------------
+    // The detail pane had no header at all, so its content started 25px above the Contents pane's
+    // and the two panes visibly failed to line up. Derived from the selection rather than from a
+    // surface each detail ViewModel implements: the Explorer already holds both the node and its
+    // domain object, and the mockup's own header is likewise a function of what is selected.
+
+    /// <summary>Drives which type glyph the header shows; null hides the whole band.</summary>
+    public ExplorerNodeKind? DetailKind => SelectedNode?.Kind;
+    public bool IsDetailCookBook => DetailKind == ExplorerNodeKind.CookBook;
+    public bool IsDetailRecipe => DetailKind == ExplorerNodeKind.Recipe;
+    public bool IsDetailIngredient => DetailKind == ExplorerNodeKind.Ingredient;
+
+    /// <summary>Mockup: the cookbook/recipe name, and for an ingredient "recipe › ingredient".
+    /// Uppercased here because Avalonia has no text-transform and the mockup's .pane-h applies
+    /// `text-transform: uppercase` to this band. That it is deliberate rather than incidental is
+    /// clear from .dcount, which explicitly opts back OUT with `text-transform: none` while the
+    /// title does not — confirmed against the rendered mockup, where "Aurora › Body" computes to
+    /// uppercase. Invariant casing so the display never varies by machine locale.</summary>
+    public string DetailTitle => (SelectedNode?.Domain switch
+    {
+        LoadedCookBook b => b.Manifest.Name,
+        LoadedRecipe r => r.Manifest.Name,
+        (LoadedRecipe r, LoadedIngredient i) => $"{r.Manifest.Name} › {i.Manifest.Name}",
+        _ => SelectedNode?.Name ?? "",
+    }).ToUpperInvariant();
+
+    /// <summary>Mockup: "N recipes" / "N layers" / "N variants" beside the title.</summary>
+    public string DetailCount => SelectedNode?.Domain switch
+    {
+        LoadedCookBook b => Pluralize(b.Recipes.Count, "recipe"),
+        LoadedRecipe r => Pluralize(r.Ingredients.Count, "layer"),
+        (LoadedRecipe, LoadedIngredient i) => Pluralize(i.Manifest.Variants.Count, "variant"),
+        _ => "",
+    };
+
+    /// <summary>The right-aligned .vtag chip. Written already-uppercased — Avalonia has no
+    /// text-transform, and the mockup uppercases this in CSS.</summary>
+    public string DetailTag => SelectedNode?.Kind switch
+    {
+        ExplorerNodeKind.CookBook => "COOKBOOK",
+        ExplorerNodeKind.Recipe => "RECIPE",
+        ExplorerNodeKind.Ingredient => "INGREDIENT",
+        _ => "",
+    };
+
+    private void RefreshDetailHeader()
+    {
+        OnPropertyChanged(nameof(DetailKind));
+        OnPropertyChanged(nameof(IsDetailCookBook));
+        OnPropertyChanged(nameof(IsDetailRecipe));
+        OnPropertyChanged(nameof(IsDetailIngredient));
+        OnPropertyChanged(nameof(DetailTitle));
+        OnPropertyChanged(nameof(DetailCount));
+        OnPropertyChanged(nameof(DetailTag));
+    }
+
     public ExplorerViewModel(LoadedCookBook book, INavigationService nav, IDialogService dialogs,
         INotYetWired notify, IImageBridge bridge,
         Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel> editorFactory,
@@ -133,6 +189,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
             && oldValue.Id == newValue.Id && ReferenceEquals(oldValue.Domain, newValue.Domain)) return;
 
         OnPropertyChanged(nameof(AddLabel));
+        RefreshDetailHeader();
         (CurrentDetail as IDisposable)?.Dispose();
         CurrentDetail = newValue?.Kind switch
         {

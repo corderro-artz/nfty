@@ -107,7 +107,34 @@
       </Border>
 
       <Border Grid.Column="1" Classes="pane last">
-        <ContentControl Content="{Binding CurrentDetail}" />
+        <Grid RowDefinitions="Auto,*">
+          <!-- .pane-h.detail-h: the same 41px band the Contents pane carries, so the two panes'
+               content starts on the same line. Without it the detail body began 25px higher and the
+               paired panes visibly failed to align. Type glyph, title, item count, then the view tag
+               pushed right by the star column. -->
+          <Border Grid.Row="0" Classes="pane-hrow"
+                  IsVisible="{Binding DetailKind, Converter={x:Static conv:ObjectConverters.IsNotNull}}">
+            <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" ColumnSpacing="8">
+              <Panel Grid.Column="0" VerticalAlignment="Center">
+                <Path Classes="ico sm" Data="{StaticResource IconTypeCookBook}"
+                      IsVisible="{Binding IsDetailCookBook}" />
+                <Path Classes="ico sm" Data="{StaticResource IconTypeRecipe}"
+                      IsVisible="{Binding IsDetailRecipe}" />
+                <Path Classes="ico sm" Data="{StaticResource IconTypeIngredient}"
+                      IsVisible="{Binding IsDetailIngredient}" />
+              </Panel>
+              <TextBlock Grid.Column="1" Text="{Binding DetailTitle}" Classes="pane-h"
+                         VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+              <TextBlock Grid.Column="2" Text="{Binding DetailCount}" Classes="hcount"
+                         HorizontalAlignment="Left" />
+              <Border Grid.Column="4" Classes="vtag" VerticalAlignment="Center">
+                <TextBlock Text="{Binding DetailTag}" />
+              </Border>
+            </Grid>
+          </Border>
+
+          <ContentControl Grid.Row="1" Content="{Binding CurrentDetail}" />
+        </Grid>
       </Border>
     </Grid>
   </Grid>
