@@ -170,7 +170,7 @@
               <Border Classes="kbd keys"><TextBlock Text="Tab" /></Border><TextBlock Text="move fields" Classes="keyhint" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="4">
-              <Border Classes="kbd keys"><TextBlock Text="Enter" /></Border><TextBlock Text="create" Classes="keyhint" />
+              <Border Classes="kbd keys"><TextBlock Text="Enter" /></Border><TextBlock Text="create &amp; paint" Classes="keyhint" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="4">
               <Border Classes="kbd keys"><TextBlock Text="Esc" /></Border><TextBlock Text="cancel" Classes="keyhint" />
@@ -181,7 +181,9 @@
             <Button Command="{Binding CreateCommand}" Classes="accent">
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <Path Classes="ico sm" Data="{StaticResource IconCheck}" />
-                <TextBlock Text="Create Ingredient" />
+                <!-- "Create & paint", not "Create Ingredient": this wizard hands straight to the
+                     ingredient editor, and the mockup's wording is what signals that. -->
+                <TextBlock Text="Create &amp; paint" />
               </StackPanel>
             </Button>
           </StackPanel>
