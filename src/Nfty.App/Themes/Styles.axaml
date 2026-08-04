@@ -557,12 +557,7 @@
   <!-- .body's accent glow: a soft radial wash from the top edge. -->
   <Style Selector="Border.modal-body">
     <Setter Property="Padding" Value="24,30" />
-    <Setter Property="Background">
-      <RadialGradientBrush Center="50%,0%" GradientOrigin="50%,0%" RadiusX="120%" RadiusY="90%">
-        <GradientStop Color="{DynamicResource AccentWashColor}" Offset="0" />
-        <GradientStop Color="{DynamicResource AccentWashFadeColor}" Offset="0.55" />
-      </RadialGradientBrush>
-    </Setter>
+    <Setter Property="Background" Value="{DynamicResource ModalGlowBrush}" />
   </Style>
   <!-- Declared AFTER Border.modal-body: Avalonia is last-one-wins at equal specificity, so a
        narrower opt-out placed above the blanket rule silently loses. New Ingredient only. -->
@@ -1208,12 +1203,7 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
     <Setter Property="Padding" Value="16,14" />
-    <Setter Property="Background">
-      <LinearGradientBrush StartPoint="50%,0%" EndPoint="50%,100%">
-        <GradientStop Color="{DynamicResource BgAlt2Color}" Offset="0" />
-        <GradientStop Color="{DynamicResource PanelColor}" Offset="1" />
-      </LinearGradientBrush>
-    </Setter>
+    <Setter Property="Background" Value="{DynamicResource CardGradientBrush}" />
   </Style>
   <Style Selector="TextBlock.idname">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
