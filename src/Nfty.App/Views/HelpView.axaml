@@ -44,9 +44,8 @@
             <Border Width="1" Height="18" Background="{DynamicResource LineStrongBrush}" />
             <TextBlock Classes="slbl sh" Text="QUICK REFERENCE" Margin="0" />
           </StackPanel>
-          <Button Grid.Column="1" Classes="esc" Command="{Binding CloseCommand}" ToolTip.Tip="Close — Esc">
-            <TextBlock Text="ESC" />
-          </Button>
+          <Button Grid.Column="1" Classes="esc" Content="ESC" Command="{Binding CloseCommand}"
+                  ToolTip.Tip="Close — Esc" />
         </Grid>
       </Border>
 

@@ -1485,9 +1485,10 @@
   <Style Selector="Button.esc:pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
   </Style>
-  <!-- LetterSpacing is a TextBlock property, not an attached one, so the tracked label has to be a
-       real TextBlock inside the button rather than a Content string. -->
-  <Style Selector="Button.esc > TextBlock">
+  <!-- Avalonia 12 makes LetterSpacing settable on the control (TemplatedControl.LetterSpacing, and
+       inheritable via TextElement), so the tracked label no longer has to be a real TextBlock inside
+       the button - a plain Content string now tracks correctly. -->
+  <Style Selector="Button.esc">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="10" />
     <Setter Property="LetterSpacing" Value="1.0" />   <!-- .1em at 10px -->
@@ -1506,18 +1507,17 @@
        share one ColumnDefinitions instance across every entry). .g is the 16px-tall gutter cell:
        Path.ico sets an explicit Width, which under the default Stretch alignment would pin the
        glyph to the cell's left edge rather than centring it in the 20px column. -->
+  <!-- The 10px gap between gutter and content is ColumnSpacing, set on the grid itself. It used to be
+       a left margin on whatever occupied the content column, because Grid.ColumnSpacing only arrived
+       in Avalonia 11.3 and this app was on 11.2.3; the app is on 12.1.1 now, so the workaround and
+       the rule that carried it are gone. -->
   <Style Selector="Grid.sh-e">
     <Setter Property="Margin" Value="0,0,0,11" />
+    <Setter Property="ColumnSpacing" Value="10" />
   </Style>
   <Style Selector="Grid.sh-kline">
     <Setter Property="Margin" Value="0,0,0,9" />
-  </Style>
-  <!-- The 10px gap between gutter and content. Grid.ColumnSpacing only arrived in Avalonia 11.3 and
-       this app targets 11.2.3, so the gap is a left margin on whatever occupies the content column.
-       Declared before the .sh-t/.sh-kdesc rules below and never re-set by them, so nothing competes
-       for Margin on those elements — the rules variant's 1px nudge is a Padding, as in the CSS. -->
-  <Style Selector="Grid.sh-e > StackPanel, Grid.sh-e > TextBlock, Grid.sh-kline > TextBlock">
-    <Setter Property="Margin" Value="10,0,0,0" />
+    <Setter Property="ColumnSpacing" Value="10" />
   </Style>
   <!-- `align-items:start`. Avalonia's ArrangeCore treats Stretch as Center once an explicit Height
        is set, so without this the 16px gutter cell floats to the middle of a two-line entry and the
