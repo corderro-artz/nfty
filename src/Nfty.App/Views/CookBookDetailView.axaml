@@ -13,11 +13,29 @@
         </StackPanel>
         <TextBlock Classes="iddesc" Text="{Binding Description}"
                    IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-        <!-- id-chips: explorer.html .cbk-id .idchips -->
+        <!-- id-chips: explorer.html .cbk-id .idchips. Each is a muted label plus a bold value. The
+             book's own Name is deliberately NOT a chip - the mockup has no such chip, and the
+             heading directly above already says it. "target supply" is the one mockup chip still
+             missing: nothing in the model carries a target yet. -->
         <StackPanel Orientation="Horizontal" Spacing="7">
-          <Border Classes="idchip"><TextBlock Classes="mono" Text="{Binding Name}" /></Border>
-          <Border Classes="idchip"><TextBlock Classes="mono" Text="{Binding Symbol}" /></Border>
-          <Border Classes="idchip"><TextBlock Classes="mono" Text="{Binding CanvasText, StringFormat='canvas {0}'}" /></Border>
+          <Border Classes="idchip">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <TextBlock Classes="ck" Text="symbol" />
+              <TextBlock Classes="cvl" Text="{Binding Symbol}" />
+            </StackPanel>
+          </Border>
+          <Border Classes="idchip">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <TextBlock Classes="ck" Text="canvas" />
+              <TextBlock Classes="cvl" Text="{Binding CanvasText}" />
+            </StackPanel>
+          </Border>
+          <Border Classes="idchip" ToolTip.Tip="Colour model used to colorize grayscale value-maps">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <TextBlock Classes="ck" Text="colorize" />
+              <TextBlock Classes="cvl" Text="{Binding ColorizeText}" />
+            </StackPanel>
+          </Border>
         </StackPanel>
       </StackPanel>
     </Border>

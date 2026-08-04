@@ -61,7 +61,7 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
                 ingById[id].Manifest.Kind.ToString(), ingById[id].Manifest.Variants.Count))
             .ToList();
 
-        Rules = recipe.Manifest.Rules.Select(MapRule).ToList();
+        Rules = recipe.Manifest.Rules.Select(r => MapRule(r, recipe)).ToList();
 
         var ordered = recipe.Manifest.LayerOrder.Where(ingById.ContainsKey).Select(id => ingById[id]).ToList();
         Factors = ordered
@@ -98,10 +98,27 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private static RuleRow MapRule(IncompatibilityRule rule) => new(
+    private static RuleRow MapRule(IncompatibilityRule rule, LoadedRecipe recipe) => new(
         rule.Type == RuleType.Exclude,
-        new RuleTargetRow(rule.When.IngredientId, rule.When.VariantId),
-        rule.Targets.Select(t => new RuleTargetRow(t.IngredientId, t.VariantId)).ToList());
+        Target(rule.When.IngredientId, rule.When.VariantId, recipe),
+        rule.Targets.Select(t => Target(t.IngredientId, t.VariantId, recipe)).ToList());
+
+    /// <summary>Resolves a rule's stored IDs to the names the mockup's rule chips show. Rules
+    /// reference ids because that is what survives a rename in the archive; a chip that prints the
+    /// id is only correct for books whose ids happen to equal their names, which is true of the
+    /// hand-authored test fixtures and not of real art. Falls back to the id when the reference
+    /// dangles, since a rule pointing at a deleted layer should still be visible rather than blank —
+    /// that is exactly the state the user needs to see in order to fix it.</summary>
+    private static RuleTargetRow Target(string ingredientId, string variantId, LoadedRecipe recipe)
+    {
+        var ing = recipe.Ingredients.FirstOrDefault(i => i.Manifest.Id == ingredientId);
+        var variant = ing?.Manifest.Variants.FirstOrDefault(v => v.Id == variantId);
+        // The ingredient caption is uppercased here: the mockup's .rcl carries text-transform,
+        // and Avalonia has none. The variant keeps its own casing - .rcv does not transform.
+        return new RuleTargetRow(
+            (ing?.Manifest.Name ?? ingredientId).ToUpperInvariant(),
+            variant?.Name ?? variantId);
+    }
 
     [RelayCommand]
     private void Reroll()

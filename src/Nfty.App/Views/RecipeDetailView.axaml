@@ -120,43 +120,27 @@
                       <Path Classes="ico xs rop require" Data="{StaticResource IconMarkRequire}" IsVisible="{Binding !IsExclude}" />
                     </Panel>
                   </Border>
+                  <!-- .rpair: two stacked .rchip, each a tiny muted ingredient caption over a bold
+                       variant headline. The mockup has NO "WHEN"/"THEN"/"WITH" words - which pair is
+                       the condition and which the consequence is carried by stacking order plus the
+                       mark's own tooltip, and the mark is already right there in the gutter. The
+                       words were also competing with the variant name at the same weight, which is
+                       the one thing in the chip the eye needs to land on. -->
                   <StackPanel Spacing="5">
                     <Border Classes="rchip" HorizontalAlignment="Left">
-                      <StackPanel Orientation="Horizontal" Spacing="6">
-                        <TextBlock Classes="rcl" Text="WHEN" />
-                        <StackPanel Orientation="Horizontal" Spacing="0">
-                          <TextBlock Classes="rcv" Text="{Binding When.Ingredient, StringFormat='{}{0}:'}" />
-                          <TextBlock Classes="rcv" Text="{Binding When.Variant}" />
-                        </StackPanel>
+                      <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Bottom">
+                        <TextBlock Classes="rcl" Text="{Binding When.Ingredient}" />
+                        <TextBlock Classes="rcv" Text="{Binding When.Variant}" />
                       </StackPanel>
                     </Border>
 
-                    <ItemsControl ItemsSource="{Binding Targets}" IsVisible="{Binding IsExclude}">
+                    <ItemsControl ItemsSource="{Binding Targets}">
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:RuleTargetRow">
                           <Border Classes="rchip" HorizontalAlignment="Left" Margin="0,0,0,5">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                              <TextBlock Classes="rcl" Text="THEN" />
-                              <StackPanel Orientation="Horizontal" Spacing="0">
-                                <TextBlock Classes="rcv" Text="{Binding Ingredient, StringFormat='{}{0}:'}" />
-                                <TextBlock Classes="rcv" Text="{Binding Variant}" />
-                              </StackPanel>
-                            </StackPanel>
-                          </Border>
-                        </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-
-                    <ItemsControl ItemsSource="{Binding Targets}" IsVisible="{Binding !IsExclude}">
-                      <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:RuleTargetRow">
-                          <Border Classes="rchip" HorizontalAlignment="Left" Margin="0,0,0,5">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                              <TextBlock Classes="rcl" Text="WITH" />
-                              <StackPanel Orientation="Horizontal" Spacing="0">
-                                <TextBlock Classes="rcv" Text="{Binding Ingredient, StringFormat='{}{0}:'}" />
-                                <TextBlock Classes="rcv" Text="{Binding Variant}" />
-                              </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Bottom">
+                              <TextBlock Classes="rcl" Text="{Binding Ingredient}" />
+                              <TextBlock Classes="rcv" Text="{Binding Variant}" />
                             </StackPanel>
                           </Border>
                         </DataTemplate>

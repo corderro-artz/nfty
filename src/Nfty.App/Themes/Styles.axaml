@@ -782,6 +782,19 @@
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
     <Setter Property="Padding" Value="7,3" />
   </Style>
+  <!-- The mockup's idchips are "muted label + bold value" (`symbol <b>VPET</b>`), not one flat run.
+       The label carries the meaning, so it must not read at the same weight as the value. -->
+  <Style Selector="Border.idchip TextBlock.ck">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="Border.idchip TextBlock.cvl">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+  </Style>
 
   <!-- Explorer tree: kind-coloured glyph (D/S/C) on ingredient nodes (mockup .kmark, explorer.html:123-127). -->
   <Style Selector="TextBlock.kmark">

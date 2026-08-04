@@ -37,6 +37,13 @@ public partial class CookBookDetailViewModel : ViewModelBase
     public string Symbol { get; }
     public string Description { get; }
     public string CanvasText { get; }
+
+    /// <summary>The mockup's "colorize &lt;model&gt;" chip. A CookBook has no colour model of its own —
+    /// it lives on each colorized Ingredient — so this reports what the book's dynamic and static
+    /// layers actually use, and says "mixed" when they disagree rather than silently picking one.
+    /// A book of purely Custom layers colorizes nothing, hence the em-dash.</summary>
+    public string ColorizeText { get; }
+
     public int RecipeCount { get; }
     public int LayerCount { get; }
     public int VariantCount { get; }
@@ -52,6 +59,21 @@ public partial class CookBookDetailViewModel : ViewModelBase
         Description = book.Manifest.Collection.Description;
         // "1000 × 1000" with a real multiplication sign and spaces, as the mockup renders it.
         CanvasText = $"{book.Manifest.Canvas.Width} × {book.Manifest.Canvas.Height}";
+
+        var models = book.Recipes
+            .SelectMany(r => r.Ingredients)
+            .Select(i => i.Manifest.Colorization?.Model)
+            .Where(m => m is not null)
+            .Select(m => m!.Value.ToString().ToLowerInvariant())
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(m => m, StringComparer.Ordinal)   // Ordinal: this reaches the UI, never an output file
+            .ToList();
+        ColorizeText = models.Count switch
+        {
+            0 => Unknown,
+            1 => models[0],
+            _ => "mixed",
+        };
         RecipeCount = book.Recipes.Count;
         LayerCount = book.Recipes.Sum(r => r.Ingredients.Count);
         VariantCount = book.Recipes.Sum(r => r.Ingredients.Sum(i => i.Manifest.Variants.Count));
