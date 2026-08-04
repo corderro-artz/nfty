@@ -15,7 +15,7 @@ namespace Nfty.App.Tests;
 /// </summary>
 public class ExplorerAddGuidanceTests
 {
-    private static (ExplorerViewModel vm, FakeNotYetWired notify, StatusService status, CookBookSession session, string path)
+    private static (ExplorerViewModel vm, FakeNotYetWired notify, StatusService status, CookBookSession session, string path, FakeNav nav)
         Explorer()
     {
         (var path, var session, _, _) = IngredientEditorSaveTests.OnDisk();
@@ -26,13 +26,13 @@ public class ExplorerAddGuidanceTests
             ExplorerViewModelTests.CookFactory(dialogs), session,
             new FilePickerService(),
             ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs), status);
-        return (vm, notify, status, session, path);
+        return (vm, notify, status, session, path, nav);
     }
 
     [AvaloniaFact]
     public async Task Add_while_locked_explains_the_lock_and_never_claims_to_be_unwired()
     {
-        var (vm, notify, status, session, path) = Explorer();
+        var (vm, notify, status, session, path, _) = Explorer();
         try
         {
             vm.SelectNodeCommand.Execute(vm.Root);      // cookbook root, edit-lock still ON
@@ -49,13 +49,20 @@ public class ExplorerAddGuidanceTests
     [AvaloniaFact]
     public async Task Add_on_an_ingredient_opens_the_editor_that_owns_variants()
     {
-        var (vm, notify, status, session, path) = Explorer();
+        var (vm, notify, status, session, path, nav) = Explorer();
         try
         {
             vm.ToggleLockCommand.Execute(null);                       // unlock
             var ing = vm.Root.Children[0].Children[0];
             vm.SelectNodeCommand.Execute(ing);
             await vm.AddCommand.ExecuteAsync(null);
+
+            // The assertion that gives this test its name. Without it the test passes with the
+            // ingredient branch of Add() DELETED, because the default fallback also speaks through
+            // status and also leaves the not-wired channel alone - so "notify is null AND status
+            // said something" is satisfied by doing nothing useful. Verified: with that branch
+            // removed, the two assertions below stayed green and only this one goes red.
+            Assert.IsType<IngredientEditorViewModel>(nav.Current);
 
             Assert.Null(notify.Last);                                 // not a "not wired" case
             Assert.NotNull(status.Last);
@@ -67,7 +74,7 @@ public class ExplorerAddGuidanceTests
     [AvaloniaFact]
     public void Clicking_a_layer_selects_that_ingredient_instead_of_reporting_a_stub()
     {
-        var (vm, notify, status, session, path) = Explorer();
+        var (vm, notify, status, session, path, _) = Explorer();
         try
         {
             var ingId = vm.Root.Children[0].Children[0].Id;
@@ -85,7 +92,7 @@ public class ExplorerAddGuidanceTests
     [AvaloniaFact]
     public void A_freshly_opened_explorer_selects_the_cookbook_so_add_has_a_target()
     {
-        var (vm, notify, status, session, path) = Explorer();
+        var (vm, notify, status, session, path, _) = Explorer();
         try
         {
             Assert.NotNull(vm.SelectedNode);
@@ -102,10 +109,14 @@ public class ExplorerAddGuidanceTests
     [AvaloniaFact]
     public void Toggling_the_lock_announces_and_describes_the_new_state()
     {
-        var (vm, notify, status, session, path) = Explorer();
+        var (vm, notify, status, session, path, _) = Explorer();
         try
         {
+            // "unlocked" CONTAINS "locked", so asserting the locked tip merely contains "locked"
+            // passes in both states and cannot tell them apart. Assert the absence of the other word.
+            Assert.DoesNotContain("unlocked", vm.LockTip, System.StringComparison.OrdinalIgnoreCase);
             Assert.Contains("locked", vm.LockTip, System.StringComparison.OrdinalIgnoreCase);
+
             vm.ToggleLockCommand.Execute(null);
             Assert.True(vm.IsEditing);
             Assert.Contains("unlocked", vm.LockTip, System.StringComparison.OrdinalIgnoreCase);
