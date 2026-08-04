@@ -16,7 +16,8 @@ public class CookBookDetailViewModelTests
         var book = ExplorerViewModelTests.TwoRecipeBook();   // cat[bg,aura]+dog[body], custom kind, 1 variant each
         var vm = new CookBookDetailViewModel(book, new FakeNotYetWired(), () => { });
         Assert.Equal("VaporPets", vm.Name);
-        Assert.Equal("8x8", vm.CanvasText);
+        // A real multiplication sign with spaces, as explorer.html renders the canvas chip - not "8x8".
+        Assert.Equal("8 × 8", vm.CanvasText);
         Assert.Equal(2, vm.RecipeCount);
         Assert.Equal(3, vm.LayerCount);      // bg, aura, body
         Assert.Equal(3, vm.VariantCount);    // one variant each

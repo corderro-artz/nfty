@@ -134,7 +134,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
         if (range is not null)
         {
             list.Add(new ColorwayAxis("HUE", $"{range.HueMin:0}–{range.HueMax:0}°", false));
-            list.Add(new ColorwayAxis("SAT", $"{range.SatMin:0}–{range.SatMax:0}%", false));
+            list.Add(new ColorwayAxis("SATURATION", $"{range.SatMin:0}–{range.SatMax:0}%", false));
         }
         else
         {

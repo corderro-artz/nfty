@@ -50,7 +50,8 @@ public partial class CookBookDetailViewModel : ViewModelBase
         Name = book.Manifest.Name;
         Symbol = book.Manifest.Collection.Symbol;
         Description = book.Manifest.Collection.Description;
-        CanvasText = $"{book.Manifest.Canvas.Width}x{book.Manifest.Canvas.Height}";
+        // "1000 × 1000" with a real multiplication sign and spaces, as the mockup renders it.
+        CanvasText = $"{book.Manifest.Canvas.Width} × {book.Manifest.Canvas.Height}";
         RecipeCount = book.Recipes.Count;
         LayerCount = book.Recipes.Sum(r => r.Ingredients.Count);
         VariantCount = book.Recipes.Sum(r => r.Ingredients.Sum(i => i.Manifest.Variants.Count));

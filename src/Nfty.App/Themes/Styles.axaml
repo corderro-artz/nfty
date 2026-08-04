@@ -255,6 +255,14 @@
     <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
   </Style>
+  <!-- The unlocked wash has to be set on the template part too. Setting it on the Button (the
+       Button.icon.unlocked rule above) is silently clobbered by the rest-state rule, which targets
+       PART_ContentPresenter directly and therefore wins whatever classes the Button carries — so
+       only the icon's stroke was changing and the toggle's "editing" wash never rendered at all.
+       Declared after the rest-state rule so it wins at equal specificity. -->
+  <Style Selector="Button.icon.unlocked /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+  </Style>
   <Style Selector="Button.icon:pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
   </Style>

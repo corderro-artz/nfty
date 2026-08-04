@@ -80,7 +80,9 @@
 
       <!-- .cspace: how each recipe's combination count is arrived at, layer by layer. -->
       <StackPanel Grid.Column="2">
-        <TextBlock Classes="sub-h" Text="COMBINATION SPACE" Margin="0,0,0,2" />
+        <!-- "DNA space" is what explorer.html renders; "combination space" appears only in a CSS
+             comment there, never as visible text. -->
+        <TextBlock Classes="sub-h" Text="DNA SPACE" Margin="0,0,0,2" />
         <ItemsControl ItemsSource="{Binding Recipes}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:RecipeShareRow">
