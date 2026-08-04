@@ -51,6 +51,16 @@ public partial class CookBookDetailViewModel : ViewModelBase
     public string StatusText { get; }
     public string? StatusTip { get; }
 
+    /// <summary>The mockup's "target supply" chip. Em-dash when the book has not committed to a
+    /// number — an unset target is a real state, not zero.</summary>
+    public string TargetSupplyText { get; }
+    public bool HasTargetSupply { get; }
+
+    /// <summary>The cookbar's sentence. With a target it reads the mockup's way — "Target supply 500
+    /// of 2,822,400,000 unique DNA" — which is the comparison that actually matters: whether the
+    /// intent fits in the space the book can generate. Without one it just states the space.</summary>
+    public string CookBarText { get; }
+
     public int RecipeCount { get; }
     public int LayerCount { get; }
     public int VariantCount { get; }
@@ -100,6 +110,13 @@ public partial class CookBookDetailViewModel : ViewModelBase
 
         UniqueDnaText = space is null ? Unknown
             : space.IsExact ? space.Total.ToString() : $"more than {space.Total}";
+
+        var target = book.Manifest.TargetSupply;
+        HasTargetSupply = target is not null;
+        TargetSupplyText = target?.ToString("N0") ?? Unknown;
+        CookBarText = target is null
+            ? $"{UniqueDnaText} unique DNA available"
+            : $"Target supply {target.Value:N0} of {UniqueDnaText} unique DNA";
 
         double totalWeight = book.Manifest.RecipeWeights.Values.Sum();
         Recipes = book.Recipes.Select(r =>

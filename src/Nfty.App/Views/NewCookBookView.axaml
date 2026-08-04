@@ -64,6 +64,17 @@
             </Grid>
 
             <StackPanel Spacing="6">
+              <StackPanel Classes="plabel-row">
+                <TextBlock Text="TARGET SUPPLY" Classes="plabel" />
+                <Border Classes="qmark"
+                        ToolTip.Tip="How many assets you intend to mint. Optional — leave it at 0 if you have not decided. It is declarative: it never limits a cook, which takes its count from the Cook dialog.">
+                  <TextBlock />
+                </Border>
+              </StackPanel>
+              <NumericUpDown Value="{Binding TargetSupply}" Minimum="0" Increment="100" />
+            </StackPanel>
+
+            <StackPanel Spacing="6">
               <TextBlock Text="DESCRIPTION" Classes="plabel" />
               <TextBox Text="{Binding Description}" AcceptsReturn="True" Height="54"
                        VerticalContentAlignment="Top" Padding="11,7"

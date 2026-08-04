@@ -64,7 +64,8 @@ public partial class LandingViewModel : ViewModelBase
         var manifest = new CookBookManifest(result.DerivedId, result.Name,
             new Dimensions(result.Width, result.Height),
             new Collection(result.Name, result.Description, result.Symbol),
-            new Dictionary<string, double>());   // no recipes yet
+            new Dictionary<string, double>(),   // no recipes yet
+            TargetSupply: result.TargetSupplyOrNull);
         try { CookBookPersistence.WriteNew(path, manifest, Array.Empty<LoadedRecipe>()); }
         catch (Exception ex) { ShowError("Could not save", ex.Message); return; }
 

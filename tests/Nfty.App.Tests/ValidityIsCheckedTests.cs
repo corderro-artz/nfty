@@ -90,4 +90,37 @@ public class ValidityIsCheckedTests
         Assert.NotEqual("Valid", vm.ValidityText);
         Assert.Contains("ghost", vm.ValidityTip!);
     }
+
+    // ---- target supply surfacing ---------------------------------------------------------------
+
+    /// <summary>The target-supply chip and cookbar sentence. Unset is a real state - the book has not
+    /// committed to a number - and must not render as a target of zero.</summary>
+    [AvaloniaFact]
+    public void An_unset_target_supply_hides_the_chip_and_leaves_the_cookbar_alone()
+    {
+        using var book = ExplorerViewModelTests.TwoRecipeBook();
+        var vm = new CookBookDetailViewModel(book, new FakeNotYetWired(), () => { });
+
+        Assert.False(vm.HasTargetSupply);
+        Assert.DoesNotContain("Target supply", vm.CookBarText);
+        Assert.Contains("unique DNA available", vm.CookBarText);
+    }
+
+    [AvaloniaFact]
+    public void A_set_target_supply_shows_the_chip_and_the_mockups_comparison()
+    {
+        using var src = ExplorerViewModelTests.TwoRecipeBook();
+        using var book = new LoadedCookBook
+        {
+            Manifest = src.Manifest with { TargetSupply = 5000 },
+            Recipes = src.Recipes,
+        };
+        var vm = new CookBookDetailViewModel(book, new FakeNotYetWired(), () => { });
+
+        Assert.True(vm.HasTargetSupply);
+        Assert.Equal("5,000", vm.TargetSupplyText);          // grouped, as the mockup formats it
+        // The sentence the cookbar exists for: intent measured against what the book can actually make.
+        Assert.StartsWith("Target supply 5,000 of ", vm.CookBarText);
+        Assert.EndsWith(" unique DNA", vm.CookBarText);
+    }
 }

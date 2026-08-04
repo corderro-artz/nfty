@@ -36,6 +36,13 @@
               <TextBlock Classes="cvl" Text="{Binding ColorizeText}" />
             </StackPanel>
           </Border>
+          <Border Classes="idchip" IsVisible="{Binding HasTargetSupply}"
+                  ToolTip.Tip="How many assets this collection intends to mint">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <TextBlock Classes="ck" Text="target supply" />
+              <TextBlock Classes="cvl" Text="{Binding TargetSupplyText}" />
+            </StackPanel>
+          </Border>
           <Border Classes="idchip" ToolTip.Tip="{Binding StatusTip}">
             <StackPanel Orientation="Horizontal" Spacing="5">
               <TextBlock Classes="ck" Text="status" />
@@ -167,7 +174,7 @@
             Margin="0,18,0,0" Padding="0,15,0,0">
       <Grid ColumnDefinitions="*,Auto">
         <TextBlock Grid.Column="0" Classes="cshare" VerticalAlignment="Center"
-                   Text="{Binding UniqueDnaText, StringFormat='{}{0} unique DNA available'}" />
+                   Text="{Binding CookBarText}" />
         <Button Grid.Column="1" Command="{Binding CookCommand}" Classes="accent">
           <StackPanel Orientation="Horizontal" Spacing="6">
             <Path Classes="ico sm" Data="{StaticResource IconArrowRight}" />

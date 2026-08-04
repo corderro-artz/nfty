@@ -16,6 +16,14 @@ public partial class NewCookBookViewModel : WizardViewModelBase
     [ObservableProperty] private bool _aspectLocked = true;
     [ObservableProperty] private string _description = "";
 
+    /// <summary>How many assets the collection intends to mint. Optional — 0 means "not decided",
+    /// which is a real answer at this point and is stored as null rather than as a target of zero.
+    /// Purely declarative: it never constrains a cook, which takes its count from the Cook dialog.</summary>
+    [ObservableProperty] private int _targetSupply;
+
+    /// <summary>Null when unset, so the manifest omits it and stays a valid schemaVersion-1 archive.</summary>
+    public int? TargetSupplyOrNull => TargetSupply > 0 ? TargetSupply : null;
+
     private double _ratio = 1.0;
     private bool _syncing;
 
