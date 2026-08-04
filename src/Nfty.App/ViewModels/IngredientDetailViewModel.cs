@@ -21,6 +21,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     private readonly INotYetWired _notify;
     private readonly Action _editIngredient;
     private readonly Action? _jumpToRecipe;
+    private readonly IStatusService? _status;
     private readonly Func<bool> _isEditing;
     private readonly IImageBridge _bridge;
     private readonly LoadedIngredient _ing;
@@ -71,11 +72,12 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
 
     public IngredientDetailViewModel(LoadedIngredient ing, LoadedRecipe recipe, LoadedCookBook book,
         IImageBridge bridge, INotYetWired notify, Action editIngredient, Func<bool> isEditing,
-        Action? jumpToRecipe = null)
+        Action? jumpToRecipe = null, IStatusService? status = null)
     {
         _ing = ing; _bridge = bridge;
         _notify = notify; _editIngredient = editIngredient; _isEditing = isEditing;
         _jumpToRecipe = jumpToRecipe;
+        _status = status;
 
         RuleCount = recipe.Manifest.Rules.Count(r =>
             r.When.IngredientId == ing.Manifest.Id || r.Targets.Any(t => t.IngredientId == ing.Manifest.Id));
@@ -193,7 +195,20 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
         old?.Dispose();
     }
 
-    [RelayCommand(CanExecute = nameof(CanEdit))] private void DeleteVariant() => _notify.Report("Delete variant");
+    /// <summary>Opens the editor, which owns variants — and therefore owns deleting one.
+    ///
+    /// This used to call <c>_notify.Report("Delete variant")</c>, which the shell renders as
+    /// "Not wired yet: Delete variant". That was wrong twice over: the button was enabled and
+    /// looked like it worked, and the feature is not unbuilt at all — the editor has a real delete
+    /// with a confirm dialog and undo history. Routing here mirrors what Add does from the
+    /// Explorer: variants live in the editor, so both actions take you to it rather than growing a
+    /// second, separately-persisted deletion path.</summary>
+    [RelayCommand(CanExecute = nameof(CanEdit))]
+    private void DeleteVariant()
+    {
+        _status?.Say("Delete variants in the editor, where the change can be undone.");
+        _editIngredient();
+    }
     /// <summary>Selects the owning recipe, whose Rules panel is where this layer's rules live. Used
     /// to be an empty body behind a permanently-visible "Jump to rules" button - a control that
     /// looked available and did nothing. It is now the .hflag pill, shown only when there is

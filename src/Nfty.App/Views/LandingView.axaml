@@ -58,7 +58,11 @@
       </Button>
       <Panel>
         <Rectangle Classes="dashed btn" />
-        <Button Classes="landing tbtn soon" Command="{Binding OpenSetCommand}">
+        <!-- NOT .soon. landing.html marks this "The Set browser is not built yet" — but it since has
+             been: SetBrowserView ships, OpenSet picks a .set, reads it and navigates. The mockup is
+             describing a state of implementation the app has overtaken, and rendering a working
+             feature as permanently unavailable is a worse error than diverging from the reference. -->
+        <Button Classes="landing tbtn" Command="{Binding OpenSetCommand}">
           <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconOpen}" /><TextBlock Classes="lbl" Text="Open a cooked .set…" /></StackPanel></Grid>
         </Button>
       </Panel>

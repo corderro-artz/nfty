@@ -80,6 +80,28 @@ public class IngredientDetailViewModelTests
         Assert.True(jumped);
     }
 
+    /// <summary>"Delete variant" used to call INotYetWired, which the shell renders as
+    /// "Not wired yet: Delete variant" — while the button sat there enabled, looking like it worked,
+    /// and while the editor had a real delete with a confirm dialog and undo history. It must never
+    /// touch the not-wired channel for a feature that exists.</summary>
+    [AvaloniaFact]
+    public void Delete_variant_opens_the_editor_and_never_claims_to_be_unbuilt()
+    {
+        var (book, recipe, ing) = Fixture();
+        var opened = false;
+        var notify = new FakeNotYetWired();
+        var status = new StatusService();
+        using var vm = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(),
+            notify, () => opened = true, () => true, null, status);
+
+        Assert.True(vm.DeleteVariantCommand.CanExecute(null));   // enabled while editing
+        vm.DeleteVariantCommand.Execute(null);
+
+        Assert.True(opened);                                     // the editor, which owns variants
+        Assert.Null(notify.Last);                                // NOT "not wired yet"
+        Assert.NotNull(status.Last);                             // it explains where deletion lives
+    }
+
     [AvaloniaFact]
     public void Variant_rows_carry_within_recipe_rarity()
     {

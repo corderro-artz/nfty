@@ -102,13 +102,17 @@
        Button.tbtn:disabled rule for a "soon" button that is also genuinely disabled (NewKitchen's
        CanExecute is permanently false) - more classes matched, so it takes precedence, and would
        otherwise be masked by the disabled-state reset. -->
-  <Style Selector="Button.soon">
+  <!-- .soon means the feature does not exist yet, and pairs with CanExecute=Never so the control is
+       genuinely disabled rather than merely looking it. .flat is the same borderless paint with no
+       such claim - for a working button that sits inside a dashed frame. Keeping them apart matters:
+       a working feature wearing .soon tells the user it is unavailable. -->
+  <Style Selector="Button.soon, Button.flat">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
-  <Style Selector="Button.soon /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Button.soon /template/ ContentPresenter#PART_ContentPresenter, Button.flat /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="BorderThickness" Value="0" />
   </Style>
   <Style Selector="Button.tbtn.soon:disabled /template/ ContentPresenter#PART_ContentPresenter">

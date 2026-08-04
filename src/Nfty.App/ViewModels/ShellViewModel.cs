@@ -47,6 +47,9 @@ public partial class ShellViewModel : ViewModelBase
     [RelayCommand] private void Minimize() => MinimizeRequested?.Invoke();
     [RelayCommand] private void ToggleMaximize() => ToggleMaximizeRequested?.Invoke();
     [RelayCommand] private void Close() => CloseRequested?.Invoke();
-    [RelayCommand] private void OpenKitchen() => _notify.Report("New Kitchen");
+    // OpenKitchen was here, bound to nothing in any view - dead the moment the titlebar's Kitchen
+    // chip became a static label. Kitchens are not modelled yet (LandingViewModel's "New Kitchen…"
+    // is CanExecute=Never for the same reason); the command comes back when they are, wired to
+    // something real rather than to the not-wired channel.
     [RelayCommand] private void ToggleTheme() => _theme.Toggle();
 }

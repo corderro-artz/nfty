@@ -47,7 +47,10 @@
               <!-- .vaddbtn: the dashed footer that adds a variant. -->
               <Panel>
                 <Rectangle Classes="dashed btn" />
-                <Button Command="{Binding AddVariantCommand}" Classes="soon tbtn"
+                <!-- .flat, not .soon: this button works. It only borrows the borderless look because
+                     it sits inside the dashed Rectangle above, and "soon" elsewhere means the
+                     feature does not exist yet. -->
+                <Button Command="{Binding AddVariantCommand}" Classes="flat tbtn"
                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
                   <StackPanel Orientation="Horizontal" Spacing="7">
                     <Path Classes="ico sm" Data="{StaticResource IconPlus}" />

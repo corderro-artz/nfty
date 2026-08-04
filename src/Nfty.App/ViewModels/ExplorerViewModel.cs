@@ -229,7 +229,8 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
                     () => OpenEditor(i, r), () => IsEditing,
                     // The rule-count pill jumps to the owning recipe, whose Rules panel is where
                     // this layer's rules actually live.
-                    () => SelectedNode = FindNode(Root, r.Manifest.Id) ?? SelectedNode)
+                    () => SelectedNode = FindNode(Root, r.Manifest.Id) ?? SelectedNode,
+                    _status)
                 : null,
             _ => null,
         };

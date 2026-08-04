@@ -30,13 +30,10 @@ public class ShellViewModelTests
         Assert.Equal(100, shell.Zoom);
     }
 
-    [Fact]
-    public void Open_kitchen_reports_not_yet_wired()
-    {
-        var shell = Make(out var notify);
-        shell.OpenKitchenCommand.Execute(null);
-        Assert.Equal("New Kitchen", notify.Last);
-    }
+    // Open_kitchen_reports_not_yet_wired was here. It pinned a command that no view ever bound, so
+    // it only ever proved that dead code still ran. Kitchens are unbuilt, and the honest contract
+    // for an unbuilt feature is the one LandingViewModel already keeps: the control is genuinely
+    // DISABLED, not enabled-and-apologising. That is asserted in LandingViewModelTests.
 
     [Fact]
     public void Close_dialog_clears_the_active_dialog()
