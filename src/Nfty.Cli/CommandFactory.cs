@@ -145,19 +145,10 @@ public static partial class CommandFactory
         cmd.SetAction(parse =>
         {
             using var cb = CookBookArchive.Read(parse.GetValue(path)!);
-            var report = RarityCalculator.Compute(cb);
-            Console.WriteLine("Recipes:");
-            foreach (var r in report.Recipes)
-                Console.WriteLine($"  {r.RecipeName,-16} {r.Percent,6:0.00}%");
-            Console.WriteLine("Traits (overall):");
-            foreach (var t in report.Traits)
-                Console.WriteLine($"  {t.RecipeName,-12} {t.IngredientName,-14} {t.VariantName,-14} {t.OverallPercent,6:0.00}%");
-
-            // The largest number of unique-DNA assets this CookBook can produce — the same figure
-            // generate would report only on failure. Surfaced here so an author can size a run
-            // before starting it. Saturates at the counter's cap, reported as "more than N".
-            var space = UniqueSpace.Count(cb);
-            Console.WriteLine($"Unique DNA space: {(space.IsExact ? space.Total.ToString() : $"more than {space.Total}")}");
+            // Rendered in Core so the GUI's copyable report is byte-identical to this - the same
+            // report, not a similar one. Includes the unique-DNA space, the figure generate reports
+            // only on failure, surfaced so a run can be sized before it starts.
+            Console.Write(CollectionReport.Render(cb));
             return 0;
         });
         return cmd;
@@ -210,48 +201,23 @@ public static partial class CommandFactory
         {
             using var ing = IngredientArchive.Read(parse.GetValue(path)!);
             string variantId = parse.GetValue(variant)!;
-            if (!ing.VariantImages.TryGetValue(variantId, out var image))
-            {
-                string validIds = string.Join(", ", ing.Manifest.Variants.Select(v => v.Id));
-                throw new InvalidOperationException(
-                    $"Ingredient '{ing.Manifest.Name}' has no variant '{variantId}'. "
-                    + $"Valid variant ids: {validIds}.");
-            }
-
             string outPath = parse.GetValue(outp)!;
 
-            if (ing.Manifest.Kind == LayerKind.Custom)
-            {
-                // Custom layers are full-color RGBA composited as-is and are never colorized —
-                // their Colorization is always null. A preview that "shows exactly what
-                // generation would render" must do the same: pass the raw variant through
-                // rather than applying a color that generation never applies. `image` is owned
-                // by `ing` and freed when it's disposed above, so nothing new to dispose here.
-                image.Save(outPath, new PngEncoder());
-                Console.WriteLine($"Wrote {outPath} (custom layer — rendered as-is, not colorized)");
-                return 0;
-            }
+            string? modelName = parse.GetValue(model);
+            ColorModel? modelOverride = modelName is null
+                ? null
+                : modelName.Equals("hsl", StringComparison.OrdinalIgnoreCase) ? ColorModel.Hsl : ColorModel.Hsv;
 
-            string? colorSpec = parse.GetValue(color);
-            if (colorSpec is null)
-                throw new InvalidOperationException(
-                    $"--color is required to preview '{ing.Manifest.Name}': it is a "
-                    + $"{ing.Manifest.Kind.ToString().ToLowerInvariant()} layer, colorized from "
-                    + "a value-map at generation time.");
-
-            var col = ing.Manifest.Colorization!;
-            string? modelOverride = parse.GetValue(model);
-            var m = modelOverride is null
-                ? col.Model
-                : modelOverride.Equals("hsl", StringComparison.OrdinalIgnoreCase) ? ColorModel.Hsl : ColorModel.Hsv;
-
-            // The same spec→(H,S) resolution a static layer gets, so a preview shows exactly
-            // what generation would render rather than a second, drifting implementation.
-            var (h, s) = ColorRoller.FromFixed(colorSpec, m);
-
-            using var img = Colorizer.Apply(image, h, s, m);
+            // The rule itself lives in Core so the GUI's export renders the identical image — the
+            // whole point of this command is that it shows what generation would produce, and two
+            // copies of that rule is how it stops being true. --color's requiredness, the Custom
+            // passthrough and the spec→(H,S) resolution are all VariantPreview's.
+            using var img = VariantPreview.Render(ing, variantId, parse.GetValue(color), modelOverride);
             img.Save(outPath, new PngEncoder());
-            Console.WriteLine($"Wrote {outPath}");
+
+            Console.WriteLine(ing.Manifest.Kind == LayerKind.Custom
+                ? $"Wrote {outPath} (custom layer — rendered as-is, not colorized)"
+                : $"Wrote {outPath}");
             return 0;
         });
         return cmd;

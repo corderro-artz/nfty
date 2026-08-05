@@ -32,6 +32,7 @@ public partial class CookBookDetailViewModel : ViewModelBase
 
     private readonly INotYetWired _notify;
     private readonly Action _cook;
+    private readonly Action? _showReports;
 
     public string Name { get; }
     public string Symbol { get; }
@@ -67,10 +68,12 @@ public partial class CookBookDetailViewModel : ViewModelBase
     public string UniqueDnaText { get; }
     public IReadOnlyList<RecipeShareRow> Recipes { get; }
 
-    public CookBookDetailViewModel(LoadedCookBook book, INotYetWired notify, Action cook)
+    public CookBookDetailViewModel(LoadedCookBook book, INotYetWired notify, Action cook,
+        Action? showReports = null)
     {
         _notify = notify;
         _cook = cook;
+        _showReports = showReports;
         Name = book.Manifest.Name;
         Symbol = book.Manifest.Collection.Symbol;
         Description = book.Manifest.Collection.Description;
@@ -146,4 +149,11 @@ public partial class CookBookDetailViewModel : ViewModelBase
     }
 
     [RelayCommand] private void Cook() => _cook();
+
+    /// <summary>Opens the stats/identity reports — the CLI's <c>stats</c> and <c>inspect</c>. Null
+    /// when no report surface was supplied (some tests), in which case the button is simply
+    /// unavailable rather than throwing at click time.</summary>
+    [RelayCommand(CanExecute = nameof(CanShowReports))]
+    private void ShowReports() => _showReports!();
+    private bool CanShowReports() => _showReports is not null;
 }

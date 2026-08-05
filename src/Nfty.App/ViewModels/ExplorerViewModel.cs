@@ -27,6 +27,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     private readonly IFilePickerService _picker;
     private readonly IStatusService _status;
     private readonly IKitchenSession? _kitchen;
+    private readonly IClipboardService? _clipboard;
     private readonly Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> _looseEditorFactory;
 
     [ObservableProperty] private ExplorerNode? _selectedNode;
@@ -172,7 +173,8 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         IFilePickerService picker,
         Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> looseEditorFactory,
         IStatusService status,
-        IKitchenSession? kitchen = null)
+        IKitchenSession? kitchen = null,
+        IClipboardService? clipboard = null)
     {
         _book = book; _nav = nav; _dialogs = dialogs; _notify = notify; _bridge = bridge;
         _editorFactory = editorFactory;
@@ -181,6 +183,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         _picker = picker;
         _status = status;
         _kitchen = kitchen;
+        _clipboard = clipboard;
         _looseEditorFactory = looseEditorFactory;
         _fullRoot = BuildTree(book);
         Root = _fullRoot;
@@ -224,7 +227,10 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         CurrentDetail = newValue?.Kind switch
         {
             ExplorerNodeKind.CookBook => new CookBookDetailViewModel(_book, _notify,
-                () => _dialogs.ShowAsync<object>(_cookFactory(_book))),
+                () => _dialogs.ShowAsync<object>(_cookFactory(_book)),
+                // stats + inspect, rendered by Core so the text matches the CLI's byte for byte.
+                () => _dialogs.ShowAsync<object>(
+                    new ReportDialogViewModel(_book, _dialogs, _clipboard ?? new NoopClipboardService()))),
             ExplorerNodeKind.Recipe => new RecipeDetailViewModel((LoadedRecipe)newValue!.Domain!, _book, _bridge, _notify,
                 id => OpenIngredientCommand.Execute(id)),
             ExplorerNodeKind.Ingredient => newValue!.Domain is (LoadedRecipe r, LoadedIngredient i)
@@ -233,7 +239,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
                     // The rule-count pill jumps to the owning recipe, whose Rules panel is where
                     // this layer's rules actually live.
                     () => SelectedNode = FindNode(Root, r.Manifest.Id) ?? SelectedNode,
-                    _status)
+                    _status, _picker, _dialogs)
                 : null,
             _ => null,
         };

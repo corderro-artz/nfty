@@ -25,6 +25,7 @@ public static class ServiceRegistration
         services.AddSingleton<IKitchenSession, KitchenSession>();
         services.AddSingleton<IImageBridge, ImageBridge>();
         services.AddSingleton<IFolderRevealer, NoopFolderRevealer>();
+        services.AddSingleton<IClipboardService, NoopClipboardService>();
 
         services.AddSingleton<ShellViewModel>();
         services.AddTransient<HelpViewModel>();
@@ -80,7 +81,9 @@ public static class ServiceRegistration
                 sp.GetRequiredService<ICookBookSession>(),
                 sp.GetRequiredService<IFilePickerService>(),
                 sp.GetRequiredService<Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel>>(),
-                sp.GetRequiredService<IStatusService>()));
+                sp.GetRequiredService<IStatusService>(),
+                sp.GetRequiredService<IKitchenSession>(),
+                sp.GetRequiredService<IClipboardService>()));
 
         services.AddSingleton<Func<LoadedSet, SetBrowserViewModel>>(sp => set => new SetBrowserViewModel(set));
 

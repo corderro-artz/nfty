@@ -1,0 +1,56 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             x:Class="Nfty.App.Views.ReportDialogView"
+             x:DataType="vm:ReportDialogViewModel"
+             Focusable="True">
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Escape" Command="{Binding CloseCommand}" />
+  </UserControl.KeyBindings>
+  <Border Classes="modal monoform">
+    <Grid RowDefinitions="Auto,*,Auto">
+      <!-- Header: the two reports as a segmented pair, the same control the editor uses for
+           Static/Dynamic, since this is likewise one surface showing one of two things. -->
+      <Border Grid.Row="0" Classes="modal-body tight">
+        <StackPanel Spacing="11">
+          <StackPanel Classes="plabel-row">
+            <Ellipse Classes="kdot" />
+            <TextBlock Text="REPORT" Classes="slbl" />
+          </StackPanel>
+          <TextBlock Text="{Binding Title}" Classes="m-h" />
+          <Border Classes="seg" HorizontalAlignment="Left">
+            <Grid ColumnDefinitions="Auto,Auto">
+              <Button Grid.Column="0" Classes="seg-b" Classes.on="{Binding !ShowingIdentity}"
+                      Content="Stats" Command="{Binding ShowStatsCommand}"
+                      ToolTip.Tip="The odds these weights imply — the CLI's stats" />
+              <Button Grid.Column="1" Classes="seg-b" Classes.on="{Binding ShowingIdentity}"
+                      Content="Identity" Command="{Binding ShowIdentityCommand}"
+                      ToolTip.Tip="Ids for --recipe and --variant — the CLI's inspect" />
+            </Grid>
+          </Border>
+        </StackPanel>
+      </Border>
+
+      <!-- Selectable, so a user can take part of it without taking all of it. Mono and wrap-free:
+           both reports are column-aligned and rewrapping them destroys the alignment. -->
+      <Border Grid.Row="1" Classes="modal-body tight" Padding="24,0,24,12">
+        <Border Classes="reportbox">
+          <ScrollViewer HorizontalScrollBarVisibility="Auto">
+            <SelectableTextBlock Text="{Binding Text}" Classes="reporttext" />
+          </ScrollViewer>
+        </Border>
+      </Border>
+
+      <Border Grid.Row="2" Classes="modal-foot">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0" Classes="keyhint" VerticalAlignment="Center"
+                     Text="Identical to what the CLI prints" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+            <Button Content="{Binding CopyLabel}" Command="{Binding CopyCommand}" Classes="tbtn" />
+            <Button Content="Close" Command="{Binding CloseCommand}" Classes="accent" />
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
+  </Border>
+</UserControl>

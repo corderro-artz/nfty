@@ -175,12 +175,23 @@
       <Grid ColumnDefinitions="*,Auto">
         <TextBlock Grid.Column="0" Classes="cshare" VerticalAlignment="Center"
                    Text="{Binding CookBarText}" />
-        <Button Grid.Column="1" Command="{Binding CookCommand}" Classes="accent">
-          <StackPanel Orientation="Horizontal" Spacing="6">
-            <Path Classes="ico sm" Data="{StaticResource IconArrowRight}" />
-            <TextBlock Text="Cook Set" />
-          </StackPanel>
-        </Button>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+          <!-- The CLI's stats and inspect, rendered by Core so the text matches byte for byte.
+               Beside Cook because both answer "is this book ready" before committing to a run. -->
+          <Button Command="{Binding ShowReportsCommand}" Classes="tbtn"
+                  ToolTip.Tip="Stats and ids — the CLI's stats and inspect">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Path Classes="ico sm" Data="{StaticResource IconTypeRecipe}" />
+              <TextBlock Text="Reports" />
+            </StackPanel>
+          </Button>
+          <Button Command="{Binding CookCommand}" Classes="accent">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Path Classes="ico sm" Data="{StaticResource IconArrowRight}" />
+              <TextBlock Text="Cook Set" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
       </Grid>
     </Border>
   </StackPanel>

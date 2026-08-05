@@ -22,6 +22,8 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     private readonly Action _editIngredient;
     private readonly Action? _jumpToRecipe;
     private readonly IStatusService? _status;
+    private readonly IFilePickerService? _picker;
+    private readonly IDialogService? _dialogs;
     private readonly Func<bool> _isEditing;
     private readonly IImageBridge _bridge;
     private readonly LoadedIngredient _ing;
@@ -72,12 +74,15 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
 
     public IngredientDetailViewModel(LoadedIngredient ing, LoadedRecipe recipe, LoadedCookBook book,
         IImageBridge bridge, INotYetWired notify, Action editIngredient, Func<bool> isEditing,
-        Action? jumpToRecipe = null, IStatusService? status = null)
+        Action? jumpToRecipe = null, IStatusService? status = null,
+        IFilePickerService? picker = null, IDialogService? dialogs = null)
     {
         _ing = ing; _bridge = bridge;
         _notify = notify; _editIngredient = editIngredient; _isEditing = isEditing;
         _jumpToRecipe = jumpToRecipe;
         _status = status;
+        _picker = picker;
+        _dialogs = dialogs;
 
         RuleCount = recipe.Manifest.Rules.Count(r =>
             r.When.IngredientId == ing.Manifest.Id || r.Targets.Any(t => t.IngredientId == ing.Manifest.Id));
@@ -215,6 +220,54 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     /// something to jump to.</summary>
     [RelayCommand] private void JumpToRules() => _jumpToRecipe?.Invoke();
     [RelayCommand] private void EditIngredient() => _editIngredient();
+
+    /// <summary>The CLI's <c>preview</c>: writes the selected variant as generation would render it.
+    ///
+    /// The GUI could not previously get a rendered PNG out at all short of cooking a whole Set, which
+    /// is a slow and destructive way to answer "what will this layer actually look like". The render
+    /// itself is <see cref="VariantPreview"/> - the same code the command runs - so the file this
+    /// writes is byte-identical to the one the CLI writes.</summary>
+    [RelayCommand(CanExecute = nameof(CanExportPreview))]
+    private async Task ExportPreview()
+    {
+        if (_picker is null || _variants.Count == 0) return;
+
+        string? path;
+        try { path = await _picker.SaveFileAsync("Export preview", ".png"); }
+        catch (Exception ex) { await ShowPreviewError(ex.Message); return; }
+        if (path is null) return;   // cancelled
+
+        try
+        {
+            // A colorized layer needs a colour; the ingredient's own first fixed colour or range
+            // start is the honest default - it is what generation would most likely roll - and the
+            // editor is where a specific one gets chosen.
+            using var img = VariantPreview.Render(_ing, _variants[0].Id, DefaultColorSpec());
+            // Fully qualified: this file deliberately does not import SixLabors.ImageSharp, whose
+            // Image type would collide with Avalonia's.
+            SixLabors.ImageSharp.ImageExtensions.Save(img, path,
+                new SixLabors.ImageSharp.Formats.Png.PngEncoder());
+            _status?.Say($"Wrote {path}");
+        }
+        catch (Exception ex) { await ShowPreviewError(ex.Message); }
+    }
+
+    private bool CanExportPreview() => _picker is not null && _variants.Count > 0;
+
+    /// <summary>Null for a Custom layer, which is never colorized and needs none.</summary>
+    private string? DefaultColorSpec()
+    {
+        if (!VariantPreview.NeedsColor(_ing)) return null;
+        var entry = _ing.Manifest.Colorization?.Entries.FirstOrDefault();
+        if (entry?.Fixed is { } fixedSpec) return fixedSpec;
+        if (entry?.Range is { } range) return $"hsv:{range.HueMin:0},{range.SatMin:0},80";
+        return "hsv:0,0,80";
+    }
+
+    private Task ShowPreviewError(string message) =>
+        _dialogs is null
+            ? Task.CompletedTask
+            : _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, "Could not export preview", message));
     private bool CanEdit() => _isEditing();
 
     public void Dispose()

@@ -337,7 +337,9 @@ public class VisualCapture
             var key = variant.Key.ToString()!.ToLowerInvariant();
 
             var cookBook = ExplorerViewModelTests.TwoRecipeBook();
-            var cookBookVm = new CookBookDetailViewModel(cookBook, new FakeNotYetWired(), () => { });
+            // showReports supplied, or the Reports button captures DISABLED and the frame is no
+            // evidence that it renders - the same fixture blind spot as the editor's toolstrip.
+            var cookBookVm = new CookBookDetailViewModel(cookBook, new FakeNotYetWired(), () => { }, () => { });
             Capture(new Views.CookBookDetailView { DataContext = cookBookVm }, variant, $"cookbook-detail-{key}.png");
 
             var (ruleBook, ruleRecipe) = RecipeWithRules();
@@ -349,15 +351,18 @@ public class VisualCapture
             var ingredientBook = ExplorerViewModelTests.TwoRecipeBook();
             var catRecipe = ingredientBook.Recipes.First(r => r.Manifest.Id == "cat");
             var firstIngredient = catRecipe.Ingredients[0];
+            // picker + dialogs supplied so Export preview captures ENABLED.
             using (var vm = new IngredientDetailViewModel(firstIngredient, catRecipe, ingredientBook, new ImageBridge(),
-                new FakeNotYetWired(), () => { }, () => false))
+                new FakeNotYetWired(), () => { }, () => false, null, null,
+                new FilePickerService(), new FakeDialogs()))
             {
                 Capture(new Views.IngredientDetailView { DataContext = vm }, variant, $"ingredient-detail-{key}.png");
             }
 
             var (dynBook, dynRecipe, dynIng) = DynamicIngredient();
             using (var vm = new IngredientDetailViewModel(dynIng, dynRecipe, dynBook, new ImageBridge(),
-                new FakeNotYetWired(), () => { }, () => false))
+                new FakeNotYetWired(), () => { }, () => false, null, null,
+                new FilePickerService(), new FakeDialogs()))
             {
                 Capture(new Views.IngredientDetailView { DataContext = vm }, variant, $"ingredient-detail-dynamic-{key}.png");
             }
