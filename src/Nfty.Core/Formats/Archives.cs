@@ -11,6 +11,9 @@ public enum ArchiveKind
 
     /// <summary><c>.igt</c> — one layer and its weighted variants.</summary>
     Ingredient,
+
+    /// <summary><c>.ktn</c> — the top-level workspace naming the folder it sits in.</summary>
+    Kitchen,
 }
 
 /// <summary>
@@ -22,6 +25,7 @@ public static class Archives
     public const string CookBookExtension = ".cbk";
     public const string RecipeExtension = ".rcp";
     public const string IngredientExtension = ".igt";
+    public const string KitchenExtension = ".ktn";
 
     /// <summary>
     /// The archive kind for <paramref name="path"/>. An unknown extension is an error rather
@@ -33,11 +37,12 @@ public static class Archives
             CookBookExtension => ArchiveKind.CookBook,
             RecipeExtension => ArchiveKind.Recipe,
             IngredientExtension => ArchiveKind.Ingredient,
+            KitchenExtension => ArchiveKind.Kitchen,
             "" => throw new NotSupportedException($"'{path}' has no extension; {Expected}"),
             var other => throw new NotSupportedException(
                 $"Unknown archive extension '{other}'; {Expected}"),
         };
 
     private static string Expected =>
-        $"expected one of {CookBookExtension}, {RecipeExtension}, {IngredientExtension}.";
+        $"expected one of {CookBookExtension}, {RecipeExtension}, {IngredientExtension}, {KitchenExtension}.";
 }
