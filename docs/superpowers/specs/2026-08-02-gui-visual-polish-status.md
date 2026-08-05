@@ -4,7 +4,8 @@ Record of the visual-polish pass (slice E). Read this **with**
 `2026-08-01-nfty-gui-visual-audit.md`, which is the source of truth for what each slice had to
 achieve. This file records where the work got to and, more usefully, what it cost to learn.
 
-Last updated: 2026-08-04. **All 12 slices complete. Merged to `main` (45 commits).**
+Last updated: 2026-08-05. **All 12 slices complete and merged. The wider project is complete too** —
+see the note at the end for what shipped after this document's slices.
 
 ## State
 
@@ -97,10 +98,16 @@ replacing a button whose command body was empty; and the New Recipe resulting-mi
 
 ### Not done, and why
 
-- **`target supply` chip** — nothing in the model carries a target supply. Needs modelling first.
-- **`status ● Valid` chip** — would need `Validator` wired into the detail pane. Note the status bar
-  *already* prints "Valid" unconditionally, without validating anything; that is worth fixing
-  together with this rather than adding a second unchecked claim.
+Both of the blocked items below were **since unblocked and shipped** (2026-08-04) — kept here only
+so the reasoning is not lost:
+
+- ~~**`target supply` chip**~~ — needed a model field. `CookBookManifest.TargetSupply` was added as
+  an optional post-v1 field; the chip and the cookbar's "Target supply N of M unique DNA" now render.
+- ~~**`status ● Valid` chip**~~ — needed `Validator` wired in. Done, **and** the status bar's
+  unconditional "Valid" it warned about is fixed: both report the real result now.
+
+Genuinely still open:
+
 - **The mockup's wide left-aligned `?` popover** — Avalonia's stock ToolTip is narrower and follows
   the pointer. The affordance and the copy are faithful; the popover's shape is not.
 
@@ -307,3 +314,28 @@ Recorded because each one shipped, or nearly shipped, a defect. They recur.
   its own `ControlTheme`.
 - Neutralising a Fluent state means **setting it explicitly** (e.g. to `Transparent`). Simply not
   painting hands the state back to Fluent's stock styling.
+
+---
+
+## After the slices (2026-08-04/05)
+
+The visual pass was the last GUI *slice*, but not the last work. Recorded here because this file is
+where someone will look:
+
+- **Avalonia 11.2.3 → 12.1.1**, verified by pixel-diffing every frame rather than by the suite passing.
+- **Honesty fixes** — several controls asserted things the app had not checked or done: a hardcoded
+  "Valid" that never ran `Validator`, a "Delete variant" that reported *not wired* while the editor
+  had a real delete, a working Set browser rendered as "coming soon", and a New Recipe *Kitchen*
+  destination that was accepted and then silently ignored.
+- **Cooking into an existing Set overwrote it.** The GUI never passed `existingDnas`/`startNumber`,
+  so `SetWriter` renumbered from 1 over the previous assets. Data loss, not a missing feature.
+- **Schema made evolvable** (`Oldest..Current`, was exact equality), plus an optional `TargetSupply`.
+- **The Kitchen** — the sixth domain word. `docs/superpowers/specs/2026-08-04-kitchen-design.md`.
+- **`stats`, `inspect` and `preview` reachable from the app**, rendered by Core so the output is
+  byte-identical to the commands' rather than merely similar.
+
+**The lesson this project kept re-teaching**, six separate times: a state no capture fixture reaches
+renders nothing and therefore looks fine. The editor's enabled toolstrip, the dynamic colorways band,
+two of three detail-header variants, the rule pill, the resulting-mix panel, and the Reports/Export
+buttons were each invisible-but-passing until a fixture was given what it needed to reach them. When
+a fixture cannot reach a state, add a frame or a test — "it looks right" is not evidence it works.
