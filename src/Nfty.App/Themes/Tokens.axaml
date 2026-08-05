@@ -43,6 +43,17 @@
       <SolidColorBrush x:Key="KindDynamicWashBrush" Color="#1f3b5b6f" />
       <SolidColorBrush x:Key="KindStaticWashBrush" Color="#216a4a25" />
       <SolidColorBrush x:Key="KindCustomWashBrush" Color="#216d4f9c" />
+      <!-- Mint-distribution series. Categorical, so they only have to be distinguishable from each
+           other and at home beside the kind colours above; they carry no meaning individually.
+           These replace a runtime HSV derived from a hash of the recipe id, which produced whatever
+           hue the id happened to land on - off-palette by construction, and invisible to the
+           raw-hex sweep because it lived in C# rather than markup. Darker set for light mode. -->
+      <SolidColorBrush x:Key="Series1Brush" Color="#3b5b6f" />
+      <SolidColorBrush x:Key="Series2Brush" Color="#6d4f9c" />
+      <SolidColorBrush x:Key="Series3Brush" Color="#6a4a25" />
+      <SolidColorBrush x:Key="Series4Brush" Color="#3d6b52" />
+      <SolidColorBrush x:Key="Series5Brush" Color="#97192a" />
+      <SolidColorBrush x:Key="Series6Brush" Color="#4a4a6b" />
       <SolidColorBrush x:Key="KindDynamicLineBrush" Color="#423b5b6f" />
       <SolidColorBrush x:Key="KindStaticLineBrush" Color="#476a4a25" />
       <SolidColorBrush x:Key="KindCustomLineBrush" Color="#476d4f9c" />
@@ -112,6 +123,15 @@
       <SolidColorBrush x:Key="KindDynamicWashBrush" Color="#1f7fb0c4" />
       <SolidColorBrush x:Key="KindStaticWashBrush" Color="#21e0c28c" />
       <SolidColorBrush x:Key="KindCustomWashBrush" Color="#21c3a6ea" />
+      <!-- Mint-distribution series, lightened for dark mode the same way the kind colours are.
+           The old hash-derived HSV took no theme input at all, so the distribution bar rendered
+           identically bright in both - and it is the heaviest element on the dark card. -->
+      <SolidColorBrush x:Key="Series1Brush" Color="#7fb0c4" />
+      <SolidColorBrush x:Key="Series2Brush" Color="#c3a6ea" />
+      <SolidColorBrush x:Key="Series3Brush" Color="#e0c28c" />
+      <SolidColorBrush x:Key="Series4Brush" Color="#a6c08a" />
+      <SolidColorBrush x:Key="Series5Brush" Color="#e0788a" />
+      <SolidColorBrush x:Key="Series6Brush" Color="#a8a8d0" />
       <SolidColorBrush x:Key="KindDynamicLineBrush" Color="#427fb0c4" />
       <SolidColorBrush x:Key="KindStaticLineBrush" Color="#47e0c28c" />
       <SolidColorBrush x:Key="KindCustomLineBrush" Color="#47c3a6ea" />

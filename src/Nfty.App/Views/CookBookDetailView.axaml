@@ -87,9 +87,13 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:RecipeShareRow">
-                <Border Height="16" Width="{Binding SharePercent, Converter={x:Static conv:PercentToWidthConverter.ForBarWidth310}}">
-                  <Border.Background><SolidColorBrush Color="{Binding SegmentColor}" /></Border.Background>
-                </Border>
+                <!-- Colour comes from a token via the series class, not from a Color on the row:
+                     a brush picked in the ViewModel cannot re-resolve when the theme flips. -->
+                <Border Height="16" Classes="series"
+                        Classes.s1="{Binding IsSeries1}" Classes.s2="{Binding IsSeries2}"
+                        Classes.s3="{Binding IsSeries3}" Classes.s4="{Binding IsSeries4}"
+                        Classes.s5="{Binding IsSeries5}" Classes.s6="{Binding IsSeries6}"
+                        Width="{Binding SharePercent, Converter={x:Static conv:PercentToWidthConverter.ForBarWidth310}}" />
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
@@ -102,7 +106,10 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:RecipeShareRow">
               <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,0,14,4" VerticalAlignment="Center">
-                <Border Classes="sw"><Border.Background><SolidColorBrush Color="{Binding SegmentColor}" /></Border.Background></Border>
+                <Border Classes="sw series"
+                        Classes.s1="{Binding IsSeries1}" Classes.s2="{Binding IsSeries2}"
+                        Classes.s3="{Binding IsSeries3}" Classes.s4="{Binding IsSeries4}"
+                        Classes.s5="{Binding IsSeries5}" Classes.s6="{Binding IsSeries6}" />
                 <TextBlock FontSize="12" Text="{Binding Name}" />
                 <TextBlock Classes="pc" FontSize="12" Text="{Binding SharePercent, StringFormat='{}{0}%'}" />
               </StackPanel>
@@ -122,9 +129,10 @@
               <Border Classes="crow">
                 <StackPanel Spacing="9">
                   <Grid ColumnDefinitions="Auto,Auto,*">
-                    <Border Grid.Column="0" Classes="cdot" Margin="0,0,10,0">
-                      <Border.Background><SolidColorBrush Color="{Binding SegmentColor}" /></Border.Background>
-                    </Border>
+                    <Border Grid.Column="0" Classes="cdot series" Margin="0,0,10,0"
+                            Classes.s1="{Binding IsSeries1}" Classes.s2="{Binding IsSeries2}"
+                            Classes.s3="{Binding IsSeries3}" Classes.s4="{Binding IsSeries4}"
+                            Classes.s5="{Binding IsSeries5}" Classes.s6="{Binding IsSeries6}" />
                     <TextBlock Grid.Column="1" Classes="cname" Text="{Binding Name}" />
                     <!-- factors x factors = total -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="5"
@@ -154,10 +162,11 @@
                   </Grid>
                   <Grid ColumnDefinitions="*,12,Auto">
                     <Border Grid.Column="0" Classes="cbar">
-                      <Border HorizontalAlignment="Left" CornerRadius="999"
-                              Width="{Binding SharePercent, Converter={x:Static conv:PercentToWidthConverter.ForBarWidth310}}">
-                        <Border.Background><SolidColorBrush Color="{Binding SegmentColor}" /></Border.Background>
-                      </Border>
+                      <Border HorizontalAlignment="Left" CornerRadius="999" Classes="series"
+                              Classes.s1="{Binding IsSeries1}" Classes.s2="{Binding IsSeries2}"
+                              Classes.s3="{Binding IsSeries3}" Classes.s4="{Binding IsSeries4}"
+                              Classes.s5="{Binding IsSeries5}" Classes.s6="{Binding IsSeries6}"
+                              Width="{Binding SharePercent, Converter={x:Static conv:PercentToWidthConverter.ForBarWidth310}}" />
                     </Border>
                     <TextBlock Grid.Column="2" Classes="cshare" Text="{Binding SharePercent, StringFormat='{}{0}% of mints'}" />
                   </Grid>

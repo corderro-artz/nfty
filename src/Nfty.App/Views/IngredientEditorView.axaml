@@ -179,12 +179,19 @@
               <Panel>
                 <Image Source="{Binding Preview}" Stretch="UniformToFill" />
                 <Border VerticalAlignment="Bottom" Height="26" Background="{DynamicResource ScrimBrush}">
-                  <Grid ColumnDefinitions="*,Auto,Auto" Margin="7,0">
+                  <!-- Three buttons, in the mockup's order: reroll, enlarge, fill-pane
+                       (ingredient-editor.html's .ov). Enlarge was missing - the ViewModel had the
+                       command and its design spec shipped, but nothing bound it, so half the
+                       preview-sizing feature was unreachable. -->
+                  <Grid ColumnDefinitions="*,Auto,Auto,Auto" Margin="7,0">
                     <TextBlock Grid.Column="0" Text="PREVIEW" Classes="plabel" VerticalAlignment="Center" />
                     <Button Grid.Column="1" Classes="icon" Padding="2" Command="{Binding RerollPreviewCommand}"
                             ToolTip.Tip="Reroll sampled colour">
                       <Path Classes="ico xs" Data="{StaticResource IconReroll}" /></Button>
-                    <Button Grid.Column="2" Classes="icon" Padding="2" Command="{Binding FillPanePreviewCommand}"
+                    <Button Grid.Column="2" Classes="icon" Padding="2" Command="{Binding EnlargePreviewCommand}"
+                            ToolTip.Tip="Enlarge preview">
+                      <Path Classes="ico xs" Data="{StaticResource IconEnlarge}" /></Button>
+                    <Button Grid.Column="3" Classes="icon" Padding="2" Command="{Binding FillPanePreviewCommand}"
                             ToolTip.Tip="Fill pane with preview">
                       <Path Classes="ico xs" Data="{StaticResource IconFillPane}" /></Button>
                   </Grid>

@@ -25,13 +25,19 @@
           <TextBlock Grid.Column="1" Classes="hk on-accent" Text="⌘N" />
         </Grid>
       </Button>
-      <!-- Dashed edge = "not built yet"; the Rectangle draws it because a Button cannot. -->
-      <Panel>
-        <Rectangle Classes="dashed btn" />
-        <Button Classes="landing tbtn soon" Command="{Binding NewKitchenCommand}">
-          <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconPlus}" /><TextBlock Classes="lbl" Text="New Kitchen…" /></StackPanel></Grid>
-        </Button>
-      </Panel>
+      <!-- DELIBERATE DEVIATION from landing.html, which renders this `.tbtn.soon` — dashed edge,
+           muted ink, transparent fill — and says so in its own prose: "Kitchen is dashed — reserved,
+           next task." That mockup was authored before the Kitchen existed. It has since shipped
+           (docs/superpowers/specs/2026-08-04-kitchen-design.md), NewKitchenCommand.CanExecute is
+           true, and the command creates a real workspace.
+           Keeping the `.soon` treatment would mean the app telling the user a working feature is
+           unavailable — which is what happened: it rendered grey beside black siblings, so nobody
+           clicked it. This is the third time that exact defect has landed here; the `.set` button
+           below carries a comment warning against it. Rendered as the ordinary secondary action it
+           now is, matching its Recipe/Ingredient siblings. -->
+      <Button Classes="landing tbtn" Command="{Binding NewKitchenCommand}">
+        <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconPlus}" /><TextBlock Classes="lbl" Text="New Kitchen…" /></StackPanel></Grid>
+      </Button>
 
       <!-- .subrow: the two smaller creatables sit side by side under the primary tier. -->
       <Grid ColumnDefinitions="*,7,*">

@@ -270,6 +270,4 @@ public partial class LandingViewModel : ViewModelBase
     }
 
     [RelayCommand] private void ShowHelp() => _dialogs.ShowAsync<object>(new HelpViewModel(_dialogs));
-
-    private bool Never() => false;
 }

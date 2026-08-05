@@ -17,6 +17,12 @@
     <KeyBinding Gesture="Ctrl+OemMinus" Command="{Binding ZoomOutCommand}" />
     <KeyBinding Gesture="Ctrl+Subtract" Command="{Binding ZoomOutCommand}" />
     <KeyBinding Gesture="Ctrl+D0" Command="{Binding ZoomResetCommand}" />
+    <!-- Light/dark had no way in at all: both theme dictionaries are built and tested, and
+         ToggleThemeCommand was bound by nothing, so a user could not switch. Keyboard only, and
+         deliberately so - the mockups carry a "Theme" button in their own .pitch scaffolding,
+         OUTSIDE the app window, as a preview control for viewing the mockup both ways. There is no
+         theme control in the locked chrome, and inventing one would be design drift. -->
+    <KeyBinding Gesture="Ctrl+T" Command="{Binding ToggleThemeCommand}" />
   </Window.KeyBindings>
 
   <Window.Styles>

@@ -22,8 +22,28 @@ public record FactorChip(string Name, int VariantCount, LayerKind Kind, bool Sho
     public string Tip => $"{Name} · {Kind.ToString().ToLowerInvariant()} · {VariantCount} variants";
 }
 
-public record RecipeShareRow(string Name, double SharePercent, string DnaSpaceText, Color SegmentColor,
-    IReadOnlyList<FactorChip> Factors);
+/// <param name="Series">Which of the six mint-distribution series colours this recipe draws, 1-based
+/// and assigned by position in the book. Exposed as an index rather than a <c>Color</c> so the paint
+/// itself stays a theme token: the view switches on <see cref="IsSeries1"/>…<see cref="IsSeries6"/>
+/// and picks up <c>Series1Brush</c>…<c>Series6Brush</c> from whichever dictionary is live, which a
+/// colour computed in the ViewModel could not do — the previous version hashed the recipe id into an
+/// HSV, so it was off-palette by construction and identical in both themes.</param>
+public record RecipeShareRow(string Name, double SharePercent, string DnaSpaceText, int Series,
+    IReadOnlyList<FactorChip> Factors)
+{
+    /// <summary>True when this row draws series colour 1.</summary>
+    public bool IsSeries1 => Series == 1;
+    /// <summary>True when this row draws series colour 2.</summary>
+    public bool IsSeries2 => Series == 2;
+    /// <summary>True when this row draws series colour 3.</summary>
+    public bool IsSeries3 => Series == 3;
+    /// <summary>True when this row draws series colour 4.</summary>
+    public bool IsSeries4 => Series == 4;
+    /// <summary>True when this row draws series colour 5.</summary>
+    public bool IsSeries5 => Series == 5;
+    /// <summary>True when this row draws series colour 6.</summary>
+    public bool IsSeries6 => Series == 6;
+}
 
 public partial class CookBookDetailViewModel : ViewModelBase
 {
@@ -122,8 +142,14 @@ public partial class CookBookDetailViewModel : ViewModelBase
             : $"Target supply {target.Value:N0} of {UniqueDnaText} unique DNA";
 
         double totalWeight = book.Manifest.RecipeWeights.Values.Sum();
+        int seriesIndex = 0;
         Recipes = book.Recipes.Select(r =>
         {
+            // By position, cycling through the six series tokens. Position rather than a hash of the
+            // id: a hash gave a stable-but-arbitrary colour per recipe, which sounds like a feature
+            // until two recipes in the same book land on near-identical hues. Cycling guarantees
+            // adjacent segments differ, which is the only property a categorical scale owes.
+            int series = (seriesIndex++ % 6) + 1;
             double w = book.Manifest.RecipeWeights.GetValueOrDefault(r.Manifest.Id);
             double share = totalWeight > 0 ? w / totalWeight * 100 : 0;
             string dna = Unknown;
@@ -136,8 +162,7 @@ public partial class CookBookDetailViewModel : ViewModelBase
                 .Select((i, idx) => new FactorChip(i.Manifest.Name, i.Manifest.Variants.Count,
                                                    i.Manifest.Kind, ShowTimes: idx > 0))
                 .ToList();
-            return new RecipeShareRow(r.Manifest.Name, Math.Round(share, 1), dna,
-                SegmentColorFor(r.Manifest.Id), factors);
+            return new RecipeShareRow(r.Manifest.Name, Math.Round(share, 1), dna, series, factors);
         }).ToList();
     }
 
@@ -157,14 +182,15 @@ public partial class CookBookDetailViewModel : ViewModelBase
         : isExact ? total.ToString()
         : $"more than {total}";
 
-    private static Color SegmentColorFor(string recipeId)
-    {
-        double hue = SeedHash.ToUlong(recipeId) % 360UL;
-        var rgb = ColorConvert.HsvToRgb(hue, 0.5, 0.72);
-        return Color.FromRgb(rgb.R, rgb.G, rgb.B);
-    }
-
-    [RelayCommand] private void Cook() => _cook();
+    /// <summary>
+    /// Opens the cook dialog. Gated on <see cref="IsValid"/> because
+    /// <c>Generator.Generate</c> runs <c>Validator.Validate</c> itself and throws on any problem —
+    /// so on a book this pane has *already* measured as invalid, the button used to stay live, let
+    /// the user choose an output folder, and only then fail. <see cref="StatusTip"/> is the
+    /// disabled tooltip, so the reason is readable rather than merely implied.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(IsValid))]
+    private void Cook() => _cook();
 
     /// <summary>Opens the stats/identity reports — the CLI's <c>stats</c> and <c>inspect</c>. Null
     /// when no report surface was supplied (some tests), in which case the button is simply

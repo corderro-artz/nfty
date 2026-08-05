@@ -86,8 +86,6 @@
     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
   </Style>
-  <!-- A "soon" button is ALREADY muted by its own foreground/border; letting the blanket disabled
-       opacity stack on top double-dimmed it to 1.73:1 (effectively invisible). Opt it out. -->
   <!-- The disabled fix above was Button-only, leaving Fluent's opaque grey slab on the editor's
        NumericUpDown/TextBox (the audit's #c7c3be / #3c3d40). Dim inputs the same way: opacity over
        the real surface, never a grey fill. -->
@@ -99,37 +97,23 @@
     <Setter Property="Opacity" Value="0.38" />
   </Style>
 
-  <Style Selector="Button.soon:disabled">
-    <Setter Property="Opacity" Value="1" />
-  </Style>
-
-  <!-- An action whose destination does not exist yet. The mockup marks these with a DASHED edge
-       (.tbtn.soon{border-style:dashed}); Avalonia's Border/Button draw a solid edge only, so the
-       button's own border is switched off and a Rectangle.dashed.btn is laid over it by the caller.
-       Everything else (transparent fill, muted ink) is the mockup's.
-
-       Declared after Button.tbtn so it wins the rest-state tie (equal single-class specificity, later
-       declaration wins); the :disabled compound selector below additionally wins over the plain
-       Button.tbtn:disabled rule for a "soon" button that is also genuinely disabled (NewKitchen's
-       CanExecute is permanently false) - more classes matched, so it takes precedence, and would
-       otherwise be masked by the disabled-state reset. -->
-  <!-- .soon means the feature does not exist yet, and pairs with CanExecute=Never so the control is
-       genuinely disabled rather than merely looking it. .flat is the same borderless paint with no
-       such claim - for a working button that sits inside a dashed frame. Keeping them apart matters:
-       a working feature wearing .soon tells the user it is unavailable. -->
-  <Style Selector="Button.soon, Button.flat">
+  <!-- .flat: the borderless paint for a working button that sits inside a dashed Rectangle, which
+       Avalonia needs because Border/Button draw a solid edge only. It replaces a former `.soon`
+       class that meant "this feature does not exist yet" and paired with CanExecute=Never.
+       Everything that wore `.soon` has since been built, and the class is gone rather than left
+       lying around: it existed to be applied, and each time a feature shipped without it being
+       removed, the app went on telling users a working feature was unavailable — three times. If a
+       genuinely unbuilt action ever needs marking again, the mockup's own recipe is one line:
+       .tbtn.soon sets border-style dashed, colour to the muted-foreground custom property, and a
+       transparent background. -->
+  <Style Selector="Button.flat">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
-  <Style Selector="Button.soon /template/ ContentPresenter#PART_ContentPresenter, Button.flat /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Button.flat /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="BorderThickness" Value="0" />
-  </Style>
-  <Style Selector="Button.tbtn.soon:disabled /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="Transparent" />
-    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
-    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
 
   <Style Selector="Button.accent">
@@ -431,13 +415,20 @@
        what the ancestor Button.Foreground is (Avalonia priority order Style > Inherited) — the same
        reason TextBlock.hk needed its own on-accent override below rather than relying on
        inheritance. Left unfixed, "New CookBook"'s label rendered near-black FgBrush text on the
-       accent maroon fill (illegible) and a "soon" button's label stayed full-strength FgBrush
-       instead of muted. -->
+       accent maroon fill — illegible. -->
+  <!-- Mint-distribution series paint. One class per series, resolved from Tokens so it follows the
+       theme; the ViewModel supplies only which series a recipe is. A Color computed in the
+       ViewModel — which is what this replaced — cannot re-resolve when the theme flips, and escaped
+       the raw-hex sweep entirely because that sweep reads markup. -->
+  <Style Selector="Border.series.s1"><Setter Property="Background" Value="{DynamicResource Series1Brush}" /></Style>
+  <Style Selector="Border.series.s2"><Setter Property="Background" Value="{DynamicResource Series2Brush}" /></Style>
+  <Style Selector="Border.series.s3"><Setter Property="Background" Value="{DynamicResource Series3Brush}" /></Style>
+  <Style Selector="Border.series.s4"><Setter Property="Background" Value="{DynamicResource Series4Brush}" /></Style>
+  <Style Selector="Border.series.s5"><Setter Property="Background" Value="{DynamicResource Series5Brush}" /></Style>
+  <Style Selector="Border.series.s6"><Setter Property="Background" Value="{DynamicResource Series6Brush}" /></Style>
+
   <Style Selector="Button.landing.accent TextBlock.lbl">
     <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
-  </Style>
-  <Style Selector="Button.soon TextBlock.lbl">
-    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
   <Style Selector="Button.landing TextBlock.hk">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />

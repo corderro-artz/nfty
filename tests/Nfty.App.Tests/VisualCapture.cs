@@ -31,10 +31,19 @@ namespace Nfty.App.Tests;
 /// normal test run; set env var NFTY_CAPTURE=1 (and optionally NFTY_CAPTURE_DIR) to activate.</summary>
 public class VisualCapture
 {
-    private static string? Dir =>
-        Environment.GetEnvironmentVariable("NFTY_CAPTURE") is null
-            ? null
-            : (Environment.GetEnvironmentVariable("NFTY_CAPTURE_DIR") ?? Path.GetTempPath());
+    private static string? Dir
+    {
+        get
+        {
+            if (Environment.GetEnvironmentVariable("NFTY_CAPTURE") is null) return null;
+            var dir = Environment.GetEnvironmentVariable("NFTY_CAPTURE_DIR") ?? Path.GetTempPath();
+            // Created here rather than assumed: pointing NFTY_CAPTURE_DIR at a path that does not
+            // exist yet failed every capture with DirectoryNotFoundException, which reads like a
+            // broken harness rather than a missing folder.
+            Directory.CreateDirectory(dir);
+            return dir;
+        }
+    }
 
     private static TextBlock Label(string text, params string[] classes)
     {
@@ -401,7 +410,13 @@ public class VisualCapture
                     ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs), new CookBookSession(),
                     new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs), new StatusService()),
                 set => new SetBrowserViewModel(set),
-                (_, _, _) => null!);
+                (_, _, _) => null!,
+                // A real KitchenSession, because the shipped container always registers one and
+                // NewKitchenCommand.CanExecute is `_kitchen is not null`. Omitting it left the frame
+                // showing a DISABLED New Kitchen button at 0.38 opacity — a state the app cannot
+                // actually be in, which is worse than not capturing the screen at all: it made a
+                // working action look unavailable and matched the bug that was being investigated.
+                new KitchenSession());
             Capture(new Views.LandingView { DataContext = vm }, variant, $"landing-{key}.png");
         }
     }
