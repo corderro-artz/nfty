@@ -31,10 +31,20 @@ public sealed class FloodFill : RegionEditCommand
             if (!map.InBounds(x, y)) continue;
             if (map.GetValue(x, y) != tv || map.GetAlpha(x, y) != ta) continue;
             pixels.Add((x, y, _value, (byte)255));
-            foreach (var (nx, ny) in new[] { (x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1) })
-                if (map.InBounds(nx, ny) && seen.Add((nx, ny)))
-                    queue.Enqueue((nx, ny));
+
+            // Enqueued one at a time rather than by iterating a freshly-allocated 4-tuple array:
+            // that array was allocated once per VISITED PIXEL, so a 2048x2048 fill made roughly four
+            // million of them for nothing.
+            Visit(x + 1, y);
+            Visit(x - 1, y);
+            Visit(x, y + 1);
+            Visit(x, y - 1);
         }
         return pixels;
+
+        void Visit(int nx, int ny)
+        {
+            if (map.InBounds(nx, ny) && seen.Add((nx, ny))) queue.Enqueue((nx, ny));
+        }
     }
 }

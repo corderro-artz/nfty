@@ -9,15 +9,19 @@ using SixLabors.ImageSharp.PixelFormats;
 namespace Nfty.Core.Tests;
 
 /// <summary>
-/// Generator.RollOne accumulates one Image&lt;Rgba32&gt; per layer into a local list as it walks
-/// a recipe's layerOrder (cloning a custom layer's source, or colorizing a dynamic/static one).
-/// Those images have no owner but RollOne itself until compositing succeeds. If a later layer's
+/// Generator.Render accumulates one Image&lt;Rgba32&gt; per layer into a local list as it walks a
+/// rolled asset's plan (cloning a custom layer's source, or colorizing a dynamic/static one). Those
+/// images have no owner but Render itself until compositing succeeds. If a later layer's
 /// Colorizer.Apply or Compositor.Composite throws, every image already added for an earlier layer
 /// must be disposed before the exception propagates, or it leaks on every reroll.
 ///
-/// RollOne is private, so this reaches it via reflection to test the unit directly rather than
+/// Rolling and rendering are separate methods — the roll decides the asset and computes its DNA
+/// without touching a pixel, so a duplicate is discarded before anything is rendered — and this
+/// drives both, because the images only exist in the second.
+///
+/// Both are private, so this reaches them via reflection to test the unit directly rather than
 /// through Generator.Generate/GenerateStreaming — which run Validator.Validate first, and would
-/// reject the pre-disposed-source-image setup below before RollOne ever ran.
+/// reject the pre-disposed-source-image setup below before either ever ran.
 ///
 /// Disposal is asserted via ImageSharp's process-wide leak counter,
 /// <see cref="MemoryDiagnostics.TotalUndisposedAllocationCount"/> (see
@@ -28,6 +32,10 @@ public class GeneratorRollOneDisposalTests
     private static readonly MethodInfo RollOneMethod =
         typeof(Generator).GetMethod("RollOne", BindingFlags.NonPublic | BindingFlags.Static)
         ?? throw new InvalidOperationException("Generator.RollOne not found by reflection; has its signature changed?");
+
+    private static readonly MethodInfo RenderMethod =
+        typeof(Generator).GetMethod("Render", BindingFlags.NonPublic | BindingFlags.Static)
+        ?? throw new InvalidOperationException("Generator.Render not found by reflection; has its signature changed?");
 
     // RollOne takes its layers pre-resolved (ingredient + prepared weight table + variants by id),
     // built once per run instead of per roll attempt. That plan is a private type, so it is built
@@ -42,8 +50,9 @@ public class GeneratorRollOneDisposalTests
         try
         {
             object? layers = PlanLayersMethod.Invoke(null, new object?[] { recipe });
-            return (GeneratedAsset?)RollOneMethod.Invoke(
-                null, new object?[] { canvas, recipe, layers, rng, number });
+            object? rolled = RollOneMethod.Invoke(null, new object?[] { recipe, layers, rng });
+            if (rolled is null) return null;                 // rules rejected the selection
+            return (GeneratedAsset?)RenderMethod.Invoke(null, new object?[] { canvas, rolled, number });
         }
         catch (TargetInvocationException ex) when (ex.InnerException is not null)
         {

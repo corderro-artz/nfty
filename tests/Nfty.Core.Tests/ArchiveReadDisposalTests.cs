@@ -28,6 +28,16 @@ public class ArchiveReadDisposalTests
     private static string TempPath(string name) =>
         Path.Combine(Directory.CreateTempSubdirectory().FullName, name);
 
+    /// <summary>Walks up from the test binary to the directory holding nfty.sln.</summary>
+    private static string RepoRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "nfty.sln")))
+            dir = dir.Parent;
+        Assert.NotNull(dir);
+        return dir!.FullName;
+    }
+
     // ---- IngredientArchive: variant "a" decodes fine, variant "b"'s PNG bytes are garbage ----
 
     private static void WriteIngredientWithCorruptSecondVariant(string path)
@@ -165,5 +175,101 @@ public class ArchiveReadDisposalTests
         var ex = await Assert.ThrowsAsync<InvalidDataException>(() => CookBookArchive.ReadAsync(path));
         Assert.Contains("duplicate variant id", ex.Message);
         Assert.Equal(before, MemoryDiagnostics.TotalUndisposedAllocationCount);
+    }
+
+    // ---- the source hash: every recipe loads, and the step AFTER them fails --------------------
+
+    private static void WriteIntactCookBook(string path)
+    {
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("r1", "R1", new[] { "ing" }, Array.Empty<IncompatibilityRule>()),
+            Ingredients = new[] { GoodIngredient("ing") },
+        };
+        var manifest = new CookBookManifest("cb", "VaporPets", new Dimensions(2, 2),
+            new Collection("VaporPets", "d", "VP"),
+            new Dictionary<string, double> { ["r1"] = 1 });
+
+        CookBookArchive.Write(path, manifest, new[] { recipe });
+        recipe.Dispose();
+
+        // Pad the file with incompressible bytes so hashing it takes appreciably longer than
+        // decoding its one 2x2 variant. Without this, a cancellation aimed at the hash almost always
+        // arrives after the whole read has finished and the test proves nothing.
+        using var zip = ZipFile.Open(path, ZipArchiveMode.Update);
+        using var s = zip.CreateEntry("padding.bin", CompressionLevel.NoCompression).Open();
+        var noise = new byte[4 * 1024 * 1024];
+        new Random(1234).NextBytes(noise);
+        s.Write(noise);
+    }
+
+    /// <summary>
+    /// The failure the other cases in this file could not reach: nothing in the archive is wrong, so
+    /// every recipe decodes, and then the SourceSha256 step throws. That step used to sit in the
+    /// object initializer after the try/catch, which meant the whole decoded tree — every variant
+    /// image in the book — was stranded with no owner.
+    ///
+    /// <para>Cancellation is the realistic trigger and the reason this matters: ReadAsync takes a
+    /// CancellationToken as a first-class input, a GUI passes one that fires when the user navigates
+    /// away, and HashFileAsync reads the entire file. Forced here with an already-cancelled token so
+    /// the test does not depend on winning a race.</para>
+    /// </summary>
+    [Fact]
+    public async Task Cancelling_a_cookbook_read_never_strands_a_decoded_image()
+    {
+        var path = TempPath("cb.cbk");
+        WriteIntactCookBook(path);
+
+        // Sweep the cancellation across the whole read rather than aiming at one instant. Aiming is
+        // a race — the read either finished first (proving nothing) or was cancelled before the
+        // recipes existed (also proving nothing). Sweeping guarantees some iterations land in the
+        // entry loop, some in the hash, and some after completion, and the invariant is the same
+        // for all of them: whatever was decoded is disposed. `cancelled` then confirms the window
+        // was actually hit, so a run where every attempt completed early fails loudly instead of
+        // passing vacuously.
+        int cancelled = 0, completed = 0;
+        foreach (var delay in new[] { 0, 1, 2, 4, 8, 16, 24, 32, 48, 64 })
+        {
+            int before = MemoryDiagnostics.TotalUndisposedAllocationCount;
+            using var cts = new CancellationTokenSource();
+            cts.CancelAfter(delay);
+            try
+            {
+                using var book = await CookBookArchive.ReadAsync(path, cts.Token);
+                completed++;
+            }
+            catch (OperationCanceledException) { cancelled++; }
+
+            Assert.Equal(before, MemoryDiagnostics.TotalUndisposedAllocationCount);
+        }
+
+        Assert.True(cancelled > 0,
+            $"no attempt was cancelled ({completed} completed), so the disposal-on-cancel path never ran");
+    }
+
+    /// <summary>
+    /// The sync seam, stated structurally because it cannot be forced from outside: <c>Read</c> and
+    /// <c>ReadAsync</c> reach the source hash the same way, and the hash is the one step that runs
+    /// after every image is decoded and before any caller owns them. Both now compute it inside the
+    /// try that disposes the recipes; this pins the shape so a refactor that moves either one back
+    /// out into the object initializer is visible here.
+    /// </summary>
+    [Fact]
+    public void Both_cookbook_readers_hash_the_source_inside_the_disposing_try()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            RepoRoot(), "src", "Nfty.Core", "Formats", "CookBookArchive.cs"));
+
+        foreach (var reader in new[] { "public static LoadedCookBook Read(", "public static async Task<LoadedCookBook> ReadAsync(" })
+        {
+            int start = source.IndexOf(reader, StringComparison.Ordinal);
+            Assert.True(start >= 0, $"could not find {reader}");
+            int hash = source.IndexOf("SourceSha256", start, StringComparison.Ordinal);
+            int catchAt = source.IndexOf("catch", start, StringComparison.Ordinal);
+
+            Assert.True(hash < catchAt,
+                $"{reader} computes SourceSha256 after its catch block, so a failing hash strands "
+                + "every decoded image in the book");
+        }
     }
 }

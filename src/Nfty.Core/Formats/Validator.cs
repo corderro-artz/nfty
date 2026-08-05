@@ -187,6 +187,15 @@ public static class Validator
                 problems.Add($"{where} has variant '{v.Id}' with a negative weight ({Num(v.Weight)}); "
                     + "weights must be zero or greater, and zero means never rolled.");
 
+        // "Type" is the pseudo trait-type an asset's Recipe is published under, in the same
+        // namespace as ingredient names. An ingredient of that name merges with it in the rarity
+        // table and ships rarityPct above 100. It cannot be disambiguated after the fact — on
+        // extend both read back as the bare string "Type" — so it is refused up front.
+        if (string.Equals(ing.Manifest.Name, Output.SetWriter.TypeTrait, StringComparison.Ordinal))
+            problems.Add($"{where} is named '{Output.SetWriter.TypeTrait}', which is reserved: it is "
+                + "the trait type an asset's Recipe is published under, so the two would merge in "
+                + "the rarity table. Rename the ingredient.");
+
         CheckKind(problems, where, ing.Manifest.Kind, ing.Manifest.Colorization);
         CheckColorEntries(problems, where, ing.Manifest.Colorization);
         CheckVariantImagesPresentAndGray(problems, where, ing);

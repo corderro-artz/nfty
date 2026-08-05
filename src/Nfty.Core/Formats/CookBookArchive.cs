@@ -23,6 +23,16 @@ public static class CookBookArchive
         {
             foreach (var name in ArchiveIo.EntryNamesUnder(zip, "recipes/").OrderBy(n => n, StringComparer.Ordinal))
                 recipes.Add(ArchiveIo.ReadNested(zip, name, RecipeArchive.Read));
+
+            // Inside the try, not after it. The hash reads the whole file and can fail — on I/O, or
+            // on cancellation in the async twin — and at this point `recipes` owns every decoded
+            // variant image in the book with no other owner to free them.
+            return new LoadedCookBook
+            {
+                Manifest = manifest,
+                Recipes = recipes,
+                SourceSha256 = ArchiveIo.HashFile(path),
+            };
         }
         catch
         {
@@ -32,12 +42,6 @@ public static class CookBookArchive
             foreach (var r in recipes) r.Dispose();
             throw;
         }
-        return new LoadedCookBook
-        {
-            Manifest = manifest,
-            Recipes = recipes,
-            SourceSha256 = ArchiveIo.HashFile(path),
-        };
     }
 
     public static async Task WriteAsync(string path, CookBookManifest manifest,
@@ -53,28 +57,31 @@ public static class CookBookArchive
     public static async Task<LoadedCookBook> ReadAsync(string path, CancellationToken ct = default)
     {
         var recipes = new List<LoadedRecipe>();
-        CookBookManifest manifest;
-
-        using (var zip = ZipFile.OpenRead(path))
+        try
         {
-            manifest = await ArchiveIo.ReadManifestAsync<CookBookManifest>(zip, ct);
-            try
+            CookBookManifest manifest;
+            using (var zip = ZipFile.OpenRead(path))
             {
+                manifest = await ArchiveIo.ReadManifestAsync<CookBookManifest>(zip, ct);
                 foreach (var name in ArchiveIo.EntryNamesUnder(zip, "recipes/").OrderBy(n => n, StringComparer.Ordinal))
                     recipes.Add(await ArchiveIo.ReadNestedAsync(zip, name, RecipeArchive.ReadAsync, ct));
             }
-            catch
-            {
-                foreach (var r in recipes) r.Dispose();
-                throw;
-            }
-        }
 
-        return new LoadedCookBook
+            // The hash is inside the try because cancellation genuinely lands here: this method
+            // takes a CancellationToken as a first-class input, a GUI passes one that fires when the
+            // user navigates away, and HashFileAsync awaits the whole file. Leaving it outside
+            // stranded every decoded image in the book.
+            return new LoadedCookBook
+            {
+                Manifest = manifest,
+                Recipes = recipes,
+                SourceSha256 = await ArchiveIo.HashFileAsync(path, ct),
+            };
+        }
+        catch
         {
-            Manifest = manifest,
-            Recipes = recipes,
-            SourceSha256 = await ArchiveIo.HashFileAsync(path, ct),
-        };
+            foreach (var r in recipes) r.Dispose();
+            throw;
+        }
     }
 }

@@ -133,17 +133,22 @@ public static class Generator
                 cancellationToken.ThrowIfCancellationRequested();
 
                 string recipeId = WeightedRoller.Roll(recipeTable, rng);
-                var candidate = RollOne(
-                    book.Manifest.Canvas, recipeById[recipeId], layerPlans[recipeId], rng, number);
-                if (candidate is null) continue;             // rule violation → reroll
+                var rolled = RollOne(recipeById[recipeId], layerPlans[recipeId], rng);
+                if (rolled is null) continue;                // rule violation → reroll
 
-                // With uniqueness off, a repeated DNA is accepted: identity comes from the token
-                // id, not the DNA, so there is nothing to dedup and nothing to exhaust. Rules were
-                // already honoured above, so the first non-violating roll is the asset.
-                if (!opts.EnforceUniqueDna) { asset = candidate; break; }
+                // Dedup BEFORE rendering. The DNA is a function of the selection and the rolled
+                // colours, all of which the roll phase already has, so a collision can be detected
+                // without touching a pixel. Rendering first meant every duplicate threw away a
+                // fully colorized and composited canvas — and minting near the top of the unique
+                // space is the normal case, where coupon-collector says most attempts collide. The
+                // file already applied exactly this reasoning to the rules check one phase earlier.
+                //
+                // With uniqueness off, a repeated DNA is accepted: identity comes from the token id,
+                // not the DNA, so there is nothing to dedup and nothing to exhaust.
+                if (opts.EnforceUniqueDna && !seen.Add(rolled.Dna)) continue;
 
-                if (seen.Add(candidate.Dna)) { asset = candidate; break; }
-                candidate.Dispose();                         // duplicate → discard
+                asset = Render(book.Manifest.Canvas, rolled, number);
+                break;
             }
 
             if (asset is null)
@@ -251,26 +256,42 @@ public static class Generator
             .ToList();
     }
 
-    private static GeneratedAsset? RollOne(
-        Dimensions canvas,
+    /// <summary>
+    /// One asset's decisions, complete and costing no pixels. Holds everything the DNA is computed
+    /// from, which is what lets the caller detect a duplicate before paying to render one.
+    /// </summary>
+    /// <param name="Dna">The identity this roll would produce.</param>
+    /// <param name="Recipe">The recipe rolled.</param>
+    /// <param name="Plan">Per layer: the source image, its rolled colour, and the colour model —
+    /// a null model marks a Custom layer, cloned as-is rather than colorized.</param>
+    /// <param name="Traits">The trait selections, in layer order.</param>
+    /// <param name="ColorRolls">The per-layer colour record for the rich metadata.</param>
+    private sealed record RolledAsset(
+        string Dna,
+        LoadedRecipe Recipe,
+        IReadOnlyList<(Image<Rgba32> Source, RolledColor Color, ColorModel? Model)> Plan,
+        IReadOnlyList<TraitSelection> Traits,
+        IReadOnlyList<ColorRoll> ColorRolls);
+
+    /// <summary>
+    /// The roll phase: consumes the RNG, decides the whole asset, and touches no pixels. Returns
+    /// null when the recipe's rules reject the selection.
+    /// </summary>
+    private static RolledAsset? RollOne(
         LoadedRecipe recipe,
         IReadOnlyList<LayerPlan> layers,
-        IRng rng,
-        int number)
+        IRng rng)
     {
         var selection = new Dictionary<string, string>();
         var traits = new List<TraitSelection>();
         var colorRolls = new List<ColorRoll>();
         var dnaParts = new List<LayerSelection>();
 
-        // What each layer will draw, decided in the roll phase and rendered in the render phase.
+        // What each layer will draw, decided here and rendered later.
         // A null model means a Custom layer, which is cloned as-is rather than colorized.
         var plan = new List<(Image<Rgba32> Source, RolledColor Color, ColorModel? Model)>();
-        var images = new List<Image<Rgba32>>();
 
-        try
         {
-            // --- Roll phase: consumes the RNG, touches no pixels. ---
             foreach (var layer in layers)
             {
                 var ing = layer.Ingredient;
@@ -317,8 +338,21 @@ public static class Generator
             if (!RulesEngine.IsLegal(selection, recipe.Manifest.Rules))
                 return null;
 
-            // --- Render phase: no RNG, only pixels. ---
-            foreach (var (source, color, model) in plan)
+            return new RolledAsset(
+                Dna.Compute(recipe.Manifest.Id, dnaParts), recipe, plan, traits, colorRolls);
+        }
+    }
+
+    /// <summary>
+    /// The render phase: no RNG, only pixels. Separated from the roll so a duplicate DNA can be
+    /// discarded without ever paying for the colorize and composite that produced it.
+    /// </summary>
+    private static GeneratedAsset Render(Dimensions canvas, RolledAsset rolled, int number)
+    {
+        var images = new List<Image<Rgba32>>(rolled.Plan.Count);
+        try
+        {
+            foreach (var (source, color, model) in rolled.Plan)
                 images.Add(model is null
                     ? source.Clone()
                     : Colorizer.Apply(source, color.H, color.S, model.Value));
@@ -329,19 +363,19 @@ public static class Generator
             return new GeneratedAsset
             {
                 SetNumber = number,
-                Dna = Dna.Compute(recipe.Manifest.Id, dnaParts),
-                RecipeId = recipe.Manifest.Id,
-                RecipeName = recipe.Manifest.Name,
+                Dna = rolled.Dna,
+                RecipeId = rolled.Recipe.Manifest.Id,
+                RecipeName = rolled.Recipe.Manifest.Name,
                 Image = composed,
-                Traits = traits,
-                ColorRolls = colorRolls,
+                Traits = rolled.Traits,
+                ColorRolls = rolled.ColorRolls,
             };
         }
         catch
         {
             // Colorizer.Apply or Compositor.Composite can throw mid-stack; every layer image
-            // already decoded/cloned/colorized into `images` has no other owner yet, so it must
-            // be disposed here before the original exception propagates.
+            // already cloned/colorized into `images` has no other owner yet, so it must be
+            // disposed here before the original exception propagates.
             foreach (var img in images) img.Dispose();
             throw;
         }

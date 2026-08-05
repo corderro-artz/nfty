@@ -16,7 +16,20 @@ public readonly record struct WriteProgress(int Completed, int Total)
 public static class SetWriter
 {
     public const string GeneratorVersion = "nfty/1.0";
-    private const string TypeTrait = "Type";
+
+    /// <summary>
+    /// The pseudo trait-type under which an asset's Recipe is published, alongside its real
+    /// ingredient traits. It shares a namespace with ingredient <em>names</em> in both the OpenSea
+    /// attributes and the rarity table, so an Ingredient actually named "Type" collides with it and
+    /// double-counts — which shipped as a <c>rarityPct</c> above 100 and a duplicated row.
+    ///
+    /// <para>Public because <see cref="Formats.Validator"/> reserves the name on this constant's
+    /// authority rather than repeating the literal. Rejecting the book is the fix rather than
+    /// disambiguating the key, because the two are genuinely indistinguishable once written: on
+    /// extend, the recipe trait is read back from <c>metadata/NNNN.json</c> as the plain string
+    /// "Type", with nothing left to tell it apart from an ingredient of that name.</para>
+    /// </summary>
+    public const string TypeTrait = "Type";
 
     public record ExistingSet(IReadOnlyList<string> Dnas, int NextNumber);
 
@@ -96,7 +109,7 @@ public static class SetWriter
         int maxNumber = 0;
         foreach (var file in Directory.EnumerateFiles(nftyDir, "*.json"))
         {
-            var (dna, number) = ReadDnaAndNumber(File.ReadAllText(file));
+            var (dna, number) = ReadDnaAndNumber(File.ReadAllText(file), file);
             dnas.Add(dna);
             maxNumber = Math.Max(maxNumber, number);
         }
@@ -113,18 +126,50 @@ public static class SetWriter
         int maxNumber = 0;
         foreach (var file in Directory.EnumerateFiles(nftyDir, "*.json"))
         {
-            var (dna, number) = ReadDnaAndNumber(await File.ReadAllTextAsync(file, cancellationToken));
+            var (dna, number) = ReadDnaAndNumber(await File.ReadAllTextAsync(file, cancellationToken), file);
             dnas.Add(dna);
             maxNumber = Math.Max(maxNumber, number);
         }
         return new ExistingSet(dnas, maxNumber + 1);
     }
 
-    private static (string Dna, int SetNumber) ReadDnaAndNumber(string json)
+    /// <summary>
+    /// Pulls the two fields extend needs out of one <c>nfty/NNNN.json</c>. Everything here is
+    /// reported as <see cref="CorruptSetException"/> rather than allowed to escape as the
+    /// framework's own type: <c>GetProperty</c> throws a bare <c>KeyNotFoundException</c> whose
+    /// message is "The given key was not present in the dictionary", and <c>ErrorReport</c> prints
+    /// exactly that to a user trying to extend their collection. <c>SiblingOf</c>, in this same
+    /// file, already did it properly.
+    /// </summary>
+    /// <param name="json">The file's contents.</param>
+    /// <param name="path">The file it came from, for the message.</param>
+    /// <returns>The DNA and set number recorded for that asset.</returns>
+    /// <exception cref="CorruptSetException">The file is not readable as an nfty metadata record.</exception>
+    private static (string Dna, int SetNumber) ReadDnaAndNumber(string json, string path)
     {
-        using var doc = JsonDocument.Parse(json);
-        return (doc.RootElement.GetProperty("dna").GetString()!,
-                doc.RootElement.GetProperty("setNumber").GetInt32());
+        JsonDocument doc;
+        try { doc = JsonDocument.Parse(json); }
+        catch (JsonException ex)
+        {
+            throw new CorruptSetException(path,
+                $"Set item '{path}' is not valid JSON, so extend cannot tell which assets already "
+                + $"exist: {ex.Message}");
+        }
+
+        using (doc)
+        {
+            if (!doc.RootElement.TryGetProperty("dna", out var dna) || dna.GetString() is not { } dnaText)
+                throw new CorruptSetException(path,
+                    $"Set item '{path}' has no 'dna' field, so extend cannot tell which assets "
+                    + "already exist.");
+            if (!doc.RootElement.TryGetProperty("setNumber", out var number)
+                || !number.TryGetInt32(out int setNumber))
+                throw new CorruptSetException(path,
+                    $"Set item '{path}' has no usable 'setNumber' field, so extend cannot tell "
+                    + "where to continue numbering.");
+
+            return (dnaText, setNumber);
+        }
     }
 
     private static Layout Prepare(string outDir)
@@ -254,7 +299,10 @@ public static class SetWriter
 
     private static void Pack(string outDir)
     {
-        string archivePath = outDir + ".set";
+        // TrimEndingDirectorySeparator, not bare concatenation: for an outDir given with a trailing
+        // separator ("out\"), "out\" + ".set" is "out\.set" — a file INSIDE the directory being
+        // zipped, rather than the sibling archive the caller asked for.
+        string archivePath = Path.TrimEndingDirectorySeparator(outDir) + ".set";
         if (File.Exists(archivePath)) File.Delete(archivePath);
         ZipFile.CreateFromDirectory(outDir, archivePath);
     }
