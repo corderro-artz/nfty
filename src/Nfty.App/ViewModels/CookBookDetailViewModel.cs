@@ -105,14 +105,14 @@ public partial class CookBookDetailViewModel : ViewModelBase
 
         // Best-effort: the Explorer opens whatever archive it is handed, and reading one does NOT
         // validate it, so a book that Validator would reject can reach this pane (e.g. a hand-edited
-        // manifest with kind "dynamic" but no colorization block - UniqueSpace dereferences it). The
-        // counts are informational; a book we cannot measure must still open and show its structure.
+        // manifest with kind "dynamic" but no colorization block). UniqueSpace reports that as
+        // uncountable rather than throwing now, so the catch is belt-and-braces; the counts are
+        // informational and a book we cannot measure must still open and show its structure.
         UniqueSpaceCount? space = null;
         try { space = UniqueSpace.Count(book); }
         catch { /* fall through to Unknown below */ }
 
-        UniqueDnaText = space is null ? Unknown
-            : space.IsExact ? space.Total.ToString() : $"more than {space.Total}";
+        UniqueDnaText = SpaceText(space is null || !space.IsCountable, space?.IsExact ?? false, space?.Total ?? 0);
 
         var target = book.Manifest.TargetSupply;
         HasTargetSupply = target is not null;
@@ -130,7 +130,7 @@ public partial class CookBookDetailViewModel : ViewModelBase
             if (space is not null)
             {
                 var rs = space[r.Manifest.Id];
-                dna = rs.IsExact ? rs.Total.ToString() : $"more than {rs.Total}";
+                dna = SpaceText(!rs.IsCountable, rs.IsExact, rs.Total);
             }
             var factors = r.Ingredients
                 .Select((i, idx) => new FactorChip(i.Manifest.Name, i.Manifest.Variants.Count,
@@ -140,6 +140,22 @@ public partial class CookBookDetailViewModel : ViewModelBase
                 SegmentColorFor(r.Manifest.Id), factors);
         }).ToList();
     }
+
+    /// <summary>
+    /// One DNA-space figure as the card shows it. Three outcomes, not two: an exact count, a
+    /// saturated count that is a real lower bound, and a space that is <em>undefined</em> because
+    /// the book is invalid in a way that makes the question meaningless. The third reports zero, so
+    /// formatting it like the second would put "more than 0" on the card — which reads like a
+    /// measurement rather than a shrug.
+    /// </summary>
+    /// <param name="uncountable">Whether the space is undefined rather than merely large.</param>
+    /// <param name="isExact">Whether <paramref name="total"/> is the figure rather than a floor.</param>
+    /// <param name="total">The counted figure.</param>
+    /// <returns>Display text, never empty.</returns>
+    private static string SpaceText(bool uncountable, bool isExact, long total) =>
+        uncountable ? Unknown
+        : isExact ? total.ToString()
+        : $"more than {total}";
 
     private static Color SegmentColorFor(string recipeId)
     {

@@ -24,7 +24,11 @@ namespace Nfty.Core.Generation;
 /// entry naming a missing ingredient): that recipe's real space is undefined until the book is
 /// fixed, not honestly zero, so it must never be read as a rule conflict either.
 /// </param>
-public record RecipeSpace(long Total, long Combos, bool IsExact);
+public record RecipeSpace(long Total, long Combos, bool IsExact)
+{
+    /// <inheritdoc cref="UniqueSpaceCount.IsCountable"/>
+    public bool IsCountable => IsExact || Total > 0;
+}
 
 /// <summary>
 /// How many distinct DNA a cookbook can produce. Counts only rollable recipes — a zero-weight
@@ -42,6 +46,20 @@ public record UniqueSpaceCount(
     /// <summary>An unknown recipe id has no space at all, and no space is exactly known.</summary>
     public RecipeSpace this[string recipeId] =>
         Recipes.GetValueOrDefault(recipeId) ?? new RecipeSpace(0, 0, true);
+
+    /// <summary>
+    /// Whether this figure means anything to show a user. <see cref="IsExact"/> alone is false for
+    /// two unrelated situations: the space saturated the enumeration cap ("more than
+    /// <see cref="Total"/>", a real lower bound), and the space is <em>undefined</em> because the
+    /// book is invalid in a way that makes the question meaningless. The second reports
+    /// <c>Total == 0</c>, and rendering that as "more than 0" states a bound that is technically
+    /// true and reads like an answer.
+    ///
+    /// <para>Every front-end needs this distinction — the CLI's <c>stats</c>, the GUI's identity
+    /// card and its per-recipe rows — so it is decided once here instead of three times, differently.
+    /// </para>
+    /// </summary>
+    public bool IsCountable => IsExact || Total > 0;
 }
 
 /// <summary>
@@ -193,7 +211,16 @@ public static class UniqueSpace
             // Static and custom layers resolve to one constant bucket each.
             if (ing.Manifest.Kind != LayerKind.Dynamic) continue;
 
-            var (buckets, bucketsExact) = DistinctBuckets(ing.Manifest.Colorization!, cap);
+            // A Dynamic layer with no colorization block is illegal, and Validator says so — but
+            // this method is documented never to throw, precisely so a GUI can call it on a book
+            // that is mid-edit. It used to dereference this null anyway, which is why
+            // CollectionReport wrapped the call in a try/catch: the contract was stated in one file
+            // and worked around in another. Report it the way an unresolvable layer is reported —
+            // "undefined until the book is fixed", not an honest zero.
+            if (ing.Manifest.Colorization is not { } colorization)
+                return (0, false);
+
+            var (buckets, bucketsExact) = DistinctBuckets(colorization, cap);
             exact &= bucketsExact;
             product = Multiply(product, buckets, cap);
             if (product >= cap) return (cap, false);
@@ -211,19 +238,29 @@ public static class UniqueSpace
         foreach (var entry in col.Entries)
         {
             // ColorRoller.PickEntry accumulates weight exactly as WeightedRoller does, so a
-            // zero-weight entry is never picked and contributes no bucket.
+            // zero-weight entry is never picked and contributes no bucket. A non-finite weight
+            // makes the pick undefined rather than zero, so the count is undefined too.
+            if (!double.IsFinite(entry.Weight)) return (0, false);
             if (entry.Weight <= 0) continue;
 
             if (entry.Fixed is not null)
             {
-                var c = ColorRoller.FromFixed(entry.Fixed, col.Model);
+                // An unparseable spec is Validator's problem to report, not this method's to throw
+                // on — see the contract on TryResolveLayers.
+                RolledColor c;
+                try { c = ColorRoller.FromFixed(entry.Fixed, col.Model); }
+                catch (FormatException) { return (0, false); }
                 seen.Add((ColorBuckets.Hue(c.H, hueQ), ColorBuckets.Sat(c.S, satQ)));
                 continue;
             }
 
+            // Neither a fixed spec nor a range: illegal, reported by Validator, and uncountable
+            // here rather than a NullReferenceException on the dereference below.
+            if (entry.Range is null) return (0, false);
+
             // A range covers every bucket reachable by ColorRoller.Roll, which samples
             // Min + r*(Max-Min) with r in [0,1) — so Max itself is never rolled.
-            var r = entry.Range!;
+            var r = entry.Range;
             var (h0, h1) = BucketSpan(r.HueMin, r.HueMax,
                 u => ColorRoller.SampleHue(r, u), h => ColorBuckets.Hue(h, hueQ));
             var (s0, s1) = BucketSpan(r.SatMin, r.SatMax,

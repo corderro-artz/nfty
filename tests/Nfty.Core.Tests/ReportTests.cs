@@ -1,4 +1,5 @@
 using Nfty.Core.Formats;
+using Nfty.Core.Generation;
 using Nfty.Core.Model;
 using Nfty.Core.Stats;
 using SixLabors.ImageSharp;
@@ -232,12 +233,14 @@ public class ReportTests
         finally { Thread.CurrentThread.CurrentCulture = previous; }
     }
 
-    /// <summary>Counting the DNA space throws on a book Validator would reject. A report that dies
-    /// on a broken book is useless exactly when it is most wanted, so that line degrades instead.</summary>
+    /// <summary>A report that dies on a broken book is useless exactly when it is most wanted, so
+    /// the DNA-space line degrades instead of taking the report down. It must degrade to "cannot be
+    /// counted" and NOT to "more than 0" — the space is undefined here, and a lower bound of zero
+    /// reads like a real answer.</summary>
     [Fact]
     public void An_uncountable_book_still_produces_a_report()
     {
-        // Dynamic with no colorization block - the shape UniqueSpace dereferences.
+        // Dynamic with no colorization block - the shape UniqueSpace used to dereference.
         var broken = new LoadedIngredient
         {
             Manifest = new IngredientManifest("bg", "BG", LayerKind.Dynamic, null,
@@ -262,5 +265,11 @@ public class ReportTests
 
         Assert.Contains("Recipes:", text);
         Assert.Contains("cannot be counted", text);
+        Assert.DoesNotContain("more than 0", text);
+
+        // ...and it degrades because Count REPORTS the problem, not because the report catches a
+        // throw. Pinning that here is the point: the catch in UniqueDnaLine is now belt-and-braces.
+        Assert.False(UniqueSpace.Count(book).IsExact);
+        Assert.Equal(0, UniqueSpace.Count(book).Total);
     }
 }

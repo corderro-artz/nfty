@@ -123,8 +123,15 @@ public static class Validator
 
         foreach (var rule in r.Manifest.Rules)
             foreach (var t in rule.Targets.Append(rule.When))
-                if (!ingById.ContainsKey(t.IngredientId))
+                if (!ingById.TryGetValue(t.IngredientId, out var target))
                     problems.Add($"Recipe '{r.Manifest.Id}' rule references unknown ingredient '{t.IngredientId}'.");
+                // A typo'd VARIANT id used to pass, because only the ingredient was resolved. The
+                // rule then matched nothing, so every roll of the real variant stayed legal and the
+                // space quietly changed size — and the user's first sign of it was a
+                // UniqueSpaceExhaustedException blaming the space rather than the typo.
+                else if (!target.Manifest.Variants.Any(v => string.Equals(v.Id, t.VariantId, StringComparison.Ordinal)))
+                    problems.Add($"Recipe '{r.Manifest.Id}' rule references unknown variant "
+                        + $"'{t.VariantId}' of ingredient '{t.IngredientId}'.");
     }
 
     /// <summary>

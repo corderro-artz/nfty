@@ -22,8 +22,26 @@ internal static class ArchiveIo
         var entry = zip.GetEntry("manifest.json")
             ?? throw new InvalidDataException("Archive is missing manifest.json.");
         using var s = entry.Open();
-        var manifest = JsonSerializer.Deserialize<T>(s, Json.Options)
-            ?? throw new InvalidDataException("manifest.json deserialized to null.");
+        T? manifest;
+        try
+        {
+            manifest = JsonSerializer.Deserialize<T>(s, Json.Options);
+        }
+        catch (JsonException ex)
+        {
+            // Includes the missing-required-member case that Json.Options' RespectNullableAnnotations
+            // now raises. Reframed because the message is shown to a user verbatim (ErrorReport
+            // prints ex.Message), and System.Text.Json's own phrasing talks about CLR types.
+            throw new InvalidDataException($"manifest.json is not a readable {typeof(T).Name}: {ex.Message}", ex);
+        }
+        return Verified(manifest);
+    }
+
+    /// <summary>Shared tail of both manifest readers: reject a null document, then gate the schema
+    /// version. Split out so the sync and async paths cannot drift on either check.</summary>
+    private static T Verified<T>(T? manifest) where T : ISchemaVersioned
+    {
+        if (manifest is null) throw new InvalidDataException("manifest.json deserialized to null.");
         UnsupportedSchemaVersionException.Require(manifest);
         return manifest;
     }
@@ -98,10 +116,16 @@ internal static class ArchiveIo
         var entry = zip.GetEntry("manifest.json")
             ?? throw new InvalidDataException("Archive is missing manifest.json.");
         await using var s = entry.Open();
-        var manifest = await JsonSerializer.DeserializeAsync<T>(s, Json.Options, ct)
-            ?? throw new InvalidDataException("manifest.json deserialized to null.");
-        UnsupportedSchemaVersionException.Require(manifest);
-        return manifest;
+        T? manifest;
+        try
+        {
+            manifest = await JsonSerializer.DeserializeAsync<T>(s, Json.Options, ct);
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidDataException($"manifest.json is not a readable {typeof(T).Name}: {ex.Message}", ex);
+        }
+        return Verified(manifest);
     }
 
     public static async Task WriteImageAsync(ZipArchive zip, string name, Image<Rgba32> img, CancellationToken ct)

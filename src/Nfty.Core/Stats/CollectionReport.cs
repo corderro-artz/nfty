@@ -41,15 +41,25 @@ public static class CollectionReport
     /// <summary>The largest number of unique-DNA assets this CookBook can produce — the figure
     /// generate reports only on failure, surfaced so a run can be sized before it starts.
     ///
-    /// Counting can throw on a book Validator would reject (a Dynamic layer with no colorization
-    /// block dereferences null inside UniqueSpace), and a report that cannot be produced for a broken
-    /// book is useless precisely when it is most wanted — so that case degrades to a line saying so
-    /// rather than taking the whole report down.</summary>
+    /// <para>Three outcomes, not two. An exact count prints the number. A count that saturated its
+    /// enumeration cap prints "more than N". And a book whose space is <em>undefined</em> — because
+    /// it is invalid in a way that makes the question meaningless, such as a Dynamic layer with no
+    /// colorization block — says so, rather than claiming "more than 0", which reads like a real
+    /// lower bound.</para>
+    ///
+    /// <para><see cref="UniqueSpace.Count"/> reports that third case as <c>Total == 0</c> with
+    /// <c>IsExact == false</c> and is documented never to throw; the catch below is kept as
+    /// belt-and-braces, not as the mechanism. It used to be the mechanism, which meant the
+    /// no-throw contract was asserted in one file and quietly worked around in this one.</para></summary>
+    /// <param name="book">The CookBook to size.</param>
+    /// <returns>A single line, always — this never throws and never omits the line.</returns>
     public static string UniqueDnaLine(LoadedCookBook book)
     {
         try
         {
             var space = UniqueSpace.Count(book);
+            if (!space.IsCountable)
+                return "Unique DNA space: cannot be counted (the CookBook has problems; run validate)";
             return space.IsExact
                 ? $"Unique DNA space: {space.Total}"
                 : $"Unique DNA space: more than {space.Total}";
