@@ -33,6 +33,18 @@
            the stroke render whole. The inner radius is one pixel tighter so it hugs the INSIDE of
            that stroke rather than sitting under it. -->
       <Border Classes="frame-clip" ClipToBounds="True">
+      <!-- The whole shell renders at ShellViewModel.BaseScale. The mockups are authored 1:1 and the
+           app reproduces them exactly, which on a large high-DPI display reads as uniformly too small
+           - correct in logical pixels, tiny in physical ones. Scaling here rather than growing the
+           font/padding tokens keeps every mockup proportion intact and leaves one number to tune.
+
+           Chrome is INSIDE this one (the titlebar and status bar looked small too) but outside the
+           zoom transform further down, which stays page-only so the window buttons and resize grip
+           keep their place at the window's edge. -->
+      <LayoutTransformControl>
+        <LayoutTransformControl.LayoutTransform>
+          <ScaleTransform ScaleX="{Binding ChromeScale}" ScaleY="{Binding ChromeScale}" />
+        </LayoutTransformControl.LayoutTransform>
       <Grid RowDefinitions="Auto,*,Auto">
         <!-- Titlebar (drag to move, double-click to maximize/restore — wired in code-behind) -->
         <!-- x:Name lives on this Border (not the inner Grid) because the Border is what carries the
@@ -203,6 +215,7 @@
         </Border>
         </Panel>
       </Grid>
+      </LayoutTransformControl>
       </Border>
     </Border>
 </UserControl>

@@ -4,9 +4,12 @@
         xmlns:views="using:Nfty.App.Views"
         x:Class="Nfty.Desktop.MainWindow"
         x:DataType="vm:ShellViewModel"
-        Width="1180" Height="720" MinWidth="900" MinHeight="580" Title="nfty"
+        Width="1416" Height="864" MinWidth="1080" MinHeight="696" Title="nfty"
         Background="Transparent" TransparencyLevelHint="Transparent"
         ExtendClientAreaToDecorationsHint="True" WindowDecorations="None">
+  <!-- The size above is the mockups' own 1180x720 (min 900x580) times ShellViewModel.BaseScale. The
+       shell now renders 20% larger, so keeping the old window size would have shown 20% LESS of the
+       layout rather than the same layout bigger - the Explorer's pane track alone needs 1014px. -->
   <Window.KeyBindings>
     <KeyBinding Gesture="Ctrl+OemQuestion" Command="{Binding ShowHelpCommand}" />
     <KeyBinding Gesture="Ctrl+OemPlus" Command="{Binding ZoomInCommand}" />

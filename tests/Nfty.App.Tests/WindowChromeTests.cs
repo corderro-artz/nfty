@@ -108,6 +108,57 @@ public class WindowChromeTests
         Assert.True(clip.CornerRadius.TopLeft < frame.CornerRadius.TopLeft);
     }
 
+    /// <summary>The shell renders at BaseScale, and zoom multiplies ON TOP of it rather than replacing
+    /// it. Reproducing the mockups at exactly 1.0 left everything correct in logical pixels and too
+    /// small in physical ones on a large high-DPI display.</summary>
+    [AvaloniaFact]
+    public void The_shell_renders_at_the_base_scale_and_zoom_composes_with_it()
+    {
+        var vm = Shell();
+        Assert.Equal(1.2, ShellViewModel.BaseScale);
+        Assert.Equal(1.2, vm.ChromeScale);
+
+        // 100% means the base scale, which is why the status bar can keep reading "100%".
+        Assert.Equal(100, vm.Zoom);
+        Assert.Equal(1.0, vm.ZoomScale);
+        Assert.Equal(1.2, vm.EffectivePageScale, 6);
+
+        // ...and the two compose multiplicatively. Zoom must NOT fold BaseScale in itself: the chrome
+        // transform is an ancestor of the page transform, so doing it in both squares the factor.
+        vm.ZoomOutCommand.Execute(null);            // 90%
+        Assert.Equal(0.9, vm.ZoomScale, 6);
+        Assert.Equal(1.08, vm.EffectivePageScale, 6);
+    }
+
+    /// <summary>The base scale reaches the visual tree, not just the ViewModel — and the chrome is
+    /// INSIDE it (the titlebar and status bar read small too), while the zoom transform stays a
+    /// separate, inner one so the window buttons and grip keep the window's edge.</summary>
+    [AvaloniaFact]
+    public void The_base_scale_is_applied_to_the_whole_shell_and_zoom_is_a_separate_inner_transform()
+    {
+        var vm = Shell();
+        var view = new Views.ShellChromeView { DataContext = vm };
+        var window = new Window { Content = view, Width = 1416, Height = 864 };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var transforms = view.GetVisualDescendants().OfType<LayoutTransformControl>()
+            .Select(t => (t, s: t.LayoutTransform as ScaleTransform))
+            .Where(x => x.s is not null)
+            .ToList();
+        Assert.Equal(2, transforms.Count);
+
+        var chrome = transforms[0];   // outermost
+        var page = transforms[1];
+        Assert.Equal(1.2, chrome.s!.ScaleX, 6);
+        Assert.Equal(1.0, page.s!.ScaleX, 6);
+
+        // The titlebar is inside the base-scale transform; if it were a sibling, "everything 20%
+        // bigger" would have skipped the chrome the user was actually complaining about.
+        Assert.Contains(chrome.t, view.FindControl<Border>("Titlebar")!.GetVisualAncestors());
+        Assert.DoesNotContain(page.t, view.FindControl<Border>("Titlebar")!.GetVisualAncestors());
+    }
+
     /// <summary>The resize grip is pinned to the frame's real corner with a full-square hit area. It
     /// used to be the last child of the zoom StackPanel, inheriting that panel's 8px right margin and
     /// its vertical centring — so it sat inset from the edge with a hit rect far shorter than the

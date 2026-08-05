@@ -110,7 +110,8 @@ public class VisualCapture
             explorer.ToggleLockCommand.Execute(null);                        // unlocked lock flag
 
             Capture(new Views.ShellChromeView { DataContext = shell }, variant,
-                $"shell-{variant.Key.ToString()!.ToLowerInvariant()}.png");
+                $"shell-{variant.Key.ToString()!.ToLowerInvariant()}.png",
+                width: 1416, height: 864);   // MainWindow's real size — 1180x720 scaled by BaseScale
         }
     }
 
@@ -507,9 +508,14 @@ public class VisualCapture
         }
     }
 
-    private static void Capture(Control view, ThemeVariant variant, string fileName)
+    /// <summary>Default 1180x720 is MainWindow's own size in MOCKUP units — the size a page's layout
+    /// is authored against. The shell itself renders at ShellViewModel.BaseScale, so a frame of the
+    /// shell must be captured at the scaled window size (1416x864) or the same layout arrives in a
+    /// window a fifth too small and correct panes look clipped.</summary>
+    private static void Capture(Control view, ThemeVariant variant, string fileName,
+        double width = 1180, double height = 720)
     {
-        var window = new Window { RequestedThemeVariant = variant, Content = view, Width = 1180, Height = 720 };
+        var window = new Window { RequestedThemeVariant = variant, Content = view, Width = width, Height = height };
         window.Show();
         Dispatcher.UIThread.RunJobs();
         window.CaptureRenderedFrame()!.Save(Path.Combine(Dir!, fileName), PngBitmapEncoderOptions.Default);

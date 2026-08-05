@@ -16,12 +16,31 @@ public partial class ShellViewModel : ViewModelBase
     [ObservableProperty] private ViewModelBase? _activeDialog;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ZoomScale))]
+    [NotifyPropertyChangedFor(nameof(EffectivePageScale))]
     private int _zoom = 100;
 
-    /// <summary>The zoom as a scale factor for the page host's LayoutTransform. Zoom itself stays an
-    /// int percentage because that is what the status bar shows and what the ±10 steps operate on;
-    /// this is the same number in the units a transform wants.</summary>
+    /// <summary>What 100% means. The mockups are authored at CSS 1:1, and reproducing them at exactly
+    /// 1.0 leaves the app noticeably small on a large high-DPI display — every control is the right
+    /// size in logical pixels and too small in physical ones. So the whole shell renders at a base
+    /// scale, and the status bar's "100%" refers to it rather than to raw 1.0.
+    ///
+    /// A base scale, not a bigger token set: the mockups are the locked 1:1 reference, so growing the
+    /// font and padding tokens by a fifth would be design drift spread across hundreds of literals and
+    /// would have to be undone to compare against a mockup ever again. One factor keeps every mockup
+    /// proportion exact and is a single number to revisit.</summary>
+    public const double BaseScale = 1.2;
+
+    /// <summary>Applied to the entire shell — chrome included, since "everything is small" was about
+    /// the titlebar and status bar too, not just the page.</summary>
+    public double ChromeScale => BaseScale;
+
+    /// <summary>The user's zoom, as a factor RELATIVE to the base scale — the chrome transform already
+    /// applies BaseScale to this control's ancestor, so multiplying it in here would square it.</summary>
     public double ZoomScale => Zoom / 100.0;
+
+    /// <summary>What the page is actually scaled by once both transforms compose. Nothing binds to it;
+    /// it exists so the relationship is asserted somewhere rather than inferred from two XAML files.</summary>
+    public double EffectivePageScale => ChromeScale * ZoomScale;
     [ObservableProperty] private string _statusMessage = "";
 
     /// <summary>The titlebar's Kitchen chip / crumbs / lock flag are Explorer-specific (the mockup's

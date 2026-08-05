@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
@@ -27,12 +30,60 @@ public class ThemeResourceTests
     [AvaloniaTheory]
     [InlineData("AccentHoverBrush")]
     [InlineData("SuccessBrush")]
+    [InlineData("WarningBrush")]
     [InlineData("GuideBrush")]
     [InlineData("GuideHiBrush")]
     public void New_colour_tokens_resolve_in_both_themes(string key)
     {
         Assert.IsAssignableFrom<IBrush>(Resolve(key, ThemeVariant.Light));
         Assert.IsAssignableFrom<IBrush>(Resolve(key, ThemeVariant.Dark));
+    }
+
+    /// <summary>Every DynamicResource key the app's markup mentions, resolved in both variants.
+    ///
+    /// The theory above is a hand-written list, and a hand-written list only covers what someone
+    /// remembered to add — which is exactly how `WarningBrush` shipped referenced-but-undefined. It
+    /// was named by TextBlock.vstate and Ellipse.vdot and existed in neither dictionary, and an
+    /// unresolved DynamicResource does not throw: the property silently keeps its default, so an
+    /// invalid CookBook painted "1 problem" in Avalonia's default Black — 1.14:1 on the dark card.
+    /// Nothing caught it because every fixture used a valid book, which takes the SuccessBrush branch.
+    ///
+    /// So this derives the list from the markup instead of from memory. A new
+    /// `{DynamicResource Whatever}` is covered the moment it is typed.</summary>
+    [AvaloniaFact]
+    public void Every_dynamic_resource_the_markup_references_resolves_in_both_themes()
+    {
+        var appDir = Path.Combine(RepoRoot(), "src", "Nfty.App");
+        var keys = new SortedSet<string>(StringComparer.Ordinal);
+        foreach (var file in Directory.EnumerateFiles(appDir, "*.axaml", SearchOption.AllDirectories))
+        {
+            // Comments first: several of them discuss DynamicResource in prose, and matching that
+            // turned English words ("stops", "that", "in") into phantom resource keys.
+            var markup = Regex.Replace(File.ReadAllText(file), "<!--.*?-->", "", RegexOptions.Singleline);
+            foreach (Match m in Regex.Matches(markup, @"\{\s*DynamicResource\s+([A-Za-z0-9_]+)\s*\}"))
+                keys.Add(m.Groups[1].Value);
+        }
+
+        Assert.NotEmpty(keys);   // a regex that matched nothing would make this vacuously green
+
+        var missing = keys
+            .Where(k => Resolve(k, ThemeVariant.Light) is null || Resolve(k, ThemeVariant.Dark) is null)
+            .Select(k => $"  {k}: light={(Resolve(k, ThemeVariant.Light) is null ? "MISSING" : "ok")} " +
+                         $"dark={(Resolve(k, ThemeVariant.Dark) is null ? "MISSING" : "ok")}")
+            .ToList();
+
+        Assert.True(missing.Count == 0,
+            $"{missing.Count} of {keys.Count} referenced resources do not resolve:\n" + string.Join("\n", missing));
+    }
+
+    /// <summary>Walks up from the test binary to the directory holding nfty.sln.</summary>
+    private static string RepoRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "nfty.sln")))
+            dir = dir.Parent;
+        return dir?.FullName
+            ?? throw new InvalidOperationException("nfty.sln not found above " + AppContext.BaseDirectory);
     }
 
     // Regression test for a hex-order bug found while verifying Task 4's surfaces: Tokens.axaml's

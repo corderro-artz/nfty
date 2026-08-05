@@ -3,10 +3,21 @@
   <Style Selector="Window">
     <Setter Property="Background" Value="{DynamicResource BgBrush}" />
     <Setter Property="FontFamily" Value="{DynamicResource SansFontFamily}" />
+    <!-- The page's default ink, set ONCE at the root and inherited from there - the same shape as the
+         mockups' `body{color:…}` cascade. Foreground is an inherited property, and an inherited value
+         is the lowest priority there is, so anything that deliberately chooses a different ink (an
+         accent button, a chip, a selected row) still wins for its own subtree.
+
+         This must NOT be a blanket `TextBlock` setter. A Style setter outranks inheritance, so
+         re-asserting the colour at every TextBlock overrode every ancestor that had chosen otherwise:
+         a `Button.accent` set OnAccent on its ContentPresenter, the label ignored it and painted
+         FgBrush, and in light mode "Add ingredient" rendered near-black on carmine (2.43:1) next to a
+         `+` icon that looked right because a Path has no such rule and does inherit. Dark mode hid it
+         entirely - FgBrush there is near-white, so the wrong value happened to look correct. -->
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
   </Style>
   <Style Selector="TextBlock">
     <Setter Property="FontFamily" Value="{DynamicResource SansFontFamily}" />
-    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
   </Style>
 
   <Style Selector="TextBlock.mono">

@@ -48,6 +48,13 @@
       <SolidColorBrush x:Key="KindCustomLineBrush" Color="#476d4f9c" />
       <SolidColorBrush x:Key="AccentHoverBrush" Color="#b92f44" />
       <SolidColorBrush x:Key="SuccessBrush" Color="#3d6b52" />
+      <!-- The mockups' warning custom property, and the other half of the validity pair. Referenced by
+           TextBlock.vstate / Ellipse.vdot but defined in NEITHER dictionary, and a DynamicResource
+           that resolves to nothing leaves Foreground at Avalonia's default - Black. So an invalid
+           CookBook painted "1 problem" as black text and a black dot, which in dark mode is black on
+           #12141c: 1.14:1, unreadable. It survived every audit because every test fixture and every
+           captured frame used a VALID book, and the valid branch resolves SuccessBrush, which exists. -->
+      <SolidColorBrush x:Key="WarningBrush" Color="#6a4a25" />
       <SolidColorBrush x:Key="GuideBrush" Color="#2b121418" />
       <SolidColorBrush x:Key="GuideHiBrush" Color="#59121418" />
       <BoxShadows x:Key="WinShadow">0 1 2 0 #10121418, 0 18 48 -24 #33121418</BoxShadows>
@@ -110,6 +117,7 @@
       <SolidColorBrush x:Key="KindCustomLineBrush" Color="#47c3a6ea" />
       <SolidColorBrush x:Key="AccentHoverBrush" Color="#ba3447" />
       <SolidColorBrush x:Key="SuccessBrush" Color="#a6c08a" />
+      <SolidColorBrush x:Key="WarningBrush" Color="#e0c28c" />
       <SolidColorBrush x:Key="GuideBrush" Color="#1ff2ede6" />
       <SolidColorBrush x:Key="GuideHiBrush" Color="#3df2ede6" />
       <BoxShadows x:Key="WinShadow">0 1 2 0 #60000000, 0 22 60 -28 #000000</BoxShadows>
