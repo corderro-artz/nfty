@@ -17,8 +17,8 @@ public static class Dna
             sb.Append(s.IngredientId).Append('=').Append(s.VariantId);
             if (s.Hue is double h && s.Sat is double sat)
             {
-                long hb = (long)Math.Floor(h / Math.Max(1, s.HueQuantize));
-                long sbk = (long)Math.Floor(sat * 100.0 / Math.Max(1, s.SatQuantize));
+                long hb = ColorBuckets.Hue(h, s.HueQuantize);
+                long sbk = ColorBuckets.Sat(sat, s.SatQuantize);
                 sb.Append('@').Append(hb).Append(',').Append(sbk);
             }
             sb.Append('|');

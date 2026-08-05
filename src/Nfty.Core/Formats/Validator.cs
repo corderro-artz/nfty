@@ -1,3 +1,4 @@
+using System.Globalization;
 using Nfty.Core.Imaging;
 using Nfty.Core.Model;
 using SixLabors.ImageSharp;
@@ -79,8 +80,11 @@ public static class Validator
         // running total passes the sample, so a negative one silently steals the share of the
         // entries after it and makes the counted space unreachable.
         foreach (var (id, weight) in cb.Manifest.RecipeWeights)
-            if (weight < 0)
-                problems.Add($"Recipe '{id}' has a negative recipe weight ({weight}); "
+            if (!double.IsFinite(weight))
+                problems.Add($"Recipe '{id}' has a non-finite recipe weight ({Num(weight)}); "
+                    + "weights must be a finite number, zero or greater.");
+            else if (weight < 0)
+                problems.Add($"Recipe '{id}' has a negative recipe weight ({Num(weight)}); "
                     + "weights must be zero or greater, and zero means never rolled.");
 
         var recipeIds = cb.Recipes.Select(r => r.Manifest.Id).ToHashSet();
@@ -168,9 +172,13 @@ public static class Validator
             problems.Add($"{where} has duplicate variant id '{dup}'.");
 
         // Zero is a legitimate way to shelve a variant; negative is not — see CheckCookBook.
-        foreach (var v in ing.Manifest.Variants.Where(v => v.Weight < 0))
-            problems.Add($"{where} has variant '{v.Id}' with a negative weight ({v.Weight}); "
-                + "weights must be zero or greater, and zero means never rolled.");
+        foreach (var v in ing.Manifest.Variants)
+            if (!double.IsFinite(v.Weight))
+                problems.Add($"{where} has variant '{v.Id}' with a non-finite weight ({Num(v.Weight)}); "
+                    + "weights must be a finite number, zero or greater.");
+            else if (v.Weight < 0)
+                problems.Add($"{where} has variant '{v.Id}' with a negative weight ({Num(v.Weight)}); "
+                    + "weights must be zero or greater, and zero means never rolled.");
 
         CheckKind(problems, where, ing.Manifest.Kind, ing.Manifest.Colorization);
         CheckColorEntries(problems, where, ing.Manifest.Colorization);
@@ -244,9 +252,12 @@ public static class Validator
         foreach (var entry in col.Entries)
         {
             // Zero is a legitimate way to shelve a colour entry; negative is not — see CheckCookBook.
-            if (entry.Weight < 0)
+            if (!double.IsFinite(entry.Weight))
+                problems.Add($"{where} has a colorization entry with a non-finite weight "
+                    + $"({Num(entry.Weight)}); weights must be a finite number, zero or greater.");
+            else if (entry.Weight < 0)
                 problems.Add($"{where} has a colorization entry with a negative weight "
-                    + $"({entry.Weight}); weights must be zero or greater, and zero means never rolled.");
+                    + $"({Num(entry.Weight)}); weights must be zero or greater, and zero means never rolled.");
 
             // Ranges are sampled ascending and never wrap, so an inverted or out-of-axis range
             // is author error — the roller would silently sample nonsense.
@@ -334,6 +345,15 @@ public static class Validator
     }
 
     /// <summary>Each id that appears more than once, in first-seen order.</summary>
+    /// <summary>
+    /// A number as it should appear inside a problem string. Invariant, for the same reason the
+    /// reports in <c>Stats/</c> are: a problem gets pasted into an issue or diffed against another
+    /// machine's run, and under a comma-decimal locale the default formatting renders <c>-1.5</c>
+    /// as <c>−1,5</c> — with U+2212, not an ASCII hyphen — which is neither comparable nor
+    /// greppable.
+    /// </summary>
+    private static string Num(double value) => value.ToString(CultureInfo.InvariantCulture);
+
     private static IEnumerable<string> Duplicates(IEnumerable<string> ids) =>
         ids.GroupBy(id => id, StringComparer.Ordinal)
            .Where(g => g.Count() > 1)

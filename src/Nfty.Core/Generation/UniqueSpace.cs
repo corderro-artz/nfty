@@ -217,15 +217,17 @@ public static class UniqueSpace
             if (entry.Fixed is not null)
             {
                 var c = ColorRoller.FromFixed(entry.Fixed, col.Model);
-                seen.Add(((long)Math.Floor(c.H / hueQ), (long)Math.Floor(c.S * 100.0 / satQ)));
+                seen.Add((ColorBuckets.Hue(c.H, hueQ), ColorBuckets.Sat(c.S, satQ)));
                 continue;
             }
 
             // A range covers every bucket reachable by ColorRoller.Roll, which samples
             // Min + r*(Max-Min) with r in [0,1) — so Max itself is never rolled.
             var r = entry.Range!;
-            var (h0, h1) = BucketSpan(r.HueMin, r.HueMax, hueQ);
-            var (s0, s1) = BucketSpan(r.SatMin, r.SatMax, satQ);
+            var (h0, h1) = BucketSpan(r.HueMin, r.HueMax,
+                u => ColorRoller.SampleHue(r, u), h => ColorBuckets.Hue(h, hueQ));
+            var (s0, s1) = BucketSpan(r.SatMin, r.SatMax,
+                u => ColorRoller.SampleSat(r, u), s => ColorBuckets.Sat(s, satQ));
 
             for (long h = h0; h <= h1; h++)
                 for (long s = s0; s <= s1; s++)
@@ -240,17 +242,30 @@ public static class UniqueSpace
 
     /// <summary>
     /// The inclusive bucket span reachable on one axis. <see cref="ColorRoller.Roll"/> samples
-    /// <c>Min + r*(Max-Min)</c> with <c>r ∈ [0,1)</c>, so the reachable interval is <c>[Min, Max)</c>
-    /// and the bucket containing Max is only reachable when Max lands strictly inside it.
+    /// <c>Min + r*(Max-Min)</c> with <c>r ∈ [0,1)</c>, so the reachable interval is <c>[Min, Max)</c>.
     /// A degenerate range (Min == Max) reaches exactly its endpoint, so it keeps that one bucket.
+    ///
+    /// <para><paramref name="sample"/> is the axis's own sampler from <see cref="ColorRoller"/> and
+    /// <paramref name="bucket"/> its bucketing function from <see cref="ColorBuckets"/> — the same
+    /// two <see cref="Dna"/> is built from. Composing the real functions is the point: this used to
+    /// re-derive the reachable interval algebraically from the stored percentages, and that
+    /// re-derivation is what let the count and the DNA disagree.</para>
+    ///
+    /// <para>The step back happens in the <em>sampled</em> space, not the stored percentage —
+    /// saturation's <c>/100</c> would swallow it (<c>BitDecrement(30)/100.0</c> rounds straight back
+    /// onto <c>0.3</c>). Nor is the top read at <c>BitDecrement(1.0)</c>: the unit sample nearest 1
+    /// makes <c>(0 + r*30)/100.0</c> round to exactly <c>0.3</c>, so Max's own bucket becomes
+    /// reachable — at probability 2⁻⁵³. Counting it would be true and useless, because
+    /// <c>Generate</c> would exhaust its reroll budget trying to deliver it. <c>Count</c> is a
+    /// promise about what can actually be produced, so the half-open <c>[Min, Max)</c> reading
+    /// stands and the measure-zero edge is deliberately excluded.</para>
     /// </summary>
-    private static (long Lo, long Hi) BucketSpan(double min, double max, int q)
+    private static (long Lo, long Hi) BucketSpan(
+        double min, double max, Func<double, double> sample, Func<double, long> bucket)
     {
-        long lo = (long)Math.Floor(min / q);
+        long lo = bucket(sample(0.0));
         if (max <= min) return (lo, lo);
-        // Ceiling(max/q) - 1 drops the bucket Max opens but never enters; when Max falls
-        // strictly inside a bucket, Ceiling rounds up into it and the -1 lands back on it.
-        return (lo, (long)Math.Ceiling(max / q) - 1);
+        return (lo, Math.Max(lo, bucket(Math.BitDecrement(sample(1.0)))));
     }
 
     private static long Multiply(long a, long b, long cap)

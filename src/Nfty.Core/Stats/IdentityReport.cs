@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using Nfty.Core.Formats;
 
@@ -14,6 +15,16 @@ namespace Nfty.Core.Stats;
 /// </summary>
 public static class IdentityReport
 {
+    /// <summary>
+    /// Renders the report. Weights are formatted with
+    /// <see cref="CultureInfo.InvariantCulture"/> for the same reason
+    /// <see cref="CollectionReport"/> does it: this is text a user copies, pastes into an issue and
+    /// diffs against a colleague's run, so it must not change with the machine's locale. It used to
+    /// — a plain interpolation renders <c>2.5</c> as <c>2,5</c> under sv-SE, and the sibling report
+    /// beside this one had been invariant since it was written.
+    /// </summary>
+    /// <param name="book">The CookBook to describe.</param>
+    /// <returns>The report text, newline-terminated per line.</returns>
     public static string Render(LoadedCookBook book)
     {
         var sb = new StringBuilder();
@@ -22,7 +33,8 @@ public static class IdentityReport
         foreach (var recipe in book.Recipes)
         {
             var weight = book.Manifest.RecipeWeights.GetValueOrDefault(recipe.Manifest.Id);
-            sb.AppendLine($"  Recipe [{recipe.Manifest.Id}] {recipe.Manifest.Name} (weight {weight:0.##})");
+            sb.AppendLine(string.Create(CultureInfo.InvariantCulture,
+                $"  Recipe [{recipe.Manifest.Id}] {recipe.Manifest.Name} (weight {weight:0.##})"));
 
             // Layer ORDER, not the ingredient collection's order: that is the order the layers
             // actually composite in, and an author reading this is usually asking about stacking.
@@ -40,7 +52,8 @@ public static class IdentityReport
                 sb.AppendLine($"    Ingredient [{ing.Manifest.Id}] {ing.Manifest.Name} "
                     + $"({ing.Manifest.Kind.ToString().ToLowerInvariant()})");
                 foreach (var v in ing.Manifest.Variants)
-                    sb.AppendLine($"      Variant [{v.Id}] {v.Name} (weight {v.Weight:0.##})");
+                    sb.AppendLine(string.Create(CultureInfo.InvariantCulture,
+                        $"      Variant [{v.Id}] {v.Name} (weight {v.Weight:0.##})"));
             }
         }
 

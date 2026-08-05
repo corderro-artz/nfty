@@ -159,6 +159,79 @@ public class ReportTests
         finally { Thread.CurrentThread.CurrentCulture = previous; }
     }
 
+    /// <summary>The identity report needs the same guarantee, and did not have it: it was written
+    /// beside the collection report and simply interpolated its weights, so under a comma-decimal
+    /// locale it printed "(weight 2,5)". Fractional weights on purpose — an integer weight formats
+    /// identically everywhere and would make this test pass without the fix.</summary>
+    [Fact]
+    public void The_identity_report_does_not_change_with_the_machine_locale()
+    {
+        var bg = Ing("bg-id", "Background", LayerKind.Custom,
+            ("day-id", "Daylight", 1.5), ("night-id", "Nightfall", 0.25));
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("cat-id", "Cat", new[] { "bg-id" }, Array.Empty<IncompatibilityRule>()),
+            Ingredients = new[] { bg },
+        };
+        using var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb-id", "VaporPets", new Dimensions(2, 2),
+                new Collection("VaporPets", "d", "VP"),
+                new Dictionary<string, double> { ["cat-id"] = 2.5 }),
+            Recipes = new[] { recipe },
+        };
+
+        var previous = Thread.CurrentThread.CurrentCulture;
+        try
+        {
+            Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo("sv-SE");
+            var swedish = IdentityReport.Render(book);
+            Thread.CurrentThread.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
+            var invariant = IdentityReport.Render(book);
+
+            Assert.Equal(invariant, swedish);
+            Assert.Contains("(weight 2.5)", swedish);
+            Assert.DoesNotContain("2,5", swedish);
+        }
+        finally { Thread.CurrentThread.CurrentCulture = previous; }
+    }
+
+    /// <summary>Validator problem strings are copied and compared the same way reports are, so the
+    /// numbers in them are invariant too. A comma decimal is the visible symptom; the subtler one is
+    /// that several locales render the sign as U+2212 MINUS SIGN rather than an ASCII hyphen, which
+    /// silently defeats a grep for "-1.5".</summary>
+    [Fact]
+    public void Validator_problem_numbers_do_not_change_with_the_machine_locale()
+    {
+        var bg = Ing("bg-id", "Background", LayerKind.Custom, ("a", "A", -1.5), ("b", "B", 2));
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("cat-id", "Cat", new[] { "bg-id" }, Array.Empty<IncompatibilityRule>()),
+            Ingredients = new[] { bg },
+        };
+        using var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb-id", "VaporPets", new Dimensions(2, 2),
+                new Collection("VaporPets", "d", "VP"),
+                new Dictionary<string, double> { ["cat-id"] = 1 }),
+            Recipes = new[] { recipe },
+        };
+
+        var previous = Thread.CurrentThread.CurrentCulture;
+        try
+        {
+            Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo("sv-SE");
+            var swedish = Validator.Validate(book);
+            Thread.CurrentThread.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
+            var invariant = Validator.Validate(book);
+
+            Assert.Equal(invariant, swedish);
+            Assert.Contains(swedish, p => p.Contains("(-1.5)"));
+            Assert.DoesNotContain(swedish, p => p.Contains('−'));
+        }
+        finally { Thread.CurrentThread.CurrentCulture = previous; }
+    }
+
     /// <summary>Counting the DNA space throws on a book Validator would reject. A report that dies
     /// on a broken book is useless exactly when it is most wanted, so that line degrades instead.</summary>
     [Fact]

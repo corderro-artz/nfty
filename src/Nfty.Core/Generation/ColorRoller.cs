@@ -14,10 +14,33 @@ public static class ColorRoller
             return FromFixed(entry.Fixed, c.Model);
 
         var range = entry.Range!;
-        double hue = range.HueMin + rng.NextDouble() * (range.HueMax - range.HueMin);
-        double sat = (range.SatMin + rng.NextDouble() * (range.SatMax - range.SatMin)) / 100.0;
+        double hue = SampleHue(range, rng.NextDouble());
+        double sat = SampleSat(range, rng.NextDouble());
         return new RolledColor(hue, sat);
     }
+
+    /// <summary>
+    /// The hue this range yields for a unit sample. Split out so <see cref="UniqueSpace"/> can
+    /// evaluate the <em>same</em> expression at its endpoints instead of re-deriving the reachable
+    /// interval algebraically — the count is a promise about what <see cref="Roll"/> produces, and
+    /// re-derivation is what let the two drift apart before.
+    /// </summary>
+    /// <param name="range">The range being sampled.</param>
+    /// <param name="unit">A value in <c>[0,1)</c>, as <see cref="IRng.NextDouble"/> produces.</param>
+    /// <returns>Hue in degrees.</returns>
+    public static double SampleHue(ColorRange range, double unit) =>
+        range.HueMin + unit * (range.HueMax - range.HueMin);
+
+    /// <summary>
+    /// The saturation this range yields for a unit sample, as the 0..1 fraction
+    /// <see cref="RolledColor.S"/> carries. The <c>/100</c> is not cosmetic: its rounding is baked
+    /// into the DNA of every Set ever generated, so this is the only definition of the value.
+    /// </summary>
+    /// <param name="range">The range being sampled.</param>
+    /// <param name="unit">A value in <c>[0,1)</c>, as <see cref="IRng.NextDouble"/> produces.</param>
+    /// <returns>Saturation as a 0..1 fraction.</returns>
+    public static double SampleSat(ColorRange range, double unit) =>
+        (range.SatMin + unit * (range.SatMax - range.SatMin)) / 100.0;
 
     /// <summary>
     /// Resolves a single fixed color spec to its (H, S) deterministically, consuming NO RNG.

@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Nfty.Core.Generation;
 
 public static class WeightedRoller
@@ -54,12 +56,25 @@ public static class WeightedRoller
     public static string Roll(WeightTable table, IRng rng)
     {
         double total = table.Total;
+
+        // Checked before `total <= 0`, because that comparison is FALSE for NaN and would wave it
+        // through. A NaN total makes every `r < cumulative[i]` below false too, so the draw would
+        // fall out of the loop and return Keys[^1] on every single roll — turning the defensive
+        // return into the production path and silently pinning a whole collection to one
+        // ordinal-last key. Validator reports non-finite weights now; this is the backstop for a
+        // table assembled some other way.
+        if (!double.IsFinite(total))
+            throw new InvalidOperationException(
+                $"Total weight must be a finite number, but it is {total.ToString(CultureInfo.InvariantCulture)}.");
         if (total <= 0) throw new InvalidOperationException("Total weight must be positive.");
 
         double r = rng.NextDouble() * total;
         var cumulative = table.Cumulative;
         for (int i = 0; i < cumulative.Length; i++)
             if (r < cumulative[i]) return table.Keys[i];
+
+        // Unreachable for a finite, positive total: r = NextDouble() * total is strictly less than
+        // total, which is Cumulative[^1]. Kept as a total-function guarantee, not as a fallback.
         return table.Keys[^1];
     }
 }
