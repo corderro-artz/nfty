@@ -14,7 +14,14 @@ public partial class ShellViewModel : ViewModelBase
 
     [ObservableProperty] private ViewModelBase? _currentPage;
     [ObservableProperty] private ViewModelBase? _activeDialog;
-    [ObservableProperty] private int _zoom = 100;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ZoomScale))]
+    private int _zoom = 100;
+
+    /// <summary>The zoom as a scale factor for the page host's LayoutTransform. Zoom itself stays an
+    /// int percentage because that is what the status bar shows and what the ±10 steps operate on;
+    /// this is the same number in the units a transform wants.</summary>
+    public double ZoomScale => Zoom / 100.0;
     [ObservableProperty] private string _statusMessage = "";
 
     /// <summary>The titlebar's Kitchen chip / crumbs / lock flag are Explorer-specific (the mockup's

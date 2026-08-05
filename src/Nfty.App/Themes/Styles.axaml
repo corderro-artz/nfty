@@ -774,10 +774,24 @@
   </Style>
   <Style Selector="Border.frame">
     <Setter Property="Background" Value="{DynamicResource BgBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <!-- Accent, not LineStrong. A deliberate divergence from explorer.html, which paints the window
+         edge with the line-strong token: this is the one border that separates the app from the
+         desktop rather than one region from another, so it reads as the app's own colour. Requested
+         directly during the smoke test. -->
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusWin}" />
     <Setter Property="BoxShadow" Value="{DynamicResource WinShadow}" />
+    <!-- The shadow gutter: room for WinShadow's blur to render inside the transparent window surface
+         instead of being clipped at the OS window edge. It MUST be a Setter and not an inline Margin
+         on the element - a local value outranks every Style, which silently killed the maximized
+         override that zeroes it. -->
+    <Setter Property="Margin" Value="12" />
+  </Style>
+  <!-- Clips the frame's children to the rounded corner. One pixel tighter than the frame's radius so
+       it hugs the inside of the 1px stroke instead of sitting under it and eating the arc. -->
+  <Style Selector="Border.frame-clip">
+    <Setter Property="CornerRadius" Value="9" />
   </Style>
   <Style Selector="Border.idchip">
     <Setter Property="Background" Value="{DynamicResource TileBrush}" />

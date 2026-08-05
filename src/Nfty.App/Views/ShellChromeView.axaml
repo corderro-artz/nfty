@@ -21,7 +21,18 @@
          chrome frame. Margin gives WinShadow's blur room to render inside the transparent window
          surface without being clipped at the OS window's edge. ClipToBounds keeps the titlebar's own
          square corners from poking out past the rounded corners below. -->
-    <Border Classes="frame" Margin="12" ClipToBounds="True">
+    <!-- Margin is NOT set here. It lives on Border.frame in Styles.axaml, because a local value beats
+         every Style setter in Avalonia - so MainWindow's `Window[WindowState=Maximized] Border.frame`
+         override could never win against an inline Margin, and a maximized window kept the 12px
+         shadow gutter as a visible gap on all four edges. -->
+    <Border Classes="frame">
+      <!-- The clip is on an INNER border, not on the frame itself. A Border that both draws a
+           CornerRadius stroke and clips to its own bounds clips the outer half of that stroke
+           exactly where the arc is, so the border thinned to nothing at all four corners while the
+           straight edges kept full thickness. Splitting the roles - outer draws, inner clips - lets
+           the stroke render whole. The inner radius is one pixel tighter so it hugs the INSIDE of
+           that stroke rather than sitting under it. -->
+      <Border Classes="frame-clip" ClipToBounds="True">
       <Grid RowDefinitions="Auto,*,Auto">
         <!-- Titlebar (drag to move, double-click to maximize/restore — wired in code-behind) -->
         <!-- x:Name lives on this Border (not the inner Grid) because the Border is what carries the
@@ -104,7 +115,21 @@
              (that inner "card inside a card" look was the audit's double-chrome finding). -->
         <Panel Grid.Row="1">
           <Border Background="{DynamicResource BgBrush}">
-            <ContentControl Content="{Binding CurrentPage}" />
+            <!-- Zoom used to be tracked and shown in the status bar without being applied to
+                 anything, so the percentage changed and the app did not.
+                 LayoutTransformControl, not RenderTransform: a render transform scales the finished
+                 pixels, which magnifies a layout still measured at 100% - text stays on the same
+                 line and just gets blurry, and the chrome does not reflow. A layout transform
+                 re-measures the content at the new scale, which is what VS Code does and what makes
+                 zooming out actually fit more on screen. The status bar and titlebar stay outside it
+                 deliberately: window chrome is not content, and scaling it would move the resize
+                 grip and window buttons away from the window edge. -->
+            <LayoutTransformControl>
+              <LayoutTransformControl.LayoutTransform>
+                <ScaleTransform ScaleX="{Binding ZoomScale}" ScaleY="{Binding ZoomScale}" />
+              </LayoutTransformControl.LayoutTransform>
+              <ContentControl Content="{Binding CurrentPage}" />
+            </LayoutTransformControl>
           </Border>
           <Panel Name="DialogScrim"
                  IsVisible="{Binding ActiveDialog, Converter={x:Static ObjectConverters.IsNotNull}}"
@@ -114,8 +139,15 @@
           </Panel>
         </Panel>
 
-        <!-- Status bar -->
-        <Border Grid.Row="2" Background="{DynamicResource BgAltBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0">
+        <!-- Status bar, with the resize grip OVERLAID on its bottom-right corner rather than being
+             the last child of the zoom StackPanel. As a StackPanel child it inherited that panel's
+             8px right margin and its vertical centring, so it sat ~8px in from the edge with a hit
+             rect much shorter than the corner it appeared to occupy - the user could see a grip and
+             miss it. An overlay pins it to the frame's real corner and gives it the whole 22px
+             square, and being last in the Panel puts it above the status bar content so nothing
+             steals the hover. -->
+        <Panel Grid.Row="2">
+        <Border Background="{DynamicResource BgAltBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0">
           <Grid ColumnDefinitions="*,Auto" Height="34">
             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="14" Margin="16,0" VerticalAlignment="Center">
               <!-- This used to be a hardcoded green "Valid" shown for every book, without anything
@@ -157,18 +189,20 @@
                          Text="{Binding Zoom, StringFormat='{}{0}%'}" />
               <Button Command="{Binding ZoomInCommand}" Classes="zoomctl" ToolTip.Tip="Zoom in"><Path Classes="ico sm" Data="{StaticResource IconZoomIn}" /></Button>
               <Button Command="{Binding ShowHelpCommand}" Classes="helpbtn" ToolTip.Tip="Help"><Path Classes="ico sm" Data="{StaticResource IconHelp}" /></Button>
-              <!-- Bottom-right resize grip (SystemDecorations=None gives no OS resize border). A Border
-                   with a filled Background is hit-testable across its whole rectangle — unlike a bare Path,
-                   whose thin strokes are the only draggable pixels. -->
-              <Border x:Name="ResizeGrip" Width="26" Cursor="BottomRightCorner"
-                      Background="Transparent" Margin="4,0,0,0">
-                <Path Width="12" Height="12" HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                      Margin="0,0,2,2" Stroke="{DynamicResource FgMutedBrush}" StrokeThickness="1"
-                      Data="M11,4 L4,11 M11,8 L8,11" />
-              </Border>
             </StackPanel>
           </Grid>
         </Border>
+
+        <!-- Overlaid last so it sits above the status bar content and nothing steals the hover. -->
+        <Border x:Name="ResizeGrip" Width="22" Height="22" Cursor="BottomRightCorner"
+                HorizontalAlignment="Right" VerticalAlignment="Bottom" Background="Transparent"
+                ToolTip.Tip="Resize">
+          <Path Width="12" Height="12" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                Margin="0,0,3,3" Stroke="{DynamicResource FgMutedBrush}" StrokeThickness="1"
+                Data="M11,4 L4,11 M11,8 L8,11" />
+        </Border>
+        </Panel>
       </Grid>
+      </Border>
     </Border>
 </UserControl>

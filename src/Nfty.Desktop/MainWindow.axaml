@@ -26,6 +26,11 @@
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="BoxShadow" Value="none" />
     </Style>
+    <!-- The inner clip has to square off too, or maximizing leaves rounded content corners inside a
+         square window and the desktop shows through four small notches. -->
+    <Style Selector="Window[WindowState=Maximized] Border.frame-clip">
+      <Setter Property="CornerRadius" Value="0" />
+    </Style>
   </Window.Styles>
   <!-- The shell chrome itself is head-agnostic UI and lives in Nfty.App so the visual-capture tests
        can render the real thing; this head supplies only the window behaviour it needs a Window for. -->
