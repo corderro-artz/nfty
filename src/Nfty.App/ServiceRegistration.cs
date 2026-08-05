@@ -20,6 +20,9 @@ public static class ServiceRegistration
         services.AddSingleton<IRecentsService, RecentsService>();
         services.AddSingleton<IThemeService, ThemeService>();
         services.AddSingleton<ICookBookSession, CookBookSession>();
+        // Singleton: at most one Kitchen is open at a time, which is the mockup's own rule - the
+        // workspace chip is "fixed for every item below it".
+        services.AddSingleton<IKitchenSession, KitchenSession>();
         services.AddSingleton<IImageBridge, ImageBridge>();
         services.AddSingleton<IFolderRevealer, NoopFolderRevealer>();
 

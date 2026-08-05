@@ -26,6 +26,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     private readonly ICookBookSession _session;
     private readonly IFilePickerService _picker;
     private readonly IStatusService _status;
+    private readonly IKitchenSession? _kitchen;
     private readonly Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> _looseEditorFactory;
 
     [ObservableProperty] private ExplorerNode? _selectedNode;
@@ -170,7 +171,8 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         Func<LoadedCookBook, CookDialogViewModel> cookFactory, ICookBookSession session,
         IFilePickerService picker,
         Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> looseEditorFactory,
-        IStatusService status)
+        IStatusService status,
+        IKitchenSession? kitchen = null)
     {
         _book = book; _nav = nav; _dialogs = dialogs; _notify = notify; _bridge = bridge;
         _editorFactory = editorFactory;
@@ -178,6 +180,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         _session = session;
         _picker = picker;
         _status = status;
+        _kitchen = kitchen;
         _looseEditorFactory = looseEditorFactory;
         _fullRoot = BuildTree(book);
         Root = _fullRoot;
@@ -500,10 +503,15 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     /// ingredients - so it is not added to the recents list as something already useful.</summary>
     private async Task CreateLooseRecipe(NewRecipeViewModel result)
     {
-        string? path;
-        try { path = await _picker.SaveFileAsync("Save new recipe", ".rcp"); }
-        catch (Exception ex) { await ShowError("Could not save", ex.Message); return; }
-        if (path is null) return;   // cancelled
+        // The Kitchen IS the loose-items folder - the creation-flows spec settled that they are one
+        // concept, not two - so when one is open the save defaults into it rather than asking again.
+        var path = DefaultLoosePath(result.DerivedId + Archives.RecipeExtension);
+        if (path is null)
+        {
+            try { path = await _picker.SaveFileAsync("Save new recipe", ".rcp"); }
+            catch (Exception ex) { await ShowError("Could not save", ex.Message); return; }
+            if (path is null) return;   // cancelled
+        }
 
         var recipe = new LoadedRecipe
         {
@@ -525,6 +533,18 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         catch (Exception ex) { await ShowError("Could not save", ex.Message); }
     }
 
+    /// <summary>Where a loose item goes when a Kitchen is open: into it, under the given file name.
+    /// Null when no Kitchen is open (the caller falls back to asking), or when a file of that name is
+    /// already there — silently replacing something in the workspace is not a save, it is a
+    /// deletion, so that case goes to the picker where the user can see and confirm it.</summary>
+    private string? DefaultLoosePath(string fileName)
+    {
+        var dir = _kitchen?.Current?.Directory;
+        if (dir is null) return null;
+        var candidate = Path.Combine(dir, fileName);
+        return File.Exists(candidate) ? null : candidate;
+    }
+
     private async Task CreateLooseIngredient(NewIngredientViewModel result)
     {
         if (!result.TryGetCanvas(out var canvas))
@@ -532,10 +552,13 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
             await ShowError("Invalid canvas", "Enter a canvas size like 512x512.");
             return;
         }
-        string? path;
-        try { path = await _picker.SaveFileAsync("Save new ingredient", ".igt"); }
-        catch (Exception ex) { await ShowError("Could not save", ex.Message); return; }
-        if (path is null) return;   // cancelled
+        var path = DefaultLoosePath(result.DerivedId + Archives.IngredientExtension);
+        if (path is null)
+        {
+            try { path = await _picker.SaveFileAsync("Save new ingredient", ".igt"); }
+            catch (Exception ex) { await ShowError("Could not save", ex.Message); return; }
+            if (path is null) return;   // cancelled
+        }
 
         LoadedIngredient built;
         try { built = result.Build(canvas); }   // Build allocates the raster — guard it (OOM on a huge canvas)

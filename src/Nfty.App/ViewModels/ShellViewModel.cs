@@ -10,6 +10,7 @@ public partial class ShellViewModel : ViewModelBase
     private readonly IDialogService _dialogs;
     private readonly INotYetWired _notify;
     private readonly IThemeService _theme;
+    private readonly IKitchenSession? _kitchen;
 
     [ObservableProperty] private ViewModelBase? _currentPage;
     [ObservableProperty] private ViewModelBase? _activeDialog;
@@ -27,10 +28,24 @@ public partial class ShellViewModel : ViewModelBase
     public event Action? ToggleMaximizeRequested;
     public event Action? CloseRequested;
 
+    /// <summary>The titlebar's workspace chip. Per explorer.html it is "fixed for every item below
+    /// it; changes only when you close this Kitchen and open another" - so it lives on the shell
+    /// rather than following the selection. Empty when no Kitchen is open, which is a normal state:
+    /// a CookBook opened from anywhere on disk needs no workspace.</summary>
+    public string? KitchenName => _kitchen?.Current?.Manifest.Name;
+    public bool HasKitchen => _kitchen?.Current is not null;
+
     public ShellViewModel(INavigationService nav, IDialogService dialogs, INotYetWired notify, IThemeService theme,
-        IStatusService status)
+        IStatusService status, IKitchenSession? kitchen = null)
     {
         _nav = nav; _dialogs = dialogs; _notify = notify; _theme = theme;
+        _kitchen = kitchen;
+        if (_kitchen is not null)
+            _kitchen.Changed += () =>
+            {
+                OnPropertyChanged(nameof(KitchenName));
+                OnPropertyChanged(nameof(HasKitchen));
+            };
         _nav.Changed += () => CurrentPage = _nav.Current;
         _dialogs.Changed += () => ActiveDialog = _dialogs.Active;
         // Two channels on purpose: Report is for buttons that genuinely do nothing yet, Say is for

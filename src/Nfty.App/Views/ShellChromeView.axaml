@@ -48,15 +48,18 @@
                 </Border>
               </Border>
               <TextBlock Classes="wordmark" VerticalAlignment="Center"><Run Text="nft" /><Run Text="y" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
-              <!-- Kitchen chip: only the open-Explorer page has a workspace to name (mockup landing
-                   titlebar has none of this either — compare landing.html's slimmer .nw-tb). -->
-              <StackPanel Orientation="Horizontal" Spacing="9"
-                          IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}">
+              <!-- Kitchen chip: the OPEN workspace, named. It used to read the literal word "Kitchen"
+                   because none existed to name; it now shows the manifest's name and hides entirely
+                   when no Kitchen is open, which is a normal state — a CookBook opened from anywhere
+                   on disk needs no workspace. Per explorer.html this is "fixed for every item below
+                   it; changes only when you close this Kitchen and open another", which is why it
+                   binds to the shell rather than to the selection. -->
+              <StackPanel Orientation="Horizontal" Spacing="9" IsVisible="{Binding HasKitchen}">
                 <Border Width="1" Height="18" Background="{DynamicResource LineStrongBrush}" />
                 <Border Classes="kroot" ToolTip.Tip="Open workspace — the Kitchen">
                   <StackPanel Orientation="Horizontal" Spacing="6">
                     <Path Classes="ico" Data="{StaticResource IconKitchen}" />
-                    <TextBlock Classes="kroot-txt" Text="Kitchen" />
+                    <TextBlock Classes="kroot-txt" Text="{Binding KitchenName}" />
                   </StackPanel>
                 </Border>
                 <Border Width="1" Height="18" Background="{DynamicResource LineStrongBrush}" />

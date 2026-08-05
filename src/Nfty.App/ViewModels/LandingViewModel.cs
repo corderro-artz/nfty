@@ -23,6 +23,7 @@ public partial class LandingViewModel : ViewModelBase
     private readonly Func<LoadedCookBook, ExplorerViewModel> _explorerFactory;
     private readonly Func<LoadedSet, SetBrowserViewModel> _setBrowserFactory;
     private readonly Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> _looseEditorFactory;
+    private readonly IKitchenSession? _kitchen;
 
     /// <summary>A snapshot, not the service's live list: bindings short-circuit when a property
     /// returns the same instance, so returning the live list would make OnPropertyChanged inert and
@@ -38,11 +39,13 @@ public partial class LandingViewModel : ViewModelBase
         IFilePickerService picker, IRecentsService recents, ICookBookSession session,
         Func<LoadedCookBook, ExplorerViewModel> explorerFactory,
         Func<LoadedSet, SetBrowserViewModel> setBrowserFactory,
-        Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> looseEditorFactory)
+        Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> looseEditorFactory,
+        IKitchenSession? kitchen = null)
     {
         _nav = nav; _dialogs = dialogs; _notify = notify; _picker = picker; _recents = recents;
         _session = session; _explorerFactory = explorerFactory; _setBrowserFactory = setBrowserFactory;
         _looseEditorFactory = looseEditorFactory;
+        _kitchen = kitchen;
     }
 
     [RelayCommand]
@@ -71,7 +74,41 @@ public partial class LandingViewModel : ViewModelBase
 
         OpenPath(path);   // reads it back (fresh hash), session.Open(book, path), → Explorer
     }
-    [RelayCommand(CanExecute = nameof(Never))] private void NewKitchen() => _notify.Report("New Kitchen");
+    /// <summary>Creates a Kitchen: a .ktn naming the folder it is saved into. The folder becomes the
+    /// workspace, so this deliberately picks a FILE location rather than a folder — the user names
+    /// the workspace and chooses where it lives in one step, and Kitchen.Create makes the folder if
+    /// it is missing.
+    ///
+    /// This was CanExecute=Never with a "Not wired yet" report for as long as Kitchens were unbuilt,
+    /// which was the honest state then and is not now.</summary>
+    [RelayCommand(CanExecute = nameof(CanNewKitchen))]
+    private async Task NewKitchen()
+    {
+        string? path;
+        try { path = await _picker.SaveFileAsync("New Kitchen", Nfty.Core.Formats.Kitchen.Extension); }
+        catch (Exception ex) { ShowError("Could not create", ex.Message); return; }
+        if (path is null) return;   // cancelled
+
+        var name = Path.GetFileNameWithoutExtension(path);
+        if (string.IsNullOrWhiteSpace(name)) { ShowError("Invalid Kitchen", "The Kitchen needs a name."); return; }
+
+        try
+        {
+            Nfty.Core.Formats.Kitchen.Create(path,
+                new KitchenManifest(DeriveId(name), name));
+            _kitchen!.Open(path);
+        }
+        catch (Exception ex) { ShowError("Could not create", ex.Message); }
+    }
+
+    /// <summary>Only offered when a Kitchen session exists to hold the result. Composition supplies
+    /// one; a ViewModel constructed without it (some tests) keeps the old disabled behaviour rather
+    /// than throwing at click time.</summary>
+    private bool CanNewKitchen() => _kitchen is not null;
+
+    /// <summary>Same rule the other wizards derive ids by: lower-case, spaces to dashes.</summary>
+    private static string DeriveId(string name) => string.Join('-',
+        name.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries));
     [RelayCommand] private void NewRecipe() => _dialogs.ShowAsync<object>(new NewRecipeViewModel(_dialogs, _notify));
     [RelayCommand]
     private async Task NewIngredient()

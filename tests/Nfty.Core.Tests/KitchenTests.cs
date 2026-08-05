@@ -105,12 +105,12 @@ public class KitchenTests
     }
 
     [Fact]
-    public void Sync_and_async_writers_produce_the_same_manifest()
+    public async Task Sync_and_async_writers_produce_the_same_manifest()
     {
         var a = Path.Combine(NewDir(), "a.ktn");
         var b = Path.Combine(NewDir(), "b.ktn");
         KitchenArchive.Write(a, Manifest());
-        KitchenArchive.WriteAsync(b, Manifest()).GetAwaiter().GetResult();
+        await KitchenArchive.WriteAsync(b, Manifest());
 
         Assert.Equal(KitchenArchive.Read(a), KitchenArchive.Read(b));
     }
