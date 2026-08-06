@@ -10,9 +10,10 @@
        grid (main) + a selected-item detail rail (~300, explorer.html-style .rules-panel look).
 
        Virtualization (doc-pull, Context7 /avaloniaui/avalonia-docs, cross-checked against the
-       actual Avalonia 11.2.3 assembly this project has pinned — see RowChunkConverter.cs for the
-       full reasoning): the docs recommend ItemsRepeater + UniformGridLayout for a virtualized
-       wrapping grid, but neither type exists in the installed 11.2.3 package (confirmed by
+       actual installed Avalonia assembly — 11.2.3 originally, re-checked on 12.1.1, which is what
+       this project pins today; see RowChunkConverter.cs for the full reasoning): the docs recommend
+       ItemsRepeater + UniformGridLayout for a virtualized
+       wrapping grid, but UniformGridLayout is in neither package version (confirmed by
        reading Avalonia.Controls.dll's metadata directly — the XAML compiler also fails to resolve
        ItemsRepeater against this project's references). The only control that virtualizes here is
        ListBox (default ItemsPanel = VirtualizingStackPanel, vertical), which has no wrap support;

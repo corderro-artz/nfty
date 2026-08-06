@@ -111,6 +111,8 @@ public static class Validator
     /// <summary>Recipe checks that need no canvas: id uniqueness, layerOrder, and rule references.</summary>
     private static void CheckRecipeStructure(List<string> problems, LoadedRecipe r)
     {
+        CheckId(problems, $"Recipe '{r.Manifest.Id}'", r.Manifest.Id);
+
         foreach (var dup in Duplicates(r.Ingredients.Select(i => i.Manifest.Id)))
             problems.Add($"Recipe '{r.Manifest.Id}' has duplicate ingredient id '{dup}'.");
 
@@ -186,6 +188,10 @@ public static class Validator
             else if (v.Weight < 0)
                 problems.Add($"{where} has variant '{v.Id}' with a negative weight ({Num(v.Weight)}); "
                     + "weights must be zero or greater, and zero means never rolled.");
+
+        CheckId(problems, where, ing.Manifest.Id);
+        foreach (var v in ing.Manifest.Variants)
+            CheckId(problems, $"{where} variant '{v.Id}'", v.Id);
 
         // "Type" is the pseudo trait-type an asset's Recipe is published under, in the same
         // namespace as ingredient names. An ingredient of that name merges with it in the rarity
@@ -361,6 +367,42 @@ public static class Validator
     }
 
     /// <summary>Each id that appears more than once, in first-seen order.</summary>
+    /// <summary>
+    /// Ids become zip entry paths — <c>recipes/{id}.rcp</c>, <c>variants/{id}.png</c> — and the CLI
+    /// resolves authoring inputs by the same <c>{id}.png</c> convention against the real filesystem.
+    /// An id carrying a separator or a <c>..</c> therefore writes an archive that no longer round-trips
+    /// through an ordinary unzip tool, which is a property CLAUDE.md advertises: "the custom extension
+    /// is a renamed .zip, so any unzip tool can inspect it". Nothing checked, so <c>../../escape</c>
+    /// validated clean and produced <c>variants/../../escape.png</c>.
+    ///
+    /// <para>Not exploitable inside Core — entries are read back by exact name and <c>SetReader</c>'s
+    /// extraction is framework-guarded — so this is about keeping the format honest rather than a
+    /// vulnerability fix.</para>
+    /// </summary>
+    private static void CheckId(List<string> problems, string what, string? id)
+    {
+        if (string.IsNullOrWhiteSpace(id)) { problems.Add($"{what} has an empty id."); return; }
+
+        if (id.Contains("..", StringComparison.Ordinal))
+            problems.Add($"{what} has id '{id}', which contains '..'; ids become file names inside the archive.");
+
+        foreach (char c in InvalidIdChars)
+            if (id.Contains(c))
+            {
+                problems.Add($"{what} has id '{id}', which contains '{c}'; ids become file names "
+                    + "inside the archive and may not contain path separators or these characters: "
+                    + new string(InvalidIdChars));
+                break;
+            }
+
+        if (id.Any(char.IsControl))
+            problems.Add($"{what} has id '{id}', which contains a control character.");
+    }
+
+    /// <summary>Explicit rather than <c>Path.GetInvalidFileNameChars</c>: that set is
+    /// platform-dependent, and an archive written on Linux has to stay readable on Windows.</summary>
+    private static readonly char[] InvalidIdChars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
+
     /// <summary>
     /// A number as it should appear inside a problem string. Invariant, for the same reason the
     /// reports in <c>Stats/</c> are: a problem gets pasted into an issue or diffed against another

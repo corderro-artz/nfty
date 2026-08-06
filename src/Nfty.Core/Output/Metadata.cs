@@ -31,11 +31,23 @@ public record NftyMetadata(
 
 public record RecipeCount(string Recipe, int Count, double Percent);
 
+/// <param name="Name">The collection's name.</param>
+/// <param name="Count">How many assets the Set holds.</param>
+/// <param name="Seed">The seed that produced it; the same seed and cookbook reproduce it exactly.</param>
+/// <param name="CookbookSha256">SHA-256 of the source <c>.cbk</c> — what ties a Set back to the exact
+/// archive that produced it. Null when the cookbook never came from a file (an in-memory book).
+///
+/// <para>Documented here rather than on the parameter itself: a <c>&lt;summary&gt;</c> inside a
+/// positional record's parameter list is not a valid documentation location, so the compiler
+/// discarded it with CS1587 and no tooling ever saw it — on the one field CLAUDE.md insists stays
+/// threaded through.</para></param>
+/// <param name="GeneratorVersion">The engine version stamp.</param>
+/// <param name="Distribution">Per-recipe counts and shares across the Set.</param>
+/// <param name="Rarity">The collection-wide rarity table.</param>
 public record SetManifest(
     string Name,
     int Count,
     string Seed,
-    /// <summary>SHA-256 of the source .cbk; null when the cookbook never came from a file.</summary>
     string? CookbookSha256,
     string GeneratorVersion,
     IReadOnlyList<RecipeCount> Distribution,

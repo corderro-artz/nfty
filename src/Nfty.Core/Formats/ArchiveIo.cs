@@ -81,8 +81,30 @@ internal static class ArchiveIo
         using var ms = new MemoryStream();
         s.CopyTo(ms);
         ms.Position = 0;
-        using var inner = new ZipArchive(ms, ZipArchiveMode.Read);
-        return read(inner);
+        return ReadInner(ms, entryName, read);
+    }
+
+    /// <summary>
+    /// Opens one nested archive's bytes and hands it to <paramref name="read"/>.
+    ///
+    /// <para>The failure is reframed because the framework's own is actively misleading here: a stray
+    /// entry under <c>recipes/</c> — a README someone dropped in with 7-Zip, exercising the very
+    /// property CLAUDE.md advertises, that "the custom extension is a renamed .zip, so any unzip tool
+    /// can inspect it" — surfaces as <c>InvalidDataException: Central Directory corrupt</c>. That
+    /// names no file and blames the OUTER archive's directory, which is intact. The user is told
+    /// their CookBook is corrupt when one file inside it simply is not a Recipe.</para>
+    /// </summary>
+    private static T ReadInner<T>(MemoryStream bytes, string entryName, Func<ZipArchive, T> read)
+    {
+        ZipArchive inner;
+        try { inner = new ZipArchive(bytes, ZipArchiveMode.Read); }
+        catch (InvalidDataException ex)
+        {
+            throw new InvalidDataException(
+                $"Entry '{entryName}' is not a readable nfty archive: {ex.Message} "
+                + "(only nfty archives belong under this folder inside the file).", ex);
+        }
+        using (inner) return read(inner);
     }
 
     /// <summary>SHA-256 of a file's bytes, lowercase hex. Streamed — archives can be large.</summary>
@@ -166,8 +188,9 @@ internal static class ArchiveIo
         using var ms = new MemoryStream();
         await s.CopyToAsync(ms, ct);
         ms.Position = 0;
-        using var inner = new ZipArchive(ms, ZipArchiveMode.Read);
-        return await read(inner, ct);
+        // Same reframing as the sync twin; see ReadInner for why "Central Directory corrupt" is the
+        // wrong thing to tell someone who dropped a README into the archive.
+        return await ReadInner(ms, entryName, inner => read(inner, ct));
     }
 
     public static IEnumerable<string> EntryNamesUnder(ZipArchive zip, string prefix) =>

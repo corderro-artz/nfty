@@ -878,7 +878,7 @@
   <Style Selector="TextBlock.kmark.kcust"><Setter Property="Foreground" Value="{DynamicResource KindCustomBrush}" /></Style>
 
   <!-- Explorer tree: branch guide line (mockup .branch border-left, explorer.html:186-190). Fluent's
-       TreeViewItem template (confirmed against the 11.2.3 source) wraps children in a bare
+       TreeViewItem template (confirmed against the Fluent source at 11.2.3) wraps children in a bare
        ItemsPresenter with no bordered container to style, so this is realised as a leading Border
        in the node's own DataTemplate (ExplorerView.axaml) instead of a template-part override —
        one guide segment per non-root row rather than a recursive per-depth stack, which is enough

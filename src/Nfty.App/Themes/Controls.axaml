@@ -11,7 +11,8 @@
 
     Colours pull from Tokens.axaml via DynamicResource so both ThemeVariants stay correct.
 
-    Mechanism notes (from reading the actual Fluent 11.2.3 theme XAML — see task-5-report.md for
+    Mechanism notes (from reading the actual Fluent theme XAML at 11.2.3, the version current when
+    these were written; the app is on 12.1.1 now — see task-5-report.md for
     the full doc-pull):
       - TextBox / NumericUpDown / ButtonSpinner: Background/BorderBrush are TemplateBound straight
         through from the control's own properties to the visible Border, so a plain property Setter
@@ -274,7 +275,7 @@
   </ControlTheme>
 
   <!-- ================= TreeViewItem ================= -->
-  <!-- Mechanism confirmed by reading the actual Fluent 11.2.3 source (not just the generic
+  <!-- Mechanism confirmed by reading the actual Fluent source at 11.2.3 (not just the generic
        treeview-how-to.md doc example), pulled from
        github.com/AvaloniaUI/Avalonia/blob/11.2.3/src/Avalonia.Themes.Fluent/Controls/TreeViewItem.xaml:
        the template is

@@ -10,8 +10,10 @@ namespace Nfty.App.ViewModels;
 
 /// <summary>The pre-open default screen: Create/Open groups plus a Recent list. Open/Import read a
 /// real archive off disk and hand it to the <see cref="ICookBookSession"/>, then navigate into the
-/// Explorer; Open .set reads a cooked Set and navigates to the Set browser. The remaining actions
-/// (New Kitchen, Open recent) are not-yet-wired stubs.</summary>
+/// Explorer; Open .set reads a cooked Set and navigates to the Set browser; the Kitchen actions
+/// open, create and leave a workspace through the <see cref="IKitchenSession"/>. Every action here
+/// is wired — the summary described New Kitchen and Open-recent as stubs for some time after both
+/// had shipped, which is the sort of comment that makes a reader distrust the rest of the file.</summary>
 public partial class LandingViewModel : ViewModelBase
 {
     private readonly INavigationService _nav;

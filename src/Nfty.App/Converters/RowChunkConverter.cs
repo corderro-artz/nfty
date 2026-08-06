@@ -18,10 +18,11 @@ public record TileRow(IReadOnlyList<SetItemRow> Tiles);
 /// SetBrowserView.axaml's MultiBinding — so the row count recomputes and the grid reflows whenever
 /// the pane is resized, rather than clipping a hard-coded row width.
 ///
-/// Why chunk instead of a wrapping panel: Avalonia 11.2.3 (this project's pinned version, verified
-/// against the actual installed assembly, not just docs) has no virtualizing wrap/uniform-grid
-/// layout — <c>ItemsRepeater</c>/<c>UniformGridLayout</c> do not exist in this package version
-/// despite appearing in newer Context7 docs, and swapping a ListBox's ItemsPanel to WrapPanel (the
+/// Why chunk instead of a wrapping panel: Avalonia has no virtualizing wrap/uniform-grid layout.
+/// <c>UniformGridLayout</c> is absent from <c>Avalonia.Controls</c> — verified against the installed
+/// assembly rather than the docs, first on 11.2.3 and re-checked on <b>12.1.1</b>, which is what this
+/// project pins today. (The comment said 11.2.3 was the pinned version long after it was not; the
+/// conclusion survived the upgrade, the premise did not.) Swapping a ListBox's ItemsPanel to WrapPanel (the
 /// only wrapping panel that does exist) disables virtualization entirely, since WrapPanel implements
 /// no virtualizing panel interface. ListBox's default ItemsPanel — VirtualizingStackPanel — only
 /// virtualizes a single vertical/horizontal run, so grouping fixed-size rows ourselves is the only
