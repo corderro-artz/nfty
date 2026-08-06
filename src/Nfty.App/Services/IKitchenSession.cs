@@ -26,6 +26,7 @@ public interface IKitchenSession
     /// <summary>Opens a Kitchen, replacing any currently open one.</summary>
     void Open(string ktnPath);
 
+    /// <summary>Leaves the open Kitchen without opening another.</summary>
     void Close();
 
     /// <summary>Re-reads the folder. Membership is discovered rather than recorded, so anything that
@@ -33,12 +34,17 @@ public interface IKitchenSession
     void Refresh();
 }
 
+/// <inheritdoc cref="IKitchenSession"/>
 public sealed class KitchenSession : IKitchenSession
 {
+    /// <inheritdoc />
     public KitchenContents? Current { get; private set; }
+    /// <inheritdoc />
     public string? Path { get; private set; }
+    /// <inheritdoc />
     public event Action? Changed;
 
+    /// <inheritdoc />
     public void Open(string ktnPath)
     {
         Current = Kitchen.Open(ktnPath);
@@ -46,6 +52,7 @@ public sealed class KitchenSession : IKitchenSession
         Changed?.Invoke();
     }
 
+    /// <inheritdoc />
     public void Close()
     {
         Current = null;
@@ -53,6 +60,7 @@ public sealed class KitchenSession : IKitchenSession
         Changed?.Invoke();
     }
 
+    /// <inheritdoc />
     public void Refresh()
     {
         if (Path is null) return;

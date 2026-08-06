@@ -7,6 +7,8 @@ using Nfty.Core.Output;
 
 namespace Nfty.App;
 
+/// <summary>Registers every head-agnostic service and ViewModel. A head adds only the services
+/// that need a window — the file picker, the folder revealer and the clipboard — on top.</summary>
 public static class ServiceRegistration
 {
     /// <summary>Registers all Nfty.App services and ViewModels. Extended by later tasks.</summary>

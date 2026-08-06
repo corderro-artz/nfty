@@ -4,8 +4,16 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace Nfty.Core.Imaging;
 
+/// <summary>Tints a grayscale value-map with a hue and saturation, preserving each pixel's own
+/// value or lightness — which is what makes one piece of art yield a whole family of variants.</summary>
 public static class Colorizer
 {
+    /// <summary>Colorizes a value-map.</summary>
+    /// <param name="valueMap">The grayscale source. Not modified.</param>
+    /// <param name="h">Hue in degrees.</param>
+    /// <param name="s">Saturation, 0..1.</param>
+    /// <param name="model">Which space to interpret the colour in.</param>
+    /// <returns>A new image; the caller owns it.</returns>
     public static Image<Rgba32> Apply(Image<Rgba32> valueMap, double h, double s, ColorModel model)
     {
         // The hue, saturation and colour model are the same for every pixel, and the only

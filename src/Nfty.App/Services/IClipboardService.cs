@@ -7,6 +7,9 @@ namespace Nfty.App.Services;
 /// </summary>
 public interface IClipboardService
 {
+    /// <summary>Copies text to the system clipboard.</summary>
+    /// <param name="text">The text to copy.</param>
+    /// <returns>A task that completes once the clipboard has been written.</returns>
     Task SetTextAsync(string text);
 }
 
@@ -15,6 +18,8 @@ public interface IClipboardService
 /// from a Copy button in an environment where copying is meaningless.</summary>
 public sealed class NoopClipboardService : IClipboardService
 {
+    /// <summary>The last text "copied", so a test can assert what would have been.</summary>
     public string? Last { get; private set; }
+    /// <inheritdoc />
     public Task SetTextAsync(string text) { Last = text; return Task.CompletedTask; }
 }

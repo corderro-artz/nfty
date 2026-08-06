@@ -1,12 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <!-- IN PROGRESS: Model/ is fully documented; Editing/, Formats/, Generation/, Imaging/, Output/
-         and Stats/ are not yet. 233 members remain. Delete this block when they land — everything
-         else in the solution already builds without it. -->
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
-  </PropertyGroup>
-
 
 
   <ItemGroup>

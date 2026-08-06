@@ -15,6 +15,11 @@ namespace Nfty.App.Services;
 /// and the lifetime of whatever its mutation orphaned.</summary>
 public static class CookBookPersistence
 {
+    /// <summary>Writes the open book back to where it came from.</summary>
+    /// <param name="session">Holds the book and its source path.</param>
+    /// <param name="book2">The graph to write.</param>
+    /// <param name="ct">Cancels the write.</param>
+    /// <returns>A task that completes when the archive is written.</returns>
     public static async Task<LoadedCookBook> PersistAsync(ICookBookSession session, LoadedCookBook book2,
         CancellationToken ct = default)
     {

@@ -9,9 +9,15 @@ namespace Nfty.Core.Formats;
 /// </summary>
 public class UnsupportedSchemaVersionException : NotSupportedException
 {
+    /// <summary>The schema version the manifest declared.</summary>
     public int Found { get; }
+    /// <summary>The newest version this build can read.</summary>
     public int Supported { get; }
 
+    /// <summary>Creates the exception.</summary>
+    /// <param name="found">The version the manifest declared.</param>
+    /// <param name="supported">The newest version this build reads.</param>
+    /// <param name="message">The message shown to the user verbatim.</param>
     public UnsupportedSchemaVersionException(int found, int supported, string message)
         : base(message)
     {

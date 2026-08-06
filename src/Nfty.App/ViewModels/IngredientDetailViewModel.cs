@@ -12,8 +12,19 @@ using Nfty.Core.Stats;
 
 namespace Nfty.App.ViewModels;
 
+/// <summary>One row of the variant table.</summary>
+/// <param name="Id">The variant's id.</param>
+/// <param name="Name">Its display name.</param>
+/// <param name="Weight">Its roll weight.</param>
+/// <param name="WithinPercent">Its share within this layer.</param>
+/// <param name="OverallPercent">Its share across the whole collection.</param>
+/// <param name="Thumbnail">A rendered swatch.</param>
 public record VariantRow(string Id, string Name, double Weight, double WithinPercent, double OverallPercent, Bitmap Thumbnail);
 
+/// <summary>One line of the Colorways panel's axis readout.</summary>
+/// <param name="Label">What the axis is, e.g. "hue".</param>
+/// <param name="Value">Its range or fixed value.</param>
+/// <param name="Derived">Whether it was derived from a fixed colour rather than stated as a range.</param>
 public record ColorwayAxis(string Label, string Value, bool Derived);
 
 public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
@@ -35,23 +46,32 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty] private Bitmap? _hero;
 
+    /// <summary>The ingredient's display name.</summary>
     public string Name { get; }
 
     /// <summary>Lowercase, because the hero renders it as one running sentence
     /// ("custom · no colorize · composited as-is") with only this word kind-coloured.</summary>
     public string KindText { get; }
+    /// <summary>Whether it rolls its colour per asset.</summary>
     public bool IsDynamic { get; }
+    /// <summary>Whether it applies one fixed colour.</summary>
     public bool IsStatic { get; }
+    /// <summary>Whether it composites as-is.</summary>
     public bool IsCustom { get; }
+    /// <summary>The Colorways heading, naming the kind.</summary>
     public string ColorwaysText { get; }
+    /// <summary>Which colour model the layer is authored in.</summary>
     public string ColorwaysModelText { get; }
 
     /// <summary>Hue sweep for the colorways band, or null when this kind has no rolled hue (static
     /// and custom layers). Rendered as a gradient rather than as variant thumbnails, which showed
     /// the source art instead of the colour space the layer actually spans.</summary>
     public IReadOnlyList<Color>? HueBandStops { get; }
+    /// <summary>Whether to draw the hue band — a fixed colour has no range to show.</summary>
     public bool HasHueBand => HueBandStops is not null;
+    /// <summary>Sample swatches across the layer's colour range.</summary>
     public IReadOnlyList<Bitmap> Colorways { get; }
+    /// <summary>The hue and saturation readouts.</summary>
     public IReadOnlyList<ColorwayAxis> ColorwayAxes { get; }
 
     /// <summary>Variant rows ordered by the active sort column: "Weight" (heaviest first) or,
@@ -69,9 +89,23 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     /// The mockup's .hflag pill exists to answer "is this layer entangled?" at a glance, which is
     /// otherwise only discoverable by opening the recipe and reading its rules.</summary>
     public int RuleCount { get; }
+    /// <summary>Whether any rule mentions this layer.</summary>
     public bool HasRules => RuleCount > 0;
+    /// <summary>The rule flag's label, naming how many rules touch this layer.</summary>
     public string RuleFlagText => RuleCount == 1 ? "1 rule" : $"{RuleCount} rules";
 
+    /// <summary>Builds the Ingredient detail pane.</summary>
+    /// <param name="ing">The layer to describe.</param>
+    /// <param name="recipe">Its owning recipe.</param>
+    /// <param name="book">The owning book, for overall odds.</param>
+    /// <param name="bridge">Converts an ImageSharp frame to an Avalonia bitmap.</param>
+    /// <param name="notify">The not-yet-wired channel.</param>
+    /// <param name="editIngredient">Opens the ingredient editor.</param>
+    /// <param name="isEditing">Whether editing is currently unlocked.</param>
+    /// <param name="jumpToRecipe">Selects the owning recipe and scrolls to its rules.</param>
+    /// <param name="status">The status bar's guidance channel.</param>
+    /// <param name="picker">Chooses where to export a preview.</param>
+    /// <param name="dialogs">The dialog layer, for reporting an export failure.</param>
     public IngredientDetailViewModel(LoadedIngredient ing, LoadedRecipe recipe, LoadedCookBook book,
         IImageBridge bridge, INotYetWired notify, Action editIngredient, Func<bool> isEditing,
         Action? jumpToRecipe = null, IStatusService? status = null,
@@ -188,6 +222,8 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
         return list;
     }
 
+    /// <summary>Re-evaluates the commands whose availability depends on the edit lock, which lives
+    /// outside this pane and changes without it.</summary>
     public void RaiseCanExecuteChanged() => DeleteVariantCommand.NotifyCanExecuteChanged();
 
     [RelayCommand] private void SortBy(string col) => SortColumn = col;
@@ -270,6 +306,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
             : _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, "Could not export preview", message));
     private bool CanEdit() => _isEditing();
 
+    /// <summary>Frees every rendered swatch and thumbnail.</summary>
     public void Dispose()
     {
         Hero?.Dispose();

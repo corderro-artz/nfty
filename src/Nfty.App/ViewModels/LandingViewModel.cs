@@ -37,6 +37,17 @@ public partial class LandingViewModel : ViewModelBase
     /// yet".</summary>
     public bool HasNoRecents => Recents.Count == 0;
 
+    /// <summary>Builds the start screen.</summary>
+    /// <param name="nav">The page stack.</param>
+    /// <param name="dialogs">The dialog layer.</param>
+    /// <param name="notify">The not-yet-wired channel.</param>
+    /// <param name="picker">Chooses files to open, import or create.</param>
+    /// <param name="recents">The persisted Recent list.</param>
+    /// <param name="session">Takes ownership of whatever is opened.</param>
+    /// <param name="explorerFactory">Opens a CookBook in the Explorer.</param>
+    /// <param name="setBrowserFactory">Opens a cooked Set in the browser.</param>
+    /// <param name="looseEditorFactory">Opens a loose Ingredient in the editor.</param>
+    /// <param name="kitchen">The workspace session; null leaves the Kitchen actions unavailable.</param>
     public LandingViewModel(INavigationService nav, IDialogService dialogs, INotYetWired notify,
         IFilePickerService picker, IRecentsService recents, ICookBookSession session,
         Func<LoadedCookBook, ExplorerViewModel> explorerFactory,

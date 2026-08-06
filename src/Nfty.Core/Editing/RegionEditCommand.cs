@@ -44,6 +44,10 @@ public abstract class RegionEditCommand : IEditCommand
         return pixels;
     }
 
+    /// <summary>Applies the edit, snapshotting the pixels it is about to overwrite so
+    /// <see cref="Undo"/> can put them back.</summary>
+    /// <param name="map">The map to edit.</param>
+    /// <returns>True when the edit changed anything.</returns>
     public bool Apply(ValueMap map)
     {
         if (_after is null)
@@ -68,6 +72,8 @@ public abstract class RegionEditCommand : IEditCommand
         return _changed;
     }
 
+    /// <summary>Restores the snapshot taken by <see cref="Apply"/>.</summary>
+    /// <param name="map">The map to restore.</param>
     public void Undo(ValueMap map)
     {
         if (_before is null) return;

@@ -5,8 +5,14 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace Nfty.Core.Formats;
 
+/// <summary>Reads and writes <c>.igt</c> archives — a manifest plus one PNG per variant. The
+/// <c>ZipArchive</c> overloads exist so a Recipe can nest one without going through a file.</summary>
 public static class IngredientArchive
 {
+    /// <summary>Writes an Ingredient into an already-open archive.</summary>
+    /// <param name="zip">The open archive.</param>
+    /// <param name="manifest">The ingredient's manifest.</param>
+    /// <param name="variantImages">One image per variant id.</param>
     public static void Write(ZipArchive zip, IngredientManifest manifest,
         IReadOnlyDictionary<string, Image<Rgba32>> variantImages)
     {
@@ -15,6 +21,9 @@ public static class IngredientArchive
             ArchiveIo.WriteImage(zip, $"variants/{v.Id}.png", variantImages[v.Id]);
     }
 
+    /// <summary>Reads an Ingredient from an already-open archive, decoding every variant PNG.</summary>
+    /// <param name="zip">The open archive.</param>
+    /// <returns>The loaded ingredient; the caller owns it.</returns>
     public static LoadedIngredient Read(ZipArchive zip)
     {
         var manifest = ArchiveIo.ReadManifest<IngredientManifest>(zip);
@@ -52,6 +61,10 @@ public static class IngredientArchive
                     $"Ingredient '{manifest.Id}' has duplicate variant id '{v.Id}'; every variant must have a unique id.");
     }
 
+    /// <summary>Writes an Ingredient to a file.</summary>
+    /// <param name="path">Destination path.</param>
+    /// <param name="manifest">The ingredient's manifest.</param>
+    /// <param name="variantImages">One image per variant id.</param>
     public static void Write(string path, IngredientManifest manifest,
         IReadOnlyDictionary<string, Image<Rgba32>> variantImages)
     {
@@ -59,12 +72,21 @@ public static class IngredientArchive
         Write(zip, manifest, variantImages);
     }
 
+    /// <summary>Reads an Ingredient from a file, decoding every variant PNG.</summary>
+    /// <param name="path">Archive path.</param>
+    /// <returns>The loaded ingredient; the caller owns it and must dispose it.</returns>
     public static LoadedIngredient Read(string path)
     {
         using var zip = ZipFile.OpenRead(path);
         return Read(zip);
     }
 
+    /// <summary>Writes an Ingredient into an already-open archive.</summary>
+    /// <param name="zip">The open archive.</param>
+    /// <param name="manifest">The ingredient's manifest.</param>
+    /// <param name="variantImages">One image per variant id.</param>
+    /// <param name="ct">Cancels the write.</param>
+    /// <returns>A task that completes when it is written.</returns>
     public static async Task WriteAsync(ZipArchive zip, IngredientManifest manifest,
         IReadOnlyDictionary<string, Image<Rgba32>> variantImages, CancellationToken ct = default)
     {
@@ -73,6 +95,10 @@ public static class IngredientArchive
             await ArchiveIo.WriteImageAsync(zip, $"variants/{v.Id}.png", variantImages[v.Id], ct);
     }
 
+    /// <summary>Reads an Ingredient from an already-open archive.</summary>
+    /// <param name="zip">The open archive.</param>
+    /// <param name="ct">Cancels the read; anything already decoded is disposed first.</param>
+    /// <returns>The loaded ingredient; the caller owns it.</returns>
     public static async Task<LoadedIngredient> ReadAsync(ZipArchive zip, CancellationToken ct = default)
     {
         var manifest = await ArchiveIo.ReadManifestAsync<IngredientManifest>(zip, ct);
@@ -91,6 +117,12 @@ public static class IngredientArchive
         return new LoadedIngredient { Manifest = manifest, VariantImages = images };
     }
 
+    /// <summary>Writes an Ingredient to a file.</summary>
+    /// <param name="path">Destination path.</param>
+    /// <param name="manifest">The ingredient's manifest.</param>
+    /// <param name="variantImages">One image per variant id.</param>
+    /// <param name="ct">Cancels the write.</param>
+    /// <returns>A task that completes when it is written.</returns>
     public static async Task WriteAsync(string path, IngredientManifest manifest,
         IReadOnlyDictionary<string, Image<Rgba32>> variantImages, CancellationToken ct = default)
     {
@@ -98,6 +130,10 @@ public static class IngredientArchive
         await WriteAsync(zip, manifest, variantImages, ct);
     }
 
+    /// <summary>Reads an Ingredient from a file.</summary>
+    /// <param name="path">Archive path.</param>
+    /// <param name="ct">Cancels the read; anything already decoded is disposed first.</param>
+    /// <returns>The loaded ingredient; the caller owns it.</returns>
     public static async Task<LoadedIngredient> ReadAsync(string path, CancellationToken ct = default)
     {
         using var zip = ZipFile.OpenRead(path);

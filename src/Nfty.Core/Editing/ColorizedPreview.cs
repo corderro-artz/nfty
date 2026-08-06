@@ -15,6 +15,12 @@ namespace Nfty.Core.Editing;
 /// </summary>
 public static class ColorizedPreview
 {
+    /// <summary>Renders a draft variant the way generation would.</summary>
+    /// <param name="variant">The variant being edited.</param>
+    /// <param name="kind">Its layer kind.</param>
+    /// <param name="colorization">Its colour configuration; ignored for Custom.</param>
+    /// <param name="rng">Supplies the roll for a Dynamic layer.</param>
+    /// <returns>A new image; the caller owns it.</returns>
     public static Image<Rgba32> Render(VariantDraft variant, LayerKind kind, Colorization? colorization, IRng rng)
     {
         Image<Rgba32> valueImg = variant.Map.ToImage();

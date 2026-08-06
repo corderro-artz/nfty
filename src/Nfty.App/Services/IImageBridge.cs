@@ -10,11 +10,16 @@ namespace Nfty.App.Services;
 /// owns an independent pixel copy, so the caller disposes the source image immediately after.</summary>
 public interface IImageBridge
 {
+    /// <summary>Converts an ImageSharp frame to an Avalonia bitmap.</summary>
+    /// <param name="image">The source frame. Not disposed.</param>
+    /// <returns>A new bitmap; the caller owns it.</returns>
     Bitmap ToBitmap(Image<Rgba32> image);
 }
 
+/// <inheritdoc cref="IImageBridge"/>
 public sealed class ImageBridge : IImageBridge
 {
+    /// <inheritdoc />
     public Bitmap ToBitmap(Image<Rgba32> image)
     {
         var wb = new WriteableBitmap(

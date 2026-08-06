@@ -8,13 +8,26 @@ namespace Nfty.Core.Editing;
 /// </summary>
 public sealed class IngredientDraft
 {
+    /// <summary>Stable identifier for the ingredient being built.</summary>
     public string Id { get; }
+    /// <summary>Display name.</summary>
     public string Name { get; set; }
+    /// <summary>Which kind of layer this will be.</summary>
     public LayerKind Kind { get; set; }
+    /// <summary>How it is coloured; null for a Custom layer.</summary>
     public Colorization? Colorization { get; set; }
+    /// <summary>The canvas every variant must match.</summary>
     public Dimensions Canvas { get; }
+    /// <summary>The variants being edited.</summary>
     public List<VariantDraft> Variants { get; }
 
+    /// <summary>Creates a draft ingredient.</summary>
+    /// <param name="id">Stable identifier.</param>
+    /// <param name="name">Display name.</param>
+    /// <param name="kind">Layer kind.</param>
+    /// <param name="colorization">Colour configuration, or null for Custom.</param>
+    /// <param name="canvas">Canvas size every variant must match.</param>
+    /// <param name="variants">Initial variants.</param>
     public IngredientDraft(string id, string name, LayerKind kind, Colorization? colorization,
         Dimensions canvas, IEnumerable<VariantDraft> variants)
     {
@@ -26,6 +39,11 @@ public sealed class IngredientDraft
         Variants = variants.ToList();
     }
 
+    /// <summary>Adds a blank variant sized to the canvas.</summary>
+    /// <param name="id">Stable identifier.</param>
+    /// <param name="name">Display name.</param>
+    /// <param name="weight">Roll weight.</param>
+    /// <returns>The new variant, already added.</returns>
     public VariantDraft AddVariant(string id, string name, double weight)
     {
         var v = new VariantDraft(id, name, weight, ValueMap.ForCanvas(Canvas));

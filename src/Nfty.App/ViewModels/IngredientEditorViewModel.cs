@@ -18,12 +18,36 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace Nfty.App.ViewModels;
 
-public enum EditorTool { Brush, Eraser, Rectangle, Circle, Triangle, Select, Fill }
+/// <summary>The editor's drawing tools.</summary>
+public enum EditorTool
+{
+    /// <summary>Freehand painting.</summary>
+    Brush,
+
+    /// <summary>Freehand erasing.</summary>
+    Eraser,
+
+    /// <summary>A filled rectangle.</summary>
+    Rectangle,
+
+    /// <summary>A filled ellipse.</summary>
+    Circle,
+
+    /// <summary>A filled triangle.</summary>
+    Triangle,
+
+    /// <summary>Selects a region to move.</summary>
+    Select,
+
+    /// <summary>Flood-fills the region under the pointer.</summary>
+    Fill,
+}
 
 /// <summary>A variant in the editor filmstrip. Observable so rename/reweight update the bound
 /// filmstrip entry in place (no collection-item replacement / selection churn).</summary>
 public partial class EditorVariant : ObservableObject
 {
+    /// <summary>The variant's id.</summary>
     public string Id { get; }
     [ObservableProperty] private string _name;
     [ObservableProperty] private double _weight;
@@ -33,6 +57,11 @@ public partial class EditorVariant : ObservableObject
     /// Selector), so selection has to travel on the item itself.</summary>
     [ObservableProperty] private bool _isSelected;
 
+    /// <summary>Creates a row in the editor's variant strip.</summary>
+    /// <param name="id">The variant's id.</param>
+    /// <param name="name">Its display name.</param>
+    /// <param name="weight">Its roll weight.</param>
+    /// <param name="thumbnail">A rendered swatch.</param>
     public EditorVariant(string id, string name, double weight, Bitmap thumbnail)
     { Id = id; _name = name; _weight = weight; _thumbnail = thumbnail; }
 }
@@ -164,11 +193,17 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// <summary>Per-tool flags for the toolstrip's active state. The old vertical text-button column
     /// showed no selection at all, so the user could not tell which tool was armed.</summary>
     public bool IsToolBrush => ActiveTool == EditorTool.Brush;
+    /// <summary>Whether the eraser is selected.</summary>
     public bool IsToolEraser => ActiveTool == EditorTool.Eraser;
+    /// <summary>Whether the rectangle tool is selected.</summary>
     public bool IsToolRectangle => ActiveTool == EditorTool.Rectangle;
+    /// <summary>Whether the ellipse tool is selected.</summary>
     public bool IsToolCircle => ActiveTool == EditorTool.Circle;
+    /// <summary>Whether the triangle tool is selected.</summary>
     public bool IsToolTriangle => ActiveTool == EditorTool.Triangle;
+    /// <summary>Whether the selection tool is active.</summary>
     public bool IsToolSelect => ActiveTool == EditorTool.Select;
+    /// <summary>Whether the flood fill is selected.</summary>
     public bool IsToolFill => ActiveTool == EditorTool.Fill;
 
     partial void OnActiveToolChanged(EditorTool value)
@@ -187,6 +222,17 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     [RelayCommand] private void SetModeDynamic() => Mode = LayerKind.Dynamic;
     [RelayCommand] private void SetModeStatic() => Mode = LayerKind.Static;
 
+    /// <summary>Opens an ingredient for editing.</summary>
+    /// <param name="ing">The layer being edited.</param>
+    /// <param name="recipe">Its owning recipe.</param>
+    /// <param name="book">The owning book, whose canvas every variant must match.</param>
+    /// <param name="bridge">Converts an ImageSharp frame to an Avalonia bitmap.</param>
+    /// <param name="nav">The page stack, for Back.</param>
+    /// <param name="notify">The not-yet-wired channel.</param>
+    /// <param name="session">Holds the open book, so a save can swap the edited graph in.</param>
+    /// <param name="dialogs">The dialog layer.</param>
+    /// <param name="picker">Chooses files to import.</param>
+    /// <param name="looseSavePath">Where a loose ingredient saves back to; null inside a CookBook.</param>
     public IngredientEditorViewModel(LoadedIngredient ing, LoadedRecipe recipe, LoadedCookBook book,
         IImageBridge bridge, INavigationService nav, INotYetWired notify, ICookBookSession session,
         IDialogService dialogs, IFilePickerService picker, string? looseSavePath = null)
@@ -322,6 +368,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// <summary>Live readouts beside each range control (mockup .cv), so the sliders' current span is
     /// legible without reading the handles' positions off the track.</summary>
     public string HueRangeText => $"{HueMin:0}–{HueMax:0}°";
+    /// <summary>The saturation range as the panel prints it.</summary>
     public string SatRangeText => $"{SatMin:0}–{SatMax:0}%";
 
     /// <summary>How many distinct colours the quantize settings actually admit - the product of the
@@ -678,6 +725,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     [RelayCommand] private void EnlargePreview() => PreviewEnlarged = !PreviewEnlarged;
     [RelayCommand] private void FillPanePreview() => PreviewFillsPane = !PreviewFillsPane;
 
+    /// <summary>Frees every editor bitmap.</summary>
     public void Dispose()
     {
         Saved = null;   // release any subscriber (e.g. the Explorer) when the editor is navigated away

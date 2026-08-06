@@ -4,16 +4,23 @@ using Nfty.App.Models;
 
 namespace Nfty.App.Services;
 
+/// <summary>The Landing screen's Recent list, persisted between sessions.</summary>
 public interface IRecentsService
 {
+    /// <summary>The remembered entries, most recent first.</summary>
     IReadOnlyList<RecentItem> Items { get; }
+    /// <summary>Records an opened item, moving it to the top if already present.</summary>
+    /// <param name="item">What was opened.</param>
     void Add(RecentItem item);
+    /// <summary>Forgets an entry — used when a remembered file has gone.</summary>
+    /// <param name="path">The path to forget.</param>
     void Remove(string path);
 }
 
 /// <summary>Most-recently-opened files, persisted as JSON under the user's app-data folder. Purely
 /// convenience state: a corrupt store loads as empty and a failed save is swallowed, so recents can
 /// never block or crash the app. The storage directory is injectable so tests never touch %APPDATA%.</summary>
+/// <inheritdoc cref="IRecentsService"/>
 public sealed class RecentsService : IRecentsService
 {
     private const int Cap = 10;
@@ -22,6 +29,10 @@ public sealed class RecentsService : IRecentsService
     private readonly string _file;
     private readonly List<RecentItem> _items = new();
 
+    /// <summary>Creates the service.</summary>
+    /// <param name="storageDir">Where to persist the list. Tests MUST pass a temp directory — the
+    /// default is the real per-user application-data folder, and a test that wrote there would
+    /// alter the developer's own Recent list.</param>
     public RecentsService(string? storageDir = null)
     {
         var dir = storageDir ?? Path.Combine(
@@ -40,8 +51,10 @@ public sealed class RecentsService : IRecentsService
         catch { _items = new(); }   // corrupt/unreadable → start empty, never throw
     }
 
+    /// <inheritdoc />
     public IReadOnlyList<RecentItem> Items => _items;
 
+    /// <inheritdoc />
     public void Add(RecentItem item)
     {
         var full = Path.GetFullPath(item.Path);
@@ -52,6 +65,7 @@ public sealed class RecentsService : IRecentsService
         Save();
     }
 
+    /// <inheritdoc />
     public void Remove(string path)
     {
         // Add stores full paths, so normalise here too or a raw/relative path silently no-ops.

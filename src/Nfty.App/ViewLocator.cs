@@ -11,6 +11,9 @@ namespace Nfty.App;
 /// </summary>
 public class ViewLocator : IDataTemplate
 {
+    /// <summary>Resolves a ViewModel to its View by name convention.</summary>
+    /// <param name="data">The ViewModel.</param>
+    /// <returns>The matching view, or a placeholder naming the type it could not resolve.</returns>
     public Control Build(object? data)
     {
         if (data is null) return new TextBlock { Text = "No data" };
@@ -22,5 +25,8 @@ public class ViewLocator : IDataTemplate
             : new TextBlock { Text = $"View not found: {name}" };
     }
 
+    /// <summary>Whether this locator handles the object.</summary>
+    /// <param name="data">The candidate.</param>
+    /// <returns>True for anything deriving from <see cref="ViewModels.ViewModelBase"/>.</returns>
     public bool Match(object? data) => data is ViewModelBase;
 }

@@ -9,6 +9,13 @@ namespace Nfty.Core.Editing;
 /// </summary>
 public static class CookBookEdits
 {
+    /// <summary>Returns a book with one ingredient replaced or added.</summary>
+    /// <param name="book">The book to edit.</param>
+    /// <param name="recipeId">Which recipe owns the layer.</param>
+    /// <param name="ingredient">The replacement.</param>
+    /// <returns>A NEW graph SHARING the previous book's images, which is why the session
+    /// swaps it in with <c>Replace</c> rather than <c>Open</c> — disposing the old book would
+    /// dispose images the new one still points at.</returns>
     public static LoadedCookBook UpsertIngredient(LoadedCookBook book, string recipeId, LoadedIngredient ingredient)
     {
         if (!book.Recipes.Any(r => r.Manifest.Id == recipeId))

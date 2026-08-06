@@ -10,11 +10,15 @@ namespace Nfty.Core.Output;
 /// <summary>How far a set write has got. <see cref="Fraction"/> suits a progress bar.</summary>
 public readonly record struct WriteProgress(int Completed, int Total)
 {
+    /// <summary>Completion as 0..1, suitable for a progress bar.</summary>
     public double Fraction => Total <= 0 ? 0 : (double)Completed / Total;
 }
 
+/// <summary>Writes a generated collection to disk: the images, both metadata files per asset, and
+/// the Set manifest — and reads an existing Set back so <c>extend</c> can add to it.</summary>
 public static class SetWriter
 {
+    /// <summary>The engine stamp written into every Set manifest.</summary>
     public const string GeneratorVersion = "nfty/1.0";
 
     /// <summary>
@@ -31,6 +35,9 @@ public static class SetWriter
     /// </summary>
     public const string TypeTrait = "Type";
 
+    /// <summary>What a Set already on disk contributes to an extend run.</summary>
+    /// <param name="Dnas">Every DNA already minted, so new rolls can avoid them.</param>
+    /// <param name="NextNumber">The number the next asset should take.</param>
     public record ExistingSet(IReadOnlyList<string> Dnas, int NextNumber);
 
     // An item already on disk (from a previous batch) that this write is not overwriting.
@@ -39,6 +46,10 @@ public static class SetWriter
 
     private record Layout(string OutDir, string ImagesDir, string MetaDir, string NftyDir);
 
+    /// <summary>Writes a Set.</summary>
+    /// <param name="set">The generated collection.</param>
+    /// <param name="outDir">Destination folder; created if missing.</param>
+    /// <param name="pack">Also zip the folder into a sibling <c>.set</c>.</param>
     public static void Write(GeneratedSet set, string outDir, bool pack)
     {
         var layout = Prepare(outDir);
@@ -100,6 +111,10 @@ public static class SetWriter
         if (pack) await Task.Run(() => Pack(outDir), cancellationToken);
     }
 
+    /// <summary>Reads what an existing Set already holds, for extend.</summary>
+    /// <param name="outDir">The Set folder.</param>
+    /// <returns>Its DNAs and the next free number. An empty Set yields no DNAs and number 1.</returns>
+    /// <exception cref="CorruptSetException">An item file is unreadable or missing its fields.</exception>
     public static ExistingSet ReadExisting(string outDir)
     {
         var nftyDir = Path.Combine(outDir, "nfty");
@@ -116,6 +131,11 @@ public static class SetWriter
         return new ExistingSet(dnas, maxNumber + 1);
     }
 
+    /// <summary>Reads what an existing Set already holds, for extend.</summary>
+    /// <param name="outDir">The Set folder.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>Its DNAs and the next free number.</returns>
+    /// <exception cref="CorruptSetException">An item file is unreadable or missing its fields.</exception>
     public static async Task<ExistingSet> ReadExistingAsync(
         string outDir, CancellationToken cancellationToken = default)
     {

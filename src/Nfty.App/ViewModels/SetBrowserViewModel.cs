@@ -15,7 +15,9 @@ public partial class SetItemRow : ObservableObject, IDisposable
     private readonly string _imagePath;
     private Bitmap? _thumbnail;
 
+    /// <summary>The asset's set number.</summary>
     public int Number { get; }
+    /// <summary>Its metadata.</summary>
     public SetItem Item { get; }
 
     /// <summary>
@@ -77,9 +79,13 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
 {
     private readonly LoadedSet _set;
 
+    /// <summary>The collection's name.</summary>
     public string Name { get; }
+    /// <summary>How many assets the Set holds.</summary>
     public int Count { get; }
+    /// <summary>The seed that produced it.</summary>
     public string Seed { get; }
+    /// <summary>One row per asset.</summary>
     public IReadOnlyList<SetItemRow> Items { get; }
 
     [ObservableProperty]
@@ -89,6 +95,8 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(SelectedNumber))]
     private SetItemRow? _selectedItem;
 
+    /// <summary>Opens a cooked Set for browsing.</summary>
+    /// <param name="set">The loaded Set; this takes ownership and disposes it.</param>
     public SetBrowserViewModel(LoadedSet set)
     {
         _set = set;
@@ -108,9 +116,13 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
         foreach (var r in Items) r.IsSelected = ReferenceEquals(r, value);
     }
 
+    /// <summary>The selected asset's number, formatted.</summary>
     public string SelectedNumber => SelectedItem is null ? "" : $"#{SelectedItem.Number:D4}";
+    /// <summary>Its DNA.</summary>
     public string SelectedDna => SelectedItem?.Item.Dna ?? "";
+    /// <summary>The recipe it came from.</summary>
     public string SelectedRecipe => SelectedItem?.Item.Recipe ?? "";
+    /// <summary>Its traits with collection-wide rarity.</summary>
     public IReadOnlyList<RarityAttribute> SelectedRarity => SelectedItem?.Item.Rarity ?? Array.Empty<RarityAttribute>();
 
     /// <summary>Frees every decoded thumbnail and the underlying Set. Rows that were never realized

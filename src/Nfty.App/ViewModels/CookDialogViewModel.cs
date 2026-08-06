@@ -33,9 +33,15 @@ public partial class CookDialogViewModel : ViewModelBase
     /// picks - which is also why the dialog cannot say so up front.</summary>
     [ObservableProperty] private bool _isExtending;
 
+    /// <summary>Creates the cook dialog.</summary>
+    /// <param name="book">The book to generate from.</param>
+    /// <param name="picker">Chooses the output folder.</param>
+    /// <param name="revealer">Opens the output folder when the run finishes.</param>
+    /// <param name="dialogs">The dialog layer to close through.</param>
     public CookDialogViewModel(LoadedCookBook book, IFilePickerService picker, IFolderRevealer revealer, IDialogService dialogs)
     { _book = book; _picker = picker; _revealer = revealer; _dialogs = dialogs; }
 
+    /// <summary>Whether the options form is showing rather than the progress view.</summary>
     public bool ShowForm => !IsRunning && !IsDone;
 
     private bool CanCook() => !IsRunning && Count > 0;

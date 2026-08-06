@@ -36,10 +36,17 @@ public sealed class RowChunkConverter : IMultiValueConverter
     private const double TileSlotWidth = 120 + 12;
     private const double TileGap = 10;
 
+    /// <summary>The shared instance markup binds to.</summary>
     public static readonly RowChunkConverter Instance = new();
 
     private RowChunkConverter() { }
 
+    /// <summary>Chunks the item list into fixed-size rows for the pane's current width.</summary>
+    /// <param name="values">The items, then the ListBox's width.</param>
+    /// <param name="targetType">Ignored.</param>
+    /// <param name="parameter">Ignored.</param>
+    /// <param name="culture">Ignored.</param>
+    /// <returns>Rows of tiles, or an empty list before the pane has been measured.</returns>
     public object? Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
     {
         var items = values.Count > 0 ? values[0] as IReadOnlyList<SetItemRow> : null;

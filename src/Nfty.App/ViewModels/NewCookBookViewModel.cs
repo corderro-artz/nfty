@@ -27,9 +27,13 @@ public partial class NewCookBookViewModel : WizardViewModelBase
     private double _ratio = 1.0;
     private bool _syncing;
 
+    /// <summary>The id derived from the name: lower-case, spaces to dashes.</summary>
     public string DerivedId => string.Join('-',
         Name.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries));
 
+    /// <summary>Creates the New CookBook wizard.</summary>
+    /// <param name="dialogs">The dialog layer.</param>
+    /// <param name="notify">The not-yet-wired channel.</param>
     public NewCookBookViewModel(IDialogService dialogs, INotYetWired notify) : base(dialogs, notify) { }
 
     partial void OnNameChanged(string value)

@@ -6,8 +6,18 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace Nfty.Core.Formats;
 
+/// <summary>
+/// The single place that decides what a legal CookBook is.
+///
+/// <para>It REPORTS problems and never throws, because <c>validate</c> — and a GUI asking "what is
+/// wrong with this book?" — exists precisely to explain a broken one. A validator that crashes on
+/// bad input fails at the only moment it matters.</para>
+/// </summary>
 public static class Validator
 {
+    /// <summary>Checks a book and returns every problem found, rather than stopping at the first.</summary>
+    /// <param name="cb">The book to check.</param>
+    /// <returns>One human-readable line per problem; empty when the book is legal.</returns>
     public static IReadOnlyList<string> Validate(LoadedCookBook cb)
     {
         var problems = new List<string>();

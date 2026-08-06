@@ -22,9 +22,13 @@ public enum ArchiveKind
 /// </summary>
 public static class Archives
 {
+    /// <summary>The CookBook archive extension.</summary>
     public const string CookBookExtension = ".cbk";
+    /// <summary>The Recipe archive extension.</summary>
     public const string RecipeExtension = ".rcp";
+    /// <summary>The Ingredient archive extension.</summary>
     public const string IngredientExtension = ".igt";
+    /// <summary>The Kitchen workspace extension.</summary>
     public const string KitchenExtension = ".ktn";
 
     /// <summary>

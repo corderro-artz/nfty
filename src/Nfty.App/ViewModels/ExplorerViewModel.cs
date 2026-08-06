@@ -59,6 +59,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     /// <summary>Test hook: the cookbook the tree is currently built from (swapped on editor save).</summary>
     internal LoadedCookBook BookForTest => _book;
 
+    /// <summary>The titlebar breadcrumb for the current selection.</summary>
     public IReadOnlyList<Crumb> Crumbs { get; private set; } = Array.Empty<Crumb>();
 
     /// <summary>Status bar's lock-state label (explorer.html .statusbar .state: "read-only"/"editing"),
@@ -68,7 +69,9 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     /// <summary>Status bar counts (explorer.html #rTotal/#iTotal/#varTotal), recomputed from
     /// <see cref="_book"/> — refreshed via <see cref="RefreshCounts"/> whenever the book is swapped.</summary>
     public string RecipeCountText => Pluralize(_book.Recipes.Count, "recipe");
+    /// <summary>"N ingredients" for the status bar.</summary>
     public string IngredientCountText => Pluralize(_book.Recipes.Sum(r => r.Ingredients.Count), "ingredient");
+    /// <summary>"N variants" for the status bar.</summary>
     public string VariantCountText =>
         Pluralize(_book.Recipes.Sum(r => r.Ingredients.Sum(i => i.Manifest.Variants.Count)), "variant");
 
@@ -81,7 +84,9 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     // note on CookBookDetailViewModel's best-effort counting), so the shell has to ask.
     private IReadOnlyList<string> _problems = Array.Empty<string>();
 
+    /// <summary>Whether the open book validates — the status bar's dot and label.</summary>
     public bool IsValid => _problems.Count == 0;
+    /// <summary>"Valid" or the problem count.</summary>
     public string ValidityText => IsValid
         ? "Valid"
         : _problems.Count == 1 ? "1 problem" : $"{_problems.Count} problems";
@@ -108,6 +113,8 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(TreeCountText));
     }
 
+    /// <summary>What the Add button offers for the current selection: a Recipe, an Ingredient or a
+    /// Variant. One button whose meaning follows the tree, as the mockup has it.</summary>
     public string AddLabel => SelectedNode?.Kind switch
     {
         ExplorerNodeKind.CookBook => "Add recipe",
@@ -124,8 +131,11 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
 
     /// <summary>Drives which type glyph the header shows; null hides the whole band.</summary>
     public ExplorerNodeKind? DetailKind => SelectedNode?.Kind;
+    /// <summary>Whether the detail pane is showing the CookBook card.</summary>
     public bool IsDetailCookBook => DetailKind == ExplorerNodeKind.CookBook;
+    /// <summary>Whether the detail pane is showing a Recipe.</summary>
     public bool IsDetailRecipe => DetailKind == ExplorerNodeKind.Recipe;
+    /// <summary>Whether the detail pane is showing an Ingredient.</summary>
     public bool IsDetailIngredient => DetailKind == ExplorerNodeKind.Ingredient;
 
     /// <summary>Mockup: the cookbook/recipe name, and for an ingredient "recipe › ingredient".
@@ -172,6 +182,20 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(DetailTag));
     }
 
+    /// <summary>Opens a CookBook in the Explorer.</summary>
+    /// <param name="book">The open book.</param>
+    /// <param name="nav">The page stack.</param>
+    /// <param name="dialogs">The dialog layer.</param>
+    /// <param name="notify">The not-yet-wired channel.</param>
+    /// <param name="bridge">Converts an ImageSharp frame to an Avalonia bitmap.</param>
+    /// <param name="editorFactory">Opens the editor for an ingredient inside this book.</param>
+    /// <param name="cookFactory">Opens the cook dialog.</param>
+    /// <param name="session">Holds the open book.</param>
+    /// <param name="picker">Chooses files to import or save.</param>
+    /// <param name="looseEditorFactory">Opens the editor for a loose ingredient.</param>
+    /// <param name="status">The status bar's guidance channel.</param>
+    /// <param name="kitchen">The open workspace, if any.</param>
+    /// <param name="clipboard">Where the report dialog's Copy writes.</param>
     public ExplorerViewModel(LoadedCookBook book, INavigationService nav, IDialogService dialogs,
         INotYetWired notify, IImageBridge bridge,
         Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel> editorFactory,
@@ -683,5 +707,6 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(Crumbs));
     }
 
+    /// <summary>Disposes the detail pane, which owns its rendered bitmaps.</summary>
     public void Dispose() => (CurrentDetail as IDisposable)?.Dispose();
 }

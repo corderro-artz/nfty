@@ -6,6 +6,14 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace Nfty.Core.Generation;
 
+/// <summary>
+/// The generation pipeline. Per asset: roll a recipe, roll each layer's variant, apply the recipe's
+/// rules, compute the DNA, reject a duplicate, and only then render — colorize, composite, emit.
+///
+/// <para>Rolling and rendering are separate deliberately: the DNA is a function of the selection
+/// alone, so a collision is discarded without paying for the pixels that would have been thrown
+/// away with it.</para>
+/// </summary>
 public static class Generator
 {
     /// <summary>

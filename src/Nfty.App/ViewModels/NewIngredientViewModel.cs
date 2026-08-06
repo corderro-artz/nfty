@@ -68,6 +68,9 @@ public partial class NewIngredientViewModel : WizardViewModelBase
         set { if (value) Destination = RecipeDestination.LooseKitchen; }
     }
 
+    /// <summary>Creates the New Ingredient wizard.</summary>
+    /// <param name="dialogs">The dialog layer.</param>
+    /// <param name="notify">The not-yet-wired channel.</param>
     public NewIngredientViewModel(IDialogService dialogs, INotYetWired notify) : base(dialogs, notify) { }
 
     partial void OnKindChanged(LayerKind value)
@@ -101,6 +104,7 @@ public partial class NewIngredientViewModel : WizardViewModelBase
     /// describe is legible without reading their positions off the track. Same shape as the
     /// ingredient editor's, since the wizard now shows the same dual-range control.</summary>
     public string HueRangeText => $"{HueMin:0}–{HueMax:0}°";
+    /// <summary>The saturation range as the form prints it.</summary>
     public string SatRangeText => $"{SatMin:0}–{SatMax:0}%";
 
     /// <summary>The ingredient id derived from the name: lower-case, spaces to dashes.</summary>

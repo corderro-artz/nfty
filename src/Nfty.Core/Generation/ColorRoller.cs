@@ -3,10 +3,19 @@ using Nfty.Core.Model;
 
 namespace Nfty.Core.Generation;
 
+/// <summary>One rolled colour: the hue and saturation a value-map is tinted with. Value and
+/// lightness are deliberately absent — those come from the grayscale art.</summary>
+/// <param name="H">Hue in degrees.</param>
+/// <param name="S">Saturation as a 0..1 fraction.</param>
 public readonly record struct RolledColor(double H, double S);
 
+/// <summary>Turns a layer's colorization into the colour one asset will use.</summary>
 public static class ColorRoller
 {
+    /// <summary>Rolls a colour, consuming RNG.</summary>
+    /// <param name="c">The layer's colorization.</param>
+    /// <param name="rng">The run's RNG.</param>
+    /// <returns>The rolled hue and saturation.</returns>
     public static RolledColor Roll(Colorization c, IRng rng)
     {
         var entry = PickEntry(c.Entries, rng);

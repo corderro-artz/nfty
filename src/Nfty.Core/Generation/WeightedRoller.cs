@@ -2,6 +2,7 @@ using System.Globalization;
 
 namespace Nfty.Core.Generation;
 
+/// <summary>Weighted selection with a stable, locale-independent draw order.</summary>
 public static class WeightedRoller
 {
     /// <summary>
@@ -50,9 +51,19 @@ public static class WeightedRoller
         return new WeightTable(keys, cumulative);
     }
 
+    /// <summary>Prepares and rolls in one step. Prefer <see cref="Prepare"/> plus
+    /// <see cref="Roll(WeightTable, IRng)"/> when rolling the same table repeatedly.</summary>
+    /// <param name="weights">Weight per key.</param>
+    /// <param name="rng">The run's RNG.</param>
+    /// <returns>The chosen key.</returns>
     public static string Roll(IReadOnlyDictionary<string, double> weights, IRng rng) =>
         Roll(Prepare(weights), rng);
 
+    /// <summary>Rolls a prepared table.</summary>
+    /// <param name="table">The prepared weights.</param>
+    /// <param name="rng">The run's RNG.</param>
+    /// <returns>The chosen key.</returns>
+    /// <exception cref="InvalidOperationException">The total is not a finite positive number.</exception>
     public static string Roll(WeightTable table, IRng rng)
     {
         double total = table.Total;

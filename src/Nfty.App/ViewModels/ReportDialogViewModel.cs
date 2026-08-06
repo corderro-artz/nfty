@@ -28,11 +28,16 @@ public partial class ReportDialogViewModel : ViewModelBase
     [ObservableProperty] private bool _showingIdentity;
     [ObservableProperty] private string _copyLabel = "Copy";
 
+    /// <summary>Creates the report dialog.</summary>
+    /// <param name="book">The book to report on.</param>
+    /// <param name="dialogs">The dialog layer to close through.</param>
+    /// <param name="clipboard">Where Copy writes.</param>
     public ReportDialogViewModel(LoadedCookBook book, IDialogService dialogs, IClipboardService clipboard)
     {
         _book = book; _dialogs = dialogs; _clipboard = clipboard;
     }
 
+    /// <summary>The heading, naming which report is showing.</summary>
     public string Title => ShowingIdentity ? "Identity — ids for the CLI" : "Stats — the odds these weights imply";
 
     /// <summary>Rendered on demand rather than cached: a book can be edited behind this dialog, and

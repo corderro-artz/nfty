@@ -1,7 +1,15 @@
 namespace Nfty.Core.Output;
 
+/// <summary>One OpenSea trait. The property name is <c>Trait_type</c> because the published JSON
+/// key is <c>trait_type</c>, which the shared serializer options map to.</summary>
+/// <param name="Trait_type">The trait category.</param>
+/// <param name="Value">Its value for this asset.</param>
 public record MetadataAttribute(string Trait_type, string Value);
 
+/// <summary>One trait with how common it is across the whole collection.</summary>
+/// <param name="Trait_type">The trait category.</param>
+/// <param name="Value">Its value for this asset.</param>
+/// <param name="RarityPct">Percentage of the collection carrying it.</param>
 public record RarityAttribute(string Trait_type, string Value, double RarityPct);
 
 /// <summary>
@@ -29,6 +37,10 @@ public record NftyMetadata(
     IReadOnlyList<RarityAttribute> Rarity,
     IReadOnlyList<LayerColor> Layers);
 
+/// <summary>How many assets one recipe produced.</summary>
+/// <param name="Recipe">The recipe's display name.</param>
+/// <param name="Count">How many assets it produced.</param>
+/// <param name="Percent">Its share of the collection.</param>
 public record RecipeCount(string Recipe, int Count, double Percent);
 
 /// <param name="Name">The collection's name.</param>

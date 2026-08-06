@@ -10,6 +10,7 @@ namespace Nfty.App.Converters;
 /// combination-space column are both 310px since the pane became two columns.</summary>
 public static class PercentToWidthConverter
 {
+    /// <summary>Maps a 0-100 percentage onto the mockup's 310px distribution bar.</summary>
     public static readonly IValueConverter ForBarWidth310 =
         new FuncValueConverter<double, double>(share => share * 3.1);
 

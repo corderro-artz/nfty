@@ -8,6 +8,8 @@ namespace Nfty.App.ViewModels;
 public partial class HelpViewModel : ViewModelBase
 {
     private readonly IDialogService _dialogs;
+    /// <summary>Creates the help sheet.</summary>
+    /// <param name="dialogs">The dialog layer to close through.</param>
     public HelpViewModel(IDialogService dialogs) => _dialogs = dialogs;
     [RelayCommand] private void Close() => _dialogs.Close(null);
 }

@@ -11,24 +11,41 @@ namespace Nfty.Core.Formats;
 /// </summary>
 public static class KitchenArchive
 {
+    /// <summary>Writes the manifest into an already-open archive.</summary>
+    /// <param name="zip">The open archive.</param>
+    /// <param name="manifest">The workspace's identity.</param>
     public static void Write(ZipArchive zip, KitchenManifest manifest) =>
         ArchiveIo.WriteManifest(zip, manifest);
 
+    /// <summary>Reads the manifest from an already-open archive.</summary>
+    /// <param name="zip">The open archive.</param>
+    /// <returns>The manifest.</returns>
     public static KitchenManifest Read(ZipArchive zip) =>
         ArchiveIo.ReadManifest<KitchenManifest>(zip);
 
+    /// <summary>Writes a <c>.ktn</c>.</summary>
+    /// <param name="path">Destination path.</param>
+    /// <param name="manifest">The workspace's identity.</param>
     public static void Write(string path, KitchenManifest manifest)
     {
         using var zip = ZipFile.Open(path, ZipArchiveMode.Create);
         Write(zip, manifest);
     }
 
+    /// <summary>Reads a <c>.ktn</c>.</summary>
+    /// <param name="path">Archive path.</param>
+    /// <returns>The manifest.</returns>
     public static KitchenManifest Read(string path)
     {
         using var zip = ZipFile.OpenRead(path);
         return Read(zip);
     }
 
+    /// <summary>Writes a <c>.ktn</c>.</summary>
+    /// <param name="path">Destination path.</param>
+    /// <param name="manifest">The workspace's identity.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <returns>A task that completes when it is written.</returns>
     public static async Task WriteAsync(string path, KitchenManifest manifest,
         CancellationToken cancellationToken = default)
     {
@@ -38,6 +55,10 @@ public static class KitchenArchive
         await ArchiveIo.WriteManifestAsync(zip, manifest, cancellationToken);
     }
 
+    /// <summary>Reads a <c>.ktn</c>.</summary>
+    /// <param name="path">Archive path.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>The manifest.</returns>
     public static async Task<KitchenManifest> ReadAsync(string path,
         CancellationToken cancellationToken = default)
     {

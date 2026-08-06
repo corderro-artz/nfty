@@ -3,8 +3,13 @@ using System.Text.Json.Serialization;
 
 namespace Nfty.Core.Formats;
 
+/// <summary>The one <see cref="JsonSerializerOptions"/> every manifest is read and written with.
+/// Serializing with default options silently breaks round-trips, so new manifest code reuses this
+/// rather than constructing its own.</summary>
 public static class Json
 {
+    /// <summary>camelCase properties, camelCase enum strings, and the nullability rules that make a
+    /// truncated manifest fail at the boundary instead of downstream.</summary>
     public static readonly JsonSerializerOptions Options = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,

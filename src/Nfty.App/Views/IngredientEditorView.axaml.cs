@@ -7,11 +7,14 @@ using Nfty.App.ViewModels;
 
 namespace Nfty.App.Views;
 
+/// <summary>The ingredient editor view. Code-behind is limited to loading the XAML and the few
+/// interactions that genuinely need a control reference; everything else is bound.</summary>
 public partial class IngredientEditorView : UserControl
 {
     private readonly List<(int x, int y)> _points = new();
     private bool _drawing;
 
+    /// <summary>Loads the view.</summary>
     public IngredientEditorView()
     {
         InitializeComponent();

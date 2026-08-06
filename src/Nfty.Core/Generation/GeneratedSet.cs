@@ -4,6 +4,11 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace Nfty.Core.Generation;
 
+/// <summary>One layer's contribution as published metadata.</summary>
+/// <param name="IngredientId">The layer's id.</param>
+/// <param name="IngredientName">The trait type shown to a marketplace.</param>
+/// <param name="VariantId">The variant's id.</param>
+/// <param name="VariantName">The trait value shown to a marketplace.</param>
 public record TraitSelection(string IngredientId, string IngredientName, string VariantId, string VariantName);
 
 /// <summary>
@@ -18,14 +23,22 @@ public record ColorRoll(string LayerId, LayerKind Kind, ColorModel? Model, doubl
 /// </summary>
 public class GeneratedAsset : IDisposable
 {
+    /// <summary>The asset's number within the Set.</summary>
     public required int SetNumber { get; init; }
+    /// <summary>Its identity hash.</summary>
     public required string Dna { get; init; }
+    /// <summary>The recipe it was rolled from.</summary>
     public required string RecipeId { get; init; }
+    /// <summary>That recipe's display name, published as the "Type" trait.</summary>
     public required string RecipeName { get; init; }
+    /// <summary>The composited artwork. Owned by this asset.</summary>
     public required Image<Rgba32> Image { get; init; }
+    /// <summary>What each layer contributed.</summary>
     public required IReadOnlyList<TraitSelection> Traits { get; init; }
+    /// <summary>The per-layer colour record for the rich metadata.</summary>
     public required IReadOnlyList<ColorRoll> ColorRolls { get; init; }
 
+    /// <summary>Frees the composited artwork.</summary>
     public void Dispose() => Image.Dispose();
 }
 
@@ -40,6 +53,7 @@ public record GeneratedSet(
     IReadOnlyList<GeneratedAsset> Assets,
     string? CookbookSha256 = null) : IDisposable
 {
+    /// <summary>Frees every asset image in the set.</summary>
     public void Dispose()
     {
         foreach (var asset in Assets) asset.Dispose();
@@ -49,6 +63,7 @@ public record GeneratedSet(
 /// <summary>How far a generation run has got. <see cref="Fraction"/> suits a progress bar.</summary>
 public readonly record struct GenerationProgress(int Completed, int Total)
 {
+    /// <summary>Completion as 0..1, suitable for a progress bar.</summary>
     public double Fraction => Total <= 0 ? 0 : (double)Completed / Total;
 }
 

@@ -6,6 +6,10 @@ public sealed class FloodFill : RegionEditCommand
     private readonly int _seedX, _seedY;
     private readonly byte _value;
 
+    /// <summary>Fills the region matching the seed pixel.</summary>
+    /// <param name="seedX">Seed column.</param>
+    /// <param name="seedY">Seed row.</param>
+    /// <param name="value">The value to write.</param>
     public FloodFill(int seedX, int seedY, byte value)
     {
         _seedX = seedX;
@@ -13,6 +17,7 @@ public sealed class FloodFill : RegionEditCommand
         _value = value;
     }
 
+    /// <inheritdoc />
     protected override IReadOnlyList<(int x, int y, byte value, byte alpha)> ComputePixels(ValueMap map)
     {
         var pixels = new List<(int, int, byte, byte)>();

@@ -2,8 +2,13 @@ using Nfty.Core.Model;
 
 namespace Nfty.Core.Generation;
 
+/// <summary>Decides whether a rolled selection satisfies a recipe's incompatibility rules.</summary>
 public static class RulesEngine
 {
+    /// <summary>Checks a selection against the rules.</summary>
+    /// <param name="selection">Variant id per ingredient id.</param>
+    /// <param name="rules">The recipe's rules.</param>
+    /// <returns>True when no rule is violated.</returns>
     public static bool IsLegal(
         IReadOnlyDictionary<string, string> selection,
         IReadOnlyList<IncompatibilityRule> rules)

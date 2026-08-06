@@ -3,8 +3,13 @@ using Nfty.Core.Model;
 
 namespace Nfty.Core.Formats;
 
+/// <summary>Reads and writes <c>.cbk</c> archives — a manifest plus one nested <c>.rcp</c> per recipe.</summary>
 public static class CookBookArchive
 {
+    /// <summary>Writes a CookBook.</summary>
+    /// <param name="path">Destination path.</param>
+    /// <param name="manifest">The book's manifest.</param>
+    /// <param name="recipes">Recipes to nest inside it.</param>
     public static void Write(string path, CookBookManifest manifest, IReadOnlyList<LoadedRecipe> recipes)
     {
         using var zip = ZipFile.Open(path, ZipArchiveMode.Create);
@@ -14,6 +19,12 @@ public static class CookBookArchive
                 inner => RecipeArchive.Write(inner, r.Manifest, r.Ingredients));
     }
 
+    /// <summary>Reads a CookBook, eagerly decoding every variant image inside it.</summary>
+    /// <param name="path">Archive path.</param>
+    /// <returns>The loaded book. The caller owns it and must dispose it — that frees every
+    /// decoded image in the tree.</returns>
+    /// <exception cref="InvalidDataException">The archive or a manifest inside it is unreadable.</exception>
+    /// <exception cref="UnsupportedSchemaVersionException">It declares a newer schema than this build reads.</exception>
     public static LoadedCookBook Read(string path)
     {
         using var zip = ZipFile.OpenRead(path);
@@ -44,6 +55,12 @@ public static class CookBookArchive
         }
     }
 
+    /// <summary>Writes a CookBook.</summary>
+    /// <param name="path">Destination path.</param>
+    /// <param name="manifest">The book's manifest.</param>
+    /// <param name="recipes">Recipes to nest inside it.</param>
+    /// <param name="ct">Cancels the write.</param>
+    /// <returns>A task that completes when the archive is written.</returns>
     public static async Task WriteAsync(string path, CookBookManifest manifest,
         IReadOnlyList<LoadedRecipe> recipes, CancellationToken ct = default)
     {
@@ -54,6 +71,11 @@ public static class CookBookArchive
                 inner => RecipeArchive.WriteAsync(inner, r.Manifest, r.Ingredients, ct), ct);
     }
 
+    /// <summary>Reads a CookBook, eagerly decoding every variant image inside it.</summary>
+    /// <param name="path">Archive path.</param>
+    /// <param name="ct">Cancels the read. Anything already decoded is disposed before the
+    /// cancellation propagates.</param>
+    /// <returns>The loaded book; the caller owns it.</returns>
     public static async Task<LoadedCookBook> ReadAsync(string path, CancellationToken ct = default)
     {
         var recipes = new List<LoadedRecipe>();

@@ -70,8 +70,14 @@ public record UniqueSpaceCount(
 /// </summary>
 public static class UniqueSpace
 {
+    /// <summary>How many buckets <see cref="Count"/> enumerates before saturating. Past this the
+    /// exact answer stops being worth its cost, and "more than N" is enough to size a run.</summary>
     public const long DefaultCap = 1_000_000;
 
+    /// <summary>Counts the unique DNA a book admits.</summary>
+    /// <param name="book">The book to count. May be mid-edit and invalid; this never throws.</param>
+    /// <param name="cap">Enumeration limit; see <see cref="DefaultCap"/>.</param>
+    /// <returns>The total, whether it is exact, and the per-recipe breakdown.</returns>
     public static UniqueSpaceCount Count(LoadedCookBook book, long cap = DefaultCap)
     {
         long total = 0;

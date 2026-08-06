@@ -22,17 +22,10 @@ public sealed record KitchenContents(
     /// <summary>Nothing has been put in this Kitchen yet — a fresh workspace, not a broken one.</summary>
     public bool IsEmpty => CookBooks.Count == 0 && Recipes.Count == 0 && Ingredients.Count == 0;
 
+    /// <summary>Total items across all three kinds.</summary>
     public int ItemCount => CookBooks.Count + Recipes.Count + Ingredients.Count;
 }
 
-/// <summary>
-/// The Kitchen workspace: a <c>.ktn</c> file that names the folder it sits in.
-///
-/// Membership is discovered by scanning that folder, never recorded in the manifest. A recorded list
-/// goes stale the moment a file is renamed, moved or deleted outside the app, and the Kitchen then
-/// describes a workspace that no longer exists. Scanning makes the filesystem the single source of
-/// truth and means moving a file in or out needs no reconciliation.
-/// </summary>
 /// <summary>Why <see cref="Kitchen.TryFindIn"/> did or did not find a workspace.</summary>
 public enum KitchenLookup
 {
@@ -47,12 +40,23 @@ public enum KitchenLookup
     Ambiguous,
 }
 
+/// <summary>
+/// The Kitchen workspace: a <c>.ktn</c> file that names the folder it sits in.
+///
+/// Membership is discovered by scanning that folder, never recorded in the manifest. A recorded list
+/// goes stale the moment a file is renamed, moved or deleted outside the app, and the Kitchen then
+/// describes a workspace that no longer exists. Scanning makes the filesystem the single source of
+/// truth and means moving a file in or out needs no reconciliation.
+/// </summary>
 public static class Kitchen
 {
+    /// <summary>The workspace file extension.</summary>
     public const string Extension = ".ktn";
 
     /// <summary>Creates a Kitchen: writes <paramref name="path"/> and ensures its folder exists.
     /// The folder IS the workspace, so a .ktn without one is not a meaningful state.</summary>
+    /// <param name="path">Where to write the <c>.ktn</c>; its folder becomes the workspace.</param>
+    /// <param name="manifest">The workspace's identity.</param>
     public static void Create(string path, KitchenManifest manifest)
     {
         var dir = Path.GetDirectoryName(Path.GetFullPath(path));
@@ -65,6 +69,8 @@ public static class Kitchen
     /// Only the immediate directory is scanned. Recursing would make a Kitchen opened at a high
     /// level swallow everything beneath it, and nested Kitchens are explicitly out of scope — a
     /// workspace inside a workspace doubles every path rule and buys nothing here.</summary>
+    /// <param name="path">Path to the <c>.ktn</c>.</param>
+    /// <returns>The manifest plus what the folder holds, as paths.</returns>
     public static KitchenContents Open(string path)
     {
         var manifest = KitchenArchive.Read(path);
@@ -77,6 +83,10 @@ public static class Kitchen
             Scan(dir, Archives.IngredientExtension));
     }
 
+    /// <summary>Opens a Kitchen and lists what its folder holds.</summary>
+    /// <param name="path">Path to the <c>.ktn</c>.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>The manifest plus what the folder holds, as paths.</returns>
     public static async Task<KitchenContents> OpenAsync(string path,
         CancellationToken cancellationToken = default)
     {

@@ -2,18 +2,39 @@ using Nfty.Core.Formats;
 
 namespace Nfty.Core.Stats;
 
+/// <summary>One recipe's share of the collection, from the cookbook's weights.</summary>
+/// <param name="RecipeId">The recipe's id.</param>
+/// <param name="RecipeName">Its display name.</param>
+/// <param name="Percent">Its share of mints.</param>
 public record RecipeOdds(string RecipeId, string RecipeName, double Percent);
 
+/// <summary>One variant's odds, both within its recipe and across the whole collection.</summary>
+/// <param name="RecipeId">The owning recipe's id.</param>
+/// <param name="RecipeName">The owning recipe's name.</param>
+/// <param name="IngredientId">The layer's id.</param>
+/// <param name="IngredientName">The layer's name.</param>
+/// <param name="VariantId">The variant's id.</param>
+/// <param name="VariantName">The variant's name.</param>
+/// <param name="WithinRecipePercent">Share among that recipe's mints.</param>
+/// <param name="OverallPercent">Share of the whole collection — the recipe's own share folded in.</param>
 public record TraitOdds(
     string RecipeId, string RecipeName,
     string IngredientId, string IngredientName,
     string VariantId, string VariantName,
     double WithinRecipePercent, double OverallPercent);
 
+/// <summary>The odds a cookbook's weights imply, before anything is generated.</summary>
+/// <param name="Recipes">Per-recipe shares.</param>
+/// <param name="Traits">Per-variant odds.</param>
 public record RarityReport(IReadOnlyList<RecipeOdds> Recipes, IReadOnlyList<TraitOdds> Traits);
 
+/// <summary>Computes the odds a cookbook's weights imply. Distinct from the rarity written into a
+/// Set, which counts what was actually minted rather than what was intended.</summary>
 public static class RarityCalculator
 {
+    /// <summary>Computes the odds.</summary>
+    /// <param name="book">The book to analyse.</param>
+    /// <returns>Per-recipe and per-variant odds.</returns>
     public static RarityReport Compute(LoadedCookBook book)
     {
         double recipeTotal = book.Manifest.RecipeWeights.Values.Sum();

@@ -10,6 +10,10 @@ public sealed class MoveSelection : RegionEditCommand
     private readonly PixelRect _source;
     private readonly int _dx, _dy;
 
+    /// <summary>Moves a rectangular selection, clearing what it left behind.</summary>
+    /// <param name="source">The region to move.</param>
+    /// <param name="dx">Horizontal offset in pixels.</param>
+    /// <param name="dy">Vertical offset in pixels.</param>
     public MoveSelection(PixelRect source, int dx, int dy)
     {
         _source = source;
@@ -17,6 +21,7 @@ public sealed class MoveSelection : RegionEditCommand
         _dy = dy;
     }
 
+    /// <inheritdoc />
     protected override IReadOnlyList<(int x, int y, byte value, byte alpha)> ComputePixels(ValueMap map)
     {
         // Build a keyed map so a destination pixel overrides the source-clear at the same coordinate.

@@ -5,8 +5,11 @@ using Nfty.App.ViewModels;
 
 namespace Nfty.App.Views;
 
+/// <summary>The set browser view. Code-behind is limited to loading the XAML and the few
+/// interactions that genuinely need a control reference; everything else is bound.</summary>
 public partial class SetBrowserView : UserControl
 {
+    /// <summary>Loads the view.</summary>
     public SetBrowserView()
     {
         InitializeComponent();

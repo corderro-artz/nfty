@@ -7,6 +7,8 @@ namespace Nfty.App.Converters;
 /// <see cref="Avalonia.Controls.ItemsControl"/>). Kept out of the ViewModels — they stay pure data.</summary>
 public static class CollectionConverters
 {
+    /// <summary>True when a bound collection has no items — for the empty-state panels, which a
+    /// plain null check cannot distinguish from "loaded and empty".</summary>
     public static readonly IValueConverter IsEmpty =
         new FuncValueConverter<ICollection?, bool>(c => c is null || c.Count == 0);
 }

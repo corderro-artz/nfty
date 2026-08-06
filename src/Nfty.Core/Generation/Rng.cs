@@ -4,16 +4,25 @@ using System.Text;
 
 namespace Nfty.Core.Generation;
 
+/// <summary>The single source of randomness a run consumes. An interface so a test can feed a
+/// fixed sequence, and so the generator cannot reach for <c>Random</c> by accident.</summary>
 public interface IRng
 {
+    /// <summary>The next sample.</summary>
+    /// <returns>A value in <c>[0,1)</c>.</returns>
     double NextDouble();
 }
 
+/// <summary>SplitMix64. Small, fast, and — the reason it is here — fully specified, so the same
+/// seed yields the same sequence on every platform and runtime.</summary>
 public sealed class SplitMix64Rng : IRng
 {
     private ulong _state;
+    /// <summary>Seeds the generator.</summary>
+    /// <param name="seed">The starting state, from <see cref="SeedHash.ToUlong"/>.</param>
     public SplitMix64Rng(ulong seed) => _state = seed;
 
+    /// <inheritdoc />
     public double NextDouble()
     {
         _state += 0x9E3779B97F4A7C15UL;
@@ -25,8 +34,14 @@ public sealed class SplitMix64Rng : IRng
     }
 }
 
+/// <summary>Turns a user's seed string into RNG state.</summary>
 public static class SeedHash
 {
+    /// <summary>Hashes a seed string to 64 bits.</summary>
+    /// <param name="seed">The user's seed.</param>
+    /// <returns>The RNG's starting state. Read LITTLE-ENDIAN from the SHA-256 rather than with
+    /// native-endian <c>BitConverter</c>, so a big-endian CPU seeds identically — and little-endian
+    /// specifically, so the rule matches every Set already generated.</returns>
     public static ulong ToUlong(string seed)
     {
         byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(seed));

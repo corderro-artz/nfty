@@ -66,8 +66,11 @@ public partial class ShellViewModel : ViewModelBase
         CloseDocumentCommand.NotifyCanExecuteChanged();
     }
 
+    /// <summary>Raised when the titlebar's minimise is pressed; the head owns the window.</summary>
     public event Action? MinimizeRequested;
+    /// <summary>Raised when maximise is pressed or the titlebar is double-clicked.</summary>
     public event Action? ToggleMaximizeRequested;
+    /// <summary>Raised when the window's close is pressed.</summary>
     public event Action? CloseRequested;
 
     /// <summary>The titlebar's workspace chip. Per explorer.html it is "fixed for every item below
@@ -75,8 +78,17 @@ public partial class ShellViewModel : ViewModelBase
     /// rather than following the selection. Empty when no Kitchen is open, which is a normal state:
     /// a CookBook opened from anywhere on disk needs no workspace.</summary>
     public string? KitchenName => _kitchen?.Current?.Manifest.Name;
+    /// <summary>Whether a Kitchen is open, which is what shows the titlebar chip.</summary>
     public bool HasKitchen => _kitchen?.Current is not null;
 
+    /// <summary>Builds the shell.</summary>
+    /// <param name="nav">The page stack.</param>
+    /// <param name="dialogs">The dialog layer.</param>
+    /// <param name="notify">The not-yet-wired channel.</param>
+    /// <param name="theme">Light/dark switching.</param>
+    /// <param name="status">The status bar's guidance channel.</param>
+    /// <param name="kitchen">The open workspace, if any.</param>
+    /// <param name="session">The open CookBook, so closing a document can free it.</param>
     public ShellViewModel(INavigationService nav, IDialogService dialogs, INotYetWired notify, IThemeService theme,
         IStatusService status, IKitchenSession? kitchen = null, ICookBookSession? session = null)
     {

@@ -2,8 +2,15 @@ using System.Globalization;
 
 namespace Nfty.Core.Imaging;
 
+/// <summary>Parses the prefixed colour specs an author writes. The prefix is REQUIRED — a missing
+/// or unknown one is an error rather than a guess, because guessing between <c>hex:</c> and
+/// <c>hsv:</c> silently produces the wrong art.</summary>
 public static class ColorSpec
 {
+    /// <summary>Parses a spec such as <c>hex:d6249f</c> or <c>hsv:322,83,84</c>.</summary>
+    /// <param name="spec">The prefixed spec.</param>
+    /// <returns>The colour.</returns>
+    /// <exception cref="FormatException">The prefix is missing, unknown, or the body is malformed.</exception>
     public static RgbColor Parse(string spec)
     {
         if (string.IsNullOrWhiteSpace(spec))

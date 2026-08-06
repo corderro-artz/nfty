@@ -11,6 +11,10 @@ namespace Nfty.Core.Editing;
 /// </summary>
 public static class IngredientDraftExporter
 {
+    /// <summary>Turns a draft into the manifest and images an <c>.igt</c> is written from.</summary>
+    /// <param name="draft">The draft to export.</param>
+    /// <returns>The manifest and one image per variant; the caller owns the images.</returns>
+    /// <exception cref="InvalidOperationException">Two variants share an id.</exception>
     public static (IngredientManifest Manifest, IReadOnlyDictionary<string, Image<Rgba32>> Images) Export(
         IngredientDraft draft)
     {

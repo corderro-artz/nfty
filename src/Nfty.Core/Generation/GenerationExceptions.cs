@@ -7,8 +7,12 @@ namespace Nfty.Core.Generation;
 /// </summary>
 public class RuleConflictException : InvalidOperationException
 {
+    /// <summary>The recipes whose rules exclude every combination.</summary>
     public IReadOnlyList<string> RecipeIds { get; }
 
+    /// <summary>Creates the exception.</summary>
+    /// <param name="recipeIds">The recipes with an empty space.</param>
+    /// <param name="message">The message shown to the user verbatim.</param>
     public RuleConflictException(IReadOnlyList<string> recipeIds, string message)
         : base(message) => RecipeIds = recipeIds;
 }
@@ -21,11 +25,21 @@ public class RuleConflictException : InvalidOperationException
 /// </summary>
 public class UniqueSpaceExhaustedException : InvalidOperationException
 {
+    /// <summary>How many unique DNA the book actually admits.</summary>
     public long Available { get; }
+    /// <summary>Whether <see cref="Available"/> is the real figure or a floor.</summary>
     public bool IsExact { get; }
+    /// <summary>How many assets were asked for.</summary>
     public int Requested { get; }
+    /// <summary>How many were produced before the space ran out.</summary>
     public int Produced { get; }
 
+    /// <summary>Creates the exception.</summary>
+    /// <param name="available">The space the book admits.</param>
+    /// <param name="isExact">Whether that figure is exact.</param>
+    /// <param name="requested">How many were asked for.</param>
+    /// <param name="produced">How many were produced.</param>
+    /// <param name="message">The message shown to the user verbatim.</param>
     public UniqueSpaceExhaustedException(
         long available, bool isExact, int requested, int produced, string message)
         : base(message)

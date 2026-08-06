@@ -7,7 +7,15 @@ using Nfty.App.Services;
 
 namespace Nfty.App.ViewModels;
 
-public enum RecipeDestination { IntoCookBook, LooseKitchen }
+/// <summary>Where a new Recipe is written.</summary>
+public enum RecipeDestination
+{
+    /// <summary>Added to the open CookBook, joining its weighted recipes.</summary>
+    IntoCookBook,
+
+    /// <summary>Saved as a loose <c>.rcp</c>, into the open Kitchen when there is one.</summary>
+    LooseKitchen,
+}
 
 /// <summary>One row of the "Resulting mix" readout: a Recipe and the share of the collection its
 /// weight buys once the book normalises every weight.</summary>
@@ -44,6 +52,11 @@ public partial class NewRecipeViewModel : WizardViewModelBase
     /// wizard is opened from the Landing view, where no book is open to weigh against.</summary>
     private readonly IReadOnlyList<(string Name, double Weight)> _siblings;
 
+    /// <summary>Creates the New Recipe wizard.</summary>
+    /// <param name="dialogs">The dialog layer.</param>
+    /// <param name="notify">The not-yet-wired channel.</param>
+    /// <param name="siblings">The open book's recipes and weights, so the form can show what
+    /// the new one dilutes; null when creating a loose Recipe with no book to join.</param>
     public NewRecipeViewModel(IDialogService dialogs, INotYetWired notify,
         IReadOnlyList<(string Name, double Weight)>? siblings = null) : base(dialogs, notify)
     {

@@ -11,13 +11,29 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace Nfty.App.ViewModels;
 
+/// <summary>One row of the recipe's layer stack.</summary>
+/// <param name="Index">Its position in layerOrder, 1-based, as the table numbers it.</param>
+/// <param name="Id">The ingredient's id.</param>
+/// <param name="Layer">Its display name.</param>
+/// <param name="Kind">The layer kind, as a lower-case word.</param>
+/// <param name="VariantCount">How many variants it offers.</param>
 public record LayerRow(int Index, string Id, string Layer, string Kind, int VariantCount)
 {
+    /// <summary>Whether this layer rolls its colour per asset.</summary>
     public bool IsDynamic => Kind == "Dynamic";
+    /// <summary>Whether this layer applies one fixed colour.</summary>
     public bool IsStatic => Kind == "Static";
+    /// <summary>Whether this layer composites as-is.</summary>
     public bool IsCustom => Kind == "Custom";
 }
+/// <summary>One side of a rule, named the way the panel reads it.</summary>
+/// <param name="Ingredient">The layer's display name.</param>
+/// <param name="Variant">The variant's display name.</param>
 public record RuleTargetRow(string Ingredient, string Variant);
+/// <summary>One incompatibility rule as the Rules panel shows it.</summary>
+/// <param name="IsExclude">True for an exclude rule, false for a require — which picks the glyph.</param>
+/// <param name="When">The trigger.</param>
+/// <param name="Targets">What it forbids or requires.</param>
 public record RuleRow(bool IsExclude, RuleTargetRow When, IReadOnlyList<RuleTargetRow> Targets);
 
 public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
@@ -31,8 +47,11 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private int _rollSeed = 1;
     [ObservableProperty] private Bitmap _hero;
 
+    /// <summary>The recipe's display name.</summary>
     public string Name { get; }
+    /// <summary>Its layer stack, in composite order.</summary>
     public IReadOnlyList<LayerRow> Layers { get; }
+    /// <summary>Its incompatibility rules.</summary>
     public IReadOnlyList<RuleRow> Rules { get; }
 
     /// <summary>The hero's factor arithmetic (mockup .rfactors): one kind-tinted chip per layer,
@@ -44,10 +63,19 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
     /// quantized colour buckets, and this line exists to explain the chips beside it, which are
     /// variant counts. The colour-inclusive figure is the cookbook detail's business.</summary>
     public string TotalText { get; }
+    /// <summary>"N layers", pluralised.</summary>
     public string LayerCountText { get; }
+    /// <summary>"N variants", pluralised.</summary>
     public string VariantCountText { get; }
+    /// <summary>"N rules", pluralised.</summary>
     public string RuleCountText { get; }
 
+    /// <summary>Builds the Recipe detail pane.</summary>
+    /// <param name="recipe">The recipe to describe.</param>
+    /// <param name="book">Its owning book, for the canvas and a sample roll.</param>
+    /// <param name="bridge">Converts an ImageSharp frame to an Avalonia bitmap.</param>
+    /// <param name="notify">The not-yet-wired channel.</param>
+    /// <param name="openIngredient">Selects a layer in the tree when a rule row is clicked.</param>
     public RecipeDetailViewModel(LoadedRecipe recipe, LoadedCookBook book, IImageBridge bridge,
         INotYetWired notify, Action<string> openIngredient)
     {
@@ -131,5 +159,6 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
 
     [RelayCommand] private void OpenIngredient(string id) => _openIngredient(id);
 
+    /// <summary>Frees the sample-roll bitmap.</summary>
     public void Dispose() => Hero.Dispose();
 }

@@ -3,8 +3,14 @@ using Nfty.Core.Model;
 
 namespace Nfty.Core.Formats;
 
+/// <summary>Reads and writes <c>.rcp</c> archives — a manifest plus one nested <c>.igt</c> per
+/// ingredient. The <c>ZipArchive</c> overloads exist so a CookBook can nest one without a file.</summary>
 public static class RecipeArchive
 {
+    /// <summary>Writes a Recipe into an already-open archive.</summary>
+    /// <param name="zip">The open archive.</param>
+    /// <param name="manifest">The recipe's manifest.</param>
+    /// <param name="ingredients">Its ingredients, nested as <c>.igt</c> entries.</param>
     public static void Write(ZipArchive zip, RecipeManifest manifest, IReadOnlyList<LoadedIngredient> ingredients)
     {
         ArchiveIo.WriteManifest(zip, manifest);
@@ -13,6 +19,9 @@ public static class RecipeArchive
                 inner => IngredientArchive.Write(inner, ing.Manifest, ing.VariantImages));
     }
 
+    /// <summary>Reads a Recipe from an already-open archive, decoding every variant PNG.</summary>
+    /// <param name="zip">The open archive.</param>
+    /// <returns>The loaded recipe; the caller owns it.</returns>
     public static LoadedRecipe Read(ZipArchive zip)
     {
         var manifest = ArchiveIo.ReadManifest<RecipeManifest>(zip);
@@ -32,18 +41,31 @@ public static class RecipeArchive
         return new LoadedRecipe { Manifest = manifest, Ingredients = ingredients };
     }
 
+    /// <summary>Writes a Recipe to a file.</summary>
+    /// <param name="path">Destination path.</param>
+    /// <param name="manifest">The recipe's manifest.</param>
+    /// <param name="ingredients">Its ingredients, nested as <c>.igt</c> entries.</param>
     public static void Write(string path, RecipeManifest manifest, IReadOnlyList<LoadedIngredient> ingredients)
     {
         using var zip = ZipFile.Open(path, ZipArchiveMode.Create);
         Write(zip, manifest, ingredients);
     }
 
+    /// <summary>Reads a Recipe from a file, decoding every variant PNG.</summary>
+    /// <param name="path">Archive path.</param>
+    /// <returns>The loaded recipe; the caller owns it and must dispose it.</returns>
     public static LoadedRecipe Read(string path)
     {
         using var zip = ZipFile.OpenRead(path);
         return Read(zip);
     }
 
+    /// <summary>Writes a Recipe into an already-open archive.</summary>
+    /// <param name="zip">The open archive.</param>
+    /// <param name="manifest">The recipe's manifest.</param>
+    /// <param name="ingredients">Its ingredients, nested as <c>.igt</c> entries.</param>
+    /// <param name="ct">Cancels the write.</param>
+    /// <returns>A task that completes when it is written.</returns>
     public static async Task WriteAsync(ZipArchive zip, RecipeManifest manifest,
         IReadOnlyList<LoadedIngredient> ingredients, CancellationToken ct = default)
     {
@@ -53,6 +75,10 @@ public static class RecipeArchive
                 inner => IngredientArchive.WriteAsync(inner, ing.Manifest, ing.VariantImages, ct), ct);
     }
 
+    /// <summary>Reads a Recipe from an already-open archive.</summary>
+    /// <param name="zip">The open archive.</param>
+    /// <param name="ct">Cancels the read; anything already decoded is disposed first.</param>
+    /// <returns>The loaded recipe; the caller owns it.</returns>
     public static async Task<LoadedRecipe> ReadAsync(ZipArchive zip, CancellationToken ct = default)
     {
         var manifest = await ArchiveIo.ReadManifestAsync<RecipeManifest>(zip, ct);
@@ -70,6 +96,12 @@ public static class RecipeArchive
         return new LoadedRecipe { Manifest = manifest, Ingredients = ingredients };
     }
 
+    /// <summary>Writes a Recipe to a file.</summary>
+    /// <param name="path">Destination path.</param>
+    /// <param name="manifest">The recipe's manifest.</param>
+    /// <param name="ingredients">Its ingredients, nested as <c>.igt</c> entries.</param>
+    /// <param name="ct">Cancels the write.</param>
+    /// <returns>A task that completes when it is written.</returns>
     public static async Task WriteAsync(string path, RecipeManifest manifest,
         IReadOnlyList<LoadedIngredient> ingredients, CancellationToken ct = default)
     {
@@ -77,6 +109,10 @@ public static class RecipeArchive
         await WriteAsync(zip, manifest, ingredients, ct);
     }
 
+    /// <summary>Reads a Recipe from a file.</summary>
+    /// <param name="path">Archive path.</param>
+    /// <param name="ct">Cancels the read; anything already decoded is disposed first.</param>
+    /// <returns>The loaded recipe; the caller owns it.</returns>
     public static async Task<LoadedRecipe> ReadAsync(string path, CancellationToken ct = default)
     {
         using var zip = ZipFile.OpenRead(path);

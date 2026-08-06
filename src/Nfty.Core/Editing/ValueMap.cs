@@ -14,9 +14,15 @@ public sealed class ValueMap
     private readonly byte[] _value;
     private readonly byte[] _alpha;
 
+    /// <summary>Width in pixels.</summary>
     public int Width { get; }
+    /// <summary>Height in pixels.</summary>
     public int Height { get; }
 
+    /// <summary>Creates a blank map.</summary>
+    /// <param name="width">Width in pixels; must be positive.</param>
+    /// <param name="height">Height in pixels; must be positive.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Either dimension is zero or negative.</exception>
     public ValueMap(int width, int height)
     {
         if (width <= 0 || height <= 0)
@@ -27,6 +33,9 @@ public sealed class ValueMap
         _alpha = new byte[width * height];
     }
 
+    /// <summary>A blank map at the CookBook's canvas size.</summary>
+    /// <param name="canvas">The canvas to match.</param>
+    /// <returns>A new map.</returns>
     public static ValueMap ForCanvas(Dimensions canvas) => new(canvas.Width, canvas.Height);
 
     /// <summary>An independent deep copy — cloned value/alpha buffers, same dimensions.</summary>
@@ -39,11 +48,29 @@ public sealed class ValueMap
     }
 
     private int Index(int x, int y) => y * Width + x;
+    /// <summary>Whether a coordinate is inside the map.</summary>
+    /// <param name="x">Column.</param>
+    /// <param name="y">Row.</param>
+    /// <returns>True when the pixel exists.</returns>
     public bool InBounds(int x, int y) => x >= 0 && x < Width && y >= 0 && y < Height;
 
+    /// <summary>The grayscale value at a pixel.</summary>
+    /// <param name="x">Column.</param>
+    /// <param name="y">Row.</param>
+    /// <returns>0-255.</returns>
     public byte GetValue(int x, int y) => _value[Index(x, y)];
+    /// <summary>The alpha at a pixel.</summary>
+    /// <param name="x">Column.</param>
+    /// <param name="y">Row.</param>
+    /// <returns>0-255.</returns>
     public byte GetAlpha(int x, int y) => _alpha[Index(x, y)];
 
+    /// <summary>Writes one pixel. Out-of-bounds coordinates are ignored, so a brush may run off
+    /// the edge without the caller clipping first.</summary>
+    /// <param name="x">Column.</param>
+    /// <param name="y">Row.</param>
+    /// <param name="value">Grayscale value.</param>
+    /// <param name="alpha">Alpha.</param>
     public void Set(int x, int y, byte value, byte alpha)
     {
         int i = Index(x, y);
@@ -51,6 +78,8 @@ public sealed class ValueMap
         _alpha[i] = alpha;
     }
 
+    /// <summary>Renders to a grayscale RGBA image — the form an <c>.igt</c> stores.</summary>
+    /// <returns>A new image; the caller owns it.</returns>
     public Image<Rgba32> ToImage()
     {
         var img = new Image<Rgba32>(Width, Height);
@@ -69,6 +98,9 @@ public sealed class ValueMap
         return img;
     }
 
+    /// <summary>Reads a map back out of a decoded variant image.</summary>
+    /// <param name="img">The source image.</param>
+    /// <returns>A new map.</returns>
     public static ValueMap FromImage(Image<Rgba32> img)
     {
         var map = new ValueMap(img.Width, img.Height);

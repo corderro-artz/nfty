@@ -10,5 +10,8 @@ public class CorruptSetException : InvalidOperationException
     /// <summary>The file whose absence or contents made the Set unreadable.</summary>
     public string Path { get; }
 
+    /// <summary>Creates the exception.</summary>
+    /// <param name="path">The file that could not be read.</param>
+    /// <param name="message">The message shown to the user verbatim.</param>
     public CorruptSetException(string path, string message) : base(message) => Path = path;
 }

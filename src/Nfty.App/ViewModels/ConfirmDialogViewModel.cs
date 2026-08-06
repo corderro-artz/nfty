@@ -7,10 +7,18 @@ namespace Nfty.App.ViewModels;
 public partial class ConfirmDialogViewModel : ViewModelBase
 {
     private readonly IDialogService _dialogs;
+    /// <summary>The dialog's heading.</summary>
     public string Title { get; }
+    /// <summary>What is about to happen, in the user's terms.</summary>
     public string Message { get; }
+    /// <summary>The confirm button's label — "Delete" rather than "OK", so the button says what it does.</summary>
     public string ConfirmLabel { get; }
 
+    /// <summary>Creates the dialog.</summary>
+    /// <param name="dialogs">The dialog layer to close through.</param>
+    /// <param name="title">Heading.</param>
+    /// <param name="message">What is about to happen.</param>
+    /// <param name="confirmLabel">The confirm button's label.</param>
     public ConfirmDialogViewModel(IDialogService dialogs, string title, string message, string confirmLabel)
     { _dialogs = dialogs; Title = title; Message = message; ConfirmLabel = confirmLabel; }
 

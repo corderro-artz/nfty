@@ -67,9 +67,13 @@ public partial class CookBookDetailViewModel : ViewModelBase
     private readonly Action _cook;
     private readonly Action? _showReports;
 
+    /// <summary>The collection's name.</summary>
     public string Name { get; }
+    /// <summary>Its ticker-style symbol.</summary>
     public string Symbol { get; }
+    /// <summary>Its description.</summary>
     public string Description { get; }
+    /// <summary>Canvas size as the card renders it, with a real multiplication sign.</summary>
     public string CanvasText { get; }
 
     /// <summary>The mockup's "colorize &lt;model&gt;" chip. A CookBook has no colour model of its own —
@@ -82,12 +86,15 @@ public partial class CookBookDetailViewModel : ViewModelBase
     /// Reading an archive does not validate it, so this asks Validator, which reports rather than
     /// throws precisely so a broken book can be opened and explained.</summary>
     public bool IsValid { get; }
+    /// <summary>"Valid", or the problem count.</summary>
     public string StatusText { get; }
+    /// <summary>Every problem, one per line, as the status pill's tooltip. Null when valid.</summary>
     public string? StatusTip { get; }
 
     /// <summary>The mockup's "target supply" chip. Em-dash when the book has not committed to a
     /// number — an unset target is a real state, not zero.</summary>
     public string TargetSupplyText { get; }
+    /// <summary>Whether the book states an intended supply.</summary>
     public bool HasTargetSupply { get; }
 
     /// <summary>The cookbar's sentence. With a target it reads the mockup's way — "Target supply 500
@@ -95,12 +102,23 @@ public partial class CookBookDetailViewModel : ViewModelBase
     /// intent fits in the space the book can generate. Without one it just states the space.</summary>
     public string CookBarText { get; }
 
+    /// <summary>How many recipes it holds.</summary>
     public int RecipeCount { get; }
+    /// <summary>How many layers across all recipes.</summary>
     public int LayerCount { get; }
+    /// <summary>How many variants across all layers.</summary>
     public int VariantCount { get; }
+    /// <summary>The unique-DNA figure as the card shows it, including the em dash for a space that
+    /// cannot be counted.</summary>
     public string UniqueDnaText { get; }
+    /// <summary>Per-recipe share and DNA-space rows.</summary>
     public IReadOnlyList<RecipeShareRow> Recipes { get; }
 
+    /// <summary>Builds the CookBook identity card.</summary>
+    /// <param name="book">The open book.</param>
+    /// <param name="notify">The not-yet-wired channel.</param>
+    /// <param name="cook">Opens the cook dialog.</param>
+    /// <param name="showReports">Opens the stats/inspect reports; null leaves that button unavailable.</param>
     public CookBookDetailViewModel(LoadedCookBook book, INotYetWired notify, Action cook,
         Action? showReports = null)
     {

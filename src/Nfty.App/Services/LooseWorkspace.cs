@@ -11,8 +11,16 @@ namespace Nfty.App.Services;
 /// Ingredient Editor — which needs a canvas + recipe context — can open it. The wrapper is a view/edit
 /// scaffold only; it is never persisted as a cookbook (loose Save writes the .igt directly). The
 /// returned book owns the ingredient, so disposing the book disposes the ingredient's images.</summary>
+/// <summary>
+/// Where a loose Recipe or Ingredient — one edited outside any CookBook — is saved. Defaults into
+/// the open Kitchen when there is one, which is the whole point of a workspace.
+/// </summary>
 public static class LooseWorkspace
 {
+    /// <summary>Wraps a loose Ingredient in the throwaway Recipe and CookBook the editor needs, since
+    /// the editor is written against a full graph and a loose item has no parents.</summary>
+    /// <param name="ing">The loose ingredient.</param>
+    /// <returns>A synthetic graph around it.</returns>
     public static LoadedCookBook WrapIngredient(LoadedIngredient ing)
     {
         var img = ing.VariantImages.Values.FirstOrDefault()

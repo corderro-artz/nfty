@@ -7,6 +7,10 @@ public sealed class DrawShape : RegionEditCommand
     private readonly PixelRect _b;
     private readonly byte _value;
 
+    /// <summary>Draws a filled shape.</summary>
+    /// <param name="kind">Which shape.</param>
+    /// <param name="bounds">Its bounding box.</param>
+    /// <param name="value">The value to write.</param>
     public DrawShape(ShapeKind kind, PixelRect bounds, byte value)
     {
         _kind = kind;
@@ -14,6 +18,7 @@ public sealed class DrawShape : RegionEditCommand
         _value = value;
     }
 
+    /// <inheritdoc />
     protected override IReadOnlyList<(int x, int y, byte value, byte alpha)> ComputePixels(ValueMap map)
     {
         var pixels = new List<(int, int, byte, byte)>();
