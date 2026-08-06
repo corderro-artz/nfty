@@ -535,4 +535,92 @@ public class VisualCapture
         Dispatcher.UIThread.RunJobs();
         window.CaptureRenderedFrame()!.Save(Path.Combine(Dir!, fileName), PngBitmapEncoderOptions.Default);
     }
+
+    /// <summary>
+    /// The states no fixture had ever built. This project's worst defect — an unresolved
+    /// <c>WarningBrush</c> leaving "1 problem" as black text at 1.14:1 — survived every audit for
+    /// exactly one reason: every fixture used a VALID book, so the branch that renders it was never
+    /// drawn. A screen that is never captured cannot look wrong.
+    ///
+    /// <para>The four dialogs are here for the same reason, and a zero-result search because an
+    /// empty list is the state most likely to render as nothing at all and be mistaken for correct.</para>
+    /// </summary>
+    [AvaloniaFact]
+    public void Capture_states_no_other_fixture_reaches()
+    {
+        if (Dir is null) return;   // inert unless explicitly capturing
+
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            var key = variant.Key.ToString()!.ToLowerInvariant();
+            var dialogs = new FakeDialogs();
+
+            // A CookBook Validator rejects: a layerOrder entry naming no ingredient. The identity
+            // card must show its problem count, and Cook Set must be visibly disabled.
+            using (var broken = InvalidBook())
+            {
+                var vm = new CookBookDetailViewModel(broken, new FakeNotYetWired(), () => { }, () => { });
+                Capture(new Views.CookBookDetailView { DataContext = vm }, variant,
+                    $"zz-cookbook-detail-invalid-{key}.png");
+            }
+
+            Capture(new Views.HelpView { DataContext = new HelpViewModel(dialogs) }, variant,
+                $"zz-help-sheet-{key}.png");
+
+            Capture(new Views.ErrorDialogView
+            { DataContext = new ErrorDialogViewModel(dialogs, "Could not open", "The file is not a readable CookBook.") },
+                variant, $"zz-dialog-error-{key}.png");
+
+            Capture(new Views.ConfirmDialogView
+            {
+                DataContext = new ConfirmDialogViewModel(dialogs, "Delete ingredient",
+                    "aura and its 3 variants will be removed.", "Delete"),
+            },
+                variant, $"zz-dialog-confirm-{key}.png");
+
+            // A search that matches nothing: the tree empties and the pane must say so rather than
+            // simply going blank.
+            using (var book = ExplorerViewModelTests.TwoRecipeBook())
+            {
+                var nav = new FakeNav();
+                using var explorer = new ExplorerViewModel(book, nav, dialogs, new FakeNotYetWired(),
+                    new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav),
+                    ExplorerViewModelTests.CookFactory(dialogs), new CookBookSession(),
+                    new FilePickerService(),
+                    ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs),
+                    new StatusService());
+                explorer.SearchQuery = "zzz-nothing-matches-this";
+                Capture(new Views.ExplorerView { DataContext = explorer }, variant,
+                    $"zz-explorer-no-results-{key}.png");
+            }
+        }
+    }
+
+    /// <summary>A book with a layerOrder entry naming no ingredient — reported by Validator, so the
+    /// detail card takes its invalid branch.</summary>
+    private static Nfty.Core.Formats.LoadedCookBook InvalidBook()
+    {
+        var ing = new Nfty.Core.Formats.LoadedIngredient
+        {
+            Manifest = new Nfty.Core.Model.IngredientManifest("bg", "Background",
+                Nfty.Core.Model.LayerKind.Custom, null,
+                new[] { new Nfty.Core.Model.Variant("day", "Day", 1) }),
+            VariantImages = new Dictionary<string, SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>>
+            { ["day"] = new(8, 8) },
+        };
+        var recipe = new Nfty.Core.Formats.LoadedRecipe
+        {
+            Manifest = new Nfty.Core.Model.RecipeManifest("cat", "Cat",
+                new[] { "bg", "missing-layer" }, Array.Empty<Nfty.Core.Model.IncompatibilityRule>()),
+            Ingredients = new[] { ing },
+        };
+        return new Nfty.Core.Formats.LoadedCookBook
+        {
+            Manifest = new Nfty.Core.Model.CookBookManifest("cb", "VaporPets",
+                new Nfty.Core.Model.Dimensions(8, 8),
+                new Nfty.Core.Model.Collection("VaporPets", "", "VP"),
+                new Dictionary<string, double> { ["cat"] = 1 }),
+            Recipes = new[] { recipe },
+        };
+    }
 }
