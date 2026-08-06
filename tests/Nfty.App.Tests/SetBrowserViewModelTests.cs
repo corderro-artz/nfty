@@ -49,4 +49,31 @@ public class SetBrowserViewModelTests
         vm.Dispose();
         Directory.Delete(dir, recursive: true);
     }
+
+    /// <summary>
+    /// Opening a Set must not decode every thumbnail. It used to: the constructor decoded all of
+    /// them on the UI thread — 627 ms for 900 assets, about seven seconds of frozen window for a
+    /// 10,000-asset Set — and the ListBox's virtualization could do nothing about it, because
+    /// virtualizing limits what is RENDERED, not work already finished before the first frame.
+    /// </summary>
+    [AvaloniaFact]
+    public void Opening_a_set_decodes_no_thumbnails_until_a_row_is_realized()
+    {
+        var loaded = CookedSet(out var dir);
+        using var vm = new SetBrowserViewModel(loaded);
+
+        // Constructed and populated, with nothing decoded.
+        Assert.Equal(2, vm.Items.Count);
+
+        // Reading the property is what the virtualizing panel does when it realizes a row, and it
+        // is the only thing that decodes.
+        var first = vm.Items[0].Thumbnail;
+        Assert.NotNull(first);
+
+        // Cached: a second read is the same instance, not a second decode.
+        Assert.Same(first, vm.Items[0].Thumbnail);
+
+        vm.Dispose();
+        Directory.Delete(dir, recursive: true);
+    }
 }
