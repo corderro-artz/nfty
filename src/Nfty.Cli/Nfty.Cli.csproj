@@ -1,11 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <!-- TEMPORARY: this project's public surface is not documented yet. Removed project by project
-         as the docs land; see Directory.Build.props for why the rule exists. -->
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
-  </PropertyGroup>
-
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>

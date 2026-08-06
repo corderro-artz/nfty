@@ -9,6 +9,12 @@ namespace Nfty.Cli;
 /// </summary>
 public static class ErrorReport
 {
+    /// <summary>Formats an exception for the console.</summary>
+    /// <param name="ex">The exception to describe. Inner exceptions are listed beneath it, because
+    /// the outermost message is often context and the cause underneath is the actionable part.</param>
+    /// <param name="verbose">Append the full stack trace. Off by default: the engine's own messages
+    /// explain themselves, and a trace on top of a good message buries it.</param>
+    /// <returns>The text to write to standard error.</returns>
     public static string Format(Exception ex, bool verbose)
     {
         var report = new StringBuilder("error: ").Append(Describe(ex));

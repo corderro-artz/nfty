@@ -10,6 +10,11 @@ using SixLabors.ImageSharp.Formats.Png;
 
 namespace Nfty.Cli;
 
+/// <summary>
+/// The whole command surface, built in one place so <c>Program</c> stays four lines and the
+/// authoring commands can live in their own partial. Handlers here catch nothing: they throw, and
+/// <c>Program</c> turns the exception into a message through <see cref="ErrorReport"/>.
+/// </summary>
 public static partial class CommandFactory
 {
     /// <summary>
@@ -22,6 +27,8 @@ public static partial class CommandFactory
         Recursive = true,
     };
 
+    /// <summary>Builds the root command with every subcommand attached.</summary>
+    /// <returns>A parser-ready root command.</returns>
     public static RootCommand Build()
     {
         var root = new RootCommand("nfty — layered NFT asset generator");

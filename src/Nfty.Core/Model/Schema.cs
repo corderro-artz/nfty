@@ -6,9 +6,11 @@ namespace Nfty.Core.Model;
 /// </summary>
 public interface ISchemaVersioned
 {
+    /// <summary>The schema version this manifest was written against.</summary>
     int SchemaVersion { get; }
 }
 
+/// <summary>The manifest schema range this build can read and write.</summary>
 public static class Schema
 {
     /// <summary>The schema version this build WRITES. It reads this and every earlier one — see

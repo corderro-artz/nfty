@@ -7,8 +7,15 @@ using Nfty.App.Views;
 
 namespace Nfty.Desktop;
 
+/// <summary>
+/// The application window. It supplies only what genuinely needs a <see cref="Window"/> — the
+/// custom chrome's minimise/maximise/close, the drag region and the resize grip; everything visible
+/// lives in <c>Nfty.App</c>'s ShellChromeView so the visual-capture tests render the shipped control
+/// rather than a replica.
+/// </summary>
 public partial class MainWindow : Window
 {
+    /// <summary>Loads the window and wires its chrome behaviour.</summary>
     public MainWindow()
     {
         AvaloniaXamlLoader.Load(this);
@@ -38,6 +45,8 @@ public partial class MainWindow : Window
             BeginMoveDrag(e);
     }
 
+    /// <summary>Subscribes to the shell's window-command events once its ViewModel is attached.</summary>
+    /// <param name="e">Ignored beyond forwarding to the base implementation.</param>
     protected override void OnDataContextChanged(EventArgs e)
     {
         base.OnDataContextChanged(e);

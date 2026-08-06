@@ -4,8 +4,12 @@ using Nfty.App.Services;
 
 namespace Nfty.Desktop;
 
+/// <summary>Opens a path in the platform's file manager. Best-effort by design: revealing a folder
+/// is a convenience, and a failure here must never take the app down with it.</summary>
 public sealed class DesktopFolderRevealer : IFolderRevealer
 {
+    /// <summary>Shows <paramref name="path"/> in Explorer, Finder or the XDG default.</summary>
+    /// <param name="path">The file or folder to reveal.</param>
     public void Reveal(string path)
     {
         try
