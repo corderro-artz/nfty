@@ -1,0 +1,67 @@
+<Project>
+
+  <!--
+    Settings every project shares, in one place.
+
+    They were duplicated across seven csproj files and had already drifted: Microsoft.NET.Test.Sdk
+    sat at 17.14.1 in two test projects and 17.12.0 in the third, and xunit.runner.visualstudio at
+    3.1.4 and 3.1.5. Nothing was wrong with either version — the point is that nobody chose the
+    difference, and a setting duplicated seven times is a setting nobody owns.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+
+    <!--
+      Turn missing XML documentation into a build warning.
+
+      Without this the compiler never emits CS1591, so "every public member is documented" was an
+      aspiration nothing measured — and 622 members across the solution had no <summary> at all,
+      including Generator, Validator, Dna and every Model record. The bar is now enforced by the
+      thing that compiles the code rather than by whoever reviews it.
+    -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!--
+      And warnings are errors, so the bar cannot quietly erode. The build has been at zero warnings
+      throughout; this makes that a property of the build rather than a habit.
+
+      NU1901-NU1904 are NuGet advisory warnings about *transitive* packages, which a new advisory can
+      introduce overnight without a line of code changing. Those must not break an unrelated build —
+      they are surfaced by the audit below and by CI's dedicated step instead.
+    -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+
+    <!-- Audit the whole graph, not just direct references: a vulnerability reaches you through a
+         dependency you never named far more often than through one you did. -->
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+  </PropertyGroup>
+
+  <!--
+    Test projects document nothing public and ship nowhere, so the doc requirement is lifted for
+    them. Leaving it on would mean writing a <summary> for every fixture builder to satisfy a rule
+    that exists to serve consumers of a library, and these have none.
+
+    Detected by convention rather than listed, so a new test project inherits it automatically.
+  -->
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <IsPackable>false</IsPackable>
+
+    <!--
+      xUnit1051 asks that every call taking a CancellationToken be passed
+      TestContext.Current.CancellationToken, so the runner can cancel a hung test promptly. Waived
+      here for a specific reason: a large share of this suite's async calls are the SUBJECT of the
+      test rather than incidental to it — the archive readers' cancellation paths, the
+      disposal-on-cancel sweep — and those must pass the token the test constructed, not the
+      runner's. Blanket-applying the rule would mean editing assertions to satisfy an analyzer.
+      The tests are also fast; there is no hang for the runner to rescue.
+    -->
+    <NoWarn>$(NoWarn);xUnit1051</NoWarn>
+  </PropertyGroup>
+
+</Project>

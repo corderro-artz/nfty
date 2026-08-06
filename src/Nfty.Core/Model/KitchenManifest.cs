@@ -14,6 +14,7 @@ namespace Nfty.Core.Model;
 /// list would go stale the moment a file was renamed or moved outside the app, and the Kitchen would
 /// then be describing a workspace that no longer exists.
 /// </remarks>
+/// <param name="SchemaVersion">The manifest format version; see <see cref="Schema"/>.</param>
 public record KitchenManifest(
     string Id,
     string Name,

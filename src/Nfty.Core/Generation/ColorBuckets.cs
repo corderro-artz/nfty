@@ -13,11 +13,12 @@ namespace Nfty.Core.Generation;
 /// exactly N unique DNA, but N were requested".</para>
 ///
 /// <para>Sharing one function is the fix: equivalent-looking arithmetic in two files is what broke,
-/// so the arithmetic now exists once. <see cref="SatFromPercent"/> deliberately routes through
-/// <see cref="Sat"/> rather than shortcutting to <c>percent / quantize</c> — the round-trip's
-/// rounding is <em>load-bearing</em>, because it is what the shipped DNA of every Set ever generated
-/// already encodes. Removing the round-trip would be the more elegant arithmetic and would silently
-/// invalidate every existing collection.</para>
+/// so the arithmetic now exists once. <see cref="UniqueSpace"/> reaches saturation through
+/// <see cref="ColorRoller.SampleSat"/> and then <see cref="Sat"/>, rather than shortcutting from the
+/// stored percentage to <c>percent / quantize</c> — the <c>/100</c> round-trip's rounding is
+/// <em>load-bearing</em>, because it is what the shipped DNA of every Set ever generated already
+/// encodes. Skipping it would be the tidier arithmetic and would silently invalidate every existing
+/// collection.</para>
 /// </summary>
 public static class ColorBuckets
 {

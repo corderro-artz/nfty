@@ -52,6 +52,16 @@ public readonly record struct GenerationProgress(int Completed, int Total)
     public double Fraction => Total <= 0 ? 0 : (double)Completed / Total;
 }
 
+/// <summary>Everything one generation run needs to know.</summary>
+/// <param name="Count">How many assets to produce.</param>
+/// <param name="Seed">The string seed driving the RNG. The same cookbook and seed reproduce a run
+/// byte for byte, across machine locales and CPU architectures alike.</param>
+/// <param name="RecipeId">Restrict the run to one Recipe, overriding the cookbook's weights
+/// entirely. Null rolls a Recipe per asset, which is the normal case.</param>
+/// <param name="MaxRerollsPerAsset">How many times a single asset may be re-rolled before the run
+/// gives up — a rule violation and a DNA collision both cost an attempt. Exhausting it raises
+/// <see cref="RuleConflictException"/> or <see cref="UniqueSpaceExhaustedException"/> depending on
+/// which is actually true of the book.</param>
 /// <param name="EnforceUniqueDna">
 /// When true (the default), every asset must have distinct DNA: a roll colliding with one already
 /// produced is discarded and re-rolled, and a run that cannot fill its quota from the unique space

@@ -1,0 +1,75 @@
+# The project had 1030 tests, a zero-warning build and a set of invariants that only hold because
+# something checks them — and none of it ran unless a human remembered to run it. This is that
+# something.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    # Windows because the GUI tests render through Avalonia's headless backend with Skia, and the
+    # desktop head is a WinExe. The engine and CLI are platform-agnostic and are covered again on
+    # Linux below, which is what would catch a path or line-ending assumption creeping into Core.
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pinned by global.json; this reads it rather than naming a version twice.
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      # nuget.config clears inherited sources and pins nuget.org, so a restore here resolves from
+      # exactly what the repository declares. (No --locked-mode: lock files that drift out of step
+      # with Directory.Packages.props fail CI in a way that reads as a broken pipeline rather than a
+      # dependency change, which costs more than it catches at this size.)
+      - name: Restore
+        run: dotnet restore nfty.sln
+
+      # TreatWarningsAsErrors is on in Directory.Build.props, so "0 warnings" is enforced by the
+      # build itself rather than by reading the log.
+      - name: Build
+        run: dotnet build nfty.sln --no-restore -c Release
+
+      - name: Test
+        run: dotnet test nfty.sln --no-build -c Release --logger "trx;LogFileName=results.trx" --results-directory artifacts/tests
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: artifacts/tests
+
+  # A separate job so an advisory published overnight reports a security problem without failing an
+  # unrelated code change — the reason NU1901-NU1904 are excluded from TreatWarningsAsErrors.
+  vulnerable-packages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet restore nfty.sln
+      - name: Audit the whole dependency graph
+        run: dotnet list nfty.sln package --vulnerable --include-transitive
+
+  # The engine and the CLI carry the determinism guarantees, and those are exactly what a
+  # platform-specific assumption breaks. The GUI is skipped here: it needs a display stack.
+  core-on-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet test tests/Nfty.Core.Tests -c Release
+      - run: dotnet test tests/Nfty.Cli.Tests -c Release

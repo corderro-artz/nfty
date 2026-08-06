@@ -149,7 +149,8 @@ public static class UniqueSpace
     private record ReachableLayer(string Id, IReadOnlyList<Variant> Variants);
 
     /// <summary>
-    /// The variants of an ingredient that <see cref="WeightedRoller.Roll"/> can return. It walks
+    /// The variants of an ingredient that
+    /// <see cref="WeightedRoller.Roll(WeightedRoller.WeightTable, IRng)"/> can return. It walks
     /// the entries accumulating weight and returns the first whose running total passes the
     /// sample, so a zero-weight variant never advances that total past its predecessor and is
     /// unreachable — a deliberate way for an author to shelve a variant without deleting it.

@@ -1,0 +1,35 @@
+# Shared formatting, so a diff shows what changed rather than whose editor saved it.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.{cs,csx}]
+indent_size = 4
+# The codebase is file-scoped namespaces and `var` throughout; these state it rather than leave it
+# to whoever configured their IDE.
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_using_directive_placement = outside_namespace:suggestion
+dotnet_sort_system_directives_first = true
+csharp_prefer_braces = when_multiline:suggestion
+
+[*.{axaml,xaml}]
+indent_size = 2
+
+[*.{json,yml,yaml}]
+indent_size = 2
+
+# Frozen fixtures: byte-for-byte hashed by FixtureFreezeTests, so nothing may touch them.
+[tests/fixtures/**]
+trim_trailing_whitespace = false
+insert_final_newline = false
+
+# The locked visual reference. Never reformatted — a whitespace change here reads as design drift.
+[docs/design/mockups/**]
+trim_trailing_whitespace = false
+insert_final_newline = false

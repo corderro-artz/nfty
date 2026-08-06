@@ -1,0 +1,42 @@
+<Project>
+
+  <!--
+    Central package management: a version is declared once here and referenced without one in each
+    csproj. The versions had already drifted apart across the three test projects, and nobody had
+    chosen the difference.
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      ImageSharp is pinned to 3.1.11 DELIBERATELY and must not be moved to 4.x: 4.0.0 requires a
+      build-time license key (sixlabors.lic), which is account-specific and gitignored, so upgrading
+      would make the repository unbuildable for anyone who does not have one.
+    -->
+    <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.11" />
+
+    <PackageVersion Include="System.CommandLine" Version="2.0.10" />
+
+    <!-- Avalonia and its satellites move together. AvaloniaUI.DiagnosticsSupport does NOT: it
+         replaced the old Avalonia.Diagnostics package in v12 and versions on its own track. -->
+    <PackageVersion Include="Avalonia" Version="12.1.1" />
+    <PackageVersion Include="Avalonia.Desktop" Version="12.1.1" />
+    <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.1.1" />
+    <PackageVersion Include="Avalonia.Headless.XUnit" Version="12.1.1" />
+    <PackageVersion Include="Avalonia.Skia" Version="12.1.1" />
+    <PackageVersion Include="Avalonia.HarfBuzz" Version="12.1.1" />
+    <PackageVersion Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3" />
+
+    <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+
+    <!-- One xunit, one runner, one test SDK, for all three test projects. -->
+    <PackageVersion Include="xunit.v3" Version="3.2.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.4" />
+  </ItemGroup>
+
+</Project>

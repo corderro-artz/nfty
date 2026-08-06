@@ -22,6 +22,9 @@ public static class VariantPreview
     /// image. Returning the borrowed one for one kind and an owned one for the others would make
     /// disposal depend on the layer kind, which is exactly the sort of ownership rule that gets a
     /// double-free or a leak eventually.</summary>
+    /// <param name="ingredient">The layer the variant belongs to; supplies the kind and the
+    /// colorization.</param>
+    /// <param name="variantId">Which variant of it to render.</param>
     /// <param name="colorSpec">A prefixed colour spec (<c>hex:</c>, <c>rgb:</c>, <c>hsl:</c>,
     /// <c>hsv:</c>). Required for a colorized layer; ignored for Custom.</param>
     /// <param name="modelOverride">Renders in a different colour model than the ingredient declares,

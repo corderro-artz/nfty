@@ -11,17 +11,30 @@ namespace Nfty.App.ViewModels;
 /// <summary>One layer's contribution to a recipe's combination space: the mockup's .fchip, showing
 /// the ingredient's variant count tinted by its kind. Chips are multiplied together (x) to reach the
 /// recipe total, which is why the count alone is the chip's whole content.</summary>
+/// <param name="Name">The ingredient's display name.</param>
+/// <param name="VariantCount">How many variants it contributes to the product.</param>
+/// <param name="Kind">The layer kind, which tints the chip.</param>
 /// <param name="ShowTimes">True for every chip after the first, so the view can render the x that
 /// separates the factors. An ItemsControl cannot interleave separators between items, so the
 /// separator travels with the item that follows it.</param>
 public record FactorChip(string Name, int VariantCount, LayerKind Kind, bool ShowTimes)
 {
+    /// <summary>Whether this layer rolls its colour per asset.</summary>
     public bool IsDynamic => Kind == LayerKind.Dynamic;
+    /// <summary>Whether this layer applies one fixed colour.</summary>
     public bool IsStatic => Kind == LayerKind.Static;
+    /// <summary>Whether this layer composites as-is, without colorization.</summary>
     public bool IsCustom => Kind == LayerKind.Custom;
+    /// <summary>Tooltip text: name, kind and variant count.</summary>
     public string Tip => $"{Name} · {Kind.ToString().ToLowerInvariant()} · {VariantCount} variants";
 }
 
+/// <summary>One recipe's row in the mint-distribution and DNA-space panels.</summary>
+/// <param name="Name">The recipe's display name.</param>
+/// <param name="SharePercent">Its share of mints, from the cookbook's weights.</param>
+/// <param name="DnaSpaceText">Its unique-DNA figure, already formatted — including the em dash used
+/// when the space is undefined rather than merely large.</param>
+/// <param name="Factors">The per-layer chips whose product is that figure.</param>
 /// <param name="Series">Which of the six mint-distribution series colours this recipe draws, 1-based
 /// and assigned by position in the book. Exposed as an index rather than a <c>Color</c> so the paint
 /// itself stays a theme token: the view switches on <see cref="IsSeries1"/>…<see cref="IsSeries6"/>
