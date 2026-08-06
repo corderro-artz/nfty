@@ -66,6 +66,12 @@
            #12141c: 1.14:1, unreadable. It survived every audit because every test fixture and every
            captured frame used a VALID book, and the valid branch resolves SuccessBrush, which exists. -->
       <SolidColorBrush x:Key="WarningBrush" Color="#6a4a25" />
+      <!-- Fluent's own placeholder key, aliased to our muted token rather than left at its default.
+           Nothing set it, so Fluent painted the search and the description box at 2.09:1 in light and
+           2.62:1 in dark - unreadable, and not what the design asked for either: explorer.html's
+           .search is the muted-foreground custom property with no extra dimming. An alias, not a
+           copied hex, so it cannot drift from the token it is meant to equal. -->
+      <StaticResource x:Key="TextControlPlaceholderForeground" ResourceKey="FgMutedBrush" />
       <SolidColorBrush x:Key="GuideBrush" Color="#2b121418" />
       <SolidColorBrush x:Key="GuideHiBrush" Color="#59121418" />
       <BoxShadows x:Key="WinShadow">0 1 2 0 #10121418, 0 18 48 -24 #33121418</BoxShadows>
@@ -138,6 +144,8 @@
       <SolidColorBrush x:Key="AccentHoverBrush" Color="#ba3447" />
       <SolidColorBrush x:Key="SuccessBrush" Color="#a6c08a" />
       <SolidColorBrush x:Key="WarningBrush" Color="#e0c28c" />
+      <!-- The dark half of the placeholder alias; see the light dictionary for why. -->
+      <StaticResource x:Key="TextControlPlaceholderForeground" ResourceKey="FgMutedBrush" />
       <SolidColorBrush x:Key="GuideBrush" Color="#1ff2ede6" />
       <SolidColorBrush x:Key="GuideHiBrush" Color="#3df2ede6" />
       <BoxShadows x:Key="WinShadow">0 1 2 0 #60000000, 0 22 60 -28 #000000</BoxShadows>

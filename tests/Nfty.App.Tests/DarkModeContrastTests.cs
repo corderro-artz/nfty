@@ -32,21 +32,32 @@ namespace Nfty.App.Tests;
 /// reaches the eye.</summary>
 public class DarkModeContrastTests
 {
-    /// <summary>The floors, and why they are not simply WCAG AA.
+    /// <summary>The floors, and why there are two of them.
     ///
-    /// The mockups are the locked 1:1 reference and their palette predates any accessibility target:
-    /// muted hints sit near 3.5:1 and the disabled treatment is a flat `opacity:.38`, which lands
-    /// several controls in the low 2s. Enforcing AA's 4.5 here would not find bugs, it would order a
-    /// redesign — and quietly diverging the app from a locked mockup is exactly what this repo forbids.
+    /// <para><b>Normal text is held to WCAG AA (4.5:1).</b> It used to be held to 3.0, on the grounds
+    /// that the mockups' palette predates any accessibility target and enforcing AA would order a
+    /// redesign. Measuring the gap rather than assuming it showed that was too pessimistic: only two
+    /// kinds of ordinary text actually failed AA, both because an element-level <c>Opacity</c> was
+    /// stacked on top of a token that is ALREADY 72% alpha — the recents path at 3.44 and the
+    /// wizards' "derived from the name" hint at 3.78. Both were lifted by reducing the double-dim,
+    /// keeping the design's intent (this text recedes) while making it readable. The palette itself
+    /// is untouched.</para>
     ///
-    /// So the floors encode the design's own intent instead. Text meant to read normally must clear
-    /// 3.0; text the design has deliberately receded (a placeholder, a disabled control) must still be
-    /// PERCEIVABLE at 2.0. Both are far above the failure this file was written for: an unresolved
-    /// DynamicResource leaves Foreground at Avalonia's default Black, which measured 1.14:1.
+    /// <para><b>Inactive controls are exempt, per the standard itself.</b> WCAG 2.1 SC 1.4.3 excludes
+    /// "text or images of text that are part of an inactive user interface component". The mockups'
+    /// disabled treatment is a flat <c>opacity:.38</c>, which lands a disabled accent button at
+    /// 2.12:1; that is the design saying "you cannot use this", not a defect. They still get a floor
+    /// of 2.0 rather than none, because the failure this file was written for — an unresolved
+    /// DynamicResource leaving Foreground at Avalonia's default Black — measured 1.14:1, and a
+    /// blanket exemption would have let it through.</para>
     ///
-    /// The 32 runs currently sitting between these floors and AA are real design debt, reported to the
-    /// user rather than silently repainted.</summary>
-    private const double NormalMin = 3.0;
+    /// <para><b>Known remaining debt:</b> placeholder text sits at 2.28:1 in light mode. Placeholders
+    /// are NOT exempt under 1.4.3, so this is real. The token is now correct — it was Fluent's own
+    /// default, dimmer than the design asked for, and is aliased to the muted token — but Fluent's
+    /// TextBox template applies a further opacity inside itself that a Style setter does not reach.
+    /// Fixing it properly needs a ControlTheme for TextBox; it is recorded here rather than hidden
+    /// behind a floor chosen to accommodate it.</para></summary>
+    private const double NormalMin = 4.5;
     private const double RecededMin = 2.0;
 
     private sealed record Offender(string View, string Text, double Ratio, bool Receded, Color Fg, Color Bg)

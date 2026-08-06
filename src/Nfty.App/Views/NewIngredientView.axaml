@@ -156,7 +156,7 @@
             <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,11,0,0">
               <TextBlock Text="Identifier" Classes="derived" />
               <Border Classes="idchip"><TextBlock Text="{Binding DerivedId}" Classes="mono" FontSize="10.5" /></Border>
-              <TextBlock Text="— derived from the name" Classes="derived" Opacity="0.75" />
+              <TextBlock Text="— derived from the name" Classes="derived" Opacity="0.9" />
             </StackPanel>
           </StackPanel>
         </StackPanel>

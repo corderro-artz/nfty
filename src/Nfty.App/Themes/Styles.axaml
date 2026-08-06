@@ -412,12 +412,23 @@
     <Setter Property="Margin" Value="0,1,0,0" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
+  <!-- landing.html gives .rpath the muted-foreground custom property AND opacity .7, and
+       FgMutedBrush is ALREADY 72% alpha, so the two multiply to ~50% and the path measured
+       3.44:1 — under WCAG AA. Raised to
+       0.85 rather than removed: a file path is genuinely secondary and should still recede, but it is
+       real information a user reads, not decoration, so it has to clear 4.5. This is a deliberate,
+       measured divergence from the mockup's number, not a transcription slip. -->
   <Style Selector="TextBlock.rpath">
     <Setter Property="FontSize" Value="10" />
-    <Setter Property="Opacity" Value="0.7" />
+    <Setter Property="Opacity" Value="0.85" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
+
+  <!-- The placeholder was never tokenised: nothing set it, so Fluent's own default painted it and
+       the search read 2.09:1 in light and 2.62:1 in dark. explorer.html's .search sets colour to the
+       muted-foreground custom property with NO extra opacity, so this is drift rather than a design
+       choice — adopting the token restores the mockup and clears AA in the same move. -->
   <!-- .rzero first-run empty state. The dashed stroke is a Rectangle, not the Border's own
        BorderBrush: Avalonia's Border draws a solid edge only and has no dash array. -->
   <Style Selector="Rectangle.dashed">
