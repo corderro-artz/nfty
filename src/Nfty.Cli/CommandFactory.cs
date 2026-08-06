@@ -39,12 +39,12 @@ public static partial class CommandFactory
 
     private static Command Inspect()
     {
-        var path = new Argument<string>("file") { Description = "Path to a .cbk, .rcp or .igt file." };
+        var path = new Argument<string>("file") { Description = "Path to a .cbk, .rcp, .igt or .ktn file." };
         var cmd = new Command("inspect",
             "Print the tree of a CookBook, Recipe or Ingredient, showing each Recipe's and "
                 + "Variant's [id] alongside its name. Those ids — not the display names — are "
                 + "what --recipe and --variant expect elsewhere on this command line, so inspect "
-                + "is how you find them.")
+                + "is how you find them. Given a Kitchen, lists what that workspace holds.")
         { path };
         cmd.SetAction(parse =>
         {
@@ -68,6 +68,13 @@ public static partial class CommandFactory
                 {
                     using var ing = IngredientArchive.Read(file);
                     PrintIngredient(ing, indent: "");
+                    break;
+                }
+                case ArchiveKind.Kitchen:
+                {
+                    // Nothing to dispose: a Kitchen lists PATHS rather than loading the archives it
+                    // names, precisely so inspecting a workspace does not decode every PNG in it.
+                    Console.Write(KitchenReport.Render(Kitchen.Open(file)));
                     break;
                 }
                 default:

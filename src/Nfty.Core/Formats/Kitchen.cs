@@ -33,6 +33,20 @@ public sealed record KitchenContents(
 /// describes a workspace that no longer exists. Scanning makes the filesystem the single source of
 /// truth and means moving a file in or out needs no reconciliation.
 /// </summary>
+/// <summary>Why <see cref="Kitchen.TryFindIn"/> did or did not find a workspace.</summary>
+public enum KitchenLookup
+{
+    /// <summary>Exactly one <c>.ktn</c>: the folder is a workspace.</summary>
+    Found,
+
+    /// <summary>No <c>.ktn</c>, or no such folder — an ordinary directory, which is not an error.</summary>
+    NotAWorkspace,
+
+    /// <summary>More than one <c>.ktn</c>. Only the user can say which was meant, so this is
+    /// reported rather than resolved by picking one.</summary>
+    Ambiguous,
+}
+
 public static class Kitchen
 {
     public const string Extension = ".ktn";
@@ -76,16 +90,41 @@ public static class Kitchen
             Scan(dir, Archives.IngredientExtension));
     }
 
-    /// <summary>The .ktn a folder is a workspace for, or null when it is just a folder. A folder
-    /// holding more than one .ktn is ambiguous rather than "the first one wins" — picking silently
-    /// would give two Kitchens the same contents and neither would be wrong.</summary>
-    public static string? FindIn(string directory)
+    /// <summary>The .ktn a folder is a workspace for, or null when it is not one. Convenience over
+    /// <see cref="TryFindIn"/> for callers that genuinely do not care <em>why</em> — most do, since
+    /// "this folder is not a workspace" and "this folder holds two of them" need different things
+    /// said to the user.</summary>
+    /// <param name="directory">The folder to look in.</param>
+    /// <returns>The path to the single <c>.ktn</c>, or null.</returns>
+    public static string? FindIn(string directory) =>
+        TryFindIn(directory) is (KitchenLookup.Found, var path) ? path : null;
+
+    /// <summary>
+    /// Looks for the <c>.ktn</c> a folder is a workspace for, and says which of the three outcomes
+    /// it is.
+    ///
+    /// <para>A folder holding more than one <c>.ktn</c> is <see cref="KitchenLookup.Ambiguous"/>
+    /// rather than "the first one wins": picking silently would give two Kitchens the same contents
+    /// and neither would be wrong. That is a state only the user can resolve, so a caller has to be
+    /// able to tell them about it — which a bare null cannot.</para>
+    /// </summary>
+    /// <param name="directory">The folder to look in.</param>
+    /// <returns>The outcome, and the path when — and only when — it is
+    /// <see cref="KitchenLookup.Found"/>.</returns>
+    public static (KitchenLookup Outcome, string? Path) TryFindIn(string directory)
     {
-        if (!System.IO.Directory.Exists(directory)) return null;
+        if (!System.IO.Directory.Exists(directory)) return (KitchenLookup.NotAWorkspace, null);
+
         var found = System.IO.Directory.GetFiles(directory, "*" + Extension)
             .OrderBy(p => p, StringComparer.Ordinal)
             .ToList();
-        return found.Count == 1 ? found[0] : null;
+
+        return found.Count switch
+        {
+            1 => (KitchenLookup.Found, found[0]),
+            0 => (KitchenLookup.NotAWorkspace, null),
+            _ => (KitchenLookup.Ambiguous, null),
+        };
     }
 
     private static IReadOnlyList<string> Scan(string dir, string extension) =>

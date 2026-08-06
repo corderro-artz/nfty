@@ -12,11 +12,61 @@ public static partial class CommandFactory
     /// one level down, resolved by the {id} filename convention.</summary>
     public static Command NewGroup()
     {
-        var group = new Command("new", "Create a new .igt / .rcp / .cbk from a manifest and its parts.");
+        var group = new Command("new", "Create a new .igt / .rcp / .cbk / .ktn from a manifest and its parts.");
         group.Subcommands.Add(NewIngredient());
         group.Subcommands.Add(NewRecipe());
         group.Subcommands.Add(NewCookbook());
+        group.Subcommands.Add(NewKitchen());
         return group;
+    }
+
+    /// <summary>
+    /// <c>new kitchen</c>. The odd one out in this group and deliberately so: a Kitchen has no parts
+    /// to assemble, because membership is discovered by scanning the folder rather than recorded —
+    /// so there is no manifest option and no <c>--force</c>, only a name and a place to put it.
+    ///
+    /// <para>Added because the Kitchen was a GUI-only concept: one of the six domain terms, with its
+    /// own file extension already in <c>Archives.KindOf</c>, and no way to create or look at one
+    /// from the command line at all.</para>
+    /// </summary>
+    private static Command NewKitchen()
+    {
+        var outPath = new Argument<string>("out")
+        { Description = "Output .ktn path to create. Its FOLDER becomes the workspace." };
+        var name = new Option<string?>("--name")
+        {
+            Description = "Display name for the Kitchen. Defaults to the file name without its extension.",
+        };
+
+        var cmd = new Command("kitchen",
+            "Create a .ktn workspace. The folder the file sits in IS the workspace: anything saved "
+                + "beside it is discovered by scanning, never recorded, so moving a file in or out "
+                + "needs no bookkeeping.")
+        { outPath, name };
+
+        cmd.SetAction(parse =>
+        {
+            string path = parse.GetValue(outPath)!;
+            if (!string.Equals(Path.GetExtension(path), Kitchen.Extension, StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException(
+                    $"A Kitchen must be written to a '{Kitchen.Extension}' path, but '{path}' was given.");
+
+            string display = parse.GetValue(name) is { Length: > 0 } n
+                ? n
+                : Path.GetFileNameWithoutExtension(path);
+            if (string.IsNullOrWhiteSpace(display))
+                throw new ArgumentException("The Kitchen needs a name; pass --name or use a named file.");
+
+            // Same id rule the GUI's wizard uses, so a Kitchen made either way looks the same.
+            string id = string.Join('-', display.ToLowerInvariant()
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries));
+
+            Kitchen.Create(path, new KitchenManifest(id, display));
+            Console.WriteLine($"Created Kitchen '{display}' [{id}] at {path}");
+            Console.Write(Nfty.Core.Stats.KitchenReport.Render(Kitchen.Open(path)));
+            return 0;
+        });
+        return cmd;
     }
 
     private static Command NewIngredient()
