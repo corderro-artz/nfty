@@ -61,16 +61,27 @@
           </Border.Background>
           <Grid ColumnDefinitions="Auto,*,Auto,Auto" Height="46">
             <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center" Spacing="9">
-              <Border Width="24" Height="24" CornerRadius="{DynamicResource RadiusSm}"
-                      Background="{DynamicResource AccentWashBrush}"
-                      BorderBrush="{DynamicResource AccentLineBrush}" BorderThickness="1">
-                <Border Width="9" Height="9" CornerRadius="2" Background="{DynamicResource AccentBrush}">
-                  <Border.RenderTransform>
-                    <RotateTransform Angle="45" />
-                  </Border.RenderTransform>
-                </Border>
-              </Border>
-              <TextBlock Classes="wordmark" VerticalAlignment="Center"><Run Text="nft" /><Run Text="y" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
+              <!-- The brand is also the way out of an open document, the way a logo is "home" almost
+                   everywhere. Deliberately reusing an element the locked titlebar already has rather
+                   than inventing a Close button: there is no such control in explorer.html, and
+                   adding chrome to a locked design to fix a wiring gap is the wrong trade. The
+                   Button carries no paint of its own (Classes="bare"), so the titlebar renders
+                   identically; it is disabled on Landing, where there is nothing to close. -->
+              <Button Classes="bare" Command="{Binding CloseDocumentCommand}"
+                      ToolTip.Tip="Close and return to the start screen  ·  Ctrl+W">
+                <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
+                  <Border Width="24" Height="24" CornerRadius="{DynamicResource RadiusSm}"
+                          Background="{DynamicResource AccentWashBrush}"
+                          BorderBrush="{DynamicResource AccentLineBrush}" BorderThickness="1">
+                    <Border Width="9" Height="9" CornerRadius="2" Background="{DynamicResource AccentBrush}">
+                      <Border.RenderTransform>
+                        <RotateTransform Angle="45" />
+                      </Border.RenderTransform>
+                    </Border>
+                  </Border>
+                  <TextBlock Classes="wordmark" VerticalAlignment="Center"><Run Text="nft" /><Run Text="y" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
+                </StackPanel>
+              </Button>
               <!-- Kitchen chip: the OPEN workspace, named. It used to read the literal word "Kitchen"
                    because none existed to name; it now shows the manifest's name and hides entirely
                    when no Kitchen is open, which is a normal state — a CookBook opened from anywhere
@@ -99,7 +110,16 @@
                 <DataTemplate x:DataType="vm:Crumb">
                   <StackPanel Orientation="Horizontal" Spacing="2">
                     <TextBlock Text="›" Classes="cseg" Opacity="0.45" IsVisible="{Binding Leading}" />
-                    <TextBlock Text="{Binding Text}" Classes="cseg" Classes.active="{Binding Active}" />
+                    <!-- A segment navigates, as it does in explorer.html where each is role="link"
+                         with a tabindex and handles click and Enter/Space. Ours were plain text, so
+                         the trail could say where you were and not take you anywhere. Paint-free
+                         Button so the type still renders exactly as the .cseg run it replaced. -->
+                    <Button Classes="bare"
+                            Command="{Binding $parent[ItemsControl].DataContext.CurrentExplorer.SelectNodeCommand}"
+                            CommandParameter="{Binding Target}"
+                            IsEnabled="{Binding Target, Converter={x:Static ObjectConverters.IsNotNull}}">
+                      <TextBlock Text="{Binding Text}" Classes="cseg" Classes.active="{Binding Active}" />
+                    </Button>
                   </StackPanel>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>

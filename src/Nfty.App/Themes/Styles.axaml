@@ -106,6 +106,42 @@
        genuinely unbuilt action ever needs marking again, the mockup's own recipe is one line:
        .tbtn.soon sets border-style dashed, colour to the muted-foreground custom property, and a
        transparent background. -->
+  <!-- .bare: a Button that contributes nothing visually — no fill, no edge, no padding, no minimum
+       size, and Fluent's hover/pressed/focus states neutralised by being set EXPLICITLY to
+       Transparent rather than simply left unpainted (not painting hands the state back to Fluent's
+       stock blue). It exists so an element the locked design already draws — the brand block, a
+       breadcrumb segment — can become clickable and keyboard-reachable without changing a pixel or
+       adding chrome the mockups do not have. -->
+  <Style Selector="Button.bare">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.bare /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="Button.bare:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.bare:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <!-- Disabled must not dim it either: the brand is still the brand on the Landing screen, where
+       there is simply nothing open to close. The blanket Button:disabled opacity would fade the
+       wordmark to 0.38 and make the app look broken at rest. -->
+  <Style Selector="Button.bare:disabled">
+    <Setter Property="Opacity" Value="1" />
+    <Setter Property="Cursor" Value="Arrow" />
+  </Style>
+
   <Style Selector="Button.flat">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />

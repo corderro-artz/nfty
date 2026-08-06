@@ -11,6 +11,7 @@ public partial class ShellViewModel : ViewModelBase
     private readonly INotYetWired _notify;
     private readonly IThemeService _theme;
     private readonly IKitchenSession? _kitchen;
+    private readonly ICookBookSession? _session;
 
     [ObservableProperty] private ViewModelBase? _currentPage;
     [ObservableProperty] private ViewModelBase? _activeDialog;
@@ -48,7 +49,22 @@ public partial class ShellViewModel : ViewModelBase
     /// exposing crumbs/lock state on ShellViewModel itself — null on any other page.</summary>
     public ExplorerViewModel? CurrentExplorer => CurrentPage as ExplorerViewModel;
 
-    partial void OnCurrentPageChanged(ViewModelBase? value) => OnPropertyChanged(nameof(CurrentExplorer));
+    /// <summary>
+    /// Whether a document — a CookBook in the Explorer, or a cooked Set in the browser — is open on
+    /// top of Landing.
+    ///
+    /// <para>The shell had no such notion, and that is why neither could be closed: navigation only
+    /// ever pushed, <c>ICookBookSession.Close</c> and <c>IKitchenSession.Close</c> had no callers at
+    /// all, and opening a second CookBook meant restarting the application.</para>
+    /// </summary>
+    public bool HasOpenDocument => CurrentPage is ExplorerViewModel or SetBrowserViewModel;
+
+    partial void OnCurrentPageChanged(ViewModelBase? value)
+    {
+        OnPropertyChanged(nameof(CurrentExplorer));
+        OnPropertyChanged(nameof(HasOpenDocument));
+        CloseDocumentCommand.NotifyCanExecuteChanged();
+    }
 
     public event Action? MinimizeRequested;
     public event Action? ToggleMaximizeRequested;
@@ -62,10 +78,11 @@ public partial class ShellViewModel : ViewModelBase
     public bool HasKitchen => _kitchen?.Current is not null;
 
     public ShellViewModel(INavigationService nav, IDialogService dialogs, INotYetWired notify, IThemeService theme,
-        IStatusService status, IKitchenSession? kitchen = null)
+        IStatusService status, IKitchenSession? kitchen = null, ICookBookSession? session = null)
     {
         _nav = nav; _dialogs = dialogs; _notify = notify; _theme = theme;
         _kitchen = kitchen;
+        _session = session;
         if (_kitchen is not null)
             _kitchen.Changed += () =>
             {
@@ -88,9 +105,26 @@ public partial class ShellViewModel : ViewModelBase
     [RelayCommand] private void Minimize() => MinimizeRequested?.Invoke();
     [RelayCommand] private void ToggleMaximize() => ToggleMaximizeRequested?.Invoke();
     [RelayCommand] private void Close() => CloseRequested?.Invoke();
-    // OpenKitchen was here, bound to nothing in any view - dead the moment the titlebar's Kitchen
-    // chip became a static label. Kitchens are not modelled yet (LandingViewModel's "New Kitchen…"
-    // is CanExecute=Never for the same reason); the command comes back when they are, wired to
-    // something real rather than to the not-wired channel.
     [RelayCommand] private void ToggleTheme() => _theme.Toggle();
+
+    /// <summary>
+    /// Closes the open document and returns to Landing, freeing everything it held.
+    ///
+    /// <para>Order matters and is the whole reason this lives on the shell rather than in a page.
+    /// <c>Back()</c> pops the page and disposes it, which releases the detail views that reference
+    /// the book's decoded images; only then is it safe to close the session, which disposes the
+    /// images themselves. Closing the session first would leave a live Explorer holding disposed
+    /// bitmaps.</para>
+    ///
+    /// <para>A Set browser holds no CookBook, so it only pops. The Kitchen is deliberately left
+    /// open: it is a workspace that outlives any one CookBook — explorer.html calls it "fixed for
+    /// every item below it" — and closing a book is not leaving the workspace.</para>
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(HasOpenDocument))]
+    private void CloseDocument()
+    {
+        bool wasCookBook = CurrentPage is ExplorerViewModel;
+        _nav.Back();
+        if (wasCookBook) _session?.Close();
+    }
 }

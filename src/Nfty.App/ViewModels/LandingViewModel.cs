@@ -46,6 +46,17 @@ public partial class LandingViewModel : ViewModelBase
         _session = session; _explorerFactory = explorerFactory; _setBrowserFactory = setBrowserFactory;
         _looseEditorFactory = looseEditorFactory;
         _kitchen = kitchen;
+
+        // The Kitchen can change from under this screen — NewKitchen and OpenKitchen both alter it,
+        // and so does anything that closes one — so the row that names it, and CloseKitchen's own
+        // availability, follow the session rather than a snapshot taken at construction.
+        if (_kitchen is not null)
+            _kitchen.Changed += () =>
+            {
+                OnPropertyChanged(nameof(KitchenName));
+                OnPropertyChanged(nameof(HasKitchen));
+                CloseKitchenCommand.NotifyCanExecuteChanged();
+            };
     }
 
     [RelayCommand]
@@ -105,6 +116,40 @@ public partial class LandingViewModel : ViewModelBase
     /// one; a ViewModel constructed without it (some tests) keeps the old disabled behaviour rather
     /// than throwing at click time.</summary>
     private bool CanNewKitchen() => _kitchen is not null;
+
+    /// <summary>
+    /// Opens an existing Kitchen.
+    ///
+    /// <para>Without this a Kitchen was a one-session object: <c>IKitchenSession.Open</c> was called
+    /// from exactly one place — the CREATE flow — so a workspace made on Monday was unreachable on
+    /// Tuesday. The titlebar chip stayed empty and loose saves stopped defaulting into it, with
+    /// nothing on screen to explain why.</para>
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanNewKitchen))]
+    private async Task OpenKitchen()
+    {
+        string? path;
+        try { path = await _picker.OpenFileAsync("Open Kitchen", Nfty.Core.Formats.Kitchen.Extension); }
+        catch (Exception ex) { ShowError("Could not open", ex.Message); return; }
+        if (path is null) return;   // cancelled
+
+        try { _kitchen!.Open(path); }
+        catch (Exception ex) { ShowError("Could not open", ex.Message); }
+    }
+
+    /// <summary>Leaves the open Kitchen without opening another. The counterpart to
+    /// <see cref="OpenKitchenCommand"/>: a workspace you can enter and never leave is a trap, and
+    /// <c>IKitchenSession.Close</c> otherwise had no caller anywhere in the app.</summary>
+    [RelayCommand(CanExecute = nameof(HasKitchen))]
+    private void CloseKitchen() => _kitchen!.Close();
+
+    /// <summary>The open Kitchen's name, or null. Drives the Landing row that reports which workspace
+    /// loose saves will default into — the titlebar chip only exists once a CookBook is open, so
+    /// without this the Landing screen could not say which Kitchen was active.</summary>
+    public string? KitchenName => _kitchen?.Current?.Manifest.Name;
+
+    /// <summary>Whether a Kitchen is open.</summary>
+    public bool HasKitchen => _kitchen?.Current is not null;
 
     /// <summary>Same rule the other wizards derive ids by: lower-case, spaces to dashes.</summary>
     private static string DeriveId(string name) => string.Join('-',

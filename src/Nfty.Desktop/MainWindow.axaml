@@ -23,6 +23,10 @@
          OUTSIDE the app window, as a preview control for viewing the mockup both ways. There is no
          theme control in the locked chrome, and inventing one would be design drift. -->
     <KeyBinding Gesture="Ctrl+T" Command="{Binding ToggleThemeCommand}" />
+    <!-- Close the open CookBook or Set and return to Landing. The brand block in the titlebar does
+         the same thing on click; this is the keyboard route, and Ctrl+W is what "close the thing
+         I am looking at" means almost everywhere. -->
+    <KeyBinding Gesture="Ctrl+W" Command="{Binding CloseDocumentCommand}" />
   </Window.KeyBindings>
 
   <Window.Styles>

@@ -11,7 +11,13 @@ using Nfty.Core.Model;
 
 namespace Nfty.App.ViewModels;
 
-public record Crumb(string Text, bool Active, bool Leading);
+/// <param name="Text">The segment's label.</param>
+/// <param name="Active">The segment for the current selection — the trail's last entry.</param>
+/// <param name="Leading">Whether to draw a "›" separator before this segment.</param>
+/// <param name="Target">The node this segment stands for, so clicking it selects that node.
+/// explorer.html's crumbs are <c>role="link" tabindex="0"</c> and handle both click and Enter/Space;
+/// ours were display-only text, so the trail showed where you were and offered no way back up.</param>
+public record Crumb(string Text, bool Active, bool Leading, ExplorerNode? Target = null);
 
 public partial class ExplorerViewModel : ViewModelBase, IDisposable
 {
@@ -657,18 +663,23 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
 
     private void RebuildCrumbs()
     {
-        var parts = new List<string> { Root.Name };
+        // Each segment carries the node it names, so the trail navigates rather than just reporting.
+        var parts = new List<(string Text, ExplorerNode? Target)> { (Root.Name, Root) };
         switch (SelectedNode?.Kind)
         {
             case ExplorerNodeKind.Recipe:
-                parts.Add(SelectedNode.Name);
+                parts.Add((SelectedNode.Name, SelectedNode));
                 break;
             case ExplorerNodeKind.Ingredient when SelectedNode.Domain is (LoadedRecipe r, LoadedIngredient i):
-                parts.Add(r.Manifest.Name);
-                parts.Add(i.Manifest.Name);
+                // The ingredient node knows its recipe as a domain object, not as a tree node, so the
+                // middle segment resolves back to the node that owns it.
+                parts.Add((r.Manifest.Name, Root.Children.FirstOrDefault(c => ReferenceEquals(c.Domain, r))));
+                parts.Add((i.Manifest.Name, SelectedNode));
                 break;
         }
-        Crumbs = parts.Select((t, idx) => new Crumb(t, idx == parts.Count - 1, idx > 0)).ToList();
+        Crumbs = parts
+            .Select((p, idx) => new Crumb(p.Text, idx == parts.Count - 1, idx > 0, p.Target))
+            .ToList();
         OnPropertyChanged(nameof(Crumbs));
     }
 

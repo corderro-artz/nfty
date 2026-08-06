@@ -72,6 +72,24 @@
           <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconOpen}" /><TextBlock Classes="lbl" Text="Open a cooked .set…" /></StackPanel></Grid>
         </Button>
       </Panel>
+      <!-- Beyond landing.html, which has no Open-Kitchen row because it predates the Kitchen. Without
+           one, IKitchenSession.Open was called only by the CREATE flow, so a workspace was reachable
+           for exactly the session that made it and never again. -->
+      <Button Classes="landing tbtn" Command="{Binding OpenKitchenCommand}">
+        <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconKitchen}" /><TextBlock Classes="lbl" Text="Open Kitchen…" /></StackPanel></Grid>
+      </Button>
+
+      <!-- Which workspace loose saves will default into. The titlebar chip reports this too, but only
+           once a CookBook is open — on Landing there was no way to tell, and no way back out. -->
+      <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,10,0,0" IsVisible="{Binding HasKitchen}">
+        <Path Grid.Column="0" Classes="ico sm" Data="{StaticResource IconKitchen}" VerticalAlignment="Center" />
+        <TextBlock Grid.Column="1" Classes="ftimes" Margin="9,0,0,0" VerticalAlignment="Center"
+                   Text="{Binding KitchenName, StringFormat='Kitchen: {0}'}" />
+        <Button Grid.Column="2" Classes="bare" Command="{Binding CloseKitchenCommand}"
+                ToolTip.Tip="Leave this Kitchen">
+          <TextBlock Classes="ftimes" Text="close" />
+        </Button>
+      </Grid>
 
       <Button Classes="learn" Command="{Binding ShowHelpCommand}">
         <StackPanel Orientation="Horizontal" Spacing="7">
