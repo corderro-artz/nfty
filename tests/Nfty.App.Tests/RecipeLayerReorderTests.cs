@@ -693,6 +693,43 @@ public class RecipeLayerReorderTests
         Assert.Equal(before, pane.Layers.Select(l => l.Id));        // but the dead pane was not touched
     }
 
+    /// <summary>
+    /// The hero is rolled OFF the UI thread now — a whole generated asset, 25 ms at 512px and 75 ms at
+    /// 1000px, which used to freeze the window on every reorder keystroke and every Reroll click. That
+    /// introduces an await the pane can be disposed across, so the disposed latch is checked on both
+    /// sides of it: a roll that finishes after the user has navigated away drops its image rather than
+    /// assigning it to a dead view.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task A_hero_roll_that_finishes_after_the_pane_is_gone_is_dropped()
+    {
+        var pane = MemoryPane(canReorder: true, out _);
+        var hero = pane.Hero;
+
+        pane.Dispose();
+        await pane.RerollCommand.ExecuteAsync(null);
+
+        Assert.Same(hero, pane.Hero);
+    }
+
+    /// <summary>And on a live pane it does what it says: a new seed, a new hero.</summary>
+    [AvaloniaFact]
+    public async Task Rerolling_a_live_pane_replaces_the_hero()
+    {
+        var pane = MemoryPane(canReorder: true, out _);
+        try
+        {
+            var before = pane.Hero;
+            int seed = pane.RollSeed;
+
+            await pane.RerollCommand.ExecuteAsync(null);
+
+            Assert.NotEqual(seed, pane.RollSeed);
+            Assert.NotSame(before, pane.Hero);
+        }
+        finally { pane.Dispose(); }
+    }
+
     private static void Cleanup(CookBookSession session, string path)
     {
         session.Dispose();

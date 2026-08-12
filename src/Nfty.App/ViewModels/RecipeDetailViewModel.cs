@@ -243,13 +243,17 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
 
         var book = await _moveLayer(row.Id, target);
         if (book is null) return false;   // refused or failed; the owner has already said why
-        Rebind(book);
+        await RebindAsync(book);
         return true;
     }
 
     /// <summary>Re-projects this pane onto the saved graph after a reorder: the same rows, re-seated,
-    /// so the row the selection points at is still the row in the table.</summary>
-    private void Rebind(LoadedCookBook book)
+    /// so the row the selection points at is still the row in the table.
+    ///
+    /// <para>The rows and chips are re-seated synchronously — the drag and the keyboard both hold a
+    /// selection and a grip focus that must land with the move, not a frame later. Only the hero,
+    /// which is a whole generated asset, is awaited.</para></summary>
+    private async Task RebindAsync(LoadedCookBook book)
     {
         // A reorder rewrites every PNG in the book, so the save can land seconds later — by which time
         // the user may have navigated away and the Explorer disposed this pane. Re-projecting a dead
@@ -281,9 +285,7 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
 
         // The hero genuinely changed: reordering moves which RNG draw reaches which layer, so the same
         // seed over a reordered book paints a different asset, not merely a restacked one.
-        var old = Hero;
-        Hero = BuildHero();
-        old.Dispose();
+        await SwapHeroAsync();
     }
 
     private int IndexOfRow(string id)
@@ -293,23 +295,60 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
         return -1;
     }
 
+    /// <summary>The one asset the hero shows: this recipe, at the current reroll seed.</summary>
+    private GenerateOptions HeroOptions() => new(Count: 1, Seed: RollSeed.ToString(),
+        RecipeId: _recipe.Manifest.Id, EnforceUniqueDna: false);
+
+    /// <summary>
+    /// Shown when the book isn't generatable yet — a freshly-added recipe with no layers (whose detail
+    /// is selected the moment it is added), or any other recipe being empty, since Generator validates
+    /// the whole book. A blank canvas-sized frame rather than a crashed detail view.
+    /// </summary>
+    private Bitmap BlankHero()
+    {
+        using var blank = new Image<Rgba32>(_book.Manifest.Canvas.Width, _book.Manifest.Canvas.Height);
+        return _bridge.ToBitmap(blank);
+    }
+
+    /// <summary>The first hero, built synchronously because a constructor cannot await and the pane
+    /// must have something to bind before it is shown. Every LATER hero goes through
+    /// <see cref="SwapHeroAsync"/>, which does not block the UI thread.</summary>
     private Bitmap BuildHero()
     {
         try
         {
-            var opts = new GenerateOptions(Count: 1, Seed: RollSeed.ToString(),
-                RecipeId: _recipe.Manifest.Id, EnforceUniqueDna: false);
-            using var asset = Generator.GenerateStreaming(_book, opts).First();
+            using var asset = Generator.GenerateStreaming(_book, HeroOptions()).First();
             return _bridge.ToBitmap(asset.Image);
         }
-        catch (Exception)
+        catch (Exception) { return BlankHero(); }
+    }
+
+    /// <summary>
+    /// Replaces the hero with a freshly rolled one, generated <b>off the UI thread</b>.
+    ///
+    /// <para>Rolling and compositing a whole asset costs about 25 ms at 512x512 and 75 ms at
+    /// 1000x1000, and it used to run synchronously — on every reorder keystroke and every Reroll
+    /// click. <c>Generator.GenerateAsync</c> exists for precisely this ("it exists to keep a UI thread
+    /// free"), and the await resumes on the UI thread, so the bitmap is still built there.</para>
+    ///
+    /// <para>The old hero stays on screen for the whole roll, so the pane never blinks to a
+    /// placeholder and back. If the pane is disposed while the roll is in flight, the new image is
+    /// dropped rather than assigned to a dead view.</para>
+    /// </summary>
+    private async Task SwapHeroAsync()
+    {
+        Bitmap next;
+        try
         {
-            // The book isn't generatable yet — e.g. a freshly-added empty recipe with no layers (its
-            // detail is selected right after Add), or another recipe is empty (Generator validates the
-            // whole book). Show a blank canvas-sized placeholder rather than crash the detail view.
-            using var blank = new Image<Rgba32>(_book.Manifest.Canvas.Width, _book.Manifest.Canvas.Height);
-            return _bridge.ToBitmap(blank);
+            using var set = await Generator.GenerateAsync(_book, HeroOptions());
+            next = _disposed ? BlankHero() : _bridge.ToBitmap(set.Assets[0].Image);
         }
+        catch (Exception) { next = BlankHero(); }
+
+        if (_disposed) { next.Dispose(); return; }
+        var old = Hero;
+        Hero = next;
+        old.Dispose();
     }
 
     private static RuleRow MapRule(IncompatibilityRule rule, LoadedRecipe recipe) => new(
@@ -335,18 +374,16 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand]
-    private void Reroll()
+    private async Task Reroll()
     {
         RollSeed++;
-        var old = Hero;
-        Hero = BuildHero();
-        old.Dispose();
+        await SwapHeroAsync();
     }
 
     [RelayCommand] private void OpenIngredient(string id) => _openIngredient(id);
 
     /// <summary>Frees the sample-roll bitmap. Idempotent, and it latches: a reorder's save can land
-    /// after the Explorer has already navigated away and disposed this pane, and the reply must not
+    /// after the Explorer has navigated away and disposed this pane, and the reply must not
     /// resurrect it.</summary>
     public void Dispose()
     {
@@ -355,6 +392,9 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
         Hero.Dispose();
     }
 
-    /// <summary>Set once this pane has been navigated away from and freed; see <see cref="Rebind"/>.</summary>
+    /// <summary>Set once this pane has been navigated away from and freed. Checked by
+    /// <see cref="RebindAsync"/> before it re-projects, and by <see cref="SwapHeroAsync"/> on BOTH
+    /// sides of its await — a hero roll started while the pane was alive can finish after it is
+    /// gone.</summary>
     private bool _disposed;
 }

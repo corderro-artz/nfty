@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Nfty.App.Models;
 using Nfty.App.Services;
 using Nfty.Core.Editing;
 using Nfty.Core.Formats;
@@ -46,13 +47,30 @@ public partial class ReferenceLayer : ObservableObject
     [ObservableProperty] private string _name;
     [ObservableProperty] private string _detailText;
 
-    /// <summary><c>D</c>/<c>S</c>/<c>C</c>, the tree's own kind mark. Empty for a Kitchen file that has
-    /// not been opened yet: the archive is only read when the reference is switched on, so its kind is
-    /// genuinely unknown until then (the gutter cell is reserved regardless).</summary>
-    [ObservableProperty] private string _kindMark = "";
-    [ObservableProperty] private bool _isDynamic;
-    [ObservableProperty] private bool _isStatic;
-    [ObservableProperty] private bool _isCustom;
+    /// <summary>
+    /// The layer's kind, or null for a Kitchen file that has not been opened yet — the archive is only
+    /// read when the reference is switched on, so its kind is genuinely unknown until then (the gutter
+    /// cell is reserved regardless).
+    ///
+    /// <para>One stored value with four projections off it, the same shape <c>ExplorerNode</c> already
+    /// uses. Storing the mark and the three predicates as four separate fields meant four things to
+    /// keep in agreement about one fact.</para>
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(KindMark))]
+    [NotifyPropertyChangedFor(nameof(IsDynamic))]
+    [NotifyPropertyChangedFor(nameof(IsStatic))]
+    [NotifyPropertyChangedFor(nameof(IsCustom))]
+    private LayerKind? _kind;
+
+    /// <summary><c>D</c>/<c>S</c>/<c>C</c>, the tree's own kind mark; empty until the kind is known.</summary>
+    public string KindMark => LayerKindMark.For(Kind) ?? "";
+    /// <summary>Whether this layer rolls its colour per asset.</summary>
+    public bool IsDynamic => Kind == LayerKind.Dynamic;
+    /// <summary>Whether this layer applies one fixed colour.</summary>
+    public bool IsStatic => Kind == LayerKind.Static;
+    /// <summary>Whether this layer composites as-is.</summary>
+    public bool IsCustom => Kind == LayerKind.Custom;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(TagOpacity))]
@@ -103,21 +121,10 @@ public partial class ReferenceLayer : ObservableObject
         IsKitchen = isKitchen;
     }
 
-    /// <summary>Fills in the kind mark once the layer's manifest is known — immediately for a sibling,
-    /// and only on first switch-on for a Kitchen file, whose archive is not read until then.</summary>
+    /// <summary>Fills in the kind once the layer's manifest is known — immediately for a sibling, and
+    /// only on first switch-on for a Kitchen file, whose archive is not read until then.</summary>
     /// <param name="kind">The layer kind.</param>
-    public void SetKind(LayerKind kind)
-    {
-        KindMark = kind switch
-        {
-            LayerKind.Dynamic => "D",
-            LayerKind.Static => "S",
-            _ => "C",
-        };
-        IsDynamic = kind == LayerKind.Dynamic;
-        IsStatic = kind == LayerKind.Static;
-        IsCustom = kind == LayerKind.Custom;
-    }
+    public void SetKind(LayerKind kind) => Kind = kind;
 }
 
 public partial class IngredientEditorViewModel
@@ -159,6 +166,10 @@ public partial class IngredientEditorViewModel
     /// malformed book, where there is no position to split the stack around.</summary>
     private int? _pinDepth;
 
+    /// <summary>The recipe's ingredients by id, built once in <c>BuildReferences</c>. Ordinal, like
+    /// every id comparison that can reach an output file.</summary>
+    private readonly Dictionary<string, LoadedIngredient> _ingById = new(StringComparer.Ordinal);
+
     /// <summary>Layers of the recipe being authored, minus the one being edited. Empty on the loose
     /// (<c>.igt</c>) path, where the editor wraps the ingredient in a synthetic single-layer book.</summary>
     public ObservableCollection<ReferenceLayer> Siblings { get; } = new();
@@ -189,12 +200,7 @@ public partial class IngredientEditorViewModel
     /// <summary>Its depth, which it is pinned at and cannot be removed from.</summary>
     public string PinnedDepthText => _pinDepth?.ToString() ?? "—";
     /// <summary>Its kind mark.</summary>
-    public string PinnedKindMark => _ing.Manifest.Kind switch
-    {
-        LayerKind.Dynamic => "D",
-        LayerKind.Static => "S",
-        _ => "C",
-    };
+    public string PinnedKindMark => LayerKindMark.For(_ing.Manifest.Kind);
     /// <summary>Whether the edited layer rolls its colour per asset.</summary>
     public bool IsPinnedDynamic => _ing.Manifest.Kind == LayerKind.Dynamic;
     /// <summary>Whether the edited layer applies one fixed colour.</summary>
@@ -248,13 +254,15 @@ public partial class IngredientEditorViewModel
         catch (KeyNotFoundException) { _pinDepth = null; }
         if (_pinDepth is null) return;
 
-        var byId = new Dictionary<string, LoadedIngredient>(StringComparer.Ordinal);
-        foreach (var i in _recipe.Ingredients) byId[i.Manifest.Id] = i;
+        // Kept, not discarded. Every other lookup in this file went through its own linear scan of
+        // _recipe.Ingredients — three spellings of one question, two of them re-scanning per layer
+        // inside the stack rebuild.
+        foreach (var i in _recipe.Ingredients) _ingById[i.Manifest.Id] = i;
 
         foreach (var (depth, id) in LayerDepth.Ordered(recipe))
         {
             if (string.Equals(id, _ing.Manifest.Id, StringComparison.Ordinal)) continue;
-            if (!byId.TryGetValue(id, out var ing)) continue;   // a broken book must still open
+            if (!_ingById.TryGetValue(id, out var ing)) continue;   // a broken book must still open
             int n = ing.Manifest.Variants.Count;
             // The bare count, as variant B draws it — the tag it shares a box with is narrow, and a
             // spelled-out "4 variants" would set the width of a cell that must never change.
@@ -300,9 +308,9 @@ public partial class IngredientEditorViewModel
     private string NameAtDepth(int depth)
     {
         string id = LayerDepth.At(_recipe.Manifest, depth);
-        var ing = _recipe.Ingredients.FirstOrDefault(i =>
-            string.Equals(i.Manifest.Id, id, StringComparison.Ordinal));
-        return ing?.Manifest.Name ?? id;
+        // Falls back to the id: a recipe can stack a layer it does not carry, and a gap label naming
+        // the phantom is more use than a blank one.
+        return _ingById.TryGetValue(id, out var ing) ? ing.Manifest.Name : id;
     }
 
     /// <summary>Moves a Kitchen row into a gap and restates everything that reads off it. Nothing here
@@ -413,11 +421,8 @@ public partial class IngredientEditorViewModel
         {
             var items = new List<(int Slot, int Tie, PreviewLayer Layer)>();
             foreach (var id in siblingIds)
-            {
-                var ing = _recipe.Ingredients.First(i =>
-                    string.Equals(i.Manifest.Id, id, StringComparison.Ordinal));
-                items.Add((LayerDepth.DepthOf(recipe, id), 0, LayerFor(ing)));
-            }
+                if (_ingById.TryGetValue(id, out var ing))
+                    items.Add((LayerDepth.DepthOf(recipe, id), 0, LayerFor(ing)));
             foreach (var row in KitchenLayers)
             {
                 if (!row.IsOn || (row.Gap >= pin) != above) continue;

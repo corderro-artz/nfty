@@ -29,13 +29,7 @@ public record ExplorerNode(string Id, string Name, ExplorerNodeKind Kind,
     public bool IsCustom => LayerKind == Nfty.Core.Model.LayerKind.Custom;
 
     /// <summary>The single-letter kind mark the tree draws, or null on a non-ingredient node.</summary>
-    public string? KindMark => LayerKind switch
-    {
-        Nfty.Core.Model.LayerKind.Dynamic => "D",
-        Nfty.Core.Model.LayerKind.Static => "S",
-        Nfty.Core.Model.LayerKind.Custom => "C",
-        _ => null
-    };
+    public string? KindMark => LayerKindMark.For(LayerKind);
 
     /// <summary>True for the single top-level CookBook node. Drives the mono/SemiBold root label
     /// style and hides the branch guide line (a root has no parent branch to hang a guide off).</summary>
