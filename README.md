@@ -49,6 +49,25 @@ The domain is a cooking metaphor, and the words are the model — the file exten
 
 Generating a CookBook rolls a Recipe per asset, so one book yields a mixed collection.
 
+A Recipe's layer stack is ordered bottom-to-top, and that order **is** the paint order — depth 1 is
+drawn first and sits furthest back. Because it is a list, two layers can never share a depth. Reorder
+it with `nfty move ingredient <rcp> --id <id> --to <depth>`, or by dragging a row in the desktop app.
+
+## Lining art up
+
+Layered art only works if the pieces register against each other, so both front-ends can composite a
+layer against the ones it will actually sit between:
+
+```bash
+nfty preview cat.rcp --seed alpha                     # the whole stack, one deterministic roll
+nfty preview cat.rcp --seed alpha --only body,shades  # just those layers, at their real depths
+```
+
+In the desktop app, the Ingredient Editor's reference panel does the same live while you draw: switch
+on any sibling layer from the Recipe, or any loose `.igt` from the open Kitchen, and it composites
+under or over the art depending on its depth. Layers above are ghosted by default so they cannot hide
+what you are painting.
+
 Every archive is a ZIP with a `manifest.json` inside — the custom extension is a renamed `.zip`, so
 any unzip tool can open one and look.
 

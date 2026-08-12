@@ -41,6 +41,19 @@ dotnet test nfty.sln      # all three projects
 - **Colours live in `Themes/Tokens.axaml` only**, and a new one goes in *both* theme dictionaries.
   Avalonia hex is `#AARRGGBB`; the mockups' CSS is `#RRGGBBAA`, so the alpha moves to the front.
 - **Tests must never touch the real `%APPDATA%`** — inject a temp directory into `RecentsService`.
+- **Layer depth is `layerOrder` read a second way, never a stored field.** `LayerDepth` projects it:
+  1-based, dense, bottom-first — depth 1 paints first and sits furthest back. Do not add an integer
+  `z` to a manifest; a list makes "two layers at one depth" unrepresentable rather than merely
+  invalid, and `Validator`'s existing bijection rules already *are* the depth invariant.
+- **Reordering a recipe produces a different collection, not a re-render.** `Generator.RollOne` walks
+  the layers in `layerOrder` taking one roll each, so moving a layer moves which RNG draw reaches it:
+  same seed + reordered book ⇒ different pixels *and* different identities. Depth must never enter
+  the DNA hash — that would invalidate every Set ever minted.
+- **In the GUI, geometry is fixed: reserve the space, toggle the ink.** A control appearing must not
+  move or resize anything. `Opacity`/`IsHitTestVisible`, never `IsVisible`, on anything occupying
+  layout. Prove it by pixel-diffing two captured frames.
+- **`DragDrop.DoDragDropAsync` does not work under `Avalonia.Headless`** (no platform drag source; a
+  call never returns). Use pointer capture, and always ship a keyboard path alongside any drag.
 
 ## The domain, in one table
 

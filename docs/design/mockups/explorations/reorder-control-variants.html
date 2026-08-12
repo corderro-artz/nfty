@@ -1,0 +1,601 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>nfty — exploration · reorder control variants</title>
+<!-- The locked mockups in ../ carry no doctype: the publish host wraps them. These explorations are
+     opened standalone, so they carry their own. It is load-bearing, not decoration — in quirks mode a
+     <table> does NOT inherit `color`, so every layer name in the tables below renders opaque black on
+     #07080b in dark mode. Same failure mode DarkModeContrastTests exists to catch. -->
+<style>
+  /* ==========================================================================
+     EXPLORATION — NOT part of the locked mockup set.
+     Everything down to the "EXPLORATION SCAFFOLDING" banner is copied verbatim
+     from docs/design/mockups/explorer.html (the surface this extends). No new
+     hex literal is introduced anywhere in this file; every colour is a var().
+     ========================================================================== */
+
+  /* ===== Vaporsoft brand tokens (corderro-artz/vaporsoft-themes) — verbatim from explorer.html ===== */
+  :root {
+    --bg: #f4efe8;      --bg-alt: #f1ece4;   --bg-alt2: #ede7df;  --panel: #f8f3ed;
+    --fg: #121318;      --fg-muted: #121418b8;
+    --line: #1214181f;  --line-strong: #12141833;
+    --guide: #1214182b; --guide-hi: #12141859;
+    --accent: #a11f31;  --accent-hover: #b92f44;  --accent-text: #97192a; --on-accent: #f7f2ec;
+    --success: #3d6b52; --warning: #6a4a25;  --info: #3b5b6f; --custom: #6d4f9c;
+    --accent-wash: #a11f3114; --accent-line: #a11f3140;
+    --tile: #ece5db;
+    --shadow: 0 1px 2px #12141810, 0 18px 48px -24px #12141833;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "SF Mono", "JetBrains Mono", "Cascadia Code", ui-monospace, Menlo, Consolas, monospace;
+    --r-win: 10px; --r-lg: 8px; --r-md: 6px; --r-sm: 5px; --r-xs: 4px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #07080b;      --bg-alt: #0a0b10;   --bg-alt2: #0f1118;  --panel: #0b0c10;
+      --fg: #f2ede6;      --fg-muted: #f2ede6c7;
+      --line: #f2ede624;  --line-strong: #f2ede633;
+      --guide: #f2ede61f; --guide-hi: #f2ede63d;
+      --accent: #a11f31;  --accent-hover: #ba3447;  --accent-text: #e0788a; --on-accent: #f7f2ec;
+      --success: #a6c08a; --warning: #e0c28c;  --info: #7fb0c4; --custom: #c3a6ea;
+      --accent-wash: #a11f3126; --accent-line: #a11f3166;
+      --tile: #12141c;
+      --shadow: 0 1px 2px #00000060, 0 22px 60px -28px #000000;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f4efe8; --bg-alt: #f1ece4; --bg-alt2: #ede7df; --panel: #f8f3ed;
+    --fg: #121318; --fg-muted: #121418b8; --line: #1214181f; --line-strong: #12141833;
+    --guide: #1214182b; --guide-hi: #12141859;
+    --accent: #a11f31; --accent-hover: #b92f44; --accent-text: #97192a; --on-accent: #f7f2ec;
+    --success: #3d6b52; --warning: #6a4a25; --info: #3b5b6f; --custom: #6d4f9c;
+    --accent-wash: #a11f3114; --accent-line: #a11f3140; --tile: #ece5db;
+    --shadow: 0 1px 2px #12141810, 0 18px 48px -24px #12141833;
+  }
+  :root[data-theme="dark"] {
+    --bg: #07080b; --bg-alt: #0a0b10; --bg-alt2: #0f1118; --panel: #0b0c10;
+    --fg: #f2ede6; --fg-muted: #f2ede6c7; --line: #f2ede624; --line-strong: #f2ede633;
+    --guide: #f2ede61f; --guide-hi: #f2ede63d;
+    --accent: #a11f31; --accent-hover: #ba3447; --accent-text: #e0788a; --on-accent: #f7f2ec;
+    --success: #a6c08a; --warning: #e0c28c; --info: #7fb0c4; --custom: #c3a6ea;
+    --accent-wash: #a11f3126; --accent-line: #a11f3166; --tile: #12141c;
+    --shadow: 0 1px 2px #00000060, 0 22px 60px -28px #000000;
+  }
+
+  /* ===== base + shared chrome — verbatim from explorer.html ===== */
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  :where(a, button, input, [tabindex], .grip):focus-visible {
+    outline: 2px solid var(--accent-text); outline-offset: 2px;
+  }
+  .stage {
+    background: var(--bg-alt); color: var(--fg); font-family: var(--font-sans);
+    min-height: 100vh; padding: 30px clamp(12px, 3vw, 48px) 56px;
+    -webkit-font-smoothing: antialiased; line-height: 1.5;
+  }
+  .pitch { max-width: 1180px; margin: 0 auto 20px; display: flex; align-items: flex-end;
+           justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+  .pitch h1 { font-family: var(--font-mono); font-size: 14px; font-weight: 600; margin: 0;
+              letter-spacing: .14em; text-transform: uppercase; color: var(--fg-muted); }
+  .pitch p { margin: 6px 0 0; max-width: 66ch; font-size: 14px; color: var(--fg-muted); }
+  .pitch .a { color: var(--accent-text); }
+  .pitch p b { color: var(--fg); font-weight: 600; }
+  .ghost { font: inherit; font-size: 13px; border: 1px solid var(--line-strong); background: var(--panel);
+           color: var(--fg); height: 38px; padding: 0 14px; border-radius: var(--r-lg); cursor: pointer;
+           display: inline-flex; align-items: center; gap: 8px; }
+  .ghost:hover { border-color: var(--accent-line); }
+  .ghost svg { width: 15px; height: 15px; flex: 0 0 auto; }
+
+  /* kind indicator — verbatim from explorer.html */
+  .kind-txt { font-family: var(--font-mono); font-size: 12px; }
+  .kind-txt.dyn  { color: var(--info); }
+  .kind-txt.stat { color: var(--warning); }
+  .kind-txt.cust { color: var(--custom); }
+
+  /* lock pill — verbatim from explorer.html (.lockflag) */
+  .lockflag { font-family: var(--font-mono); font-size: 11px; display: inline-flex; align-items: center; gap: 6px;
+              padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--fg-muted);
+              flex: 0 0 auto; }
+  .lockflag svg { width: 12px; height: 12px; }
+  .lockflag.editing { color: var(--accent-text); border-color: var(--accent-line); background: var(--accent-wash); }
+
+  /* sub-header — verbatim from explorer.html */
+  .sub-h { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase;
+           color: var(--fg-muted); }
+  .sub-h .hint { margin-left: 8px; text-transform: none; letter-spacing: 0; }
+  .rstack .sub-h { display: block; margin-bottom: 9px; }
+
+  /* data tables — verbatim from explorer.html */
+  table.data { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.data th { text-align: left; font-family: var(--font-mono); font-weight: 500; font-size: 10.5px;
+                  letter-spacing: .1em; text-transform: uppercase; color: var(--fg-muted);
+                  padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  table.data th.num { text-align: right; }
+  table.data td { padding: 12px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  table.data tbody tr { cursor: pointer; }
+  table.data tbody tr:hover td { background: var(--bg-alt2); }
+  table.data tbody tr.sel td { background: var(--accent-wash); }
+  .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; }
+  .vname { font-weight: 600; }
+  .winput { font: inherit; font-family: var(--font-mono); font-size: 12.5px; width: 58px; text-align: right;
+            background: var(--bg); border: 1px solid var(--accent-line); border-radius: var(--r-sm); padding: 4px 7px;
+            color: var(--fg); }
+  .winput:focus { outline: 2px solid var(--accent-line); outline-offset: 1px; }
+  .rowdel { border: 0; background: transparent; color: var(--fg-muted); cursor: pointer; padding: 4px;
+            border-radius: var(--r-sm); opacity: 0; }
+  tr:hover .rowdel { opacity: 1; } .rowdel:hover, .rowdel:focus-visible { opacity: 1; color: var(--accent-text); background: var(--accent-wash); }
+  .rowdel svg { width: 15px; height: 15px; display: block; }
+  .mcpc { color: var(--fg-muted); margin-left: 7px; }
+
+  /* rail panel + stat rows — verbatim from explorer.html */
+  .rules-panel { border: 1px solid var(--line); border-radius: var(--r-md); padding: 12px 13px; background: var(--bg-alt2);
+                 box-shadow: inset 0 1px 0 color-mix(in srgb, var(--fg) 5%, transparent); }
+  .rules-h { display: flex; align-items: baseline; gap: 7px; }
+  .rules-ct { font-family: var(--font-mono); font-size: 11px; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+  .rstats { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 12px; }
+  .rstat { font-size: 12px; color: var(--fg-muted); }
+  .rstat b { color: var(--fg); font-family: var(--font-mono); font-variant-numeric: tabular-nums; margin-left: 6px; font-weight: 600; }
+  .idchip { font-family: var(--font-mono); font-size: 11px; display: inline-flex; align-items: center; gap: 6px;
+            padding: 4px 9px; border-radius: var(--r-xs); border: 1px solid var(--line-strong); color: var(--fg-muted); }
+  .idchip b { color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* stepper button geometry — verbatim from explorer.html (.zoomctl button) */
+  .zbtn { font: inherit; font-family: var(--font-mono); border: 1px solid var(--line-strong);
+          background: var(--panel); color: var(--fg); width: 24px; height: 24px; border-radius: var(--r-sm);
+          cursor: pointer; line-height: 1; display: inline-grid; place-items: center; }
+  .zbtn:hover { border-color: var(--accent-line); }
+  .zbtn svg { width: 13px; height: 13px; }
+
+  /* tooltip — verbatim from explorer.html */
+  .tip { position: fixed; z-index: 60; background: var(--fg); color: var(--bg); font-family: var(--font-mono);
+         font-size: 11px; padding: 4px 8px; border-radius: var(--r-sm); pointer-events: none; opacity: 0;
+         transform: translateY(3px); transition: opacity .12s ease, transform .12s ease; white-space: nowrap;
+         box-shadow: var(--shadow); }
+  .tip.on { opacity: 1; transform: none; }
+
+  .note { max-width: 1180px; margin: 16px auto 0; font-size: 12.5px; color: var(--fg-muted);
+          display: flex; gap: 10px; align-items: flex-start; }
+  .note .k { font-family: var(--font-mono); color: var(--accent-text); flex: 0 0 auto; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+  }
+
+  /* ==========================================================================
+     EXPLORATION SCAFFOLDING — only the page that holds the specimens.
+     Built from the tokens above; no new colour.
+     ========================================================================== */
+  .mono { font-family: var(--font-mono); }
+  .fixedbar { position: fixed; top: 16px; right: 16px; z-index: 70; display: flex; gap: 8px; }
+  .fixedbar .ghost { height: 32px; font-size: 12px; padding: 0 11px; border-radius: var(--r-md);
+                     box-shadow: var(--shadow); }
+  .fixedbar .ghost svg { width: 13px; height: 13px; }
+  .fixedbar .ghost.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+  .warnline { margin: 10px 0 0; max-width: 78ch; font-size: 12.5px; color: var(--fg-muted);
+              border-left: 2px solid var(--accent); padding-left: 11px; }
+  .warnline b { color: var(--fg); font-weight: 600; }
+
+  .ex { max-width: 1180px; margin: 38px auto 0; }
+  .exhead { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+            padding-bottom: 11px; border-bottom: 1px solid var(--line-strong); margin-bottom: 18px; }
+  .exid { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase;
+          color: var(--accent-text); background: var(--accent-wash); border: 1px solid var(--accent-line);
+          border-radius: var(--r-xs); padding: 4px 9px; flex: 0 0 auto; }
+  .exhead h2 { margin: 0; font-size: 15.5px; font-weight: 600; letter-spacing: -.01em; }
+  .exgrid { display: grid; grid-template-columns: 597px minmax(0, 1fr); gap: 28px; align-items: start; }
+  @media (max-width: 1120px) { .exgrid { grid-template-columns: 1fr; } }
+  .excol { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .exside { min-width: 0; }
+  .excap { margin: 0 0 14px; font-size: 12.5px; color: var(--fg-muted); line-height: 1.6; }
+  .excap b { color: var(--fg); font-weight: 600; }
+  .excap .a { color: var(--accent-text); }
+
+  /* one specimen = the Recipe detail's main column, at its true in-app width */
+  .spec { width: 597px; max-width: 100%; }
+  .spechead { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .specw { margin-left: auto; font-family: var(--font-mono); font-size: 10.5px; color: var(--fg-muted); }
+  .specbody { position: relative; background: var(--bg); border: 1px solid var(--line-strong);
+              border-radius: var(--r-md); padding: 13px 15px 4px; }
+
+  /* ==========================================================================
+     THE AFFORDANCES UNDER TEST
+     ========================================================================== */
+
+  /* --- A · per-row up/down. Same idiom as .rowdel: hidden until the row is hovered. --- */
+  .mvcell { white-space: nowrap; text-align: right; padding-left: 0 !important; }
+  .rowmv { border: 0; background: transparent; color: var(--fg-muted); cursor: pointer; padding: 3px;
+           border-radius: var(--r-sm); opacity: 0; }
+  tr:hover .rowmv { opacity: 1; }
+  tr:hover .rowmv:disabled { opacity: .38; }
+  .rowmv:disabled { cursor: not-allowed; }
+  .rowmv:focus-visible { opacity: 1; }
+  .rowmv:hover:not(:disabled) { color: var(--accent-text); background: var(--accent-wash); }
+  .rowmv svg { width: 15px; height: 15px; display: block; }
+  /* review aid only — pins the hover-revealed controls open so a static frame can be compared.
+     Declared after the rules above so it wins at equal specificity, no !important needed. */
+  .peek .rowmv { opacity: 1; }
+  .peek .rowmv:disabled { opacity: .38; }
+  .peek .grip { color: var(--fg-muted); }
+
+  /* --- B · drag handle --- */
+  .gripcell { padding-right: 0 !important; }
+  .grip { display: inline-grid; place-items: center; width: 18px; height: 22px; color: var(--guide-hi);
+          cursor: grab; border-radius: var(--r-xs); touch-action: none; }
+  tr:hover .grip { color: var(--fg-muted); }
+  .grip:active { cursor: grabbing; }
+  .grip svg { width: 15px; height: 15px; display: block; }
+  tr.lift td { background: var(--accent-wash); }
+  .dropline { position: absolute; left: 15px; right: 15px; height: 2px; background: var(--accent);
+              border-radius: 2px; pointer-events: none; }
+  body.dragging { cursor: grabbing; user-select: none; }
+
+  /* --- C · editable depth --- */
+  .dcell { padding-top: 7px !important; padding-bottom: 7px !important; }
+  .dstep { display: inline-flex; align-items: center; gap: 4px; }
+  .dnum { font: inherit; font-family: var(--font-mono); font-size: 12.5px; width: 44px; text-align: center;
+          background: var(--bg); border: 1px solid var(--accent-line); border-radius: var(--r-sm);
+          padding: 4px 4px; color: var(--fg); font-variant-numeric: tabular-nums; }
+  .dnum:focus { outline: 2px solid var(--accent-line); outline-offset: 1px; }
+  .dnum::-webkit-outer-spin-button, .dnum::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .dnum { -moz-appearance: textfield; appearance: textfield; }
+  .dspin { display: inline-flex; flex-direction: column; gap: 1px; }
+  .dsb { font: inherit; border: 1px solid var(--line-strong); background: var(--panel); color: var(--fg);
+         width: 20px; height: 13px; border-radius: var(--r-xs); cursor: pointer; padding: 0;
+         display: grid; place-items: center; }
+  .dsb:hover:not(:disabled) { border-color: var(--accent-line); }
+  .dsb:disabled { opacity: .38; cursor: not-allowed; }
+  .dsb svg { width: 11px; height: 11px; display: block; }
+</style>
+
+<div class="stage">
+
+  <header class="pitch">
+    <div>
+      <h1>nfty · exploration · reorder control</h1>
+      <p><b>Surface:</b> the Recipe detail's <b>Layers</b> table in <span class="a">explorer.html</span> — today a
+        read-only <span class="mono">#</span> / Layer / Kind / Variants / Most&nbsp;common table. Three ways to let an
+        author change a layer's <b>paint depth</b>, each drawn twice — <b>locked</b> (read-only, must stay exactly as
+        shipped) above <b>unlocked</b> (editing), so any column drift on unlock is visible by comparing the two.
+        Order is <b>bottom-to-top</b>: depth&nbsp;1 paints first, furthest back.</p>
+      <p class="warnline">These are <b>explorations, not locked.</b> Nothing here belongs to the 1:1 reference set in
+        <span class="mono">docs/design/mockups/</span>. Per the spec, one variant is promoted into the locked set and
+        the other two are deleted.</p>
+    </div>
+  </header>
+
+  <div class="fixedbar">
+    <button class="ghost" id="peek" title="Pin the hover-revealed controls open (review aid)" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M2.6 12S6 5.8 12 5.8 21.4 12 21.4 12 18 18.2 12 18.2 2.6 12 2.6 12Z"/><circle cx="12" cy="12" r="2.7"/></svg> Reveal hover</button>
+    <button class="ghost" id="theme" title="Toggle light / dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/></svg> Theme</button>
+  </div>
+
+  <!-- ===================== Variant A ===================== -->
+  <section class="ex">
+    <div class="exhead"><span class="exid">Variant A</span><h2>Per-row up / down</h2></div>
+    <div class="exgrid">
+      <div class="excol">
+        <div class="spec" data-v="A" data-mode="locked"></div>
+        <div class="spec" data-v="A" data-mode="unlocked"></div>
+      </div>
+      <div class="exside">
+        <p class="excap"><b>The idea.</b> A trailing actions column carrying two chevrons, hidden until the row is
+          hovered — the <span class="mono">.rowdel</span> idiom the Variant table already uses, and the same
+          "append a column only when unlocked" trick <span class="mono">ingView</span> already performs.<br>
+          <b>The trade-off.</b> It is the only variant that leaves every existing column exactly where it was, but a
+          move costs one click per step, and <b>"up" means toward row&nbsp;1 — i.e. further <span class="a">back</span></b>,
+          so the arrow points the opposite way from the stack it moves through.</p>
+        <div class="rules-panel">
+          <div class="rules-h"><span class="sub-h">Cost + reach</span><span class="rules-ct">4 layers</span></div>
+          <div class="rstats">
+            <span class="rstat">Depth 4 → 1<b>3 clicks</b></span>
+            <span class="rstat">Keyboard<b>yes</b></span>
+            <span class="rstat">Touch<b>needs hover</b></span>
+            <span class="rstat">Column drift on unlock<b>none</b></span>
+          </div>
+          <p class="excap" style="margin:13px 0 0"><b>Watch out.</b> Hover-to-reveal is invisible on touch and to a
+            screen reader scanning the row. The disabled first/last buttons stay in the layout at
+            <span class="mono">opacity .38</span> so the column never reflows.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== Variant B ===================== -->
+  <section class="ex">
+    <div class="exhead"><span class="exid">Variant B</span><h2>Drag handle</h2></div>
+    <div class="exgrid">
+      <div class="excol">
+        <div class="spec" data-v="B" data-mode="locked"></div>
+        <div class="spec" data-v="B" data-mode="unlocked"></div>
+      </div>
+      <div class="exside">
+        <p class="excap"><b>The idea.</b> A grip column prepended to the row. Press and drag; a 2&nbsp;px
+          <span class="mono">--accent</span> drop line (the <span class="mono">.ramp .pin</span> idiom) shows where the
+          layer lands before you let go. One gesture moves any distance.<br>
+          <b>The trade-off.</b> The landing spot is visible before commit and cost is flat, but it <b>prepends</b> a
+          column so every other column shifts right on unlock, there is no keyboard path at all, and the spec
+          <b>explicitly puts drag-to-reorder out of scope</b> for this pass.</p>
+        <div class="rules-panel">
+          <div class="rules-h"><span class="sub-h">Cost + reach</span><span class="rules-ct">4 layers</span></div>
+          <div class="rstats">
+            <span class="rstat">Depth 4 → 1<b>1 drag</b></span>
+            <span class="rstat">Keyboard<b>none</b></span>
+            <span class="rstat">Touch<b>yes</b></span>
+            <span class="rstat">Column drift on unlock<b>26 px →</b></span>
+          </div>
+          <p class="excap" style="margin:13px 0 0"><b>Watch out.</b> The grip glyph is the one <b>new icon</b> in either
+            file — six dots, not traced from any locked mockup. And dragging <i>up</i> the table still means moving
+            <i>back</i> in the stack, so B inherits A's direction problem in a quieter form.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== Variant C ===================== -->
+  <section class="ex">
+    <div class="exhead"><span class="exid">Variant C</span><h2>Editable depth</h2></div>
+    <div class="exgrid">
+      <div class="excol">
+        <div class="spec" data-v="C" data-mode="locked"></div>
+        <div class="spec" data-v="C" data-mode="unlocked"></div>
+      </div>
+      <div class="exside">
+        <p class="excap"><b>The idea.</b> The <span class="mono">#</span> cell becomes the control: a number field
+          (<span class="mono">.winput</span> geometry) with a stacked spinner. Type a depth, press&nbsp;Enter, the layer
+          goes there. Out-of-range input clamps to <span class="mono">1..N</span>, matching
+          <span class="mono">LayerDepth.MoveTo</span>. This is the only variant that makes depth a number the author
+          <i>types</i>, which is the gap the spec names.<br>
+          <b>The trade-off.</b> Flat cost, no direction ambiguity when typing — but the column has to grow from
+          34&nbsp;px to 88&nbsp;px on unlock, and the spinner reintroduces the ambiguity in reverse:
+          <b>▲ raises the number, which moves the row <span class="a">down</span> the table</b> — the exact opposite of
+          A's up arrow.</p>
+        <div class="rules-panel">
+          <div class="rules-h"><span class="sub-h">Cost + reach</span><span class="rules-ct">4 layers</span></div>
+          <div class="rstats">
+            <span class="rstat">Depth 4 → 1<b>1 entry</b></span>
+            <span class="rstat">Keyboard<b>yes</b></span>
+            <span class="rstat">Touch<b>yes</b></span>
+            <span class="rstat">Column drift on unlock<b>54 px →</b></span>
+          </div>
+          <p class="excap" style="margin:13px 0 0"><b>Watch out.</b> One mistyped digit silently renumbers three other
+            rows, and the row grows taller to fit the control. In Avalonia this cannot be a
+            <span class="mono">NumericUpDown</span> — CLAUDE.md records that its spinner column geometry is fixed
+            inside Fluent's template at a priority a <span class="mono">Style</span> setter cannot beat, so this is a
+            bare <span class="mono">TextBox</span> plus two <span class="mono">Button</span>s.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="note" style="margin-top:34px">
+    <span class="k">read it this way →</span>
+    <span>The table lists depth <b style="color:var(--fg)">ascending down the page</b>, and depth&nbsp;1 paints
+      <b style="color:var(--fg)">first</b> — so the <i>top</i> row of this table is the <i>back</i> of the stack, the
+      inverse of every layers panel an artist has used. Every ±1 affordance therefore has to pick a direction to
+      betray. A points its arrow at the row; C points its spinner at the number; they resolve it in
+      <b style="color:var(--fg)">opposite</b> directions, deliberately, so the two can be compared side by side rather
+      than argued about. Hover any control for the depth transition it performs.</span>
+  </div>
+
+  <div class="note">
+    <span class="k">try it →</span>
+    <span>All six tables are live and independent. Click the chevrons in A, drag a grip in B, type a depth (or a
+      deliberately out-of-range one, to watch it clamp) in C. The moved row keeps the
+      <span class="mono">tr.sel</span> highlight so you can see where it landed. Flip the theme, top right — the
+      hover-revealed controls in A are the ones worth re-checking in dark.</span>
+  </div>
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement;
+
+  /* ---------- theme (verbatim idiom from explorer.html) ---------- */
+  document.getElementById('theme').addEventListener('click', function () {
+    var cur = root.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    root.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+  });
+
+  /* ---------- review aid: pin hover-revealed controls open ---------- */
+  var peek = document.getElementById('peek');
+  peek.addEventListener('click', function () {
+    var on = root.classList.toggle('peek');
+    peek.classList.toggle('on', on);
+    peek.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+
+  /* ---------- tooltip (verbatim from explorer.html) ---------- */
+  var tip = document.createElement('div'); tip.className = 'tip'; document.body.appendChild(tip);
+  document.addEventListener('mouseover', function (e) {
+    var t = e.target.closest('[data-tip]'); if (!t || !t.getAttribute('data-tip')) return;
+    tip.textContent = t.getAttribute('data-tip'); tip.classList.add('on');
+    var r = t.getBoundingClientRect(), tw = tip.offsetWidth, th = tip.offsetHeight;
+    var x = r.left + r.width / 2 - tw / 2, y = r.top - th - 6;
+    if (y < 4) y = r.bottom + 6;
+    x = Math.max(6, Math.min(window.innerWidth - tw - 6, x));
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  });
+  document.addEventListener('mouseout', function (e) { if (e.target.closest('[data-tip]')) tip.classList.remove('on'); });
+
+  /* ---------- icons ---------- */
+  var lockOpen = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-1.9" stroke-linecap="round"/></svg>';
+  var lockClosed = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke-linecap="round"/></svg>';
+  var ICON = {
+    up:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M6.5 14.5 12 9l5.5 5.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M6.5 9.5 12 15l5.5-5.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    /* the one new glyph in either file — a six-dot grip, not traced from a locked mockup */
+    grip: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9.5" cy="6" r="1.45"/><circle cx="14.5" cy="6" r="1.45"/><circle cx="9.5" cy="12" r="1.45"/><circle cx="14.5" cy="12" r="1.45"/><circle cx="9.5" cy="18" r="1.45"/><circle cx="14.5" cy="18" r="1.45"/></svg>'
+  };
+
+  /* ---------- data — VaporPets › Aurora, exactly as explorer.html models it ---------- */
+  var LAYERS = [
+    { n: 'Body',      k: 'dynamic', v: 4, mc: 'Slime',   mcp: 40 },
+    { n: 'Ears',      k: 'dynamic', v: 3, mc: 'Pointed', mcp: 45 },
+    { n: 'Eyes',      k: 'static',  v: 5, mc: 'Wide',    mcp: 30 },
+    { n: 'Accessory', k: 'custom',  v: 6, mc: 'None',    mcp: 35 }
+  ];
+  function kcls(k) { return k === 'dynamic' ? 'dyn' : k === 'custom' ? 'cust' : 'stat'; }
+  function clone() { return LAYERS.map(function (l) { return { n: l.n, k: l.k, v: l.v, mc: l.mc, mcp: l.mcp }; }); }
+
+  /* ---------- render ---------- */
+  function shell(spec) {
+    var un = spec.dataset.mode === 'unlocked';
+    spec.innerHTML =
+      '<div class="spechead">' +
+        '<span class="lockflag' + (un ? ' editing' : '') + '">' + (un ? lockOpen + ' editing' : lockClosed + ' read-only') + '</span>' +
+        '<span class="specw">565 px · Recipe main column at 1180</span>' +
+      '</div>' +
+      '<div class="specbody"><div class="rstack">' +
+        '<div class="sub-h">Layers' + (un ? '<span class="hint">bottom → top · 1 paints first</span>' : '') + '</div>' +
+        '<table class="data"><thead></thead><tbody></tbody></table>' +
+      '</div></div>';
+  }
+
+  function head(kind, un) {
+    var h = '';
+    if (kind === 'B' && un) h += '<th style="width:26px"></th>';
+    if (kind === 'C' && un) h += '<th style="width:88px">Depth</th>';
+    else h += '<th class="num" style="width:34px">#</th>';
+    h += '<th>Layer</th><th>Kind</th><th class="num">Variants</th><th>Most common</th>';
+    if (kind === 'A' && un) h += '<th style="width:44px"></th>';
+    return '<tr>' + h + '</tr>';
+  }
+
+  function row(kind, un, L, i, n) {
+    var d = i + 1, c = '';
+    if (kind === 'B' && un) {
+      c += '<td class="gripcell"><span class="grip" data-tip="Drag — depth ' + d + '" role="button" tabindex="0" aria-label="Reorder ' + L.n + '">' + ICON.grip + '</span></td>';
+    }
+    if (kind === 'C' && un) {
+      c += '<td class="dcell"><span class="dstep">' +
+             '<input class="dnum" type="number" min="1" max="' + n + '" value="' + d + '" data-i="' + i + '" aria-label="Depth of ' + L.n + '">' +
+             '<span class="dspin">' +
+               '<button class="dsb" data-d="1" data-i="' + i + '"' + (d === n ? ' disabled' : '') + ' data-tip="Depth ' + d + ' → ' + (d + 1) + ' · row moves down" aria-label="Increase depth">' + ICON.up + '</button>' +
+               '<button class="dsb" data-d="-1" data-i="' + i + '"' + (d === 1 ? ' disabled' : '') + ' data-tip="Depth ' + d + ' → ' + (d - 1) + ' · row moves up" aria-label="Decrease depth">' + ICON.down + '</button>' +
+             '</span></span></td>';
+    } else {
+      c += '<td class="num">' + d + '</td>';
+    }
+    c += '<td><span class="vname">' + L.n + '</span></td>' +
+         '<td><span class="kind-txt ' + kcls(L.k) + '">' + L.k + '</span></td>' +
+         '<td class="num">' + L.v + '</td>' +
+         '<td>' + L.mc + '<span class="mcpc">' + L.mcp + '%</span></td>';
+    if (kind === 'A' && un) {
+      c += '<td class="mvcell">' +
+             '<button class="rowmv" data-mv="-1" data-i="' + i + '"' + (d === 1 ? ' disabled' : '') + ' data-tip="Depth ' + d + ' → ' + (d - 1) + ' · further back" aria-label="Move ' + L.n + ' back">' + ICON.up + '</button>' +
+             '<button class="rowmv" data-mv="1" data-i="' + i + '"' + (d === n ? ' disabled' : '') + ' data-tip="Depth ' + d + ' → ' + (d + 1) + ' · further forward" aria-label="Move ' + L.n + ' forward">' + ICON.down + '</button>' +
+           '</td>';
+    }
+    return '<tr' + (L.hot ? ' class="sel"' : '') + ' data-i="' + i + '">' + c + '</tr>';
+  }
+
+  function render(spec) {
+    var kind = spec.dataset.v, un = spec.dataset.mode === 'unlocked', arr = spec._arr;
+    spec.querySelector('thead').innerHTML = head(kind, un);
+    spec.querySelector('tbody').innerHTML = arr.map(function (L, i) { return row(kind, un, L, i, arr.length); }).join('');
+  }
+
+  /* MoveTo, mirroring Core/Editing/LayerDepth: clamp to 1..N rather than throw */
+  function moveTo(arr, from, to) {
+    to = Math.max(0, Math.min(arr.length - 1, to));
+    if (to === from) return false;
+    var it = arr.splice(from, 1)[0];
+    arr.splice(to, 0, it);
+    arr.forEach(function (L) { L.hot = false; });
+    it.hot = true;
+    return true;
+  }
+
+  /* ---------- per-specimen wiring ---------- */
+  document.querySelectorAll('.spec').forEach(function (spec) {
+    spec._arr = clone();
+    shell(spec);
+    render(spec);
+    if (spec.dataset.mode !== 'unlocked') return;
+    var kind = spec.dataset.v;
+    if (kind === 'A') wireA(spec);
+    if (kind === 'B') wireB(spec);
+    if (kind === 'C') wireC(spec);
+  });
+
+  function refocus(spec, sel) {
+    var el = spec.querySelector(sel); if (el && !el.disabled) el.focus();
+  }
+
+  function wireA(spec) {
+    spec.addEventListener('click', function (e) {
+      var b = e.target.closest('.rowmv'); if (!b || b.disabled) return;
+      var from = +b.dataset.i, dir = +b.dataset.mv;
+      if (!moveTo(spec._arr, from, from + dir)) return;
+      render(spec);
+      refocus(spec, 'tr[data-i="' + (from + dir) + '"] .rowmv[data-mv="' + dir + '"]');
+    });
+  }
+
+  function wireC(spec) {
+    spec.addEventListener('click', function (e) {
+      var b = e.target.closest('.dsb'); if (!b || b.disabled) return;
+      var from = +b.dataset.i, dir = +b.dataset.d;
+      if (!moveTo(spec._arr, from, from + dir)) return;
+      render(spec);
+      refocus(spec, 'tr[data-i="' + (from + dir) + '"] .dsb[data-d="' + dir + '"]');
+    });
+    function commit(inp) {
+      var from = +inp.dataset.i, want = parseInt(inp.value, 10);
+      if (isNaN(want)) { render(spec); return; }
+      /* clamp, exactly as LayerDepth.MoveTo does */
+      var to = Math.max(0, Math.min(spec._arr.length - 1, want - 1));
+      moveTo(spec._arr, from, to);
+      render(spec);
+      refocus(spec, 'tr[data-i="' + to + '"] .dnum');
+    }
+    spec.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      var inp = e.target.closest('.dnum'); if (!inp) return;
+      e.preventDefault(); commit(inp);
+    });
+    spec.addEventListener('change', function (e) {
+      var inp = e.target.closest('.dnum'); if (inp) commit(inp);
+    });
+  }
+
+  function wireB(spec) {
+    var body = spec.querySelector('.specbody');
+    body.addEventListener('pointerdown', function (e) {
+      var g = e.target.closest('.grip'); if (!g) return;
+      e.preventDefault();
+      var tbody = spec.querySelector('tbody');
+      var tr = g.closest('tr'), from = +tr.dataset.i;
+      var rows = Array.prototype.slice.call(tbody.rows);
+      var line = document.createElement('div'); line.className = 'dropline'; body.appendChild(line);
+      tr.classList.add('lift'); document.body.classList.add('dragging');
+      var target = from;
+
+      function place(y) {
+        var idx = rows.length;
+        for (var i = 0; i < rows.length; i++) {
+          var r = rows[i].getBoundingClientRect();
+          if (y < r.top + r.height / 2) { idx = i; break; }
+        }
+        target = idx;
+        var br = body.getBoundingClientRect(), yy;
+        if (idx >= rows.length) yy = rows[rows.length - 1].getBoundingClientRect().bottom - br.top;
+        else yy = rows[idx].getBoundingClientRect().top - br.top;
+        line.style.top = (yy - 1) + 'px';
+      }
+      function mv(ev) { place(ev.clientY); }
+      function up() {
+        g.removeEventListener('pointermove', mv);
+        try { g.releasePointerCapture(e.pointerId); } catch (x) {}
+        line.remove(); tr.classList.remove('lift'); document.body.classList.remove('dragging');
+        var to = target > from ? target - 1 : target;
+        if (to !== from) moveTo(spec._arr, from, to);
+        render(spec);
+      }
+      place(e.clientY);
+      try { g.setPointerCapture(e.pointerId); } catch (x) {}
+      g.addEventListener('pointermove', mv);
+      g.addEventListener('pointerup', up, { once: true });
+      g.addEventListener('pointercancel', up, { once: true });
+    });
+    /* keyboard has no path here — that is the point of the trade-off, not an omission */
+  }
+})();
+</script>
