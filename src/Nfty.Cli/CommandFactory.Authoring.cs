@@ -1,4 +1,6 @@
 using System.CommandLine;
+using System.Globalization;
+using Nfty.Core.Editing;
 using Nfty.Core.Formats;
 using Nfty.Core.Model;
 using SixLabors.ImageSharp;
@@ -364,6 +366,147 @@ public static partial class CommandFactory
         });
         return cmd;
     }
+
+    /// <summary>
+    /// The `move` command group: change where an existing archive stacks something it already holds.
+    /// Separate from `add`, which chooses a position only at insert time and could never revisit it.
+    /// </summary>
+    public static Command MoveGroup()
+    {
+        var group = new Command("move", "Reorder the layers an existing archive stacks.");
+        group.Subcommands.Add(MoveIngredient());
+        return group;
+    }
+
+    /// <summary>
+    /// <c>move ingredient</c>. Depth is the 1-based position in the recipe's <c>layerOrder</c>, and
+    /// there is no stored depth field to keep in step — <c>layerOrder</c> IS the depth, so a move
+    /// cannot leave the two disagreeing. See <see cref="LayerDepth"/>, which does the reordering.
+    ///
+    /// <para><b>The numbering ascends the opposite way to an artist's intuition</b>, so every string
+    /// this command prints says which way: <b>depth 1 is the bottom layer — it paints first and sits
+    /// furthest back</b>, and <c>--up</c> moves toward a HIGHER number, toward the front.</para>
+    /// </summary>
+    private static Command MoveIngredient()
+    {
+        var rcpPath = new Argument<string>("rcp") { Description = "Path to the .rcp to modify in place." };
+        var id = new Option<string>("--id")
+        {
+            Description = "Ingredient id to move — an id, not its display name. Run inspect on the "
+                + ".rcp to list them.",
+            Required = true,
+        };
+        var to = new Option<int?>("--to")
+        {
+            Description = "Absolute depth to move it to. Depth 1 is the BOTTOM layer: it paints "
+                + "first and sits furthest back. A depth past the top of the stack clamps to the "
+                + "top, so it cannot fail on a stack that shrank.",
+        };
+        to.Validators.Add(r =>
+        {
+            if (r.GetValueOrDefault<int?>() is < 1)
+                r.AddError("--to must be 1 or greater: depth is 1-based, and depth 1 is the bottom layer.");
+        });
+        var up = new Option<bool>("--up")
+        {
+            Description = "Move one layer up — toward a HIGHER depth number, toward the front, so it "
+                + "paints later and over its old neighbour. A no-op at the top.",
+        };
+        var down = new Option<bool>("--down")
+        {
+            Description = "Move one layer down — toward a LOWER depth number, toward the back, so it "
+                + "paints earlier and under its old neighbour. A no-op at the bottom.",
+        };
+
+        var cmd = new Command("ingredient",
+            "Move one layer of a .rcp to a different depth, shifting the layers it passes. Depth 1 "
+                + "is the bottom layer: it paints first and sits furthest back.")
+            { rcpPath, id, to, up, down };
+
+        // Rejected rather than silently preferring one: --to 1 --up asks for two different depths,
+        // and picking either would move a layer somewhere the author did not ask for and then report
+        // success. Absent-entirely is refused for the same reason — there would be no destination.
+        cmd.Validators.Add(result =>
+        {
+            var given = new List<string>();
+            if (result.GetValue(to) is not null) given.Add("--to");
+            if (result.GetValue(up)) given.Add("--up");
+            if (result.GetValue(down)) given.Add("--down");
+
+            if (given.Count == 0)
+                result.AddError("move ingredient needs a destination: --to <depth>, --up, or --down.");
+            else if (given.Count > 1)
+                result.AddError($"{string.Join(" and ", given)} cannot be combined: each names a "
+                    + "different destination depth. Pass exactly one.");
+        });
+
+        cmd.SetAction(parse =>
+        {
+            string path = parse.GetValue(rcpPath)!;
+            using var recipe = RecipeArchive.Read(path);
+            string ingredientId = parse.GetValue(id)!;
+
+            // Throws a KeyNotFoundException naming both the id and the recipe, which ErrorReport
+            // prints verbatim — nothing to add here.
+            int from = LayerDepth.DepthOf(recipe.Manifest, ingredientId);
+            int count = LayerDepth.Count(recipe.Manifest);
+
+            var moved = parse.GetValue(to) is int depth
+                ? LayerDepth.MoveTo(recipe.Manifest, ingredientId, depth)
+                : LayerDepth.MoveBy(recipe.Manifest, ingredientId, parse.GetValue(up) ? +1 : -1);
+            int now = LayerDepth.DepthOf(moved, ingredientId);
+
+            // LayerDepth clamps rather than throwing, so nudging the top layer up is a no-op. Nothing
+            // is rewritten for one: an identical archive with a new timestamp is churn, and saying so
+            // is more useful than reporting a move that did not happen.
+            if (now == from)
+            {
+                Console.WriteLine($"'{ingredientId}' is already at depth {Num(from)} of {Num(count)} "
+                    + $"in '{recipe.Manifest.Id}'; nothing moved.");
+                return 0;
+            }
+
+            var merged = new LoadedRecipe { Manifest = moved, Ingredients = recipe.Ingredients };
+            var problems = Validator.ValidateRecipe(merged);
+            if (problems.Count > 0) { Report(problems); return 1; }
+
+            // Read(path) closed its file handle before returning, so it's safe to replace the
+            // file now. RecipeArchive.Write opens in ZipArchiveMode.Create, which throws if the
+            // target already exists, so we write to a sibling temp file and move it into place
+            // rather than deleting the original first.
+            WriteReplacing(path, p => RecipeArchive.Write(p, moved, recipe.Ingredients));
+
+            Console.WriteLine($"Moved '{ingredientId}' in '{recipe.Manifest.Id}' from depth "
+                + $"{Num(from)} to depth {Num(now)} of {Num(count)}.");
+            PrintStack(moved);
+            return 0;
+        });
+        return cmd;
+    }
+
+    /// <summary>
+    /// The layer stack, bottom-to-top, with the two ends labelled. Printed after a move because the
+    /// numbering ascends the opposite way to an artist's intuition — showing the result is what makes
+    /// the direction unambiguous, rather than a sentence the reader has to trust.
+    /// </summary>
+    private static void PrintStack(RecipeManifest recipe)
+    {
+        var layers = LayerDepth.Ordered(recipe);
+        int width = layers.Count == 0 ? 0 : layers.Max(l => l.IngredientId.Length);
+        foreach (var (depth, ingredientId) in layers)
+        {
+            string note = depth == 1 ? "  (paints first, furthest back)"
+                : depth == layers.Count ? "  (paints last, furthest front)"
+                : string.Empty;
+            // TrimEnd, because the padding that aligns the labelled ends would otherwise trail off
+            // the unlabelled middle rows as invisible whitespace.
+            Console.WriteLine($"  {Num(depth),3}  {ingredientId.PadRight(width)}{note}".TrimEnd());
+        }
+    }
+
+    /// <summary>A number as it should appear in output: invariant, like every other figure the CLI
+    /// and the reports in <c>Stats/</c> print, so a pasted line compares across machines.</summary>
+    private static string Num(int value) => value.ToString(CultureInfo.InvariantCulture);
 
     /// <summary>
     /// Overwrites <paramref name="path"/> atomically: writes via <paramref name="write"/> to a

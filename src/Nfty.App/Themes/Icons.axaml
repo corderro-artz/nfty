@@ -128,4 +128,25 @@
        is single-stroke only (one Fill/Stroke pair), so that two-tone accent tab is dropped here, same
        approximation already used for Border.rop.require in Styles.axaml. -->
   <StreamGeometry x:Key="IconKitchen">M5.3 5h13.4a1.8 1.8 0 0 1 1.8 1.8v10.4a1.8 1.8 0 0 1-1.8 1.8H5.3a1.8 1.8 0 0 1-1.8-1.8V6.8A1.8 1.8 0 0 1 5.3 5zM3.5 9.2h17M7 3.6v2.2M12 3.6v2.2</StreamGeometry>
+
+  <!-- Placement steppers for a Kitchen reference layer, from variant B of
+       docs/design/mockups/explorations/reference-panel-variants.html (its UP/DOWN glyphs, copied
+       verbatim). Chevrons rather than arrows because a gap stepper nudges by one slot; the locked set
+       has no reference panel and so no glyph for this. Authored in the same 24-unit box as every icon
+       here and sized by the ico classes, never inline. -->
+  <StreamGeometry x:Key="IconChevronUp">M6.5 14.5 12 9l5.5 5.5</StreamGeometry>
+  <StreamGeometry x:Key="IconChevronDown">M6.5 9.5 12 15l5.5-5.5</StreamGeometry>
+
+  <!-- The layer-reorder grip: six dots in two columns, from variant B of
+       docs/design/mockups/explorations/reorder-control-variants.html. The ONE glyph on this feature
+       that is not traced from a locked mockup - the locked set has no reorder affordance at all - so
+       it is authored in the same 24-unit box as every other icon here and drawn at the exploration's
+       own centres (x 9.5/14.5, y 6/12/18).
+
+       The mockup's circles are r=1.45 and `fill: currentColor`. A Path.ico is a single STROKED path
+       (Fill=Transparent, StrokeThickness=2 in these 24 units), so a filled dot is expressed as a
+       circle small enough for its own stroke to close the middle: r=0.45 plus the 1-unit stroke
+       half-width on each side paints a solid disc of radius 1.45 - the mockup's dot exactly, arrived
+       at by the same trick IconDiceFace uses for its pips. -->
+  <StreamGeometry x:Key="IconGrip">M9.95 6a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0M14.95 6a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0M9.95 12a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0M14.95 12a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0M9.95 18a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0M14.95 18a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0</StreamGeometry>
 </ResourceDictionary>

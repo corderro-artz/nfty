@@ -44,6 +44,15 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(LockStateText))]
     private bool _isEditing;
 
+    /// <summary>The edit lock, pushed into the open detail pane rather than polled by it: the Recipe
+    /// detail's reorder grips have to ghost and un-ghost as the lock flips, and that happens while
+    /// the pane is open. Rebuilding the pane to refresh it would be a reflow, and would throw away
+    /// the row selection the keyboard reorder moves.</summary>
+    partial void OnIsEditingChanged(bool value)
+    {
+        if (CurrentDetail is RecipeDetailViewModel recipe) recipe.CanReorder = value;
+    }
+
     [ObservableProperty] private ExplorerNode _root = default!;
 
     [ObservableProperty] private string _searchQuery = "";
@@ -253,6 +262,18 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
 
         OnPropertyChanged(nameof(AddLabel));
         RefreshDetailHeader();
+        // Identity, not a bare flag. A reorder swapped the graph under a detail pane that has ALREADY
+        // applied the move to itself (see MoveLayerAsync): rebuilding it here would destroy the row
+        // selection and the grip focus the drag and the keyboard both hold, and would render the hero
+        // twice. But the pane being preserved must be the pane that ASKED — a flag alone kept whatever
+        // happened to be on screen, so navigating away mid-write left the CookBook card sitting under
+        // a "CAT / RECIPE" header.
+        if (_keepDetailFor is not null && ReferenceEquals(_keepDetailFor, CurrentDetail))
+        {
+            RebuildCrumbs();
+            DeleteSelectedCommand.NotifyCanExecuteChanged();
+            return;
+        }
         (CurrentDetail as IDisposable)?.Dispose();
         CurrentDetail = newValue?.Kind switch
         {
@@ -262,7 +283,16 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
                 () => _dialogs.ShowAsync<object>(
                     new ReportDialogViewModel(_book, _dialogs, _clipboard ?? new NoopClipboardService()))),
             ExplorerNodeKind.Recipe => new RecipeDetailViewModel((LoadedRecipe)newValue!.Domain!, _book, _bridge, _notify,
-                id => OpenIngredientCommand.Execute(id)),
+                id => OpenIngredientCommand.Execute(id),
+                // The pane asks; the Explorer owns the graph, the gate and the file. It reads _book at
+                // CALL time, not now, so a pane that outlives several saves still edits the live book.
+                //
+                // The id is hoisted out of the lambda ON PURPOSE. Closing over `newValue` instead would
+                // store an ExplorerNode — and through its Domain, a LoadedRecipe owning every decoded
+                // image in it — on the pane for the pane's whole life, pinning the PRE-reorder graph
+                // across every later ApplyBook. That is the opposite of what the sentence above claims.
+                RecipeIdCallback((LoadedRecipe)newValue.Domain!),
+                IsEditing),
             ExplorerNodeKind.Ingredient => newValue!.Domain is (LoadedRecipe r, LoadedIngredient i)
                 ? new IngredientDetailViewModel(i, r, _book, _bridge, _notify,
                     () => OpenEditor(i, r), () => IsEditing,
@@ -290,7 +320,22 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
 
     /// <summary>Rebuild the tree from a swapped-in book and select the node with <paramref name="selectId"/>
     /// (root, a recipe, or an ingredient), falling back to the cookbook root.</summary>
-    private void ApplyBook(LoadedCookBook book, string? selectId)
+    /// <param name="book">The swapped-in graph.</param>
+    /// <param name="selectId">Which node to select afterwards.</param>
+    /// <param name="revalidate">
+    /// Whether to re-run <c>Validator</c> over the whole book. True for every edit that can change
+    /// what is legal.
+    ///
+    /// <para>False for a <b>reorder</b>, and provably so rather than as an optimisation guess:
+    /// <c>LayerDepth.MoveTo</c> re-seats one entry in a list, so the id set, the ingredients, the
+    /// variants, the weights and the rules are all identical afterwards — every rule Validator applies
+    /// sees the same inputs. <c>LayerDepth</c>'s own doc says as much ("Validator gains nothing for
+    /// depth, because those bijection rules already ARE the depth invariant"). It is worth skipping
+    /// because it is not cheap: <c>Validator</c> reads <i>every pixel of every non-Custom variant</i>
+    /// to check greyscale, measured at 51 ms on a six-layer 1000x1000 book — synchronously, on the UI
+    /// thread, per keystroke.</para>
+    /// </param>
+    private void ApplyBook(LoadedCookBook book, string? selectId, bool revalidate = true)
     {
         _book = book;
         _fullRoot = BuildTree(book);
@@ -298,8 +343,123 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(SearchSummary));
         OnPropertyChanged(nameof(TreeCountText));
         RefreshCounts();
-        RefreshValidity();   // the graph just changed; a save can fix or introduce a problem
+        if (revalidate) RefreshValidity();   // an edit can fix or introduce a problem; a reorder cannot
         SelectedNode = FindNode(Root, selectId) ?? Root;
+    }
+
+    /// <summary>
+    /// Whether this book can be edited at all, <b>saying why not</b> when it cannot.
+    ///
+    /// <para>One place, because there is one rule: edits need the lock open and a <c>.cbk</c> on disk
+    /// to write to. Add and reorder had grown their own copies — the read-only sentence was written out
+    /// verbatim twice — while <c>CanDeleteSelected</c> expressed the identical pair as a
+    /// <c>CanExecute</c> that greys the button and explains nothing. Same rule, three shapes, and a
+    /// wording fix that had to be made in two of them.</para>
+    /// </summary>
+    /// <param name="action">How to finish the sentence: "…then <paramref name="action"/>."</param>
+    /// <returns>True when the edit may proceed; false after saying why it may not.</returns>
+    private bool CanEditBook(string action)
+    {
+        if (!IsEditing)
+        {
+            _status.Say($"Editing is locked. Use the lock button to unlock, then {action}.");
+            return false;
+        }
+        if (_session.SourcePath is null)
+        {
+            _status.Say("This view is read-only because it isn't backed by a .cbk file on disk.");
+            return false;
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// The reorder callback a detail pane is handed, capturing the recipe's <b>id</b> and nothing else.
+    ///
+    /// <para>A separate method rather than a lambda in the switch arm, because a lambda written there
+    /// closes over the whole switch scope — the <c>ExplorerNode</c> and, through its
+    /// <c>Domain</c>, a <c>LoadedRecipe</c> holding every decoded <c>Image&lt;Rgba32&gt;</c> in that
+    /// recipe — and the pane holds the delegate for its whole life, pinning the pre-reorder graph
+    /// across every later save. Taking the id as a parameter makes the capture exactly one string.</para>
+    /// </summary>
+    /// <param name="recipe">The recipe whose id the callback should carry.</param>
+    /// <returns>A move callback bound to that id.</returns>
+    private Func<string, int, Task<LoadedCookBook?>> RecipeIdCallback(LoadedRecipe recipe)
+    {
+        string recipeId = recipe.Manifest.Id;
+        return (ingredientId, depth) => MoveLayerAsync(recipeId, ingredientId, depth);
+    }
+
+    /// <summary>
+    /// The detail pane a reorder's tree rebuild must leave alone — the pane that ASKED for the move
+    /// and has already applied it to itself. Null except for the duration of that rebuild.
+    ///
+    /// <para>An identity, not a bare flag. A reorder rewrites every PNG in the book, so on real art
+    /// the write takes seconds and the user can navigate away mid-flight. A flag preserved whatever
+    /// happened to be on screen when the write landed, which left the CookBook card sitting under a
+    /// "CAT / RECIPE" header. Holding the pane itself means the guard can ask "is this still the one
+    /// that asked?" and step aside when it is not.</para>
+    /// </summary>
+    private object? _keepDetailFor;
+
+    /// <summary>
+    /// True while a reorder is being written. Reorders do not queue: <c>OnKeyDown</c> is
+    /// <c>async void</c> and reentrant, so holding Alt+Up fired a second move before the first had
+    /// saved — the two collided on <c>book.cbk.tmp</c> and the loser had already recomputed from the
+    /// stale graph, so one keystroke was silently discarded on top of the error dialog.
+    ///
+    /// <para>Refused rather than queued, deliberately. A queue would apply a move computed against a
+    /// stack the user can no longer see, and the honest thing on a seconds-long write is to say so
+    /// and let them press again. The same shape as the editor's <c>IsSaving</c>.</para>
+    /// </summary>
+    private bool _reordering;
+
+    /// <summary>
+    /// Reorders one of a recipe's layers, saves the book, and rebuilds the tree onto the saved graph
+    /// — the Recipe detail pane's reorder, routed through the one place that owns the edit lock, the
+    /// source file and the cookbook graph.
+    /// </summary>
+    /// <param name="recipeId">Which recipe owns the layer.</param>
+    /// <param name="ingredientId">The layer to move.</param>
+    /// <param name="toDepth">Its new 1-based depth; <c>LayerDepth</c> clamps it to the stack.</param>
+    /// <returns>The saved graph, or null when the move was refused or failed. Refusals are the same
+    /// two the Add path checks and they are <b>said</b>, not thrown: reordering while locked is a
+    /// user mistake with an obvious remedy, not an error.</returns>
+    internal async Task<LoadedCookBook?> MoveLayerAsync(string recipeId, string ingredientId, int toDepth)
+    {
+        if (!CanEditBook("reorder the layers")) return null;
+        if (_reordering)
+        {
+            _status.Say("Still saving the last reorder — try that again in a moment.");
+            return null;
+        }
+        // No special case here for a recipe that stacks a layer it does not carry. There used to be
+        // one, because LayerRow.Index was the row's POSITION and got fed back as a depth, so the two
+        // diverged on exactly that book. Numbering the rows from LayerDepth instead made the index a
+        // depth by construction — the bandaid's premise, not just the bandaid, is gone.
+
+        _reordering = true;
+        // Captured BEFORE the await: whatever is on screen when the write finishes may not be this.
+        object? askedFrom = CurrentDetail;
+        try
+        {
+            var book2 = CookBookEdits.MoveLayer(_book, recipeId, ingredientId, toDepth);
+            var book3 = await CookBookPersistence.PersistAsync(_session, book2);
+
+            // Navigating away mid-write is not an error and must not be undone by the write landing:
+            // re-select the recipe only if the user is still looking at the pane that asked.
+            string? selectId = ReferenceEquals(CurrentDetail, askedFrom) ? recipeId : SelectedNode?.Id;
+            _keepDetailFor = askedFrom;
+            try { ApplyBook(book3, selectId, revalidate: false); }
+            finally { _keepDetailFor = null; }
+            return book3;
+        }
+        catch (Exception ex)
+        {
+            await ShowError("Could not reorder layers", ex.Message);
+            return null;
+        }
+        finally { _reordering = false; }
     }
 
     private static ExplorerNode? FindNode(ExplorerNode root, string? id)
@@ -402,16 +562,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     {
         // Adding is GATED, not unbuilt — say why, rather than routing through the not-wired channel
         // (which prefixes "Not wired yet:" and told users a working feature didn't exist).
-        if (!IsEditing)
-        {
-            _status.Say("Editing is locked. Use the lock button to unlock, then add.");
-            return;
-        }
-        if (_session.SourcePath is null)
-        {
-            _status.Say("This view is read-only because it isn't backed by a .cbk file on disk.");
-            return;
-        }
+        if (!CanEditBook("add")) return;
         switch (SelectedNode?.Domain)
         {
             case LoadedRecipe recipe: await AddIngredientTo(recipe); return;

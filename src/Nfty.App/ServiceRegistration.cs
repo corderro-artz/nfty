@@ -43,7 +43,13 @@ public static class ServiceRegistration
                 sp.GetRequiredService<INotYetWired>(),
                 sp.GetRequiredService<ICookBookSession>(),
                 sp.GetRequiredService<IDialogService>(),
-                sp.GetRequiredService<IFilePickerService>()));
+                sp.GetRequiredService<IFilePickerService>(),
+                // The open workspace, so the editor's reference panel can borrow loose .igt files.
+                // Null is a normal state (nothing requires a Kitchen), but the shipped app always has
+                // the session registered — a factory that omitted it would leave the whole "From the
+                // Kitchen" section permanently empty with nothing saying why.
+                looseSavePath: null,
+                kitchen: sp.GetRequiredService<IKitchenSession>()));
 
         // Loose (.igt) editor: same editor, but with a save-straight-to-.igt path and the synthetic
         // wrapper book it owns. Built directly (not via the cookbook editor factory) so it can pass
@@ -63,7 +69,8 @@ public static class ServiceRegistration
                     sp.GetRequiredService<IImageBridge>(), sp.GetRequiredService<INavigationService>(),
                     sp.GetRequiredService<INotYetWired>(), sp.GetRequiredService<ICookBookSession>(),
                     sp.GetRequiredService<IDialogService>(), sp.GetRequiredService<IFilePickerService>(),
-                    looseSavePath: path);
+                    looseSavePath: path,
+                    kitchen: sp.GetRequiredService<IKitchenSession>());
             });
 
         services.AddSingleton<Func<LoadedCookBook, CookDialogViewModel>>(sp =>

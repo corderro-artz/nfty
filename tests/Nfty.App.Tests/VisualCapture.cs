@@ -7,6 +7,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -380,6 +381,115 @@ public class VisualCapture
         }
     }
 
+    /// <summary>A four-layer recipe carrying all three kinds, mirroring the table the reorder
+    /// exploration draws (docs/design/mockups/explorations/reorder-control-variants.html), so the
+    /// frames below can be compared against the variant they implement rather than against nothing.</summary>
+    private static (LoadedCookBook Book, LoadedRecipe Recipe) FourLayerRecipe()
+    {
+        LoadedIngredient Ing(string id, string name, LayerKind kind, int variants)
+        {
+            var colorization = kind == LayerKind.Custom ? null
+                : new Colorization(ColorModel.Hsv, 12, 4,
+                    new[] { new ColorEntry(1, new ColorRange(0, 360, 40, 100), null) });
+            return new LoadedIngredient
+            {
+                Manifest = new IngredientManifest(id, name, kind, colorization,
+                    Enumerable.Range(0, variants).Select(i => new Variant($"v{i}", $"V{i}", 1)).ToArray()),
+                VariantImages = Enumerable.Range(0, variants)
+                    .ToDictionary(i => $"v{i}", _ => new Image<Rgba32>(8, 8)),
+            };
+        }
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("cat", "Aurora",
+                new[] { "body", "ears", "eyes", "accessory" }, Array.Empty<IncompatibilityRule>()),
+            Ingredients = new[]
+            {
+                Ing("body", "Body", LayerKind.Dynamic, 4),
+                Ing("ears", "Ears", LayerKind.Dynamic, 3),
+                Ing("eyes", "Eyes", LayerKind.Static, 5),
+                Ing("accessory", "Accessory", LayerKind.Custom, 6),
+            },
+        };
+        var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "VaporPets", new Dimensions(8, 8),
+                new Collection("VaporPets", "", "VP"), new Dictionary<string, double> { ["cat"] = 100 }),
+            Recipes = new[] { recipe },
+        };
+        return (book, recipe);
+    }
+
+    private static RecipeDetailViewModel ReorderablePane(bool canReorder)
+    {
+        var (book, recipe) = FourLayerRecipe();
+        var current = book;
+        Task<LoadedCookBook?> Move(string ingredientId, int depth)
+        {
+            current = Nfty.Core.Editing.CookBookEdits.MoveLayer(current, "cat", ingredientId, depth);
+            return Task.FromResult<LoadedCookBook?>(current);
+        }
+        return new RecipeDetailViewModel(recipe, book, new ImageBridge(), new FakeNotYetWired(), _ => { },
+            Move, canReorder);
+    }
+
+    /// <summary>
+    /// The Layers table's reorder affordance, in the three states that matter and both themes.
+    ///
+    /// <para>The pair to compare is <c>locked</c> against <c>unlocked</c>: the spec's hard rule is
+    /// that the table is the SAME width in both and that no column shifts, so anything that moves
+    /// between those two frames is the defect. The exploration draws variant B <i>prepending</i> its
+    /// grip column on unlock, which is exactly the reflow being guarded against — the grip column
+    /// here is in the layout of both frames and only its ink changes.</para>
+    ///
+    /// <para>The third frame is a drag in flight, driven through real simulated pointer input, so the
+    /// accent drop line has a rendered frame of its own. That is only possible because the gesture is
+    /// pointer-capture rather than <c>DragDrop.DoDragDropAsync</c>, whose platform drag source the
+    /// headless harness does not provide.</para></summary>
+    [AvaloniaFact]
+    public void Capture_layer_reorder()
+    {
+        if (Dir is null) return;   // inert unless explicitly capturing
+
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            var key = variant.Key.ToString()!.ToLowerInvariant();
+
+            using (var locked = ReorderablePane(canReorder: false))
+                Capture(new Views.RecipeDetailView { DataContext = locked }, variant,
+                    $"recipe-reorder-locked-{key}.png");
+
+            using (var unlocked = ReorderablePane(canReorder: true))
+                Capture(new Views.RecipeDetailView { DataContext = unlocked }, variant,
+                    $"recipe-reorder-unlocked-{key}.png");
+
+            using (var dragging = ReorderablePane(canReorder: true))
+            {
+                var view = new Views.RecipeDetailView { DataContext = dragging };
+                var window = new Window { RequestedThemeVariant = variant, Content = view, Width = 1180, Height = 720 };
+                window.Show();
+                Dispatcher.UIThread.RunJobs();
+
+                var grips = view.GetVisualDescendants().OfType<Border>()
+                    .Where(b => b.Classes.Contains("grip")).ToList();
+                Avalonia.Point Centre(Visual c) =>
+                    c.TranslatePoint(new Avalonia.Point(c.Bounds.Width / 2, c.Bounds.Height / 2), window)
+                    ?? default;
+
+                // Drag the bottom layer up over the second row: press, then hold above its midpoint.
+                window.MouseDown(Centre(grips[3]), MouseButton.Left);
+                Dispatcher.UIThread.RunJobs();
+                window.MouseMove(Centre(grips[1]) - new Avalonia.Point(0, grips[1].Bounds.Height / 2 + 2));
+                Dispatcher.UIThread.RunJobs();
+
+                window.CaptureRenderedFrame()!.Save(
+                    Path.Combine(Dir!, $"recipe-reorder-dragging-{key}.png"), PngBitmapEncoderOptions.Default);
+                window.MouseUp(Centre(grips[1]), MouseButton.Left);
+                window.Close();
+            }
+        }
+    }
+
     [AvaloniaFact]
     public void Capture_landing()
     {
@@ -492,6 +602,68 @@ public class VisualCapture
             dynVm.Dispose();
             dynBook.Dispose();
         }
+    }
+
+    /// <summary>
+    /// The reference-layer panel in the Ingredient Editor's colorize rail, in the four states that
+    /// matter and both themes.
+    ///
+    /// <para>The pair to compare is <c>off</c> against <c>split</c>: the spec's hard rule is that a row
+    /// is the SAME HEIGHT active and inactive and the panel the same width in every state, so anything
+    /// that moves between those two frames is the defect. Variant B grows its rows AS DRAWN — the
+    /// over/under tag and the placement stepper appear — which is exactly the reflow being guarded
+    /// against, and every one of those cells is in the layout of both frames here with only its ink
+    /// changing.</para>
+    ///
+    /// <para>The <c>ghost</c>/<c>true</c> pair is the other half: at full opacity an above-reference can
+    /// hide the art being painted outright, which is why ghosting is the default rather than polish.</para>
+    /// </summary>
+    [AvaloniaFact]
+    public void Capture_editor_references()
+    {
+        if (Dir is null) return;   // inert unless explicitly capturing
+
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            var key = variant.Key.ToString()!.ToLowerInvariant();
+            var (kitchen, kitchenDir) = IngredientEditorReferencesTests.TempKitchen(
+                ("shades", IngredientEditorReferencesTests.Canvas),
+                ("visor", IngredientEditorReferencesTests.Canvas));
+            var (book, recipe, eyes) = IngredientEditorReferencesTests.FourLayerStack();
+            try
+            {
+                using var vm = IngredientEditorReferencesTests.Editor(eyes, recipe, book, kitchen);
+
+                CaptureReferences(vm, variant, $"editor-refs-off-{key}.png");
+
+                foreach (var id in new[] { "body", "ears", "accessory" })
+                    vm.ToggleReferenceCommand.Execute(vm.Siblings.First(s => s.Key == id));
+                CaptureReferences(vm, variant, $"editor-refs-split-{key}.png");
+
+                var loose = vm.KitchenLayers[0];
+                vm.ToggleReferenceCommand.Execute(loose);
+                vm.PlaceDownCommand.Execute(loose);   // gap 3: directly over the layer being edited
+                CaptureReferences(vm, variant, $"editor-refs-kitchen-{key}.png");
+
+                vm.ShowTrueColourCommand.Execute(null);
+                CaptureReferences(vm, variant, $"editor-refs-true-{key}.png");
+            }
+            finally { book.Dispose(); Directory.Delete(kitchenDir, recursive: true); }
+        }
+    }
+
+    /// <summary>Captures the editor with its colorize rail scrolled to the reference panel — which sits
+    /// beneath the whole Colorize block and is otherwise below the fold at the mockups' own 720px.</summary>
+    private static void CaptureReferences(IngredientEditorViewModel vm, ThemeVariant variant, string fileName)
+    {
+        var view = new Views.IngredientEditorView { DataContext = vm };
+        var window = new Window { RequestedThemeVariant = variant, Content = view, Width = 1180, Height = 720 };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        view.FindControl<ScrollViewer>("ColorizeScroll")!.ScrollToEnd();
+        Dispatcher.UIThread.RunJobs();
+        window.CaptureRenderedFrame()!.Save(Path.Combine(Dir!, fileName), PngBitmapEncoderOptions.Default);
+        window.Close();
     }
 
     /// <summary>Renders the Help view and the three wizards, so every screen with a locked mockup

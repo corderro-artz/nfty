@@ -65,6 +65,42 @@ public static class CookBookEdits
         return new LoadedCookBook { Manifest = book.Manifest, Recipes = recipes, SourceSha256 = book.SourceSha256 };
     }
 
+    /// <summary>
+    /// Moves one of a recipe's layers to a depth, shifting the layers it passes. Depth is the 1-based
+    /// position in <c>layerOrder</c>, bottom-first — see <see cref="LayerDepth"/>, which does the
+    /// reordering and whose clamping rules apply here unchanged.
+    /// </summary>
+    /// <param name="book">The book to edit.</param>
+    /// <param name="recipeId">Which recipe owns the layer.</param>
+    /// <param name="ingredientId">The layer to move.</param>
+    /// <param name="toDepth">The 1-based depth to move it to; clamped to the stack rather than rejected.</param>
+    /// <returns>A NEW graph SHARING every image with the previous book — only one recipe's manifest
+    /// differs, and only in the order of its layer ids. Nothing is disposed.</returns>
+    /// <exception cref="KeyNotFoundException">No such recipe, or no such ingredient in it.</exception>
+    public static LoadedCookBook MoveLayer(
+        LoadedCookBook book, string recipeId, string ingredientId, int toDepth)
+    {
+        var recipe = book.Recipes.FirstOrDefault(r => r.Manifest.Id == recipeId)
+            ?? throw new KeyNotFoundException($"No recipe '{recipeId}' in cookbook '{book.Manifest.Id}'.");
+        if (recipe.Ingredients.All(i => i.Manifest.Id != ingredientId))
+            throw new KeyNotFoundException($"No ingredient '{ingredientId}' in recipe '{recipeId}'.");
+
+        var recipes = book.Recipes.Select(r => r.Manifest.Id != recipeId ? r : new LoadedRecipe
+        {
+            Manifest = LayerDepth.MoveTo(r.Manifest, ingredientId, toDepth),
+            // Reused wholesale: the ingredient collection has no order of its own that matters —
+            // layerOrder is what generation walks — so a move rewrites nothing but that one list.
+            Ingredients = r.Ingredients,
+        }).ToList();
+
+        return new LoadedCookBook
+        {
+            Manifest = book.Manifest,
+            Recipes = recipes,
+            SourceSha256 = book.SourceSha256,
+        };
+    }
+
     /// <summary>Adds a recipe to a cookbook (or replaces one with the same id) and sets its selection
     /// weight. Reuses every other recipe/image by reference; disposes nothing.</summary>
     public static LoadedCookBook UpsertRecipe(LoadedCookBook book, LoadedRecipe recipe, double weight)

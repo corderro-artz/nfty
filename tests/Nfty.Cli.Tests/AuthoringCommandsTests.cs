@@ -441,4 +441,74 @@ public class AuthoringCommandsTests
         }
         finally { tmp.Delete(recursive: true); }
     }
+
+    // --- move ingredient ---------------------------------------------------------------------------
+    //
+    // `add` could only choose a position at insert time; this is the command that can revisit it.
+    // Depth is the 1-based position in layerOrder, bottom-first: depth 1 paints first and sits
+    // furthest back, so --up moves toward a HIGHER number and toward the front.
+
+    [Theory]
+    [InlineData(new[] { "--to", "1" }, new[] { "mid", "bg", "aura" })]
+    [InlineData(new[] { "--to", "3" }, new[] { "bg", "aura", "mid" })]
+    [InlineData(new[] { "--up" }, new[] { "bg", "aura", "mid" })]
+    [InlineData(new[] { "--down" }, new[] { "mid", "bg", "aura" })]
+    public void Move_ingredient_rewrites_the_layer_order_in_place(string[] destination, string[] expected)
+    {
+        var tmp = Directory.CreateTempSubdirectory();
+        try
+        {
+            string rcp = ThreeLayerRecipe(tmp.FullName);
+
+            Assert.Equal(0, Run(["move", "ingredient", rcp, "--id", "mid", .. destination]));
+
+            using var loaded = RecipeArchive.Read(rcp);
+            Assert.Equal(expected, loaded.Manifest.LayerOrder);
+
+            // The archive is rebuilt through a temp file and moved into place, so the parts have to
+            // survive the round trip too, not just the manifest.
+            Assert.Equal(3, loaded.Ingredients.Count);
+            Assert.Equal(expected.Order(StringComparer.Ordinal),
+                loaded.Ingredients.Select(i => i.Manifest.Id).Order(StringComparer.Ordinal));
+        }
+        finally { tmp.Delete(recursive: true); }
+    }
+
+    /// <summary>
+    /// <c>LayerDepth</c> clamps rather than throwing, so nudging the top layer up is a legal no-op —
+    /// and a no-op must not rewrite the archive. Asserted on the file's BYTES: reporting a move that
+    /// did not happen, and churning a timestamp to do it, are both things this command must not do.
+    /// </summary>
+    [Theory]
+    [InlineData("--up")]
+    [InlineData("--to", "3")]
+    public void Move_ingredient_leaves_the_archive_untouched_when_the_move_is_a_no_op(params string[] destination)
+    {
+        var tmp = Directory.CreateTempSubdirectory();
+        try
+        {
+            string rcp = ThreeLayerRecipe(tmp.FullName);
+            byte[] before = File.ReadAllBytes(rcp);
+
+            Assert.Equal(0, Run(["move", "ingredient", rcp, "--id", "aura", .. destination]));
+
+            Assert.Equal(before, File.ReadAllBytes(rcp));
+        }
+        finally { tmp.Delete(recursive: true); }
+    }
+
+    /// <summary>A three-layer <c>.rcp</c> stacked bg → mid → aura, bottom to top.</summary>
+    private string ThreeLayerRecipe(string root)
+    {
+        string ings = Path.Combine(root, "ings");
+        Directory.CreateDirectory(ings);
+        BuildIgt(ings, "bg", LayerKind.Dynamic, Hsv(), "sky");
+        BuildIgt(ings, "mid", LayerKind.Dynamic, Hsv(), "m");
+        BuildIgt(ings, "aura", LayerKind.Dynamic, Hsv(), "glow");
+
+        string rcps = Path.Combine(root, "rcps");
+        Directory.CreateDirectory(rcps);
+        BuildRcp(rcps, ings, "cat", "bg", "mid", "aura");
+        return Path.Combine(rcps, "cat.rcp");
+    }
 }

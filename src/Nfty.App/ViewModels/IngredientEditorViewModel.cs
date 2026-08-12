@@ -11,6 +11,7 @@ using Nfty.App.Imaging;
 using Nfty.App.Services;
 using Nfty.Core.Editing;
 using Nfty.Core.Formats;
+using Nfty.Core.Imaging;
 using Nfty.Core.Model;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
@@ -233,13 +234,18 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// <param name="dialogs">The dialog layer.</param>
     /// <param name="picker">Chooses files to import.</param>
     /// <param name="looseSavePath">Where a loose ingredient saves back to; null inside a CookBook.</param>
+    /// <param name="kitchen">The open workspace, whose loose <c>.igt</c> files the reference panel can
+    /// borrow. Null is normal — nothing requires a Kitchen, and the panel simply shows no scratch
+    /// section.</param>
     public IngredientEditorViewModel(LoadedIngredient ing, LoadedRecipe recipe, LoadedCookBook book,
         IImageBridge bridge, INavigationService nav, INotYetWired notify, ICookBookSession session,
-        IDialogService dialogs, IFilePickerService picker, string? looseSavePath = null)
+        IDialogService dialogs, IFilePickerService picker, string? looseSavePath = null,
+        IKitchenSession? kitchen = null)
     {
         _ing = ing; _bridge = bridge; _nav = nav; _notify = notify;
         _recipe = recipe; _session = session; _dialogs = dialogs; _picker = picker;
         _looseSavePath = looseSavePath;
+        _kitchen = kitchen;
         // A loose (standalone .igt) editor owns its synthetic wrapper book — dispose it with the editor.
         if (looseSavePath is not null) _ownedBook = book;
 
@@ -248,6 +254,10 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
             ing.Manifest.Variants.Select(v => new VariantDraft(v.Id, v.Name, v.Weight,
                 ValueMap.FromImage(ing.VariantImages[v.Id]))));
         foreach (var v in _draft.Variants) _history[v.Id] = new EditHistory();
+
+        // Before the first RebuildSurfaces() below: the reference rows and the pinned depth are what
+        // the canvas composites against, and building them after would repaint twice on open.
+        BuildReferences();
 
         foreach (var v in ing.Manifest.Variants)
             Variants.Add(new EditorVariant(v.Id, v.Name, v.Weight, VariantImagery.Render(bridge, ing, v.Id)));
@@ -277,10 +287,37 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     // reduces their colour to grayscale.
     private Bitmap RenderCanvas()
     {
-        if (IsCustom && EffectiveCustomImage(SelectedVariant!.Id) is { } eff)
-            return _bridge.ToBitmap(eff);
-        using var img = ActiveMap!.ToImage();
-        return _bridge.ToBitmap(img);
+        EnsureStackCaches();
+
+        // Zero references on is the default, and it must render EXACTLY what the editor drew before
+        // this panel existed — not a one-layer composite that happens to look the same.
+        if (_belowStack is null && _aboveStack is null)
+        {
+            if (IsCustom && EffectiveCustomImage(SelectedVariant!.Id) is { } bare)
+                return _bridge.ToBitmap(bare);
+            using var plain = ActiveMap!.ToImage();
+            return _bridge.ToBitmap(plain);
+        }
+
+        // With references on: two DrawImage calls around the surface being painted, however many
+        // layers are switched on — that is what the two caches buy, and it is what makes this
+        // affordable inside RebuildSurfaces (every stroke, every slider tick).
+        Image<Rgba32>? owned = null;
+        try
+        {
+            Image<Rgba32> subject;
+            if (IsCustom && EffectiveCustomImage(SelectedVariant!.Id) is { } eff) subject = eff;   // borrowed
+            else subject = owned = ActiveMap!.ToImage();
+
+            var stack = new List<Image<Rgba32>>(3);
+            if (_belowStack is not null) stack.Add(_belowStack);
+            stack.Add(subject);
+            if (_aboveStack is not null) stack.Add(_aboveStack);
+
+            using var composed = Compositor.Composite(_draft.Canvas, stack);
+            return _bridge.ToBitmap(composed);
+        }
+        finally { owned?.Dispose(); }
     }
 
     private Bitmap RenderPreview()
@@ -731,6 +768,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         Saved = null;   // release any subscriber (e.g. the Explorer) when the editor is navigated away
         foreach (var v in Variants) v.Thumbnail.Dispose();
         foreach (var i in _importedCustom.Values) i.Dispose();
+        DisposeReferences();   // the two cached stacks + every Kitchen graph opened this session
         Canvas?.Dispose(); Preview?.Dispose();
         _ownedBook?.Dispose();   // loose path only: free the synthetic wrapper book (→ the ingredient)
     }

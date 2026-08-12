@@ -71,36 +71,58 @@
         </Grid>
       </Border>
 
-      <TextBlock Classes="sub-h" Text="LAYERS" Margin="2,0,0,0" />
+      <!-- The hint is PERMANENT, in both lock states. The table lists depth ascending down the page
+           while depth 1 paints first, so its top row is the BACK of the stack — the inverse of every
+           layers panel an artist has used. The spec settles that by keeping the locked reading order
+           and carrying the meaning in a label rather than in an arrow that would have to pick a
+           direction to betray. Permanent also means the header never reflows on unlock. -->
+      <StackPanel Orientation="Horizontal" Spacing="9" Margin="2,0,0,0">
+        <TextBlock Classes="sub-h" Text="LAYERS" />
+        <TextBlock Classes="hint" Text="1 → paints first, furthest back" />
+      </StackPanel>
 
       <StackPanel Spacing="0">
+        <!-- The leading 26px column is the drag grip's, and it is present in BOTH lock states at the
+             same width: only the glyph's ink changes (Border.grip / .grip.on in Styles.axaml). The
+             exploration draws variant B prepending this column on unlock, which shifts every other
+             column 26px right — the exact reflow the spec forbids. -->
         <Border Classes="data-h">
-          <Grid ColumnDefinitions="40,*,110,90">
-            <TextBlock Grid.Column="0" Classes="data-h num" Text="#" Margin="0,0,10,0" />
-            <TextBlock Grid.Column="1" Classes="data-h" Text="LAYER" />
-            <TextBlock Grid.Column="2" Classes="data-h" Text="KIND" />
-            <TextBlock Grid.Column="3" Classes="data-h num" Text="VARIANTS" />
+          <Grid ColumnDefinitions="26,40,*,110,90">
+            <TextBlock Grid.Column="1" Classes="data-h num" Text="#" Margin="0,0,10,0" />
+            <TextBlock Grid.Column="2" Classes="data-h" Text="LAYER" />
+            <TextBlock Grid.Column="3" Classes="data-h" Text="KIND" />
+            <TextBlock Grid.Column="4" Classes="data-h num" Text="VARIANTS" />
           </Grid>
         </Border>
-        <ItemsControl ItemsSource="{Binding Layers}">
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:LayerRow">
-              <Button Classes="ghost" Padding="0" HorizontalAlignment="Stretch"
-                      HorizontalContentAlignment="Stretch"
-                      Command="{Binding $parent[ItemsControl].((vm:RecipeDetailViewModel)DataContext).OpenIngredientCommand}"
-                      CommandParameter="{Binding Id}">
-                <Border Classes="data-row">
-                  <Grid ColumnDefinitions="40,*,110,90">
-                    <TextBlock Grid.Column="0" Classes="data-row num" Text="{Binding Index}" Margin="0,0,10,0" />
-                    <TextBlock Grid.Column="1" Classes="data-row" Text="{Binding Layer}" />
-                    <TextBlock Grid.Column="2" Classes="data-row kind-txt" Classes.kdyn="{Binding IsDynamic}" Classes.kstat="{Binding IsStatic}" Classes.kcust="{Binding IsCustom}" Text="{Binding Kind}" />
-                    <TextBlock Grid.Column="3" Classes="data-row num" Text="{Binding VariantCount}" />
-                  </Grid>
-                </Border>
-              </Button>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
+        <!-- A Panel, not a StackPanel: the drop line is an OVERLAY positioned by margin over the
+             rows, so that showing it costs no layout anywhere. -->
+        <Panel Name="LayerStack">
+          <ItemsControl Name="LayerRows" ItemsSource="{Binding Layers}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:LayerRow">
+                <Button Classes="ghost" Padding="0" HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Stretch"
+                        Command="{Binding $parent[ItemsControl].((vm:RecipeDetailViewModel)DataContext).OpenIngredientCommand}"
+                        CommandParameter="{Binding Id}">
+                  <Border Classes="data-row" Classes.sel="{Binding IsSelected}">
+                    <Grid ColumnDefinitions="26,40,*,110,90">
+                      <Border Grid.Column="0" Classes="grip"
+                              Classes.on="{Binding $parent[ItemsControl].((vm:RecipeDetailViewModel)DataContext).CanReorder}"
+                              ToolTip.Tip="Drag to reorder — or Alt+Up / Alt+Down">
+                        <Path Classes="ico" Data="{StaticResource IconGrip}" />
+                      </Border>
+                      <TextBlock Grid.Column="1" Classes="data-row num" Text="{Binding Index}" Margin="0,0,10,0" />
+                      <TextBlock Grid.Column="2" Classes="data-row" Text="{Binding Layer}" />
+                      <TextBlock Grid.Column="3" Classes="data-row kind-txt" Classes.kdyn="{Binding IsDynamic}" Classes.kstat="{Binding IsStatic}" Classes.kcust="{Binding IsCustom}" Text="{Binding Kind}" />
+                      <TextBlock Grid.Column="4" Classes="data-row num" Text="{Binding VariantCount}" />
+                    </Grid>
+                  </Border>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <Border Name="DropLine" Classes="dropline" />
+        </Panel>
       </StackPanel>
     </StackPanel>
 

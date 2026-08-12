@@ -114,6 +114,62 @@ public class CookBookEditsTests
     }
 
     [Fact]
+    public void MoveLayer_reorders_one_recipe_and_leaves_the_rest_of_the_book_alone()
+    {
+        var book = TwoRecipeBook();
+        var moved = CookBookEdits.MoveLayer(book, "cat", "aura", 1);
+
+        Assert.Equal(new[] { "aura", "bg" },
+            moved.Recipes.Single(r => r.Manifest.Id == "cat").Manifest.LayerOrder);
+        Assert.Equal(new[] { "bg" },
+            moved.Recipes.Single(r => r.Manifest.Id == "dog").Manifest.LayerOrder);
+        Assert.Equal(book.Manifest.RecipeWeights, moved.Manifest.RecipeWeights);
+
+        // The book it was given is untouched — every edit here returns a new graph.
+        Assert.Equal(new[] { "bg", "aura" },
+            book.Recipes.Single(r => r.Manifest.Id == "cat").Manifest.LayerOrder);
+    }
+
+    [Fact]
+    public void MoveLayer_clamps_the_depth_rather_than_rejecting_it()
+    {
+        var moved = CookBookEdits.MoveLayer(TwoRecipeBook(), "cat", "bg", 99);
+
+        Assert.Equal(new[] { "aura", "bg" },
+            moved.Recipes.Single(r => r.Manifest.Id == "cat").Manifest.LayerOrder);
+    }
+
+    [Fact]
+    public void MoveLayer_reuses_every_image_and_carries_the_source_hash()
+    {
+        var src = TwoRecipeBook();
+        var book = new LoadedCookBook
+        {
+            Manifest = src.Manifest,
+            Recipes = src.Recipes,
+            SourceSha256 = "abc123",
+        };
+
+        var moved = CookBookEdits.MoveLayer(book, "cat", "aura", 1);
+
+        Assert.Equal("abc123", moved.SourceSha256);
+
+        var before = book.Recipes.Single(r => r.Manifest.Id == "cat")
+            .Ingredients.Single(i => i.Manifest.Id == "aura");
+        var after = moved.Recipes.Single(r => r.Manifest.Id == "cat")
+            .Ingredients.Single(i => i.Manifest.Id == "aura");
+        Assert.Same(before, after);
+        Assert.Same(before.VariantImages["aura-v"], after.VariantImages["aura-v"]);
+    }
+
+    [Fact]
+    public void MoveLayer_rejects_absent_ids()
+    {
+        Assert.Throws<KeyNotFoundException>(() => CookBookEdits.MoveLayer(TwoRecipeBook(), "nope", "bg", 1));
+        Assert.Throws<KeyNotFoundException>(() => CookBookEdits.MoveLayer(TwoRecipeBook(), "cat", "nope", 1));
+    }
+
+    [Fact]
     public void UpsertRecipe_adds_a_new_recipe_with_its_weight()
     {
         var newRecipe = new LoadedRecipe

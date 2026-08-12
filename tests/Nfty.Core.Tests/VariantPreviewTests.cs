@@ -131,6 +131,64 @@ public class VariantPreviewTests
         Assert.Contains("no colorization", ex.Message);
     }
 
+    /// <summary>
+    /// The same refusal <b>with a model override supplied</b>, on both overloads — the one case a
+    /// refactor can silently drop.
+    ///
+    /// <para>Written as <c>modelOverride ?? (Colorization ?? throw).Model</c> the check reads
+    /// correctly and is dead: <c>??</c> never evaluates its right operand when the left is non-null,
+    /// so passing a model turned a refusal into a successful render of a manifest generation could
+    /// not cook at all. Reachable straight from the command line —
+    /// <c>preview x.igt --variant v --color hex:aabbcc --model hsv</c> — and invisible to every test
+    /// that omitted the override, which was all of them.</para>
+    /// </summary>
+    [Fact]
+    public void A_model_override_does_not_excuse_a_missing_colorization_block()
+    {
+        using var ing = Ing(LayerKind.Dynamic, colorization: null, new Rgba32(128, 128, 128, 255));
+
+        var fromSpec = Assert.Throws<InvalidOperationException>(
+            () => VariantPreview.Render(ing, "a", "hex:d6249f", ColorModel.Hsl));
+        var fromRolled = Assert.Throws<InvalidOperationException>(
+            () => VariantPreview.Render(ing, "a", new RolledColor(210, 0.5), ColorModel.Hsl));
+
+        Assert.Contains("no colorization", fromSpec.Message);
+        Assert.Contains("no colorization", fromRolled.Message);
+    }
+
+    /// <summary>The rolled overload refuses it without an override too — it has no colour-spec check
+    /// ahead of it, so this is the only thing standing between a broken manifest and a render.</summary>
+    [Fact]
+    public void The_rolled_overload_refuses_a_colorized_kind_with_no_colorization_block()
+    {
+        using var ing = Ing(LayerKind.Static, colorization: null, new Rgba32(128, 128, 128, 255));
+
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => VariantPreview.Render(ing, "a", new RolledColor(210, 0.5)));
+
+        Assert.Contains("no colorization", ex.Message);
+    }
+
+    // ---- the rolled overload -----------------------------------------------------------------------
+
+    /// <summary>Ownership does not depend on which overload was called either: Custom still comes back
+    /// as a clone the caller owns, and the colour is still ignored rather than applied.</summary>
+    [Fact]
+    public void The_rolled_overload_clones_a_custom_layer_and_ignores_the_colour()
+    {
+        var fill = new Rgba32(10, 200, 30, 255);
+        using var ing = Ing(LayerKind.Custom, null, fill);
+        var source = ing.VariantImages["a"];
+
+        var preview = VariantPreview.Render(ing, "a", new RolledColor(210, 0.5));
+
+        Assert.NotSame(source, preview);
+        Assert.Equal(fill, preview[0, 0]);
+
+        preview.Dispose();
+        Assert.Equal(fill, source[0, 0]);   // the ingredient's own image survived
+    }
+
     // ---- model override ----------------------------------------------------------------------------
 
     [Fact]

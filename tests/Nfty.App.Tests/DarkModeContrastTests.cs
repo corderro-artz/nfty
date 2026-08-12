@@ -313,6 +313,14 @@ public class DarkModeContrastTests
         var recipeVm = new RecipeDetailViewModel(cat, detailBook, new ImageBridge(), notify, _ => { });
         yield return ("recipe-detail", new Views.RecipeDetailView { DataContext = recipeVm }, recipeVm.Dispose);
 
+        // The same pane with editing UNLOCKED. Its own state, not a variation on a theme: the reorder
+        // grips are ghosted to nothing while locked, so a scan of the locked pane is a scan of a
+        // control that is not being drawn - the exact blind spot the rest of this file exists for.
+        var reorderVm = new RecipeDetailViewModel(cat, detailBook, new ImageBridge(), notify, _ => { },
+            (_, _) => Task.FromResult<Nfty.Core.Formats.LoadedCookBook?>(null), canReorder: true);
+        yield return ("recipe-detail-unlocked",
+            new Views.RecipeDetailView { DataContext = reorderVm }, reorderVm.Dispose);
+
         var ingVm = new IngredientDetailViewModel(cat.Ingredients[0], cat, detailBook, new ImageBridge(),
             notify, () => { }, () => false, null, null, new FilePickerService(), dialogs);
         yield return ("ingredient-detail", new Views.IngredientDetailView { DataContext = ingVm }, ingVm.Dispose);
@@ -322,5 +330,24 @@ public class DarkModeContrastTests
         var editorVm = new IngredientEditorViewModel(editorRecipe.Ingredients[0], editorRecipe, editorBook,
             new ImageBridge(), nav, notify, new CookBookSession(), dialogs, new FilePickerService());
         yield return ("editor-disabled", new Views.IngredientEditorView { DataContext = editorVm }, editorVm.Dispose);
+
+        // The reference panel with layers switched ON. Its own state, not a variation on a theme: the
+        // over/under tag, the Kitchen chip and the placement stepper are all ghosted to nothing while
+        // switched off, so scanning the resting panel scans text that is not being drawn - the exact
+        // blind spot the rest of this file exists for.
+        var (refKitchen, refDir) = IngredientEditorReferencesTests.TempKitchen(
+            ("shades", IngredientEditorReferencesTests.Canvas));
+        var (refBook, refRecipe, refEyes) = IngredientEditorReferencesTests.FourLayerStack();
+        var refVm = IngredientEditorReferencesTests.Editor(refEyes, refRecipe, refBook, refKitchen, dialogs);
+        foreach (var id in new[] { "body", "accessory" })
+            refVm.ToggleReferenceCommand.Execute(refVm.Siblings.First(s => s.Key == id));
+        refVm.ToggleReferenceCommand.Execute(refVm.KitchenLayers[0]);
+        yield return ("editor-references", new Views.IngredientEditorView { DataContext = refVm },
+            () =>
+            {
+                refVm.Dispose();
+                refBook.Dispose();
+                Directory.Delete(refDir, recursive: true);
+            });
     }
 }

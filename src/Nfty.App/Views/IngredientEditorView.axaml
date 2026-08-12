@@ -209,7 +209,7 @@
             <TextBlock Text="COLORIZE" Classes="pane-h" VerticalAlignment="Center" />
           </Border>
 
-          <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+          <ScrollViewer Grid.Row="1" Name="ColorizeScroll" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="14" Spacing="14">
               <!-- .seg: a segmented tray, not two loose radio buttons. -->
               <Border Classes="seg">
@@ -300,6 +300,216 @@
                              Text="Value comes from the grayscale map — colour only sets hue and saturation." />
                 </Grid>
               </Panel>
+
+              <!-- ==================== Reference layers ====================
+                   Variant B of docs/design/mockups/explorations/reference-panel-variants.html: two
+                   labelled sections over a depth gutter. The layer being authored is PINNED at its own
+                   depth and cannot be switched off; siblings below it composite under, siblings above
+                   composite over, and a loose .igt from the Kitchen is placed into a GAP for this
+                   session alone — nothing here is ever written back to an archive.
+
+                   Every cell that can appear is already in the layout while absent (see Styles.axaml's
+                   block for this panel): a row is the same height on and off. -->
+              <Border BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0" Margin="0,6,0,0" />
+
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0" Text="REFERENCE LAYERS" Classes="plabel" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Classes="hcount" Text="{Binding ReferenceCountText}" />
+              </Grid>
+
+              <StackPanel Spacing="14" IsVisible="{Binding ReferencesAvailable}">
+                <!-- Ghost / Full. NOT optional polish: at full opacity a reference above the edited
+                     layer can hide the art being painted outright (the exploration draws sunglasses
+                     completely covering the eyes being drawn), so above composites dimmed by default
+                     and the true composite is one click away. Below is never dimmed — it is what the
+                     art sits ON. Reuses the rail's own .seg tray, so this needed no new glyph. -->
+                <Border Classes="seg">
+                  <Grid ColumnDefinitions="*,3,*">
+                    <Button Grid.Column="0" Classes="seg-b" Classes.on="{Binding GhostAbove}"
+                            Content="Ghost above" Command="{Binding ShowGhostedCommand}"
+                            ToolTip.Tip="Dim the layers above this one so the art stays visible" />
+                    <Button Grid.Column="2" Classes="seg-b" Classes.on="{Binding ShowsTrueComposite}"
+                            Content="True colour" Command="{Binding ShowTrueColourCommand}"
+                            ToolTip.Tip="Show the real composite, at full opacity" />
+                  </Grid>
+                </Border>
+
+                <!-- A canvas mismatch is refused, never scaled: StackPreview.Render words it with both
+                     sizes named and that message is shown verbatim.
+
+                     Its box is always here and only the ink changes - see Panel.stackproblem in
+                     Styles.axaml for why an IsVisible toggle was the wrong tool. -->
+                <Panel Classes="stackproblem"
+                       Classes.on="{Binding StackProblem, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                       ToolTip.Tip="{Binding StackProblem}">
+                  <Rectangle Classes="dashed btn" />
+                  <TextBlock Classes="vlock" Margin="10,0" VerticalAlignment="Center"
+                             TextTrimming="CharacterEllipsis" Text="{Binding StackProblem}" />
+                </Panel>
+
+                <!-- In this recipe: real siblings, at their real depths. -->
+                <StackPanel Spacing="8">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Text="IN THIS RECIPE" Classes="plabel" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Classes="hcount" Text="{Binding Siblings.Count}" />
+                  </Grid>
+
+                  <!-- The pinned row: the subject of the preview, not a reference in it. -->
+                  <Border Classes="pinrow">
+                    <Grid ColumnDefinitions="15,13,*,Auto,14" ColumnSpacing="8">
+                      <TextBlock Grid.Column="0" Classes="dpt" Text="{Binding PinnedDepthText}" />
+                      <TextBlock Grid.Column="1" Classes="kmark"
+                                 Classes.kdyn="{Binding IsPinnedDynamic}"
+                                 Classes.kstat="{Binding IsPinnedStatic}"
+                                 Classes.kcust="{Binding IsPinnedCustom}"
+                                 Text="{Binding PinnedKindMark}" />
+                      <TextBlock Grid.Column="2" Classes="vname" Text="{Binding PinnedName}" />
+                      <TextBlock Grid.Column="3" Classes="editmark" Text="EDITING" />
+                      <Path Grid.Column="4" Classes="ico xs" Data="{StaticResource IconLock}"
+                            ToolTip.Tip="Pinned at its own depth — it cannot be removed from the stack" />
+                    </Grid>
+                  </Border>
+
+                  <!-- Empty is a real state, not an error: a loose .igt belongs to no recipe. -->
+                  <Panel IsVisible="{Binding !HasSiblings}">
+                    <Rectangle Classes="dashed btn" />
+                    <TextBlock Classes="vlock" Margin="10,9" Text="{Binding NoSiblingsText}" />
+                  </Panel>
+
+                  <ItemsControl ItemsSource="{Binding Siblings}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:ReferenceLayer">
+                        <Border Classes="refrow" Margin="0,0,0,7"
+                                Classes.sel="{Binding IsOn}" Classes.off="{Binding !IsOn}"
+                                ToolTip.Tip="{Binding Tip}">
+                          <Button Classes="bare" HorizontalAlignment="Stretch"
+                                  HorizontalContentAlignment="Stretch"
+                                  Command="{Binding $parent[ItemsControl].((vm:IngredientEditorViewModel)DataContext).ToggleReferenceCommand}"
+                                  CommandParameter="{Binding}">
+                            <Grid ColumnDefinitions="15,15,13,*,46" ColumnSpacing="8">
+                              <Border Grid.Column="0" Classes="cbx" Classes.on="{Binding IsOn}">
+                                <Path Classes="ico xs" Data="{StaticResource IconCheck}" />
+                              </Border>
+                              <TextBlock Grid.Column="1" Classes="dpt" Text="{Binding DepthText}" />
+                              <TextBlock Grid.Column="2" Classes="kmark"
+                                         Classes.kdyn="{Binding IsDynamic}"
+                                         Classes.kstat="{Binding IsStatic}"
+                                         Classes.kcust="{Binding IsCustom}"
+                                         Text="{Binding KindMark}" />
+                              <TextBlock Grid.Column="3" Classes="vname" Text="{Binding Name}" />
+                              <!-- Fixed-width cell holding BOTH the tag and the at-rest count, each
+                                   toggled by Opacity. Neither may size the cell, or the row would
+                                   change width the moment a layer is switched on. -->
+                              <Panel Grid.Column="4" Width="46">
+                                <TextBlock Classes="tlabel" Text="{Binding DetailText}"
+                                           HorizontalAlignment="Right"
+                                           Opacity="{Binding DetailOpacity}" />
+                                <Border Classes="tagx" Classes.over="{Binding IsAbove}"
+                                        Opacity="{Binding TagOpacity}">
+                                  <TextBlock Text="{Binding TagText}" />
+                                </Border>
+                              </Panel>
+                            </Grid>
+                          </Button>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+
+                <!-- From the Kitchen: loose .igt files, scratch only. -->
+                <StackPanel Spacing="8">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Text="FROM THE KITCHEN" Classes="plabel" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Classes="hcount" Text="{Binding KitchenLayers.Count}" />
+                  </Grid>
+
+                  <Border Classes="kroot" HorizontalAlignment="Left" IsVisible="{Binding HasKitchen}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <Path Classes="ico xs" Data="{StaticResource IconKitchen}" />
+                      <TextBlock Classes="kroot-txt" FontSize="11" Text="{Binding KitchenName}" />
+                    </StackPanel>
+                  </Border>
+
+                  <Panel IsVisible="{Binding !HasKitchenLayers}">
+                    <Rectangle Classes="dashed btn" />
+                    <TextBlock Classes="vlock" Margin="10,9" Text="{Binding NoKitchenText}" />
+                  </Panel>
+
+                  <ItemsControl ItemsSource="{Binding KitchenLayers}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:ReferenceLayer">
+                        <Border Classes="refrow" Margin="0,0,0,7"
+                                Classes.sel="{Binding IsOn}" Classes.off="{Binding !IsOn}"
+                                ToolTip.Tip="{Binding Tip}">
+                          <!-- Two rows, both always present. The second is a FIXED 19px: it holds the
+                               file name at rest and the placement stepper once switched on, and a row
+                               that grew when the stepper appeared is exactly the reflow the spec
+                               forbids. -->
+                          <Grid RowDefinitions="Auto,19" RowSpacing="3">
+                            <Button Grid.Row="0" Classes="bare" HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Stretch"
+                                    Command="{Binding $parent[ItemsControl].((vm:IngredientEditorViewModel)DataContext).ToggleReferenceCommand}"
+                                    CommandParameter="{Binding}">
+                              <Grid ColumnDefinitions="15,15,13,*,Auto" ColumnSpacing="8">
+                                <Border Grid.Column="0" Classes="cbx" Classes.on="{Binding IsOn}">
+                                  <Path Classes="ico xs" Data="{StaticResource IconCheck}" />
+                                </Border>
+                                <!-- No numeral, ever: a loose .igt has no canonical depth here. -->
+                                <TextBlock Grid.Column="1" Classes="dpt none" Text="{Binding DepthText}"
+                                           ToolTip.Tip="No canonical depth — placed for this preview only" />
+                                <TextBlock Grid.Column="2" Classes="kmark"
+                                           Classes.kdyn="{Binding IsDynamic}"
+                                           Classes.kstat="{Binding IsStatic}"
+                                           Classes.kcust="{Binding IsCustom}"
+                                           Text="{Binding KindMark}" />
+                                <TextBlock Grid.Column="3" Classes="vname" Text="{Binding Name}" />
+                                <Border Grid.Column="4" Classes="kchip">
+                                  <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <Path Classes="ico xs" Data="{StaticResource IconKitchen}" />
+                                    <TextBlock Text="KITCHEN" />
+                                  </StackPanel>
+                                </Border>
+                              </Grid>
+                            </Button>
+
+                            <!-- Indented to the name column (15 + 8 + 15 + 8 + 13 + 8), so the sub-line
+                                 hangs off the layer's name the way the exploration's .vmeta does
+                                 rather than starting back under the checkbox. -->
+                            <Panel Grid.Row="1" Margin="67,0,0,0">
+                              <TextBlock Classes="tlabel" Text="{Binding DetailText}"
+                                         Opacity="{Binding DetailOpacity}" />
+                              <!-- The opacity/hit-test switch is on the GROUP, never on the two
+                                   buttons: a local Opacity value beats every Style setter, so binding
+                                   it per button would silently disable Button:disabled's own dimming
+                                   and an unsteppable end-of-stack chevron would look live. -->
+                              <Grid ColumnDefinitions="19,*,19,46" ColumnSpacing="4"
+                                    Opacity="{Binding TagOpacity}" IsHitTestVisible="{Binding IsOn}">
+                                <Button Grid.Column="0" Classes="sbtn" IsEnabled="{Binding CanStepDown}"
+                                        ToolTip.Tip="Move down one gap"
+                                        Command="{Binding $parent[ItemsControl].((vm:IngredientEditorViewModel)DataContext).PlaceDownCommand}"
+                                        CommandParameter="{Binding}">
+                                  <Path Classes="ico xs" Data="{StaticResource IconChevronDown}" />
+                                </Button>
+                                <TextBlock Grid.Column="1" Classes="sv" Text="{Binding PlacementText}" />
+                                <Button Grid.Column="2" Classes="sbtn" IsEnabled="{Binding CanStepUp}"
+                                        ToolTip.Tip="Move up one gap"
+                                        Command="{Binding $parent[ItemsControl].((vm:IngredientEditorViewModel)DataContext).PlaceUpCommand}"
+                                        CommandParameter="{Binding}">
+                                  <Path Classes="ico xs" Data="{StaticResource IconChevronUp}" />
+                                </Button>
+                                <Border Grid.Column="3" Classes="tagx" Classes.over="{Binding IsAbove}">
+                                  <TextBlock Text="{Binding TagText}" />
+                                </Border>
+                              </Grid>
+                            </Panel>
+                          </Grid>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </StackPanel>
             </StackPanel>
           </ScrollViewer>
         </Grid>

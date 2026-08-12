@@ -1025,6 +1025,98 @@
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
   </Style>
 
+  <!-- explorer.html `.sub-h .hint`: a sentence-case aside sitting beside an uppercase section
+       heading. It inherits .sub-h's mono/size/colour and opts back OUT of the tracking, which is
+       what makes it read as prose rather than as a second heading. Avalonia has no inheritance
+       between class selectors, so the shared values are restated. -->
+  <Style Selector="TextBlock.hint">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="LetterSpacing" Value="0" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+
+  <!-- ===== layer reorder (docs/design/mockups/explorations/reorder-control-variants.html, variant B)
+       The drag grip, and the drop line that shows where a dragged layer will land.
+
+       GEOMETRY IS FIXED. The spec's hard rule for this feature is that a control appearing or
+       disappearing must not move, resize or reflow anything around it - and it names THIS control as
+       the likely violation, because the exploration draws variant B PREPENDING its grip column on
+       unlock, shifting every other column 26px right. So the column is always in the layout at the
+       same width and only the ink changes: Opacity plus IsHitTestVisible (which hands the click back
+       to the row button underneath) plus Focusable (or Tab would stop on invisible grips). Never
+       IsVisible - that is the one property here that WOULD reflow.
+
+       Width/Height are fixed for the same reason at one level down: the focus ring below thickens the
+       Border, and a fixed box keeps that inside the grip instead of pushing the row's cells. -->
+  <Style Selector="Border.grip">
+    <Setter Property="Width" Value="18" />
+    <Setter Property="Height" Value="22" />
+    <!-- Explicitly Transparent, not unset: a Border with a null Background is not hit-testable, so
+         an unpainted grip would never receive the pointer press that starts a drag. -->
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+    <Setter Property="Focusable" Value="False" />
+  </Style>
+  <!-- Declared AFTER the blanket rule so the narrower opt-in wins at equal specificity. -->
+  <Style Selector="Border.grip.on">
+    <Setter Property="Opacity" Value="1" />
+    <Setter Property="IsHitTestVisible" Value="True" />
+    <Setter Property="Focusable" Value="True" />
+    <Setter Property="Cursor" Value="SizeAll" />
+  </Style>
+  <Style Selector="Border.grip.on:focus-visible">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+  <!-- The mockup's grip is the guide-hi token at rest and the muted foreground once its row is
+       hovered; the hover rule is declared second so it wins. Both already exist - variant B
+       introduced no colour at all. -->
+  <Style Selector="Border.grip Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource GuideHiBrush}" />
+  </Style>
+  <Style Selector="Border.data-row:pointerover Border.grip Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <!-- The 2px accent bar marking the insertion point during a drag. It lives in an overlay Panel
+       above the rows and is toggled by Opacity, so showing it reflows nothing either. -->
+  <Style Selector="Border.dropline">
+    <Setter Property="Height" Value="2" />
+    <Setter Property="CornerRadius" Value="1" />
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+    <Setter Property="Opacity" Value="0" />
+  </Style>
+  <Style Selector="Border.dropline.on">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+
+  <!-- The reference panel's stack-problem banner, held to the same rule as the grip above. It used to
+       toggle IsVisible, so appearing pushed BOTH reference sections down the rail - directly under the
+       pointer that had just switched a layer on, which is exactly the harm "reserve the space, toggle
+       the ink" exists to prevent.
+
+       One trimmed line rather than a wrapping block, with the whole message on the tooltip: the
+       engine's text names two pixel sizes and a full-width wrap would reserve a slab big enough to
+       shove the sections off the rail in the ordinary case, where there is no problem at all. The
+       reserved row is the price of the rule and is deliberate. -->
+  <Style Selector="Panel.stackproblem">
+    <Setter Property="Height" Value="34" />
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+  </Style>
+  <!-- Declared AFTER the blanket rule so the narrower opt-in wins at equal specificity. -->
+  <Style Selector="Panel.stackproblem.on">
+    <Setter Property="Opacity" Value="1" />
+    <Setter Property="IsHitTestVisible" Value="True" />
+  </Style>
+
   <!-- incompatibility-rules panel (recipe rail + ingredient inspector; explorer.html:365-381) -->
   <Style Selector="Border.rules-panel">
     <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
@@ -1186,6 +1278,208 @@
     <Setter Property="FontSize" Value="10.5" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+  <!-- ====================================================================
+       Reference-layer panel (ingredient editor's colorize rail), variant B of
+       docs/design/mockups/explorations/reference-panel-variants.html: two labelled sections with a
+       depth gutter, each row a checkable filmstrip card.
+
+       GEOMETRY IS FIXED, and this is the control the spec names as most likely to break the rule:
+       variant B GROWS its rows when a layer activates, because the over/under tag and the placement
+       stepper appear. So every one of those already owns its box while absent — fixed cell widths,
+       a fixed sub-line height, and Opacity/IsHitTestVisible rather than IsVisible. A row is the same
+       height on and off, and the panel is the same width in every state.
+
+       The variant introduced NO new colour: every brush below already existed. -->
+
+  <!-- the card a reference row is drawn on. A Border rather than a Button, because a Kitchen row
+       carries its own stepper buttons and Avalonia's Button marks a pointer press handled on the way
+       up - nesting one inside another is a fight not worth having for a row that already has an
+       explicit toggle covering its whole top line. -->
+  <Style Selector="Border.refrow">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="Padding" Value="8,7" />
+  </Style>
+  <Style Selector="Border.refrow:pointerover">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+  <!-- Declared after the hover rule so the switched-on treatment wins at equal specificity. -->
+  <Style Selector="Border.refrow.sel">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource AccentBarShadow}" />
+  </Style>
+
+  <!-- the layer being authored: the identity card's own gradient, so it reads as THE SUBJECT rather
+       than as one more selected row. It carries the accent bar but no checkbox - it is pinned at its
+       own depth and cannot be switched off. -->
+  <Style Selector="Border.pinrow">
+    <Setter Property="Background" Value="{DynamicResource CardGradientBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="Padding" Value="8,9" />
+    <Setter Property="BoxShadow" Value="{DynamicResource AccentBarShadow}" />
+  </Style>
+  <Style Selector="TextBlock.editmark">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="9.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LetterSpacing" Value="0.6" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- the row's name. Muted and lighter while switched off, so the on-rows read as the composite. -->
+  <Style Selector="TextBlock.vname">
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.refrow.off TextBlock.vname">
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+
+  <!-- the depth gutter. A sibling shows a real numeral; a Kitchen file shows an em dash, because it
+       has no canonical depth in this recipe at all. Fixed width in both cases. -->
+  <Style Selector="TextBlock.dpt">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontFeatures" Value="+tnum" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="Width" Value="15" />
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.dpt.none">
+    <Setter Property="Foreground" Value="{DynamicResource GuideHiBrush}" />
+  </Style>
+  <!-- Declared after the rule above so the narrower case wins. The exploration draws the empty gutter
+       in the guide-hi token, which it only ever sits on the page ground: on a SWITCHED-ON row that
+       ground becomes the accent wash, where the same token measures 1.97:1 in dark mode - under even
+       the receded floor, and found by DarkModeContrastTests rather than by looking. Lifted to the muted
+       ink there and only there; the "no canonical depth" signal is the em dash itself, and the fainter
+       treatment is kept for the resting row it was designed on. -->
+  <Style Selector="Border.refrow.sel TextBlock.dpt.none">
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+
+  <!-- the leading checkbox. Ink only: the whole top line is the toggle. -->
+  <Style Selector="Border.cbx">
+    <Setter Property="Width" Value="15" />
+    <Setter Property="Height" Value="15" />
+    <Setter Property="Background" Value="{DynamicResource BgBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.cbx Path.ico">
+    <Setter Property="Stroke" Value="Transparent" />
+  </Style>
+  <Style Selector="Border.cbx.on">
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+  </Style>
+  <Style Selector="Border.cbx.on Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource OnAccentBrush}" />
+  </Style>
+
+  <!-- the over/under tag. Not derivable from where the row sits: rows 1 and 2 are ABOVE row 3 on
+       screen while compositing BENEATH it, which is the one contradiction variant B has to undo in
+       words. -->
+  <Style Selector="Border.tagx">
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="Padding" Value="5,1" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="HorizontalAlignment" Value="Right" />
+  </Style>
+  <Style Selector="Border.tagx.over">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+  <Style Selector="Border.tagx > TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="9" />
+    <Setter Property="LetterSpacing" Value="0.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="Border.tagx.over > TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+
+  <!-- the at-rest caption a row shows instead of its tag: a sibling's variant count, a Kitchen
+       file's file name. Shares its box with the tag, which is what keeps the row one height. -->
+  <Style Selector="TextBlock.tlabel">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- Kitchen provenance chip: the titlebar .kroot chip's exact recipe at chip scale, on a PANEL
+       ground rather than the accent wash so it stays legible on a switched-on row. -->
+  <Style Selector="Border.kchip">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="Padding" Value="5,2" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.kchip TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="9" />
+    <Setter Property="LetterSpacing" Value="0.4" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="Border.kchip Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+
+  <!-- the placement stepper. Only a Kitchen file gets one, because only a Kitchen file can move: a
+       sibling's depth belongs to the Recipe, not to this preview. -->
+  <Style Selector="Button.sbtn">
+    <Setter Property="Width" Value="19" />
+    <Setter Property="Height" Value="19" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.sbtn /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+  </Style>
+  <Style Selector="Button.sbtn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+  <Style Selector="Button.sbtn:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+  <!-- the gap a Kitchen file sits in, written out ("over Ears"). A gap, never a depth - which is
+       what lets a placement leave every sibling's numbering exactly where it was. -->
+  <Style Selector="TextBlock.sv">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <!-- .nin: the mono end-inputs on a range control -->
   <Style Selector="TextBox.nin">

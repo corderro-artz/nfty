@@ -38,7 +38,13 @@ public static class SetWriter
     /// <summary>What a Set already on disk contributes to an extend run.</summary>
     /// <param name="Dnas">Every DNA already minted, so new rolls can avoid them.</param>
     /// <param name="NextNumber">The number the next asset should take.</param>
-    public record ExistingSet(IReadOnlyList<string> Dnas, int NextNumber);
+    /// <param name="CookbookSha256">What <c>set.json</c> recorded as the source archive's hash, so an
+    /// extend can tell whether the CookBook it was handed is the one that cooked this Set — see
+    /// <see cref="SetProvenance"/>. <b>Null means "cannot tell"</b>, never "they differ": the Set may
+    /// have been cooked from an in-memory book, or from a build before the field existed, and its
+    /// <c>set.json</c> may be absent or unreadable. Optional so it is additive at every existing call
+    /// site.</param>
+    public record ExistingSet(IReadOnlyList<string> Dnas, int NextNumber, string? CookbookSha256 = null);
 
     // An item already on disk (from a previous batch) that this write is not overwriting.
     private record ExistingItem(string NftyPath, int SetNumber, string Recipe,
@@ -52,6 +58,8 @@ public static class SetWriter
     /// <param name="pack">Also zip the folder into a sibling <c>.set</c>.</param>
     public static void Write(GeneratedSet set, string outDir, bool pack)
     {
+        // Read BEFORE anything can overwrite set.json — see RecordedShaAt.
+        string? recorded = RecordedShaAt(outDir);
         var layout = Prepare(outDir);
         var existing = LoadExisting(layout, set);
         var rarity = new Rarity(existing, set);
@@ -67,8 +75,8 @@ public static class SetWriter
         foreach (var item in existing)
             File.WriteAllText(item.NftyPath, Serialize(Regraded(item, rarity)));
 
-        File.WriteAllText(Path.Combine(outDir, "set.json"),
-            Serialize(BuildSetManifest(set, existing, rarity)));
+        File.WriteAllText(SetJsonPath(outDir),
+            Serialize(BuildSetManifest(set, existing, rarity, recorded)));
 
         if (pack) Pack(outDir);
     }
@@ -84,6 +92,8 @@ public static class SetWriter
         IProgress<WriteProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
+        // Read BEFORE anything can overwrite set.json — see RecordedShaAt.
+        string? recorded = RecordedShaAt(outDir);
         var layout = Prepare(outDir);
         var existing = await LoadExistingAsync(layout, set, cancellationToken);
         var rarity = new Rarity(existing, set);
@@ -104,8 +114,8 @@ public static class SetWriter
         foreach (var item in existing)
             await File.WriteAllTextAsync(item.NftyPath, Serialize(Regraded(item, rarity)), cancellationToken);
 
-        await File.WriteAllTextAsync(Path.Combine(outDir, "set.json"),
-            Serialize(BuildSetManifest(set, existing, rarity)), cancellationToken);
+        await File.WriteAllTextAsync(SetJsonPath(outDir),
+            Serialize(BuildSetManifest(set, existing, rarity, recorded)), cancellationToken);
 
         // ZipFile has no async API; keep the UI thread free rather than pretend.
         if (pack) await Task.Run(() => Pack(outDir), cancellationToken);
@@ -117,8 +127,10 @@ public static class SetWriter
     /// <exception cref="CorruptSetException">An item file is unreadable or missing its fields.</exception>
     public static ExistingSet ReadExisting(string outDir)
     {
+        string? sha = RecordedShaAt(outDir);
+
         var nftyDir = Path.Combine(outDir, "nfty");
-        if (!Directory.Exists(nftyDir)) return new ExistingSet(Array.Empty<string>(), 1);
+        if (!Directory.Exists(nftyDir)) return new ExistingSet(Array.Empty<string>(), 1, sha);
 
         var dnas = new List<string>();
         int maxNumber = 0;
@@ -128,7 +140,7 @@ public static class SetWriter
             dnas.Add(dna);
             maxNumber = Math.Max(maxNumber, number);
         }
-        return new ExistingSet(dnas, maxNumber + 1);
+        return new ExistingSet(dnas, maxNumber + 1, sha);
     }
 
     /// <summary>Reads what an existing Set already holds, for extend.</summary>
@@ -139,8 +151,13 @@ public static class SetWriter
     public static async Task<ExistingSet> ReadExistingAsync(
         string outDir, CancellationToken cancellationToken = default)
     {
+        string setJson = SetJsonPath(outDir);
+        string? sha = File.Exists(setJson)
+            ? ParseRecordedCookbookSha(await File.ReadAllTextAsync(setJson, cancellationToken))
+            : null;   // the awaiting twin of RecordedShaAt; same rule, same best-effort parse
+
         var nftyDir = Path.Combine(outDir, "nfty");
-        if (!Directory.Exists(nftyDir)) return new ExistingSet(Array.Empty<string>(), 1);
+        if (!Directory.Exists(nftyDir)) return new ExistingSet(Array.Empty<string>(), 1, sha);
 
         var dnas = new List<string>();
         int maxNumber = 0;
@@ -150,7 +167,7 @@ public static class SetWriter
             dnas.Add(dna);
             maxNumber = Math.Max(maxNumber, number);
         }
-        return new ExistingSet(dnas, maxNumber + 1);
+        return new ExistingSet(dnas, maxNumber + 1, sha);
     }
 
     /// <summary>
@@ -189,6 +206,33 @@ public static class SetWriter
                     + "where to continue numbering.");
 
             return (dnaText, setNumber);
+        }
+    }
+
+    /// <summary>Where a Set folder keeps its manifest.</summary>
+    private static string SetJsonPath(string outDir) => Path.Combine(outDir, "set.json");
+
+    /// <summary>
+    /// The source-archive hash a Set recorded when it was cooked, or null when it did not record one.
+    ///
+    /// <para><b>Best effort, on purpose.</b> This field exists so extend can <i>warn</i> that the book
+    /// it was handed is not the one that cooked the Set — see <see cref="SetProvenance"/> — and a
+    /// warning must never be able to fail the operation it decorates. Extend's real inputs are the
+    /// per-item files, which are read strictly and do raise <see cref="CorruptSetException"/>; a
+    /// missing or malformed <c>set.json</c> only costs the warning, so it reads as "cannot tell"
+    /// rather than as an error.</para>
+    /// </summary>
+    /// <param name="json">The contents of <c>set.json</c>.</param>
+    /// <returns>The recorded hash, or null when it is absent or unreadable.</returns>
+    private static string? ParseRecordedCookbookSha(string json)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<SetManifest>(json, Json.Options)?.CookbookSha256;
+        }
+        catch (JsonException)
+        {
+            return null;
         }
     }
 
@@ -301,8 +345,24 @@ public static class SetWriter
     private static NftyMetadata Regraded(ExistingItem item, Rarity rarity) =>
         item.Nfty with { Rarity = item.Attributes.Select(a => rarity.For(a.Trait_type, a.Value)).ToList() };
 
+    /// <summary>
+    /// What <c>set.json</c> in this folder already records as its source archive, or null when there
+    /// is no readable one — the same best-effort parse <c>ReadExisting</c> does.
+    ///
+    /// <para>Read at the very top of a write, because the write itself overwrites the file it reads.
+    /// That ordering is the whole point: without it an extend erased the record it was about to be
+    /// judged against.</para>
+    /// </summary>
+    private static string? RecordedShaAt(string outDir)
+    {
+        string setJson = SetJsonPath(outDir);
+        return File.Exists(setJson) ? ParseRecordedCookbookSha(File.ReadAllText(setJson)) : null;
+    }
+
+    /// <summary>The <c>set.json</c> for the enlarged collection. <paramref name="recordedSha256"/> is
+    /// what this Set already recorded as its origin, from <see cref="RecordedShaAt"/>.</summary>
     private static SetManifest BuildSetManifest(
-        GeneratedSet set, IReadOnlyList<ExistingItem> existing, Rarity rarity)
+        GeneratedSet set, IReadOnlyList<ExistingItem> existing, Rarity rarity, string? recordedSha256)
     {
         var distribution = existing.Select(e => e.Recipe)
             .Concat(set.Assets.Select(a => a.RecipeId))
@@ -313,8 +373,18 @@ public static class SetWriter
             // promises byte-identical output).
             .OrderBy(d => d.Recipe, StringComparer.Ordinal).ToList();
 
+        // The origin wins, and is never overwritten. cookbookSha256 means "the archive this Set was
+        // cooked from", and an extend does not re-cook a Set — it adds to one. Stamping the book in
+        // hand made the field describe the last EDIT instead of the origin, which made the mismatch
+        // warning self-defeating: extending a Set from book A with book B warned once, wrote B over
+        // A, then fell silent for every further extend with B — and started warning about A, the
+        // book that had actually minted most of the collection. The check inverted.
+        //
+        // Null falls through, because null means "no origin was ever recorded" (cooked from an
+        // in-memory book, or by a build predating the field) — an absence to fill, not a value to
+        // preserve.
         return new SetManifest(set.CollectionName, rarity.Total, set.Seed,
-            set.CookbookSha256, GeneratorVersion, distribution, rarity.Table());
+            recordedSha256 ?? set.CookbookSha256, GeneratorVersion, distribution, rarity.Table());
     }
 
     private static void Pack(string outDir)

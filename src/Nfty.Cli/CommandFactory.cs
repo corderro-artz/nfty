@@ -1,4 +1,6 @@
 using System.CommandLine;
+using System.Globalization;
+using Nfty.Core.Editing;
 using Nfty.Core.Formats;
 using Nfty.Core.Generation;
 using Nfty.Core.Imaging;
@@ -41,6 +43,7 @@ public static partial class CommandFactory
         root.Subcommands.Add(Extend());
         root.Subcommands.Add(NewGroup());
         root.Subcommands.Add(AddGroup());
+        root.Subcommands.Add(MoveGroup());
         return root;
     }
 
@@ -170,13 +173,17 @@ public static partial class CommandFactory
 
     private static Command Preview()
     {
-        var path = new Argument<string>("ingredient") { Description = "Path to a .igt file (an Ingredient — one layer's variants)." };
+        var path = new Argument<string>("file")
+        {
+            Description = "Path to a .igt (one layer's variants) or a .rcp (a whole layer stack). "
+                + "Which one you pass chooses the form: an .igt renders exactly one named variant, "
+                + "a .rcp rolls the whole stack from --seed.",
+        };
         var variant = new Option<string>("--variant")
         {
             Description = "Variant id to render — an id, not its display name. Run inspect on "
                 + "this .igt (or its parent Recipe/CookBook) to list the ids and names side by "
-                + "side.",
-            Required = true,
+                + "side. Required for an .igt; the .rcp form rolls each layer's variant instead.",
         };
         var color = new Option<string?>("--color")
         {
@@ -206,35 +213,322 @@ public static partial class CommandFactory
             Description = "Output PNG path.",
             DefaultValueFactory = _ => "preview.png",
         };
+        var seed = new Option<string>("--seed")
+        {
+            Description = "RNG seed for the .rcp form: it drives one roll of the whole stack — each "
+                + "layer's variant, and each Dynamic layer's colour — so the same recipe and seed "
+                + "always render the same PNG. Defaults to a fixed value, so the command works "
+                + "without it.",
+            DefaultValueFactory = _ => "nfty",
+        };
+        var only = new Option<string?>("--only")
+        {
+            Description = "Comma-separated ingredient ids to draw, for the .rcp form. The layers "
+                + "still sit at their REAL depths — --only hides the others, it does not renumber "
+                + "or compact the stack — and the whole recipe is still rolled, so a layer looks "
+                + "the same whether or not its neighbours are drawn. An id the recipe does not "
+                + "stack is an error.",
+        };
+        var with = new Option<string?>("--with")
+        {
+            Description = "Path to a loose .igt to composite ON TOP of the .rcp's stack — a layer "
+                + "being authored against the recipe it will join. Its variant is PICKED rather "
+                + "than rolled (see --with-variant) so it holds still while you vary --seed; a "
+                + "colorized one still takes its colour from --seed. It must match the recipe's "
+                + "canvas, and is never scaled to fit.",
+        };
+        var withVariant = new Option<string?>("--with-variant")
+        {
+            Description = "Which variant of --with to draw. Defaults to the deterministic pick "
+                + "(highest weight, ties broken by ordinal-first id) so a reference layer never "
+                + "changes appearance between runs.",
+        };
         var cmd = new Command("preview",
-            "Render one Variant of an Ingredient to a PNG, exactly as generation would render "
-                + "it: colorized from its value-map for Dynamic/Static ingredients, or passed "
-                + "through untouched for Custom ingredients.")
-        { path, variant, color, model, outp };
+            "Render a PNG exactly as generation would. Given an .igt, renders one named Variant: "
+                + "colorized from its value-map for Dynamic/Static ingredients, or passed through "
+                + "untouched for Custom ones. Given a .rcp, rolls that Recipe's whole layer stack "
+                + "from --seed and composites it in depth order — depth 1 paints first and sits "
+                + "furthest back.")
+        { path, variant, color, model, outp, seed, only, with, withVariant };
+
+        // Which options are legal depends on which FORM the file argument selects, and silently
+        // ignoring a flag that does not apply is how a user comes to believe --color did something.
+        // So the split is enforced at parse time, where the error names the form rather than
+        // surfacing halfway through a render.
+        cmd.Validators.Add(result =>
+        {
+            string? file = result.GetValue(path);
+            if (string.IsNullOrEmpty(file)) return;   // the missing-argument error already speaks
+
+            bool Given(Option option) => result.GetResult(option) is { Implicit: false };
+
+            // Neither form, checked first. Without this the else-branch below treats "not a .rcp" as
+            // "an .igt", so `preview book.cbk` was told --variant is required — advice that, followed,
+            // produced a different error from a different layer. Say what preview actually reads, and
+            // say it once.
+            if (PreviewForm(file) is null)
+            {
+                result.AddError($"preview reads an Ingredient ({Archives.IngredientExtension}) or a "
+                    + $"Recipe ({Archives.RecipeExtension}); '{file}' is neither. An .igt renders one "
+                    + "variant, a .rcp rolls the whole layer stack.");
+                return;
+            }
+
+            if (IsRecipePath(file))
+            {
+                if (Given(variant))
+                    result.AddError("--variant names one Variant of an .igt; the .rcp form rolls "
+                        + "every layer's variant from --seed. Use --with-variant for the --with layer.");
+                if (Given(color))
+                    result.AddError("--color applies to the .igt form; in the .rcp form each "
+                        + "colorized layer's colour is rolled from --seed, as generation rolls it.");
+                if (Given(model))
+                    result.AddError("--model applies to the .igt form; in the .rcp form every layer "
+                        + "renders in the colour model its own ingredient declares.");
+                if (Given(withVariant) && !Given(with))
+                    result.AddError("--with-variant names a variant of --with, but no --with was given.");
+            }
+            else
+            {
+                if (!Given(variant))
+                    result.AddError($"--variant is required to preview '{file}': an Ingredient holds "
+                        + "several variants and this form renders exactly one. Pass a .rcp instead to "
+                        + "roll a whole stack.");
+                foreach (var (option, name) in new (Option Option, string Name)[]
+                         { (seed, "--seed"), (only, "--only"), (with, "--with"), (withVariant, "--with-variant") })
+                    if (Given(option))
+                        result.AddError($"{name} applies to the .rcp form, which rolls a whole layer "
+                            + "stack; this form renders the one variant named by --variant.");
+            }
+        });
+
         cmd.SetAction(parse =>
         {
-            using var ing = IngredientArchive.Read(parse.GetValue(path)!);
-            string variantId = parse.GetValue(variant)!;
+            string file = parse.GetValue(path)!;
             string outPath = parse.GetValue(outp)!;
 
-            string? modelName = parse.GetValue(model);
-            ColorModel? modelOverride = modelName is null
-                ? null
-                : modelName.Equals("hsl", StringComparison.OrdinalIgnoreCase) ? ColorModel.Hsl : ColorModel.Hsv;
-
-            // The rule itself lives in Core so the GUI's export renders the identical image — the
-            // whole point of this command is that it shows what generation would produce, and two
-            // copies of that rule is how it stops being true. --color's requiredness, the Custom
-            // passthrough and the spec→(H,S) resolution are all VariantPreview's.
-            using var img = VariantPreview.Render(ing, variantId, parse.GetValue(color), modelOverride);
-            img.Save(outPath, new PngEncoder());
-
-            Console.WriteLine(ing.Manifest.Kind == LayerKind.Custom
-                ? $"Wrote {outPath} (custom layer — rendered as-is, not colorized)"
-                : $"Wrote {outPath}");
-            return 0;
+            // Archives.KindOf owns the extension→kind decision, and rejects an unknown extension
+            // rather than guessing, so preview never has to.
+            return Archives.KindOf(file) switch
+            {
+                ArchiveKind.Ingredient => PreviewIngredient(
+                    file, outPath, parse.GetValue(variant)!, parse.GetValue(color), parse.GetValue(model)),
+                ArchiveKind.Recipe => PreviewRecipe(
+                    file, outPath, parse.GetValue(seed)!, parse.GetValue(only),
+                    parse.GetValue(with), parse.GetValue(withVariant)),
+                // A backstop, not a reachable path: the validator above has already refused anything
+                // that is neither form, with a better-worded message. Kept because a bare switch
+                // expression would otherwise raise SwitchExpressionException if that ever stopped
+                // being true, and this says what went wrong instead.
+                var kind => throw new NotSupportedException(
+                    $"preview reads an Ingredient ({Archives.IngredientExtension}) or a Recipe "
+                    + $"({Archives.RecipeExtension}), not a {kind}."),
+            };
         });
         return cmd;
+    }
+
+    /// <summary>
+    /// Which of <c>preview</c>'s two forms a path selects, or null for neither.
+    ///
+    /// <para>Goes through <see cref="Archives.TryKindOf"/> rather than comparing extensions here:
+    /// this runs during validation, where an unknown extension must become a parse error about the
+    /// FORM rather than a thrown <c>NotSupportedException</c> from inside the parser — but the
+    /// extension→kind table still has exactly one owner, which is what <c>Archives</c> is for. The
+    /// action calls <c>KindOf</c> and gets its real message.</para>
+    ///
+    /// <para>Both forms are asked about explicitly rather than one being inferred from the other's
+    /// absence — "not a .rcp" is not "an .igt", and treating it that way sent a <c>.cbk</c> the
+    /// ingredient form's advice.</para>
+    /// </summary>
+    private static ArchiveKind? PreviewForm(string path) =>
+        Archives.TryKindOf(path, out var kind) && kind is ArchiveKind.Recipe or ArchiveKind.Ingredient
+            ? kind
+            : null;
+
+    /// <summary>Whether a path selects <c>preview</c>'s Recipe form.</summary>
+    private static bool IsRecipePath(string path) => PreviewForm(path) == ArchiveKind.Recipe;
+
+    /// <summary>The original form: one named Variant of one Ingredient.</summary>
+    private static int PreviewIngredient(
+        string file, string outPath, string variantId, string? colorSpec, string? modelName)
+    {
+        using var ing = IngredientArchive.Read(file);
+
+        ColorModel? modelOverride = modelName is null
+            ? null
+            : modelName.Equals("hsl", StringComparison.OrdinalIgnoreCase) ? ColorModel.Hsl : ColorModel.Hsv;
+
+        // The rule itself lives in Core so the GUI's export renders the identical image — the
+        // whole point of this command is that it shows what generation would produce, and two
+        // copies of that rule is how it stops being true. --color's requiredness, the Custom
+        // passthrough and the spec→(H,S) resolution are all VariantPreview's.
+        using var img = VariantPreview.Render(ing, variantId, colorSpec, modelOverride);
+        img.Save(outPath, new PngEncoder());
+
+        Console.WriteLine(ing.Manifest.Kind == LayerKind.Custom
+            ? $"Wrote {outPath} (custom layer — rendered as-is, not colorized)"
+            : $"Wrote {outPath}");
+        return 0;
+    }
+
+    /// <summary>
+    /// The stack form: one deterministic roll of a whole Recipe, composited in depth order.
+    /// </summary>
+    private static int PreviewRecipe(
+        string file, string outPath, string seed, string? only, string? with, string? withVariant)
+    {
+        using var recipe = RecipeArchive.Read(file);
+
+        // Gated on the same check `new recipe` and `add ingredient` use, and for a reason beyond
+        // tidiness: it is what makes the canvas below well-defined. Rendering a recipe whose images
+        // disagree in size would have to pick one of them as "the" canvas and reject the rest.
+        var problems = Validator.ValidateRecipe(recipe);
+        if (problems.Count > 0) { Report(problems); return 1; }
+
+        var canvas = CanvasOf(recipe);
+
+        // Resolved before anything is rolled: a mistyped --only id is a mistake in the command line,
+        // and there is no reason to make the user wait for a roll and a composite to hear about it.
+        var keep = OnlyFilter(recipe, only);
+
+        // One RNG for the whole command: the recipe's layers first, in layerOrder, then the --with
+        // layer that sits on top of them. Re-seeding for the loose layer would hand it a colour
+        // correlated with the bottom layer's, which is exactly the sort of thing a preview is used
+        // to judge.
+        //
+        // The roll walks EVERY layer, --only or not. --only decides what is drawn, never what was
+        // rolled, so a layer looks identical whether or not its neighbours are on screen — which is
+        // the only reading under which "at their real depths" means anything.
+        var rng = StackRoll.RngFor(seed);
+        var rolled = StackRoll.ForRecipe(recipe, rng);
+
+        var drawn = new List<(string Depth, PreviewLayer Layer, string? Source)>();
+        for (int i = 0; i < rolled.Count; i++)
+        {
+            string id = recipe.Manifest.LayerOrder[i];
+            if (keep is not null && !keep.Contains(id)) continue;
+
+            // The layer's own depth, not its position among the drawn ones: --only hides layers, it
+            // does not renumber them, and a printed "1, 3, 4" is what says so.
+            drawn.Add((Num(i + 1), rolled[i], null));
+        }
+
+        LoadedIngredient? loose = null;
+        try
+        {
+            if (with is not null)
+            {
+                // Asked before opening, so a wrong extension gets the domain's own message
+                // ("expected one of .cbk, .rcp, .igt, .ktn") instead of a JSON deserializer
+                // complaining about missing required properties from inside the archive reader.
+                if (Archives.KindOf(with) is var withKind and not ArchiveKind.Ingredient)
+                    throw new InvalidOperationException(
+                        $"--with adds one loose Ingredient ({Archives.IngredientExtension}) on top of "
+                        + $"the stack; '{with}' is a {withKind}.");
+
+                loose = IngredientArchive.Read(with);
+
+                // Picked, not rolled. A --with layer is a REFERENCE — "how does this sit against
+                // that stack?" — so it must hold still while the author varies --seed to look at
+                // different rolls of the recipe. StackPreview.PickVariant is that deterministic
+                // choice (highest weight, ordinal-first on a tie). Its colour still comes from the
+                // seed, because a colorized layer needs one and there is no other source.
+                string variantId = withVariant ?? StackPreview.PickVariant(loose);
+                drawn.Add(("+", StackRoll.ForIngredient(loose, rng, variantId), with));
+            }
+
+            using var img = StackPreview.Render(canvas, drawn.Select(d => d.Layer).ToList());
+            img.Save(outPath, new PngEncoder());
+
+            ReportStack(outPath, recipe, canvas, seed, rolled.Count, drawn);
+            return 0;
+        }
+        finally { loose?.Dispose(); }
+    }
+
+    /// <summary>
+    /// The ids <c>--only</c> admits, or null when every layer draws.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">An id the recipe does not stack — named, with the
+    /// real stack listed beside it, because the usual cause is a display name typed where an id
+    /// belongs.</exception>
+    private static HashSet<string>? OnlyFilter(LoadedRecipe recipe, string? only)
+    {
+        if (only is null) return null;
+
+        var wanted = only.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        // RemoveEmptyEntries turns "", "," and " , " into NO ids, and an empty allow-list filters
+        // every layer out — so this used to write a fully transparent PNG and report success, while a
+        // single typo'd id was a hard error. Silent nothing is the worse of the two: the file looks
+        // like the render failed for some reason the tool did not mention.
+        if (wanted.Length == 0)
+            throw new InvalidOperationException(
+                "--only was given no layer ids. Pass a comma-separated list of ids to draw, or omit "
+                + "--only entirely to draw the whole stack.");
+
+        var stacked = new HashSet<string>(recipe.Manifest.LayerOrder, StringComparer.Ordinal);
+        foreach (var id in wanted)
+            if (!stacked.Contains(id))
+                throw new InvalidOperationException(
+                    $"Recipe '{recipe.Manifest.Id}' does not stack an ingredient '{id}'. Its layers, "
+                    + "bottom to top: " + string.Join(", ", LayerDepth.Ordered(recipe.Manifest)
+                        .Select(l => $"{l.IngredientId} (depth {Num(l.Depth)})"))
+                    + ".");
+
+        return new HashSet<string>(wanted, StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// The canvas a Recipe previews at.
+    ///
+    /// <para>A <c>.rcp</c> has no canvas of its own — canvas is a CookBook property, the single source
+    /// of truth for a whole book, and the same recipe can legitimately be nested in books of different
+    /// sizes. So the size is <b>derived from the recipe's own art</b>: <c>Validator.ValidateRecipe</c>
+    /// has just proved that every variant image across every ingredient shares one size, which makes
+    /// "the first one" well-defined rather than arbitrary — and that shared size is the only canvas
+    /// this recipe could ever be cooked at.</para>
+    ///
+    /// <para>A <c>--canvas WxH</c> option was rejected: it would let a preview render at a size no
+    /// CookBook could use, and <see cref="StackPreview"/> never scales a layer precisely so that a
+    /// preview cannot show art lining up at a size it will not ship at.</para>
+    /// </summary>
+    private static Dimensions CanvasOf(LoadedRecipe recipe)
+    {
+        foreach (var ing in recipe.Ingredients)
+            foreach (var img in ing.VariantImages.Values)
+                return new Dimensions(img.Width, img.Height);
+
+        throw new InvalidOperationException(
+            $"Recipe '{recipe.Manifest.Id}' has no variant images, so there is no canvas to "
+            + "preview it at.");
+    }
+
+    /// <summary>What was drawn, at what depth, in what colour — printed under the output path.</summary>
+    private static void ReportStack(
+        string outPath, LoadedRecipe recipe, Dimensions canvas, string seed, int total,
+        IReadOnlyList<(string Depth, PreviewLayer Layer, string? Source)> drawn)
+    {
+        int stacked = drawn.Count(d => d.Source is null);
+        string scope = stacked == total
+            ? $"{Num(total)} layers"
+            : $"{Num(stacked)} of {Num(total)} layers";
+        if (drawn.Count > stacked) scope += $" + {Num(drawn.Count - stacked)} loose";
+
+        Console.WriteLine($"Wrote {outPath} — recipe '{recipe.Manifest.Name}' [{recipe.Manifest.Id}] "
+            + $"at {Num(canvas.Width)}x{Num(canvas.Height)}, seed '{seed}', {scope}");
+
+        int idWidth = drawn.Count == 0 ? 0 : drawn.Max(d => d.Layer.Ingredient.Manifest.Id.Length);
+        int variantWidth = drawn.Count == 0 ? 0 : drawn.Max(d => d.Layer.VariantId.Length);
+        foreach (var (depth, layer, source) in drawn)
+        {
+            string id = layer.Ingredient.Manifest.Id.PadRight(idWidth);
+            string variantId = layer.VariantId.PadRight(variantWidth);
+            string colour = layer.ColorSpec ?? "(custom — as-is)";
+            string from = source is null ? string.Empty : $"   ← {source}";
+            Console.WriteLine($"  {depth,3}  {id}  {variantId}  {colour}{from}");
+        }
     }
 
     private static Command Generate()
@@ -327,9 +621,20 @@ public static partial class CommandFactory
             int target = parse.GetValue(to);
 
             var existing = SetWriter.ReadExisting(setDir);
+
             int have = existing.NextNumber - 1;
             int need = target - have;
+
+            // Before the early return, but after the arithmetic: a run that adds nothing mixes
+            // nothing, so warning about the book would be noise on a no-op.
             if (need <= 0) { Console.WriteLine($"Already at {have}."); return 0; }
+
+            // A warning, to stderr, and never a refusal: re-cooking a deliberately edited book is a
+            // legitimate thing to want, and the author is the one who knows. Core owns the wording so
+            // a GUI says the identical thing, and owns the "a null on either side means cannot tell"
+            // rule so neither front-end has to get it right twice.
+            if (SetProvenance.Warning(existing.CookbookSha256, book.SourceSha256) is { } warning)
+                Console.Error.WriteLine(warning);
 
             using var more = Generator.Generate(book,
                 new GenerateOptions(need, parse.GetValue(seed)!,
