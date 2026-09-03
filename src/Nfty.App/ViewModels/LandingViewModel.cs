@@ -267,9 +267,16 @@ public partial class LandingViewModel : ViewModelBase
         catch (Exception ex) { ShowError("Could not open", ex.Message); return; }
         _session.Open(book, path);
         _nav.To(_explorerFactory(book));
-        RecordRecent(new RecentItem(book.Manifest.Name,
-            $"{book.Recipes.Count} recipes · {book.Manifest.Canvas.Width}×{book.Manifest.Canvas.Height}", path, false));
+        RecordRecent(new RecentItem(book.Manifest.Name, RecentMeta(book), path, false));
     }
+
+    /// <summary>The subtitle a remembered CookBook carries. Singular where it should be: "1 recipes"
+    /// was on the Landing screen every time a book had one.</summary>
+    /// <param name="book">The book being remembered.</param>
+    /// <returns>Its subtitle line.</returns>
+    public static string RecentMeta(LoadedCookBook book) =>
+        $"{book.Recipes.Count} {(book.Recipes.Count == 1 ? "recipe" : "recipes")} · "
+        + $"{book.Manifest.Canvas.Width}×{book.Manifest.Canvas.Height}";
 
     private void ShowError(string title, string message) =>
         _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, title, message));

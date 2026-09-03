@@ -301,8 +301,13 @@
                        (ingredient-editor.html's .ov). Enlarge was missing - the ViewModel had the
                        command and its design spec shipped, but nothing bound it, so half the
                        preview-sizing feature was unreachable. -->
-                  <Grid ColumnDefinitions="*,Auto,Auto,Auto" Margin="7,0">
-                    <TextBlock Grid.Column="0" Text="PREVIEW" Classes="plabel" VerticalAlignment="Center" />
+                  <!-- 7px side padding plus three 18px buttons leaves under 40px for the caption,
+                       which clipped "PREVIEW" to "PREVIEV". The buttons are the working part; the
+                       caption gives up the space and keeps its meaning in the tooltip. -->
+                  <Grid ColumnDefinitions="*,Auto,Auto,Auto" Margin="6,0">
+                    <TextBlock Grid.Column="0" Text="PREVIEW" Classes="plabel" VerticalAlignment="Center"
+                               TextTrimming="None" ClipToBounds="False" FontSize="7.5"
+                               ToolTip.Tip="The colorized result, as generation would render it" />
                     <Button Grid.Column="1" Classes="icon" Padding="2" Command="{Binding RerollPreviewCommand}"
                             ToolTip.Tip="Reroll sampled colour">
                       <Path Classes="ico xs" Data="{StaticResource IconReroll}" /></Button>

@@ -21,6 +21,14 @@ public enum ExplorerNodeKind
 public record ExplorerNode(string Id, string Name, ExplorerNodeKind Kind,
     IReadOnlyList<ExplorerNode> Children, object? Domain, LayerKind? LayerKind = null)
 {
+    /// <summary>
+    /// Whether this branch is open in the tree. Mutable and NOT part of the node's identity: a
+    /// rebuild (a save, a reorder) constructs an entirely new tree, so the Explorer carries the open
+    /// branches across by id the same way it carries the selection. Without it, saving a layer
+    /// dropped the author back to a fully collapsed root three levels from where they were working.
+    /// </summary>
+    public bool IsExpanded { get; set; }
+
     /// <summary>Whether this ingredient rolls its colour per asset.</summary>
     public bool IsDynamic => LayerKind == Nfty.Core.Model.LayerKind.Dynamic;
     /// <summary>Whether this ingredient applies one fixed colour.</summary>

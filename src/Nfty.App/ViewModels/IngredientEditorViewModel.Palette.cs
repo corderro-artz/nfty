@@ -76,6 +76,9 @@ public partial class IngredientEditorViewModel
     /// its archive, and changing it belongs with the CookBook, not with one layer's canvas.</summary>
     private readonly IReadOnlyList<RgbColor> _bookSwatches;
 
+    // Whether colour mode has ever been entered this session; see OnPaintModeChanged.
+    private bool _everEnteredColor;
+
     // Shown at most once per editor session. The warning is about what partial alpha does to a
     // downstream voxel conversion, which does not become more true on the second stroke.
     private bool _partialAlphaWarned;
@@ -168,7 +171,18 @@ public partial class IngredientEditorViewModel
         // whole ingredient, and a variant left without a colour raster would make the export throw
         // on a variant the author never visited.
         if (value == PaletteMode.Color)
+        {
             foreach (var v in _draft.Variants) v.EnsureColor();
+
+            // Arm a colour the author can see in the palette. The grayscale default (V=128) reads as
+            // HSV(0, 100%, 50%) once hue and saturation join it — a muddy dark red nobody picked and
+            // no slot offers. Only on the FIRST entry: after that the armed colour is theirs.
+            if (!_everEnteredColor)
+            {
+                _everEnteredColor = true;
+                BrushValue = 255;
+            }
+        }
 
         RebuildRamp();
         OnPropertyChanged(nameof(IsColorMode));

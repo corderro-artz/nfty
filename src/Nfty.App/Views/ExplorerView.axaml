@@ -72,6 +72,15 @@
           <TreeView Grid.Row="1" Name="Tree" ItemsSource="{Binding Roots}"
                     SelectedItem="{Binding SelectedNode, Mode=TwoWay}"
                     Background="Transparent" Padding="10,4,10,14">
+            <!-- Expansion lives on the NODE, two-way, so it survives the tree being rebuilt. A save
+                 constructs an entirely new tree; without this the author lands back on a collapsed
+                 root three levels from where they were working. ExplorerViewModel.ApplyBook carries
+                 the open branches across by id, exactly as it already did for the selection. -->
+            <TreeView.Styles>
+              <Style Selector="TreeViewItem" x:DataType="models:ExplorerNode">
+                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+              </Style>
+            </TreeView.Styles>
             <TreeView.ItemTemplate>
               <TreeDataTemplate x:DataType="models:ExplorerNode" ItemsSource="{Binding Children}">
                 <!-- Grid, not StackPanel: the guide must stretch the row's FULL height so successive

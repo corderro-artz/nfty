@@ -37,14 +37,23 @@ public abstract class RegionEditCommand<TPixel> : IEditCommand<TPixel> where TPi
     protected abstract IReadOnlyList<(int x, int y, TPixel pixel)> ComputePixels(IEditSurface<TPixel> surface);
 
     /// <summary>
-    /// Stamps a filled round disc of diameter <paramref name="size"/> at each point on
-    /// <paramref name="path"/>, visiting each in-bounds pixel at most once. Only the pixel a
-    /// coordinate takes differs between edits — brush paints its own pixel, erase keeps what is
-    /// there and drops the alpha — so <paramref name="paint"/> supplies that per pixel and the disc
-    /// geometry lives here once, payload-free.
+    /// Stamps a filled round disc of diameter <paramref name="size"/> along <paramref name="path"/>,
+    /// visiting each in-bounds pixel at most once. Only the pixel a coordinate takes differs between
+    /// edits — brush paints its own pixel, erase keeps what is there and drops the alpha — so
+    /// <paramref name="paint"/> supplies that per pixel and the disc geometry lives here once,
+    /// payload-free.
     /// </summary>
+    /// <remarks>
+    /// The path is <b>joined</b>, not merely visited: a disc is stamped at every pixel on the line
+    /// between consecutive points, not only at the points themselves. A pointer reports samples at
+    /// whatever rate the device and the UI thread manage, so a stroke drawn at any speed arrives as
+    /// a handful of scattered coordinates — stamping only those turns a fast stroke into a row of
+    /// dots with gaps between them, which is what the editor shipped before this. Joining here
+    /// rather than in the front-end makes it a property of "a stroke" rather than of one caller's
+    /// sample rate, and fixes every stroke tool at once.
+    /// </remarks>
     /// <param name="surface">The surface being edited; supplies bounds and any read-back the paint needs.</param>
-    /// <param name="path">The gesture's pixel path; a disc is stamped at each point.</param>
+    /// <param name="path">The gesture's pixel path; discs are stamped along it.</param>
     /// <param name="size">Disc diameter in pixels; anything below 1 is treated as 1.</param>
     /// <param name="paint">What the pixel at a coordinate becomes.</param>
     /// <returns>The stamped pixels, deduplicated and clipped to the surface.</returns>
@@ -57,7 +66,9 @@ public abstract class RegionEditCommand<TPixel> : IEditCommand<TPixel> where TPi
         int ir = (int)Math.Ceiling(r);
         var seen = new HashSet<(int, int)>();
         var pixels = new List<(int, int, TPixel)>();
-        foreach (var (cx, cy) in path)
+
+        void Stamp(int cx, int cy)
+        {
             for (int dy = -ir; dy <= ir; dy++)
                 for (int dx = -ir; dx <= ir; dx++)
                 {
@@ -67,7 +78,32 @@ public abstract class RegionEditCommand<TPixel> : IEditCommand<TPixel> where TPi
                     if (!seen.Add((x, y))) continue;
                     pixels.Add((x, y, paint(x, y)));
                 }
+        }
+
+        if (path.Count == 0) return pixels;
+        Stamp(path[0].x, path[0].y);
+        for (int i = 1; i < path.Count; i++)
+            foreach (var (x, y) in Between(path[i - 1], path[i]))
+                Stamp(x, y);
         return pixels;
+    }
+
+    /// <summary>Every pixel from <paramref name="a"/> to <paramref name="b"/> inclusive of the end
+    /// and exclusive of the start (the caller has already stamped it), by Bresenham — integer only,
+    /// so the same gesture joins up identically on every machine.</summary>
+    private static IEnumerable<(int x, int y)> Between((int x, int y) a, (int x, int y) b)
+    {
+        int x = a.x, y = a.y;
+        int dx = Math.Abs(b.x - x), dy = -Math.Abs(b.y - y);
+        int sx = x < b.x ? 1 : -1, sy = y < b.y ? 1 : -1;
+        int err = dx + dy;
+        while (x != b.x || y != b.y)
+        {
+            int e2 = 2 * err;
+            if (e2 >= dy) { err += dy; x += sx; }
+            if (e2 <= dx) { err += dx; y += sy; }
+            yield return (x, y);
+        }
     }
 
     /// <summary>

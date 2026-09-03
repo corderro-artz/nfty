@@ -76,7 +76,9 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     private readonly INavigationService _nav;
     private readonly INotYetWired _notify;
     private readonly IImageBridge _bridge;
-    private readonly LoadedRecipe _recipe;
+    // Not readonly: a save that adds a layer produces a new graph, and this must point at the recipe
+    // in THAT graph or the reference panel keeps describing the one before it.
+    private LoadedRecipe _recipe;
     private readonly ICookBookSession _session;
     private readonly IDialogService _dialogs;
     private readonly IFilePickerService _picker;
@@ -95,6 +97,8 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty] private EditorTool _activeTool = EditorTool.Brush;
     [ObservableProperty] private int _brushValue = 128;
+    // Set from the canvas in the constructor: a fixed 8 covers an entire 8x8 variant in one stamp,
+    // so the brush arrived unusable on a small canvas and every author's first act was to shrink it.
     [ObservableProperty] private int _brushSize = 8;
     [ObservableProperty] private LayerKind _mode;
     [ObservableProperty] private double _hueMin, _hueMax = 360, _satMin = 40, _satMax = 100;
@@ -124,6 +128,29 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// <summary>Raised after a successful Save with the newly-spliced graph, so a listener
     /// (Explorer) can rebuild its tree in place instead of reloading the whole archive.</summary>
     public event Action<LoadedCookBook>? Saved;
+
+    /// <summary>Raised when this editor is disposed, so a listener holding it can let go. Without it
+    /// the Explorer would keep a disposed editor and call into it on the next save.</summary>
+    public event Action? Closed;
+
+    /// <summary>
+    /// Re-points this editor at a freshly-spliced graph and rebuilds what it derives from it.
+    /// </summary>
+    /// <remarks>
+    /// The reference panel lists the recipe's OTHER layers, read once when the editor opened. A
+    /// colour save adds a layer to that recipe, so without this the panel goes on describing a
+    /// recipe that no longer exists — missing the layer the author just made. The draft, the undo
+    /// stacks and the canvas are untouched: only the surroundings changed.
+    /// </remarks>
+    /// <param name="book">The graph the save produced.</param>
+    internal void RefreshFromBook(LoadedCookBook book)
+    {
+        if (book.Recipes.FirstOrDefault(r => r.Manifest.Id == _recipe.Manifest.Id) is not { } fresh) return;
+        _recipe = fresh;
+        DisposeStackCaches();
+        BuildReferences();
+        RebuildSurfaces();
+    }
 
     /// <summary>Save is offered for any edited ingredient with a known source file.
     ///
@@ -226,6 +253,16 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     [RelayCommand] private void SetModeDynamic() => Mode = LayerKind.Dynamic;
     [RelayCommand] private void SetModeStatic() => Mode = LayerKind.Static;
 
+    /// <summary>Pushes the rail's current state into the draft. Called on save rather than on every
+    /// slider tick, so a drag across the hue track rebuilds one record at the end instead of one per
+    /// pixel of travel.</summary>
+    private void CommitColorization()
+    {
+        if (IsCustom) return;              // a Custom layer carries none, and Save clears it explicitly
+        _draft.Kind = Mode;
+        _draft.Colorization = BuildColorization();
+    }
+
     /// <summary>Opens an ingredient for editing.</summary>
     /// <param name="ing">The layer being edited.</param>
     /// <param name="recipe">Its owning recipe.</param>
@@ -271,6 +308,11 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
             _colorHistory[v.Id] = new EditHistory<Rgba32>();
         }
 
+        // The rail must show THIS layer's colour configuration, not the field defaults. Without this
+        // the editor opened a 170-200 degree layer showing 0-360, rendered its preview from the wrong
+        // range, and — since the rail now writes back — would have saved the wrong range too.
+        LoadColorization(ing.Manifest.Colorization);
+
         // Before the first RebuildSurfaces() below: the reference rows and the pinned depth are what
         // the canvas composites against, and building them after would repaint twice on open.
         BuildReferences();
@@ -278,6 +320,10 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         // The palette follows the layer's kind on open: Custom is authored in colour, everything else
         // in the greys a value-map is made of. Set before the filmstrip below, whose thumbnails are
         // rendered through the mode.
+        // A stamp about a thirty-second of the canvas: fine enough to draw with on a large canvas,
+        // and a single pixel on a tiny one rather than the whole image.
+        BrushSize = Math.Clamp(Math.Min(book.Manifest.Canvas.Width, book.Manifest.Canvas.Height) / 32, 1, 8);
+
         _paintMode = ing.Manifest.Kind == LayerKind.Custom ? PaletteMode.Color : PaletteMode.Grayscale;
         RebuildRamp();
         RefreshSaved();
@@ -415,16 +461,85 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         finally { _syncingSelection = false; }   // never latch the guard on if an assignment throws
     }
 
-    partial void OnHueMinChanged(double value) { RebuildSurfaces(); OnPropertyChanged(nameof(HueRangeText)); }
-    partial void OnHueMaxChanged(double value) { RebuildSurfaces(); OnPropertyChanged(nameof(HueRangeText)); }
-    partial void OnSatMinChanged(double value) { RebuildSurfaces(); OnPropertyChanged(nameof(SatRangeText)); }
-    partial void OnSatMaxChanged(double value) { RebuildSurfaces(); OnPropertyChanged(nameof(SatRangeText)); }
-    partial void OnFixedColorChanged(string value) => RebuildSurfaces();
-    partial void OnHueQuantizeChanged(int value) => OnPropertyChanged(nameof(ApproxColorsText));
-    partial void OnSatQuantizeChanged(int value) => OnPropertyChanged(nameof(ApproxColorsText));
+    // Every one of these is now part of what Save WRITES, not just of what the preview shows, so each
+    // marks the draft dirty. _loadingColorization suppresses that while the ctor fills the rail from
+    // the layer's own configuration — opening a layer must not make it look edited.
+    partial void OnHueMinChanged(double value) { RebuildSurfaces(); OnPropertyChanged(nameof(HueRangeText)); ColorizeEdited(); }
+    partial void OnHueMaxChanged(double value) { RebuildSurfaces(); OnPropertyChanged(nameof(HueRangeText)); ColorizeEdited(); }
+    partial void OnSatMinChanged(double value) { RebuildSurfaces(); OnPropertyChanged(nameof(SatRangeText)); ColorizeEdited(); }
+    partial void OnSatMaxChanged(double value) { RebuildSurfaces(); OnPropertyChanged(nameof(SatRangeText)); ColorizeEdited(); }
+    partial void OnFixedColorChanged(string value) { RebuildSurfaces(); ColorizeEdited(); }
+    partial void OnHueQuantizeChanged(int value) { OnPropertyChanged(nameof(ApproxColorsText)); ColorizeEdited(); }
+    partial void OnSatQuantizeChanged(int value) { OnPropertyChanged(nameof(ApproxColorsText)); ColorizeEdited(); }
+
+    private bool _loadingColorization;
+
+    private void ColorizeEdited()
+    {
+        if (_loadingColorization || IsCustom) return;
+        IsDirty = true;
+    }
     // The value ramp is V in colour mode and the whole colour in grayscale mode, so a change to it
     // moves the armed colour either way.
     partial void OnBrushValueChanged(int value) => NotifyBrushChanged();
+
+    /// <summary>
+    /// Fills the colorize rail from a layer's stored configuration. Reads the first entry that
+    /// carries each kind of value, matching how the detail pane and the colorways band read it.
+    /// </summary>
+    /// <param name="c">The layer's colorization, or null for a Custom layer (the rail is hidden).</param>
+    private void LoadColorization(Colorization? c)
+    {
+        if (c is null) return;
+        _loadingColorization = true;
+        try { LoadInto(c); } finally { _loadingColorization = false; }
+    }
+
+    private void LoadInto(Colorization c)
+    {
+        HueQuantize = c.HueQuantize;
+        SatQuantize = c.SatQuantize;
+        if (c.Entries.FirstOrDefault(e => e.Range is not null)?.Range is { } range)
+        {
+            HueMin = range.HueMin; HueMax = range.HueMax;
+            SatMin = range.SatMin; SatMax = range.SatMax;
+        }
+        if (c.Entries.FirstOrDefault(e => e.Fixed is not null)?.Fixed is { } fixedSpec)
+            FixedColor = fixedSpec;
+    }
+
+    /// <summary>
+    /// The colorization the rail currently describes, as a layer would store it.
+    /// </summary>
+    /// <remarks>
+    /// The rail edits ONE entry, because that is all it can show: a hue/saturation range for Dynamic,
+    /// a fixed colour for Static. Any further entries a hand-authored layer carries are passed
+    /// through untouched rather than flattened away — the editor may only change what it can see.
+    /// </remarks>
+    private Colorization BuildColorization()
+    {
+        var edited = Mode == LayerKind.Dynamic
+            ? new ColorEntry(1, new ColorRange(HueMin, HueMax, SatMin, SatMax), null)
+            : new ColorEntry(1, null, FixedColor);
+
+        var previous = _ing.Manifest.Colorization?.Entries ?? Array.Empty<ColorEntry>();
+        // Replace the entry the rail was showing; keep every other one exactly as it was.
+        int shown = Mode == LayerKind.Dynamic
+            ? IndexOf(previous, e => e.Range is not null)
+            : IndexOf(previous, e => e.Fixed is not null);
+
+        var entries = previous.ToList();
+        if (shown >= 0) entries[shown] = edited with { Weight = previous[shown].Weight };
+        else entries.Insert(0, edited);
+
+        return new Colorization(ColorModel.Hsv, HueQuantize, SatQuantize, entries);
+    }
+
+    private static int IndexOf(IReadOnlyList<ColorEntry> entries, Func<ColorEntry, bool> match)
+    {
+        for (int i = 0; i < entries.Count; i++) if (match(entries[i])) return i;
+        return -1;
+    }
 
     /// <summary>Live readouts beside each range control (mockup .cv), so the sliders' current span is
     /// legible without reading the handles' positions off the track.</summary>
@@ -809,6 +924,10 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         IsSaving = true;
         try
         {
+            // The colorize rail is part of the layer, not a preview toy: what it shows is what gets
+            // written. (A colour save has already converted the draft to Custom, where this no-ops.)
+            CommitColorization();
+
             // The exporter picks each variant's raster from the draft's KIND — colour for Custom,
             // value-map for everything else — so there is nothing to rebuild here.
             var (manifest, images) = IngredientDraftExporter.Export(_draft);
@@ -892,7 +1011,9 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// <summary>Frees every editor bitmap.</summary>
     public void Dispose()
     {
+        Closed?.Invoke();   // let the Explorer drop its reference BEFORE we tear anything down
         Saved = null;   // release any subscriber (e.g. the Explorer) when the editor is navigated away
+        Closed = null;
         foreach (var v in Variants) v.Thumbnail.Dispose();
         DisposeReferences();   // the two cached stacks + every Kitchen graph opened this session
         Canvas?.Dispose(); Preview?.Dispose();

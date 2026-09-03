@@ -230,8 +230,15 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         // and Add itself has no target - it fell through to the stub and reported "not wired", which
         // is exactly the dead end a user hits the moment they open a cookbook.
         SelectedNode = Root;
+        // The root open on arrival: a collapsed tree on a book you just opened says nothing about
+        // what is in it, and every author's first action was to click the chevron.
+        Root.IsExpanded = true;
         RebuildCrumbs();
         RefreshValidity();
+        // The status line is shared and outlives this page. A second book opens LOCKED, but the line
+        // left over from the first still read "Editing unlocked" — the chip and the status bar
+        // disagreeing about the same thing, on the same screen.
+        SayLockState();
     }
 
     private static ExplorerNode BuildTree(LoadedCookBook book)
@@ -307,16 +314,29 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         DeleteSelectedCommand.NotifyCanExecuteChanged();
     }
 
+    // The editor currently on top of this page, so a save can refresh what it is showing. Cleared
+    // when it goes away: holding a disposed editor would let a later save call into it.
+    private IngredientEditorViewModel? _openEditor;
+
     private void OpenEditor(LoadedIngredient i, LoadedRecipe r)
     {
         var editor = _editorFactory(i, r, _book);
         editor.Saved += OnEditorSaved;
+        editor.Closed += () => { if (ReferenceEquals(_openEditor, editor)) _openEditor = null; };
+        _openEditor = editor;
         _nav.To(editor);
     }
 
     /// <summary>The editor persisted an ingredient; the session now holds the spliced graph. Rebuild
     /// the tree from it and reselect the same ingredient so its detail/thumbnails refresh in place.</summary>
-    internal void OnEditorSaved(LoadedCookBook book) => ApplyBook(book, SelectedNode?.Id);
+    internal void OnEditorSaved(LoadedCookBook book)
+    {
+        ApplyBook(book, SelectedNode?.Id);
+        // A colour save ADDS a layer to the recipe, and the editor is still open on top of this page
+        // with a reference panel listing that recipe's layers — which would now be missing the one
+        // just created. The editor rebuilds it from the graph it is handed.
+        _openEditor?.RefreshFromBook(book);
+    }
 
     /// <summary>Rebuild the tree from a swapped-in book and select the node with <paramref name="selectId"/>
     /// (root, a recipe, or an ingredient), falling back to the cookbook root.</summary>
@@ -337,14 +357,40 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     /// </param>
     private void ApplyBook(LoadedCookBook book, string? selectId, bool revalidate = true)
     {
+        // Which branches were open, before the tree they belong to stops existing. Selection was
+        // already carried across by id; expansion has to be, for the same reason and by the same key.
+        var open = OpenBranchIds(_fullRoot);
+
         _book = book;
         _fullRoot = BuildTree(book);
+        Reopen(_fullRoot, open);
         Root = Filter(_fullRoot, SearchQuery);
         OnPropertyChanged(nameof(SearchSummary));
         OnPropertyChanged(nameof(TreeCountText));
         RefreshCounts();
         if (revalidate) RefreshValidity();   // an edit can fix or introduce a problem; a reorder cannot
         SelectedNode = FindNode(Root, selectId) ?? Root;
+    }
+
+    private static HashSet<string> OpenBranchIds(ExplorerNode? node)
+    {
+        var open = new HashSet<string>(StringComparer.Ordinal);
+        Walk(node);
+        return open;
+
+        void Walk(ExplorerNode? n)
+        {
+            if (n is null) return;
+            if (n.IsExpanded) open.Add(n.Id);
+            foreach (var c in n.Children) Walk(c);
+        }
+    }
+
+    private static void Reopen(ExplorerNode? node, HashSet<string> open)
+    {
+        if (node is null) return;
+        node.IsExpanded = open.Contains(node.Id);
+        foreach (var c in node.Children) Reopen(c, open);
     }
 
     /// <summary>
@@ -548,10 +594,17 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     private void ToggleLock()
     {
         IsEditing = !IsEditing;
-        _status.Say(IsEditing
-            ? "Editing unlocked - you can add, delete and edit."
-            : "Editing locked - unlock to make changes.");
+        SayLockState();
     }
+
+    /// <summary>Puts the current lock state on the status line.
+    ///
+    /// <para>Called on open as well as on toggle. Opening a second book starts it locked, but the
+    /// line left over from the first still read "Editing unlocked" — so the chip said read-only and
+    /// the status bar said the opposite, on the same screen.</para></summary>
+    private void SayLockState() => _status.Say(IsEditing
+        ? "Editing unlocked - you can add, delete and edit."
+        : "Editing locked - unlock to make changes.");
 
     /// <summary>Tooltip that states the CURRENT state and what clicking will do.</summary>
     public string LockTip => IsEditing

@@ -46,7 +46,7 @@ public static class ServiceRegistration
         services.AddTransient<LandingViewModel>();
 
         services.AddSingleton<Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel>>(sp =>
-            (ing, recipe, book) => new IngredientEditorViewModel(ing, recipe, book,
+            (ing, recipe, book) => RememberOnSave(sp, new IngredientEditorViewModel(ing, recipe, book,
                 sp.GetRequiredService<IImageBridge>(),
                 sp.GetRequiredService<INavigationService>(),
                 sp.GetRequiredService<INotYetWired>(),
@@ -62,7 +62,7 @@ public static class ServiceRegistration
                 // The app-wide saved swatches. The editor defaults to an in-memory palette when this
                 // is omitted, which is right for a test and wrong for the app: without it every
                 // swatch the author saved would be gone at the next launch.
-                palette: sp.GetRequiredService<IPaletteService>()));
+                palette: sp.GetRequiredService<IPaletteService>())));
 
         // Loose (.igt) editor: same editor, but with a save-straight-to-.igt path and the synthetic
         // wrapper book it owns. Built directly (not via the cookbook editor factory) so it can pass
@@ -115,4 +115,29 @@ public static class ServiceRegistration
 
         return services;
     }
+
+    /// <summary>
+    /// Re-records a CookBook's Recent entry whenever an editor saves into it.
+    /// </summary>
+    /// <remarks>
+    /// The Landing screen's subtitle ("2 recipes · 512x512") is recorded once, when the book is
+    /// opened. A save can change it — a colour save adds a layer, and a book opened with none showed
+    /// "0 recipes" forever after — so the line has to be re-recorded against what is now on disk.
+    ///
+    /// <para>Here, at the composition root, for the same reason the loose-editor factory records its
+    /// own open here: one rule in one place beats N callers each remembering, and it keeps
+    /// <c>IRecentsService</c> out of the Explorer's constructor.</para>
+    /// </remarks>
+    private static IngredientEditorViewModel RememberOnSave(IServiceProvider sp, IngredientEditorViewModel editor)
+    {
+        var session = sp.GetRequiredService<ICookBookSession>();
+        var recents = sp.GetRequiredService<IRecentsService>();
+        editor.Saved += book =>
+        {
+            if (session.SourcePath is { } path)
+                recents.Add(new RecentItem(book.Manifest.Name, LandingViewModel.RecentMeta(book), path, false));
+        };
+        return editor;
+    }
+
 }
