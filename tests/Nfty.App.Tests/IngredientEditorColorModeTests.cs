@@ -11,6 +11,8 @@ using Nfty.Core.Editing;
 using Nfty.Core.Formats;
 using Nfty.Core.Imaging;
 using Nfty.Core.Model;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 using Xunit;
 
 namespace Nfty.App.Tests;
@@ -58,6 +60,27 @@ public class IngredientEditorColorModeTests
         }
         public void Close(object? result) { }
     }
+
+    private sealed class OnePicker(string? open) : IFilePickerService
+    {
+        public Task<string?> OpenFileAsync(string t, params string[] e) => Task.FromResult(open);
+        public Task<string?> SaveFileAsync(string t, string e) => Task.FromResult<string?>(null);
+        public Task<string?> PickFolderAsync(string t) => Task.FromResult<string?>(null);
+    }
+
+    private static string WriteGrayPng(int w, int h, byte value)
+    {
+        var path = Path.Combine(Directory.CreateTempSubdirectory().FullName, "in.png");
+        using var img = new Image<Rgba32>(w, h, new Rgba32(value, value, value, 255));
+        img.Save(path);
+        return path;
+    }
+
+    private static IngredientEditorViewModel EditorWithPicker(
+        (string path, CookBookSession session, LoadedRecipe recipe, LoadedIngredient ing) f,
+        IFilePickerService picker) =>
+        new(f.ing, f.recipe, f.session.Current!, new ImageBridge(), new FakeNav(), new FakeNotYetWired(),
+            f.session, new FakeDialogs(), picker);
 
     private static IngredientEditorViewModel Editor(
         (string path, CookBookSession session, LoadedRecipe recipe, LoadedIngredient ing) f,
@@ -415,6 +438,60 @@ public class IngredientEditorColorModeTests
             Assert.Equal(0, ing.VariantImages["glow"][4, 4].A);
         }
         finally { f.session.Dispose(); Directory.Delete(Path.GetDirectoryName(f.path)!, true); }
+    }
+
+    /// <summary>An auto-widened colour raster is a copy of a value-map that no longer exists once
+    /// the value-map is replaced by an import — so it must not survive to be shown as artwork.</summary>
+    [AvaloniaFact]
+    public async Task Importing_into_the_value_map_drops_a_colour_raster_nobody_painted_on()
+    {
+        var f = IngredientEditorSaveTests.OnDisk(LayerKind.Dynamic);
+        var png = WriteGrayPng(8, 8, 90);
+        try
+        {
+            using var vm = EditorWithPicker(f, new OnePicker(png));
+
+            vm.ActiveTool = EditorTool.Fill; vm.BrushValue = 200;
+            vm.ApplyToolStroke(new[] { (0, 0) });
+            vm.SetPaintColorCommand.Execute(null);       // widens: the colour raster is grey 200
+            Assert.Equal(200, vm.ColorAt(4, 4).R);
+
+            vm.SetPaintGrayscaleCommand.Execute(null);
+            await vm.ImportImageCommand.ExecuteAsync(null);   // the value-map becomes grey 90
+            Assert.Equal(90, vm.ValueAt(4, 4));
+
+            vm.SetPaintColorCommand.Execute(null);
+            Assert.Equal(90, vm.ColorAt(4, 4).R);        // re-widened, not the stale 200
+        }
+        finally { f.session.Dispose(); Directory.Delete(Path.GetDirectoryName(f.path)!, true); File.Delete(png); }
+    }
+
+    /// <summary>The other half of the rule: colour art the author actually painted is their work, and
+    /// importing a value-map — a different surface entirely — is no reason to throw it away.</summary>
+    [AvaloniaFact]
+    public async Task Importing_into_the_value_map_keeps_colour_art_that_was_painted()
+    {
+        var f = IngredientEditorSaveTests.OnDisk(LayerKind.Dynamic);
+        var png = WriteGrayPng(8, 8, 90);
+        try
+        {
+            using var vm = EditorWithPicker(f, new OnePicker(png));
+
+            vm.SetPaintColorCommand.Execute(null);
+            vm.ActiveTool = EditorTool.Fill;
+            vm.BrushHue = 0; vm.BrushSat = 100; vm.BrushValue = 255;
+            vm.ApplyToolStroke(new[] { (0, 0) });        // a real colour stroke
+            Assert.Equal(255, vm.ColorAt(4, 4).R);
+
+            vm.SetPaintGrayscaleCommand.Execute(null);
+            await vm.ImportImageCommand.ExecuteAsync(null);
+            Assert.Equal(90, vm.ValueAt(4, 4));
+
+            vm.SetPaintColorCommand.Execute(null);
+            var kept = vm.ColorAt(4, 4);
+            Assert.Equal(255, kept.R); Assert.Equal(0, kept.G); Assert.Equal(0, kept.B);
+        }
+        finally { f.session.Dispose(); Directory.Delete(Path.GetDirectoryName(f.path)!, true); File.Delete(png); }
     }
 
     /// <summary>Each surface keeps its own stack, so undoing in colour must not walk back value-map

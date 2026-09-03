@@ -499,6 +499,14 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
                 for (int x = 0; x < canvas.Width; x++)
                     target.Map.Set(x, y, src.GetValue(x, y), src.GetAlpha(x, y));
             _history[target.Id] = new EditHistory<GrayPixel>();   // old snapshots describe pixels that are gone
+
+            // A colour raster this variant never had a stroke on is a WIDENING of the value-map that
+            // was just replaced — keeping it would show the pre-import drawing the moment colour mode
+            // is entered. Drop it so it widens again from what is actually there now. A raster the
+            // author has painted on is their work and survives: importing a value-map is not a reason
+            // to discard colour art.
+            if (!_colorHistory[target.Id].CanUndo) target.Color = null;
+
             UndoCommand.NotifyCanExecuteChanged();
 
             if (hadColour)
