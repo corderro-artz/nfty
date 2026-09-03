@@ -229,6 +229,23 @@ a choice, or a caption with none, at a fixed 128px either way.
 - **Per-variant opacity settings.** The lock is an editor mode, not a property of a variant.
 - **A colour picker in the CLI.** Colour specs already carry explicit prefixes there.
 
+## What shipped (CLI)
+
+`inspect` gained two things the archive already held but nothing on the command line ever showed:
+
+- **The book's palette**, printed as the prefixed specs it is stored as — the same form an author
+  types, so what is shown and what is stored cannot drift.
+- **`--voxel`**, the readiness report: which variants carry *partial* alpha, how much of each image,
+  and what to do about it. Opt-in, because partial alpha is legal (it is a report, not a validation)
+  and because it costs a full scan of every variant image. Refused on a `.ktn`: a Kitchen lists paths
+  without opening them, and an option that silently does nothing is worse than one that says no.
+
+`Validator` also gained the rule this feature kept running into: **two layers in one recipe may not
+share a display name.** A layer's name is the `trait_type` it is published under, so duplicates merge
+into one trait and one rarity bucket — percentages above 100. The colour save's "Aura (colour)"
+naming exists to satisfy exactly this, and the reserved-name check for `"Type"` was its special case
+all along.
+
 ## Testing
 
 House rules throughout: in-memory `Loaded*` fixtures, exact-pixel assertions on tiny synthetic

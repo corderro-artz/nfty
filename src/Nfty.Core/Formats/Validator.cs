@@ -126,6 +126,17 @@ public static class Validator
         foreach (var dup in Duplicates(r.Ingredients.Select(i => i.Manifest.Id)))
             problems.Add($"Recipe '{r.Manifest.Id}' has duplicate ingredient id '{dup}'.");
 
+        // A layer's NAME is the trait_type every generated item is published under
+        // (Output.SetWriter writes one attribute per layer, keyed by name). Two layers sharing one
+        // name therefore write two attributes with the same trait_type: OpenSea shows one trait
+        // where the author drew two, and the rarity table folds both layers' variants into a single
+        // bucket — which is how a collection ships percentages above 100. The same reasoning already
+        // refuses the reserved name "Type" below; this is the general case of it.
+        foreach (var dup in Duplicates(r.Ingredients.Select(i => i.Manifest.Name)))
+            problems.Add($"Recipe '{r.Manifest.Id}' has two ingredients named '{dup}'. A layer's name "
+                + "is the trait it is published under, so two layers sharing one name merge into a "
+                + "single trait and a single rarity bucket.");
+
         // Built duplicate-tolerantly (last wins) so a duplicate is reported above rather than
         // thrown here; the rest of the checks still run and report what they find.
         var ingById = new Dictionary<string, LoadedIngredient>();

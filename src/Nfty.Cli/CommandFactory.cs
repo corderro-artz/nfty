@@ -50,15 +50,24 @@ public static partial class CommandFactory
     private static Command Inspect()
     {
         var path = new Argument<string>("file") { Description = "Path to a .cbk, .rcp, .igt or .ktn file." };
+        var voxel = new Option<bool>("--voxel")
+        {
+            Description = "Also report voxel readiness: which variants carry PARTIAL alpha, which a "
+                + "voxel converter cannot resolve (it must drop the pixel or make it solid). Partial "
+                + "alpha is legal — this is a report, not a validation — so it is opt-in, and it "
+                + "costs a full scan of every variant image. Not available for a Kitchen, which "
+                + "lists paths without opening them.",
+        };
         var cmd = new Command("inspect",
             "Print the tree of a CookBook, Recipe or Ingredient, showing each Recipe's and "
                 + "Variant's [id] alongside its name. Those ids — not the display names — are "
                 + "what --recipe and --variant expect elsewhere on this command line, so inspect "
                 + "is how you find them. Given a Kitchen, lists what that workspace holds.")
-        { path };
+        { path, voxel };
         cmd.SetAction(parse =>
         {
             string file = parse.GetValue(path)!;
+            bool wantVoxel = parse.GetValue(voxel);
             var kind = Archives.KindOf(file);
             switch (kind)
             {
@@ -66,24 +75,33 @@ public static partial class CommandFactory
                 {
                     using var cb = CookBookArchive.Read(file);
                     PrintCookBook(cb);
+                    if (wantVoxel) PrintVoxel(cb.Manifest.Name, VoxelReport.Scan(cb));
                     break;
                 }
                 case ArchiveKind.Recipe:
                 {
                     using var recipe = RecipeArchive.Read(file);
                     PrintRecipe(recipe, weight: null, indent: "");
+                    if (wantVoxel) PrintVoxel(recipe.Manifest.Name, VoxelReport.Scan(recipe));
                     break;
                 }
                 case ArchiveKind.Ingredient:
                 {
                     using var ing = IngredientArchive.Read(file);
                     PrintIngredient(ing, indent: "");
+                    if (wantVoxel) PrintVoxel(ing.Manifest.Name, VoxelReport.Scan(ing));
                     break;
                 }
                 case ArchiveKind.Kitchen:
                 {
                     // Nothing to dispose: a Kitchen lists PATHS rather than loading the archives it
                     // names, precisely so inspecting a workspace does not decode every PNG in it.
+                    // --voxel would have to open every one, so it is refused rather than quietly
+                    // ignored — an option that silently does nothing is worse than one that says no.
+                    if (wantVoxel)
+                        throw new InvalidOperationException(
+                            "--voxel needs artwork to scan, and a Kitchen lists paths without opening "
+                            + "them. Run it on one of the CookBooks the listing names.");
                     Console.Write(KitchenReport.Render(Kitchen.Open(file)));
                     break;
                 }
@@ -101,8 +119,26 @@ public static partial class CommandFactory
     private static void PrintCookBook(LoadedCookBook cb)
     {
         Console.WriteLine($"CookBook: {cb.Manifest.Name} ({cb.Manifest.Canvas.Width}x{cb.Manifest.Canvas.Height})");
+
+        // A book's palette travels inside the archive, so a collection handed to someone else brings
+        // its colours with it — and nothing else in the CLI would have shown they were there.
+        // Printed as the specs it is stored as: the same form an author types.
+        if (cb.Manifest.Palette is { Count: > 0 } specs)
+        {
+            Console.WriteLine($"  Palette: {specs.Count} swatch{(specs.Count == 1 ? "" : "es")}");
+            foreach (var spec in specs) Console.WriteLine($"    {spec}");
+        }
+
         foreach (var r in cb.Recipes)
             PrintRecipe(r, cb.Manifest.RecipeWeights.GetValueOrDefault(r.Manifest.Id), "  ");
+    }
+
+    /// <summary>Prints the voxel-readiness report under whatever tree was just printed. Rendered in
+    /// Core so the CLI and the GUI show byte-identical text.</summary>
+    private static void PrintVoxel(string title, IReadOnlyList<VoxelVariant> rows)
+    {
+        Console.WriteLine();
+        Console.Write(VoxelReport.Render(title, rows));
     }
 
     private static void PrintRecipe(LoadedRecipe recipe, double? weight, string indent)
