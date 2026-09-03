@@ -1,8 +1,12 @@
+<!-- RenderOptions.BitmapInterpolationMode=None on the root: pixel art scales with nearest
+     neighbour, never a filter. It inherits to every Image below, and
+     PixelPerfectRenderingTests fails naming any view that drops it. -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Nfty.App.ViewModels"
              x:Class="Nfty.App.Views.IngredientEditorView"
-             x:DataType="vm:IngredientEditorViewModel">
+             x:DataType="vm:IngredientEditorViewModel"
+             RenderOptions.BitmapInterpolationMode="None">
   <!-- ingredient-editor.html .epanes: variants rail / canvas / colorize rail, full-bleed and divided
        by 1px rules, each opening with a 41px pane header. This screen was previously a functional
        skeleton - stacked default primitives in three fixed columns - rather than the designed one. -->
@@ -85,9 +89,9 @@
 
       <!-- ============ Canvas ============ -->
       <Border Grid.Column="1" Classes="pane">
-        <Grid RowDefinitions="Auto,*">
+        <Grid RowDefinitions="Auto,Auto,*">
           <!-- .toolstrip: horizontal 30px icon bar with an ACTIVE tool, a value ramp and a swatch. -->
-          <Border Grid.Row="0" Classes="pane-hrow" Padding="12,0" IsEnabled="{Binding CanPaint}">
+          <Border Grid.Row="0" Classes="pane-hrow" Padding="12,0">
             <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
               <Button Classes="ttool" Classes.on="{Binding IsToolBrush}" ToolTip.Tip="Brush"
                       Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Brush}">
@@ -123,13 +127,15 @@
 
               <Border Classes="tsep" />
 
-              <!-- .ramp: the value gradient the brush samples, and the grey it will lay down. -->
+              <!-- .ramp: the brightness axis. In grayscale mode it IS the colour; in colour mode it
+                   is V of HSV, with H and S on the colorize rail's own tracks. One control, one
+                   meaning ("how bright"), in both modes. -->
               <Panel Width="96" VerticalAlignment="Center">
                 <Border Classes="ramp" Background="{StaticResource ValueRampBrush}" />
                 <Slider Value="{Binding BrushValue}" Minimum="0" Maximum="255"
-                        Classes="overlay" ToolTip.Tip="Paint value" />
+                        Classes="overlay" ToolTip.Tip="Paint value / brightness" />
               </Panel>
-              <Border Classes="swatch">
+              <Border Classes="swatch" ToolTip.Tip="{Binding BrushSpec}">
                 <Border.Background><SolidColorBrush Color="{Binding BrushSwatch}" /></Border.Background>
               </Border>
 
@@ -142,8 +148,120 @@
             </StackPanel>
           </Border>
 
+          <!-- ============ Palette strip ============
+               Ten ramp slots that change fill with the mode, the saved swatches, the alpha axis and
+               the opacity lock. Always present: on a Dynamic or Static layer it simply offers the
+               greys a value-map is authored in. See Styles.axaml's block for the no-reflow rules. -->
+          <Border Grid.Row="1" Classes="pstrip">
+            <!-- WIDTH IS A BUDGET. Everything but the saved run is fixed, and the saved run is the
+                 star column: at the minimum window width the canvas pane is 594px, so the fixed
+                 cells have to leave room or that column silently collapses to zero and the palette
+                 is simply absent (which is exactly what shipped in the first cut of this strip).
+                 Current fixed total: 128 + 207 + 18 + 94 + 30 + 42 gaps + 2 rules = 521. -->
+            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="6">
+
+              <!-- A Custom layer has no grey mode at all: its value-map never reaches an archive,
+                   so those strokes would be invisible work. The cell is a FIXED 104px either way and
+                   the ink inside it swaps — a tray with a choice, or a caption with none. It is not
+                   a DISABLED tray: the app dims disabled controls to 0.38 opacity, which put "Grey"
+                   at 1.41:1 (DarkModeContrastTests), and unreadable is worse than absent. -->
+              <Panel Grid.Column="0" Width="128" VerticalAlignment="Center">
+                <Border Classes="seg mini" IsVisible="{Binding CanPaintGrayscale}">
+                  <Grid ColumnDefinitions="*,2,*">
+                    <Button Grid.Column="0" Classes="seg-b mini" Content="Grey"
+                            Classes.on="{Binding !IsColorMode}"
+                            Command="{Binding SetPaintGrayscaleCommand}"
+                            ToolTip.Tip="Paint the grayscale value-map" />
+                    <Button Grid.Column="2" Classes="seg-b mini" Content="Colour"
+                            Classes.on="{Binding IsColorMode}"
+                            Command="{Binding SetPaintColorCommand}"
+                            ToolTip.Tip="Paint in full colour — saves as a Custom ingredient" />
+                  </Grid>
+                </Border>
+                <Border Classes="seg mini" IsVisible="{Binding !CanPaintGrayscale}"
+                        ToolTip.Tip="Custom layers are authored in colour — they composite as-is">
+                  <TextBlock Text="COLOUR" Classes="plabel" Margin="0,4"
+                             HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+              </Panel>
+
+              <Border Grid.Column="1" Classes="tsep" />
+
+              <ItemsControl Grid.Column="2" ItemsSource="{Binding Ramp}" VerticalAlignment="Center">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="3" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:PaletteSwatch">
+                    <Button Classes="sw" Classes.on="{Binding IsSelected}" ToolTip.Tip="{Binding Spec}"
+                            Command="{Binding $parent[ItemsControl].((vm:IngredientEditorViewModel)DataContext).PickSwatchCommand}"
+                            CommandParameter="{Binding}">
+                      <Border Classes="swfill" CornerRadius="{DynamicResource RadiusXs}">
+                        <Border.Background><SolidColorBrush Color="{Binding Color}" /></Border.Background>
+                      </Border>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <Border Grid.Column="3" Classes="tsep" />
+
+              <!-- The saved run scrolls inside its own cell: a palette that grew would otherwise
+                   push the alpha axis and the lock off the strip. -->
+              <ScrollViewer Grid.Column="4" HorizontalScrollBarVisibility="Auto"
+                            VerticalScrollBarVisibility="Disabled" VerticalAlignment="Center"
+                            HorizontalAlignment="Stretch" Height="20">
+                <ItemsControl ItemsSource="{Binding SavedSwatches}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="3" /></ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:PaletteSwatch">
+                      <Button Classes="sw" Classes.on="{Binding IsSelected}" ToolTip.Tip="{Binding Spec}"
+                              Command="{Binding $parent[ItemsControl].((vm:IngredientEditorViewModel)DataContext).PickSwatchCommand}"
+                              CommandParameter="{Binding}">
+                        <!-- The command comes from the CELL. A ContextMenu is not in the visual
+                             tree, so $parent[ItemsControl] cannot resolve from inside one and the
+                             whole item template renders empty — silently. -->
+                        <Button.ContextMenu>
+                          <ContextMenu>
+                            <MenuItem Header="Forget swatch" Command="{Binding ForgetCommand}"
+                                      CommandParameter="{Binding}" />
+                          </ContextMenu>
+                        </Button.ContextMenu>
+                        <Border Classes="swfill" CornerRadius="{DynamicResource RadiusXs}">
+                          <Border.Background><SolidColorBrush Color="{Binding Color}" /></Border.Background>
+                        </Border>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+
+              <Button Grid.Column="5" Classes="sw add" Command="{Binding SaveSwatchCommand}"
+                      ToolTip.Tip="Save this colour to the palette">
+                <Path Classes="ico xs" Data="{StaticResource IconPlus}" />
+              </Button>
+
+              <!-- Reserved whether or not the lock admits it — see Styles.axaml. -->
+              <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="6" Width="94"
+                          VerticalAlignment="Center" Classes="alphacell"
+                          Classes.off="{Binding IsOpacityLocked}">
+                <TextBlock Text="A" Classes="plabel" VerticalAlignment="Center" Margin="0" />
+                <Slider Value="{Binding BrushAlpha}" Minimum="0" Maximum="255" Width="72"
+                        VerticalAlignment="Center" ToolTip.Tip="Paint alpha" />
+              </StackPanel>
+
+              <Button Grid.Column="7" Classes="ttool" Classes.on="{Binding IsOpacityLocked}"
+                      Command="{Binding ToggleOpacityLockCommand}"
+                      ToolTip.Tip="Opacity lock — every painted pixel is fully opaque or fully erased">
+                <Path Classes="ico sm" Data="{StaticResource IconLock}" />
+              </Button>
+            </Grid>
+          </Border>
+
           <!-- .canvas-wrap: checkerboard backdrop, 320px art tile, blip preview over the corner. -->
-          <Panel Grid.Row="1">
+          <Panel Grid.Row="2">
             <Panel.Background>
               <!-- The mockup's 18px repeating-conic checkerboard. -->
               <DrawingBrush TileMode="Tile" SourceRect="0,0,36,36" DestinationRect="0,0,36,36">
@@ -211,8 +329,9 @@
 
           <ScrollViewer Grid.Row="1" Name="ColorizeScroll" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="14" Spacing="14">
-              <!-- .seg: a segmented tray, not two loose radio buttons. -->
-              <Border Classes="seg">
+              <!-- .seg: a segmented tray, not two loose radio buttons. Hidden on a Custom layer,
+                   which composites as-is and rolls nothing — the choice would have no effect. -->
+              <Border Classes="seg" IsVisible="{Binding ShowColorizeMode}">
                 <Grid ColumnDefinitions="*,3,*">
                   <Button Grid.Column="0" Classes="seg-b" Classes.on="{Binding IsModeDynamic}"
                           Content="Dynamic" Command="{Binding SetModeDynamicCommand}" />
@@ -220,6 +339,54 @@
                           Content="Static" Command="{Binding SetModeStaticCommand}" />
                 </Grid>
               </Border>
+
+              <!-- ==================== Paint colour ====================
+                   Colour mode's H and S axes, on the rail's own hue and saturation tracks. Those
+                   tracks are the Dynamic layer's RANGE controls; a Custom layer has no range to set,
+                   so rather than adding a third pair of sliders the same two components take the
+                   rail's free space and set ONE colour. The third axis, V, is the toolstrip's value
+                   ramp — unchanged in meaning from grayscale mode. -->
+              <StackPanel Spacing="14" IsVisible="{Binding IsColorMode}">
+                <StackPanel Spacing="7">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Text="PAINT HUE" Classes="plabel" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Classes="cv" Text="{Binding BrushHueText}" />
+                  </Grid>
+                  <Panel>
+                    <Border Classes="dualtrack" Background="{StaticResource HueSpectrumBrush}" />
+                    <Slider Classes="overlay" Value="{Binding BrushHue}" Minimum="0" Maximum="360" />
+                  </Panel>
+                </StackPanel>
+
+                <StackPanel Spacing="7">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Text="PAINT SATURATION" Classes="plabel" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Classes="cv" Text="{Binding BrushSatText}" />
+                  </Grid>
+                  <Panel>
+                    <Border Classes="dualtrack" Background="{StaticResource SaturationRampBrush}" />
+                    <Slider Classes="overlay" Value="{Binding BrushSat}" Minimum="0" Maximum="100" />
+                  </Panel>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Spacing="9">
+                  <Border Classes="swatch" Width="34" Height="34"
+                          CornerRadius="{DynamicResource RadiusMd}">
+                    <Border.Background><SolidColorBrush Color="{Binding BrushSwatch}" /></Border.Background>
+                  </Border>
+                  <TextBlock Text="{Binding BrushSpec}" Classes="cv" VerticalAlignment="Center" />
+                </StackPanel>
+
+                <Panel>
+                  <Rectangle Classes="dashed btn" />
+                  <Grid ColumnDefinitions="Auto,*" Margin="10,9">
+                    <Path Grid.Column="0" Classes="ico xs" Data="{StaticResource IconLock}"
+                          VerticalAlignment="Top" Margin="0,1,8,0" />
+                    <TextBlock Grid.Column="1" Classes="vlock"
+                               Text="Colour art composites as-is and is never recoloured at generation time." />
+                  </Grid>
+                </Panel>
+              </StackPanel>
 
               <StackPanel Spacing="14" IsVisible="{Binding ShowColourRange}">
                 <!-- .dual (hue): two ring handles over the hue rainbow, with a live readout. -->
@@ -291,7 +458,7 @@
               </StackPanel>
 
               <!-- .vlock: value is not editable here; it comes from the grayscale map. -->
-              <Panel Margin="0,4,0,0">
+              <Panel Margin="0,4,0,0" IsVisible="{Binding ShowColorizeMode}">
                 <Rectangle Classes="dashed btn" />
                 <Grid ColumnDefinitions="Auto,*" Margin="10,9">
                   <Path Grid.Column="0" Classes="ico xs" Data="{StaticResource IconLock}"
@@ -520,8 +687,8 @@
     <Border Grid.Row="1" Classes="modal-foot">
       <Grid ColumnDefinitions="*,Auto">
         <TextBlock Grid.Column="0" Classes="cshare" VerticalAlignment="Center"
-                   Text="{Binding SaveBlockedReason}"
-                   IsVisible="{Binding SaveBlockedReason, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                   Text="{Binding SaveNoteText}"
+                   IsVisible="{Binding SaveNoteText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
           <Button Content="Back" Command="{Binding BackCommand}" Classes="tbtn ghost" />
           <Button Command="{Binding SaveCommand}" Classes="accent">

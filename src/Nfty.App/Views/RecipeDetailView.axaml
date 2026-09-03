@@ -1,9 +1,13 @@
+<!-- RenderOptions.BitmapInterpolationMode=None on the root: pixel art scales with nearest
+     neighbour, never a filter. It inherits to every Image below, and
+     PixelPerfectRenderingTests fails naming any view that drops it. -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Nfty.App.ViewModels"
              xmlns:conv="using:Nfty.App.Converters"
              x:Class="Nfty.App.Views.RecipeDetailView"
-             x:DataType="vm:RecipeDetailViewModel">
+             x:DataType="vm:RecipeDetailViewModel"
+             RenderOptions.BitmapInterpolationMode="None">
   <!-- Recipe detail body: 2-column layout (explorer.html:356-361 .recipe-grid / .recipe-main / .recipe-rules).
        Main column: portrait hero (.rhero, explorer.html:283-296) + layer table (table.data, explorer.html:833).
        Rail column: incompatibility rules panel (.rules-panel, explorer.html:365-382). -->

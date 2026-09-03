@@ -17,7 +17,9 @@ using Avalonia.VisualTree;
 using Nfty.App;
 using Nfty.App.Services;
 using Nfty.App.ViewModels;
+using Nfty.Core.Editing;
 using Nfty.Core.Formats;
+using Nfty.Core.Imaging;
 using Nfty.Core.Generation;
 using Nfty.Core.Model;
 using Nfty.Core.Output;
@@ -278,7 +280,7 @@ public class VisualCapture
     /// <see cref="RecipeDetailViewModelTests.Rules_expose_operator_and_traits"/>'s fixture.</summary>
     /// <summary>A DYNAMIC ingredient with a real hue range. TwoRecipeBook's layers are all Custom,
     /// so the colorways hue band - which only a dynamic layer has - had no frame proving it renders.</summary>
-    private static (LoadedCookBook book, LoadedRecipe recipe, LoadedIngredient ing) DynamicIngredient()
+    internal static (LoadedCookBook book, LoadedRecipe recipe, LoadedIngredient ing) DynamicIngredient()
     {
         var colorization = new Colorization(ColorModel.Hsv, HueQuantize: 24, SatQuantize: 6,
             new[] { new ColorEntry(1, new ColorRange(190, 320, 55, 95), null) });
@@ -585,12 +587,13 @@ public class VisualCapture
             Capture(new Views.IngredientEditorView { DataContext = vm }, variant, $"editor-paint-{key}.png");
             vm.Dispose();
 
-            // TwoRecipeBook's layers are ALL LayerKind.Custom, and the editor gates painting on
-            // CanPaint => !IsCustom. So the frames above render the entire toolstrip - tools,
-            // undo/redo, value ramp, swatch, brush size - DISABLED, and the editor's whole reason to
-            // exist had no visual evidence at all. Same class of blind spot as the colorways hue
-            // band before ingredient-detail-dynamic-* existed: a frame that exercises no code is not
-            // evidence. This pair is the enabled editor.
+            // TwoRecipeBook's layers are ALL LayerKind.Custom. Colour mode made those paintable, so
+            // the frames above now show a live toolstrip and the palette strip's CUSTOM state: no
+            // grey/colour tray (a Custom layer has no grey mode), the rainbow ramp, and the rail's
+            // paint-hue/saturation axes in place of a colorization it does not have.
+            //
+            // This pair is the same screen on a value-map layer: the grey/colour tray, the grey ramp
+            // and the Dynamic colorize rail.
             var (dynBook, dynRecipe, dynIng) = DynamicIngredient();
             var dynVm = new IngredientEditorViewModel(dynIng, dynRecipe, dynBook, new ImageBridge(),
                 new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs(),
@@ -601,6 +604,28 @@ public class VisualCapture
             Capture(new Views.IngredientEditorView { DataContext = dynVm }, variant, $"editor-enabled-{key}.png");
             dynVm.Dispose();
             dynBook.Dispose();
+
+            // The palette strip's remaining states, none of which the two frames above reach: a
+            // value-map layer switched INTO colour (so both halves of the tray are live and the ramp
+            // is the rainbow one), saved swatches actually present, and the opacity lock OFF — the
+            // one state in which the alpha axis is not dimmed. Set directly rather than through
+            // ToggleOpacityLock: the capture is of the unlocked strip, not of the warning dialog.
+            var (colBook, colRecipe, colIng) = DynamicIngredient();
+            var palette = new PaletteService(StateStore.InMemory());
+            palette.Add(new RgbColor(0x6D, 0x4F, 0x9C));
+            palette.Add(new RgbColor(0x3D, 0x6B, 0x52));
+            var colVm = new IngredientEditorViewModel(colIng, colRecipe, colBook, new ImageBridge(),
+                new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs(),
+                new FilePickerService(), palette: palette);
+            colVm.SetPaintColorCommand.Execute(null);
+            colVm.OpacityMode = OpacityLock.Unlocked;
+            colVm.BrushAlpha = 190;
+            colVm.PickSwatchCommand.Execute(colVm.Ramp[4]);
+            colVm.ActiveTool = EditorTool.Fill;
+            colVm.ApplyToolStroke(new[] { (0, 0) });
+            Capture(new Views.IngredientEditorView { DataContext = colVm }, variant, $"editor-colour-{key}.png");
+            colVm.Dispose();
+            colBook.Dispose();
         }
     }
 

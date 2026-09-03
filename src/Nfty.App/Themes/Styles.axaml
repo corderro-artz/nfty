@@ -2137,4 +2137,108 @@
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
     <Setter Property="TextWrapping" Value="NoWrap" />
   </Style>
+
+  <!-- ==================== Palette strip (colour mode) ====================
+       A second 40px row under the toolstrip, carrying the ramp mode, the ten slots, the saved
+       swatches, the alpha axis and the opacity lock. New to the app: the locked mockup set predates
+       colour mode, so this is built from that set's own grammar (see
+       docs/design/mockups/explorations/palette-panel-variants.html, variant A).
+
+       GEOMETRY IS FIXED. The row is one height in both modes and both lock states: the ten slots
+       change fill rather than count, the saved run scrolls inside its own cell instead of pushing
+       its neighbours, and the alpha control is dimmed and un-hittable while locked rather than
+       absent — so unlocking moves nothing. -->
+  <Style Selector="Border.pstrip">
+    <Setter Property="Height" Value="40" />
+    <Setter Property="Padding" Value="12,0" />
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+
+  <!-- .sw: one palette cell. The colour is painted by the CHILD Border, not by the Button's own
+       Background, because Fluent repaints PART_ContentPresenter's Background on :pointerover and
+       :pressed at a priority a Setter here cannot beat — a swatch would flash grey under the cursor.
+       Painting the colour on top of that surface sidesteps the fight entirely. -->
+  <Style Selector="Button.sw">
+    <Setter Property="Width" Value="18" />
+    <Setter Property="Height" Value="18" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.sw /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.sw:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+  <Style Selector="Button.sw:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <!-- Selected: the accent ring is the button's own border plus a 2px inset on the colour, so the
+       ring is legible at 22px without any change to the cell's outer size. -->
+  <Style Selector="Button.sw.on /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+  </Style>
+  <Style Selector="Button.sw.on Border.swfill">
+    <Setter Property="Margin" Value="2" />
+  </Style>
+  <Style Selector="Button.sw.add">
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="Button.sw.add Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+
+  <!-- .pmode: the grey/colour tray. Same grammar as .seg, sized for a 40px row. -->
+  <Style Selector="Border.seg.mini">
+    <Setter Property="Padding" Value="2" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.seg-b.mini">
+    <Setter Property="Padding" Value="8,4" />
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+  </Style>
+
+  <!-- The alpha axis. Reserved in the layout at all times; dimmed and inert while the lock is on,
+       which is the no-reflow rule applied to a control that only sometimes does anything. -->
+  <Style Selector="StackPanel.alphacell.off">
+    <Setter Property="IsHitTestVisible" Value="False" />
+  </Style>
+  <!-- Only the SLIDER is dimmed. Dimming the caption too put "A" at 1.64:1 in light mode
+       (DarkModeContrastTests) — the app's disabled convention is 0.38 opacity, and 0.38 of an
+       already-muted foreground is below any legibility floor. The control carries the inactive
+       state; its label only has to say which control it is. -->
+  <Style Selector="StackPanel.alphacell.off > Slider">
+    <Setter Property="Opacity" Value="0.38" />
+  </Style>
+
+  <!-- ==================== Pixel-perfect scaling ====================
+       EVERY image this app shows is generated pixel art: a variant raster, a composited preview, a
+       set thumbnail. All of it is displayed at a size that has nothing to do with its pixel count —
+       an 8x8 variant fills a 320px canvas tile, a 64x64 asset fills a 120px card — and Avalonia's
+       default scaling filter blurs each of those into mush. The rule is NEAREST NEIGHBOUR
+       everywhere: a 32x32 sprite shown at 320px must be 10x10 hard squares.
+
+       It is NOT set here, though it belongs here. In Avalonia 12 RenderOptions is a Get/Set pair
+       rather than an AvaloniaProperty, so `<Setter Property="RenderOptions.BitmapInterpolationMode">`
+       does not compile ("Unable to find BitmapInterpolationModeProperty field") — it is only usable
+       as an attribute on an element. So it is set on each VIEW ROOT instead, where it inherits down
+       to every Image in that view, and PixelPerfectRenderingTests walks every view and fails naming
+       any that forgot. That test is the rule; these lines only say why it could not live here.
+
+       This governs DISPLAY only. Nothing in Nfty.Core resamples, blurs or anti-aliases a variant:
+       every edit command writes whole pixels, import refuses an image that is not exactly the canvas
+       size rather than scaling it, and colorization is per-pixel. -->
 </Styles>

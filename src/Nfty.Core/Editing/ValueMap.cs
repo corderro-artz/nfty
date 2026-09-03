@@ -9,7 +9,13 @@ namespace Nfty.Core.Editing;
 /// bound to a fixed canvas size. Grayscale is guaranteed by construction — there is no way to
 /// store independent R/G/B. Materialize an <see cref="Image{Rgba32}"/> only at export/preview.
 /// </summary>
-public sealed class ValueMap
+/// <remarks>
+/// It is an <see cref="IEditSurface{GrayPixel}"/>, which is how the generic paint stack reaches it.
+/// That costs the guarantee nothing: <see cref="GrayPixel"/> carries one value and one alpha, so a
+/// command written against the generic surface has no colour to hand this map even if it holds one.
+/// Nothing on this type accepts independent R/G/B, and nothing should be added that does.
+/// </remarks>
+public sealed class ValueMap : IEditSurface<GrayPixel>
 {
     private readonly byte[] _value;
     private readonly byte[] _alpha;
@@ -73,10 +79,29 @@ public sealed class ValueMap
     /// <param name="alpha">Alpha.</param>
     public void Set(int x, int y, byte value, byte alpha)
     {
+        if (!InBounds(x, y)) return;
         int i = Index(x, y);
         _value[i] = value;
         _alpha[i] = alpha;
     }
+
+    /// <summary>The pixel at a coordinate, as the generic paint stack sees it.</summary>
+    /// <param name="x">Column.</param>
+    /// <param name="y">Row.</param>
+    /// <returns>Its value and alpha.</returns>
+    public GrayPixel Get(int x, int y) => new(_value[Index(x, y)], _alpha[Index(x, y)]);
+
+    /// <summary>Writes one pixel. Out-of-bounds coordinates are ignored.</summary>
+    /// <param name="x">Column.</param>
+    /// <param name="y">Row.</param>
+    /// <param name="pixel">The value and alpha to store.</param>
+    public void Set(int x, int y, GrayPixel pixel) => Set(x, y, pixel.Value, pixel.Alpha);
+
+    /// <inheritdoc />
+    public byte AlphaOf(GrayPixel pixel) => pixel.Alpha;
+
+    /// <inheritdoc />
+    public GrayPixel WithAlpha(GrayPixel pixel, byte alpha) => pixel with { Alpha = alpha };
 
     /// <summary>Renders to a grayscale RGBA image — the form an <c>.igt</c> stores.</summary>
     /// <returns>A new image; the caller owns it.</returns>

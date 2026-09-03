@@ -31,8 +31,13 @@ public class WiringCoverageTests
     /// a name here is a decision to be defended, not a way to silence the test.</summary>
     private static readonly Dictionary<string, string> Exempt = new(StringComparer.Ordinal)
     {
-        // Nothing is currently exempt. Kept so the mechanism, and the standard for using it, are
-        // visible at the point where someone will be tempted to reach for it.
+        // Reachable, but not by name from any markup: the saved swatches' "Forget swatch" MenuItem
+        // binds {Binding ForgetCommand} on the PaletteSwatch, which the ViewModel hands this very
+        // command to. It is indirect because a ContextMenu is not in the visual tree, so the usual
+        // $parent[ItemsControl] lookup cannot resolve from inside one — and fails SILENTLY, taking
+        // the whole item template with it. Covered by
+        // IngredientEditorColorModeTests.A_books_own_swatches_show_first_and_cannot_be_forgotten_from_the_editor.
+        ["ForgetSwatchCommand"] = "invoked via PaletteSwatch.ForgetCommand, which the VM assigns",
     };
 
     private static string RepoRoot()

@@ -39,6 +39,20 @@ public class ValueMapTests
     }
 
     [Fact]
+    public void Set_ignores_an_out_of_bounds_coordinate()
+    {
+        var m = new ValueMap(2, 2);
+        m.Set(-1, 0, 200, 255);   // must not throw
+        m.Set(0, 9, 200, 255);
+        // The sharp one: on a 2-wide map, unguarded index arithmetic puts x=2,y=0 onto (0,1) —
+        // a brush running off the right edge would silently paint the row below.
+        m.Set(2, 0, 200, 255);
+        Assert.Equal(0, m.GetValue(0, 1));
+        Assert.Equal(0, m.GetAlpha(0, 1));
+        Assert.Equal(0, m.GetValue(0, 0));
+    }
+
+    [Fact]
     public void Clone_is_an_independent_deep_copy()
     {
         var a = new ValueMap(4, 4);

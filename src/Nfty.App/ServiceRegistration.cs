@@ -19,12 +19,21 @@ public static class ServiceRegistration
         services.AddSingleton<INotYetWired, NotYetWired>();
         services.AddSingleton<IStatusService, StatusService>();
         services.AddSingleton<IFilePickerService, FilePickerService>();
-        services.AddSingleton<IRecentsService, RecentsService>();
         services.AddSingleton<IThemeService, ThemeService>();
         services.AddSingleton<ICookBookSession, CookBookSession>();
         // Singleton: at most one Kitchen is open at a time, which is the mockup's own rule - the
         // workspace chip is "fixed for every item below it".
         services.AddSingleton<IKitchenSession, KitchenSession>();
+
+        // The .nfty store, and the two things that live in it. Built by hand rather than by type so
+        // the Kitchen session reaches the store (rule 3 of its discovery order) and so the legacy
+        // %APPDATA% recents file is named HERE, at the composition root, and nowhere else - a test
+        // that constructs a RecentsService can then never reach the developer's own list.
+        services.AddSingleton<IStateStore>(sp => new StateStore(sp.GetRequiredService<IKitchenSession>()));
+        services.AddSingleton<IRecentsService>(sp =>
+            new RecentsService(sp.GetRequiredService<IStateStore>(), RecentsService.LegacyFile));
+        services.AddSingleton<IPaletteService>(sp =>
+            new PaletteService(sp.GetRequiredService<IStateStore>()));
         services.AddSingleton<IImageBridge, ImageBridge>();
         services.AddSingleton<IFolderRevealer, NoopFolderRevealer>();
         services.AddSingleton<IClipboardService, NoopClipboardService>();
@@ -49,7 +58,11 @@ public static class ServiceRegistration
                 // the session registered — a factory that omitted it would leave the whole "From the
                 // Kitchen" section permanently empty with nothing saying why.
                 looseSavePath: null,
-                kitchen: sp.GetRequiredService<IKitchenSession>()));
+                kitchen: sp.GetRequiredService<IKitchenSession>(),
+                // The app-wide saved swatches. The editor defaults to an in-memory palette when this
+                // is omitted, which is right for a test and wrong for the app: without it every
+                // swatch the author saved would be gone at the next launch.
+                palette: sp.GetRequiredService<IPaletteService>()));
 
         // Loose (.igt) editor: same editor, but with a save-straight-to-.igt path and the synthetic
         // wrapper book it owns. Built directly (not via the cookbook editor factory) so it can pass
@@ -70,7 +83,8 @@ public static class ServiceRegistration
                     sp.GetRequiredService<INotYetWired>(), sp.GetRequiredService<ICookBookSession>(),
                     sp.GetRequiredService<IDialogService>(), sp.GetRequiredService<IFilePickerService>(),
                     looseSavePath: path,
-                    kitchen: sp.GetRequiredService<IKitchenSession>());
+                    kitchen: sp.GetRequiredService<IKitchenSession>(),
+                    palette: sp.GetRequiredService<IPaletteService>());
             });
 
         services.AddSingleton<Func<LoadedCookBook, CookDialogViewModel>>(sp =>

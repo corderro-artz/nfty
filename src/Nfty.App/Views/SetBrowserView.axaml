@@ -1,3 +1,6 @@
+<!-- RenderOptions.BitmapInterpolationMode=None on the root: pixel art scales with nearest
+     neighbour, never a filter. It inherits to every Image below, and
+     PixelPerfectRenderingTests fails naming any view that drops it. -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Nfty.App.ViewModels"
@@ -5,7 +8,8 @@
              xmlns:conv="using:Avalonia.Data.Converters"
              xmlns:appconv="using:Nfty.App.Converters"
              x:Class="Nfty.App.Views.SetBrowserView"
-             x:DataType="vm:SetBrowserViewModel">
+             x:DataType="vm:SetBrowserViewModel"
+             RenderOptions.BitmapInterpolationMode="None">
   <!-- Set browser: header (name/count/seed) over a 2-column body — a virtualized thumbnail
        grid (main) + a selected-item detail rail (~300, explorer.html-style .rules-panel look).
 

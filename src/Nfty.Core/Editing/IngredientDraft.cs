@@ -9,7 +9,7 @@ namespace Nfty.Core.Editing;
 public sealed class IngredientDraft
 {
     /// <summary>Stable identifier for the ingredient being built.</summary>
-    public string Id { get; }
+    public string Id { get; set; }
     /// <summary>Display name.</summary>
     public string Name { get; set; }
     /// <summary>Which kind of layer this will be.</summary>
@@ -39,26 +39,36 @@ public sealed class IngredientDraft
         Variants = variants.ToList();
     }
 
-    /// <summary>Adds a blank variant sized to the canvas.</summary>
+    /// <summary>Adds a blank variant sized to the canvas. A Custom ingredient's variants are
+    /// authored in colour, so one gets a blank <see cref="ColorMap"/> as well — without it a
+    /// freshly added Custom variant would have nothing to export.</summary>
     /// <param name="id">Stable identifier.</param>
     /// <param name="name">Display name.</param>
     /// <param name="weight">Roll weight.</param>
     /// <returns>The new variant, already added.</returns>
     public VariantDraft AddVariant(string id, string name, double weight)
     {
-        var v = new VariantDraft(id, name, weight, ValueMap.ForCanvas(Canvas));
+        var v = new VariantDraft(id, name, weight, ValueMap.ForCanvas(Canvas),
+            Kind == LayerKind.Custom ? ColorMap.ForCanvas(Canvas) : null);
         Variants.Add(v);
         return v;
     }
 
-    /// <summary>Appends a copy of an existing variant (same weight, cloned pixels) under a new id/name.</summary>
+    /// <summary>Appends a copy of an existing variant (same weight, cloned pixels) under a new
+    /// id/name. Both rasters are cloned when both exist — copying only the value-map would give a
+    /// Custom variant a grey ghost for artwork and silently block its save.</summary>
+    /// <param name="sourceId">The variant to copy.</param>
+    /// <param name="newId">The copy's identifier.</param>
+    /// <param name="newName">The copy's display name.</param>
+    /// <returns>The copy, already added.</returns>
+    /// <exception cref="InvalidOperationException">The source is absent, or the new id is taken.</exception>
     public VariantDraft DuplicateVariant(string sourceId, string newId, string newName)
     {
         var src = Variants.FirstOrDefault(v => v.Id == sourceId)
             ?? throw new InvalidOperationException($"No variant '{sourceId}' in ingredient '{Id}'.");
         if (Variants.Any(v => v.Id == newId))
             throw new InvalidOperationException($"Variant id '{newId}' already exists in ingredient '{Id}'.");
-        var copy = new VariantDraft(newId, newName, src.Weight, src.Map.Clone());
+        var copy = new VariantDraft(newId, newName, src.Weight, src.Map.Clone(), src.Color?.Clone());
         Variants.Add(copy);
         return copy;
     }

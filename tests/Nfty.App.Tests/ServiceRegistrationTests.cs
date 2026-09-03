@@ -16,15 +16,37 @@ namespace Nfty.App.Tests;
 /// </summary>
 public class ServiceRegistrationTests
 {
-    /// <summary>The real container, except that recents are pointed at a temp directory — resolving
-    /// the default <see cref="RecentsService"/> would read and write the user's actual app-data.</summary>
+    /// <summary>The real container, except that the state store is pinned to a temp directory —
+    /// resolving the shipped <see cref="StateStore"/> would discover a home beside the test binary
+    /// or in the working directory and leave a <c>.nfty</c> folder in the developer's build output,
+    /// and the shipped <see cref="RecentsService"/> would additionally read their real %APPDATA%
+    /// list to migrate it.</summary>
     private static ServiceProvider Container(string recentsDir)
     {
         var services = new ServiceCollection().AddNftyApp();
-        // Last registration wins in Microsoft.Extensions.DependencyInjection, so this overrides the
-        // app-data-backed default rather than duplicating it.
+        // Last registration wins in Microsoft.Extensions.DependencyInjection, so these override the
+        // discovered defaults rather than duplicating them.
+        services.AddSingleton<IStateStore>(StateStore.At(recentsDir));
         services.AddSingleton<IRecentsService>(new RecentsService(recentsDir));
         return services.BuildServiceProvider();
+    }
+
+    /// <summary>Everything registered in the composition root has to be resolvable from it — a
+    /// service nothing constructs is a service whose constructor nobody has ever run.</summary>
+    [AvaloniaFact]
+    public void The_store_and_the_two_things_that_live_in_it_all_resolve()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            using var provider = Container(dir);
+
+            var store = provider.GetRequiredService<IStateStore>();
+            Assert.Equal(dir, store.Resolution.Directory);
+            Assert.NotNull(provider.GetRequiredService<IRecentsService>());
+            Assert.NotNull(provider.GetRequiredService<IPaletteService>());
+        }
+        finally { Directory.Delete(dir, recursive: true); }
     }
 
     [AvaloniaFact]

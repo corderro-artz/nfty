@@ -202,8 +202,11 @@ public class IngredientEditorImportTests
         }
     }
 
+    /// <summary>Colour mode replaced the old "custom is import-only" contract. A Custom layer now
+    /// opens in colour and paints; what it must NOT offer is grayscale, because its value-map never
+    /// reaches an archive and those strokes would be invisible work.</summary>
     [AvaloniaFact]
-    public void Custom_cannot_be_painted()
+    public void Custom_opens_in_colour_and_paints_but_is_never_offered_grayscale()
     {
         var (path, session, recipe, ing) = IngredientEditorSaveTests.OnDisk(LayerKind.Custom);
         try
@@ -211,12 +214,22 @@ public class IngredientEditorImportTests
             var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
                 new FakeNav(), new FakeNotYetWired(), session, new FakeDialogs(), new OpenPicker(null));
 
-            Assert.False(vm.CanPaint);
-            vm.ActiveTool = EditorTool.Fill; vm.BrushValue = 200;
-            vm.ApplyToolStroke(new[] { (0, 0) });   // must be a no-op for a custom layer
+            Assert.True(vm.IsColorMode);
+            Assert.False(vm.CanPaintGrayscale);
 
-            Assert.False(vm.IsDirty);
-            Assert.False(vm.UndoCommand.CanExecute(null));
+            // The refusal has to be real, not just a greyed button: driving the command directly
+            // must leave the mode alone.
+            vm.SetPaintGrayscaleCommand.Execute(null);
+            Assert.True(vm.IsColorMode);
+
+            vm.ActiveTool = EditorTool.Fill;
+            vm.BrushHue = 120; vm.BrushSat = 100; vm.BrushValue = 255;
+            vm.ApplyToolStroke(new[] { (0, 0) });
+
+            Assert.True(vm.IsDirty);
+            Assert.True(vm.UndoCommand.CanExecute(null));
+            var painted = vm.ColorAt(4, 4);
+            Assert.Equal(0, painted.R); Assert.Equal(255, painted.G); Assert.Equal(0, painted.B);
             vm.Dispose();
         }
         finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
@@ -256,58 +269,42 @@ public class IngredientEditorImportTests
         }
     }
 
+    // ---- Review regressions (C2 whole-branch review) ----
+
+    /// <summary>The per-variant image gate is gone: a Custom variant is born with a blank colour
+    /// raster, so it is paintable at once rather than blocked until an import. Assert the COMMAND's
+    /// notification, not just the property — the property is computed live and passes even when the
+    /// bound button is stale.</summary>
     [AvaloniaFact]
-    public void Custom_save_is_blocked_when_a_variant_has_no_image()
+    public void A_custom_variant_added_this_session_is_paintable_immediately()
     {
         var (path, session, recipe, ing) = IngredientEditorSaveTests.OnDisk(LayerKind.Custom);
         try
         {
             var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
                 new FakeNav(), new FakeNotYetWired(), session, new FakeDialogs(), new OpenPicker(null));
-            vm.AddVariantCommand.Execute(null);   // the new variant has no original and no import
-            Assert.True(vm.IsDirty);
-            Assert.False(vm.CanSave);             // gated: not every custom variant has an image
+            int notifications = 0;
+            vm.SaveCommand.CanExecuteChanged += (_, _) => notifications++;
+
+            vm.AddVariantCommand.Execute(null);   // selects the new variant
+            Assert.True(vm.CanSave);              // it has a colour raster, so there IS art to write
+            Assert.True(notifications > 0, "SaveCommand never raised CanExecuteChanged, so the button stays stale");
+
+            // The point of the raster existing is that a stroke lands on it without an import first.
+            vm.ActiveTool = EditorTool.Fill;
+            vm.BrushHue = 0; vm.BrushSat = 100; vm.BrushValue = 255;
+            vm.ApplyToolStroke(new[] { (0, 0) });
+            var painted = vm.ColorAt(4, 4);
+            Assert.Equal(255, painted.R); Assert.Equal(0, painted.G); Assert.Equal(0, painted.B);
             vm.Dispose();
         }
         finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
     }
 
-    // ---- Review regressions (C2 whole-branch review) ----
-
-    /// <summary>Custom Save depends on the per-variant image set, which import/add/duplicate/delete all
-    /// change while IsDirty is already true — so the [NotifyCanExecuteChangedFor(IsDirty)] wiring never
-    /// fires. Assert the COMMAND's notification, not just the CanSave property: the property is computed
-    /// live and passes even when the bound button is stale.</summary>
-    [AvaloniaFact]
-    public async Task Custom_save_availability_is_notified_when_the_image_set_changes()
-    {
-        var (path, session, recipe, ing) = IngredientEditorSaveTests.OnDisk(LayerKind.Custom);
-        var pngPath = WritePng(8, 8, 10, 200, 40);
-        try
-        {
-            var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
-                new FakeNav(), new FakeNotYetWired(), session, new FakeDialogs(), new OpenPicker(pngPath));
-            int notifications = 0;
-            vm.SaveCommand.CanExecuteChanged += (_, _) => notifications++;
-
-            vm.AddVariantCommand.Execute(null);          // image-less custom variant → Save blocked
-            Assert.False(vm.CanSave);
-            Assert.NotNull(vm.SaveBlockedReason);        // and the UI can say which variant
-            notifications = 0;
-
-            await vm.ImportImageCommand.ExecuteAsync(null);   // now it has an image → Save becomes valid
-            Assert.True(vm.CanSave);
-            Assert.Null(vm.SaveBlockedReason);
-            Assert.True(notifications > 0, "SaveCommand never raised CanExecuteChanged, so the button stays stale");
-            vm.Dispose();
-        }
-        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); Directory.Delete(Path.GetDirectoryName(pngPath)!, recursive: true); }
-    }
-
     /// <summary>NextVariantId reuses the smallest free id, so a deleted variant's import must be dropped
     /// with it — otherwise the next added variant inherits the dead variant's art and Save writes it.</summary>
     [AvaloniaFact]
-    public async Task Deleting_a_custom_variant_drops_its_import_so_a_reused_id_starts_blank()
+    public async Task Deleting_a_custom_variant_drops_its_art_so_a_reused_id_starts_blank()
     {
         var (path, session, recipe, ing) = IngredientEditorSaveTests.OnDisk(LayerKind.Custom);
         var pngPath = WritePng(8, 8, 10, 200, 40);
@@ -317,12 +314,16 @@ public class IngredientEditorImportTests
                 new FakeNav(), new FakeNotYetWired(), session, new ConfirmingDialogsStub(), new OpenPicker(pngPath));
             vm.AddVariantCommand.Execute(null);
             await vm.ImportImageCommand.ExecuteAsync(null);   // the added variant now has art
-            Assert.True(vm.CanSave);
+            Assert.Equal(200, vm.ColorAt(4, 4).G);
 
             await vm.DeleteVariantCommand.ExecuteAsync(null); // delete it (frees its id)
             vm.AddVariantCommand.Execute(null);               // re-adds with the SAME id
-            Assert.False(vm.CanSave);                         // must be blank again, not the ghost
-            Assert.NotNull(vm.SaveBlockedReason);
+
+            // Asserted on the PIXELS: the old save-blocked flag is gone, so an inherited ghost would
+            // now be silently savable rather than loudly refused.
+            var fresh = vm.ColorAt(4, 4);
+            Assert.Equal(0, fresh.A);                         // fully transparent - no inherited ghost
+            Assert.Equal(0, fresh.G);
             vm.Dispose();
         }
         finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); Directory.Delete(Path.GetDirectoryName(pngPath)!, recursive: true); }

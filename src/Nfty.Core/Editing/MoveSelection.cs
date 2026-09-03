@@ -5,7 +5,14 @@ namespace Nfty.Core.Editing;
 /// transparent and its pixels are re-stamped at the shifted position. Later writes win, so a pixel that
 /// is both cleared and re-stamped ends up stamped.
 /// </summary>
-public sealed class MoveSelection : RegionEditCommand
+/// <remarks>
+/// The re-stamped pixels are copied from the surface, so they arrive carrying whatever alpha they
+/// already had — an imported soft edge included. Under <see cref="OpacityLock.Locked"/> the base
+/// snaps them like any other painted pixel: moving a soft-edged sprite hardens its edge, which is
+/// the lock doing what it says rather than a gap in it.
+/// </remarks>
+/// <typeparam name="TPixel">The pixel the target surface stores.</typeparam>
+public sealed class MoveSelection<TPixel> : RegionEditCommand<TPixel> where TPixel : struct
 {
     private readonly PixelRect _source;
     private readonly int _dx, _dy;
@@ -14,7 +21,9 @@ public sealed class MoveSelection : RegionEditCommand
     /// <param name="source">The region to move.</param>
     /// <param name="dx">Horizontal offset in pixels.</param>
     /// <param name="dy">Vertical offset in pixels.</param>
-    public MoveSelection(PixelRect source, int dx, int dy)
+    /// <param name="opacity">Whether partial alpha is admitted on the moved pixels; locked by default.</param>
+    public MoveSelection(PixelRect source, int dx, int dy, OpacityLock opacity = OpacityLock.Locked)
+        : base(opacity)
     {
         _source = source;
         _dx = dx;
@@ -22,27 +31,27 @@ public sealed class MoveSelection : RegionEditCommand
     }
 
     /// <inheritdoc />
-    protected override IReadOnlyList<(int x, int y, byte value, byte alpha)> ComputePixels(ValueMap map)
+    protected override IReadOnlyList<(int x, int y, TPixel pixel)> ComputePixels(IEditSurface<TPixel> surface)
     {
         // Build a keyed map so a destination pixel overrides the source-clear at the same coordinate.
-        var result = new Dictionary<(int, int), (byte v, byte a)>();
+        var result = new Dictionary<(int, int), TPixel>();
         for (int y = _source.Y; y < _source.Y + _source.Height; y++)
             for (int x = _source.X; x < _source.X + _source.Width; x++)
             {
-                if (!map.InBounds(x, y)) continue;
-                result[(x, y)] = (0, 0); // clear source
+                if (!surface.InBounds(x, y)) continue;
+                result[(x, y)] = default;   // clear source: the blank pixel, transparent on both surfaces
             }
         for (int y = _source.Y; y < _source.Y + _source.Height; y++)
             for (int x = _source.X; x < _source.X + _source.Width; x++)
             {
-                if (!map.InBounds(x, y)) continue;
+                if (!surface.InBounds(x, y)) continue;
                 int nx = x + _dx, ny = y + _dy;
-                if (!map.InBounds(nx, ny)) continue;
-                result[(nx, ny)] = (map.GetValue(x, y), map.GetAlpha(x, y));
+                if (!surface.InBounds(nx, ny)) continue;
+                result[(nx, ny)] = surface.Get(x, y);
             }
-        var pixels = new List<(int, int, byte, byte)>(result.Count);
+        var pixels = new List<(int, int, TPixel)>(result.Count);
         foreach (var kv in result)
-            pixels.Add((kv.Key.Item1, kv.Key.Item2, kv.Value.v, kv.Value.a));
+            pixels.Add((kv.Key.Item1, kv.Key.Item2, kv.Value));
         return pixels;
     }
 }

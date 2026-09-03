@@ -107,21 +107,27 @@ public class LooseIngredientEditorTests
         }
     }
 
-    // C2 changed this contract: a custom ingredient is no longer save-blocked outright — it is
-    // import-only. Painting can't dirty it (CanPaint is false), so Save stays disabled until an
-    // image is imported. The savable path (import → full-colour round-trip) is covered by
-    // IngredientEditorImportTests.
+    // Colour mode replaced the import-only contract: a loose custom ingredient opens in colour and
+    // paints, so a stroke dirties it and Save becomes available with no import at all. The
+    // full-colour round-trip through the .igt is covered by IngredientEditorImportTests.
     [AvaloniaFact]
-    public void Loose_custom_is_import_only_so_painting_leaves_save_disabled()
+    public void Loose_custom_paints_in_colour_and_becomes_savable_without_an_import()
     {
         var (path, ing) = OnDiskIgt(LayerKind.Custom);
         try
         {
             var vm = LooseEditor(ing, path);
-            Assert.False(vm.CanPaint);                      // custom can't be painted
-            vm.ApplyToolStroke(new[] { (0, 0) });           // ...so this is a no-op
-            Assert.False(vm.IsDirty);                       // and cannot dirty the draft
-            Assert.False(vm.CanSave);                       // hence nothing to save yet
+            Assert.True(vm.IsColorMode);
+            Assert.False(vm.CanPaintGrayscale);
+
+            vm.ActiveTool = EditorTool.Fill;
+            vm.BrushHue = 240; vm.BrushSat = 100; vm.BrushValue = 255;
+            vm.ApplyToolStroke(new[] { (0, 0) });
+
+            Assert.True(vm.IsDirty);
+            Assert.True(vm.CanSave);
+            var painted = vm.ColorAt(1, 1);
+            Assert.Equal(0, painted.R); Assert.Equal(0, painted.G); Assert.Equal(255, painted.B);
             vm.Dispose();
         }
         finally { Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
