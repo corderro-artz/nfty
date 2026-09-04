@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Nfty.App.ViewModels"
+             xmlns:svc="using:Nfty.App.Services"
              xmlns:models="using:Nfty.App.Models"
              xmlns:conv="using:Avalonia.Data.Converters"
              x:Class="Nfty.App.Views.ExplorerView"
@@ -37,7 +38,7 @@
             <TextBox Grid.Column="1" x:Name="SearchBox" Text="{Binding SearchQuery}" Classes="bare"
                      Margin="8,0" VerticalAlignment="Center"
                      PlaceholderText="Find recipe, ingredient, variant…" ToolTip.Tip="Search (Ctrl+K)" />
-            <Border Grid.Column="2" Classes="kbd"><TextBlock Text="⌘K" /></Border>
+            <Border Grid.Column="2" Classes="kbd"><TextBlock Text="{x:Static svc:KeyHints.Search}" /></Border>
           </Grid>
         </Border>
 

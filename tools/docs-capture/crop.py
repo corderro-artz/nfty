@@ -30,8 +30,10 @@ FIGURES = {
     "cook-dialog":        ("cook-dialog", (468, 280, 928, 569)),
     "cook-done":          ("cook-done", (468, 334, 928, 500)),
     "set-browser":        ("set-browser", None),
-    "rarity":             ("set-browser", (1006, 112, 1384, 630)),
-    "help-sheet":         ("help", (229, 133, 1164, 711)),
+    "rarity":             ("set-browser", (1006, 108, 1384, 672)),
+    # The quick-reference sheet outgrew the 864px capture when it gained Kitchen and a second
+    # KEYS group, so ITS frame is shot at `pair.py help <dir> 1010` and cropped from that.
+    "help-sheet":         ("help", (202, 92, 1184, 898)),
     "new-cookbook":       ("wizard-cookbook", (324, 86, 1070, 752)),
 }
 

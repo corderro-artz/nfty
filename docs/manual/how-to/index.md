@@ -39,6 +39,8 @@ around; if you do not, start with [Get started](../get-started/index.md).
 
     ---
 
+    [Look closely at a finished asset](inspect-an-asset.md)
+
     [Add more assets to a finished set](more-assets.md)
 
 </div>

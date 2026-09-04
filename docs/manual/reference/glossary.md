@@ -37,7 +37,8 @@
 :   One layer of a Recipe: its kind, its colorization, and its weighted variants.
 
 **Kitchen** (`.ktn`)
-:   A folder you work out of. Membership is discovered by scanning, never recorded.
+:   Your shelf of loose parts -- Ingredients and Recipes that belong to no one CookBook, ready to
+    pull into any project. Membership is discovered by scanning the folder, never recorded.
 
 **Layer order**
 :   The paint order of a Recipe's Ingredients, bottom to top. Depth 1 paints first and sits furthest

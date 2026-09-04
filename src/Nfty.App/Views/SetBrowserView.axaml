@@ -29,16 +29,32 @@
        ListBox's own selection is unused (its unit is a row, not a tile); tile clicks are wired via
        one bubbled Button.Click handler in SetBrowserView.axaml.cs instead. -->
   <Grid RowDefinitions="Auto,*" Margin="16">
-    <!-- Header row: idchip-wrapped metadata (mirrors CookBookDetailView's .idchip usage, matching
-         explorer.html's shared "chip/label grammar" instead of the bare TextBlocks the audit found
-         here — set-browser-*.png). -->
-    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10" Margin="0,0,0,14">
+    <!-- Header row. The chips are the app's own `label value` grammar (CookBookDetailView uses the
+         same .ck / .cvl pair for `symbol VP`, `canvas 64 x 64`), not one flat run of text.
+
+         That is the whole fix: "Seed launch" read as two unrelated words and told a first-time user
+         nothing, while "SEED launch" names the field and then gives it. The tooltip carries the one
+         sentence that makes a seed worth caring about. -->
+    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="9" Margin="0,0,0,14">
       <TextBlock Classes="mono" FontSize="17" FontWeight="Bold" Text="{Binding Name}" VerticalAlignment="Center" />
-      <Border Classes="idchip">
-        <TextBlock Classes="mono" Text="{Binding Count, StringFormat='{}{0} items'}" />
+      <Border Classes="idchip" ToolTip.Tip="How many assets this Set holds">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <TextBlock Classes="ck" Text="ASSETS" />
+          <TextBlock Classes="cvl" Text="{Binding Count}" />
+        </StackPanel>
       </Border>
-      <Border Classes="idchip">
-        <TextBlock Classes="mono" Text="{Binding Seed, StringFormat='Seed {0}'}" />
+      <Border Classes="idchip"
+              ToolTip.Tip="The word that cooked this collection. The same CookBook and the same seed always produce the same Set.">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <TextBlock Classes="ck" Text="SEED" />
+          <TextBlock Classes="cvl" Text="{Binding Seed}" />
+        </StackPanel>
+      </Border>
+      <Border Classes="idchip" ToolTip.Tip="How many Recipes the assets were rolled from">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <TextBlock Classes="ck" Text="RECIPES" />
+          <TextBlock Classes="cvl" Text="{Binding RecipeCount}" />
+        </StackPanel>
       </Border>
     </StackPanel>
 
@@ -55,62 +71,120 @@
         </ListBox.ItemsSource>
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="appconv:TileRow">
-            <ItemsControl ItemsSource="{Binding Tiles}">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="10" /></ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:SetItemRow">
-                  <Button Classes="ghost" Padding="6" HorizontalContentAlignment="Center">
-                    <StackPanel Spacing="6" HorizontalAlignment="Center">
-                      <Border Classes="tile" Classes.sel="{Binding IsSelected}" Width="120" Height="120"
-                              ClipToBounds="True">
-                        <Image Source="{Binding Thumbnail}" Width="120" Height="120" Stretch="UniformToFill" />
-                      </Border>
-                      <TextBlock Classes="mono" FontSize="11" HorizontalAlignment="Center"
-                                 Classes.muted="{Binding !IsSelected}"
-                                 Text="{Binding Number, StringFormat='#{0:D4}'}" />
-                    </StackPanel>
-                  </Button>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            <!-- The ROW is the hover surface, not just the cell: hovering washes the whole run and
+                 then the cell under the pointer one step further, which reads as a crosshair over
+                 the grid. Both are background-only, so nothing moves under the pointer. -->
+            <Border Classes="trow">
+              <ItemsControl ItemsSource="{Binding Tiles}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="10" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:SetItemRow">
+                    <Button Classes="ghost tcell" Padding="6" HorizontalContentAlignment="Center"
+                            ToolTip.Tip="Click to inspect">
+                      <StackPanel Spacing="6" HorizontalAlignment="Center">
+                        <Border Classes="tile" Classes.sel="{Binding IsSelected}" Width="120" Height="120"
+                                ClipToBounds="True">
+                          <Image Source="{Binding Thumbnail}" Width="120" Height="120" Stretch="UniformToFill" />
+                        </Border>
+                        <TextBlock Classes="mono" FontSize="11" HorizontalAlignment="Center"
+                                   Classes.muted="{Binding !IsSelected}"
+                                   Classes.accent="{Binding IsSelected}"
+                                   Text="{Binding Number, StringFormat='#{0:D4}'}" />
+                      </StackPanel>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Border>
           </DataTemplate>
         </ListBox.ItemTemplate>
       </ListBox>
 
-      <!-- Detail rail -->
-      <Border Grid.Column="1" Classes="rules-panel" VerticalAlignment="Stretch"
+      <!-- Detail rail. Two rows, not one: the body scrolls and the Save band does not, so the rail
+           is exactly the same height for every asset and the button never moves. -->
+      <Border Grid.Column="1" Classes="rules-panel" Padding="0" VerticalAlignment="Stretch"
               IsVisible="{Binding SelectedItem, Converter={x:Static conv:ObjectConverters.IsNotNull}}">
-        <StackPanel Spacing="10">
-          <TextBlock Classes="mono" FontSize="14" FontWeight="Bold" Text="{Binding SelectedNumber}" />
-          <TextBlock Classes="muted" Text="{Binding SelectedRecipe}" />
-          <TextBlock Classes="mono muted" FontSize="11" TextWrapping="Wrap" Text="{Binding SelectedDna}" />
+        <Grid RowDefinitions="*,Auto">
+          <ScrollViewer Grid.Row="0" Padding="13,12" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="10">
 
-          <TextBlock Classes="sub-h" Text="RARITY" Margin="0,8,0,0" />
-          <StackPanel Spacing="0">
-            <Border Classes="data-h">
-              <Grid ColumnDefinitions="*,Auto,Auto">
-                <TextBlock Grid.Column="0" Classes="data-h" Text="TRAIT" />
-                <TextBlock Grid.Column="1" Classes="data-h" Text="VALUE" Margin="8,0" />
-                <TextBlock Grid.Column="2" Classes="data-h num" Text="%" />
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0" Classes="mono" FontSize="17" FontWeight="Bold"
+                           Text="{Binding SelectedNumber}" VerticalAlignment="Center" />
+                <Border Grid.Column="1" Classes="rtag"><TextBlock Text="{Binding SelectedRecipe}" /></Border>
               </Grid>
-            </Border>
-            <ItemsControl ItemsSource="{Binding SelectedRarity}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="core:RarityAttribute">
-                  <Border Classes="data-row">
-                    <Grid ColumnDefinitions="*,Auto,Auto">
-                      <TextBlock Grid.Column="0" Classes="data-row" Text="{Binding Trait_type}" />
-                      <TextBlock Grid.Column="1" Classes="data-row muted" Text="{Binding Value}" Margin="8,0" />
-                      <TextBlock Grid.Column="2" Classes="data-row num" Text="{Binding RarityPct, StringFormat='{}{0}%'}" />
-                    </Grid>
-                  </Border>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </StackPanel>
-        </StackPanel>
+
+              <!-- The DNA gets a box of its own and breaks at exactly half. A SHA-256 is always 64
+                   hex characters, so the two rows are always 32 apiece and always the same width -
+                   which is what lets them be centered and still line up on both edges. Half() does
+                   the arithmetic rather than a hard-coded 32, so a future hash of another length
+                   still splits instead of losing its tail. -->
+              <StackPanel Spacing="5">
+                <TextBlock Classes="sub-h" Text="DNA" />
+                <Border Classes="dnabox">
+                  <StackPanel>
+                    <TextBlock Text="{Binding SelectedDnaTop}" />
+                    <TextBlock Text="{Binding SelectedDnaBottom}" />
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+
+              <TextBlock Classes="sub-h" Text="RARITY" Margin="0,8,0,0" />
+              <StackPanel Spacing="0">
+                <Border Classes="data-h">
+                  <Grid ColumnDefinitions="*,Auto,46">
+                    <TextBlock Grid.Column="0" Classes="data-h" Text="TRAIT" />
+                    <TextBlock Grid.Column="1" Classes="data-h" Text="VALUE" Margin="8,0" />
+                    <TextBlock Grid.Column="2" Classes="data-h num" Text="%" />
+                  </Grid>
+                </Border>
+                <ItemsControl ItemsSource="{Binding SelectedRarity}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="core:RarityAttribute">
+                      <Border Classes="data-row" x:Name="RarRow" ClipToBounds="True">
+                        <Panel>
+                          <!-- The share bar is a fraction of the track it is ACTUALLY in, via
+                               ShareWidthConverter over the row's own measured width - not a constant
+                               multiplier, which is only ever right for a pinned track. -->
+                          <Rectangle Classes="rarbar" Height="20" VerticalAlignment="Center">
+                            <Rectangle.Width>
+                              <MultiBinding Converter="{x:Static appconv:ShareWidthConverter.Instance}">
+                                <Binding Path="RarityPct" />
+                                <Binding ElementName="RarRow" Path="Bounds.Width" />
+                              </MultiBinding>
+                            </Rectangle.Width>
+                          </Rectangle>
+                          <Grid ColumnDefinitions="*,Auto,46">
+                            <TextBlock Grid.Column="0" Classes="data-row muted" Text="{Binding Trait_type}" />
+                            <TextBlock Grid.Column="1" Classes="data-row" Text="{Binding Value}" Margin="8,0" />
+                            <TextBlock Grid.Column="2" Classes="data-row num pct"
+                                       Classes.rare="{Binding RarityPct, Converter={x:Static appconv:RarityBandConverter.Rare}}"
+                                       Classes.mid="{Binding RarityPct, Converter={x:Static appconv:RarityBandConverter.Mid}}"
+                                       Classes.common="{Binding RarityPct, Converter={x:Static appconv:RarityBandConverter.Common}}"
+                                       Text="{Binding RarityPct, StringFormat='{}{0}%'}" />
+                          </Grid>
+                        </Panel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </StackPanel>
+          </ScrollViewer>
+
+          <Border Grid.Row="1" Classes="rail-foot">
+            <Button Classes="savebtn" HorizontalAlignment="Stretch"
+                    Command="{Binding SaveImageCommand}"
+                    ToolTip.Tip="Write the selected asset's PNG somewhere of your choosing">
+              <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                <Path Classes="ico xs" Data="{StaticResource IconDownload}" />
+                <TextBlock Text="Save image…" />
+              </StackPanel>
+            </Button>
+          </Border>
+        </Grid>
       </Border>
     </Grid>
   </Grid>

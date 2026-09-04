@@ -95,6 +95,19 @@
            CookBook identity card with a light-theme gradient in dark mode, i.e. near-white text on
            cream. Swapping the entire brush per dictionary is the mechanism every other brush here
            already uses, and it cannot fail the same way. -->
+      <!-- The rarity share bar. A whole brush per dictionary, per the rule above CardGradientBrush:
+           a gradient built inside a Style Setter with DynamicResource stops is constructed once and
+           shared, so its stops never re-resolve on a theme change.
+
+           It FADES because a flat block does not read as a bar - it reads as a selected row, which
+           is exactly how the first cut looked: six hard-edged rectangles behind six trait names,
+           each ending mid-word. The fade gives the bar a direction, so the eye takes the length as
+           a quantity rather than the fill as a state. -->
+      <LinearGradientBrush x:Key="RarityBarBrush" StartPoint="0%,50%" EndPoint="100%,50%">
+        <GradientStop Color="#1fa11f31" Offset="0" />
+        <GradientStop Color="#14a11f31" Offset="0.55" />
+        <GradientStop Color="#00a11f31" Offset="1" />
+      </LinearGradientBrush>
       <LinearGradientBrush x:Key="CardGradientBrush" StartPoint="50%,0%" EndPoint="50%,100%">
         <GradientStop Color="#ede7df" Offset="0" />
         <GradientStop Color="#f8f3ed" Offset="1" />
@@ -158,6 +171,19 @@
       <Color x:Key="AccentWashFadeColor">#00a11f31</Color>
       <!-- See the light dictionary's note: these are whole brushes because a Setter-hosted gradient
            does not re-resolve DynamicResource stops on a theme change. -->
+      <!-- The rarity share bar. A whole brush per dictionary, per the rule above CardGradientBrush:
+           a gradient built inside a Style Setter with DynamicResource stops is constructed once and
+           shared, so its stops never re-resolve on a theme change.
+
+           It FADES because a flat block does not read as a bar - it reads as a selected row, which
+           is exactly how the first cut looked: six hard-edged rectangles behind six trait names,
+           each ending mid-word. The fade gives the bar a direction, so the eye takes the length as
+           a quantity rather than the fill as a state. -->
+      <LinearGradientBrush x:Key="RarityBarBrush" StartPoint="0%,50%" EndPoint="100%,50%">
+        <GradientStop Color="#3da11f31" Offset="0" />
+        <GradientStop Color="#26a11f31" Offset="0.55" />
+        <GradientStop Color="#00a11f31" Offset="1" />
+      </LinearGradientBrush>
       <LinearGradientBrush x:Key="CardGradientBrush" StartPoint="50%,0%" EndPoint="50%,100%">
         <GradientStop Color="#0f1118" Offset="0" />
         <GradientStop Color="#0b0c10" Offset="1" />

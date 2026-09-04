@@ -1,0 +1,119 @@
+<!-- RenderOptions.BitmapInterpolationMode=None on the root: this is the one screen whose entire job
+     is showing the real pixels, so it must never resample. PixelPerfectRenderingTests names any
+     view that drops it. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             x:Class="Nfty.App.Views.SetInspectView"
+             x:DataType="vm:SetInspectViewModel"
+             RenderOptions.BitmapInterpolationMode="None">
+  <!--
+    The asset inspector (.demo/proposal C). A large modal over the dimmed Set browser: header
+    (number, recipe, elided DNA, Esc), a checkered viewport, and a footer of controls.
+
+    Two rules the design turns on, both enforced in the code-behind rather than here:
+
+      * ZOOM is a multiple of the FITTED size, 1x to 16x. Opening at 1:1 would show a 64x64 asset as
+        a postage stamp and a 1000x1000 one cropped; Fit is the only opening state right for both.
+      * PANNING IS BOUNDED. At Fit there is nothing outside the viewport, so the drag is off
+        entirely - free drift is what makes an inspector feel sloppy. Above Fit the offset is
+        clamped so the image edge can never travel inside the viewport edge: every corner reachable,
+        nothing beyond.
+  -->
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Escape" Command="{Binding CloseCommand}" />
+    <KeyBinding Gesture="Left" Command="{Binding PreviousCommand}" />
+    <KeyBinding Gesture="Right" Command="{Binding NextCommand}" />
+    <KeyBinding Gesture="OemPlus" Command="{Binding ZoomInCommand}" />
+    <KeyBinding Gesture="OemMinus" Command="{Binding ZoomOutCommand}" />
+    <KeyBinding Gesture="D0" Command="{Binding FitCommand}" />
+  </UserControl.KeyBindings>
+
+  <Border Classes="inspect">
+    <Grid RowDefinitions="Auto,*,Auto">
+
+      <!-- ===== header ===== -->
+      <Border Grid.Row="0" Classes="ins-h">
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+            <TextBlock Classes="ins-no" Text="{Binding Number}" />
+            <Border Classes="rtag"><TextBlock Text="{Binding Recipe}" /></Border>
+            <TextBlock Classes="ins-dna" Text="{Binding DnaShort}" ToolTip.Tip="This asset's fingerprint" />
+          </StackPanel>
+          <Button Grid.Column="1" Classes="esc" Content="ESC" Command="{Binding CloseCommand}"
+                  ToolTip.Tip="Close — Esc" />
+        </Grid>
+      </Border>
+
+      <!-- ===== viewport =====
+           The checker is the editor's own transparency ground, so alpha reads honestly rather than
+           against a flat panel that could be mistaken for the art. -->
+      <Border Grid.Row="1" x:Name="Viewport" ClipToBounds="True">
+        <Border.Background>
+          <!-- The editor's own 18px checker, inline rather than in a Style Setter: a brush built in
+               a Setter is constructed ONCE and shared, so its DynamicResource children never
+               re-resolve on a theme change. Inline in the view they resolve against the visual tree
+               and follow the theme. -->
+          <DrawingBrush TileMode="Tile" SourceRect="0,0,36,36" DestinationRect="0,0,36,36">
+            <DrawingBrush.Drawing>
+              <DrawingGroup>
+                <GeometryDrawing Brush="{DynamicResource BgAltBrush}" Geometry="M0,0 H36 V36 H0 Z" />
+                <GeometryDrawing Brush="{DynamicResource BgAlt2Brush}" Geometry="M0,0 H18 V18 H0 Z" />
+                <GeometryDrawing Brush="{DynamicResource BgAlt2Brush}" Geometry="M18,18 H36 V36 H18 Z" />
+              </DrawingGroup>
+            </DrawingBrush.Drawing>
+          </DrawingBrush>
+        </Border.Background>
+        <!-- The transform group is built in code-behind, not here: a Transform is not a Control, so
+             x:Name on one is not reachable through FindControl, and the gesture code needs to write
+             both parts on every frame. -->
+        <Image x:Name="Canvas" Source="{Binding Image}"
+               HorizontalAlignment="Center" VerticalAlignment="Center" />
+      </Border>
+
+      <!-- ===== footer ===== -->
+      <Border Grid.Row="2" Classes="ins-f">
+        <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto" ColumnSpacing="9">
+          <Button Grid.Column="0" Classes="insb" Command="{Binding PreviousCommand}"
+                  ToolTip.Tip="Previous asset — ←">
+            <Path Classes="ico xs" Data="{StaticResource IconChevronLeft}" />
+          </Button>
+          <Button Grid.Column="1" Classes="insb" Command="{Binding NextCommand}"
+                  ToolTip.Tip="Next asset — →">
+            <Path Classes="ico xs" Data="{StaticResource IconChevronRight}" />
+          </Button>
+
+          <Border Grid.Column="2" Width="1" Height="20" Background="{DynamicResource LineStrongBrush}"
+                  VerticalAlignment="Center" />
+
+          <Button Grid.Column="3" Classes="insb" Command="{Binding ZoomOutCommand}" ToolTip.Tip="Zoom out — −">
+            <Path Classes="ico xs" Data="{StaticResource IconZoomOut}" />
+          </Button>
+          <!-- NOT Slider.overlay: that class blanks the track, which is right for every slider laid
+               over a band and wrong for the only one that is its own control. -->
+          <Slider Grid.Column="4" Classes="ins-z" Width="168"
+                  Minimum="1" Maximum="16" Value="{Binding Scale}" VerticalAlignment="Center" />
+          <Button Grid.Column="5" Classes="insb" Command="{Binding ZoomInCommand}" ToolTip.Tip="Zoom in — +">
+            <Path Classes="ico xs" Data="{StaticResource IconZoomIn}" />
+          </Button>
+          <TextBlock Grid.Column="6" Classes="ins-zv" Text="{Binding ScaleText}" />
+
+          <Button Grid.Column="7" Classes="tbtn" Command="{Binding FitCommand}" Content="Fit"
+                  ToolTip.Tip="Fit the whole asset — 0" />
+
+          <TextBlock Grid.Column="9" Classes="ins-hint" VerticalAlignment="Center">
+            <Run Text="{Binding SourceSize}" /><Run Text=" · drag to pan · wheel to zoom" />
+          </TextBlock>
+
+          <Button Grid.Column="10" Classes="savebtn" Command="{Binding SaveCommand}"
+                  ToolTip.Tip="Save this image">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <Path Classes="ico xs" Data="{StaticResource IconDownload}" />
+              <TextBlock Text="Save" />
+            </StackPanel>
+          </Button>
+        </Grid>
+      </Border>
+    </Grid>
+  </Border>
+</UserControl>

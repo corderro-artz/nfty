@@ -105,7 +105,9 @@ public static class ServiceRegistration
                 sp.GetRequiredService<IKitchenSession>(),
                 sp.GetRequiredService<IClipboardService>()));
 
-        services.AddSingleton<Func<LoadedSet, SetBrowserViewModel>>(sp => set => new SetBrowserViewModel(set));
+        services.AddSingleton<Func<LoadedSet, SetBrowserViewModel>>(sp => set => new SetBrowserViewModel(
+            set, sp.GetRequiredService<IFilePickerService>(), sp.GetRequiredService<IDialogService>(),
+            sp.GetRequiredService<IStatusService>()));
 
         // Further VM registrations are added incrementally by the task that creates each
         // ViewModel (see Tasks 12-13).

@@ -825,14 +825,17 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
   </Style>
-  <!-- Set-browser grid tile: selected-tile indicator (accent border + wash), since the tile grid
-       is a plain ItemsControl over rows (see SetBrowserView.axaml's note on ListBox virtualization)
-       rather than a real ListBox/ListBoxItem, so there is no native :selected pseudo-class to
-       style — selection is instead exposed as a bound "sel" class per SetItemRow.IsSelected. -->
+  <!-- Set-browser grid tile: the selected tile is its GROUND plus its accent caption, and nothing
+       else. It used to carry a 2px accent border too; at 76px any added edge reads as a frame around
+       the art rather than a marker on it, so the border went and the wash stayed.
+
+       The grid is a plain ItemsControl over rows (see SetBrowserView.axaml's note on ListBox
+       virtualization) rather than a real ListBox/ListBoxItem, so there is no native :selected
+       pseudo-class - selection is a bound "sel" class per SetItemRow.IsSelected. -->
   <Style Selector="Border.tile.sel">
-    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
-    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
   </Style>
   <Style Selector="Border.frame">
     <Setter Property="Background" Value="{DynamicResource BgBrush}" />
@@ -1986,7 +1989,7 @@
        is scoped `sh-` because the sheet re-uses several mockup class NAMES (.slbl, .t, .s, .k) at
        its own sizes; the shared ones stay whatever the rest of the app already made them. -->
   <Style Selector="Border.sheet">
-    <Setter Property="Width" Value="780" />
+    <Setter Property="Width" Value="820" />
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
     <Setter Property="BorderThickness" Value="1" />
@@ -2103,7 +2106,212 @@
     <Setter Property="Margin" Value="0,3,0,0" />
   </Style>
 
-  <!-- .kline / .k — the keyboard rows. Border.kbd already carries the chip's border, radius and
+  <!-- The nesting line under THE SIX WORDS. Sits tight under the label (negative top margin) so it
+       reads as part of the header rather than as a first entry. -->
+  <Style Selector="TextBlock.sh-chain">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="LineHeight" Value="15" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="Margin" Value="0,-5,0,13" />
+  </Style>
+
+  <!-- The rule above Kitchen. Dashed, because it separates a DIFFERENT KIND of thing from the chain
+       above it rather than one list item from the next; a solid hairline reads as a divider between
+       peers, which is the opposite of the point. -->
+  <Style Selector="Border.sh-split">
+    <Setter Property="Margin" Value="0,15,0,15" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+  </Style>
+
+<!-- The selected tile's caption. Paired with .muted on every other caption, this is the whole
+       selected-state marker now that the tile's accent border is gone. -->
+  <Style Selector="TextBlock.accent">
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+
+  <!-- ===== Set browser: hover, the rail, and the asset inspector ===== -->
+
+  <!-- Hover is a row AND a cell, which together read as a crosshair over the grid: the row washes,
+       and the cell under the pointer washes one step further. Background only - nothing here may
+       change a size, or the whole grid reflows under the pointer. -->
+  <Style Selector="Border.trow">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="Padding" Value="7,6" />
+  </Style>
+  <Style Selector="Border.trow:pointerover">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+  </Style>
+  <Style Selector="Button.tcell">
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+  </Style>
+  <Style Selector="Button.tcell:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource LineBrush}" />
+  </Style>
+
+  <!-- The recipe, as a tag rather than a grey word: it is the asset's TYPE, which is also the first
+       row of the rarity table, so it should not read as a caption. -->
+  <Style Selector="Border.rtag">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="Padding" Value="8,2" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.rtag > TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+
+  <!-- The DNA block. Centered because both rows are exactly half of a 64-character hash and so
+       exactly the same width: centering makes both edges line up instead of only the left, which is
+       what turns a wrapped string into a deliberate block. -->
+  <Style Selector="Border.dnabox">
+    <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="Padding" Value="8,9" />
+  </Style>
+  <Style Selector="Border.dnabox TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="LetterSpacing" Value="1" />
+    <Setter Property="LineHeight" Value="18" />
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+
+  <!-- Rarity percentages, banded. Rare is the reason anyone opens this rail; a flat column of grey
+       numbers makes the one that matters look like the five that do not. -->
+  <Style Selector="TextBlock.pct.rare">
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.pct.mid">
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+  </Style>
+  <Style Selector="TextBlock.pct.common">
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="Rectangle.rarbar">
+    <Setter Property="Fill" Value="{DynamicResource RarityBarBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="RadiusX" Value="3" />
+    <Setter Property="RadiusY" Value="3" />
+  </Style>
+
+  <!-- Save: present at the rail's foot for every asset, so the rail is one height and the rarity
+       list scrolls under it rather than pushing it around. -->
+  <Style Selector="Border.rail-foot">
+    <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="Padding" Value="10" />
+  </Style>
+  <Style Selector="Button.savebtn">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+    <Setter Property="Padding" Value="12,8" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.savebtn /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.savebtn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+  <Style Selector="Button.savebtn Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+
+  <!-- ===== the inspector modal ===== -->
+  <Style Selector="Border.inspect">
+    <Setter Property="Width" Value="900" />
+    <Setter Property="Height" Value="620" />
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusLg}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource WinShadow}" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+<!-- The inspector's zoom slider is the one slider in this app with a track of its OWN, so it
+       cannot take Slider.overlay: that class paints Background and Foreground transparent precisely
+       because every other slider here is laid over a band it must not hide. It rendered as a lone
+       ring floating between the two zoom buttons.
+
+       The cancelling margin is repeated inline rather than inherited, per the same rule: Fluent's
+       horizontal Slider reserves a tick lane below its track and draws the handle 5px under the
+       control's own middle. -->
+  <Style Selector="Slider.ins-z">
+    <Setter Property="Background" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Margin" Value="0,-5,0,5" />
+  </Style>
+
+    <Style Selector="Border.ins-h">
+    <Setter Property="Padding" Value="14,11" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+  <Style Selector="TextBlock.ins-no">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="16" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.ins-dna">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.ins-f">
+    <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="Padding" Value="14,10" />
+  </Style>
+  <Style Selector="Button.insb">
+    <Setter Property="Width" Value="28" />
+    <Setter Property="Height" Value="28" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.ins-zv">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Width" Value="42" />
+    <Setter Property="TextAlignment" Value="Right" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.ins-hint">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="TextAlignment" Value="Right" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+    <!-- .kline / .k — the keyboard rows. Border.kbd already carries the chip's border, radius and
        mono 10.5 ink; only the fill, the flatter padding and the centered glyph differ here. -->
   <Style Selector="Border.kbd.sh-k">
     <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />

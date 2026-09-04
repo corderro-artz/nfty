@@ -138,6 +138,13 @@
        verbatim). Chevrons rather than arrows because a gap stepper nudges by one slot; the locked set
        has no reference panel and so no glyph for this. Authored in the same 24-unit box as every icon
        here and sized by the ico classes, never inline. -->
+  <!-- Horizontal chevrons for the inspector's prev/next. The vertical pair below is the same
+       stroke rotated, but a rotated Path.ico would fight the shared 24-unit scale transform, so
+       these are traced in the box like every other glyph. -->
+  <StreamGeometry x:Key="IconChevronLeft">M15 18 L9 12 L15 6</StreamGeometry>
+  <StreamGeometry x:Key="IconChevronRight">M9 18 L15 12 L9 6</StreamGeometry>
+  <!-- Save-to-disk. Tray with an arrow into it: the standard download mark, not a floppy. -->
+  <StreamGeometry x:Key="IconDownload">M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3</StreamGeometry>
   <StreamGeometry x:Key="IconChevronUp">M6.5 14.5 12 9l5.5 5.5</StreamGeometry>
   <StreamGeometry x:Key="IconChevronDown">M6.5 9.5 12 15l5.5-5.5</StreamGeometry>
 

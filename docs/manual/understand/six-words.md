@@ -9,11 +9,12 @@ nfty uses a cooking metaphor. Learning these six words *is* learning the app.
 | **Ingredient** | One layer: "Background", "Eyes", "Aura". Holds that layer's kind, its coloring, and all its options. | `.igt` |
 | **Variant** | One option inside a layer -- a single drawing, with a name and a weight. | *(inside an Ingredient)* |
 | **Set** | The finished output: the images, their data, the rarity, and the seed that made them. | `.set` |
-| **Kitchen** | A folder you work out of. Anything you save there shows up in the app. | `.ktn` |
+| **Kitchen** | Your shelf of loose parts -- Ingredients and Recipes that belong to no one CookBook. | `.ktn` |
 
 So: a **CookBook** holds **Recipes**, a Recipe holds **Ingredients** in order, an Ingredient holds
 **Variants**, and cooking the book produces a **Set**. A **Kitchen** is not part of that chain at
-all -- it is the desk the whole thing sits on.
+all -- it is the shelf the chain draws from: loose parts that belong to no one book, ready to be
+pulled into any of them.
 
 ## Why a metaphor at all
 

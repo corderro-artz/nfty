@@ -1,12 +1,12 @@
 # Work out of a Kitchen folder
 
-A **Kitchen** is a folder you work out of. Anything you save there shows up in the app without you
-having to open it.
+A **Kitchen** is your shelf of loose parts: Ingredients and Recipes that belong to no one
+CookBook, kept in a folder so you can pull them into any project. Everything but the kitchen sink.
 
 ## Open one
 
 **New Kitchen...** or **Open Kitchen...** on the opening screen. A Kitchen is a `.ktn` file, and *the
-folder that file sits in* is the workspace.
+folder that file sits in* is the vault -- everything beside it is in the Kitchen.
 
 ## What it gives you
 

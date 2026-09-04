@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Nfty.App.ViewModels"
+             xmlns:svc="using:Nfty.App.Services"
              xmlns:m="using:Nfty.App.Models"
              x:Class="Nfty.App.Views.LandingView"
              x:DataType="vm:LandingViewModel"
@@ -26,7 +27,7 @@
       <Button Classes="landing accent" Command="{Binding NewCookBookCommand}">
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconPlus}" /><TextBlock Classes="lbl" Text="New CookBook" /></StackPanel>
-          <TextBlock Grid.Column="1" Classes="hk on-accent" Text="⌘N" />
+          <TextBlock Grid.Column="1" Classes="hk on-accent" Text="{x:Static svc:KeyHints.NewCookBook}" />
         </Grid>
       </Button>
       <!-- DELIBERATE DEVIATION from landing.html, which renders this `.tbtn.soon` — dashed edge,
@@ -57,13 +58,13 @@
       <Button Classes="landing tbtn" Command="{Binding OpenCookBookCommand}">
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconOpen}" /><TextBlock Classes="lbl" Text="Open CookBook…" /></StackPanel>
-          <TextBlock Grid.Column="1" Classes="hk" Text="⌘O" />
+          <TextBlock Grid.Column="1" Classes="hk" Text="{x:Static svc:KeyHints.Open}" />
         </Grid>
       </Button>
       <Button Classes="landing tbtn" Command="{Binding ImportCommand}">
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconImport}" /><TextBlock Classes="lbl" Text="Import…" /></StackPanel>
-          <TextBlock Grid.Column="1" Classes="hk" Text="⌘I" />
+          <TextBlock Grid.Column="1" Classes="hk" Text="{x:Static svc:KeyHints.Import}" />
         </Grid>
       </Button>
       <Panel>
@@ -206,7 +207,7 @@
         <Rectangle Classes="dashed btn" />
         <StackPanel Margin="12,0" VerticalAlignment="Center" Spacing="2">
           <TextBlock Text="No Kitchen open" Classes="zh" FontSize="12" HorizontalAlignment="Left" />
-          <TextBlock Classes="zp" FontSize="10.5" TextAlignment="Left" Margin="0"><Run Text="A Kitchen is any folder you work out of — open one with " /><Run Text="Open Kitchen…" Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold" /><Run Text=" and its CookBooks and loose parts appear here." /></TextBlock>
+          <TextBlock Classes="zp" FontSize="10.5" TextAlignment="Left" Margin="0"><Run Text="A Kitchen is your shelf of loose parts — Ingredients and Recipes that belong to no one CookBook. Open one with " /><Run Text="Open Kitchen…" Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold" /><Run Text=" and everything in its folder appears here." /></TextBlock>
         </StackPanel>
       </Panel>
 
@@ -215,7 +216,7 @@
         <Rectangle Classes="dashed btn" />
         <StackPanel Margin="12,0" VerticalAlignment="Center" Spacing="2">
           <TextBlock Text="This Kitchen is empty" Classes="zh" FontSize="12" HorizontalAlignment="Left" />
-          <TextBlock Classes="zp" FontSize="10.5" TextAlignment="Left" Margin="0"><Run Text="Anything you save into this workspace appears here — start with " /><Run Text="New CookBook" Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold" /><Run Text="." /></TextBlock>
+          <TextBlock Classes="zp" FontSize="10.5" TextAlignment="Left" Margin="0"><Run Text="Anything you save into this Kitchen appears here, ready to pull into any project — start with " /><Run Text="New CookBook" Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold" /><Run Text="." /></TextBlock>
         </StackPanel>
       </Panel>
     </Grid>

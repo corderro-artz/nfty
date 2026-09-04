@@ -1,15 +1,27 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Nfty.App.ViewModels"
+             xmlns:svc="using:Nfty.App.Services"
              x:Class="Nfty.App.Views.HelpView"
              x:DataType="vm:HelpViewModel">
   <!--
-    The quick-reference sheet (docs/design/mockups/help.html): a 780px three-column card summoned
-    over whatever the user is doing. It replaced a single run-on paragraph in a box.
+    The quick-reference sheet (docs/design/mockups/help.html, then .demo/proposal A): an 820px
+    three-column card summoned over whatever the user is doing.
 
-    Copy is the mockup's, verbatim. Where the mockup relies on CSS `text-transform: uppercase`
-    (.slbl, .esc) the text is written already-uppercased, since Avalonia has no text-transform —
-    the same convention as TextBlock.data-h elsewhere.
+    Four things diverge from the locked mockup, all approved:
+
+      1. KITCHEN is here, below a dashed rule. It is the sixth word, but it is NOT in the
+         CookBook > Recipe > Ingredient > Variant chain — it is the shelf of loose parts that chain
+         draws from. Listing it in the run would teach the wrong shape, so the rule separates it and
+         the copy says what it is FOR ("pull them into any project") rather than where it lives.
+      2. The chain is stated once, under the header, so the five read as a sequence and not a list.
+      3. KEYS listed 4 of the app's 14 shortcuts. Split into ANYWHERE and EDITING, complete. COLOR
+         moves to column two to pay for the height.
+      4. The modifier follows the platform (svc:KeyHints). The mockup draws Command because it was
+         authored on a Mac; on Windows and Linux that glyph is not a style choice, it is wrong.
+
+    Copy is otherwise the mockup's, verbatim. Where the mockup relies on CSS `text-transform`
+    (.slbl, .esc) the text is written already-uppercased, since Avalonia has no text-transform.
 
     Every entry is the same strict `20px | 10px gap | rest` grid, so the terms align down the whole
     page regardless of which glyph sits in the gutter. Column ratios and every surface color come
@@ -19,10 +31,9 @@
     <KeyBinding Gesture="Escape" Command="{Binding CloseCommand}" />
   </UserControl.KeyBindings>
 
-  <!-- The sheet is ~480px tall and MainWindow allows a 580px window, which leaves the page area
-       ~474px — six pixels short, enough to slice the footer band off. The mockup has no scroller
-       (it never shrinks); this one only engages below that threshold, and centers exactly as a bare
-       Border would above it. -->
+  <!-- The sheet is taller than the mockup's (Kitchen plus the KEYS split) and MainWindow allows a
+       580px window, so the scroller earns its keep more than before. It centers exactly as a bare
+       Border would whenever there is room. -->
   <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
   <Border x:Name="Sheet" Classes="sheet">
     <Grid RowDefinitions="Auto,Auto,Auto">
@@ -49,13 +60,17 @@
         </Grid>
       </Border>
 
-      <!-- ===== .sh-b: 1.35fr / 1fr / .82fr, hairline between ===== -->
-      <Grid x:Name="SheetBody" Grid.Row="1" ColumnDefinitions="1.35*,*,0.82*">
+      <!-- ===== .sh-b: 1.28fr / 1.06fr / .9fr, hairline between ===== -->
+      <Grid x:Name="SheetBody" Grid.Row="1" ColumnDefinitions="1.28*,1.06*,0.9*">
 
-        <!-- ===== The five words ===== -->
+        <!-- ===== The six words ===== -->
         <Border Grid.Column="0" Classes="sh-col">
           <StackPanel>
-            <TextBlock Classes="slbl sh" Text="THE FIVE WORDS" />
+            <TextBlock Classes="slbl sh" Text="THE SIX WORDS" />
+
+            <!-- The nesting, said once. Without it the five below are a list of definitions; with
+                 it they are visibly a chain, which is the single most useful thing to know. -->
+            <TextBlock Classes="sh-chain"><Run Text="CookBook " /><Run Text="›" Foreground="{DynamicResource AccentTextBrush}" /><Run Text=" Recipe " /><Run Text="›" Foreground="{DynamicResource AccentTextBrush}" /><Run Text=" Ingredient " /><Run Text="›" Foreground="{DynamicResource AccentTextBrush}" /><Run Text=" Variant  —  cook it to get a Set" /></TextBlock>
 
             <Grid Classes="sh-e" ColumnDefinitions="20,*">
               <Panel Grid.Column="0" Classes="sh-g">
@@ -93,7 +108,7 @@
               </Panel>
               <StackPanel Grid.Column="1">
                 <TextBlock Classes="sh-t" Text="Variant" />
-                <TextBlock Classes="sh-s" Text="One image and a weight, inside an ingredient." />
+                <TextBlock Classes="sh-s" Text="One image and a weight, inside an Ingredient." />
               </StackPanel>
             </Grid>
 
@@ -106,10 +121,35 @@
                 <TextBlock Classes="sh-s"><Run Text="What " /><Run Text="Cook" Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold" /><Run Text=" produces: images, metadata, rarity, seed." /></TextBlock>
               </StackPanel>
             </Grid>
+
+            <!-- Kitchen is below the rule because it is not a link in the chain above it. The dash
+                 is the signal: a solid hairline reads as a divider between peers, which is the
+                 opposite of the point.
+
+                 Avalonia's Border cannot dash, and a Height="1" Rectangle does not either — it
+                 still draws BOTH long edges, one left-to-right and one right-to-left, so their
+                 gaps land in each other's dashes and the line renders solid. It looked correct in
+                 the markup and wrong in the frame. So: a 3px rectangle whose top edge is the only
+                 one inside a 1px clip. -->
+            <Border Classes="sh-split" Height="1" ClipToBounds="True">
+              <Rectangle Height="3" VerticalAlignment="Top"
+                         Stroke="{DynamicResource LineStrongBrush}"
+                         StrokeThickness="1" StrokeDashArray="3,3" />
+            </Border>
+
+            <Grid Classes="sh-e" ColumnDefinitions="20,*" Margin="0">
+              <Panel Grid.Column="0" Classes="sh-g">
+                <Path Classes="ico ti-sh" Data="{StaticResource IconKitchen}" />
+              </Panel>
+              <StackPanel Grid.Column="1">
+                <TextBlock Classes="sh-t"><Run Text="Kitchen" /><Run Text=" .ktn" FontFamily="{DynamicResource MonoFontFamily}" FontSize="9.5" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
+                <TextBlock Classes="sh-s"><Run Text="Your shelf of " /><Run Text="loose parts" Foreground="{DynamicResource FgBrush}" /><Run Text=" — Ingredients and Recipes that belong to no one CookBook. Pull them into any project. Found by " /><Run Text="scanning the folder" Foreground="{DynamicResource FgBrush}" /><Run Text="." /></TextBlock>
+              </StackPanel>
+            </Grid>
           </StackPanel>
         </Border>
 
-        <!-- ===== Layer kinds + Rules and state ===== -->
+        <!-- ===== Layer kinds + Rules and state + Color ===== -->
         <Border Grid.Column="1" Classes="sh-col div">
           <StackPanel>
             <TextBlock Classes="slbl sh" Text="LAYER KINDS" />
@@ -167,35 +207,22 @@
 
             <!-- The mockup's ● here is real typography, not a stand-in for an icon; drawn as an
                  Ellipse the way the status bar's own validity dot and Ellipse.kdot already are. -->
-            <Grid Classes="sh-e" ColumnDefinitions="20,*" Margin="0">
+            <Grid Classes="sh-e" ColumnDefinitions="20,*">
               <Panel Grid.Column="0" Classes="sh-g">
                 <Ellipse Width="7" Height="7" Fill="{DynamicResource SuccessBrush}" />
               </Panel>
               <TextBlock Grid.Column="1" Classes="sh-t plain" Text="CookBook is valid" />
             </Grid>
-          </StackPanel>
-        </Border>
 
-        <!-- ===== Keys + Color ===== -->
-        <Border Grid.Column="2" Classes="sh-col div">
-          <StackPanel>
-            <TextBlock Classes="slbl sh" Text="KEYS" />
-
-            <Grid Classes="sh-kline" ColumnDefinitions="38,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="⌘/" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="this sheet" />
-            </Grid>
-            <Grid Classes="sh-kline" ColumnDefinitions="38,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="⌘K" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="search" />
-            </Grid>
-            <Grid Classes="sh-kline" ColumnDefinitions="38,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="⌘N" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="new CookBook" />
-            </Grid>
-            <Grid Classes="sh-kline" ColumnDefinitions="38,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="⌘O" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="open" />
+            <!-- Added: the padlock is the most-encountered state in the app and the legend never
+                 mentioned it. It governs STRUCTURE — add, delete, reorder — and deliberately not
+                 the pencil, so the wording says "adding, deleting, reordering" rather than the
+                 flat "editing" the status bar uses. -->
+            <Grid Classes="sh-e" ColumnDefinitions="20,*" Margin="0">
+              <Panel Grid.Column="0" Classes="sh-g">
+                <Path Classes="ico sm" Data="{StaticResource IconLock}" />
+              </Panel>
+              <TextBlock Grid.Column="1" Classes="sh-t plain" Text="adding, deleting, reordering locked" />
             </Grid>
 
             <TextBlock Classes="slbl sh" Text="COLOR" Margin="0,20,0,14" />
@@ -214,6 +241,61 @@
             </StackPanel>
 
             <TextBlock Classes="sh-fine" Text="The prefix is required — a color is never guessed." />
+          </StackPanel>
+        </Border>
+
+        <!-- ===== Keys ===== -->
+        <Border Grid.Column="2" Classes="sh-col div">
+          <StackPanel>
+            <TextBlock Classes="slbl sh" Text="KEYS · ANYWHERE" />
+
+            <Grid Classes="sh-kline" ColumnDefinitions="62,*">
+              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.Help}" /></Border>
+              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="this sheet" />
+            </Grid>
+            <Grid Classes="sh-kline" ColumnDefinitions="62,*">
+              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.Search}" /></Border>
+              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="search" />
+            </Grid>
+            <Grid Classes="sh-kline" ColumnDefinitions="62,*">
+              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.NewCookBook}" /></Border>
+              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="new CookBook" />
+            </Grid>
+            <Grid Classes="sh-kline" ColumnDefinitions="62,*">
+              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.Open}" /></Border>
+              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="open" />
+            </Grid>
+            <Grid Classes="sh-kline" ColumnDefinitions="62,*">
+              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.CloseDocument}" /></Border>
+              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="close document" />
+            </Grid>
+            <Grid Classes="sh-kline" ColumnDefinitions="62,*">
+              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.Theme}" /></Border>
+              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="light / dark" />
+            </Grid>
+            <Grid Classes="sh-kline" ColumnDefinitions="62,*">
+              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.ZoomReset}" /></Border>
+              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="zoom to 100%" />
+            </Grid>
+
+            <TextBlock Classes="slbl sh" Text="KEYS · EDITING" Margin="0,20,0,14" />
+
+            <Grid Classes="sh-kline" ColumnDefinitions="62,*">
+              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.Undo}" /></Border>
+              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="undo" />
+            </Grid>
+            <Grid Classes="sh-kline" ColumnDefinitions="62,*">
+              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.Redo}" /></Border>
+              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="redo" />
+            </Grid>
+            <Grid Classes="sh-kline" ColumnDefinitions="62,*">
+              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.MoveLayer}" /></Border>
+              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="move layer" />
+            </Grid>
+            <Grid Classes="sh-kline" ColumnDefinitions="62,*">
+              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.DropSelection}" /></Border>
+              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="drop selection" />
+            </Grid>
           </StackPanel>
         </Border>
       </Grid>
