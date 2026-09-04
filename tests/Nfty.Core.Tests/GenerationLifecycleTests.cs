@@ -128,7 +128,7 @@ public class GenerationLifecycleTests
                 progress: progress, cancellationToken: cts.Token));
     }
 
-    /// <summary>A book with exactly one possible asset: 1 recipe, 1 layer, 1 variant, no colour.</summary>
+    /// <summary>A book with exactly one possible asset: 1 recipe, 1 layer, 1 variant, no color.</summary>
     private static LoadedCookBook SingleDnaBook() => new()
     {
         Manifest = new CookBookManifest("cb", "One", new Dimensions(2, 2),

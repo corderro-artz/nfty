@@ -563,10 +563,10 @@ public class ValidatorTests
         Assert.Empty(Validator.Validate(BookOf(Rec("cat", Ing("bg",
             new Variant("a", "A", 1), new Variant("b", "B", 0))))));
 
-    // --- colour spec parsing (finding 4, spec section 9) ---
+    // --- color spec parsing (finding 4, spec section 9) ---
 
     [Fact]
-    public void Unprefixed_fixed_colour_reported()
+    public void Unprefixed_fixed_color_reported()
     {
         // "d6249f" without a prefix must be a validation error, never guessed.
         var book = Wrap(new IngredientManifest("s", "S", LayerKind.Static,
@@ -577,7 +577,7 @@ public class ValidatorTests
     }
 
     [Fact]
-    public void Unknown_colour_prefix_reported()
+    public void Unknown_color_prefix_reported()
     {
         var book = Wrap(new IngredientManifest("s", "S", LayerKind.Static,
             Fixed("cmyk:1,2,3"), new[] { new Variant("v", "v", 1) }));
@@ -587,7 +587,7 @@ public class ValidatorTests
     }
 
     [Fact]
-    public void Malformed_fixed_colour_on_a_dynamic_entry_reported()
+    public void Malformed_fixed_color_on_a_dynamic_entry_reported()
     {
         var book = Wrap(new IngredientManifest("d", "D", LayerKind.Dynamic,
             new Colorization(ColorModel.Hsv, 5, 5, new[] { new ColorEntry(1, null, "hex:zzz") }),
@@ -647,7 +647,7 @@ public class ValidatorTests
     [Fact]
     public void Non_grayscale_dynamic_variant_is_reported()
     {
-        // A dynamic ingredient whose only variant image has a coloured (non-grayscale) pixel.
+        // A dynamic ingredient whose only variant image has a colored (non-grayscale) pixel.
         // Everything else about the book is valid, so the grayscale check should be the only
         // problem reported.
         var ing = new LoadedIngredient
@@ -682,7 +682,7 @@ public class ValidatorTests
     [Fact]
     public void Non_grayscale_custom_variant_is_allowed()
     {
-        // Custom layers are full-colour RGBA composited as-is, never colorized, so the
+        // Custom layers are full-color RGBA composited as-is, never colorized, so the
         // Kind != Custom exemption should let a genuinely non-grayscale image through clean.
         var ing = new LoadedIngredient
         {

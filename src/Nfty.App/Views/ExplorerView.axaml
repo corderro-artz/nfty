@@ -17,7 +17,7 @@
            slack collects before the lock.
 
            One star column (search) put all four buttons on the far edge and left the pill floating
-           in the middle of an oversized slot — a stretched control capped by MaxWidth centres itself
+           in the middle of an oversized slot — a stretched control capped by MaxWidth centers itself
            in what is left over. Capping the COLUMN instead of the control is what makes "grow to
            360, then stop" mean grow-from-the-left. -->
       <Grid>

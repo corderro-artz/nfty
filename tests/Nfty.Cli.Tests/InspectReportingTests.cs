@@ -10,7 +10,7 @@ namespace Nfty.Cli.Tests;
 /// What <c>inspect</c> reports beyond the tree: a book's own palette, and voxel readiness.
 /// </summary>
 /// <remarks>
-/// The palette travels inside the archive — a collection handed to someone else brings its colours
+/// The palette travels inside the archive — a collection handed to someone else brings its colors
 /// with it — and nothing on the command line would otherwise have shown it was there. Voxel
 /// readiness is opt-in because it costs a full scan of every variant image, and because partial
 /// alpha is legal: it is a report, not a validation.

@@ -6,7 +6,7 @@ namespace Nfty.Core.Output;
 ///
 /// <para><b>Why it matters.</b> <c>Generator</c> walks a recipe's <c>layerOrder</c> and consumes one
 /// weighted draw per layer, so moving a layer moves <i>which draw reaches it</i>. The same seed over a
-/// reordered — or otherwise edited — book therefore rolls different variants and different colours:
+/// reordered — or otherwise edited — book therefore rolls different variants and different colors:
 /// not a re-render of the same collection, a different collection. Extending a Set with a book that
 /// did not cook it silently interleaves two generations under one set of token ids, and nothing else
 /// in the output records that it happened. <c>set.json</c>'s <c>cookbookSha256</c> is the only thread
@@ -53,7 +53,7 @@ public static class SetProvenance
               this CookBook hashes to        {cookbookSha256}
               Reordering a recipe's layers — or any other edit — changes which random draw reaches
               which layer, so the same seed over a changed book rolls different variants and
-              different colours. Extending with it adds assets from a second generation to a
+              different colors. Extending with it adds assets from a second generation to a
               collection minted from the first; the assets already there are not re-rolled.
               Pass the CookBook this Set was cooked from, or generate a fresh Set from this one.
             """;

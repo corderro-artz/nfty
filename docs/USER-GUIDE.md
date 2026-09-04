@@ -3,7 +3,7 @@
 **How to make a collection, from a blank folder to a finished set of assets.**
 
 nfty builds large collections of layered pixel art. You draw a handful of pieces; it stacks them in
-every legal combination and colours them, so a few dozen drawings become thousands of distinct
+every legal combination and colors them, so a few dozen drawings become thousands of distinct
 assets — each one recorded with a fingerprint that proves it is unique.
 
 This guide is for using the app. If you want to build or modify nfty itself, read the
@@ -18,7 +18,7 @@ This guide is for using the app. If you want to build or modify nfty itself, rea
 3. [Your first collection](#3-your-first-collection)
 4. [The three kinds of layer](#4-the-three-kinds-of-layer)
 5. [Drawing](#5-drawing)
-6. [Colour mode](#6-colour-mode)
+6. [Color mode](#6-color-mode)
 7. [Transparency and the opacity lock](#7-transparency-and-the-opacity-lock)
 8. [Layer order](#8-layer-order)
 9. [Weights, rules and how many you can make](#9-weights-rules-and-how-many-you-can-make)
@@ -36,9 +36,9 @@ A character is made of stacked layers — a background, a body, eyes, an aura. Y
 for each layer. nfty picks one option per layer, stacks them, and that is one asset. Do it a thousand
 times with different picks and you have a collection.
 
-The twist is **colour**. Most layers are not drawn in colour at all. You draw them in **grey**, and
-nfty treats the grey as *lightness* — how bright each pixel is — then adds a colour at generation
-time. One grey drawing of an aura becomes a blue aura, a pink aura, a green one, all with the same
+The twist is **color**. Most layers are not drawn in color at all. You draw them in **gray**, and
+nfty treats the gray as *lightness* — how bright each pixel is — then adds a color at generation
+time. One gray drawing of an aura becomes a blue aura, a pink aura, a green one, all with the same
 shading you drew.
 
 That is why a small amount of art goes a very long way.
@@ -94,32 +94,32 @@ at least as large as the collection you want, and click **Cook Set**.
 When you create a layer you choose its kind. This is the most important decision you make about a
 layer, and it decides how you draw it.
 
-### Dynamic — a different colour every time
+### Dynamic — a different color every time
 
-You draw it in **grey**. nfty picks a colour for it per asset, from a range you set.
+You draw it in **gray**. nfty picks a color for it per asset, from a range you set.
 
 Use it for anything that should vary: auras, fur, clothing, gems. This is where the multiplication
-happens — one grey drawing with a wide hue range becomes dozens of visibly different assets.
+happens — one gray drawing with a wide hue range becomes dozens of visibly different assets.
 
-You set a **hue range** (0–360°, the colour wheel) and a **saturation range** (0–100%, grey to
-vivid). Every asset rolls a colour inside those.
+You set a **hue range** (0–360°, the color wheel) and a **saturation range** (0–100%, gray to
+vivid). Every asset rolls a color inside those.
 
-### Static — one fixed colour, always
+### Static — one fixed color, always
 
-You draw it in **grey**, and nfty applies a single colour you choose. Same colour on every asset.
+You draw it in **gray**, and nfty applies a single color you choose. Same color on every asset.
 
-Use it for anything that should be consistent but is easier to draw in grey — an outline, a shadow, a
-brand colour.
+Use it for anything that should be consistent but is easier to draw in gray — an outline, a shadow, a
+brand color.
 
 ### Custom — exactly what you drew
 
-Full-colour art, placed as-is and never recoloured.
+Full-color art, placed as-is and never recolored.
 
-Use it for anything whose colours matter as drawn: a logo, a detailed background, a piece of art that
+Use it for anything whose colors matter as drawn: a logo, a detailed background, a piece of art that
 is not a silhouette.
 
-> **Why draw in grey at all?** Because a grey drawing carries the *shading* and nfty supplies the
-> *colour*. Draw a sphere in grey once and it can be a red sphere, a blue sphere or a gold one, all
+> **Why draw in gray at all?** Because a gray drawing carries the *shading* and nfty supplies the
+> *color*. Draw a sphere in gray once and it can be a red sphere, a blue sphere or a gold one, all
 > correctly shaded. Draw it in red and it is only ever red.
 
 ## 5. Drawing
@@ -144,45 +144,45 @@ wandering in between does not count.
 A single click away from the marquee drops it, as does pressing **Escape** or picking another tool.
 A move is a normal edit, so **undo** puts it back.
 
-**The value slider** is the black-to-white gradient. On a grey layer this *is* the colour you paint —
-it sets how bright the pixel is, and therefore how bright it will be after nfty colours it. In colour
-mode it becomes the brightness of the colour you are painting.
+**The value slider** is the black-to-white gradient. On a gray layer this *is* the color you paint —
+it sets how bright the pixel is, and therefore how bright it will be after nfty colors it. In color
+mode it becomes the brightness of the color you are painting.
 
 **The preview** in the bottom-right corner of the canvas shows what the layer will actually look like
-once coloured. Its three small buttons re-roll the sampled colour, enlarge it, and let it take over
+once colored. Its three small buttons re-roll the sampled color, enlarge it, and let it take over
 the canvas.
 
 **Reference layers**, at the bottom of the right-hand panel, are how you line art up. Switch on any
 other layer in the Recipe and it composites underneath or on top of what you are drawing, depending
 on its depth — so you can see the eyes sitting on the face while you draw them. Layers above yours are
-dimmed by default so they cannot hide your work; **True colour** shows the real composite.
+dimmed by default so they cannot hide your work; **True color** shows the real composite.
 
 **Importing** a drawing made elsewhere: **Import image…** on the left. It must match the CookBook's
-canvas size exactly — nfty will not resize your art. On a grey layer a colour image is converted to
+canvas size exactly — nfty will not resize your art. On a gray layer a color image is converted to
 its lightness, and the app tells you when that happens.
 
-## 6. Colour mode
+## 6. Color mode
 
-The palette strip under the tools has a **Grey / Colour** switch.
+The palette strip under the tools has a **Gray / Color** switch.
 
-**Grey** is the normal mode for Dynamic and Static layers: ten shades of grey, plus the value slider
+**Gray** is the normal mode for Dynamic and Static layers: ten shades of gray, plus the value slider
 for anything in between.
 
-**Colour** paints in full colour. The ten slots become a rainbow, and the right-hand panel turns into
-**Paint Hue** and **Paint Saturation** — those two plus the brightness slider give you any colour.
+**Color** paints in full color. The ten slots become a rainbow, and the right-hand panel turns into
+**Paint Hue** and **Paint Saturation** — those two plus the brightness slider give you any color.
 
-Switching to colour mode brings your existing drawing with you, in grey, so you can paint over it.
+Switching to color mode brings your existing drawing with you, in gray, so you can paint over it.
 
-**Colour art can only be saved as a Custom layer**, because a Custom layer is the only kind that keeps
-the colours you drew. So when you save a grey layer that you painted in colour, nfty asks:
+**Color art can only be saved as a Custom layer**, because a Custom layer is the only kind that keeps
+the colors you drew. So when you save a gray layer that you painted in color, nfty asks:
 
 - **Save as new** *(the default)* — makes a new Custom layer on top of the Recipe and leaves the
-  original grey layer exactly as it was.
-- **Overwrite** — converts the original. **This discards its colour settings** — the hue and
+  original gray layer exactly as it was.
+- **Overwrite** — converts the original. **This discards its color settings** — the hue and
   saturation ranges and the quantize steps — and they cannot be recovered.
 
-**Saving colours you like:** the **+** button on the palette strip saves the current colour. Saved
-colours persist between sessions. Right-click one to forget it. A CookBook can also carry its own
+**Saving colors you like:** the **+** button on the palette strip saves the current color. Saved
+colors persist between sessions. Right-click one to forget it. A CookBook can also carry its own
 palette, which travels inside the file — those appear first and cannot be deleted from the editor.
 
 ## 7. Transparency and the opacity lock
@@ -227,11 +227,11 @@ says "when this variant is picked, exclude that one". Set them on the Recipe's p
 
 **UNIQUE DNA** on the CookBook panel is the number that matters before you cook. It is how many
 genuinely distinct assets this book can produce, counting both the variant combinations *and* the
-distinguishable colours a Dynamic layer can roll.
+distinguishable colors a Dynamic layer can roll.
 
 If you ask for more assets than that number, nfty refuses and tells you the real maximum, rather than
 producing duplicates. To raise it: add variants, widen a hue range, or raise a layer's **quantize**
-steps — the "≈ N colors" readout on the colorize panel shows how many distinct colours the current
+steps — the "≈ N colors" readout on the colorize panel shows how many distinct colors the current
 settings admit.
 
 ## 10. Cooking a Set
@@ -246,7 +246,7 @@ settings admit.
 
 The result is a Set: numbered PNGs, plus two data files per asset — a standard `metadata/NNNN.json`
 that marketplaces understand, and a richer `nfty/NNNN.json` with the fingerprint, the seed, the
-rarity, and the exact colour each layer rolled.
+rarity, and the exact color each layer rolled.
 
 **Extending later:** you can grow an existing Set rather than regenerating it. nfty re-opens it, keeps
 every asset it already made, adds new ones that do not collide, and recalculates rarity across the
@@ -288,7 +288,7 @@ and the share each Recipe takes of the collection.
 **The Recipe panel** — the layer stack in paint order, and the rules.
 
 **The Ingredient panel** — the variants with their weights and how often each will appear, and a
-**Colorways** strip showing the range of colours this layer can take.
+**Colorways** strip showing the range of colors this layer can take.
 
 ## 13. Doing it from the command line
 

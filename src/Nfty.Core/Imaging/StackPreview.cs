@@ -8,7 +8,7 @@ using SixLabors.ImageSharp.PixelFormats;
 namespace Nfty.Core.Imaging;
 
 /// <summary>
-/// One reference layer in a stack preview: which ingredient, which of its variants, and the colour to
+/// One reference layer in a stack preview: which ingredient, which of its variants, and the color to
 /// draw it in.
 /// </summary>
 /// <param name="Ingredient">The layer to draw. Its images stay owned by it —
@@ -16,23 +16,23 @@ namespace Nfty.Core.Imaging;
 /// out a borrowed image, so nothing here ever disposes what an ingredient owns.</param>
 /// <param name="VariantId">Which variant to draw. <see cref="StackPreview.PickVariant"/> is the
 /// deterministic default when the caller has no opinion.</param>
-/// <param name="ColorSpec">A prefixed colour spec (<c>hex:</c>, <c>rgb:</c>, <c>hsl:</c>,
+/// <param name="ColorSpec">A prefixed color spec (<c>hex:</c>, <c>rgb:</c>, <c>hsl:</c>,
 /// <c>hsv:</c>) for a Dynamic or Static layer; ignored by a Custom one, which is composited as-is and
 /// never colorized. Which kinds need one is <see cref="VariantPreview.NeedsColor"/>'s answer and the
 /// requirement is <c>VariantPreview.Render</c>'s to enforce — restating either here would be a
 /// second copy of a rule that has exactly one owner.</param>
-/// <param name="Rolled">The rolled hue and saturation, unrounded — set for a layer whose colour was
+/// <param name="Rolled">The rolled hue and saturation, unrounded — set for a layer whose color was
 /// <i>rolled</i> rather than authored. <b>When present it is what gets drawn, and
 /// <paramref name="ColorSpec"/> becomes display only.</b>
 ///
 /// <para>Both exist because they answer different questions. A spec is what a human reads, pastes and
 /// re-runs; a <see cref="RolledColor"/> is what generation actually hands the colorizer. Every spec
-/// resolves through 8-bit RGB, so a rolled hue that fell between two representable colours cannot be
+/// resolves through 8-bit RGB, so a rolled hue that fell between two representable colors cannot be
 /// spelled exactly — carrying only the string put the preview a rounding step off the asset it claims
 /// to show. Carrying both keeps the printed spec readable AND the rendered pixel exact.</para>
 ///
 /// <para>Null for Static (an author-written spec, resolved identically by generation, so already
-/// exact) and for Custom (no colour at all).</para></param>
+/// exact) and for Custom (no color at all).</para></param>
 public readonly record struct PreviewLayer(
     LoadedIngredient Ingredient, string VariantId, string? ColorSpec, RolledColor? Rolled = null);
 
@@ -80,7 +80,7 @@ public static class StackPreview
     /// is checked rather than assumed.</exception>
     /// <exception cref="InvalidOperationException">A layer's image does not match the canvas, or
     /// <c>VariantPreview.Render</c> refused it (unknown variant, colorized layer with no
-    /// colour).</exception>
+    /// color).</exception>
     public static Image<Rgba32> Render(Dimensions canvas, IReadOnlyList<PreviewLayer> bottomToTop)
     {
         ArgumentNullException.ThrowIfNull(canvas);
@@ -99,8 +99,8 @@ public static class StackPreview
                 // Registered in the accumulator the instant it exists, BEFORE anything can throw
                 // about it: from here on the only thing that frees it is the finally below.
                 //
-                // A rolled colour wins over the spec beside it. The spec is the readable spelling of
-                // that same colour, but it can only spell what 8-bit RGB can represent, so rendering
+                // A rolled color wins over the spec beside it. The spec is the readable spelling of
+                // that same color, but it can only spell what 8-bit RGB can represent, so rendering
                 // through it would quantize a value generation never quantizes — and this whole class
                 // exists to show what generation would draw, not something within a step of it.
                 var image = layer.Rolled is { } rolled

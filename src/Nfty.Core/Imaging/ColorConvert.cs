@@ -1,6 +1,6 @@
 namespace Nfty.Core.Imaging;
 
-/// <summary>Conversions between RGB and the two colour spaces a layer can be authored in. Hue is
+/// <summary>Conversions between RGB and the two color spaces a layer can be authored in. Hue is
 /// in degrees and wraps at 360; saturation, value and lightness are 0..1 fractions.</summary>
 public static class ColorConvert
 {
@@ -10,7 +10,7 @@ public static class ColorConvert
     /// <param name="h">Hue in degrees; wrapped, so 360 is 0.</param>
     /// <param name="s">Saturation, 0..1.</param>
     /// <param name="v">Value, 0..1.</param>
-    /// <returns>The colour.</returns>
+    /// <returns>The color.</returns>
     public static RgbColor HsvToRgb(double h, double s, double v)
     {
         h = Wrap(h);
@@ -22,7 +22,7 @@ public static class ColorConvert
     /// <param name="h">Hue in degrees; wrapped, so 360 is 0.</param>
     /// <param name="s">Saturation, 0..1.</param>
     /// <param name="l">Lightness, 0..1.</param>
-    /// <returns>The colour.</returns>
+    /// <returns>The color.</returns>
     public static RgbColor HslToRgb(double h, double s, double l)
     {
         h = Wrap(h);
@@ -53,7 +53,7 @@ public static class ColorConvert
     }
 
     /// <summary>RGB to HSV.</summary>
-    /// <param name="c">The colour.</param>
+    /// <param name="c">The color.</param>
     /// <returns>Hue in degrees, saturation and value as 0..1.</returns>
     public static (double H, double S, double V) RgbToHsv(RgbColor c)
     {
@@ -65,7 +65,7 @@ public static class ColorConvert
     }
 
     /// <summary>RGB to HSL.</summary>
-    /// <param name="c">The colour.</param>
+    /// <param name="c">The color.</param>
     /// <returns>Hue in degrees, saturation and lightness as 0..1.</returns>
     public static (double H, double S, double L) RgbToHsl(RgbColor c)
     {

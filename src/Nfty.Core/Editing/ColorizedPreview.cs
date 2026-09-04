@@ -10,7 +10,7 @@ namespace Nfty.Core.Editing;
 /// Renders what the cook produces from a variant's grayscale value-map: custom (or no colorization)
 /// is returned as-is; dynamic/static resolve (H,S) via the real <see cref="ColorRoller"/> and colorize
 /// via the real <see cref="Colorizer"/>, so the preview matches generation. Mirrors the cook path's
-/// branch exactly: dynamic rolls per-asset (consumes RNG); static resolves its single fixed colour
+/// branch exactly: dynamic rolls per-asset (consumes RNG); static resolves its single fixed color
 /// (consumes no RNG). Returned image is live.
 /// </summary>
 public static class ColorizedPreview
@@ -18,7 +18,7 @@ public static class ColorizedPreview
     /// <summary>Renders a draft variant the way generation would.</summary>
     /// <param name="variant">The variant being edited.</param>
     /// <param name="kind">Its layer kind.</param>
-    /// <param name="colorization">Its colour configuration; ignored for Custom.</param>
+    /// <param name="colorization">Its color configuration; ignored for Custom.</param>
     /// <param name="rng">Supplies the roll for a Dynamic layer.</param>
     /// <returns>A new image; the caller owns it.</returns>
     public static Image<Rgba32> Render(VariantDraft variant, LayerKind kind, Colorization? colorization, IRng rng)
@@ -30,7 +30,7 @@ public static class ColorizedPreview
         using (valueImg)
         {
             // Match the generator's cook path: Dynamic rolls per-asset (consumes RNG);
-            // Static resolves its single fixed colour and consumes NO RNG (see Generator.cs).
+            // Static resolves its single fixed color and consumes NO RNG (see Generator.cs).
             var rolled = kind == LayerKind.Dynamic
                 ? ColorRoller.Roll(colorization, rng)
                 : ColorRoller.FromFixed(colorization.Entries[0].Fixed!, colorization.Model);

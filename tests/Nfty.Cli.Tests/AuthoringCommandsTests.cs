@@ -72,7 +72,7 @@ public class AuthoringCommandsTests
             string manifestPath = WriteJson(tmp.FullName, "aura.json", manifest);
             string images = Path.Combine(tmp.FullName, "img");
             Directory.CreateDirectory(images);
-            WritePng(images, "glow.png", new Rgba32(200, 10, 10, 255)); // coloured, not grayscale
+            WritePng(images, "glow.png", new Rgba32(200, 10, 10, 255)); // colored, not grayscale
 
             string outPath = Path.Combine(tmp.FullName, "aura.igt");
             int code = Run("new", "ingredient", outPath, "--manifest", manifestPath, "--images", images);

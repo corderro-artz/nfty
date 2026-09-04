@@ -56,7 +56,7 @@ public class LandingOpenSetTests
     }
 
     [AvaloniaFact]
-    public async Task Cancelled_picker_does_nothing()
+    public async Task Canceled_picker_does_nothing()
     {
         var nav = new FakeNav();
         var vm = MakeLanding(nav, new FakeDialogs(), new StubPicker(null));

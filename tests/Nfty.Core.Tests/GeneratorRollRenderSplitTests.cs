@@ -19,7 +19,7 @@ namespace Nfty.Core.Tests;
 /// </summary>
 public class GeneratorRollRenderSplitTests
 {
-    // "bg" is dynamic, so it rolls a colour — an extra RNG draw per layer per attempt, which is
+    // "bg" is dynamic, so it rolls a color — an extra RNG draw per layer per attempt, which is
     // exactly what a resequenced phase would disturb. Its value-map is grayscale, as Validator
     // requires. "body" is custom and composites as-is.
     private static LoadedIngredient Bg() => new()
@@ -86,7 +86,7 @@ public class GeneratorRollRenderSplitTests
     [Fact]
     public void Same_seed_reproduces_identical_rolled_colors_when_rules_reject_rolls()
     {
-        // The colour roll is the RNG draw most sensitive to a resequenced phase, because it comes
+        // The color roll is the RNG draw most sensitive to a resequenced phase, because it comes
         // after the variant draw within the same layer.
         var opts = new GenerateOptions(12, "reroll-seed");
         using var first = Generator.Generate(RuleBook(), opts);

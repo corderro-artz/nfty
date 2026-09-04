@@ -15,7 +15,7 @@ namespace Nfty.App.Tests;
 /// The Kitchen shelf: one row of cards, paged by kind.
 /// </summary>
 /// <remarks>
-/// The behaviour that matters is the paging — one flat sequence across the three kinds, so crossing
+/// The behavior that matters is the paging — one flat sequence across the three kinds, so crossing
 /// from the last CookBook page into the first Recipe page is the same gesture as moving within a
 /// kind — and the fact that the row is one shape whatever is on it: a short final page keeps its
 /// empty slots rather than re-spacing the cards.

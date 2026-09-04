@@ -54,7 +54,7 @@ public class UniqueSpaceResilienceTests
     }
 
     [Fact]
-    public void A_colour_entry_with_neither_fixed_nor_range_is_uncountable_not_a_crash()
+    public void A_color_entry_with_neither_fixed_nor_range_is_uncountable_not_a_crash()
     {
         using var book = BookWith(new IngredientManifest("l", "l", LayerKind.Dynamic,
             new Colorization(ColorModel.Hsv, 10, 10, new[] { new ColorEntry(1, null, null) }),
@@ -64,7 +64,7 @@ public class UniqueSpaceResilienceTests
     }
 
     [Fact]
-    public void An_unparseable_fixed_colour_spec_is_uncountable_not_a_crash()
+    public void An_unparseable_fixed_color_spec_is_uncountable_not_a_crash()
     {
         using var book = BookWith(new IngredientManifest("l", "l", LayerKind.Dynamic,
             new Colorization(ColorModel.Hsv, 10, 10, new[] { new ColorEntry(1, null, "notacolor") }),

@@ -46,7 +46,7 @@ public class CookDialogViewModelTests
     }
 
     [AvaloniaFact]
-    public async Task Cancelled_pick_does_nothing()
+    public async Task Canceled_pick_does_nothing()
     {
         var vm = new CookDialogViewModel(Book(), new FolderPicker(null), new RecordingRevealer(), new FakeDialogs());
         vm.Count = 2; vm.Seed = "s";

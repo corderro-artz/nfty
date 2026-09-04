@@ -151,7 +151,7 @@ public class SetWriterTests
     public void Set_json_is_byte_identical_across_cultures()
     {
         // Spec 5.5: same cookbook + same seed => byte-identical output. A current-culture sort
-        // makes that a lie — the machine's locale leaks into the artefact.
+        // makes that a lie — the machine's locale leaks into the artifact.
         Assert.Equal(WriteSetJsonUnderCulture("en-US"), WriteSetJsonUnderCulture("sv-SE"));
     }
 

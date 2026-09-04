@@ -109,7 +109,7 @@ public class LandingNewCookBookTests
     }
 
     [AvaloniaFact]
-    public async Task Cancelling_the_save_picker_writes_nothing()
+    public async Task Canceling_the_save_picker_writes_nothing()
     {
         var (vm, nav, session) = Landing(new WizardDialogs("Vapor Pets"), new SavePicker(null));
         try

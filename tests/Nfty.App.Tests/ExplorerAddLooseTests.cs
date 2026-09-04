@@ -88,7 +88,7 @@ public class ExplorerAddLooseTests
     }
 
     [AvaloniaFact]
-    public async Task Add_loose_cancelled_picker_writes_nothing_and_leaves_the_cookbook_untouched()
+    public async Task Add_loose_canceled_picker_writes_nothing_and_leaves_the_cookbook_untouched()
     {
         var (vm, session, cbkPath, nav) = Explorer(new LooseWizardDialogs("Hat", "8x8"), new SavePicker(null));
         try

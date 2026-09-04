@@ -10,7 +10,7 @@ namespace Nfty.Core.Imaging;
 /// draws — one deterministic roll from a seed, in generation's own draw order.
 ///
 /// <para><b>Why this is in Core.</b> The draw order <i>is</i> the determinism contract: a variant is
-/// rolled per layer walking <c>layerOrder</c> bottom-to-top, a Dynamic layer then consumes its colour
+/// rolled per layer walking <c>layerOrder</c> bottom-to-top, a Dynamic layer then consumes its color
 /// draws and a Static one consumes none. A front-end that re-derived that walk would be a second copy
 /// of the rule, and the first reorder or new layer kind would make the two disagree silently. So the
 /// walk lives here, beside the roller it calls, and the CLI's <c>preview</c> and a GUI panel share
@@ -20,7 +20,7 @@ namespace Nfty.Core.Imaging;
 /// the CookBook's weights, before any of this — so previewing <c>cat.rcp</c> at seed <c>s</c> is not
 /// the first asset of generating its CookBook at seed <c>s</c>, and is not meant to be. What it does
 /// reproduce is what one Recipe's stack looks like when rolled: the same layers, in the same order,
-/// with colours drawn from the same distribution.</para>
+/// with colors drawn from the same distribution.</para>
 /// </summary>
 public static class StackRoll
 {
@@ -28,7 +28,7 @@ public static class StackRoll
     /// The RNG a seed string drives — <see cref="SeedHash.ToUlong"/> into
     /// <see cref="SplitMix64Rng"/>, exactly as <c>Generator</c> seeds a run. Exposed so a caller
     /// rolling a recipe and then a loose extra layer draws both from one continuing stream instead of
-    /// re-seeding (which would hand the two layers correlated colours), and so no front-end has to
+    /// re-seeding (which would hand the two layers correlated colors), and so no front-end has to
     /// name the seeding scheme itself.
     /// </summary>
     /// <param name="seed">The user's seed string.</param>
@@ -44,7 +44,7 @@ public static class StackRoll
     /// </summary>
     /// <param name="recipe">The recipe whose stack to roll.</param>
     /// <param name="rng">The run's RNG, from <see cref="RngFor"/>. Consumed in generation's order:
-    /// one variant draw per layer, then that layer's colour draws.</param>
+    /// one variant draw per layer, then that layer's color draws.</param>
     /// <param name="maxAttempts">How many whole-stack rolls to try before giving up on the rules.
     /// Defaults to the same budget generation uses, so a recipe that previews is a recipe that
     /// cooks.</param>
@@ -101,11 +101,11 @@ public static class StackRoll
     }
 
     /// <summary>
-    /// Rolls one layer: its variant by weight, then its colour by kind.
+    /// Rolls one layer: its variant by weight, then its color by kind.
     ///
     /// <para>Kind decides everything, exactly as it does at generation time. <b>Dynamic</b> rolls a
-    /// colour and so consumes RNG; <b>Static</b> carries a single fixed colour and consumes
-    /// <i>none</i>; <b>Custom</b> is composited as-is and gets no colour at all. Keeping the same
+    /// color and so consumes RNG; <b>Static</b> carries a single fixed color and consumes
+    /// <i>none</i>; <b>Custom</b> is composited as-is and gets no color at all. Keeping the same
     /// consumption pattern is what makes a preview of a stack reproducible against the same seed
     /// however the layer kinds are mixed.</para>
     /// </summary>
@@ -115,8 +115,8 @@ public static class StackRoll
     /// reference layer placed beside a stack is chosen by <see cref="StackPreview.PickVariant"/> or
     /// named outright, not rolled, so that varying the seed to explore the stack does not also keep
     /// changing the reference. Naming one <b>consumes no variant draw</b>: the choice was not the
-    /// RNG's to make, so it must not cost the RNG a step and shift every colour after it.</param>
-    /// <returns>The layer, its variant, and the colour spec to draw it in (null for Custom).</returns>
+    /// RNG's to make, so it must not cost the RNG a step and shift every color after it.</param>
+    /// <returns>The layer, its variant, and the color spec to draw it in (null for Custom).</returns>
     /// <exception cref="ArgumentNullException"><paramref name="ingredient"/> or
     /// <paramref name="rng"/> is null.</exception>
     /// <exception cref="InvalidOperationException">A colorized layer carries no usable colorization,
@@ -130,7 +130,7 @@ public static class StackRoll
         // Two statements rather than two arguments to one constructor: both consume the RNG, so
         // their ORDER is the determinism contract, and inlining them would hand that contract to
         // C#'s argument-evaluation order and to whatever order PreviewLayer happens to declare its
-        // members in. Variant first, then colour — the order Generator.RollOne uses.
+        // members in. Variant first, then color — the order Generator.RollOne uses.
         string variant = variantId ?? RollVariant(ingredient, rng);
         var (spec, rolled) = ColorFor(ingredient, rng);
         return new PreviewLayer(ingredient, variant, spec, rolled);
@@ -149,12 +149,12 @@ public static class StackRoll
     }
 
     /// <summary>
-    /// A rolled hue and saturation written back out as the prefixed colour spec a
+    /// A rolled hue and saturation written back out as the prefixed color spec a
     /// <see cref="PreviewLayer"/> carries.
     ///
     /// <para><b>This spelling is lossy, which is exactly why nothing renders through it.</b> Every
     /// spec resolves via 8-bit RGB on its way back to (H,S), so a rolled hue that fell between two
-    /// representable colours cannot be written down exactly. <see cref="PreviewLayer"/> therefore
+    /// representable colors cannot be written down exactly. <see cref="PreviewLayer"/> therefore
     /// carries the unrounded <see cref="RolledColor"/> alongside this string and draws from that; the
     /// spec is what a person reads, pastes and re-runs. Rendering through the string instead put the
     /// preview about a quarter-degree of hue off the asset it claims to show — small, but this path
@@ -167,11 +167,11 @@ public static class StackRoll
     /// lands as close as the format allows.</para>
     ///
     /// <para>Static and Custom layers are exact, not approximate: a Static layer's spec is passed
-    /// through verbatim from its own colorization and a Custom layer has no colour at all, so only a
-    /// <i>rolled</i> colour goes through this at all.</para>
+    /// through verbatim from its own colorization and a Custom layer has no color at all, so only a
+    /// <i>rolled</i> color goes through this at all.</para>
     /// </summary>
     /// <param name="color">The rolled hue (degrees) and saturation (0..1).</param>
-    /// <param name="model">The layer's colour model, which decides both the prefix and the axis the
+    /// <param name="model">The layer's color model, which decides both the prefix and the axis the
     /// third component sits on.</param>
     /// <returns>A spec such as <c>hsv:210.5,64.2,100</c>, formatted invariantly — it is printed, and
     /// re-parsed by <see cref="ColorSpec"/>, both of which a comma-decimal locale would break.</returns>
@@ -188,11 +188,11 @@ public static class StackRoll
     }
 
     /// <summary>
-    /// The colour one layer draws in, and the RNG it costs to decide it.
+    /// The color one layer draws in, and the RNG it costs to decide it.
     /// </summary>
-    /// <returns>The readable spec, and — for a <i>rolled</i> colour only — the unrounded value behind
+    /// <returns>The readable spec, and — for a <i>rolled</i> color only — the unrounded value behind
     /// it. Both travel: the spec is what gets printed and pasted, the <see cref="RolledColor"/> is
-    /// what gets drawn. A spec can only spell a colour 8-bit RGB can represent, so returning the
+    /// what gets drawn. A spec can only spell a color 8-bit RGB can represent, so returning the
     /// string alone would round a rolled hue on its way to the renderer and put the preview a step off
     /// the asset. Static returns its author-written spec with no rolled value, because generation
     /// resolves that same string through that same parser — it is already exact.</returns>
@@ -200,24 +200,24 @@ public static class StackRoll
     {
         var kind = ingredient.Manifest.Kind;
 
-        // Composited as-is, never colorized: no colour, and no draw.
+        // Composited as-is, never colorized: no color, and no draw.
         if (kind == LayerKind.Custom) return (null, null);
 
         var colorization = ingredient.Manifest.Colorization
             ?? throw new InvalidOperationException(
                 $"Ingredient '{ingredient.Manifest.Name}' is {kind.ToString().ToLowerInvariant()} but "
-                + "carries no colorization block, so there is no colour to roll.");
+                + "carries no colorization block, so there is no color to roll.");
 
         if (kind == LayerKind.Static)
         {
             // Verbatim, and no RNG — the same two properties generation gives a Static layer. Passing
             // the author's own spec through rather than resolving and re-formatting it also keeps this
-            // case exact, where a rolled colour cannot be.
+            // case exact, where a rolled color cannot be.
             var entry = colorization.Entries.Count == 1 ? colorization.Entries[0] : null;
             return (entry?.Fixed
                 ?? throw new InvalidOperationException(
                     $"Ingredient '{ingredient.Manifest.Name}' is static, so it must carry exactly one "
-                    + "fixed colour to be drawn in; run validate on the recipe to see what is wrong."),
+                    + "fixed color to be drawn in; run validate on the recipe to see what is wrong."),
                 null);
         }
 

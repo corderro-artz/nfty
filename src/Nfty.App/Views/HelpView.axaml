@@ -12,7 +12,7 @@
     the same convention as TextBlock.data-h elsewhere.
 
     Every entry is the same strict `20px | 10px gap | rest` grid, so the terms align down the whole
-    page regardless of which glyph sits in the gutter. Column ratios and every surface colour come
+    page regardless of which glyph sits in the gutter. Column ratios and every surface color come
     from Styles.axaml/Tokens.axaml; nothing here carries a raw hex.
   -->
   <UserControl.KeyBindings>
@@ -21,7 +21,7 @@
 
   <!-- The sheet is ~480px tall and MainWindow allows a 580px window, which leaves the page area
        ~474px — six pixels short, enough to slice the footer band off. The mockup has no scroller
-       (it never shrinks); this one only engages below that threshold, and centres exactly as a bare
+       (it never shrinks); this one only engages below that threshold, and centers exactly as a bare
        Border would above it. -->
   <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
   <Border x:Name="Sheet" Classes="sheet">
@@ -83,7 +83,7 @@
               </Panel>
               <StackPanel Grid.Column="1">
                 <TextBlock Classes="sh-t"><Run Text="Ingredient" /><Run Text=" .igt" FontFamily="{DynamicResource MonoFontFamily}" FontSize="9.5" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
-                <TextBlock Classes="sh-s" Text="One layer — its kind, its colouring, its weighted variants." />
+                <TextBlock Classes="sh-s" Text="One layer — its kind, its coloring, its weighted variants." />
               </StackPanel>
             </Grid>
 
@@ -118,7 +118,7 @@
               <Panel Grid.Column="0" Classes="sh-g"><TextBlock Classes="kmark kdyn" Text="D" /></Panel>
               <StackPanel Grid.Column="1">
                 <TextBlock Classes="sh-t" Text="dynamic" />
-                <TextBlock Classes="sh-s"><Run Text="Grey value-map. Colour " /><Run Text="rolled" Foreground="{DynamicResource FgBrush}" /><Run Text=" per asset." /></TextBlock>
+                <TextBlock Classes="sh-s"><Run Text="Gray value-map. Color " /><Run Text="rolled" Foreground="{DynamicResource FgBrush}" /><Run Text=" per asset." /></TextBlock>
               </StackPanel>
             </Grid>
 
@@ -126,7 +126,7 @@
               <Panel Grid.Column="0" Classes="sh-g"><TextBlock Classes="kmark kstat" Text="S" /></Panel>
               <StackPanel Grid.Column="1">
                 <TextBlock Classes="sh-t" Text="static" />
-                <TextBlock Classes="sh-s"><Run Text="Grey value-map. One " /><Run Text="fixed" Foreground="{DynamicResource FgBrush}" /><Run Text=" colour." /></TextBlock>
+                <TextBlock Classes="sh-s"><Run Text="Gray value-map. One " /><Run Text="fixed" Foreground="{DynamicResource FgBrush}" /><Run Text=" color." /></TextBlock>
               </StackPanel>
             </Grid>
 
@@ -134,7 +134,7 @@
               <Panel Grid.Column="0" Classes="sh-g"><TextBlock Classes="kmark kcust" Text="C" /></Panel>
               <StackPanel Grid.Column="1">
                 <TextBlock Classes="sh-t" Text="custom" />
-                <TextBlock Classes="sh-s"><Run Text="Full colour, composited " /><Run Text="as-is" Foreground="{DynamicResource FgBrush}" /><Run Text="." /></TextBlock>
+                <TextBlock Classes="sh-s"><Run Text="Full color, composited " /><Run Text="as-is" Foreground="{DynamicResource FgBrush}" /><Run Text="." /></TextBlock>
               </StackPanel>
             </Grid>
 
@@ -176,7 +176,7 @@
           </StackPanel>
         </Border>
 
-        <!-- ===== Keys + Colour ===== -->
+        <!-- ===== Keys + Color ===== -->
         <Border Grid.Column="2" Classes="sh-col div">
           <StackPanel>
             <TextBlock Classes="slbl sh" Text="KEYS" />
@@ -198,7 +198,7 @@
               <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="open" />
             </Grid>
 
-            <TextBlock Classes="slbl sh" Text="COLOUR" Margin="0,20,0,14" />
+            <TextBlock Classes="slbl sh" Text="COLOR" Margin="0,20,0,14" />
 
             <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,0,0,7">
               <TextBlock Classes="sh-cs pre" Text="hex:" /><TextBlock Classes="sh-cs" Text="d6249f" />
@@ -213,7 +213,7 @@
               <TextBlock Classes="sh-cs pre" Text="hsv:" /><TextBlock Classes="sh-cs" Text="322,83,84" />
             </StackPanel>
 
-            <TextBlock Classes="sh-fine" Text="The prefix is required — a colour is never guessed." />
+            <TextBlock Classes="sh-fine" Text="The prefix is required — a color is never guessed." />
           </StackPanel>
         </Border>
       </Grid>
@@ -221,7 +221,7 @@
       <!-- ===== .sh-f: the DNA sentence + its arithmetic chip ===== -->
       <Border Grid.Row="2" Classes="sh-f">
         <Grid ColumnDefinitions="*,Auto">
-          <TextBlock Grid.Column="0" Classes="sh-dna"><Run Text="Unique DNA" Foreground="{DynamicResource FgBrush}" FontWeight="SemiBold" /><Run Text=" — one Recipe, its rolled Variants, their colours. It's what makes an asset distinct, and what a collection is counted in." /></TextBlock>
+          <TextBlock Grid.Column="0" Classes="sh-dna"><Run Text="Unique DNA" Foreground="{DynamicResource FgBrush}" FontWeight="SemiBold" /><Run Text=" — one Recipe, its rolled Variants, their colors. It's what makes an asset distinct, and what a collection is counted in." /></TextBlock>
           <Border Grid.Column="1" Classes="kbd sh-eq">
             <TextBlock><Run Text="4 × 3 × 5 × 6 " /><Run Text="=" Foreground="{DynamicResource AccentTextBrush}" /><Run Text=" 360" /></TextBlock>
           </Border>

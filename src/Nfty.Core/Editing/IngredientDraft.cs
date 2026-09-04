@@ -14,7 +14,7 @@ public sealed class IngredientDraft
     public string Name { get; set; }
     /// <summary>Which kind of layer this will be.</summary>
     public LayerKind Kind { get; set; }
-    /// <summary>How it is coloured; null for a Custom layer.</summary>
+    /// <summary>How it is colored; null for a Custom layer.</summary>
     public Colorization? Colorization { get; set; }
     /// <summary>The canvas every variant must match.</summary>
     public Dimensions Canvas { get; }
@@ -25,7 +25,7 @@ public sealed class IngredientDraft
     /// <param name="id">Stable identifier.</param>
     /// <param name="name">Display name.</param>
     /// <param name="kind">Layer kind.</param>
-    /// <param name="colorization">Colour configuration, or null for Custom.</param>
+    /// <param name="colorization">Color configuration, or null for Custom.</param>
     /// <param name="canvas">Canvas size every variant must match.</param>
     /// <param name="variants">Initial variants.</param>
     public IngredientDraft(string id, string name, LayerKind kind, Colorization? colorization,
@@ -40,7 +40,7 @@ public sealed class IngredientDraft
     }
 
     /// <summary>Adds a blank variant sized to the canvas. A Custom ingredient's variants are
-    /// authored in colour, so one gets a blank <see cref="ColorMap"/> as well — without it a
+    /// authored in color, so one gets a blank <see cref="ColorMap"/> as well — without it a
     /// freshly added Custom variant would have nothing to export.</summary>
     /// <param name="id">Stable identifier.</param>
     /// <param name="name">Display name.</param>
@@ -56,7 +56,7 @@ public sealed class IngredientDraft
 
     /// <summary>Appends a copy of an existing variant (same weight, cloned pixels) under a new
     /// id/name. Both rasters are cloned when both exist — copying only the value-map would give a
-    /// Custom variant a grey ghost for artwork and silently block its save.</summary>
+    /// Custom variant a gray ghost for artwork and silently block its save.</summary>
     /// <param name="sourceId">The variant to copy.</param>
     /// <param name="newId">The copy's identifier.</param>
     /// <param name="newName">The copy's display name.</param>

@@ -17,7 +17,7 @@ public enum ExplorerNodeKind
 
 /// <summary>One tree node. <see cref="Domain"/> carries the Core object this node stands for
 /// (LoadedCookBook / LoadedRecipe / LoadedIngredient). <see cref="LayerKind"/> is the ingredient's
-/// kind on Ingredient nodes (null otherwise), used to colour the tree kind mark.</summary>
+/// kind on Ingredient nodes (null otherwise), used to color the tree kind mark.</summary>
 public record ExplorerNode(string Id, string Name, ExplorerNodeKind Kind,
     IReadOnlyList<ExplorerNode> Children, object? Domain, LayerKind? LayerKind = null)
 {
@@ -29,9 +29,9 @@ public record ExplorerNode(string Id, string Name, ExplorerNodeKind Kind,
     /// </summary>
     public bool IsExpanded { get; set; }
 
-    /// <summary>Whether this ingredient rolls its colour per asset.</summary>
+    /// <summary>Whether this ingredient rolls its color per asset.</summary>
     public bool IsDynamic => LayerKind == Nfty.Core.Model.LayerKind.Dynamic;
-    /// <summary>Whether this ingredient applies one fixed colour.</summary>
+    /// <summary>Whether this ingredient applies one fixed color.</summary>
     public bool IsStatic => LayerKind == Nfty.Core.Model.LayerKind.Static;
     /// <summary>Whether this ingredient composites as-is.</summary>
     public bool IsCustom => LayerKind == Nfty.Core.Model.LayerKind.Custom;

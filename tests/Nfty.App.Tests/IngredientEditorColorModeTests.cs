@@ -18,7 +18,7 @@ using Xunit;
 namespace Nfty.App.Tests;
 
 /// <summary>
-/// Colour mode in the editor: the palette strip, the opacity lock, and what Save does with colour
+/// Color mode in the editor: the palette strip, the opacity lock, and what Save does with color
 /// art painted onto a value-map layer.
 /// </summary>
 public class IngredientEditorColorModeTests
@@ -30,7 +30,7 @@ public class IngredientEditorColorModeTests
         public Task<string?> PickFolderAsync(string t) => Task.FromResult<string?>(null);
     }
 
-    /// <summary>Answers the colour-save dialog with a fixed choice and counts how often it was asked;
+    /// <summary>Answers the color-save dialog with a fixed choice and counts how often it was asked;
     /// every other dialog is confirmed. Counting matters for "asked once, not on every save".</summary>
     private sealed class ColorSaveDialogs(ColorSaveChoice choice) : IDialogService
     {
@@ -131,11 +131,11 @@ public class IngredientEditorColorModeTests
         finally { f.session.Dispose(); Directory.Delete(Path.GetDirectoryName(f.path)!, true); }
     }
 
-    /// <summary>A value-map stores lightness and nothing else, so a colour swatch picked in grayscale
+    /// <summary>A value-map stores lightness and nothing else, so a color swatch picked in grayscale
     /// mode has to become its lightness. Refusing the click instead would leave saved swatches
     /// visibly present and silently inert.</summary>
     [AvaloniaFact]
-    public void A_colour_swatch_picked_in_grayscale_mode_becomes_its_lightness()
+    public void A_color_swatch_picked_in_grayscale_mode_becomes_its_lightness()
     {
         var f = IngredientEditorSaveTests.OnDisk(LayerKind.Dynamic);
         try
@@ -145,7 +145,7 @@ public class IngredientEditorColorModeTests
 
             vm.PickSwatchCommand.Execute(new PaletteSwatch(new RgbColor(0, 255, 0)));
 
-            // BT.709 luminance of pure green, the same reduction a colour PNG import goes through.
+            // BT.709 luminance of pure green, the same reduction a color PNG import goes through.
             Assert.Equal(182, vm.BrushValue);
             Assert.Equal(new RgbColor(182, 182, 182), vm.CurrentRgb);
         }
@@ -275,10 +275,10 @@ public class IngredientEditorColorModeTests
         finally { f.session.Dispose(); Directory.Delete(Path.GetDirectoryName(f.path)!, true); }
     }
 
-    // ---------------- saving colour art ----------------
+    // ---------------- saving color art ----------------
 
     [AvaloniaFact]
-    public void Switching_to_colour_carries_the_existing_drawing_over_as_grey()
+    public void Switching_to_color_carries_the_existing_drawing_over_as_gray()
     {
         var f = IngredientEditorSaveTests.OnDisk(LayerKind.Dynamic);
         try
@@ -351,11 +351,11 @@ public class IngredientEditorColorModeTests
         finally { f.session.Dispose(); Directory.Delete(Path.GetDirectoryName(f.path)!, true); }
     }
 
-    /// <summary>A save writes the WHOLE ingredient, so entering colour mode has to widen every
+    /// <summary>A save writes the WHOLE ingredient, so entering color mode has to widen every
     /// variant — not only the one on screen. A variant the author never visited would otherwise reach
-    /// the exporter with no colour raster and take the save down with it.</summary>
+    /// the exporter with no color raster and take the save down with it.</summary>
     [AvaloniaFact]
-    public async Task Every_variant_gets_colour_art_even_the_ones_never_visited()
+    public async Task Every_variant_gets_color_art_even_the_ones_never_visited()
     {
         var f = IngredientEditorSaveTests.OnDisk(LayerKind.Dynamic);
         var dialogs = new ColorSaveDialogs(ColorSaveChoice.NewIngredient);
@@ -411,7 +411,7 @@ public class IngredientEditorColorModeTests
     }
 
     [AvaloniaFact]
-    public async Task Cancelling_the_dialog_writes_nothing_and_leaves_the_draft_editable()
+    public async Task Canceling_the_dialog_writes_nothing_and_leaves_the_draft_editable()
     {
         var f = IngredientEditorSaveTests.OnDisk(LayerKind.Dynamic);
         var dialogs = new ColorSaveDialogs(ColorSaveChoice.Cancel);
@@ -440,10 +440,10 @@ public class IngredientEditorColorModeTests
         finally { f.session.Dispose(); Directory.Delete(Path.GetDirectoryName(f.path)!, true); }
     }
 
-    /// <summary>An auto-widened colour raster is a copy of a value-map that no longer exists once
+    /// <summary>An auto-widened color raster is a copy of a value-map that no longer exists once
     /// the value-map is replaced by an import — so it must not survive to be shown as artwork.</summary>
     [AvaloniaFact]
-    public async Task Importing_into_the_value_map_drops_a_colour_raster_nobody_painted_on()
+    public async Task Importing_into_the_value_map_drops_a_color_raster_nobody_painted_on()
     {
         var f = IngredientEditorSaveTests.OnDisk(LayerKind.Dynamic);
         var png = WriteGrayPng(8, 8, 90);
@@ -453,11 +453,11 @@ public class IngredientEditorColorModeTests
 
             vm.ActiveTool = EditorTool.Fill; vm.BrushValue = 200;
             vm.ApplyToolStroke(new[] { (0, 0) });
-            vm.SetPaintColorCommand.Execute(null);       // widens: the colour raster is grey 200
+            vm.SetPaintColorCommand.Execute(null);       // widens: the color raster is gray 200
             Assert.Equal(200, vm.ColorAt(4, 4).R);
 
             vm.SetPaintGrayscaleCommand.Execute(null);
-            await vm.ImportImageCommand.ExecuteAsync(null);   // the value-map becomes grey 90
+            await vm.ImportImageCommand.ExecuteAsync(null);   // the value-map becomes gray 90
             Assert.Equal(90, vm.ValueAt(4, 4));
 
             vm.SetPaintColorCommand.Execute(null);
@@ -466,10 +466,10 @@ public class IngredientEditorColorModeTests
         finally { f.session.Dispose(); Directory.Delete(Path.GetDirectoryName(f.path)!, true); File.Delete(png); }
     }
 
-    /// <summary>The other half of the rule: colour art the author actually painted is their work, and
+    /// <summary>The other half of the rule: color art the author actually painted is their work, and
     /// importing a value-map — a different surface entirely — is no reason to throw it away.</summary>
     [AvaloniaFact]
-    public async Task Importing_into_the_value_map_keeps_colour_art_that_was_painted()
+    public async Task Importing_into_the_value_map_keeps_color_art_that_was_painted()
     {
         var f = IngredientEditorSaveTests.OnDisk(LayerKind.Dynamic);
         var png = WriteGrayPng(8, 8, 90);
@@ -480,7 +480,7 @@ public class IngredientEditorColorModeTests
             vm.SetPaintColorCommand.Execute(null);
             vm.ActiveTool = EditorTool.Fill;
             vm.BrushHue = 0; vm.BrushSat = 100; vm.BrushValue = 255;
-            vm.ApplyToolStroke(new[] { (0, 0) });        // a real colour stroke
+            vm.ApplyToolStroke(new[] { (0, 0) });        // a real color stroke
             Assert.Equal(255, vm.ColorAt(4, 4).R);
 
             vm.SetPaintGrayscaleCommand.Execute(null);
@@ -494,7 +494,7 @@ public class IngredientEditorColorModeTests
         finally { f.session.Dispose(); Directory.Delete(Path.GetDirectoryName(f.path)!, true); File.Delete(png); }
     }
 
-    /// <summary>Each surface keeps its own stack, so undoing in colour must not walk back value-map
+    /// <summary>Each surface keeps its own stack, so undoing in color must not walk back value-map
     /// strokes made before the mode was switched.</summary>
     [AvaloniaFact]
     public void Undo_follows_the_mode_and_never_crosses_between_the_two_surfaces()
@@ -507,14 +507,14 @@ public class IngredientEditorColorModeTests
             vm.ApplyToolStroke(new[] { (0, 0) });          // one grayscale stroke
 
             vm.SetPaintColorCommand.Execute(null);
-            Assert.False(vm.UndoCommand.CanExecute(null)); // the colour stack is empty
+            Assert.False(vm.UndoCommand.CanExecute(null)); // the color stack is empty
 
             vm.BrushHue = 0; vm.BrushSat = 100; vm.BrushValue = 255;
             vm.ApplyToolStroke(new[] { (0, 0) });
             Assert.True(vm.UndoCommand.CanExecute(null));
             vm.UndoCommand.Execute(null);
 
-            Assert.Equal(200, vm.ColorAt(4, 4).R);         // back to the lifted grey, not further
+            Assert.Equal(200, vm.ColorAt(4, 4).R);         // back to the lifted gray, not further
             Assert.Equal(200, vm.ValueAt(4, 4));           // and the value-map never moved
 
             vm.SetPaintGrayscaleCommand.Execute(null);

@@ -110,7 +110,7 @@ public class PaletteStripLayoutTests
             Assert.Equal(saved, vm.SavedSwatches.Count);
 
             // ONE swatch wide is the floor. Below it the cell is not "tight", it is absent: the
-            // column collapses to zero, every saved colour scrolls out of a zero-width viewport, and
+            // column collapses to zero, every saved color scrolls out of a zero-width viewport, and
             // nothing anywhere reports a problem.
             Assert.True(SavedViewport(view).Bounds.Width >= SwatchSize,
                 $"the saved-swatch cell was arranged {SavedViewport(view).Bounds.Width}px wide — "

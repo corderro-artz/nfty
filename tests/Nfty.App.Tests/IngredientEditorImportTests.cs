@@ -146,7 +146,7 @@ public class IngredientEditorImportTests
     }
 
     [AvaloniaFact]
-    public async Task Cancelled_import_changes_nothing()
+    public async Task Canceled_import_changes_nothing()
     {
         var (path, session, recipe, ing) = IngredientEditorSaveTests.OnDisk();
         try
@@ -177,10 +177,10 @@ public class IngredientEditorImportTests
     }
 
     [AvaloniaFact]
-    public async Task Import_into_a_custom_variant_keeps_full_colour()
+    public async Task Import_into_a_custom_variant_keeps_full_color()
     {
         var (path, session, recipe, ing) = IngredientEditorSaveTests.OnDisk(LayerKind.Custom);
-        var pngPath = WritePng(8, 8, 10, 200, 40);   // a distinctly non-gray colour
+        var pngPath = WritePng(8, 8, 10, 200, 40);   // a distinctly non-gray color
         try
         {
             var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
@@ -190,7 +190,7 @@ public class IngredientEditorImportTests
 
             var (r, g, b, a) = ReadPixel(vm.Canvas, 8, 8, 4, 4);
             Assert.Equal(10, r); Assert.Equal(200, g); Assert.Equal(40, b); Assert.Equal(255, a);
-            Assert.NotEqual(r, g);   // proves this is full colour, not a grayscale value-map
+            Assert.NotEqual(r, g);   // proves this is full color, not a grayscale value-map
             Assert.True(vm.IsDirty);
             vm.Dispose();
         }
@@ -202,11 +202,11 @@ public class IngredientEditorImportTests
         }
     }
 
-    /// <summary>Colour mode replaced the old "custom is import-only" contract. A Custom layer now
-    /// opens in colour and paints; what it must NOT offer is grayscale, because its value-map never
+    /// <summary>Color mode replaced the old "custom is import-only" contract. A Custom layer now
+    /// opens in color and paints; what it must NOT offer is grayscale, because its value-map never
     /// reaches an archive and those strokes would be invisible work.</summary>
     [AvaloniaFact]
-    public void Custom_opens_in_colour_and_paints_but_is_never_offered_grayscale()
+    public void Custom_opens_in_color_and_paints_but_is_never_offered_grayscale()
     {
         var (path, session, recipe, ing) = IngredientEditorSaveTests.OnDisk(LayerKind.Custom);
         try
@@ -217,7 +217,7 @@ public class IngredientEditorImportTests
             Assert.True(vm.IsColorMode);
             Assert.False(vm.CanPaintGrayscale);
 
-            // The refusal has to be real, not just a greyed button: driving the command directly
+            // The refusal has to be real, not just a grayed button: driving the command directly
             // must leave the mode alone.
             vm.SetPaintGrayscaleCommand.Execute(null);
             Assert.True(vm.IsColorMode);
@@ -235,11 +235,11 @@ public class IngredientEditorImportTests
         finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
     }
 
-    // The headline guarantee: a CUSTOM ingredient's imported image must survive Save in full colour —
+    // The headline guarantee: a CUSTOM ingredient's imported image must survive Save in full color —
     // it must never round-trip through ValueMap (grayscale by construction). Re-reading the archive and
     // finding R != G != B at a known pixel proves no value-map round-trip happened.
     [AvaloniaFact]
-    public async Task Custom_save_round_trips_full_colour()
+    public async Task Custom_save_round_trips_full_color()
     {
         var (path, session, recipe, ing) = IngredientEditorSaveTests.OnDisk(LayerKind.Custom);
         var pngPath = WritePng(8, 8, 10, 200, 40);
@@ -271,7 +271,7 @@ public class IngredientEditorImportTests
 
     // ---- Review regressions (C2 whole-branch review) ----
 
-    /// <summary>The per-variant image gate is gone: a Custom variant is born with a blank colour
+    /// <summary>The per-variant image gate is gone: a Custom variant is born with a blank color
     /// raster, so it is paintable at once rather than blocked until an import. Assert the COMMAND's
     /// notification, not just the property — the property is computed live and passes even when the
     /// bound button is stale.</summary>
@@ -287,7 +287,7 @@ public class IngredientEditorImportTests
             vm.SaveCommand.CanExecuteChanged += (_, _) => notifications++;
 
             vm.AddVariantCommand.Execute(null);   // selects the new variant
-            Assert.True(vm.CanSave);              // it has a colour raster, so there IS art to write
+            Assert.True(vm.CanSave);              // it has a color raster, so there IS art to write
             Assert.True(notifications > 0, "SaveCommand never raised CanExecuteChanged, so the button stays stale");
 
             // The point of the raster existing is that a stroke lands on it without an import first.
@@ -330,7 +330,7 @@ public class IngredientEditorImportTests
     }
 
     /// <summary>Duplicate copies the draft's (grayscale) ValueMap, which is not where a custom variant's
-    /// pixels live — so the copy must inherit the effective image, or it renders a grey ghost and
+    /// pixels live — so the copy must inherit the effective image, or it renders a gray ghost and
     /// silently blocks Save.</summary>
     [AvaloniaFact]
     public async Task Duplicating_a_custom_variant_carries_its_image()
@@ -345,7 +345,7 @@ public class IngredientEditorImportTests
             vm.DuplicateVariantCommand.Execute(null);
 
             var (r, g, b, _) = ReadPixel(vm.Canvas, 8, 8, 4, 4);   // the copy is selected
-            Assert.Equal(10, r); Assert.Equal(200, g); Assert.Equal(40, b);   // colour carried, not grey
+            Assert.Equal(10, r); Assert.Equal(200, g); Assert.Equal(40, b);   // color carried, not gray
             Assert.True(vm.CanSave);                                          // and Save stays available
             vm.Dispose();
         }
@@ -353,9 +353,9 @@ public class IngredientEditorImportTests
     }
 
     /// <summary>The loose (.igt) custom save path is the one whose export clones are DISPOSED rather
-    /// than adopted — the seam the spec called sharp. Prove colour survives, twice.</summary>
+    /// than adopted — the seam the spec called sharp. Prove color survives, twice.</summary>
     [AvaloniaFact]
-    public async Task Loose_custom_save_round_trips_full_colour_twice()
+    public async Task Loose_custom_save_round_trips_full_color_twice()
     {
         var dir = Directory.CreateTempSubdirectory().FullName;
         var igt = Path.Combine(dir, "art.igt");
@@ -389,11 +389,11 @@ public class IngredientEditorImportTests
     }
 
     [AvaloniaFact]
-    // A value-map stores lightness only, so a colour source must be collapsed to one channel. Handing
+    // A value-map stores lightness only, so a color source must be collapsed to one channel. Handing
     // it straight to ValueMap.FromImage would keep the RED channel - fine for round-tripping this
     // layer's own grayscale PNG, but arbitrary for foreign art. The import desaturates first, and says
-    // that the colour is gone.
-    public async Task Importing_a_colour_image_into_a_value_map_uses_luminance_and_says_so()
+    // that the color is gone.
+    public async Task Importing_a_color_image_into_a_value_map_uses_luminance_and_says_so()
     {
         var (path, session, recipe, ing) = IngredientEditorSaveTests.OnDisk();   // dynamic 8x8
         // Pure green is the case that exposes the difference: the red channel calls it BLACK, while
@@ -407,7 +407,7 @@ public class IngredientEditorImportTests
 
             await vm.ImportImageCommand.ExecuteAsync(null);
 
-            Assert.Equal("Colour flattened", dialogs.ErrorTitle);
+            Assert.Equal("Color flattened", dialogs.ErrorTitle);
             // BT.709 luminance of pure green is ~182. The red channel would have given 0.
             Assert.InRange(vm.ValueAt(4, 4), 175, 190);
             vm.Dispose();
@@ -417,7 +417,7 @@ public class IngredientEditorImportTests
 
     [AvaloniaFact]
     // The counterpart: a genuinely grayscale source loses nothing, so it must NOT nag - and must
-    // still round-trip EXACTLY, since desaturating an already-grey pixel has to be a no-op.
+    // still round-trip EXACTLY, since desaturating an already-gray pixel has to be a no-op.
     public async Task Importing_a_grayscale_image_into_a_value_map_does_not_warn()
     {
         var (path, session, recipe, ing) = IngredientEditorSaveTests.OnDisk();

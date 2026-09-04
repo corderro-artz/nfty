@@ -105,7 +105,7 @@ public class ColorizerTests
     // Apply resolves the (h, s, model) conversion once into a 256-entry table keyed on the source
     // byte and indexes it per pixel, instead of re-running the HSV/HSL maths for every pixel. That
     // is only legal if the table reproduces the per-pixel conversion exactly, for every gray and
-    // every hue sector, under BOTH colour models. These tests pin that equivalence against
+    // every hue sector, under BOTH color models. These tests pin that equivalence against
     // ColorConvert directly, so they fail if the table is ever built from the wrong key, sized
     // wrong, quantized, cached across calls, or allowed to drift from the conversion it stands in for.
 
@@ -187,7 +187,7 @@ public class ColorizerTests
     public void Each_call_resolves_its_own_colors_and_does_not_reuse_the_previous_calls()
     {
         // A table hoisted into a static or cached across calls would make the second Apply repeat
-        // the first one's colour. Same source, two hues, one after the other.
+        // the first one's color. Same source, two hues, one after the other.
         using var map = SpreadMap();
 
         using var red = Colorizer.Apply(map, h: 0, s: 1.0, ColorModel.Hsv);

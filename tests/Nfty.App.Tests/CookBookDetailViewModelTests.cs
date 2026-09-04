@@ -37,7 +37,7 @@ public class CookBookDetailViewModelTests
     }
 
     /// <summary>
-    /// The row carries a series INDEX, not a colour. It used to carry a <c>Color</c> hashed from the
+    /// The row carries a series INDEX, not a color. It used to carry a <c>Color</c> hashed from the
     /// recipe id, which was deterministic but off-palette by construction and — the part that
     /// mattered — structurally unable to change with the theme, so the distribution bar rendered
     /// identically bright in dark mode where it is the heaviest element on the card. The paint is

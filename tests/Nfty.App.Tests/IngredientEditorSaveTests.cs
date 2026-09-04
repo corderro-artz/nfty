@@ -21,7 +21,7 @@ public class IngredientEditorSaveTests
     internal static (string path, CookBookSession session, LoadedRecipe recipe, LoadedIngredient ing) OnDisk() =>
         OnDisk(LayerKind.Dynamic);
 
-    // As above, but lets a test build a CUSTOM (full-colour, un-colorized) fixture instead of the
+    // As above, but lets a test build a CUSTOM (full-color, un-colorized) fixture instead of the
     // default dynamic (value-map) one. Custom ingredients carry no Colorization (CLAUDE.md: "Colorization
     // must be null" for custom).
     internal static (string path, CookBookSession session, LoadedRecipe recipe, LoadedIngredient ing) OnDisk(LayerKind kind)
@@ -106,7 +106,7 @@ public class IngredientEditorSaveTests
             vm.ApplyToolStroke(new[] { (0, 0) });
             await vm.BackCommand.ExecuteAsync(null);
             Assert.True(dialogs.Shown);            // a confirm was shown
-            Assert.Equal(0, nav.BackCount);        // cancelled → did not navigate
+            Assert.Equal(0, nav.BackCount);        // canceled → did not navigate
             vm.Dispose();
         }
         finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }

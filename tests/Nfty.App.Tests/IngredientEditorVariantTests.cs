@@ -83,7 +83,7 @@ public class IngredientEditorVariantTests
     }
 
     [AvaloniaFact]
-    public async Task Delete_is_cancelled_when_the_confirm_is_declined()
+    public async Task Delete_is_canceled_when_the_confirm_is_declined()
     {
         var vm = Editor(out var session, out var path, new ConfirmingDialogs(false));
         try

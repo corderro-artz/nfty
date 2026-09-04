@@ -5,11 +5,11 @@ space far larger than the source art.**
 
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
 [![Avalonia 12](https://img.shields.io/badge/Avalonia-12.1.1-8B44AC)](https://avaloniaui.net/)
-[![tests 1450](https://img.shields.io/badge/tests-1450%20passing-3d6b52)](#testing)
+[![tests 1454](https://img.shields.io/badge/tests-1454%20passing-3d6b52)](#testing)
 [![warnings 0](https://img.shields.io/badge/warnings-0-3d6b52)](#contributing)
 
 Most layered generators composite fixed images. Here a layer can be a **grayscale value-map**
-colorized at generation time: recolouring preserves each pixel's value and lightness and injects a
+colorized at generation time: recoloring preserves each pixel's value and lightness and injects a
 hue and saturation, so one hand-drawn variant becomes a whole family of them.
 
 Same cookbook and same seed produce byte-identical output — on any machine, in any locale, on any CPU
@@ -41,7 +41,7 @@ architecture. That is a guarantee the test suite enforces rather than a hope.
 |---|---|
 | **SDK** | .NET 10 |
 | **OS** | Windows, macOS, Linux (the desktop head is Avalonia; the CLI is portable) |
-| **Dependencies** | Restored by `dotnet build`. ImageSharp is pinned to **3.1.11** on purpose — 4.0.0 requires a build-time licence key. |
+| **Dependencies** | Restored by `dotnet build`. ImageSharp is pinned to **3.1.11** on purpose — 4.0.0 requires a build-time license key. |
 
 ## Quick start
 
@@ -95,11 +95,11 @@ the domain layers.
 | Kind | Source art | At generation time |
 |------|-----------|--------------------|
 | **Dynamic** | Grayscale value-map | Rolls a hue and saturation per asset from a weighted range |
-| **Static** | Grayscale value-map | Applies one fixed colour, deterministically, consuming no RNG |
-| **Custom** | Full-colour RGBA | Composited exactly as-is; never recoloured |
+| **Static** | Grayscale value-map | Applies one fixed color, deterministically, consuming no RNG |
+| **Custom** | Full-color RGBA | Composited exactly as-is; never recolored |
 
 Dynamic and static take their **value** from the grayscale map and only their hue and saturation from
-the colour — which is what multiplies the output space. Custom carries no colorization at all, and
+the color — which is what multiplies the output space. Custom carries no colorization at all, and
 `Validator` refuses one that does.
 
 ### Depth
@@ -129,12 +129,12 @@ roll a Recipe by weight
   → emit
 ```
 
-The **DNA** is a SHA-256 over the recipe id, each layer's variant id, and the *quantized* colour of
-each colorized layer. Quantizing folds a continuous colour space into something countable, which is
+The **DNA** is a SHA-256 over the recipe id, each layer's variant id, and the *quantized* color of
+each colorized layer. Quantizing folds a continuous color space into something countable, which is
 what lets `stats` tell you how many unique assets a book can produce before you try to mint them.
 
 A generated Set carries two metadata files per asset: a standards-pure OpenSea `metadata/NNNN.json`,
-and a richer `nfty/NNNN.json` with the DNA, seed, rarity and per-layer colour. `extend` re-opens a Set
+and a richer `nfty/NNNN.json` with the DNA, seed, rarity and per-layer color. `extend` re-opens a Set
 and adds to it, recomputing rarity across the whole collection.
 
 ---
@@ -169,10 +169,10 @@ nfty preview cat.rcp --seed alpha --only body,shades  # just those layers, at th
 
 The same `Nfty.Core` engine behind an Avalonia UI: an Explorer over the open CookBook, a per-type
 detail pane, and an **Ingredient Editor** with a paint stack — brush, eraser, shapes, line, flood
-fill, rectangular select-and-move, undo/redo — over either a grayscale value-map or a full-colour
+fill, rectangular select-and-move, undo/redo — over either a grayscale value-map or a full-color
 raster.
 
-- **Colour mode** paints RGBA and saves as a Custom ingredient, either as a new layer or by
+- **Color mode** paints RGBA and saves as a Custom ingredient, either as a new layer or by
   converting the original.
 - **The opacity lock** is on by default and keeps every painted pixel fully opaque or fully erased,
   because partial alpha does not voxelise cleanly.
@@ -188,7 +188,7 @@ src/Nfty.Core       the engine — no UI or CLI dependencies, so both front-ends
 src/Nfty.Cli        the command line (System.CommandLine)
 src/Nfty.App        the Avalonia GUI: Services, ViewModels, Views, Themes
 src/Nfty.Desktop    the desktop head — window, clipboard, file pickers
-tests/              1450 tests across three xunit.v3 projects
+tests/              1454 tests across three xunit.v3 projects
 tests/fixtures/     archives written by an older build, so format changes cannot pass unnoticed
 docs/USER-GUIDE.md  end-user documentation
 docs/design/mockups the locked visual reference the GUI is built to match
@@ -237,7 +237,7 @@ House rules worth knowing before your first commit:
 
 ## License
 
-Not yet licensed. All rights reserved pending a licence decision.
+Not yet licensed. All rights reserved pending a license decision.
 
 ---
 

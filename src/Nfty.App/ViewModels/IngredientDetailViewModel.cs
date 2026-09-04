@@ -24,7 +24,7 @@ public record VariantRow(string Id, string Name, double Weight, double WithinPer
 /// <summary>One line of the Colorways panel's axis readout.</summary>
 /// <param name="Label">What the axis is, e.g. "hue".</param>
 /// <param name="Value">Its range or fixed value.</param>
-/// <param name="Derived">Whether it was derived from a fixed colour rather than stated as a range.</param>
+/// <param name="Derived">Whether it was derived from a fixed color rather than stated as a range.</param>
 public record ColorwayAxis(string Label, string Value, bool Derived);
 
 public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
@@ -49,26 +49,26 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     public string Name { get; }
 
     /// <summary>Lowercase, because the hero renders it as one running sentence
-    /// ("custom · no colorize · composited as-is") with only this word kind-coloured.</summary>
+    /// ("custom · no colorize · composited as-is") with only this word kind-colored.</summary>
     public string KindText { get; }
-    /// <summary>Whether it rolls its colour per asset.</summary>
+    /// <summary>Whether it rolls its color per asset.</summary>
     public bool IsDynamic { get; }
-    /// <summary>Whether it applies one fixed colour.</summary>
+    /// <summary>Whether it applies one fixed color.</summary>
     public bool IsStatic { get; }
     /// <summary>Whether it composites as-is.</summary>
     public bool IsCustom { get; }
     /// <summary>The Colorways heading, naming the kind.</summary>
     public string ColorwaysText { get; }
-    /// <summary>Which colour model the layer is authored in.</summary>
+    /// <summary>Which color model the layer is authored in.</summary>
     public string ColorwaysModelText { get; }
 
     /// <summary>Hue sweep for the colorways band, or null when this kind has no rolled hue (static
     /// and custom layers). Rendered as a gradient rather than as variant thumbnails, which showed
-    /// the source art instead of the colour space the layer actually spans.</summary>
+    /// the source art instead of the color space the layer actually spans.</summary>
     public IReadOnlyList<Color>? HueBandStops { get; }
-    /// <summary>Whether to draw the hue band — a fixed colour has no range to show.</summary>
+    /// <summary>Whether to draw the hue band — a fixed color has no range to show.</summary>
     public bool HasHueBand => HueBandStops is not null;
-    /// <summary>Sample swatches across the layer's colour range.</summary>
+    /// <summary>Sample swatches across the layer's color range.</summary>
     public IReadOnlyList<Bitmap> Colorways { get; }
     /// <summary>The hue and saturation readouts.</summary>
     public IReadOnlyList<ColorwayAxis> ColorwayAxes { get; }
@@ -198,7 +198,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     private static IReadOnlyList<ColorwayAxis> BuildAxes(IngredientManifest m)
     {
         // No axes for an uncolorized layer. There used to be a single synthetic
-        // ColorwayAxis("COLOUR", "no colorize · composited as-is") here, which borrowed the
+        // ColorwayAxis("COLOR", "no colorize · composited as-is") here, which borrowed the
         // axis-row shape to say "there are no axes" - and made a full sentence share a row template
         // built for "HUE  190–320°". Custom now has its own branch in the view (mockup .cwcustom:
         // a swatch of the art plus a plain-language note), so this returns nothing.
@@ -214,7 +214,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
         else
         {
             var fixedSpec = c.Entries.FirstOrDefault(e => e.Fixed is not null)?.Fixed;
-            if (fixedSpec is not null) list.Add(new ColorwayAxis("COLOUR", fixedSpec, false));
+            if (fixedSpec is not null) list.Add(new ColorwayAxis("COLOR", fixedSpec, false));
         }
         list.Add(new ColorwayAxis("VALUE", "← value-map", true));
         return list;
@@ -269,11 +269,11 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
         string? path;
         try { path = await _picker.SaveFileAsync("Export preview", ".png"); }
         catch (Exception ex) { await ShowPreviewError(ex.Message); return; }
-        if (path is null) return;   // cancelled
+        if (path is null) return;   // canceled
 
         try
         {
-            // A colorized layer needs a colour; the ingredient's own first fixed colour or range
+            // A colorized layer needs a color; the ingredient's own first fixed color or range
             // start is the honest default - it is what generation would most likely roll - and the
             // editor is where a specific one gets chosen.
             using var img = VariantPreview.Render(_ing, _variants[0].Id, DefaultColorSpec());

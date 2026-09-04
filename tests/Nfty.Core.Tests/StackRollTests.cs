@@ -14,7 +14,7 @@ namespace Nfty.Core.Tests;
 ///
 /// <para>The properties worth pinning are all about <b>what the roll costs</b> rather than what it
 /// returns. The draw order is the determinism contract: one weighted draw per layer walking
-/// <c>layerOrder</c> bottom-first, then that layer's colour draws — and a Static layer takes none,
+/// <c>layerOrder</c> bottom-first, then that layer's color draws — and a Static layer takes none,
 /// because generation's does not. Every one of those is asserted against a <see cref="ScriptedRng"/>
 /// with a counted, fixed sequence rather than against a seed, so the assertions say exactly which
 /// draw reached which layer instead of merely that two runs agreed.</para>
@@ -101,11 +101,11 @@ public class StackRollTests
     /// <summary>
     /// The exact RNG cost per layer kind, which is what makes a seed reproduce a stack however the
     /// kinds are mixed: one variant draw each, plus a Dynamic layer's entry pick and its hue and
-    /// saturation samples. A <b>Static layer takes none</b> — it resolves one fixed colour, exactly as
-    /// generation does — and a Custom layer takes none either, having no colour at all.
+    /// saturation samples. A <b>Static layer takes none</b> — it resolves one fixed color, exactly as
+    /// generation does — and a Custom layer takes none either, having no color at all.
     /// </summary>
     [Fact]
-    public void Only_a_dynamic_layer_costs_colour_draws()
+    public void Only_a_dynamic_layer_costs_color_draws()
     {
         using var stat = Static("shades", "hex:d6249f", "v");
         using var custom = Custom("hat", "v");
@@ -114,7 +114,7 @@ public class StackRollTests
         var rng = new ScriptedRng(0.5, 0.5, 0.5, 0.5, 0.25, 0.75);
         StackRoll.ForRecipe(Recipe(stat, custom, dyn), rng);
 
-        // 1 variant draw each for static and custom (no colour), then the dynamic layer's variant
+        // 1 variant draw each for static and custom (no color), then the dynamic layer's variant
         // draw plus its entry pick, hue sample and saturation sample.
         Assert.Equal(1 + 1 + 4, rng.Calls);
     }
@@ -148,12 +148,12 @@ public class StackRollTests
         Assert.Equal(first.Select(l => (l.VariantId, l.ColorSpec)), again.Select(l => (l.VariantId, l.ColorSpec)));
     }
 
-    // ---- colour, and the one place the path is lossy ---------------------------------------------
+    // ---- color, and the one place the path is lossy ---------------------------------------------
 
     /// <summary>
     /// A named variant costs no draw. That is what lets a reference layer — the CLI's <c>--with</c>,
     /// whose variant is PICKED rather than rolled so it holds still while the author varies the seed
-    /// — sit in the same RNG stream as a rolled stack without shifting every colour after it.
+    /// — sit in the same RNG stream as a rolled stack without shifting every color after it.
     /// </summary>
     [Fact]
     public void Naming_a_variant_takes_the_variant_draw_off_the_rng()
@@ -171,7 +171,7 @@ public class StackRollTests
     }
 
     [Fact]
-    public void A_custom_layer_is_rolled_without_a_colour()
+    public void A_custom_layer_is_rolled_without_a_color()
     {
         using var hat = Custom("hat", "cap");
 
@@ -181,9 +181,9 @@ public class StackRollTests
     }
 
     /// <summary>
-    /// A Static layer's colour is its own spec string, passed through character for character rather
+    /// A Static layer's color is its own spec string, passed through character for character rather
     /// than resolved to (H,S) and written back out. That is what keeps this kind exact where a rolled
-    /// colour cannot be — the round trip through 8-bit RGB never happens for it.
+    /// color cannot be — the round trip through 8-bit RGB never happens for it.
     /// </summary>
     [Fact]
     public void A_static_layer_carries_its_own_fixed_spec_verbatim()
@@ -197,7 +197,7 @@ public class StackRollTests
 
     /// <summary>
     /// The lossy step, bounded. A rolled (H,S) is written as a spec, and every spec resolves back
-    /// through 8-bit RGB — so what the preview draws is the nearest representable colour, not the
+    /// through 8-bit RGB — so what the preview draws is the nearest representable color, not the
     /// rolled one. This pins how near: a quarter-degree of hue and half a percentage point of
     /// saturation, both far below what a viewer or the DNA's own quantize buckets can resolve, and
     /// both a direct consequence of one 8-bit rounding step per channel. HSL is the looser of the two
@@ -206,15 +206,15 @@ public class StackRollTests
     [Theory]
     [InlineData(ColorModel.Hsv)]
     [InlineData(ColorModel.Hsl)]
-    public void A_rolled_colour_survives_the_spec_round_trip_to_within_an_8_bit_step(ColorModel model)
+    public void A_rolled_color_survives_the_spec_round_trip_to_within_an_8_bit_step(ColorModel model)
     {
         using var body = Dynamic("body", model, "v");
         var colorization = body.Manifest.Colorization!;
 
-        // The colour draws the roll will take, taken here on an identically seeded RNG — after
+        // The color draws the roll will take, taken here on an identically seeded RNG — after
         // stepping past the VARIANT draw the roll takes first, which is the draw order this whole
         // file exists to pin. Without that step the two RNGs are offset by one and the "loss" being
-        // measured is a different colour entirely.
+        // measured is a different color entirely.
         var rng = StackRoll.RngFor("alpha");
         rng.NextDouble();
         var expected = ColorRoller.Roll(colorization, rng);
@@ -229,7 +229,7 @@ public class StackRollTests
     /// <summary>
     /// The trap the spec format sets: an HSL spec has to pin lightness at <b>50</b>, because
     /// <c>hsl:h,s,100</c> is pure white and throws the saturation away entirely — a preview that used
-    /// it would render every HSL layer grey and look like a colorizer bug.
+    /// it would render every HSL layer gray and look like a colorizer bug.
     /// </summary>
     [Fact]
     public void An_hsl_layer_pins_lightness_at_fifty_so_its_saturation_survives()

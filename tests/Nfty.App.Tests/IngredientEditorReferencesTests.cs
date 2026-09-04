@@ -26,12 +26,12 @@ public class IngredientEditorReferencesTests
 {
     internal const int Canvas = 16;
 
-    /// <summary>A value-map (or full-colour) layer that paints one horizontal band, so a composite is
+    /// <summary>A value-map (or full-color) layer that paints one horizontal band, so a composite is
     /// legible band by band rather than being one flat wash.</summary>
-    internal static Image<Rgba32> Band(int top, int bottom, byte value, Rgba32? colour = null)
+    internal static Image<Rgba32> Band(int top, int bottom, byte value, Rgba32? color = null)
     {
         var img = new Image<Rgba32>(Canvas, Canvas);
-        var px = colour ?? new Rgba32(value, value, value, 255);
+        var px = color ?? new Rgba32(value, value, value, 255);
         for (int y = top; y <= bottom; y++)
             for (int x = 0; x < Canvas; x++)
                 img[x, y] = px;
@@ -246,7 +246,7 @@ public class IngredientEditorReferencesTests
         Assert.Equal(89, ghosted.A);
         Assert.Equal((byte)255, Pixel(vm.Canvas, 4, 13).A);   // below is NEVER dimmed
 
-        vm.ShowTrueColourCommand.Execute(null);
+        vm.ShowTrueColorCommand.Execute(null);
         Assert.Equal((byte)255, Pixel(vm.Canvas, 4, 1).A);
         Assert.Equal((byte)255, Pixel(vm.Canvas, 4, 13).A);
 
@@ -356,17 +356,17 @@ public class IngredientEditorReferencesTests
     }
 
     [AvaloniaFact]
-    public void A_reference_whose_fixed_colour_cannot_be_parsed_is_reported_not_thrown()
+    public void A_reference_whose_fixed_color_cannot_be_parsed_is_reported_not_thrown()
     {
-        // A colour spec is parsed when the layer is DRAWN, not when the archive is read, and Validator
+        // A color spec is parsed when the layer is DRAWN, not when the archive is read, and Validator
         // only REPORTS an unprefixed one - so a book that opens saying "1 problem" carries static
-        // layers whose colour first fails right here, inside a repaint. Escaping the filter would let
+        // layers whose color first fails right here, inside a repaint. Escaping the filter would let
         // the exception out through AsyncRelayCommand onto the dispatcher, where the desktop head
         // installs no handler at all.
         var (book, recipe, eyes) = FourLayerStack();
         var bad = new LoadedIngredient
         {
-            // "d6249f" is missing its hex: prefix - the one mistake the colour-spec rule exists to refuse.
+            // "d6249f" is missing its hex: prefix - the one mistake the color-spec rule exists to refuse.
             Manifest = new IngredientManifest("bad", "Bad", LayerKind.Static,
                 new Colorization(ColorModel.Hsv, 12, 4, new[] { new ColorEntry(1, null, "d6249f") }),
                 new[] { new Variant("a", "A", 1) }),
@@ -438,7 +438,7 @@ public class IngredientEditorReferencesTests
             var row = Assert.Single(vm.KitchenLayers);
             Assert.Equal("over Aura", row.PlacementText);    // the only layer there is
             await vm.ToggleReferenceCommand.ExecuteAsync(row);
-            vm.ShowTrueColourCommand.Execute(null);
+            vm.ShowTrueColorCommand.Execute(null);
             Assert.Equal((230, 60, 120, 255), Pixel(vm.Canvas, 4, 6));
 
             vm.PlaceDownCommand.Execute(row);
@@ -500,7 +500,7 @@ public class IngredientEditorReferencesTests
                 await vm.ToggleReferenceCommand.ExecuteAsync(vm.KitchenLayers[0]);
                 vm.ToggleReferenceCommand.Execute(Sibling(vm, "body"));
                 vm.ToggleReferenceCommand.Execute(Sibling(vm, "accessory"));
-                vm.ShowTrueColourCommand.Execute(null);
+                vm.ShowTrueColorCommand.Execute(null);
                 vm.ShowGhostedCommand.Execute(null);
                 vm.PlaceDownCommand.Execute(vm.KitchenLayers[0]);
                 // Note: Image.Width does NOT throw after Dispose, so a disposed image cannot be

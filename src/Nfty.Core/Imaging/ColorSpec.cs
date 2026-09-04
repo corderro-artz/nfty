@@ -2,14 +2,14 @@ using System.Globalization;
 
 namespace Nfty.Core.Imaging;
 
-/// <summary>Parses the prefixed colour specs an author writes. The prefix is REQUIRED — a missing
+/// <summary>Parses the prefixed color specs an author writes. The prefix is REQUIRED — a missing
 /// or unknown one is an error rather than a guess, because guessing between <c>hex:</c> and
 /// <c>hsv:</c> silently produces the wrong art.</summary>
 public static class ColorSpec
 {
     /// <summary>Parses a spec such as <c>hex:d6249f</c> or <c>hsv:322,83,84</c>.</summary>
     /// <param name="spec">The prefixed spec.</param>
-    /// <returns>The colour.</returns>
+    /// <returns>The color.</returns>
     /// <exception cref="FormatException">The prefix is missing, unknown, or the body is malformed.</exception>
     public static RgbColor Parse(string spec)
     {
@@ -32,14 +32,14 @@ public static class ColorSpec
         };
     }
 
-    /// <summary>Writes a colour back out as a spec <see cref="Parse"/> reads — always the
+    /// <summary>Writes a color back out as a spec <see cref="Parse"/> reads — always the
     /// <c>hex:rrggbb</c> form.
     ///
     /// <para>Always hex because it is the one form that survives the round trip exactly: hsv and hsl
-    /// resolve through 8-bit RGB and back with rounding at both ends, so formatting a colour as
+    /// resolve through 8-bit RGB and back with rounding at both ends, so formatting a color as
     /// <c>hsv:</c> and re-parsing it can land a channel off by one. Lower-case and invariant, so the
-    /// same colour produces the same six characters on every machine.</para></summary>
-    /// <param name="color">The colour to write.</param>
+    /// same color produces the same six characters on every machine.</para></summary>
+    /// <param name="color">The color to write.</param>
     /// <returns>A spec such as <c>hex:d6249f</c>.</returns>
     public static string Format(RgbColor color) =>
         "hex:" + color.R.ToString("x2", CultureInfo.InvariantCulture)

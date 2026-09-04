@@ -4,7 +4,7 @@ using Nfty.App.Services;
 
 namespace Nfty.App.ViewModels;
 
-/// <summary>What the author chose when colour art had to become a Custom ingredient.</summary>
+/// <summary>What the author chose when color art had to become a Custom ingredient.</summary>
 public enum ColorSaveChoice
 {
     /// <summary>Nothing is written. The zero value on purpose: a dialog dismissed rather than
@@ -19,14 +19,14 @@ public enum ColorSaveChoice
 }
 
 /// <summary>
-/// Asks what becomes of a value-map layer that was painted in colour. Colour art composites as-is
-/// and is never recoloured at generation time, so it can only be stored as a Custom layer — and a
+/// Asks what becomes of a value-map layer that was painted in color. Color art composites as-is
+/// and is never recolored at generation time, so it can only be stored as a Custom layer — and a
 /// Custom layer carries no colorization.
 /// </summary>
 /// <remarks>
 /// The default is non-destructive because a colorization block is <b>not recoverable</b>: the hue and
 /// saturation ranges, the entry weights and the DNA quantize steps all go, and with them the layer's
-/// entire colour space. That is stated in the dialog rather than in a tooltip, and the confirm button
+/// entire color space. That is stated in the dialog rather than in a tooltip, and the confirm button
 /// renames itself so the button says which of the two things it is about to do.
 /// </remarks>
 public partial class ColorSaveDialogViewModel : ViewModelBase
@@ -57,12 +57,12 @@ public partial class ColorSaveDialogViewModel : ViewModelBase
     {
         _dialogs = dialogs;
         LayerName = layerName;
-        Message = $"Colour artwork composites as-is and is never recoloured at generation time, so "
+        Message = $"Color artwork composites as-is and is never recolored at generation time, so "
             + $"“{layerName}” will be saved as a new Custom ingredient on top of this recipe. "
             + "The original stays exactly as it is.";
         OverwriteWarning = $"Overwrite “{layerName}” instead. Its colorization is discarded — the hue "
             + "and saturation ranges, the entry weights and the DNA quantize steps all go, and with "
-            + "them this layer's entire colour space. This cannot be undone from here.";
+            + "them this layer's entire color space. This cannot be undone from here.";
     }
 
     [RelayCommand]

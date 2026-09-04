@@ -52,7 +52,7 @@ public class LandingOpenFlowTests
     }
 
     [Fact]
-    public void Cancelled_picker_does_nothing()
+    public void Canceled_picker_does_nothing()
     {
         var vm = Make(null, out var nav, out _, out var session);
         vm.OpenCookBookCommand.Execute(null);

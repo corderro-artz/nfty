@@ -5,8 +5,8 @@ using SixLabors.ImageSharp.PixelFormats;
 namespace Nfty.Core.Editing;
 
 /// <summary>
-/// Editable single-layer raster storing full-colour RGBA, bound to a fixed canvas size — the
-/// colour-mode counterpart to <see cref="ValueMap"/>, and the only surface a Custom layer's artwork
+/// Editable single-layer raster storing full-color RGBA, bound to a fixed canvas size — the
+/// color-mode counterpart to <see cref="ValueMap"/>, and the only surface a Custom layer's artwork
 /// can be painted on. It deliberately mirrors the value-map's shape (<see cref="ForCanvas"/>,
 /// <see cref="Clone"/>, <see cref="ToImage"/>, <see cref="FromImage"/>, a bounds-tolerant
 /// <see cref="Set(int,int,Rgba32)"/>) so the paint stack treats the two identically.
@@ -57,7 +57,7 @@ public sealed class ColorMap : IEditSurface<Rgba32>
     /// <returns>True when the pixel exists.</returns>
     public bool InBounds(int x, int y) => x >= 0 && x < Width && y >= 0 && y < Height;
 
-    /// <summary>The colour at a pixel.</summary>
+    /// <summary>The color at a pixel.</summary>
     /// <param name="x">Column.</param>
     /// <param name="y">Row.</param>
     /// <returns>Its RGBA.</returns>
@@ -67,7 +67,7 @@ public sealed class ColorMap : IEditSurface<Rgba32>
     /// edge without the caller clipping first.</summary>
     /// <param name="x">Column.</param>
     /// <param name="y">Row.</param>
-    /// <param name="pixel">The colour to store.</param>
+    /// <param name="pixel">The color to store.</param>
     public void Set(int x, int y, Rgba32 pixel)
     {
         if (!InBounds(x, y)) return;
@@ -80,7 +80,7 @@ public sealed class ColorMap : IEditSurface<Rgba32>
     /// <inheritdoc />
     public Rgba32 WithAlpha(Rgba32 pixel, byte alpha) => new(pixel.R, pixel.G, pixel.B, alpha);
 
-    /// <summary>Renders to a full-colour RGBA image — the form a Custom variant stores.</summary>
+    /// <summary>Renders to a full-color RGBA image — the form a Custom variant stores.</summary>
     /// <returns>A new image; the caller owns it.</returns>
     public Image<Rgba32> ToImage()
     {
@@ -98,14 +98,14 @@ public sealed class ColorMap : IEditSurface<Rgba32>
     }
 
     /// <summary>
-    /// Lifts a grayscale value-map into colour: each pixel becomes <c>(v, v, v, a)</c>, exactly what
+    /// Lifts a grayscale value-map into color: each pixel becomes <c>(v, v, v, a)</c>, exactly what
     /// <see cref="ValueMap.ToImage"/> writes. This is what an author sees the instant they switch a
-    /// Dynamic or Static layer into colour mode — the drawing they already have, in grey, ready to be
+    /// Dynamic or Static layer into color mode — the drawing they already have, in gray, ready to be
     /// painted over. Switching the palette must never alter a pixel, so this is a widening and not a
-    /// recolouring: no hue, no saturation, no colorization is consulted.
+    /// recoloring: no hue, no saturation, no colorization is consulted.
     /// </summary>
     /// <param name="map">The value-map to widen.</param>
-    /// <returns>A new colour map with the same dimensions and the same visible pixels.</returns>
+    /// <returns>A new color map with the same dimensions and the same visible pixels.</returns>
     public static ColorMap FromValueMap(ValueMap map)
     {
         var color = new ColorMap(map.Width, map.Height);

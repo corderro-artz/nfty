@@ -86,7 +86,7 @@ public partial class CookDialogViewModel : ViewModelBase
                 : $"{set.Assets.Count} assets → {dir}";
             IsDone = true;
         }
-        catch (OperationCanceledException) { PhaseText = "Cancelled"; }
+        catch (OperationCanceledException) { PhaseText = "Canceled"; }
         catch (Exception ex)
         {
             await _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, "Cook failed", ex.Message));

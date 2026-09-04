@@ -178,7 +178,7 @@ public class ReportAndPreviewTests
     }
 
     [AvaloniaFact]
-    public async Task Cancelling_the_picker_writes_nothing()
+    public async Task Canceling_the_picker_writes_nothing()
     {
         var (book, recipe, ing) = Custom();
         var picker = new SavePicker(null);

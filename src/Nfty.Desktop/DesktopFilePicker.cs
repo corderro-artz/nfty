@@ -13,7 +13,7 @@ public sealed class DesktopFilePicker : IFilePickerService
     /// <summary>Shows an open dialog filtered to <paramref name="extensions"/>.</summary>
     /// <param name="title">Dialog title.</param>
     /// <param name="extensions">Accepted extensions, each including the leading dot.</param>
-    /// <returns>The chosen path, or null if the user cancelled.</returns>
+    /// <returns>The chosen path, or null if the user canceled.</returns>
     public async Task<string?> OpenFileAsync(string title, params string[] extensions)
     {
         var top = TopLevel;
@@ -35,7 +35,7 @@ public sealed class DesktopFilePicker : IFilePickerService
     /// <summary>Shows a save dialog defaulting to <paramref name="defaultExtension"/>.</summary>
     /// <param name="title">Dialog title.</param>
     /// <param name="defaultExtension">Extension applied when the user types none, including the dot.</param>
-    /// <returns>The chosen path, or null if the user cancelled.</returns>
+    /// <returns>The chosen path, or null if the user canceled.</returns>
     public async Task<string?> SaveFileAsync(string title, string defaultExtension)
     {
         var top = TopLevel;
@@ -53,7 +53,7 @@ public sealed class DesktopFilePicker : IFilePickerService
 
     /// <summary>Shows a folder picker.</summary>
     /// <param name="title">Dialog title.</param>
-    /// <returns>The chosen folder, or null if the user cancelled.</returns>
+    /// <returns>The chosen folder, or null if the user canceled.</returns>
     public async Task<string?> PickFolderAsync(string title)
     {
         var top = TopLevel;

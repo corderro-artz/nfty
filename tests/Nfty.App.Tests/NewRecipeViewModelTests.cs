@@ -11,7 +11,7 @@ public class NewRecipeViewModelTests
     { d = new FakeDialogs(); return new NewRecipeViewModel(d); }
 
     /// <summary>The "Resulting mix" readout. A selection weight is RELATIVE to its siblings and the
-    /// book normalises the set — it is not a percentage. The control this replaces was a ProgressBar
+    /// book normalizes the set — it is not a percentage. The control this replaces was a ProgressBar
     /// bound Value=Weight Maximum=100, which drew a weight of 100 as a full bar and therefore told
     /// the user their recipe was the whole collection regardless of what the siblings weighed.</summary>
     [Fact]

@@ -93,10 +93,10 @@ public class LandingNewIngredientTests
     }
 
     [AvaloniaFact]
-    public async Task Cancelling_the_save_picker_writes_nothing()
+    public async Task Canceling_the_save_picker_writes_nothing()
     {
         var dialogs = new WizardDialogs("Hat", "8x8");
-        var (vm, nav) = Landing(dialogs, new SavePicker(null));   // picker cancelled
+        var (vm, nav) = Landing(dialogs, new SavePicker(null));   // picker canceled
         await vm.NewIngredientCommand.ExecuteAsync(null);
         Assert.Null(nav.Current);
         Assert.Null(dialogs.ErrorTitle);   // clean cancel — no error dialog

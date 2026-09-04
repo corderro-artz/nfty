@@ -90,7 +90,7 @@ public class EditorColorizationTests
     }
 
     [AvaloniaFact]
-    public void A_static_layer_opens_showing_its_fixed_colour()
+    public void A_static_layer_opens_showing_its_fixed_color()
     {
         var coloriz = new Colorization(ColorModel.Hsv, 1, 1,
             new[] { new ColorEntry(1, null, "hex:1188cc") });
@@ -170,7 +170,7 @@ public class EditorColorizationTests
     }
 
     /// <summary>Saving without touching the rail must leave the colorization exactly as it was —
-    /// a round trip, not a re-derivation that quietly normalises something.</summary>
+    /// a round trip, not a re-derivation that quietly normalizes something.</summary>
     [AvaloniaFact]
     public async Task Saving_an_untouched_rail_writes_the_same_colorization_back()
     {
@@ -197,9 +197,9 @@ public class EditorColorizationTests
         finally { f.session.Dispose(); Directory.Delete(Path.GetDirectoryName(f.path)!, true); }
     }
 
-    /// <summary>Switching the tray to Static writes a fixed-colour layer, kind and all.</summary>
+    /// <summary>Switching the tray to Static writes a fixed-color layer, kind and all.</summary>
     [AvaloniaFact]
-    public async Task Switching_to_static_writes_a_static_layer_with_its_fixed_colour()
+    public async Task Switching_to_static_writes_a_static_layer_with_its_fixed_color()
     {
         var f = OnDisk(Ranged(170, 200, 60, 90));
         try

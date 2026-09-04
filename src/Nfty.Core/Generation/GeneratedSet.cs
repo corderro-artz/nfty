@@ -35,7 +35,7 @@ public class GeneratedAsset : IDisposable
     public required Image<Rgba32> Image { get; init; }
     /// <summary>What each layer contributed.</summary>
     public required IReadOnlyList<TraitSelection> Traits { get; init; }
-    /// <summary>The per-layer colour record for the rich metadata.</summary>
+    /// <summary>The per-layer color record for the rich metadata.</summary>
     public required IReadOnlyList<ColorRoll> ColorRolls { get; init; }
 
     /// <summary>Frees the composited artwork.</summary>

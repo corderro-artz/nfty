@@ -149,7 +149,7 @@ public partial class RecipeDetailView : UserControl
         double top = _dropSlot >= rows.Count
             ? rows[^1].Top + rows[^1].Height
             : rows[_dropSlot].Top;
-        // Centred on the boundary rather than sitting under it, like the mockup's 2px line.
+        // Centered on the boundary rather than sitting under it, like the mockup's 2px line.
         _dropLine.Margin = new Thickness(0, Math.Max(0, top - 1), 0, 0);
         _dropLine.Classes.Set("on", true);
     }

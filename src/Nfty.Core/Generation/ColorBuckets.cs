@@ -1,7 +1,7 @@
 namespace Nfty.Core.Generation;
 
 /// <summary>
-/// The one place a rolled colour is folded into the quantized bucket that identifies it.
+/// The one place a rolled color is folded into the quantized bucket that identifies it.
 ///
 /// <para>Two callers must agree exactly: <see cref="Dna"/>, which decides whether two assets are the
 /// same asset, and <see cref="UniqueSpace"/>, which promises how many distinct assets exist. They

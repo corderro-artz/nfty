@@ -12,7 +12,7 @@ namespace Nfty.App.Tests;
 
 /// <summary>Guards that a wizard card actually FITS at the size the app ships at.
 ///
-/// New Ingredient is the tallest form in the app — it is the only one carrying two colour-range
+/// New Ingredient is the tallest form in the app — it is the only one carrying two color-range
 /// controls, and Fluent lays a horizontal Slider out at roughly twice the height the mockup's range
 /// row wants. When it overflows, the body's ScrollViewer silently absorbs the excess: DESTINATION,
 /// CANVAS and the derived-identifier row drop below the fold behind a scrollbar with no cue that
@@ -25,7 +25,7 @@ namespace Nfty.App.Tests;
 public class WizardFitsTests
 {
     // MainWindow's own shipping size. Measuring at any other size is meaningless here — the card is
-    // centred in the page area and a smaller host would report an overflow the user never sees.
+    // centered in the page area and a smaller host would report an overflow the user never sees.
     private const int WindowWidth = 1180;
     private const int WindowHeight = 720;
 
@@ -43,7 +43,7 @@ public class WizardFitsTests
     [AvaloniaFact]
     public void New_ingredient_form_fits_without_hiding_fields()
     {
-        // Dynamic is the worst case: it is the only kind that reveals BOTH colour-range controls.
+        // Dynamic is the worst case: it is the only kind that reveals BOTH color-range controls.
         var view = ShowAtShippingSize(new Views.NewIngredientView
         {
             DataContext = new NewIngredientViewModel(new FakeDialogs())

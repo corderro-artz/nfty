@@ -5,7 +5,7 @@ namespace Nfty.Core.Model;
 /// </summary>
 public enum LayerKind
 {
-    /// <summary>A grayscale value-map colorized with EXACTLY ONE fixed colour, deterministically.
+    /// <summary>A grayscale value-map colorized with EXACTLY ONE fixed color, deterministically.
     /// Consumes no RNG, so a static layer adds no cross-asset uniqueness.</summary>
     Static,
 
@@ -13,7 +13,7 @@ public enum LayerKind
     /// layer's colorization. This is what makes the output space larger than the source art.</summary>
     Dynamic,
 
-    /// <summary>A full-colour RGBA image composited AS-IS and never colorized. Its colorization
+    /// <summary>A full-color RGBA image composited AS-IS and never colorized. Its colorization
     /// must be null.</summary>
     Custom,
 }

@@ -118,7 +118,7 @@ public static class ServiceRegistration
     /// </summary>
     /// <remarks>
     /// The Landing screen's subtitle ("2 recipes · 512x512") is recorded once, when the book is
-    /// opened. A save can change it — a colour save adds a layer, and a book opened with none showed
+    /// opened. A save can change it — a color save adds a layer, and a book opened with none showed
     /// "0 recipes" forever after — so the line has to be re-recorded against what is now on disk.
     ///
     /// <para>Here, at the composition root, for the same reason the loose-editor factory records its

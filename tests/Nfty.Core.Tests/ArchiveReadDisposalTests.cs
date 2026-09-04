@@ -211,23 +211,23 @@ public class ArchiveReadDisposalTests
     ///
     /// <para>Cancellation is the realistic trigger and the reason this matters: ReadAsync takes a
     /// CancellationToken as a first-class input, a GUI passes one that fires when the user navigates
-    /// away, and HashFileAsync reads the entire file. Forced here with an already-cancelled token so
+    /// away, and HashFileAsync reads the entire file. Forced here with an already-canceled token so
     /// the test does not depend on winning a race.</para>
     /// </summary>
     [Fact]
-    public async Task Cancelling_a_cookbook_read_never_strands_a_decoded_image()
+    public async Task Canceling_a_cookbook_read_never_strands_a_decoded_image()
     {
         var path = TempPath("cb.cbk");
         WriteIntactCookBook(path);
 
         // Sweep the cancellation across the whole read rather than aiming at one instant. Aiming is
-        // a race — the read either finished first (proving nothing) or was cancelled before the
+        // a race — the read either finished first (proving nothing) or was canceled before the
         // recipes existed (also proving nothing). Sweeping guarantees some iterations land in the
         // entry loop, some in the hash, and some after completion, and the invariant is the same
-        // for all of them: whatever was decoded is disposed. `cancelled` then confirms the window
+        // for all of them: whatever was decoded is disposed. `canceled` then confirms the window
         // was actually hit, so a run where every attempt completed early fails loudly instead of
         // passing vacuously.
-        int cancelled = 0, completed = 0;
+        int canceled = 0, completed = 0;
         foreach (var delay in new[] { 0, 1, 2, 4, 8, 16, 24, 32, 48, 64 })
         {
             int before = MemoryDiagnostics.TotalUndisposedAllocationCount;
@@ -238,13 +238,13 @@ public class ArchiveReadDisposalTests
                 using var book = await CookBookArchive.ReadAsync(path, cts.Token);
                 completed++;
             }
-            catch (OperationCanceledException) { cancelled++; }
+            catch (OperationCanceledException) { canceled++; }
 
             Assert.Equal(before, MemoryDiagnostics.TotalUndisposedAllocationCount);
         }
 
-        Assert.True(cancelled > 0,
-            $"no attempt was cancelled ({completed} completed), so the disposal-on-cancel path never ran");
+        Assert.True(canceled > 0,
+            $"no attempt was canceled ({completed} completed), so the disposal-on-cancel path never ran");
     }
 
     /// <summary>

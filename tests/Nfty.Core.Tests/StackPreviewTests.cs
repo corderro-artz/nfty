@@ -33,7 +33,7 @@ public class StackPreviewTests
     // Every pixel of the 2x2, never just one: a layer that failed to cover would show at a corner.
     private static readonly (int X, int Y)[] Corners = { (0, 0), (1, 0), (0, 1), (1, 1) };
 
-    // A custom layer with a single variant "v": full-colour art, composited as-is, never colorized.
+    // A custom layer with a single variant "v": full-color art, composited as-is, never colorized.
     private static LoadedIngredient Custom(string id, Rgba32 fill, int width = 2, int height = 2) => new()
     {
         Manifest = new IngredientManifest(id, id, LayerKind.Custom, null,
@@ -77,7 +77,7 @@ public class StackPreviewTests
     // ---- the one the whole feature rests on -------------------------------------------------------
 
     /// <summary>
-    /// Two renders of the same two layers, in the same colours, on the same canvas. The only
+    /// Two renders of the same two layers, in the same colors, on the same canvas. The only
     /// difference is which side of the edited layer the recipe stacks the reference on — and that
     /// alone must decide whether the edited layer is visible. Without this split the feature is
     /// useless: a flat underlay shows a hat as if it were behind the sunglasses.
@@ -212,8 +212,8 @@ public class StackPreviewTests
         foreach (var (x, y) in Corners) Assert.Equal(Clear, image[x, y]);
     }
 
-    /// <summary>Custom layers are composited as-is and never colorized, so the art's own colour must
-    /// survive the stack exactly — the colour spec here would be violently visible if it were
+    /// <summary>Custom layers are composited as-is and never colorized, so the art's own color must
+    /// survive the stack exactly — the color spec here would be violently visible if it were
     /// applied.</summary>
     [Fact]
     public void A_custom_layer_passes_through_uncolorized()
@@ -246,21 +246,21 @@ public class StackPreviewTests
             for (int x = 0; x < Canvas.Width; x++)
                 Assert.Equal(alone[x, y], stacked[x, y]);
 
-        // And not vacuously: the value-map went in gray and came out coloured.
+        // And not vacuously: the value-map went in gray and came out colored.
         Assert.NotEqual(new Rgba32(128, 128, 128, 255), stacked[0, 0]);
     }
 
-    /// <summary>A colorized layer still refuses to guess a colour inside a stack — the rule has one
+    /// <summary>A colorized layer still refuses to guess a color inside a stack — the rule has one
     /// owner and the stack does not re-implement or soften it.</summary>
     [Fact]
-    public void A_colorized_layer_with_no_colour_is_still_refused_inside_a_stack()
+    public void A_colorized_layer_with_no_color_is_still_refused_inside_a_stack()
     {
         using var ing = Gray("aura", LayerKind.Static, 128);
 
         var ex = Assert.Throws<InvalidOperationException>(
             () => StackPreview.Render(Canvas, new[] { new PreviewLayer(ing, "v", null) }));
 
-        Assert.Contains("colour is required", ex.Message);
+        Assert.Contains("color is required", ex.Message);
     }
 
     /// <summary>Never scaled: a preview that silently resizes is lying about alignment, which is the

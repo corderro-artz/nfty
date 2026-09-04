@@ -12,7 +12,7 @@ namespace Nfty.Core.Editing;
 /// <remarks>
 /// It is an <see cref="IEditSurface{GrayPixel}"/>, which is how the generic paint stack reaches it.
 /// That costs the guarantee nothing: <see cref="GrayPixel"/> carries one value and one alpha, so a
-/// command written against the generic surface has no colour to hand this map even if it holds one.
+/// command written against the generic surface has no color to hand this map even if it holds one.
 /// Nothing on this type accepts independent R/G/B, and nothing should be added that does.
 /// </remarks>
 public sealed class ValueMap : IEditSurface<GrayPixel>

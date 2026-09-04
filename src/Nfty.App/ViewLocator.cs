@@ -6,7 +6,7 @@ namespace Nfty.App;
 
 /// <summary>
 /// Resolves a View for a ViewModel by convention: replace "ViewModel" with "View" in the full type
-/// name (ViewModels namespace → Views namespace). Returns a labelled placeholder when no View exists,
+/// name (ViewModels namespace → Views namespace). Returns a labeled placeholder when no View exists,
 /// so an unmapped VM is visible rather than blank.
 /// </summary>
 public class ViewLocator : IDataTemplate

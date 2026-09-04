@@ -380,9 +380,9 @@ public class RecipeLayerReorderTests
             Assert.DoesNotContain("on", dropLine.Classes);
 
             var grip = Grips(view)[2];                                  // "hat", the bottom row
-            var from = Centre(grip, window);
+            var from = Center(grip, window);
             var topRow = Grips(view)[0];
-            var above = Centre(topRow, window) - new Point(0, topRow.Bounds.Height);
+            var above = Center(topRow, window) - new Point(0, topRow.Bounds.Height);
 
             window.MouseDown(from, MouseButton.Left);
             Dispatcher.UIThread.RunJobs();
@@ -412,9 +412,9 @@ public class RecipeLayerReorderTests
         var (window, view) = Show(pane);
         try
         {
-            var target = Centre(Grips(view)[0], window) - new Point(0, Grips(view)[0].Bounds.Height);
+            var target = Center(Grips(view)[0], window) - new Point(0, Grips(view)[0].Bounds.Height);
 
-            window.MouseDown(Centre(Grips(view)[2], window), MouseButton.Right);
+            window.MouseDown(Center(Grips(view)[2], window), MouseButton.Right);
             Dispatcher.UIThread.RunJobs();
             window.MouseMove(target);
             window.MouseUp(target, MouseButton.Right);
@@ -422,7 +422,7 @@ public class RecipeLayerReorderTests
             Assert.Equal(0, moves());
             Assert.Equal(Stack, pane.Layers.Select(l => l.Id));
 
-            window.MouseDown(Centre(Grips(view)[2], window), MouseButton.Left);
+            window.MouseDown(Center(Grips(view)[2], window), MouseButton.Left);
             Dispatcher.UIThread.RunJobs();
             window.MouseMove(target);
             window.MouseUp(target, MouseButton.Left);
@@ -443,8 +443,8 @@ public class RecipeLayerReorderTests
             var grip = Grips(view)[2];
             Assert.False(grip.IsHitTestVisible);   // the press falls through to the row button beneath
             Assert.False(grip.Focusable);          // and Tab does not stop on an invisible control
-            window.MouseDown(Centre(grip, window), MouseButton.Left);
-            window.MouseUp(Centre(grip, window), MouseButton.Left);
+            window.MouseDown(Center(grip, window), MouseButton.Left);
+            window.MouseUp(Center(grip, window), MouseButton.Left);
             Dispatcher.UIThread.RunJobs();
             Assert.Equal(0, moves());
         }
@@ -506,11 +506,11 @@ public class RecipeLayerReorderTests
         .Select(t => (t.Text!, new Rect(t.TranslatePoint(default, view) ?? default, t.Bounds.Size)))
         .ToList();
 
-    private static Point Centre(Visual control, Visual window) =>
+    private static Point Center(Visual control, Visual window) =>
         control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)
         ?? default;
 
-    // ---- cancelling, colliding, and books whose stack does not add up ---------------------------
+    // ---- canceling, colliding, and books whose stack does not add up ---------------------------
 
     /// <summary>
     /// Esc abandons a drag. A captured drag has no other way out — release commits, and capture-lost
@@ -528,9 +528,9 @@ public class RecipeLayerReorderTests
             var dropLine = view.GetVisualDescendants().OfType<Border>()
                 .Single(b => b.Classes.Contains("dropline"));
             var topRow = Grips(view)[0];
-            var above = Centre(topRow, window) - new Point(0, topRow.Bounds.Height);
+            var above = Center(topRow, window) - new Point(0, topRow.Bounds.Height);
 
-            window.MouseDown(Centre(Grips(view)[2], window), MouseButton.Left);
+            window.MouseDown(Center(Grips(view)[2], window), MouseButton.Left);
             Dispatcher.UIThread.RunJobs();
             window.MouseMove(above);
             Dispatcher.UIThread.RunJobs();
@@ -563,9 +563,9 @@ public class RecipeLayerReorderTests
         try
         {
             var topRow = Grips(view)[0];
-            var above = Centre(topRow, window) - new Point(0, topRow.Bounds.Height);
+            var above = Center(topRow, window) - new Point(0, topRow.Bounds.Height);
 
-            window.MouseDown(Centre(Grips(view)[2], window), MouseButton.Left);
+            window.MouseDown(Center(Grips(view)[2], window), MouseButton.Left);
             Dispatcher.UIThread.RunJobs();
             window.MouseMove(above);          // over a real slot, so a commit WOULD have moved it
             Dispatcher.UIThread.RunJobs();

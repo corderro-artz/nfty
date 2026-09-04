@@ -46,6 +46,6 @@
     </Style>
   </Window.Styles>
   <!-- The shell chrome itself is head-agnostic UI and lives in Nfty.App so the visual-capture tests
-       can render the real thing; this head supplies only the window behaviour it needs a Window for. -->
+       can render the real thing; this head supplies only the window behavior it needs a Window for. -->
   <views:ShellChromeView x:Name="Chrome" />
 </Window>

@@ -485,7 +485,7 @@ public static partial class CommandFactory
     }
 
     /// <summary>
-    /// The layer stack, bottom-to-top, with the two ends labelled. Printed after a move because the
+    /// The layer stack, bottom-to-top, with the two ends labeled. Printed after a move because the
     /// numbering ascends the opposite way to an artist's intuition — showing the result is what makes
     /// the direction unambiguous, rather than a sentence the reader has to trust.
     /// </summary>
@@ -498,8 +498,8 @@ public static partial class CommandFactory
             string note = depth == 1 ? "  (paints first, furthest back)"
                 : depth == layers.Count ? "  (paints last, furthest front)"
                 : string.Empty;
-            // TrimEnd, because the padding that aligns the labelled ends would otherwise trail off
-            // the unlabelled middle rows as invisible whitespace.
+            // TrimEnd, because the padding that aligns the labeled ends would otherwise trail off
+            // the unlabeled middle rows as invisible whitespace.
             Console.WriteLine($"  {Num(depth),3}  {ingredientId.PadRight(width)}{note}".TrimEnd());
         }
     }

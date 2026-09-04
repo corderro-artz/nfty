@@ -18,7 +18,7 @@ public enum RecipeDestination
 }
 
 /// <summary>One row of the "Resulting mix" readout: a Recipe and the share of the collection its
-/// weight buys once the book normalises every weight.</summary>
+/// weight buys once the book normalizes every weight.</summary>
 public record ShareRow(string Name, double Percent, bool IsCurrent);
 
 /// <summary>Phase-1 New Recipe wizard: collects the fields a Recipe manifest needs (name, weight,
@@ -63,7 +63,7 @@ public partial class NewRecipeViewModel : WizardViewModelBase
     }
 
     /// <summary>The mockup's .share readout. A weight is meaningless on its own — it is RELATIVE to
-    /// its siblings and the book normalises the set, so the number the user actually cares about is
+    /// its siblings and the book normalizes the set, so the number the user actually cares about is
     /// the share it buys. The control this replaces was a ProgressBar bound Value=Weight Maximum=100,
     /// which rendered a weight of 100 as a full bar and so read as "100% of the collection" no matter
     /// what the siblings weighed.</summary>
@@ -99,7 +99,7 @@ public partial class NewRecipeViewModel : WizardViewModelBase
     partial void OnNameChanged(string value)
     {
         OnPropertyChanged(nameof(DerivedId));
-        OnPropertyChanged(nameof(ShareRows));   // the current row is labelled with the name
+        OnPropertyChanged(nameof(ShareRows));   // the current row is labeled with the name
         CreateCommand.NotifyCanExecuteChanged();
     }
 

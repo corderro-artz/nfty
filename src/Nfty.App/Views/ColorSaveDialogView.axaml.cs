@@ -3,7 +3,7 @@ using Avalonia.Markup.Xaml;
 
 namespace Nfty.App.Views;
 
-/// <summary>The colour-save dialog view. Code-behind is limited to loading the XAML; everything
+/// <summary>The color-save dialog view. Code-behind is limited to loading the XAML; everything
 /// else is bound.</summary>
 public partial class ColorSaveDialogView : UserControl
 {

@@ -161,7 +161,7 @@ public class WindowChromeTests
 
     /// <summary>The resize grip is pinned to the frame's real corner with a full-square hit area. It
     /// used to be the last child of the zoom StackPanel, inheriting that panel's 8px right margin and
-    /// its vertical centring — so it sat inset from the edge with a hit rect far shorter than the
+    /// its vertical centering — so it sat inset from the edge with a hit rect far shorter than the
     /// corner it appeared to occupy, and hovering it often missed.</summary>
     [AvaloniaFact]
     public void The_resize_grip_fills_the_corner_rather_than_floating_near_it()

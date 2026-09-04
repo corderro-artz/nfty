@@ -84,14 +84,14 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     private readonly ICookBookSession _session;
     private readonly IDialogService _dialogs;
     private readonly IFilePickerService _picker;
-    // Set → save straight to this .igt, not into a cookbook. Not readonly: saving colour art as a
+    // Set → save straight to this .igt, not into a cookbook. Not readonly: saving color art as a
     // NEW ingredient on the loose path means writing a different file, and the editor then targets it.
     private string? _looseSavePath;
     private readonly LoadedCookBook? _ownedBook;   // the synthetic wrapper book, owned only on the loose path
     private LoadedIngredient _ing;
     private readonly IngredientDraft _draft;
 
-    // One undo stack per variant per surface. The two are separate on purpose: undoing a colour
+    // One undo stack per variant per surface. The two are separate on purpose: undoing a color
     // stroke must not reach back into value-map edits made before the mode was switched, and they
     // hold different pixel types, so a single shared stack could not compile in the first place.
     private readonly Dictionary<string, EditHistory<GrayPixel>> _history = new(StringComparer.Ordinal);
@@ -140,7 +140,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// </summary>
     /// <remarks>
     /// The reference panel lists the recipe's OTHER layers, read once when the editor opened. A
-    /// colour save adds a layer to that recipe, so without this the panel goes on describing a
+    /// color save adds a layer to that recipe, so without this the panel goes on describing a
     /// recipe that no longer exists — missing the layer the author just made. The draft, the undo
     /// stacks and the canvas are untouched: only the surroundings changed.
     /// </remarks>
@@ -167,16 +167,16 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// colorized.
     ///
     /// <para>Read from the <em>draft</em>, not from the loaded manifest. The two agree on open and
-    /// diverge exactly once — when a colour save converts the draft — and from that moment the draft
+    /// diverge exactly once — when a color save converts the draft — and from that moment the draft
     /// is the truth: asking the manifest would re-prompt for the conversion on every subsequent save
     /// and offer grayscale painting on a layer whose value-map no longer reaches an archive.</para></summary>
     private bool IsCustom => _draft.Kind == LayerKind.Custom;
 
-    /// <summary>What Save is about to do, when that is not simply "write this layer back". Colour art
-    /// can only be stored as a Custom layer, so painting a value-map layer in colour changes which
+    /// <summary>What Save is about to do, when that is not simply "write this layer back". Color art
+    /// can only be stored as a Custom layer, so painting a value-map layer in color changes which
     /// ingredient Save writes — said here rather than only in the dialog that follows.</summary>
     public string? SaveNoteText => IsColorMode && !IsCustom
-        ? "Colour art saves as a Custom ingredient — Save will ask whether to add a new layer or convert this one."
+        ? "Color art saves as a Custom ingredient — Save will ask whether to add a new layer or convert this one."
         : null;
 
     /// <summary>Re-evaluate Save's availability and its note after anything that changes either.</summary>
@@ -190,11 +190,11 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// path would (colorized for dynamic/static, raw for custom).</summary>
     public ObservableCollection<EditorVariant> Variants { get; } = new();
 
-    /// <summary>Dynamic layers roll a colour per asset from a hue/sat range.</summary>
-    public bool ShowColourRange => ShowColorizeMode && Mode == LayerKind.Dynamic;
+    /// <summary>Dynamic layers roll a color per asset from a hue/sat range.</summary>
+    public bool ShowColorRange => ShowColorizeMode && Mode == LayerKind.Dynamic;
 
-    /// <summary>Static layers apply one fixed colour deterministically.</summary>
-    public bool ShowFixedColour => ShowColorizeMode && Mode == LayerKind.Static;
+    /// <summary>Static layers apply one fixed color deterministically.</summary>
+    public bool ShowFixedColor => ShowColorizeMode && Mode == LayerKind.Static;
 
     /// <summary>
     /// Whether the rail shows the colorization controls at all.
@@ -202,10 +202,10 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// <remarks>
     /// Hidden in two cases, for the same reason: the controls would describe something that is not
     /// going to happen. A <b>Custom</b> layer composites as-is and rolls nothing. And while
-    /// <b>colour mode</b> is on, the rail's hue and saturation tracks are the paint colour's own two
+    /// <b>color mode</b> is on, the rail's hue and saturation tracks are the paint color's own two
     /// axes — leaving the range controls up beside them put two hue sliders on one rail meaning
     /// different things, which is worse than a control that is briefly out of sight. Switching back
-    /// to grey brings them straight back; nothing about the colorization has changed meanwhile.
+    /// to gray brings them straight back; nothing about the colorization has changed meanwhile.
     /// </remarks>
     public bool ShowColorizeMode => !IsCustom && !IsColorMode;
 
@@ -335,8 +335,8 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         // A loose (standalone .igt) editor owns its synthetic wrapper book — dispose it with the editor.
         if (looseSavePath is not null) _ownedBook = book;
 
-        // A Custom ingredient's pixels ARE its colour raster; a value-map layer gets one only if the
-        // author switches into colour mode. The grayscale map is built either way, so the two save
+        // A Custom ingredient's pixels ARE its color raster; a value-map layer gets one only if the
+        // author switches into color mode. The grayscale map is built either way, so the two save
         // paths (leave the original alone / convert it) both have something to write.
         _draft = new IngredientDraft(ing.Manifest.Id, ing.Manifest.Name, ing.Manifest.Kind, ing.Manifest.Colorization,
             book.Manifest.Canvas,
@@ -349,7 +349,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
             _colorHistory[v.Id] = new EditHistory<Rgba32>();
         }
 
-        // The rail must show THIS layer's colour configuration, not the field defaults. Without this
+        // The rail must show THIS layer's color configuration, not the field defaults. Without this
         // the editor opened a 170-200 degree layer showing 0-360, rendered its preview from the wrong
         // range, and — since the rail now writes back — would have saved the wrong range too.
         LoadColorization(ing.Manifest.Colorization);
@@ -358,8 +358,8 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         // the canvas composites against, and building them after would repaint twice on open.
         BuildReferences();
 
-        // The palette follows the layer's kind on open: Custom is authored in colour, everything else
-        // in the greys a value-map is made of. Set before the filmstrip below, whose thumbnails are
+        // The palette follows the layer's kind on open: Custom is authored in color, everything else
+        // in the grays a value-map is made of. Set before the filmstrip below, whose thumbnails are
         // rendered through the mode.
         // A stamp about a thirty-second of the canvas: fine enough to draw with on a large canvas,
         // and a single pixel on a tiny one rather than the whole image.
@@ -379,7 +379,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         // The editor only toggles between Dynamic and Static; a Custom layer (composited as-is,
         // never colorized) defaults to Dynamic so the toggle has a sensible starting point.
         // Assigning Mode (as opposed to a field initializer) fires OnModeChanged, which rebuilds
-        // the surfaces with the final colour state.
+        // the surfaces with the final color state.
         Mode = ing.Manifest.Kind == LayerKind.Custom ? LayerKind.Dynamic : ing.Manifest.Kind;
         // Fallback: if Mode's incoming value equalled its field default, OnModeChanged never
         // fired and Canvas/Preview are still unset from the ctor's perspective — build them now.
@@ -389,7 +389,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     private VariantDraft? ActiveDraft =>
         SelectedVariant is null ? null : _draft.Variants.FirstOrDefault(d => d.Id == SelectedVariant.Id);
     private ValueMap? ActiveMap => ActiveDraft?.Map;
-    /// <summary>The active variant's colour raster, or null if it has never been widened. A plain
+    /// <summary>The active variant's color raster, or null if it has never been widened. A plain
     /// READ: widening is the paint-mode change's job and nowhere else's, so a render can
     /// never quietly allocate a raster and mask a variant the mode change missed.</summary>
     private ColorMap? ActiveColor => ActiveDraft?.Color;
@@ -398,12 +398,12 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
 
     /// <summary>The active variant's pixels as an image, taken from whichever surface the current
     /// paint mode is editing. Always a fresh image the caller owns, so both branches are freed the
-    /// same way — the value-map's round-trip and the colour map's are equally allocations.</summary>
+    /// same way — the value-map's round-trip and the color map's are equally allocations.</summary>
     private Image<Rgba32> RenderSubject() =>
         IsColorMode && ActiveColor is { } color ? color.ToImage() : ActiveMap!.ToImage();
 
     // Canvas shows the surface being painted; Preview shows what the cook would make of it. In
-    // colour mode both are the same image: a Custom layer composites as-is and is never recoloured,
+    // color mode both are the same image: a Custom layer composites as-is and is never recolored,
     // so there is no "colorized companion" to show.
     private Bitmap RenderCanvas()
     {
@@ -433,7 +433,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     private Bitmap RenderPreview()
     {
         using var img = RenderSubject();
-        // Colour art, or a layer with no colorization at all, is shown exactly as it is stored.
+        // Color art, or a layer with no colorization at all, is shown exactly as it is stored.
         return IsColorMode || _ing.Manifest.Colorization is null
             ? _bridge.ToBitmap(img)
             : VariantImagery.RenderWith(_bridge, img, Mode == LayerKind.Dynamic,
@@ -451,8 +451,8 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
 
     partial void OnModeChanged(LayerKind value)
     {
-        OnPropertyChanged(nameof(ShowColourRange));
-        OnPropertyChanged(nameof(ShowFixedColour));
+        OnPropertyChanged(nameof(ShowColorRange));
+        OnPropertyChanged(nameof(ShowFixedColor));
         OnPropertyChanged(nameof(IsModeStatic));
         OnPropertyChanged(nameof(IsModeDynamic));
         RebuildSurfaces();
@@ -521,8 +521,8 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         if (_loadingColorization || IsCustom) return;
         IsDirty = true;
     }
-    // The value ramp is V in colour mode and the whole colour in grayscale mode, so a change to it
-    // moves the armed colour either way.
+    // The value ramp is V in color mode and the whole color in grayscale mode, so a change to it
+    // moves the armed color either way.
     partial void OnBrushValueChanged(int value) => NotifyBrushChanged();
 
     /// <summary>
@@ -555,7 +555,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// </summary>
     /// <remarks>
     /// The rail edits ONE entry, because that is all it can show: a hue/saturation range for Dynamic,
-    /// a fixed colour for Static. Any further entries a hand-authored layer carries are passed
+    /// a fixed color for Static. Any further entries a hand-authored layer carries are passed
     /// through untouched rather than flattened away — the editor may only change what it can see.
     /// </remarks>
     private Colorization BuildColorization()
@@ -589,8 +589,8 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// <summary>The saturation range as the panel prints it.</summary>
     public string SatRangeText => $"{SatMin:0}–{SatMax:0}%";
 
-    /// <summary>How many distinct colours the quantize settings actually admit - the product of the
-    /// two bucket counts. This is the number that decides how much of the colour space survives into
+    /// <summary>How many distinct colors the quantize settings actually admit - the product of the
+    /// two bucket counts. This is the number that decides how much of the color space survives into
     /// DNA, so the editor states it rather than leaving the user to multiply two steppers.</summary>
     public string ApproxColorsText => $"≈ {HueQuantize * SatQuantize} colors";
 
@@ -599,7 +599,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     private bool CanImport() => SelectedVariant is not null && !IsSaving;
 
     /// <summary>Replaces the selected variant's raster from a PNG on disk, into whichever surface the
-    /// paint mode is editing. Colour mode keeps every channel; grayscale mode reduces the image to its
+    /// paint mode is editing. Color mode keeps every channel; grayscale mode reduces the image to its
     /// lightness, because a <see cref="ValueMap"/> stores nothing else. Either way the matching undo
     /// history is cleared — its snapshots describe pixels that no longer exist.</summary>
     [RelayCommand(CanExecute = nameof(CanImport))]
@@ -609,7 +609,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         string? path;
         try { path = await _picker.OpenFileAsync("Import variant image", ".png"); }
         catch (Exception ex) { await ShowErrorAsync("Could not import", ex.Message); return; }
-        if (path is null) return;   // cancelled
+        if (path is null) return;   // canceled
 
         Image<Rgba32> img;
         try { img = Image.Load<Rgba32>(path); }
@@ -626,7 +626,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
 
             if (IsColorMode)
             {
-                // Colour mode keeps every channel: this is the one import path that does not reduce
+                // Color mode keeps every channel: this is the one import path that does not reduce
                 // the image, and the whole reason a Custom layer exists.
                 target.Color = ColorMap.FromImage(img);
                 _colorHistory[target.Id] = new EditHistory<Rgba32>();   // old snapshots describe pixels that are gone
@@ -640,16 +640,16 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
             }
 
             // Dynamic/static: the PNG becomes the variant's value-map, which stores lightness only,
-            // so a colour source has to be collapsed to one channel.
+            // so a color source has to be collapsed to one channel.
             //
-            // Desaturate FIRST rather than handing the colour image straight to ValueMap.FromImage.
+            // Desaturate FIRST rather than handing the color image straight to ValueMap.FromImage.
             // FromImage reads the RED channel - exact and lossless for its real job, round-tripping
             // this layer's own already-grayscale PNG, but arbitrary for foreign art: pure green would
             // import as pure BLACK and pure red as pure WHITE, though both read as mid-bright to the
             // eye. Grayscale() is ITU-R BT.709 luminance, so R==G==B afterwards and FromImage's own
             // contract is left exactly as it was.
-            bool hadColour = HasColour(img);
-            if (hadColour) img.Mutate(x => x.Grayscale());
+            bool hadColor = HasColor(img);
+            if (hadColor) img.Mutate(x => x.Grayscale());
 
             var src = ValueMap.FromImage(img);
             for (int y = 0; y < canvas.Height; y++)
@@ -657,21 +657,21 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
                     target.Map.Set(x, y, src.GetValue(x, y), src.GetAlpha(x, y));
             _history[target.Id] = new EditHistory<GrayPixel>();   // old snapshots describe pixels that are gone
 
-            // A colour raster this variant never had a stroke on is a WIDENING of the value-map that
-            // was just replaced — keeping it would show the pre-import drawing the moment colour mode
+            // A color raster this variant never had a stroke on is a WIDENING of the value-map that
+            // was just replaced — keeping it would show the pre-import drawing the moment color mode
             // is entered. Drop it so it widens again from what is actually there now. A raster the
             // author has painted on is their work and survives: importing a value-map is not a reason
-            // to discard colour art.
+            // to discard color art.
             if (!_colorHistory[target.Id].CanUndo) target.Color = null;
 
             UndoCommand.NotifyCanExecuteChanged();
 
-            if (hadColour)
+            if (hadColor)
             {
-                await ShowErrorAsync("Colour flattened",
-                    "This layer is a value-map: it stores lightness only, and its colour is chosen at "
+                await ShowErrorAsync("Color flattened",
+                    "This layer is a value-map: it stores lightness only, and its color is chosen at "
                     + "generation time. The imported image was converted to its lightness, so its own "
-                    + "colours are gone. Import into a custom layer instead to keep the image exactly "
+                    + "colors are gone. Import into a custom layer instead to keep the image exactly "
                     + "as-is.");
             }
             RedoCommand.NotifyCanExecuteChanged();
@@ -683,9 +683,9 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         finally { img.Dispose(); }
     }
 
-    /// <summary>True if any pixel carries colour (channels not all equal). Used only to warn on a
-    /// value-map import; a fully transparent pixel cannot show colour, so it is skipped.</summary>
-    private static bool HasColour(Image<Rgba32> img)
+    /// <summary>True if any pixel carries color (channels not all equal). Used only to warn on a
+    /// value-map import; a fully transparent pixel cannot show color, so it is skipped.</summary>
+    private static bool HasColor(Image<Rgba32> img)
     {
         bool found = false;
         img.ProcessPixelRows(accessor =>
@@ -823,7 +823,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     }
 
     // Undo follows the mode, not the last stroke: each surface keeps its own stack, so switching to
-    // colour and undoing walks back colour strokes and leaves the value-map exactly as it was.
+    // color and undoing walks back color strokes and leaves the value-map exactly as it was.
     private bool CanUndo() => ActiveDraft is { } d
         && (IsColorMode ? _colorHistory[d.Id].CanUndo : _history[d.Id].CanUndo);
     private bool CanRedo() => ActiveDraft is { } d
@@ -890,7 +890,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     private void AddVariant()
     {
         var vd = _draft.AddVariant(NextVariantId(), $"Variant {_draft.Variants.Count + 1}", 1);
-        // In colour mode the new variant has to be paintable immediately, not on the next mode change.
+        // In color mode the new variant has to be paintable immediately, not on the next mode change.
         if (IsColorMode) vd.EnsureColor();
         _history[vd.Id] = new EditHistory<GrayPixel>();
         _colorHistory[vd.Id] = new EditHistory<Rgba32>();
@@ -906,8 +906,8 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     private void DuplicateVariant()
     {
         var src = ActiveDraft!;
-        // DuplicateVariant clones BOTH rasters when both exist, so a colour copy is real art rather
-        // than the grey ghost a value-map-only copy would produce.
+        // DuplicateVariant clones BOTH rasters when both exist, so a color copy is real art rather
+        // than the gray ghost a value-map-only copy would produce.
         var vd = _draft.DuplicateVariant(src.Id, NextVariantId(), $"{src.Name} copy");
         _history[vd.Id] = new EditHistory<GrayPixel>();
         _colorHistory[vd.Id] = new EditHistory<Rgba32>();
@@ -941,7 +941,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
-    /// Turns the draft into the Custom ingredient colour art has to be saved as, asking first what
+    /// Turns the draft into the Custom ingredient color art has to be saved as, asking first what
     /// becomes of the original. Returns false when the author backed out, in which case nothing has
     /// been changed and nothing will be written.
     /// </summary>
@@ -954,11 +954,11 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         if (choice == ColorSaveChoice.NewIngredient)
         {
             // A loose .igt IS one file. "Beside the original" therefore means a second file, and the
-            // author picks where — asked before anything is renamed, so cancelling here leaves the
+            // author picks where — asked before anything is renamed, so canceling here leaves the
             // draft exactly as it was rather than half-converted.
             if (_looseSavePath is not null)
             {
-                var chosen = await _picker.SaveFileAsync($"Save “{_draft.Name}” as a colour ingredient", ".igt");
+                var chosen = await _picker.SaveFileAsync($"Save “{_draft.Name}” as a color ingredient", ".igt");
                 if (chosen is null) return false;
                 _looseSavePath = chosen;
             }
@@ -966,7 +966,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
             // trait_type every generated item carries, where two layers sharing one merge in the
             // rarity table and ship percentages over 100.
             _draft.Id = Unique($"{_draft.Id}-color", SiblingIds());
-            _draft.Name = Unique($"{_draft.Name} (colour)", SiblingNames());
+            _draft.Name = Unique($"{_draft.Name} (color)", SiblingNames());
         }
 
         _draft.Kind = LayerKind.Custom;
@@ -975,8 +975,8 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         // The draft's kind drives the whole screen: the colorize rail's controls, whether grayscale
         // is still on offer, and whether Save asks this again. It changes here and nowhere else, so
         // this is the one place that has to announce it.
-        OnPropertyChanged(nameof(ShowColourRange));
-        OnPropertyChanged(nameof(ShowFixedColour));
+        OnPropertyChanged(nameof(ShowColorRange));
+        OnPropertyChanged(nameof(ShowFixedColor));
         OnPropertyChanged(nameof(ShowColorizeMode));
         OnPropertyChanged(nameof(CanPaintGrayscale));
         OnPropertyChanged(nameof(SaveNoteText));
@@ -1016,10 +1016,10 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         try
         {
             // The colorize rail is part of the layer, not a preview toy: what it shows is what gets
-            // written. (A colour save has already converted the draft to Custom, where this no-ops.)
+            // written. (A color save has already converted the draft to Custom, where this no-ops.)
             CommitColorization();
 
-            // The exporter picks each variant's raster from the draft's KIND — colour for Custom,
+            // The exporter picks each variant's raster from the draft's KIND — color for Custom,
             // value-map for everything else — so there is nothing to rebuild here.
             var (manifest, images) = IngredientDraftExporter.Export(_draft);
 
@@ -1046,7 +1046,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
             var newIng = new LoadedIngredient { Manifest = manifest, VariantImages = images };
             var book2 = CookBookEdits.UpsertIngredient(_session.Current!, _recipe.Manifest.Id, newIng);
 
-            // Only a save that REPLACED this ingredient orphans its images. Saving colour art as a
+            // Only a save that REPLACED this ingredient orphans its images. Saving color art as a
             // new ingredient leaves the original in the book — disposing its images there would
             // blank the layer it was supposed to leave alone.
             var replaced = string.Equals(_ing.Manifest.Id, manifest.Id, StringComparison.Ordinal) ? _ing : null;

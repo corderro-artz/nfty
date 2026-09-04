@@ -19,9 +19,9 @@ namespace Nfty.App.ViewModels;
 /// separator travels with the item that follows it.</param>
 public record FactorChip(string Name, int VariantCount, LayerKind Kind, bool ShowTimes)
 {
-    /// <summary>Whether this layer rolls its colour per asset.</summary>
+    /// <summary>Whether this layer rolls its color per asset.</summary>
     public bool IsDynamic => Kind == LayerKind.Dynamic;
-    /// <summary>Whether this layer applies one fixed colour.</summary>
+    /// <summary>Whether this layer applies one fixed color.</summary>
     public bool IsStatic => Kind == LayerKind.Static;
     /// <summary>Whether this layer composites as-is, without colorization.</summary>
     public bool IsCustom => Kind == LayerKind.Custom;
@@ -35,26 +35,26 @@ public record FactorChip(string Name, int VariantCount, LayerKind Kind, bool Sho
 /// <param name="DnaSpaceText">Its unique-DNA figure, already formatted — including the em dash used
 /// when the space is undefined rather than merely large.</param>
 /// <param name="Factors">The per-layer chips whose product is that figure.</param>
-/// <param name="Series">Which of the six mint-distribution series colours this recipe draws, 1-based
+/// <param name="Series">Which of the six mint-distribution series colors this recipe draws, 1-based
 /// and assigned by position in the book. Exposed as an index rather than a <c>Color</c> so the paint
 /// itself stays a theme token: the view switches on <see cref="IsSeries1"/>…<see cref="IsSeries6"/>
 /// and picks up <c>Series1Brush</c>…<c>Series6Brush</c> from whichever dictionary is live, which a
-/// colour computed in the ViewModel could not do — the previous version hashed the recipe id into an
+/// color computed in the ViewModel could not do — the previous version hashed the recipe id into an
 /// HSV, so it was off-palette by construction and identical in both themes.</param>
 public record RecipeShareRow(string Name, double SharePercent, string DnaSpaceText, int Series,
     IReadOnlyList<FactorChip> Factors)
 {
-    /// <summary>True when this row draws series colour 1.</summary>
+    /// <summary>True when this row draws series color 1.</summary>
     public bool IsSeries1 => Series == 1;
-    /// <summary>True when this row draws series colour 2.</summary>
+    /// <summary>True when this row draws series color 2.</summary>
     public bool IsSeries2 => Series == 2;
-    /// <summary>True when this row draws series colour 3.</summary>
+    /// <summary>True when this row draws series color 3.</summary>
     public bool IsSeries3 => Series == 3;
-    /// <summary>True when this row draws series colour 4.</summary>
+    /// <summary>True when this row draws series color 4.</summary>
     public bool IsSeries4 => Series == 4;
-    /// <summary>True when this row draws series colour 5.</summary>
+    /// <summary>True when this row draws series color 5.</summary>
     public bool IsSeries5 => Series == 5;
-    /// <summary>True when this row draws series colour 6.</summary>
+    /// <summary>True when this row draws series color 6.</summary>
     public bool IsSeries6 => Series == 6;
 }
 
@@ -75,7 +75,7 @@ public partial class CookBookDetailViewModel : ViewModelBase
     /// <summary>Canvas size as the card renders it, with a real multiplication sign.</summary>
     public string CanvasText { get; }
 
-    /// <summary>The mockup's "colorize &lt;model&gt;" chip. A CookBook has no colour model of its own —
+    /// <summary>The mockup's "colorize &lt;model&gt;" chip. A CookBook has no color model of its own —
     /// it lives on each colorized Ingredient — so this reports what the book's dynamic and static
     /// layers actually use, and says "mixed" when they disagree rather than silently picking one.
     /// A book of purely Custom layers colorizes nothing, hence the em-dash.</summary>
@@ -174,7 +174,7 @@ public partial class CookBookDetailViewModel : ViewModelBase
         Recipes = book.Recipes.Select(r =>
         {
             // By position, cycling through the six series tokens. Position rather than a hash of the
-            // id: a hash gave a stable-but-arbitrary colour per recipe, which sounds like a feature
+            // id: a hash gave a stable-but-arbitrary color per recipe, which sounds like a feature
             // until two recipes in the same book land on near-identical hues. Cycling guarantees
             // adjacent segments differ, which is the only property a categorical scale owes.
             int series = (seriesIndex++ % 6) + 1;

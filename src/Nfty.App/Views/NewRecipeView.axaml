@@ -31,14 +31,14 @@
               <StackPanel Classes="plabel-row">
                 <TextBlock Text="WEIGHT" Classes="plabel" />
                 <Border Classes="qmark"
-                        ToolTip.Tip="How often this Recipe is rolled, relative to its siblings — not a percentage. Any positive number works; the book normalises them.">
+                        ToolTip.Tip="How often this Recipe is rolled, relative to its siblings — not a percentage. Any positive number works; the book normalizes them.">
                   <TextBlock />
                 </Border>
               </StackPanel>
               <NumericUpDown Value="{Binding Weight}" Minimum="0" IsEnabled="{Binding WeightEnabled}" />
             </StackPanel>
             <!-- .share: what the weight actually buys. A weight is relative to its siblings and the
-                 book normalises the set, so the bare ProgressBar this replaces - bound
+                 book normalizes the set, so the bare ProgressBar this replaces - bound
                  Value=Weight Maximum=100 - drew a weight of 100 as a full bar and read as "100% of
                  the collection" regardless of what the siblings weighed. Hidden for a loose Recipe,
                  which has no collection to be a share of. -->

@@ -121,7 +121,7 @@ public static partial class CommandFactory
         Console.WriteLine($"CookBook: {cb.Manifest.Name} ({cb.Manifest.Canvas.Width}x{cb.Manifest.Canvas.Height})");
 
         // A book's palette travels inside the archive, so a collection handed to someone else brings
-        // its colours with it — and nothing else in the CLI would have shown they were there.
+        // its colors with it — and nothing else in the CLI would have shown they were there.
         // Printed as the specs it is stored as: the same form an author types.
         if (cb.Manifest.Palette is { Count: > 0 } specs)
         {
@@ -252,7 +252,7 @@ public static partial class CommandFactory
         var seed = new Option<string>("--seed")
         {
             Description = "RNG seed for the .rcp form: it drives one roll of the whole stack — each "
-                + "layer's variant, and each Dynamic layer's colour — so the same recipe and seed "
+                + "layer's variant, and each Dynamic layer's color — so the same recipe and seed "
                 + "always render the same PNG. Defaults to a fixed value, so the command works "
                 + "without it.",
             DefaultValueFactory = _ => "nfty",
@@ -270,7 +270,7 @@ public static partial class CommandFactory
             Description = "Path to a loose .igt to composite ON TOP of the .rcp's stack — a layer "
                 + "being authored against the recipe it will join. Its variant is PICKED rather "
                 + "than rolled (see --with-variant) so it holds still while you vary --seed; a "
-                + "colorized one still takes its colour from --seed. It must match the recipe's "
+                + "colorized one still takes its color from --seed. It must match the recipe's "
                 + "canvas, and is never scaled to fit.",
         };
         var withVariant = new Option<string?>("--with-variant")
@@ -317,10 +317,10 @@ public static partial class CommandFactory
                         + "every layer's variant from --seed. Use --with-variant for the --with layer.");
                 if (Given(color))
                     result.AddError("--color applies to the .igt form; in the .rcp form each "
-                        + "colorized layer's colour is rolled from --seed, as generation rolls it.");
+                        + "colorized layer's color is rolled from --seed, as generation rolls it.");
                 if (Given(model))
                     result.AddError("--model applies to the .igt form; in the .rcp form every layer "
-                        + "renders in the colour model its own ingredient declares.");
+                        + "renders in the color model its own ingredient declares.");
                 if (Given(withVariant) && !Given(with))
                     result.AddError("--with-variant names a variant of --with, but no --with was given.");
             }
@@ -429,7 +429,7 @@ public static partial class CommandFactory
         var keep = OnlyFilter(recipe, only);
 
         // One RNG for the whole command: the recipe's layers first, in layerOrder, then the --with
-        // layer that sits on top of them. Re-seeding for the loose layer would hand it a colour
+        // layer that sits on top of them. Re-seeding for the loose layer would hand it a color
         // correlated with the bottom layer's, which is exactly the sort of thing a preview is used
         // to judge.
         //
@@ -468,7 +468,7 @@ public static partial class CommandFactory
                 // Picked, not rolled. A --with layer is a REFERENCE — "how does this sit against
                 // that stack?" — so it must hold still while the author varies --seed to look at
                 // different rolls of the recipe. StackPreview.PickVariant is that deterministic
-                // choice (highest weight, ordinal-first on a tie). Its colour still comes from the
+                // choice (highest weight, ordinal-first on a tie). Its color still comes from the
                 // seed, because a colorized layer needs one and there is no other source.
                 string variantId = withVariant ?? StackPreview.PickVariant(loose);
                 drawn.Add(("+", StackRoll.ForIngredient(loose, rng, variantId), with));
@@ -541,7 +541,7 @@ public static partial class CommandFactory
             + "preview it at.");
     }
 
-    /// <summary>What was drawn, at what depth, in what colour — printed under the output path.</summary>
+    /// <summary>What was drawn, at what depth, in what color — printed under the output path.</summary>
     private static void ReportStack(
         string outPath, LoadedRecipe recipe, Dimensions canvas, string seed, int total,
         IReadOnlyList<(string Depth, PreviewLayer Layer, string? Source)> drawn)
@@ -561,9 +561,9 @@ public static partial class CommandFactory
         {
             string id = layer.Ingredient.Manifest.Id.PadRight(idWidth);
             string variantId = layer.VariantId.PadRight(variantWidth);
-            string colour = layer.ColorSpec ?? "(custom — as-is)";
+            string color = layer.ColorSpec ?? "(custom — as-is)";
             string from = source is null ? string.Empty : $"   ← {source}";
-            Console.WriteLine($"  {depth,3}  {id}  {variantId}  {colour}{from}");
+            Console.WriteLine($"  {depth,3}  {id}  {variantId}  {color}{from}");
         }
     }
 

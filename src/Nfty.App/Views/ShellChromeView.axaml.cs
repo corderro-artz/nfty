@@ -8,7 +8,7 @@ namespace Nfty.App.Views;
 /// <summary>
 /// The shell chrome (frame + titlebar + status bar). Head-agnostic on purpose - see the comment in
 /// ShellChromeView.axaml. The two properties below are the seam the desktop head wires window
-/// behaviour to; a UserControl has its own name scope, so the host cannot reach these by name.
+/// behavior to; a UserControl has its own name scope, so the host cannot reach these by name.
 /// </summary>
 /// <summary>The shell chrome view. Code-behind is limited to loading the XAML and the few
 /// interactions that genuinely need a control reference; everything else is bound.</summary>
@@ -19,7 +19,7 @@ public partial class ShellChromeView : UserControl
     {
         AvaloniaXamlLoader.Load(this);
 
-        // Click-the-scrim-to-dismiss is ordinary UI behaviour rather than window behaviour, so it
+        // Click-the-scrim-to-dismiss is ordinary UI behavior rather than window behavior, so it
         // stays here with the scrim itself instead of being reached into from the head.
         var scrim = this.FindControl<Panel>("DialogScrim")!;
         scrim.PointerPressed += (sender, e) =>

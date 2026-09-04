@@ -33,7 +33,7 @@ public record RarityReport(IReadOnlyList<RecipeOdds> Recipes, IReadOnlyList<Trai
 public static class RarityCalculator
 {
     /// <summary>Computes the odds.</summary>
-    /// <param name="book">The book to analyse.</param>
+    /// <param name="book">The book to analyze.</param>
     /// <returns>Per-recipe and per-variant odds.</returns>
     public static RarityReport Compute(LoadedCookBook book)
     {

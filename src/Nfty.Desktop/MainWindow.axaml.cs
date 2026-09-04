@@ -15,7 +15,7 @@ namespace Nfty.Desktop;
 /// </summary>
 public partial class MainWindow : Window
 {
-    /// <summary>Loads the window and wires its chrome behaviour.</summary>
+    /// <summary>Loads the window and wires its chrome behavior.</summary>
     public MainWindow()
     {
         AvaloniaXamlLoader.Load(this);

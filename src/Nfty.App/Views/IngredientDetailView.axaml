@@ -37,8 +37,8 @@
           <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
             <TextBlock Classes="mono" FontSize="17" FontWeight="Bold" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
             <!-- .hsub is ONE line - "custom · no colorize · composited as-is" - with only the kind
-                 word carrying the kind colour. It used to be two stacked neutral lines, which lost
-                 the colour-coding the tree and the layer table both apply. -->
+                 word carrying the kind color. It used to be two stacked neutral lines, which lost
+                 the color-coding the tree and the layer table both apply. -->
             <StackPanel Orientation="Horizontal" Spacing="6">
               <TextBlock Classes="kind-txt"
                          Classes.kdyn="{Binding IsDynamic}"
@@ -135,7 +135,7 @@
       <StackPanel Spacing="10">
         <TextBlock Classes="sub-h" Text="COLORWAYS" />
 
-        <!-- .cwtop: what the layer's colour model IS, before the band that shows its span. -->
+        <!-- .cwtop: what the layer's color model IS, before the band that shows its span. -->
         <StackPanel Orientation="Horizontal" Spacing="7">
           <TextBlock Classes="kind-txt"
                      Classes.kdyn="{Binding IsDynamic}"
@@ -147,7 +147,7 @@
 
         <!-- .hueband: the hue sweep this layer rolls within. Shown only for a dynamic layer - the
              others roll no hue, and the thumbnails that used to sit here showed the SOURCE art
-             rather than the colour space, which is the one thing this rail exists to convey. -->
+             rather than the color space, which is the one thing this rail exists to convey. -->
         <Border Classes="hueband" IsVisible="{Binding HasHueBand}">
           <Border.Background>
             <LinearGradientBrush StartPoint="0%,50%" EndPoint="100%,50%">
@@ -173,7 +173,7 @@
           <Border Grid.Column="0" Classes="cwsw">
             <Image Source="{Binding SelectedThumb}" Stretch="UniformToFill" />
           </Border>
-          <TextBlock Grid.Column="1" Classes="cwnote" VerticalAlignment="Center"><Run Text="Full-colour image, " /><Run
+          <TextBlock Grid.Column="1" Classes="cwnote" VerticalAlignment="Center"><Run Text="Full-color image, " /><Run
             Text="composited as-is" FontWeight="SemiBold" Foreground="{DynamicResource FgBrush}" /><Run
             Text=". Value-map colorization does not apply to this layer." /></TextBlock>
         </Grid>
@@ -182,7 +182,7 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:ColorwayAxis">
               <Border Classes="cwaxis">
-                <!-- Auto,* (not *,Auto): the label ("Hue"/"Colour"/…) is always short, while a
+                <!-- Auto,* (not *,Auto): the label ("Hue"/"Color"/…) is always short, while a
                      custom-kind Value can be a full sentence ("no colorize · composited as-is") —
                      giving Value the star column plus wrap lets it flow onto extra lines instead
                      of forcing the label column to near-zero width and overlapping it (a real

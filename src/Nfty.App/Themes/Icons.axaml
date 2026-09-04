@@ -3,7 +3,7 @@
   <!--
     Icon geometry, traced from the locked mockups' inline SVG. The mockups draw every glyph as a
     24x24 stroked path (stroke-linecap/linejoin round, ~2px), and the app previously substituted
-    Unicode/emoji characters — which rendered as colour emoji injecting off-palette hues (the toolbar
+    Unicode/emoji characters — which rendered as color emoji injecting off-palette hues (the toolbar
     padlock sampled #f6cd6a, the edit pencil #ff822d) and, where the shipped fonts lacked the glyph,
     as literal tofu boxes.
 
@@ -40,7 +40,7 @@
   <StreamGeometry x:Key="IconUndo">M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-1</StreamGeometry>
   <StreamGeometry x:Key="IconRedo">M15 7l5 5-5 5M20 12H9a5 5 0 0 0 0 10h1</StreamGeometry>
 
-  <!-- ingredient-editor.html: "Reroll sampled colour" — also the recipe portrait's reroll -->
+  <!-- ingredient-editor.html: "Reroll sampled color" — also the recipe portrait's reroll -->
   <StreamGeometry x:Key="IconReroll">M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6</StreamGeometry>
 
   <!-- ingredient-editor.html: enlarge preview / fill pane with preview -->
@@ -56,7 +56,7 @@
   <!-- explorer.html tree type marks (the .ti glyphs in its ICON map: cook / recipe / ing). Each
        mockup glyph is several <path>s: a stroked outline plus a fill-only accent detail. The stroked
        outlines are concatenated verbatim below; the fill-only details are dropped, since a
-       StreamGeometry is one single-colour stroked path and cannot carry a second fill. What is lost
+       StreamGeometry is one single-color stroked path and cannot carry a second fill. What is lost
        is the cookbook's accent bookmark tab, the recipe's accent corner dot and the ingredient's
        accent-wash top face - decoration, not the silhouette that identifies the glyph. -->
   <StreamGeometry x:Key="IconTypeCookBook">M6 3.5h11.4a.7.7 0 0 1 .7.7V20a.7.7 0 0 1-.7.7H6.3A2.3 2.3 0 0 1 4 18.4V5.8A2.3 2.3 0 0 1 6.3 3.5ZM4.4 18.1a2.3 2.3 0 0 1 1.9-1h11.8M9.4 3.5h3.4v5.2l-1.7-1.2-1.7 1.2z</StreamGeometry>
@@ -128,7 +128,7 @@
 
   <!-- explorer.html titlebar: the persistent "Kitchen" workspace chip (<rect x=3.5 y=5 w=17 h=14 rx=1.8>
        plus a divider line and two spiral-binder ticks). The mockup also fills a small accent square
-       inside the box (rect x=6.6 y=12 w=4 h=4, filled with the accent colour) - StreamGeometry/Path.ico
+       inside the box (rect x=6.6 y=12 w=4 h=4, filled with the accent color) - StreamGeometry/Path.ico
        is single-stroke only (one Fill/Stroke pair), so that two-tone accent tab is dropped here, same
        approximation already used for Border.rop.require in Styles.axaml. -->
   <StreamGeometry x:Key="IconKitchen">M5.3 5h13.4a1.8 1.8 0 0 1 1.8 1.8v10.4a1.8 1.8 0 0 1-1.8 1.8H5.3a1.8 1.8 0 0 1-1.8-1.8V6.8A1.8 1.8 0 0 1 5.3 5zM3.5 9.2h17M7 3.6v2.2M12 3.6v2.2</StreamGeometry>
@@ -145,7 +145,7 @@
        docs/design/mockups/explorations/reorder-control-variants.html. The ONE glyph on this feature
        that is not traced from a locked mockup - the locked set has no reorder affordance at all - so
        it is authored in the same 24-unit box as every other icon here and drawn at the exploration's
-       own centres (x 9.5/14.5, y 6/12/18).
+       own centers (x 9.5/14.5, y 6/12/18).
 
        The mockup's circles are r=1.45 and `fill: currentColor`. A Path.ico is a single STROKED path
        (Fill=Transparent, StrokeThickness=2 in these 24 units), so a filled dot is expressed as a

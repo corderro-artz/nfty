@@ -11,7 +11,7 @@ namespace Nfty.Core.Output;
 /// <param name="Dna">Its identity hash.</param>
 /// <param name="Recipe">The recipe it came from.</param>
 /// <param name="Rarity">Its traits with collection-wide rarity.</param>
-/// <param name="Layers">The per-layer colour record.</param>
+/// <param name="Layers">The per-layer color record.</param>
 public record SetItem(int Number, string ImagePath, string Dna, string Recipe,
     IReadOnlyList<RarityAttribute> Rarity, IReadOnlyList<LayerColor> Layers);
 

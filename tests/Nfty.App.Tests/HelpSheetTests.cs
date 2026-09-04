@@ -85,7 +85,7 @@ public class HelpSheetTests
         Assert.Contains("LAYER KINDS", labels);
         Assert.Contains("RULES & STATE", labels);
         Assert.Contains("KEYS", labels);
-        Assert.Contains("COLOUR", labels);
+        Assert.Contains("COLOR", labels);
     }
 
     // help.html `.sh-b{grid-template-columns: 1.35fr 1fr .82fr}`. Star sizing is the only thing

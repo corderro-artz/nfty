@@ -12,8 +12,8 @@ namespace Nfty.Core.Editing;
 /// <remarks>
 /// <see cref="IngredientDraft.Kind"/> alone decides which raster a variant exports — its
 /// <see cref="VariantDraft.Color"/> for Custom, its <see cref="VariantDraft.Map"/> for Dynamic and
-/// Static. A variant painted in colour still holds both, so reading "whichever is non-null" would
-/// quietly export colour art from a value-map layer and destroy the layer's colour space.
+/// Static. A variant painted in color still holds both, so reading "whichever is non-null" would
+/// quietly export color art from a value-map layer and destroy the layer's color space.
 /// </remarks>
 public static class IngredientDraftExporter
 {
@@ -21,7 +21,7 @@ public static class IngredientDraftExporter
     /// <param name="draft">The draft to export.</param>
     /// <returns>The manifest and one image per variant; the caller owns the images.</returns>
     /// <exception cref="InvalidOperationException">Two variants share an id, or a Custom variant has
-    /// no colour raster to write.</exception>
+    /// no color raster to write.</exception>
     public static (IngredientManifest Manifest, IReadOnlyDictionary<string, Image<Rgba32>> Images) Export(
         IngredientDraft draft)
     {

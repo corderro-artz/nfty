@@ -5,8 +5,8 @@ using SixLabors.ImageSharp.PixelFormats;
 namespace Nfty.Core.Tests;
 
 /// <summary>
-/// The same five commands, over the full-colour surface. Geometry is written once and shared with
-/// the grayscale side, so what is asserted here is the payload: colour arrives intact, region
+/// The same five commands, over the full-color surface. Geometry is written once and shared with
+/// the grayscale side, so what is asserted here is the payload: color arrives intact, region
 /// matching sees the whole pixel rather than one channel, and history restores exactly.
 /// </summary>
 public class ColorEditingTests
@@ -15,7 +15,7 @@ public class ColorEditingTests
     private static readonly Rgba32 Cyan = new(43, 214, 205, 255);
 
     [Fact]
-    public void A_brush_paints_the_exact_colour_it_carries()
+    public void A_brush_paints_the_exact_color_it_carries()
     {
         var map = new ColorMap(3, 3);
         new BrushStroke<Rgba32>(new Brush<Rgba32>(1, Magenta), new[] { (1, 1) }).Apply(map);
@@ -24,7 +24,7 @@ public class ColorEditingTests
     }
 
     [Fact]
-    public void A_shape_fills_its_bounds_in_colour()
+    public void A_shape_fills_its_bounds_in_color()
     {
         var map = new ColorMap(4, 4);
         new DrawShape<Rgba32>(ShapeKind.Rectangle, new PixelRect(1, 1, 2, 2), Cyan).Apply(map);
@@ -34,7 +34,7 @@ public class ColorEditingTests
     }
 
     [Fact]
-    public void Erasing_drops_the_alpha_and_keeps_the_colour()
+    public void Erasing_drops_the_alpha_and_keeps_the_color()
     {
         var map = new ColorMap(3, 3);
         new BrushStroke<Rgba32>(new Brush<Rgba32>(1, Magenta), new[] { (1, 1) }).Apply(map);
@@ -45,7 +45,7 @@ public class ColorEditingTests
     [Fact]
     public void A_fill_matches_the_whole_pixel_not_one_channel()
     {
-        // Two colours sharing a red channel: a fill keyed on R alone would leak across the wall.
+        // Two colors sharing a red channel: a fill keyed on R alone would leak across the wall.
         var map = new ColorMap(3, 1);
         var a = new Rgba32(100, 0, 0, 255);
         var wall = new Rgba32(100, 200, 0, 255);
@@ -60,7 +60,7 @@ public class ColorEditingTests
     }
 
     [Fact]
-    public void A_move_carries_the_colour_and_clears_the_source()
+    public void A_move_carries_the_color_and_clears_the_source()
     {
         var map = new ColorMap(4, 1);
         new BrushStroke<Rgba32>(new Brush<Rgba32>(1, Magenta), new[] { (0, 0) }).Apply(map);
@@ -70,7 +70,7 @@ public class ColorEditingTests
     }
 
     [Fact]
-    public void Undo_and_redo_restore_a_colour_surface_exactly()
+    public void Undo_and_redo_restore_a_color_surface_exactly()
     {
         var map = new ColorMap(2, 2);
         map.Set(0, 0, Cyan);   // pre-existing art the edit must be able to put back
@@ -92,7 +92,7 @@ public class ColorEditingTests
     }
 
     [Fact]
-    public void A_redundant_colour_edit_is_not_recorded()
+    public void A_redundant_color_edit_is_not_recorded()
     {
         var map = new ColorMap(2, 2);
         new BrushStroke<Rgba32>(new Brush<Rgba32>(1, Magenta), new[] { (0, 0) }).Apply(map);
@@ -102,7 +102,7 @@ public class ColorEditingTests
     }
 
     [Fact]
-    public void An_edited_colour_surface_round_trips_to_an_image_with_exact_pixels()
+    public void An_edited_color_surface_round_trips_to_an_image_with_exact_pixels()
     {
         var map = new ColorMap(2, 2);
         new DrawShape<Rgba32>(ShapeKind.Rectangle, new PixelRect(0, 0, 2, 1), Magenta).Apply(map);

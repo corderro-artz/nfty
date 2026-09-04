@@ -115,7 +115,7 @@ public partial class LandingViewModel : ViewModelBase
     {
         var wizard = new NewCookBookViewModel(_dialogs);
         var result = await _dialogs.ShowAsync<NewCookBookViewModel>(wizard);
-        if (result is null) return;   // cancelled
+        if (result is null) return;   // canceled
         if (string.IsNullOrWhiteSpace(result.DerivedId))
         {
             ShowError("Invalid cookbook", "The cookbook needs a name.");
@@ -124,7 +124,7 @@ public partial class LandingViewModel : ViewModelBase
         string? path;
         try { path = await _picker.SaveFileAsync("Save new cookbook", ".cbk"); }
         catch (Exception ex) { ShowError("Could not save", ex.Message); return; }
-        if (path is null) return;   // cancelled the picker
+        if (path is null) return;   // canceled the picker
 
         var manifest = new CookBookManifest(result.DerivedId, result.Name,
             new Dimensions(result.Width, result.Height),
@@ -149,7 +149,7 @@ public partial class LandingViewModel : ViewModelBase
         string? path;
         try { path = await _picker.SaveFileAsync("New Kitchen", Nfty.Core.Formats.Kitchen.Extension); }
         catch (Exception ex) { ShowError("Could not create", ex.Message); return; }
-        if (path is null) return;   // cancelled
+        if (path is null) return;   // canceled
 
         var name = Path.GetFileNameWithoutExtension(path);
         if (string.IsNullOrWhiteSpace(name)) { ShowError("Invalid Kitchen", "The Kitchen needs a name."); return; }
@@ -164,7 +164,7 @@ public partial class LandingViewModel : ViewModelBase
     }
 
     /// <summary>Only offered when a Kitchen session exists to hold the result. Composition supplies
-    /// one; a ViewModel constructed without it (some tests) keeps the old disabled behaviour rather
+    /// one; a ViewModel constructed without it (some tests) keeps the old disabled behavior rather
     /// than throwing at click time.</summary>
     private bool CanNewKitchen() => _kitchen is not null;
 
@@ -182,7 +182,7 @@ public partial class LandingViewModel : ViewModelBase
         string? path;
         try { path = await _picker.OpenFileAsync("Open Kitchen", Nfty.Core.Formats.Kitchen.Extension); }
         catch (Exception ex) { ShowError("Could not open", ex.Message); return; }
-        if (path is null) return;   // cancelled
+        if (path is null) return;   // canceled
 
         try { _kitchen!.Open(path); }
         catch (Exception ex) { ShowError("Could not open", ex.Message); }
@@ -211,7 +211,7 @@ public partial class LandingViewModel : ViewModelBase
     {
         var wizard = new NewIngredientViewModel(_dialogs) { Destination = RecipeDestination.LooseKitchen };
         var result = await _dialogs.ShowAsync<NewIngredientViewModel>(wizard);
-        if (result is null) return;   // cancelled
+        if (result is null) return;   // canceled
 
         if (result.Destination == RecipeDestination.IntoCookBook)
         {
@@ -224,7 +224,7 @@ public partial class LandingViewModel : ViewModelBase
             return;
         }
         var path = await _picker.SaveFileAsync("Save new ingredient", ".igt");
-        if (path is null) return;   // cancelled the picker
+        if (path is null) return;   // canceled the picker
 
         LoadedIngredient built;
         try { built = result.Build(canvas); }   // Build allocates the raster — guard it (OOM on a huge canvas)

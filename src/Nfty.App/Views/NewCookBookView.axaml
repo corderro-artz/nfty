@@ -47,7 +47,7 @@
                     <TextBlock />
                   </Border>
                 </StackPanel>
-                <!-- Width / aspect lock / height, with the lock centred between the two fields.
+                <!-- Width / aspect lock / height, with the lock centered between the two fields.
                      Star-sized rather than fixed: Fluent's spinner is a wide side-by-side pair
                      (Known deviation - the mockup's .stepr is a 20px column we cannot reach from a
                      Style), so it eats most of a fixed field and clipped "1000" to "100(" in mono.

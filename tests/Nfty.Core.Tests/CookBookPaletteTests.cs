@@ -10,7 +10,7 @@ using SixLabors.ImageSharp.PixelFormats;
 namespace Nfty.Core.Tests;
 
 /// <summary>The CookBook-scoped palette: an ADDITIVE OPTIONAL manifest field, so a collection's
-/// colours travel inside the archive without a schema bump.
+/// colors travel inside the archive without a schema bump.
 ///
 /// The bump is deliberately absent. System.Text.Json ignores unknown properties, so a build that
 /// predates this field still reads these archives; bumping Schema.Current would instead make every

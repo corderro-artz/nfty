@@ -23,11 +23,11 @@ public partial class NewIngredientViewModel : WizardViewModelBase
     [ObservableProperty] private string _fixedColor = "hex:d6249f";
     [ObservableProperty] private string _canvasSize = "512x512";
 
-    /// <summary>Dynamic layers roll a colour per asset from a hue/sat range.</summary>
-    public bool ShowColourRange => Kind == LayerKind.Dynamic;
+    /// <summary>Dynamic layers roll a color per asset from a hue/sat range.</summary>
+    public bool ShowColorRange => Kind == LayerKind.Dynamic;
 
-    /// <summary>Static layers apply one fixed colour deterministically.</summary>
-    public bool ShowFixedColour => Kind == LayerKind.Static;
+    /// <summary>Static layers apply one fixed color deterministically.</summary>
+    public bool ShowFixedColor => Kind == LayerKind.Static;
 
     /// <summary>A loose Ingredient saved on its own has no CookBook canvas to inherit, so it needs
     /// its own canvas size.</summary>
@@ -74,8 +74,8 @@ public partial class NewIngredientViewModel : WizardViewModelBase
 
     partial void OnKindChanged(LayerKind value)
     {
-        OnPropertyChanged(nameof(ShowColourRange));
-        OnPropertyChanged(nameof(ShowFixedColour));
+        OnPropertyChanged(nameof(ShowColorRange));
+        OnPropertyChanged(nameof(ShowFixedColor));
         OnPropertyChanged(nameof(IsKindDynamic));
         OnPropertyChanged(nameof(IsKindStatic));
         OnPropertyChanged(nameof(IsKindCustom));

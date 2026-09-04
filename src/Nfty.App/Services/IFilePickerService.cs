@@ -7,21 +7,21 @@ public interface IFilePickerService
     /// <summary>Shows an open dialog filtered to the given extensions.</summary>
     /// <param name="title">Dialog title.</param>
     /// <param name="extensions">Accepted extensions, each including the leading dot.</param>
-    /// <returns>The chosen path, or null if cancelled.</returns>
+    /// <returns>The chosen path, or null if canceled.</returns>
     Task<string?> OpenFileAsync(string title, params string[] extensions);
     /// <summary>Shows a save dialog.</summary>
     /// <param name="title">Dialog title.</param>
     /// <param name="defaultExtension">Extension applied when the user types none.</param>
-    /// <returns>The chosen path, or null if cancelled.</returns>
+    /// <returns>The chosen path, or null if canceled.</returns>
     Task<string?> SaveFileAsync(string title, string defaultExtension);
     /// <summary>Shows a folder picker.</summary>
     /// <param name="title">Dialog title.</param>
-    /// <returns>The chosen folder, or null if cancelled.</returns>
+    /// <returns>The chosen folder, or null if canceled.</returns>
     Task<string?> PickFolderAsync(string title);
 }
 
 /// <summary>The null object used by the headless test host and any surface without a window.
-/// Every call returns null, which every caller already treats as "the user cancelled".</summary>
+/// Every call returns null, which every caller already treats as "the user canceled".</summary>
 public sealed class FilePickerService : IFilePickerService
 {
     /// <inheritdoc />

@@ -9,7 +9,7 @@
          accent button, a chip, a selected row) still wins for its own subtree.
 
          This must NOT be a blanket `TextBlock` setter. A Style setter outranks inheritance, so
-         re-asserting the colour at every TextBlock overrode every ancestor that had chosen otherwise:
+         re-asserting the color at every TextBlock overrode every ancestor that had chosen otherwise:
          a `Button.accent` set OnAccent on its ContentPresenter, the label ignored it and painted
          FgBrush, and in light mode "Add ingredient" rendered near-black on carmine (2.43:1) next to a
          `+` icon that looked right because a Path has no such rule and does inherit. Dark mode hid it
@@ -71,10 +71,10 @@
   <!-- Disabled: the mockup disables by OPACITY only, keeping the panel surface underneath
        (explorer.html `.tbtn:disabled{opacity:.38}`) — but Fluent's own ":disabled" template style
        repaints PART_ContentPresenter's Background/BorderBrush/Foreground from its own
-       (grey) disabled resources at Style priority, same mechanism as :pointerover/:pressed above,
-       so a disabled Button.tbtn/.accent rendered as an opaque grey slab (audit finding: the entire
+       (gray) disabled resources at Style priority, same mechanism as :pointerover/:pressed above,
+       so a disabled Button.tbtn/.accent rendered as an opaque gray slab (audit finding: the entire
        ingredient-editor tool column when CanPaint is false). Reset the three properties back to
-       each variant's normal-state brushes so the Opacity rule below dims the *real* colours instead
+       each variant's normal-state brushes so the Opacity rule below dims the *real* colors instead
        of Fluent's substituted ones. -->
   <Style Selector="Button.tbtn:disabled /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
@@ -86,9 +86,9 @@
     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
   </Style>
-  <!-- The disabled fix above was Button-only, leaving Fluent's opaque grey slab on the editor's
+  <!-- The disabled fix above was Button-only, leaving Fluent's opaque gray slab on the editor's
        NumericUpDown/TextBox (the audit's #c7c3be / #3c3d40). Dim inputs the same way: opacity over
-       the real surface, never a grey fill. -->
+       the real surface, never a gray fill. -->
   <Style Selector="NumericUpDown:disabled, TextBox:disabled, Slider:disabled">
     <Setter Property="Opacity" Value="0.38" />
   </Style>
@@ -104,10 +104,10 @@
        lying around: it existed to be applied, and each time a feature shipped without it being
        removed, the app went on telling users a working feature was unavailable — three times. If a
        genuinely unbuilt action ever needs marking again, the mockup's own recipe is one line:
-       .tbtn.soon sets border-style dashed, colour to the muted-foreground custom property, and a
+       .tbtn.soon sets border-style dashed, color to the muted-foreground custom property, and a
        transparent background. -->
   <!-- .bare: a Button that contributes nothing visually — no fill, no edge, no padding, no minimum
-       size, and Fluent's hover/pressed/focus states neutralised by being set EXPLICITLY to
+       size, and Fluent's hover/pressed/focus states neutralized by being set EXPLICITLY to
        Transparent rather than simply left unpainted (not painting hands the state back to Fluent's
        stock blue). It exists so an element the locked design already draws — the brand block, a
        breadcrumb segment — can become clickable and keyboard-reachable without changing a pixel or
@@ -197,8 +197,8 @@
   </Style>
 
   <!-- Icon system (audit Critical #1): the mockups draw glyphs as 24-unit stroked SVG paths, so an
-       icon is a Path stroked with the current text colour, never a font glyph — emoji injected
-       off-palette colour and missing glyphs rendered as tofu. Stretch=Uniform maps the 24-unit
+       icon is a Path stroked with the current text color, never a font glyph — emoji injected
+       off-palette color and missing glyphs rendered as tofu. Stretch=Uniform maps the 24-unit
        geometry into the box below. -->
   <!--
     Icons are authored in the mockups' 24x24 SVG viewBox (see Icons.axaml) and must be scaled the way
@@ -426,7 +426,7 @@
   </Style>
 
   <!-- The placeholder was never tokenised: nothing set it, so Fluent's own default painted it and
-       the search read 2.09:1 in light and 2.62:1 in dark. explorer.html's .search sets colour to the
+       the search read 2.09:1 in light and 2.62:1 in dark. explorer.html's .search sets color to the
        muted-foreground custom property with NO extra opacity, so this is drift rather than a design
        choice — adopting the token restores the mockup and clears AA in the same move. -->
   <!-- .rzero first-run empty state. The dashed stroke is a Rectangle, not the Border's own
@@ -496,7 +496,7 @@
        rendered at Avalonia's default ~14px with zero tracking instead of the mockups' 10-11.5px
        uppercase-tracked look — landing.html/ingredient-editor.html/wizard-recipe.html/explorer.html
        token values, ported verbatim below). Where mockup text is uppercase, Avalonia has no
-       text-transform: the sizing/letter-spacing/colour is set here, and the consuming view supplies
+       text-transform: the sizing/letter-spacing/color is set here, and the consuming view supplies
        already-uppercased text where that matters (see TextBlock.data-h above for the existing
        convention this follows). -->
   <Style Selector="TextBlock.slbl">
@@ -594,7 +594,7 @@
 
   <!-- ===================== Wizard / modal form grammar =====================
        All three New* wizards share this skeleton (wizard-{cookbook,recipe,ingredient}.html):
-       kicker, heading, sub, labelled fields, a derived-identifier strip, and a footer band with
+       kicker, heading, sub, labeled fields, a derived-identifier strip, and a footer band with
        keyboard hints. Before this the wizards were a bare stack of watermarked TextBoxes. -->
   <Style Selector="Border.modal">
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
@@ -612,7 +612,7 @@
          a tall empty panel. -->
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="HorizontalAlignment" Value="Center" />
-    <!-- The tallest wizard (New Ingredient, with both colour ranges open) is taller than a small
+    <!-- The tallest wizard (New Ingredient, with both color ranges open) is taller than a small
          window: without a ceiling the card overflowed and took the footer - and therefore Create -
          off screen entirely. The body scrolls inside this instead. -->
     <Setter Property="MaxHeight" Value="620" />
@@ -636,12 +636,20 @@
     <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
     <Setter Property="BorderThickness" Value="0,1,0,0" />
-    <Setter Property="Padding" Value="16,10" />
+    <Setter Property="Padding" Value="16,8" />
   </Style>
-  <!-- .kicker dot. The mockup's .kicker is a flex row with align-items:center, but centring the dot
+  <!-- The bar was 58px because its two buttons disagreed: the ghost measured 29 and the accent 37,
+       since the accent carries an icon row and both were padded 12,8. Pinning one height makes the
+       bar the height of a button plus its padding, and stops the two reading as different sizes. -->
+  <Style Selector="Border.modal-foot Button">
+    <Setter Property="Height" Value="30" />
+    <Setter Property="Padding" Value="12,0" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <!-- .kicker dot. The mockup's .kicker is a flex row with align-items:center, but centering the dot
        on the TextBlock's LINE BOX puts it low: the label is all-caps, so its glyphs sit high in a box
        that still reserves descender space below the baseline. Measured off a rendered frame the dot
-       landed 4.5px under the optical centre of "CREATE". The bottom margin lifts it by half its own
+       landed 4.5px under the optical center of "CREATE". The bottom margin lifts it by half its own
        value, so 9 corrects the full 4.5. Only the three wizard kickers use this class, all at the
        same label size, so the correction is safe to carry on the style itself. -->
   <Style Selector="Ellipse.kdot">
@@ -654,7 +662,7 @@
 
   <!-- .kind / .dopt choice cards. The wizards' Kind and Destination pickers are bordered cards with
        a dot indicator, a label and a muted subtext line - not bare radio buttons. Retemplating a
-       RadioButton rather than hand-rolling toggles keeps single-select and keyboard behaviour for
+       RadioButton rather than hand-rolling toggles keeps single-select and keyboard behavior for
        free. The dot's filled pip is a real Ellipse because the mockup draws it with ::after, which
        has no XAML equivalent. -->
   <Style Selector="RadioButton.choice">
@@ -718,7 +726,7 @@
        popover on hover; Avalonia's stock ToolTip is narrower and follows the pointer, so the
        affordance and the copy are faithful but the popover's shape is not. Copy is verbatim from the
        wizard mockups, which is the point: these explain domain rules (weights are relative, not
-       percentages; a colour spec is never guessed) that the form alone does not convey. -->
+       percentages; a color spec is never guessed) that the form alone does not convey. -->
   <Style Selector="Border.qmark">
     <Setter Property="Width" Value="13" />
     <Setter Property="Height" Value="13" />
@@ -788,6 +796,11 @@
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="Margin" Value="0,0,0,8" />
   </Style>
+  <!-- Mockup .ctl-h .plabel { margin-bottom: 0 }: a label that shares a ROW with its value must not
+       keep the stacked-label bottom margin, or it floats above the number it is labeling. -->
+  <Style Selector="Grid.ctlh > TextBlock.plabel">
+    <Setter Property="Margin" Value="0" />
+  </Style>
   <Style Selector="TextBlock.tagline">
     <Setter Property="FontSize" Value="11.5" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
@@ -825,7 +838,7 @@
     <Setter Property="Background" Value="{DynamicResource BgBrush}" />
     <!-- Accent, not LineStrong. A deliberate divergence from explorer.html, which paints the window
          edge with the line-strong token: this is the one border that separates the app from the
-         desktop rather than one region from another, so it reads as the app's own colour. Requested
+         desktop rather than one region from another, so it reads as the app's own color. Requested
          directly during the smoke test. -->
     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     <Setter Property="BorderThickness" Value="1" />
@@ -863,7 +876,7 @@
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
   </Style>
 
-  <!-- Explorer tree: kind-coloured glyph (D/S/C) on ingredient nodes (mockup .kmark, explorer.html:123-127). -->
+  <!-- Explorer tree: kind-colored glyph (D/S/C) on ingredient nodes (mockup .kmark, explorer.html:123-127). -->
   <Style Selector="TextBlock.kmark">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontWeight" Value="Bold" />
@@ -934,10 +947,10 @@
          - .rhero/.vhero use a flat PanelBrush background rather than the
            mockup's linear-gradient from bg-alt2 to panel; no
            LinearGradientBrush resource exists for this token pair, and the
-           two colours are close enough that a flat fill reads the same at
+           two colors are close enough that a flat fill reads the same at
            this tile's size.
        Where mockup text is uppercase (.ml, .data-h, .rcl, .ax), Avalonia has
-       no text-transform: the sizing/letter-spacing/colour is set here, and
+       no text-transform: the sizing/letter-spacing/color is set here, and
        the consuming view is expected to supply already-uppercased text. -->
 
   <!-- metric band tile (explorer.html:210-216) -->
@@ -1026,7 +1039,7 @@
   </Style>
 
   <!-- explorer.html `.sub-h .hint`: a sentence-case aside sitting beside an uppercase section
-       heading. It inherits .sub-h's mono/size/colour and opts back OUT of the tracking, which is
+       heading. It inherits .sub-h's mono/size/color and opts back OUT of the tracking, which is
        what makes it read as prose rather than as a second heading. Avalonia has no inheritance
        between class selectors, so the shared values are restated. -->
   <Style Selector="TextBlock.hint">
@@ -1076,7 +1089,7 @@
   </Style>
   <!-- The mockup's grip is the guide-hi token at rest and the muted foreground once its row is
        hovered; the hover rule is declared second so it wins. Both already exist - variant B
-       introduced no colour at all. -->
+       introduced no color at all. -->
   <Style Selector="Border.grip Path.ico">
     <Setter Property="Stroke" Value="{DynamicResource GuideHiBrush}" />
   </Style>
@@ -1130,7 +1143,7 @@
     <Setter Property="Height" Value="20" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
   </Style>
-  <!-- The mark is line art (Icons.axaml IconMark*), not a text glyph, so its colour is a Stroke.
+  <!-- The mark is line art (Icons.axaml IconMark*), not a text glyph, so its color is a Stroke.
        Declared after Path.ico so these win over the default muted stroke. -->
   <Style Selector="Border.rop.exclude">
     <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
@@ -1152,7 +1165,7 @@
   <Style Selector="Path.rop.require">
     <Setter Property="Stroke" Value="{DynamicResource KindDynamicBrush}" />
   </Style>
-  <!-- explorer.html .fchip: a tinted mono count badge, kind-coloured. Used by the cookbook's
+  <!-- explorer.html .fchip: a tinted mono count badge, kind-colored. Used by the cookbook's
        combination-space rows and the recipe hero's factor arithmetic. -->
   <!-- explorer.html .cbk-id: the identity card the name/description/chips live in. They were
        previously orphaned at the top of the pane with no card around them. -->
@@ -1207,7 +1220,7 @@
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="Margin" Value="3,0" />
   </Style>
-  <!-- .ramp: the 96x16 value gradient with its accent pin; .swatch: the resulting grey -->
+  <!-- .ramp: the 96x16 value gradient with its accent pin; .swatch: the resulting gray -->
   <!-- No Width: the ramp fills the Panel that hosts it, so the strip's width budget is stated once
        in the view rather than twice here and there — two numbers that can drift apart, which is how
        the shelf band lost a pixel. -->
@@ -1284,7 +1297,7 @@
 
   <!-- ====================================================================
        Reference-layer panel (ingredient editor's colorize rail), variant B of
-       docs/design/mockups/explorations/reference-panel-variants.html: two labelled sections with a
+       docs/design/mockups/explorations/reference-panel-variants.html: two labeled sections with a
        depth gutter, each row a checkable filmstrip card.
 
        GEOMETRY IS FIXED, and this is the control the spec names as most likely to break the rule:
@@ -1293,7 +1306,7 @@
        a fixed sub-line height, and Opacity/IsHitTestVisible rather than IsVisible. A row is the same
        height on and off, and the panel is the same width in every state.
 
-       The variant introduced NO new colour: every brush below already existed. -->
+       The variant introduced NO new color: every brush below already existed. -->
 
   <!-- the card a reference row is drawn on. A Border rather than a Button, because a Kitchen row
        carries its own stepper buttons and Avalonia's Button marks a pointer press handled on the way
@@ -1498,16 +1511,27 @@
        Width stays in the markup, where the strip's width budget is explained. One /template/ hop to
        the TextBox Fluent puts inside; the spinner is switched off at the call site. -->
   <Style Selector="NumericUpDown.nin">
-    <Setter Property="MinHeight" Value="24" />
+    <!-- 24, not Fluent's natural 32: this sits in a row with a 20px swatch and a 16px ramp, and a
+         box half again their height reads as a different row rather than the same one. The height
+         has to go on the INNER TextBox: that is what draws the border, and pinning only the outer
+         NumericUpDown clipped the box's top and bottom edges off. The outer control still measures
+         32 from its own template, but nothing paints there. -->
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Padding" Value="0" />
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="11" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
     <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
   <Style Selector="NumericUpDown.nin /template/ TextBox">
     <Setter Property="TextAlignment" Value="Center" />
+    <!-- Vertically centered explicitly: Fluent's TextBox tops its content, which put the digits
+         against the box's upper edge. -->
+    <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="Padding" Value="4,0" />
-    <Setter Property="MinHeight" Value="24" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Height" Value="24" />
   </Style>
 
   <Style Selector="TextBlock.cv">
@@ -1529,7 +1553,12 @@
   <Style Selector="Slider.overlay">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="Transparent" />
-    <Setter Property="Margin" Value="0" />
+    <!-- THE THUMB IS NOT CENTRED. Fluent's horizontal Slider reserves a tick lane below its track,
+         so the handle renders 5px under the control's own middle - measured off a laid-out frame
+         (band cy=20, thumb cy=25 in a 40px cell). Every slider in this app is laid OVER something it
+         has to line up with, so the whole control is shifted up by exactly that: the margins cancel,
+         leaving the height untouched and the handle on the band. SliderAlignmentTests keeps it. -->
+    <Setter Property="Margin" Value="0,-5,0,5" />
     <Setter Property="MinHeight" Value="0" />
     <!-- Do NOT pin a Height here, and do not pin one on the Panel this sits in. Fluent lays a
          horizontal Slider out at roughly 40px against the mockup's ~20px range row, and both levers
@@ -1861,8 +1890,8 @@
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
-  <!-- The validity pill. Not-valid is the WARNING colour, not the accent: accent means "editing" one
-       row over, and two different meanings sharing a colour in the same bar is worse than either.
+  <!-- The validity pill. Not-valid is the WARNING color, not the accent: accent means "editing" one
+       row over, and two different meanings sharing a color in the same bar is worse than either.
        .ok variants declared after the base so they win at equal specificity. -->
   <Style Selector="Ellipse.vdot">
     <Setter Property="Fill" Value="{DynamicResource WarningBrush}" />
@@ -1877,7 +1906,7 @@
     <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" />
   </Style>
 
-  <!-- explorer.html: .statusbar .state.editing takes the accent colour. Declared after the blanket
+  <!-- explorer.html: .statusbar .state.editing takes the accent color. Declared after the blanket
        .sbar rule, which sets Foreground explicitly and would otherwise win. -->
   <Style Selector="TextBlock.sbar.editing">
     <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
@@ -1971,7 +2000,7 @@
   </Style>
   <!-- .esc — a chip in the mockup, a Button here: Escape (the KeyBinding) is otherwise the sheet's
        ONLY way out, and the scrim behind it does not dismiss. Fluent's hover/pressed fills are
-       neutralised explicitly rather than left unset, which would hand the states back to its blue. -->
+       neutralized explicitly rather than left unset, which would hand the states back to its blue. -->
   <Style Selector="Button.esc">
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="Background" Value="Transparent" />
@@ -2014,7 +2043,7 @@
   <!-- .e — one strict 20px glyph gutter (its ColumnDefinitions stay in the view; a Setter would
        share one ColumnDefinitions instance across every entry). .g is the 16px-tall gutter cell:
        Path.ico sets an explicit Width, which under the default Stretch alignment would pin the
-       glyph to the cell's left edge rather than centring it in the 20px column. -->
+       glyph to the cell's left edge rather than centering it in the 20px column. -->
   <!-- The 10px gap between gutter and content is ColumnSpacing, set on the grid itself. It used to be
        a left margin on whatever occupied the content column, because Grid.ColumnSpacing only arrived
        in Avalonia 11.3 and this app was on 11.2.3; the app is on 12.1.1 now, so the workaround and
@@ -2061,7 +2090,7 @@
   </Style>
 
   <!-- .kline / .k — the keyboard rows. Border.kbd already carries the chip's border, radius and
-       mono 10.5 ink; only the fill, the flatter padding and the centred glyph differ here. -->
+       mono 10.5 ink; only the fill, the flatter padding and the centered glyph differ here. -->
   <Style Selector="Border.kbd.sh-k">
     <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
     <Setter Property="Padding" Value="0,2" />
@@ -2075,7 +2104,7 @@
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 
-  <!-- .cs / .fine — the colour-spec rows and the note under them. -->
+  <!-- .cs / .fine — the color-spec rows and the note under them. -->
   <Style Selector="TextBlock.sh-cs">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="10.5" />
@@ -2117,7 +2146,7 @@
        container, so every descendant inherits mono. explorer.html / help.html / ingredient-editor.html
        declare BOTH tokens and use sans for body with mono as an accent - which is what the blanket
        TextBlock rule at the top of this file implements. The split is real and it is in the locked
-       mockups, so it is reproduced here rather than normalised away.
+       mockups, so it is reproduced here rather than normalized away.
 
        This must be declared AFTER the blanket "TextBlock" rule: that rule sets FontFamily explicitly,
        which defeats normal inheritance, so setting FontFamily on an ancestor alone would not reach
@@ -2157,10 +2186,10 @@
     <Setter Property="TextWrapping" Value="NoWrap" />
   </Style>
 
-  <!-- ==================== Palette strip (colour mode) ====================
+  <!-- ==================== Palette strip (color mode) ====================
        A second 40px row under the toolstrip, carrying the ramp mode, the ten slots, the saved
        swatches, the alpha axis and the opacity lock. New to the app: the locked mockup set predates
-       colour mode, so this is built from that set's own grammar (see
+       color mode, so this is built from that set's own grammar (see
        docs/design/mockups/explorations/palette-panel-variants.html, variant A).
 
        GEOMETRY IS FIXED. The row is one height in both modes and both lock states: the ten slots
@@ -2175,10 +2204,10 @@
     <Setter Property="BorderThickness" Value="0,0,0,1" />
   </Style>
 
-  <!-- .sw: one palette cell. The colour is painted by the CHILD Border, not by the Button's own
+  <!-- .sw: one palette cell. The color is painted by the CHILD Border, not by the Button's own
        Background, because Fluent repaints PART_ContentPresenter's Background on :pointerover and
-       :pressed at a priority a Setter here cannot beat — a swatch would flash grey under the cursor.
-       Painting the colour on top of that surface sidesteps the fight entirely. -->
+       :pressed at a priority a Setter here cannot beat — a swatch would flash gray under the cursor.
+       Painting the color on top of that surface sidesteps the fight entirely. -->
   <Style Selector="Button.sw">
     <Setter Property="Width" Value="18" />
     <Setter Property="Height" Value="18" />
@@ -2201,7 +2230,7 @@
   <Style Selector="Button.sw:pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
   </Style>
-  <!-- Selected: the accent ring is the button's own border plus a 2px inset on the colour, so the
+  <!-- Selected: the accent ring is the button's own border plus a 2px inset on the color, so the
        ring is legible at 22px without any change to the cell's outer size. -->
   <Style Selector="Button.sw.on /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
@@ -2217,7 +2246,7 @@
     <Setter Property="Stroke" Value="{DynamicResource FgMutedBrush}" />
   </Style>
 
-  <!-- .pmode: the grey/colour tray. Same grammar as .seg, sized for a 40px row. -->
+  <!-- .pmode: the gray/color tray. Same grammar as .seg, sized for a 40px row. -->
   <Style Selector="Border.seg.mini">
     <Setter Property="Padding" Value="2" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />

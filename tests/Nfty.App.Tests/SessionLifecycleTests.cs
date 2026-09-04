@@ -276,7 +276,7 @@ public class SessionLifecycleTests
     }
 
     [AvaloniaFact]
-    public async Task Cancelling_the_picker_leaves_the_open_kitchen_alone()
+    public async Task Canceling_the_picker_leaves_the_open_kitchen_alone()
     {
         var dir = Directory.CreateTempSubdirectory().FullName;
         string ktn = Path.Combine(dir, "Studio.ktn");

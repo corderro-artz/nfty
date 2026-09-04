@@ -95,7 +95,7 @@ public sealed class RecentsService : IRecentsService
     /// <inheritdoc />
     public void Remove(string path)
     {
-        // Add stores full paths, so normalise here too or a raw/relative path silently no-ops.
+        // Add stores full paths, so normalize here too or a raw/relative path silently no-ops.
         string full;
         try { full = Path.GetFullPath(path); } catch { full = path; }
         _items.RemoveAll(i => string.Equals(i.Path, full, StringComparison.Ordinal));
@@ -107,7 +107,7 @@ public sealed class RecentsService : IRecentsService
         if (string.IsNullOrWhiteSpace(json)) return new();
         try
         {
-            // Well-formed JSON of the wrong shape ([null], [{}]) deserialises "successfully" —
+            // Well-formed JSON of the wrong shape ([null], [{}]) deserializes "successfully" —
             // drop anything without a usable path so a later Add can't NRE on it.
             return (JsonSerializer.Deserialize<List<RecentItem?>>(json, Json) ?? new())
                 .Where(i => i is not null && !string.IsNullOrWhiteSpace(i.Path))

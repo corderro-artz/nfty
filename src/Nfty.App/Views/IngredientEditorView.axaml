@@ -70,7 +70,10 @@
 
               <StackPanel Spacing="6" Margin="0,8,0,0"
                           IsEnabled="{Binding SelectedVariant, Converter={x:Static ObjectConverters.IsNotNull}}">
-                <TextBlock Text="NAME" Classes="plabel" />
+                <!-- Margin="0" beats .plabel's 8px bottom: with the panel's own 6px spacing that
+                     put NAME 14px above its box while WEIGHT, which overrides the margin, sat 6.
+                     Both are 6 now, and the 6 on WEIGHT's top is the gap BETWEEN the two fields. -->
+                <TextBlock Text="NAME" Classes="plabel" Margin="0" />
                 <TextBox Text="{Binding SelectedName}" />
                 <TextBlock Text="WEIGHT" Classes="plabel" Margin="0,6,0,0" />
                 <NumericUpDown Value="{Binding SelectedWeight}" Minimum="0.01" Increment="1" />
@@ -139,7 +142,7 @@
 
               <Border Classes="tsep" />
 
-              <!-- .ramp: the brightness axis. In grayscale mode it IS the colour; in colour mode it
+              <!-- .ramp: the brightness axis. In grayscale mode it IS the color; in color mode it
                    is V of HSV, with H and S on the colorize rail's own tracks. One control, one
                    meaning ("how bright"), in both modes. -->
               <!-- 80, not the mockup's 96. The third deliberate chrome divergence on record (after
@@ -170,7 +173,7 @@
           <!-- ============ Palette strip ============
                Ten ramp slots that change fill with the mode, the saved swatches, the alpha axis and
                the opacity lock. Always present: on a Dynamic or Static layer it simply offers the
-               greys a value-map is authored in. See Styles.axaml's block for the no-reflow rules. -->
+               grays a value-map is authored in. See Styles.axaml's block for the no-reflow rules. -->
           <Border Grid.Row="1" Classes="pstrip">
             <!-- WIDTH IS A BUDGET. Everything but the saved run is fixed, and the saved run is the
                  star column: at the minimum window width the canvas pane is 594px, so the fixed
@@ -179,27 +182,27 @@
                  Current fixed total: 128 + 207 + 18 + 94 + 30 + 42 gaps + 2 rules = 521. -->
             <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="6">
 
-              <!-- A Custom layer has no grey mode at all: its value-map never reaches an archive,
+              <!-- A Custom layer has no gray mode at all: its value-map never reaches an archive,
                    so those strokes would be invisible work. The cell is a FIXED 104px either way and
                    the ink inside it swaps — a tray with a choice, or a caption with none. It is not
-                   a DISABLED tray: the app dims disabled controls to 0.38 opacity, which put "Grey"
+                   a DISABLED tray: the app dims disabled controls to 0.38 opacity, which put "Gray"
                    at 1.41:1 (DarkModeContrastTests), and unreadable is worse than absent. -->
               <Panel Grid.Column="0" Width="128" VerticalAlignment="Center">
                 <Border Classes="seg mini" IsVisible="{Binding CanPaintGrayscale}">
                   <Grid ColumnDefinitions="*,2,*">
-                    <Button Grid.Column="0" Classes="seg-b mini" Content="Grey"
+                    <Button Grid.Column="0" Classes="seg-b mini" Content="Gray"
                             Classes.on="{Binding !IsColorMode}"
                             Command="{Binding SetPaintGrayscaleCommand}"
                             ToolTip.Tip="Paint the grayscale value-map" />
-                    <Button Grid.Column="2" Classes="seg-b mini" Content="Colour"
+                    <Button Grid.Column="2" Classes="seg-b mini" Content="Color"
                             Classes.on="{Binding IsColorMode}"
                             Command="{Binding SetPaintColorCommand}"
-                            ToolTip.Tip="Paint in full colour — saves as a Custom ingredient" />
+                            ToolTip.Tip="Paint in full color — saves as a Custom ingredient" />
                   </Grid>
                 </Border>
                 <Border Classes="seg mini" IsVisible="{Binding !CanPaintGrayscale}"
-                        ToolTip.Tip="Custom layers are authored in colour — they composite as-is">
-                  <TextBlock Text="COLOUR" Classes="plabel" Margin="0,4"
+                        ToolTip.Tip="Custom layers are authored in color — they composite as-is">
+                  <TextBlock Text="COLOR" Classes="plabel" Margin="0,4"
                              HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
               </Panel>
@@ -258,7 +261,7 @@
               </ScrollViewer>
 
               <Button Grid.Column="5" Classes="sw add" Command="{Binding SaveSwatchCommand}"
-                      ToolTip.Tip="Save this colour to the palette">
+                      ToolTip.Tip="Save this color to the palette">
                 <Path Classes="ico xs" Data="{StaticResource IconPlus}" />
               </Button>
 
@@ -267,8 +270,12 @@
                           VerticalAlignment="Center" Classes="alphacell"
                           Classes.off="{Binding IsOpacityLocked}">
                 <TextBlock Text="A" Classes="plabel" VerticalAlignment="Center" Margin="0" />
+                <!-- Same canceling margin as Slider.overlay, and for the same reason: Fluent puts
+                     the handle 5px below the control's middle, which left it sitting under the "A"
+                     rather than beside it. This slider keeps a visible track, so it cannot simply
+                     take that class. -->
                 <Slider Value="{Binding BrushAlpha}" Minimum="0" Maximum="255" Width="72"
-                        VerticalAlignment="Center" ToolTip.Tip="Paint alpha" />
+                        Margin="0,-5,0,5" VerticalAlignment="Center" ToolTip.Tip="Paint alpha" />
               </StackPanel>
 
               <Button Grid.Column="7" Classes="ttool" Classes.on="{Binding IsOpacityLocked}"
@@ -333,7 +340,7 @@
                                TextTrimming="None" ClipToBounds="False" FontSize="7.5"
                                ToolTip.Tip="The colorized result, as generation would render it" />
                     <Button Grid.Column="1" Classes="icon" Padding="2" Command="{Binding RerollPreviewCommand}"
-                            ToolTip.Tip="Reroll sampled colour">
+                            ToolTip.Tip="Reroll sampled color">
                       <Path Classes="ico xs" Data="{StaticResource IconReroll}" /></Button>
                     <Button Grid.Column="2" Classes="icon" Padding="2" Command="{Binding EnlargePreviewCommand}"
                             ToolTip.Tip="Enlarge preview">
@@ -357,7 +364,10 @@
           </Border>
 
           <ScrollViewer Grid.Row="1" Name="ColorizeScroll" HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Margin="14" Spacing="14">
+            <!-- .rbody { padding: 13px 13px 16px; gap: 15px } — one gap for the whole rail. Any
+                 extra Margin on a child here is a second, competing number; the two that existed
+                 made those gaps 18 and 20 while every other one was 14. -->
+            <StackPanel Margin="13,13,13,16" Spacing="15">
               <!-- .seg: a segmented tray, not two loose radio buttons. Hidden on a Custom layer,
                    which composites as-is and rolls nothing — the choice would have no effect. -->
               <Border Classes="seg" IsVisible="{Binding ShowColorizeMode}">
@@ -369,15 +379,15 @@
                 </Grid>
               </Border>
 
-              <!-- ==================== Paint colour ====================
-                   Colour mode's H and S axes, on the rail's own hue and saturation tracks. Those
+              <!-- ==================== Paint color ====================
+                   Color mode's H and S axes, on the rail's own hue and saturation tracks. Those
                    tracks are the Dynamic layer's RANGE controls; a Custom layer has no range to set,
                    so rather than adding a third pair of sliders the same two components take the
-                   rail's free space and set ONE colour. The third axis, V, is the toolstrip's value
+                   rail's free space and set ONE color. The third axis, V, is the toolstrip's value
                    ramp — unchanged in meaning from grayscale mode. -->
               <StackPanel Spacing="14" IsVisible="{Binding IsColorMode}">
                 <StackPanel Spacing="7">
-                  <Grid ColumnDefinitions="*,Auto">
+                  <Grid Classes="ctlh" ColumnDefinitions="*,Auto">
                     <TextBlock Grid.Column="0" Text="PAINT HUE" Classes="plabel" VerticalAlignment="Center" />
                     <TextBlock Grid.Column="1" Classes="cv" Text="{Binding BrushHueText}" />
                   </Grid>
@@ -388,7 +398,7 @@
                 </StackPanel>
 
                 <StackPanel Spacing="7">
-                  <Grid ColumnDefinitions="*,Auto">
+                  <Grid Classes="ctlh" ColumnDefinitions="*,Auto">
                     <TextBlock Grid.Column="0" Text="PAINT SATURATION" Classes="plabel" VerticalAlignment="Center" />
                     <TextBlock Grid.Column="1" Classes="cv" Text="{Binding BrushSatText}" />
                   </Grid>
@@ -412,15 +422,15 @@
                     <Path Grid.Column="0" Classes="ico xs" Data="{StaticResource IconLock}"
                           VerticalAlignment="Top" Margin="0,1,8,0" />
                     <TextBlock Grid.Column="1" Classes="vlock"
-                               Text="Colour art composites as-is and is never recoloured at generation time." />
+                               Text="Color art composites as-is and is never recolored at generation time." />
                   </Grid>
                 </Panel>
               </StackPanel>
 
-              <StackPanel Spacing="14" IsVisible="{Binding ShowColourRange}">
+              <StackPanel Spacing="14" IsVisible="{Binding ShowColorRange}">
                 <!-- .dual (hue): two ring handles over the hue rainbow, with a live readout. -->
                 <StackPanel Spacing="7">
-                  <Grid ColumnDefinitions="*,Auto">
+                  <Grid Classes="ctlh" ColumnDefinitions="*,Auto">
                     <TextBlock Grid.Column="0" Text="HUE RANGE" Classes="plabel" VerticalAlignment="Center" />
                     <TextBlock Grid.Column="1" Classes="cv" Text="{Binding HueRangeText}" />
                   </Grid>
@@ -436,9 +446,9 @@
                   </StackPanel>
                 </StackPanel>
 
-                <!-- .dual (saturation): grey to full chroma -->
+                <!-- .dual (saturation): gray to full chroma -->
                 <StackPanel Spacing="7">
-                  <Grid ColumnDefinitions="*,Auto">
+                  <Grid Classes="ctlh" ColumnDefinitions="*,Auto">
                     <TextBlock Grid.Column="0" Text="SATURATION RANGE" Classes="plabel" VerticalAlignment="Center" />
                     <TextBlock Grid.Column="1" Classes="cv" Text="{Binding SatRangeText}" />
                   </Grid>
@@ -456,26 +466,29 @@
 
                 <!-- .qrow: compact steppers plus what the two bucket counts actually add up to. -->
                 <StackPanel Spacing="7">
-                  <Grid ColumnDefinitions="*,Auto">
+                  <Grid Classes="ctlh" ColumnDefinitions="*,Auto">
                     <TextBlock Grid.Column="0" Text="QUANTIZE" Classes="plabel" VerticalAlignment="Center" />
                     <TextBlock Grid.Column="1" Classes="cv" Text="{Binding ApproxColorsText}" />
                   </Grid>
+                  <!-- WIDTH IS A BUDGET here too: the rail is a fixed 300 and its body 13px in on
+                       each side, so this row has 274. At 112 apiece the second stepper's chevron ran
+                       off the edge. ColorizeRailLayoutTests holds the budget. -->
                   <StackPanel Orientation="Horizontal" Spacing="10">
                     <StackPanel Orientation="Horizontal" Spacing="5">
                       <TextBlock Text="Hue" Classes="cshare" VerticalAlignment="Center" />
-                      <NumericUpDown Value="{Binding HueQuantize}" Minimum="1" Width="112" />
+                      <NumericUpDown Value="{Binding HueQuantize}" Minimum="1" Width="94" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="5">
                       <TextBlock Text="Sat" Classes="cshare" VerticalAlignment="Center" />
-                      <NumericUpDown Value="{Binding SatQuantize}" Minimum="1" Width="112" />
+                      <NumericUpDown Value="{Binding SatQuantize}" Minimum="1" Width="94" />
                     </StackPanel>
                   </StackPanel>
                 </StackPanel>
               </StackPanel>
 
-              <!-- Static: a fixed colour, shown as a swatch rather than only as hex text. -->
-              <StackPanel Spacing="7" IsVisible="{Binding ShowFixedColour}">
-                <TextBlock Text="FIXED COLOUR" Classes="plabel" />
+              <!-- Static: a fixed color, shown as a swatch rather than only as hex text. -->
+              <StackPanel Spacing="7" IsVisible="{Binding ShowFixedColor}">
+                <TextBlock Text="FIXED COLOR" Classes="plabel" />
                 <StackPanel Orientation="Horizontal" Spacing="9">
                   <Border Width="34" Height="34" CornerRadius="{DynamicResource RadiusSm}"
                           BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1"
@@ -487,28 +500,28 @@
               </StackPanel>
 
               <!-- .vlock: value is not editable here; it comes from the grayscale map. -->
-              <Panel Margin="0,4,0,0" IsVisible="{Binding ShowColorizeMode}">
+              <Panel IsVisible="{Binding ShowColorizeMode}">
                 <Rectangle Classes="dashed btn" />
                 <Grid ColumnDefinitions="Auto,*" Margin="10,9">
                   <Path Grid.Column="0" Classes="ico xs" Data="{StaticResource IconLock}"
                         VerticalAlignment="Top" Margin="0,1,8,0" />
                   <TextBlock Grid.Column="1" Classes="vlock"
-                             Text="Value comes from the grayscale map — colour only sets hue and saturation." />
+                             Text="Value comes from the grayscale map — color only sets hue and saturation." />
                 </Grid>
               </Panel>
 
               <!-- ==================== Reference layers ====================
                    Variant B of docs/design/mockups/explorations/reference-panel-variants.html: two
-                   labelled sections over a depth gutter. The layer being authored is PINNED at its own
+                   labeled sections over a depth gutter. The layer being authored is PINNED at its own
                    depth and cannot be switched off; siblings below it composite under, siblings above
                    composite over, and a loose .igt from the Kitchen is placed into a GAP for this
                    session alone — nothing here is ever written back to an archive.
 
                    Every cell that can appear is already in the layout while absent (see Styles.axaml's
                    block for this panel): a row is the same height on and off. -->
-              <Border BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0" Margin="0,6,0,0" />
+              <Border BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0" />
 
-              <Grid ColumnDefinitions="*,Auto">
+              <Grid Classes="ctlh" ColumnDefinitions="*,Auto">
                 <TextBlock Grid.Column="0" Text="REFERENCE LAYERS" Classes="plabel" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="1" Classes="hcount" Text="{Binding ReferenceCountText}" />
               </Grid>
@@ -525,7 +538,7 @@
                             Content="Ghost above" Command="{Binding ShowGhostedCommand}"
                             ToolTip.Tip="Dim the layers above this one so the art stays visible" />
                     <Button Grid.Column="2" Classes="seg-b" Classes.on="{Binding ShowsTrueComposite}"
-                            Content="True colour" Command="{Binding ShowTrueColourCommand}"
+                            Content="True color" Command="{Binding ShowTrueColorCommand}"
                             ToolTip.Tip="Show the real composite, at full opacity" />
                   </Grid>
                 </Border>
@@ -545,7 +558,7 @@
 
                 <!-- In this recipe: real siblings, at their real depths. -->
                 <StackPanel Spacing="8">
-                  <Grid ColumnDefinitions="*,Auto">
+                  <Grid Classes="ctlh" ColumnDefinitions="*,Auto">
                     <TextBlock Grid.Column="0" Text="IN THIS RECIPE" Classes="plabel" VerticalAlignment="Center" />
                     <TextBlock Grid.Column="1" Classes="hcount" Text="{Binding Siblings.Count}" />
                   </Grid>
@@ -615,7 +628,7 @@
 
                 <!-- From the Kitchen: loose .igt files, scratch only. -->
                 <StackPanel Spacing="8">
-                  <Grid ColumnDefinitions="*,Auto">
+                  <Grid Classes="ctlh" ColumnDefinitions="*,Auto">
                     <TextBlock Grid.Column="0" Text="FROM THE KITCHEN" Classes="plabel" VerticalAlignment="Center" />
                     <TextBlock Grid.Column="1" Classes="hcount" Text="{Binding KitchenLayers.Count}" />
                   </Grid>

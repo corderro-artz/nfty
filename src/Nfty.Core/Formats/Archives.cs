@@ -33,7 +33,7 @@ public static class Archives
 
     /// <summary>
     /// The archive kind for <paramref name="path"/>. An unknown extension is an error rather
-    /// than a guess — the same rule colour specs follow.
+    /// than a guess — the same rule color specs follow.
     /// </summary>
     public static ArchiveKind KindOf(string path) =>
         TryKindOf(path, out var kind) ? kind

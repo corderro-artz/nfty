@@ -6,7 +6,7 @@ using SixLabors.ImageSharp.PixelFormats;
 namespace Nfty.Core.Tests;
 
 /// <summary>
-/// The whole justification for making the paint stack generic rather than adding a parallel colour
+/// The whole justification for making the paint stack generic rather than adding a parallel color
 /// command set: a ValueMap must remain incapable of holding independent R/G/B, no matter which
 /// command paints it or which opacity mode it paints in.
 /// </summary>
@@ -14,7 +14,7 @@ public class GrayscaleGuaranteeTests
 {
     // Every command, run over one map, in one opacity mode. Deliberately exercises the two that take
     // their payload from the surface rather than from a brush (erase, move) alongside the three that
-    // carry one, because those are the paths a colour could sneak in through.
+    // carry one, because those are the paths a color could sneak in through.
     private static ValueMap PaintedThroughEveryCommand(OpacityLock opacity)
     {
         var map = new ValueMap(6, 6);
@@ -35,7 +35,7 @@ public class GrayscaleGuaranteeTests
     [Theory]
     [InlineData(OpacityLock.Locked)]
     [InlineData(OpacityLock.Unlocked)]
-    public void A_value_map_cannot_become_non_grey_through_any_command(OpacityLock opacity)
+    public void A_value_map_cannot_become_non_gray_through_any_command(OpacityLock opacity)
     {
         using Image<Rgba32> img = PaintedThroughEveryCommand(opacity).ToImage();
         for (int y = 0; y < img.Height; y++)
@@ -51,16 +51,16 @@ public class GrayscaleGuaranteeTests
     public void A_value_map_is_only_ever_a_grayscale_surface()
     {
         Assert.True(typeof(IEditSurface<GrayPixel>).IsAssignableFrom(typeof(ValueMap)));
-        // If it were also an Rgba32 surface, every colour command would accept it and the guarantee
+        // If it were also an Rgba32 surface, every color command would accept it and the guarantee
         // would rest on nobody ever writing `new BrushStroke<Rgba32>(...).Apply(valueMap)`.
         Assert.False(typeof(IEditSurface<Rgba32>).IsAssignableFrom(typeof(ValueMap)));
     }
 
     [Fact]
-    public void No_public_value_map_member_moves_a_colour_pixel_in_or_out()
+    public void No_public_value_map_member_moves_a_color_pixel_in_or_out()
     {
         // Whole-image import/export (Image<Rgba32>) is the documented boundary and stays. What must
-        // not exist is a per-pixel colour path — a Set/Get/ctor taking or returning an Rgba32 — since
+        // not exist is a per-pixel color path — a Set/Get/ctor taking or returning an Rgba32 — since
         // that is the one shape that could store independent R/G/B.
         var offenders = new List<string>();
         foreach (var m in typeof(ValueMap).GetMembers(BindingFlags.Public | BindingFlags.Instance |
@@ -81,7 +81,7 @@ public class GrayscaleGuaranteeTests
     public void The_gray_pixel_has_one_value_channel_and_one_alpha()
     {
         // GrayPixel is what carries the guarantee into the generic stack: if it ever grew a second
-        // colour component, every command would be able to make a value-map non-grey.
+        // color component, every command would be able to make a value-map non-gray.
         var components = typeof(GrayPixel)
             .GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
             .Select(p => p.Name)

@@ -16,8 +16,8 @@
 
   <!-- landing.html .land: two equal columns, 34px gutter, 34/38 padding. -->
   <Grid Grid.Row="0" ColumnDefinitions="*,34,*" Margin="38,34">
-    <!-- .actions is left-aligned at 272px. Stretching it inside the column centres the button
-         stack, which is what made the whole screen read as a centred splash. -->
+    <!-- .actions is left-aligned at 272px. Stretching it inside the column centers the button
+         stack, which is what made the whole screen read as a centered splash. -->
     <StackPanel Grid.Column="0" Spacing="7" MaxWidth="272" HorizontalAlignment="Left">
       <TextBlock Classes="lwordmark"><Run Text="nft" /><Run Text="y" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
       <TextBlock Text="Asset Generator" Classes="tagline" />
@@ -35,7 +35,7 @@
            (docs/superpowers/specs/2026-08-04-kitchen-design.md), NewKitchenCommand.CanExecute is
            true, and the command creates a real workspace.
            Keeping the `.soon` treatment would mean the app telling the user a working feature is
-           unavailable — which is what happened: it rendered grey beside black siblings, so nobody
+           unavailable — which is what happened: it rendered gray beside black siblings, so nobody
            clicked it. This is the third time that exact defect has landed here; the `.set` button
            below carries a comment warning against it. Rendered as the ordinary secondary action it
            now is, matching its Recipe/Ingredient siblings. -->

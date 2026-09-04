@@ -112,8 +112,8 @@ public class UniqueSpaceTests
     [Fact]
     public void Static_layer_contributes_one_bucket_not_more()
     {
-        // A static layer's colour is constant, so it adds no cross-asset uniqueness:
-        // 2 bg x 2 skin variants = 4, NOT 4 x (colour buckets).
+        // A static layer's color is constant, so it adds no cross-asset uniqueness:
+        // 2 bg x 2 skin variants = 4, NOT 4 x (color buckets).
         var book = Book(Recipe("cat", Array.Empty<IncompatibilityRule>(),
             Custom("bg", "a", "b"), StaticIng("skin", "p", "q")));
 
@@ -256,7 +256,7 @@ public class UniqueSpaceTests
     [Fact]
     public void Zero_buckets_are_not_reported_as_zero_legal_combinations()
     {
-        // A dynamic layer with no colour entries has no reachable buckets, so the total is 0.
+        // A dynamic layer with no color entries has no reachable buckets, so the total is 0.
         // The recipe has NO rules, so its legal combinations must still count 1 — conflating the
         // two zeroes makes Generator blame rules that do not exist.
         var ing = new LoadedIngredient
@@ -362,7 +362,7 @@ public class UniqueSpaceTests
     }
 
     [Fact]
-    public void Zero_weight_colour_entry_contributes_no_buckets()
+    public void Zero_weight_color_entry_contributes_no_buckets()
     {
         // ColorRoller.PickEntry accumulates weights the same way, so a zero-weight entry is
         // unreachable and its buckets belong to no asset. Only the hue 0..90 entry can be rolled

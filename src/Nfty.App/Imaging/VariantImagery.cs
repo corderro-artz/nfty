@@ -18,7 +18,7 @@ public static class VariantImagery
     /// <param name="bridge">Converts an ImageSharp frame to an Avalonia bitmap.</param>
     /// <param name="ing">The layer.</param>
     /// <param name="variantId">Which variant.</param>
-    /// <param name="salt">Varies the sampled colour, so two swatches of the same variant differ.</param>
+    /// <param name="salt">Varies the sampled color, so two swatches of the same variant differ.</param>
     /// <returns>The bitmap; the caller owns it.</returns>
     public static Bitmap Render(IImageBridge bridge, LoadedIngredient ing, string variantId, int salt = 0)
     {
@@ -32,7 +32,7 @@ public static class VariantImagery
         return bridge.ToBitmap(colored);
     }
 
-    /// <summary>Renders one variant once per colour the layer can take, for the Colorways panel.</summary>
+    /// <summary>Renders one variant once per color the layer can take, for the Colorways panel.</summary>
     /// <param name="bridge">Converts an ImageSharp frame to an Avalonia bitmap.</param>
     /// <param name="ing">The layer.</param>
     /// <param name="samples">How many swatches to render across the range.</param>
@@ -58,7 +58,7 @@ public static class VariantImagery
         return result;
     }
 
-    /// <summary>Renders a value-map with an explicit colour range, for the editor's live preview.</summary>
+    /// <summary>Renders a value-map with an explicit color range, for the editor's live preview.</summary>
     /// <param name="bridge">Converts an ImageSharp frame to an Avalonia bitmap.</param>
     /// <param name="valueMap">The source image.</param>
     /// <param name="dynamic">Whether to tint at all; false composites as-is.</param>
@@ -66,7 +66,7 @@ public static class VariantImagery
     /// <param name="hueMax">Highest hue in degrees.</param>
     /// <param name="satMin">Lowest saturation, 0-100.</param>
     /// <param name="satMax">Highest saturation, 0-100.</param>
-    /// <param name="fixedColor">A fixed colour spec to use instead of sampling the range, or null.</param>
+    /// <param name="fixedColor">A fixed color spec to use instead of sampling the range, or null.</param>
     /// <param name="salt">Varies the sample within that seed.</param>
     /// <returns>The bitmap; the caller owns it.</returns>
     public static Bitmap RenderWith(IImageBridge bridge, Image<Rgba32> valueMap, bool dynamic,
@@ -89,6 +89,6 @@ public static class VariantImagery
             using var colored = Colorizer.Apply(valueMap, c.H, c.S, ColorModel.Hsv);
             return bridge.ToBitmap(colored);
         }
-        catch (FormatException) { return bridge.ToBitmap(valueMap); }        // bad colour spec — show raw
+        catch (FormatException) { return bridge.ToBitmap(valueMap); }        // bad color spec — show raw
     }
 }

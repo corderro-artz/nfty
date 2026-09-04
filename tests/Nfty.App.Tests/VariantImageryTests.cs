@@ -62,11 +62,11 @@ public class VariantImageryTests
     }
 
     [AvaloniaFact]
-    public void RenderWith_bad_fixed_colour_falls_back_instead_of_throwing()
+    public void RenderWith_bad_fixed_color_falls_back_instead_of_throwing()
     {
         using var map = new Image<Rgba32>(4, 4);
         var bmp = VariantImagery.RenderWith(new ImageBridge(), map, dynamic: false,
-            0, 360, 40, 100, fixedColor: "not-a-colour");
+            0, 360, 40, 100, fixedColor: "not-a-color");
         Assert.Equal(4, bmp.PixelSize.Width);   // fell back to the raw map, no exception
         bmp.Dispose();
     }

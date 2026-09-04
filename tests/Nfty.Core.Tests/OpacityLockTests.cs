@@ -151,7 +151,7 @@ public class OpacityLockTests
     }
 
     [Fact]
-    public void The_lock_applies_to_the_colour_surface_too()
+    public void The_lock_applies_to_the_color_surface_too()
     {
         var map = new ColorMap(4, 1);
         new BrushStroke<Rgba32>(new Brush<Rgba32>(1, new Rgba32(10, 20, 30, 200)),
@@ -163,7 +163,7 @@ public class OpacityLockTests
     }
 
     [Fact]
-    public void Unlocked_colour_painting_keeps_partial_alpha()
+    public void Unlocked_color_painting_keeps_partial_alpha()
     {
         var map = new ColorMap(2, 1);
         new BrushStroke<Rgba32>(new Brush<Rgba32>(1, new Rgba32(10, 20, 30, 200)),

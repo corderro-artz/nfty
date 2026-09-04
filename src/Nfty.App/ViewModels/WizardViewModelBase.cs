@@ -10,7 +10,7 @@ public abstract partial class WizardViewModelBase : ViewModelBase
     /// <summary>The dialog layer this wizard closes through.</summary>
     protected readonly IDialogService Dialogs;
     /// <summary>The not-yet-wired channel, for actions a wizard cannot complete.</summary>
-    /// <summary>Initialises the shared wizard plumbing.</summary>
+    /// <summary>Initializes the shared wizard plumbing.</summary>
     /// <param name="dialogs">The dialog layer.</param>
     protected WizardViewModelBase(IDialogService dialogs) { Dialogs = dialogs; }
     /// <summary>Dismisses the wizard with no result.</summary>

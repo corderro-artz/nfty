@@ -107,11 +107,11 @@ public class LooseIngredientEditorTests
         }
     }
 
-    // Colour mode replaced the import-only contract: a loose custom ingredient opens in colour and
+    // Color mode replaced the import-only contract: a loose custom ingredient opens in color and
     // paints, so a stroke dirties it and Save becomes available with no import at all. The
-    // full-colour round-trip through the .igt is covered by IngredientEditorImportTests.
+    // full-color round-trip through the .igt is covered by IngredientEditorImportTests.
     [AvaloniaFact]
-    public void Loose_custom_paints_in_colour_and_becomes_savable_without_an_import()
+    public void Loose_custom_paints_in_color_and_becomes_savable_without_an_import()
     {
         var (path, ing) = OnDiskIgt(LayerKind.Custom);
         try

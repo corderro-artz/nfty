@@ -176,7 +176,7 @@
 
         <!-- Status bar, with the resize grip OVERLAID on its bottom-right corner rather than being
              the last child of the zoom StackPanel. As a StackPanel child it inherited that panel's
-             8px right margin and its vertical centring, so it sat ~8px in from the edge with a hit
+             8px right margin and its vertical centering, so it sat ~8px in from the edge with a hit
              rect much shorter than the corner it appeared to occupy - the user could see a grip and
              miss it. An overlay pins it to the frame's real corner and gives it the whole 22px
              square, and being last in the Panel puts it above the status bar content so nothing
@@ -187,7 +187,7 @@
             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="14" Margin="16,0" VerticalAlignment="Center">
               <!-- This used to be a hardcoded green "Valid" shown for every book, without anything
                    ever running Validator - the shell asserted a fact it had not checked. It now
-                   reports the real result, turns warning-coloured when there are problems, and lists
+                   reports the real result, turns warning-colored when there are problems, and lists
                    them on the tooltip. Hidden with no cookbook open: there is nothing to validate. -->
               <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center"
                           IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}"
@@ -199,7 +199,7 @@
               </StackPanel>
               <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"
                           IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}">
-                <!-- explorer.html's .statusbar .state.editing switches to the accent colour, so the
+                <!-- explorer.html's .statusbar .state.editing switches to the accent color, so the
                      unlocked state reads as a live mode rather than another muted count. -->
                 <Path Classes="ico sm" Data="{StaticResource IconLock}" IsVisible="{Binding !CurrentExplorer.IsEditing}" />
                 <Path Classes="ico sm editing" Data="{StaticResource IconUnlock}" IsVisible="{Binding CurrentExplorer.IsEditing}" />
@@ -218,7 +218,10 @@
               <TextBlock Classes="sbar" Text="{Binding StatusMessage}"
                          IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
             </StackPanel>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0" VerticalAlignment="Center" Spacing="2">
+            <!-- Right margin 24, not 8: the resize grip is a 22px square pinned to this corner, and
+                 at 8 the help button sat under it - the grip won the hover and the button looked
+                 like it was falling off the window. -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,24,0" VerticalAlignment="Center" Spacing="2">
               <Button Command="{Binding ZoomOutCommand}" Classes="zoomctl" ToolTip.Tip="Zoom out"><Path Classes="ico sm" Data="{StaticResource IconZoomOut}" /></Button>
               <TextBlock Classes="sbar" VerticalAlignment="Center" Width="46" TextAlignment="Center"
                          Text="{Binding Zoom, StringFormat='{}{0}%'}" />

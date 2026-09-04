@@ -14,12 +14,12 @@ public class NewIngredientViewModelTests
     { d = new FakeDialogs(); return new NewIngredientViewModel(d); }
 
     [Fact]
-    public void Kind_selects_the_matching_colour_zone()
+    public void Kind_selects_the_matching_color_zone()
     {
         var vm = Make(out _);
-        vm.Kind = LayerKind.Dynamic; Assert.True(vm.ShowColourRange); Assert.False(vm.ShowFixedColour);
-        vm.Kind = LayerKind.Static;  Assert.True(vm.ShowFixedColour); Assert.False(vm.ShowColourRange);
-        vm.Kind = LayerKind.Custom;  Assert.False(vm.ShowColourRange); Assert.False(vm.ShowFixedColour);
+        vm.Kind = LayerKind.Dynamic; Assert.True(vm.ShowColorRange); Assert.False(vm.ShowFixedColor);
+        vm.Kind = LayerKind.Static;  Assert.True(vm.ShowFixedColor); Assert.False(vm.ShowColorRange);
+        vm.Kind = LayerKind.Custom;  Assert.False(vm.ShowColorRange); Assert.False(vm.ShowFixedColor);
     }
 
     [Fact]

@@ -5,14 +5,14 @@ namespace Nfty.Core.Generation;
 
 /// <summary>One recipe's share of the space.</summary>
 /// <param name="Total">
-/// Legal combinations times reachable colour buckets. This is the recipe's space in isolation and
+/// Legal combinations times reachable color buckets. This is the recipe's space in isolation and
 /// is recorded even for a shelved (zero-weight) recipe; whether the cookbook can actually roll it
 /// is a separate question the cookbook-level <see cref="UniqueSpaceCount.Total"/> answers.
 /// </param>
 /// <param name="Combos">
-/// The legal variant combinations alone, without colour buckets folded in. <see cref="Total"/>
+/// The legal variant combinations alone, without color buckets folded in. <see cref="Total"/>
 /// can be zero for two unrelated reasons — the rules exclude every combination, or a layer has
-/// no reachable colour buckets — and only this figure tells them apart. A caller must never read
+/// no reachable color buckets — and only this figure tells them apart. A caller must never read
 /// a zero <see cref="Total"/> as a rule conflict.
 /// </param>
 /// <param name="IsExact">
@@ -64,8 +64,8 @@ public record UniqueSpaceCount(
 
 /// <summary>
 /// Counts the unique DNA space of a cookbook: per recipe, the legal variant combinations
-/// (rules honoured) multiplied by each dynamic layer's quantized colour buckets. Static and
-/// custom layers contribute a single bucket — a static layer's colour is constant, so it
+/// (rules honoured) multiplied by each dynamic layer's quantized color buckets. Static and
+/// custom layers contribute a single bucket — a static layer's color is constant, so it
 /// adds no cross-asset uniqueness.
 /// </summary>
 public static class UniqueSpace
@@ -87,7 +87,7 @@ public static class UniqueSpace
         foreach (var recipe in book.Recipes)
         {
             var (combos, combosExact) = LegalCombinations(recipe, cap);
-            var (buckets, bucketsExact) = ColourBuckets(recipe, cap);
+            var (buckets, bucketsExact) = CountColorBuckets(recipe, cap);
 
             long recipeTotal = Saturate(Multiply(combos, buckets, cap), cap);
             bool recipeExact = combosExact && bucketsExact && recipeTotal < cap;
@@ -205,7 +205,7 @@ public static class UniqueSpace
     }
 
     /// <summary>The product of every dynamic layer's distinct quantized (H,S) buckets.</summary>
-    private static (long Count, bool Exact) ColourBuckets(LoadedRecipe recipe, long cap)
+    private static (long Count, bool Exact) CountColorBuckets(LoadedRecipe recipe, long cap)
     {
         if (!TryResolveLayers(recipe, out var layers))
             return (0, false);

@@ -33,7 +33,7 @@ public class ThemeResourceTests
     [InlineData("WarningBrush")]
     [InlineData("GuideBrush")]
     [InlineData("GuideHiBrush")]
-    public void New_colour_tokens_resolve_in_both_themes(string key)
+    public void New_color_tokens_resolve_in_both_themes(string key)
     {
         Assert.IsAssignableFrom<IBrush>(Resolve(key, ThemeVariant.Light));
         Assert.IsAssignableFrom<IBrush>(Resolve(key, ThemeVariant.Dark));
@@ -87,11 +87,11 @@ public class ThemeResourceTests
     }
 
     // Regression test for a hex-order bug found while verifying Task 4's surfaces: Tokens.axaml's
-    // translucent colours were ported verbatim from the mockup's CSS custom properties, which write
+    // translucent colors were ported verbatim from the mockup's CSS custom properties, which write
     // 8-digit hex as RRGGBBAA (alpha last, CSS Color Module 4). Avalonia's Color.Parse (and
-    // BoxShadows.Parse, which shares the same colour grammar) reads 8-digit hex as AARRGGBB (alpha
+    // BoxShadows.Parse, which shares the same color grammar) reads 8-digit hex as AARRGGBB (alpha
     // first, the .NET/WPF convention) — so every translucent brush was silently rendering as an
-    // opaque, wrong-hued colour (e.g. dark LineBrush "#f2ede624" parsed to A=242 R=237 G=230 B=36,
+    // opaque, wrong-hued color (e.g. dark LineBrush "#f2ede624" parsed to A=242 R=237 G=230 B=36,
     // an opaque yellow-gold, instead of the intended ~14%-alpha near-white). This asserts each
     // affected brush's channels land where the mockup's CSS intended: RGB from the token's first 6
     // hex digits, alpha from its last 2.
@@ -118,10 +118,10 @@ public class ThemeResourceTests
         Assert.Equal(new Avalonia.Media.Color(a, r, g, b), color);
     }
 
-    // Same bug, but in the shared BoxShadows grammar: WinShadow's two hex colours per theme were
+    // Same bug, but in the shared BoxShadows grammar: WinShadow's two hex colors per theme were
     // also authored as CSS RRGGBBAA and need the same alpha-first correction.
     [AvaloniaFact]
-    public void WinShadow_colours_match_mockup_css_rgba_not_misparsed_argb()
+    public void WinShadow_colors_match_mockup_css_rgba_not_misparsed_argb()
     {
         var light = (Avalonia.Media.BoxShadows)Resolve("WinShadow", ThemeVariant.Light)!;
         Assert.Equal(new Avalonia.Media.Color(0x10, 0x12, 0x14, 0x18), light[0].Color);
@@ -224,11 +224,11 @@ public class ThemeResourceTests
     // variant resolves against ThemeVariant.Default, which never matches the "Light"/"Dark"
     // keys under Tokens.axaml's ThemeDictionaries and always returns UnsetValue.
     // The kind chip asserted against `Border.kind-dynamic`, a class Slice 9 replaced with
-    // `Border.fchip.kdyn` (wash background + kind-tinted border + kind-coloured label). Nothing in
+    // `Border.fchip.kdyn` (wash background + kind-tinted border + kind-colored label). Nothing in
     // the app referenced `.kind-dynamic` any more — this test was the only thing keeping it alive,
     // so it was guarding a style no screen could ever show. Retargeted at the shipped class.
     [AvaloniaFact]
-    public void Panel_uses_panel_brush_and_kind_chip_uses_kind_colour()
+    public void Panel_uses_panel_brush_and_kind_chip_uses_kind_color()
     {
         var panel = StyledHost.Show(new Border { Classes = { "panel" } });
         var chip = StyledHost.Show(new Border { Classes = { "fchip", "kdyn" } });
@@ -495,7 +495,7 @@ public class ThemeResourceTests
         Assert.True(layoutRoot.Background is null
             || ((ISolidColorBrush)layoutRoot.Background).Color.A == 0);
 
-        // The Dynamic child's kind glyph resolves the dynamic kind colour (guards the
+        // The Dynamic child's kind glyph resolves the dynamic kind color (guards the
         // TextBlock.kmark.kdyn selector + KindDynamicBrush token).
         var kmark = childContainer.GetVisualDescendants().OfType<TextBlock>()
             .First(t => t.Classes.Contains("kmark"));

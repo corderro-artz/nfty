@@ -78,7 +78,7 @@ public class GeneratorUnlimitedModeTests
     [Fact]
     public void Normal_mode_still_exhausts_the_space_honestly()
     {
-        // Guard: turning the flag OFF (the default) must not change the exhaustion behaviour.
+        // Guard: turning the flag OFF (the default) must not change the exhaustion behavior.
         var ex = Assert.Throws<UniqueSpaceExhaustedException>(
             () => Generator.Generate(FourDnaBook(), new GenerateOptions(5, "seed-1")));
         Assert.Equal(4, ex.Available);

@@ -5,7 +5,7 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace Nfty.Core.Tests;
 
-/// <summary>The full-colour editable surface: same shape as ValueMap, but every channel survives.</summary>
+/// <summary>The full-color editable surface: same shape as ValueMap, but every channel survives.</summary>
 public class ColorMapTests
 {
     [Fact]

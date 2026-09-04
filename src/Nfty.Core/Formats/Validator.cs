@@ -284,17 +284,17 @@ public static class Validator
         if (col.HueQuantize <= 0)
             problems.Add($"{where} has a hueQuantize of {col.HueQuantize}; it must be a positive "
                 + "integer (the bucket width in hue degrees). A value of zero or less is silently "
-                + "treated as 1 during generation, producing a far finer colour space than the "
+                + "treated as 1 during generation, producing a far finer color space than the "
                 + "author most likely intended.");
         if (col.SatQuantize <= 0)
             problems.Add($"{where} has a satQuantize of {col.SatQuantize}; it must be a positive "
                 + "integer (the bucket width in saturation percent). A value of zero or less is "
-                + "silently treated as 1 during generation, producing a far finer colour space "
+                + "silently treated as 1 during generation, producing a far finer color space "
                 + "than the author most likely intended.");
 
         foreach (var entry in col.Entries)
         {
-            // Zero is a legitimate way to shelve a colour entry; negative is not — see CheckCookBook.
+            // Zero is a legitimate way to shelve a color entry; negative is not — see CheckCookBook.
             if (!double.IsFinite(entry.Weight))
                 problems.Add($"{where} has a colorization entry with a non-finite weight "
                     + $"({Num(entry.Weight)}); weights must be a finite number, zero or greater.");
@@ -307,7 +307,7 @@ public static class Validator
             if (entry.Range is { } range)
                 CheckRange(problems, where, range);
 
-            // Spec 9: a colour spec must carry an explicit prefix and is never guessed. Parsing
+            // Spec 9: a color spec must carry an explicit prefix and is never guessed. Parsing
             // here is what makes `validate` catch it instead of Generate throwing FormatException later.
             if (entry.Fixed is { } spec)
             {
@@ -368,7 +368,7 @@ public static class Validator
     }
 
     /// <summary>Every pixel must have R==G==B: dynamic/static layers are grayscale value-maps
-    /// colorized at generation time, so a coloured pixel here would be silently misinterpreted.</summary>
+    /// colorized at generation time, so a colored pixel here would be silently misinterpreted.</summary>
     private static bool IsGrayscale(Image<Rgba32> img)
     {
         bool gray = true;

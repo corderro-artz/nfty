@@ -6,7 +6,7 @@ namespace Nfty.App.Services;
 /// <summary>The app-wide palette — the swatches the user has saved, shared across every CookBook.
 ///
 /// <para>The other scope is the open CookBook's own palette, which travels inside the archive so a
-/// collection's colours survive being handed to someone else. With a book open its swatches show
+/// collection's colors survive being handed to someone else. With a book open its swatches show
 /// first and these sit beneath; with no book open these are all there is. That resolution is
 /// <see cref="Palette.Combine"/>, in Core, so both front-ends agree on the precedence.</para>
 ///
@@ -18,15 +18,15 @@ public interface IPaletteService
     IReadOnlyList<RgbColor> Swatches { get; }
 
     /// <summary>Saves a swatch. Re-saving one already present is a no-op.</summary>
-    /// <param name="swatch">The colour to save.</param>
+    /// <param name="swatch">The color to save.</param>
     void Add(RgbColor swatch);
 
     /// <summary>Forgets a swatch. Removing one that is not saved is a no-op.</summary>
-    /// <param name="swatch">The colour to forget.</param>
+    /// <param name="swatch">The color to forget.</param>
     void Remove(RgbColor swatch);
 }
 
-/// <summary>The app palette, persisted in the <see cref="IStateStore"/> as a list of prefixed colour
+/// <summary>The app palette, persisted in the <see cref="IStateStore"/> as a list of prefixed color
 /// specs — the same form an author types, so the file stays readable and hand-editable.
 ///
 /// <para>Convenience state throughout: a corrupt file loads empty, a failed save is swallowed, and

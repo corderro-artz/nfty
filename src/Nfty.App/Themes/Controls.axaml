@@ -9,7 +9,7 @@
     examples). Being keyed by "{x:Type X}" (not an arbitrary name) makes each theme apply to every
     instance of that control automatically — no Classes needed on call sites.
 
-    Colours pull from Tokens.axaml via DynamicResource so both ThemeVariants stay correct.
+    Colors pull from Tokens.axaml via DynamicResource so both ThemeVariants stay correct.
 
     Mechanism notes (from reading the actual Fluent theme XAML at 11.2.3, the version current when
     these were written; the app is on 12.1.1 now — see task-5-report.md for
@@ -23,7 +23,7 @@
         border in Styles.axaml).
       - Slider: Foreground/Background TemplateBind through to the PART_DecreaseButton (filled track)
         and PART_IncreaseButton (track) at rest, but the Thumb's Background and every hover/pressed
-        track colour are hardcoded DynamicResource references baked directly into Fluent's shared
+        track color are hardcoded DynamicResource references baked directly into Fluent's shared
         ControlTemplate (not TemplateBound) — reached the same way, via same-selector nested Styles.
       - CheckBox / RadioButton: the actual check glyph/box (Border#NormalRectangle,
         Ellipse#CheckOuterEllipse, Path#CheckGlyph, Ellipse#CheckGlyph) are hardcoded DynamicResource
@@ -174,7 +174,7 @@
                 BasedOn="{StaticResource {x:Type CheckBox}}">
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
 
-    <!-- Unchecked box: panel fill, line-strong stroke. NormalRectangle's colours are hardcoded
+    <!-- Unchecked box: panel fill, line-strong stroke. NormalRectangle's colors are hardcoded
          DynamicResource in Fluent's shared template (Avalonia "Template" priority), not
          TemplateBound, so a plain (pseudo-class-free) Style setter is silently a no-op here
          (confirmed — see task-5-report.md); ":not(:disabled)" is pseudo-class-qualified so it
@@ -293,7 +293,7 @@
        Both the highlight and the branch guide are drawn by the ITEM TEMPLATE (Border.node and
        Border.guide in Styles.axaml) rather than by this theme, because PART_LayoutRoot spans the
        row's whole width — indent included — and Fluent's PART_ItemsPresenter has no bordered wrapper
-       to hang a guide off. The rules below only neutralise Fluent's own state paints so the two do
+       to hang a guide off. The rules below only neutralize Fluent's own state paints so the two do
        not stack; the 2px accent bar rides along on Border.node as an inset BoxShadow (Avalonia's
        BoxShadow grammar accepts a leading "inset" keyword, the same technique the mockup uses with
        its own "box-shadow: inset 2px 0 0").

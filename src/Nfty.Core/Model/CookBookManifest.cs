@@ -19,12 +19,12 @@ namespace Nfty.Core.Model;
 /// deliberately NOT bumped for it: the change is purely additive, System.Text.Json ignores unknown
 /// properties so older builds read these archives fine, and a bump would instead make every already
 /// shipped build reject them.</param>
-/// <param name="Palette">The swatches this collection carries, as prefixed colour specs
+/// <param name="Palette">The swatches this collection carries, as prefixed color specs
 /// (<c>hex:d6249f</c>), or null when the book has never saved one. Book-scoped so a collection's
-/// colours travel with it when it is handed to someone else — the app-wide palette in the
+/// colors travel with it when it is handed to someone else — the app-wide palette in the
 /// <c>.nfty</c> store sits beneath these, see <see cref="Imaging.Palette.Combine"/>.
 ///
-/// Specs rather than a colour record because that is already how a manifest spells a colour
+/// Specs rather than a color record because that is already how a manifest spells a color
 /// (<see cref="ColorEntry.Fixed"/>), so a palette reads the same as everything around it and
 /// <c>ColorSpec</c> stays the single parser. This is the ten-slot ramp's <em>saved swatches</em>
 /// only: the ramp itself is computed and the painting mode is editor state, so neither belongs in a

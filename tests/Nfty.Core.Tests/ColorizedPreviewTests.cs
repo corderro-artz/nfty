@@ -18,7 +18,7 @@ public class ColorizedPreviewTests
     }
 
     [Fact]
-    public void Static_fixed_colour_matches_the_colorizer_output_exactly()
+    public void Static_fixed_color_matches_the_colorizer_output_exactly()
     {
         var colorization = new Colorization(ColorModel.Hsv, 1, 1,
             new[] { new ColorEntry(1, null, "hsv:200,50,50") });

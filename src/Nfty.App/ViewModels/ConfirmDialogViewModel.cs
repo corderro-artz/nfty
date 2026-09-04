@@ -3,7 +3,7 @@ using Nfty.App.Services;
 
 namespace Nfty.App.ViewModels;
 
-/// <summary>Reusable yes/no modal. Closes with a bool: true = confirmed, false = cancelled.</summary>
+/// <summary>Reusable yes/no modal. Closes with a bool: true = confirmed, false = canceled.</summary>
 public partial class ConfirmDialogViewModel : ViewModelBase
 {
     private readonly IDialogService _dialogs;

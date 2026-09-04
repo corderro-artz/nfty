@@ -145,7 +145,7 @@ public static class Generator
                 if (rolled is null) continue;                // rule violation → reroll
 
                 // Dedup BEFORE rendering. The DNA is a function of the selection and the rolled
-                // colours, all of which the roll phase already has, so a collision can be detected
+                // colors, all of which the roll phase already has, so a collision can be detected
                 // without touching a pixel. Rendering first meant every duplicate threw away a
                 // fully colorized and composited canvas — and minting near the top of the unique
                 // space is the normal case, where coupon-collector says most attempts collide. The
@@ -189,7 +189,7 @@ public static class Generator
 
         // Every recipe this run could roll is ruled out entirely: the space is empty, not small.
         // Keyed off legal COMBINATIONS, never the total — a total can also hit zero because a
-        // layer has no reachable colour buckets, which is not a rule conflict and must not be
+        // layer has no reachable color buckets, which is not a rule conflict and must not be
         // reported as one (a rules-free recipe would otherwise be blamed on rules that do not exist).
         var dead = inPlay.Where(id => space[id].Combos == 0).ToList();
         if (dead.Count == inPlay.Count && dead.Count > 0)
@@ -270,10 +270,10 @@ public static class Generator
     /// </summary>
     /// <param name="Dna">The identity this roll would produce.</param>
     /// <param name="Recipe">The recipe rolled.</param>
-    /// <param name="Plan">Per layer: the source image, its rolled colour, and the colour model —
+    /// <param name="Plan">Per layer: the source image, its rolled color, and the color model —
     /// a null model marks a Custom layer, cloned as-is rather than colorized.</param>
     /// <param name="Traits">The trait selections, in layer order.</param>
-    /// <param name="ColorRolls">The per-layer colour record for the rich metadata.</param>
+    /// <param name="ColorRolls">The per-layer color record for the rich metadata.</param>
     private sealed record RolledAsset(
         string Dna,
         LoadedRecipe Recipe,
@@ -316,8 +316,8 @@ public static class Generator
                     case LayerKind.Dynamic or LayerKind.Static:
                     {
                         // Both kinds are grayscale value-maps colorized with an (H,S). The ONLY
-                        // difference is where that colour comes from: dynamic rolls it per asset,
-                        // static resolves its single fixed colour and consumes NO RNG (spec 5.3).
+                        // difference is where that color comes from: dynamic rolls it per asset,
+                        // static resolves its single fixed color and consumes NO RNG (spec 5.3).
                         var col = ing.Manifest.Colorization!;
                         var color = kind == LayerKind.Dynamic
                             ? ColorRoller.Roll(col, rng)

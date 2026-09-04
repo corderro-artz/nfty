@@ -94,7 +94,7 @@ public class ExplorerAddLooseRecipeTests
     }
 
     [AvaloniaFact]
-    public async Task Cancelling_the_save_picker_writes_nothing()
+    public async Task Canceling_the_save_picker_writes_nothing()
     {
         (var cbkPath, var session, _, _) = IngredientEditorSaveTests.OnDisk();
         var nav = new FakeNav();
@@ -102,7 +102,7 @@ public class ExplorerAddLooseRecipeTests
         var vm = new ExplorerViewModel(session.Current!, nav, dialogs, new ImageBridge(),
             ExplorerViewModelTests.EditorFactory(nav, session, dialogs),
             ExplorerViewModelTests.CookFactory(dialogs), session,
-            new SavePicker(null),   // user cancelled
+            new SavePicker(null),   // user canceled
             ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs), new StatusService());
         try
         {

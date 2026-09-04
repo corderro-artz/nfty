@@ -13,19 +13,19 @@ namespace Nfty.App.ViewModels;
 
 /// <summary>One cell of the editor's palette strip: a ramp slot or a saved swatch.</summary>
 /// <remarks>
-/// The colour is <b>artwork data, not a theme token</b>. The house rule that no raw colour lives
+/// The color is <b>artwork data, not a theme token</b>. The house rule that no raw color lives
 /// outside <c>Themes/Tokens.axaml</c> governs chrome; a ramp Core computed and a swatch the author
 /// mixed are neither, and moving them into a theme dictionary would make them change with the theme.
 /// </remarks>
 public sealed partial class PaletteSwatch : ObservableObject
 {
-    /// <summary>The colour, in Core's terms.</summary>
+    /// <summary>The color, in Core's terms.</summary>
     public RgbColor Rgb { get; }
 
-    /// <summary>The same colour as the view paints it.</summary>
+    /// <summary>The same color as the view paints it.</summary>
     public Avalonia.Media.Color Color { get; }
 
-    /// <summary>The prefixed spec an author would type for this colour — the tooltip, and the form
+    /// <summary>The prefixed spec an author would type for this color — the tooltip, and the form
     /// the palette is persisted in, so what is shown and what is stored cannot drift.</summary>
     public string Spec { get; }
 
@@ -43,11 +43,11 @@ public sealed partial class PaletteSwatch : ObservableObject
     /// silent failure an unresolved <c>DynamicResource</c> produces.</para></summary>
     public System.Windows.Input.ICommand? ForgetCommand { get; }
 
-    /// <summary>Whether this is the colour the brush is currently laying down.</summary>
+    /// <summary>Whether this is the color the brush is currently laying down.</summary>
     [ObservableProperty] private bool _isSelected;
 
     /// <summary>Creates a palette cell.</summary>
-    /// <param name="rgb">The colour.</param>
+    /// <param name="rgb">The color.</param>
     /// <param name="forget">Forgets this swatch, or null for a cell that cannot be forgotten.</param>
     public PaletteSwatch(RgbColor rgb, System.Windows.Input.ICommand? forget = null)
     {
@@ -61,7 +61,7 @@ public sealed partial class PaletteSwatch : ObservableObject
 
 /// <summary>
 /// The editor's palette strip and opacity lock: which ramp the ten slots offer, the swatches the
-/// author has saved, the colour and alpha the brush lays down, and whether partial alpha is admitted
+/// author has saved, the color and alpha the brush lays down, and whether partial alpha is admitted
 /// at all.
 /// </summary>
 public partial class IngredientEditorViewModel
@@ -76,32 +76,32 @@ public partial class IngredientEditorViewModel
     /// its archive, and changing it belongs with the CookBook, not with one layer's canvas.</summary>
     private readonly IReadOnlyList<RgbColor> _bookSwatches;
 
-    // Whether colour mode has ever been entered this session; see OnPaintModeChanged.
+    // Whether color mode has ever been entered this session; see OnPaintModeChanged.
     private bool _everEnteredColor;
 
     // Shown at most once per editor session. The warning is about what partial alpha does to a
     // downstream voxel conversion, which does not become more true on the second stroke.
     private bool _partialAlphaWarned;
 
-    /// <summary>The ten ramp slots — greys in grayscale mode, hues in colour mode. The count never
+    /// <summary>The ten ramp slots — grays in grayscale mode, hues in color mode. The count never
     /// changes, so swapping the mode repaints ten cells and reflows nothing.</summary>
     public ObservableCollection<PaletteSwatch> Ramp { get; } = new();
 
     /// <summary>The saved swatches: the open book's first, the app-wide ones beneath, deduplicated
-    /// by <see cref="Palette.Combine"/> so a colour saved in both appears once.</summary>
+    /// by <see cref="Palette.Combine"/> so a color saved in both appears once.</summary>
     public ObservableCollection<PaletteSwatch> SavedSwatches { get; } = new();
 
     /// <summary>Which ramp the strip offers. Not a property of the artwork: switching it hands the
-    /// author different colours to pick and repaints no pixel that is already down.</summary>
+    /// author different colors to pick and repaints no pixel that is already down.</summary>
     [ObservableProperty] private PaletteMode _paintMode;
 
     /// <summary>Whether a stroke may write partial alpha. Locked is the default and the zero value.</summary>
     [ObservableProperty] private OpacityLock _opacityMode;
 
-    /// <summary>Hue of the paint colour, 0-360. Colour mode only.</summary>
+    /// <summary>Hue of the paint color, 0-360. Color mode only.</summary>
     [ObservableProperty] private double _brushHue;
 
-    /// <summary>Saturation of the paint colour, 0-100. Colour mode only.</summary>
+    /// <summary>Saturation of the paint color, 0-100. Color mode only.</summary>
     [ObservableProperty] private double _brushSat = 100;
 
     /// <summary>The alpha every painted pixel carries. Inert while the lock is on, where the paint
@@ -109,7 +109,7 @@ public partial class IngredientEditorViewModel
     /// rather than disappearing, so unlocking moves nothing.</summary>
     [ObservableProperty] private int _brushAlpha = 255;
 
-    /// <summary>Whether the strip is offering colour rather than greys.</summary>
+    /// <summary>Whether the strip is offering color rather than grays.</summary>
     public bool IsColorMode => PaintMode == PaletteMode.Color;
 
     /// <summary>Whether partial alpha is currently admitted — drives the alpha slider's live state.</summary>
@@ -119,17 +119,17 @@ public partial class IngredientEditorViewModel
     public bool IsOpacityLocked => OpacityMode == OpacityLock.Locked;
 
     /// <summary>
-    /// Whether grayscale painting is offered at all. A Custom layer exports its colour raster and
+    /// Whether grayscale painting is offered at all. A Custom layer exports its color raster and
     /// nothing else, so painting one in grayscale would edit pixels no archive ever sees — the mode
     /// is refused rather than allowed and quietly discarded.
     /// </summary>
     public bool CanPaintGrayscale => !IsCustom;
 
     /// <summary>
-    /// The colour the brush is laying down right now, whichever mode supplied it.
+    /// The color the brush is laying down right now, whichever mode supplied it.
     /// </summary>
     /// <remarks>
-    /// Colour mode is HSV over three axes the screen already had: the toolstrip's value ramp is
+    /// Color mode is HSV over three axes the screen already had: the toolstrip's value ramp is
     /// <b>V</b>, and the colorize rail's hue and saturation tracks — dead space on a Custom layer,
     /// which rolls nothing — become <b>H</b> and <b>S</b>. Grayscale mode uses the same V axis alone,
     /// so the ramp means "how bright" in both modes and no control changes what it does under the
@@ -145,16 +145,16 @@ public partial class IngredientEditorViewModel
     /// <summary>The saturation axis as the rail prints it.</summary>
     public string BrushSatText => $"{BrushSat:0}%";
 
-    /// <summary>The paint colour as a swatch, alpha included — under the lock alpha is always 255,
+    /// <summary>The paint color as a swatch, alpha included — under the lock alpha is always 255,
     /// so the swatch only ever looks translucent when a translucent stroke is really what is armed.</summary>
     public Avalonia.Media.Color BrushSwatch =>
         Avalonia.Media.Color.FromArgb((byte)(IsAlphaEnabled ? BrushAlpha : 255),
             CurrentRgb.R, CurrentRgb.G, CurrentRgb.B);
 
-    /// <summary>The armed colour as a spec, for the strip's readout.</summary>
+    /// <summary>The armed color as a spec, for the strip's readout.</summary>
     public string BrushSpec => ColorSpec.Format(CurrentRgb);
 
-    /// <summary>The pixel a colour-mode command paints.</summary>
+    /// <summary>The pixel a color-mode command paints.</summary>
     private SixLabors.ImageSharp.PixelFormats.Rgba32 ColorInk =>
         new(CurrentRgb.R, CurrentRgb.G, CurrentRgb.B, EffectiveAlpha);
 
@@ -167,16 +167,16 @@ public partial class IngredientEditorViewModel
 
     partial void OnPaintModeChanged(PaletteMode value)
     {
-        // Entering colour mode widens EVERY variant, not just the selected one: a save writes the
-        // whole ingredient, and a variant left without a colour raster would make the export throw
+        // Entering color mode widens EVERY variant, not just the selected one: a save writes the
+        // whole ingredient, and a variant left without a color raster would make the export throw
         // on a variant the author never visited.
         if (value == PaletteMode.Color)
         {
             foreach (var v in _draft.Variants) v.EnsureColor();
 
-            // Arm a colour the author can see in the palette. The grayscale default (V=128) reads as
+            // Arm a color the author can see in the palette. The grayscale default (V=128) reads as
             // HSV(0, 100%, 50%) once hue and saturation join it — a muddy dark red nobody picked and
-            // no slot offers. Only on the FIRST entry: after that the armed colour is theirs.
+            // no slot offers. Only on the FIRST entry: after that the armed color is theirs.
             if (!_everEnteredColor)
             {
                 _everEnteredColor = true;
@@ -195,8 +195,8 @@ public partial class IngredientEditorViewModel
         // The rail's hue and saturation tracks change what they mean with the mode, so everything
         // keyed off that has to be announced here too.
         OnPropertyChanged(nameof(ShowColorizeMode));
-        OnPropertyChanged(nameof(ShowColourRange));
-        OnPropertyChanged(nameof(ShowFixedColour));
+        OnPropertyChanged(nameof(ShowColorRange));
+        OnPropertyChanged(nameof(ShowFixedColor));
     }
 
     partial void OnOpacityModeChanged(OpacityLock value)
@@ -210,7 +210,7 @@ public partial class IngredientEditorViewModel
     partial void OnBrushSatChanged(double value) { OnPropertyChanged(nameof(BrushSatText)); NotifyBrushChanged(); }
     partial void OnBrushAlphaChanged(int value) => OnPropertyChanged(nameof(BrushSwatch));
 
-    /// <summary>Announces every projection of the armed colour at once. One method because the three
+    /// <summary>Announces every projection of the armed color at once. One method because the three
     /// axes each change all of them, and a per-axis list is three places to forget one.</summary>
     private void NotifyBrushChanged()
     {
@@ -246,11 +246,11 @@ public partial class IngredientEditorViewModel
         foreach (var s in SavedSwatches) s.IsSelected = s.Rgb == current;
     }
 
-    /// <summary>Arms a palette colour.</summary>
+    /// <summary>Arms a palette color.</summary>
     /// <param name="swatch">The cell that was clicked.</param>
     /// <remarks>
-    /// In grayscale mode a colour swatch is taken as its <b>lightness</b> (BT.709), the same
-    /// reduction importing a colour PNG into a value-map performs. A value-map stores lightness and
+    /// In grayscale mode a color swatch is taken as its <b>lightness</b> (BT.709), the same
+    /// reduction importing a color PNG into a value-map performs. A value-map stores lightness and
     /// nothing else, so the alternative to converting is refusing the click, and refusing it would
     /// leave saved swatches visibly present and silently inert.
     /// </remarks>
@@ -258,8 +258,8 @@ public partial class IngredientEditorViewModel
     private void PickSwatch(PaletteSwatch swatch)
     {
         if (!IsColorMode) { BrushValue = Luminance(swatch.Rgb); return; }
-        // Decompose onto the three axes rather than storing the colour, so the sliders show where the
-        // picked colour sits and the next drag continues from there instead of jumping.
+        // Decompose onto the three axes rather than storing the color, so the sliders show where the
+        // picked color sits and the next drag continues from there instead of jumping.
         var (h, sat, v) = ColorConvert.RgbToHsv(swatch.Rgb);
         BrushHue = h;
         BrushSat = sat * 100.0;
@@ -267,11 +267,11 @@ public partial class IngredientEditorViewModel
     }
 
     /// <summary>ITU-R BT.709 luminance, matching <c>ImageSharp</c>'s <c>Grayscale()</c> — which is
-    /// what an imported colour PNG is reduced through, so a swatch and an import agree.</summary>
+    /// what an imported color PNG is reduced through, so a swatch and an import agree.</summary>
     private static byte Luminance(RgbColor c) =>
         (byte)Math.Round(0.2126 * c.R + 0.7152 * c.G + 0.0722 * c.B);
 
-    /// <summary>Saves the armed colour to the app-wide palette. Re-saving one already there is a
+    /// <summary>Saves the armed color to the app-wide palette. Re-saving one already there is a
     /// no-op, so the button is never a way to accumulate duplicates.</summary>
     [RelayCommand]
     private void SaveSwatch()
@@ -291,7 +291,7 @@ public partial class IngredientEditorViewModel
         RefreshSaved();
     }
 
-    /// <summary>Switches the strip to the grey ramp.</summary>
+    /// <summary>Switches the strip to the gray ramp.</summary>
     [RelayCommand]
     private void SetPaintGrayscale()
     {
@@ -303,7 +303,7 @@ public partial class IngredientEditorViewModel
 
     /// <summary>
     /// Toggles the opacity lock, warning once before partial alpha is admitted for the first time
-    /// this session. Cancelling the warning leaves the lock on — the dialog is a gate, not a notice
+    /// this session. Canceling the warning leaves the lock on — the dialog is a gate, not a notice
     /// shown after the fact.
     /// </summary>
     [RelayCommand]

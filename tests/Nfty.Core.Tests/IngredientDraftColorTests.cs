@@ -5,8 +5,8 @@ using SixLabors.ImageSharp.PixelFormats;
 namespace Nfty.Core.Tests;
 
 /// <summary>
-/// The draft's two rasters, and which one an export reads. A variant painted in colour carries both
-/// — that is what lets a colour save leave the original value-map layer untouched on disk — so
+/// The draft's two rasters, and which one an export reads. A variant painted in color carries both
+/// — that is what lets a color save leave the original value-map layer untouched on disk — so
 /// "whichever is non-null" is never the rule; the ingredient's KIND is.
 /// </summary>
 public class IngredientDraftColorTests
@@ -27,12 +27,12 @@ public class IngredientDraftColorTests
     }
 
     [Fact]
-    public void Entering_colour_widens_the_value_map_rather_than_starting_blank()
+    public void Entering_color_widens_the_value_map_rather_than_starting_blank()
     {
         var v = Gray("v1");
         var color = v.EnsureColor();
 
-        // The drawing that is already there, in grey — no hue, no saturation, no colorization.
+        // The drawing that is already there, in gray — no hue, no saturation, no colorization.
         var lifted = color.Get(1, 1);
         Assert.Equal(200, lifted.R);
         Assert.Equal(200, lifted.G);
@@ -42,7 +42,7 @@ public class IngredientDraftColorTests
     }
 
     [Fact]
-    public void Entering_colour_twice_never_discards_paint()
+    public void Entering_color_twice_never_discards_paint()
     {
         var v = Gray("v1");
         v.EnsureColor().Set(1, 1, new Rgba32(10, 20, 30, 255));
@@ -53,10 +53,10 @@ public class IngredientDraftColorTests
     }
 
     [Fact]
-    public void A_value_map_layer_exports_its_value_map_even_when_it_also_has_colour()
+    public void A_value_map_layer_exports_its_value_map_even_when_it_also_has_color()
     {
         var v = Gray("v1");
-        v.EnsureColor().Set(1, 1, new Rgba32(255, 0, 0, 255));   // painted in colour, not saved as Custom
+        v.EnsureColor().Set(1, 1, new Rgba32(255, 0, 0, 255));   // painted in color, not saved as Custom
 
         var (manifest, images) = IngredientDraftExporter.Export(Draft(LayerKind.Dynamic, v));
         using var img = images["v1"];
@@ -64,12 +64,12 @@ public class IngredientDraftColorTests
         Assert.Equal(LayerKind.Dynamic, manifest.Kind);
         var px = img[1, 1];
         Assert.Equal(200, px.R);
-        Assert.Equal(px.R, px.G);   // still a grey — the colour raster was not read
+        Assert.Equal(px.R, px.G);   // still a gray — the color raster was not read
         Assert.Equal(px.G, px.B);
     }
 
     [Fact]
-    public void A_custom_layer_exports_its_colour_map()
+    public void A_custom_layer_exports_its_color_map()
     {
         var v = Gray("v1");
         v.EnsureColor().Set(1, 1, new Rgba32(255, 0, 0, 255));
@@ -83,7 +83,7 @@ public class IngredientDraftColorTests
     /// <summary>The GUI cannot reach this — a Custom draft's variants all carry a raster — but the
     /// exporter is the contract point, and a CLI or a future caller building a draft by hand can.</summary>
     [Fact]
-    public void A_custom_layer_whose_variant_has_no_colour_is_refused()
+    public void A_custom_layer_whose_variant_has_no_color_is_refused()
     {
         var ex = Assert.Throws<InvalidOperationException>(
             () => IngredientDraftExporter.Export(Draft(LayerKind.Custom, Gray("v1"))));
@@ -105,7 +105,7 @@ public class IngredientDraftColorTests
     }
 
     [Fact]
-    public void A_value_map_variant_added_to_a_draft_has_no_colour_raster_yet()
+    public void A_value_map_variant_added_to_a_draft_has_no_color_raster_yet()
     {
         var draft = Draft(LayerKind.Dynamic, Gray("v1"));
 

@@ -101,7 +101,7 @@ public class IngredientEditorViewModelTests
     }
 
     [AvaloniaFact]
-    // Both preview buttons are now real toggles (C1); the behaviour is asserted in detail by
+    // Both preview buttons are now real toggles (C1); the behavior is asserted in detail by
     // IngredientEditorVariantTests.Preview_toggles_are_independent_and_do_not_touch_the_draft.
     public void Enlarge_and_fill_pane_preview_toggle_presentation_state()
     {
@@ -130,7 +130,7 @@ public class IngredientEditorViewModelTests
     }
 
     [AvaloniaFact]
-    public void Canvas_and_preview_render_and_update_on_colour_change()
+    public void Canvas_and_preview_render_and_update_on_color_change()
     {
         var (ing, recipe, book) = Real();
         using var vm = new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(),
@@ -138,7 +138,7 @@ public class IngredientEditorViewModelTests
         Assert.NotNull(vm.Canvas);
         Assert.NotNull(vm.Preview);
         var before = vm.Preview;
-        vm.HueMin = 120;                 // change colour state
+        vm.HueMin = 120;                 // change color state
         Assert.NotSame(before, vm.Preview);   // preview rebuilt (old disposed internally)
     }
 
@@ -154,10 +154,10 @@ public class IngredientEditorViewModelTests
     }
 
     [AvaloniaFact]
-    public void Custom_ingredient_canvas_shows_the_original_image_in_full_colour()
+    public void Custom_ingredient_canvas_shows_the_original_image_in_full_color()
     {
         // Import-variant-image spec §3.4: this removes the paint slice's former "custom shows
-        // grayscale" limitation — the canvas renders the effective full-colour image (the original,
+        // grayscale" limitation — the canvas renders the effective full-color image (the original,
         // absent any session import) rather than a ValueMap round-trip that would reduce it to its
         // R channel (value) + alpha, losing G/B.
         var (_, recipe, book) = Real();

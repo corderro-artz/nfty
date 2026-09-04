@@ -15,7 +15,7 @@ public readonly record struct LayerSelection(
 
 /// <summary>
 /// An asset's identity: SHA-256 over the recipe id, each layer's variant id, and — for colorized
-/// layers — the QUANTIZED colour. Quantizing is what makes uniqueness decidable at all; without it
+/// layers — the QUANTIZED color. Quantizing is what makes uniqueness decidable at all; without it
 /// two assets a pixel apart in hue would count as different.
 /// </summary>
 public static class Dna

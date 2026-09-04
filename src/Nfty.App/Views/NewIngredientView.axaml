@@ -8,7 +8,7 @@
     <KeyBinding Gesture="Escape" Command="{Binding CancelCommand}" />
     <KeyBinding Gesture="Enter" Command="{Binding CreateCommand}" />
   </UserControl.KeyBindings>
-  <!-- .tall/.tight: this is the only wizard carrying two colour ranges AND two card pickers, and the
+  <!-- .tall/.tight: this is the only wizard carrying two color ranges AND two card pickers, and the
        mockup's wizard is a full-window screen where that all fits comfortably. Ours is a dialog card
        with a hard ceiling, so this one form gets a taller card and a tighter body. Without it the
        card overflows and the ScrollViewer silently hides Destination, Canvas and the identifier -
@@ -23,9 +23,9 @@
             <TextBlock Text="CREATE" Classes="slbl" />
           </StackPanel>
           <TextBlock Text="New Ingredient" Classes="m-h" />
-          <TextBlock Classes="m-sub"><Run Text="One layer, one trait category. Its " /><Run Text="kind" Foreground="{DynamicResource FgBrush}" /><Run Text=" decides whether its colour is rolled, fixed, or baked into the art." /></TextBlock>
+          <TextBlock Classes="m-sub"><Run Text="One layer, one trait category. Its " /><Run Text="kind" Foreground="{DynamicResource FgBrush}" /><Run Text=" decides whether its color is rolled, fixed, or baked into the art." /></TextBlock>
 
-          <!-- Tighter than the other two wizards' 14/19: this is the only form carrying two colour
+          <!-- Tighter than the other two wizards' 14/19: this is the only form carrying two color
                range controls, and Fluent's Slider row is about twice the mockup's height (see
                Slider.overlay in Styles.axaml). Without this the card overflowed and put DESTINATION,
                CANVAS and the derived identifier behind an unsignposted scrollbar. -->
@@ -39,7 +39,7 @@
               <StackPanel Classes="plabel-row">
                 <TextBlock Text="KIND" Classes="plabel" />
                 <Border Classes="qmark"
-                        ToolTip.Tip="How this layer becomes pixels. Dynamic and Static are grayscale value-maps that get colorized; Custom is full-colour art composited untouched. This cannot be changed later without repainting.">
+                        ToolTip.Tip="How this layer becomes pixels. Dynamic and Static are grayscale value-maps that get colorized; Custom is full-color art composited untouched. This cannot be changed later without repainting.">
                   <TextBlock />
                 </Border>
               </StackPanel>
@@ -48,19 +48,19 @@
                 <RadioButton Grid.Column="0" Classes="choice" GroupName="Kind" IsChecked="{Binding IsKindDynamic}">
                   <StackPanel>
                     <TextBlock Text="Dynamic" Classes="ct" />
-                    <TextBlock Text="colour rolled per asset" Classes="csub" />
+                    <TextBlock Text="color rolled per asset" Classes="csub" />
                   </StackPanel>
                 </RadioButton>
                 <RadioButton Grid.Column="1" Classes="choice" GroupName="Kind" IsChecked="{Binding IsKindStatic}">
                   <StackPanel>
                     <TextBlock Text="Static" Classes="ct" />
-                    <TextBlock Text="one fixed colour" Classes="csub" />
+                    <TextBlock Text="one fixed color" Classes="csub" />
                   </StackPanel>
                 </RadioButton>
                 <RadioButton Grid.Column="2" Classes="choice" GroupName="Kind" IsChecked="{Binding IsKindCustom}">
                   <StackPanel>
                     <TextBlock Text="Custom" Classes="ct" />
-                    <TextBlock Text="full-colour, as-is" Classes="csub" />
+                    <TextBlock Text="full-color, as-is" Classes="csub" />
                   </StackPanel>
                 </RadioButton>
               </Grid>
@@ -72,7 +72,7 @@
                  identifier all fell below the card's fold behind an unsignposted scrollbar. The
                  control is the same one the ingredient editor already uses - a gradient Border with
                  two transparent-track Sliders laid over it so only the ring handles show. -->
-            <StackPanel Spacing="8" IsVisible="{Binding ShowColourRange}">
+            <StackPanel Spacing="8" IsVisible="{Binding ShowColorRange}">
               <StackPanel Spacing="4">
                 <Grid ColumnDefinitions="*,Auto">
                   <StackPanel Grid.Column="0" Classes="plabel-row">
@@ -104,9 +104,9 @@
               </StackPanel>
             </StackPanel>
 
-            <StackPanel Spacing="6" IsVisible="{Binding ShowFixedColour}">
+            <StackPanel Spacing="6" IsVisible="{Binding ShowFixedColor}">
               <StackPanel Classes="plabel-row">
-                <TextBlock Text="FIXED COLOUR" Classes="plabel" />
+                <TextBlock Text="FIXED COLOR" Classes="plabel" />
                 <Border Classes="qmark"
                         ToolTip.Tip="Needs an explicit prefix — hex:, rgb:, hsl: or hsv:. A bare value is rejected, never guessed.">
                   <TextBlock />

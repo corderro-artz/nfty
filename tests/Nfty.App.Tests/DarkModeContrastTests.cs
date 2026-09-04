@@ -28,7 +28,7 @@ namespace Nfty.App.Tests;
 ///
 /// Contrast is computed the way a person sees it, not the way the markup declares it: alpha is
 /// composited through every translucent ancestor down from the window background, and Opacity is
-/// folded in, so a 55%-alpha foreground over a 6%-alpha panel is scored on the colour that actually
+/// folded in, so a 55%-alpha foreground over a 6%-alpha panel is scored on the color that actually
 /// reaches the eye.</summary>
 public class DarkModeContrastTests
 {
@@ -75,7 +75,7 @@ public class DarkModeContrastTests
     /// is exactly why they measure low), or a field's placeholder.
     ///
     /// The mechanism does not matter; the deliberateness does. What must never qualify is text that is
-    /// fully opaque and simply the wrong colour — the "1 problem" label was opaque Black at 1.14:1,
+    /// fully opaque and simply the wrong color — the "1 problem" label was opaque Black at 1.14:1,
     /// and it is held to the normal floor and fails, which is the point of the split.</summary>
     private static bool IsReceded(TextBlock tb, double opacity, Color ink)
     {
@@ -109,7 +109,7 @@ public class DarkModeContrastTests
     }
 
     /// <summary>Source-over composite. This is the whole reason the test is honest: nearly every
-    /// surface in this app is a translucent wash, so the declared colour is never the seen colour.</summary>
+    /// surface in this app is a translucent wash, so the declared color is never the seen color.</summary>
     private static Color Over(Color fg, Color bg, double extraOpacity = 1.0)
     {
         var a = fg.A / 255.0 * extraOpacity;
@@ -137,7 +137,7 @@ public class DarkModeContrastTests
     }
 
     /// <summary>Composites every ancestor background from the window down, so the result is the
-    /// colour physically behind this control.</summary>
+    /// color physically behind this control.</summary>
     private static Color EffectiveBackground(Visual leaf, Color pageBase)
     {
         var chain = new List<Visual>();
@@ -206,8 +206,8 @@ public class DarkModeContrastTests
     }
 
     /// <summary>Every screen, both themes. Disabled controls are included on purpose: "disabled" is a
-    /// reason for text to be dimmer, not a licence for it to be unreadable — a user still has to read
-    /// a greyed-out button to know what they can't do.</summary>
+    /// reason for text to be dimmer, not a license for it to be unreadable — a user still has to read
+    /// a grayed-out button to know what they can't do.</summary>
     [AvaloniaFact]
     public void No_text_is_unreadable_against_the_surface_it_lands_on()
     {

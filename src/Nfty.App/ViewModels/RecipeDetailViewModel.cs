@@ -56,9 +56,9 @@ public partial class LayerRow : ObservableObject
     /// <summary>How many variants it offers.</summary>
     public int VariantCount { get; }
 
-    /// <summary>Whether this layer rolls its colour per asset.</summary>
+    /// <summary>Whether this layer rolls its color per asset.</summary>
     public bool IsDynamic => Kind == "Dynamic";
-    /// <summary>Whether this layer applies one fixed colour.</summary>
+    /// <summary>Whether this layer applies one fixed color.</summary>
     public bool IsStatic => Kind == "Static";
     /// <summary>Whether this layer composites as-is.</summary>
     public bool IsCustom => Kind == "Custom";
@@ -120,9 +120,9 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
     public IReadOnlyList<FactorChip> Factors { get; private set; }
 
     /// <summary>Product of the layers' variant counts - the combinations this recipe's art alone can
-    /// make, before colour. Deliberately NOT UniqueSpace.Count: that folds in each dynamic layer's
-    /// quantized colour buckets, and this line exists to explain the chips beside it, which are
-    /// variant counts. The colour-inclusive figure is the cookbook detail's business.</summary>
+    /// make, before color. Deliberately NOT UniqueSpace.Count: that folds in each dynamic layer's
+    /// quantized color buckets, and this line exists to explain the chips beside it, which are
+    /// variant counts. The color-inclusive figure is the cookbook detail's business.</summary>
     public string TotalText { get; }
     /// <summary>"N layers", pluralised.</summary>
     public string LayerCountText { get; }

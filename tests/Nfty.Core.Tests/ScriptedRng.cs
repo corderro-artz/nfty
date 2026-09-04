@@ -7,13 +7,13 @@ namespace Nfty.Core.Tests;
 /// this: a seed proves two runs agree, a script proves <i>which</i> draw went where.
 ///
 /// <para>Overrunning throws rather than returning a default, which is what makes the <b>budget</b>
-/// assertable. What a roll costs is itself a contract here — a colour roll takes three draws
+/// assertable. What a roll costs is itself a contract here — a color roll takes three draws
 /// (weighted entry, hue, saturation), a Static layer takes none, and a caller-named variant takes
 /// none — so a change in consumption surfaces as a failure rather than as a quietly different
-/// colour.</para>
+/// color.</para>
 ///
 /// <para>Shared rather than per-file, unlike the fixture builders around it. CLAUDE.md's carve-out is
-/// for builders "shaped for what that file tests"; this is a behaviour stub with no per-file shaping
+/// for builders "shaped for what that file tests"; this is a behavior stub with no per-file shaping
 /// at all, and it had already been written out twice, byte-identically, under two names.</para>
 /// </summary>
 /// <param name="values">The draws to hand out, in order.</param>

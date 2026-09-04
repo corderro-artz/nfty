@@ -50,7 +50,7 @@ public class VariantPreviewTests
     }
 
     /// <summary>A Custom layer is composited as-is and never colorized, so its preview must be the
-    /// art untouched — applying a colour generation never applies would make the preview a lie.</summary>
+    /// art untouched — applying a color generation never applies would make the preview a lie.</summary>
     [Fact]
     public void A_custom_layer_renders_untouched()
     {
@@ -64,7 +64,7 @@ public class VariantPreviewTests
     }
 
     [Fact]
-    public void A_custom_layer_ignores_a_colour_rather_than_honouring_it()
+    public void A_custom_layer_ignores_a_color_rather_than_honouring_it()
     {
         var fill = new Rgba32(10, 200, 30, 255);
         using var ing = Ing(LayerKind.Custom, null, fill);
@@ -96,13 +96,13 @@ public class VariantPreviewTests
     // ---- what it refuses to guess ------------------------------------------------------------------
 
     [Fact]
-    public void A_colorized_layer_without_a_colour_is_an_error_naming_the_kind()
+    public void A_colorized_layer_without_a_color_is_an_error_naming_the_kind()
     {
         using var ing = Ing(LayerKind.Static, Hsv(), new Rgba32(128, 128, 128, 255));
 
         var ex = Assert.Throws<InvalidOperationException>(() => VariantPreview.Render(ing, "a"));
 
-        Assert.Contains("colour is required", ex.Message);
+        Assert.Contains("color is required", ex.Message);
         Assert.Contains("static", ex.Message);      // says WHY, not just that it failed
         Assert.Contains("Aura", ex.Message);
     }
@@ -156,7 +156,7 @@ public class VariantPreviewTests
         Assert.Contains("no colorization", fromRolled.Message);
     }
 
-    /// <summary>The rolled overload refuses it without an override too — it has no colour-spec check
+    /// <summary>The rolled overload refuses it without an override too — it has no color-spec check
     /// ahead of it, so this is the only thing standing between a broken manifest and a render.</summary>
     [Fact]
     public void The_rolled_overload_refuses_a_colorized_kind_with_no_colorization_block()
@@ -172,9 +172,9 @@ public class VariantPreviewTests
     // ---- the rolled overload -----------------------------------------------------------------------
 
     /// <summary>Ownership does not depend on which overload was called either: Custom still comes back
-    /// as a clone the caller owns, and the colour is still ignored rather than applied.</summary>
+    /// as a clone the caller owns, and the color is still ignored rather than applied.</summary>
     [Fact]
-    public void The_rolled_overload_clones_a_custom_layer_and_ignores_the_colour()
+    public void The_rolled_overload_clones_a_custom_layer_and_ignores_the_color()
     {
         var fill = new Rgba32(10, 200, 30, 255);
         using var ing = Ing(LayerKind.Custom, null, fill);
@@ -227,7 +227,7 @@ public class VariantPreviewTests
         Assert.Equal(expected, VariantPreview.NeedsColor(ing));
     }
 
-    /// <summary>Value comes from the grayscale map, hue and saturation from the colour — so a
+    /// <summary>Value comes from the grayscale map, hue and saturation from the color — so a
     /// value-map's light and dark pixels must stay light and dark after colorization.</summary>
     [Fact]
     public void Colorizing_preserves_the_value_maps_light_and_dark()

@@ -330,7 +330,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     internal void OnEditorSaved(LoadedCookBook book)
     {
         ApplyBook(book, SelectedNode?.Id);
-        // A colour save ADDS a layer to the recipe, and the editor is still open on top of this page
+        // A color save ADDS a layer to the recipe, and the editor is still open on top of this page
         // with a reference panel listing that recipe's layers — which would now be missing the one
         // just created. The editor rebuilds it from the graph it is handed.
         _openEditor?.RefreshFromBook(book);
@@ -350,7 +350,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     /// sees the same inputs. <c>LayerDepth</c>'s own doc says as much ("Validator gains nothing for
     /// depth, because those bijection rules already ARE the depth invariant"). It is worth skipping
     /// because it is not cheap: <c>Validator</c> reads <i>every pixel of every non-Custom variant</i>
-    /// to check greyscale, measured at 51 ms on a six-layer 1000x1000 book — synchronously, on the UI
+    /// to check grayscale, measured at 51 ms on a six-layer 1000x1000 book — synchronously, on the UI
     /// thread, per keystroke.</para>
     /// </param>
     private void ApplyBook(LoadedCookBook book, string? selectId, bool revalidate = true)
@@ -397,7 +397,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     /// <para>One place, because there is one rule: edits need the lock open and a <c>.cbk</c> on disk
     /// to write to. Add and reorder had grown their own copies — the read-only sentence was written out
     /// verbatim twice — while <c>CanDeleteSelected</c> expressed the identical pair as a
-    /// <c>CanExecute</c> that greys the button and explains nothing. Same rule, three shapes, and a
+    /// <c>CanExecute</c> that grays the button and explains nothing. Same rule, three shapes, and a
     /// wording fix that had to be made in two of them.</para>
     /// </summary>
     /// <param name="action">How to finish the sentence: "…then <paramref name="action"/>."</param>
@@ -632,13 +632,13 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
 
     private async Task AddRecipe()
     {
-        // The wizard's "Resulting mix" needs the siblings the new weight will be normalised against.
+        // The wizard's "Resulting mix" needs the siblings the new weight will be normalized against.
         var siblings = _book.Recipes
             .Select(r => (r.Manifest.Name, Weight: _book.Manifest.RecipeWeights.GetValueOrDefault(r.Manifest.Id)))
             .ToList();
         var wizard = new NewRecipeViewModel(_dialogs, siblings);
         var result = await _dialogs.ShowAsync<NewRecipeViewModel>(wizard);
-        if (result is null) return;   // cancelled
+        if (result is null) return;   // canceled
         if (string.IsNullOrWhiteSpace(result.DerivedId))
         {
             await ShowError("Invalid recipe", "The recipe needs a name.");
@@ -683,7 +683,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     {
         var wizard = new NewIngredientViewModel(_dialogs);
         var result = await _dialogs.ShowAsync<NewIngredientViewModel>(wizard);
-        if (result is null) return;   // cancelled
+        if (result is null) return;   // canceled
 
         if (string.IsNullOrWhiteSpace(result.DerivedId))   // authoritative: never persist an empty id
         {
@@ -729,7 +729,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         }
         finally
         {
-            if (!adopted) newIng.Dispose();   // cancelled early / validation failed / write failed → free it
+            if (!adopted) newIng.Dispose();   // canceled early / validation failed / write failed → free it
         }
     }
 
@@ -748,7 +748,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         {
             try { path = await _picker.SaveFileAsync("Save new recipe", ".rcp"); }
             catch (Exception ex) { await ShowError("Could not save", ex.Message); return; }
-            if (path is null) return;   // cancelled
+            if (path is null) return;   // canceled
         }
 
         var recipe = new LoadedRecipe
@@ -795,7 +795,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         {
             try { path = await _picker.SaveFileAsync("Save new ingredient", ".igt"); }
             catch (Exception ex) { await ShowError("Could not save", ex.Message); return; }
-            if (path is null) return;   // cancelled
+            if (path is null) return;   // canceled
         }
 
         LoadedIngredient built;

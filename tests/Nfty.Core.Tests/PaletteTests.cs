@@ -19,7 +19,7 @@ public class PaletteTests
     }
 
     [Fact]
-    public void The_grey_ramp_ascends_from_black_to_white()
+    public void The_gray_ramp_ascends_from_black_to_white()
     {
         Assert.Equal(new RgbColor(0, 0, 0), Palette.GrayRamp[0]);
         Assert.Equal(new RgbColor(255, 255, 255), Palette.GrayRamp[^1]);
@@ -30,9 +30,9 @@ public class PaletteTests
     }
 
     [Fact]
-    public void Every_grey_is_actually_grey()
+    public void Every_gray_is_actually_gray()
     {
-        // A "grey" with independent channels would be a colour that merely looks neutral, and the
+        // A "gray" with independent channels would be a color that merely looks neutral, and the
         // ramp is what a value-map is authored in.
         foreach (var g in Palette.GrayRamp)
         {
@@ -42,7 +42,7 @@ public class PaletteTests
     }
 
     [Fact]
-    public void The_grey_ramp_is_evenly_spaced_across_the_full_range()
+    public void The_gray_ramp_is_evenly_spaced_across_the_full_range()
     {
         // Reproducible by construction: step = 255/9, so no gap is more than a rounding unit off.
         var step = 255.0 / (Palette.Slots - 1);
@@ -82,22 +82,22 @@ public class PaletteTests
         Assert.Same(expected, (Palette.Empty with { Mode = mode }).Ramp);
     }
 
-    // ---- swapping offers colours, it does not touch artwork -------------------------------------
+    // ---- swapping offers colors, it does not touch artwork -------------------------------------
 
     [Fact]
     public void Swapping_the_ramp_changes_what_is_offered_and_nothing_else()
     {
         var red = new RgbColor(200, 30, 30);
-        var grey = Palette.Empty.WithSwatch(red).WithSwatch(new RgbColor(9, 9, 9));
+        var gray = Palette.Empty.WithSwatch(red).WithSwatch(new RgbColor(9, 9, 9));
 
-        var colour = grey.WithMode(PaletteMode.Color);
+        var color = gray.WithMode(PaletteMode.Color);
 
         // The ten slots are different...
-        Assert.NotEqual(grey.Ramp, colour.Ramp);
-        // ...and the user's own colours are untouched, in the same order.
-        Assert.Equal(grey.Swatches, colour.Swatches);
+        Assert.NotEqual(gray.Ramp, color.Ramp);
+        // ...and the user's own colors are untouched, in the same order.
+        Assert.Equal(gray.Swatches, color.Swatches);
         // Swapping back is a round trip, not a lossy one.
-        Assert.Equal(grey, colour.WithMode(PaletteMode.Grayscale));
+        Assert.Equal(gray, color.WithMode(PaletteMode.Grayscale));
     }
 
     [Fact]
@@ -155,7 +155,7 @@ public class PaletteTests
     }
 
     [Fact]
-    public void A_colour_in_both_scopes_appears_once_at_its_book_position()
+    public void A_color_in_both_scopes_appears_once_at_its_book_position()
     {
         var shared = new RgbColor(7, 7, 7);
         var book = new[] { shared, new RgbColor(1, 1, 1) };
@@ -204,7 +204,7 @@ public class PaletteTests
     }
 
     [Fact]
-    public void Every_ramp_colour_survives_a_spec_round_trip_exactly()
+    public void Every_ramp_color_survives_a_spec_round_trip_exactly()
     {
         // Format always writes hex for this reason: hsv/hsl resolve through 8-bit RGB and back with
         // rounding at both ends, so a channel could land one off.

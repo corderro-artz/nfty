@@ -13,7 +13,7 @@ namespace Nfty.App.Tests;
 /// The two tools whose gesture is not "stamp where the pointer went": <b>Line</b>, which uses only
 /// the ends of the drag, and <b>Select</b>, which is two gestures (mark, then move) told apart by
 /// where the drag starts. Both were affordances with nothing behind them — Select painted nothing at
-/// all, and there was no line tool — so these pin the behaviour a user would try first.
+/// all, and there was no line tool — so these pin the behavior a user would try first.
 /// </summary>
 public class EditorToolGesturesTests
 {

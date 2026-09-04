@@ -474,19 +474,19 @@ public class VisualCapture
 
                 var grips = view.GetVisualDescendants().OfType<Border>()
                     .Where(b => b.Classes.Contains("grip")).ToList();
-                Avalonia.Point Centre(Visual c) =>
+                Avalonia.Point Center(Visual c) =>
                     c.TranslatePoint(new Avalonia.Point(c.Bounds.Width / 2, c.Bounds.Height / 2), window)
                     ?? default;
 
                 // Drag the bottom layer up over the second row: press, then hold above its midpoint.
-                window.MouseDown(Centre(grips[3]), MouseButton.Left);
+                window.MouseDown(Center(grips[3]), MouseButton.Left);
                 Dispatcher.UIThread.RunJobs();
-                window.MouseMove(Centre(grips[1]) - new Avalonia.Point(0, grips[1].Bounds.Height / 2 + 2));
+                window.MouseMove(Center(grips[1]) - new Avalonia.Point(0, grips[1].Bounds.Height / 2 + 2));
                 Dispatcher.UIThread.RunJobs();
 
                 window.CaptureRenderedFrame()!.Save(
                     Path.Combine(Dir!, $"recipe-reorder-dragging-{key}.png"), PngBitmapEncoderOptions.Default);
-                window.MouseUp(Centre(grips[1]), MouseButton.Left);
+                window.MouseUp(Center(grips[1]), MouseButton.Left);
                 window.Close();
             }
         }
@@ -647,12 +647,12 @@ public class VisualCapture
             Capture(new Views.IngredientEditorView { DataContext = vm }, variant, $"editor-paint-{key}.png");
             vm.Dispose();
 
-            // TwoRecipeBook's layers are ALL LayerKind.Custom. Colour mode made those paintable, so
+            // TwoRecipeBook's layers are ALL LayerKind.Custom. Color mode made those paintable, so
             // the frames above now show a live toolstrip and the palette strip's CUSTOM state: no
-            // grey/colour tray (a Custom layer has no grey mode), the rainbow ramp, and the rail's
+            // gray/color tray (a Custom layer has no gray mode), the rainbow ramp, and the rail's
             // paint-hue/saturation axes in place of a colorization it does not have.
             //
-            // This pair is the same screen on a value-map layer: the grey/colour tray, the grey ramp
+            // This pair is the same screen on a value-map layer: the gray/color tray, the gray ramp
             // and the Dynamic colorize rail.
             var (dynBook, dynRecipe, dynIng) = DynamicIngredient();
             var dynVm = new IngredientEditorViewModel(dynIng, dynRecipe, dynBook, new ImageBridge(),
@@ -666,7 +666,7 @@ public class VisualCapture
             dynBook.Dispose();
 
             // The palette strip's remaining states, none of which the two frames above reach: a
-            // value-map layer switched INTO colour (so both halves of the tray are live and the ramp
+            // value-map layer switched INTO color (so both halves of the tray are live and the ramp
             // is the rainbow one), saved swatches actually present, and the opacity lock OFF — the
             // one state in which the alpha axis is not dimmed. Set directly rather than through
             // ToggleOpacityLock: the capture is of the unlocked strip, not of the warning dialog.
@@ -683,7 +683,7 @@ public class VisualCapture
             colVm.PickSwatchCommand.Execute(colVm.Ramp[4]);
             colVm.ActiveTool = EditorTool.Fill;
             colVm.ApplyToolStroke(new[] { (0, 0) });
-            Capture(new Views.IngredientEditorView { DataContext = colVm }, variant, $"editor-colour-{key}.png");
+            Capture(new Views.IngredientEditorView { DataContext = colVm }, variant, $"editor-color-{key}.png");
             colVm.Dispose();
             colBook.Dispose();
         }
@@ -730,7 +730,7 @@ public class VisualCapture
                 vm.PlaceDownCommand.Execute(loose);   // gap 3: directly over the layer being edited
                 CaptureReferences(vm, variant, $"editor-refs-kitchen-{key}.png");
 
-                vm.ShowTrueColourCommand.Execute(null);
+                vm.ShowTrueColorCommand.Execute(null);
                 CaptureReferences(vm, variant, $"editor-refs-true-{key}.png");
             }
             finally { book.Dispose(); Directory.Delete(kitchenDir, recursive: true); }
@@ -769,7 +769,7 @@ public class VisualCapture
                 variant, $"wizard-cookbook-{key}.png");
 
             // Siblings, or the "Resulting mix" panel hides and the frame proves nothing about it -
-            // a weight is only meaningful RELATIVE to the recipes it is normalised against.
+            // a weight is only meaningful RELATIVE to the recipes it is normalized against.
             var siblings = new[] { ("Fox", 45d), ("Owl", 25d) };
             Capture(new Views.NewRecipeView { DataContext = new NewRecipeViewModel(dialogs, siblings) { Name = "Cat" } },
                 variant, $"wizard-recipe-{key}.png");

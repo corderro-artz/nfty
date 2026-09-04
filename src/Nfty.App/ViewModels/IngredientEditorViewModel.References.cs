@@ -65,9 +65,9 @@ public partial class ReferenceLayer : ObservableObject
 
     /// <summary><c>D</c>/<c>S</c>/<c>C</c>, the tree's own kind mark; empty until the kind is known.</summary>
     public string KindMark => LayerKindMark.For(Kind) ?? "";
-    /// <summary>Whether this layer rolls its colour per asset.</summary>
+    /// <summary>Whether this layer rolls its color per asset.</summary>
     public bool IsDynamic => Kind == LayerKind.Dynamic;
-    /// <summary>Whether this layer applies one fixed colour.</summary>
+    /// <summary>Whether this layer applies one fixed color.</summary>
     public bool IsStatic => Kind == LayerKind.Static;
     /// <summary>Whether this layer composites as-is.</summary>
     public bool IsCustom => Kind == LayerKind.Custom;
@@ -201,9 +201,9 @@ public partial class IngredientEditorViewModel
     public string PinnedDepthText => _pinDepth?.ToString() ?? "—";
     /// <summary>Its kind mark.</summary>
     public string PinnedKindMark => LayerKindMark.For(_ing.Manifest.Kind);
-    /// <summary>Whether the edited layer rolls its colour per asset.</summary>
+    /// <summary>Whether the edited layer rolls its color per asset.</summary>
     public bool IsPinnedDynamic => _ing.Manifest.Kind == LayerKind.Dynamic;
-    /// <summary>Whether the edited layer applies one fixed colour.</summary>
+    /// <summary>Whether the edited layer applies one fixed color.</summary>
     public bool IsPinnedStatic => _ing.Manifest.Kind == LayerKind.Static;
     /// <summary>Whether the edited layer composites as-is.</summary>
     public bool IsPinnedCustom => _ing.Manifest.Kind == LayerKind.Custom;
@@ -395,7 +395,7 @@ public partial class IngredientEditorViewModel
             // sizes named; that message is surfaced verbatim rather than swallowed, and the references
             // simply do not draw until it is resolved.
             //
-            // FormatException is in that list because a colour spec is parsed at DRAW time, not at read
+            // FormatException is in that list because a color spec is parsed at DRAW time, not at read
             // time: `ColorSpec.Parse` refuses an unprefixed spec and `Validator` only REPORTS one, so a
             // book with "1 problem" opens and its static layers reach here unparsed. VariantImagery
             // already catches the same exception for the same reason on the single-layer path.
@@ -440,10 +440,10 @@ public partial class IngredientEditorViewModel
     /// <summary>One reference layer, chosen deterministically.
     ///
     /// <para>The variant is <see cref="StackPreview.PickVariant"/>'s — highest weight, ordinal
-    /// tie-break — and the colour comes from <see cref="StackRoll.ForIngredient"/> seeded off the
+    /// tie-break — and the color comes from <see cref="StackRoll.ForIngredient"/> seeded off the
     /// ingredient's own id. Both are deterministic on purpose: a reference that changed appearance
     /// between repaints would make the alignment this panel exists to show unreadable. Naming the
-    /// variant also costs the RNG no draw, so a Static layer still gets its own fixed colour verbatim
+    /// variant also costs the RNG no draw, so a Static layer still gets its own fixed color verbatim
     /// and a Custom layer still gets none.</para></summary>
     private static PreviewLayer LayerFor(LoadedIngredient ing) => StackRoll.ForIngredient(
         ing, StackRoll.RngFor("reference:" + ing.Manifest.Id), StackPreview.PickVariant(ing));
@@ -503,7 +503,7 @@ public partial class IngredientEditorViewModel
                 // the engine rather than paraphrased here.
                 using var probe = StackPreview.Render(_draft.Canvas, new[] { LayerFor(opened) });
             }
-            // FormatException too: a static layer's fixed colour is only parsed when it is drawn, so an
+            // FormatException too: a static layer's fixed color is only parsed when it is drawn, so an
             // unprefixed spec in a loose .igt first surfaces right here — and escaping this filter would
             // both crash the command and orphan every PNG the archive just decoded.
             catch (Exception ex) when (ex is InvalidOperationException or ArgumentException
@@ -527,7 +527,7 @@ public partial class IngredientEditorViewModel
     [RelayCommand] private void ShowGhosted() => GhostAbove = true;
 
     /// <summary>Shows the true composite: every reference at full opacity.</summary>
-    [RelayCommand] private void ShowTrueColour() => GhostAbove = false;
+    [RelayCommand] private void ShowTrueColor() => GhostAbove = false;
 
     /// <summary>Moves a Kitchen layer one gap up the stack.</summary>
     /// <param name="row">The row to move.</param>

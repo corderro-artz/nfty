@@ -290,7 +290,7 @@ public class CommandFactoryTests
 
     /// <summary>
     /// Options that belong to the other form are REJECTED rather than ignored. Silently dropping a
-    /// flag is how a user comes to believe --color did something to a stack whose colours came from
+    /// flag is how a user comes to believe --color did something to a stack whose colors came from
     /// the seed.
     /// </summary>
     [Theory]
