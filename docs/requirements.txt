@@ -1,0 +1,10 @@
+# The manual's toolchain. Pinned so a build here and a build in CI produce the same site.
+#
+#   python -m pip install -r docs/requirements.txt
+#   python -m mkdocs serve     # http://127.0.0.1:8000
+#   python -m mkdocs build     # static output in .mkdocs-site/ (gitignored)
+#
+# Material's own console warning about MkDocs 2.0 is upstream news, not a problem with this site:
+# these pins keep it on the 1.x line, where the plugins and theme overrides above are supported.
+mkdocs-material==9.7.7
+mkdocs-glightbox==0.5.2

@@ -1,0 +1,124 @@
+# nfty user manual — Material for MkDocs.
+#
+# docs_dir is docs/manual rather than docs/, on purpose: docs/ also holds the locked design mockups
+# and the superpowers specs, and MkDocs copies everything under docs_dir into the built site. The
+# manual is the only thing here meant for a user to read.
+#
+#   python -m pip install -r docs/requirements.txt
+#   python -m mkdocs serve     # live preview on http://127.0.0.1:8000
+#   python -m mkdocs build     # static site into .mkdocs-site/ (gitignored)
+
+site_name: nfty
+site_description: How to make a collection of layered pixel art, from a blank folder to a finished set.
+site_author: Vaporsoft
+repo_url: https://github.com/corderro-artz/nfty
+repo_name: corderro-artz/nfty
+edit_uri: edit/main/docs/manual/
+
+docs_dir: docs/manual
+site_dir: .mkdocs-site
+
+copyright: >
+  &copy; 2026 <a href="https://www.vaporsoft.dev" rel="noopener">Vaporsoft</a>. All rights reserved.
+
+theme:
+  name: material
+  language: en
+  # No Google Fonts request: the palette's own stacks are system fonts, and the app itself resolves
+  # them locally. Nothing here reaches out to a third party.
+  font: false
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Match my system
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light
+  features:
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+
+extra_css:
+  - stylesheets/vaporsoft.css
+
+extra:
+  social:
+    - icon: fontawesome/solid/globe
+      link: https://www.vaporsoft.dev
+      name: Vaporsoft
+    - icon: fontawesome/brands/github
+      link: https://github.com/corderro-artz/nfty
+      name: nfty on GitHub
+  generator: false
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      permalink_title: Link to this section
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+plugins:
+  - search
+  - glightbox
+
+nav:
+  - Start here:
+      - Overview: index.md
+      - concepts.md
+      - first-collection.md
+  - Drawing:
+      - layer-kinds.md
+      - drawing.md
+      - color-mode.md
+      - transparency.md
+  - Building a collection:
+      - layer-order.md
+      - weights-and-rules.md
+      - cooking.md
+      - kitchen.md
+  - Reference:
+      - screens.md
+      - cli.md
+      - troubleshooting.md

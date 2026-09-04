@@ -15,8 +15,11 @@ hue and saturation, so one hand-drawn variant becomes a whole family of them.
 Same cookbook and same seed produce byte-identical output — on any machine, in any locale, on any CPU
 architecture. That is a guarantee the test suite enforces rather than a hope.
 
-> **Using the app rather than working on it?** Start with the
-> **[User Guide](docs/USER-GUIDE.md)** instead. This file is for developers.
+> **Using the app rather than working on it?** Read the
+> **[User Manual](docs/manual/index.md)** instead. This file is for developers.
+>
+> The manual is a Material for MkDocs site — `pip install -r docs/requirements.txt`
+> then `mkdocs serve` to read it in a browser.
 
 ---
 
@@ -190,7 +193,8 @@ src/Nfty.App        the Avalonia GUI: Services, ViewModels, Views, Themes
 src/Nfty.Desktop    the desktop head — window, clipboard, file pickers
 tests/              1454 tests across three xunit.v3 projects
 tests/fixtures/     archives written by an older build, so format changes cannot pass unnoticed
-docs/USER-GUIDE.md  end-user documentation
+docs/manual/        the end-user manual (Material for MkDocs; mkdocs.yml is at the root)
+docs/requirements.txt  the manual's pinned toolchain
 docs/design/mockups the locked visual reference the GUI is built to match
 docs/superpowers/   design specs, newest first
 ```

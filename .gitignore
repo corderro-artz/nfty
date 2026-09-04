@@ -22,3 +22,6 @@ TestResults/
 # Six Labors license (account-specific; never commit)
 sixlabors.lic
 build-output.txt
+
+# Built user manual (Material for MkDocs); the source is docs/manual/
+.mkdocs-site/

@@ -1,0 +1,346 @@
+/* ==========================================================================
+   Vaporsoft palette for Material for MkDocs.
+
+   Every value here is lifted from src/Nfty.App/Themes/Tokens.axaml, which is itself a verbatim port
+   of the locked token block in docs/design/mockups/explorer.html. That file is the source of truth:
+   do not invent a hex here, and if a token changes there, change it here too.
+
+   Two notes on the translation:
+
+   - Avalonia writes 8-digit hex alpha-FIRST (#AARRGGBB); CSS writes it alpha-LAST. Rather than
+     re-rotate the digits and risk the exact bug Tokens.axaml warns about, every translucent value
+     is written here as rgb() with a decimal alpha, and the Avalonia byte it came from is in the
+     comment beside it.
+   - Material names its header colours backwards from what you would guess: --md-primary-fg-color is
+     the header's BACKGROUND and --md-primary-bg-color is its TEXT. The app's titlebar is a quiet
+     panel with an accent wordmark, not a slab of red, so primary is the panel colour here.
+   ========================================================================== */
+
+:root {
+  --md-text-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --md-code-font-family: "SF Mono", "JetBrains Mono", "Cascadia Code", ui-monospace, Menlo, Consolas, monospace;
+
+  /* Shared across both schemes: the accent is one colour in the app, and only the text form of it
+     shifts per theme for contrast. */
+  --vs-accent: #a11f31;
+  --vs-on-accent: #f7f2ec;
+}
+
+/* ---------------------------------------------------------------- light --- */
+[data-md-color-scheme="default"] {
+  --vs-bg: #f4efe8;
+  --vs-bg-alt: #f1ece4;
+  --vs-bg-alt2: #ede7df;
+  --vs-panel: #f8f3ed;
+  --vs-tile: #ece5db;
+  --vs-fg: #121318;
+  --vs-fg-muted: rgb(18 20 24 / 0.72);      /* Avalonia #b8121418 */
+  --vs-line: rgb(18 20 24 / 0.12);          /* #1f121418 */
+  --vs-line-strong: rgb(18 20 24 / 0.20);   /* #33121418 */
+  --vs-accent-text: #97192a;
+  --vs-accent-hover: #b92f44;
+  --vs-accent-wash: rgb(161 31 49 / 0.08);  /* #14a11f31 */
+  --vs-accent-line: rgb(161 31 49 / 0.25);  /* #40a11f31 */
+  --vs-success: #3d6b52;
+  --vs-warning: #6a4a25;
+  --vs-info: #3b5b6f;                       /* the Dynamic kind colour */
+  --vs-custom: #6d4f9c;                     /* the Custom kind colour */
+  --vs-shadow: 0 1px 2px rgb(18 20 24 / 0.06), 0 18px 48px -24px rgb(18 20 24 / 0.20);
+
+  color-scheme: light;
+}
+
+/* ----------------------------------------------------------------- dark --- */
+[data-md-color-scheme="slate"] {
+  --vs-bg: #07080b;
+  --vs-bg-alt: #0a0b10;
+  --vs-bg-alt2: #0f1118;
+  --vs-panel: #0b0c10;
+  --vs-tile: #12141c;
+  --vs-fg: #f2ede6;
+  --vs-fg-muted: rgb(242 237 230 / 0.78);   /* Avalonia #c7f2ede6 */
+  --vs-line: rgb(242 237 230 / 0.14);       /* #24f2ede6 */
+  --vs-line-strong: rgb(242 237 230 / 0.20);/* #33f2ede6 */
+  --vs-accent-text: #e0788a;
+  --vs-accent-hover: #ba3447;
+  --vs-accent-wash: rgb(161 31 49 / 0.15);  /* #26a11f31 */
+  --vs-accent-line: rgb(161 31 49 / 0.40);  /* #66a11f31 */
+  --vs-success: #a6c08a;
+  --vs-warning: #e0c28c;
+  --vs-info: #7fb0c4;
+  --vs-custom: #c3a6ea;
+  --vs-shadow: 0 1px 2px rgb(0 0 0 / 0.38), 0 22px 60px -28px rgb(0 0 0 / 1);
+
+  color-scheme: dark;
+}
+
+/* ------------------------------------------------- mapped onto Material --- */
+[data-md-color-scheme="default"],
+[data-md-color-scheme="slate"] {
+  --md-default-bg-color: var(--vs-bg);
+  --md-default-fg-color: var(--vs-fg);
+  --md-default-fg-color--light: var(--vs-fg-muted);
+  --md-default-fg-color--lighter: var(--vs-line-strong);
+  --md-default-fg-color--lightest: var(--vs-line);
+
+  --md-primary-fg-color: var(--vs-panel);       /* header background */
+  --md-primary-fg-color--light: var(--vs-bg-alt);
+  --md-primary-fg-color--dark: var(--vs-bg-alt2);
+  --md-primary-bg-color: var(--vs-fg);          /* header text */
+  --md-primary-bg-color--light: var(--vs-fg-muted);
+
+  --md-accent-fg-color: var(--vs-accent-text);
+  --md-accent-fg-color--transparent: var(--vs-accent-wash);
+  --md-accent-bg-color: var(--vs-on-accent);
+
+  --md-typeset-color: var(--vs-fg);
+  --md-typeset-a-color: var(--vs-accent-text);
+  --md-typeset-mark-color: var(--vs-accent-wash);
+  --md-typeset-del-color: rgb(161 31 49 / 0.20);
+  --md-typeset-ins-color: rgb(61 107 82 / 0.20);
+  --md-typeset-table-color: var(--vs-line-strong);
+
+  --md-code-fg-color: var(--vs-fg);
+  --md-code-bg-color: var(--vs-tile);
+  --md-code-hl-comment-color: var(--vs-fg-muted);
+  --md-code-hl-string-color: var(--vs-success);
+  --md-code-hl-number-color: var(--vs-custom);
+  --md-code-hl-keyword-color: var(--vs-accent-text);
+  --md-code-hl-name-color: var(--vs-fg);
+  --md-code-hl-operator-color: var(--vs-fg-muted);
+  --md-code-hl-punctuation-color: var(--vs-fg-muted);
+  --md-code-hl-function-color: var(--vs-info);
+  --md-code-hl-constant-color: var(--vs-custom);
+  --md-code-hl-variable-color: var(--vs-warning);
+
+  --md-footer-bg-color: var(--vs-bg-alt2);
+  --md-footer-bg-color--dark: var(--vs-bg-alt);
+  --md-footer-fg-color: var(--vs-fg);
+  --md-footer-fg-color--light: var(--vs-fg-muted);
+  --md-footer-fg-color--lighter: var(--vs-line-strong);
+
+  --md-shadow-z1: var(--vs-shadow);
+  --md-shadow-z2: var(--vs-shadow);
+  --md-shadow-z3: var(--vs-shadow);
+}
+
+/* ------------------------------------------------------------- chrome ---- */
+
+/* The app's titlebar is a panel with a hairline under it, not a coloured slab. */
+.md-header {
+  background-color: var(--vs-panel);
+  border-bottom: 1px solid var(--vs-line);
+  box-shadow: none;
+}
+.md-header--shadow { box-shadow: var(--vs-shadow); }
+
+/* The wordmark, as the app draws it: mono, tight, with the trailing letter in the accent. */
+.md-header__title,
+.md-nav__title[for="__drawer"] { font-family: var(--md-code-font-family); letter-spacing: -0.01em; }
+.md-header__topic:first-child .md-ellipsis { font-weight: 700; }
+.md-header__topic:first-child .md-ellipsis::after {
+  content: "";
+  display: inline-block;
+  width: 6px; height: 6px;
+  margin-left: 7px;
+  border-radius: 2px;
+  background: var(--vs-accent);
+  vertical-align: 0.08em;
+}
+
+/* Search: the app's own search field, not Material's tinted one. */
+.md-search__form {
+  background-color: var(--vs-bg-alt2);
+  border: 1px solid var(--vs-line-strong);
+  border-radius: 8px;
+  box-shadow: none;
+}
+.md-search__form:hover { background-color: var(--vs-bg-alt2); border-color: var(--vs-accent-line); }
+[data-md-toggle="search"]:checked ~ .md-header .md-search__form { border-color: var(--vs-accent-line); }
+.md-search__input { font-family: var(--md-code-font-family); font-size: 0.72rem; }
+.md-search__input::placeholder { color: var(--vs-fg-muted); }
+.md-search-result__meta,
+.md-search-result__article .md-search-result__title { font-family: var(--md-code-font-family); }
+
+/* Section labels in the sidebar read as the app's .plabel: small, spaced, muted, uppercase. */
+.md-nav--secondary .md-nav__title,
+.md-nav__item--section > .md-nav__link {
+  font-family: var(--md-code-font-family);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--vs-fg-muted);
+}
+
+/* The selected page carries the app's 2px accent bar, the same one the Explorer tree uses. */
+.md-nav__link--active,
+.md-nav__link--active code { color: var(--vs-accent-text); }
+.md-nav__item .md-nav__link--active {
+  box-shadow: inset 2px 0 0 var(--vs-accent);
+  padding-left: 0.6rem;
+}
+
+/* ------------------------------------------------------------ typeset ---- */
+
+.md-typeset h1,
+.md-typeset h2 {
+  font-family: var(--md-code-font-family);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--vs-fg);
+}
+.md-typeset h2 {
+  margin-top: 2.2em;
+  padding-top: 0.9em;
+  border-top: 1px solid var(--vs-line);
+}
+.md-typeset h1 + h2,
+.md-typeset h2:first-child { border-top: 0; padding-top: 0; margin-top: 1.2em; }
+.md-typeset h3 { font-weight: 600; }
+
+.md-typeset a:hover { color: var(--vs-accent-hover); }
+
+/* Tables: the app's panel, hairlines, and a mono header row. */
+.md-typeset table:not([class]) {
+  background-color: var(--vs-panel);
+  border: 1px solid var(--vs-line);
+  border-radius: 10px;
+  box-shadow: none;
+  font-size: 0.7rem;
+}
+.md-typeset table:not([class]) th {
+  background-color: var(--vs-bg-alt2);
+  font-family: var(--md-code-font-family);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--vs-fg-muted);
+  border-bottom: 1px solid var(--vs-line);
+}
+.md-typeset table:not([class]) td { border-top: 1px solid var(--vs-line); }
+.md-typeset table:not([class]) tr:first-child td { border-top: 0; }
+
+/* Code blocks sit on the app's tile colour, inside its own hairline. */
+.md-typeset pre > code,
+.md-typeset .highlight { border-radius: 10px; }
+.md-typeset pre > code { border: 1px solid var(--vs-line); }
+.md-typeset code { border-radius: 4px; }
+.md-typeset a > code { color: var(--vs-accent-text); }
+
+/* Blockquotes are the app's dashed note panel. */
+.md-typeset blockquote {
+  color: var(--vs-fg-muted);
+  border-left: 0;
+  border: 1px dashed var(--vs-line-strong);
+  border-radius: 8px;
+  padding: 0.7em 0.9em;
+  background: var(--vs-bg-alt);
+}
+
+/* Admonitions borrow the kind colours: info is Dynamic, warning is Static, success is the valid
+   pill, and note takes the accent. */
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: 10px;
+  border-width: 1px;
+  box-shadow: none;
+  background-color: var(--vs-panel);
+  font-size: 0.7rem;
+}
+.md-typeset .admonition-title,
+.md-typeset summary { font-family: var(--md-code-font-family); font-size: 0.68rem; }
+
+.md-typeset .note { border-color: var(--vs-accent-line); }
+.md-typeset .note > .admonition-title { background-color: var(--vs-accent-wash); }
+.md-typeset .note > .admonition-title::before { background-color: var(--vs-accent-text); }
+
+.md-typeset .tip,
+.md-typeset .success { border-color: color-mix(in srgb, var(--vs-success) 40%, transparent); }
+.md-typeset .tip > .admonition-title,
+.md-typeset .success > .admonition-title { background-color: color-mix(in srgb, var(--vs-success) 13%, transparent); }
+.md-typeset .tip > .admonition-title::before,
+.md-typeset .success > .admonition-title::before { background-color: var(--vs-success); }
+
+.md-typeset .info { border-color: color-mix(in srgb, var(--vs-info) 40%, transparent); }
+.md-typeset .info > .admonition-title { background-color: color-mix(in srgb, var(--vs-info) 13%, transparent); }
+.md-typeset .info > .admonition-title::before { background-color: var(--vs-info); }
+
+.md-typeset .warning { border-color: color-mix(in srgb, var(--vs-warning) 45%, transparent); }
+.md-typeset .warning > .admonition-title { background-color: color-mix(in srgb, var(--vs-warning) 14%, transparent); }
+.md-typeset .warning > .admonition-title::before { background-color: var(--vs-warning); }
+
+.md-typeset .danger,
+.md-typeset .failure { border-color: var(--vs-accent-line); }
+.md-typeset .danger > .admonition-title,
+.md-typeset .failure > .admonition-title { background-color: var(--vs-accent-wash); }
+.md-typeset .danger > .admonition-title::before,
+.md-typeset .failure > .admonition-title::before { background-color: var(--vs-accent); }
+
+/* -------------------------------------------------------------- extras --- */
+
+/* .kind — the letter chip the Explorer puts beside a layer. Written inline as, e.g.,
+   [D](#){ .kind .dynamic } is overkill; these are spans in the prose: <span class="kind dynamic">D</span> */
+.md-typeset .kind {
+  display: inline-block;
+  min-width: 1.35em;
+  padding: 0 0.3em;
+  border-radius: 4px;
+  border: 1px solid;
+  font-family: var(--md-code-font-family);
+  font-size: 0.82em;
+  font-weight: 600;
+  text-align: center;
+}
+.md-typeset .kind.dynamic { color: var(--vs-info);    border-color: color-mix(in srgb, var(--vs-info) 28%, transparent);    background: color-mix(in srgb, var(--vs-info) 12%, transparent); }
+.md-typeset .kind.static  { color: var(--vs-warning); border-color: color-mix(in srgb, var(--vs-warning) 28%, transparent); background: color-mix(in srgb, var(--vs-warning) 13%, transparent); }
+.md-typeset .kind.custom  { color: var(--vs-custom);  border-color: color-mix(in srgb, var(--vs-custom) 28%, transparent);  background: color-mix(in srgb, var(--vs-custom) 13%, transparent); }
+
+/* The landing page's card grid. */
+.md-typeset .vs-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 0.8rem;
+  margin: 1.2em 0;
+}
+.md-typeset .vs-cards > * {
+  display: block;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--vs-line);
+  border-radius: 10px;
+  background: var(--vs-panel);
+  color: var(--vs-fg);
+  transition: border-color 0.12s, background 0.12s;
+}
+.md-typeset .vs-cards > a:hover {
+  border-color: var(--vs-accent-line);
+  background: var(--vs-accent-wash);
+  color: var(--vs-fg);
+}
+.md-typeset .vs-cards strong { display: block; margin-bottom: 0.25em; }
+.md-typeset .vs-cards p { margin: 0; font-size: 0.72rem; color: var(--vs-fg-muted); }
+
+/* Footer: the copyright is the point, so it gets the app's muted mono. */
+.md-footer-meta { background-color: var(--vs-bg-alt2); border-top: 1px solid var(--vs-line); }
+.md-copyright { font-family: var(--md-code-font-family); font-size: 0.62rem; }
+.md-copyright__highlight { color: var(--vs-fg-muted); }
+.md-footer__link { color: var(--vs-fg); }
+.md-footer { background-color: var(--vs-bg-alt); }
+
+/* The version/edit affordances Material tints with the accent. */
+.md-typeset .md-button--primary {
+  background-color: var(--vs-accent);
+  border-color: var(--vs-accent);
+  color: var(--vs-on-accent);
+}
+.md-typeset .md-button--primary:hover {
+  background-color: var(--vs-accent-hover);
+  border-color: var(--vs-accent-hover);
+  color: var(--vs-on-accent);
+}
+.md-typeset .md-button {
+  border-radius: 8px;
+  border-color: var(--vs-line-strong);
+  color: var(--vs-fg);
+}
+.md-typeset .md-button:hover { border-color: var(--vs-accent-line); color: var(--vs-accent-text); background: var(--vs-accent-wash); }
