@@ -214,4 +214,51 @@ public class SetBrowserPerfTests
         }
         finally { Directory.Delete(dir, recursive: true); }
     }
+
+    /// <summary>
+    /// How a thumbnail decode scales with the SOURCE image's size.
+    /// </summary>
+    /// <remarks>
+    /// <para>The number that decides whether thumbnail decoding is worth engineering around, and the
+    /// reason the rest of this class understates it: the shared fixture's art is 2x2, so decode
+    /// measures as noise there and would in any collection of small pixel art. It is not noise in a
+    /// real one.</para>
+    ///
+    /// <para>Measured per decode to the 128px thumbnail width: 2px and 64px sources both ~0.6 ms,
+    /// 256px 1.2 ms, 512px 2.4 ms, <b>1000px 7.1 ms</b>. A screen of forty 1000px tiles is therefore
+    /// ~280 ms of decoding on the UI thread every time you scroll into fresh rows — which is a stall
+    /// you can feel, and the only part of a scroll that grows with the canvas the author chose.</para>
+    /// </remarks>
+    [AvaloniaFact]
+    public void How_a_thumbnail_decode_scales_with_the_source_size()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            foreach (var size in new[] { 2, 64, 256, 512, 1000 })
+            {
+                var path = Path.Combine(dir, $"{size}.png");
+                using (var img = new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(size, size))
+                {
+                    for (var y = 0; y < size; y++)
+                        for (var x = 0; x < size; x++)
+                            img[x, y] = new SixLabors.ImageSharp.PixelFormats.Rgba32(
+                                (byte)(x * 7), (byte)(y * 11), (byte)(x ^ y), 255);
+                    SixLabors.ImageSharp.ImageExtensions.SaveAsPng(img, path);
+                }
+
+                for (var i = 0; i < 3; i++) Decode(path).Dispose();          // warm the file and the JIT
+                var sw = Stopwatch.StartNew();
+                for (var i = 0; i < 40; i++) Decode(path).Dispose();
+                _out.WriteLine($"{size,5}px source -> {sw.Elapsed.TotalMilliseconds / 40:N3} ms per decode");
+            }
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+
+        static Avalonia.Media.Imaging.Bitmap Decode(string path)
+        {
+            using var fs = File.OpenRead(path);
+            return Avalonia.Media.Imaging.Bitmap.DecodeToWidth(fs, 128);
+        }
+    }
 }
