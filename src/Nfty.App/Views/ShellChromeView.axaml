@@ -59,7 +59,10 @@
               <GradientStop Color="{DynamicResource BgAltColor}" Offset="1" />
             </LinearGradientBrush>
           </Border.Background>
-          <Grid ColumnDefinitions="Auto,*,Auto,Auto" Height="46">
+          <!-- 40, not the mockup's 46. The mockup is authored 1:1 and the whole shell renders at
+               ShellViewModel.BaseScale (1.2), so 46 arrives as 55 device pixels and reads heavy.
+               A deliberate, user-directed divergence — see the note in CLAUDE.md. -->
+          <Grid ColumnDefinitions="Auto,*,Auto,Auto" Height="40">
             <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center" Spacing="9">
               <!-- The brand is also the way out of an open document, the way a logo is "home" almost
                    everywhere. Deliberately reusing an element the locked titlebar already has rather

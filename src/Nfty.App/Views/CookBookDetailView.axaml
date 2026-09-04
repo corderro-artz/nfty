@@ -161,12 +161,22 @@
                     </StackPanel>
                   </Grid>
                   <Grid ColumnDefinitions="*,12,Auto">
+                    <!-- Unlike the three other bars in this app, THIS track has no fixed width — it
+                         is a star column, so it is wider than the 310px a constant multiplier
+                         assumed, and a recipe holding 100% of mints drew about four fifths of a bar.
+                         Measure the track instead. -->
                     <Border Grid.Column="0" Classes="cbar">
                       <Border HorizontalAlignment="Left" CornerRadius="999" Classes="series"
                               Classes.s1="{Binding IsSeries1}" Classes.s2="{Binding IsSeries2}"
                               Classes.s3="{Binding IsSeries3}" Classes.s4="{Binding IsSeries4}"
-                              Classes.s5="{Binding IsSeries5}" Classes.s6="{Binding IsSeries6}"
-                              Width="{Binding SharePercent, Converter={x:Static conv:PercentToWidthConverter.ForBarWidth310}}" />
+                              Classes.s5="{Binding IsSeries5}" Classes.s6="{Binding IsSeries6}">
+                        <Border.Width>
+                          <MultiBinding Converter="{x:Static conv:ShareWidthConverter.Instance}">
+                            <Binding Path="SharePercent" />
+                            <Binding Path="$parent[Border].Bounds.Width" />
+                          </MultiBinding>
+                        </Border.Width>
+                      </Border>
                     </Border>
                     <TextBlock Grid.Column="2" Classes="cshare" Text="{Binding SharePercent, StringFormat='{}{0}% of mints'}" />
                   </Grid>

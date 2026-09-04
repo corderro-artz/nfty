@@ -10,12 +10,25 @@
     <!-- Context toolbar (.exp-toolbar): gap 10, padding 10/14, bottom hairline. Crumbs live in the
          titlebar now (ShellChromeView, bound through ShellViewModel.CurrentExplorer) rather than as
          a row here, so the page host is flush under the titlebar instead of double-chromed. -->
-    <Border Grid.Row="0" Background="{DynamicResource BgAltBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,0,1" Padding="14,10">
-      <!-- A Grid, not a StackPanel: the search pill flexes into the free space and the lock is
-           right-aligned against the far edge (mockup .exp-toolbar is a flex row whose .search takes
-           `flex:1`). A StackPanel would size the search to its content and leave the lock adrift
-           in the middle of the bar. -->
-      <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
+    <Border Grid.Row="0" Background="{DynamicResource BgAltBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,0,1" Padding="14,7">
+      <!-- TWO star columns, which is what the mockup's flex row actually is: `.search` is
+           `flex:1; max-width:360px` and only `.lock-toggle` carries `margin-left:auto`. So the
+           search grows up to 360 FROM THE LEFT, Add/Delete/Import sit immediately after it, and the
+           slack collects before the lock.
+
+           One star column (search) put all four buttons on the far edge and left the pill floating
+           in the middle of an oversized slot — a stretched control capped by MaxWidth centres itself
+           in what is left over. Capping the COLUMN instead of the control is what makes "grow to
+           360, then stop" mean grow-from-the-left. -->
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" MinWidth="180" MaxWidth="360" />
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
         <Border Grid.Column="0" Classes="search" HorizontalAlignment="Stretch" Margin="0,0,10,0">
           <Grid ColumnDefinitions="Auto,*,Auto">
             <Path Grid.Column="0" Classes="ico sm" Data="{StaticResource IconSearch}" VerticalAlignment="Center" />
@@ -47,7 +60,7 @@
             <TextBlock Text="Import" />
           </StackPanel>
         </Button>
-        <Button Grid.Column="4" Command="{Binding ToggleLockCommand}" Classes="icon" Classes.unlocked="{Binding IsEditing}"
+        <Button Grid.Column="5" Command="{Binding ToggleLockCommand}" Classes="icon" Classes.unlocked="{Binding IsEditing}"
                 ToolTip.Tip="{Binding LockTip}">
           <Panel>
             <Path Classes="ico" Data="{StaticResource IconLock}" IsVisible="{Binding !IsEditing}" />
