@@ -17,13 +17,19 @@ public class FixtureFreezeTests
     // either the change was accidental (restore the original file), or it is a deliberate format
     // change, in which case bump Schema.Current and add a NEW fixture beside this one — the old
     // fixture and its pinned hash stay exactly as they are.
+    //
+    // README.md IS THE ONE EXCEPTION, and only because it carries no format: it is prose ABOUT the
+    // archives, so editing it cannot launder a format change. Its hash moved once, on 2026-09-04,
+    // when the app-wide switch to US spelling reached "colour" in three of its lines. That is the
+    // only reason this entry may ever be re-pinned, and it is not a precedent for the three
+    // archives above it — theirs move only by being replaced, never by being rewritten.
     private static readonly IReadOnlyDictionary<string, string> ExpectedHashes =
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["VaporPets.cbk"] = "9cfef410bdee4134a3bfdc51d5777073919d00fbe60c078e5eb0ddd6b501542b",
             ["cat.rcp"] = "a43d3f298dc559a7e9bbcbc271005b380fdc1959bc401331a50f57042bd57a0d",
             ["aura.igt"] = "f8b6156072fd99edcf49b2daa3457b11d5edac3c26819b625da11dc9d9703ccb",
-            ["README.md"] = "75b9b99aa2e468df6150b4feee53fc21dd7a20700b4ffdc9bf368da1bd1d46f3",
+            ["README.md"] = "014dca73500d52fc639e8bbddfc26e2c8f87ef5624a5fbf55f1990512861b7aa",
         };
 
     private static string FixturesDir => Path.Combine(AppContext.BaseDirectory, "fixtures");

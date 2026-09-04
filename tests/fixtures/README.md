@@ -26,9 +26,9 @@ version stays covered by whatever compatibility path you write for it.
 `VaporPets.cbk` deliberately exercises **all three layer kinds at once**, which no other single
 archive does:
 
-- **`bg`** (custom) — full-colour, composited as-is. Variants `sunset` (w 70), `grid` (w 30).
-- **`skin`** (static) — value-map, one fixed colour `hsv:322,83,84`, no RNG. Variant `smooth`.
-- **`aura`** (dynamic) — value-map, colour rolled per asset from two weighted entries (a
+- **`bg`** (custom) — full-color, composited as-is. Variants `sunset` (w 70), `grid` (w 30).
+- **`skin`** (static) — value-map, one fixed color `hsv:322,83,84`, no RNG. Variant `smooth`.
+- **`aura`** (dynamic) — value-map, color rolled per asset from two weighted entries (a
   170–200° hue range at w 70, and fixed `hex:d6249f` at w 30). Variants `glow` (w 60),
   `spark` (w 40).
 
