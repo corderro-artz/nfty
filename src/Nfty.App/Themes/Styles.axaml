@@ -2128,8 +2128,16 @@
     <Setter Property="HorizontalAlignment" Value="Stretch" />
   </Style>
 
-<!-- The selected tile's caption. Paired with .muted on every other caption, this is the whole
-       selected-state marker now that the tile's accent border is gone. -->
+<!-- A tile's caption is muted by default and accent when selected. Two classes rather than two
+       BOUND classes: the tile is the unit this grid realizes hundreds of, so binding both
+       `Classes.muted` and `Classes.accent` to complementary values cost a binding per tile for a
+       state one class already carries. Declared first so .accent wins the tie at equal
+       specificity. -->
+  <Style Selector="TextBlock.tcap">
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <!-- The selected tile's caption — the whole selected-state marker now that the tile's accent
+       border is gone. -->
   <Style Selector="TextBlock.accent">
     <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
   </Style>
@@ -2240,11 +2248,23 @@
   <Style Selector="TextBlock.pct.common">
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
+  <!-- The bar spans the ROW, not the row's content box: the negative margin cancels
+       Border.data-row's 10px padding on both sides, so the bar starts before the trait name rather
+       than under its first letter. Sharing an edge with the text made the text look like it was
+       sitting on the bar; a 10px lead-in makes it look like it is inside it.
+
+       A defined height rather than the row's own, so there is air above and below and the wash reads
+       as a band instead of a filled row. And a minimum width, because a rounded bar at 1% would
+       otherwise draw as a two-pixel sliver that reads as a rendering fault. -->
   <Style Selector="Rectangle.rarbar">
     <Setter Property="Fill" Value="{DynamicResource RarityBarBrush}" />
     <Setter Property="HorizontalAlignment" Value="Left" />
-    <Setter Property="RadiusX" Value="3" />
-    <Setter Property="RadiusY" Value="3" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Height" Value="26" />
+    <Setter Property="Margin" Value="-10,0" />
+    <Setter Property="MinWidth" Value="18" />
+    <Setter Property="RadiusX" Value="5" />
+    <Setter Property="RadiusY" Value="5" />
   </Style>
 
   <!-- Save: present at the rail's foot for every asset, so the rail is one height and the rarity

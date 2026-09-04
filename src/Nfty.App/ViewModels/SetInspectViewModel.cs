@@ -2,6 +2,7 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Services;
+using Nfty.Core.Diagnostics;
 
 namespace Nfty.App.ViewModels;
 
@@ -104,6 +105,7 @@ public partial class SetInspectViewModel : ViewModelBase, IDisposable
             _full = null;
             _fullFor = Index;
             if (Current is null) return null;
+            using var _ = Perf.Measure("SetInspect.DecodeFull");
             try { _full = new Bitmap(Current.ImagePath); }
             catch { _full = null; }   // a damaged Set should show the damage, not throw
             return _full;

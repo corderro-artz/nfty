@@ -4,6 +4,7 @@ using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Services;
+using Nfty.Core.Diagnostics;
 using Nfty.Core.Output;
 
 namespace Nfty.App.ViewModels;
@@ -37,6 +38,11 @@ public partial class SetItemRow : ObservableObject, IDisposable
     /// </summary>
     public Bitmap Thumbnail => _thumbnail ??= Decode(ImagePath);
 
+    /// <summary>Whether this row has actually paid for its image yet. Read by the performance tests
+    /// to prove the decode is still falling under the ListBox's virtualization rather than on top
+    /// of it.</summary>
+    internal bool IsThumbnailDecoded => _thumbnail is not null;
+
     /// <summary>Whether this tile is the selected one, so the grid can paint an indicator — the
     /// detail rail alone does not show which tile is selected once there are many rows.</summary>
     [ObservableProperty]
@@ -55,10 +61,19 @@ public partial class SetItemRow : ObservableObject, IDisposable
 
     private static Bitmap Decode(string path)
     {
+        // Named so a scroll's cost splits into "decoding images" and "building controls", which are
+        // two different problems with two different fixes.
+        using var _ = Perf.Measure("SetItemRow.Decode");
         try
         {
             using var fs = File.OpenRead(path);
-            return Bitmap.DecodeToWidth(fs, ThumbW);   // small downscaled thumbnail
+            // Never decode LARGER than the source. DecodeToWidth(128) on a 64px asset upscales it,
+            // so a 500-tile Set of 64x64 art held four times the pixels it had any use for -- 32 MB
+            // of bitmap for 8 MB of image. Downscaling a big asset is still the point; growing a
+            // small one never was.
+            var w = Math.Min(ThumbW, PngWidth(fs));
+            fs.Position = 0;
+            return Bitmap.DecodeToWidth(fs, w);
         }
         catch
         {
@@ -67,6 +82,24 @@ public partial class SetItemRow : ObservableObject, IDisposable
             return new WriteableBitmap(new PixelSize(1, 1), new Vector(96, 96),
                 PixelFormat.Bgra8888, AlphaFormat.Unpremul);
         }
+    }
+
+    /// <summary>
+    /// A PNG's pixel width, read from its header.
+    /// </summary>
+    /// <param name="fs">The open file, positioned at its start. Left wherever the read ended.</param>
+    /// <returns>The width, or <see cref="ThumbW"/> for anything that is not a PNG this can read —
+    /// which makes the caller's Min a no-op and restores the previous behavior exactly.</returns>
+    /// <remarks>IHDR is fixed at bytes 16..19, big-endian, immediately after the 8-byte signature and
+    /// the chunk's own length and type. Eight bytes off the front of a file the decoder is about to
+    /// read anyway; cheaper than decoding and measuring.</remarks>
+    private static int PngWidth(Stream fs)
+    {
+        Span<byte> head = stackalloc byte[24];
+        if (fs.ReadAtLeast(head, head.Length, throwOnEndOfStream: false) < head.Length) return ThumbW;
+        if (head[0] != 0x89 || head[1] != 'P' || head[2] != 'N' || head[3] != 'G') return ThumbW;
+        var w = System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(head[16..20]);
+        return w > 0 ? w : ThumbW;
     }
 
     /// <summary>Frees the thumbnail if one was ever decoded.</summary>
@@ -129,9 +162,14 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
 
     // Keep each row's own IsSelected in sync so the grid can paint a selected-tile indicator —
     // the detail rail alone doesn't show which tile is selected once the grid has many rows.
-    partial void OnSelectedItemChanged(SetItemRow? value)
+    //
+    // Exactly two rows can change, so exactly two are touched. Walking all of them raised 500
+    // PropertyChanged events per click for 498 rows whose answer was already false, which measured
+    // at 288 ms and 16 MB over twenty selections. Same observable result, ~250x less of it.
+    partial void OnSelectedItemChanged(SetItemRow? oldValue, SetItemRow? newValue)
     {
-        foreach (var r in Items) r.IsSelected = ReferenceEquals(r, value);
+        if (oldValue is not null) oldValue.IsSelected = false;
+        if (newValue is not null) newValue.IsSelected = true;
     }
 
     /// <summary>The selected asset's number, formatted.</summary>

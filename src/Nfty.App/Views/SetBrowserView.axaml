@@ -91,8 +91,11 @@
                                 ClipToBounds="True">
                           <Image Source="{Binding Thumbnail}" Width="120" Height="120" Stretch="UniformToFill" />
                         </Border>
-                        <TextBlock Classes="mono" FontSize="11" HorizontalAlignment="Center"
-                                   Classes.muted="{Binding !IsSelected}"
+                        <!-- One bound class, not two. `.tcap` is muted by default and `.accent`
+                             overrides it, which renders identically to binding both and halves the
+                             per-tile binding count — and a tile is the unit this grid realizes
+                             hundreds of. -->
+                        <TextBlock Classes="mono tcap" FontSize="11" HorizontalAlignment="Center"
                                    Classes.accent="{Binding IsSelected}"
                                    Text="{Binding Number, StringFormat='#{0:D4}'}" />
                       </StackPanel>
@@ -151,7 +154,10 @@
                           <!-- The share bar is a fraction of the track it is ACTUALLY in, via
                                ShareWidthConverter over the row's own measured width - not a constant
                                multiplier, which is only ever right for a pinned track. -->
-                          <Rectangle Classes="rarbar" Height="20" VerticalAlignment="Center">
+                          <!-- Geometry lives in the style, not here: a local value outranks every
+                               Style setter, so a height stated in both places is a height that will
+                               drift. -->
+                          <Rectangle Classes="rarbar">
                             <Rectangle.Width>
                               <MultiBinding Converter="{x:Static appconv:ShareWidthConverter.Instance}">
                                 <Binding Path="RarityPct" />

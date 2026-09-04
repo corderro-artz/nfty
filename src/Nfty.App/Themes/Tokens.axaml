@@ -104,8 +104,9 @@
            each ending mid-word. The fade gives the bar a direction, so the eye takes the length as
            a quantity rather than the fill as a state. -->
       <LinearGradientBrush x:Key="RarityBarBrush" StartPoint="0%,50%" EndPoint="100%,50%">
-        <GradientStop Color="#1fa11f31" Offset="0" />
-        <GradientStop Color="#14a11f31" Offset="0.55" />
+        <GradientStop Color="#22a11f31" Offset="0" />
+        <GradientStop Color="#1ca11f31" Offset="0.30" />
+        <GradientStop Color="#0da11f31" Offset="0.72" />
         <GradientStop Color="#00a11f31" Offset="1" />
       </LinearGradientBrush>
       <LinearGradientBrush x:Key="CardGradientBrush" StartPoint="50%,0%" EndPoint="50%,100%">
@@ -180,8 +181,9 @@
            each ending mid-word. The fade gives the bar a direction, so the eye takes the length as
            a quantity rather than the fill as a state. -->
       <LinearGradientBrush x:Key="RarityBarBrush" StartPoint="0%,50%" EndPoint="100%,50%">
-        <GradientStop Color="#3da11f31" Offset="0" />
-        <GradientStop Color="#26a11f31" Offset="0.55" />
+        <GradientStop Color="#42a11f31" Offset="0" />
+        <GradientStop Color="#34a11f31" Offset="0.30" />
+        <GradientStop Color="#18a11f31" Offset="0.72" />
         <GradientStop Color="#00a11f31" Offset="1" />
       </LinearGradientBrush>
       <LinearGradientBrush x:Key="CardGradientBrush" StartPoint="50%,0%" EndPoint="50%,100%">
