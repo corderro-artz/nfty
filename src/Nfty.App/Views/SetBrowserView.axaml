@@ -76,7 +76,13 @@
                  then the cell under the pointer one step further, which reads as a crosshair over
                  the grid. Both are background-only, so nothing moves under the pointer. -->
             <Border Classes="trow">
-              <ItemsControl ItemsSource="{Binding Tiles}">
+              <!-- Centered, because a row holds a whole number of fixed-width tiles and the
+                   remainder has to go somewhere. At a typical pane that remainder is ~112px, which
+                   sat entirely on the right as a gap between the last tile and the rail. Splitting
+                   it keeps the 10px rhythm the tiles are designed on; spreading it into the gaps
+                   would have made them 38px and left this grid looking nothing like the rest of the
+                   app. The hover band still spans the full pane, because the row IS the full pane. -->
+              <ItemsControl ItemsSource="{Binding Tiles}" HorizontalAlignment="Center">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="10" /></ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
@@ -154,7 +160,11 @@
               <TextBlock Classes="sub-h" Text="RARITY" Margin="0,8,0,0" />
               <StackPanel Spacing="0">
                 <Border Classes="data-h">
-                  <Grid ColumnDefinitions="*,Auto,46">
+                  <!-- 56, not 46: a rarity reads "52.33%" as often as "44%", and six characters of
+                       tabular mono need ~52px. At 46 the wider values overflowed their column to
+                       the LEFT, into the value column's gap, so the value text landed at a
+                       different x depending on how many digits its percentage had. -->
+                  <Grid ColumnDefinitions="*,Auto,56">
                     <TextBlock Grid.Column="0" Classes="data-h" Text="TRAIT" />
                     <TextBlock Grid.Column="1" Classes="data-h" Text="VALUE" Margin="8,0" />
                     <TextBlock Grid.Column="2" Classes="data-h num" Text="%" />
@@ -179,8 +189,8 @@
                               </MultiBinding>
                             </Rectangle.Width>
                           </Rectangle>
-                          <Grid ColumnDefinitions="*,Auto,46">
-                            <TextBlock Grid.Column="0" Classes="data-row muted" Text="{Binding Trait_type}" />
+                          <Grid ColumnDefinitions="*,Auto,56">
+                            <TextBlock Grid.Column="0" Classes="data-row trait" Text="{Binding Trait_type}" />
                             <TextBlock Grid.Column="1" Classes="data-row" Text="{Binding Value}" Margin="8,0" />
                             <TextBlock Grid.Column="2" Classes="data-row num pct"
                                        Classes.rare="{Binding RarityPct, Converter={x:Static appconv:RarityBandConverter.Rare}}"

@@ -99,13 +99,16 @@ public partial class NewRecipeViewModel : WizardViewModelBase
     partial void OnNameChanged(string value)
     {
         OnPropertyChanged(nameof(DerivedId));
+        OnPropertyChanged(nameof(DerivedIdText));
         OnPropertyChanged(nameof(ShareRows));   // the current row is labeled with the name
         CreateCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>The recipe id derived from the name: lower-case, spaces to dashes.</summary>
-    public string DerivedId => string.Join('-',
-        Name.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+    public string DerivedId => DeriveId(Name);
+
+    /// <summary>The derived id as the Identifier chip prints it.</summary>
+    public string DerivedIdText => IdChipText(DerivedId);
 
     private bool CanCreate() => !string.IsNullOrWhiteSpace(DerivedId);
 

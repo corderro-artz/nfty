@@ -27,6 +27,12 @@
         (verified by ThemeResourceTests.Translucent_brush_channels_match_mockup_css_rgba_not_misparsed_argb
         and .WinShadow_colors_match_mockup_css_rgba_not_misparsed_argb).
       -->
+      <!-- The rarity rail's trait name. Between FgMuted and Fg on purpose: muted is right for a
+           label on a plain panel and slightly too quiet on top of the share bar's tint, which is
+           exactly where every one of these sits. Lifting the ink rather than fading the bar keeps
+           the bar's color, which is the thing being read. Still below Fg, so the trait name stays
+           subordinate to its value. -->
+      <SolidColorBrush x:Key="TraitInkBrush" Color="#d9121418" />
       <SolidColorBrush x:Key="FgMutedBrush" Color="#b8121418" />
       <SolidColorBrush x:Key="LineBrush" Color="#1f121418" />
       <SolidColorBrush x:Key="LineStrongBrush" Color="#33121418" />
@@ -129,6 +135,12 @@
       <SolidColorBrush x:Key="FgBrush" Color="#f2ede6" />
       <!-- See the Light dictionary's note above: 8-digit hex here is the mockup's #RRGGBBAA
            rotated to Avalonia's #AARRGGBB. -->
+      <!-- The rarity rail's trait name. Between FgMuted and Fg on purpose: muted is right for a
+           label on a plain panel and slightly too quiet on top of the share bar's tint, which is
+           exactly where every one of these sits. Lifting the ink rather than fading the bar keeps
+           the bar's color, which is the thing being read. Still below Fg, so the trait name stays
+           subordinate to its value. -->
+      <SolidColorBrush x:Key="TraitInkBrush" Color="#ebf2ede6" />
       <SolidColorBrush x:Key="FgMutedBrush" Color="#c7f2ede6" />
       <SolidColorBrush x:Key="LineBrush" Color="#24f2ede6" />
       <SolidColorBrush x:Key="LineStrongBrush" Color="#33f2ede6" />

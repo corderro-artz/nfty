@@ -164,7 +164,7 @@ public partial class SetItemRow : ObservableObject, IDisposable
     }
 
     /// <summary>Frees the thumbnail if one was ever decoded.</summary>
-    /// <remarks>A decode already in flight is not cancelled — it is cheap and nearly done — but its
+    /// <remarks>A decode already in flight is not canceled — it is cheap and nearly done — but its
     /// result is dropped rather than published, so nothing leaks and nothing resurrects a disposed
     /// row.</remarks>
     public void Dispose()

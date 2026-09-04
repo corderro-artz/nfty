@@ -104,7 +104,22 @@
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     </Style>
+    <!-- A stepper at its limit (the New CookBook wizard's target supply opens at 0) drew Fluent's
+         stock light-gray slab: the one button in the app painted LIGHTER than its neighbours, which
+         reads as hovered rather than unavailable. Setting the RepeatButton's own Background does not
+         fix it - Fluent paints the disabled wash on PART_ContentPresenter INSIDE the button, which is
+         a second /template/ hop from here and unreachable. Verified off a rendered control: with this
+         rule alone the button read Background=Transparent, Opacity=0.4 and its presenter still read
+         #33ffffff. The presenter is neutralized in the RepeatButton theme below, which is one hop
+         from ITS own root. This half still dims the chevron. -->
+    <Style Selector="^ /template/ RepeatButton:disabled">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+      <Setter Property="Opacity" Value="0.4" />
+    </Style>
   </ControlTheme>
+
 
   <!-- ================= Slider ================= -->
   <ControlTheme x:Key="{x:Type Slider}" TargetType="Slider"

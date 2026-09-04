@@ -116,17 +116,30 @@
               <Grid ColumnDefinitions="22,*,Auto" >
                 <Border Grid.Column="0" Classes="rico" Classes.loose="{Binding Loose}">
                   <Panel>
-                    <Path Classes="ico sm" Stroke="{DynamicResource FgMutedBrush}"
-                          Data="{StaticResource IconTypeIngredient}" IsVisible="{Binding Loose}" />
+                    <!-- One glyph per kind, chosen by the file's own extension. This used to be a
+                         boolean over four kinds, so a cooked .set drew the CookBook icon and a
+                         loose .rcp drew the Ingredient one. -->
                     <Path Classes="ico sm" Stroke="{DynamicResource AccentTextBrush}"
-                          Data="{StaticResource IconTypeCookBook}" IsVisible="{Binding !Loose}" />
+                          Data="{StaticResource IconTypeCookBook}" IsVisible="{Binding IsCookBook}" />
+                    <Path Classes="ico sm" Stroke="{DynamicResource FgMutedBrush}"
+                          Data="{StaticResource IconTypeRecipe}" IsVisible="{Binding IsRecipe}" />
+                    <Path Classes="ico sm" Stroke="{DynamicResource FgMutedBrush}"
+                          Data="{StaticResource IconTypeIngredient}" IsVisible="{Binding IsIngredient}" />
+                    <Path Classes="ico sm" Stroke="{DynamicResource AccentTextBrush}"
+                          Data="{StaticResource IconTypeSet}" IsVisible="{Binding IsSet}" />
+                    <Path Classes="ico sm" Stroke="{DynamicResource FgMutedBrush}"
+                          Data="{StaticResource IconTypeVariant}" IsVisible="{Binding IsUnknownKind}" />
                   </Panel>
                 </Border>
                 <StackPanel Grid.Column="1" Margin="10,0" VerticalAlignment="Center">
                   <TextBlock Text="{Binding Name}" Classes="rname" TextTrimming="CharacterEllipsis" />
                   <TextBlock Text="{Binding Meta}" Classes="rmeta" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
-                <TextBlock Grid.Column="2" Text="{Binding Path}" Classes="rpath" TextTrimming="CharacterEllipsis" MaxWidth="150" />
+                <!-- Folder + file, not the whole path: see RecentItem.DisplayPath. 260 rather than
+                     150 because the row has ~150px of empty gutter between the meta line and this
+                     column, and the shorter string was still being cut at the file name. -->
+                <TextBlock Grid.Column="2" Text="{Binding DisplayPath}" Classes="rpath"
+                           TextTrimming="CharacterEllipsis" MaxWidth="260" />
               </Grid>
             </Button>
           </DataTemplate>

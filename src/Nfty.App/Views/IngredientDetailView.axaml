@@ -39,14 +39,18 @@
             <!-- .hsub is ONE line - "custom · no colorize · composited as-is" - with only the kind
                  word carrying the kind color. It used to be two stacked neutral lines, which lost
                  the color-coding the tree and the layer table both apply. -->
+            <!-- Bottom on each run, not on the panel: children of a horizontal StackPanel default to
+                 Stretch and draw their line at the top of the row, so the 12px kind word sat 4px
+                 above the 14px description it reads as one sentence with. -->
             <StackPanel Orientation="Horizontal" Spacing="6">
-              <TextBlock Classes="kind-txt"
+              <TextBlock Classes="kind-txt" VerticalAlignment="Bottom"
                          Classes.kdyn="{Binding IsDynamic}"
                          Classes.kstat="{Binding IsStatic}"
                          Classes.kcust="{Binding IsCustom}"
                          Text="{Binding KindText}" />
-              <TextBlock Classes="muted" Text="·" />
-              <TextBlock Classes="muted" Text="{Binding ColorwaysText}" TextTrimming="CharacterEllipsis" />
+              <TextBlock Classes="muted" Text="·" VerticalAlignment="Bottom" />
+              <TextBlock Classes="muted" Text="{Binding ColorwaysText}" VerticalAlignment="Bottom"
+                         TextTrimming="CharacterEllipsis" />
             </StackPanel>
             <!-- .hflag: shown ONLY when this layer is named in a rule, which is the question it
                  exists to answer. It replaces a permanently-visible "Jump to rules" button whose
@@ -84,8 +88,14 @@
       </Border>
 
       <StackPanel Spacing="0">
+        <!-- FIXED columns, not Auto. The header and the rows are separate Grids, so an Auto column
+             sizes on the header's word in one and on the widest number in the other: "WEIGHT" is
+             wider than "30", which put the weight column's numbers 10px right of the header naming
+             them, and every value in that column moved as soon as a weight gained a digit. The
+             widths are the header words (the binding constraint at every realistic value) plus the
+             8px gutter each cell carries: 48+8, 70+8, 56+8. -->
         <Border Classes="data-h">
-          <Grid ColumnDefinitions="40,*,Auto,Auto,Auto">
+          <Grid ColumnDefinitions="40,*,56,78,64">
             <TextBlock Grid.Column="0" Classes="data-h" Text="" />
             <Button Grid.Column="1" Classes="ghost" Padding="0" HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Left" Command="{Binding SortByCommand}" CommandParameter="Variant">
@@ -93,10 +103,10 @@
             </Button>
             <Button Grid.Column="2" Classes="ghost" Padding="0" HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Right" Command="{Binding SortByCommand}" CommandParameter="Weight">
-              <TextBlock Classes="data-h num" Text="WEIGHT" MinWidth="44" Margin="8,0,0,0" />
+              <TextBlock Classes="data-h num" Text="WEIGHT" Margin="8,0,0,0" />
             </Button>
-            <TextBlock Grid.Column="3" Classes="data-h num" Text="IN RECIPE" MinWidth="56" Margin="8,0,0,0" />
-            <TextBlock Grid.Column="4" Classes="data-h num" Text="OVERALL" MinWidth="52" Margin="8,0,0,0" />
+            <TextBlock Grid.Column="3" Classes="data-h num" Text="IN RECIPE" Margin="8,0,0,0" />
+            <TextBlock Grid.Column="4" Classes="data-h num" Text="OVERALL" Margin="8,0,0,0" />
           </Grid>
         </Border>
 
@@ -104,12 +114,12 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:VariantRow">
               <Border Classes="data-row">
-                <Grid ColumnDefinitions="40,*,Auto,Auto,Auto">
+                <Grid ColumnDefinitions="40,*,56,78,64">
                   <Image Grid.Column="0" Source="{Binding Thumbnail}" Width="32" Height="32" VerticalAlignment="Center" />
                   <TextBlock Grid.Column="1" Classes="data-row" Text="{Binding Name}" VerticalAlignment="Center" Margin="10,0,0,0" TextTrimming="CharacterEllipsis" />
-                  <TextBlock Grid.Column="2" Classes="data-row num" Text="{Binding Weight}" VerticalAlignment="Center" MinWidth="44" Margin="8,0,0,0" />
-                  <TextBlock Grid.Column="3" Classes="data-row num" Text="{Binding WithinPercent, StringFormat='{}{0}%'}" VerticalAlignment="Center" MinWidth="56" Margin="8,0,0,0" />
-                  <TextBlock Grid.Column="4" Classes="data-row num" Text="{Binding OverallPercent, StringFormat='{}{0}%'}" VerticalAlignment="Center" MinWidth="52" Margin="8,0,0,0" />
+                  <TextBlock Grid.Column="2" Classes="data-row num" Text="{Binding Weight}" Margin="8,0,0,0" />
+                  <TextBlock Grid.Column="3" Classes="data-row num" Text="{Binding WithinPercent, StringFormat='{}{0}%'}" Margin="8,0,0,0" />
+                  <TextBlock Grid.Column="4" Classes="data-row num" Text="{Binding OverallPercent, StringFormat='{}{0}%'}" Margin="8,0,0,0" />
                 </Grid>
               </Border>
             </DataTemplate>

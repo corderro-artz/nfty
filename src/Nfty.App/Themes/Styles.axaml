@@ -89,6 +89,24 @@
   <!-- The disabled fix above was Button-only, leaving Fluent's opaque gray slab on the editor's
        NumericUpDown/TextBox (the audit's #c7c3be / #3c3d40). Dim inputs the same way: opacity over
        the real surface, never a gray fill. -->
+  <!-- Fluent paints a disabled RepeatButton's wash on the presenter INSIDE it, not on the button,
+       and it is lighter than the button's normal ground - so a spinner arrow at its limit (the New
+       CookBook wizard's target supply, which opens at 0) was the one control in the app that got
+       BRIGHTER when it became unavailable, reading as hovered.
+
+       This has to be a top-level Style. Setting Background on the RepeatButton itself changes
+       nothing (verified off a rendered control: button Transparent, presenter still #33ffffff), and
+       the presenter is a second /template/ hop from the ButtonSpinner theme, which Avalonia rejects
+       - while a type-keyed ControlTheme never applies at all, because ButtonSpinner's template hands
+       its buttons an explicit Theme. From here the presenter is one hop and the rule lands.
+
+       Unscoped on purpose: every RepeatButton in this app is chrome someone else owns - two spinner
+       arrows, a Slider's two track halves, a ScrollBar's arrows - and "lighter means unavailable" is
+       backwards in all of them. A Slider is unaffected either way; its track buttons have no
+       ContentPresenter to match. Dimming a disabled input as a whole is the rule right below. -->
+  <Style Selector="RepeatButton:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
   <Style Selector="NumericUpDown:disabled, TextBox:disabled, Slider:disabled">
     <Setter Property="Opacity" Value="0.38" />
   </Style>
@@ -1035,6 +1053,15 @@
   </Style>
   <Style Selector="TextBlock.data-row">
     <Setter Property="FontSize" Value="13" />
+    <!-- A TextBlock in a Grid cell stretches and draws its line at the TOP, which put every one of
+         these a couple of pixels above the middle of the bar behind it. Nothing else in the row is
+         centered either, so the whole line read as sitting slightly high. -->
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- The trait NAME specifically, which is the only text in this app that sits on a tinted ground. -->
+  <Style Selector="TextBlock.data-row.trait">
+    <Setter Property="Foreground" Value="{DynamicResource TraitInkBrush}" />
   </Style>
   <Style Selector="TextBlock.num">
     <Setter Property="TextAlignment" Value="Right" />
@@ -1142,6 +1169,11 @@
     <Setter Property="Padding" Value="13,12" />
   </Style>
   <Style Selector="Border.rop">
+    <!-- explorer.html: .rrow is align-items:flex-start and .rop carries margin-top:1px, so the mark
+         sits beside the FIRST chip. A fixed-size child of a horizontal StackPanel centers itself in
+         Avalonia, which floated it between the two chips instead, reading as an orphan. -->
+    <Setter Property="VerticalAlignment" Value="Top" />
+    <Setter Property="Margin" Value="0,1,0,0" />
     <Setter Property="Width" Value="20" />
     <Setter Property="Height" Value="20" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
@@ -1570,7 +1602,7 @@
   <Style Selector="Slider.overlay">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="Transparent" />
-    <!-- THE THUMB IS NOT CENTRED. Fluent's horizontal Slider reserves a tick lane below its track,
+    <!-- THE THUMB IS NOT CENTERED. Fluent's horizontal Slider reserves a tick lane below its track,
          so the handle renders 5px under the control's own middle - measured off a laid-out frame
          (band cy=20, thumb cy=25 in a 40px cell). Every slider in this app is laid OVER something it
          has to line up with, so the whole control is shifted up by exactly that: the margins cancel,
@@ -1634,6 +1666,12 @@
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="TextWrapping" Value="Wrap" />
     <Setter Property="MaxWidth" Value="460" />
+    <!-- explorer.html's .iddesc is a block div with max-width: it starts at the card's padding edge
+         and stops early. In Avalonia a MaxWidth-capped control whose alignment is the default
+         Stretch is CENTERED in the slack instead — so the book's own description floated 205px in,
+         under nothing, while the title above and the chips below both began at the card's edge.
+         ExplorerView's tree column carries a comment about the same trap; this is the second site. -->
+    <Setter Property="HorizontalAlignment" Value="Left" />
   </Style>
   <!-- .crow: one recipe's combination-space line -->
   <Style Selector="Border.crow">
@@ -1723,15 +1761,23 @@
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
     <Setter Property="Padding" Value="9,4" />
   </Style>
+  <!-- BASELINE, not top. explorer.html's .rchip is align-items:baseline; Avalonia has no baseline
+       alignment, and a TextBlock in a horizontal StackPanel defaults to Stretch, which draws its
+       line at the TOP of the row. A 9.5px caption beside a 12.5px name then sat 4.7px high — the
+       largest text misalignment in the app, and the one that made these chips look broken.
+       Bottom is the closest Avalonia has: it flushes the boxes, leaving only the descent
+       difference (~0.7px at these sizes) rather than the whole size difference. -->
   <Style Selector="TextBlock.rcl">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="9.5" />
     <Setter Property="LetterSpacing" Value="0.38" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Bottom" />
   </Style>
   <Style Selector="TextBlock.rcv">
     <Setter Property="FontSize" Value="12.5" />
     <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="VerticalAlignment" Value="Bottom" />
   </Style>
 
   <!-- .share: the New Recipe wizard's live "Resulting mix" readout. -->
@@ -2142,7 +2188,7 @@
     <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
   </Style>
 
-  <!-- The loading placeholder: a 13px diamond at the tile's centre, fading between 10% and 26% on
+  <!-- The loading placeholder: a 13px diamond at the tile's center, fading between 10% and 26% on
        a 2.4s cycle. Deliberately the quietest thing that still says "working" — no direction and no
        travel, so a screen of them reads as texture rather than as forty separate animations.
 
@@ -2228,7 +2274,7 @@
     <Setter Property="Background" Value="{DynamicResource LineBrush}" />
   </Style>
 
-  <!-- The recipe, as a tag rather than a grey word: it is the asset's TYPE, which is also the first
+  <!-- The recipe, as a tag rather than a gray word: it is the asset's TYPE, which is also the first
        row of the rarity table, so it should not read as a caption. -->
   <Style Selector="Border.rtag">
     <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
@@ -2263,7 +2309,7 @@
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
 
-  <!-- Rarity percentages, banded. Rare is the reason anyone opens this rail; a flat column of grey
+  <!-- Rarity percentages, banded. Rare is the reason anyone opens this rail; a flat column of gray
        numbers makes the one that matters look like the five that do not. -->
   <Style Selector="TextBlock.pct.rare">
     <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />

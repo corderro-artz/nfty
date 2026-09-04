@@ -34,7 +34,10 @@ public record FactorChip(string Name, int VariantCount, LayerKind Kind, bool Sho
 /// <param name="SharePercent">Its share of mints, from the cookbook's weights.</param>
 /// <param name="DnaSpaceText">Its unique-DNA figure, already formatted — including the em dash used
 /// when the space is undefined rather than merely large.</param>
-/// <param name="Factors">The per-layer chips whose product is that figure.</param>
+/// <param name="Factors">The layer stack, in paint order, one chip per layer carrying its variant
+/// count. Deliberately NOT a factorization of <paramref name="DnaSpaceText"/>: the DNA space is the
+/// legal combinations (rules applied) times each dynamic layer's quantized colors, so the chips'
+/// product is neither factor. The row draws an arrow between them rather than an equals sign.</param>
 /// <param name="Series">Which of the six mint-distribution series colors this recipe draws, 1-based
 /// and assigned by position in the book. Exposed as an index rather than a <c>Color</c> so the paint
 /// itself stays a theme token: the view switches on <see cref="IsSeries1"/>…<see cref="IsSeries6"/>
@@ -186,7 +189,21 @@ public partial class CookBookDetailViewModel : ViewModelBase
                 var rs = space[r.Manifest.Id];
                 dna = SpaceText(!rs.IsCountable, rs.IsExact, rs.Total);
             }
-            var factors = r.Ingredients
+            // layerOrder, not r.Ingredients. The archive's own order is arbitrary, so the same
+            // recipe's chips came out in one order here and in paint order on the recipe panel -
+            // the same five numbers, shuffled, two clicks apart. Resolved tolerantly (an entry
+            // naming a removed ingredient is simply skipped) because this panel is expected to
+            // render a book that is mid-edit and invalid; deciding what is legal is Validator's job.
+            var byId = new Dictionary<string, LoadedIngredient>(StringComparer.Ordinal);
+            foreach (var i in r.Ingredients) byId[i.Manifest.Id] = i;
+            var ordered = r.Manifest.LayerOrder
+                .Select(id => byId.GetValueOrDefault(id))
+                .Where(i => i is not null)
+                .Select(i => i!)
+                .ToList();
+            if (ordered.Count == 0) ordered = r.Ingredients.ToList();
+
+            var factors = ordered
                 .Select((i, idx) => new FactorChip(i.Manifest.Name, i.Manifest.Variants.Count,
                                                    i.Manifest.Kind, ShowTimes: idx > 0))
                 .ToList();

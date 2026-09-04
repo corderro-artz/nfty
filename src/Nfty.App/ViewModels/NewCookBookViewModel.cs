@@ -28,8 +28,10 @@ public partial class NewCookBookViewModel : WizardViewModelBase
     private bool _syncing;
 
     /// <summary>The id derived from the name: lower-case, spaces to dashes.</summary>
-    public string DerivedId => string.Join('-',
-        Name.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+    public string DerivedId => DeriveId(Name);
+
+    /// <summary>The derived id as the Identifier chip prints it.</summary>
+    public string DerivedIdText => IdChipText(DerivedId);
 
     /// <summary>Creates the New CookBook wizard.</summary>
     /// <param name="dialogs">The dialog layer.</param>
@@ -38,6 +40,7 @@ public partial class NewCookBookViewModel : WizardViewModelBase
     partial void OnNameChanged(string value)
     {
         OnPropertyChanged(nameof(DerivedId));
+        OnPropertyChanged(nameof(DerivedIdText));
         CreateCommand.NotifyCanExecuteChanged();
     }
 

@@ -8,7 +8,7 @@ namespace Nfty.App.Converters;
 /// Sorts a rarity percentage into one of three bands, so the rail can ink it accordingly.
 /// </summary>
 /// <remarks>
-/// <para>Rarity is the reason anyone opens the Set browser's rail, and a flat column of grey numbers
+/// <para>Rarity is the reason anyone opens the Set browser's rail, and a flat column of gray numbers
 /// makes the one that matters look exactly like the five that do not. Banding the ink — accent for
 /// rare, foreground for the middle, muted for common — turns the column into something you can read
 /// at a glance instead of something you have to compare digit by digit.</para>

@@ -91,6 +91,7 @@ public partial class NewIngredientViewModel : WizardViewModelBase
     partial void OnNameChanged(string value)
     {
         OnPropertyChanged(nameof(DerivedId));
+        OnPropertyChanged(nameof(DerivedIdText));
         CreateCommand.NotifyCanExecuteChanged();
     }
 
@@ -107,8 +108,10 @@ public partial class NewIngredientViewModel : WizardViewModelBase
     public string SatRangeText => $"{SatMin:0}–{SatMax:0}%";
 
     /// <summary>The ingredient id derived from the name: lower-case, spaces to dashes.</summary>
-    public string DerivedId => string.Join('-',
-        Name.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+    public string DerivedId => DeriveId(Name);
+
+    /// <summary>The derived id as the Identifier chip prints it.</summary>
+    public string DerivedIdText => IdChipText(DerivedId);
 
     /// <summary>Parse the CanvasSize field ("{W}x{H}") into positive dimensions.</summary>
     public bool TryGetCanvas(out Dimensions canvas)

@@ -474,4 +474,77 @@ public class UniqueSpaceTests
         Assert.False(count.IsExact);
         Assert.Equal(1000, count.Total);
     }
+
+    // ---- CountColors: the one figure allowed to answer "how many colors?" -----------------------
+    //
+    // The Ingredient editor used to print HueQuantize * SatQuantize, the product of the two STEP
+    // sizes. That is not a count of anything: it ignores the ranges, and it grows as the steps
+    // coarsen, which can only ever remove colors. These pin the count to buckets.
+
+    private static Colorization Ranged(double hMin, double hMax, double sMin, double sMax,
+                                       int hueQ, int satQ) =>
+        new(ColorModel.Hsv, hueQ, satQ,
+            new[] { new ColorEntry(1, new ColorRange(hMin, hMax, sMin, sMax), null) });
+
+    [Fact]
+    public void Color_count_is_buckets_not_the_product_of_the_two_steps()
+    {
+        // The demo book's Background layer: the whole hue circle in 30-degree steps is 12 buckets,
+        // and 25..70 saturation in steps of 20 is 3 - so 36, where step-multiplication said 600.
+        var (count, exact) = UniqueSpace.CountColors(Ranged(0, 360, 25, 70, 30, 20));
+
+        Assert.True(exact);
+        Assert.Equal(36, count);
+        Assert.NotEqual(30 * 20, count);
+    }
+
+    [Fact]
+    public void Coarser_quantize_never_admits_more_colors()
+    {
+        var fine = UniqueSpace.CountColors(Ranged(0, 360, 0, 100, 10, 10)).Count;
+        var coarse = UniqueSpace.CountColors(Ranged(0, 360, 0, 100, 30, 20)).Count;
+
+        Assert.True(coarse < fine,
+            $"a coarser step must not admit more colors: fine={fine}, coarse={coarse}");
+    }
+
+    [Fact]
+    public void Color_count_reads_the_range_not_only_the_step()
+    {
+        // Same steps, a quarter of the hue circle: the count has to fall with the range. The old
+        // formula could not see this at all - both of these read 600.
+        int whole = (int)UniqueSpace.CountColors(Ranged(0, 360, 25, 70, 30, 20)).Count;
+        int quarter = (int)UniqueSpace.CountColors(Ranged(0, 90, 25, 70, 30, 20)).Count;
+
+        Assert.Equal(36, whole);
+        Assert.Equal(9, quarter);
+    }
+
+    [Fact]
+    public void A_fixed_color_admits_exactly_one()
+    {
+        var fixedSpec = new Colorization(ColorModel.Hsv, 30, 20,
+            new[] { new ColorEntry(1, null, "hex:d6249f") });
+
+        Assert.Equal((1L, true), UniqueSpace.CountColors(fixedSpec));
+    }
+
+    [Fact]
+    public void Count_colors_agrees_with_the_space_a_book_reports()
+    {
+        // CountColors is the same counter Count multiplies per dynamic layer, and the editor now
+        // prints it - so the editor's figure and the CookBook panel's cannot drift apart.
+        var colorization = Ranged(0, 360, 25, 70, 30, 20);
+        var dynamic = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("bg", "bg", LayerKind.Dynamic, colorization,
+                new[] { new Variant("only", "only", 1) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>>
+                { ["only"] = new Image<Rgba32>(2, 2, new Rgba32(9, 9, 9, 255)) },
+        };
+        using var book = Book(Recipe("r", Array.Empty<IncompatibilityRule>(), dynamic));
+
+        // One variant, so the whole space IS the color count.
+        Assert.Equal(UniqueSpace.CountColors(colorization).Count, UniqueSpace.Count(book).Total);
+    }
 }

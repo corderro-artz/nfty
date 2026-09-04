@@ -11,6 +11,7 @@ using Nfty.App.Imaging;
 using Nfty.App.Services;
 using Nfty.Core.Editing;
 using Nfty.Core.Formats;
+using Nfty.Core.Generation;
 using Nfty.Core.Imaging;
 using Nfty.Core.Model;
 using SixLabors.ImageSharp;
@@ -506,13 +507,22 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     // Every one of these is now part of what Save WRITES, not just of what the preview shows, so each
     // marks the draft dirty. _loadingColorization suppresses that while the ctor fills the rail from
     // the layer's own configuration — opening a layer must not make it look edited.
-    partial void OnHueMinChanged(double value) { RebuildSurfaces(); OnPropertyChanged(nameof(HueRangeText)); ColorizeEdited(); }
-    partial void OnHueMaxChanged(double value) { RebuildSurfaces(); OnPropertyChanged(nameof(HueRangeText)); ColorizeEdited(); }
-    partial void OnSatMinChanged(double value) { RebuildSurfaces(); OnPropertyChanged(nameof(SatRangeText)); ColorizeEdited(); }
-    partial void OnSatMaxChanged(double value) { RebuildSurfaces(); OnPropertyChanged(nameof(SatRangeText)); ColorizeEdited(); }
-    partial void OnFixedColorChanged(string value) { RebuildSurfaces(); ColorizeEdited(); }
-    partial void OnHueQuantizeChanged(int value) { OnPropertyChanged(nameof(ApproxColorsText)); ColorizeEdited(); }
-    partial void OnSatQuantizeChanged(int value) { OnPropertyChanged(nameof(ApproxColorsText)); ColorizeEdited(); }
+    // The colors readout counts BUCKETS over the live ranges, so a range endpoint moves it exactly
+    // as a quantize step does. Only the steppers used to raise it, which was correct for a figure
+    // that only read the steppers and is not for one that reads the whole block.
+    partial void OnHueMinChanged(double value) { RebuildSurfaces(); OnPropertyChanged(nameof(HueRangeText)); ColorsChanged(); }
+    partial void OnHueMaxChanged(double value) { RebuildSurfaces(); OnPropertyChanged(nameof(HueRangeText)); ColorsChanged(); }
+    partial void OnSatMinChanged(double value) { RebuildSurfaces(); OnPropertyChanged(nameof(SatRangeText)); ColorsChanged(); }
+    partial void OnSatMaxChanged(double value) { RebuildSurfaces(); OnPropertyChanged(nameof(SatRangeText)); ColorsChanged(); }
+    partial void OnFixedColorChanged(string value) { RebuildSurfaces(); ColorsChanged(); }
+    partial void OnHueQuantizeChanged(int value) { ColorsChanged(); }
+    partial void OnSatQuantizeChanged(int value) { ColorsChanged(); }
+
+    private void ColorsChanged()
+    {
+        OnPropertyChanged(nameof(ApproxColorsText));
+        ColorizeEdited();
+    }
 
     private bool _loadingColorization;
 
@@ -589,10 +599,24 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// <summary>The saturation range as the panel prints it.</summary>
     public string SatRangeText => $"{SatMin:0}–{SatMax:0}%";
 
-    /// <summary>How many distinct colors the quantize settings actually admit - the product of the
-    /// two bucket counts. This is the number that decides how much of the color space survives into
-    /// DNA, so the editor states it rather than leaving the user to multiply two steppers.</summary>
-    public string ApproxColorsText => $"≈ {HueQuantize * SatQuantize} colors";
+    /// <summary>
+    /// How many distinct colors this layer's colorization actually admits.
+    /// </summary>
+    /// <remarks>
+    /// Counted by <see cref="UniqueSpace.CountColors"/> — the same counter the DNA space is built
+    /// from, so the editor's figure and the CookBook's cannot disagree. It used to be
+    /// <c>HueQuantize * SatQuantize</c>, the product of the two STEP sizes, which is not a count:
+    /// it ignored the ranges entirely, read 600 where the layer admitted 36, and rose when a
+    /// coarser step made the palette smaller.
+    /// </remarks>
+    public string ApproxColorsText
+    {
+        get
+        {
+            var (count, exact) = UniqueSpace.CountColors(BuildColorization());
+            return exact ? $"≈ {count} colors" : "≈ many colors";
+        }
+    }
 
     [RelayCommand] private void SelectTool(EditorTool tool) => ActiveTool = tool;
 

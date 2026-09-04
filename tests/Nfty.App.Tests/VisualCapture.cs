@@ -307,7 +307,7 @@ public class VisualCapture
         return (book, recipe, ing);
     }
 
-    private static (LoadedCookBook book, LoadedRecipe recipe) RecipeWithRules()
+    internal static (LoadedCookBook book, LoadedRecipe recipe) RecipeWithRules()
     {
         var rules = new[]
         {

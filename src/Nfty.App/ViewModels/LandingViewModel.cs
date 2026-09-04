@@ -202,10 +202,59 @@ public partial class LandingViewModel : ViewModelBase
     /// <summary>Whether a Kitchen is open.</summary>
     public bool HasKitchen => _kitchen?.Current is not null;
 
-    /// <summary>Same rule the other wizards derive ids by: lower-case, spaces to dashes.</summary>
-    private static string DeriveId(string name) => string.Join('-',
-        name.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries));
-    [RelayCommand] private void NewRecipe() => _dialogs.ShowAsync<object>(new NewRecipeViewModel(_dialogs));
+    /// <summary>Same rule the wizards derive ids by — now literally the same code.</summary>
+    private static string DeriveId(string name) => WizardViewModelBase.DeriveId(name);
+    /// <summary>
+    /// Landing's "+ Recipe": a loose <c>.rcp</c>, saved and then opened.
+    /// </summary>
+    /// <remarks>
+    /// This used to be <c>_dialogs.ShowAsync&lt;object&gt;(new NewRecipeViewModel(_dialogs))</c> - the
+    /// wizard was shown and its result dropped on the floor, so the button collected a name, a
+    /// weight and a destination and then did nothing at all. Its sibling "+ Ingredient" beside it
+    /// was fully wired, which is what made the gap invisible: the two buttons look the same and only
+    /// one of them worked. Found by driving, not by a test - nothing referenced the command.
+    ///
+    /// Shaped like <see cref="NewIngredient"/> on purpose, including forcing the destination:
+    /// Landing has no CookBook open, so "This CookBook" has nothing to add to. The recipe is written
+    /// EMPTY and not validated, exactly as the Explorer's own loose branch does it - a fresh recipe
+    /// has no layers yet, and the user fills it in the editor next.
+    /// </remarks>
+    [RelayCommand]
+    private async Task NewRecipe()
+    {
+        var wizard = new NewRecipeViewModel(_dialogs) { Destination = RecipeDestination.LooseKitchen };
+        var result = await _dialogs.ShowAsync<NewRecipeViewModel>(wizard);
+        if (result is null) return;   // canceled
+
+        if (result.Destination == RecipeDestination.IntoCookBook)
+        {
+            ShowError("No cookbook open", "Open or create a cookbook, then add recipes from the Explorer.");
+            return;
+        }
+
+        var path = await _picker.SaveFileAsync("Save new recipe", ".rcp");
+        if (path is null) return;   // canceled the picker
+
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest(result.DerivedId, result.Name,
+                Array.Empty<string>(), Array.Empty<IncompatibilityRule>()),
+            Ingredients = Array.Empty<LoadedIngredient>(),
+        };
+
+        try
+        {
+            var problems = LooseWorkspace.WriteRecipe(path, recipe);
+            if (problems.Count > 0)
+            {
+                ShowError("Invalid recipe", string.Join(Environment.NewLine, problems));
+                return;
+            }
+        }
+        catch (Exception ex) { ShowError("Could not save", ex.Message); return; }
+
+        OpenLooseRecipe(path);
+    }
     [RelayCommand]
     private async Task NewIngredient()
     {
@@ -321,8 +370,12 @@ public partial class LandingViewModel : ViewModelBase
     /// was on the Landing screen every time a book had one.</summary>
     /// <param name="book">The book being remembered.</param>
     /// <returns>Its subtitle line.</returns>
+    /// <remarks>Leads with the kind, as every other remembered thing does — "set · 300 assets",
+    /// "loose recipe · 3 ingredients". A CookBook was the one row that did not, so the list read as
+    /// three conventions instead of one, and "2 recipes · 512×512" beside "set · 300 assets" left
+    /// the reader to infer which of the four kinds an unlabeled row was.</remarks>
     public static string RecentMeta(LoadedCookBook book) =>
-        $"{book.Recipes.Count} {(book.Recipes.Count == 1 ? "recipe" : "recipes")} · "
+        $"cookbook · {book.Recipes.Count} {(book.Recipes.Count == 1 ? "recipe" : "recipes")} · "
         + $"{book.Manifest.Canvas.Width}×{book.Manifest.Canvas.Height}";
 
     private void ShowError(string title, string message) =>

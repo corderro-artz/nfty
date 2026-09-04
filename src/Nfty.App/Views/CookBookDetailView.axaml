@@ -110,8 +110,12 @@
                         Classes.s1="{Binding IsSeries1}" Classes.s2="{Binding IsSeries2}"
                         Classes.s3="{Binding IsSeries3}" Classes.s4="{Binding IsSeries4}"
                         Classes.s5="{Binding IsSeries5}" Classes.s6="{Binding IsSeries6}" />
-                <TextBlock FontSize="12" Text="{Binding Name}" />
-                <TextBlock Classes="pc" FontSize="12" Text="{Binding SharePercent, StringFormat='{}{0}%'}" />
+                <!-- Same size, different faces: .pc is mono and the name is not, and two faces at
+                     one size still have different line boxes. Top-aligned that put the percentage
+                     1.8px above the name it belongs to. -->
+                <TextBlock FontSize="12" Text="{Binding Name}" VerticalAlignment="Bottom" />
+                <TextBlock Classes="pc" FontSize="12" VerticalAlignment="Bottom"
+                           Text="{Binding SharePercent, StringFormat='{}{0}%'}" />
               </StackPanel>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
@@ -156,8 +160,16 @@
                           </DataTemplate>
                         </ItemsControl.ItemTemplate>
                       </ItemsControl>
-                      <TextBlock Classes="ceq" Text="=" />
-                      <TextBlock Classes="cnum" Text="{Binding DnaSpaceText}" />
+                      <!-- "→", not "=". The chips are the layer stack; the figure is unique DNA,
+                           which is the LEGAL combinations (this recipe's rules remove some) times
+                           each dynamic layer's quantized color buckets. So the chips' product is
+                           not the figure and no extra factor can make it one — Cat reads
+                           2x3x2x3x3 = 108 while its DNA space is 90 legal combinations x 7776
+                           colors. An equals sign there was arithmetic the panel could not back up.
+                           The tooltip carries the derivation the arrow leaves implicit. -->
+                      <TextBlock Classes="ceq" Text="→" VerticalAlignment="Bottom" />
+                      <TextBlock Classes="cnum" Text="{Binding DnaSpaceText}" VerticalAlignment="Bottom"
+                                 ToolTip.Tip="Legal variant combinations (this recipe's rules applied), times each dynamic layer's quantized colors" />
                     </StackPanel>
                   </Grid>
                   <Grid ColumnDefinitions="*,12,Auto">

@@ -67,9 +67,11 @@
               <TextBlock Classes="cshare" Text="{Binding LayerCountText}" />
               <TextBlock Classes="cshare" Text="{Binding VariantCountText}" />
               <TextBlock Classes="cshare" Text="{Binding RuleCountText}" />
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <TextBlock Classes="cshare" Text="{Binding RollSeed, StringFormat='seed {0}'}" />
-              </StackPanel>
+              <!-- The other three describe the recipe; this one describes the PICTURE beside them,
+                   and a bare "seed 1" in their company read as a fourth property of the recipe -
+                   which has no seed. Named for what it is, and the die on the hero rerolls it. -->
+              <TextBlock Classes="cshare" ToolTip.Tip="Which roll the picture above shows. Reroll it with the die on the image; it is not stored in the recipe."
+                         Text="{Binding RollSeed, StringFormat='sample seed {0}'}" />
             </StackPanel>
           </StackPanel>
         </Grid>

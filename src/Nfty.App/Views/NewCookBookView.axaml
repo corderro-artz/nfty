@@ -76,7 +76,13 @@
 
             <StackPanel Spacing="6">
               <TextBlock Text="DESCRIPTION" Classes="plabel" />
+              <!-- Wrap, and no horizontal scrollbar. A TextBox defaults to NoWrap even with
+                   AcceptsReturn set, so this two-line box ran its text off the right edge and
+                   Fluent drew a horizontal scrollbar under it - which the PLACEHOLDER alone was
+                   enough to trigger, so an untouched wizard opened showing a clipped sentence and
+                   a scrollbar for text the user had not typed. -->
               <TextBox Text="{Binding Description}" AcceptsReturn="True" Height="54"
+                       TextWrapping="Wrap" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                        VerticalContentAlignment="Top" Padding="11,7"
                        PlaceholderText="A collection of neon companions, each hatched from its own recipe…" />
             </StackPanel>
@@ -88,7 +94,7 @@
                        StrokeThickness="1" StrokeDashArray="3,3" />
             <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,11,0,0">
               <TextBlock Text="Identifier" Classes="derived" />
-              <Border Classes="idchip"><TextBlock Text="{Binding DerivedId}" Classes="mono" FontSize="10.5" /></Border>
+              <Border Classes="idchip"><TextBlock Text="{Binding DerivedIdText}" Classes="mono" FontSize="10.5" /></Border>
               <TextBlock Text="— derived from the name" Classes="derived" Opacity="0.9" />
             </StackPanel>
           </StackPanel>

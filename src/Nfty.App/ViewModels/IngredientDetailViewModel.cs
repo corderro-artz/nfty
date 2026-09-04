@@ -155,11 +155,25 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
         }
     }
 
+    /// <summary>The color model this layer is authored in, as the panel spells it.</summary>
+    /// <remarks>
+    /// Read from the layer, not assumed. Both of the labels below used to hardcode "HSV" while
+    /// <see cref="ColorModel"/> has two members, so an HSL layer's card read "HSV · rolled" with
+    /// the CookBook panel one click away printing "colorize hsl". The third channel is named after
+    /// the model too: HSV's is value, HSL's is lightness, and it is the one the grayscale map
+    /// supplies — saying "value" of an HSL layer names a channel that model does not have.
+    /// </remarks>
+    private static string ModelName(IngredientManifest m) =>
+        m.Colorization?.Model == ColorModel.Hsl ? "HSL" : "HSV";
+
+    private static string ThirdChannel(IngredientManifest m) =>
+        m.Colorization?.Model == ColorModel.Hsl ? "lightness" : "value";
+
     /// <summary>The hero's one-line summary, which does carry the value-map aside.</summary>
     private static string ColorwaysLabel(IngredientManifest m) => m.Kind switch
     {
-        LayerKind.Dynamic => "HSV · rolled  (value ← value-map)",
-        LayerKind.Static => "HSV · fixed  (value ← value-map)",
+        LayerKind.Dynamic => $"{ModelName(m)} · rolled  ({ThirdChannel(m)} ← value-map)",
+        LayerKind.Static => $"{ModelName(m)} · fixed  ({ThirdChannel(m)} ← value-map)",
         _ => "no colorize · composited as-is",
     };
 
@@ -169,8 +183,8 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     /// and made the one element with a direct mockup equivalent the wrong one.</summary>
     private static string ColorwaysModelLabel(IngredientManifest m) => m.Kind switch
     {
-        LayerKind.Dynamic => "HSV · rolled",
-        LayerKind.Static => "HSV · fixed",
+        LayerKind.Dynamic => $"{ModelName(m)} · rolled",
+        LayerKind.Static => $"{ModelName(m)} · fixed",
         _ => "no colorize",
     };
 
@@ -216,7 +230,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
             var fixedSpec = c.Entries.FirstOrDefault(e => e.Fixed is not null)?.Fixed;
             if (fixedSpec is not null) list.Add(new ColorwayAxis("COLOR", fixedSpec, false));
         }
-        list.Add(new ColorwayAxis("VALUE", "← value-map", true));
+        list.Add(new ColorwayAxis(ThirdChannel(m).ToUpperInvariant(), "← value-map", true));
         return list;
     }
 
@@ -294,8 +308,12 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
         if (!VariantPreview.NeedsColor(_ing)) return null;
         var entry = _ing.Manifest.Colorization?.Entries.FirstOrDefault();
         if (entry?.Fixed is { } fixedSpec) return fixedSpec;
-        if (entry?.Range is { } range) return $"hsv:{range.HueMin:0},{range.SatMin:0},80";
-        return "hsv:0,0,80";
+        // The prefix names the model the numbers are IN. They come off this layer's own range, so
+        // spelling them "hsv:" for an HSL layer would hand the picker a saturation the layer never
+        // meant - the two models agree on hue and disagree on saturation for the same triple.
+        var model = _ing.Manifest.Colorization?.Model == ColorModel.Hsl ? "hsl" : "hsv";
+        if (entry?.Range is { } range) return $"{model}:{range.HueMin:0},{range.SatMin:0},80";
+        return $"{model}:0,0,80";
     }
 
     private Task ShowPreviewError(string message) =>

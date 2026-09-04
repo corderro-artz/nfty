@@ -108,6 +108,22 @@ public static class UniqueSpace
         return new UniqueSpaceCount(total, exact, cap, recipes);
     }
 
+    /// <summary>
+    /// How many distinct quantized colors one colorization admits.
+    /// </summary>
+    /// <param name="colorization">The block to count. May be mid-edit and illegal; this never throws.</param>
+    /// <param name="cap">Enumeration limit; see <see cref="DefaultCap"/>.</param>
+    /// <returns>The bucket count, and whether it is exact rather than saturated at the cap.</returns>
+    /// <remarks>
+    /// This is the same counter <see cref="Count"/> multiplies per dynamic layer, exposed because an
+    /// editor showing the user a colors figure must show <em>that</em> figure. The Ingredient editor
+    /// used to print the product of the two quantize STEPS, which is not a count of anything: a hue
+    /// step of 30 and a saturation step of 20 read as "600 colors" where the layer actually admits
+    /// 36, and coarsening a step — which can only ever remove colors — made the number go up.
+    /// </remarks>
+    public static (long Count, bool Exact) CountColors(Colorization colorization, long cap = DefaultCap) =>
+        DistinctBuckets(colorization, cap);
+
     /// <summary>Variant combinations that satisfy the recipe's rules.</summary>
     private static (long Count, bool Exact) LegalCombinations(LoadedRecipe recipe, long cap)
     {
