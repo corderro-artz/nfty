@@ -1,0 +1,417 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>nfty — exploration · Kitchen contents on Landing</title>
+<!-- The locked mockups in ../ carry no doctype: the publish host wraps them. These explorations are
+     opened standalone, so they carry their own. -->
+<style>
+  /* ==========================================================================
+     EXPLORATION — NOT part of the locked mockup set.
+
+     Everything down to the "EXPLORATION SCAFFOLDING" banner is copied verbatim
+     from docs/design/mockups/landing.html — which carries the TRIMMED token
+     block: mono only (no sans token), and no shadow / guide / radius tokens.
+     landing.html inlines its own radii for that reason (`--r-md inlined as 8px`)
+     and so does this file. No new hex literal appears anywhere below.
+     ========================================================================== */
+
+  /* ===== tokens — verbatim from landing.html's .nfty-scope ===== */
+  .nfty-scope {
+    --bg:#f4efe8; --bg-alt:#f1ece4; --bg-alt2:#ede7df; --panel:#f8f3ed;
+    --fg:#121318; --fg-muted:#121418b8; --line:#1214181f; --line-strong:#12141833;
+    --accent:#a11f31; --accent-text:#97192a; --on-accent:#f7f2ec;
+    --accent-wash:#a11f3114; --accent-line:#a11f3140; --tile:#ece5db;
+    --info:#3b5b6f; --font-mono:"SF Mono","JetBrains Mono",ui-monospace,Menlo,Consolas,monospace; color:var(--fg);
+  }
+  @media (prefers-color-scheme: dark) {
+    .nfty-scope { --bg:#07080b; --bg-alt:#0a0b10; --bg-alt2:#0f1118; --panel:#0b0c10;
+      --fg:#f2ede6; --fg-muted:#f2ede6c7; --line:#f2ede624; --line-strong:#f2ede633;
+      --accent:#a11f31; --accent-text:#e0788a; --on-accent:#f7f2ec;
+      --accent-wash:#a11f3126; --accent-line:#a11f3166; --tile:#12141c; --info:#7fb0c4; }
+  }
+  :root[data-theme="light"] .nfty-scope {
+    --bg:#f4efe8; --bg-alt:#f1ece4; --bg-alt2:#ede7df; --panel:#f8f3ed;
+    --fg:#121318; --fg-muted:#121418b8; --line:#1214181f; --line-strong:#12141833;
+    --accent:#a11f31; --accent-text:#97192a; --on-accent:#f7f2ec;
+    --accent-wash:#a11f3114; --accent-line:#a11f3140; --tile:#ece5db; --info:#3b5b6f;
+  }
+  :root[data-theme="dark"] .nfty-scope {
+    --bg:#07080b; --bg-alt:#0a0b10; --bg-alt2:#0f1118; --panel:#0b0c10;
+    --fg:#f2ede6; --fg-muted:#f2ede6c7; --line:#f2ede624; --line-strong:#f2ede633;
+    --accent:#a11f31; --accent-text:#e0788a; --on-accent:#f7f2ec;
+    --accent-wash:#a11f3126; --accent-line:#a11f3166; --tile:#12141c; --info:#7fb0c4;
+  }
+
+  /* ===== window chrome + landing grammar — verbatim from landing.html ===== */
+  .nw { border:1px solid var(--line-strong); border-radius:10px; overflow:hidden; background:var(--bg);
+        box-shadow:0 1px 2px #12141810, 0 18px 48px -24px #12141833; font-family:var(--font-mono); }
+  .nw-tb { display:flex; align-items:center; gap:10px; height:38px; padding:0 10px 0 12px;
+           background:linear-gradient(var(--panel),var(--bg-alt)); border-bottom:1px solid var(--line); }
+  .btile { width:20px; height:20px; border-radius:5px; display:grid; place-items:center; background:var(--accent-wash); border:1px solid var(--accent-line); }
+  .btile i { width:8px; height:8px; background:var(--accent); border-radius:2px; transform:rotate(45deg); display:block; }
+  .wm { font-weight:700; font-size:13px; } .wm b { color:var(--accent-text); }
+  .div { width:1px; height:16px; background:var(--line-strong); }
+  .noopen { font-size:11.5px; color:var(--fg-muted); flex:1; }
+  .wc { width:26px; height:22px; border:0; background:transparent; border-radius:5px; color:var(--fg-muted); display:grid; place-items:center; font-size:12px; cursor:pointer; }
+  .wc svg { width:12px; height:12px; }
+  .wc:hover { background:var(--bg-alt2); color:var(--fg); }
+  .wc.close:hover { background:var(--accent); color:var(--on-accent); }
+
+  .land { display:grid; grid-template-columns:1fr 1fr; gap:34px; padding:34px 38px; min-height:396px; background:var(--bg); }
+  .lwordmark { font-size:30px; font-weight:700; letter-spacing:-.02em; margin:0; } .lwordmark b { color:var(--accent-text); }
+  .tagline { font-size:11.5px; color:var(--fg-muted); margin:3px 0 0; letter-spacing:.02em; }
+  .slbl { font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--fg-muted); margin:0 0 8px; }
+
+  .actions { display:flex; flex-direction:column; gap:7px; max-width:272px; }
+  .tbtn { display:flex; align-items:center; gap:9px; padding:9px 12px; font:inherit; font-size:12px;
+          border:1px solid var(--line-strong); border-radius:6px; background:var(--panel); color:var(--fg);
+          cursor:pointer; text-align:left; width:100%; }
+  .tbtn .g { font-family:var(--font-mono); flex:0 0 auto; color:var(--fg-muted); width:13px; text-align:center; }
+  .tbtn .g svg { width:13px; height:13px; display:block; }
+  .tbtn.accent { background:var(--accent); border-color:var(--accent); color:var(--on-accent); font-weight:600; }
+  .tbtn.accent .g { color:var(--on-accent); }
+  .khint { margin-left:auto; font-size:10px; color:var(--fg-muted); }
+  .tbtn.accent .khint { color:var(--on-accent); opacity:.72; }
+  .grp { margin-top:20px; }
+  .subrow { display:flex; gap:7px; max-width:272px; }
+  .subrow .tbtn { padding:7px 10px; font-size:11.5px; }
+
+  .rlist { display:flex; flex-direction:column; gap:2px; }
+  .rrow { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:6px; border:1px solid transparent;
+          background:transparent; font:inherit; text-align:left; width:100%; cursor:pointer; }
+  .rrow:hover { background:var(--bg-alt); border-color:var(--line); }
+  .rico { width:22px; height:22px; border-radius:5px; background:var(--accent-wash); border:1px solid var(--accent-line);
+          display:grid; place-items:center; flex:0 0 auto; color:var(--accent-text); font-size:10px; }
+  .rico svg { width:14px; height:14px; display:block; }
+  .rname { font-size:12px; color:var(--fg); display:block; }
+  .rmeta { font-size:10px; color:var(--fg-muted); display:block; margin-top:1px; }
+  .rpath { margin-left:auto; font-size:10px; color:var(--fg-muted); opacity:.7; }
+
+  .rzero { border:1px dashed var(--line-strong); border-radius:8px; padding:28px 20px; text-align:center; }
+  .rzero .zh { font-size:13px; color:var(--fg); font-weight:600; margin:0 0 5px; }
+  .rzero .zp { font-size:12px; color:var(--fg-muted); margin:0; line-height:1.6; }
+  .rzero .zp b { color:var(--accent-text); font-weight:600; }
+
+  .learn { margin-top:22px; display:inline-flex; align-items:center; gap:7px; font:inherit; font-size:11.5px;
+           background:transparent; border:0; color:var(--fg-muted); cursor:pointer; padding:0; }
+  .learn b { color:var(--accent-text); }
+
+  .statusbar { display:flex; align-items:center; gap:14px; padding:8px 16px; border-top:1px solid var(--line);
+               background:var(--bg-alt); font-family:var(--font-mono); font-size:11.5px; color:var(--fg-muted);
+               font-variant-numeric:tabular-nums; flex-wrap:wrap; }
+
+  /* the Kitchen chip the shipped app already draws in the titlebar (Explorer/ShellChromeView) */
+  .kroot { display:flex; align-items:center; gap:6px; flex:0 0 auto; font-family:var(--font-mono);
+           font-size:12px; color:var(--fg); padding:3px 9px 3px 7px; border-radius:5px;
+           background:var(--accent-wash); border:1px solid var(--accent-line); }
+  .kroot svg { width:13px; height:13px; color:var(--accent-text); flex:0 0 auto; }
+
+  /* ==========================================================================
+     EXPLORATION SCAFFOLDING — the page frame, and the three treatments.
+     ========================================================================== */
+  * { box-sizing:border-box; }
+  body { margin:0; }
+  .stage { background:#f1ece4; color:#121318; font-family:"SF Mono","JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+           min-height:100vh; padding:30px clamp(12px,3vw,48px) 56px; line-height:1.5; }
+  @media (prefers-color-scheme: dark) { .stage { background:#0a0b10; color:#f2ede6; } }
+  :root[data-theme="light"] .stage { background:#f1ece4; color:#121318; }
+  :root[data-theme="dark"] .stage { background:#0a0b10; color:#f2ede6; }
+
+  .pitch { max-width:1180px; margin:0 auto 22px; display:flex; align-items:flex-end;
+           justify-content:space-between; gap:24px; flex-wrap:wrap; }
+  .pitch h1 { font-size:14px; font-weight:600; margin:0; letter-spacing:.14em; text-transform:uppercase; opacity:.7; }
+  .pitch p { margin:6px 0 0; max-width:78ch; font-size:13px; opacity:.75; }
+  .pitch p b { opacity:1; font-weight:600; }
+  .ghost { font:inherit; font-size:13px; border:1px solid #12141833; background:#f8f3ed; color:#121318;
+           height:36px; padding:0 14px; border-radius:8px; cursor:pointer; }
+  @media (prefers-color-scheme: dark) { .ghost { background:#0b0c10; color:#f2ede6; border-color:#f2ede633; } }
+  :root[data-theme="dark"] .ghost { background:#0b0c10; color:#f2ede6; border-color:#f2ede633; }
+  :root[data-theme="light"] .ghost { background:#f8f3ed; color:#121318; border-color:#12141833; }
+
+  .row { max-width:1180px; margin:0 auto 36px; }
+  .cap { display:flex; align-items:baseline; gap:10px; margin:0 0 8px; flex-wrap:wrap; }
+  .cap h2 { font-size:12px; letter-spacing:.12em; text-transform:uppercase; margin:0; }
+  .cap .tag { font-size:10.5px; color:#f7f2ec; background:#a11f31; border-radius:4px; padding:1px 7px; }
+  .cap .tag.alt { background:transparent; color:inherit; opacity:.6; border:1px solid currentColor; }
+  .note { font-size:12.5px; opacity:.75; margin:0 0 12px; max-width:86ch; }
+  .note b { opacity:1; font-weight:600; }
+  .pair { display:grid; grid-template-columns:1fr; gap:14px; }
+  .costs { max-width:1180px; margin:0 auto; font-size:12.5px; opacity:.8; }
+  .costs ul { margin:6px 0 0; padding-left:18px; }
+  .costs b { opacity:1; }
+
+  /* ---- A: a second section stacked above Recent ---- */
+  .krule { border:0; border-top:1px solid var(--line); margin:16px 0 14px; }
+  .kmore { font-size:10.5px; color:var(--fg-muted); background:transparent; border:0; font:inherit;
+           padding:6px 10px; cursor:pointer; text-align:left; }
+  .kmore:hover { color:var(--accent-text); }
+
+  /* ---- B: one list, a segmented head ---- */
+  .kseg { display:flex; padding:2px; gap:2px; background:var(--bg-alt2); border:1px solid var(--line);
+          border-radius:5px; margin:0 0 10px; width:fit-content; }
+  .kseg button { font:inherit; font-size:10px; letter-spacing:.08em; text-transform:uppercase; border:0;
+                 background:transparent; color:var(--fg-muted); padding:4px 10px; border-radius:4px; cursor:pointer; }
+  .kseg button.on { background:var(--accent); color:var(--on-accent); font-weight:600; }
+
+  /* ---- C: a full-width workspace shelf ---- */
+  .shelf { border-top:1px solid var(--line); background:var(--bg-alt); padding:14px 38px 18px; }
+  .shelfhead { display:flex; align-items:center; gap:10px; margin:0 0 10px; }
+  .shelfhead .slbl { margin:0; }
+  .shelfcount { margin-left:auto; font-size:10.5px; color:var(--fg-muted); }
+  .shelfrow { display:flex; gap:9px; overflow-x:auto; padding-bottom:2px; }
+  .kcard { flex:0 0 auto; width:186px; display:flex; gap:9px; align-items:center; padding:9px;
+           border:1px solid var(--line); border-radius:6px; background:var(--bg-alt2); cursor:pointer;
+           font:inherit; text-align:left; }
+  .kcard:hover { border-color:var(--accent-line); }
+  .kcard .rico { width:26px; height:26px; }
+  .kcard .rname { font-size:12px; }
+  .kadd { flex:0 0 auto; width:132px; border:1px dashed var(--line-strong); border-radius:6px;
+          background:transparent; color:var(--fg-muted); font:inherit; font-size:11.5px; cursor:pointer; }
+  .kadd:hover { border-color:var(--accent-line); color:var(--accent-text); }
+</style>
+
+<div class="stage">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <symbol id="i-book" viewBox="0 0 24 24" fill="none"><path d="M6 3.5h11.4a.7.7 0 0 1 .7.7V20a.7.7 0 0 1-.7.7H6.3A2.3 2.3 0 0 1 4 18.4V5.8A2.3 2.3 0 0 1 6.3 3.5Z" fill="var(--panel)" stroke="currentColor" stroke-width="1.3"/><path d="M4.4 18.1a2.3 2.3 0 0 1 1.9-1h11.8" stroke="currentColor" stroke-width="1.3"/><path d="M9.4 3.5h3.4v5.2l-1.7-1.2-1.7 1.2z" fill="var(--accent)"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24" fill="none"><path d="M12 3.4 3.4 8 12 12.6 20.6 8 12 3.4Z" fill="var(--accent-wash)" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M3.4 12 12 16.6 20.6 12" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M3.4 16 12 20.6 20.6 16" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" opacity=".8"/></symbol>
+    <symbol id="i-recipe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M6.5 3.5h8.2L18 6.8V20a.7.7 0 0 1-.7.7H6.5a.7.7 0 0 1-.7-.7V4.2a.7.7 0 0 1 .7-.7Z" fill="var(--panel)"/><path d="M14.2 3.6v3.4h3.5"/></symbol>
+    <symbol id="i-kitchen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3.5" y="6" width="17" height="13" rx="2"/><path d="M3.5 10.5h17M9 6V4.2"/></symbol>
+    <symbol id="i-min" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 12h12" stroke-linecap="round"/></symbol>
+    <symbol id="i-max" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="6" width="12" height="12" rx="1.5"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 7l10 10M17 7 7 17" stroke-linecap="round"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></symbol>
+    <symbol id="i-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M13.5 5.5H18.5V10.5M18.5 5.5 11 13" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 14.5v3.2a.8.8 0 0 1-.8.8H6.3a.8.8 0 0 1-.8-.8V7.8a.8.8 0 0 1 .8-.8h3.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-import" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 4v10M8.2 10.4 12 14.2l3.8-3.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 16.5v2a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2" stroke-linecap="round"/></symbol>
+  </defs></svg>
+
+  <div class="pitch">
+    <div>
+      <h1>Exploration — the Kitchen's contents on Landing</h1>
+      <p>Opening a Kitchen today gives a titlebar chip, a default save folder and reference layers in the
+         editor. It does <b>not</b> let you open anything in it: <code>KitchenContents.CookBooks</code> is
+         scanned on every open and has <b>zero</b> readers in the GUI. To open a book in the workspace you
+         just pointed the app at, you navigate a file dialog back to the same folder.
+         <br><br>All three treatments below are built from <b>landing.html</b>'s own grammar — the same
+         <code>.slbl</code>, <code>.rlist</code>, <code>.rrow</code>, <code>.rico</code> and
+         <code>.rzero</code> the Recent list already uses. Ordered most standard first.</p>
+    </div>
+    <button class="ghost" onclick="var r=document.documentElement;r.dataset.theme=r.dataset.theme==='dark'?'light':'dark'">Toggle theme</button>
+  </div>
+
+  <!-- ============================ A ============================ -->
+  <div class="row">
+    <div class="cap"><h2>A — a Kitchen section stacked above Recent</h2><span class="tag">most standard</span></div>
+    <p class="note">The right column gains a second section, above Recent, using the identical row component.
+      This is the pattern every editor uses (VS Code, Figma): <b>workspace first, history second</b>. Nothing
+      new is invented — a second <code>.slbl</code>, a second <code>.rlist</code>, a hairline between them.
+      Capped at four rows with a "more" affordance so the column cannot outgrow the left one.</p>
+    <div class="nfty-scope">
+      <div class="nw">
+        <div class="nw-tb">
+          <span class="btile"><i></i></span><span class="wm">nft<b>y</b></span><span class="div"></span>
+          <span class="kroot"><svg><use href="#i-kitchen"/></svg> Studio</span>
+          <span class="noopen" style="flex:1"></span>
+          <button class="wc"><svg><use href="#i-min"/></svg></button><button class="wc"><svg><use href="#i-max"/></svg></button><button class="wc close"><svg><use href="#i-x"/></svg></button>
+        </div>
+        <div class="land">
+          <div>
+            <p class="lwordmark">nft<b>y</b></p>
+            <p class="tagline">Asset Generator</p>
+            <div class="grp">
+              <p class="slbl">Create</p>
+              <div class="actions">
+                <button class="tbtn accent"><span class="g"><svg><use href="#i-plus"/></svg></span> New CookBook <span class="khint">⌘N</span></button>
+                <button class="tbtn"><span class="g"><svg><use href="#i-plus"/></svg></span> New Kitchen…</button>
+              </div>
+              <div class="subrow" style="margin-top:7px;">
+                <button class="tbtn"><span class="g"><svg><use href="#i-plus"/></svg></span> Recipe</button>
+                <button class="tbtn"><span class="g"><svg><use href="#i-plus"/></svg></span> Ingredient</button>
+              </div>
+            </div>
+            <div class="grp">
+              <p class="slbl">Open</p>
+              <div class="actions">
+                <button class="tbtn"><span class="g"><svg><use href="#i-open"/></svg></span> Open CookBook… <span class="khint">⌘O</span></button>
+                <button class="tbtn"><span class="g"><svg><use href="#i-import"/></svg></span> Import… <span class="khint">⌘I</span></button>
+                <button class="tbtn"><span class="g"><svg><use href="#i-kitchen"/></svg></span> Open Kitchen…</button>
+              </div>
+            </div>
+            <button class="learn">New to nfty? <b>The cooking metaphor</b> <span>→</span></button>
+          </div>
+          <div>
+            <p class="slbl">Kitchen · Studio</p>
+            <div class="rlist">
+              <button class="rrow"><span class="rico"><svg><use href="#i-book"/></svg></span><span><span class="rname">VaporPets</span><span class="rmeta">3 recipes · 1000×1000</span></span><span class="rpath">VaporPets.cbk</span></button>
+              <button class="rrow"><span class="rico"><svg><use href="#i-book"/></svg></span><span><span class="rname">NeonKoi</span><span class="rmeta">1 recipe · 512×512</span></span><span class="rpath">NeonKoi.cbk</span></button>
+              <button class="rrow"><span class="rico" style="background:var(--tile); border-color:var(--line-strong); color:var(--fg-muted)"><svg><use href="#i-layers"/></svg></span><span><span class="rname">aura</span><span class="rmeta">loose ingredient · dynamic · 4 variants</span></span><span class="rpath">aura.igt</span></button>
+              <button class="rrow"><span class="rico" style="background:var(--tile); border-color:var(--line-strong); color:var(--fg-muted)"><svg><use href="#i-recipe"/></svg></span><span><span class="rname">cat</span><span class="rmeta">loose recipe · 3 layers</span></span><span class="rpath">cat.rcp</span></button>
+              <button class="kmore">+2 more in this Kitchen →</button>
+            </div>
+            <hr class="krule">
+            <p class="slbl">Recent</p>
+            <div class="rlist">
+              <button class="rrow"><span class="rico"><svg><use href="#i-book"/></svg></span><span><span class="rname">VaporPets</span><span class="rmeta">3 recipes · 1000×1000</span></span><span class="rpath">~/art/vaporpets.cbk</span></button>
+              <button class="rrow"><span class="rico"><svg><use href="#i-book"/></svg></span><span><span class="rname">Drifters</span><span class="rmeta">2 recipes · 256×256</span></span><span class="rpath">~/old/drifters.cbk</span></button>
+            </div>
+          </div>
+        </div>
+        <div class="statusbar"><span>Kitchen: Studio · 6 items</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================ B ============================ -->
+  <div class="row">
+    <div class="cap"><h2>B — one list, a segmented head</h2><span class="tag alt">fixed geometry</span></div>
+    <p class="note">The right column keeps <b>exactly one</b> heading and <b>exactly one</b> list, always. A
+      segmented tray at its head switches between the Kitchen and Recent; with no Kitchen open the tray is
+      replaced by the plain <code>RECENT</code> label in the same 20px slot, so the column's geometry never
+      changes. The tray is the <code>.seg</code> grammar the Ingredient Editor and the Explorer already use,
+      which is what ties this to the rest of the app. Costs one click to reach history.</p>
+    <div class="nfty-scope">
+      <div class="nw">
+        <div class="nw-tb">
+          <span class="btile"><i></i></span><span class="wm">nft<b>y</b></span><span class="div"></span>
+          <span class="kroot"><svg><use href="#i-kitchen"/></svg> Studio</span>
+          <span class="noopen" style="flex:1"></span>
+          <button class="wc"><svg><use href="#i-min"/></svg></button><button class="wc"><svg><use href="#i-max"/></svg></button><button class="wc close"><svg><use href="#i-x"/></svg></button>
+        </div>
+        <div class="land">
+          <div>
+            <p class="lwordmark">nft<b>y</b></p>
+            <p class="tagline">Asset Generator</p>
+            <div class="grp">
+              <p class="slbl">Create</p>
+              <div class="actions">
+                <button class="tbtn accent"><span class="g"><svg><use href="#i-plus"/></svg></span> New CookBook <span class="khint">⌘N</span></button>
+                <button class="tbtn"><span class="g"><svg><use href="#i-plus"/></svg></span> New Kitchen…</button>
+              </div>
+              <div class="subrow" style="margin-top:7px;">
+                <button class="tbtn"><span class="g"><svg><use href="#i-plus"/></svg></span> Recipe</button>
+                <button class="tbtn"><span class="g"><svg><use href="#i-plus"/></svg></span> Ingredient</button>
+              </div>
+            </div>
+            <div class="grp">
+              <p class="slbl">Open</p>
+              <div class="actions">
+                <button class="tbtn"><span class="g"><svg><use href="#i-open"/></svg></span> Open CookBook… <span class="khint">⌘O</span></button>
+                <button class="tbtn"><span class="g"><svg><use href="#i-import"/></svg></span> Import… <span class="khint">⌘I</span></button>
+                <button class="tbtn"><span class="g"><svg><use href="#i-kitchen"/></svg></span> Open Kitchen…</button>
+              </div>
+            </div>
+            <button class="learn">New to nfty? <b>The cooking metaphor</b> <span>→</span></button>
+          </div>
+          <div>
+            <div class="kseg"><button class="on">Studio</button><button>Recent</button></div>
+            <div class="rlist">
+              <button class="rrow"><span class="rico"><svg><use href="#i-book"/></svg></span><span><span class="rname">VaporPets</span><span class="rmeta">3 recipes · 1000×1000</span></span><span class="rpath">VaporPets.cbk</span></button>
+              <button class="rrow"><span class="rico"><svg><use href="#i-book"/></svg></span><span><span class="rname">NeonKoi</span><span class="rmeta">1 recipe · 512×512</span></span><span class="rpath">NeonKoi.cbk</span></button>
+              <button class="rrow"><span class="rico"><svg><use href="#i-book"/></svg></span><span><span class="rname">Drifters</span><span class="rmeta">2 recipes · 256×256</span></span><span class="rpath">Drifters.cbk</span></button>
+              <button class="rrow"><span class="rico" style="background:var(--tile); border-color:var(--line-strong); color:var(--fg-muted)"><svg><use href="#i-layers"/></svg></span><span><span class="rname">aura</span><span class="rmeta">loose ingredient · dynamic · 4 variants</span></span><span class="rpath">aura.igt</span></button>
+              <button class="rrow"><span class="rico" style="background:var(--tile); border-color:var(--line-strong); color:var(--fg-muted)"><svg><use href="#i-layers"/></svg></span><span><span class="rname">glow</span><span class="rmeta">loose ingredient · static · 2 variants</span></span><span class="rpath">glow.igt</span></button>
+              <button class="rrow"><span class="rico" style="background:var(--tile); border-color:var(--line-strong); color:var(--fg-muted)"><svg><use href="#i-recipe"/></svg></span><span><span class="rname">cat</span><span class="rmeta">loose recipe · 3 layers</span></span><span class="rpath">cat.rcp</span></button>
+            </div>
+          </div>
+        </div>
+        <div class="statusbar"><span>Kitchen: Studio · 6 items</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================ C ============================ -->
+  <div class="row">
+    <div class="cap"><h2>C — a full-width workspace shelf</h2><span class="tag alt">most distinctive</span></div>
+    <p class="note">The two columns are left exactly as they are, and the workspace becomes a band beneath
+      them — a horizontally scrolling shelf of cards. It borrows the Ingredient Editor's filmstrip
+      vocabulary (<code>.vcard</code>: tile + name + meta, in a scrolling run), which is the strongest tie
+      to the rest of the app. It is also the only option that <b>changes the screen's overall shape</b>: the
+      band is absent with no Kitchen open, so opening one makes Landing taller.</p>
+    <div class="nfty-scope">
+      <div class="nw">
+        <div class="nw-tb">
+          <span class="btile"><i></i></span><span class="wm">nft<b>y</b></span><span class="div"></span>
+          <span class="kroot"><svg><use href="#i-kitchen"/></svg> Studio</span>
+          <span class="noopen" style="flex:1"></span>
+          <button class="wc"><svg><use href="#i-min"/></svg></button><button class="wc"><svg><use href="#i-max"/></svg></button><button class="wc close"><svg><use href="#i-x"/></svg></button>
+        </div>
+        <div class="land" style="min-height:300px">
+          <div>
+            <p class="lwordmark">nft<b>y</b></p>
+            <p class="tagline">Asset Generator</p>
+            <div class="grp">
+              <p class="slbl">Create</p>
+              <div class="actions">
+                <button class="tbtn accent"><span class="g"><svg><use href="#i-plus"/></svg></span> New CookBook <span class="khint">⌘N</span></button>
+                <button class="tbtn"><span class="g"><svg><use href="#i-plus"/></svg></span> New Kitchen…</button>
+              </div>
+              <div class="subrow" style="margin-top:7px;">
+                <button class="tbtn"><span class="g"><svg><use href="#i-plus"/></svg></span> Recipe</button>
+                <button class="tbtn"><span class="g"><svg><use href="#i-plus"/></svg></span> Ingredient</button>
+              </div>
+            </div>
+            <div class="grp">
+              <p class="slbl">Open</p>
+              <div class="actions">
+                <button class="tbtn"><span class="g"><svg><use href="#i-open"/></svg></span> Open CookBook… <span class="khint">⌘O</span></button>
+                <button class="tbtn"><span class="g"><svg><use href="#i-import"/></svg></span> Import… <span class="khint">⌘I</span></button>
+              </div>
+            </div>
+          </div>
+          <div>
+            <p class="slbl">Recent</p>
+            <div class="rlist">
+              <button class="rrow"><span class="rico"><svg><use href="#i-book"/></svg></span><span><span class="rname">VaporPets</span><span class="rmeta">3 recipes · 1000×1000</span></span><span class="rpath">~/art/vaporpets.cbk</span></button>
+              <button class="rrow"><span class="rico"><svg><use href="#i-book"/></svg></span><span><span class="rname">Drifters</span><span class="rmeta">2 recipes · 256×256</span></span><span class="rpath">~/old/drifters.cbk</span></button>
+            </div>
+          </div>
+        </div>
+        <div class="shelf">
+          <div class="shelfhead">
+            <p class="slbl">Kitchen · Studio</p>
+            <span class="shelfcount">3 cookbooks · 2 ingredients · 1 recipe</span>
+          </div>
+          <div class="shelfrow">
+            <button class="kcard"><span class="rico"><svg><use href="#i-book"/></svg></span><span><span class="rname">VaporPets</span><span class="rmeta">3 recipes · 1000×1000</span></span></button>
+            <button class="kcard"><span class="rico"><svg><use href="#i-book"/></svg></span><span><span class="rname">NeonKoi</span><span class="rmeta">1 recipe · 512×512</span></span></button>
+            <button class="kcard"><span class="rico"><svg><use href="#i-book"/></svg></span><span><span class="rname">Drifters</span><span class="rmeta">2 recipes · 256×256</span></span></button>
+            <button class="kcard"><span class="rico" style="background:var(--tile); border-color:var(--line-strong); color:var(--fg-muted)"><svg><use href="#i-layers"/></svg></span><span><span class="rname">aura</span><span class="rmeta">dynamic · 4 variants</span></span></button>
+            <button class="kcard"><span class="rico" style="background:var(--tile); border-color:var(--line-strong); color:var(--fg-muted)"><svg><use href="#i-recipe"/></svg></span><span><span class="rname">cat</span><span class="rmeta">3 layers</span></span></button>
+            <button class="kadd">+ Add to Kitchen</button>
+          </div>
+        </div>
+        <div class="statusbar"><span>Kitchen: Studio · 6 items</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================ empty states ============================ -->
+  <div class="row">
+    <div class="cap"><h2>Shared — an empty Kitchen</h2><span class="tag alt">all three</span></div>
+    <p class="note">A fresh workspace is <b>not a broken one</b> (<code>KitchenContents.IsEmpty</code> says so
+      in as many words), so it gets the same <code>.rzero</code> treatment first-run Recent already has,
+      pointed at the thing that fills it.</p>
+    <div class="nfty-scope" style="max-width:340px">
+      <div class="rzero">
+        <p class="zh">This Kitchen is empty</p>
+        <p class="zp">CookBooks and loose parts saved here will appear.<br>Start with <b>New CookBook</b>.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="costs">
+    <p><b>What each costs, honestly:</b></p>
+    <ul>
+      <li><b>A</b> — the right column now holds two lists, so it can outgrow the left one on a big workspace.
+        Handled with a four-row cap and a "+N more"; that affordance needs somewhere to go (an Explorer-style
+        workspace browser) or it is a dead end.</li>
+      <li><b>B</b> — history moves behind a click while a Kitchen is open. Also the only option where the same
+        slot means two different things, so the tray has to be unmistakable.</li>
+      <li><b>C</b> — Landing changes height when a Kitchen opens or closes, which is the one thing the app's
+        geometry rule otherwise forbids. Defensible (it is a mode change, like the "Kitchen: Studio" line the
+        screen already grows today) but it is a knowing exception and should be recorded as one.</li>
+    </ul>
+    <p style="margin-top:10px"><b>All three share the same engine work</b>, so the choice is purely visual:
+      a cheap <code>PeekManifest</code> in Core that reads an archive's <code>manifest.json</code> without
+      decoding a single PNG — which is what lets every row above show real counts — plus
+      <code>KitchenItems</code> on the Landing ViewModel, refreshed off <code>IKitchenSession.Changed</code>.</p>
+  </div>
+</div>

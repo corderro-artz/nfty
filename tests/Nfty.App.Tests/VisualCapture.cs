@@ -530,7 +530,68 @@ public class VisualCapture
                 // working action look unavailable and matched the bug that was being investigated.
                 new KitchenSession());
             Capture(new Views.LandingView { DataContext = vm }, variant, $"landing-{key}.png");
+
+            // The Kitchen shelf's THIRD state. The two frames above both show it with no workspace
+            // open, which is the state that needs the least looking at; the one that carries the
+            // design — a row of cards, the pager, the kind heading — had no rendered evidence at all.
+            if (!empty)
+            {
+                var (dir, ktn) = ShelfWorkspace();
+                try
+                {
+                    var kitchen = new KitchenSession();
+                    kitchen.Open(ktn);
+                    var full = new LandingViewModel(nav, dialogs, notify, new FilePickerService(),
+                        recents, new CookBookSession(),
+                        book => null!, set => null!, (_, _, _) => null!, kitchen);
+                    Capture(new Views.LandingView { DataContext = full }, variant, $"landing-kitchen-{key}.png");
+                }
+                finally { Directory.Delete(dir, true); }
+            }
         }
+    }
+
+    /// <summary>A throwaway workspace with enough in it to page: seven CookBooks and three loose
+    /// parts, so the shelf shows a full row, a page count above one, and both tile treatments.</summary>
+    private static (string dir, string ktn) ShelfWorkspace()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        for (int i = 1; i <= 7; i++)
+        {
+            using var ing = new LoadedIngredient
+            {
+                Manifest = new IngredientManifest("aura", "Aura", LayerKind.Custom, null,
+                    new[] { new Variant("v1", "V1", 1) }),
+                VariantImages = new Dictionary<string, Image<Rgba32>>
+                { ["v1"] = new(8, 8, new Rgba32(1, 2, 3, 255)) },
+            };
+            var recipe = new LoadedRecipe
+            {
+                Manifest = new RecipeManifest("cat", "Cat", new[] { "aura" }, Array.Empty<IncompatibilityRule>()),
+                Ingredients = new[] { ing },
+            };
+            CookBookArchive.Write(Path.Combine(dir, $"Book{i}.cbk"),
+                new CookBookManifest("cb", $"Collection {i}", new Dimensions(512, 512),
+                    new Collection($"Collection {i}", "", "C"),
+                    new Dictionary<string, double> { ["cat"] = 100 }), new[] { recipe });
+        }
+
+        using (var loose = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("aura", "Aura", LayerKind.Dynamic,
+                new Colorization(ColorModel.Hsv, 12, 4,
+                    new[] { new ColorEntry(1, new ColorRange(0, 360, 40, 100), null) }),
+                new[] { new Variant("v1", "Glow", 1), new Variant("v2", "Spark", 1) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>>
+            { ["v1"] = new(8, 8), ["v2"] = new(8, 8) },
+        })
+        {
+            IngredientArchive.Write(Path.Combine(dir, "aura.igt"), loose.Manifest, loose.VariantImages);
+        }
+
+        var ktn = Path.Combine(dir, "Studio.ktn");
+        Kitchen.Create(ktn, new KitchenManifest("studio", "Studio"));
+        return (dir, ktn);
     }
 
     /// <summary>Renders the real <see cref="Views.SetBrowserView"/> bound to a

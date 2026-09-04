@@ -10,8 +10,12 @@
     <KeyBinding Gesture="Ctrl+O" Command="{Binding OpenCookBookCommand}" />
     <KeyBinding Gesture="Ctrl+I" Command="{Binding ImportCommand}" />
   </UserControl.KeyBindings>
+  <!-- The screen is the two landing.html columns PLUS a fixed workspace band beneath them. The band
+       is a row of its own so the columns keep landing.html's own geometry exactly. -->
+  <Grid Classes="monoform" RowDefinitions="*,Auto">
+
   <!-- landing.html .land: two equal columns, 34px gutter, 34/38 padding. -->
-  <Grid Classes="monoform" ColumnDefinitions="*,34,*" Margin="38,34">
+  <Grid Grid.Row="0" ColumnDefinitions="*,34,*" Margin="38,34">
     <!-- .actions is left-aligned at 272px. Stretching it inside the column centres the button
          stack, which is what made the whole screen read as a centred splash. -->
     <StackPanel Grid.Column="0" Spacing="7" MaxWidth="272" HorizontalAlignment="Left">
@@ -137,5 +141,84 @@
         </StackPanel>
       </Panel>
     </StackPanel>
+  </Grid>
+
+  <!-- ==================== Kitchen shelf ====================
+       Always present, always 104px — see Styles.axaml for why that is the whole argument. Wheel,
+       chevrons and keyboard all page it; a pointer-only control would be the incomplete version of
+       this, the same way pointer-only reorder was. -->
+  <Border Grid.Row="1" Classes="kshelf" Name="KitchenShelf" Focusable="True">
+    <Grid RowDefinitions="20,9,52">
+
+      <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="6">
+        <TextBlock Grid.Column="0" Text="KITCHEN" Classes="slbl" Margin="0" VerticalAlignment="Center" />
+        <TextBlock Grid.Column="1" Text="{Binding KitchenShelf.WhereText}" Classes="rmeta"
+                   Margin="4,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+        <TextBlock Grid.Column="3" Text="{Binding KitchenShelf.PageText}" Classes="rmeta"
+                   VerticalAlignment="Center" MinWidth="86" TextAlignment="Right" />
+        <Button Grid.Column="4" Classes="kchev" Command="{Binding KitchenShelf.PrevCommand}"
+                IsEnabled="{Binding KitchenShelf.CanPrev}" ToolTip.Tip="Previous page">
+          <Path Classes="ico xs" Data="{StaticResource IconChevronUp}" />
+        </Button>
+        <Button Grid.Column="5" Classes="kchev" Command="{Binding KitchenShelf.NextCommand}"
+                IsEnabled="{Binding KitchenShelf.CanNext}" ToolTip.Tip="Next page">
+          <Path Classes="ico xs" Data="{StaticResource IconChevronDown}" />
+        </Button>
+      </Grid>
+
+      <!-- the row of cards -->
+      <ItemsControl Grid.Row="2" Name="ShelfRow" ItemsSource="{Binding KitchenShelf.Row}"
+                    IsVisible="{Binding KitchenShelf.HasCards}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <UniformGrid Rows="1" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:KitchenCard">
+            <Button Classes="kcard" Classes.slot="{Binding Converter={x:Static ObjectConverters.IsNull}}"
+                    Margin="0,0,9,0" ToolTip.Tip="{Binding FileName}"
+                    Command="{Binding $parent[ItemsControl].((vm:LandingViewModel)DataContext).KitchenShelf.OpenCardCommand}"
+                    CommandParameter="{Binding}">
+              <Grid ColumnDefinitions="26,9,*">
+                <!-- One tile, three glyphs, one inked: the app already has a per-kind icon and
+                     using a single one would throw that away. -->
+                <Border Grid.Column="0" Classes="ktile" Classes.loose="{Binding IsLoose}">
+                  <Panel>
+                    <Path Classes="ico xs" Data="{StaticResource IconTypeCookBook}" IsVisible="{Binding IsCookBook}" />
+                    <Path Classes="ico xs" Data="{StaticResource IconTypeRecipe}" IsVisible="{Binding IsRecipe}" />
+                    <Path Classes="ico xs" Data="{StaticResource IconTypeIngredient}" IsVisible="{Binding IsIngredient}" />
+                  </Panel>
+                </Border>
+                <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="1">
+                  <TextBlock Text="{Binding Name}" Classes="rname" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Text="{Binding Meta}" Classes="rmeta" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+              </Grid>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <!-- No Kitchen open. NO BUTTONS: Open Kitchen… and New Kitchen… are already in the Open and
+           Create groups to the left, so this names them rather than repeating them. -->
+      <Panel Grid.Row="2" IsVisible="{Binding KitchenShelf.ShowNoKitchen}">
+        <Rectangle Classes="dashed btn" />
+        <StackPanel Margin="12,0" VerticalAlignment="Center" Spacing="2">
+          <TextBlock Text="No Kitchen open" Classes="zh" FontSize="12" HorizontalAlignment="Left" />
+          <TextBlock Classes="zp" FontSize="10.5" TextAlignment="Left" Margin="0"><Run Text="A Kitchen is any folder you work out of — open one with " /><Run Text="Open Kitchen…" Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold" /><Run Text=" and its CookBooks and loose parts appear here." /></TextBlock>
+        </StackPanel>
+      </Panel>
+
+      <!-- Open, but nothing in it yet. A fresh workspace is not a broken one. -->
+      <Panel Grid.Row="2" IsVisible="{Binding KitchenShelf.ShowEmptyKitchen}">
+        <Rectangle Classes="dashed btn" />
+        <StackPanel Margin="12,0" VerticalAlignment="Center" Spacing="2">
+          <TextBlock Text="This Kitchen is empty" Classes="zh" FontSize="12" HorizontalAlignment="Left" />
+          <TextBlock Classes="zp" FontSize="10.5" TextAlignment="Left" Margin="0"><Run Text="Anything you save into this workspace appears here — start with " /><Run Text="New CookBook" Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold" /><Run Text="." /></TextBlock>
+        </StackPanel>
+      </Panel>
+    </Grid>
+  </Border>
   </Grid>
 </UserControl>

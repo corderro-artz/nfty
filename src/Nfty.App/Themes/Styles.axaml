@@ -2241,4 +2241,99 @@
        This governs DISPLAY only. Nothing in Nfty.Core resamples, blurs or anti-aliases a variant:
        every edit command writes whole pixels, import refuses an image that is not exactly the canvas
        size rather than scaling it, and colorization is per-pixel. -->
+
+  <!-- ==================== Kitchen shelf (Landing) ====================
+       The workspace's own contents, as one row of cards paged by kind. See
+       docs/design/mockups/explorations/kitchen-shelf.html.
+
+       GEOMETRY IS FIXED, in its strictest form: the band is ALWAYS present at ALWAYS the same
+       height — a Kitchen open, no Kitchen, an empty Kitchen — so opening or closing a workspace
+       swaps the ink inside a box that never moves. That permanence is also the argument the design
+       makes: the Kitchen is not something a CookBook has, it is a shelf the app always carries.
+
+       The band deliberately holds NO Open-Kitchen or New-CookBook button of its own. Those already
+       sit in the Create and Open groups a few inches to the left, and two controls for one action a
+       few inches apart is worse than one; the band names them in prose instead. -->
+  <!-- No explicit Height: the band's rows are fixed (20 head / 9 gap / 52 row) and its padding is
+       fixed, so its height already is. A second declaration of the same number is a number that can
+       come to disagree with the first — and it did, by a pixel. What has to be true is that all
+       three STATES are the same height, which is what KitchenShelfLayoutTests measures. -->
+  <Style Selector="Border.kshelf">
+    <Setter Property="Padding" Value="38,11,38,13" />
+    <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+  </Style>
+
+  <!-- One card. Equal-width and filling the row, so a wider window shows more per page rather than
+       leaving a gap; a short final page keeps its empty slots so the row never re-spaces itself. -->
+  <Style Selector="Button.kcard">
+    <Setter Property="Height" Value="52" />
+    <Setter Property="Padding" Value="9,0" />
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.kcard /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+  </Style>
+  <Style Selector="Button.kcard:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+  <!-- An empty slot holds the space and shows nothing: the row's shape is the point of it. -->
+  <Style Selector="Button.kcard.slot">
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+  </Style>
+
+  <!-- The card's kind tile, matching the Recent list's: accent for a CookBook, muted for a loose part. -->
+  <Style Selector="Border.ktile">
+    <Setter Property="Width" Value="26" />
+    <Setter Property="Height" Value="26" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.ktile.loose">
+    <Setter Property="Background" Value="{DynamicResource TileBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+  </Style>
+  <Style Selector="Border.ktile Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+  <Style Selector="Border.ktile.loose Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+
+  <!-- The pager's chevrons keep their boxes at both ends and lose only their ink, so nothing beside
+       them moves when you reach the first or last page. Same rule as the editor's alpha control. -->
+  <Style Selector="Button.kchev">
+    <Setter Property="Width" Value="20" />
+    <Setter Property="Height" Value="20" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.kchev /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+  </Style>
+  <Style Selector="Button.kchev:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+
+  <!-- The two non-list states carry NO style of their own: they sit in the shelf grid's own 52px
+       row alongside the card row, so all three states are the same height by construction rather
+       than by three declarations agreeing. A style here would be a fourth place to change. -->
 </Styles>

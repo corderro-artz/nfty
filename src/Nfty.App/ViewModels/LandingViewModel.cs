@@ -59,6 +59,8 @@ public partial class LandingViewModel : ViewModelBase
         _session = session; _explorerFactory = explorerFactory; _setBrowserFactory = setBrowserFactory;
         _looseEditorFactory = looseEditorFactory;
         _kitchen = kitchen;
+        // Before the Changed subscription below, which loads it.
+        KitchenShelf = new KitchenShelfViewModel(OpenKitchenCard);
 
         // The Kitchen can change from under this screen — NewKitchen and OpenKitchen both alter it,
         // and so does anything that closes one — so the row that names it, and CloseKitchen's own
@@ -69,7 +71,45 @@ public partial class LandingViewModel : ViewModelBase
                 OnPropertyChanged(nameof(KitchenName));
                 OnPropertyChanged(nameof(HasKitchen));
                 CloseKitchenCommand.NotifyCanExecuteChanged();
+                LoadShelf();
             };
+
+        LoadShelf();
+    }
+
+    /// <summary>
+    /// The workspace shelf: the Kitchen's own contents, one row, paged by kind.
+    /// </summary>
+    /// <remarks>
+    /// It exists whether or not a Kitchen is open — the band is a fixed part of this screen, and its
+    /// three states swap the ink inside a box that never changes size. That is also what makes the
+    /// Kitchen read as something the app always carries rather than something a CookBook has.
+    /// </remarks>
+    public KitchenShelfViewModel KitchenShelf { get; } = null!;
+
+    /// <summary>Fills the shelf from the open workspace, or empties it when there is none.
+    ///
+    /// <para>Membership is DISCOVERED rather than recorded, so this re-reads whatever the session
+    /// currently holds instead of trying to keep a list in step — the same rule
+    /// <c>IKitchenSession.Rescan</c> exists to serve.</para></summary>
+    private void LoadShelf()
+    {
+        var contents = _kitchen?.Current;
+        KitchenShelf.Load(contents?.Manifest.Name,
+            contents is null ? Array.Empty<KitchenCard>() : KitchenShelfViewModel.CardsFor(contents));
+    }
+
+    /// <summary>Opens whatever a shelf card stands for, through the routes this screen already has:
+    /// a CookBook goes to the Explorer, a loose part to its editor. Same dispatch as Import, because
+    /// it is the same question — what kind of archive is this?</summary>
+    private void OpenKitchenCard(KitchenCard card)
+    {
+        switch (card.Kind)
+        {
+            case KitchenItemKind.CookBook: OpenPath(card.Path); break;
+            case KitchenItemKind.Ingredient: OpenLooseIngredient(card.Path); break;
+            case KitchenItemKind.Recipe: OpenLooseRecipe(card.Path); break;
+        }
     }
 
     [RelayCommand]
