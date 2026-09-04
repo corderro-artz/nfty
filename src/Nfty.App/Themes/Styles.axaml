@@ -55,7 +55,10 @@
     <Setter Property="Padding" Value="12,8" />
     <Setter Property="FontSize" Value="12.5" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
-    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <!-- Centered, like every other button in the app. Left only ever looked right because these
+         buttons are content-sized in most rows, where the two are indistinguishable; the moment one
+         is stretched - the variant sidebar, a modal footer - the label slid to one edge. -->
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
   </Style>
   <!-- Fluent's ^:pointerover template style sets Background/BorderBrush/Foreground together
        on PART_ContentPresenter at StyleTrigger priority, so a hover BorderBrush set on the
@@ -105,6 +108,18 @@
        backwards in all of them. A Slider is unaffected either way; its track buttons have no
        ContentPresenter to match. Dimming a disabled input as a whole is the rule right below. -->
   <Style Selector="RepeatButton:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+
+  <!-- And transparent at REST too, which is what unclips the corner. A spinner's buttons are square
+       rectangles reaching to within a pixel of a control whose border is rounded, and their presenter
+       paints an opaque ground - the same color as the control behind it, so it is invisible
+       everywhere except over the corner arc, where it covers the curve and leaves a notch. That is
+       the notch on the WEIGHT field's bottom-right. Nothing is lost by not painting it: the ground
+       underneath is the same color. Pseudo-class-qualified so it beats the Template-priority
+       assignment Fluent makes on that presenter - the same trick the Slider thumb needs - and
+       :pointerover is excluded so hover feedback still lands. -->
+  <Style Selector="RepeatButton:not(:pointerover):not(:pressed) /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
   </Style>
   <Style Selector="NumericUpDown:disabled, TextBox:disabled, Slider:disabled">
@@ -177,6 +192,12 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="Padding" Value="12,8" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <!-- The same size as Button.tbtn, which it always sits beside. Without this it inherited
+         Fluent's 14 while every outline button next to it was 12.5, so "Add recipe" measured 37px
+         tall against Delete and Import at 35 and read as a size larger - a difference of two pixels
+         that the eye reads as a mistake because the three are in one row. -->
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
   </Style>
   <!-- FluentTheme's ControlTheme for Button defines its own nested "^.accent" style that paints
        PART_ContentPresenter's Background/BorderBrush/Foreground from AccentButtonBackground (blue)
@@ -745,6 +766,18 @@
        affordance and the copy are faithful but the popover's shape is not. Copy is verbatim from the
        wizard mockups, which is the point: these explain domain rules (weights are relative, not
        percentages; a color spec is never guessed) that the form alone does not convey. -->
+  <!-- ONE tooltip delay for the whole app, on every control that can carry a tip.
+       Avalonia's default is 400ms, which means moving the pointer across a toolbar pops a tip on
+       every button it crosses - the app talks over you while you are just navigating. 2.2s is long
+       enough that only a deliberate rest triggers one, and the tip itself then fades in over 140ms
+       (see the ToolTip theme in Controls.axaml).
+
+       ":is(Control)" rather than "Control": an Avalonia type selector matches that exact type, so
+       the bare form would apply to nothing. -->
+  <Style Selector=":is(Control)">
+    <Setter Property="ToolTip.ShowDelay" Value="2200" />
+  </Style>
+
   <Style Selector="Border.qmark">
     <Setter Property="Width" Value="13" />
     <Setter Property="Height" Value="13" />
@@ -752,7 +785,10 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
-    <Setter Property="ToolTip.ShowDelay" Value="250" />
+    <!-- The exception to the 2.2s rule above, and the only one: a "?" badge is never crossed by
+         accident on the way somewhere - it is hovered on purpose, and waiting two seconds for the
+         thing you deliberately pointed at reads as broken. Still slower than Fluent's default. -->
+    <Setter Property="ToolTip.ShowDelay" Value="600" />
   </Style>
   <Style Selector="Border.qmark:pointerover">
     <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
@@ -1590,6 +1626,19 @@
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <!-- The gradient band a dual range is drawn over. -->
+  <!-- A slider laid over a band is always in one of these, and the height is the whole trick.
+       Fluent puts the thumb's CENTER 25px below the Slider's own top, whatever height the Slider is
+       given; Slider.overlay then lifts the control by 5. So the handle lands 20px down, and a band
+       centered in a 40px row is at 20 too. Pinning the row is what makes that true everywhere
+       instead of only where the Slider's natural height happened to be 40 - the dual-range rows
+       measured 50, which put every one of their handles 5px ABOVE the bar. The cancelling margin was
+       the fix for one row height and the bug for the other; SliderBandAlignmentTests now asserts the
+       thing that actually matters, that band center == thumb center, rather than any one number.
+       40 is safe: the thumb occupies 10..30 of the row, so nothing clips. -->
+  <Style Selector="Panel.band">
+    <Setter Property="Height" Value="40" />
+  </Style>
+
   <Style Selector="Border.dualtrack">
     <Setter Property="Height" Value="18" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />

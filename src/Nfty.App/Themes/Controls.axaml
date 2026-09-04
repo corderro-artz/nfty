@@ -176,8 +176,12 @@
       <Setter Property="Height" Value="14" />
       <Setter Property="Template">
         <ControlTemplate>
+          <!-- OnAccentBrush, not PanelBrush: this knob sits on a saturated band, which is exactly
+               what that token means. PanelBrush is near-black in dark mode, so the handle read as a
+               HOLE punched through the hue bar rather than a control resting on it - correct in
+               light, wrong in dark, and invisible to any single-theme check. -->
           <Ellipse Width="14" Height="14"
-                   Fill="{DynamicResource PanelBrush}"
+                   Fill="{DynamicResource OnAccentBrush}"
                    Stroke="{DynamicResource AccentBrush}" StrokeThickness="2" />
         </ControlTemplate>
       </Setter>
@@ -357,6 +361,46 @@
     <Style Selector="^:selected /template/ Border#PART_LayoutRoot:pointerover">
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+  </ControlTheme>
+
+  <!-- ================= ToolTip ================= -->
+  <!-- The app had no ToolTip theme at all, so every tip in it - and they are everywhere: the kind
+       chips, the DNA derivation, the wizard help badges, every icon button - drew Fluent's stock
+       gray slab in a system font. It was the one surface that never spoke the palette.
+
+       Uses the popover shape the rest of the app uses for a floating card: panel ground, a strong
+       hairline and the small radius. No drop shadow: a popup surface sizes to its content, so a
+       BoxShadow would be clipped at the edge it is supposed to fall outside. MaxWidth so a sentence
+       wraps instead of running
+       past the pointer, and the body size is the app's own small-copy size rather than Fluent's 14.
+
+       The fade is 140ms from 0.  It is short on purpose: the DELAY is what stops tips from
+       bombarding you (see the ShowDelay rule in Styles.axaml), and a slow fade on top of a long
+       delay just makes the app feel unresponsive once you have decided to wait for it. -->
+  <ControlTheme x:Key="{x:Type ToolTip}" TargetType="ToolTip"
+                BasedOn="{StaticResource {x:Type ToolTip}}">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="MaxWidth" Value="280" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <!-- Attached on the ToolTip itself rather than on a template part: it inherits down to whatever
+         the tip's content turns out to be, so a plain string and a hand-built panel both wrap. -->
+    <Setter Property="TextBlock.TextWrapping" Value="Wrap" />
+    <Setter Property="TextBlock.LineHeight" Value="15" />
+
+    <Style Selector="^">
+      <Style.Animations>
+        <Animation Duration="0:0:0.14" FillMode="Forward" Easing="SineEaseOut">
+          <KeyFrame Cue="0%"><Setter Property="Opacity" Value="0" /></KeyFrame>
+          <KeyFrame Cue="100%"><Setter Property="Opacity" Value="1" /></KeyFrame>
+        </Animation>
+      </Style.Animations>
     </Style>
   </ControlTheme>
 </ResourceDictionary>

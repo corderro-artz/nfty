@@ -8,6 +8,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Nfty.App.Services;
 using Nfty.App.ViewModels;
+using Nfty.Core.Model;
 using Xunit;
 
 namespace Nfty.App.Tests;
@@ -42,6 +43,92 @@ public class EditorStripAlignmentTests
 
     private static double CenterY(Visual root, Control c) =>
         c.TranslatePoint(default, root)!.Value.Y + c.Bounds.Height / 2;
+
+    /// <summary>
+    /// EVERY band row, not just the value ramp: each handle sits on the bar it drags along.
+    /// </summary>
+    /// <remarks>
+    /// The test above checked one band and passed while the four dual-range handles were 5px high,
+    /// because the compensation <c>Slider.overlay</c> carries is only correct for a 40px row and the
+    /// range rows measured 50. The rows are pinned now (<c>Panel.band</c>), but the number is not
+    /// what this asserts — it asserts the thing that has to be true, so any future change to the
+    /// row height, the slider template or the handle size fails here rather than shipping.
+    /// The wizard is swept too: it draws the same four range rows.
+    /// </remarks>
+    [AvaloniaFact]
+    public void Every_handle_is_centered_on_the_band_it_drags_along()
+    {
+        var (window, vm, view) = Render();
+        var wizard = new Views.NewIngredientView
+        {
+            DataContext = new NewIngredientViewModel(new FakeDialogs()) { Kind = LayerKind.Dynamic },
+        };
+        var wizWindow = new Window { Content = wizard, Width = MinimumWindowWidth, Height = 900 };
+        wizWindow.Show();
+        Dispatcher.UIThread.RunJobs();
+        try
+        {
+            int checked_ = 0;
+            foreach (var root in new Control[] { view, wizard })
+                foreach (var panel in root.GetVisualDescendants().OfType<Panel>()
+                             .Where(p => p.Classes.Contains("band") && p.Bounds.Height > 0))
+                {
+                    var band = panel.Children.OfType<Border>().Single();
+                    foreach (var thumb in panel.GetVisualDescendants().OfType<Thumb>())
+                    {
+                        Assert.True(band.Bounds.Height > 0, "a band was not laid out");
+                        Assert.Equal(CenterY(root, band), CenterY(root, thumb), 1);
+                        checked_++;
+                    }
+                }
+
+            // Both screens' rows really were reached — an empty sweep would pass vacuously, which is
+            // exactly how the four range handles went unchecked for so long.
+            Assert.True(checked_ >= 9, $"only {checked_} handles were swept");
+        }
+        finally { wizWindow.Close(); window.Close(); vm.Dispose(); }
+    }
+
+    /// <summary>
+    /// The variant sidebar's three actions are one row: two equal, and Import the small one.
+    /// </summary>
+    /// <remarks>Duplicate and Delete over a full-width Import read as two different kinds of
+    /// control. Asserts containment with slack rather than exact fit — the labels are the budget
+    /// here, and fitting exactly is one style tweak from not fitting.</remarks>
+    [AvaloniaFact]
+    public void The_variant_actions_are_one_row_and_all_fit()
+    {
+        var (window, vm, view) = Render();
+        try
+        {
+            var buttons = view.GetVisualDescendants().OfType<Button>()
+                .Where(b => (b.Content as string) is "Duplicate" or "Delete" or "Import…")
+                .OrderBy(b => b.Bounds.X)
+                .ToList();
+            Assert.Equal(3, buttons.Count);
+
+            // One row: same top, same height.
+            Assert.Equal(buttons[0].Bounds.Y, buttons[1].Bounds.Y, 1);
+            Assert.Equal(buttons[0].Bounds.Y, buttons[2].Bounds.Y, 1);
+            Assert.All(buttons, b => Assert.Equal(buttons[0].Bounds.Height, b.Bounds.Height, 1));
+
+            // Duplicate and Delete share the slack; Import takes only its label.
+            Assert.Equal(buttons[0].Bounds.Width, buttons[1].Bounds.Width, 1);
+            Assert.True(buttons[2].Bounds.Width < buttons[0].Bounds.Width,
+                $"Import ({buttons[2].Bounds.Width}) should be the small one");
+
+            // The two share a fixed budget, so they need real slack: fitting exactly is one style
+            // tweak from not fitting. Import sits in an Auto column and is its own content by
+            // definition - there the only thing to check is that nothing squeezed it below that.
+            foreach (var (b, floor) in new[] { (buttons[0], 3.0), (buttons[1], 3.0), (buttons[2], 0.0) })
+            {
+                var text = b.GetVisualDescendants().OfType<TextBlock>().Single();
+                double slack = b.Bounds.Width - b.Padding.Left - b.Padding.Right - text.Bounds.Width;
+                Assert.True(slack >= floor, $"\"{text.Text}\" has {slack:0.0}px of slack");
+            }
+        }
+        finally { window.Close(); vm.Dispose(); }
+    }
 
     /// <summary>The value ramp's handle sits on the band it is dragging along, not below it.</summary>
     [AvaloniaFact]

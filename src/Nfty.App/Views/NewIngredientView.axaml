@@ -84,7 +84,7 @@
                   </StackPanel>
                   <TextBlock Grid.Column="1" Classes="cv" Text="{Binding HueRangeText}" />
                 </Grid>
-                <Panel>
+                <Panel Classes="band">
                   <Border Classes="dualtrack" Background="{StaticResource HueSpectrumBrush}" />
                   <Slider Classes="overlay" Value="{Binding HueMin}" Minimum="0" Maximum="360" />
                   <Slider Classes="overlay" Value="{Binding HueMax}" Minimum="0" Maximum="360" />
@@ -96,7 +96,7 @@
                   <TextBlock Grid.Column="0" Text="SATURATION RANGE" Classes="plabel" VerticalAlignment="Center" />
                   <TextBlock Grid.Column="1" Classes="cv" Text="{Binding SatRangeText}" />
                 </Grid>
-                <Panel>
+                <Panel Classes="band">
                   <Border Classes="dualtrack" Background="{StaticResource SaturationRampBrush}" />
                   <Slider Classes="overlay" Value="{Binding SatMin}" Minimum="0" Maximum="100" />
                   <Slider Classes="overlay" Value="{Binding SatMax}" Minimum="0" Maximum="100" />

@@ -79,17 +79,23 @@
                 <NumericUpDown Value="{Binding SelectedWeight}" Minimum="0.01" Increment="1" />
               </StackPanel>
 
-              <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,4,0,0">
-                <Button Content="Duplicate" Command="{Binding DuplicateVariantCommand}" Classes="tbtn" />
-                <Button Content="Delete" Command="{Binding DeleteVariantCommand}" Classes="tbtn" />
-              </StackPanel>
-              <Button Command="{Binding ImportImageCommand}" Classes="tbtn" HorizontalAlignment="Stretch"
-                      HorizontalContentAlignment="Center">
-                <StackPanel Orientation="Horizontal" Spacing="7">
-                  <Path Classes="ico sm" Data="{StaticResource IconImport}" />
-                  <TextBlock Text="Import image…" />
-                </StackPanel>
-              </Button>
+              <!-- One row, not a row of two over a full-width third. The old shape read as two
+                   different kinds of control: Duplicate and Delete hugged their labels while Import
+                   spanned the whole sidebar, so the odd one out was the one that does the least
+                   destructive thing. Duplicate and Delete share the slack; Import takes only what
+                   its label needs, which makes it the small one.
+
+                   The label lost the word "image" and the glyph to fit three across 237px: with
+                   both it needs 130 and the row has 82 to spare. The tooltip carries what it opens. -->
+              <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="7" Margin="0,4,0,0">
+                <Button Grid.Column="0" Content="Duplicate" Classes="tbtn" Padding="9,8"
+                        HorizontalAlignment="Stretch" Command="{Binding DuplicateVariantCommand}" />
+                <Button Grid.Column="1" Content="Delete" Classes="tbtn" Padding="9,8"
+                        HorizontalAlignment="Stretch" Command="{Binding DeleteVariantCommand}" />
+                <Button Grid.Column="2" Content="Import…" Classes="tbtn" Padding="9,8"
+                        Command="{Binding ImportImageCommand}"
+                        ToolTip.Tip="Replace this variant's image from a PNG on disk" />
+              </Grid>
             </StackPanel>
           </ScrollViewer>
         </Grid>
@@ -150,7 +156,7 @@
                    a brush-size field the mockup has neither of, and at the pane's minimum width
                    something had to give. A brightness slider is the one control here whose meaning
                    does not depend on its exact length. See ToolstripLayoutTests. -->
-              <Panel Width="80" VerticalAlignment="Center">
+              <Panel Classes="band" Width="80" VerticalAlignment="Center">
                 <Border Classes="ramp" Background="{StaticResource ValueRampBrush}" />
                 <Slider Value="{Binding BrushValue}" Minimum="0" Maximum="255"
                         Classes="overlay" ToolTip.Tip="Paint value / brightness" />
@@ -391,7 +397,7 @@
                     <TextBlock Grid.Column="0" Text="PAINT HUE" Classes="plabel" VerticalAlignment="Center" />
                     <TextBlock Grid.Column="1" Classes="cv" Text="{Binding BrushHueText}" />
                   </Grid>
-                  <Panel>
+                  <Panel Classes="band">
                     <Border Classes="dualtrack" Background="{StaticResource HueSpectrumBrush}" />
                     <Slider Classes="overlay" Value="{Binding BrushHue}" Minimum="0" Maximum="360" />
                   </Panel>
@@ -402,7 +408,7 @@
                     <TextBlock Grid.Column="0" Text="PAINT SATURATION" Classes="plabel" VerticalAlignment="Center" />
                     <TextBlock Grid.Column="1" Classes="cv" Text="{Binding BrushSatText}" />
                   </Grid>
-                  <Panel>
+                  <Panel Classes="band">
                     <Border Classes="dualtrack" Background="{StaticResource SaturationRampBrush}" />
                     <Slider Classes="overlay" Value="{Binding BrushSat}" Minimum="0" Maximum="100" />
                   </Panel>
@@ -434,7 +440,7 @@
                     <TextBlock Grid.Column="0" Text="HUE RANGE" Classes="plabel" VerticalAlignment="Center" />
                     <TextBlock Grid.Column="1" Classes="cv" Text="{Binding HueRangeText}" />
                   </Grid>
-                  <Panel>
+                  <Panel Classes="band">
                     <Border Classes="dualtrack" Background="{StaticResource HueSpectrumBrush}" />
                     <Slider Classes="overlay" Value="{Binding HueMin}" Minimum="0" Maximum="360" />
                     <Slider Classes="overlay" Value="{Binding HueMax}" Minimum="0" Maximum="360" />
@@ -452,7 +458,7 @@
                     <TextBlock Grid.Column="0" Text="SATURATION RANGE" Classes="plabel" VerticalAlignment="Center" />
                     <TextBlock Grid.Column="1" Classes="cv" Text="{Binding SatRangeText}" />
                   </Grid>
-                  <Panel>
+                  <Panel Classes="band">
                     <Border Classes="dualtrack" Background="{StaticResource SaturationRampBrush}" />
                     <Slider Classes="overlay" Value="{Binding SatMin}" Minimum="0" Maximum="100" />
                     <Slider Classes="overlay" Value="{Binding SatMax}" Minimum="0" Maximum="100" />

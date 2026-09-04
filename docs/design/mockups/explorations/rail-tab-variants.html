@@ -1,0 +1,188 @@
+<!doctype html><meta charset="utf-8"><title>rail tabs — 3 variants</title>
+<style>
+  :root{
+    --bg:#07080b; --bg-alt:#0a0b10; --bg-alt2:#0f1118; --panel:#0b0c10;
+    --line:rgba(242,237,230,.14); --line-strong:rgba(242,237,230,.20);
+    --fg:#f2ede6; --fg-muted:rgba(242,237,230,.78);
+    --accent:#a11f31; --accent-text:#e0788a; --accent-line:rgba(161,31,49,.40);
+    --accent-wash:rgba(161,31,49,.15); --on-accent:#f7f2ec; --tile:#12141c;
+    --r-xs:4px; --r-sm:5px; --r-md:6px;
+    --mono:"JetBrains Mono","Cascadia Mono",Consolas,monospace;
+    --sans:"Inter","Segoe UI",system-ui,sans-serif;
+  }
+  body.light{
+    --bg:#f4efe8; --bg-alt:#f1ece4; --bg-alt2:#ede7df; --panel:#f8f3ed;
+    --line:rgba(18,19,24,.12); --line-strong:rgba(18,19,24,.20);
+    --fg:#121318; --fg-muted:rgba(18,19,24,.72);
+    --accent-text:#97192a; --accent-line:rgba(161,31,49,.25);
+    --accent-wash:rgba(161,31,49,.08); --tile:#ece5db;
+  }
+  body{zoom:2.05;background:var(--bg);color:var(--fg);font-family:var(--sans);margin:0;padding:26px;
+       display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
+  .col{width:300px}
+  .cap{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+       color:var(--accent-text);margin:0 0 9px 2px}
+  .note{font-size:11px;color:var(--fg-muted);line-height:1.45;margin:9px 2px 0}
+  .rail{width:300px;border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;background:var(--bg)}
+
+  /* shared inner bits so each variant shows real content underneath */
+  .body{padding:13px 13px 16px;display:flex;flex-direction:column;gap:15px}
+  .seg{background:var(--bg-alt2);border:1px solid var(--line);border-radius:var(--r-md);padding:3px;
+       display:grid;grid-template-columns:1fr 3px 1fr}
+  .seg b{border-radius:var(--r-sm);padding:7px 4px;font-size:11.5px;text-align:center;font-weight:400;
+         color:var(--fg-muted)}
+  .seg b.on{background:var(--accent);color:var(--on-accent);font-weight:600}
+  .plabel{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--fg-muted)}
+  .cv{font-family:var(--mono);font-size:11px;font-weight:600}
+  .ctlh{display:flex;justify-content:space-between;align-items:flex-end}
+  .band{height:18px;border-radius:var(--r-sm);border:1px solid var(--line-strong);
+        background:linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);position:relative;margin:11px 0}
+  .knob{position:absolute;top:50%;width:14px;height:14px;transform:translate(-50%,-50%);border-radius:50%;
+        background:var(--on-accent);border:2px solid var(--accent);box-sizing:border-box}
+
+  /* ---- A: underline tabs, in the pane header row ---- */
+  .hrowA{height:41px;padding:0 16px;border-bottom:1px solid var(--line);display:flex;gap:18px;align-items:stretch}
+  .tabA{display:flex;align-items:center;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;
+        text-transform:uppercase;color:var(--fg-muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tabA.on{color:var(--fg);border-bottom-color:var(--accent)}
+  .tabA .n{font-size:9.5px;letter-spacing:0;margin-left:6px;color:var(--fg-muted);
+           background:var(--tile);border:1px solid var(--line);border-radius:999px;padding:1px 5px}
+
+  /* ---- B: segmented tray in the header row ---- */
+  .hrowB{height:41px;padding:0 10px;border-bottom:1px solid var(--line);display:flex;align-items:center}
+  .segB{flex:1;background:var(--bg-alt2);border:1px solid var(--line);border-radius:var(--r-md);padding:2px;
+        display:grid;grid-template-columns:1fr 1fr}
+  .segB b{border-radius:var(--r-xs);padding:4px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;
+          text-transform:uppercase;text-align:center;color:var(--fg-muted);font-weight:400}
+  .segB b.on{background:var(--accent);color:var(--on-accent);font-weight:600}
+
+  /* ---- C: title left, compact switch right ---- */
+  .hrowC{height:41px;padding:0 12px 0 16px;border-bottom:1px solid var(--line);
+         display:flex;align-items:center;justify-content:space-between}
+  .titleC{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--fg-muted)}
+  .swC{display:flex;border:1px solid var(--line-strong);border-radius:var(--r-xs);overflow:hidden}
+  .swC b{padding:4px 9px;font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;
+         color:var(--fg-muted);font-weight:400;border-right:1px solid var(--line-strong)}
+  .swC b:last-child{border-right:0}
+  .swC b.on{background:var(--accent-wash);color:var(--accent-text);font-weight:600}
+
+  /* the same three, on the light palette */
+  .lightwrap{display:flex;gap:26px;flex-wrap:wrap;
+    --bg:#f4efe8; --bg-alt:#f1ece4; --bg-alt2:#ede7df; --panel:#f8f3ed;
+    --line:rgba(18,19,24,.12); --line-strong:rgba(18,19,24,.20);
+    --fg:#121318; --fg-muted:rgba(18,19,24,.72);
+    --accent-text:#97192a; --accent-line:rgba(161,31,49,.25);
+    --accent-wash:rgba(161,31,49,.08); --tile:#ece5db;
+    background:var(--bg);color:var(--fg);padding:22px;border-radius:8px}
+</style>
+<body>
+  <div class="col">
+    <p class="cap">A · underline tabs</p>
+    <div class="rail">
+      <div class="hrowA">
+        <span class="tabA on">Colorize</span>
+        <span class="tabA">References <span class="n">0/4</span></span>
+      </div>
+      <div class="body">
+        <div class="seg"><b class="on">Dynamic</b><i></i><b>Static</b></div>
+        <div>
+          <div class="ctlh"><span class="plabel">Hue range</span><span class="cv">0–360°</span></div>
+          <div class="band"><span class="knob" style="left:2%"></span><span class="knob" style="left:98%"></span></div>
+        </div>
+      </div>
+    </div>
+    <p class="note">Reads as a tab bar, not a toggle. Sits where the pane title is now, so it costs no height. The count rides on the tab that owns it.</p>
+  </div>
+
+  <div class="col">
+    <p class="cap">B · segmented tray</p>
+    <div class="rail">
+      <div class="hrowB">
+        <div class="segB"><b class="on">Colorize</b><b>References</b></div>
+      </div>
+      <div class="body">
+        <div class="seg"><b class="on">Dynamic</b><i></i><b>Static</b></div>
+        <div>
+          <div class="ctlh"><span class="plabel">Hue range</span><span class="cv">0–360°</span></div>
+          <div class="band"><span class="knob" style="left:2%"></span><span class="knob" style="left:98%"></span></div>
+        </div>
+      </div>
+    </div>
+    <p class="note">The app's own <code>.seg</code> grammar, so nothing new is invented — but it lands directly above a second identical tray (Dynamic / Static), and two stacked pills read as one control with four options.</p>
+  </div>
+
+  <div class="col">
+    <p class="cap">C · title + switch</p>
+    <div class="rail">
+      <div class="hrowC">
+        <span class="titleC">Colorize</span>
+        <span class="swC"><b class="on">Color</b><b>Refs 0/4</b></span>
+      </div>
+      <div class="body">
+        <div class="seg"><b class="on">Dynamic</b><i></i><b>Static</b></div>
+        <div>
+          <div class="ctlh"><span class="plabel">Hue range</span><span class="cv">0–360°</span></div>
+          <div class="band"><span class="knob" style="left:2%"></span><span class="knob" style="left:98%"></span></div>
+        </div>
+      </div>
+    </div>
+    <p class="note">Keeps a real section title and puts the switch where the rail already puts counters. Most compact, but the abbreviations are doing a lot of work and the title restates the active tab.</p>
+  </div>
+
+  <div style="flex-basis:100%;height:1px;background:var(--line);margin:8px 0 4px"></div>
+  <div class="lightwrap">
+<div class="col">
+    <p class="cap">A · underline tabs</p>
+    <div class="rail">
+      <div class="hrowA">
+        <span class="tabA on">Colorize</span>
+        <span class="tabA">References <span class="n">0/4</span></span>
+      </div>
+      <div class="body">
+        <div class="seg"><b class="on">Dynamic</b><i></i><b>Static</b></div>
+        <div>
+          <div class="ctlh"><span class="plabel">Hue range</span><span class="cv">0–360°</span></div>
+          <div class="band"><span class="knob" style="left:2%"></span><span class="knob" style="left:98%"></span></div>
+        </div>
+      </div>
+    </div>
+    <p class="note">Reads as a tab bar, not a toggle. Sits where the pane title is now, so it costs no height. The count rides on the tab that owns it.</p>
+  </div>
+
+  <div class="col">
+    <p class="cap">B · segmented tray</p>
+    <div class="rail">
+      <div class="hrowB">
+        <div class="segB"><b class="on">Colorize</b><b>References</b></div>
+      </div>
+      <div class="body">
+        <div class="seg"><b class="on">Dynamic</b><i></i><b>Static</b></div>
+        <div>
+          <div class="ctlh"><span class="plabel">Hue range</span><span class="cv">0–360°</span></div>
+          <div class="band"><span class="knob" style="left:2%"></span><span class="knob" style="left:98%"></span></div>
+        </div>
+      </div>
+    </div>
+    <p class="note">The app's own <code>.seg</code> grammar, so nothing new is invented — but it lands directly above a second identical tray (Dynamic / Static), and two stacked pills read as one control with four options.</p>
+  </div>
+
+  <div class="col">
+    <p class="cap">C · title + switch</p>
+    <div class="rail">
+      <div class="hrowC">
+        <span class="titleC">Colorize</span>
+        <span class="swC"><b class="on">Color</b><b>Refs 0/4</b></span>
+      </div>
+      <div class="body">
+        <div class="seg"><b class="on">Dynamic</b><i></i><b>Static</b></div>
+        <div>
+          <div class="ctlh"><span class="plabel">Hue range</span><span class="cv">0–360°</span></div>
+          <div class="band"><span class="knob" style="left:2%"></span><span class="knob" style="left:98%"></span></div>
+        </div>
+      </div>
+    </div>
+    <p class="note">Keeps a real section title and puts the switch where the rail already puts counters. Most compact, but the abbreviations are doing a lot of work and the title restates the active tab.</p>
+  </div>
+
+  </div>
+</body>
