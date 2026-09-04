@@ -89,7 +89,21 @@
                       <StackPanel Spacing="6" HorizontalAlignment="Center">
                         <Border Classes="tile" Classes.sel="{Binding IsSelected}" Width="120" Height="120"
                                 ClipToBounds="True">
-                          <Image Source="{Binding Thumbnail}" Width="120" Height="120" Stretch="UniformToFill" />
+                          <Panel>
+                            <!-- The placeholder: the app's own mark, breathing, while the image is
+                                 still being decoded on a background thread. It occupies no layout
+                                 of its own — it sits in the same Panel cell the image will — so
+                                 nothing moves when the art lands.
+
+                                 A mark rather than a sweep: forty tiles all travelling at once is a
+                                 lot of movement on a screen whose subject is still pictures, and a
+                                 pulse in place reads as texture instead. It is also the nfty
+                                 diamond, so an unfilled tile looks like part of the product rather
+                                 than a hole in it. -->
+                            <Border Classes="tload" IsVisible="{Binding IsLoading}" />
+                            <Image Source="{Binding Thumbnail}" Width="120" Height="120"
+                                   Stretch="UniformToFill" />
+                          </Panel>
                         </Border>
                         <!-- One bound class, not two. `.tcap` is muted by default and `.accent`
                              overrides it, which renders identically to binding both and halves the

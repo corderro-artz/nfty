@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Media.Imaging;
+using Avalonia.Threading;
 using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -15,7 +16,9 @@ namespace Nfty.App.ViewModels;
 public partial class SetItemRow : ObservableObject, IDisposable
 {
     private const int ThumbW = 128;
-    private Bitmap? _thumbnail;
+    private volatile Bitmap? _thumbnail;
+    private bool _decodeStarted;
+    private bool _disposed;
 
     /// <summary>The asset's PNG on disk. The grid shows a 128px thumbnail of it; the inspector and
     /// Save both need the file itself.</summary>
@@ -27,21 +30,79 @@ public partial class SetItemRow : ObservableObject, IDisposable
     public SetItem Item { get; }
 
     /// <summary>
-    /// The tile image, decoded on first access and cached.
+    /// The tile image: null until it has been decoded, then the decoded bitmap.
     ///
     /// <para>Lazy because the ViewModel used to decode every thumbnail in its constructor, on the UI
     /// thread: 627 ms for 900 assets, which extrapolates to roughly seven seconds of frozen window
-    /// for a 10,000-asset Set — and that is a floor, measured on 64x64 sources rather than real art.
-    /// The ListBox below it virtualizes, but virtualization only limits what is <em>rendered</em>;
-    /// it could do nothing about work already done up front. Deferring to the getter puts the decode
-    /// back under the virtualizer, so only realized rows pay for it.</para>
+    /// for a 10,000-asset Set. The ListBox below it virtualizes, but virtualization only limits what
+    /// is <em>rendered</em>; it could do nothing about work already done up front. Deferring the
+    /// decode puts it back under the virtualizer, so only realized rows pay for it.</para>
+    ///
+    /// <para><b>And now the decode happens off the UI thread.</b> Reading this property starts one
+    /// if it has not started, and returns null meanwhile — which is what the tile's placeholder is
+    /// for. That matters at scale rather than in the demo: a thumbnail costs ~0.5 ms from a 64px
+    /// source and <b>7.1 ms from a 1000px one</b>, so a screenful of forty large tiles was ~280 ms
+    /// of frozen UI every time you scrolled into fresh rows. Decoded on the thread pool the same
+    /// forty take about 27 ms and the UI thread never stops.</para>
     /// </summary>
-    public Bitmap Thumbnail => _thumbnail ??= Decode(ImagePath);
+    public Bitmap? Thumbnail
+    {
+        get
+        {
+            BeginDecode();
+            return _thumbnail;
+        }
+    }
+
+    /// <summary>Whether the image is still on its way, so the tile should show its placeholder.</summary>
+    public bool IsLoading => _thumbnail is null;
 
     /// <summary>Whether this row has actually paid for its image yet. Read by the performance tests
     /// to prove the decode is still falling under the ListBox's virtualization rather than on top
     /// of it.</summary>
     internal bool IsThumbnailDecoded => _thumbnail is not null;
+
+    /// <summary>
+    /// Starts this row's decode, once.
+    /// </summary>
+    /// <remarks>
+    /// The guard is a plain bool because every caller is the UI thread — a binding reading
+    /// <see cref="Thumbnail"/> during measure. Only the decode itself leaves that thread, and the
+    /// result comes back to it before anything is published, so nothing here needs a lock.
+    /// </remarks>
+    private void BeginDecode()
+    {
+        if (_decodeStarted) return;
+        _decodeStarted = true;
+
+        var path = ImagePath;
+        _ = Task.Run(() =>
+        {
+            var bitmap = Decode(path);
+            // Back to the UI thread through the dispatcher rather than a captured
+            // SynchronizationContext: a binding may read Thumbnail from a measure pass that has no
+            // context to capture, and FromCurrentSynchronizationContext throws outright when there
+            // is none. Post always has somewhere to land.
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (_disposed) { bitmap.Dispose(); return; }   // torn down while it was decoding
+                _thumbnail = bitmap;
+                OnPropertyChanged(nameof(Thumbnail));
+                OnPropertyChanged(nameof(IsLoading));
+            });
+        });
+    }
+
+    /// <summary>
+    /// Decodes this row's thumbnail synchronously, for callers that cannot wait for a frame.
+    /// </summary>
+    /// <returns>The decoded bitmap, which this row then owns and caches.</returns>
+    /// <remarks>Used by the tests, which have no dispatcher to marshal a continuation back to.</remarks>
+    internal Bitmap DecodeNow()
+    {
+        _decodeStarted = true;
+        return _thumbnail ??= Decode(ImagePath);
+    }
 
     /// <summary>Whether this tile is the selected one, so the grid can paint an indicator — the
     /// detail rail alone does not show which tile is selected once there are many rows.</summary>
@@ -103,8 +164,12 @@ public partial class SetItemRow : ObservableObject, IDisposable
     }
 
     /// <summary>Frees the thumbnail if one was ever decoded.</summary>
+    /// <remarks>A decode already in flight is not cancelled — it is cheap and nearly done — but its
+    /// result is dropped rather than published, so nothing leaks and nothing resurrects a disposed
+    /// row.</remarks>
     public void Dispose()
     {
+        _disposed = true;
         _thumbnail?.Dispose();
         _thumbnail = null;
     }

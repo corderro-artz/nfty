@@ -147,6 +147,17 @@ public class SetBrowserPerfTests
             Dispatcher.UIThread.RunJobs();
             try
             {
+                // Decoding is off the UI thread now, so realizing a row STARTS a decode rather than
+                // finishing one. Pump until they land, or this test measures how fast the machine
+                // is instead of how much work the grid asked for.
+                var sw = Stopwatch.StartNew();
+                while (!vm.Items.Take(8).All(r => r.IsThumbnailDecoded) && sw.ElapsedMilliseconds < 5000)
+                {
+                    Dispatcher.UIThread.RunJobs();
+                    Thread.Sleep(1);
+                }
+                Dispatcher.UIThread.RunJobs();
+
                 var decoded = vm.Items.Count(r => r.IsThumbnailDecoded);
                 Assert.True(decoded > 0, "nothing was realized, so this test proves nothing");
                 Assert.True(decoded < Assets / 4,

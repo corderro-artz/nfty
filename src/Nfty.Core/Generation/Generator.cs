@@ -21,6 +21,23 @@ public static class Generator
     /// dispose it when done. For large runs prefer <see cref="GenerateStreaming"/>, which never
     /// holds more than one asset at a time.
     /// </summary>
+    /// <remarks>
+    /// <para><b>Two phases, and only the second is parallel.</b> Rolling consumes the RNG and does
+    /// the duplicate check, and both depend on the exact order every asset is decided in — so the
+    /// roll phase is sequential, always, and produces the identical stream of decisions this method
+    /// has always produced. Rendering is then a pure function of one asset's own already-decided
+    /// roll: colorize each layer, composite them, done. Nothing it does can observe another asset,
+    /// the thread it runs on, or how many threads there are.</para>
+    ///
+    /// <para>That is what makes this safe for reproducibility, and it is a stronger claim than
+    /// "same machine": results cannot vary with core count or scheduling because no parallel step
+    /// aggregates anything. There is no summing, no ordering, no shared accumulator — each asset is
+    /// written to its own slot in a pre-sized array, so the collection comes out in roll order on
+    /// any machine. <c>GeneratorParallelismTests</c> asserts this against
+    /// <see cref="GenerateStreaming"/>, which is the sequential oracle: same seed, byte-identical
+    /// pixels, identical DNA, identical order.</para>
+    /// </remarks>
+    /// <inheritdoc cref="Generate(LoadedCookBook, GenerateOptions, IReadOnlyList{string}, int, IProgress{GenerationProgress}, CancellationToken)" path="/summary"/>
     public static GeneratedSet Generate(
         LoadedCookBook book,
         GenerateOptions opts,
@@ -29,17 +46,34 @@ public static class Generator
         IProgress<GenerationProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        var assets = new List<GeneratedAsset>();
+        var (recipeById, recipeWeights) = Prepare(book, opts);
+        var rolls = RollAll(book, opts, recipeById, recipeWeights, existingDnas, startNumber,
+            cancellationToken);
+
+        var canvas = book.Manifest.Canvas;
+        var assets = new GeneratedAsset[rolls.Count];
+        var progressGate = new Lock();
+        int done = 0;
         try
         {
-            foreach (var asset in GenerateStreaming(
-                         book, opts, existingDnas, startNumber, progress, cancellationToken))
-                assets.Add(asset);
+            ParallelWork.For(rolls.Count, cancellationToken, i =>
+            {
+                assets[i] = Render(canvas, rolls[i].Rolled, rolls[i].Number);
+
+                // A caller's IProgress handler is still invoked ONE AT A TIME, in increasing order,
+                // exactly as it was when this loop was sequential. That is a contract, not a
+                // nicety: handlers here append to plain lists and update UI state, and calling them
+                // concurrently would corrupt both. Counting and reporting happen together inside
+                // the lock, or two threads could take numbers 1 and 2 and report them in the other
+                // order. The lock is negligible beside a colorize-and-composite.
+                if (progress is not null)
+                    lock (progressGate)
+                        progress.Report(new GenerationProgress(++done, opts.Count));
+            });
         }
         catch
         {
-            // Nothing else owns these yet, so a run that fails part-way must not strand them.
-            foreach (var asset in assets) asset.Dispose();
+            foreach (var a in assets) a?.Dispose();   // nothing else owns these yet
             throw;
         }
 
@@ -86,6 +120,26 @@ public static class Generator
         // work, and before the cookbook is even validated. Non-positive is rejected outright:
         // unlike extend's --to (an absolute target that can legally already be met), Count is a
         // direct request with no benign zero/negative reading, so both fail the same way.
+        var (recipeById, recipeWeights) = Prepare(book, opts);
+        return Stream(book, opts, recipeById, recipeWeights, existingDnas, startNumber,
+            progress, cancellationToken);
+    }
+
+    /// <summary>
+    /// The checks and lookups both entry points share, run eagerly before any work.
+    /// </summary>
+    /// <param name="book">The cookbook.</param>
+    /// <param name="opts">The run's options.</param>
+    /// <returns>The recipes by id, and the weights this run rolls them by.</returns>
+    private static (IReadOnlyDictionary<string, LoadedRecipe> ById,
+                    IReadOnlyDictionary<string, double> Weights)
+        Prepare(LoadedCookBook book, GenerateOptions opts)
+    {
+        // Count is a per-run parameter, not a property of the book, so it is checked here rather
+        // than in Validator — but it must still be checked before any rolling/decoding/output
+        // work, and before the cookbook is even validated. Non-positive is rejected outright:
+        // unlike extend's --to (an absolute target that can legally already be met), Count is a
+        // direct request with no benign zero/negative reading, so both fail the same way.
         if (opts.Count <= 0)
             throw new InvalidOperationException(
                 $"Asset count must be positive, but {opts.Count} was requested.");
@@ -103,8 +157,60 @@ public static class Generator
                 ? book.Manifest.RecipeWeights
                 : new Dictionary<string, double> { [opts.RecipeId] = 1 };
 
-        return Stream(book, opts, recipeById, recipeWeights, existingDnas, startNumber,
-            progress, cancellationToken);
+        return (recipeById, recipeWeights);
+    }
+
+    /// <summary>
+    /// The roll phase for the whole run, in order, on one thread.
+    /// </summary>
+    /// <remarks>
+    /// This is the half that can never be parallel, and the reason is not performance: it consumes
+    /// a single RNG stream and rejects duplicates against a running set, so the Nth asset's
+    /// decisions depend on every decision before it. Splitting it would change the collection.
+    /// It touches no pixels, which is why doing it all up front is cheap.
+    /// </remarks>
+    private static List<(RolledAsset Rolled, int Number)> RollAll(
+        LoadedCookBook book,
+        GenerateOptions opts,
+        IReadOnlyDictionary<string, LoadedRecipe> recipeById,
+        IReadOnlyDictionary<string, double> recipeWeights,
+        IReadOnlyList<string>? existingDnas,
+        int startNumber,
+        CancellationToken cancellationToken)
+    {
+        var rng = new SplitMix64Rng(SeedHash.ToUlong(opts.Seed));
+        var seen = new HashSet<string>(existingDnas ?? Array.Empty<string>());
+        var recipeTable = WeightedRoller.Prepare(recipeWeights);
+        var layerPlans = recipeById.ToDictionary(kv => kv.Key, kv => PlanLayers(kv.Value));
+
+        var rolls = new List<(RolledAsset, int)>(opts.Count);
+        int number = startNumber;
+
+        for (int i = 0; i < opts.Count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            RolledAsset? rolled = null;
+            for (int attempt = 0; attempt < opts.MaxRerollsPerAsset; attempt++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                string recipeId = WeightedRoller.Roll(recipeTable, rng);
+                var candidate = RollOne(recipeById[recipeId], layerPlans[recipeId], rng);
+                if (candidate is null) continue;                       // rule violation → reroll
+                if (opts.EnforceUniqueDna && !seen.Add(candidate.Dna)) continue;
+
+                rolled = candidate;
+                break;
+            }
+
+            if (rolled is null) throw DescribeFailure(book, opts, produced: i);
+
+            rolls.Add((rolled, number));
+            number++;
+        }
+
+        return rolls;
     }
 
     private static IEnumerable<GeneratedAsset> Stream(

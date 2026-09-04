@@ -53,15 +53,35 @@ internal static class ArchiveIo
         img.Save(s, new PngEncoder());
     }
 
-    public static Image<Rgba32> ReadImage(ZipArchive zip, string name)
+    public static Image<Rgba32> ReadImage(ZipArchive zip, string name) =>
+        DecodeImage(ReadImageBytes(zip, name));
+
+    /// <summary>
+    /// Extracts one entry's bytes without decoding them.
+    /// </summary>
+    /// <param name="zip">The open archive.</param>
+    /// <param name="name">The entry to read.</param>
+    /// <returns>The entry's bytes.</returns>
+    /// <remarks>
+    /// Split from the decode because the two have opposite threading rules. A
+    /// <see cref="ZipArchive"/>'s entries share one underlying stream, so it is <b>not</b>
+    /// thread-safe and extraction must stay sequential; decoding a PNG from a byte array touches
+    /// nothing shared and is where the time actually goes. Callers that read many images extract in
+    /// order and then decode wide.
+    /// </remarks>
+    public static byte[] ReadImageBytes(ZipArchive zip, string name)
     {
         var entry = zip.GetEntry(name) ?? throw new InvalidDataException($"Archive is missing {name}.");
         using var s = entry.Open();
         using var ms = new MemoryStream();
         s.CopyTo(ms);
-        ms.Position = 0;
-        return Image.Load<Rgba32>(ms);
+        return ms.ToArray();
     }
+
+    /// <summary>Decodes PNG bytes. Pure, and safe to call from many threads at once.</summary>
+    /// <param name="bytes">The encoded image.</param>
+    /// <returns>The decoded image; the caller owns it.</returns>
+    public static Image<Rgba32> DecodeImage(byte[] bytes) => Image.Load<Rgba32>(bytes);
 
     public static void WriteNested(ZipArchive zip, string entryName, Action<ZipArchive> build)
     {
@@ -157,14 +177,22 @@ internal static class ArchiveIo
         await img.SaveAsync(s, new PngEncoder(), ct);
     }
 
-    public static async Task<Image<Rgba32>> ReadImageAsync(ZipArchive zip, string name, CancellationToken ct)
+    public static async Task<Image<Rgba32>> ReadImageAsync(ZipArchive zip, string name, CancellationToken ct) =>
+        DecodeImage(await ReadImageBytesAsync(zip, name, ct));
+
+    /// <summary>Extracts one entry's bytes without decoding them.</summary>
+    /// <param name="zip">The open archive.</param>
+    /// <param name="name">The entry to read.</param>
+    /// <param name="ct">Cancels the read.</param>
+    /// <returns>The entry's bytes.</returns>
+    /// <inheritdoc cref="ReadImageBytes" path="/remarks"/>
+    public static async Task<byte[]> ReadImageBytesAsync(ZipArchive zip, string name, CancellationToken ct)
     {
         var entry = zip.GetEntry(name) ?? throw new InvalidDataException($"Archive is missing {name}.");
         await using var s = entry.Open();
         using var ms = new MemoryStream();
         await s.CopyToAsync(ms, ct);
-        ms.Position = 0;
-        return await Image.LoadAsync<Rgba32>(ms, ct);
+        return ms.ToArray();
     }
 
     public static async Task WriteNestedAsync(

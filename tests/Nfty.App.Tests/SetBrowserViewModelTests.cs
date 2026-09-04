@@ -1,5 +1,6 @@
 using System.IO;
 using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
 using Nfty.App.ViewModels;
 using Nfty.Core.Generation;
 using Nfty.Core.Output;
@@ -26,7 +27,7 @@ public class SetBrowserViewModelTests
         Assert.Equal("VaporCats", vm.Name);
         Assert.Equal(2, vm.Count);
         Assert.Equal(2, vm.Items.Count);
-        Assert.All(vm.Items, r => Assert.NotNull(r.Thumbnail));
+        Assert.All(vm.Items, r => Assert.NotNull(r.DecodeNow()));
         vm.SelectedItem = vm.Items[0];
         Assert.False(string.IsNullOrEmpty(vm.SelectedDna));
         vm.Dispose();
@@ -44,7 +45,9 @@ public class SetBrowserViewModelTests
         var vm = new SetBrowserViewModel(loaded);
 
         Assert.Equal(2, vm.Items.Count);
-        Assert.All(vm.Items, r => Assert.NotNull(r.Thumbnail));
+        // A missing file must still yield a placeholder bitmap rather than throwing — the decode is
+        // off the UI thread now, so an exception there would be a crash with no stack to attach to.
+        Assert.All(vm.Items, r => Assert.NotNull(r.DecodeNow()));
 
         vm.Dispose();
         Directory.Delete(dir, recursive: true);
@@ -65,15 +68,43 @@ public class SetBrowserViewModelTests
         // Constructed and populated, with nothing decoded.
         Assert.Equal(2, vm.Items.Count);
 
-        // Reading the property is what the virtualizing panel does when it realizes a row, and it
-        // is the only thing that decodes.
+        Assert.All(vm.Items, r => Assert.False(r.IsThumbnailDecoded));
+
+        // Reading the property is what the virtualizing panel does when it realizes a row, and it is
+        // the only thing that starts a decode. It returns null until that decode lands, which is
+        // what the tile's placeholder covers.
+        Assert.Null(vm.Items[0].Thumbnail);
+        PumpUntil(() => vm.Items[0].IsThumbnailDecoded);     // let the decode land
         var first = vm.Items[0].Thumbnail;
         Assert.NotNull(first);
+        Assert.False(vm.Items[1].IsThumbnailDecoded);        // and only the row that was read
 
         // Cached: a second read is the same instance, not a second decode.
         Assert.Same(first, vm.Items[0].Thumbnail);
 
         vm.Dispose();
         Directory.Delete(dir, recursive: true);
+    }
+
+    /// <summary>
+    /// Runs the dispatcher until <paramref name="done"/> holds, or gives up.
+    /// </summary>
+    /// <param name="done">The condition to wait for.</param>
+    /// <param name="timeoutMs">How long to wait before giving up.</param>
+    /// <remarks>
+    /// Thumbnails decode on the thread pool and publish through <c>Dispatcher.UIThread.Post</c>, so
+    /// a single <c>RunJobs</c> can drain an empty queue before the decode has even finished. Pumping
+    /// until the state actually changes is the honest way to test that path; the timeout is there so
+    /// a broken decode fails as a failed assertion rather than a hung run.
+    /// </remarks>
+    private static void PumpUntil(Func<bool> done, int timeoutMs = 5000)
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        while (!done() && sw.ElapsedMilliseconds < timeoutMs)
+        {
+            Dispatcher.UIThread.RunJobs();
+            Thread.Sleep(1);
+        }
+        Dispatcher.UIThread.RunJobs();
     }
 }

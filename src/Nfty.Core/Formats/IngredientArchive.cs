@@ -28,20 +28,7 @@ public static class IngredientArchive
     {
         var manifest = ArchiveIo.ReadManifest<IngredientManifest>(zip);
         EnsureUniqueVariantIds(manifest);
-        var images = new Dictionary<string, Image<Rgba32>>(manifest.Variants.Count);
-        try
-        {
-            foreach (var v in manifest.Variants)
-                images[v.Id] = ArchiveIo.ReadImage(zip, $"variants/{v.Id}.png");
-        }
-        catch
-        {
-            // A later variant's PNG can be missing/corrupt after earlier ones decoded fine.
-            // Those decoded images have no other owner yet, so strand-free means disposing
-            // them here before the original exception propagates.
-            foreach (var img in images.Values) img.Dispose();
-            throw;
-        }
+        var images = DecodeVariants(zip, manifest);
         return new LoadedIngredient { Manifest = manifest, VariantImages = images };
     }
 
@@ -103,18 +90,11 @@ public static class IngredientArchive
     {
         var manifest = await ArchiveIo.ReadManifestAsync<IngredientManifest>(zip, ct);
         EnsureUniqueVariantIds(manifest);
-        var images = new Dictionary<string, Image<Rgba32>>(manifest.Variants.Count);
-        try
+        return new LoadedIngredient
         {
-            foreach (var v in manifest.Variants)
-                images[v.Id] = await ArchiveIo.ReadImageAsync(zip, $"variants/{v.Id}.png", ct);
-        }
-        catch
-        {
-            foreach (var img in images.Values) img.Dispose();
-            throw;
-        }
-        return new LoadedIngredient { Manifest = manifest, VariantImages = images };
+            Manifest = manifest,
+            VariantImages = await DecodeVariantsAsync(zip, manifest, ct),
+        };
     }
 
     /// <summary>Writes an Ingredient to a file.</summary>
@@ -138,5 +118,78 @@ public static class IngredientArchive
     {
         using var zip = ZipFile.OpenRead(path);
         return await ReadAsync(zip, ct);
+    }
+
+    /// <summary>
+    /// Extracts every variant PNG in manifest order, then decodes them in parallel.
+    /// </summary>
+    /// <param name="zip">The open archive.</param>
+    /// <param name="manifest">The ingredient's manifest, which fixes the order.</param>
+    /// <returns>The decoded images by variant id, inserted in manifest order.</returns>
+    /// <remarks>
+    /// <para>Two phases, because the two halves have opposite threading rules. A ZipArchive's
+    /// entries share one stream, so extraction is sequential and always will be. Decoding is pure
+    /// and is the expensive half — a 1000px PNG costs an order of magnitude more to decode than to
+    /// pull out of the zip — so that is the half that runs wide.</para>
+    ///
+    /// <para>The dictionary is filled afterwards, in <b>manifest order</b>, never from the parallel
+    /// loop. Insertion order is observable when anything enumerates VariantImages, and an order that
+    /// depended on which decode finished first would be an order that varied by machine.</para>
+    /// </remarks>
+    private static Dictionary<string, Image<Rgba32>> DecodeVariants(
+        ZipArchive zip, IngredientManifest manifest)
+    {
+        var variants = manifest.Variants;
+        var encoded = new byte[variants.Count][];
+        for (var i = 0; i < variants.Count; i++)
+            encoded[i] = ArchiveIo.ReadImageBytes(zip, $"variants/{variants[i].Id}.png");
+
+        var decoded = new Image<Rgba32>[variants.Count];
+        try
+        {
+            ParallelWork.For(variants.Count, CancellationToken.None,
+                i => decoded[i] = ArchiveIo.DecodeImage(encoded[i]));
+        }
+        catch
+        {
+            // A corrupt PNG can throw after its neighbours decoded fine. Those have no other owner
+            // yet, so strand-free means disposing them before the original exception propagates.
+            foreach (var img in decoded) img?.Dispose();
+            throw;
+        }
+
+        var images = new Dictionary<string, Image<Rgba32>>(variants.Count);
+        for (var i = 0; i < variants.Count; i++) images[variants[i].Id] = decoded[i];
+        return images;
+    }
+
+    /// <summary>Extracts every variant PNG in manifest order, then decodes them in parallel.</summary>
+    /// <param name="zip">The open archive.</param>
+    /// <param name="manifest">The ingredient's manifest, which fixes the order.</param>
+    /// <param name="ct">Cancels the read.</param>
+    /// <returns>The decoded images by variant id, inserted in manifest order.</returns>
+    /// <inheritdoc cref="DecodeVariants" path="/remarks"/>
+    private static async Task<Dictionary<string, Image<Rgba32>>> DecodeVariantsAsync(
+        ZipArchive zip, IngredientManifest manifest, CancellationToken ct)
+    {
+        var variants = manifest.Variants;
+        var encoded = new byte[variants.Count][];
+        for (var i = 0; i < variants.Count; i++)
+            encoded[i] = await ArchiveIo.ReadImageBytesAsync(zip, $"variants/{variants[i].Id}.png", ct);
+
+        var decoded = new Image<Rgba32>[variants.Count];
+        try
+        {
+            ParallelWork.For(variants.Count, ct, i => decoded[i] = ArchiveIo.DecodeImage(encoded[i]));
+        }
+        catch
+        {
+            foreach (var img in decoded) img?.Dispose();
+            throw;
+        }
+
+        var images = new Dictionary<string, Image<Rgba32>>(variants.Count);
+        for (var i = 0; i < variants.Count; i++) images[variants[i].Id] = decoded[i];
+        return images;
     }
 }

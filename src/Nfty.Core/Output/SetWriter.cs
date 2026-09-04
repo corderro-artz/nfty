@@ -64,16 +64,22 @@ public static class SetWriter
         var existing = LoadExisting(layout, set);
         var rarity = new Rarity(existing, set);
 
-        foreach (var asset in set.Assets)
+        // One asset's three files depend on that asset and on `rarity`, which is finished being
+        // built above and is only read from here on. Nothing is shared and nothing accumulates, so
+        // the files that land on disk are byte-identical whatever order they are written in — only
+        // the order changes, and no reader can see it. PNG encoding is the cost here, and it is
+        // CPU-bound, so this is where the time goes.
+        ParallelWork.ForEach(set.Assets, CancellationToken.None, asset =>
         {
             var (imagePath, metaPath, nftyPath) = PathsFor(layout, asset.SetNumber);
             asset.Image.Save(imagePath, new PngEncoder());
             File.WriteAllText(metaPath, Serialize(BuildOpenSea(set, asset)));
             File.WriteAllText(nftyPath, Serialize(BuildNfty(set, asset, rarity)));
-        }
+        });
 
-        foreach (var item in existing)
-            File.WriteAllText(item.NftyPath, Serialize(Regraded(item, rarity)));
+        // Extend's regrade: same shape, same independence — one file per existing item.
+        ParallelWork.ForEach(existing, CancellationToken.None, item =>
+            File.WriteAllText(item.NftyPath, Serialize(Regraded(item, rarity))));
 
         File.WriteAllText(SetJsonPath(outDir),
             Serialize(BuildSetManifest(set, existing, rarity, recorded)));
@@ -98,21 +104,24 @@ public static class SetWriter
         var existing = await LoadExistingAsync(layout, set, cancellationToken);
         var rarity = new Rarity(existing, set);
 
+        var progressGate = new Lock();
         int done = 0;
-        foreach (var asset in set.Assets)
+        await ParallelWork.ForEachAsync(set.Assets, cancellationToken, async (asset, ct) =>
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
             var (imagePath, metaPath, nftyPath) = PathsFor(layout, asset.SetNumber);
-            await asset.Image.SaveAsync(imagePath, new PngEncoder(), cancellationToken);
-            await File.WriteAllTextAsync(metaPath, Serialize(BuildOpenSea(set, asset)), cancellationToken);
-            await File.WriteAllTextAsync(nftyPath, Serialize(BuildNfty(set, asset, rarity)), cancellationToken);
+            await asset.Image.SaveAsync(imagePath, new PngEncoder(), ct);
+            await File.WriteAllTextAsync(metaPath, Serialize(BuildOpenSea(set, asset)), ct);
+            await File.WriteAllTextAsync(nftyPath, Serialize(BuildNfty(set, asset, rarity)), ct);
 
-            progress?.Report(new WriteProgress(++done, set.Assets.Count));
-        }
+            // Serialized for the same reason as the generator's: a caller's handler is written
+            // assuming one call at a time, in order.
+            if (progress is not null)
+                lock (progressGate)
+                    progress.Report(new WriteProgress(++done, set.Assets.Count));
+        });
 
-        foreach (var item in existing)
-            await File.WriteAllTextAsync(item.NftyPath, Serialize(Regraded(item, rarity)), cancellationToken);
+        await ParallelWork.ForEachAsync(existing, cancellationToken, async (item, ct) =>
+            await File.WriteAllTextAsync(item.NftyPath, Serialize(Regraded(item, rarity)), ct));
 
         await File.WriteAllTextAsync(SetJsonPath(outDir),
             Serialize(BuildSetManifest(set, existing, rarity, recorded)), cancellationToken);
