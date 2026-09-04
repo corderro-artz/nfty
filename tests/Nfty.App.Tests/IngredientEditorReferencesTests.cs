@@ -106,7 +106,7 @@ public class IngredientEditorReferencesTests
     internal static IngredientEditorViewModel Editor(
         LoadedIngredient ing, LoadedRecipe recipe, LoadedCookBook book,
         IKitchenSession? kitchen = null, IDialogService? dialogs = null) =>
-        new(ing, recipe, book, new ImageBridge(), new FakeNav(), new FakeNotYetWired(),
+        new(ing, recipe, book, new ImageBridge(), new FakeNav(),
             new CookBookSession(), dialogs ?? new FakeDialogs(), new FilePickerService(),
             looseSavePath: null, kitchen: kitchen);
 
@@ -412,7 +412,7 @@ public class IngredientEditorReferencesTests
         using var loose = Ing("aura", "Aura", LayerKind.Dynamic, Band(6, 9, 180));
         var book = LooseWorkspace.WrapIngredient(loose);
         using var vm = new IngredientEditorViewModel(loose, book.Recipes[0], book, new ImageBridge(),
-            new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs(),
+            new FakeNav(), new CookBookSession(), new FakeDialogs(),
             new FilePickerService(), looseSavePath: Path.Combine(Path.GetTempPath(), "aura.igt"));
 
         Assert.True(vm.ReferencesAvailable);
@@ -432,7 +432,7 @@ public class IngredientEditorReferencesTests
         try
         {
             using var vm = new IngredientEditorViewModel(loose, book.Recipes[0], book, new ImageBridge(),
-                new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs(),
+                new FakeNav(), new CookBookSession(), new FakeDialogs(),
                 new FilePickerService(), looseSavePath: Path.Combine(dir, "aura.igt"), kitchen: kitchen);
 
             var row = Assert.Single(vm.KitchenLayers);
@@ -457,7 +457,7 @@ public class IngredientEditorReferencesTests
         try
         {
             using var vm = new IngredientEditorViewModel(loose, book.Recipes[0], book, new ImageBridge(),
-                new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs(),
+                new FakeNav(), new CookBookSession(), new FakeDialogs(),
                 new FilePickerService(),
                 looseSavePath: Path.Combine(dir, "shades.igt"), kitchen: kitchen);
 

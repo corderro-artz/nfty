@@ -75,7 +75,6 @@ public record RuleRow(bool IsExclude, RuleTargetRow When, IReadOnlyList<RuleTarg
 
 public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
 {
-    private readonly INotYetWired _notify;
     private readonly Action<string> _openIngredient;
     private readonly IImageBridge _bridge;
 
@@ -136,16 +135,15 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
     /// <param name="recipe">The recipe to describe.</param>
     /// <param name="book">Its owning book, for the canvas and a sample roll.</param>
     /// <param name="bridge">Converts an ImageSharp frame to an Avalonia bitmap.</param>
-    /// <param name="notify">The not-yet-wired channel.</param>
     /// <param name="openIngredient">Selects a layer in the tree when a rule row is clicked.</param>
     /// <param name="moveLayer">Moves a layer to a depth and saves, returning the saved graph — null
     /// (the default) for a pane with nothing to persist through, which disables reordering outright.</param>
     /// <param name="canReorder">Whether editing is unlocked right now.</param>
     public RecipeDetailViewModel(LoadedRecipe recipe, LoadedCookBook book, IImageBridge bridge,
-        INotYetWired notify, Action<string> openIngredient,
+        Action<string> openIngredient,
         Func<string, int, Task<LoadedCookBook?>>? moveLayer = null, bool canReorder = false)
     {
-        _recipe = recipe; _book = book; _bridge = bridge; _notify = notify; _openIngredient = openIngredient;
+        _recipe = recipe; _book = book; _bridge = bridge; _openIngredient = openIngredient;
         _moveLayer = moveLayer;
         _canReorder = canReorder;
         Name = recipe.Manifest.Name;

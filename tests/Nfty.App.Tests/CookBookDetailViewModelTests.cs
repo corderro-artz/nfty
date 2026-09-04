@@ -14,7 +14,7 @@ public class CookBookDetailViewModelTests
     public void Exposes_identity_counts_and_unique_dna()
     {
         var book = ExplorerViewModelTests.TwoRecipeBook();   // cat[bg,aura]+dog[body], custom kind, 1 variant each
-        var vm = new CookBookDetailViewModel(book, new FakeNotYetWired(), () => { });
+        var vm = new CookBookDetailViewModel(book, () => { });
         Assert.Equal("VaporPets", vm.Name);
         // A real multiplication sign with spaces, as explorer.html renders the canvas chip - not "8x8".
         Assert.Equal("8 × 8", vm.CanvasText);
@@ -31,7 +31,7 @@ public class CookBookDetailViewModelTests
     public void Cook_invokes_the_cook_action()
     {
         bool cooked = false;
-        var vm = new CookBookDetailViewModel(ExplorerViewModelTests.TwoRecipeBook(), new FakeNotYetWired(), () => cooked = true);
+        var vm = new CookBookDetailViewModel(ExplorerViewModelTests.TwoRecipeBook(), () => cooked = true);
         vm.CookCommand.Execute(null);
         Assert.True(cooked);
     }
@@ -48,8 +48,8 @@ public class CookBookDetailViewModelTests
     public void Recipe_series_assignment_is_stable_and_adjacent_recipes_differ()
     {
         var book = ExplorerViewModelTests.TwoRecipeBook();
-        var vm1 = new CookBookDetailViewModel(book, new FakeNotYetWired(), () => { });
-        var vm2 = new CookBookDetailViewModel(book, new FakeNotYetWired(), () => { });
+        var vm1 = new CookBookDetailViewModel(book, () => { });
+        var vm2 = new CookBookDetailViewModel(book, () => { });
 
         Assert.Equal(vm1.Recipes.Select(r => r.Series), vm2.Recipes.Select(r => r.Series));
         Assert.NotEqual(vm1.Recipes[0].Series, vm1.Recipes[1].Series);

@@ -55,7 +55,7 @@ public class ValidityIsCheckedTests
         // Precondition: if Validator stopped flagging this, the test below would pass vacuously.
         Assert.NotEmpty(Validator.Validate(book));
 
-        var vm = new CookBookDetailViewModel(book, new FakeNotYetWired(), () => { });
+        var vm = new CookBookDetailViewModel(book, () => { });
 
         Assert.False(vm.IsValid);
         Assert.NotEqual("Valid", vm.StatusText);
@@ -70,7 +70,7 @@ public class ValidityIsCheckedTests
         using var book = ExplorerViewModelTests.TwoRecipeBook();
         Assert.Empty(Validator.Validate(book));
 
-        var vm = new CookBookDetailViewModel(book, new FakeNotYetWired(), () => { });
+        var vm = new CookBookDetailViewModel(book, () => { });
         Assert.True(vm.IsValid);
         Assert.Equal("Valid", vm.StatusText);
         Assert.Null(vm.StatusTip);                        // nothing to explain
@@ -81,7 +81,7 @@ public class ValidityIsCheckedTests
     {
         using var book = BrokenBook();
         var nav = new FakeNav(); var dialogs = new FakeDialogs(); var session = new CookBookSession();
-        using var vm = new ExplorerViewModel(book, nav, dialogs, new FakeNotYetWired(), new ImageBridge(),
+        using var vm = new ExplorerViewModel(book, nav, dialogs, new ImageBridge(),
             ExplorerViewModelTests.EditorFactory(nav, session, dialogs),
             ExplorerViewModelTests.CookFactory(dialogs), session, new FilePickerService(),
             ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs), new StatusService());
@@ -99,7 +99,7 @@ public class ValidityIsCheckedTests
     public void An_unset_target_supply_hides_the_chip_and_leaves_the_cookbar_alone()
     {
         using var book = ExplorerViewModelTests.TwoRecipeBook();
-        var vm = new CookBookDetailViewModel(book, new FakeNotYetWired(), () => { });
+        var vm = new CookBookDetailViewModel(book, () => { });
 
         Assert.False(vm.HasTargetSupply);
         Assert.DoesNotContain("Target supply", vm.CookBarText);
@@ -115,7 +115,7 @@ public class ValidityIsCheckedTests
             Manifest = src.Manifest with { TargetSupply = 5000 },
             Recipes = src.Recipes,
         };
-        var vm = new CookBookDetailViewModel(book, new FakeNotYetWired(), () => { });
+        var vm = new CookBookDetailViewModel(book, () => { });
 
         Assert.True(vm.HasTargetSupply);
         Assert.Equal("5,000", vm.TargetSupplyText);          // grouped, as the mockup formats it

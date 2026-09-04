@@ -43,10 +43,10 @@ public class LandingNewCookBookTests
     private static (LandingViewModel vm, FakeNav nav, CookBookSession session) Landing(
         IDialogService dialogs, IFilePickerService picker)
     {
-        var nav = new FakeNav(); var notify = new FakeNotYetWired(); var session = new CookBookSession();
-        var vm = new LandingViewModel(nav, dialogs, notify, picker,
+        var nav = new FakeNav(); var session = new CookBookSession();
+        var vm = new LandingViewModel(nav, dialogs, picker,
             new RecentsService(Directory.CreateTempSubdirectory().FullName), session,
-            book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(),
+            book => new ExplorerViewModel(book, nav, dialogs, new ImageBridge(),
                 ExplorerViewModelTests.EditorFactory(nav, session, dialogs),
                 ExplorerViewModelTests.CookFactory(dialogs), session,
                 picker, ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs), new StatusService()),

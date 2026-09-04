@@ -16,7 +16,6 @@ public static class ServiceRegistration
     {
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IDialogService, DialogService>();
-        services.AddSingleton<INotYetWired, NotYetWired>();
         services.AddSingleton<IStatusService, StatusService>();
         services.AddSingleton<IFilePickerService, FilePickerService>();
         services.AddSingleton<IThemeService, ThemeService>();
@@ -49,7 +48,6 @@ public static class ServiceRegistration
             (ing, recipe, book) => RememberOnSave(sp, new IngredientEditorViewModel(ing, recipe, book,
                 sp.GetRequiredService<IImageBridge>(),
                 sp.GetRequiredService<INavigationService>(),
-                sp.GetRequiredService<INotYetWired>(),
                 sp.GetRequiredService<ICookBookSession>(),
                 sp.GetRequiredService<IDialogService>(),
                 sp.GetRequiredService<IFilePickerService>(),
@@ -80,7 +78,7 @@ public static class ServiceRegistration
                                       path, Loose: true));
                 return new IngredientEditorViewModel(ing, book.Recipes[0], book,
                     sp.GetRequiredService<IImageBridge>(), sp.GetRequiredService<INavigationService>(),
-                    sp.GetRequiredService<INotYetWired>(), sp.GetRequiredService<ICookBookSession>(),
+                    sp.GetRequiredService<ICookBookSession>(),
                     sp.GetRequiredService<IDialogService>(), sp.GetRequiredService<IFilePickerService>(),
                     looseSavePath: path,
                     kitchen: sp.GetRequiredService<IKitchenSession>(),
@@ -97,7 +95,6 @@ public static class ServiceRegistration
             book => new ExplorerViewModel(book,
                 sp.GetRequiredService<INavigationService>(),
                 sp.GetRequiredService<IDialogService>(),
-                sp.GetRequiredService<INotYetWired>(),
                 sp.GetRequiredService<IImageBridge>(),
                 sp.GetRequiredService<Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel>>(),
                 sp.GetRequiredService<Func<LoadedCookBook, CookDialogViewModel>>(),

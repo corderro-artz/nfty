@@ -16,7 +16,7 @@ public class RecipeDetailViewModelTests
     {
         var book = ExplorerViewModelTests.TwoRecipeBook();
         var cat = book.Recipes.First(r => r.Manifest.Id == "cat");
-        using var vm = new RecipeDetailViewModel(cat, book, new ImageBridge(), new FakeNotYetWired(), _ => { });
+        using var vm = new RecipeDetailViewModel(cat, book, new ImageBridge(), _ => { });
         Assert.Equal(new[] { "bg", "aura" }, vm.Layers.Select(l => l.Layer));
         Assert.Equal(new[] { "bg", "aura" }, vm.Layers.Select(l => l.Id));   // Id drives OpenIngredient, not the display name
         Assert.All(vm.Layers, l => Assert.Equal(1, l.VariantCount));
@@ -29,7 +29,7 @@ public class RecipeDetailViewModelTests
         var book = ExplorerViewModelTests.TwoRecipeBook();
         var cat = book.Recipes.First(r => r.Manifest.Id == "cat");
         string? opened = null;
-        using var vm = new RecipeDetailViewModel(cat, book, new ImageBridge(), new FakeNotYetWired(), id => opened = id);
+        using var vm = new RecipeDetailViewModel(cat, book, new ImageBridge(), id => opened = id);
         var before = vm.RollSeed; vm.RerollCommand.Execute(null); Assert.NotEqual(before, vm.RollSeed);
         vm.OpenIngredientCommand.Execute("aura"); Assert.Equal("aura", opened);
     }
@@ -39,7 +39,7 @@ public class RecipeDetailViewModelTests
     {
         var book = ExplorerViewModelTests.TwoRecipeBook();
         var cat = book.Recipes.First(r => r.Manifest.Id == "cat");
-        using var vm = new RecipeDetailViewModel(cat, book, new ImageBridge(), new FakeNotYetWired(), _ => { });
+        using var vm = new RecipeDetailViewModel(cat, book, new ImageBridge(), _ => { });
         Assert.NotNull(vm.Hero);
         var before = vm.RollSeed;
         vm.RerollCommand.Execute(null);
@@ -84,7 +84,7 @@ public class RecipeDetailViewModelTests
             Recipes = new[] { recipe },
         };
 
-        using var vm = new RecipeDetailViewModel(recipe, book, new ImageBridge(), new FakeNotYetWired(), _ => { });
+        using var vm = new RecipeDetailViewModel(recipe, book, new ImageBridge(), _ => { });
 
         Assert.Equal(2, vm.Rules.Count);
         var exclude = vm.Rules.Single(r => r.IsExclude);
@@ -111,7 +111,7 @@ public class RecipeDetailViewModelTests
             Ingredients = recipe.Ingredients,
         };
         using var orphanVm = new RecipeDetailViewModel(orphanRecipe, book, new ImageBridge(),
-            new FakeNotYetWired(), _ => { });
+            _ => { });
         Assert.Equal("GONE", orphanVm.Rules[0].When.Ingredient);
         Assert.Equal("missing", orphanVm.Rules[0].When.Variant);
     }

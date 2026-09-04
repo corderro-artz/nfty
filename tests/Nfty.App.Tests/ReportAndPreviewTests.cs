@@ -113,11 +113,11 @@ public class ReportAndPreviewTests
     {
         using var book = ExplorerViewModelTests.TwoRecipeBook();
 
-        var without = new CookBookDetailViewModel(book, new FakeNotYetWired(), () => { });
+        var without = new CookBookDetailViewModel(book, () => { });
         Assert.False(without.ShowReportsCommand.CanExecute(null));
 
         var opened = false;
-        var with = new CookBookDetailViewModel(book, new FakeNotYetWired(), () => { }, () => opened = true);
+        var with = new CookBookDetailViewModel(book, () => { }, () => opened = true);
         Assert.True(with.ShowReportsCommand.CanExecute(null));
         with.ShowReportsCommand.Execute(null);
         Assert.True(opened);
@@ -160,7 +160,7 @@ public class ReportAndPreviewTests
         try
         {
             using var vm = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(),
-                new FakeNotYetWired(), () => { }, () => false, null, status,
+                () => { }, () => false, null, status,
                 new SavePicker(target), new FakeDialogs());
 
             Assert.True(vm.ExportPreviewCommand.CanExecute(null));
@@ -185,7 +185,7 @@ public class ReportAndPreviewTests
         try
         {
             using var vm = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(),
-                new FakeNotYetWired(), () => { }, () => false, null, new StatusService(),
+                () => { }, () => false, null, new StatusService(),
                 picker, new FakeDialogs());
 
             await vm.ExportPreviewCommand.ExecuteAsync(null);   // must not throw
@@ -201,7 +201,7 @@ public class ReportAndPreviewTests
         try
         {
             using var vm = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(),
-                new FakeNotYetWired(), () => { }, () => false);
+                () => { }, () => false);
 
             Assert.False(vm.ExportPreviewCommand.CanExecute(null));
         }

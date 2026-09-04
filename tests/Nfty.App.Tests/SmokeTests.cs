@@ -17,7 +17,6 @@ public class SmokeTests
     {
         var locator = new ViewLocator();
         var dialogs = new FakeDialogs();
-        var notify = new FakeNotYetWired();
         var nav = new FakeNav();
         var editorFactory = ExplorerViewModelTests.EditorFactory(nav);
         var cookFactory = ExplorerViewModelTests.CookFactory(dialogs);
@@ -31,19 +30,19 @@ public class SmokeTests
 
         ViewModelBase[] vms =
         [
-            new LandingViewModel(nav, dialogs, notify, new FilePickerService(),
+            new LandingViewModel(nav, dialogs, new FilePickerService(),
                 new RecentsService(Directory.CreateTempSubdirectory().FullName),
-                new CookBookSession(), book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(), editorFactory, cookFactory, new CookBookSession(),
+                new CookBookSession(), book => new ExplorerViewModel(book, nav, dialogs, new ImageBridge(), editorFactory, cookFactory, new CookBookSession(),
                     new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs), new StatusService()),
                 set => new SetBrowserViewModel(set),
                 (_, _, _) => null!),
-            new ExplorerViewModel(smokeBook, nav, dialogs, notify, new ImageBridge(), editorFactory, cookFactory, new CookBookSession(),
+            new ExplorerViewModel(smokeBook, nav, dialogs, new ImageBridge(), editorFactory, cookFactory, new CookBookSession(),
                 new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs), new StatusService()),
             editorFactory(cat.Ingredients[0], cat, smokeBook),
             new HelpViewModel(dialogs),
-            new NewCookBookViewModel(dialogs, notify),
-            new NewRecipeViewModel(dialogs, notify),
-            new NewIngredientViewModel(dialogs, notify),
+            new NewCookBookViewModel(dialogs),
+            new NewRecipeViewModel(dialogs),
+            new NewIngredientViewModel(dialogs),
             new ErrorDialogViewModel(dialogs, "Error", "Could not open the cookbook."),
             new ConfirmDialogViewModel(dialogs, "Discard?", "You have unsaved edits.", "Discard"),
             new CookDialogViewModel(smokeBook, new FilePickerService(), new NoopFolderRevealer(), dialogs),
@@ -65,10 +64,10 @@ public class SmokeTests
     public void Landing_new_cookbook_opens_then_cancel_closes()
     {
         var dialogs = new DialogService();
-        var nav = new FakeNav(); var notify = new FakeNotYetWired();
-        var vm = new LandingViewModel(nav, dialogs, notify,
+        var nav = new FakeNav();
+        var vm = new LandingViewModel(nav, dialogs,
             new FilePickerService(), new RecentsService(Directory.CreateTempSubdirectory().FullName), new CookBookSession(),
-            book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav),
+            book => new ExplorerViewModel(book, nav, dialogs, new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav),
                 ExplorerViewModelTests.CookFactory(dialogs), new CookBookSession(),
                 new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs), new StatusService()),
             set => new SetBrowserViewModel(set),

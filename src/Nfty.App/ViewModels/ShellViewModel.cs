@@ -8,7 +8,6 @@ public partial class ShellViewModel : ViewModelBase
 {
     private readonly INavigationService _nav;
     private readonly IDialogService _dialogs;
-    private readonly INotYetWired _notify;
     private readonly IThemeService _theme;
     private readonly IKitchenSession? _kitchen;
     private readonly ICookBookSession? _session;
@@ -84,15 +83,14 @@ public partial class ShellViewModel : ViewModelBase
     /// <summary>Builds the shell.</summary>
     /// <param name="nav">The page stack.</param>
     /// <param name="dialogs">The dialog layer.</param>
-    /// <param name="notify">The not-yet-wired channel.</param>
     /// <param name="theme">Light/dark switching.</param>
     /// <param name="status">The status bar's guidance channel.</param>
     /// <param name="kitchen">The open workspace, if any.</param>
     /// <param name="session">The open CookBook, so closing a document can free it.</param>
-    public ShellViewModel(INavigationService nav, IDialogService dialogs, INotYetWired notify, IThemeService theme,
+    public ShellViewModel(INavigationService nav, IDialogService dialogs, IThemeService theme,
         IStatusService status, IKitchenSession? kitchen = null, ICookBookSession? session = null)
     {
-        _nav = nav; _dialogs = dialogs; _notify = notify; _theme = theme;
+        _nav = nav; _dialogs = dialogs; _theme = theme;
         _kitchen = kitchen;
         _session = session;
         if (_kitchen is not null)
@@ -105,7 +103,6 @@ public partial class ShellViewModel : ViewModelBase
         _dialogs.Changed += () => ActiveDialog = _dialogs.Active;
         // Two channels on purpose: Report is for buttons that genuinely do nothing yet, Say is for
         // real guidance. Routing guidance through Report told users a working feature was unbuilt.
-        _notify.Reported += a => StatusMessage = $"Not wired yet: {a}";
         status.Said += m => StatusMessage = m;
     }
 

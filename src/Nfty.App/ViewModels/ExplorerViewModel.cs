@@ -23,7 +23,6 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
 {
     private readonly INavigationService _nav;
     private readonly IDialogService _dialogs;
-    private readonly INotYetWired _notify;
     private readonly IImageBridge _bridge;
     private LoadedCookBook _book;
     private ExplorerNode _fullRoot = default!;
@@ -195,7 +194,6 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     /// <param name="book">The open book.</param>
     /// <param name="nav">The page stack.</param>
     /// <param name="dialogs">The dialog layer.</param>
-    /// <param name="notify">The not-yet-wired channel.</param>
     /// <param name="bridge">Converts an ImageSharp frame to an Avalonia bitmap.</param>
     /// <param name="editorFactory">Opens the editor for an ingredient inside this book.</param>
     /// <param name="cookFactory">Opens the cook dialog.</param>
@@ -206,7 +204,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     /// <param name="kitchen">The open workspace, if any.</param>
     /// <param name="clipboard">Where the report dialog's Copy writes.</param>
     public ExplorerViewModel(LoadedCookBook book, INavigationService nav, IDialogService dialogs,
-        INotYetWired notify, IImageBridge bridge,
+        IImageBridge bridge,
         Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel> editorFactory,
         Func<LoadedCookBook, CookDialogViewModel> cookFactory, ICookBookSession session,
         IFilePickerService picker,
@@ -215,7 +213,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         IKitchenSession? kitchen = null,
         IClipboardService? clipboard = null)
     {
-        _book = book; _nav = nav; _dialogs = dialogs; _notify = notify; _bridge = bridge;
+        _book = book; _nav = nav; _dialogs = dialogs; _bridge = bridge;
         _editorFactory = editorFactory;
         _cookFactory = cookFactory;
         _session = session;
@@ -284,12 +282,12 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         (CurrentDetail as IDisposable)?.Dispose();
         CurrentDetail = newValue?.Kind switch
         {
-            ExplorerNodeKind.CookBook => new CookBookDetailViewModel(_book, _notify,
+            ExplorerNodeKind.CookBook => new CookBookDetailViewModel(_book,
                 () => _dialogs.ShowAsync<object>(_cookFactory(_book)),
                 // stats + inspect, rendered by Core so the text matches the CLI's byte for byte.
                 () => _dialogs.ShowAsync<object>(
                     new ReportDialogViewModel(_book, _dialogs, _clipboard ?? new NoopClipboardService()))),
-            ExplorerNodeKind.Recipe => new RecipeDetailViewModel((LoadedRecipe)newValue!.Domain!, _book, _bridge, _notify,
+            ExplorerNodeKind.Recipe => new RecipeDetailViewModel((LoadedRecipe)newValue!.Domain!, _book, _bridge,
                 id => OpenIngredientCommand.Execute(id),
                 // The pane asks; the Explorer owns the graph, the gate and the file. It reads _book at
                 // CALL time, not now, so a pane that outlives several saves still edits the live book.
@@ -301,7 +299,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
                 RecipeIdCallback((LoadedRecipe)newValue.Domain!),
                 IsEditing),
             ExplorerNodeKind.Ingredient => newValue!.Domain is (LoadedRecipe r, LoadedIngredient i)
-                ? new IngredientDetailViewModel(i, r, _book, _bridge, _notify,
+                ? new IngredientDetailViewModel(i, r, _book, _bridge,
                     () => OpenEditor(i, r), () => IsEditing,
                     // The rule-count pill jumps to the owning recipe, whose Rules panel is where
                     // this layer's rules actually live.
@@ -638,7 +636,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         var siblings = _book.Recipes
             .Select(r => (r.Manifest.Name, Weight: _book.Manifest.RecipeWeights.GetValueOrDefault(r.Manifest.Id)))
             .ToList();
-        var wizard = new NewRecipeViewModel(_dialogs, _notify, siblings);
+        var wizard = new NewRecipeViewModel(_dialogs, siblings);
         var result = await _dialogs.ShowAsync<NewRecipeViewModel>(wizard);
         if (result is null) return;   // cancelled
         if (string.IsNullOrWhiteSpace(result.DerivedId))
@@ -683,7 +681,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
 
     private async Task AddIngredientTo(LoadedRecipe recipe)
     {
-        var wizard = new NewIngredientViewModel(_dialogs, _notify);
+        var wizard = new NewIngredientViewModel(_dialogs);
         var result = await _dialogs.ShowAsync<NewIngredientViewModel>(wizard);
         if (result is null) return;   // cancelled
 

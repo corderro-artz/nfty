@@ -54,11 +54,10 @@ public partial class NewRecipeViewModel : WizardViewModelBase
 
     /// <summary>Creates the New Recipe wizard.</summary>
     /// <param name="dialogs">The dialog layer.</param>
-    /// <param name="notify">The not-yet-wired channel.</param>
     /// <param name="siblings">The open book's recipes and weights, so the form can show what
     /// the new one dilutes; null when creating a loose Recipe with no book to join.</param>
-    public NewRecipeViewModel(IDialogService dialogs, INotYetWired notify,
-        IReadOnlyList<(string Name, double Weight)>? siblings = null) : base(dialogs, notify)
+    public NewRecipeViewModel(IDialogService dialogs,
+        IReadOnlyList<(string Name, double Weight)>? siblings = null) : base(dialogs)
     {
         _siblings = siblings ?? Array.Empty<(string, double)>();
     }

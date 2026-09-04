@@ -70,8 +70,7 @@ public partial class NewIngredientViewModel : WizardViewModelBase
 
     /// <summary>Creates the New Ingredient wizard.</summary>
     /// <param name="dialogs">The dialog layer.</param>
-    /// <param name="notify">The not-yet-wired channel.</param>
-    public NewIngredientViewModel(IDialogService dialogs, INotYetWired notify) : base(dialogs, notify) { }
+    public NewIngredientViewModel(IDialogService dialogs) : base(dialogs) { }
 
     partial void OnKindChanged(LayerKind value)
     {

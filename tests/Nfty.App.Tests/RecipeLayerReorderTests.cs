@@ -70,7 +70,7 @@ public class RecipeLayerReorderTests
     {
         var nav = new FakeNav();
         var dialogs = new FakeDialogs();
-        return new ExplorerViewModel(session.Current!, nav, dialogs, new FakeNotYetWired(), new ImageBridge(),
+        return new ExplorerViewModel(session.Current!, nav, dialogs, new ImageBridge(),
             ExplorerViewModelTests.EditorFactory(nav, session, dialogs),
             ExplorerViewModelTests.CookFactory(dialogs), session, new FilePickerService(),
             ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs), status);
@@ -90,7 +90,7 @@ public class RecipeLayerReorderTests
             current = CookBookEdits.MoveLayer(current, "cat", ingredientId, depth);
             return Task.FromResult<LoadedCookBook?>(current);
         }
-        return new RecipeDetailViewModel(book.Recipes[0], book, new ImageBridge(), new FakeNotYetWired(),
+        return new RecipeDetailViewModel(book.Recipes[0], book, new ImageBridge(),
             _ => { }, Move, canReorder);
     }
 
@@ -213,7 +213,7 @@ public class RecipeLayerReorderTests
         var dialogs = new FakeDialogs();
         var status = new StatusService();
         using var book = MemoryBook();
-        using var explorer = new ExplorerViewModel(book, nav, dialogs, new FakeNotYetWired(), new ImageBridge(),
+        using var explorer = new ExplorerViewModel(book, nav, dialogs, new ImageBridge(),
             ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs),
             new CookBookSession(), new FilePickerService(),
             ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs), status);

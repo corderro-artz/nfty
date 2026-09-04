@@ -79,13 +79,13 @@ public class IngredientEditorColorModeTests
     private static IngredientEditorViewModel EditorWithPicker(
         (string path, CookBookSession session, LoadedRecipe recipe, LoadedIngredient ing) f,
         IFilePickerService picker) =>
-        new(f.ing, f.recipe, f.session.Current!, new ImageBridge(), new FakeNav(), new FakeNotYetWired(),
+        new(f.ing, f.recipe, f.session.Current!, new ImageBridge(), new FakeNav(),
             f.session, new FakeDialogs(), picker);
 
     private static IngredientEditorViewModel Editor(
         (string path, CookBookSession session, LoadedRecipe recipe, LoadedIngredient ing) f,
         IDialogService? dialogs = null, IPaletteService? palette = null) =>
-        new(f.ing, f.recipe, f.session.Current!, new ImageBridge(), new FakeNav(), new FakeNotYetWired(),
+        new(f.ing, f.recipe, f.session.Current!, new ImageBridge(), new FakeNav(),
             f.session, dialogs ?? new FakeDialogs(), new NoPicker(), palette: palette);
 
     // ---------------- the palette strip ----------------

@@ -7,8 +7,8 @@ namespace Nfty.App.Tests;
 
 public class NewRecipeViewModelTests
 {
-    private static NewRecipeViewModel Make(out FakeDialogs d, out FakeNotYetWired n)
-    { d = new FakeDialogs(); n = new FakeNotYetWired(); return new NewRecipeViewModel(d, n); }
+    private static NewRecipeViewModel Make(out FakeDialogs d)
+    { d = new FakeDialogs(); return new NewRecipeViewModel(d); }
 
     /// <summary>The "Resulting mix" readout. A selection weight is RELATIVE to its siblings and the
     /// book normalises the set — it is not a percentage. The control this replaces was a ProgressBar
@@ -17,7 +17,7 @@ public class NewRecipeViewModelTests
     [Fact]
     public void Share_is_relative_to_siblings_not_an_absolute_percentage()
     {
-        var vm = new NewRecipeViewModel(new FakeDialogs(), new FakeNotYetWired(),
+        var vm = new NewRecipeViewModel(new FakeDialogs(),
             new[] { ("Fox", 45d), ("Owl", 25d) }) { Name = "Cat", Weight = 100 };
 
         var rows = vm.ShareRows;
@@ -36,7 +36,7 @@ public class NewRecipeViewModelTests
     [Fact]
     public void Share_tracks_the_weight_and_hides_where_there_is_nothing_to_share_with()
     {
-        var vm = new NewRecipeViewModel(new FakeDialogs(), new FakeNotYetWired(),
+        var vm = new NewRecipeViewModel(new FakeDialogs(),
             new[] { ("Fox", 100d) }) { Name = "Cat", Weight = 100 };
         Assert.Equal(50d, vm.ShareRows[0].Percent, 3);
 
@@ -49,14 +49,14 @@ public class NewRecipeViewModelTests
         Assert.False(vm.ShowShare);
 
         // Nor when the book has no other recipes: a lone recipe is trivially 100% of itself.
-        var alone = new NewRecipeViewModel(new FakeDialogs(), new FakeNotYetWired()) { Weight = 100 };
+        var alone = new NewRecipeViewModel(new FakeDialogs()) { Weight = 100 };
         Assert.False(alone.ShowShare);
     }
 
     [Fact]
     public void Choosing_loose_kitchen_disables_the_weight_field()
     {
-        var vm = Make(out _, out _);
+        var vm = Make(out _);
         vm.Destination = RecipeDestination.LooseKitchen;
         Assert.False(vm.WeightEnabled);
         vm.Destination = RecipeDestination.IntoCookBook;
@@ -66,14 +66,14 @@ public class NewRecipeViewModelTests
     [Fact]
     public void DerivedId_slugs_the_name()
     {
-        var vm = Make(out _, out _); vm.Name = "Night Sky";
+        var vm = Make(out _); vm.Name = "Night Sky";
         Assert.Equal("night-sky", vm.DerivedId);
     }
 
     [Fact]
     public void Create_is_disabled_until_the_name_yields_a_non_blank_id()
     {
-        var vm = Make(out _, out _);
+        var vm = Make(out _);
         Assert.False(vm.CreateCommand.CanExecute(null));
         vm.Name = "  ";
         Assert.False(vm.CreateCommand.CanExecute(null));
@@ -85,7 +85,7 @@ public class NewRecipeViewModelTests
     public async System.Threading.Tasks.Task Create_closes_the_dialog_with_the_vm()
     {
         var real = new DialogService();
-        var vm = new NewRecipeViewModel(real, new FakeNotYetWired()) { Name = "Bird" };
+        var vm = new NewRecipeViewModel(real) { Name = "Bird" };
         var task = real.ShowAsync<NewRecipeViewModel>(vm);
         vm.CreateCommand.Execute(null);
         Assert.Same(vm, await task);

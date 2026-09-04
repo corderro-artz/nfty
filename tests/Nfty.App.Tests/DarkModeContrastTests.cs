@@ -251,11 +251,10 @@ public class DarkModeContrastTests
     {
         var nav = new FakeNav();
         var dialogs = new FakeDialogs();
-        var notify = new FakeNotYetWired();
 
         // Explorer with a CookBook selected — the screen in the bug report.
         var book = ExplorerViewModelTests.TwoRecipeBook();
-        var explorer = new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(),
+        var explorer = new ExplorerViewModel(book, nav, dialogs, new ImageBridge(),
             ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs),
             new CookBookSession(), new FilePickerService(),
             ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs), new StatusService());
@@ -263,19 +262,19 @@ public class DarkModeContrastTests
         yield return ("explorer", new Views.ExplorerView { DataContext = explorer }, explorer.Dispose);
 
         var shellNav = new FakeNav();
-        var shellExplorer = new ExplorerViewModel(ExplorerViewModelTests.TwoRecipeBook(), shellNav, dialogs, notify,
+        var shellExplorer = new ExplorerViewModel(ExplorerViewModelTests.TwoRecipeBook(), shellNav, dialogs,
             new ImageBridge(), ExplorerViewModelTests.EditorFactory(shellNav),
             ExplorerViewModelTests.CookFactory(dialogs), new CookBookSession(), new FilePickerService(),
             ExplorerViewModelTests.LooseEditorFactory(shellNav, new CookBookSession(), dialogs), new StatusService());
-        var shell = new ShellViewModel(shellNav, dialogs, notify, new ThemeService(), new StatusService());
+        var shell = new ShellViewModel(shellNav, dialogs, new ThemeService(), new StatusService());
         shellNav.To(shellExplorer);
         yield return ("shell", new Views.ShellChromeView { DataContext = shell }, shellExplorer.Dispose);
 
         var recents = new RecentsService(Directory.CreateTempSubdirectory().FullName);
         recents.Add(new Models.RecentItem("VaporPets", "cookbook · 2 recipes", @"D:\art\VaporPets.cbk", false));
-        var landing = new LandingViewModel(nav, dialogs, notify, new FilePickerService(), recents,
+        var landing = new LandingViewModel(nav, dialogs, new FilePickerService(), recents,
             new CookBookSession(),
-            b => new ExplorerViewModel(b, nav, dialogs, notify, new ImageBridge(),
+            b => new ExplorerViewModel(b, nav, dialogs, new ImageBridge(),
                 ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs),
                 new CookBookSession(), new FilePickerService(),
                 ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs), new StatusService()),
@@ -285,11 +284,11 @@ public class DarkModeContrastTests
         yield return ("help", new Views.HelpView { DataContext = new HelpViewModel(dialogs) }, null);
 
         yield return ("wizard-cookbook",
-            new Views.NewCookBookView { DataContext = new NewCookBookViewModel(dialogs, notify) { Name = "Vapor Pets", Symbol = "VP" } }, null);
+            new Views.NewCookBookView { DataContext = new NewCookBookViewModel(dialogs) { Name = "Vapor Pets", Symbol = "VP" } }, null);
         yield return ("wizard-recipe",
-            new Views.NewRecipeView { DataContext = new NewRecipeViewModel(dialogs, notify, new[] { ("Fox", 45d) }) { Name = "Cat" } }, null);
+            new Views.NewRecipeView { DataContext = new NewRecipeViewModel(dialogs, new[] { ("Fox", 45d) }) { Name = "Cat" } }, null);
         yield return ("wizard-ingredient",
-            new Views.NewIngredientView { DataContext = new NewIngredientViewModel(dialogs, notify) { Name = "Aura" } }, null);
+            new Views.NewIngredientView { DataContext = new NewIngredientViewModel(dialogs) { Name = "Aura" } }, null);
 
         // The states above are all the HAPPY ones, and a state no fixture reaches renders nothing and
         // therefore looks fine - the single most repeated defect on this branch. The screens below are
@@ -298,11 +297,11 @@ public class DarkModeContrastTests
         // An empty, INVALID book: the identity card's "N problems" chip and the zeroed metric tiles.
         // The reported screenshot was exactly this - 0 recipes, 1 problem - and none of the fixtures
         // above ever paint a problem chip, because they are all valid.
-        var brokenVm = new CookBookDetailViewModel(EmptyBook(), notify, () => { }, () => { });
+        var brokenVm = new CookBookDetailViewModel(EmptyBook(), () => { }, () => { });
         yield return ("cookbook-detail-invalid",
             new Views.CookBookDetailView { DataContext = brokenVm }, null);
 
-        var goodVm = new CookBookDetailViewModel(ExplorerViewModelTests.TwoRecipeBook(), notify, () => { }, () => { });
+        var goodVm = new CookBookDetailViewModel(ExplorerViewModelTests.TwoRecipeBook(), () => { }, () => { });
         yield return ("cookbook-detail", new Views.CookBookDetailView { DataContext = goodVm }, null);
 
         // Detail bodies for the other two node kinds, and the editor - the editor twice, because its
@@ -310,25 +309,24 @@ public class DarkModeContrastTests
         // unreadable text hides.
         var detailBook = ExplorerViewModelTests.TwoRecipeBook();
         var cat = detailBook.Recipes.First(r => r.Manifest.Id == "cat");
-        var recipeVm = new RecipeDetailViewModel(cat, detailBook, new ImageBridge(), notify, _ => { });
+        var recipeVm = new RecipeDetailViewModel(cat, detailBook, new ImageBridge(), _ => { });
         yield return ("recipe-detail", new Views.RecipeDetailView { DataContext = recipeVm }, recipeVm.Dispose);
 
         // The same pane with editing UNLOCKED. Its own state, not a variation on a theme: the reorder
         // grips are ghosted to nothing while locked, so a scan of the locked pane is a scan of a
         // control that is not being drawn - the exact blind spot the rest of this file exists for.
-        var reorderVm = new RecipeDetailViewModel(cat, detailBook, new ImageBridge(), notify, _ => { },
+        var reorderVm = new RecipeDetailViewModel(cat, detailBook, new ImageBridge(), _ => { },
             (_, _) => Task.FromResult<Nfty.Core.Formats.LoadedCookBook?>(null), canReorder: true);
         yield return ("recipe-detail-unlocked",
             new Views.RecipeDetailView { DataContext = reorderVm }, reorderVm.Dispose);
 
-        var ingVm = new IngredientDetailViewModel(cat.Ingredients[0], cat, detailBook, new ImageBridge(),
-            notify, () => { }, () => false, null, null, new FilePickerService(), dialogs);
+        var ingVm = new IngredientDetailViewModel(cat.Ingredients[0], cat, detailBook, new ImageBridge(), () => { }, () => false, null, null, new FilePickerService(), dialogs);
         yield return ("ingredient-detail", new Views.IngredientDetailView { DataContext = ingVm }, ingVm.Dispose);
 
         var editorBook = ExplorerViewModelTests.TwoRecipeBook();
         var editorRecipe = editorBook.Recipes.First(r => r.Manifest.Id == "cat");
         var editorVm = new IngredientEditorViewModel(editorRecipe.Ingredients[0], editorRecipe, editorBook,
-            new ImageBridge(), nav, notify, new CookBookSession(), dialogs, new FilePickerService());
+            new ImageBridge(), nav, new CookBookSession(), dialogs, new FilePickerService());
         yield return ("editor-disabled", new Views.IngredientEditorView { DataContext = editorVm }, editorVm.Dispose);
 
         // The reference panel with layers switched ON. Its own state, not a variation on a theme: the

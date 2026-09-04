@@ -29,7 +29,6 @@ public record ColorwayAxis(string Label, string Value, bool Derived);
 
 public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
 {
-    private readonly INotYetWired _notify;
     private readonly Action _editIngredient;
     private readonly Action? _jumpToRecipe;
     private readonly IStatusService? _status;
@@ -99,7 +98,6 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     /// <param name="recipe">Its owning recipe.</param>
     /// <param name="book">The owning book, for overall odds.</param>
     /// <param name="bridge">Converts an ImageSharp frame to an Avalonia bitmap.</param>
-    /// <param name="notify">The not-yet-wired channel.</param>
     /// <param name="editIngredient">Opens the ingredient editor.</param>
     /// <param name="isEditing">Whether editing is currently unlocked.</param>
     /// <param name="jumpToRecipe">Selects the owning recipe and scrolls to its rules.</param>
@@ -107,12 +105,12 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     /// <param name="picker">Chooses where to export a preview.</param>
     /// <param name="dialogs">The dialog layer, for reporting an export failure.</param>
     public IngredientDetailViewModel(LoadedIngredient ing, LoadedRecipe recipe, LoadedCookBook book,
-        IImageBridge bridge, INotYetWired notify, Action editIngredient, Func<bool> isEditing,
+        IImageBridge bridge, Action editIngredient, Func<bool> isEditing,
         Action? jumpToRecipe = null, IStatusService? status = null,
         IFilePickerService? picker = null, IDialogService? dialogs = null)
     {
         _ing = ing; _bridge = bridge;
-        _notify = notify; _editIngredient = editIngredient; _isEditing = isEditing;
+        _editIngredient = editIngredient; _isEditing = isEditing;
         _jumpToRecipe = jumpToRecipe;
         _status = status;
         _picker = picker;
@@ -238,7 +236,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
 
     /// <summary>Opens the editor, which owns variants — and therefore owns deleting one.
     ///
-    /// This used to call <c>_notify.Report("Delete variant")</c>, which the shell renders as
+    /// This used to report the action as unbuilt, which the shell rendered as
     /// "Not wired yet: Delete variant". That was wrong twice over: the button was enabled and
     /// looked like it worked, and the feature is not unbuilt at all — the editor has a real delete
     /// with a confirm dialog and undo history. Routing here mirrors what Add does from the

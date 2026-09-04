@@ -49,7 +49,7 @@ public class SessionLifecycleTests
 
     private static ShellViewModel Shell(INavigationService nav, ICookBookSession? session = null,
         IKitchenSession? kitchen = null) =>
-        new(nav, new FakeDialogs(), new FakeNotYetWired(), new StubTheme(), new StatusService(),
+        new(nav, new FakeDialogs(), new StubTheme(), new StatusService(),
             kitchen, session);
 
     private sealed class StubTheme : IThemeService
@@ -58,7 +58,7 @@ public class SessionLifecycleTests
     private static ExplorerViewModel Explorer(LoadedCookBook book, INavigationService nav)
     {
         var dialogs = new FakeDialogs();
-        return new ExplorerViewModel(book, nav, dialogs, new FakeNotYetWired(), new ImageBridge(),
+        return new ExplorerViewModel(book, nav, dialogs, new ImageBridge(),
             ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs),
             new CookBookSession(), new FilePickerService(),
             ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs), new StatusService());
@@ -230,7 +230,7 @@ public class SessionLifecycleTests
     {
         var nav = new FakeNav();
         var dialogs = new FakeDialogs();
-        return new LandingViewModel(nav, dialogs, new FakeNotYetWired(), picker,
+        return new LandingViewModel(nav, dialogs, picker,
             new RecentsService(Directory.CreateTempSubdirectory().FullName), new CookBookSession(),
             _ => null!, _ => null!, (_, _, _) => null!, kitchen);
     }

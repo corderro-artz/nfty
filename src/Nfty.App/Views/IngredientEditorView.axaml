@@ -7,6 +7,11 @@
              x:Class="Nfty.App.Views.IngredientEditorView"
              x:DataType="vm:IngredientEditorViewModel"
              RenderOptions.BitmapInterpolationMode="None">
+  <!-- Escape drops the marquee. A selection you cannot dismiss without drawing another one is a
+       mode you are stuck in, and Escape is the key everyone tries first. -->
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Escape" Command="{Binding ClearSelectionCommand}" />
+  </UserControl.KeyBindings>
   <!-- ingredient-editor.html .epanes: variants rail / canvas / colorize rail, full-bleed and divided
        by 1px rules, each opening with a 41px pane header. This screen was previously a functional
        skeleton - stacked default primitives in three fixed columns - rather than the designed one. -->
@@ -114,7 +119,14 @@
               <Button Classes="ttool" Classes.on="{Binding IsToolTriangle}" ToolTip.Tip="Triangle"
                       Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Triangle}">
                 <Path Classes="ico sm" Data="{StaticResource IconTriangle}" /></Button>
-              <Button Classes="ttool" Classes.on="{Binding IsToolSelect}" ToolTip.Tip="Select region"
+              <!-- Line is not in the locked mockup, and is here on purpose: the shape group offered
+                   rectangle, circle and triangle but no way to draw the single most basic mark in a
+                   pixel editor, and the engine already draws one (a two-point brush stroke, joined
+                   by the same Bresenham walk every freehand stroke uses). -->
+              <Button Classes="ttool" Classes.on="{Binding IsToolLine}" ToolTip.Tip="Line"
+                      Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Line}">
+                <Path Classes="ico sm" Data="{StaticResource IconLine}" /></Button>
+              <Button Classes="ttool" Classes.on="{Binding IsToolSelect}" ToolTip.Tip="Select region, then drag it to move"
                       Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Select}">
                 <Path Classes="ico sm" Data="{StaticResource IconSelect}" /></Button>
 
@@ -130,7 +142,12 @@
               <!-- .ramp: the brightness axis. In grayscale mode it IS the colour; in colour mode it
                    is V of HSV, with H and S on the colorize rail's own tracks. One control, one
                    meaning ("how bright"), in both modes. -->
-              <Panel Width="96" VerticalAlignment="Center">
+              <!-- 80, not the mockup's 96. The third deliberate chrome divergence on record (after
+                   the 40px titlebar and the 7px toolbar padding): this strip carries a Line tool and
+                   a brush-size field the mockup has neither of, and at the pane's minimum width
+                   something had to give. A brightness slider is the one control here whose meaning
+                   does not depend on its exact length. See ToolstripLayoutTests. -->
+              <Panel Width="80" VerticalAlignment="Center">
                 <Border Classes="ramp" Background="{StaticResource ValueRampBrush}" />
                 <Slider Value="{Binding BrushValue}" Minimum="0" Maximum="255"
                         Classes="overlay" ToolTip.Tip="Paint value / brightness" />
@@ -139,12 +156,14 @@
                 <Border.Background><SolidColorBrush Color="{Binding BrushSwatch}" /></Border.Background>
               </Border>
 
-              <Border Classes="tsep" />
-              <!-- No "SIZE" caption: the strip's full contents already exceed the canvas pane at the
-                   window's default width, and a clipped stepper is worse than an implicit one. The
-                   tooltip carries the meaning. -->
-              <NumericUpDown Value="{Binding BrushSize}" Minimum="1" Width="96"
-                             ToolTip.Tip="Brush size (px)" />
+              <!-- Brush size. WIDTH IS A BUDGET, and this cell is what pays for the rest: the strip
+                   has to fit the canvas pane at the app's minimum width (ToolstripLayoutTests), and
+                   adding the Line tool cost 36px it did not have. So: no "SIZE" caption, no leading
+                   separator, and no spinner column — Fluent's is two ~28px buttons for a number you
+                   type once. What is left is the mockup's own numeric idiom (.nin, 58px), and the
+                   tooltip carries the meaning the caption would have. -->
+              <NumericUpDown Classes="nin" Value="{Binding BrushSize}" Minimum="1" Width="58"
+                             ShowButtonSpinner="False" ToolTip.Tip="Brush size (px)" />
             </StackPanel>
           </Border>
 
@@ -282,6 +301,11 @@
               <Panel>
                 <Image x:Name="CanvasImage" Source="{Binding Canvas}" Stretch="Uniform"
                        IsVisible="{Binding ShowPaintCanvas}" />
+                <!-- The rubber band and the selection marquee. Drawn in control coordinates over
+                     the art rather than into it, so a shape being positioned never touches a pixel
+                     until it is committed, and never hit-tests away the pointer that is drawing it. -->
+                <Canvas x:Name="CanvasOverlay" IsHitTestVisible="False"
+                        IsVisible="{Binding ShowPaintCanvas}" />
                 <!-- "Fill pane with preview": the colorized result takes over the tile. -->
                 <Image Source="{Binding Preview}" Stretch="Uniform" IsVisible="{Binding PreviewFillsPane}" />
               </Panel>

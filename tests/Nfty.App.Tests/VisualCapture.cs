@@ -112,11 +112,11 @@ public class VisualCapture
             var dialogs = new FakeDialogs();
             var session = new CookBookSession();
             using var explorer = new ExplorerViewModel(ExplorerViewModelTests.TwoRecipeBook(), nav, dialogs,
-                new FakeNotYetWired(), new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav),
+                new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav),
                 ExplorerViewModelTests.CookFactory(dialogs), session, new FilePickerService(),
                 ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs), new StatusService());
 
-            var shell = new ShellViewModel(nav, dialogs, new FakeNotYetWired(), new ThemeService(), new StatusService());
+            var shell = new ShellViewModel(nav, dialogs, new ThemeService(), new StatusService());
             nav.To(explorer);                             // drives ShellViewModel.CurrentPage
             explorer.SelectNodeCommand.Execute(explorer.Root.Children[0]);   // a crumb trail to show
             explorer.ToggleLockCommand.Execute(null);                        // unlocked lock flag
@@ -240,7 +240,7 @@ public class VisualCapture
             var nav = new FakeNav();
             var dialogs = new FakeDialogs();
             var vm = new ExplorerViewModel(ExplorerViewModelTests.TwoRecipeBook(), nav, dialogs,
-                new FakeNotYetWired(), new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav),
+                new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav),
                 ExplorerViewModelTests.CookFactory(dialogs), new CookBookSession(),
                 new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs), new StatusService());
             var view = new Views.ExplorerView { DataContext = vm };
@@ -352,11 +352,11 @@ public class VisualCapture
             var cookBook = ExplorerViewModelTests.TwoRecipeBook();
             // showReports supplied, or the Reports button captures DISABLED and the frame is no
             // evidence that it renders - the same fixture blind spot as the editor's toolstrip.
-            var cookBookVm = new CookBookDetailViewModel(cookBook, new FakeNotYetWired(), () => { }, () => { });
+            var cookBookVm = new CookBookDetailViewModel(cookBook, () => { }, () => { });
             Capture(new Views.CookBookDetailView { DataContext = cookBookVm }, variant, $"cookbook-detail-{key}.png");
 
             var (ruleBook, ruleRecipe) = RecipeWithRules();
-            using (var vm = new RecipeDetailViewModel(ruleRecipe, ruleBook, new ImageBridge(), new FakeNotYetWired(), _ => { }))
+            using (var vm = new RecipeDetailViewModel(ruleRecipe, ruleBook, new ImageBridge(), _ => { }))
             {
                 Capture(new Views.RecipeDetailView { DataContext = vm }, variant, $"recipe-detail-{key}.png");
             }
@@ -366,7 +366,7 @@ public class VisualCapture
             var firstIngredient = catRecipe.Ingredients[0];
             // picker + dialogs supplied so Export preview captures ENABLED.
             using (var vm = new IngredientDetailViewModel(firstIngredient, catRecipe, ingredientBook, new ImageBridge(),
-                new FakeNotYetWired(), () => { }, () => false, null, null,
+                () => { }, () => false, null, null,
                 new FilePickerService(), new FakeDialogs()))
             {
                 Capture(new Views.IngredientDetailView { DataContext = vm }, variant, $"ingredient-detail-{key}.png");
@@ -374,7 +374,7 @@ public class VisualCapture
 
             var (dynBook, dynRecipe, dynIng) = DynamicIngredient();
             using (var vm = new IngredientDetailViewModel(dynIng, dynRecipe, dynBook, new ImageBridge(),
-                new FakeNotYetWired(), () => { }, () => false, null, null,
+                () => { }, () => false, null, null,
                 new FilePickerService(), new FakeDialogs()))
             {
                 Capture(new Views.IngredientDetailView { DataContext = vm }, variant, $"ingredient-detail-dynamic-{key}.png");
@@ -431,7 +431,7 @@ public class VisualCapture
             current = Nfty.Core.Editing.CookBookEdits.MoveLayer(current, "cat", ingredientId, depth);
             return Task.FromResult<LoadedCookBook?>(current);
         }
-        return new RecipeDetailViewModel(recipe, book, new ImageBridge(), new FakeNotYetWired(), _ => { },
+        return new RecipeDetailViewModel(recipe, book, new ImageBridge(), _ => { },
             Move, canReorder);
     }
 
@@ -505,7 +505,6 @@ public class VisualCapture
             var key = variant.Key.ToString()!.ToLowerInvariant() + (empty ? "-empty" : "");
             var nav = new FakeNav();
             var dialogs = new FakeDialogs();
-            var notify = new FakeNotYetWired();
             // Two frames per theme: the populated rows AND the first-run empty state. Capturing only
             // the empty one left the .rrow template (icon tile, name/meta stack, path column) with no
             // rendered evidence at all.
@@ -515,10 +514,10 @@ public class VisualCapture
                 recents.Add(new Models.RecentItem("VaporPets", "cookbook · 2 recipes", @"D:\art\VaporPets.cbk", false));
                 recents.Add(new Models.RecentItem("aura", "ingredient · 3 variants", @"D:\art\parts\aura.igt", true));
             }
-            var vm = new LandingViewModel(nav, dialogs, notify, new FilePickerService(),
+            var vm = new LandingViewModel(nav, dialogs, new FilePickerService(),
                 recents,
                 new CookBookSession(),
-                book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(),
+                book => new ExplorerViewModel(book, nav, dialogs, new ImageBridge(),
                     ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs), new CookBookSession(),
                     new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs), new StatusService()),
                 set => new SetBrowserViewModel(set),
@@ -541,7 +540,7 @@ public class VisualCapture
                 {
                     var kitchen = new KitchenSession();
                     kitchen.Open(ktn);
-                    var full = new LandingViewModel(nav, dialogs, notify, new FilePickerService(),
+                    var full = new LandingViewModel(nav, dialogs, new FilePickerService(),
                         recents, new CookBookSession(),
                         book => null!, set => null!, (_, _, _) => null!, kitchen);
                     Capture(new Views.LandingView { DataContext = full }, variant, $"landing-kitchen-{key}.png");
@@ -637,7 +636,7 @@ public class VisualCapture
             var book = ExplorerViewModelTests.TwoRecipeBook();
             var cat = book.Recipes.First(r => r.Manifest.Id == "cat");
             var ing = cat.Ingredients[0];
-            var vm = new IngredientEditorViewModel(ing, cat, book, new ImageBridge(), new FakeNav(), new FakeNotYetWired(),
+            var vm = new IngredientEditorViewModel(ing, cat, book, new ImageBridge(), new FakeNav(),
                 new CookBookSession(), new FakeDialogs(), new FilePickerService());
             vm.ActiveTool = EditorTool.Fill;
             vm.BrushValue = 200;
@@ -657,7 +656,7 @@ public class VisualCapture
             // and the Dynamic colorize rail.
             var (dynBook, dynRecipe, dynIng) = DynamicIngredient();
             var dynVm = new IngredientEditorViewModel(dynIng, dynRecipe, dynBook, new ImageBridge(),
-                new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs(),
+                new FakeNav(), new CookBookSession(), new FakeDialogs(),
                 new FilePickerService());
             dynVm.ActiveTool = EditorTool.Fill;
             dynVm.BrushValue = 200;
@@ -676,7 +675,7 @@ public class VisualCapture
             palette.Add(new RgbColor(0x6D, 0x4F, 0x9C));
             palette.Add(new RgbColor(0x3D, 0x6B, 0x52));
             var colVm = new IngredientEditorViewModel(colIng, colRecipe, colBook, new ImageBridge(),
-                new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs(),
+                new FakeNav(), new CookBookSession(), new FakeDialogs(),
                 new FilePickerService(), palette: palette);
             colVm.SetPaintColorCommand.Execute(null);
             colVm.OpacityMode = OpacityLock.Unlocked;
@@ -763,20 +762,19 @@ public class VisualCapture
         {
             var key = variant.Key.ToString()!.ToLowerInvariant();
             var dialogs = new FakeDialogs();
-            var notify = new FakeNotYetWired();
 
             Capture(new Views.HelpView { DataContext = new HelpViewModel(dialogs) }, variant, $"help-{key}.png");
 
-            Capture(new Views.NewCookBookView { DataContext = new NewCookBookViewModel(dialogs, notify) { Name = "Vapor Pets", Symbol = "VP", Description = "A cosy little collection." } },
+            Capture(new Views.NewCookBookView { DataContext = new NewCookBookViewModel(dialogs) { Name = "Vapor Pets", Symbol = "VP", Description = "A cosy little collection." } },
                 variant, $"wizard-cookbook-{key}.png");
 
             // Siblings, or the "Resulting mix" panel hides and the frame proves nothing about it -
             // a weight is only meaningful RELATIVE to the recipes it is normalised against.
             var siblings = new[] { ("Fox", 45d), ("Owl", 25d) };
-            Capture(new Views.NewRecipeView { DataContext = new NewRecipeViewModel(dialogs, notify, siblings) { Name = "Cat" } },
+            Capture(new Views.NewRecipeView { DataContext = new NewRecipeViewModel(dialogs, siblings) { Name = "Cat" } },
                 variant, $"wizard-recipe-{key}.png");
 
-            Capture(new Views.NewIngredientView { DataContext = new NewIngredientViewModel(dialogs, notify) { Name = "Aura" } },
+            Capture(new Views.NewIngredientView { DataContext = new NewIngredientViewModel(dialogs) { Name = "Aura" } },
                 variant, $"wizard-ingredient-{key}.png");
         }
     }
@@ -817,7 +815,7 @@ public class VisualCapture
             // card must show its problem count, and Cook Set must be visibly disabled.
             using (var broken = InvalidBook())
             {
-                var vm = new CookBookDetailViewModel(broken, new FakeNotYetWired(), () => { }, () => { });
+                var vm = new CookBookDetailViewModel(broken, () => { }, () => { });
                 Capture(new Views.CookBookDetailView { DataContext = vm }, variant,
                     $"zz-cookbook-detail-invalid-{key}.png");
             }
@@ -841,7 +839,7 @@ public class VisualCapture
             using (var book = ExplorerViewModelTests.TwoRecipeBook())
             {
                 var nav = new FakeNav();
-                using var explorer = new ExplorerViewModel(book, nav, dialogs, new FakeNotYetWired(),
+                using var explorer = new ExplorerViewModel(book, nav, dialogs,
                     new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav),
                     ExplorerViewModelTests.CookFactory(dialogs), new CookBookSession(),
                     new FilePickerService(),

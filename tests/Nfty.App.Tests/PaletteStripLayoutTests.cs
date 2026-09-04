@@ -50,7 +50,7 @@ public class PaletteStripLayoutTests
             palette.Add(new RgbColor((byte)(10 + i * 7), (byte)(200 - i * 5), 40));
 
         var vm = new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(), new FakeNav(),
-            new FakeNotYetWired(), new CookBookSession(), new FakeDialogs(), new FilePickerService(),
+            new CookBookSession(), new FakeDialogs(), new FilePickerService(),
             palette: palette);
         vm.SetPaintColorCommand.Execute(null);
 

@@ -59,7 +59,7 @@ public class IngredientEditorSaveTests
         try
         {
             var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
-                new FakeNav(), new FakeNotYetWired(), session, new FakeDialogs(), new FilePickerService());
+                new FakeNav(), session, new FakeDialogs(), new FilePickerService());
             vm.ActiveTool = EditorTool.Fill; vm.BrushValue = 200;
             vm.ApplyToolStroke(new[] { (0, 0) });          // flood the blank value-map to 200
             Assert.True(vm.CanSave);
@@ -82,7 +82,7 @@ public class IngredientEditorSaveTests
         try
         {
             var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
-                new FakeNav(), new FakeNotYetWired(), session, new FakeDialogs(), new FilePickerService());
+                new FakeNav(), session, new FakeDialogs(), new FilePickerService());
             Assert.False(vm.CanSave);                      // clean → disabled
             vm.ActiveTool = EditorTool.Fill; vm.BrushValue = 50;
             vm.ApplyToolStroke(new[] { (0, 0) });
@@ -101,7 +101,7 @@ public class IngredientEditorSaveTests
             var nav = new FakeNav();
             var dialogs = new FakeConfirmingDialogs(confirm: false);   // user cancels the discard
             var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
-                nav, new FakeNotYetWired(), session, dialogs, new FilePickerService());
+                nav, session, dialogs, new FilePickerService());
             vm.ActiveTool = EditorTool.Fill; vm.BrushValue = 10;
             vm.ApplyToolStroke(new[] { (0, 0) });
             await vm.BackCommand.ExecuteAsync(null);
@@ -121,7 +121,7 @@ public class IngredientEditorSaveTests
             var nav = new FakeNav();
             var dialogs = new FakeConfirmingDialogs(confirm: true);
             var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
-                nav, new FakeNotYetWired(), session, dialogs, new FilePickerService());
+                nav, session, dialogs, new FilePickerService());
             await vm.BackCommand.ExecuteAsync(null);
             Assert.False(dialogs.Shown);           // clean → no confirm
             Assert.Equal(1, nav.BackCount);        // navigated straight back

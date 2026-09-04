@@ -33,8 +33,7 @@ public partial class NewCookBookViewModel : WizardViewModelBase
 
     /// <summary>Creates the New CookBook wizard.</summary>
     /// <param name="dialogs">The dialog layer.</param>
-    /// <param name="notify">The not-yet-wired channel.</param>
-    public NewCookBookViewModel(IDialogService dialogs, INotYetWired notify) : base(dialogs, notify) { }
+    public NewCookBookViewModel(IDialogService dialogs) : base(dialogs) { }
 
     partial void OnNameChanged(string value)
     {

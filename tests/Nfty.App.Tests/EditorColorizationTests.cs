@@ -65,7 +65,7 @@ public class EditorColorizationTests
 
     private static IngredientEditorViewModel Editor(
         (string path, CookBookSession session, LoadedRecipe recipe, LoadedIngredient ing) f) =>
-        new(f.ing, f.recipe, f.session.Current!, new ImageBridge(), new FakeNav(), new FakeNotYetWired(),
+        new(f.ing, f.recipe, f.session.Current!, new ImageBridge(), new FakeNav(),
             f.session, new FakeDialogs(), new NoPicker());
 
     [AvaloniaFact]

@@ -18,13 +18,12 @@ namespace Nfty.App.Tests;
 /// filter-survives-a-graph-swap as the two named risks (spec §6).</summary>
 public class ExplorerSearchTests
 {
-    private static ExplorerViewModel Make(out FakeNotYetWired n, LoadedCookBook? book = null)
+    private static ExplorerViewModel Make(LoadedCookBook? book = null)
     {
-        n = new FakeNotYetWired();
         var nav = new FakeNav();
         var dialogs = new FakeDialogs();
         var session = new CookBookSession();
-        return new ExplorerViewModel(book ?? ExplorerViewModelTests.TwoRecipeBook(), nav, dialogs, n, new ImageBridge(),
+        return new ExplorerViewModel(book ?? ExplorerViewModelTests.TwoRecipeBook(), nav, dialogs, new ImageBridge(),
             ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs), session,
             new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs), new StatusService());
     }
@@ -67,7 +66,7 @@ public class ExplorerSearchTests
     [AvaloniaFact]
     public void Matching_an_ingredient_keeps_its_recipe_and_drops_siblings()
     {
-        using var vm = Make(out _);
+        using var vm = Make();
         vm.SearchQuery = "aura";   // unique to cat's ingredient
         Assert.Equal(new[] { "cat" }, vm.Root.Children.Select(c => c.Id));
         Assert.Equal(new[] { "aura" }, vm.Root.Children[0].Children.Select(c => c.Id));
@@ -76,7 +75,7 @@ public class ExplorerSearchTests
     [AvaloniaFact]
     public void Matching_a_recipe_keeps_all_its_ingredients()
     {
-        using var vm = Make(out _);
+        using var vm = Make();
         vm.SearchQuery = "cat";
         Assert.Equal(new[] { "cat" }, vm.Root.Children.Select(c => c.Id));
         Assert.Equal(new[] { "bg", "aura" }, vm.Root.Children[0].Children.Select(c => c.Id));
@@ -85,7 +84,7 @@ public class ExplorerSearchTests
     [AvaloniaFact]
     public void Matching_a_variant_keeps_its_ingredient()
     {
-        using var vm = Make(out _, BookWithDistinctiveVariant());
+        using var vm = Make(BookWithDistinctiveVariant());
         vm.SearchQuery = "Shiny Chrome";   // matches only the "aura" ingredient's variant, not any id/name
         Assert.Equal(new[] { "cat" }, vm.Root.Children.Select(c => c.Id));
         Assert.Equal(new[] { "aura" }, vm.Root.Children[0].Children.Select(c => c.Id));
@@ -94,7 +93,7 @@ public class ExplorerSearchTests
     [AvaloniaFact]
     public void A_blank_query_restores_the_full_tree()
     {
-        using var vm = Make(out _);
+        using var vm = Make();
         var fullRoot = vm.Root;   // captured before any filtering
 
         vm.SearchQuery = "aura";
@@ -109,7 +108,7 @@ public class ExplorerSearchTests
     [AvaloniaFact]
     public void A_query_matching_nothing_yields_an_empty_root_and_zero_matches()
     {
-        using var vm = Make(out _);
+        using var vm = Make();
         vm.SearchQuery = "zzz-does-not-exist";
         Assert.Empty(vm.Root.Children);
         Assert.Equal("0 matches", vm.SearchSummary);
@@ -118,8 +117,8 @@ public class ExplorerSearchTests
     [AvaloniaFact]
     public void Matching_is_case_insensitive()
     {
-        using var lower = Make(out _);
-        using var upper = Make(out _);
+        using var lower = Make();
+        using var upper = Make();
         lower.SearchQuery = "cat";
         upper.SearchQuery = "CAT";
         Assert.Equal(lower.Root.Children.Select(c => c.Id), upper.Root.Children.Select(c => c.Id));
@@ -129,7 +128,7 @@ public class ExplorerSearchTests
     [AvaloniaFact]
     public void Selection_falls_back_to_the_root_when_filtered_away()
     {
-        using var vm = Make(out _);
+        using var vm = Make();
         var auraNode = vm.Root.Children[0].Children[1];   // cat/aura
         vm.SelectNodeCommand.Execute(auraNode);
         Assert.Equal("aura", vm.SelectedNode!.Id);
@@ -142,7 +141,7 @@ public class ExplorerSearchTests
     [AvaloniaFact]
     public void The_filter_survives_a_graph_swap()
     {
-        using var vm = Make(out _);
+        using var vm = Make();
         vm.SearchQuery = "cat";
         Assert.Equal(new[] { "cat" }, vm.Root.Children.Select(c => c.Id));
 
@@ -159,7 +158,7 @@ public class ExplorerSearchTests
     [AvaloniaFact]
     public void Typing_does_not_rebuild_the_detail_pane()
     {
-        using var vm = Make(out _);
+        using var vm = Make();
         vm.SelectNodeCommand.Execute(vm.Root);            // cookbook root selected
         var detail = vm.CurrentDetail;
         Assert.NotNull(detail);
@@ -178,7 +177,7 @@ public class ExplorerSearchTests
     // ApplyFilter must only RE-HOME an existing selection, never invent one.
     public void Typing_with_nothing_selected_does_not_select_the_root()
     {
-        using var vm = Make(out _);
+        using var vm = Make();
         vm.SelectedNode = null;                 // simulate no selection
         vm.SearchQuery = "cat";
         Assert.Null(vm.SelectedNode);           // typing must not invent a selection

@@ -70,7 +70,7 @@ public class IngredientEditorImportTests
         try
         {
             var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
-                new FakeNav(), new FakeNotYetWired(), session, new FakeDialogs(), new OpenPicker(pngPath));
+                new FakeNav(), session, new FakeDialogs(), new OpenPicker(pngPath));
             // Paint first so there IS history to be cleared by the import.
             vm.ActiveTool = EditorTool.Fill; vm.BrushValue = 50;
             vm.ApplyToolStroke(new[] { (0, 0) });
@@ -100,7 +100,7 @@ public class IngredientEditorImportTests
         {
             var dialogs = new RecordingDialogs();
             var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
-                new FakeNav(), new FakeNotYetWired(), session, dialogs, new OpenPicker(pngPath));
+                new FakeNav(), session, dialogs, new OpenPicker(pngPath));
 
             await vm.ImportImageCommand.ExecuteAsync(null);
 
@@ -128,7 +128,7 @@ public class IngredientEditorImportTests
         {
             var dialogs = new RecordingDialogs();
             var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
-                new FakeNav(), new FakeNotYetWired(), session, dialogs, new OpenPicker(badPath));
+                new FakeNav(), session, dialogs, new OpenPicker(badPath));
 
             await vm.ImportImageCommand.ExecuteAsync(null);
 
@@ -152,7 +152,7 @@ public class IngredientEditorImportTests
         try
         {
             var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
-                new FakeNav(), new FakeNotYetWired(), session, new FakeDialogs(), new OpenPicker(null));
+                new FakeNav(), session, new FakeDialogs(), new OpenPicker(null));
 
             await vm.ImportImageCommand.ExecuteAsync(null);
 
@@ -184,7 +184,7 @@ public class IngredientEditorImportTests
         try
         {
             var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
-                new FakeNav(), new FakeNotYetWired(), session, new FakeDialogs(), new OpenPicker(pngPath));
+                new FakeNav(), session, new FakeDialogs(), new OpenPicker(pngPath));
 
             await vm.ImportImageCommand.ExecuteAsync(null);
 
@@ -212,7 +212,7 @@ public class IngredientEditorImportTests
         try
         {
             var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
-                new FakeNav(), new FakeNotYetWired(), session, new FakeDialogs(), new OpenPicker(null));
+                new FakeNav(), session, new FakeDialogs(), new OpenPicker(null));
 
             Assert.True(vm.IsColorMode);
             Assert.False(vm.CanPaintGrayscale);
@@ -246,7 +246,7 @@ public class IngredientEditorImportTests
         try
         {
             var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
-                new FakeNav(), new FakeNotYetWired(), session, new FakeDialogs(), new OpenPicker(pngPath));
+                new FakeNav(), session, new FakeDialogs(), new OpenPicker(pngPath));
             await vm.ImportImageCommand.ExecuteAsync(null);
             Assert.True(vm.CanSave);
 
@@ -282,7 +282,7 @@ public class IngredientEditorImportTests
         try
         {
             var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
-                new FakeNav(), new FakeNotYetWired(), session, new FakeDialogs(), new OpenPicker(null));
+                new FakeNav(), session, new FakeDialogs(), new OpenPicker(null));
             int notifications = 0;
             vm.SaveCommand.CanExecuteChanged += (_, _) => notifications++;
 
@@ -311,7 +311,7 @@ public class IngredientEditorImportTests
         try
         {
             var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
-                new FakeNav(), new FakeNotYetWired(), session, new ConfirmingDialogsStub(), new OpenPicker(pngPath));
+                new FakeNav(), session, new ConfirmingDialogsStub(), new OpenPicker(pngPath));
             vm.AddVariantCommand.Execute(null);
             await vm.ImportImageCommand.ExecuteAsync(null);   // the added variant now has art
             Assert.Equal(200, vm.ColorAt(4, 4).G);
@@ -340,7 +340,7 @@ public class IngredientEditorImportTests
         try
         {
             var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
-                new FakeNav(), new FakeNotYetWired(), session, new FakeDialogs(), new OpenPicker(pngPath));
+                new FakeNav(), session, new FakeDialogs(), new OpenPicker(pngPath));
             await vm.ImportImageCommand.ExecuteAsync(null);
             vm.DuplicateVariantCommand.Execute(null);
 
@@ -373,7 +373,7 @@ public class IngredientEditorImportTests
                 var loaded = IngredientArchive.Read(igt);
                 var book = LooseWorkspace.WrapIngredient(loaded);
                 var vm = new IngredientEditorViewModel(loaded, book.Recipes[0], book, new ImageBridge(),
-                    new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs(),
+                    new FakeNav(), new CookBookSession(), new FakeDialogs(),
                     new OpenPicker(pngPath), looseSavePath: igt);
                 await vm.ImportImageCommand.ExecuteAsync(null);
                 await vm.SaveCommand.ExecuteAsync(null);
@@ -403,7 +403,7 @@ public class IngredientEditorImportTests
         try
         {
             var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
-                new FakeNav(), new FakeNotYetWired(), session, dialogs, new OpenPicker(pngPath));
+                new FakeNav(), session, dialogs, new OpenPicker(pngPath));
 
             await vm.ImportImageCommand.ExecuteAsync(null);
 
@@ -426,7 +426,7 @@ public class IngredientEditorImportTests
         try
         {
             var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
-                new FakeNav(), new FakeNotYetWired(), session, dialogs, new OpenPicker(pngPath));
+                new FakeNav(), session, dialogs, new OpenPicker(pngPath));
 
             await vm.ImportImageCommand.ExecuteAsync(null);
 

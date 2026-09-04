@@ -45,7 +45,7 @@ public class CookBookDetailResilienceTests
     public void A_book_whose_dna_space_cannot_be_counted_still_opens()
     {
         using var book = Unmeasurable();
-        var vm = new ViewModels.CookBookDetailViewModel(book, new FakeNotYetWired(), () => { });
+        var vm = new ViewModels.CookBookDetailViewModel(book, () => { });
 
         Assert.Equal("—", vm.UniqueDnaText);            // not a crash, and not a fabricated number
         Assert.Equal("—", Assert.Single(vm.Recipes).DnaSpaceText);

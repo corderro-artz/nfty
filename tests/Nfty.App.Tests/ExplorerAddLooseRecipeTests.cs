@@ -57,7 +57,7 @@ public class ExplorerAddLooseRecipeTests
         var nav = new FakeNav();
         var dialogs = new LooseRecipeDialogs("Fox");
         var status = new StatusService();
-        var vm = new ExplorerViewModel(session.Current!, nav, dialogs, new FakeNotYetWired(), new ImageBridge(),
+        var vm = new ExplorerViewModel(session.Current!, nav, dialogs, new ImageBridge(),
             ExplorerViewModelTests.EditorFactory(nav, session, dialogs),
             ExplorerViewModelTests.CookFactory(dialogs), session,
             new SavePicker(rcpPath),
@@ -99,7 +99,7 @@ public class ExplorerAddLooseRecipeTests
         (var cbkPath, var session, _, _) = IngredientEditorSaveTests.OnDisk();
         var nav = new FakeNav();
         var dialogs = new LooseRecipeDialogs("Fox");
-        var vm = new ExplorerViewModel(session.Current!, nav, dialogs, new FakeNotYetWired(), new ImageBridge(),
+        var vm = new ExplorerViewModel(session.Current!, nav, dialogs, new ImageBridge(),
             ExplorerViewModelTests.EditorFactory(nav, session, dialogs),
             ExplorerViewModelTests.CookFactory(dialogs), session,
             new SavePicker(null),   // user cancelled

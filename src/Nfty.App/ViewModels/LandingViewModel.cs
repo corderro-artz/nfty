@@ -18,7 +18,6 @@ public partial class LandingViewModel : ViewModelBase
 {
     private readonly INavigationService _nav;
     private readonly IDialogService _dialogs;
-    private readonly INotYetWired _notify;
     private readonly IFilePickerService _picker;
     private readonly IRecentsService _recents;
     private readonly ICookBookSession _session;
@@ -40,7 +39,6 @@ public partial class LandingViewModel : ViewModelBase
     /// <summary>Builds the start screen.</summary>
     /// <param name="nav">The page stack.</param>
     /// <param name="dialogs">The dialog layer.</param>
-    /// <param name="notify">The not-yet-wired channel.</param>
     /// <param name="picker">Chooses files to open, import or create.</param>
     /// <param name="recents">The persisted Recent list.</param>
     /// <param name="session">Takes ownership of whatever is opened.</param>
@@ -48,14 +46,14 @@ public partial class LandingViewModel : ViewModelBase
     /// <param name="setBrowserFactory">Opens a cooked Set in the browser.</param>
     /// <param name="looseEditorFactory">Opens a loose Ingredient in the editor.</param>
     /// <param name="kitchen">The workspace session; null leaves the Kitchen actions unavailable.</param>
-    public LandingViewModel(INavigationService nav, IDialogService dialogs, INotYetWired notify,
+    public LandingViewModel(INavigationService nav, IDialogService dialogs,
         IFilePickerService picker, IRecentsService recents, ICookBookSession session,
         Func<LoadedCookBook, ExplorerViewModel> explorerFactory,
         Func<LoadedSet, SetBrowserViewModel> setBrowserFactory,
         Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> looseEditorFactory,
         IKitchenSession? kitchen = null)
     {
-        _nav = nav; _dialogs = dialogs; _notify = notify; _picker = picker; _recents = recents;
+        _nav = nav; _dialogs = dialogs; _picker = picker; _recents = recents;
         _session = session; _explorerFactory = explorerFactory; _setBrowserFactory = setBrowserFactory;
         _looseEditorFactory = looseEditorFactory;
         _kitchen = kitchen;
@@ -115,7 +113,7 @@ public partial class LandingViewModel : ViewModelBase
     [RelayCommand]
     private async Task NewCookBook()
     {
-        var wizard = new NewCookBookViewModel(_dialogs, _notify);
+        var wizard = new NewCookBookViewModel(_dialogs);
         var result = await _dialogs.ShowAsync<NewCookBookViewModel>(wizard);
         if (result is null) return;   // cancelled
         if (string.IsNullOrWhiteSpace(result.DerivedId))
@@ -207,11 +205,11 @@ public partial class LandingViewModel : ViewModelBase
     /// <summary>Same rule the other wizards derive ids by: lower-case, spaces to dashes.</summary>
     private static string DeriveId(string name) => string.Join('-',
         name.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries));
-    [RelayCommand] private void NewRecipe() => _dialogs.ShowAsync<object>(new NewRecipeViewModel(_dialogs, _notify));
+    [RelayCommand] private void NewRecipe() => _dialogs.ShowAsync<object>(new NewRecipeViewModel(_dialogs));
     [RelayCommand]
     private async Task NewIngredient()
     {
-        var wizard = new NewIngredientViewModel(_dialogs, _notify) { Destination = RecipeDestination.LooseKitchen };
+        var wizard = new NewIngredientViewModel(_dialogs) { Destination = RecipeDestination.LooseKitchen };
         var result = await _dialogs.ShowAsync<NewIngredientViewModel>(wizard);
         if (result is null) return;   // cancelled
 
@@ -271,7 +269,7 @@ public partial class LandingViewModel : ViewModelBase
 
         // REACHABLE, and it used to lie about itself. There are FOUR known kinds, not three: the
         // picker is filtered to .cbk/.rcp/.igt but a typed filename is not, and Archives.KindOf
-        // resolves a .ktn happily — so importing one fell through to INotYetWired, which the shell
+        // resolves a .ktn happily — so importing one fell through to the unbuilt-action channel, which
         // renders as "Not wired yet: …". That told the user a working feature was unbuilt, which is
         // the exact mistake IStatusService was split out to stop. A Kitchen is openable; just not
         // from here, so say which action does it.

@@ -1208,8 +1208,10 @@
     <Setter Property="Margin" Value="3,0" />
   </Style>
   <!-- .ramp: the 96x16 value gradient with its accent pin; .swatch: the resulting grey -->
+  <!-- No Width: the ramp fills the Panel that hosts it, so the strip's width budget is stated once
+       in the view rather than twice here and there — two numbers that can drift apart, which is how
+       the shelf band lost a pixel. -->
   <Style Selector="Border.ramp">
-    <Setter Property="Width" Value="96" />
     <Setter Property="Height" Value="16" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
@@ -1491,6 +1493,23 @@
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
     <Setter Property="TextAlignment" Value="Center" />
   </Style>
+  <!-- .nin on a NumericUpDown: the same mono numeric cell as the range inputs above, so the
+       toolstrip's brush-size field reads as one of them rather than a full-height Fluent input.
+       Width stays in the markup, where the strip's width budget is explained. One /template/ hop to
+       the TextBox Fluent puts inside; the spinner is switched off at the call site. -->
+  <Style Selector="NumericUpDown.nin">
+    <Setter Property="MinHeight" Value="24" />
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="NumericUpDown.nin /template/ TextBox">
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="Padding" Value="4,0" />
+    <Setter Property="MinHeight" Value="24" />
+  </Style>
+
   <Style Selector="TextBlock.cv">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="11" />

@@ -31,8 +31,7 @@ public class KitchenShelfLayoutTests
     {
         var nav = new FakeNav();
         var dialogs = new FakeDialogs();
-        var notify = new FakeNotYetWired();
-        return new LandingViewModel(nav, dialogs, notify, new FilePickerService(),
+        return new LandingViewModel(nav, dialogs, new FilePickerService(),
             new RecentsService(StateStore.InMemory()), new CookBookSession(),
             _ => null!, _ => null!, (_, _, _) => null!, kitchen);
     }

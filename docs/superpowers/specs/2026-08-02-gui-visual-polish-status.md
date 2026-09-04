@@ -334,6 +334,20 @@ where someone will look:
 - **`stats`, `inspect` and `preview` reachable from the app**, rendered by Core so the output is
   byte-identical to the commands' rather than merely similar.
 
+- **The editor's tools finished** (2026-09-04). Rectangle/circle/triangle had no rubber band — you
+  dragged blind and found out on release — and Select marked nothing and moved nothing. Both now
+  draw on a hit-test-invisible overlay above the canvas; Select marks on a drag from outside and
+  moves on a drag from inside; **Line** was added (a two-point `BrushStroke`, no new Core command),
+  which is a deliberate divergence from `ingredient-editor.html`. Its 36px cost overran the
+  toolstrip and pushed the brush-size field off the pane — caught in a frame, now guarded by
+  `ToolstripLayoutTests`.
+- **`INotYetWired` deleted** (2026-09-04). Nothing had called `Report` for some time, so the shell's
+  `"Not wired yet: {a}"` handler could never fire: an interface, an implementation, a DI
+  registration, a constructor parameter on eleven ViewModels and a fake threaded through fifty test
+  files, all inert. `IStatusService` is the only status channel now. What survives is the *lesson*,
+  in comments at each former call site: gated is not unbuilt, and a working feature must never
+  announce itself as missing.
+
 **The lesson this project kept re-teaching**, six separate times: a state no capture fixture reaches
 renders nothing and therefore looks fine. The editor's enabled toolstrip, the dynamic colorways band,
 two of three detail-header variants, the rule pill, the resulting-mix panel, and the Reports/Export

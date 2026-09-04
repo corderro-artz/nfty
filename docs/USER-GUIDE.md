@@ -127,8 +127,22 @@ is not a silhouette.
 The Ingredient Editor has three panes: your **variants** on the left, the **canvas** in the middle,
 and **colorize** settings on the right.
 
-**Tools**, along the top: pencil, eraser, flood fill, rectangle, ellipse, triangle, and undo/redo.
-**Brush size** is the number box at the end of the strip.
+**Tools**, along the top: pencil, eraser, flood fill, then rectangle, ellipse, triangle, line and
+select, then undo/redo. **Brush size** is the number box at the end of the strip.
+
+Every shape tool works the same way: press where you want one corner, drag, and let go. The outline
+follows your cursor while you drag, so you can see what you are about to make before you commit it.
+The **line** tool joins where you pressed to where you let go, at the current brush size — the
+wandering in between does not count.
+
+**Select** is two gestures in one tool, told apart by where you start the drag:
+
+- Drag on empty canvas to **mark** a rectangle. A dashed marquee shows what is marked.
+- Drag from **inside** the marquee to **move** those pixels somewhere else. What they left behind is
+  cleared, and the marquee travels with them.
+
+A single click away from the marquee drops it, as does pressing **Escape** or picking another tool.
+A move is a normal edit, so **undo** puts it back.
 
 **The value slider** is the black-to-white gradient. On a grey layer this *is* the colour you paint —
 it sets how bright the pixel is, and therefore how bright it will be after nfty colours it. In colour

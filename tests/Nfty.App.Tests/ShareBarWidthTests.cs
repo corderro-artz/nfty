@@ -75,7 +75,7 @@ public class ShareBarWidthTests
             Recipes = new[] { book.Recipes[0] },
         };
 
-        var vm = new CookBookDetailViewModel(single, new FakeNotYetWired(), () => { });
+        var vm = new CookBookDetailViewModel(single, () => { });
         var view = new Views.CookBookDetailView { DataContext = vm };
         var window = new Window
         {

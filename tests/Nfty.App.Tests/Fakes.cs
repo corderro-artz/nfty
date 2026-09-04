@@ -19,10 +19,3 @@ public sealed class FakeDialogs : IDialogService
     public Task<TResult?> ShowAsync<TResult>(ViewModelBase dialog) { Active = dialog; Changed?.Invoke(); return Task.FromResult<TResult?>(default); }
     public void Close(object? result) { Active = null; Changed?.Invoke(); }
 }
-
-public sealed class FakeNotYetWired : INotYetWired
-{
-    public string? Last { get; private set; }
-    public event Action<string>? Reported;
-    public void Report(string action) { Last = action; Reported?.Invoke(action); }
-}

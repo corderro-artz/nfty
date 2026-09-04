@@ -38,12 +38,11 @@ public class IngredientEditorViewModelTests
         return (ing, recipe, book);
     }
 
-    private static IngredientEditorViewModel Make(out FakeNotYetWired n, out FakeNav nav)
+    private static IngredientEditorViewModel Make(out FakeNav nav)
     {
-        n = new FakeNotYetWired();
         nav = new FakeNav();
         var (ing, recipe, book) = Real();
-        return new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(), nav, n,
+        return new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(), nav,
             new CookBookSession(), new FakeDialogs(), new FilePickerService());
     }
 
@@ -52,7 +51,7 @@ public class IngredientEditorViewModelTests
     {
         var (ing, recipe, book) = Real();
         using var vm = new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(),
-            new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs(), new FilePickerService());
+            new FakeNav(), new CookBookSession(), new FakeDialogs(), new FilePickerService());
         Assert.Equal(new[] { "Glow", "Spark" }, vm.Variants.Select(v => v.Name));
         Assert.All(vm.Variants, v => Assert.NotNull(v.Thumbnail));
         Assert.NotNull(vm.SelectedVariant);
@@ -61,7 +60,7 @@ public class IngredientEditorViewModelTests
     [AvaloniaFact]
     public void Select_tool_sets_the_active_tool()
     {
-        using var vm = Make(out _, out _);
+        using var vm = Make(out _);
         vm.SelectToolCommand.Execute(EditorTool.Fill);
         Assert.Equal(EditorTool.Fill, vm.ActiveTool);
     }
@@ -69,7 +68,7 @@ public class IngredientEditorViewModelTests
     [AvaloniaFact]
     public void Mode_toggle_changes_the_layer_kind()
     {
-        using var vm = Make(out _, out _);
+        using var vm = Make(out _);
         vm.Mode = LayerKind.Static;
         Assert.Equal(LayerKind.Static, vm.Mode);
     }
@@ -79,7 +78,7 @@ public class IngredientEditorViewModelTests
     {
         // Make()'s CookBookSession was never Open()'d, so SourcePath is null: CanSave stays false
         // and the command is gated off (Save round-trip itself is covered by IngredientEditorSaveTests).
-        using var vm = Make(out _, out _);
+        using var vm = Make(out _);
         Assert.False(vm.CanSave);
         Assert.False(vm.SaveCommand.CanExecute(null));
     }
@@ -87,7 +86,7 @@ public class IngredientEditorViewModelTests
     [AvaloniaFact]
     public void Select_variant_sets_the_selected_variant()
     {
-        using var vm = Make(out _, out _);
+        using var vm = Make(out _);
         var second = vm.Variants[1];
         vm.SelectVariantCommand.Execute(second);
         Assert.Same(second, vm.SelectedVariant);
@@ -96,7 +95,7 @@ public class IngredientEditorViewModelTests
     [AvaloniaFact]
     public void Undo_and_redo_are_disabled_with_no_history()
     {
-        using var vm = Make(out _, out _);
+        using var vm = Make(out _);
         Assert.False(vm.UndoCommand.CanExecute(null));
         Assert.False(vm.RedoCommand.CanExecute(null));
     }
@@ -106,7 +105,7 @@ public class IngredientEditorViewModelTests
     // IngredientEditorVariantTests.Preview_toggles_are_independent_and_do_not_touch_the_draft.
     public void Enlarge_and_fill_pane_preview_toggle_presentation_state()
     {
-        using var vm = Make(out _, out _);
+        using var vm = Make(out _);
         vm.EnlargePreviewCommand.Execute(null); Assert.True(vm.PreviewEnlarged);
         vm.FillPanePreviewCommand.Execute(null); Assert.True(vm.PreviewFillsPane);
     }
@@ -116,7 +115,7 @@ public class IngredientEditorViewModelTests
     {
         var (ing, recipe, book) = Real();
         using var vm = new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(),
-            new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs(), new FilePickerService());
+            new FakeNav(), new CookBookSession(), new FakeDialogs(), new FilePickerService());
         Assert.Equal(LayerKind.Dynamic, vm.Mode);
 
         var customIng = new LoadedIngredient
@@ -126,7 +125,7 @@ public class IngredientEditorViewModelTests
             VariantImages = new Dictionary<string, Image<Rgba32>> { ["a"] = new(8, 8) },
         };
         using var customVm = new IngredientEditorViewModel(customIng, recipe, book, new ImageBridge(),
-            new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs(), new FilePickerService());
+            new FakeNav(), new CookBookSession(), new FakeDialogs(), new FilePickerService());
         Assert.Equal(LayerKind.Dynamic, customVm.Mode);
     }
 
@@ -135,7 +134,7 @@ public class IngredientEditorViewModelTests
     {
         var (ing, recipe, book) = Real();
         using var vm = new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(),
-            new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs(), new FilePickerService());
+            new FakeNav(), new CookBookSession(), new FakeDialogs(), new FilePickerService());
         Assert.NotNull(vm.Canvas);
         Assert.NotNull(vm.Preview);
         var before = vm.Preview;
@@ -148,7 +147,7 @@ public class IngredientEditorViewModelTests
     {
         var (ing, recipe, book) = Real();
         using var vm = new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(),
-            new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs(), new FilePickerService());
+            new FakeNav(), new CookBookSession(), new FakeDialogs(), new FilePickerService());
         var before = vm.Preview;
         vm.RerollPreviewCommand.Execute(null);
         Assert.NotSame(before, vm.Preview);
@@ -171,7 +170,7 @@ public class IngredientEditorViewModelTests
             VariantImages = new Dictionary<string, Image<Rgba32>> { ["a"] = map },
         };
         using var vm = new IngredientEditorViewModel(customIng, recipe, book, new ImageBridge(),
-            new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs(), new FilePickerService());
+            new FakeNav(), new CookBookSession(), new FakeDialogs(), new FilePickerService());
 
         var buffer = new byte[8 * 8 * 4];
         unsafe
@@ -193,7 +192,7 @@ public class IngredientEditorViewModelTests
             VariantImages = new Dictionary<string, Image<Rgba32>>(),
         };
         using var vm = new IngredientEditorViewModel(emptyIng, recipe, book, new ImageBridge(),
-            new FakeNav(), new FakeNotYetWired(), new CookBookSession(), new FakeDialogs(), new FilePickerService());
+            new FakeNav(), new CookBookSession(), new FakeDialogs(), new FilePickerService());
         Assert.Empty(vm.Variants);
         Assert.Null(vm.SelectedVariant);
     }

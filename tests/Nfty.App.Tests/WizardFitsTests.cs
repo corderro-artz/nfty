@@ -46,7 +46,7 @@ public class WizardFitsTests
         // Dynamic is the worst case: it is the only kind that reveals BOTH colour-range controls.
         var view = ShowAtShippingSize(new Views.NewIngredientView
         {
-            DataContext = new NewIngredientViewModel(new FakeDialogs(), new FakeNotYetWired())
+            DataContext = new NewIngredientViewModel(new FakeDialogs())
             {
                 Name = "Aura",
                 Kind = LayerKind.Dynamic,
@@ -70,7 +70,7 @@ public class WizardFitsTests
         {
             var view = ShowAtShippingSize(new Views.NewIngredientView
             {
-                DataContext = new NewIngredientViewModel(new FakeDialogs(), new FakeNotYetWired())
+                DataContext = new NewIngredientViewModel(new FakeDialogs())
                 {
                     Name = "Aura",
                     Kind = kind,

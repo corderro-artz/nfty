@@ -88,6 +88,10 @@
   <StreamGeometry x:Key="IconTriangle">M12 4.8 20 18.5 4 18.5Z</StreamGeometry>
   <StreamGeometry x:Key="IconSelect">M5.5 4h13A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13A1.5 1.5 0 0 1 5.5 4z</StreamGeometry>
   <StreamGeometry x:Key="IconFill">M4 12l7-7 7 7-7 7zM18 14c1.5 2 2 3 0 3s-1.5-1 0-3z</StreamGeometry>
+  <!-- IconLine has no counterpart in ingredient-editor.html: the mockup's toolstrip has no line
+       tool. Drawn in the same 24-unit box and the same stroke weight as its neighbours, so the row
+       still reads as one set. The divergence is deliberate - see the note in the view. -->
+  <StreamGeometry x:Key="IconLine">M5 19 19 5</StreamGeometry>
 
   <!-- explorer.html ICON.dice: the recipe portrait's reroll button. A literal die face - a rounded
        square with four pips. The mockup draws it as a <rect> plus four filled <circle>s; both are

@@ -45,7 +45,7 @@ public class IngredientDetailViewModelTests
     {
         var (book, recipe, ing) = Fixture();
         using (var none = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(),
-            new FakeNotYetWired(), () => { }, () => false))
+            () => { }, () => false))
         {
             Assert.Equal(0, none.RuleCount);
             Assert.False(none.HasRules);        // nothing to jump to, so the pill must not show
@@ -69,7 +69,7 @@ public class IngredientDetailViewModelTests
         };
         var jumped = false;
         using var vm = new IngredientDetailViewModel(ing, withRules, book, new ImageBridge(),
-            new FakeNotYetWired(), () => { }, () => false, () => jumped = true);
+            () => { }, () => false, () => jumped = true);
 
         Assert.Equal(2, vm.RuleCount);
         Assert.True(vm.HasRules);
@@ -80,7 +80,7 @@ public class IngredientDetailViewModelTests
         Assert.True(jumped);
     }
 
-    /// <summary>"Delete variant" used to call INotYetWired, which the shell renders as
+    /// <summary>"Delete variant" used to report itself as unbuilt, which the shell rendered as
     /// "Not wired yet: Delete variant" — while the button sat there enabled, looking like it worked,
     /// and while the editor had a real delete with a confirm dialog and undo history. It must never
     /// touch the not-wired channel for a feature that exists.</summary>
@@ -89,16 +89,13 @@ public class IngredientDetailViewModelTests
     {
         var (book, recipe, ing) = Fixture();
         var opened = false;
-        var notify = new FakeNotYetWired();
         var status = new StatusService();
-        using var vm = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(),
-            notify, () => opened = true, () => true, null, status);
+        using var vm = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(), () => opened = true, () => true, null, status);
 
         Assert.True(vm.DeleteVariantCommand.CanExecute(null));   // enabled while editing
         vm.DeleteVariantCommand.Execute(null);
 
         Assert.True(opened);                                     // the editor, which owns variants
-        Assert.Null(notify.Last);                                // NOT "not wired yet"
         Assert.NotNull(status.Last);                             // it explains where deletion lives
     }
 
@@ -107,7 +104,7 @@ public class IngredientDetailViewModelTests
     {
         var (book, recipe, ing) = Fixture();
         using var vm = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(),
-            new FakeNotYetWired(), () => { }, () => false);
+            () => { }, () => false);
         Assert.Equal(2, vm.Variants.Count);
         var glow = vm.Variants.Single(v => v.Name == "Glow");
         Assert.Equal(75.0, glow.WithinPercent, 1);   // 3/(3+1)
@@ -135,7 +132,7 @@ public class IngredientDetailViewModelTests
             Recipes = new[] { recipe },
         };
         using var vm = new IngredientDetailViewModel(aura, recipe, book, new ImageBridge(),
-            new FakeNotYetWired(), () => { }, () => false);
+            () => { }, () => false);
 
         Assert.Equal(new[] { "Apple", "Zephyr" }, vm.Variants.Select(v => v.Name));   // default "Variant": by name
         vm.SortByCommand.Execute("Weight");
@@ -148,7 +145,7 @@ public class IngredientDetailViewModelTests
         var (book, recipe, ing) = Fixture();
         bool editing = false;
         using var vm = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(),
-            new FakeNotYetWired(), () => { }, () => editing);
+            () => { }, () => editing);
         Assert.False(vm.DeleteVariantCommand.CanExecute(null));
         editing = true; vm.RaiseCanExecuteChanged();
         Assert.True(vm.DeleteVariantCommand.CanExecute(null));
@@ -159,7 +156,7 @@ public class IngredientDetailViewModelTests
     {
         var (book, recipe, ing) = Fixture();
         using var vm = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(),
-            new FakeNotYetWired(), () => { }, () => false);
+            () => { }, () => false);
         Assert.NotNull(vm.Hero);
         Assert.All(vm.Variants, v => Assert.NotNull(v.Thumbnail));
         Assert.NotEmpty(vm.Colorways);
@@ -187,7 +184,7 @@ public class IngredientDetailViewModelTests
         };
 
         using var vm = new IngredientDetailViewModel(aura, recipe, book, new ImageBridge(),
-            new FakeNotYetWired(), () => { }, () => false);
+            () => { }, () => false);
 
         Assert.Empty(vm.Variants);
         Assert.Null(vm.Hero);
@@ -199,7 +196,7 @@ public class IngredientDetailViewModelTests
     {
         var (book, recipe, ing) = Fixture();
         using var vm = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(),
-            new FakeNotYetWired(), () => { }, () => false);
+            () => { }, () => false);
         var first = vm.Hero;
         vm.SelectVariantCommand.Execute(ing.Manifest.Variants[^1].Id);
         Assert.NotNull(vm.Hero);   // rebuilt; old disposed internally
@@ -211,7 +208,7 @@ public class IngredientDetailViewModelTests
     {
         var (book, recipe, ing) = Fixture();
         using var vm = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(),
-            new FakeNotYetWired(), () => { }, () => false);
+            () => { }, () => false);
 
         // A Custom layer has NO axes. It used to report one synthetic
         // ColorwayAxis("COLOUR", "no colorize · composited as-is"), which borrowed the axis-row

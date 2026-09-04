@@ -48,7 +48,7 @@ public class ExplorerDetailTests
     {
         var (book, recipe, ing) = Fixture();
         using var vm = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(),
-            new FakeNotYetWired(), () => { }, () => false);
+            () => { }, () => false);
         vm.SortByCommand.Execute("Weight");
         Assert.Equal("Weight", vm.SortColumn);
     }

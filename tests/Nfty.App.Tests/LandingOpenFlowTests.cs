@@ -22,13 +22,13 @@ public class LandingOpenFlowTests
     }
 
     private static LandingViewModel Make(string? pickerPath, out FakeNav nav, out FakeDialogs dialogs,
-        out FakeNotYetWired notify, out CookBookSession session)
+        out CookBookSession session)
     {
-        nav = new FakeNav(); dialogs = new FakeDialogs(); notify = new FakeNotYetWired(); session = new CookBookSession();
-        var s = session; var n = nav; var d = dialogs; var no = notify;
-        return new LandingViewModel(n, d, no, new StubPicker(pickerPath),
+        nav = new FakeNav(); dialogs = new FakeDialogs(); session = new CookBookSession();
+        var s = session; var n = nav; var d = dialogs;
+        return new LandingViewModel(n, d, new StubPicker(pickerPath),
             new RecentsService(Directory.CreateTempSubdirectory().FullName), s,
-            book => new ExplorerViewModel(book, n, d, no, new ImageBridge(), ExplorerViewModelTests.EditorFactory(n),
+            book => new ExplorerViewModel(book, n, d, new ImageBridge(), ExplorerViewModelTests.EditorFactory(n),
                 ExplorerViewModelTests.CookFactory(d), new CookBookSession(),
                 new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(n, new CookBookSession(), d), new StatusService()),
             set => new SetBrowserViewModel(set),
@@ -43,7 +43,7 @@ public class LandingOpenFlowTests
         {
             string path = Path.Combine(tmp.FullName, "VaporPets.cbk");
             WriteTinyCookBook(path);   // helper below
-            var vm = Make(path, out var nav, out _, out _, out var session);
+            var vm = Make(path, out var nav, out _, out var session);
             vm.OpenCookBookCommand.Execute(null);
             Assert.NotNull(session.Current);
             Assert.IsType<ExplorerViewModel>(nav.Current);
@@ -54,7 +54,7 @@ public class LandingOpenFlowTests
     [Fact]
     public void Cancelled_picker_does_nothing()
     {
-        var vm = Make(null, out var nav, out _, out _, out var session);
+        var vm = Make(null, out var nav, out _, out var session);
         vm.OpenCookBookCommand.Execute(null);
         Assert.Null(session.Current);
         Assert.Null(nav.Current);
@@ -63,7 +63,7 @@ public class LandingOpenFlowTests
     [Fact]
     public void A_bad_path_shows_the_error_dialog_and_does_not_navigate()
     {
-        var vm = Make("does-not-exist.cbk", out var nav, out var dialogs, out _, out var session);
+        var vm = Make("does-not-exist.cbk", out var nav, out var dialogs, out var session);
         vm.OpenCookBookCommand.Execute(null);
         Assert.IsType<ErrorDialogViewModel>(dialogs.Active);
         Assert.Null(nav.Current);
@@ -76,7 +76,7 @@ public class LandingOpenFlowTests
     [Fact]
     public void Import_of_a_bad_rcp_path_shows_the_error_dialog_and_does_not_navigate()
     {
-        var vm = Make("does-not-exist.rcp", out var nav, out var dialogs, out _, out var session);
+        var vm = Make("does-not-exist.rcp", out var nav, out var dialogs, out var session);
         vm.ImportCommand.Execute(null);
         Assert.IsType<ErrorDialogViewModel>(dialogs.Active);
         Assert.Null(nav.Current);
@@ -105,7 +105,7 @@ public class LandingOpenFlowTests
                 .ToList(),
         }).ToList();
 
-        var vm = Make(path, out var nav, out _, out _, out var session);
+        var vm = Make(path, out var nav, out _, out var session);
         vm.OpenCookBookCommand.Execute(null);
 
         Assert.NotNull(session.Current);

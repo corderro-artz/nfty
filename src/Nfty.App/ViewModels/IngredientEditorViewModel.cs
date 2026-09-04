@@ -37,7 +37,10 @@ public enum EditorTool
     /// <summary>A filled triangle.</summary>
     Triangle,
 
-    /// <summary>Selects a region to move.</summary>
+    /// <summary>A straight line between where the drag started and where it ended.</summary>
+    Line,
+
+    /// <summary>Marks a rectangular region, then drags it somewhere else.</summary>
     Select,
 
     /// <summary>Flood-fills the region under the pointer.</summary>
@@ -74,7 +77,6 @@ public partial class EditorVariant : ObservableObject
 public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
 {
     private readonly INavigationService _nav;
-    private readonly INotYetWired _notify;
     private readonly IImageBridge _bridge;
     // Not readonly: a save that adds a layer produces a new graph, and this must point at the recipe
     // in THAT graph or the reference panel keeps describing the one before it.
@@ -232,6 +234,8 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     public bool IsToolCircle => ActiveTool == EditorTool.Circle;
     /// <summary>Whether the triangle tool is selected.</summary>
     public bool IsToolTriangle => ActiveTool == EditorTool.Triangle;
+    /// <summary>Whether the line tool is selected.</summary>
+    public bool IsToolLine => ActiveTool == EditorTool.Line;
     /// <summary>Whether the selection tool is active.</summary>
     public bool IsToolSelect => ActiveTool == EditorTool.Select;
     /// <summary>Whether the flood fill is selected.</summary>
@@ -244,9 +248,36 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(IsToolRectangle));
         OnPropertyChanged(nameof(IsToolCircle));
         OnPropertyChanged(nameof(IsToolTriangle));
+        OnPropertyChanged(nameof(IsToolLine));
         OnPropertyChanged(nameof(IsToolSelect));
         OnPropertyChanged(nameof(IsToolFill));
+
+        // A marquee belongs to the tool that made it. Leaving it on screen under the brush would be
+        // a control that looks live and does nothing — the thing this whole pass is removing.
+        if (value != EditorTool.Select) Selection = null;
     }
+
+    /// <summary>
+    /// The marked region, in canvas pixels, or null when nothing is marked.
+    /// </summary>
+    /// <remarks>
+    /// Two gestures, one tool, told apart by where the drag STARTS — which is how every editor does
+    /// it and therefore what a user tries first. A drag that begins outside the marquee marks a new
+    /// region; a drag that begins inside it moves what is marked. No modifier to learn, and no second
+    /// button for "now move it".
+    /// </remarks>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelection))]
+    private PixelRect? _selection;
+
+    /// <summary>Whether a region is currently marked.</summary>
+    public bool HasSelection => Selection is not null;
+
+    /// <summary>Drops the marquee. Bound to Escape, which is what a user presses.</summary>
+    [RelayCommand] private void ClearSelection() => Selection = null;
+
+    private static bool Contains(PixelRect r, (int x, int y) p) =>
+        p.x >= r.X && p.x < r.X + r.Width && p.y >= r.Y && p.y < r.Y + r.Height;
 
     /// <summary>The segmented Dynamic/Static control is two Buttons, not two RadioButtons, so it
     /// needs commands rather than two-way IsChecked bindings.</summary>
@@ -269,7 +300,6 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// <param name="book">The owning book, whose canvas every variant must match.</param>
     /// <param name="bridge">Converts an ImageSharp frame to an Avalonia bitmap.</param>
     /// <param name="nav">The page stack, for Back.</param>
-    /// <param name="notify">The not-yet-wired channel.</param>
     /// <param name="session">Holds the open book, so a save can swap the edited graph in.</param>
     /// <param name="dialogs">The dialog layer.</param>
     /// <param name="picker">Chooses files to import.</param>
@@ -281,11 +311,11 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// in memory, so a caller that never wires one — every test — cannot reach the user's real store
     /// by omission; the composition root passes the registered service.</param>
     public IngredientEditorViewModel(LoadedIngredient ing, LoadedRecipe recipe, LoadedCookBook book,
-        IImageBridge bridge, INavigationService nav, INotYetWired notify, ICookBookSession session,
+        IImageBridge bridge, INavigationService nav, ICookBookSession session,
         IDialogService dialogs, IFilePickerService picker, string? looseSavePath = null,
         IKitchenSession? kitchen = null, IPaletteService? palette = null)
     {
-        _ing = ing; _bridge = bridge; _nav = nav; _notify = notify;
+        _ing = ing; _bridge = bridge; _nav = nav;
         _recipe = recipe; _session = session; _dialogs = dialogs; _picker = picker;
         _looseSavePath = looseSavePath;
         _kitchen = kitchen;
@@ -422,6 +452,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         // The filmstrip is an ItemsControl, so the selected treatment rides on the item.
         if (oldValue is not null) oldValue.IsSelected = false;
         if (newValue is not null) newValue.IsSelected = true;
+        Selection = null;   // a marquee is about one variant's pixels, not the filmstrip's
         RebuildSurfaces();
         UndoCommand?.NotifyCanExecuteChanged();
         RedoCommand?.NotifyCanExecuteChanged();
@@ -683,6 +714,11 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         where TPixel : struct
     {
         var op = OpacityMode;
+        if (_pendingMove is { } move)
+        {
+            _pendingMove = null;
+            return new MoveSelection<TPixel>(move.Source, move.Dx, move.Dy, op);
+        }
         return ActiveTool switch
         {
             EditorTool.Brush => new BrushStroke<TPixel>(new Brush<TPixel>(BrushSize, ink), points, op),
@@ -691,7 +727,15 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
             EditorTool.Rectangle => new DrawShape<TPixel>(ShapeKind.Rectangle, BoundsOf(points), ink, op),
             EditorTool.Circle => new DrawShape<TPixel>(ShapeKind.Ellipse, BoundsOf(points), ink, op),
             EditorTool.Triangle => new DrawShape<TPixel>(ShapeKind.Triangle, BoundsOf(points), ink, op),
-            _ => null,   // Select — no-op this slice
+
+            // A line is a stroke with only its two ends. RegionEditCommand joins consecutive path
+            // points with Bresenham, so handing it the first and last coordinate IS a straight line —
+            // at the brush's own size, which is what a user expects a line tool to honour.
+            EditorTool.Line => new BrushStroke<TPixel>(new Brush<TPixel>(BrushSize, ink),
+                new[] { points[0], points[^1] }, op),
+
+            // Select paints nothing; ApplyToolStroke handles it before reaching here.
+            _ => null,
         };
     }
 
@@ -701,6 +745,8 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     public void ApplyToolStroke(IReadOnlyList<(int x, int y)> points)
     {
         if (ActiveDraft is not { } target || points.Count == 0) return;
+
+        if (ActiveTool == EditorTool.Select && !BeginSelectGesture(points)) return;
 
         bool changed;
         if (IsColorMode)
@@ -722,6 +768,40 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         UndoCommand.NotifyCanExecuteChanged();
         RedoCommand.NotifyCanExecuteChanged();
     }
+
+    /// <summary>
+    /// Resolves a Select gesture. Returns true when it turned into a MOVE that the caller should now
+    /// apply as an edit, and false when it only re-marked the region (or cleared it), which changes
+    /// no pixel and so is not an undo step.
+    /// </summary>
+    /// <param name="points">The gesture's pixel path.</param>
+    private bool BeginSelectGesture(IReadOnlyList<(int x, int y)> points)
+    {
+        var start = points[0];
+        var end = points[^1];
+
+        if (Selection is { } sel && Contains(sel, start))
+        {
+            int dx = end.x - start.x, dy = end.y - start.y;
+            // A click inside the marquee moves nothing. Building the move anyway would be correct —
+            // the clear and the re-stamp land on the same pixels and cancel — but it walks the whole
+            // region to prove it, so take the early out.
+            if (dx == 0 && dy == 0) return false;
+            _pendingMove = (sel, dx, dy);
+            Selection = new PixelRect(sel.X + dx, sel.Y + dy, sel.Width, sel.Height);
+            return true;
+        }
+
+        // A drag outside the marquee marks a new region; a plain click drops it, which is what
+        // clicking away from a selection does everywhere else.
+        Selection = start == end ? null : BoundsOf(points);
+        return false;
+    }
+
+    // Set by BeginSelectGesture and consumed by the very next BuildCommand call in the same
+    // ApplyToolStroke. A field rather than a parameter because BuildCommand is generic over the pixel
+    // and is called from two branches; threading it through both would say the same thing twice.
+    private (PixelRect Source, int Dx, int Dy)? _pendingMove;
 
     private static PixelRect BoundsOf(IReadOnlyList<(int x, int y)> pts)
     {

@@ -30,11 +30,11 @@ public class LandingRecentsTests
     private static (LandingViewModel vm, FakeNav nav, FakeDialogs dialogs, IRecentsService recents) Landing(
         IFilePickerService picker, string storageDir)
     {
-        var nav = new FakeNav(); var dialogs = new FakeDialogs(); var notify = new FakeNotYetWired();
+        var nav = new FakeNav(); var dialogs = new FakeDialogs();
         var session = new CookBookSession();
         var recents = new RecentsService(storageDir);
-        var vm = new LandingViewModel(nav, dialogs, notify, picker, recents, session,
-            book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(),
+        var vm = new LandingViewModel(nav, dialogs, picker, recents, session,
+            book => new ExplorerViewModel(book, nav, dialogs, new ImageBridge(),
                 ExplorerViewModelTests.EditorFactory(nav, session, dialogs),
                 ExplorerViewModelTests.CookFactory(dialogs), session,
                 picker, ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs), new StatusService()),

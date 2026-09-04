@@ -1,18 +1,13 @@
 namespace Nfty.App.Services;
 
 /// <summary>
-/// Plain status-line messages: guidance the app genuinely means, shown verbatim.
+/// The status bar's guidance channel: what just happened, or what to do next, shown verbatim.
 /// <para>
-/// Deliberately separate from <see cref="INotYetWired"/>. That one exists to say "this button does
-/// nothing yet", and the shell prefixes it with "Not wired yet:". Routing ordinary guidance through
-/// it — e.g. telling the user to switch on editing before adding a recipe — makes a working feature
-/// announce itself as unimplemented, which is what this interface exists to stop.
+/// Verbatim is the whole point. There was once a second channel that prefixed every message with
+/// "Not wired yet:", and gated-but-working features spoke through it — so telling a user to switch
+/// editing on before adding a recipe announced the feature as unimplemented. That channel is gone;
+/// this one says only what the app means.
 /// </para>
-/// </summary>
-/// <summary>
-/// The status bar's guidance channel. Deliberately separate from <see cref="INotYetWired"/>:
-/// that one is for actions that genuinely do nothing yet, and routing real guidance through it
-/// told users a working feature was unbuilt.
 /// </summary>
 public interface IStatusService
 {

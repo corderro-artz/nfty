@@ -26,10 +26,10 @@ public class LandingImportIgtTests
 
     private static LandingViewModel Landing(FakeNav nav, IFilePickerService picker, IDialogService dialogs)
     {
-        var session = new CookBookSession(); var notify = new FakeNotYetWired();
-        return new LandingViewModel(nav, dialogs, notify, picker,
+        var session = new CookBookSession();
+        return new LandingViewModel(nav, dialogs, picker,
             new RecentsService(Directory.CreateTempSubdirectory().FullName), session,
-            book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(),
+            book => new ExplorerViewModel(book, nav, dialogs, new ImageBridge(),
                 ExplorerViewModelTests.EditorFactory(nav, session, dialogs),
                 ExplorerViewModelTests.CookFactory(dialogs), session,
                 new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs), new StatusService()),

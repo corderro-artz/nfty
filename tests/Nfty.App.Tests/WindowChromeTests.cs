@@ -31,7 +31,7 @@ public class WindowChromeTests
     { public bool IsDark { get; private set; } public void Toggle() => IsDark = !IsDark; }
 
     private static ShellViewModel Shell() =>
-        new(new FakeNav(), new FakeDialogs(), new FakeNotYetWired(), new StubTheme(), new StatusService());
+        new(new FakeNav(), new FakeDialogs(), new StubTheme(), new StatusService());
 
     private static Border Frame(Visual root) =>
         root.GetVisualDescendants().OfType<Border>().First(b => b.Classes.Contains("frame"));

@@ -213,7 +213,7 @@
               <TextBlock Classes="sbar" Text="{Binding CurrentExplorer.VariantCountText}"
                          IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}" />
               <!-- Beyond the mockup's static bar: the app's real gating/guidance feed (StatusMessage,
-                   e.g. "Editing unlocked…", "Not wired yet: …") has no mockup counterpart, but dropping
+                   e.g. "Editing unlocked…", "Unlock editing to add a recipe") has no mockup counterpart, but dropping
                    it would regress real UX the shell relies on — shown only when non-empty. -->
               <TextBlock Classes="sbar" Text="{Binding StatusMessage}"
                          IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />

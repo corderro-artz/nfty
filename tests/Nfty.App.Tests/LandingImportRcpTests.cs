@@ -25,11 +25,11 @@ public class LandingImportRcpTests
 
     private static (LandingViewModel vm, FakeNav nav, CookBookSession session) Landing(IFilePickerService picker)
     {
-        var nav = new FakeNav(); var dialogs = new FakeDialogs(); var notify = new FakeNotYetWired();
+        var nav = new FakeNav(); var dialogs = new FakeDialogs();
         var session = new CookBookSession();
-        var vm = new LandingViewModel(nav, dialogs, notify, picker,
+        var vm = new LandingViewModel(nav, dialogs, picker,
             new RecentsService(Directory.CreateTempSubdirectory().FullName), session,
-            book => new ExplorerViewModel(book, nav, dialogs, notify, new ImageBridge(),
+            book => new ExplorerViewModel(book, nav, dialogs, new ImageBridge(),
                 ExplorerViewModelTests.EditorFactory(nav, session, dialogs),
                 ExplorerViewModelTests.CookFactory(dialogs), session,
                 new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs), new StatusService()),

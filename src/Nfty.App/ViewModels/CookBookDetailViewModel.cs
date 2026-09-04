@@ -63,7 +63,6 @@ public partial class CookBookDetailViewModel : ViewModelBase
     /// <summary>Shown where a count cannot be computed (an unvalidatable book).</summary>
     private const string Unknown = "—";
 
-    private readonly INotYetWired _notify;
     private readonly Action _cook;
     private readonly Action? _showReports;
 
@@ -116,13 +115,11 @@ public partial class CookBookDetailViewModel : ViewModelBase
 
     /// <summary>Builds the CookBook identity card.</summary>
     /// <param name="book">The open book.</param>
-    /// <param name="notify">The not-yet-wired channel.</param>
     /// <param name="cook">Opens the cook dialog.</param>
     /// <param name="showReports">Opens the stats/inspect reports; null leaves that button unavailable.</param>
-    public CookBookDetailViewModel(LoadedCookBook book, INotYetWired notify, Action cook,
+    public CookBookDetailViewModel(LoadedCookBook book, Action cook,
         Action? showReports = null)
     {
-        _notify = notify;
         _cook = cook;
         _showReports = showReports;
         Name = book.Manifest.Name;

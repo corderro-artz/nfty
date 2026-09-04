@@ -23,7 +23,7 @@ public class DetailHeaderTests
     {
         (var path, var session, _, _) = IngredientEditorSaveTests.OnDisk();
         var nav = new FakeNav(); var dialogs = new FakeDialogs();
-        var vm = new ExplorerViewModel(session.Current!, nav, dialogs, new FakeNotYetWired(), new ImageBridge(),
+        var vm = new ExplorerViewModel(session.Current!, nav, dialogs, new ImageBridge(),
             ExplorerViewModelTests.EditorFactory(nav, session, dialogs),
             ExplorerViewModelTests.CookFactory(dialogs), session,
             new FilePickerService(),

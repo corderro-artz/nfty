@@ -119,7 +119,7 @@ public class KitchenSessionTests
     [AvaloniaFact]
     public void The_chip_hides_when_no_kitchen_is_open()
     {
-        var shell = new ShellViewModel(new FakeNav(), new FakeDialogs(), new FakeNotYetWired(),
+        var shell = new ShellViewModel(new FakeNav(), new FakeDialogs(),
             new StubTheme(), new StatusService(), new KitchenSession());
 
         Assert.False(shell.HasKitchen);
@@ -130,7 +130,7 @@ public class KitchenSessionTests
     public void The_chip_names_the_open_kitchen_and_updates_when_it_changes()
     {
         var session = new KitchenSession();
-        var shell = new ShellViewModel(new FakeNav(), new FakeDialogs(), new FakeNotYetWired(),
+        var shell = new ShellViewModel(new FakeNav(), new FakeDialogs(),
             new StubTheme(), new StatusService(), session);
 
         var changes = 0;
@@ -172,7 +172,7 @@ public class KitchenSessionTests
     {
         (cbkPath, session, _, _) = IngredientEditorSaveTests.OnDisk();
         var nav = new FakeNav();
-        return new ExplorerViewModel(session.Current!, nav, dialogs, new FakeNotYetWired(), new ImageBridge(),
+        return new ExplorerViewModel(session.Current!, nav, dialogs, new ImageBridge(),
             ExplorerViewModelTests.EditorFactory(nav, session, dialogs),
             ExplorerViewModelTests.CookFactory(dialogs), session, picker,
             ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs), new StatusService(), kitchen);

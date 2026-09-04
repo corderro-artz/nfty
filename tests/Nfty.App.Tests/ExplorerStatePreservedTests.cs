@@ -28,7 +28,7 @@ public class ExplorerStatePreservedTests
         var nav = new FakeNav();
         var dialogs = new FakeDialogs();
         var session = new CookBookSession();
-        return new ExplorerViewModel(book, nav, dialogs, new FakeNotYetWired(), new ImageBridge(),
+        return new ExplorerViewModel(book, nav, dialogs, new ImageBridge(),
             ExplorerViewModelTests.EditorFactory(nav, session, dialogs),
             ExplorerViewModelTests.CookFactory(dialogs), session, new FilePickerService(),
             ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs), status);

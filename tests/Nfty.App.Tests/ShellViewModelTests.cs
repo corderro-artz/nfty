@@ -6,12 +6,11 @@ namespace Nfty.App.Tests;
 
 public class ShellViewModelTests
 {
-    private static ShellViewModel Make(out FakeNotYetWired notify)
+    private static ShellViewModel Make()
     {
-        notify = new FakeNotYetWired();
         var nav = new FakeNav();
         var dialogs = new FakeDialogs();
-        var shell = new ShellViewModel(nav, dialogs, notify, new StubTheme(), new StatusService());
+        var shell = new ShellViewModel(nav, dialogs, new StubTheme(), new StatusService());
         return shell;
     }
 
@@ -21,7 +20,7 @@ public class ShellViewModelTests
     [Fact]
     public void Zoom_in_and_out_stays_within_50_to_300()
     {
-        var shell = Make(out _);
+        var shell = Make();
         for (int i = 0; i < 50; i++) shell.ZoomInCommand.Execute(null);
         Assert.True(shell.Zoom <= 300);
         for (int i = 0; i < 50; i++) shell.ZoomOutCommand.Execute(null);
@@ -39,7 +38,7 @@ public class ShellViewModelTests
     public void Close_dialog_clears_the_active_dialog()
     {
         var dialogs = new DialogService();
-        var shell = new ShellViewModel(new FakeNav(), dialogs, new FakeNotYetWired(), new StubTheme(), new StatusService());
+        var shell = new ShellViewModel(new FakeNav(), dialogs, new StubTheme(), new StatusService());
         _ = dialogs.ShowAsync<object>(new HelpViewModel(dialogs));
         Assert.NotNull(dialogs.Active);
 
