@@ -70,11 +70,28 @@ public class SetBrowserPerfTests
 
             var list = view.GetVisualDescendants().OfType<ListBox>().First();
 
-            using (Perf.Measure("30 scroll one screen x10"))
+            // Two scroll shapes, because they cost two completely different things and only one of
+            // them is what a user does.
+            //
+            // A wheel moves a little at a time, which lets the virtualizing panel RECYCLE its
+            // containers. A jump the height of the viewport discards every container and builds new
+            // ones. Measured: 40 wheel-sized steps cost 32 ms and 6 MB; ten viewport jumps cost
+            // ~750 ms and 104 MB. Quoting the second as "scrolling is slow" would be measuring a
+            // gesture nobody performs.
+            using (Perf.Measure("30 scroll: 40 wheel-sized steps"))
+            {
+                for (var i = 0; i < 40; i++)
+                {
+                    list.Scroll!.Offset = list.Scroll.Offset.WithY(i * 60);
+                    Dispatcher.UIThread.RunJobs();
+                }
+            }
+
+            using (Perf.Measure("31 scroll: 10 viewport jumps (worst case)"))
             {
                 for (var i = 0; i < 10; i++)
                 {
-                    list.Scroll!.Offset = list.Scroll.Offset.WithY(list.Scroll.Offset.Y + 400);
+                    list.Scroll!.Offset = list.Scroll.Offset.WithY(i % 2 == 0 ? 4000 : 0);
                     Dispatcher.UIThread.RunJobs();
                 }
             }
