@@ -1780,11 +1780,14 @@
   </Style>
 
   <!-- .hflag: the hero's accent rule-count pill. Fully rounded, accent ink on accent wash. -->
+  <!-- RadiusXs, not a pill. Every badge here is the .idchip shape; a capsule among them reads
+       as a different kind of thing. The pill radius stays on the BARS (.rt, .cbar), where the
+       shape means "track" and not "badge". -->
   <Style Selector="Button.hflag">
     <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="999" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
     <Setter Property="Padding" Value="9,3" />
   </Style>
   <Style Selector="Button.hflag /template/ ContentPresenter#PART_ContentPresenter">
@@ -1890,7 +1893,7 @@
   <Style Selector="Border.lockflag">
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="999" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
     <Setter Property="Padding" Value="10,4" />
   </Style>
   <Style Selector="TextBlock.lockflag-txt">
@@ -2143,6 +2146,42 @@
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
     <Setter Property="Padding" Value="7,6" />
   </Style>
+  <!-- The tile grid is a ListBox only because ListBox is the one control here that virtualizes
+       (see SetBrowserView's note). Its unit is a ROW, which is not a thing a user selects - so every
+       state Fluent paints on a ListBoxItem is a second, wider indicator sitting under this app's
+       own, and right-clicking added a focus ring around it as well. Three highlights for one row.
+
+       Neutralise them EXPLICITLY rather than by omission: not painting a state hands it back to
+       Fluent's stock blue. -->
+  <Style Selector="ListBox.tiles > ListBoxItem">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Margin" Value="0" />
+  </Style>
+  <Style Selector="ListBox.tiles > ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
+  </Style>
+  <Style Selector="ListBox.tiles > ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="ListBox.tiles > ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="ListBox.tiles > ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="ListBox.tiles > ListBoxItem:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="ListBox.tiles > ListBoxItem:focus /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="ListBox.tiles > ListBoxItem:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+
   <Style Selector="Border.trow:pointerover">
     <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
@@ -2160,7 +2199,7 @@
     <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
     <Setter Property="Padding" Value="8,2" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
@@ -2210,7 +2249,9 @@
 
   <!-- Save: present at the rail's foot for every asset, so the rail is one height and the rarity
        list scrolls under it rather than pushing it around. -->
+  <!-- Same again, at the rail's RadiusMd. -->
   <Style Selector="Border.rail-foot">
+    <Setter Property="CornerRadius" Value="0,0,6,6" />
     <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
     <Setter Property="BorderThickness" Value="0,1,0,0" />
@@ -2278,7 +2319,10 @@
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
+  <!-- Same as Border.sh-f: the band has to round its own bottom corners or it squares off the
+       modal's. -->
   <Style Selector="Border.ins-f">
+    <Setter Property="CornerRadius" Value="0,0,8,8" />
     <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
     <Setter Property="BorderThickness" Value="0,1,0,0" />
@@ -2344,7 +2388,11 @@
   </Style>
 
   <!-- .sh-f / .dna / .dnaeq — the footer band. -->
+  <!-- The footer band carries the sheet's own bottom radius. ClipToBounds on Border.sheet clips to
+       the layout RECTANGLE, not to the corner radius, so this band's square background painted over
+       the rounded corner and cut the border's arc off at both bottom corners. -->
   <Style Selector="Border.sh-f">
+    <Setter Property="CornerRadius" Value="0,0,8,8" />
     <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
     <Setter Property="BorderThickness" Value="0,1,0,0" />

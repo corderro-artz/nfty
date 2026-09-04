@@ -101,7 +101,8 @@ Click **Cook Set**.
 ![The Cook dialog, with a count and a seed](../images/cook-dialog-light.png#only-light)
 ![The Cook dialog, with a count and a seed](../images/cook-dialog-dark.png#only-dark)
 
-- **Count** — how many assets to make. Try `50`.
+- **Count** — how many assets to make. Try `50` for a first run; the screenshot shows the
+  finished Vapor Pets at 500.
 - **Seed** — any word. It arrives pre-filled with a random one; type something you will remember,
   like `launch`. The same book and the same seed always produce the same collection.
 - Leave **Pack into a single .set** unchecked so you get a plain folder you can look through.

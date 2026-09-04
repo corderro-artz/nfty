@@ -10,13 +10,14 @@ from PIL import Image
 
 SCRATCH = os.path.dirname(os.path.abspath(__file__))
 NAME, OUT = sys.argv[1], sys.argv[2]
+HEIGHT = sys.argv[3] if len(sys.argv) > 3 else "950"
 
 def ps(*args):
     return subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", *args],
                           capture_output=True, text=True)
 
 def shot(path):
-    ps("-File", os.path.join(SCRATCH, "shot.ps1"), "-Out", path)
+    ps("-File", os.path.join(SCRATCH, "shot.ps1"), "-Out", path, "-Height", HEIGHT)
 
 def toggle():
     ps("-Command",

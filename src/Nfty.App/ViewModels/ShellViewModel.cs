@@ -30,6 +30,27 @@ public partial class ShellViewModel : ViewModelBase
     /// proportion exact and is a single number to revisit.</summary>
     public const double BaseScale = 1.2;
 
+    /// <summary>
+    /// The smallest the window may be, in device pixels.
+    ///
+    /// <para>Set by the LARGEST MODAL, not by the pages. A page can scroll or reflow; a modal is a
+    /// fixed card that either fits or is cut off, and a quick-reference sheet with its footer sliced
+    /// away is worse than no sheet. The numbers are the sheet's and the inspector's own sizes times
+    /// <see cref="BaseScale"/>, plus the titlebar, the status bar and the shadow gutter —
+    /// <c>ShellChromeTests</c> derives that arithmetic from the real controls and fails if either
+    /// modal outgrows it.</para>
+    /// </summary>
+    /// <remarks>Measured: the quick-reference sheet needs 1008 x 886 and the inspector 1104 x 838,
+    /// so the binding constraints are the inspector's width and the sheet's height. These carry ~24
+    /// and ~38 of slack on top.</remarks>
+    public const double MinWindowWidth = 1128;
+    /// <inheritdoc cref="MinWindowWidth"/>
+    public const double MinWindowHeight = 924;
+
+    /// <summary>Titlebar + status bar + the frame's shadow gutter: everything a modal does NOT get
+    /// to use. Named so the minimum above and the test that checks it agree by construction.</summary>
+    public const double ChromeReserve = 40 + 30 + 24;
+
     /// <summary>Applied to the entire shell — chrome included, since "everything is small" was about
     /// the titlebar and status bar too, not just the page.</summary>
     public double ChromeScale => BaseScale;
@@ -119,7 +140,30 @@ public partial class ShellViewModel : ViewModelBase
     }
 
     [RelayCommand] private void ShowHelp() => _dialogs.ShowAsync<object>(new HelpViewModel(_dialogs));
-    [RelayCommand] private void CloseDialog() => _dialogs.Close(null);
+    /// <summary>
+    /// Closes whatever modal is open — the scrim's click, and Escape.
+    ///
+    /// <para>Escape is bound at the WINDOW rather than inside each dialog, because a dialog's own
+    /// <c>KeyBinding</c> only fires while that dialog holds focus, and the dialog layer shows its
+    /// content in a plain ContentControl that never takes it. Escape did nothing over the
+    /// quick-reference sheet and nothing over the inspector, both of which declared the binding.</para>
+    ///
+    /// <para>Hence the guard: with no dialog open the command refuses, the window's KeyBinding does
+    /// not handle the key, and it still reaches the page underneath — the editor drops its selection
+    /// marquee on the same key.</para>
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(HasDialog))]
+    private void CloseDialog() => _dialogs.Close(null);
+
+    /// <summary>Whether a modal is open.</summary>
+    public bool HasDialog => ActiveDialog is not null;
+
+    partial void OnActiveDialogChanged(ViewModelBase? value)
+    {
+        OnPropertyChanged(nameof(HasDialog));
+        CloseDialogCommand.NotifyCanExecuteChanged();
+    }
+
     [RelayCommand] private void ZoomIn() => Zoom = Math.Min(300, Zoom + 10);
     [RelayCommand] private void ZoomOut() => Zoom = Math.Max(50, Zoom - 10);
     [RelayCommand] private void ZoomReset() => Zoom = 100;

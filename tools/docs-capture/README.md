@@ -33,11 +33,23 @@ lists. Any short, neutral folder works — but keep it short: it appears in the 
 |---|---|
 | `draw-demo-art.py` | Draws the 64×64 pixel art: three backgrounds, two cat bodies, a fox, three eyes, two auras, three hats. Gray value-maps for the Dynamic and Static layers, full color for the Custom hats. |
 | `build-demo-book.py` | Writes the manifests, calls the CLI's authoring commands, and lays out a Kitchen with a packed Set beside it. |
-| `shot.ps1` | Captures the nfty window to a PNG at exactly 1416×864, inset by the 12px shadow gutter. |
+| `shot.ps1` | Captures the nfty window to a PNG at the standard size below, inset by the 12px shadow gutter. |
 | `pair.py` | Captures the current screen in **both** themes and names each file by which one it actually is. |
 | `label.py` | Re-checks a whole folder of pairs the same way. Run it after a batch. |
 | `click.ps1` | Clicks a list of screen points, for replaying a path to a screen after a rebuild. |
 | `crop.py` | The figure list: which frame each figure comes from and what box to cut. Edit this to add one. |
+
+## The capture size
+
+**1416x950.** The height moved up from 864 when the window minimum became 924, which is set by the
+quick-reference sheet — the largest modal. A shorter capture is a size the app will not open at.
+
+The sheet is the one exception and needs its own taller run, because it is larger than what fits
+inside a minimum window's page area:
+
+```bash
+python tools/docs-capture/pair.py help <shots-dir> 1010
+```
 
 ## Three traps, all of which cost real time
 

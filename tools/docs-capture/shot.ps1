@@ -5,7 +5,10 @@
 # the window is still settling from SW_RESTORE is silently ignored -- hence the settle, move, settle,
 # move again. The grab is the WINDOW rect inset by Border.frame's 12px shadow gutter, not the client
 # rect, so no desktop bleeds in around the rounded corners.
-param([string]$Out, [int]$Width = 1416, [int]$Height = 864, [int]$Gutter = 12)
+# 1416x950 is the documentation standard. The height moved up from 864 when the window minimum
+# became 924 (set by the quick-reference sheet, the largest modal) -- a shorter capture is a size the
+# app will not open at, so every figure has to be shot at or above it.
+param([string]$Out, [int]$Width = 1416, [int]$Height = 950, [int]$Gutter = 12)
 
 Add-Type -AssemblyName System.Drawing
 Add-Type @"

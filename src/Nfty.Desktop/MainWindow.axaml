@@ -4,7 +4,9 @@
         xmlns:views="using:Nfty.App.Views"
         x:Class="Nfty.Desktop.MainWindow"
         x:DataType="vm:ShellViewModel"
-        Width="1416" Height="864" MinWidth="1080" MinHeight="696" Title="nfty"
+        Width="1416" Height="864"
+        MinWidth="{x:Static vm:ShellViewModel.MinWindowWidth}"
+        MinHeight="{x:Static vm:ShellViewModel.MinWindowHeight}" Title="nfty"
         Background="Transparent" TransparencyLevelHint="Transparent"
         ExtendClientAreaToDecorationsHint="True" WindowDecorations="None">
   <!-- The size above is the mockups' own 1180x720 (min 900x580) times ShellViewModel.BaseScale. The
@@ -27,6 +29,11 @@
          the same thing on click; this is the keyboard route, and Ctrl+W is what "close the thing
          I am looking at" means almost everywhere. -->
     <KeyBinding Gesture="Ctrl+W" Command="{Binding CloseDocumentCommand}" />
+    <!-- Escape closes the open modal. It has to live here rather than on each dialog: the dialog
+         layer hosts its content in a ContentControl that never takes focus, so a UserControl-level
+         KeyBinding inside a dialog never fires. The command refuses when nothing is open, so the key
+         still falls through to the page (the editor drops its selection marquee on it). -->
+    <KeyBinding Gesture="Escape" Command="{Binding CloseDialogCommand}" />
   </Window.KeyBindings>
 
   <Window.Styles>

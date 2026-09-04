@@ -11,7 +11,7 @@ SRC, DST = sys.argv[1], sys.argv[2]
 # name -> (source frame, crop box or None for the whole frame)
 FIGURES = {
     "landing":            ("landing", None),
-    "kitchen-shelf":      ("landing-kitchen", (16, 668, 1376, 796)),
+    "kitchen-shelf":      ("landing-kitchen", (16, 754, 1376, 882)),
     "explorer":           ("explorer-cookbook", None),
     "cookbook-panel":     ("explorer-cookbook", (352, 160, 1392, 700)),
     "recipe-panel":       ("explorer-recipe", None),
@@ -26,15 +26,16 @@ FIGURES = {
     "palette-strip":      ("editor", (318, 102, 1028, 146)),
     "colorize-rail":      ("editor", (1034, 100, 1388, 620)),
     "editor-color":       ("editor-color", None),
-    "reference-layers":   ("editor-references", (1036, 265, 1386, 740)),
-    "cook-dialog":        ("cook-dialog", (468, 280, 928, 569)),
-    "cook-done":          ("cook-done", (468, 334, 928, 500)),
+    "reference-layers":   ("editor-references", (1036, 145, 1386, 795)),
+    "cook-dialog":        ("cook-dialog", (470, 318, 930, 612)),
+    "cook-done":          ("cook-done", (470, 372, 930, 545)),
     "set-browser":        ("set-browser", None),
+    "inspector":          ("inspector", (156, 90, 1236, 830)),
     "rarity":             ("set-browser", (1006, 108, 1384, 672)),
     # The quick-reference sheet outgrew the 864px capture when it gained Kitchen and a second
     # KEYS group, so ITS frame is shot at `pair.py help <dir> 1010` and cropped from that.
-    "help-sheet":         ("help", (202, 92, 1184, 898)),
-    "new-cookbook":       ("wizard-cookbook", (324, 86, 1070, 752)),
+    "help-sheet":         ("help", (202, 92, 1184, 898)),   # from the 1010-tall run
+    "new-cookbook":       ("wizard-cookbook", (326, 116, 1076, 796)),
 }
 
 for name, (frame, box) in FIGURES.items():

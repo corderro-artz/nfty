@@ -62,7 +62,8 @@
       <!-- Main: virtualized thumbnail grid (ListBox virtualizes per row; see RowChunkConverter's
            note above). Row width is a MultiBinding over [Items, Bounds.Width] so the chunk size
            recomputes on resize instead of clipping a fixed 4-wide row (audit finding). -->
-      <ListBox Grid.Column="0" x:Name="TilesList" Margin="0,0,16,0" Background="Transparent">
+      <ListBox Grid.Column="0" x:Name="TilesList" Classes="tiles" Margin="0,0,16,0"
+               Background="Transparent">
         <ListBox.ItemsSource>
           <MultiBinding Converter="{x:Static appconv:RowChunkConverter.Instance}">
             <Binding Path="Items" />
@@ -81,8 +82,10 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:SetItemRow">
-                    <Button Classes="ghost tcell" Padding="6" HorizontalContentAlignment="Center"
-                            ToolTip.Tip="Click to inspect">
+                    <!-- No tooltip. A hint that follows the pointer across a grid of 500 tiles is
+                         in the way of the thing it describes, and clicking a picture to see it
+                         bigger needs no caption. -->
+                    <Button Classes="ghost tcell" Padding="6" HorizontalContentAlignment="Center">
                       <StackPanel Spacing="6" HorizontalAlignment="Center">
                         <Border Classes="tile" Classes.sel="{Binding IsSelected}" Width="120" Height="120"
                                 ClipToBounds="True">
