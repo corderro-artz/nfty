@@ -1,31 +1,64 @@
 # nfty
 
-Generates NFT-style asset collections by stacking layered PNGs — with a twist that makes the output
-space far larger than the source art.
+**Generate NFT-style asset collections by stacking layered PNGs — with a twist that makes the output
+space far larger than the source art.**
 
-Most layered generators composite fixed images. Here a layer can be a **grayscale value-map** that is
+[![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
+[![Avalonia 12](https://img.shields.io/badge/Avalonia-12.1.1-8B44AC)](https://avaloniaui.net/)
+[![tests 1434](https://img.shields.io/badge/tests-1434%20passing-3d6b52)](#testing)
+[![warnings 0](https://img.shields.io/badge/warnings-0-3d6b52)](#contributing)
+
+Most layered generators composite fixed images. Here a layer can be a **grayscale value-map**
 colorized at generation time: recolouring preserves each pixel's value and lightness and injects a
-hue and saturation, so one hand-drawn variant becomes a whole family of them. A layer is one of three
-kinds — **dynamic** rolls its colour per asset, **static** applies one fixed colour deterministically,
-and **custom** is full-colour art composited as-is.
+hue and saturation, so one hand-drawn variant becomes a whole family of them.
 
-Same cookbook and same seed produce byte-identical output, on any machine, in any locale, on any CPU
+Same cookbook and same seed produce byte-identical output — on any machine, in any locale, on any CPU
 architecture. That is a guarantee the test suite enforces rather than a hope.
 
-## Getting started
+> **Using the app rather than working on it?** Start with the
+> **[User Guide](docs/USER-GUIDE.md)** instead. This file is for developers.
+
+---
+
+## Contents
+
+- [Requirements](#requirements)
+- [Quick start](#quick-start)
+- [Concepts](#concepts) · [the six words](#the-six-words) · [layer kinds](#layer-kinds) · [depth](#depth)
+- [How a run works](#how-a-run-works)
+- [The command line](#the-command-line)
+- [The desktop app](#the-desktop-app)
+- [Project layout](#project-layout)
+- [Testing](#testing)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
+## Requirements
+
+| | |
+|---|---|
+| **SDK** | .NET 10 |
+| **OS** | Windows, macOS, Linux (the desktop head is Avalonia; the CLI is portable) |
+| **Dependencies** | Restored by `dotnet build`. ImageSharp is pinned to **3.1.11** on purpose — 4.0.0 requires a build-time licence key. |
+
+## Quick start
 
 ```bash
 dotnet build nfty.sln
 dotnet run --project src/Nfty.Cli -- --help
 ```
 
-A first collection, end to end:
+A first collection, end to end, against the fixture archive in this repo:
 
 ```bash
-dotnet run --project src/Nfty.Cli -- inspect  tests/fixtures/VaporPets.cbk
-dotnet run --project src/Nfty.Cli -- validate tests/fixtures/VaporPets.cbk
-dotnet run --project src/Nfty.Cli -- stats    tests/fixtures/VaporPets.cbk
-dotnet run --project src/Nfty.Cli -- generate tests/fixtures/VaporPets.cbk --count 8 --seed hello --out ./out
+CBK=tests/fixtures/VaporPets.cbk
+
+dotnet run --project src/Nfty.Cli -- inspect  $CBK          # what is in it
+dotnet run --project src/Nfty.Cli -- validate $CBK          # is it sound
+dotnet run --project src/Nfty.Cli -- stats    $CBK          # what odds do its weights imply
+dotnet run --project src/Nfty.Cli -- generate $CBK --count 8 --seed hello --out ./out
 ```
 
 The desktop app is the same engine with a UI on top:
@@ -34,9 +67,13 @@ The desktop app is the same engine with a UI on top:
 dotnet run --project src/Nfty.Desktop
 ```
 
-## The six words
+---
 
-The domain is a cooking metaphor, and the words are the model — the file extensions follow them.
+## Concepts
+
+### The six words
+
+The domain is a cooking metaphor, and the words *are* the model — the file extensions follow them.
 
 | Term | File | What it is |
 |------|------|-----------|
@@ -44,16 +81,81 @@ The domain is a cooking metaphor, and the words are the model — the file exten
 | **Recipe** | `.rcp` | A complete template for one character *type* — an ordered layer stack plus incompatibility rules |
 | **Ingredient** | `.igt` | One layer, or trait-category, with its weighted variant images |
 | **Variant** | — | A single image with a weight and a name, held inside an Ingredient |
-| **Set** | `.set` | The generated output: images, per-item metadata, rarity and the seed that made it |
+| **Set** | `.set` | The generated output: images, per-item metadata, rarity, and the seed that made it |
 | **Kitchen** | `.ktn` | A workspace folder; what is in it is discovered by scanning, never recorded |
 
-Generating a CookBook rolls a Recipe per asset, so one book yields a mixed collection.
+Generating a CookBook rolls a Recipe per asset, so one book yields a *mixed* collection.
 
-A Recipe's layer stack is ordered bottom-to-top, and that order **is** the paint order — depth 1 is
-drawn first and sits furthest back. Because it is a list, two layers can never share a depth. Reorder
-it with `nfty move ingredient <rcp> --id <id> --to <depth>`, or by dragging a row in the desktop app.
+Every archive is a ZIP with a `manifest.json` inside — the custom extension is a renamed `.zip`, so
+any unzip tool can open one and look. `.cbk` nests `.rcp` nests `.igt`, so the archive layers mirror
+the domain layers.
 
-## Lining art up
+### Layer kinds
+
+| Kind | Source art | At generation time |
+|------|-----------|--------------------|
+| **Dynamic** | Grayscale value-map | Rolls a hue and saturation per asset from a weighted range |
+| **Static** | Grayscale value-map | Applies one fixed colour, deterministically, consuming no RNG |
+| **Custom** | Full-colour RGBA | Composited exactly as-is; never recoloured |
+
+Dynamic and static take their **value** from the grayscale map and only their hue and saturation from
+the colour — which is what multiplies the output space. Custom carries no colorization at all, and
+`Validator` refuses one that does.
+
+### Depth
+
+A Recipe's layer stack is ordered bottom-to-top, and that order **is** the paint order — depth 1
+paints first and sits furthest back. Because it is a list, two layers can never share a depth.
+
+```bash
+nfty move ingredient cat.rcp --id shades --to 3
+```
+
+…or drag a row in the desktop app. Reordering produces a **different collection**, not a re-render:
+the generator consumes one roll per layer in order, so moving a layer moves which roll reaches it.
+
+## How a run works
+
+Per asset:
+
+```
+roll a Recipe by weight
+  → roll each layer's Variant by weight
+  → apply the Recipe's incompatibility rules, re-rolling on a violation
+  → colorize the dynamic and static layers
+  → composite in depth order
+  → hash the DNA
+  → reject duplicates
+  → emit
+```
+
+The **DNA** is a SHA-256 over the recipe id, each layer's variant id, and the *quantized* colour of
+each colorized layer. Quantizing folds a continuous colour space into something countable, which is
+what lets `stats` tell you how many unique assets a book can produce before you try to mint them.
+
+A generated Set carries two metadata files per asset: a standards-pure OpenSea `metadata/NNNN.json`,
+and a richer `nfty/NNNN.json` with the DNA, seed, rarity and per-layer colour. `extend` re-opens a Set
+and adds to it, recomputing rarity across the whole collection.
+
+---
+
+## The command line
+
+| Command | What it does |
+|---------|--------------|
+| `inspect <file>` | Print the tree of a `.cbk` / `.rcp` / `.igt`, or list a `.ktn`. Add `--voxel` for a partial-alpha report. |
+| `validate <cbk>` | Report **every** problem found, not just the first |
+| `stats <cbk>` | The odds the weights imply, per Recipe and per Variant |
+| `preview <file>` | Render a PNG exactly as generation would — one variant, or a whole rolled stack |
+| `generate <cbk>` | Generate a Set |
+| `extend <cbk> <set>` | Grow an existing Set, recomputing rarity across all of it |
+| `new ingredient\|recipe\|cookbook\|kitchen` | Build an archive from a manifest and its parts |
+| `add variant\|ingredient\|recipe` | Append to an existing archive |
+| `move ingredient` | Reorder a Recipe's layers |
+
+Errors surface as a message, never a stack trace — add `--verbose` for the trace.
+
+### Lining art up
 
 Layered art only works if the pieces register against each other, so both front-ends can composite a
 layer against the ones it will actually sit between:
@@ -63,43 +165,79 @@ nfty preview cat.rcp --seed alpha                     # the whole stack, one det
 nfty preview cat.rcp --seed alpha --only body,shades  # just those layers, at their real depths
 ```
 
-In the desktop app, the Ingredient Editor's reference panel does the same live while you draw: switch
-on any sibling layer from the Recipe, or any loose `.igt` from the open Kitchen, and it composites
-under or over the art depending on its depth. Layers above are ghosted by default so they cannot hide
-what you are painting.
+## The desktop app
 
-Every archive is a ZIP with a `manifest.json` inside — the custom extension is a renamed `.zip`, so
-any unzip tool can open one and look.
+The same `Nfty.Core` engine behind an Avalonia UI: an Explorer over the open CookBook, a per-type
+detail pane, and an **Ingredient Editor** with a paint stack — brush, eraser, shapes, flood fill,
+undo/redo — over either a grayscale value-map or a full-colour raster.
 
-## How a run works
+- **Colour mode** paints RGBA and saves as a Custom ingredient, either as a new layer or by
+  converting the original.
+- **The opacity lock** is on by default and keeps every painted pixel fully opaque or fully erased,
+  because partial alpha does not voxelise cleanly.
+- **The reference panel** composites sibling layers, or loose `.igt` files from the open Kitchen,
+  under and over the art while you draw.
+- **Pixel art scales with nearest neighbour**, everywhere. Nothing in the app or the engine blurs,
+  resamples or anti-aliases an author's pixels.
 
-Per asset: roll a Recipe by weight → roll each layer's Variant by weight → apply the Recipe's
-incompatibility rules, re-rolling on a violation → colorize the dynamic and static layers →
-composite → hash the **DNA** → reject duplicates → emit.
+## Project layout
 
-The DNA is a SHA-256 over the recipe id, each layer's variant id, and the *quantized* colour of each
-colorized layer. Quantizing folds a continuous colour space into something that can be counted, which
-is what lets `stats` tell you how many unique assets a book can produce before you try to mint them.
+```
+src/Nfty.Core       the engine — no UI or CLI dependencies, so both front-ends share it
+src/Nfty.Cli        the command line (System.CommandLine)
+src/Nfty.App        the Avalonia GUI: Services, ViewModels, Views, Themes
+src/Nfty.Desktop    the desktop head — window, clipboard, file pickers
+tests/              1434 tests across three xunit.v3 projects
+tests/fixtures/     archives written by an older build, so format changes cannot pass unnoticed
+docs/USER-GUIDE.md  end-user documentation
+docs/design/mockups the locked visual reference the GUI is built to match
+docs/superpowers/   design specs, newest first
+```
 
-## Output
+## Testing
 
-A generated Set carries two metadata files per asset: a standards-pure OpenSea
-`metadata/NNNN.json`, and a richer `nfty/NNNN.json` with the DNA, seed, rarity and per-layer colour.
-`extend` re-opens a Set and adds to it, recomputing rarity across the whole collection.
+```bash
+dotnet test nfty.sln                                          # everything
+dotnet test tests/Nfty.Core.Tests                             # one project
+dotnet test --filter FullyQualifiedName~DnaTests              # one class
+dotnet test --filter FullyQualifiedName~DnaTests.Same_selection_same_dna
+```
 
-## Layout
+Tests are named `Snake_case_sentences`, which is what `--filter` matches. There are no golden-image
+files — every image assertion reads a pixel off a tiny synthetic image.
 
-- `src/Nfty.Core` — the engine. No UI or CLI dependencies, so both front-ends share it.
-- `src/Nfty.Cli` — the command line.
-- `src/Nfty.App` / `src/Nfty.Desktop` — the Avalonia GUI and its desktop head.
-- `tests/` — 1030 tests. `tests/fixtures/` holds archives written by an older build, kept so that
-  format changes cannot pass unnoticed.
-- `docs/design/mockups/` — the locked visual reference the GUI is built to match.
+**Visual work is verified from a rendered frame, never from the markup:**
+
+```bash
+NFTY_CAPTURE=1 NFTY_CAPTURE_DIR=./frames dotnet test tests/Nfty.App.Tests \
+  --filter FullyQualifiedName~VisualCapture
+```
+
+…then *look at* the PNGs. Nearly every GUI defect this project has fixed was found that way and would
+have been missed by reading code.
 
 ## Contributing
 
-Read [CLAUDE.md](CLAUDE.md) first — it is the real briefing, and several of its rules are the kind
-you would otherwise only learn by breaking something. [AGENTS.md](AGENTS.md) is the short version.
+**Read [CLAUDE.md](CLAUDE.md) first.** It is the real briefing — the domain model, the file formats,
+and the invariants that are load-bearing but not obvious from the code. Several of its rules are the
+kind you would otherwise only learn by breaking something. [AGENTS.md](AGENTS.md) is the short
+version.
 
-`dotnet build` must stay at zero warnings; warnings are errors and missing XML documentation is a
-warning.
+House rules worth knowing before your first commit:
+
+- **The build is the lint.** `TreatWarningsAsErrors` and `GenerateDocumentationFile` are on, so a
+  warning or an undocumented public member fails the build. Zero warnings, always.
+- **Package versions live in `Directory.Packages.props`**, never in a `.csproj`.
+- **Determinism is a contract.** Any sort that reaches an output file uses `StringComparer.Ordinal`;
+  any number that does uses `CultureInfo.InvariantCulture`.
+- **Callers own images.** `Nfty.Core` hands back live `Image<Rgba32>`; `LoadedCookBook` and
+  `GeneratedSet` are `IDisposable` and free the whole tree.
+- **Never edit a mockup to match the app** — the app moves.
+
+## License
+
+Not yet licensed. All rights reserved pending a licence decision.
+
+---
+
+<sub>© 2026 [Vaporsoft](https://www.vaporsoft.dev). All rights reserved.</sub>
