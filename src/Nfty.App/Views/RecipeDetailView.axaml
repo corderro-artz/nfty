@@ -140,7 +140,7 @@
         <ItemsControl ItemsSource="{Binding Rules}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:RuleRow">
-              <Border BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,0,1" Padding="0,9">
+              <Border Classes="rulerow">
                 <StackPanel Orientation="Horizontal" Spacing="9">
                   <Border Classes="rop" Classes.exclude="{Binding IsExclude}" Classes.require="{Binding !IsExclude}">
                     <Panel>

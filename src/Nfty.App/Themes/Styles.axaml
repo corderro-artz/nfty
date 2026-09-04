@@ -2336,4 +2336,34 @@
   <!-- The two non-list states carry NO style of their own: they sit in the shelf grid's own 52px
        row alongside the card row, so all three states are the same height by construction rather
        than by three declarations agreeing. A style here would be a fourth place to change. -->
+
+  <!-- ==================== Ends of lists ====================
+       Three rules the locked mockups state and the app had not carried over: a separator belongs
+       BETWEEN rows, not after the last one or before the first. explorer.html says so three times —
+       `.crow:last-of-type`, `.rrow:last-child`, `.cwaxis:first-child` — and each showed as a rule
+       with nothing on the other side of it.
+
+       Expressed with :nth-child / :nth-last-child on the generated ContentPresenter, which is what
+       the CSS pseudo-classes actually mean, rather than by threading an IsFirst/IsLast flag through
+       three record types and their construction sites. A row still cannot know its own position; the
+       selector asks its container, which can. -->
+  <Style Selector="ItemsControl > ContentPresenter:nth-last-child(1) > Border.crow">
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0,11,0,3" />
+  </Style>
+
+  <Style Selector="Border.rulerow">
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="0,9" />
+  </Style>
+  <Style Selector="ItemsControl > ContentPresenter:nth-last-child(1) > Border.rulerow">
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0,9,0,2" />
+  </Style>
+
+  <Style Selector="ItemsControl > ContentPresenter:nth-child(1) > Border.cwaxis">
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0,4,0,8" />
+  </Style>
 </Styles>

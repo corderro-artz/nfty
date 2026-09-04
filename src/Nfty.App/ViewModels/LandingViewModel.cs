@@ -268,7 +268,16 @@ public partial class LandingViewModel : ViewModelBase
         if (kind == ArchiveKind.CookBook) { OpenPath(path); return; }
         if (kind == ArchiveKind.Ingredient) { OpenLooseIngredient(path); return; }
         if (kind == ArchiveKind.Recipe) { OpenLooseRecipe(path); return; }
-        _notify.Report("This file type can't be imported.");   // guard (unreachable for the three known kinds)
+
+        // REACHABLE, and it used to lie about itself. There are FOUR known kinds, not three: the
+        // picker is filtered to .cbk/.rcp/.igt but a typed filename is not, and Archives.KindOf
+        // resolves a .ktn happily — so importing one fell through to INotYetWired, which the shell
+        // renders as "Not wired yet: …". That told the user a working feature was unbuilt, which is
+        // the exact mistake IStatusService was split out to stop. A Kitchen is openable; just not
+        // from here, so say which action does it.
+        ShowError("That's a Kitchen",
+            "A Kitchen (.ktn) is a workspace rather than something to import. Use “Open Kitchen…” to "
+            + "open it, and its CookBooks and loose parts appear on the shelf below.");
     }
 
     private void OpenLooseRecipe(string path)
