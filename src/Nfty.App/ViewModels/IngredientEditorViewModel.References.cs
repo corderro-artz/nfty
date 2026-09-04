@@ -208,6 +208,55 @@ public partial class IngredientEditorViewModel
     /// <summary>Whether the edited layer composites as-is.</summary>
     public bool IsPinnedCustom => _ing.Manifest.Kind == LayerKind.Custom;
 
+    /// <summary>Which half of the rail is showing.</summary>
+    public enum RailTab
+    {
+        /// <summary>Kind, ranges, quantize — everything that decides the layer's color.</summary>
+        Colorize,
+
+        /// <summary>The reference stack: what this art is being lined up against.</summary>
+        References,
+    }
+
+    /// <summary>
+    /// The rail is two panels behind one tab bar, not one long scroll.
+    /// </summary>
+    /// <remarks>
+    /// Together they overflowed a 720px rail, and the half that lost was the references — the
+    /// sibling list and the Kitchen section sat below the fold with nothing on screen to say they
+    /// were there. They are also two different jobs: one sets what the layer looks like, the other
+    /// sets what you are looking at it against, and neither is consulted while doing the other.
+    /// </remarks>
+    [ObservableProperty] private RailTab _activeRailTab = RailTab.Colorize;
+
+    /// <summary>Whether the colorize half is showing.</summary>
+    public bool IsColorizeTab => ActiveRailTab == RailTab.Colorize;
+    /// <summary>Whether the reference half is showing.</summary>
+    public bool IsReferencesTab => ActiveRailTab == RailTab.References;
+
+    partial void OnActiveRailTabChanged(RailTab value)
+    {
+        OnPropertyChanged(nameof(IsColorizeTab));
+        OnPropertyChanged(nameof(IsReferencesTab));
+    }
+
+    /// <summary>Shows the colorize half.</summary>
+    [RelayCommand] private void ShowColorizeTab() => ActiveRailTab = RailTab.Colorize;
+    /// <summary>Shows the reference half.</summary>
+    [RelayCommand] private void ShowReferencesTab() => ActiveRailTab = RailTab.References;
+
+    /// <summary>"N/M" — the same count as <see cref="ReferenceCountText"/>, short enough for the
+    /// tab's badge. The tab has to carry it: the count is the one thing about the other half worth
+    /// knowing without going there.</summary>
+    public string ReferenceBadgeText
+    {
+        get
+        {
+            int on = Siblings.Count(r => r.IsOn) + KitchenLayers.Count(r => r.IsOn);
+            return $"{on}/{Siblings.Count + KitchenLayers.Count}";
+        }
+    }
+
     /// <summary>"N / M on" — the panel header's count.</summary>
     public string ReferenceCountText
     {
@@ -552,6 +601,7 @@ public partial class IngredientEditorViewModel
     {
         InvalidateStack();
         OnPropertyChanged(nameof(ReferenceCountText));
+        OnPropertyChanged(nameof(ReferenceBadgeText));
         RebuildSurfaces();
     }
 

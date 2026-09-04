@@ -536,6 +536,9 @@ public class IngredientEditorReferencesTests
             var view = new Views.IngredientEditorView { DataContext = vm };
             var window = new Window { Content = view, Width = 1180, Height = 720 };
             window.Show();
+            // The rail is two tabs now and Colorize opens first, so the reference rows this measures
+            // are not laid out until the other one is showing.
+            vm.ShowReferencesTabCommand.Execute(null);
             Dispatcher.UIThread.RunJobs();
 
             double[] Rows() => view.GetVisualDescendants().OfType<Border>()
@@ -579,6 +582,9 @@ public class IngredientEditorReferencesTests
             var view = new Views.IngredientEditorView { DataContext = vm };
             var window = new Window { Content = view, Width = 1180, Height = 720 };
             window.Show();
+            // The rail is two tabs now and Colorize opens first, so the reference rows this measures
+            // are not laid out until the other one is showing.
+            vm.ShowReferencesTabCommand.Execute(null);
             Dispatcher.UIThread.RunJobs();
 
             await vm.ToggleReferenceCommand.ExecuteAsync(vm.KitchenLayers[0]);   // opens at gap 4, the top

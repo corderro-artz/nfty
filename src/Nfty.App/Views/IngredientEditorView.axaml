@@ -365,8 +365,25 @@
       <!-- ============ Colorize rail ============ -->
       <Border Grid.Column="2" Classes="pane last">
         <Grid RowDefinitions="Auto,*">
-          <Border Grid.Row="0" Classes="pane-hrow">
-            <TextBlock Text="COLORIZE" Classes="pane-h" VerticalAlignment="Center" />
+          <!-- Two tabs in the pane's own 41px header row, so splitting the rail costs no height.
+               Underline rather than a segmented tray: a tray would land directly above the
+               Dynamic/Static tray below it, and two stacked pills read as one control with four
+               options. Each tab carries its 2px underline in BOTH states - transparent when off -
+               so switching moves nothing. -->
+          <Border Grid.Row="0" Classes="pane-hrow tabrow">
+            <StackPanel Orientation="Horizontal" Spacing="18">
+              <Button Classes="railtab" Classes.on="{Binding IsColorizeTab}"
+                      Command="{Binding ShowColorizeTabCommand}" Content="COLORIZE" />
+              <Button Classes="railtab" Classes.on="{Binding IsReferencesTab}"
+                      Command="{Binding ShowReferencesTabCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="7">
+                  <TextBlock Text="REFERENCES" VerticalAlignment="Center" />
+                  <Border Classes="tabcount">
+                    <TextBlock Text="{Binding ReferenceBadgeText}" />
+                  </Border>
+                </StackPanel>
+              </Button>
+            </StackPanel>
           </Border>
 
           <ScrollViewer Grid.Row="1" Name="ColorizeScroll" HorizontalScrollBarVisibility="Disabled">
@@ -374,6 +391,7 @@
                  extra Margin on a child here is a second, competing number; the two that existed
                  made those gaps 18 and 20 while every other one was 14. -->
             <StackPanel Margin="13,13,13,16" Spacing="15">
+             <StackPanel Spacing="15" IsVisible="{Binding IsColorizeTab}">
               <!-- .seg: a segmented tray, not two loose radio buttons. Hidden on a Custom layer,
                    which composites as-is and rolls nothing — the choice would have no effect. -->
               <Border Classes="seg" IsVisible="{Binding ShowColorizeMode}">
@@ -516,17 +534,21 @@
                 </Grid>
               </Panel>
 
-              <!-- ==================== Reference layers ====================
-                   Variant B of docs/design/mockups/explorations/reference-panel-variants.html: two
-                   labeled sections over a depth gutter. The layer being authored is PINNED at its own
-                   depth and cannot be switched off; siblings below it composite under, siblings above
-                   composite over, and a loose .igt from the Kitchen is placed into a GAP for this
-                   session alone — nothing here is ever written back to an archive.
+             </StackPanel>
 
-                   Every cell that can appear is already in the layout while absent (see Styles.axaml's
-                   block for this panel): a row is the same height on and off. -->
-              <Border BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0" />
+             <!-- ==================== Reference layers ====================
+                  Variant B of docs/design/mockups/explorations/reference-panel-variants.html: two
+                  labeled sections over a depth gutter. The layer being authored is PINNED at its own
+                  depth and cannot be switched off; siblings below it composite under, siblings above
+                  composite over, and a loose .igt from the Kitchen is placed into a GAP for this
+                  session alone — nothing here is ever written back to an archive.
 
+                  Every cell that can appear is already in the layout while absent (see Styles.axaml's
+                  block for this panel): a row is the same height on and off.
+
+                  The rule above this used to divide the two halves inside one scroll; the tab bar
+                  does that now, so it is gone rather than restated. -->
+             <StackPanel Spacing="15" IsVisible="{Binding IsReferencesTab}">
               <Grid Classes="ctlh" ColumnDefinitions="*,Auto">
                 <TextBlock Grid.Column="0" Text="REFERENCE LAYERS" Classes="plabel" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="1" Classes="hcount" Text="{Binding ReferenceCountText}" />
@@ -548,19 +570,6 @@
                             ToolTip.Tip="Show the real composite, at full opacity" />
                   </Grid>
                 </Border>
-
-                <!-- A canvas mismatch is refused, never scaled: StackPreview.Render words it with both
-                     sizes named and that message is shown verbatim.
-
-                     Its box is always here and only the ink changes - see Panel.stackproblem in
-                     Styles.axaml for why an IsVisible toggle was the wrong tool. -->
-                <Panel Classes="stackproblem"
-                       Classes.on="{Binding StackProblem, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                       ToolTip.Tip="{Binding StackProblem}">
-                  <Rectangle Classes="dashed btn" />
-                  <TextBlock Classes="vlock" Margin="10,0" VerticalAlignment="Center"
-                             TextTrimming="CharacterEllipsis" Text="{Binding StackProblem}" />
-                </Panel>
 
                 <!-- In this recipe: real siblings, at their real depths. -->
                 <StackPanel Spacing="8">
@@ -725,6 +734,26 @@
                   </ItemsControl>
                 </StackPanel>
               </StackPanel>
+
+              <!-- A canvas mismatch is refused, never scaled: StackPreview.Render words it with both
+                   sizes named and that message is shown verbatim.
+
+                   LAST in the panel, and IsVisible rather than the usual reserve-the-space-toggle-
+                   the-ink. It used to sit between the ghost toggle and the layer list, where an
+                   always-present 34px box left a hole in the middle of the panel that read as a
+                   layout mistake - which it may as well have been, since the message is absent in
+                   every ordinary session. The rule it was following exists to stop a control
+                   appearing UNDER the pointer that just acted and shoving the rows away; nothing
+                   sits below this now, so appearing here pushes nothing, and the panel fits on
+                   screen without scrolling so it is still seen. -->
+              <Panel Classes="stackproblem on" Margin="0,4,0,0"
+                     IsVisible="{Binding StackProblem, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                     ToolTip.Tip="{Binding StackProblem}">
+                <Rectangle Classes="dashed btn" />
+                <TextBlock Classes="vlock" Margin="10,0" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" Text="{Binding StackProblem}" />
+              </Panel>
+             </StackPanel>
             </StackPanel>
           </ScrollViewer>
         </Grid>
