@@ -297,28 +297,69 @@
 .md-typeset .kind.custom  { color: var(--vs-custom);  border-color: color-mix(in srgb, var(--vs-custom) 28%, transparent);  background: color-mix(in srgb, var(--vs-custom) 13%, transparent); }
 
 /* The landing page's card grid. */
-.md-typeset .vs-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 0.8rem;
-  margin: 1.2em 0;
-}
-.md-typeset .vs-cards > * {
-  display: block;
-  padding: 0.9rem 1rem;
+/* Card grids. Material's own `grid cards` rather than a hand-rolled one: it already carries the
+   responsive columns, the focus ring and the dark-mode handling, so all that is left here is to
+   dress it in the app's panel. */
+.md-typeset .grid.cards > ul > li,
+.md-typeset .grid > .card {
   border: 1px solid var(--vs-line);
   border-radius: 10px;
   background: var(--vs-panel);
-  color: var(--vs-fg);
+  padding: 0.9rem 1rem;
   transition: border-color 0.12s, background 0.12s;
 }
-.md-typeset .vs-cards > a:hover {
+.md-typeset .grid.cards > ul > li:hover,
+.md-typeset .grid > .card:hover {
   border-color: var(--vs-accent-line);
   background: var(--vs-accent-wash);
-  color: var(--vs-fg);
+  box-shadow: none;
 }
-.md-typeset .vs-cards strong { display: block; margin-bottom: 0.25em; }
-.md-typeset .vs-cards p { margin: 0; font-size: 0.72rem; color: var(--vs-fg-muted); }
+.md-typeset .grid.cards > ul > li > hr {
+  margin: 0.5em 0;
+  border-bottom-color: var(--vs-line);
+}
+.md-typeset .grid.cards > ul > li > p:last-child {
+  margin-bottom: 0;
+  font-size: 0.72rem;
+  color: var(--vs-fg-muted);
+}
+.md-typeset .grid.cards .twemoji,
+.md-typeset .grid.cards svg {
+  color: var(--vs-accent-text);
+}
+
+/* Screenshots. Every figure here is a frame of the running app, so it gets the app's own edge --
+   without it a light-theme screenshot bleeds into a light page and loses its boundary. */
+.md-typeset img[src*="/images/"] {
+  border: 1px solid var(--vs-line);
+  border-radius: 8px;
+}
+/* NO `display` here. Material hides the off-theme half of a screenshot pair with
+   `[data-md-color-scheme="slate"] img[src$="#only-light"] { display: none }` -- the same specificity
+   as the selector above, and this sheet loads after Material's, so setting `display: block` here
+   won a tie it should never have entered and both images rendered, one under the other. */
+.md-typeset a.glightbox img[src*="/images/"] { cursor: zoom-in; }
+
+/* Glossary tooltips. Every domain word on the site carries one (the abbreviation list is appended
+   to every page), which is exactly why the marker has to be quiet -- Material's stock dotted rule is
+   a fine cue on a rare term and reads as a page full of spelling errors when six of them appear in
+   one paragraph. Faint underline, and none at all where the word is already the subject: a heading,
+   a table cell, or a bolded term. The tooltip still works in all of them. */
+.md-typeset abbr {
+  border-bottom: 1px dotted var(--vs-line-strong);
+  text-decoration: none;
+  cursor: help;
+}
+.md-typeset h1 abbr,
+.md-typeset h2 abbr,
+.md-typeset h3 abbr,
+.md-typeset h4 abbr,
+.md-typeset table abbr,
+.md-typeset strong abbr,
+.md-typeset .grid.cards abbr {
+  border-bottom: 0;
+  cursor: inherit;
+}
 
 /* Footer: the copyright is the point, so it gets the app's muted mono. */
 .md-footer-meta { background-color: var(--vs-bg-alt2); border-top: 1px solid var(--vs-line); }

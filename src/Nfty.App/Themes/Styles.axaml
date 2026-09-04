@@ -1524,6 +1524,20 @@
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
+  <!-- The quantize steppers. Fluent's two spinner buttons take ~64 of the control's 94, and its
+       stock TextBox padding then took most of what was left: "30" rendered as "3" plus a sliver,
+       clipped, with the control still reporting the width it was asked for. Trim the inner box's
+       padding rather than widening the control: the row has 274px and only 16 spare, and every way
+       of buying width (wider control, tighter spacing) spends all 16 and leaves the next style
+       tweak nowhere to go. Padding 1 leaves 24px of text room against the 20.2px a three-digit
+       value needs - hue quantize reaches 360 and saturation 100, so three digits is the real
+       ceiling. One /template/ hop, which is the most a selector may cross. -->
+  <Style Selector="NumericUpDown.qnt /template/ TextBox">
+    <Setter Property="Padding" Value="1,0" />
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+
   <Style Selector="NumericUpDown.nin /template/ TextBox">
     <Setter Property="TextAlignment" Value="Center" />
     <!-- Vertically centered explicitly: Fluent's TextBox tops its content, which put the digits

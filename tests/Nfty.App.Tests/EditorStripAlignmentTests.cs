@@ -1,5 +1,6 @@
 using System.Linq;
 using Avalonia;
+using Avalonia.Media;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Headless.XUnit;
@@ -130,6 +131,47 @@ public class EditorStripAlignmentTests
                     .Select(a => a.GetType().Name + "[" + string.Join('.', a.Classes) + "]"));
                 Assert.Fail($"{c.GetType().Name} spans {o.Value.X:0.#}..{o.Value.X + c.Bounds.Width:0.#} " +
                     $"in a {edge:0.#}px rail :: {chain}");
+            }
+        }
+        finally { window.Close(); vm.Dispose(); }
+    }
+
+    /// <summary>
+    /// The quantize steppers show their whole value. Three digits is the real ceiling on both -- hue
+    /// quantize reaches 360 and saturation 100 -- so that is what has to fit.
+    /// </summary>
+    /// <remarks>
+    /// This shipped clipped: Fluent's two spinner buttons take ~64 of the control's 94 and its stock
+    /// TextBox padding ate most of the rest, so "30" drew as "3" plus a sliver. Nothing caught it,
+    /// because a clipped TextBox still reports the width it was asked for and every ViewModel test
+    /// still passed. Found by looking at a captured frame of the running app.
+    /// </remarks>
+    [AvaloniaFact]
+    public void The_quantize_steppers_show_their_whole_value()
+    {
+        var (window, vm, view) = Render();
+        try
+        {
+            vm.SetModeDynamicCommand.Execute(null);
+            vm.HueQuantize = 360;
+            vm.SatQuantize = 100;
+            Dispatcher.UIThread.RunJobs();
+
+            var steppers = view.GetVisualDescendants().OfType<NumericUpDown>()
+                .Where(n => n.Classes.Contains("qnt")).ToList();
+            Assert.Equal(2, steppers.Count);
+
+            foreach (var nud in steppers)
+            {
+                var box = nud.GetVisualDescendants().OfType<TextBox>().First();
+                double content = box.Bounds.Width - box.Padding.Left - box.Padding.Right;
+                var text = new FormattedText(box.Text ?? "", System.Globalization.CultureInfo.InvariantCulture,
+                    FlowDirection.LeftToRight, new Typeface(box.FontFamily), box.FontSize, Brushes.Black);
+
+                // A 2px floor, not a bare fit: a box that clears its text exactly is one font or
+                // padding tweak from clipping again, which is how this shipped the first time.
+                Assert.True(content >= text.Width + 2,
+                    $"'{box.Text}' needs {text.Width:0.#}px but the box offers {content:0.#}px");
             }
         }
         finally { window.Close(); vm.Dispose(); }

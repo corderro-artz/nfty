@@ -318,11 +318,20 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
 
     private void OpenEditor(LoadedIngredient i, LoadedRecipe r)
     {
+        // The status line is a last-message board, so whatever the Explorer said last was still
+        // standing over the editor - and what it usually said last was "Editing locked - unlock to
+        // make changes." The lock governs the Explorer's structural edits (add, delete, reorder);
+        // the pencil is deliberately NOT gated by it, so that sentence sat under a canvas that
+        // painted perfectly well, claiming the opposite. Say something true on the way in.
         var editor = _editorFactory(i, r, _book);
         editor.Saved += OnEditorSaved;
         editor.Closed += () => { if (ReferenceEquals(_openEditor, editor)) _openEditor = null; };
         _openEditor = editor;
         _nav.To(editor);
+
+        // AFTER the navigation, not before: the shell clears the status on every page change, so a
+        // line said first would be wiped by the very push that shows the editor.
+        _status.Say($"Editing “{i.Manifest.Name}” - Save writes it back into the CookBook.");
     }
 
     /// <summary>The editor persisted an ingredient; the session now holds the spliced graph. Rebuild
@@ -599,8 +608,14 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     ///
     /// <para>Called on open as well as on toggle. Opening a second book starts it locked, but the
     /// line left over from the first still read "Editing unlocked" — so the chip said read-only and
-    /// the status bar said the opposite, on the same screen.</para></summary>
-    private void SayLockState() => _status.Say(IsEditing
+    /// the status bar said the opposite, on the same screen.</para>
+    ///
+    /// <para>Also called by the shell whenever this page becomes the current one. The open-time call
+    /// happens in the constructor, which runs BEFORE the navigation that shows the page — and the
+    /// shell clears the status on every page change, so the constructor's line would be wiped by the
+    /// very push that displays it. Saying it again on arrival also covers coming BACK from the
+    /// editor, which used to leave the editor's line standing over the Explorer.</para></summary>
+    internal void SayLockState() => _status.Say(IsEditing
         ? "Editing unlocked - you can add, delete and edit."
         : "Editing locked - unlock to make changes.");
 

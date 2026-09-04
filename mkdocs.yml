@@ -9,7 +9,7 @@
 #   python -m mkdocs build     # static site into .mkdocs-site/ (gitignored)
 
 site_name: nfty
-site_description: How to make a collection of layered pixel art, from a blank folder to a finished set.
+site_description: The nfty manual - how to draw a handful of layers and cook them into a collection.
 site_author: Vaporsoft
 repo_url: https://github.com/corderro-artz/nfty
 repo_name: corderro-artz/nfty
@@ -17,6 +17,11 @@ edit_uri: edit/main/docs/manual/
 
 docs_dir: docs/manual
 site_dir: .mkdocs-site
+
+# includes/ holds the abbreviation list appended to every page by pymdownx.snippets. It is a
+# fragment, not a page: excluded from the build so it never ships as a URL of its own.
+exclude_docs: |
+  includes/
 
 copyright: >
   &copy; 2026 <a href="https://www.vaporsoft.dev" rel="noopener">Vaporsoft</a>. All rights reserved.
@@ -49,10 +54,10 @@ theme:
         icon: material/brightness-4
         name: Switch to light
   features:
+    - navigation.indexes
     - navigation.instant
     - navigation.instant.progress
     - navigation.tracking
-    - navigation.sections
     - navigation.top
     - navigation.footer
     - toc.follow
@@ -90,9 +95,21 @@ markdown_extensions:
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
+  - pymdownx.emoji:
+      # Material ships its own icon set; without this the :material-...: shortcodes render as
+      # literal text on the page.
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.inlinehilite
   - pymdownx.keys
-  - pymdownx.snippets
+  - pymdownx.snippets:
+      # base_path defaults to the PROJECT ROOT, not docs_dir, so the include has to be named from
+      # there or it silently resolves to nothing and every abbreviation quietly disappears.
+      base_path:
+        - docs/manual
+      check_paths: true
+      auto_append:
+        - includes/glossary.md
   - pymdownx.superfences
   - pymdownx.tabbed:
       alternate_style: true
@@ -104,21 +121,40 @@ plugins:
   - glightbox
 
 nav:
-  - Start here:
-      - Overview: index.md
-      - concepts.md
-      - first-collection.md
-  - Drawing:
-      - layer-kinds.md
-      - drawing.md
-      - color-mode.md
-      - transparency.md
-  - Building a collection:
-      - layer-order.md
-      - weights-and-rules.md
-      - cooking.md
-      - kitchen.md
+  - Home: index.md
+  - Get started:
+      - get-started/index.md
+      - get-started/install.md
+      - get-started/first-collection.md
+      - get-started/first-layer.md
+  - How do I…:
+      - how-to/index.md
+      - how-to/rarer-trait.md
+      - how-to/exclude-combinations.md
+      - how-to/reorder-layers.md
+      - how-to/line-layers-up.md
+      - how-to/import-art.md
+      - how-to/paint-in-color.md
+      - how-to/soft-edges.md
+      - how-to/more-assets.md
+      - how-to/kitchen.md
+      - how-to/raise-unique-count.md
+  - How nfty works:
+      - understand/index.md
+      - understand/six-words.md
+      - understand/why-gray.md
+      - understand/layer-kinds.md
+      - understand/uniqueness.md
+      - understand/seeds.md
+      - understand/no-resizing.md
   - Reference:
-      - screens.md
-      - cli.md
-      - troubleshooting.md
+      - reference/index.md
+      - reference/opening-screen.md
+      - reference/explorer.md
+      - reference/editor.md
+      - reference/shortcuts.md
+      - reference/cli.md
+      - reference/file-formats.md
+      - reference/set-contents.md
+      - reference/errors.md
+      - reference/glossary.md

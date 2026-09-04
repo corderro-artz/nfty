@@ -60,6 +60,18 @@ public partial class ShellViewModel : ViewModelBase
 
     partial void OnCurrentPageChanged(ViewModelBase? value)
     {
+        // The status bar is a last-message board, and a message belongs to the page that said it.
+        // Carried across a navigation it becomes a claim about a screen that never made it: the Set
+        // browser -- which has no lock at all -- greeted the user with the Explorer's "Editing
+        // locked - unlock to make changes." Clear on the way in; whatever the new page has to say,
+        // it says after this.
+        StatusMessage = "";
+
+        // ...and then let the arriving page say its own opening line, if it has one. The Explorer
+        // does: its lock state, which the chip in the titlebar shows at the same time, and which the
+        // two must never disagree about.
+        (value as ExplorerViewModel)?.SayLockState();
+
         OnPropertyChanged(nameof(CurrentExplorer));
         OnPropertyChanged(nameof(HasOpenDocument));
         CloseDocumentCommand.NotifyCanExecuteChanged();

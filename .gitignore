@@ -25,3 +25,7 @@ build-output.txt
 
 # Built user manual (Material for MkDocs); the source is docs/manual/
 .mkdocs-site/
+.demo/
+
+# VisualCapture's output (NFTY_CAPTURE_DIR); frames are regenerated, never committed
+.capture/

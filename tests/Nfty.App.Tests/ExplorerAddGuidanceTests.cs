@@ -119,4 +119,35 @@ public class ExplorerAddGuidanceTests
         }
         finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
     }
+
+    /// <summary>
+    /// The pencil opens the editor whether or not the edit-lock is on -- that is deliberate, the lock
+    /// governs the Explorer's structural edits -- so the editor must not arrive under the Explorer's
+    /// "Editing locked" sentence.
+    /// </summary>
+    /// <remarks>
+    /// The status line is a last-message board. Whatever was said last stays up, and what the
+    /// Explorer says on selection is the lock state, so the editor opened with "Editing locked -
+    /// unlock to make changes." standing over a canvas that painted perfectly well. Found by driving
+    /// the running app and painting a pixel the status bar said was impossible.
+    /// </remarks>
+    [AvaloniaFact]
+    public void Opening_the_editor_while_locked_does_not_leave_the_lock_message_standing()
+    {
+        var (vm, status, session, path, _) = Explorer();
+        try
+        {
+            var ing = vm.Root.Children[0].Children[0];
+            vm.SelectNodeCommand.Execute(ing);                        // says the lock state
+            Assert.Contains("lock", status.Last!, System.StringComparison.OrdinalIgnoreCase);
+
+            var detail = Assert.IsType<IngredientDetailViewModel>(vm.CurrentDetail);
+            detail.EditIngredientCommand.Execute(null);               // pencil: NOT gated by the lock
+
+            Assert.DoesNotContain("lock", status.Last!, System.StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Save", status.Last!, System.StringComparison.Ordinal);
+            vm.Dispose();
+        }
+        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
+    }
 }

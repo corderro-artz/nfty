@@ -476,11 +476,11 @@
                   <StackPanel Orientation="Horizontal" Spacing="10">
                     <StackPanel Orientation="Horizontal" Spacing="5">
                       <TextBlock Text="Hue" Classes="cshare" VerticalAlignment="Center" />
-                      <NumericUpDown Value="{Binding HueQuantize}" Minimum="1" Width="94" />
+                      <NumericUpDown Classes="qnt" Value="{Binding HueQuantize}" Minimum="1" Width="94" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="5">
                       <TextBlock Text="Sat" Classes="cshare" VerticalAlignment="Center" />
-                      <NumericUpDown Value="{Binding SatQuantize}" Minimum="1" Width="94" />
+                      <NumericUpDown Classes="qnt" Value="{Binding SatQuantize}" Minimum="1" Width="94" />
                     </StackPanel>
                   </StackPanel>
                 </StackPanel>
