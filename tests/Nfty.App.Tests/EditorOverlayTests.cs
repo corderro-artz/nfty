@@ -153,6 +153,54 @@ public class EditorOverlayTests
         finally { window.Close(); vm.Dispose(); }
     }
 
+    /// <summary>
+    /// A drag that starts INSIDE the marquee drags the marquee, and shows that while it is
+    /// happening.
+    /// </summary>
+    /// <remarks>
+    /// Found by dragging the real app: mid-move the overlay drew a second, growing mark box, because
+    /// mark-vs-move was only decided on release and the band had no idea which gesture it was in.
+    /// The user saw the opposite of what release was about to do. Two things pin it — that there is
+    /// exactly ONE outline (not the standing marquee plus a new box), and that it sits at the
+    /// dragged-to position rather than the original one.
+    /// </remarks>
+    [AvaloniaFact]
+    public void A_move_drags_the_marquee_rather_than_drawing_a_new_one()
+    {
+        var (window, vm, view) = Render();
+        try
+        {
+            var art = Art(view);
+            var origin = art.TranslatePoint(default, window)!.Value;
+            var bmp = (Avalonia.Media.Imaging.Bitmap)art.Source!;
+            double scale = System.Math.Min(art.Bounds.Width / bmp.PixelSize.Width,
+                                           art.Bounds.Height / bmp.PixelSize.Height);
+            double offX = (art.Bounds.Width - bmp.PixelSize.Width * scale) / 2;
+            double offY = (art.Bounds.Height - bmp.PixelSize.Height * scale) / 2;
+            Point At(int px, int py) =>
+                new(origin.X + offX + (px + 0.5) * scale, origin.Y + offY + (py + 0.5) * scale);
+
+            vm.ActiveTool = EditorTool.Select;
+            vm.Selection = new PixelRect(1, 1, 3, 3);
+            Dispatcher.UIThread.RunJobs();
+
+            window.MouseDown(At(2, 2), Avalonia.Input.MouseButton.Left);   // inside it
+            window.MouseMove(At(6, 5));                                    // +4, +3
+            Dispatcher.UIThread.RunJobs();
+
+            var ghost = Assert.IsType<Rectangle>(Assert.Single(Overlay(view).Children));
+            Assert.Equal(3 * scale, ghost.Width, 1);                       // same size, not a new box
+            Assert.Equal(3 * scale, ghost.Height, 1);
+            Assert.Equal(offX + (1 + 4) * scale, Canvas.GetLeft(ghost), 1);
+            Assert.Equal(offY + (1 + 3) * scale, Canvas.GetTop(ghost), 1);
+
+            window.MouseUp(At(6, 5), Avalonia.Input.MouseButton.Left);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(new PixelRect(5, 4, 3, 3), vm.Selection);         // where the ghost was
+        }
+        finally { window.Close(); vm.Dispose(); }
+    }
+
     [AvaloniaFact]
     public void Clearing_the_selection_clears_the_overlay()
     {

@@ -11,6 +11,8 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Nfty.App.ViewModels;
 using Nfty.Core.Editing;
+// Both Avalonia and the engine have a PixelRect; the overlay speaks the engine's.
+using PixelRect = Nfty.Core.Editing.PixelRect;
 
 namespace Nfty.App.Views;
 
@@ -29,6 +31,11 @@ public partial class IngredientEditorView : UserControl
     private readonly List<(int x, int y)> _points = new();
     private bool _drawing;
 
+    // Set at PRESS: a Select drag that begins inside the marquee is a MOVE, and the overlay has to
+    // say so from the first pixel. The ViewModel only resolves mark-vs-move on release, which is
+    // too late to draw with.
+    private bool _movingSelection;
+
     private Image _img = null!;
     private Canvas _overlay = null!;
     private IngredientEditorViewModel? _vm;
@@ -46,6 +53,10 @@ public partial class IngredientEditorView : UserControl
             _drawing = true;
             _points.Clear();
             AddPoint(e);
+            _movingSelection = _vm is not null
+                && _vm.ActiveTool == EditorTool.Select
+                && _points.Count > 0
+                && _vm.SelectionContains(_points[0].x, _points[0].y);
             DrawBand();
         };
         _img.PointerMoved += (_, e) =>
@@ -62,6 +73,7 @@ public partial class IngredientEditorView : UserControl
             if (DataContext is IngredientEditorViewModel vm && _points.Count > 0)
                 vm.ApplyToolStroke(_points.ToArray());
             _points.Clear();
+            _movingSelection = false;
             DrawBand();          // clears the band and repaints the marquee in its new place
         };
 
@@ -100,9 +112,17 @@ public partial class IngredientEditorView : UserControl
 
         Point ToControl(int px, int py) => new(offX + px * scale, offY + py * scale);
 
+        // A move in progress drags the marquee itself: the region shows where it is GOING, which is
+        // the whole affordance. Drawing a fresh mark box here instead — what this did before — told
+        // the user the opposite of what release was about to do.
+        bool moving = _drawing && _movingSelection && _points.Count > 0;
+        int mdx = moving ? _points[^1].x - _points[0].x : 0;
+        int mdy = moving ? _points[^1].y - _points[0].y : 0;
+
         // The standing marquee, whether or not a gesture is in progress.
-        if (_vm.Selection is { } sel)
+        if (_vm.Selection is { } sel0)
         {
+            var sel = new PixelRect(sel0.X + mdx, sel0.Y + mdy, sel0.Width, sel0.Height);
             var tl = ToControl(sel.X, sel.Y);
             var br = ToControl(sel.X + sel.Width, sel.Y + sel.Height);
             var marquee = new Rectangle
@@ -119,7 +139,7 @@ public partial class IngredientEditorView : UserControl
             _overlay.Children.Add(marquee);
         }
 
-        if (!_drawing || _points.Count == 0) return;
+        if (!_drawing || _points.Count == 0 || moving) return;
 
         var a = _points[0];
         var b = _points[^1];

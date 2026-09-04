@@ -5,7 +5,7 @@ space far larger than the source art.**
 
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
 [![Avalonia 12](https://img.shields.io/badge/Avalonia-12.1.1-8B44AC)](https://avaloniaui.net/)
-[![tests 1449](https://img.shields.io/badge/tests-1449%20passing-3d6b52)](#testing)
+[![tests 1450](https://img.shields.io/badge/tests-1450%20passing-3d6b52)](#testing)
 [![warnings 0](https://img.shields.io/badge/warnings-0-3d6b52)](#contributing)
 
 Most layered generators composite fixed images. Here a layer can be a **grayscale value-map**
@@ -188,7 +188,7 @@ src/Nfty.Core       the engine — no UI or CLI dependencies, so both front-ends
 src/Nfty.Cli        the command line (System.CommandLine)
 src/Nfty.App        the Avalonia GUI: Services, ViewModels, Views, Themes
 src/Nfty.Desktop    the desktop head — window, clipboard, file pickers
-tests/              1449 tests across three xunit.v3 projects
+tests/              1450 tests across three xunit.v3 projects
 tests/fixtures/     archives written by an older build, so format changes cannot pass unnoticed
 docs/USER-GUIDE.md  end-user documentation
 docs/design/mockups the locked visual reference the GUI is built to match

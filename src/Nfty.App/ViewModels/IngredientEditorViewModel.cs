@@ -279,6 +279,17 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     private static bool Contains(PixelRect r, (int x, int y) p) =>
         p.x >= r.X && p.x < r.X + r.Width && p.y >= r.Y && p.y < r.Y + r.Height;
 
+    /// <summary>Whether a canvas pixel lies inside the standing marquee.</summary>
+    /// <remarks>
+    /// The view needs this at PRESS time. Mark and move are the same gesture until you know where it
+    /// started, and <see cref="BeginSelectGesture"/> only runs on release — so without this the
+    /// overlay drew a new mark box during a move, telling the user the opposite of what was about to
+    /// happen. Found by dragging the real app, not by a test.
+    /// </remarks>
+    /// <param name="x">Canvas x.</param>
+    /// <param name="y">Canvas y.</param>
+    internal bool SelectionContains(int x, int y) => Selection is { } s && Contains(s, (x, y));
+
     /// <summary>The segmented Dynamic/Static control is two Buttons, not two RadioButtons, so it
     /// needs commands rather than two-way IsChecked bindings.</summary>
     [RelayCommand] private void SetModeDynamic() => Mode = LayerKind.Dynamic;
