@@ -86,8 +86,10 @@
                 </Grid>
                 <Panel Classes="band">
                   <Border Classes="dualtrack" Background="{StaticResource HueSpectrumBrush}" />
-                  <Slider Classes="overlay" Value="{Binding HueMin}" Minimum="0" Maximum="360" />
-                  <Slider Classes="overlay" Value="{Binding HueMax}" Minimum="0" Maximum="360" />
+                  <Slider Classes="overlay" Value="{Binding HueMin}" Minimum="0" Maximum="360"
+                          TickFrequency="1" IsSnapToTickEnabled="True" />
+                  <Slider Classes="overlay" Value="{Binding HueMax}" Minimum="0" Maximum="360"
+                          TickFrequency="1" IsSnapToTickEnabled="True" />
                 </Panel>
               </StackPanel>
 
@@ -98,8 +100,10 @@
                 </Grid>
                 <Panel Classes="band">
                   <Border Classes="dualtrack" Background="{StaticResource SaturationRampBrush}" />
-                  <Slider Classes="overlay" Value="{Binding SatMin}" Minimum="0" Maximum="100" />
-                  <Slider Classes="overlay" Value="{Binding SatMax}" Minimum="0" Maximum="100" />
+                  <Slider Classes="overlay" Value="{Binding SatMin}" Minimum="0" Maximum="100"
+                          TickFrequency="1" IsSnapToTickEnabled="True" />
+                  <Slider Classes="overlay" Value="{Binding SatMax}" Minimum="0" Maximum="100"
+                          TickFrequency="1" IsSnapToTickEnabled="True" />
                 </Panel>
               </StackPanel>
             </StackPanel>

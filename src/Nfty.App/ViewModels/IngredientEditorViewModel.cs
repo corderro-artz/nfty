@@ -510,10 +510,38 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     // The colors readout counts BUCKETS over the live ranges, so a range endpoint moves it exactly
     // as a quantize step does. Only the steppers used to raise it, which was correct for a figure
     // that only read the steppers and is not for one that reads the whole block.
-    partial void OnHueMinChanged(double value) { RebuildSurfaces(); OnPropertyChanged(nameof(HueRangeText)); ColorsChanged(); }
-    partial void OnHueMaxChanged(double value) { RebuildSurfaces(); OnPropertyChanged(nameof(HueRangeText)); ColorsChanged(); }
-    partial void OnSatMinChanged(double value) { RebuildSurfaces(); OnPropertyChanged(nameof(SatRangeText)); ColorsChanged(); }
-    partial void OnSatMaxChanged(double value) { RebuildSurfaces(); OnPropertyChanged(nameof(SatRangeText)); ColorsChanged(); }
+    // THE RANGE ENDPOINTS ARE WHOLE NUMBERS HERE. The four .nin boxes are bound straight to these
+    // doubles, so a slider that reported 137.42786885245902 put that in the box: the field changed
+    // width as you dragged, and a spinner press turned a bare "0" into "0.5". Snapping is what makes
+    // the box one shape. It is an AUTHORING narrowing and nothing more — ColorRange still carries
+    // doubles, the CLI can still write a fractional endpoint, and no generation arithmetic changes;
+    // this editor simply does not author one. The re-entrant assignment settles in one hop because
+    // Math.Round is idempotent and the generated setter drops an equal value.
+    private static bool NotWhole(double v) => v != Math.Round(v);
+
+    partial void OnHueMinChanged(double value)
+    {
+        if (NotWhole(value)) { HueMin = Math.Round(value); return; }
+        RebuildSurfaces(); OnPropertyChanged(nameof(HueRangeText)); ColorsChanged();
+    }
+
+    partial void OnHueMaxChanged(double value)
+    {
+        if (NotWhole(value)) { HueMax = Math.Round(value); return; }
+        RebuildSurfaces(); OnPropertyChanged(nameof(HueRangeText)); ColorsChanged();
+    }
+
+    partial void OnSatMinChanged(double value)
+    {
+        if (NotWhole(value)) { SatMin = Math.Round(value); return; }
+        RebuildSurfaces(); OnPropertyChanged(nameof(SatRangeText)); ColorsChanged();
+    }
+
+    partial void OnSatMaxChanged(double value)
+    {
+        if (NotWhole(value)) { SatMax = Math.Round(value); return; }
+        RebuildSurfaces(); OnPropertyChanged(nameof(SatRangeText)); ColorsChanged();
+    }
     partial void OnFixedColorChanged(string value) { RebuildSurfaces(); ColorsChanged(); }
     partial void OnHueQuantizeChanged(int value) { ColorsChanged(); }
     partial void OnSatQuantizeChanged(int value) { ColorsChanged(); }
@@ -1108,17 +1136,42 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     // toggles: the mockup gives them no separate "restore" affordance, so each undoes itself.
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(PreviewHeight))]
+    [NotifyPropertyChangedFor(nameof(EnlargePreviewTip))]
     private bool _previewEnlarged;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowPaintCanvas))]
+    [NotifyPropertyChangedFor(nameof(PreviewBlipLabel))]
+    [NotifyPropertyChangedFor(nameof(PreviewBlipTip))]
+    [NotifyPropertyChangedFor(nameof(FillPanePreviewTip))]
     private bool _previewFillsPane;
 
-    /// <summary>Height of the colorize-rail preview: normal inset, or enlarged in place.</summary>
-    public double PreviewHeight => PreviewEnlarged ? 320 : 120;
+    /// <summary>Side of the corner preview tile: normal inset, or enlarged in place. Three sizes
+    /// exist in all and they are monotonic — this tile, this tile enlarged, and the whole pane —
+    /// so enlarged stops short of the 320px canvas rather than covering it, which is what the next
+    /// button along already does.</summary>
+    public double PreviewHeight => PreviewEnlarged ? 208 : 120;
 
     /// <summary>The canvas pane shows the paint canvas unless the preview has taken it over.</summary>
     public bool ShowPaintCanvas => !PreviewFillsPane;
+
+    /// <summary>The corner tile names whichever half of the pair it is showing. It shows the one
+    /// the big canvas is not, so the two together are always the source and the result.</summary>
+    public string PreviewBlipLabel => PreviewFillsPane ? "SOURCE" : "PREVIEW";
+
+    /// <summary>Tooltip for the corner tile, matching <see cref="PreviewBlipLabel"/>.</summary>
+    public string PreviewBlipTip => PreviewFillsPane
+        ? "The grayscale value map you are painting"
+        : "The colorized result, as generation would render it";
+
+    /// <summary>Both sizing buttons are toggles and say so, because a button that only enlarges
+    /// leaves the reader looking for the one that undoes it.</summary>
+    public string EnlargePreviewTip => PreviewEnlarged ? "Shrink preview" : "Enlarge preview";
+
+    /// <summary>Tooltip for the fill-pane toggle. See <see cref="EnlargePreviewTip"/>.</summary>
+    public string FillPanePreviewTip => PreviewFillsPane
+        ? "Return the pane to the paint canvas"
+        : "Fill pane with preview";
 
     [RelayCommand] private void EnlargePreview() => PreviewEnlarged = !PreviewEnlarged;
     [RelayCommand] private void FillPanePreview() => PreviewFillsPane = !PreviewFillsPane;

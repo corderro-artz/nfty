@@ -75,50 +75,121 @@
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
-    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="MinHeight" Value="{DynamicResource FieldHeight}" />
     <Setter Property="FontSize" Value="12.5" />
 
+    <!-- The spinner must not carry a floor of its own: it is the thing that draws, so a
+         NumericUpDown asked for the compact height would keep the form height here and clip. It
+         inherits whatever the outer control was given instead. -->
     <Style Selector="^ /template/ ButtonSpinner">
-      <Setter Property="MinHeight" Value="32" />
+      <Setter Property="MinHeight" Value="0" />
     </Style>
   </ControlTheme>
 
   <!-- ================= ButtonSpinner ================= -->
-  <!-- The spinner buttons live inside ButtonSpinner's OWN template, so they cannot be reached from
-       the NumericUpDown theme: Avalonia rejects a selector that crosses two template boundaries
-       ("ControlTemplate styles cannot contain multiple template selectors"). Hence a second theme,
-       keyed by type so it applies wherever a spinner appears.
-
-       KNOWN GAP: the mockups' .stepr is a 20px-wide COLUMN of 9px chevrons; ours remains Fluent's
-       wide side-by-side pair. Both the buttons' width and the panel that stacks them are fixed inside
-       Fluent's own ButtonSpinner template at a priority a Style setter does not beat - Width setters
-       here (tried both bare "RepeatButton" and the named PART_Increase/DecreaseButton selectors) were
-       verified against a rendered frame and changed nothing. Closing it means hand-authoring the full
-       ButtonSpinner ControlTemplate, which is out of proportion to the gap; the height and ink below
-       DO take effect and are what this theme is for. -->
-  <ControlTheme x:Key="{x:Type ButtonSpinner}" TargetType="ButtonSpinner"
-                BasedOn="{StaticResource {x:Type ButtonSpinner}}">
-    <Setter Property="MinHeight" Value="32" />
-    <Style Selector="^ /template/ RepeatButton">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  <!-- HAND-AUTHORED TEMPLATE, and the reason is the one thing a Style setter could not buy.
+       Fluent's ButtonSpinner draws two side-by-side buttons roughly 32px wide apiece, so a
+       NumericUpDown spent ~64 of its width on chevrons and the field beside them read as an
+       afterthought: at Width="94" the quantize steppers had about 8px of text room and rendered
+       "30" as "3" plus a sliver. Both the button width and the panel that lays them out are fixed
+       inside Fluent's own template at a priority a Style setter does not beat - Width setters were
+       tried against a rendered frame (bare "RepeatButton" and the named PART_ parts) and changed
+       nothing. The note that used to sit here called closing that gap "out of proportion to the
+       gap"; it is not, once the gap is every numeric input in the app.
+       What this template is: the mockups' .stepr, a narrow COLUMN of two chevrons on the field's
+       trailing edge, at StepperWidth (17). PART_IncreaseButton / PART_DecreaseButton are the two
+       names ButtonSpinner.OnApplyTemplate looks up; it hooks their Click and drives their IsEnabled
+       from ValidSpinDirections itself, so limit behavior is template-independent and survives this.
+       ButtonSpinnerLocation="Left" is NOT supported here (nothing in this app asks for it) - the
+       steppers are always trailing. -->
+  <ControlTheme x:Key="SpinnerChevron" TargetType="RepeatButton">
+    <!-- Fluent's RepeatButton is templated too, and every one of its states would have to be
+         neutralized one at a time. Authoring the two-element template instead is shorter than the
+         list of things to switch off, and leaves no state that can hand itself back to Fluent. -->
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="ChevronWash"
+                Background="{TemplateBinding Background}"
+                CornerRadius="{TemplateBinding CornerRadius}">
+          <ContentPresenter Content="{TemplateBinding Content}"
+                            HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover /template/ Border#ChevronWash">
+      <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
     </Style>
-    <!-- A stepper at its limit (the New CookBook wizard's target supply opens at 0) drew Fluent's
-         stock light-gray slab: the one button in the app painted LIGHTER than its neighbours, which
-         reads as hovered rather than unavailable. Setting the RepeatButton's own Background does not
-         fix it - Fluent paints the disabled wash on PART_ContentPresenter INSIDE the button, which is
-         a second /template/ hop from here and unreachable. Verified off a rendered control: with this
-         rule alone the button read Background=Transparent, Opacity=0.4 and its presenter still read
-         #33ffffff. The presenter is neutralized in the RepeatButton theme below, which is one hop
-         from ITS own root. This half still dims the chevron. -->
-    <Style Selector="^ /template/ RepeatButton:disabled">
+    <Style Selector="^:pressed /template/ Border#ChevronWash">
+      <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    </Style>
+    <!-- A stepper at its limit must read as unavailable, never as hovered. Fluent's disabled wash
+         was the one control in the app that got BRIGHTER when it stopped working; here nothing
+         paints a disabled state at all, so the whole treatment is this one opacity. -->
+    <Style Selector="^:disabled">
+      <Setter Property="Opacity" Value="0.32" />
+    </Style>
+    <Style Selector="^:disabled /template/ Border#ChevronWash">
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
-      <Setter Property="Opacity" Value="0.4" />
     </Style>
   </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type ButtonSpinner}" TargetType="ButtonSpinner">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+    <Setter Property="MinHeight" Value="{DynamicResource FieldHeight}" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="PART_BorderElement"
+                Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="{TemplateBinding CornerRadius}"
+                MinHeight="{TemplateBinding MinHeight}">
+          <Grid ColumnDefinitions="*,Auto">
+            <ContentPresenter Grid.Column="0" Name="PART_ContentPresenter"
+                              Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                              Padding="{TemplateBinding Padding}"
+                              HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+            <!-- The whole column is 17 wide and inset 2 from the field's border, so the two
+                 chevrons stack inside the rounded corner rather than over it. Reserved by the
+                 Grid's Auto column, so the text cell it leaves behind is exact at any width. -->
+            <Grid Grid.Column="1" Name="PART_Steppers" RowDefinitions="*,*"
+                  Width="{DynamicResource StepperWidth}" Margin="0,2,3,2"
+                  IsVisible="{TemplateBinding ShowButtonSpinner}">
+              <RepeatButton Grid.Row="0" Name="PART_IncreaseButton"
+                            Theme="{StaticResource SpinnerChevron}">
+                <Path Classes="ico st" Data="{StaticResource IconChevronUp}" />
+              </RepeatButton>
+              <RepeatButton Grid.Row="1" Name="PART_DecreaseButton"
+                            Theme="{StaticResource SpinnerChevron}">
+                <Path Classes="ico st" Data="{StaticResource IconChevronDown}" />
+              </RepeatButton>
+            </Grid>
+          </Grid>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+
+    <!-- Fluent repaints PART_BorderElement directly on these states, bypassing the TemplateBinding;
+         this template has no such rule, so the two states are stated here and nowhere else. -->
+    <Style Selector="^:pointerover /template/ Border#PART_BorderElement">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    </Style>
+    <Style Selector="^:focus-within /template/ Border#PART_BorderElement">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+  </ControlTheme>
+
 
 
   <!-- ================= Slider ================= -->
@@ -166,7 +237,8 @@
     <!-- The mockup's handle is a 14px RING (panel fill, 2px accent stroke), not Fluent's solid dot.
          Retemplating the Thumb reaches it.
 
-         KNOWN GAP, same shape as the ButtonSpinner one above: the mockup's TRACK is a 6px rounded bar
+         KNOWN GAP (the ButtonSpinner one above is now closed, by hand-authoring its template — the
+         same move would close this): the mockup's TRACK is a 6px rounded bar
          with a hairline border, and ours stays Fluent's ~2px line. Height/CornerRadius setters aimed
          at both Border#TrackBackground and the two track RepeatButtons were tried and verified
          against a rendered frame - Fluent's Slider template fixes the track geometry at a priority a

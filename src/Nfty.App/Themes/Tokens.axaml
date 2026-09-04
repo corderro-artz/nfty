@@ -218,6 +218,19 @@
   <CornerRadius x:Key="RadiusMd">6</CornerRadius>
   <CornerRadius x:Key="RadiusSm">5</CornerRadius>
 
+  <!-- FIELD METRICS. Every input in this app is one of exactly two heights, and the choice is
+       semantic rather than per-call-site taste: FieldHeight is a FORM field (the wizards, a name, a
+       weight, a description), FieldHeightSm is a COMPACT NUMERIC CELL in a dense strip or rail (the
+       range end-inputs, the quantize steppers, the brush size). They used to be neither - a rail
+       carried 24px range boxes beside 32px quantize steppers, one above the other, which read as
+       two unrelated controls rather than two of the same kind. Stated once here so a new input
+       picks a size rather than inventing one.
+       StepperWidth is the chevron column of a NumericUpDown; see the ButtonSpinner template in
+       Controls.axaml, which is hand-authored precisely so this number can exist. -->
+  <x:Double x:Key="FieldHeight">32</x:Double>
+  <x:Double x:Key="FieldHeightSm">26</x:Double>
+  <x:Double x:Key="StepperWidth">17</x:Double>
+
   <!-- Color-range track fills. These are NOT palette colors and deliberately do not vary by theme:
        a hue wheel is a hue wheel in the dark. They live here rather than inline in a view so the two
        screens that show a color range (the ingredient editor and the New Ingredient wizard) paint

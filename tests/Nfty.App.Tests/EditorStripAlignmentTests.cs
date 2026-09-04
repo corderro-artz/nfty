@@ -163,6 +163,15 @@ public class EditorStripAlignmentTests
         finally { window.Close(); vm.Dispose(); }
     }
 
+    /// <summary>The compact numeric cell's height, read from the token rather than restated — a
+    /// size stated twice will drift, and this one is now shared by two strips.</summary>
+    private static double CompactFieldHeight(Window window)
+    {
+        Assert.True(Application.Current!.TryGetResource(
+            "FieldHeightSm", window.ActualThemeVariant, out var v));
+        return Assert.IsType<double>(v);
+    }
+
     /// <summary>
     /// The brush-size box is the same sort of cell as the swatch beside it, not half again its
     /// height — and its border is whole, which pinning the outer control's height alone destroys.
@@ -177,8 +186,108 @@ public class EditorStripAlignmentTests
             var box = nud.GetVisualDescendants().OfType<TextBox>().First();
             var swatch = view.GetVisualDescendants().OfType<Border>().First(b => b.Classes.Contains("swatch"));
 
-            Assert.Equal(24, box.Bounds.Height, 1);                       // what actually draws
+            Assert.Equal(CompactFieldHeight(window), box.Bounds.Height, 1);   // what actually draws
             Assert.Equal(CenterY(view, swatch), CenterY(view, box), 1);
+        }
+        finally { window.Close(); vm.Dispose(); }
+    }
+
+    /// <summary>
+    /// EVERY compact numeric cell in the editor is one height. The rail used to stack 24px range
+    /// boxes directly above 32px quantize steppers, which read as two unrelated kinds of control in
+    /// one panel; the height is a token now, and this asserts that every call site took it. The
+    /// measurement is of the INNER TextBox in each case, since that is the box that draws the border
+    /// — an outer NumericUpDown can report whatever height it likes with nothing painting there.
+    /// </summary>
+    [AvaloniaFact]
+    public void Every_compact_numeric_cell_is_the_same_height()
+    {
+        var (window, vm, view) = Render();
+        try
+        {
+            var expected = CompactFieldHeight(window);
+
+            var boxes = view.GetVisualDescendants().OfType<TextBox>()
+                .Where(b => b.Classes.Contains("nin")).ToList();
+            foreach (var nud in view.GetVisualDescendants().OfType<NumericUpDown>()
+                         .Where(n => n.Classes.Contains("nin") || n.Classes.Contains("qnt")))
+                boxes.AddRange(nud.GetVisualDescendants().OfType<TextBox>());
+
+            Assert.True(boxes.Count >= 7, $"expected the four range boxes, the two quantize steppers "
+                                        + $"and the brush size; found {boxes.Count}");
+            foreach (var b in boxes)
+                Assert.Equal(expected, b.Bounds.Height, 1);
+
+            // And a declared width is the real width. Fluent's TextBox carries a 64px MinWidth that
+            // beats any smaller Width, so `Width="58"` drew at 64 and the markup said one thing
+            // while the frame did another — silently, since the boxes still matched each other.
+            foreach (var b in view.GetVisualDescendants().OfType<TextBox>()
+                         .Where(b => b.Classes.Contains("nin") && !double.IsNaN(b.Width)))
+                Assert.Equal(b.Width, b.Bounds.Width, 1);
+        }
+        finally { window.Close(); vm.Dispose(); }
+    }
+
+    /// <summary>
+    /// The stepper column is a narrow chevron rail, not most of the field. Fluent's own
+    /// ButtonSpinner draws two side-by-side buttons ~32px each, which left a 94px quantize control
+    /// with about 8px of text room; the hand-authored template in Controls.axaml gives them one
+    /// StepperWidth column. Asserted as a RATIO of the control rather than a number, so it stays
+    /// true if either the token or the field width moves.
+    /// </summary>
+    [AvaloniaFact]
+    public void The_spinner_chevrons_take_a_narrow_column_not_half_the_field()
+    {
+        var (window, vm, view) = Render();
+        try
+        {
+            var nud = view.GetVisualDescendants().OfType<NumericUpDown>()
+                .First(n => n.Classes.Contains("qnt"));
+            var box = nud.GetVisualDescendants().OfType<TextBox>().First();
+
+            Assert.True(nud.Bounds.Width > 0, "the stepper is laid out at all");
+            var share = box.Bounds.Width / nud.Bounds.Width;
+            Assert.True(share > 0.7,
+                $"the value cell is {box.Bounds.Width:0.#} of {nud.Bounds.Width:0.#} ({share:P0}) — "
+                + "the chevrons are eating the field again");
+        }
+        finally { window.Close(); vm.Dispose(); }
+    }
+
+    /// <summary>
+    /// The corner preview tile obeys BOTH of its buttons, on a laid-out frame. Each was broken in a
+    /// different way and neither was visible in a ViewModel test: the size was hard-coded in the
+    /// markup, so "enlarge" moved a number nothing read, and the tile hid itself whenever fill-pane
+    /// was on — taking fill-pane's own off switch off the screen with it. Measured off the tile's
+    /// own Bounds, since a Width the markup ignores still binds and still reports.
+    /// </summary>
+    [AvaloniaFact]
+    public void The_preview_tile_resizes_and_stays_reachable_in_both_states()
+    {
+        var (window, vm, view) = Render();
+        try
+        {
+            static Border Tile(Visual root) => root.GetVisualDescendants().OfType<Border>()
+                .First(b => b.Name == "PreviewTile");
+
+            var inset = Tile(view).Bounds.Height;
+            Assert.Equal(vm.PreviewHeight, inset, 1);
+
+            vm.EnlargePreviewCommand.Execute(null);
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(Tile(view).Bounds.Height > inset + 20,
+                $"enlarge moved the tile from {inset:0.#} to {Tile(view).Bounds.Height:0.#}");
+
+            vm.EnlargePreviewCommand.Execute(null);
+            vm.FillPanePreviewCommand.Execute(null);
+            Dispatcher.UIThread.RunJobs();
+
+            // The way back out has to still be on screen — this is the whole bug.
+            var tile = Tile(view);
+            Assert.True(tile.IsEffectivelyVisible, "the tile carrying the buttons vanished");
+            var buttons = tile.GetVisualDescendants().OfType<Button>().ToList();
+            Assert.Equal(3, buttons.Count);
+            Assert.All(buttons, b => Assert.True(b.IsEffectivelyVisible && b.Bounds.Width > 0));
         }
         finally { window.Close(); vm.Dispose(); }
     }

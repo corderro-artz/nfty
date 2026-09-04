@@ -173,7 +173,7 @@ public class IngredientEditorVariantTests
             Assert.True(vm.ShowPaintCanvas);
 
             vm.EnlargePreviewCommand.Execute(null);
-            Assert.Equal(320, vm.PreviewHeight);          // enlarged in place
+            Assert.Equal(208, vm.PreviewHeight);          // enlarged in place, short of the 320 canvas
             Assert.True(vm.ShowPaintCanvas);              // independent of fill-pane
             vm.EnlargePreviewCommand.Execute(null);
             Assert.Equal(120, vm.PreviewHeight);          // toggles back
@@ -184,6 +184,13 @@ public class IngredientEditorVariantTests
             Assert.Equal(120, vm.PreviewHeight);          // independent of enlarge
             vm.FillPanePreviewCommand.Execute(null);
             Assert.True(vm.ShowPaintCanvas);              // toggles back
+
+            // The tile is what carries the three buttons, so it stays on screen in both states and
+            // simply names the half it is showing. Hiding it took fill-pane's own off switch with it.
+            Assert.Equal("PREVIEW", vm.PreviewBlipLabel);
+            vm.FillPanePreviewCommand.Execute(null);
+            Assert.Equal("SOURCE", vm.PreviewBlipLabel);
+            vm.FillPanePreviewCommand.Execute(null);
 
             Assert.False(vm.IsDirty);                     // presentation only — no draft edit
             Assert.Same(canvas, vm.Canvas);               // and no re-render

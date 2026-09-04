@@ -76,7 +76,10 @@
                 <TextBlock Text="NAME" Classes="plabel" Margin="0" />
                 <TextBox Text="{Binding SelectedName}" />
                 <TextBlock Text="WEIGHT" Classes="plabel" Margin="0,6,0,0" />
-                <NumericUpDown Value="{Binding SelectedWeight}" Minimum="0.01" Increment="1" />
+                <!-- FormatString pins the shape: without one a spinner press renders "50" and a typed
+                     value "49.5" at two different widths, and the box changes shape as you use it. -->
+                <NumericUpDown Value="{Binding SelectedWeight}" Minimum="0.01" Increment="1"
+                               FormatString="0.##" />
               </StackPanel>
 
               <!-- One row, not a row of two over a full-width third. The old shape read as two
@@ -171,7 +174,7 @@
                    separator, and no spinner column — Fluent's is two ~28px buttons for a number you
                    type once. What is left is the mockup's own numeric idiom (.nin, 58px), and the
                    tooltip carries the meaning the caption would have. -->
-              <NumericUpDown Classes="nin" Value="{Binding BrushSize}" Minimum="1" Width="58"
+              <NumericUpDown Classes="nin" Value="{Binding BrushSize}" Minimum="1" Width="58" FormatString="0"
                              ShowButtonSpinner="False" ToolTip.Tip="Brush size (px)" />
             </StackPanel>
           </Border>
@@ -325,14 +328,25 @@
             </Border>
 
             <!-- .blip: the colorized preview sits ON the canvas' bottom-right corner rather than
-                 stacked in the rail under the controls. -->
-            <Border Width="104" Height="104" CornerRadius="10" ClipToBounds="True"
+                 stacked in the rail under the controls.
+                 THE BLIP IS ALWAYS PRESENT, and that is what makes the three buttons on it a set of
+                 toggles rather than a one-way door. It used to hide itself whenever "fill pane" was
+                 on - taking the only control that could turn fill-pane back off with it, so the
+                 preview took over the canvas permanently and the way out was to leave the screen.
+                 The two images simply swap: the small tile shows whichever of the pair the big
+                 canvas is NOT showing, so the caption always names something that is on screen once.
+                 Size is bound, not fixed: "enlarge" moved a number the markup had hard-coded past,
+                 so the middle button did nothing at all. -->
+            <Border x:Name="PreviewTile" Width="{Binding PreviewHeight}" Height="{Binding PreviewHeight}"
+                    CornerRadius="10" ClipToBounds="True"
                     BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1"
                     Background="{DynamicResource TileBrush}" BoxShadow="{DynamicResource WinShadow}"
-                    HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,26,26"
-                    IsVisible="{Binding ShowPaintCanvas}">
+                    HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,26,26">
               <Panel>
-                <Image Source="{Binding Preview}" Stretch="UniformToFill" />
+                <Image Source="{Binding Preview}" Stretch="UniformToFill"
+                       IsVisible="{Binding ShowPaintCanvas}" />
+                <Image Source="{Binding Canvas}" Stretch="UniformToFill"
+                       IsVisible="{Binding PreviewFillsPane}" />
                 <Border VerticalAlignment="Bottom" Height="26" Background="{DynamicResource ScrimBrush}">
                   <!-- Three buttons, in the mockup's order: reroll, enlarge, fill-pane
                        (ingredient-editor.html's .ov). Enlarge was missing - the ViewModel had the
@@ -342,17 +356,20 @@
                        which clipped "PREVIEW" to "PREVIEV". The buttons are the working part; the
                        caption gives up the space and keeps its meaning in the tooltip. -->
                   <Grid ColumnDefinitions="*,Auto,Auto,Auto" Margin="6,0">
-                    <TextBlock Grid.Column="0" Text="PREVIEW" Classes="plabel" VerticalAlignment="Center"
+                    <TextBlock Grid.Column="0" Text="{Binding PreviewBlipLabel}" Classes="plabel"
+                               VerticalAlignment="Center"
                                TextTrimming="None" ClipToBounds="False" FontSize="7.5"
-                               ToolTip.Tip="The colorized result, as generation would render it" />
+                               ToolTip.Tip="{Binding PreviewBlipTip}" />
                     <Button Grid.Column="1" Classes="icon" Padding="2" Command="{Binding RerollPreviewCommand}"
                             ToolTip.Tip="Reroll sampled color">
                       <Path Classes="ico xs" Data="{StaticResource IconReroll}" /></Button>
-                    <Button Grid.Column="2" Classes="icon" Padding="2" Command="{Binding EnlargePreviewCommand}"
-                            ToolTip.Tip="Enlarge preview">
+                    <Button Grid.Column="2" Classes="icon" Padding="2" Classes.unlocked="{Binding PreviewEnlarged}"
+                            Command="{Binding EnlargePreviewCommand}"
+                            ToolTip.Tip="{Binding EnlargePreviewTip}">
                       <Path Classes="ico xs" Data="{StaticResource IconEnlarge}" /></Button>
-                    <Button Grid.Column="3" Classes="icon" Padding="2" Command="{Binding FillPanePreviewCommand}"
-                            ToolTip.Tip="Fill pane with preview">
+                    <Button Grid.Column="3" Classes="icon" Padding="2" Classes.unlocked="{Binding PreviewFillsPane}"
+                            Command="{Binding FillPanePreviewCommand}"
+                            ToolTip.Tip="{Binding FillPanePreviewTip}">
                       <Path Classes="ico xs" Data="{StaticResource IconFillPane}" /></Button>
                   </Grid>
                 </Border>
@@ -460,10 +477,15 @@
                   </Grid>
                   <Panel Classes="band">
                     <Border Classes="dualtrack" Background="{StaticResource HueSpectrumBrush}" />
-                    <Slider Classes="overlay" Value="{Binding HueMin}" Minimum="0" Maximum="360" />
-                    <Slider Classes="overlay" Value="{Binding HueMax}" Minimum="0" Maximum="360" />
+                    <Slider Classes="overlay" Value="{Binding HueMin}" Minimum="0" Maximum="360"
+                            TickFrequency="1" IsSnapToTickEnabled="True" />
+                    <Slider Classes="overlay" Value="{Binding HueMax}" Minimum="0" Maximum="360"
+                            TickFrequency="1" IsSnapToTickEnabled="True" />
                   </Panel>
-                  <StackPanel Orientation="Horizontal" Spacing="7">
+                  <!-- Centered under the band, not flush left. Left-pinned they read as the
+                       start of a row that never arrives; the pair names the whole track, so it
+                       belongs on the track's own axis. -->
+                  <StackPanel Orientation="Horizontal" Spacing="7" HorizontalAlignment="Center">
                     <TextBox Classes="nin" Text="{Binding HueMin}" />
                     <TextBlock Classes="ftimes" Text="—" VerticalAlignment="Center" />
                     <TextBox Classes="nin" Text="{Binding HueMax}" />
@@ -478,10 +500,15 @@
                   </Grid>
                   <Panel Classes="band">
                     <Border Classes="dualtrack" Background="{StaticResource SaturationRampBrush}" />
-                    <Slider Classes="overlay" Value="{Binding SatMin}" Minimum="0" Maximum="100" />
-                    <Slider Classes="overlay" Value="{Binding SatMax}" Minimum="0" Maximum="100" />
+                    <Slider Classes="overlay" Value="{Binding SatMin}" Minimum="0" Maximum="100"
+                            TickFrequency="1" IsSnapToTickEnabled="True" />
+                    <Slider Classes="overlay" Value="{Binding SatMax}" Minimum="0" Maximum="100"
+                            TickFrequency="1" IsSnapToTickEnabled="True" />
                   </Panel>
-                  <StackPanel Orientation="Horizontal" Spacing="7">
+                  <!-- Centered under the band, not flush left. Left-pinned they read as the
+                       start of a row that never arrives; the pair names the whole track, so it
+                       belongs on the track's own axis. -->
+                  <StackPanel Orientation="Horizontal" Spacing="7" HorizontalAlignment="Center">
                     <TextBox Classes="nin" Text="{Binding SatMin}" />
                     <TextBlock Classes="ftimes" Text="—" VerticalAlignment="Center" />
                     <TextBox Classes="nin" Text="{Binding SatMax}" />
@@ -495,18 +522,23 @@
                     <TextBlock Grid.Column="1" Classes="cv" Text="{Binding ApproxColorsText}" />
                   </Grid>
                   <!-- WIDTH IS A BUDGET here too: the rail is a fixed 300 and its body 13px in on
-                       each side, so this row has 274. At 112 apiece the second stepper's chevron ran
-                       off the edge. ColorizeRailLayoutTests holds the budget. -->
-                  <StackPanel Orientation="Horizontal" Spacing="10">
-                    <StackPanel Orientation="Horizontal" Spacing="5">
-                      <TextBlock Text="Hue" Classes="cshare" VerticalAlignment="Center" />
-                      <NumericUpDown Classes="qnt" Value="{Binding HueQuantize}" Minimum="1" Width="94" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="5">
-                      <TextBlock Text="Sat" Classes="cshare" VerticalAlignment="Center" />
-                      <NumericUpDown Classes="qnt" Value="{Binding SatQuantize}" Minimum="1" Width="94" />
-                    </StackPanel>
-                  </StackPanel>
+                       each side, so this row has 274. Two star columns rather than two left-pinned
+                       stacks, so the pair is symmetric about the rail's center line and each half
+                       spends the same share - which is also what stops one stepper from being the
+                       one that runs off the edge when a label changes width.
+                       ColorizeRailLayoutTests holds the budget. -->
+                  <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                    <Grid Grid.Column="0" ColumnDefinitions="Auto,*" ColumnSpacing="6">
+                      <TextBlock Grid.Column="0" Text="Hue" Classes="cshare" VerticalAlignment="Center" />
+                      <NumericUpDown Grid.Column="1" Classes="qnt" Value="{Binding HueQuantize}"
+                                     Minimum="1" Maximum="360" FormatString="0" />
+                    </Grid>
+                    <Grid Grid.Column="1" ColumnDefinitions="Auto,*" ColumnSpacing="6">
+                      <TextBlock Grid.Column="0" Text="Sat" Classes="cshare" VerticalAlignment="Center" />
+                      <NumericUpDown Grid.Column="1" Classes="qnt" Value="{Binding SatQuantize}"
+                                     Minimum="1" Maximum="100" FormatString="0" />
+                    </Grid>
+                  </Grid>
                 </StackPanel>
               </StackPanel>
 

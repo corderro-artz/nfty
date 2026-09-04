@@ -92,36 +92,17 @@
   <!-- The disabled fix above was Button-only, leaving Fluent's opaque gray slab on the editor's
        NumericUpDown/TextBox (the audit's #c7c3be / #3c3d40). Dim inputs the same way: opacity over
        the real surface, never a gray fill. -->
-  <!-- Fluent paints a disabled RepeatButton's wash on the presenter INSIDE it, not on the button,
-       and it is lighter than the button's normal ground - so a spinner arrow at its limit (the New
-       CookBook wizard's target supply, which opens at 0) was the one control in the app that got
-       BRIGHTER when it became unavailable, reading as hovered.
-
-       This has to be a top-level Style. Setting Background on the RepeatButton itself changes
-       nothing (verified off a rendered control: button Transparent, presenter still #33ffffff), and
-       the presenter is a second /template/ hop from the ButtonSpinner theme, which Avalonia rejects
-       - while a type-keyed ControlTheme never applies at all, because ButtonSpinner's template hands
-       its buttons an explicit Theme. From here the presenter is one hop and the rule lands.
-
-       Unscoped on purpose: every RepeatButton in this app is chrome someone else owns - two spinner
-       arrows, a Slider's two track halves, a ScrollBar's arrows - and "lighter means unavailable" is
-       backwards in all of them. A Slider is unaffected either way; its track buttons have no
-       ContentPresenter to match. Dimming a disabled input as a whole is the rule right below. -->
-  <Style Selector="RepeatButton:disabled /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="Transparent" />
-  </Style>
-
-  <!-- And transparent at REST too, which is what unclips the corner. A spinner's buttons are square
-       rectangles reaching to within a pixel of a control whose border is rounded, and their presenter
-       paints an opaque ground - the same color as the control behind it, so it is invisible
-       everywhere except over the corner arc, where it covers the curve and leaves a notch. That is
-       the notch on the WEIGHT field's bottom-right. Nothing is lost by not painting it: the ground
-       underneath is the same color. Pseudo-class-qualified so it beats the Template-priority
-       assignment Fluent makes on that presenter - the same trick the Slider thumb needs - and
-       :pointerover is excluded so hover feedback still lands. -->
-  <Style Selector="RepeatButton:not(:pointerover):not(:pressed) /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="Transparent" />
-  </Style>
+  <!-- THE TWO RepeatButton RULES THAT USED TO SIT HERE ARE GONE, and the reason is recorded because
+       they were correct when written. Fluent paints a disabled RepeatButton's wash on the presenter
+       INSIDE it, lighter than the button's own ground, so a spinner arrow at its limit was the one
+       control in the app that got BRIGHTER when it became unavailable; a second rule blanked the
+       presenter at rest too, because a square button's opaque ground covered the rounded corner of
+       the field it sat in and left a notch. Both were reaching into Fluent's ButtonSpinner template
+       from outside, which was the only way in. That template is ours now (Controls.axaml), the
+       chevron buttons carry their own two-element template with no Fluent state to neutralize, and
+       both rules matched nothing they were written for. An app-wide selector left in place after its
+       target is gone is worse than no rule: it still matches every OTHER RepeatButton - a Slider's
+       track halves, a ScrollBar's arrows - for reasons nobody wrote down. -->
   <Style Selector="NumericUpDown:disabled, TextBox:disabled, Slider:disabled">
     <Setter Property="Opacity" Value="0.38" />
   </Style>
@@ -299,6 +280,20 @@
   <Style Selector="Path.ico.sm">
     <Setter Property="Width" Value="13" /><Setter Property="Height" Value="13" />
     <Setter Property="RenderTransform" Value="scale(0.5417)" />   <!-- 13/24 -->
+  </Style>
+  <!-- The NumericUpDown stepper chevrons, in the 17px column the hand-authored ButtonSpinner
+       template gives them (Controls.axaml). RenderTransform scales the STROKE too, so the nominal
+       thickness is raised to land back on ~1.1px drawn - the same weight the 14px icons carry. -->
+  <Style Selector="Path.ico.st">
+    <Setter Property="Width" Value="10" /><Setter Property="Height" Value="10" />
+    <Setter Property="RenderTransform" Value="scale(0.4167)" />   <!-- 10/24 -->
+    <Setter Property="StrokeThickness" Value="2.6" />
+  </Style>
+  <!-- The chevron brightens with its button. This lives here rather than beside the stepper's own
+       ControlTheme because a ControlTheme may not contain a descendant selector at all - it throws
+       at load, not at build. A top-level Style may. -->
+  <Style Selector="RepeatButton:pointerover Path.ico.st">
+    <Setter Property="Stroke" Value="{DynamicResource FgBrush}" />
   </Style>
   <!-- On an accent fill the icon must switch to the on-accent ink, like the label does. -->
   <Style Selector="Button.accent Path.ico"><Setter Property="Stroke" Value="{DynamicResource OnAccentBrush}" /></Style>
@@ -1617,27 +1612,35 @@
     <Setter Property="TextAlignment" Value="Center" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
-  <!-- .nin: the mono end-inputs on a range control -->
+  <!-- THE TWO FIELD SIZES. Both classes below are FieldHeightSm - the compact numeric cell - and
+       that is the whole point of them: a rail that put 24px range boxes directly above 32px
+       quantize steppers read as two unrelated controls rather than two of the same kind. The sizes
+       are named in Tokens.axaml; nothing here restates a number.
+       .nin: the mono end-inputs on a range control (a TextBox), and the toolstrip's brush size (a
+       NumericUpDown wearing the same cell, so the strip reads as one row rather than a short input
+       beside a tall one). -->
   <Style Selector="TextBox.nin">
+    <!-- MinWidth 0 FIRST, or the Width below is a number nobody honors: Fluent's TextBox carries
+         TextControlThemeMinWidth (64), which beats a smaller Width and quietly rounded every one of
+         these boxes up. Measured, not read - the markup said 58 and the frame said 64. -->
+    <Setter Property="MinWidth" Value="0" />
     <Setter Property="Width" Value="58" />
-    <Setter Property="MinHeight" Value="24" />
+    <Setter Property="MinHeight" Value="{DynamicResource FieldHeightSm}" />
+    <Setter Property="Height" Value="{DynamicResource FieldHeightSm}" />
     <Setter Property="Padding" Value="4,0" />
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="11" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
     <Setter Property="TextAlignment" Value="Center" />
   </Style>
-  <!-- .nin on a NumericUpDown: the same mono numeric cell as the range inputs above, so the
-       toolstrip's brush-size field reads as one of them rather than a full-height Fluent input.
-       Width stays in the markup, where the strip's width budget is explained. One /template/ hop to
-       the TextBox Fluent puts inside; the spinner is switched off at the call site. -->
-  <Style Selector="NumericUpDown.nin">
-    <!-- 24, not Fluent's natural 32: this sits in a row with a 20px swatch and a 16px ramp, and a
-         box half again their height reads as a different row rather than the same one. The height
-         has to go on the INNER TextBox: that is what draws the border, and pinning only the outer
-         NumericUpDown clipped the box's top and bottom edges off. The outer control still measures
-         32 from its own template, but nothing paints there. -->
-    <Setter Property="MinHeight" Value="0" />
+  <!-- A NumericUpDown's height has to go on the INNER TextBox as well as the outer control: the
+       inner box is what draws the border, and it keeps a 32px floor of its own, so pinning only the
+       outer control clipped the box's top and bottom edges off while still reporting the height it
+       was asked for. One /template/ hop, which is the most a selector may cross. -->
+  <Style Selector="NumericUpDown.nin, NumericUpDown.qnt">
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="MinHeight" Value="{DynamicResource FieldHeightSm}" />
+    <Setter Property="Height" Value="{DynamicResource FieldHeightSm}" />
     <Setter Property="Padding" Value="0" />
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="11" />
@@ -1645,28 +1648,18 @@
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
-  <!-- The quantize steppers. Fluent's two spinner buttons take ~64 of the control's 94, and its
-       stock TextBox padding then took most of what was left: "30" rendered as "3" plus a sliver,
-       clipped, with the control still reporting the width it was asked for. Trim the inner box's
-       padding rather than widening the control: the row has 274px and only 16 spare, and every way
-       of buying width (wider control, tighter spacing) spends all 16 and leaves the next style
-       tweak nowhere to go. Padding 1 leaves 24px of text room against the 20.2px a three-digit
-       value needs - hue quantize reaches 360 and saturation 100, so three digits is the real
-       ceiling. One /template/ hop, which is the most a selector may cross. -->
-  <Style Selector="NumericUpDown.qnt /template/ TextBox">
-    <Setter Property="Padding" Value="1,0" />
-    <Setter Property="TextAlignment" Value="Center" />
-    <Setter Property="VerticalContentAlignment" Value="Center" />
-  </Style>
-
-  <Style Selector="NumericUpDown.nin /template/ TextBox">
+  <Style Selector="NumericUpDown.nin /template/ TextBox, NumericUpDown.qnt /template/ TextBox">
+    <Setter Property="MinWidth" Value="0" />
     <Setter Property="TextAlignment" Value="Center" />
     <!-- Vertically centered explicitly: Fluent's TextBox tops its content, which put the digits
          against the box's upper edge. -->
     <Setter Property="VerticalContentAlignment" Value="Center" />
+    <!-- Padding 4, not Fluent's 11: the chevron column is 17 wide now (it was ~64), so the text
+         cell is wide enough that the padding is a margin rather than a budget. Before the
+         ButtonSpinner template was hand-authored, "30" rendered here as "3" plus a sliver. -->
     <Setter Property="Padding" Value="4,0" />
     <Setter Property="MinHeight" Value="0" />
-    <Setter Property="Height" Value="24" />
+    <Setter Property="Height" Value="{DynamicResource FieldHeightSm}" />
   </Style>
 
   <Style Selector="TextBlock.cv">
