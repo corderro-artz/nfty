@@ -1,3 +1,6 @@
+using Avalonia.Headless;
+using System.Runtime.InteropServices;
+using System;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
@@ -181,5 +184,138 @@ public class WindowChromeTests
 
         // Hit-testable across the whole rectangle, not just the glyph's thin strokes.
         Assert.NotNull(((Border)grip).Background);
+    }
+
+    /// <summary>
+    /// The lock badge must not touch the window-button divider.
+    /// </summary>
+    /// <remarks>
+    /// The badge is the titlebar's last content column and the window buttons are the next one, and
+    /// that column opens with a 1px hairline carrying no left inset — so with no margin on the badge
+    /// its border and that hairline share an edge, and the pair reads as one control with a stripe
+    /// drawn down it. Measured off a laid-out frame in the titlebar's own coordinate space, because
+    /// what matters is the gap on screen and neither control's own properties state it.
+    ///
+    /// A floor of 8 rather than "more than zero": one pixel of daylight satisfies "not touching" and
+    /// still looks like a mistake, and this is the check that would otherwise pass while the defect
+    /// came back.
+    /// </remarks>
+    [AvaloniaFact]
+    public void The_lock_badge_does_not_touch_the_window_button_divider()
+    {
+        var nav = new FakeNav();
+        var dialogs = new FakeDialogs();
+        var session = new CookBookSession();
+        using var explorer = new ExplorerViewModel(ExplorerViewModelTests.TwoRecipeBook(), nav, dialogs,
+            new ImageBridge(), ExplorerViewModelTests.EditorFactory(nav),
+            ExplorerViewModelTests.CookFactory(dialogs), session, new FilePickerService(),
+            ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs), new StatusService());
+
+        var shell = new ShellViewModel(nav, dialogs, new StubTheme(), new StatusService());
+        nav.To(explorer);   // the badge only exists while an Explorer is the current page
+
+        var view = new Views.ShellChromeView { DataContext = shell };
+        var window = new Window { Content = view, Width = 1416, Height = 864 };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var titlebar = view.GetVisualDescendants().OfType<Border>().First(b => b.Name == "Titlebar");
+        var badge = view.GetVisualDescendants().OfType<Button>().First(b => b.Classes.Contains("lockflag"));
+
+        // The divider is the first child of the strip that ends in the close button — found by that
+        // relationship rather than by index, so re-ordering the buttons does not silently retarget it.
+        var strip = view.GetVisualDescendants().OfType<StackPanel>()
+            .First(sp => sp.Children.OfType<Button>().Any(b => b.Classes.Contains("danger")));
+        var divider = strip.Children.OfType<Border>().First();
+
+        double badgeRight = badge.TranslatePoint(new Point(badge.Bounds.Width, 0), titlebar)!.Value.X;
+        double dividerLeft = divider.TranslatePoint(new Point(0, 0), titlebar)!.Value.X;
+
+        Assert.True(dividerLeft - badgeRight >= 8,
+            $"the badge ends at {badgeRight} and the divider starts at {dividerLeft}");
+    }
+
+    /// <summary>
+    /// The brand mark's ink is centered in its tile — measured off a RENDERED frame.
+    /// </summary>
+    /// <remarks>
+    /// <para>The mark is a lowercase <c>n</c> turned 45 degrees. A rotation pivots on the glyph's
+    /// LINE BOX, and an <c>n</c> has neither ascender nor descender, so its ink sits low inside that
+    /// box and turning the box about its own centre swings the ink down and to the right. It shipped
+    /// 2.5 and 2.9 pixels out of the tile's middle, which at 24px reads as a mark stuck to one
+    /// corner. The view cancels it with a translate composed after the rotation.</para>
+    ///
+    /// <para>This has to render. Every property involved is already correct — the tile is centered,
+    /// the TextBlock is centered, the angle is right — and the defect lives entirely in where the
+    /// pixels land, which is the one thing the markup does not state. So the frame is captured and
+    /// the accent ink inside the tile is measured, exactly as it was found.</para>
+    ///
+    /// <para>The tolerance is 1px because that is what anti-aliasing costs on a diagonal stroke;
+    /// probing it by deleting the translate puts the error at 3, which fails.</para>
+    /// </remarks>
+    [AvaloniaFact]
+    public void The_brand_mark_is_centered_in_its_tile()
+    {
+        var view = new Views.ShellChromeView { DataContext = Shell() };
+        var window = new Window { RequestedThemeVariant = ThemeVariant.Dark, Content = view, Width = 1416, Height = 864 };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        // The tile is the Border that owns the mark, found through the glyph rather than by shape,
+        // so nothing else round and 24px wide can be measured by accident.
+        var glyph = view.GetVisualDescendants().OfType<TextBlock>().First(t => t.Classes.Contains("brandmark"));
+        var tile = glyph.GetVisualAncestors().OfType<Border>().First();
+
+        using var frame = window.CaptureRenderedFrame()!;
+
+        // Only the tile is copied out, not the whole 1416x864 frame: the rectangle is what the test
+        // is about, and reading it directly means no decode step and no image library.
+        // BOTH corners are translated, rather than an origin plus Bounds.Size. Bounds is in the
+        // tile's OWN coordinate space, which the shell's ChromeScale has not been applied to yet -
+        // using it samples a 24px window out of a tile that renders 28.8px wide, and a crop that
+        // clips one side biases the very center this test measures.
+        var topLeft = tile.TranslatePoint(new Point(0, 0), view)!.Value;
+        var bottomRight = tile.TranslatePoint(new Point(tile.Bounds.Width, tile.Bounds.Height), view)!.Value;
+        double scale = window.RenderScaling;
+        var rect = new PixelRect((int)(topLeft.X * scale), (int)(topLeft.Y * scale),
+                                 (int)((bottomRight.X - topLeft.X) * scale),
+                                 (int)((bottomRight.Y - topLeft.Y) * scale));
+        int stride = rect.Width * 4;
+        var pixels = Marshal.AllocHGlobal(stride * rect.Height);
+        int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
+        try
+        {
+            frame.CopyPixels(rect, pixels, stride * rect.Height, stride);
+
+            // The ink is the only saturated red in the tile: the wash behind it and the hairline
+            // around it are both dim, so a brightness floor separates the glyph from its container.
+            // RGBA: red leads. Checked against the frame rather than assumed from the format name -
+            // read as Bgra this finds no saturated red at all, which is how the order was caught.
+            for (int y = 0; y < rect.Height; y++)
+            for (int x = 0; x < rect.Width; x++)
+            {
+                int i = y * stride + x * 4;
+                byte r = Marshal.ReadByte(pixels, i);
+                byte g = Marshal.ReadByte(pixels, i + 1);
+                byte b = Marshal.ReadByte(pixels, i + 2);
+                if (r > 150 && r - g > 70 && r - b > 50)
+                {
+                    minX = Math.Min(minX, x); maxX = Math.Max(maxX, x);
+                    minY = Math.Min(minY, y); maxY = Math.Max(maxY, y);
+                }
+            }
+        }
+        finally { Marshal.FreeHGlobal(pixels); }
+        Assert.True(minX != int.MaxValue, "no accent ink found inside the brand tile");
+
+        // Both centers are put back into VIEW coordinates before comparing. The crop's own origin is
+        // an integer pixel and the tile's is not (ChromeScale is 1.2), so measuring the ink against
+        // the CROP's midpoint charges the mark for up to a pixel of truncation that is the crop's.
+        double inkX = rect.X + (minX + maxX) / 2.0, inkY = rect.Y + (minY + maxY) / 2.0;
+        double tileX = (topLeft.X + bottomRight.X) / 2.0 * scale - 0.5;
+        double tileY = (topLeft.Y + bottomRight.Y) / 2.0 * scale - 0.5;
+
+        Assert.True(Math.Abs(inkX - tileX) <= 1 && Math.Abs(inkY - tileY) <= 1,
+            $"the mark's ink centers at ({inkX}, {inkY}) in a tile centered ({tileX}, {tileY})");
     }
 }

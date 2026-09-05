@@ -3,6 +3,8 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <AssemblyTitle>nfty command line</AssemblyTitle>
+    <ApplicationIcon>..\Nfty.Desktop\nfty.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

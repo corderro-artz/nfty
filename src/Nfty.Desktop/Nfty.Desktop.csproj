@@ -4,6 +4,12 @@
     <OutputType>WinExe</OutputType>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- The same mark the titlebar wears, as a file Windows can use. Regenerate with
+         `python tools/icons/make-app-icon.py`, which draws it from the theme's own values rather
+         than from a screenshot, and tunes the 16px frame by hand - at that size the outlined tile
+         dissolves into a dark square, and 16 is the size in the taskbar. -->
+    <ApplicationIcon>nfty.ico</ApplicationIcon>
+    <AssemblyTitle>nfty</AssemblyTitle>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
   <ItemGroup>

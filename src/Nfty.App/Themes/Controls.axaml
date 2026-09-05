@@ -403,14 +403,17 @@
     <Setter Property="Padding" Value="0" />
     <Setter Property="Background" Value="Transparent" />
 
-    <!-- The mockup's caret (.tw) is a 13px box holding a 9px glyph; Fluent's default chevron is
-         roughly half again that and reads as the loudest thing in the row. -->
+    <!-- Fluent's default chevron is roughly half again this and reads as the loudest thing in the
+         row. 10, down from 13: the caret is a hint about a row, not a control competing with the
+         name beside it, and at 13 plus a 4px gap the carets and the indent together took more of a
+         narrow pane's width than the names did. The glyph keeps its size; only the box around it
+         shrinks, so the mark itself is no harder to hit or to see. -->
     <Style Selector="^ /template/ ToggleButton#PART_ExpandCollapseChevron">
-      <Setter Property="Width" Value="13" />
+      <Setter Property="Width" Value="10" />
       <Setter Property="Height" Value="13" />
       <Setter Property="FontSize" Value="9" />
       <Setter Property="Padding" Value="0" />
-      <Setter Property="Margin" Value="0,0,4,0" />
+      <Setter Property="Margin" Value="0,0,1,0" />
     </Style>
 
     <!-- Hover and selection are painted by Border.node in the item template, NOT here. PART_LayoutRoot

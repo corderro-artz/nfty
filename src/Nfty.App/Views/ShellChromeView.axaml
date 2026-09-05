@@ -73,18 +73,45 @@
               <Button Classes="bare" Command="{Binding CloseDocumentCommand}"
                       ToolTip.Tip="Close and return to the start screen  ·  Ctrl+W">
                 <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
+                  <!-- The mark is the product's own initial, turned 45 degrees, on the dim wash
+                       inside the brighter edge. It replaced a plain rotated square, which said
+                       nothing: a diamond is a shape every second app uses, and this one at least
+                       spells the name. Drawn in the app's own mono face rather than as a path so it
+                       cannot drift from the wordmark beside it, and rendered from the CENTRE so the
+                       rotation pivots about the glyph instead of swinging it out of its box. -->
                   <Border Width="24" Height="24" CornerRadius="{DynamicResource RadiusSm}"
                           Background="{DynamicResource AccentWashBrush}"
-                          BorderBrush="{DynamicResource AccentLineBrush}" BorderThickness="1">
-                    <Border Width="9" Height="9" CornerRadius="2" Background="{DynamicResource AccentBrush}">
-                      <Border.RenderTransform>
-                        <RotateTransform Angle="45" />
-                      </Border.RenderTransform>
-                    </Border>
+                          BorderBrush="{DynamicResource AccentLineBrush}" BorderThickness="1"
+                          ClipToBounds="True">
+                    <TextBlock Text="n" Classes="brandmark"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               RenderTransformOrigin="50%,50%">
+                      <!-- The rotation pivots on the LINE BOX, and an `n` has no ascender or
+                           descender: its ink sits low and slightly right inside that box, so turning
+                           the box about its own centre swings the ink down-right and out of the
+                           tile's middle - measured at 2.5 and 2.9 device-independent pixels off, on
+                           a captured frame rather than by eye. The translate cancels exactly that
+                           swing; it is not a nudge to taste, and it composes after the rotation
+                           because it corrects the rotation's result. -->
+                      <TextBlock.RenderTransform>
+                        <TransformGroup>
+                          <RotateTransform Angle="-45" />
+                          <TranslateTransform X="-2.5" Y="-3" />
+                        </TransformGroup>
+                      </TextBlock.RenderTransform>
+                    </TextBlock>
                   </Border>
                   <TextBlock Classes="wordmark" VerticalAlignment="Center"><Run Text="nft" /><Run Text="y" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
                 </StackPanel>
               </Button>
+              <!-- Carmine, not the LineStrong the Kitchen chip uses on either side of itself. This
+                   one separates the BRAND from the document, which is a different kind of boundary
+                   than one crumb from the next: everything left of it is the application and
+                   everything right of it is the file you have open. It is present whenever there is
+                   a trail to divide from. -->
+              <Border Width="1" Height="16" Background="{DynamicResource AccentBrush}" Opacity="0.75"
+                      IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
               <!-- Kitchen chip: the OPEN workspace, named. It used to read the literal word "Kitchen"
                    because none existed to name; it now shows the manifest's name and hides entirely
                    when no Kitchen is open, which is a normal state — a CookBook opened from anywhere
@@ -128,14 +155,27 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-            <Border Grid.Column="2" Classes="lockflag" VerticalAlignment="Center"
+            <!-- The badge IS the switch. There used to be a lock button in the toolbar one row
+                 below as well - two controls for one piece of state, with the badge reporting what
+                 the button did. A reader has to learn which of them acts. Pressing the badge is also
+                 the obvious guess, and it did nothing.
+                 Carmine outline and ink when unlocked, so the live mode is visible from across the
+                 room rather than by reading a word. -->
+            <!-- The right margin is not decoration: column 3 opens with the window-button divider
+                 and carries no left inset, so a badge with no margin sits flush against that hairline
+                 and the two read as one control with a stripe down it. 12 matches the brand's own
+                 inset on the far left, so both ends of the titlebar breathe by the same amount. -->
+            <Button Grid.Column="2" Classes="lockflag" VerticalAlignment="Center" Margin="0,0,12,0"
+                    Classes.editing="{Binding CurrentExplorer.IsEditing}"
+                    Command="{Binding CurrentExplorer.ToggleLockCommand}"
+                    ToolTip.Tip="{Binding CurrentExplorer.LockTip}"
                     IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}">
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <Path Classes="ico xs" Data="{StaticResource IconLock}" IsVisible="{Binding !CurrentExplorer.IsEditing}" />
                 <Path Classes="ico xs" Data="{StaticResource IconUnlock}" IsVisible="{Binding CurrentExplorer.IsEditing}" />
                 <TextBlock Classes="lockflag-txt" Text="{Binding CurrentExplorer.LockStateText}" />
               </StackPanel>
-            </Border>
+            </Button>
 
             <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
               <Border Width="1" Height="18" Background="{DynamicResource LineStrongBrush}" Margin="0,0,10,0" />

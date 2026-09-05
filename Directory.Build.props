@@ -14,7 +14,25 @@
       always be asked what it is - a released file that cannot identify itself is a support problem
       the first time somebody reports a bug against "the download".
     -->
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
+
+    <!--
+      WHO MADE THIS, stamped into every assembly. Windows reads these for the file's Details tab and
+      the UAC prompt, and a binary that cannot say who published it or under what licence is a
+      binary a person is right to be wary of downloading.
+
+      Copyright is a plain year rather than a build date: it is a legal claim about the work, not a
+      timestamp, and a value that changed every build would make two identical binaries differ.
+    -->
+    <Product>nfty</Product>
+    <Company>Vaporsoft</Company>
+    <Authors>Vaporsoft</Authors>
+    <Copyright>Copyright (c) 2026 Vaporsoft</Copyright>
+    <Description>Generates NFT-style asset collections by stacking layered pixel art, with grayscale value-maps colorized at generation time.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/corderro-artz/nfty</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/corderro-artz/nfty</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
 
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

@@ -20,13 +20,30 @@
                and a picture 92px square has no room to spare. It has moved into the stats row as
                the sample chip, beside the seed it changes, where it is a control among controls
                instead of a smudge on the art. -->
-          <Border Grid.Column="0" Margin="0,0,16,0"
-                  Width="92" Height="92" CornerRadius="{DynamicResource RadiusMd}"
-                  Background="{DynamicResource TileBrush}" ClipToBounds="True">
-            <Image Source="{Binding Hero}" Stretch="UniformToFill" />
-          </Border>
+          <!-- The picture and the control that changes it, as one column.
+               TOP-aligned, not centred: the card's text starts at the recipe's name, and a
+               vertically-centred 92px square floated the art half a line above it, so neither the
+               top nor the bottom of the two columns lined up with anything. Flush with the title is
+               the one alignment a reader can actually see.
+               And the sample chip lives HERE now rather than out at the end of the stats row, where
+               it trailed three recipe facts it is not one of - a recipe has no seed. Under the
+               picture it labels the thing it describes and is the button that rerolls it. -->
+          <StackPanel Grid.Column="0" Margin="0,0,16,0" Spacing="7" VerticalAlignment="Top">
+            <Border Width="92" Height="92" CornerRadius="{DynamicResource RadiusMd}"
+                    Background="{DynamicResource TileBrush}" ClipToBounds="True">
+              <Image Source="{Binding Hero}" Stretch="UniformToFill" />
+            </Border>
+            <Button Classes="sampleroll" Command="{Binding RerollCommand}"
+                    HorizontalAlignment="Center"
+                    ToolTip.Tip="The picture is ONE roll of this recipe, not a stored asset. Press to roll another. The seed is not part of the recipe.">
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <Path Classes="ico ti" Data="{StaticResource IconDiceFace}" />
+                <TextBlock Text="{Binding RollSeed, StringFormat='sample {0}'}" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
 
-          <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+          <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Top">
             <TextBlock Classes="mono" FontSize="17" FontWeight="Bold" Text="{Binding Name}" />
 
             <!-- .rfactors: the same variant-count arithmetic the cookbook's combination space shows,
@@ -75,17 +92,6 @@
                 <TextBlock Classes="statw" Text="{Binding RuleCountWord}" />
               </StackPanel>
 
-              <!-- The sample roll, which is NOT a fourth fact about the recipe - a recipe has no
-                   seed. It describes the picture, and it is the control that changes it, so it is
-                   a button and it says what pressing it does. "sample seed 1" as plain text in a
-                   row of recipe facts read as an error, which is exactly what a reader reported. -->
-              <Button Classes="sampleroll" Command="{Binding RerollCommand}"
-                      ToolTip.Tip="The picture is ONE roll of this recipe, not a stored asset. Press to roll another. The seed is not part of the recipe.">
-                <StackPanel Orientation="Horizontal" Spacing="5">
-                  <Path Classes="ico ti" Data="{StaticResource IconDiceFace}" />
-                  <TextBlock Text="{Binding RollSeed, StringFormat='sample {0}'}" />
-                </StackPanel>
-              </Button>
             </StackPanel>
           </StackPanel>
         </Grid>

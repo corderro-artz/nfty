@@ -27,8 +27,10 @@
           <ColumnDefinition Width="Auto" />
           <ColumnDefinition Width="Auto" />
           <ColumnDefinition Width="Auto" />
+          <!-- The trailing Auto column held a lock button. It is gone: the titlebar's read-only
+               badge IS the switch now, and two controls for one piece of state - one of them only
+               reporting what the other did - is a thing to learn rather than a thing to use. -->
           <ColumnDefinition Width="*" />
-          <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
         <Border Grid.Column="0" Classes="search" HorizontalAlignment="Stretch" Margin="0,0,10,0">
           <Grid ColumnDefinitions="Auto,*,Auto">
@@ -60,13 +62,6 @@
             <Path Classes="ico sm" Data="{StaticResource IconImport}" />
             <TextBlock Text="Import" />
           </StackPanel>
-        </Button>
-        <Button Grid.Column="5" Command="{Binding ToggleLockCommand}" Classes="icon" Classes.unlocked="{Binding IsEditing}"
-                ToolTip.Tip="{Binding LockTip}">
-          <Panel>
-            <Path Classes="ico" Data="{StaticResource IconLock}" IsVisible="{Binding !IsEditing}" />
-            <Path Classes="ico" Data="{StaticResource IconUnlock}" IsVisible="{Binding IsEditing}" />
-          </Panel>
         </Button>
       </Grid>
     </Border>
@@ -105,7 +100,9 @@
                   <Border Grid.Column="0" Classes="guide" IsVisible="{Binding !IsRoot}" />
                   <!-- The node box, and only it, takes the hover/selected wash - so the highlight
                        starts after the guide rather than behind the indent. -->
-                  <Border Grid.Column="1" Classes="node" Margin="12,0,0,0"
+                  <!-- 6, not 12. The node sat that far right of its own caret, which put every
+                       name a third of the way across a narrow pane before it started. -->
+                  <Border Grid.Column="1" Classes="node" Margin="6,0,0,0"
                           Classes.sel="{Binding $parent[TreeViewItem].IsSelected}">
                   <StackPanel Orientation="Horizontal" Spacing="8">
                     <!-- .ti type mark, on every node -->

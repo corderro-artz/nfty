@@ -76,11 +76,14 @@
 
         <TextBlock Classes="sub-h" Text="MINT DISTRIBUTION" Margin="0,16,0,9" />
 
-        <!-- PROPORTIONAL WIDTHS: each segment's Width is bound through PercentToWidthConverter
-             (SharePercent * 3.1) inside a fixed-width Border.distbar, so segment widths stay
-             proportional to SharePercent without a Grid built from a variable number of star
-             columns (Recipes.Count isn't known until runtime). -->
-        <Border Classes="distbar" Width="310" HorizontalAlignment="Left">
+        <!-- FULL WIDTH, and therefore multi-bound. This was a 310px track with each segment sized
+             by SharePercent * 3.1 - a constant that is only exact while the track is exactly 310,
+             and it left the bar stopping a third of the way across a panel whose other two sections
+             already run edge to edge. Stretched, the constant stops being exact, so the segments
+             take their share of the track's OWN measured width through ShareWidthConverter - which
+             is precisely the rule the recipe mix bar (.cbar) already follows and the one CLAUDE.md
+             records for a bar in a flexible track. -->
+        <Border Classes="distbar" HorizontalAlignment="Stretch">
           <ItemsControl ItemsSource="{Binding Recipes}">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
@@ -92,8 +95,14 @@
                 <Border Height="16" Classes="series"
                         Classes.s1="{Binding IsSeries1}" Classes.s2="{Binding IsSeries2}"
                         Classes.s3="{Binding IsSeries3}" Classes.s4="{Binding IsSeries4}"
-                        Classes.s5="{Binding IsSeries5}" Classes.s6="{Binding IsSeries6}"
-                        Width="{Binding SharePercent, Converter={x:Static conv:PercentToWidthConverter.ForBarWidth310}}" />
+                        Classes.s5="{Binding IsSeries5}" Classes.s6="{Binding IsSeries6}">
+                  <Border.Width>
+                    <MultiBinding Converter="{x:Static conv:ShareWidthConverter.Instance}">
+                      <Binding Path="SharePercent" />
+                      <Binding Path="$parent[ItemsControl].Bounds.Width" />
+                    </MultiBinding>
+                  </Border.Width>
+                </Border>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>

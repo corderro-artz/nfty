@@ -900,10 +900,97 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
 
     private Task ShowError(string title, string message) =>
         _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, title, message));
-    /// <summary>Importing a loose file opens it as its own document, which is a start-screen action;
-    /// importing INTO the open cookbook isn't built yet, so say that rather than nothing.</summary>
-    [RelayCommand] private void Import() =>
-        _status.Say("Importing into an open cookbook isn't available yet - use Import on the start screen to open a loose file.");
+    /// <summary>
+    /// Brings a loose <c>.rcp</c> or <c>.igt</c> into the open CookBook.
+    /// </summary>
+    /// <remarks>
+    /// <para>This used to say "isn't available yet" and do nothing else — honest, and still a button
+    /// that did not work. Importing is how a Kitchen's loose parts get INTO a project, so a CookBook
+    /// you cannot import into makes the Kitchen a place things only leave.</para>
+    ///
+    /// <para>Where an ingredient lands is decided by the SELECTION, not by asking: a layer belongs
+    /// to a recipe, and the one you are looking at is the one you mean. With a recipe selected it
+    /// goes there; with one of its layers selected it goes beside that layer; with the book itself
+    /// selected there is no answer to guess at, so it says which recipe to pick rather than choosing
+    /// one. A recipe has no such ambiguity — it goes into the book.</para>
+    ///
+    /// <para>Both paths go through the same seams the wizards use (<see cref="CookBookEdits"/> then
+    /// <see cref="CookBookPersistence"/>), so an import is validated, saved and re-selected exactly
+    /// as an Add is, and the edit lock governs it because adding a layer is structure.</para>
+    /// </remarks>
+    [RelayCommand]
+    private async Task Import()
+    {
+        if (!CanEditBook("import into this cookbook")) return;
+
+        string? path = await _picker.OpenFileAsync("Import into this CookBook", ".rcp", ".igt");
+        if (path is null) return;   // canceled
+
+        try
+        {
+            if (path.EndsWith(".rcp", StringComparison.OrdinalIgnoreCase))
+                await ImportRecipe(path);
+            else
+                await ImportIngredient(path);
+        }
+        catch (Exception ex)
+        {
+            await ShowError("Could not import", ex.Message);
+        }
+    }
+
+    /// <summary>Adds a loose recipe to the book, at the weight its siblings average.</summary>
+    /// <remarks>
+    /// The average rather than a literal 100: a book whose recipes are weighted 10 and 20 would
+    /// otherwise get a newcomer that outweighs both of them put together, which is a mix nobody
+    /// asked for. An empty book falls back to 100, which is the number the wizard also starts from.
+    /// </remarks>
+    private async Task ImportRecipe(string path)
+    {
+        var recipe = RecipeArchive.Read(path);
+        try
+        {
+            double weight = _book.Manifest.RecipeWeights.Count > 0
+                ? _book.Manifest.RecipeWeights.Values.Average()
+                : 100;
+
+            var next = CookBookEdits.UpsertRecipe(_book, recipe, weight);
+            recipe = null;   // the new graph owns it
+            var saved = await CookBookPersistence.PersistAsync(_session, next);
+            ApplyBook(saved, selectId: null, revalidate: true);
+            _status.Say($"Imported recipe “{Path.GetFileNameWithoutExtension(path)}”.");
+        }
+        finally { recipe?.Dispose(); }
+    }
+
+    /// <summary>Adds a loose ingredient to whichever recipe the selection is in.</summary>
+    private async Task ImportIngredient(string path)
+    {
+        // The recipe the selection is in: the recipe itself, or the one that owns the selected
+        // layer. Neither means the book node is selected, and there is nothing to infer from that.
+        LoadedRecipe? target = SelectedNode?.Domain switch
+        {
+            LoadedRecipe r => r,
+            (LoadedRecipe r, LoadedIngredient _) => r,
+            _ => null,
+        };
+        if (target is null)
+        {
+            _status.Say("Select the recipe to import the layer into first — a layer belongs to one recipe.");
+            return;
+        }
+
+        var ing = IngredientArchive.Read(path);
+        try
+        {
+            var next = CookBookEdits.UpsertIngredient(_book, target.Manifest.Id, ing);
+            ing = null;   // the new graph owns it
+            var saved = await CookBookPersistence.PersistAsync(_session, next);
+            ApplyBook(saved, selectId: null, revalidate: true);
+            _status.Say($"Imported “{Path.GetFileNameWithoutExtension(path)}” into {target.Manifest.Name}.");
+        }
+        finally { ing?.Dispose(); }
+    }
     [RelayCommand] private void SelectNode(ExplorerNode node) => SelectedNode = node;
     /// <summary>Clicking a layer in the recipe detail jumps to that ingredient in the tree.</summary>
     [RelayCommand]

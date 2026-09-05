@@ -2280,16 +2280,59 @@
   </Style>
 
   <!-- edit-lock state pill (explorer.html .lockflag) -->
-  <Style Selector="Border.lockflag">
+  <!-- A Button now, not a Border: the badge is the lock switch, and the toolbar's separate lock
+       button is gone. Two controls for one piece of state, one of them merely reporting what the
+       other did, is a thing to learn rather than a thing to use - and pressing the badge was the
+       obvious guess, which previously did nothing at all. -->
+  <Style Selector="Button.lockflag">
+    <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
     <Setter Property="Padding" Value="10,4" />
+    <Setter Property="Cursor" Value="Hand" />
   </Style>
+  <Style Selector="Button.lockflag:pointerover">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+  <!-- Fluent paints the hover and pressed wash on the presenter, never on the button. -->
+  <Style Selector="Button.lockflag:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+  </Style>
+  <Style Selector="Button.lockflag:pressed /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+  </Style>
+  <!-- UNLOCKED reads as a live mode: carmine edge and carmine ink, so the state is visible without
+       reading the word. Declared after the base rule, which is how a narrower opt-out wins here. -->
+  <Style Selector="Button.lockflag.editing">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+  <!-- The titlebar mark: the product's initial, turned 45 degrees inside its box. Sized and weighted
+       to fill that 24px square once rotated - a diagonal glyph needs less point size than an upright
+       one to occupy the same width, which is why this is smaller than it looks like it should be. -->
+  <Style Selector="TextBlock.brandmark">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+    <Setter Property="LineHeight" Value="14" />
+  </Style>
+
   <Style Selector="TextBlock.lockflag-txt">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <!-- AFTER TextBlock.lockflag-txt, not before it. Avalonia is last-one-wins at equal specificity,
+       and these were originally declared up with the button: the base rule then re-muted the text
+       every time, so the unlocked badge drew a carmine border around a grey word. The rule is
+       documented in CLAUDE.md and it still caught me. -->
+  <Style Selector="Button.lockflag.editing TextBlock.lockflag-txt">
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+  <Style Selector="Button.lockflag.editing Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
   </Style>
 
   <!-- status bar text (explorer.html .statusbar: mono 11.5px, tabular numerals) -->
@@ -2350,6 +2393,21 @@
   </Style>
 
   <!-- status bar help trigger: accent-wash tile (explorer.html .helpbtn) -->
+  <!-- It had no hover state at all, so the one control in the status bar that looks like a button
+       felt dead under the pointer. Everything else down there either lights up or is text. -->
+  <Style Selector="Button.helpbtn:pointerover">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+  </Style>
+  <Style Selector="Button.helpbtn:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+  </Style>
+  <Style Selector="Button.helpbtn:pointerover Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+  <Style Selector="Button.helpbtn:pressed /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+  </Style>
+
   <Style Selector="Button.helpbtn">
     <Setter Property="Width" Value="24" />
     <Setter Property="Height" Value="24" />
