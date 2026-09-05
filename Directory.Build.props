@@ -14,7 +14,7 @@
       always be asked what it is - a released file that cannot identify itself is a support problem
       the first time somebody reports a bug against "the download".
     -->
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
 
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

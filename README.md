@@ -17,7 +17,7 @@ Same cookbook and same seed produce byte-identical output — on any machine, in
 architecture. That is a guarantee the test suite enforces rather than a hope.
 
 > **Using the app rather than working on it?** Read the
-> **[User Manual](https://corderro-artz.github.io/nfty/)** instead. This file is for developers.
+> **[User Manual](https://www.vaporsoft.dev/nfty/)** instead. This file is for developers.
 > (Its source is in [`docs/manual/`](docs/manual/index.md).)
 >
 > The manual is a Material for MkDocs site — `pip install -r docs/requirements.txt`
@@ -52,8 +52,12 @@ the desktop app and the command line.
 |---|---|---|
 | **Portable** | 84 MB | no — unzip anywhere and run. Start here if you are unsure. |
 | **Single file** | 76 MB | no — one `.exe`. Unpacks itself on first run, so that launch is slower. |
-| **Single file, .NET** | 30 MB | yes — one `.exe`, runtime left out. |
-| **Framework-dependent** | 14 MB | yes — the smallest, as a folder. |
+| **Single file, .NET** | 14 MB | yes — one `.exe`, runtime left out. |
+| **Framework-dependent** | 14 MB | yes — the same, as a folder. |
+
+Sizes are the download. The two `.NET` builds need the
+[.NET 10 desktop runtime](https://dotnet.microsoft.com/download/dotnet/10.0); the other two carry
+everything.
 
 nfty keeps its settings in a `.nfty` folder **beside the executable**, so a copy carries its own
 recent-files list and palette and writes nothing elsewhere. Move or delete the folder and nothing is
