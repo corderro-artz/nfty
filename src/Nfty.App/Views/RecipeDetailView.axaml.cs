@@ -54,16 +54,46 @@ public partial class RecipeDetailView : UserControl
         // them. "Done" for a numeric field is losing focus or pressing Enter, and both are handled
         // here rather than per row because the rows are templated and there is no per-row code.
         _rows.AddHandler(LostFocusEvent, OnChanceLostFocus, RoutingStrategies.Bubble);
+
+        // Enter needs handledEventsToo. Focus rests in the field's inner PART_TextBox, and a TextBox
+        // marks Enter HANDLED before the event leaves the control — so the view's own OnKeyDown,
+        // registered the ordinary way, never saw it and the Enter half of "done" did nothing. Narrow
+        // on purpose: taking handled events on the whole view would also hand Escape and Alt+Up/Down
+        // to keys a child has already dealt with.
+        _rows.AddHandler(KeyDownEvent, OnChanceKeyDown, RoutingStrategies.Bubble, handledEventsToo: true);
     }
 
     /// <summary>The layer row a chance field belongs to, or null for any other control.</summary>
+    /// <remarks>
+    /// Walks UP from the source rather than testing it, because focus does not rest on the
+    /// NumericUpDown — it goes to the <c>PART_TextBox</c> inside the template, and every event that
+    /// matters is sourced there. Testing the source directly matched exactly one thing: the
+    /// LostFocus the NumericUpDown raises while handing focus INWARD, which fires as the user
+    /// arrives and carries the value they have not typed yet. The departure, sourced at the
+    /// TextBox, was ignored — so the field committed on Enter and silently discarded everything
+    /// else. No ViewModel test could see it: they all call CommitAbsentAsync themselves.
+    /// </remarks>
     private static LayerRow? ChanceRow(object? source) =>
-        source is NumericUpDown { Name: "AbsentField" } f ? f.Tag as LayerRow : null;
+        (source as Visual)?.FindAncestorOfType<NumericUpDown>(includeSelf: true)
+            is { Name: "AbsentField" } f ? f.Tag as LayerRow : null;
 
     private void OnChanceLostFocus(object? sender, RoutedEventArgs e)
     {
         if (DataContext is RecipeDetailViewModel vm && ChanceRow(e.Source) is { } row)
             _ = vm.CommitAbsentAsync(row);
+    }
+
+    /// <summary>Enter commits a chance without waiting for focus to go somewhere else — the other
+    /// half of "done being edited", and the half a user reaches for when the field is the last thing
+    /// they touched.</summary>
+    private void OnChanceKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter) return;
+        if (DataContext is RecipeDetailViewModel vm && ChanceRow(e.Source) is { } row)
+        {
+            e.Handled = true;
+            _ = vm.CommitAbsentAsync(row);
+        }
     }
 
     // ---- drag ---------------------------------------------------------------------------------
@@ -199,17 +229,10 @@ public partial class RecipeDetailView : UserControl
     /// page, towards #1 — which is why #1's meaning is spelled out in the header hint.</summary>
     private async void OnKeyDown(object? sender, KeyEventArgs e)
     {
-        // Enter commits a chance without waiting for focus to go somewhere else — the other half of
-        // "done being edited". Checked first because it belongs to the field, not to the table, and
-        // must not fall through to the reorder keys below.
-        if (e.Key == Key.Enter && DataContext is RecipeDetailViewModel chanceVm
-            && ChanceRow(e.Source) is { } chanceRow)
-        {
-            e.Handled = true;
-            await chanceVm.CommitAbsentAsync(chanceRow);
-            return;
-        }
-
+        // Enter is NOT handled here. It used to be, and it could never fire: this handler is
+        // registered the ordinary way, and the TextBox inside the chance field marks Enter handled
+        // before it gets this far. OnChanceKeyDown takes it instead, on the rows, handledEventsToo.
+        //
         // Esc abandons a drag. Checked before the Alt gate, because Esc carries no modifier — and a
         // captured drag has no other way out: every other route (release, capture lost) commits or
         // has already ended it.
