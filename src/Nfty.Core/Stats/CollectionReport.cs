@@ -34,8 +34,51 @@ public static class CollectionReport
             sb.AppendLine(string.Create(CultureInfo.InvariantCulture,
                 $"  {t.RecipeName,-12} {t.IngredientName,-14} {t.VariantName,-14} {t.OverallPercent,6:0.00}%"));
 
+        AppendOptionalLayers(sb, book);
         sb.AppendLine(UniqueDnaLine(book));
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// The layers that may be left out, and how often. Printed only when a book uses them, so a
+    /// book that does not renders byte-identically to before the feature existed — these reports
+    /// get copied between machines and compared, and a new empty heading would make two identical
+    /// collections look different.
+    /// </summary>
+    /// <remarks>
+    /// It earns its place beside the trait table rather than duplicating it. The trait percentages
+    /// above already fold absence in, so a chase item reads correctly there — but they cannot say
+    /// WHY it is rare, and "this variant is one of two on a layer that shows up 10% of the time" is
+    /// a different fact from "this variant has a low weight". This section is the second one.
+    /// </remarks>
+    private static void AppendOptionalLayers(StringBuilder sb, LoadedCookBook book)
+    {
+        var rows = new List<(string Recipe, string Layer, double Percent)>();
+        foreach (var r in book.Recipes)
+        {
+            var ingById = new Dictionary<string, LoadedIngredient>(StringComparer.Ordinal);
+            foreach (var i in r.Ingredients) ingById[i.Manifest.Id] = i;
+
+            // In layerOrder, like every other per-layer listing in this product, so the same layers
+            // are not shuffled between two reports one command apart.
+            foreach (var id in r.Manifest.LayerOrder)
+            {
+                double pct = r.Manifest.AbsentPercentOf(id);
+                if (pct <= 0) continue;
+                string name = ingById.TryGetValue(id, out var ing) ? ing.Manifest.Name : id;
+                rows.Add((r.Manifest.Name, name, pct));
+            }
+        }
+
+        if (rows.Count == 0) return;
+
+        sb.AppendLine("Optional layers:");
+        foreach (var (recipe, layer, pct) in rows)
+            sb.AppendLine(pct >= 100
+                ? string.Create(CultureInfo.InvariantCulture,
+                    $"  {recipe,-12} {layer,-14} never appears")
+                : string.Create(CultureInfo.InvariantCulture,
+                    $"  {recipe,-12} {layer,-14} absent {pct,6:0.00}%  present {100 - pct,6:0.00}%"));
     }
 
     /// <summary>The largest number of unique-DNA assets this CookBook can produce — the figure

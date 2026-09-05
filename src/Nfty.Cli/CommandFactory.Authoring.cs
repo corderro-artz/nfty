@@ -227,6 +227,91 @@ public static partial class CommandFactory
     }
 
     /// <summary>
+    /// The `set` command group: change one property of an existing archive in place. Distinct from
+    /// `add`, which appends something that was not there.
+    /// </summary>
+    public static Command SetGroup()
+    {
+        var group = new Command("set", "Change a property of an existing archive.");
+        group.Subcommands.Add(SetChance());
+        return group;
+    }
+
+    /// <summary>
+    /// `set chance`. How often a layer is left out of an asset entirely — the "does this accessory
+    /// show up at all" dial, as opposed to the variant weights, which decide WHICH one shows up.
+    ///
+    /// <para>It is set on the RECIPE and could not be set anywhere else: an .igt is a standalone
+    /// file a Kitchen hands to any project, so whether a Hat appears is a property of this
+    /// composition rather than of the hat artwork. The same ingredient is guaranteed in one recipe
+    /// and a chase item in another.</para>
+    /// </summary>
+    private static Command SetChance()
+    {
+        var rcpPath = new Argument<string>("rcp") { Description = "Path to the .rcp to modify in place." };
+        var id = new Option<string>("--id")
+        {
+            Description = "Ingredient id of the layer — an id, not its display name. Run inspect on "
+                + "the .rcp to list them.",
+            Required = true,
+        };
+        var absent = new Option<double>("--absent")
+        {
+            Description = "How often the layer is left out, as a PERCENT. 0 always appears and "
+                + "clears the setting; 100 never appears, which shelves the layer without deleting "
+                + "it — the same meaning a recipe weight of 0 carries. The variants' own weights "
+                + "decide which one shows up when it does, and are untouched by this.",
+            Required = true,
+        };
+        absent.Validators.Add(r =>
+        {
+            double v = r.GetValueOrDefault<double>();
+            if (!double.IsFinite(v) || v < 0 || v > 100)
+                r.AddError("--absent is a percent: it must be between 0 and 100.");
+        });
+
+        var cmd = new Command("chance", "Set how often a layer is left out of an asset entirely.")
+            { rcpPath, id, absent };
+        cmd.SetAction(parse =>
+        {
+            string path = parse.GetValue(rcpPath)!;
+            using var recipe = RecipeArchive.Read(path);
+
+            string ingredientId = parse.GetValue(id)!;
+            double percent = parse.GetValue(absent);
+
+            // Checked HERE as well as in AbsentChance, for the reason `remove rule --at` already
+            // records: the library guard throws ArgumentException, whose Message appends
+            // "(Parameter 'ingredientId')" — and there is no `ingredientId` on this command line,
+            // there is `--id`. A guard phrased for a caller is the wrong sentence to show a person.
+            if (!recipe.Manifest.LayerOrder.Contains(ingredientId, StringComparer.Ordinal))
+                throw new InvalidOperationException(
+                    $"--id '{ingredientId}' is not a layer of recipe '{recipe.Manifest.Id}'. Run "
+                    + "inspect on the .rcp to list its layers with their ids.");
+
+            var manifest = AbsentChance.Set(recipe.Manifest, ingredientId, percent);
+            var merged = new LoadedRecipe { Manifest = manifest, Ingredients = recipe.Ingredients };
+            var problems = Validator.ValidateRecipe(merged);
+            if (problems.Count > 0) { Report(problems); return 1; }
+
+            // Read(path) closed its file handle before returning, so it's safe to replace the file
+            // now. RecipeArchive.Write opens in ZipArchiveMode.Create, which throws if the target
+            // already exists, so we write to a sibling temp file and move it into place.
+            WriteReplacing(path, p => RecipeArchive.Write(p, manifest, recipe.Ingredients));
+            Console.WriteLine(percent == 0
+                ? $"Layer '{ingredientId}' now always appears in {path}"
+                : $"Layer '{ingredientId}' is now left out {Pct(percent)} of the time in {path}");
+            return 0;
+        });
+        return cmd;
+    }
+
+    /// <summary>A percent as a person reads it: no trailing zeros, and invariant so a report copied
+    /// between machines says the same thing.</summary>
+    internal static string Pct(double percent) =>
+        percent.ToString("0.##", CultureInfo.InvariantCulture) + "%";
+
+    /// <summary>
     /// The `remove` command group. One subcommand so far, and it exists because `add rule` without
     /// it would be a one-way door: a rule written by mistake could only be taken back by unzipping
     /// the archive and editing the JSON, which is the state the whole feature is here to end.

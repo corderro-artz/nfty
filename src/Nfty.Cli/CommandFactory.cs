@@ -45,6 +45,7 @@ public static partial class CommandFactory
         root.Subcommands.Add(AddGroup());
         root.Subcommands.Add(MoveGroup());
         root.Subcommands.Add(RemoveGroup());
+        root.Subcommands.Add(SetGroup());
         return root;
     }
 
@@ -156,7 +157,8 @@ public static partial class CommandFactory
         foreach (var i in recipe.Ingredients) byId[i.Manifest.Id] = i;
         foreach (var layerId in recipe.Manifest.LayerOrder)
         {
-            if (byId.TryGetValue(layerId, out var ing)) PrintIngredient(ing, indent + "  ");
+            if (byId.TryGetValue(layerId, out var ing))
+                PrintIngredient(ing, indent + "  ", recipe.Manifest.AbsentPercentOf(layerId));
             else Console.WriteLine($"{indent}  Ingredient: <missing '{layerId}'>");
         }
 
@@ -173,7 +175,23 @@ public static partial class CommandFactory
         // while nothing on the command line took an ingredient id — and stopped being fine the
         // moment `add rule --when` did: the id was the one thing the user needed and the one thing
         // inspect would not tell them. Found by driving the command, not by a test.
-        Console.WriteLine($"{indent}Ingredient: {ing.Manifest.Name} [{ing.Manifest.Id}] ({ing.Manifest.Kind})");
+        PrintIngredient(ing, indent, absentPercent: 0);
+    }
+
+    /// <summary>
+    /// One ingredient, with the chance its owning recipe leaves it out. The chance lives on the
+    /// RECIPE, so it is passed in rather than read off the ingredient — an .igt inspected on its own
+    /// has no owning recipe and therefore no chance to print, which is exactly right.
+    /// </summary>
+    private static void PrintIngredient(LoadedIngredient ing, string indent, double absentPercent)
+    {
+        string absent = absentPercent > 0
+            ? absentPercent >= 100
+                ? "  never appears"
+                : $"  absent {Pct(absentPercent)}"
+            : string.Empty;
+        Console.WriteLine(
+            $"{indent}Ingredient: {ing.Manifest.Name} [{ing.Manifest.Id}] ({ing.Manifest.Kind}){absent}");
         foreach (var v in ing.Manifest.Variants)
             Console.WriteLine($"{indent}  Variant: {v.Name} [{v.Id}] (w={v.Weight})");
     }
