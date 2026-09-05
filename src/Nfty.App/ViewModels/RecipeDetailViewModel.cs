@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
@@ -71,7 +72,19 @@ public record RuleTargetRow(string Ingredient, string Variant);
 /// <param name="IsExclude">True for an exclude rule, false for a require — which picks the glyph.</param>
 /// <param name="When">The trigger.</param>
 /// <param name="Targets">What it forbids or requires.</param>
-public record RuleRow(bool IsExclude, RuleTargetRow When, IReadOnlyList<RuleTargetRow> Targets);
+public record RuleRow(bool IsExclude, RuleTargetRow When, IReadOnlyList<RuleTargetRow> Targets)
+{
+    /// <summary>The relationship as one word, printed under the mark. The mark alone was a
+    /// vocabulary the reader had to learn before the panel said anything.</summary>
+    public string ShortText => IsExclude ? "never" : "always";
+
+    /// <summary>The relationship spelled out. Require is stated as a CONJUNCTION on purpose: the
+    /// enum's own documentation said "one of the targets" until it was corrected, and a reader who
+    /// believes that will write a rule that does the opposite of what they meant.</summary>
+    public string RelationTip => IsExclude
+        ? "Never together — if this variant is rolled, none of these may be."
+        : "Always together — if this variant is rolled, every one of these must be too.";
+}
 
 public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
 {
@@ -131,6 +144,14 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
     /// <summary>"N rules", pluralised.</summary>
     public string RuleCountText { get; }
 
+    /// <summary>Just the number, for the panel header's badge. Separate from
+    /// <see cref="RuleCountText"/>, which is the hero's "2 rules" sentence — a badge that read
+    /// "2 rules" beside a heading that already reads RULES says the word twice.</summary>
+    public string RulesBadgeText { get; }
+
+    /// <summary>Whether the panel shows its table or its empty state.</summary>
+    public bool HasRules => Rules.Count > 0;
+
     /// <summary>Builds the Recipe detail pane.</summary>
     /// <param name="recipe">The recipe to describe.</param>
     /// <param name="book">Its owning book, for the canvas and a sample roll.</param>
@@ -172,6 +193,7 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
         int variants = ordered.Sum(i => i.Manifest.Variants.Count);
         VariantCountText = variants == 1 ? "1 variant" : $"{variants} variants";
         RuleCountText = Rules.Count == 1 ? "1 rule" : $"{Rules.Count} rules";
+        RulesBadgeText = Rules.Count.ToString(CultureInfo.InvariantCulture);
 
         _hero = BuildHero();
     }

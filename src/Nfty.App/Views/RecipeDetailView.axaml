@@ -8,9 +8,9 @@
              x:Class="Nfty.App.Views.RecipeDetailView"
              x:DataType="vm:RecipeDetailViewModel"
              RenderOptions.BitmapInterpolationMode="None">
-  <!-- Recipe detail body: 2-column layout (explorer.html:356-361 .recipe-grid / .recipe-main / .recipe-rules).
-       Main column: portrait hero (.rhero, explorer.html:283-296) + layer table (table.data, explorer.html:833).
-       Rail column: incompatibility rules panel (.rules-panel, explorer.html:365-382). -->
+  <!-- Recipe detail body: a 2-column layout — a main column carrying the portrait hero and the
+       full-width layer table, beside a rules rail.
+       Rail column: the incompatibility rules panel. -->
   <Grid Margin="16" ColumnDefinitions="*,300">
     <StackPanel Grid.Column="0" Spacing="14" Margin="0,0,16,0">
       <Border Classes="rhero">
@@ -132,57 +132,92 @@
       </StackPanel>
     </StackPanel>
 
+    <!-- RULES, as a table. The panel used to stack two bordered chips per rule with the relation
+         carried only by a 20px mark in the gutter and its tooltip, which meant the reader had to
+         learn a symbol vocabulary to know whether a rule forbade or demanded — and a two-target
+         rule read as two separate rules, because nothing said where one ended.
+         Column heads name the two sides ONCE, the mark keeps its badge but gains the word under it,
+         and a rule's targets stack in the right cell where their shared row makes them obviously
+         one rule. Three designs were rendered at the real 300px width before this one was picked;
+         it is the only one that shows a realistic rule set without scrolling, and a rail is the
+         worst place in this app to hide content behind a scrollbar.
+         The heads say LAYER twice rather than WHEN/THEN because an exclude rule is SYMMETRIC —
+         "these two never appear together" reads the same in both directions — and only require has
+         a direction. A directional heading over a symmetric relation would be a small lie in half
+         the rows. -->
     <Border Grid.Column="1" Classes="rules-panel" VerticalAlignment="Stretch">
-      <StackPanel Spacing="10">
-        <TextBlock Classes="sub-h" Text="RULES" />
+      <Grid RowDefinitions="Auto,Auto,Auto,*">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0" Classes="sub-h" Text="RULES" VerticalAlignment="Center" />
+          <Border Grid.Column="1" Classes="tabcount" IsVisible="{Binding HasRules}">
+            <TextBlock Text="{Binding RulesBadgeText}" />
+          </Border>
+        </Grid>
 
-        <TextBlock Classes="muted" Text="No incompatibility rules"
-                   IsVisible="{Binding Rules, Converter={x:Static conv:CollectionConverters.IsEmpty}}" />
+        <TextBlock Grid.Row="1" Classes="muted" Text="No incompatibility rules"
+                   Margin="0,12,0,0" IsVisible="{Binding !HasRules}" />
 
-        <ItemsControl ItemsSource="{Binding Rules}">
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:RuleRow">
-              <Border Classes="rulerow">
-                <StackPanel Orientation="Horizontal" Spacing="9">
-                  <Border Classes="rop" Classes.exclude="{Binding IsExclude}" Classes.require="{Binding !IsExclude}">
-                    <Panel>
-                      <Path Classes="ico xs rop exclude" Data="{StaticResource IconMarkExclude}" IsVisible="{Binding IsExclude}" />
-                      <Path Classes="ico xs rop require" Data="{StaticResource IconMarkRequire}" IsVisible="{Binding !IsExclude}" />
-                    </Panel>
-                  </Border>
-                  <!-- .rpair: two stacked .rchip, each a tiny muted ingredient caption over a bold
-                       variant headline. The mockup has NO "WHEN"/"THEN"/"WITH" words - which pair is
-                       the condition and which the consequence is carried by stacking order plus the
-                       mark's own tooltip, and the mark is already right there in the gutter. The
-                       words were also competing with the variant name at the same weight, which is
-                       the one thing in the chip the eye needs to land on. -->
-                  <StackPanel Spacing="5">
-                    <Border Classes="rchip" HorizontalAlignment="Left">
-                      <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Bottom">
-                        <TextBlock Classes="rcl" Text="{Binding When.Ingredient}" />
-                        <TextBlock Classes="rcv" Text="{Binding When.Variant}" />
-                      </StackPanel>
-                    </Border>
+        <Grid Grid.Row="1" ColumnDefinitions="*,58,*" Margin="0,12,0,6" IsVisible="{Binding HasRules}">
+          <TextBlock Grid.Column="0" Classes="data-h" Text="LAYER" />
+          <TextBlock Grid.Column="2" Classes="data-h" Text="LAYER" />
+        </Grid>
+        <Border Grid.Row="2" Height="1" Background="{DynamicResource LineBrush}"
+                IsVisible="{Binding HasRules}" />
 
-                    <ItemsControl ItemsSource="{Binding Targets}">
+        <!-- The ScrollViewer this panel has never had. A recipe with a dozen rules did not scroll,
+             it overflowed the window: the panel Border simply grew past the bottom of the pane and
+             every rule below the fold was unreachable. -->
+        <ScrollViewer Grid.Row="3" HorizontalScrollBarVisibility="Disabled">
+          <ItemsControl ItemsSource="{Binding Rules}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:RuleRow">
+                <Border Classes="rulerow">
+                  <Grid ColumnDefinitions="*,58,*">
+                    <StackPanel Grid.Column="0" Spacing="2">
+                      <TextBlock Classes="rcl" Text="{Binding When.Ingredient}"
+                                 TextTrimming="CharacterEllipsis" />
+                      <TextBlock Classes="rcv" Text="{Binding When.Variant}"
+                                 TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+
+                    <!-- The mark keeps its badge and gains the word. The badge alone was a
+                         vocabulary to learn; the word alone would lose the color that tells the two
+                         kinds apart down a column at a glance. -->
+                    <StackPanel Grid.Column="1" Spacing="3" HorizontalAlignment="Center"
+                                VerticalAlignment="Center" ToolTip.Tip="{Binding RelationTip}">
+                      <Border Classes="rop" Classes.exclude="{Binding IsExclude}"
+                              Classes.require="{Binding !IsExclude}"
+                              Width="18" Height="18" Margin="0" HorizontalAlignment="Center">
+                        <Panel>
+                          <Path Classes="ico xs rop exclude" Data="{StaticResource IconMarkExclude}"
+                                IsVisible="{Binding IsExclude}" />
+                          <Path Classes="ico xs rop require" Data="{StaticResource IconMarkRequire}"
+                                IsVisible="{Binding !IsExclude}" />
+                        </Panel>
+                      </Border>
+                      <TextBlock Classes="rmark" Text="{Binding ShortText}"
+                                 HorizontalAlignment="Center" />
+                    </StackPanel>
+
+                    <ItemsControl Grid.Column="2" ItemsSource="{Binding Targets}">
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:RuleTargetRow">
-                          <Border Classes="rchip" HorizontalAlignment="Left" Margin="0,0,0,5">
-                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Bottom">
-                              <TextBlock Classes="rcl" Text="{Binding Ingredient}" />
-                              <TextBlock Classes="rcv" Text="{Binding Variant}" />
-                            </StackPanel>
-                          </Border>
+                          <StackPanel Spacing="2" Margin="0,0,0,4">
+                            <TextBlock Classes="rcl" Text="{Binding Ingredient}"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Classes="rcv" Text="{Binding Variant}"
+                                       TextTrimming="CharacterEllipsis" />
+                          </StackPanel>
                         </DataTemplate>
                       </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                  </StackPanel>
-                </StackPanel>
-              </Border>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </StackPanel>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Grid>
     </Border>
   </Grid>
 </UserControl>
