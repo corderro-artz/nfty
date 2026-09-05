@@ -834,6 +834,15 @@ public class VisualCapture
             },
                 variant, $"zz-dialog-confirm-{key}.png");
 
+            // The colorize save prompt, in its riskiest state: the overwrite box TICKED, which is
+            // the one path that discards a colorization nothing on disk can rebuild. It had never
+            // been captured at all, which is how it stayed a flat slab with a literal radius long
+            // after every other modal had moved to the shared grammar - a state no fixture renders
+            // looks fine forever.
+            var colorVm = new ColorSaveDialogViewModel(dialogs, "aura") { Overwrite = true };
+            Capture(new Views.ColorSaveDialogView { DataContext = colorVm }, variant,
+                $"zz-dialog-colorsave-{key}.png");
+
             // The cook dialog in the state that carries its riskiest layout: FINISHED, with the
             // output path in it. That path is the longest string this card ever holds and the only
             // one it cannot wrap, so a fixture with a short path proves nothing - this one is a real

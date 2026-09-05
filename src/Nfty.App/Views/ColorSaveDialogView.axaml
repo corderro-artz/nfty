@@ -6,28 +6,41 @@
   <UserControl.KeyBindings>
     <KeyBinding Gesture="Escape" Command="{Binding CancelCommand}" />
   </UserControl.KeyBindings>
-  <Border Background="{DynamicResource PanelBrush}" CornerRadius="10" Padding="24" MaxWidth="470"
-          BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1">
-    <StackPanel Spacing="10">
-      <TextBlock Text="Save as a Custom ingredient?" FontWeight="Bold"
-                 Foreground="{DynamicResource AccentTextBrush}" />
-      <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Classes="muted" />
+  <Border Classes="modal small">
+    <Grid RowDefinitions="Auto,Auto">
+      <Border Grid.Row="0" Classes="modal-body tight">
+        <StackPanel Spacing="9">
+          <!-- The warning dot, as on the problem dialog: this card can discard work, so it should
+               not greet the eye as the same thing as a plain confirmation. -->
+          <StackPanel Classes="plabel-row">
+            <Ellipse Classes="kdot warn" />
+            <TextBlock Text="SAVE" Classes="slbl" />
+          </StackPanel>
+          <TextBlock Text="Save as a Custom ingredient?" Classes="m-h" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Classes="m-sub" />
 
-      <!-- The destructive option is opt-in and carries its cost inline, not in a tooltip: the
-           colorization it discards cannot be rebuilt from anything left on disk. Dashed edge via a
-           Rectangle, not the Border's own stroke — Avalonia's Border draws solid only. -->
-      <Panel Margin="0,2,0,0">
-        <Rectangle Classes="dashed btn" />
-        <CheckBox IsChecked="{Binding Overwrite}" VerticalAlignment="Top" Margin="11,10">
-          <TextBlock Text="{Binding OverwriteWarning}" TextWrapping="Wrap"
-                     Foreground="{DynamicResource WarningBrush}" />
-        </CheckBox>
-      </Panel>
+          <!-- The destructive option is opt-in and carries its cost inline, not in a tooltip: the
+               colorization it discards cannot be rebuilt from anything left on disk. Dashed edge via
+               a Rectangle, not the Border's own stroke — Avalonia's Border draws solid only. -->
+          <Panel Margin="0,2,0,0">
+            <Rectangle Classes="dashed btn" />
+            <CheckBox IsChecked="{Binding Overwrite}" VerticalAlignment="Top" Margin="11,10">
+              <TextBlock Text="{Binding OverwriteWarning}" TextWrapping="Wrap"
+                         Foreground="{DynamicResource WarningBrush}" />
+            </CheckBox>
+          </Panel>
+        </StackPanel>
+      </Border>
 
-      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-        <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="ghost" />
-        <Button Content="{Binding ConfirmLabel}" Command="{Binding ConfirmCommand}" Classes="accent" />
-      </StackPanel>
-    </StackPanel>
+      <Border Grid.Row="1" Classes="modal-foot">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0" Classes="keyhint" VerticalAlignment="Center" Text="Esc to cancel" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+            <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="tbtn" />
+            <Button Content="{Binding ConfirmLabel}" Command="{Binding ConfirmCommand}" Classes="accent" />
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
   </Border>
 </UserControl>
