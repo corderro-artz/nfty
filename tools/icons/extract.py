@@ -31,9 +31,16 @@ def main():
     os.makedirs(DEST, exist_ok=True)
 
     found = 0
+    # Two things keep a note attached to the right glyph, and both were learned the hard way.
+    # EXACTLY ONE newline between the comment and its geometry: a bare `\s*` let the file's own
+    # header attach to whichever icon came first, since the header is also a comment followed by
+    # whitespace. And the comment body may not CONTAIN `-->`: `(.*?)` under re.S backtracks
+    # straight through one comment's close and on to the next, so the header still matched by
+    # swallowing the per-icon note after it. A second run then wrote the entire generated preamble
+    # into arrow-right.svg, and the `--` inside it broke build.py's XML comments in turn.
     for m in re.finditer(
-            r'(?:<!--(.*?)-->\s*)?<StreamGeometry x:Key="(\w+)">(.*?)</StreamGeometry>',
-            text, re.S):
+            r'(?:<!--((?:(?!-->)[\s\S])*)-->[ \t]*\r?\n[ \t]*)?<StreamGeometry x:Key="(\w+)">([\s\S]*?)</StreamGeometry>',
+            text):
         note = ' '.join((m.group(1) or '').split())
         key, d = m.group(2), m.group(3).strip()
         out = os.path.join(DEST, kebab(key) + '.svg')
