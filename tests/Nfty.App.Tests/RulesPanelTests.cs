@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
@@ -337,5 +338,61 @@ public class RulesPanelTests
             Assert.Equal(1, said);
         }
         finally { window.Close(); vm.Dispose(); }
+    }
+
+    /// <summary>
+    /// The second LAYER heading sits over the values it names.
+    /// </summary>
+    /// <remarks>
+    /// <para>It did not. The header grid and the row grid both declared
+    /// <c>ColumnDefinitions="*,58,*,Auto"</c> — identical strings, which is exactly why nobody
+    /// looked twice — but the fourth column is EMPTY in the header and holds the row actions in the
+    /// rows. So <c>Auto</c> resolved to 0 above and 38 below, the two star columns divided a
+    /// different remainder, and the right-hand heading sat about 19px right of its own column. The
+    /// first column lined up perfectly throughout, which is what made it invisible.</para>
+    ///
+    /// <para>This app has now been bitten by an <c>Auto</c> column in a two-Grid table three times
+    /// (the ingredient's WEIGHT, the Set browser's VALUE, and this). Measured off a laid-out frame
+    /// against the ROW's own content, not against the other Grid's declaration, because two
+    /// declarations being equal is precisely what was true while it was broken.</para>
+    /// </remarks>
+    [AvaloniaFact]
+    public void Both_layer_headings_sit_over_the_values_they_name()
+    {
+        var (window, _, view) = Render(3);
+        try
+        {
+            // Scoped to the rules panel: the LAYERS table below has a "LAYER" heading of its own,
+            // and comparing across the two tables would be meaningless.
+            var panel = view.GetVisualDescendants().OfType<Border>()
+                .First(b => b.Classes.Contains("rules-panel"));
+
+            var heads = panel.GetVisualDescendants().OfType<TextBlock>()
+                .Where(t => t.Text == "LAYER" && t.Classes.Contains("data-h"))
+                .OrderBy(t => t.TranslatePoint(default, view)!.Value.X)
+                .ToList();
+            Assert.Equal(2, heads.Count);
+
+            // The trigger cell and the target cell of ONE row. Ordering every .rcl in the panel by x
+            // and taking two would return the leftmost two, which are both column-0 cells from
+            // different rows sitting at the same x - a comparison that proves nothing.
+            var row = panel.GetVisualDescendants().OfType<Border>()
+                .First(b => b.Classes.Contains("rulerow"));
+            var cells = row.GetVisualDescendants().OfType<TextBlock>()
+                .Where(t => t.Classes.Contains("rcl"))
+                .OrderBy(t => t.TranslatePoint(default, view)!.Value.X)
+                .ToList();
+            Assert.True(cells.Count >= 2, $"expected two named cells, found {cells.Count}");
+
+            for (int i = 0; i < 2; i++)
+            {
+                double head = heads[i].TranslatePoint(default, view)!.Value.X;
+                double cell = cells[i].TranslatePoint(default, view)!.Value.X;
+                Assert.True(Math.Abs(head - cell) <= 1.5,
+                    $"LAYER heading {i + 1} is at x={head:0.#} and the values under it start at "
+                    + $"x={cell:0.#} — the heading is not over its own column.");
+            }
+        }
+        finally { window.Close(); }
     }
 }

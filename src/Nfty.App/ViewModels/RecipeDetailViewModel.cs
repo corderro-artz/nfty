@@ -255,6 +255,31 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
     /// quantized color buckets, and this line exists to explain the chips beside it, which are
     /// variant counts. The color-inclusive figure is the cookbook detail's business.</summary>
     public string TotalText { get; }
+    /// <summary>The three hero counts, split into the FIGURE and the WORD for it.</summary>
+    /// <remarks>
+    /// They used to be three finished sentences in one muted mono style — "5 layers  13 variants
+    /// 1 rule" — which is a row a reader has to actually read rather than scan. The numbers are
+    /// what the eye is after, so they get the ink and the words stay muted, which is exactly what
+    /// the "108 art combinations" line one row above already does. The whole-sentence properties
+    /// stay: the tests and the status bar read them, and a sentence is the right form there.
+    /// </remarks>
+    public string LayerCount { get; } = "";
+
+    /// <inheritdoc cref="LayerCount"/>
+    public string LayerCountWord { get; } = "";
+
+    /// <inheritdoc cref="LayerCount"/>
+    public string VariantCount { get; } = "";
+
+    /// <inheritdoc cref="LayerCount"/>
+    public string VariantCountWord { get; } = "";
+
+    /// <inheritdoc cref="LayerCount"/>
+    public string RuleCount { get; } = "";
+
+    /// <inheritdoc cref="LayerCount"/>
+    public string RuleCountWord { get; } = "";
+
     /// <summary>"N layers", pluralised.</summary>
     public string LayerCountText { get; }
     /// <summary>"N variants", pluralised.</summary>
@@ -340,9 +365,15 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
         // would be free to disagree with the chips it sits under.
         long total = Factors.Aggregate(1L, (acc, f) => acc * Math.Max(1, f.VariantCount));
         TotalText = total.ToString("N0");
+        LayerCount = Layers.Count.ToString();
+        LayerCountWord = Layers.Count == 1 ? "layer" : "layers";
         LayerCountText = Layers.Count == 1 ? "1 layer" : $"{Layers.Count} layers";
         int variants = ordered.Sum(i => i.Manifest.Variants.Count);
+        VariantCount = variants.ToString();
+        VariantCountWord = variants == 1 ? "variant" : "variants";
         VariantCountText = variants == 1 ? "1 variant" : $"{variants} variants";
+        RuleCount = _allRules.Count.ToString();
+        RuleCountWord = _allRules.Count == 1 ? "rule" : "rules";
         RuleCountText = _allRules.Count == 1 ? "1 rule" : $"{_allRules.Count} rules";
         RulesBadgeText = _allRules.Count.ToString(CultureInfo.InvariantCulture);
 

@@ -15,20 +15,16 @@
     <StackPanel Grid.Column="0" Spacing="14" Margin="0,0,16,0">
       <Border Classes="rhero">
         <Grid ColumnDefinitions="Auto,*">
-          <!-- .rport-wrap: the reroll die sits OVER the portrait's bottom-right corner, not beside
-               the text - so a Panel, not a sibling. -->
-          <Panel Grid.Column="0" Margin="0,0,16,0">
-            <Border Width="92" Height="92" CornerRadius="{DynamicResource RadiusMd}"
-                    Background="{DynamicResource TileBrush}" ClipToBounds="True">
-              <Image Source="{Binding Hero}" Stretch="UniformToFill" />
-            </Border>
-            <Button Classes="dice" Command="{Binding RerollCommand}" ToolTip.Tip="Reroll sample"
-                    HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,6,6">
-              <!-- A die face, per the mockup's .dice button. IconReroll (a circular arrow) is the
-                   ingredient editor's "reroll sampled color" glyph and was borrowed here. -->
-              <Path Classes="ico sm" Data="{StaticResource IconDiceFace}" />
-            </Button>
-          </Panel>
+          <!-- Nothing sits on the portrait. The reroll die used to be pinned over its bottom-right
+               corner, which put a control on top of the one thing on this card that is a picture -
+               and a picture 92px square has no room to spare. It has moved into the stats row as
+               the sample chip, beside the seed it changes, where it is a control among controls
+               instead of a smudge on the art. -->
+          <Border Grid.Column="0" Margin="0,0,16,0"
+                  Width="92" Height="92" CornerRadius="{DynamicResource RadiusMd}"
+                  Background="{DynamicResource TileBrush}" ClipToBounds="True">
+            <Image Source="{Binding Hero}" Stretch="UniformToFill" />
+          </Border>
 
           <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
             <TextBlock Classes="mono" FontSize="17" FontWeight="Bold" Text="{Binding Name}" />
@@ -62,16 +58,34 @@
               <TextBlock Classes="rlabel" Text="art combinations" VerticalAlignment="Bottom" Margin="0,0,0,3" />
             </StackPanel>
 
-            <!-- .rstats -->
-            <StackPanel Orientation="Horizontal" Spacing="20" Margin="0,8,0,0">
-              <TextBlock Classes="cshare" Text="{Binding LayerCountText}" />
-              <TextBlock Classes="cshare" Text="{Binding VariantCountText}" />
-              <TextBlock Classes="cshare" Text="{Binding RuleCountText}" />
-              <!-- The other three describe the recipe; this one describes the PICTURE beside them,
-                   and a bare "seed 1" in their company read as a fourth property of the recipe -
-                   which has no seed. Named for what it is, and the die on the hero rerolls it. -->
-              <TextBlock Classes="cshare" ToolTip.Tip="Which roll the picture above shows. Reroll it with the die on the image; it is not stored in the recipe."
-                         Text="{Binding RollSeed, StringFormat='sample seed {0}'}" />
+            <!-- .rstats. The figure carries the ink and the word stays muted, so the row can be
+                 SCANNED rather than read - the same shape as the "108 art combinations" line above
+                 it. As three finished sentences in one flat mono they read as a paragraph. -->
+            <StackPanel Orientation="Horizontal" Spacing="18" Margin="0,8,0,0" VerticalAlignment="Center">
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <TextBlock Classes="statn" Text="{Binding LayerCount}" />
+                <TextBlock Classes="statw" Text="{Binding LayerCountWord}" />
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <TextBlock Classes="statn" Text="{Binding VariantCount}" />
+                <TextBlock Classes="statw" Text="{Binding VariantCountWord}" />
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <TextBlock Classes="statn" Text="{Binding RuleCount}" />
+                <TextBlock Classes="statw" Text="{Binding RuleCountWord}" />
+              </StackPanel>
+
+              <!-- The sample roll, which is NOT a fourth fact about the recipe - a recipe has no
+                   seed. It describes the picture, and it is the control that changes it, so it is
+                   a button and it says what pressing it does. "sample seed 1" as plain text in a
+                   row of recipe facts read as an error, which is exactly what a reader reported. -->
+              <Button Classes="sampleroll" Command="{Binding RerollCommand}"
+                      ToolTip.Tip="The picture is ONE roll of this recipe, not a stored asset. Press to roll another. The seed is not part of the recipe.">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <Path Classes="ico ti" Data="{StaticResource IconDiceFace}" />
+                  <TextBlock Text="{Binding RollSeed, StringFormat='sample {0}'}" />
+                </StackPanel>
+              </Button>
             </StackPanel>
           </StackPanel>
         </Grid>
@@ -236,7 +250,17 @@
              in some other order would quietly disagree with `nfty inspect` about which rule is
              number 3. Rule order changes no roll (RulesEngine evaluates all of them), which is what
              makes sorting safe here and NOT safe on the layer table above. -->
-        <Grid Grid.Row="2" ColumnDefinitions="*,58,*,Auto" Margin="0,12,0,6" IsVisible="{Binding HasRules}">
+        <!-- 38 IS NOT Auto, and the difference is the whole of a bug this panel shipped with.
+             Both grids declared "*,58,*,Auto" and looked identical, but the actions column is
+             EMPTY in the header and occupied in the rows - so Auto resolved to 0 up here and to
+             38 down there, the two star columns divided a different remainder, and the second
+             LAYER heading sat ~19px right of the values it names. The first column aligned
+             perfectly, which is what made it easy to miss. 38 = two 18px icon buttons (a 12px
+             ico xs plus Button.icon's overridden 3px padding each side) and the 2px between
+             them. Fixed in BOTH grids, as the layer table above already does, and
+             RulesPanelTests measures the two off a laid-out frame rather than trusting that
+             these two strings stay equal by eye. -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,58,*,38" Margin="0,12,0,6" IsVisible="{Binding HasRules}">
           <Button Grid.Column="0" Classes="sorth" HorizontalContentAlignment="Left"
                   Classes.on="{Binding RuleSort.Column, Converter={x:Static conv:SortColumnConverter.Instance}, ConverterParameter=Trigger}"
                   Command="{Binding RuleSort.ByCommand}" CommandParameter="Trigger">
@@ -281,7 +305,7 @@
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:RuleRow">
                 <Border Classes="rulerow ract">
-                  <Grid ColumnDefinitions="*,58,*,Auto">
+                  <Grid ColumnDefinitions="*,58,*,38">
                     <StackPanel Grid.Column="0" Spacing="2">
                       <TextBlock Classes="rcl" Text="{Binding When.Ingredient}"
                                  TextTrimming="CharacterEllipsis" />
@@ -321,10 +345,11 @@
                       </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <!-- The row's own actions, revealed on hover. Reserved by a fixed-width column
-                         so the three text cells are the same width on every row whether the pointer
-                         is over one or not — opacity, never IsVisible, or the columns would resize
-                         under the pointer that just arrived. -->
+                    <!-- The row's own actions, revealed on hover. The column really is fixed-width
+                         now — it said Auto while this comment claimed otherwise — so the three text
+                         cells are the same width on every row whether the pointer is over one or
+                         not, and the header above lines up with them. Opacity, never IsVisible, or
+                         the columns would resize under the pointer that just arrived. -->
                     <StackPanel Grid.Column="3" Classes="ractions" Orientation="Horizontal"
                                 Spacing="2" VerticalAlignment="Center">
                       <Button Classes="icon" Padding="3"

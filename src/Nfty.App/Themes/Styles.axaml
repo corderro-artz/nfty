@@ -340,26 +340,6 @@
     <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
   </Style>
 
-  <Style Selector="Button.dice">
-    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="Width" Value="27" />
-    <Setter Property="Height" Value="27" />
-    <Setter Property="Padding" Value="0" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
-    <Setter Property="HorizontalContentAlignment" Value="Center" />
-    <Setter Property="VerticalContentAlignment" Value="Center" />
-  </Style>
-  <Style Selector="Button.dice:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
-    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
-  </Style>
-  <Style Selector="Button.dice:pressed /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
-  </Style>
-
   <!-- Landing action buttons: uniform full-width, label left + hotkey right, slightly larger. -->
   <!-- landing.html .lwordmark -->
   <Style Selector="TextBlock.lwordmark">
@@ -809,6 +789,53 @@
        the whole of what tells an error card apart from a confirmation card before either is read —
        the two are otherwise the same shape, and the old dialogs left the distinction entirely to the
        title text. -->
+  <!-- The recipe hero's stat row: the FIGURE and the word for it. Splitting them is what lets the
+       row be scanned instead of read - it is the same treatment "108 art combinations" gets a line
+       above, where the number is large and the label is muted. -->
+  <Style Selector="TextBlock.statn">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+    <Setter Property="VerticalAlignment" Value="Bottom" />
+  </Style>
+  <Style Selector="TextBlock.statw">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Bottom" />
+  </Style>
+
+  <!-- The sample-roll chip. Quiet at rest to the point of reading as one more muted stat, because
+       most of the time it is only telling you which roll you are looking at; it takes an edge and
+       the accent when the pointer is on it, which is where it admits to being a button. It replaced
+       a die pinned over the portrait's corner - a control sitting on top of the only picture on the
+       card, with 92px of art to spare none of. -->
+  <Style Selector="Button.sampleroll">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="Padding" Value="6,2" />
+    <Setter Property="Margin" Value="-6,0,0,0" />   <!-- cancels the padding, so it lines up with the stats -->
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="Button.sampleroll:pointerover">
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+  <!-- Fluent paints the pressed and hover wash on the presenter, not the button. -->
+  <Style Selector="Button.sampleroll:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.sampleroll:pressed /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+  </Style>
+
   <Style Selector="Ellipse.kdot.warn">
     <Setter Property="Fill" Value="{DynamicResource WarningBrush}" />
   </Style>
