@@ -31,6 +31,18 @@
                        ToolTip.Tip="Any word. The same book and the same seed always cook the same collection." />
             </Grid>
             <CheckBox Content="Pack into a single .set" IsChecked="{Binding Pack}" />
+
+            <!-- The engine and the CLI have always had this; the dialog took the default and never
+                 offered it, so a person using only the app could not mint past the unique space.
+                 They met "allows exactly 33 unique DNA, but 500 were requested" with no way past it
+                 but asking for fewer. The hint below changes with the box because the consequence
+                 is the whole point of the choice, and it is not guessable from the label. -->
+            <StackPanel Spacing="4">
+              <CheckBox Content="Allow repeats" IsChecked="{Binding Unlimited}"
+                        ToolTip.Tip="With repeats allowed, identity is the token number, as ERC-721 defines it. Weights still decide how common each variant is, so a rare variant stays rare and a layer with a low appearance chance is rarer still." />
+              <TextBlock Text="{Binding UniqueHint}" Classes="m-sub" TextWrapping="Wrap"
+                         Margin="24,0,0,0" />
+            </StackPanel>
           </StackPanel>
 
           <StackPanel Spacing="9" IsVisible="{Binding IsRunning}">

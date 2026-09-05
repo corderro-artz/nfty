@@ -82,7 +82,7 @@ public static class SetWriter
             File.WriteAllText(item.NftyPath, Serialize(Regraded(item, rarity))));
 
         File.WriteAllText(SetJsonPath(outDir),
-            Serialize(BuildSetManifest(set, existing, rarity, recorded)));
+            Serialize(BuildSetManifest(set, existing, rarity, recorded, RecordedUniqueAt(outDir))));
 
         if (pack) Pack(outDir);
     }
@@ -124,7 +124,8 @@ public static class SetWriter
             await File.WriteAllTextAsync(item.NftyPath, Serialize(Regraded(item, rarity)), ct));
 
         await File.WriteAllTextAsync(SetJsonPath(outDir),
-            Serialize(BuildSetManifest(set, existing, rarity, recorded)), cancellationToken);
+            Serialize(BuildSetManifest(set, existing, rarity, recorded, RecordedUniqueAt(outDir))),
+            cancellationToken);
 
         // ZipFile has no async API; keep the UI thread free rather than pretend.
         if (pack) await Task.Run(() => Pack(outDir), cancellationToken);
@@ -238,6 +239,25 @@ public static class SetWriter
         try
         {
             return JsonSerializer.Deserialize<SetManifest>(json, Json.Options)?.CookbookSha256;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>What an existing Set recorded about its own uniqueness, or null when it never said.
+    /// Best-effort in the same way and for the same reason as the hash above.</summary>
+    /// <param name="outDir">The Set folder.</param>
+    /// <returns>The recorded claim, or null when absent or unreadable.</returns>
+    private static bool? RecordedUniqueAt(string outDir)
+    {
+        string setJson = SetJsonPath(outDir);
+        if (!File.Exists(setJson)) return null;
+        try
+        {
+            return JsonSerializer.Deserialize<SetManifest>(
+                File.ReadAllText(setJson), Json.Options)?.UniqueDna;
         }
         catch (JsonException)
         {
@@ -387,7 +407,8 @@ public static class SetWriter
     /// <summary>The <c>set.json</c> for the enlarged collection. <paramref name="recordedSha256"/> is
     /// what this Set already recorded as its origin, from <see cref="RecordedShaAt"/>.</summary>
     private static SetManifest BuildSetManifest(
-        GeneratedSet set, IReadOnlyList<ExistingItem> existing, Rarity rarity, string? recordedSha256)
+        GeneratedSet set, IReadOnlyList<ExistingItem> existing, Rarity rarity, string? recordedSha256,
+        bool? recordedUnique = null)
     {
         var distribution = existing.Select(e => e.Recipe)
             .Concat(set.Assets.Select(a => a.RecipeId))
@@ -408,8 +429,17 @@ public static class SetWriter
         // Null falls through, because null means "no origin was ever recorded" (cooked from an
         // in-memory book, or by a build predating the field) — an absence to fill, not a value to
         // preserve.
+        // uniqueDna is a claim about the WHOLE collection, so an extend can only ever weaken it:
+        // adding unlimited rolls to a unique Set makes the result not-unique, and no later unique
+        // extend can undo that. False sticks; null (an older Set that never recorded it) stays
+        // unknown rather than being upgraded to a claim nobody made.
+        bool? unique = recordedUnique is false ? false
+            : recordedUnique is null && existing.Count > 0 ? null
+            : set.UniqueDna;
+
         return new SetManifest(set.CollectionName, rarity.Total, set.Seed,
-            recordedSha256 ?? set.CookbookSha256, GeneratorVersion, distribution, rarity.Table());
+            recordedSha256 ?? set.CookbookSha256, GeneratorVersion, distribution, rarity.Table(),
+            unique);
     }
 
     private static void Pack(string outDir)

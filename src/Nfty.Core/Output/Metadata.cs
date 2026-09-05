@@ -57,6 +57,18 @@ public record RecipeCount(string Recipe, int Count, double Percent);
 /// <param name="GeneratorVersion">The engine version stamp.</param>
 /// <param name="Distribution">Per-recipe counts and shares across the Set.</param>
 /// <param name="Rarity">The collection-wide rarity table.</param>
+/// <param name="UniqueDna">Whether every asset was required to have distinct DNA.
+///
+/// <para>Recorded because the seed does NOT reproduce a run on its own. The same cookbook and the
+/// same seed generate a different collection depending on this switch — with uniqueness on, a
+/// colliding roll is discarded and re-rolled, which consumes RNG draws that the unlimited run
+/// never spends, so the two diverge from the first collision onward. Without this field a Set
+/// carried two thirds of its own recipe.</para>
+///
+/// <para><b>Null means "not recorded"</b>, not "false": Sets written before this field existed
+/// cannot say, and claiming they were unique would be inventing a fact. Additive and optional, so
+/// <c>Schema.Current</c> is deliberately NOT bumped — older builds ignore unknown properties,
+/// whereas a bump would make them reject the file outright.</para></param>
 public record SetManifest(
     string Name,
     int Count,
@@ -64,4 +76,5 @@ public record SetManifest(
     string? CookbookSha256,
     string GeneratorVersion,
     IReadOnlyList<RecipeCount> Distribution,
-    IReadOnlyList<RarityAttribute> Rarity);
+    IReadOnlyList<RarityAttribute> Rarity,
+    bool? UniqueDna = null);

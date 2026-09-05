@@ -22,6 +22,25 @@ public partial class CookDialogViewModel : ViewModelBase
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(CookCommand))] private int _count = 50;
     [ObservableProperty] private string _seed = Guid.NewGuid().ToString("N")[..8];
     [ObservableProperty] private bool _pack;
+
+    /// <summary>Accept every roll instead of requiring each asset to have distinct DNA.</summary>
+    /// <remarks>
+    /// The engine has always supported this and the CLI has always exposed it as <c>--unlimited</c>;
+    /// this dialog built <c>new GenerateOptions(Count, Seed)</c> and took the default, so a person
+    /// using only the app could not mint a collection larger than its unique space. They met
+    /// "allows exactly 33 unique DNA, but 500 were requested" and had no way past it except asking
+    /// for fewer.
+    ///
+    /// <para>That is a real way to mint: identity is the token id, as ERC-721 defines it, and the
+    /// weights still decide how common each variant is — a rare variant is rare, and a layer with a
+    /// low appearance chance is rarer still. Duplicates are the point, not a defect.</para>
+    /// </remarks>
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(UniqueHint))] private bool _unlimited;
+
+    /// <summary>What the switch means, in the words a person minting would use.</summary>
+    public string UniqueHint => Unlimited
+        ? "Every roll is kept, so assets can repeat — weights still decide how rare each one is."
+        : "Every asset is different. The run stops if the cookbook cannot fill the count.";
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(CookCommand))] [NotifyCanExecuteChangedFor(nameof(CancelCommand))] [NotifyCanExecuteChangedFor(nameof(CloseCommand))] [NotifyPropertyChangedFor(nameof(ShowForm))] [NotifyPropertyChangedFor(nameof(FootHint))] private bool _isRunning;
     [ObservableProperty] private double _progress;
     [ObservableProperty] private string _phaseText = "";
@@ -103,7 +122,7 @@ public partial class CookDialogViewModel : ViewModelBase
             var existing = await SetWriter.ReadExistingAsync(dir, _cts.Token);
             IsExtending = existing.Dnas.Count > 0;
 
-            var opts = new GenerateOptions(Count, Seed);
+            var opts = new GenerateOptions(Count, Seed, EnforceUniqueDna: !Unlimited);
             PhaseText = IsExtending ? $"Extending {existing.Dnas.Count} assets…" : "Generating…";
             var genProgress = new Progress<GenerationProgress>(p => Progress = p.Fraction);
             set = await Generator.GenerateAsync(_book, opts, existing.Dnas, existing.NextNumber,

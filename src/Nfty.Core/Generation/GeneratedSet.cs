@@ -70,7 +70,8 @@ public class GeneratedAsset : IDisposable
 public record GeneratedSet(
     string CollectionName, string Description, string Symbol, string Seed,
     IReadOnlyList<GeneratedAsset> Assets,
-    string? CookbookSha256 = null) : IDisposable
+    string? CookbookSha256 = null,
+    bool UniqueDna = true) : IDisposable
 {
     /// <summary>Frees every asset image in the set.</summary>
     public void Dispose()

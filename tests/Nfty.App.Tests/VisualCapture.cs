@@ -860,6 +860,15 @@ public class VisualCapture
                 };
                 Capture(new Views.CookDialogView { DataContext = cookVm }, variant,
                     $"zz-dialog-cook-done-{key}.png");
+
+                // And the FORM state, which is where the repeats switch lives. The engine and the
+                // CLI always had that switch; this dialog never offered it, so a person using only
+                // the app could not mint past the unique space - and no capture rendered the form,
+                // which is how the omission survived.
+                var cookForm = new CookDialogViewModel(cookBook, new FilePickerService(),
+                    new NoopFolderRevealer(), dialogs) { Count = 500, Seed = "vapor", Unlimited = true };
+                Capture(new Views.CookDialogView { DataContext = cookForm }, variant,
+                    $"zz-dialog-cook-form-{key}.png");
             }
 
             // The ingredient pane for a chase layer: its absent flag beside the rule flag, and the

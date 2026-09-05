@@ -83,7 +83,8 @@ public static class Generator
             book.Manifest.Collection.Symbol,
             opts.Seed,
             assets,
-            book.SourceSha256);
+            book.SourceSha256,
+            opts.EnforceUniqueDna);
     }
 
     /// <summary>
