@@ -29,3 +29,7 @@ build-output.txt
 
 # VisualCapture's output (NFTY_CAPTURE_DIR); frames are regenerated, never committed
 .capture/
+
+# Python bytecode from the mkdocs hooks.
+__pycache__/
+*.pyc
