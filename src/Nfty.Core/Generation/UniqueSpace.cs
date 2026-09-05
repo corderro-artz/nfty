@@ -86,11 +86,13 @@ public static class UniqueSpace
 
         foreach (var recipe in book.Recipes)
         {
-            var (combos, combosExact) = LegalCombinations(recipe, cap);
-            var (buckets, bucketsExact) = CountColorBuckets(recipe, cap);
-
-            long recipeTotal = Saturate(Multiply(combos, buckets, cap), cap);
-            bool recipeExact = combosExact && bucketsExact && recipeTotal < cap;
+            // combos x buckets NO LONGER FACTORIZES once a layer can be absent, and the difference
+            // is not a rounding error — it is the whole answer. The old split was only valid because
+            // every legal selection had every layer present, so every one of them contributed the
+            // same product of color buckets. An absent Dynamic layer rolls no color and contributes
+            // ONE shape, so the bucket product now depends on which layers a given selection
+            // actually has. RecipeSpace does the sum; see its own note.
+            var (recipeTotal, combos, recipeExact) = RecipeShapes(recipe, cap);
 
             // Each recipe's own space is always recorded, so a caller inspecting a shelved recipe
             // still sees what it would contribute if enabled. But the cookbook total counts only
@@ -123,6 +125,127 @@ public static class UniqueSpace
     /// </remarks>
     public static (long Count, bool Exact) CountColors(Colorization colorization, long cap = DefaultCap) =>
         DistinctBuckets(colorization, cap);
+
+    /// <summary>One layer's choices, as the DNA space sees them.</summary>
+    /// <param name="Id">The layer id.</param>
+    /// <param name="Variants">The variants a roll can land on. Empty when the layer never appears.</param>
+    /// <param name="Buckets">Distinct quantized colors ONE present variant of this layer admits;
+    /// 1 for static and custom, which contribute no cross-asset color uniqueness.</param>
+    /// <param name="CanBeAbsent">Whether "not there at all" is one of this layer's outcomes.</param>
+    private record LayerShapes(string Id, IReadOnlyList<Variant> Variants, long Buckets, bool CanBeAbsent)
+    {
+        /// <summary>Distinct DNA contributions this layer can make on its own: every present
+        /// variant times the colors it can wear, plus one for being absent, which is a single shape
+        /// however many colors the layer could have worn had it shown up.</summary>
+        public long Shapes => Variants.Count * Buckets + (CanBeAbsent ? 1 : 0);
+    }
+
+    /// <summary>
+    /// The distinct DNA one recipe admits, and how many legal variant selections underlie it.
+    /// </summary>
+    /// <param name="recipe">The recipe. May be mid-edit and illegal; this never throws.</param>
+    /// <param name="cap">Enumeration limit.</param>
+    /// <returns>The DNA total, the legal selection count, and whether both are exact.</returns>
+    /// <remarks>
+    /// Two paths, and the split is the same one the rules check already made. With no rules the
+    /// space FACTORIZES — every layer's choices are independent, so the answer is the product of
+    /// each layer's own shape count and nothing has to be walked. With rules it does not, because a
+    /// rule can forbid a combination, and now a second thing varies per combination too: which
+    /// Dynamic layers are present, and therefore how many color buckets that combination carries.
+    /// So the enumeration sums a product per legal selection rather than multiplying one product by
+    /// a count.
+    /// </remarks>
+    private static (long Total, long Combos, bool Exact) RecipeShapes(LoadedRecipe recipe, long cap)
+    {
+        if (!TryResolveLayers(recipe, out var resolved))
+            return (0, 0, false);
+
+        var layers = new List<LayerShapes>(resolved.Count);
+        bool exact = true;
+        foreach (var ing in resolved)
+        {
+            double percent = recipe.Manifest.AbsentPercentOf(ing.Manifest.Id);
+            bool never = WeightedRoller.AlwaysAbsent(percent);
+
+            long buckets = 1;
+            if (ing.Manifest.Kind == LayerKind.Dynamic)
+            {
+                // A Dynamic layer with no colorization block is illegal, and Validator says so — but
+                // this method is documented never to throw, precisely so a GUI can call it on a book
+                // that is mid-edit. Report it the way an unresolvable layer is reported: "undefined
+                // until the book is fixed", not an honest zero.
+                if (ing.Manifest.Colorization is not { } colorization)
+                    return (0, 0, false);
+                var (b, bExact) = DistinctBuckets(colorization, cap);
+                buckets = b;
+                exact &= bExact;
+            }
+
+            layers.Add(new LayerShapes(
+                ing.Manifest.Id,
+                // A layer that never appears offers no variants at all, however many it carries.
+                never ? Array.Empty<Variant>() : Reachable(ing).Variants,
+                buckets,
+                percent > 0));
+        }
+
+        if (recipe.Manifest.Rules.Count == 0)
+        {
+            long product = 1;
+            long combos = 1;
+            foreach (var l in layers)
+            {
+                product = Multiply(product, l.Shapes, cap);
+                combos = Multiply(combos, l.Variants.Count + (l.CanBeAbsent ? 1 : 0), cap);
+            }
+            // BOTH have to be under the cap, not just the total. A Dynamic layer with no color
+            // entries has zero buckets, so a product that saturated on combinations can collapse
+            // back to 0 — under the cap — and re-deriving exactness from the total alone would then
+            // call a count exact that had already given up. The old split carried that signal in
+            // combosExact; folding the two products together is what nearly lost it.
+            bool ok = exact && product < cap && combos < cap;
+            return (Saturate(product, cap), Saturate(combos, cap), ok);
+        }
+
+        // Rules can only remove selections, so the unconstrained product bounds the walk. Only
+        // enumerate when that bound is small enough to be worth walking.
+        long bound = 1;
+        foreach (var l in layers)
+            bound = Multiply(bound, l.Variants.Count + (l.CanBeAbsent ? 1 : 0), cap);
+        if (bound >= cap) return (cap, cap, false);
+
+        long total = 0;
+        long legal = 0;
+        var selection = new Dictionary<string, string>();
+
+        void Walk(int depth, long bucketsSoFar)
+        {
+            if (depth == layers.Count)
+            {
+                if (!RulesEngine.IsLegal(selection, recipe.Manifest.Rules)) return;
+                legal++;
+                total = Saturate(total + bucketsSoFar, cap);
+                return;
+            }
+
+            var layer = layers[depth];
+            foreach (var v in layer.Variants)
+            {
+                selection[layer.Id] = v.Id;
+                Walk(depth + 1, Multiply(bucketsSoFar, layer.Buckets, cap));
+            }
+            selection.Remove(layer.Id);
+
+            // ABSENT IS A CHOICE LIKE ANY OTHER, and it is expressed by the layer having no entry in
+            // the selection — which is exactly what RulesEngine already reads as "not present", so
+            // exclude rules pass and require rules fail with no new code. It multiplies no buckets:
+            // a layer nobody can see wears no color.
+            if (layer.CanBeAbsent) Walk(depth + 1, bucketsSoFar);
+        }
+
+        Walk(0, 1);
+        return (total, legal, exact && total < cap);
+    }
 
     /// <summary>Variant combinations that satisfy the recipe's rules.</summary>
     private static (long Count, bool Exact) LegalCombinations(LoadedRecipe recipe, long cap)

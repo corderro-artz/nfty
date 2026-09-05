@@ -1,3 +1,4 @@
+using Nfty.Core.Stats;
 using Nfty.Core.Formats;
 using Nfty.Core.Generation;
 using Nfty.Core.Model;
@@ -196,5 +197,236 @@ public class AbsentLayerTests
         // only true if the invisible layer contributed no rolled color to the hash.
         Assert.Single(set.Assets.Select(a => a.Dna).Distinct());
         Assert.All(set.Assets, a => Assert.DoesNotContain(a.ColorRolls, c => c.LayerId == "aura"));
+    }
+
+    // ------------------------------------------------------------- the space it admits
+
+    /// <summary>
+    /// The count is a PROMISE: exactly this many unique DNA must be generable, or Generate throws
+    /// the self-contradicting "allows exactly N, but N were requested". So these do not check a
+    /// formula — they generate the whole space and count what actually comes out.
+    /// </summary>
+    private static int ActualUniqueDna(LoadedCookBook book, int ask)
+    {
+        using var set = Generator.Generate(book, new GenerateOptions(ask, "seed1"));
+        return set.Assets.Select(a => a.Dna).Distinct().Count();
+    }
+
+    [Fact]
+    public void An_optional_layer_adds_exactly_one_shape_and_the_generator_can_reach_them_all()
+    {
+        // bg 2 x hat 2 = 4 with hat mandatory; hat optional adds "no hat", so 2 x 3 = 6.
+        using var mandatory = Book(null);
+        Assert.Equal(4, UniqueSpace.Count(mandatory).Total);
+
+        using var optional = Book(new Dictionary<string, double> { ["hat"] = 40 });
+        var counted = UniqueSpace.Count(optional);
+        Assert.Equal(6, counted.Total);
+        Assert.True(counted.IsExact);
+
+        // And every one of the six is actually reachable, which is the part a formula cannot claim.
+        Assert.Equal(6, ActualUniqueDna(optional, 6));
+    }
+
+    [Fact]
+    public void A_layer_that_never_appears_contributes_one_shape_not_its_variants()
+    {
+        using var book = Book(new Dictionary<string, double> { ["hat"] = 100 });
+        // hat offers only "absent", so the space is bg's 2 — not 2 x 3.
+        Assert.Equal(2, UniqueSpace.Count(book).Total);
+        Assert.Equal(2, ActualUniqueDna(book, 2));
+    }
+
+    /// <summary>
+    /// The reason the counter had to be restructured rather than patched. It used to compute
+    /// (legal combinations) x (product of every dynamic layer's color buckets) and multiply the two
+    /// — valid only because every legal selection had every layer present, so each carried the same
+    /// bucket product. An absent Dynamic layer wears no color and contributes ONE shape, so the
+    /// bucket product now varies per selection and the two no longer factorize.
+    /// </summary>
+    [Fact]
+    public void An_optional_dynamic_layer_contributes_one_shape_absent_and_its_colors_present()
+    {
+        var aura = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("aura", "aura", LayerKind.Dynamic,
+                // 4 hue buckets x 1 saturation bucket = 4 colors.
+                new Colorization(ColorModel.Hsv, 90, 100,
+                    new[] { new ColorEntry(1, new ColorRange(0, 360, 0, 100), null) }),
+                new[] { new Variant("glow", "glow", 1) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>>
+            {
+                ["glow"] = new Image<Rgba32>(2, 2, new Rgba32(120, 120, 120, 255)),
+            },
+        };
+        LoadedCookBook WithAura(IReadOnlyDictionary<string, double>? absent) => new()
+        {
+            Manifest = new CookBookManifest("cb", "VaporPets", new Dimensions(2, 2),
+                new Collection("VaporPets", "d", "VP"), new Dictionary<string, double> { ["cat"] = 1 }),
+            Recipes = new[]
+            {
+                new LoadedRecipe
+                {
+                    Manifest = new RecipeManifest("cat", "cat", new[] { "bg", "aura" },
+                        Array.Empty<IncompatibilityRule>(), AbsentPercent: absent),
+                    Ingredients = new[] { Ing("bg", "a", "b"), aura },
+                },
+            },
+        };
+
+        using var mandatory = WithAura(null);
+        Assert.Equal(8, UniqueSpace.Count(mandatory).Total);          // bg 2 x (1 variant x 4 colors)
+
+        using var optional = WithAura(new Dictionary<string, double> { ["aura"] = 30 });
+        // NOT 2 x 2 x 4 = 16. Absent is ONE shape however many colors it could have worn:
+        // bg 2 x (1 x 4 + 1) = 10.
+        Assert.Equal(10, UniqueSpace.Count(optional).Total);
+        Assert.Equal(10, ActualUniqueDna(optional, 10));
+    }
+
+    [Fact]
+    public void Rules_and_absence_are_counted_together_rather_than_multiplied_apart()
+    {
+        // bg{a,b} x hat{crown,cap}, hat optional => 6 selections. One rule removes exactly one of
+        // them (a+crown), leaving 5 — and the absent selections are untouched by it, which is only
+        // right because RulesEngine reads a missing entry as "not present".
+        var rule = new IncompatibilityRule(RuleType.Exclude,
+            new RuleTarget("bg", "a"), new[] { new RuleTarget("hat", "crown") });
+
+        using var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "VaporPets", new Dimensions(2, 2),
+                new Collection("VaporPets", "d", "VP"), new Dictionary<string, double> { ["cat"] = 1 }),
+            Recipes = new[]
+            {
+                new LoadedRecipe
+                {
+                    Manifest = new RecipeManifest("cat", "cat", new[] { "bg", "hat" },
+                        new[] { rule }, AbsentPercent: new Dictionary<string, double> { ["hat"] = 40 }),
+                    Ingredients = new[] { Ing("bg", "a", "b"), Ing("hat", "crown", "cap") },
+                },
+            },
+        };
+
+        var counted = UniqueSpace.Count(book);
+        Assert.Equal(5, counted.Total);
+        Assert.True(counted.IsExact);
+        Assert.Equal(5, ActualUniqueDna(book, 5));
+    }
+
+    // -------------------------------------------------------- what the odds actually say
+
+    /// <summary>
+    /// A chase item's odds are the odds of GETTING it. Without folding absence in, the variants of a
+    /// 90%-absent layer each report the share they hold among themselves — so a one-in-twenty item
+    /// prints "50% in recipe", which is the opposite of the number an author is looking for.
+    /// </summary>
+    [Fact]
+    public void An_optional_layer_scales_the_odds_of_every_variant_under_it()
+    {
+        using var mandatory = Book(null);
+        var before = RarityCalculator.Compute(mandatory).Traits
+            .Single(t => t.IngredientId == "hat" && t.VariantId == "crown");
+        Assert.Equal(50, before.WithinRecipePercent);        // one of two, always present
+
+        using var chase = Book(new Dictionary<string, double> { ["hat"] = 90 });
+        var after = RarityCalculator.Compute(chase).Traits
+            .Single(t => t.IngredientId == "hat" && t.VariantId == "crown");
+        Assert.Equal(5, after.WithinRecipePercent);          // half of the 10% it shows up at
+
+        // Its neighbour on a mandatory layer is untouched.
+        Assert.Equal(50, RarityCalculator.Compute(chase).Traits
+            .Single(t => t.IngredientId == "bg" && t.VariantId == "a").WithinRecipePercent);
+    }
+
+    /// <summary>And the odds are not just arithmetic — a generated collection lands near them.</summary>
+    [Fact]
+    public void The_generated_collection_lands_near_the_odds_the_report_promises()
+    {
+        using var book = Book(new Dictionary<string, double> { ["hat"] = 75 });
+        using var set = Generator.Generate(book, new GenerateOptions(600, "seed1", EnforceUniqueDna: false));
+
+        double withHat = set.Assets.Count(a => a.Traits.Any(t => t.IngredientId == "hat")) / 600.0;
+        Assert.InRange(withHat, 0.21, 0.29);                 // asked for 25% present
+    }
+
+    // ------------------------------------------------------------------- validation
+
+    private static IReadOnlyList<string> Problems(
+        IReadOnlyDictionary<string, double>? absent, params IncompatibilityRule[] rules)
+    {
+        using var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "VaporPets", new Dimensions(2, 2),
+                new Collection("VaporPets", "d", "VP"), new Dictionary<string, double> { ["cat"] = 1 }),
+            Recipes = new[]
+            {
+                new LoadedRecipe
+                {
+                    Manifest = new RecipeManifest("cat", "cat", new[] { "bg", "hat" },
+                        rules, AbsentPercent: absent),
+                    Ingredients = new[] { Ing("bg", "a", "b"), Ing("hat", "crown", "cap") },
+                },
+            },
+        };
+        return Validator.Validate(book);
+    }
+
+    [Fact]
+    public void A_chance_for_a_layer_the_recipe_does_not_stack_is_reported()
+    {
+        // Not merely useless: it is almost certainly a chance meant for a layer that IS stacked,
+        // doing nothing while the author believes their chase item is rare.
+        Assert.Contains(Problems(new Dictionary<string, double> { ["wings"] = 50 }),
+            p => p.Contains("not one of its layers"));
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(101)]
+    [InlineData(double.NaN)]
+    public void A_chance_outside_zero_to_a_hundred_is_reported(double pct) =>
+        Assert.Contains(Problems(new Dictionary<string, double> { ["hat"] = pct }),
+            p => p.Contains("absent chance"));
+
+    [Fact]
+    public void Leaving_out_every_layer_is_reported_like_an_empty_layer_order()
+    {
+        Assert.Contains(
+            Problems(new Dictionary<string, double> { ["bg"] = 100, ["hat"] = 100 }),
+            p => p.Contains("fully-transparent"));
+    }
+
+    [Fact]
+    public void A_rule_requiring_a_layer_that_never_appears_is_reported()
+    {
+        // Fatal in a way the author will not see coming: every roll that hits the trigger is
+        // rejected, so the trigger's own variant becomes unrollable and the space quietly shrinks.
+        var rule = new IncompatibilityRule(RuleType.Require,
+            new RuleTarget("bg", "a"), new[] { new RuleTarget("hat", "crown") });
+
+        Assert.Contains(Problems(new Dictionary<string, double> { ["hat"] = 100 }, rule),
+            p => p.Contains("can never be rolled at all"));
+    }
+
+    [Fact]
+    public void A_rule_triggered_by_a_layer_that_never_appears_is_reported()
+    {
+        var rule = new IncompatibilityRule(RuleType.Exclude,
+            new RuleTarget("hat", "crown"), new[] { new RuleTarget("bg", "a") });
+
+        Assert.Contains(Problems(new Dictionary<string, double> { ["hat"] = 100 }, rule),
+            p => p.Contains("can never fire"));
+    }
+
+    [Fact]
+    public void An_ordinary_optional_layer_is_not_reported()
+    {
+        // The guard against the checks above being written so broadly that a working book trips
+        // them: a real chase item, with a rule that names it and still fires sometimes.
+        var rule = new IncompatibilityRule(RuleType.Exclude,
+            new RuleTarget("bg", "a"), new[] { new RuleTarget("hat", "crown") });
+
+        Assert.Empty(Problems(new Dictionary<string, double> { ["hat"] = 95 }, rule));
     }
 }

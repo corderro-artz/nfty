@@ -157,6 +157,62 @@ public static class Validator
                         + $"'{t.VariantId}' of ingredient '{t.IngredientId}'.");
 
         CheckRuleSanity(problems, r);
+        CheckAbsentChances(problems, r);
+    }
+
+    /// <summary>
+    /// The optional-layer chances: that they name real layers, sit in range, and do not describe a
+    /// recipe that cannot produce anything.
+    /// </summary>
+    private static void CheckAbsentChances(List<string> problems, LoadedRecipe r)
+    {
+        if (r.Manifest.AbsentPercent is not { } chances || chances.Count == 0) return;
+
+        var layers = new HashSet<string>(r.Manifest.LayerOrder, StringComparer.Ordinal);
+
+        foreach (var (id, percent) in chances)
+        {
+            // A chance for a layer this recipe does not stack is not merely useless — it is almost
+            // certainly a chance meant for a layer that IS stacked, silently doing nothing while
+            // the author believes their chase item is rare.
+            if (!layers.Contains(id))
+                problems.Add($"Recipe '{r.Manifest.Id}' sets an absent chance for '{id}', which is "
+                    + "not one of its layers.");
+
+            if (!double.IsFinite(percent))
+                problems.Add($"Recipe '{r.Manifest.Id}' layer '{id}' has a non-finite absent chance "
+                    + $"({Num(percent)}); it must be a finite number between 0 and 100.");
+            else if (percent < 0 || percent > 100)
+                problems.Add($"Recipe '{r.Manifest.Id}' layer '{id}' has an absent chance of "
+                    + $"{Num(percent)}; it must be between 0 and 100, where 0 always appears and "
+                    + "100 never does.");
+        }
+
+        // Every layer shelved composites nothing at all — the same emptiness an empty layerOrder
+        // produces, reached a different way and worth the same sentence.
+        if (r.Manifest.LayerOrder.Count > 0
+            && r.Manifest.LayerOrder.All(id => r.Manifest.AbsentPercentOf(id) >= 100))
+            problems.Add($"Recipe '{r.Manifest.Id}' leaves out every one of its layers, so it "
+                + "would generate a fully-transparent asset.");
+
+        // A rule cannot be satisfied by a layer that never appears. As a TARGET of a require rule
+        // this is fatal in a way the author will not see coming: every roll that hits the trigger is
+        // rejected, so the trigger's own variant becomes unrollable and the space quietly shrinks —
+        // the same harm the contradicting-pair check above reports.
+        foreach (var rule in r.Manifest.Rules)
+        {
+            if (r.Manifest.AbsentPercentOf(rule.When.IngredientId) >= 100)
+                problems.Add($"Recipe '{r.Manifest.Id}' has a rule triggered by layer "
+                    + $"'{rule.When.IngredientId}', which never appears, so the rule can never fire.");
+
+            if (rule.Type != RuleType.Require) continue;
+            foreach (var t in rule.Targets)
+                if (r.Manifest.AbsentPercentOf(t.IngredientId) >= 100)
+                    problems.Add($"Recipe '{r.Manifest.Id}' has a rule requiring "
+                        + $"'{t.IngredientId}:{t.VariantId}', but layer '{t.IngredientId}' never "
+                        + $"appears — so '{rule.When.IngredientId}:{rule.When.VariantId}' can never "
+                        + "be rolled at all.");
+        }
     }
 
     /// <summary>

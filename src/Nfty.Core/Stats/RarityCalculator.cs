@@ -57,9 +57,18 @@ public static class RarityCalculator
             {
                 if (!ingById.TryGetValue(layerId, out var ing)) continue;
                 double layerTotal = ing.Manifest.Variants.Sum(v => v.Weight);
+
+                // A LAYER THAT CAN BE LEFT OUT SCALES EVERY VARIANT UNDER IT. Without this the
+                // variants of a 90%-absent layer would each report the share they hold AMONG
+                // THEMSELVES — a chase item printing "50% in recipe" when it lands on one asset in
+                // twenty. The odds shown are the odds of getting it, so absence has to be folded in
+                // here rather than mentioned somewhere else.
+                double absentPct = r.Manifest.AbsentPercentOf(layerId);
+                double presentShare = Math.Clamp(100 - absentPct, 0, 100) / 100;
+
                 foreach (var v in ing.Manifest.Variants)
                 {
-                    double within = layerTotal > 0 ? v.Weight / layerTotal * 100 : 0;
+                    double within = (layerTotal > 0 ? v.Weight / layerTotal * 100 : 0) * presentShare;
                     double overall = recipePct / 100 * within;
                     traits.Add(new TraitOdds(r.Manifest.Id, r.Manifest.Name,
                         ing.Manifest.Id, ing.Manifest.Name, v.Id, v.Name,
