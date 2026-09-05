@@ -36,3 +36,6 @@ __pycache__/
 
 # Local publish output from packaging experiments.
 .pub/
+
+# Built release artifacts.
+.release/

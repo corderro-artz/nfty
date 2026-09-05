@@ -9,6 +9,13 @@
     difference, and a setting duplicated seven times is a setting nobody owns.
   -->
   <PropertyGroup>
+    <!--
+      THE PRODUCT VERSION, in one place. Every assembly in the solution carries it, so a binary can
+      always be asked what it is - a released file that cannot identify itself is a support problem
+      the first time somebody reports a bug against "the download".
+    -->
+    <Version>0.1.0</Version>
+
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -63,5 +70,29 @@
     -->
     <NoWarn>$(NoWarn);xUnit1051</NoWarn>
   </PropertyGroup>
+
+  <!--
+    PUBLISH HYGIENE. A plain `dotnet publish` of the desktop app produced 567 MB, and almost none of
+    it was this program:
+
+      - 101 MB of NATIVE debug symbols. SkiaSharp and HarfBuzzSharp ship .pdb files beside their
+        .dll, and publish copies them; libSkiaSharp.pdb alone is 81 MB of symbols for someone
+        else's C++, useless to anyone downloading a release.
+      - The .xml documentation files, which exist because GenerateDocumentationFile is on to enforce
+        the doc bar at compile time. They are a build-time check, not a shipped artifact.
+
+    Both are stripped from RELEASE publishes only, so a Debug publish still has everything a
+    debugger wants. What remains for win-x64 is 33 MB. Choosing a RuntimeIdentifier is the other
+    half and belongs on the publish command, not here: without one, publish copies the natives for
+    every platform Avalonia supports - win-x86, win-arm64, five Linux flavours, macOS - which was
+    the other 500 MB.
+  -->
+  <Target Name="TrimPublishOfBuildArtifacts" AfterTargets="ComputeFilesToPublish"
+          Condition="'$(Configuration)' == 'Release'">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
+                             Condition="'%(Extension)' == '.pdb' or '%(Extension)' == '.xml'" />
+    </ItemGroup>
+  </Target>
 
 </Project>

@@ -5,8 +5,9 @@ space far larger than the source art.**
 
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
 [![Avalonia 12](https://img.shields.io/badge/Avalonia-12.1.1-8B44AC)](https://avaloniaui.net/)
-[![tests 1454](https://img.shields.io/badge/tests-1454%20passing-3d6b52)](#testing)
+[![tests 1668](https://img.shields.io/badge/tests-1668%20passing-3d6b52)](#testing)
 [![warnings 0](https://img.shields.io/badge/warnings-0-3d6b52)](#contributing)
+[![license MIT](https://img.shields.io/badge/license-MIT-3d6b52)](LICENSE)
 
 Most layered generators composite fixed images. Here a layer can be a **grayscale value-map**
 colorized at generation time: recoloring preserves each pixel's value and lightness and injects a
@@ -242,8 +243,12 @@ House rules worth knowing before your first commit:
 
 ## License
 
-Not yet licensed. All rights reserved pending a license decision.
+[MIT](LICENSE) — © 2026 Vaporsoft. Use it, change it, ship it; keep the notice.
+
+The interface is set in **IBM Plex**, bundled with the app under the
+[SIL Open Font License](src/Nfty.App/Assets/Fonts/OFL.txt). That licence travels with any
+redistribution of the binaries, which is why every release archive carries a copy.
 
 ---
 
-<sub>© 2026 [Vaporsoft](https://www.vaporsoft.dev). All rights reserved.</sub>
+<sub>© 2026 [Vaporsoft](https://www.vaporsoft.dev) — [MIT](LICENSE).</sub>
