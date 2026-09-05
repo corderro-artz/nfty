@@ -9,6 +9,9 @@
 #   python -m mkdocs build     # static site into .mkdocs-site/ (gitignored)
 
 site_name: nfty
+# Needed for canonical links and the sitemap, and it is the published address rather than a guess:
+# a project site on GitHub Pages lives under the owner's github.io at the repository's name.
+site_url: https://corderro-artz.github.io/nfty/
 site_description: The nfty manual - how to draw a handful of layers and cook them into a collection.
 site_author: Vaporsoft
 repo_url: https://github.com/corderro-artz/nfty

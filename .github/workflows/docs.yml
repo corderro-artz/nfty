@@ -1,0 +1,77 @@
+# Publishes the user manual to GitHub Pages.
+#
+# The site is BUILT here rather than committed: docs/manual/ is the source, .mkdocs-site/ is a build
+# product, and committing a generated copy of something already in the repository is how the two
+# drift. mkdocs.yml pins the toolchain (docs/requirements.txt) so this build and a local one produce
+# the same site.
+#
+# One thing this workflow needs that a plain `mkdocs build` does not: the repository checkout must
+# include src/Nfty.App/Assets/Fonts, because tools/mkdocs-hooks/fonts.py zips the app's own font
+# files into the site as the typeface download. A sparse checkout of docs/ alone would silently
+# publish a page whose download link 404s.
+name: docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/manual/**'
+      - 'mkdocs.yml'
+      - 'docs/requirements.txt'
+      - 'tools/mkdocs-hooks/**'
+      - 'src/Nfty.App/Assets/Fonts/**'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+# Least privilege: read the code, write Pages, and mint the deploy token. Nothing else.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time, and never cancel one midway — a half-published site is worse than a stale
+# one, so an in-flight run finishes rather than being replaced.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: docs/requirements.txt
+
+      - name: Install the pinned toolchain
+        run: python -m pip install -r docs/requirements.txt
+
+      # --strict turns a broken internal link or a missing figure into a failed build rather than a
+      # published page with a hole in it.
+      - name: Build the manual
+        run: python -m mkdocs build --strict
+
+      # The font bundle is written by the hook at post-build. If it is missing the page still
+      # renders and its download link 404s, which is exactly the kind of quiet failure worth
+      # failing loudly for.
+      - name: Check the typeface bundle was built
+        run: test -s .mkdocs-site/assets/fonts/ibm-plex-nfty.zip
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .mkdocs-site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

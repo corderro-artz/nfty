@@ -1,9 +1,10 @@
 # Raise the unique-asset count
 
 **UNIQUE DNA** on the CookBook panel is how many genuinely distinct assets the book can produce. Ask
-for more than that and nfty refuses, and tells you the real maximum, rather than shipping duplicates.
+for more than that and nfty refuses, and tells you the real maximum, rather than shipping duplicates
+you did not ask for.
 
-Four ways to raise it, cheapest first.
+Four ways to raise it, cheapest first -- and a fifth option at the end, which is to stop needing it.
 
 ## 1. Widen a hue range
 
@@ -38,3 +39,14 @@ a rule you added early and no longer need may be the reason.
     Color range multiplies the *count*. Variants multiply the *visible variety*. A book with two
     drawings and a huge hue range can produce a million distinct assets that all look like the same
     two drawings. Push both.
+
+## Or: allow repeats instead
+
+None of the above is compulsory. If what you want is a large collection from a small book -- which is
+how a great many collections are minted -- tick **Allow repeats** in the Cook dialog and the limit
+stops applying: every roll is kept, and any count is producible.
+
+You keep the rarity. The weights still decide how common each variant is, and a layer with a low
+appearance chance is still rare. What you give up is the guarantee that no two assets are identical.
+
+See [How uniqueness is decided](../understand/uniqueness.md) for what that trade actually costs.

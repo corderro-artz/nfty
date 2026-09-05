@@ -1,7 +1,7 @@
 # How uniqueness is decided
 
-nfty guarantees that no two assets in a Set are the same. This page is what that guarantee actually
-means.
+By default, nfty guarantees that no two assets in a Set are the same. This page is what that
+guarantee actually means -- and how to switch it off, which is a normal thing to want.
 
 ## An asset's fingerprint
 
@@ -55,3 +55,32 @@ They look similar and mean opposite things:
 Above about a million unconstrained combinations, nfty stops enumerating and reports "more than N"
 instead of an exact figure. The guarantee is unchanged; only the display is approximate, and a book
 that big is not going to run out.
+
+## Or don't require it
+
+The guarantee costs something: a book can only produce as many assets as it has distinct
+combinations, so a small book cannot mint a large collection.
+
+Plenty of collections are minted the other way. Tick **Allow repeats** in the Cook dialog (or pass
+`--unlimited` on the command line) and every roll is kept, whether or not its fingerprint has come up
+before. Any count becomes producible from any book.
+
+Nothing else changes. The incompatibility rules are still enforced, and -- this is the part that
+matters -- **the weights still decide how rare each asset is**. A variant with a low weight stays
+proportionally uncommon; a layer with a low appearance chance is rarer still; and the rarest thing
+in the collection is the low-weight variant of a low-chance layer, which is exactly what a chase item
+is for. What you give up is the promise that two assets are never identical, not the rarity
+structure underneath.
+
+Identity in that mode is the asset's **number**, the way ERC-721 defines it -- token 41 and token 402
+are different tokens even if they look the same.
+
+A Set records which way it was made, in `set.json`:
+
+```json
+"uniqueDna": true
+```
+
+That matters more than it looks. The same book and the same seed produce a *different* collection
+depending on the setting, because rejecting a duplicate consumes a roll that the other mode never
+spends. The seed alone does not reproduce a run; the seed and this field together do.
