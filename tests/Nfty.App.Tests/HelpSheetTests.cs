@@ -12,7 +12,7 @@ using IconPath = Avalonia.Controls.Shapes.Path;   // disambiguates the implicit 
 
 namespace Nfty.App.Tests;
 
-/// <summary>Structural guards for the quick-reference sheet (docs/design/mockups/help.html). The
+/// <summary>Structural guards for the quick-reference sheet (docs/design/archive/mockups/help.html). The
 /// frames are the real check on how it LOOKS; these pin the two things a rendered frame cannot
 /// distinguish — which icon resource a glyph came from, and the column ratios behind a layout that
 /// would still look plausible if they drifted.</summary>

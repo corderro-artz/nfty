@@ -22,9 +22,11 @@ dotnet test nfty.sln      # all three projects
 - **Do not regenerate `tests/fixtures/`.** Those archives were written by an older build and the
   point of them is that they still read. Regenerating one to make a failing test pass launders a
   format change instead of catching it.
-- **Do not edit anything in `docs/design/mockups/`.** They are the locked 1:1 visual reference; the
-  app moves to match them, never the reverse. A deliberate divergence is allowed but must be
-  commented at the point of divergence with the reason.
+- **Do not edit anything in `docs/design/archive/`.** Not because it is authoritative — it is not —
+  but because it is a dated record of what the GUI was imagined as before it existed. The app has
+  been redesigned many times since and **the app is right by default**: a difference between the
+  running app and a file in that folder is not a defect and needs no justification. Editing one to
+  match today's app destroys the only thing it is still good for. See `docs/design/archive/README.md`.
 - **Determinism is a product guarantee.** Same cookbook + same seed ⇒ byte-identical output, across
   locales and CPU architectures. Every sort that can reach an output file uses
   `StringComparer.Ordinal`; every number that reaches a file or a report is formatted with

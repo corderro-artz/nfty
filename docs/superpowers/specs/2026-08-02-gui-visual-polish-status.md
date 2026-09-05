@@ -4,8 +4,18 @@ Record of the visual-polish pass (slice E). Read this **with**
 `2026-08-01-nfty-gui-visual-audit.md`, which is the source of truth for what each slice had to
 achieve. This file records where the work got to and, more usefully, what it cost to learn.
 
-Last updated: 2026-08-05. **All 12 slices complete and merged. The wider project is complete too** —
+Last updated: 2026-09-05. **All 12 slices complete and merged. The wider project is complete too** —
 see the note at the end for what shipped after this document's slices.
+
+> **2026-09-05 — the premise of this document has changed, and most of it should now be read as
+> history.** The seven HTML screens this pass measured itself against are archived under
+> `docs/design/archive/mockups/`; they are no longer a specification. The design has been revamped
+> many times since, mostly from looking at rendered frames, and **the running app is the source of
+> truth for how the app looks**. Every "divergence", "deviation" and "not 1:1" below is therefore
+> settled by default — none of them is an open defect, and the "~55% against the mockups" score is
+> a measurement of a question the project no longer asks. What stays useful here is the *reasoning*:
+> what each fix cost to learn, and which traps in Avalonia's Fluent theme are real. See
+> `docs/design/archive/README.md`.
 
 ## State
 
@@ -108,8 +118,13 @@ so the reasoning is not lost:
 
 Genuinely still open:
 
-- **The mockup's wide left-aligned `?` popover** — Avalonia's stock ToolTip is narrower and follows
-  the pointer. The affordance and the copy are faithful; the popover's shape is not.
+- ~~**The mockup's wide left-aligned `?` popover**~~ — **closed 2026-09-05, twice over.** The app
+  grew a real `ToolTip` ControlTheme in the meantime (panel ground, `LineStrong` hairline,
+  `RadiusSm`, a wrapping `MaxWidth`, a 140ms fade, and a 2.2s app-wide delay), so the affordance is
+  no longer a stock gray slab; and the archived screen it was being compared against is no longer a
+  specification. Shape parity with a relic is not a defect.
+
+Nothing is open under this heading any more.
 
 **Superseded — the original list, kept for provenance:**
 

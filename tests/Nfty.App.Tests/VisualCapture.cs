@@ -228,7 +228,7 @@ public class VisualCapture
 
     /// <summary>Renders the real <see cref="Views.ExplorerView"/> bound to an
     /// <see cref="ExplorerViewModel"/> (with an ingredient node selected) so visual parity with
-    /// docs/design/mockups/explorer.html can be checked from an actual rendered frame — not
+    /// docs/design/archive/mockups/explorer.html can be checked from an actual rendered frame — not
     /// imagined from XAML.</summary>
     [AvaloniaFact]
     public void Capture_explorer()
@@ -338,7 +338,7 @@ public class VisualCapture
 
     /// <summary>Renders the three real Explorer detail-body views (<see cref="Views.CookBookDetailView"/>,
     /// <see cref="Views.RecipeDetailView"/>, <see cref="Views.IngredientDetailView"/>) bound to fixture
-    /// VMs, so visual parity with docs/design/mockups/explorer.html's CookBook/Recipe/Ingredient bodies
+    /// VMs, so visual parity with docs/design/archive/mockups/explorer.html's CookBook/Recipe/Ingredient bodies
     /// can be checked from actual rendered frames — not imagined from XAML.</summary>
     [AvaloniaFact]
     public void Capture_detail_bodies()
@@ -384,7 +384,7 @@ public class VisualCapture
     }
 
     /// <summary>A four-layer recipe carrying all three kinds, mirroring the table the reorder
-    /// exploration draws (docs/design/mockups/explorations/reorder-control-variants.html), so the
+    /// exploration draws (docs/design/archive/mockups/explorations/reorder-control-variants.html), so the
     /// frames below can be compared against the variant they implement rather than against nothing.</summary>
     private static (LoadedCookBook Book, LoadedRecipe Recipe) FourLayerRecipe()
     {

@@ -196,7 +196,7 @@ tests/              1454 tests across three xunit.v3 projects
 tests/fixtures/     archives written by an older build, so format changes cannot pass unnoticed
 docs/manual/        the end-user manual (Material for MkDocs; mkdocs.yml is at the root)
 docs/requirements.txt  the manual's pinned toolchain
-docs/design/mockups the locked visual reference the GUI is built to match
+docs/design/archive/mockups the locked visual reference the GUI is built to match
 docs/superpowers/   design specs, newest first
 ```
 
