@@ -154,7 +154,7 @@
       <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
           <TextBlock Grid.Column="0" Classes="sub-h" Text="RULES" VerticalAlignment="Center" />
-          <Border Grid.Column="1" Classes="tabcount" IsVisible="{Binding HasRules}">
+          <Border Grid.Column="1" Classes="tabcount" IsVisible="{Binding RecipeHasRules}">
             <TextBlock Text="{Binding RulesBadgeText}" />
           </Border>
           <!-- Reserved, not conditional. The lock flips while this pane is open, and a button that
@@ -172,7 +172,8 @@
              change in one click, and show all three states at once where a ComboBox would hide two
              thirds of them. Always present — a filter that appeared once a recipe had "enough"
              rules would move the table under the pointer. -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="5" Margin="0,11,0,0">
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="5" Margin="0,11,0,0"
+                    IsVisible="{Binding RecipeHasRules}">
           <Button Classes="rfilter" Classes.on="{Binding IsFilterAll}" Content="ALL"
                   Command="{Binding FilterRulesCommand}" CommandParameter="all" />
           <Button Classes="rfilter" Classes.on="{Binding IsFilterExclude}" Content="NEVER"
@@ -183,8 +184,13 @@
 
         <!-- The empty state says WHICH emptiness: a recipe with no rules and a filter that matched
              none are different situations, and one of them is undone by a click. -->
+        <!-- Row 1 when the recipe has no rules at all (the chips are gone, so the row is free),
+             row 2 when a filter emptied the view (the chips are still there, above it). Bound to
+             the same grid row would leave a hole where the chips were on an empty recipe. -->
+        <TextBlock Grid.Row="1" Classes="muted" Text="{Binding EmptyRuleText}"
+                   Margin="0,12,0,0" IsVisible="{Binding !RecipeHasRules}" />
         <TextBlock Grid.Row="2" Classes="muted" Text="{Binding EmptyRuleText}"
-                   Margin="0,12,0,0" IsVisible="{Binding !HasRules}" />
+                   Margin="0,12,0,0" IsVisible="{Binding FilterEmptied}" />
 
         <!-- Sortable, and the DEFAULT IS AS AUTHORED — which is not a column any header offers.
              The CLI addresses a rule by its 1-based position in the manifest, so a panel that opened

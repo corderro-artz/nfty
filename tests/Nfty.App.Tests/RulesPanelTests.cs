@@ -263,4 +263,79 @@ public class RulesPanelTests
         }
         finally { window.Close(); vm.Dispose(); }
     }
+
+    /// <summary>
+    /// A rule row RECEIVES THE POINTER. This is the one the whole panel turned on and no other test
+    /// could see: <c>Border.rulerow</c> sets a border and a padding but no Background, and a Border
+    /// with a null Background is not hit-testable in Avalonia — null means "nothing here", not
+    /// "nothing painted". So the row never entered <c>:pointerover</c>, the actions never un-inked,
+    /// and Edit and Delete were unreachable by mouse from the day they shipped. Every layout
+    /// assertion passed the whole time, because the geometry was always right.
+    ///
+    /// <para>Asserted as a HIT TEST rather than as "Background is not null", because the property is
+    /// the mechanism and reaching the row is the requirement.</para>
+    /// </summary>
+    [AvaloniaFact]
+    public void A_rule_row_receives_the_pointer_so_its_actions_can_appear()
+    {
+        var (window, vm, view) = Render(2);
+        try
+        {
+            var row = view.GetVisualDescendants().OfType<Border>()
+                .First(b => b.Classes.Contains("rulerow"));
+            var centre = row.TranslatePoint(
+                new Avalonia.Point(row.Bounds.Width / 2, row.Bounds.Height / 2), window)!.Value;
+
+            var hit = window.GetVisualAt(centre);
+            Assert.NotNull(hit);
+            Assert.True(ReferenceEquals(hit, row) || (hit?.GetVisualAncestors().Contains(row) ?? false),
+                $"the pointer at the row's centre found {hit?.GetType().Name ?? "nothing"}, "
+                + "which is not the row or anything inside it");
+        }
+        finally { window.Close(); vm.Dispose(); }
+    }
+
+    [AvaloniaFact]
+    public void The_count_badge_and_the_filter_chips_describe_the_recipe_not_the_view()
+    {
+        var (window, vm, view) = Render(4);
+        try
+        {
+            vm.FilterRulesCommand.Execute("require");   // the fixture's odd rules only
+            Assert.True(vm.RecipeHasRules);
+            Assert.True(vm.FilterEmptied is false);     // some matched, so this is not the empty case
+
+            vm.FilterRulesCommand.Execute("exclude");
+            Assert.True(vm.RecipeHasRules);
+
+            // A badge bound to the FILTERED view disappeared whenever a filter matched nothing,
+            // telling the reader a recipe with four rules had none.
+            Assert.Equal("4", vm.RulesBadgeText);
+            var badge = view.GetVisualDescendants().OfType<Border>()
+                .First(b => b.Classes.Contains("tabcount"));
+            Assert.True(badge.IsEffectivelyVisible);
+        }
+        finally { window.Close(); vm.Dispose(); }
+    }
+
+    [AvaloniaFact]
+    public void A_recipe_with_no_rules_offers_no_filter_and_says_it_once()
+    {
+        var (window, vm, view) = Render(0);
+        try
+        {
+            // Three chips for a choice that cannot change anything, over a badge counting nothing.
+            Assert.False(vm.RecipeHasRules);
+            Assert.False(vm.FilterEmptied);
+            Assert.DoesNotContain(view.GetVisualDescendants().OfType<Button>(),
+                b => b.Classes.Contains("rfilter") && b.IsEffectivelyVisible);
+
+            // And the sentence exactly once: !HasRules is also true on an empty recipe, so binding
+            // the filtered empty state to it drew the same line in two grid rows.
+            var said = view.GetVisualDescendants().OfType<TextBlock>()
+                .Count(t => t.IsEffectivelyVisible && t.Text == "No incompatibility rules");
+            Assert.Equal(1, said);
+        }
+        finally { window.Close(); vm.Dispose(); }
+    }
 }

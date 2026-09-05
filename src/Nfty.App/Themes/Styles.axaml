@@ -1859,6 +1859,15 @@
        of the row the pointer just entered — which is the one thing a hover affordance must not do.
        0 rather than IsVisible=False so the row's height and column widths are identical in both
        states by construction. -->
+  <!-- BACKGROUND TRANSPARENT, AND IT IS LOAD-BEARING. A Border with no Background is not
+       hit-testable in Avalonia — null is "nothing here", not "nothing painted" — so the row never
+       entered :pointerover and the actions below never appeared at all. Edit and Delete were
+       unreachable by mouse from the day they shipped, on a panel whose own test asserted the column
+       was reserved and its buttons laid out. Found by driving the real app; no rendered frame and no
+       headless assertion about layout could have shown it, because the geometry was always right. -->
+  <Style Selector="Border.ract">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
   <Style Selector="StackPanel.ractions">
     <Setter Property="Opacity" Value="0" />
   </Style>

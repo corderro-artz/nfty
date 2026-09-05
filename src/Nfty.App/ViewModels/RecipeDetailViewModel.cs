@@ -187,6 +187,7 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(Rules));
         OnPropertyChanged(nameof(HasRules));
         OnPropertyChanged(nameof(EmptyRuleText));
+        OnPropertyChanged(nameof(FilterEmptied));
         OnPropertyChanged(nameof(FilterHidesSome));
         OnPropertyChanged(nameof(HiddenRuleText));
         OnPropertyChanged(nameof(IsFilterAll));
@@ -250,6 +251,18 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
     /// a filter that matches nothing shows an empty state rather than column heads over no rows —
     /// and the empty state says which of the two emptinesses it is.</summary>
     public bool HasRules => Rules.Count > 0;
+
+    /// <summary>Whether the RECIPE has any rules — as opposed to <see cref="HasRules"/>, which is
+    /// about the filtered view. The count badge and the filter chips both hang off this one: a
+    /// filter narrows the view and never the count, and a badge that vanished when a filter matched
+    /// nothing said the recipe had no rules when it has two. Chips over a recipe with no rules at
+    /// all are three controls for a choice that cannot change anything.</summary>
+    public bool RecipeHasRules => _allRules.Count > 0;
+
+    /// <summary>The recipe has rules but the filter matched none of them. Distinct from
+    /// <c>!HasRules</c>, which is ALSO true when the recipe is empty — binding the filtered empty
+    /// state to that drew the sentence twice, once in each row.</summary>
+    public bool FilterEmptied => RecipeHasRules && !HasRules;
 
     /// <summary>The empty state's sentence: a recipe with no rules and a filter that matched none
     /// are different situations, and one of them is undone by a click.</summary>
