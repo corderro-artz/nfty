@@ -247,6 +247,20 @@ public class DarkModeContrastTests
 
     /// <summary>The screens, built from the same fixtures the visual captures use so the two agree on
     /// what "the app" is.</summary>
+    /// <summary>The rule form seated on a rule it cannot save, so the sweep meets its warning ink
+    /// and its disabled confirm rather than the clean state.</summary>
+    private static RuleDialogViewModel RuleForm(FakeDialogs dialogs)
+    {
+        var (book, recipe) = VisualCapture.RecipeWithRules();
+        // The book owns the images; the sweep measures text against surfaces and never draws one.
+        book.Dispose();
+        var vm = new RuleDialogViewModel(dialogs, recipe.Manifest, recipe.Ingredients);
+        // Point it at the layer it is already triggered on: a rule cannot constrain a layer against
+        // itself, so the form refuses and paints the warning.
+        vm.Targets[0].Layer = vm.Layers.First(l => l.Id == vm.Trigger.Layer!.Id);
+        return vm;
+    }
+
     private static IEnumerable<(string Name, Control View, Action? Dispose)> Screens()
     {
         var nav = new FakeNav();
@@ -298,6 +312,15 @@ public class DarkModeContrastTests
         // The reported screenshot was exactly this - 0 recipes, 1 problem - and none of the fixtures
         // above ever paint a problem chip, because they are all valid.
         var brokenVm = new CookBookDetailViewModel(EmptyBook(), () => { }, () => { });
+
+        // The rule form, in the state that carries its warning ink — a WarningBrush sentence and a
+        // DISABLED accent button, which are the two runs on it most likely to fall under the floor.
+        // A screen that is never swept cannot be found to be unreadable.
+        yield return ("dialog-rule", new Views.RuleDialogView
+        {
+            DataContext = RuleForm(dialogs),
+        }, null);
+
         yield return ("cookbook-detail-invalid",
             new Views.CookBookDetailView { DataContext = brokenVm }, null);
 

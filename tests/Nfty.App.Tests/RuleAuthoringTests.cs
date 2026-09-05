@@ -343,6 +343,26 @@ public class RuleAuthoringTests
         }
         finally { book.Dispose(); }
     }
+
+    [Fact]
+    public void The_add_form_opens_on_a_rule_the_recipe_does_not_already_have()
+    {
+        // A first rule is usually made of first things, so a form that opened on the first layer and
+        // first variant opened refused — telling the user their untouched form was a duplicate
+        // before they had touched anything. Caught on a rendered frame.
+        //
+        // Seating the two halves SEPARATELY does not fix it, which is the instructive part: each is
+        // individually unused and the PAIR they form is the rule that already exists.
+        var (book, recipe) = Fixture(Exclude("bg", "day", "aura", "none"));
+        try
+        {
+            var vm = Dialog(recipe);
+            Assert.Equal(string.Empty, vm.Problem);
+            Assert.True(vm.ConfirmCommand.CanExecute(null));
+        }
+        finally { book.Dispose(); }
+    }
+
 }
 
 /// <summary>A dialog layer that answers with a canned result instead of showing anything.</summary>

@@ -178,11 +178,49 @@ public partial class RuleDialogViewModel : ViewModelBase
         }
         else
         {
-            Trigger.Layer = Layers.FirstOrDefault();
-            Targets.Add(NewTarget(null));
+            // BOTH halves together. Seating the trigger and then letting NewTarget pick its own
+            // target independently is how this opened refused in the first place: each half was
+            // individually reasonable and the PAIR they formed was the rule the recipe already had.
+            Targets.Add(NewTarget(SeatFirstUnusedPair()));
         }
 
         Revalidate();
+    }
+
+    /// <summary>
+    /// Opens an ADD form on a trigger the recipe does not already have a rule for, rather than on
+    /// the first layer in the list.
+    /// </summary>
+    /// <remarks>
+    /// A rendered frame caught this: on a recipe whose first rule is bg:day never-with aura:none —
+    /// which is what a first rule usually is, since the author picked the first things too — the
+    /// form opened already refused, telling the user their untouched form duplicated something
+    /// before they had done anything. It is the same principle the "+ Target" button follows: a
+    /// control that creates a row should create a row that is legal.
+    /// </remarks>
+    private RuleTarget? SeatFirstUnusedPair()
+    {
+        Trigger.Layer = Layers.FirstOrDefault();
+
+        foreach (var wl in Layers)
+            foreach (var wv in wl.Variants)
+                foreach (var tl in Layers.Where(l => l.Id != wl.Id))
+                    foreach (var tv in tl.Variants)
+                    {
+                        var candidate = new IncompatibilityRule(
+                            IsExclude ? RuleType.Exclude : RuleType.Require,
+                            new RuleTarget(wl.Id, wv.Id),
+                            new[] { new RuleTarget(tl.Id, tv.Id) });
+                        if (_recipe.Rules.Any(r => RuleEdits.AreSame(r, candidate))) continue;
+
+                        Trigger.Layer = wl;
+                        Trigger.Variant = wv;
+                        return candidate.Targets[0];
+                    }
+
+        // Every pair is spoken for. The form opens on the first layer and says why through Problem;
+        // there is nothing better to offer, and refusing to open would explain nothing.
+        return null;
     }
 
     private RuleTargetDraft NewTarget(RuleTarget? seed)
