@@ -82,10 +82,19 @@
            layers panel an artist has used. The spec settles that by keeping the locked reading order
            and carrying the meaning in a label rather than in an arrow that would have to pick a
            direction to betray. Permanent also means the header never reflows on unlock. -->
-      <StackPanel Orientation="Horizontal" Spacing="9" Margin="2,0,0,0">
-        <TextBlock Classes="sub-h" Text="LAYERS" />
-        <TextBlock Classes="hint" Text="1 → paints first, furthest back" />
-      </StackPanel>
+      <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="9" Margin="2,0,0,0">
+        <TextBlock Grid.Column="0" Classes="sub-h" Text="LAYERS" VerticalAlignment="Center" />
+        <TextBlock Grid.Column="1" Classes="hint" Text="1 → paints first, furthest back"
+                   VerticalAlignment="Center" />
+        <!-- The toggle sits ABOVE the table it reshapes, which is what makes the chance column
+             allowed to appear and disappear: switching it re-lays the columns below rather than
+             moving anything under the pointer that just clicked. It is DERIVED from the data — the
+             recipe has optional layers exactly when some layer has a chance — so there is no stored
+             flag that could disagree with the numbers underneath it. -->
+        <Button Grid.Column="3" Classes="chip" Classes.on="{Binding ShowChanceColumn}"
+                Content="OPTIONAL LAYERS" Command="{Binding ToggleOptionalLayersCommand}"
+                ToolTip.Tip="Let layers be left out of an asset entirely, at a chance you set per layer. The variants' own weights still decide which one shows up when it does." />
+      </Grid>
 
       <StackPanel Spacing="0">
         <!-- The leading 26px column is the drag grip's, and it is present in BOTH lock states at the
@@ -98,11 +107,21 @@
              sorted view would show a stack that is not the stack, directly beside a drag handle
              that writes the real one. Nothing here is missing; see TableSort's own summary. -->
         <Border Classes="data-h">
-          <Grid ColumnDefinitions="26,40,*,110,90">
+          <Grid ColumnDefinitions="26,40,*,110,90,Auto">
             <TextBlock Grid.Column="1" Classes="data-h num" Text="#" Margin="0,0,10,0" />
             <TextBlock Grid.Column="2" Classes="data-h" Text="LAYER" />
             <TextBlock Grid.Column="3" Classes="data-h" Text="KIND" />
             <TextBlock Grid.Column="4" Classes="data-h num" Text="VARIANTS" />
+            <!-- AN AUTO COLUMN IN TWO GRIDS IS THE TRAP THIS APP HAS BEEN BITTEN BY TWICE — the
+                 header sizes on its own content and the rows size on theirs, and the column starts
+                 at a different x in each. It is safe here only because both cells are the SAME
+                 styled wrapper (Panel.chancecell, one width stated once in Styles.axaml) and both
+                 collapse together: hidden, the Panel does not measure, so Auto is 0 in both and the
+                 column is simply not there. That collapse is why the shape can change at all
+                 without a bindable ColumnDefinitions, which Avalonia does not offer. -->
+            <Panel Grid.Column="5" Classes="chancecell" IsVisible="{Binding ShowChanceColumn}">
+              <TextBlock Classes="data-h num" Text="ABSENT" HorizontalAlignment="Right" />
+            </Panel>
           </Grid>
         </Border>
         <!-- A Panel, not a StackPanel: the drop line is an OVERLAY positioned by margin over the
@@ -116,7 +135,7 @@
                         Command="{Binding $parent[ItemsControl].((vm:RecipeDetailViewModel)DataContext).OpenIngredientCommand}"
                         CommandParameter="{Binding Id}">
                   <Border Classes="data-row" Classes.sel="{Binding IsSelected}">
-                    <Grid ColumnDefinitions="26,40,*,110,90">
+                    <Grid ColumnDefinitions="26,40,*,110,90,Auto">
                       <Border Grid.Column="0" Classes="grip"
                               Classes.on="{Binding $parent[ItemsControl].((vm:RecipeDetailViewModel)DataContext).CanReorder}"
                               ToolTip.Tip="Drag to reorder — or Alt+Up / Alt+Down">
@@ -126,6 +145,26 @@
                       <TextBlock Grid.Column="2" Classes="data-row" Text="{Binding Layer}" />
                       <TextBlock Grid.Column="3" Classes="data-row kind-txt" Classes.kdyn="{Binding IsDynamic}" Classes.kstat="{Binding IsStatic}" Classes.kcust="{Binding IsCustom}" Text="{Binding Kind}" />
                       <TextBlock Grid.Column="4" Classes="data-row num" Text="{Binding VariantCount}" />
+
+                      <!-- Editable while the book is unlocked, plain text while it is not — the
+                           same gate reordering and rule authoring use, because a chance is
+                           structure rather than pixels. Both states occupy the same cell, so
+                           flipping the lock does not move the column.
+                           The field commits on LOST FOCUS and on Enter, never on every value
+                           change: a save rewrites every PNG in the book, and a stepper spun from 0
+                           to 85 would otherwise be eighty-five of them. RecipeDetailView.axaml.cs
+                           holds that wiring. -->
+                      <Panel Grid.Column="5" Classes="chancecell"
+                             IsVisible="{Binding $parent[ItemsControl].((vm:RecipeDetailViewModel)DataContext).ShowChanceColumn}">
+                        <TextBlock Classes="data-row num" Text="{Binding AbsentText}"
+                                   HorizontalAlignment="Right" VerticalAlignment="Center"
+                                   IsVisible="{Binding !$parent[ItemsControl].((vm:RecipeDetailViewModel)DataContext).CanEditChances}" />
+                        <NumericUpDown Name="AbsentField" Classes="qnt" Value="{Binding AbsentPercent}"
+                                       Minimum="0" Maximum="100" FormatString="0.##"
+                                       IsVisible="{Binding $parent[ItemsControl].((vm:RecipeDetailViewModel)DataContext).CanEditChances}"
+                                       Tag="{Binding}"
+                                       ToolTip.Tip="How often this layer is left out entirely. 0 always appears, 100 never does." />
+                      </Panel>
                     </Grid>
                   </Border>
                 </Button>
@@ -174,11 +213,11 @@
              rules would move the table under the pointer. -->
         <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="5" Margin="0,11,0,0"
                     IsVisible="{Binding RecipeHasRules}">
-          <Button Classes="rfilter" Classes.on="{Binding IsFilterAll}" Content="ALL"
+          <Button Classes="chip rfilter" Classes.on="{Binding IsFilterAll}" Content="ALL"
                   Command="{Binding FilterRulesCommand}" CommandParameter="all" />
-          <Button Classes="rfilter" Classes.on="{Binding IsFilterExclude}" Content="NEVER"
+          <Button Classes="chip rfilter" Classes.on="{Binding IsFilterExclude}" Content="NEVER"
                   Command="{Binding FilterRulesCommand}" CommandParameter="exclude" />
-          <Button Classes="rfilter" Classes.on="{Binding IsFilterRequire}" Content="ALWAYS"
+          <Button Classes="chip rfilter" Classes.on="{Binding IsFilterRequire}" Content="ALWAYS"
                   Command="{Binding FilterRulesCommand}" CommandParameter="require" />
         </StackPanel>
 

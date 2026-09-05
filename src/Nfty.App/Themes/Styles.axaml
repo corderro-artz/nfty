@@ -1880,6 +1880,16 @@
     <Setter Property="Opacity" Value="1" />
   </Style>
 
+  <!-- The Recipe layer table's chance cell. ONE WIDTH, used by the header cell and the row cell
+       alike, because the two live in different Grids over an Auto column — size them on their own
+       content and the column starts at a different x in each, which is the misalignment this app
+       has now found twice. Hidden, the Panel does not measure, so the Auto column collapses to
+       nothing and the table is the table it was before optional layers existed. -->
+  <Style Selector="Panel.chancecell">
+    <Setter Property="Width" Value="96" />
+    <Setter Property="Margin" Value="8,0,0,0" />
+  </Style>
+
   <!-- ============ SORTABLE COLUMN HEADERS ============
        A header that sorts is a Button, so it is focusable, keyboard-activatable and has a hover
        state — none of which a TextBlock with a pointer handler would have. It draws as bare text:
@@ -1946,10 +1956,15 @@
     <Setter Property="Opacity" Value="1" />
   </Style>
 
-  <!-- The rules rail's relation filter: three tiny mono chips, the .seg-b vocabulary at rail
-       scale. Not a ComboBox — three options that fit across 274px are faster to read and one click
-       to change, and a dropdown would hide two thirds of the state. -->
-  <Style Selector="Button.rfilter">
+  <!-- A CHIP: a small mono toggle that reads as one of a set. Three of them make the rules rail's
+       relation filter; one on its own is the layer table's optional-layers switch. The look is here
+       and the MEANING is in the call site's second class, so a test that asks "is this a rules
+       filter?" is asking about the control's job rather than about what it looks like.
+       Resting ink is FgBrush, not FgMutedBrush. Muted measured 1.41 against a floor of 2.0 on the
+       page ground the layer table sits on — it happened to pass inside the rules rail, whose panel
+       is a different surface, which is exactly how an unreadable control ships. The on state stays
+       unmistakable through the accent wash and border rather than through the off state being dim. -->
+  <Style Selector="Button.chip">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="9.5" />
     <Setter Property="LetterSpacing" Value="0.3" />
@@ -1959,16 +1974,19 @@
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
   </Style>
-  <Style Selector="Button.rfilter /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Button.chip /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
   </Style>
-  <Style Selector="Button.rfilter.on">
+  <Style Selector="Button.chip:pointerover">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+  <Style Selector="Button.chip.on">
     <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
   </Style>
-  <Style Selector="Button.rfilter.on /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Button.chip.on /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
   </Style>
 

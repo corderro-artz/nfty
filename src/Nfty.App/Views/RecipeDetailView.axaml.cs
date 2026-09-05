@@ -48,6 +48,22 @@ public partial class RecipeDetailView : UserControl
         _rows.PointerReleased += OnRowsPointerReleased;
         _rows.PointerCaptureLost += (_, _) => EndDrag();
         AddHandler(KeyDownEvent, OnKeyDown, RoutingStrategies.Bubble);
+
+        // The chance field commits when it is DONE being edited, not on every value change: a save
+        // rewrites every PNG in the book, so a stepper spun from 0 to 85 would be eighty-five of
+        // them. "Done" for a numeric field is losing focus or pressing Enter, and both are handled
+        // here rather than per row because the rows are templated and there is no per-row code.
+        _rows.AddHandler(LostFocusEvent, OnChanceLostFocus, RoutingStrategies.Bubble);
+    }
+
+    /// <summary>The layer row a chance field belongs to, or null for any other control.</summary>
+    private static LayerRow? ChanceRow(object? source) =>
+        source is NumericUpDown { Name: "AbsentField" } f ? f.Tag as LayerRow : null;
+
+    private void OnChanceLostFocus(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is RecipeDetailViewModel vm && ChanceRow(e.Source) is { } row)
+            _ = vm.CommitAbsentAsync(row);
     }
 
     // ---- drag ---------------------------------------------------------------------------------
@@ -183,6 +199,17 @@ public partial class RecipeDetailView : UserControl
     /// page, towards #1 — which is why #1's meaning is spelled out in the header hint.</summary>
     private async void OnKeyDown(object? sender, KeyEventArgs e)
     {
+        // Enter commits a chance without waiting for focus to go somewhere else — the other half of
+        // "done being edited". Checked first because it belongs to the field, not to the table, and
+        // must not fall through to the reorder keys below.
+        if (e.Key == Key.Enter && DataContext is RecipeDetailViewModel chanceVm
+            && ChanceRow(e.Source) is { } chanceRow)
+        {
+            e.Handled = true;
+            await chanceVm.CommitAbsentAsync(chanceRow);
+            return;
+        }
+
         // Esc abandons a drag. Checked before the Alt gate, because Esc carries no modifier — and a
         // captured drag has no other way out: every other route (release, capture lost) commits or
         // has already ended it.

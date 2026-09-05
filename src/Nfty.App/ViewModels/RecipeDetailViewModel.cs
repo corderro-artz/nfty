@@ -33,15 +33,35 @@ public partial class LayerRow : ObservableObject
     /// <summary>Whether this is the row a keyboard reorder acts on; drives the row's accent wash.</summary>
     [ObservableProperty] private bool _isSelected;
 
+    /// <summary>How often this layer is left out of an asset entirely, as a percent. Zero — the
+    /// overwhelmingly common case — means it always appears.</summary>
+    /// <remarks>
+    /// Edited in place and committed when the field is DONE being edited rather than on every
+    /// change: a save rewrites every PNG in the book, and a stepper spun from 0 to 85 would
+    /// otherwise be eighty-five of them. The view commits on lost focus and on Enter, which is what
+    /// "done" means for a numeric field.
+    /// </remarks>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AbsentText))]
+    private double _absentPercent;
+
+    /// <summary>The chance as the table prints it when the layer is not being edited.</summary>
+    public string AbsentText => AbsentPercent <= 0
+        ? "\u2014"
+        : AbsentPercent >= 100 ? "never" : $"{AbsentPercent:0.##}%";
+
     /// <summary>Builds a row.</summary>
     /// <param name="index">Its 1-based depth.</param>
     /// <param name="id">The ingredient's id.</param>
     /// <param name="layer">Its display name.</param>
     /// <param name="kind">The layer kind, as a lower-case word.</param>
     /// <param name="variantCount">How many variants it offers.</param>
-    public LayerRow(int index, string id, string layer, string kind, int variantCount)
+    /// <param name="absentPercent">How often the recipe leaves it out, 0..100.</param>
+    public LayerRow(int index, string id, string layer, string kind, int variantCount,
+        double absentPercent = 0)
     {
         _index = index;
+        _absentPercent = absentPercent;
         Id = id;
         Layer = layer;
         Kind = kind;
@@ -307,15 +327,18 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
                 .Where(l => ingById.ContainsKey(l.IngredientId))
                 .Select(l => new LayerRow(l.Depth, l.IngredientId, ingById[l.IngredientId].Manifest.Name,
                     ingById[l.IngredientId].Manifest.Kind.ToString(),
-                    ingById[l.IngredientId].Manifest.Variants.Count)));
+                    ingById[l.IngredientId].Manifest.Variants.Count,
+                    recipe.Manifest.AbsentPercentOf(l.IngredientId))));
 
         _allRules = recipe.Manifest.Rules.Select(r => MapRule(r, recipe)).ToList();
         RuleSort = new TableSort("Authored", () => OnPropertyChanged(nameof(Rules)));
 
         var ordered = Ordered();
-        Factors = BuildFactors(ordered);
+        Factors = BuildFactors(ordered, _recipe.Manifest);
         // long, not int: a dozen 5-variant layers already overflows int.
-        long total = ordered.Aggregate(1L, (acc, ing) => acc * Math.Max(1, ing.Manifest.Variants.Count));
+        // The same arithmetic the chips show, for the same reason: a total derived independently
+        // would be free to disagree with the chips it sits under.
+        long total = Factors.Aggregate(1L, (acc, f) => acc * Math.Max(1, f.VariantCount));
         TotalText = total.ToString("N0");
         LayerCountText = Layers.Count == 1 ? "1 layer" : $"{Layers.Count} layers";
         int variants = ordered.Sum(i => i.Manifest.Variants.Count);
@@ -334,9 +357,27 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
         return _recipe.Manifest.LayerOrder.Where(ingById.ContainsKey).Select(id => ingById[id]).ToList();
     }
 
-    private static IReadOnlyList<FactorChip> BuildFactors(IReadOnlyList<LoadedIngredient> ordered) => ordered
-        .Select((ing, idx) => new FactorChip(ing.Manifest.Name, ing.Manifest.Variants.Count,
-                                             ing.Manifest.Kind, ShowTimes: idx > 0))
+    /// <summary>
+    /// The hero's factor arithmetic: one chip per layer, multiplied together.
+    /// </summary>
+    /// <remarks>
+    /// AN OPTIONAL LAYER COUNTS ONE HIGHER, because "not there" is a distinct outcome the roll can
+    /// land on — a two-variant layer that may be left out offers three. A layer that never appears
+    /// counts ONE, not its variants: it has exactly one outcome. Get either wrong and the chips
+    /// multiply out to a number that disagrees with the Unique DNA tile beside them, which is the
+    /// class of defect this panel has been bitten by before.
+    /// </remarks>
+    private static IReadOnlyList<FactorChip> BuildFactors(
+        IReadOnlyList<LoadedIngredient> ordered, RecipeManifest manifest) => ordered
+        .Select((ing, idx) =>
+        {
+            double absent = manifest.AbsentPercentOf(ing.Manifest.Id);
+            int count = absent >= 100
+                ? 1
+                : ing.Manifest.Variants.Count + (absent > 0 ? 1 : 0);
+            return new FactorChip(ing.Manifest.Name, count, ing.Manifest.Kind, ShowTimes: idx > 0,
+                Variants: ing.Manifest.Variants.Count, Optional: absent > 0);
+        })
         .ToList();
 
     // ---- reorder --------------------------------------------------------------------------------
@@ -396,6 +437,104 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
+    /// Whether this recipe has any layer that may be left out — and therefore whether the table
+    /// shows its chance column at all.
+    /// </summary>
+    /// <remarks>
+    /// <b>DERIVED, never stored.</b> A stored flag beside the chances could disagree with them —
+    /// off with a chase item still set, or on with nothing — and then something has to decide which
+    /// one generation believes. There is nothing to disagree about here because there is only one
+    /// of them: the toggle IS the data. Turning it off clears every chance, which is why the
+    /// command below asks first.
+    /// </remarks>
+    public bool OptionalLayers => _recipe.Manifest.HasOptionalLayers;
+
+    /// <summary>Whether the optional-layer chances can be edited: the same gate reordering and rule
+    /// authoring use, because a chance is structure — what a recipe can produce — not pixels.</summary>
+    public bool CanEditChances => _editRules is not null && _dialogs is not null && CanReorder;
+
+    /// <summary>
+    /// Turns optional layers on or off for this recipe.
+    /// </summary>
+    /// <remarks>
+    /// Turning it ON writes nothing: every layer still always appears, and the column simply
+    /// appears with every row reading a dash, ready to be given a number. That asymmetry is the one
+    /// cost of deriving the toggle rather than storing it, and it is the right way round — the
+    /// destructive direction is the one that asks.
+    /// </remarks>
+    /// <remarks>
+    /// NOT gated by the edit lock, unlike the fields it reveals — and that is the same distinction
+    /// the pencil already draws. Turning the column ON writes nothing; it shows numbers the recipe
+    /// already has, and a locked book is a book you can still LOOK at. Only turning it off is
+    /// destructive, and that goes through the seam, which is gated and says so.
+    ///
+    /// <para>The contrast sweep is what surfaced this. Gated, the toggle rendered disabled at 0.38
+    /// and measured 1.41 against a floor of 2.0 — unreadable. The fix is not a brighter disabled
+    /// state but noticing that a control which only reveals information had no business being
+    /// disabled for someone who is allowed to read.</para>
+    /// </remarks>
+    [RelayCommand]
+    private async Task ToggleOptionalLayers()
+    {
+        if (_dialogs is null || _editRules is null) return;
+
+        if (!OptionalLayers)
+        {
+            // Nothing to write. The column is shown by ShowChanceColumn, which the pane holds for
+            // as long as it is open — see its own note on why that is a pane state and not a field.
+            _chanceColumnRequested = true;
+            OnPropertyChanged(nameof(ShowChanceColumn));
+            return;
+        }
+
+        var ok = await _dialogs.ShowAsync<bool>(new ConfirmDialogViewModel(_dialogs,
+            "Turn off optional layers?",
+            "Every layer of this recipe will always appear again, and the chances you have set are "
+            + "discarded.", "Turn off"));
+        if (!ok) return;
+
+        _chanceColumnRequested = false;
+        await _editRules(AbsentChance.ClearAll, "change optional layers");
+    }
+
+    /// <summary>
+    /// The pane has been asked to show the chance column even though no chance is set yet.
+    /// </summary>
+    /// <remarks>
+    /// This is PANE state, not manifest state, and deliberately so. Deriving the toggle from the
+    /// data means "on with nothing set" has no representation on disk — which is correct, because
+    /// it describes nothing about the recipe — but a user who has just clicked the toggle needs the
+    /// column to appear before they can type the first number into it. So the pane remembers the
+    /// ask for as long as it is open, and the data remembers everything that matters.
+    /// </remarks>
+    private bool _chanceColumnRequested;
+
+    /// <summary>Whether the table draws its chance column.</summary>
+    public bool ShowChanceColumn => OptionalLayers || _chanceColumnRequested;
+
+    /// <summary>
+    /// Commits one layer's chance and saves.
+    /// </summary>
+    /// <param name="row">The row being edited.</param>
+    /// <returns>True when the recipe changed and was saved.</returns>
+    /// <remarks>
+    /// Called when the field is DONE being edited — lost focus, or Enter — rather than on every
+    /// value change. A save rewrites every PNG in the book, so a stepper spun from 0 to 85 would
+    /// otherwise be eighty-five of them.
+    /// </remarks>
+    public async Task<bool> CommitAbsentAsync(LayerRow row)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+        if (_editRules is null || !CanEditChances) return false;
+
+        double percent = Math.Clamp(row.AbsentPercent, 0, 100);
+        if (percent == _recipe.Manifest.AbsentPercentOf(row.Id)) return false;   // nothing to write
+
+        var book = await _editRules(m => AbsentChance.Set(m, row.Id, percent), "change a layer's chance");
+        return book is not null;
+    }
+
+    /// <summary>
     /// Whether rules can be authored here. The same gate as reordering, and for the same reason:
     /// rules are STRUCTURE — what a recipe permits — not pixels. The pencil's deliberate exemption
     /// from the edit lock is about looking at a layer, which this is not.
@@ -405,6 +544,9 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
     partial void OnCanReorderChanged(bool value)
     {
         OnPropertyChanged(nameof(CanEditRules));
+        OnPropertyChanged(nameof(CanEditChances));
+        OnPropertyChanged(nameof(ShowChanceColumn));
+        ToggleOptionalLayersCommand.NotifyCanExecuteChanged();
         AddRuleCommand.NotifyCanExecuteChanged();
         EditRuleCommand.NotifyCanExecuteChanged();
         DeleteRuleCommand.NotifyCanExecuteChanged();
@@ -500,7 +642,7 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
         // which is only the row's position on a book that carries every layer it stacks.
         foreach (var row in Layers) row.Index = LayerDepth.DepthOf(_recipe.Manifest, row.Id);
 
-        Factors = BuildFactors(ordered);
+        Factors = BuildFactors(ordered, _recipe.Manifest);
         OnPropertyChanged(nameof(Factors));
 
         // The hero genuinely changed: reordering moves which RNG draw reaches which layer, so the same

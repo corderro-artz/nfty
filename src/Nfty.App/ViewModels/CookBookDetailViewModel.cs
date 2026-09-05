@@ -17,7 +17,12 @@ namespace Nfty.App.ViewModels;
 /// <param name="ShowTimes">True for every chip after the first, so the view can render the x that
 /// separates the factors. An ItemsControl cannot interleave separators between items, so the
 /// separator travels with the item that follows it.</param>
-public record FactorChip(string Name, int VariantCount, LayerKind Kind, bool ShowTimes)
+/// <param name="Variants">How many variants the layer actually has, when that differs from the
+/// factor — which it does exactly when the layer is optional. Null means they are the same.</param>
+/// <param name="Optional">Whether the layer may be left out of an asset entirely, which is what
+/// makes the factor one higher than the variant count.</param>
+public record FactorChip(string Name, int VariantCount, LayerKind Kind, bool ShowTimes,
+    int? Variants = null, bool Optional = false)
 {
     /// <summary>Whether this layer rolls its color per asset.</summary>
     public bool IsDynamic => Kind == LayerKind.Dynamic;
@@ -26,7 +31,27 @@ public record FactorChip(string Name, int VariantCount, LayerKind Kind, bool Sho
     /// <summary>Whether this layer composites as-is, without colorization.</summary>
     public bool IsCustom => Kind == LayerKind.Custom;
     /// <summary>Tooltip text: name, kind and variant count.</summary>
-    public string Tip => $"{Name} · {Kind.ToString().ToLowerInvariant()} · {VariantCount} variants";
+    /// <summary>
+    /// What the chip means, in words.
+    /// </summary>
+    /// <remarks>
+    /// It names the REAL variant count, not the factor. An optional layer's factor is one higher —
+    /// "not present" is an outcome the roll can land on — so a tooltip reading the factor would say
+    /// a two-variant layer has three, one hover away from the table column that correctly says two.
+    /// The "+ not present" is what reconciles the chip with that column.
+    /// </remarks>
+    public string Tip
+    {
+        get
+        {
+            int variants = Variants ?? VariantCount;
+            string plural = variants == 1 ? "variant" : "variants";
+            string kind = Kind.ToString().ToLowerInvariant();
+            return Optional
+                ? $"{Name} · {kind} · {variants} {plural} + not present"
+                : $"{Name} · {kind} · {variants} {plural}";
+        }
+    }
 }
 
 /// <summary>One recipe's row in the mint-distribution and DNA-space panels.</summary>

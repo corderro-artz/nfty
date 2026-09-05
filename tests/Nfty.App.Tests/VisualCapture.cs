@@ -834,6 +834,29 @@ public class VisualCapture
             },
                 variant, $"zz-dialog-confirm-{key}.png");
 
+            // A recipe with an optional layer, unlocked, so the frame carries the chance column,
+            // its editable fields and the factor chip that counts one higher for it. Every other
+            // recipe frame is a book that does not use the feature, and a state no fixture reaches
+            // renders nothing and therefore looks fine.
+            using (var chanceBook = RecipeWithRules().book)
+            {
+                var chanceRecipe = chanceBook.Recipes[0];
+                var withChance = new LoadedRecipe
+                {
+                    Manifest = chanceRecipe.Manifest with
+                    {
+                        AbsentPercent = new Dictionary<string, double> { ["aura"] = 85 },
+                    },
+                    Ingredients = chanceRecipe.Ingredients,
+                };
+                using var chanceVm = new RecipeDetailViewModel(withChance, chanceBook,
+                    new ImageBridge(), _ => { },
+                    moveLayer: (_, _) => Task.FromResult<LoadedCookBook?>(null), canReorder: true,
+                    editRules: (_, _) => Task.FromResult<LoadedCookBook?>(null), dialogs: dialogs);
+                Capture(new Views.RecipeDetailView { DataContext = chanceVm }, variant,
+                    $"zz-recipe-optional-layers-{key}.png");
+            }
+
             // The rule form, in both of its states. Two captures rather than one because the two
             // differ in more than a title: the edit form opens seated on an existing rule, and only
             // the add form shows the "pick a layer and a variant" refusal a fresh row starts in.
