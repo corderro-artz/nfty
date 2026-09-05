@@ -33,3 +33,6 @@ build-output.txt
 # Python bytecode from the mkdocs hooks.
 __pycache__/
 *.pyc
+
+# Local publish output from packaging experiments.
+.pub/
