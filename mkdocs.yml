@@ -29,8 +29,11 @@ copyright: >
 theme:
   name: material
   language: en
-  # No Google Fonts request: the palette's own stacks are system fonts, and the app itself resolves
-  # them locally. Nothing here reaches out to a third party.
+  # No Google Fonts request. The manual serves IBM Plex itself, from stylesheets/vaporsoft.css, so
+  # this site asks no third party for a typeface - which also means it renders the same on a machine
+  # that has never heard of Plex. Weighed and accepted: 472K of woff2 against a 7M site, most of
+  # which is screenshots. Self-hosting also gets the exact four weights the app ships; Material's
+  # own font: shorthand requests 300/400/700 and would leave the manual without Medium or SemiBold.
   font: false
   icon:
     repo: fontawesome/brands/github
@@ -65,6 +68,12 @@ theme:
     - search.highlight
     - content.code.copy
     - content.tabs.link
+
+# The installable bundle the Reference index offers is BUILT from the app's own font files rather
+# than committed a second time, so the site can never hand out a face the product has stopped using.
+# The hook lives outside docs_dir; anything inside it would be copied into the site as a page.
+hooks:
+  - tools/mkdocs-hooks/fonts.py
 
 extra_css:
   - stylesheets/vaporsoft.css

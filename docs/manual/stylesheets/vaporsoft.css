@@ -16,16 +16,79 @@
      panel with an accent wordmark, not a slab of red, so primary is the panel colour here.
    ========================================================================== */
 
+/* THE TYPEFACE, served from this site.
+   The same superfamily the app embeds (src/Nfty.App/Assets/Fonts), so the manual's prose
+   matches its own screenshots. Self-hosted rather than pulled from a font CDN because
+   mkdocs.yml sets `font: false` - this site asks no third party for a typeface, and that
+   promise would be worth nothing if the stylesheet then did.
+   Eight files rather than a variable font because the app ships these exact four weights of
+   each, and a manual that renders a weight the product cannot draw is quietly unlike it.
+   font-display: swap - the page stays readable in a fallback while these arrive, which
+   matters more here than avoiding one reflow. */
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/IBMPlexSans-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../assets/fonts/IBMPlexSans-Medium.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../assets/fonts/IBMPlexSans-SemiBold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../assets/fonts/IBMPlexSans-Bold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/IBMPlexMono-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../assets/fonts/IBMPlexMono-Medium.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../assets/fonts/IBMPlexMono-SemiBold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../assets/fonts/IBMPlexMono-Bold.woff2") format("woff2");
+}
+
 :root {
-  /* The app EMBEDS IBM Plex (src/Nfty.App/Assets/Fonts) so it renders identically everywhere. This
-     site does not, and that divergence is deliberate rather than an oversight: mkdocs.yml sets
-     `font: false` so the manual never reaches out to a third party for a typeface, and serving the
-     faces from here would mean carrying another eight binaries for a page of prose. Plex leads the
-     stack so a reader who has it gets the app's own face; everyone else gets their system's, which
-     is what this site did before the app embedded anything.
-     Note these stacks are CSS, where `-apple-system` is a real keyword. The Avalonia tokens these
-     mirror could NOT use it — there it named nothing at all and silently resolved to a fallback. */
-  --md-text-font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  /* Named here because theme.font is off: with `font: false` Material keeps its own system stack,
+     so the faces declared above have to be asked for. The fallbacks stay for the moment before the
+     woff2 lands, and for a reader who blocks web fonts.
+     These are CSS stacks, where `-apple-system` is a real keyword - unlike the Avalonia tokens they
+     mirror, where it named nothing at all and silently resolved to a system fallback. */
+  --md-text-font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
   --md-code-font-family: "IBM Plex Mono", "SF Mono", "Cascadia Code", ui-monospace, Menlo, Consolas, monospace;
 
   /* Shared across both schemes: the accent is one colour in the app, and only the text form of it
@@ -393,3 +456,61 @@
   color: var(--vs-fg);
 }
 .md-typeset .md-button:hover { border-color: var(--vs-accent-line); color: var(--vs-accent-text); background: var(--vs-accent-wash); }
+
+/* ==========================================================================
+   THE TYPEFACE OFFER
+
+   A quiet line, not a call to action. It sits at the foot of a reference page and matters to almost
+   nobody, so it is sized and coloured like a footnote and only gains ink on hover — the same
+   restraint the app's own ghost buttons use.
+
+   The wording is deliberate and the restraint is not only aesthetic: a web page CANNOT install a
+   font. The control says "Get IBM Plex" and goes to IBM's own release, because a button labelled
+   "Install" that merely navigates would be the same species of lie as a button wired to nothing,
+   which this project has shipped twice and written rules about. It links out rather than serving a
+   copy from here: this site is GitHub Pages, and the upstream is the authoritative source anyway.
+   ========================================================================== */
+.md-typeset .vs-typeface {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin: 2rem 0 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--vs-line);
+  border-radius: 0.3rem;
+  background: var(--vs-bg-alt);
+}
+.md-typeset .vs-typeface__text {
+  flex: 1;
+  font-size: 0.68rem;
+  line-height: 1.5;
+  color: var(--vs-fg-muted);
+}
+.md-typeset .vs-typeface__text strong {
+  display: block;
+  font-family: var(--md-code-font-family);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--vs-fg);
+}
+/* Not .md-button: Material's is a filled slab, and this is a footnote with an action on it. */
+.md-typeset a.vs-typeface__get {
+  flex: none;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--vs-line-strong);
+  border-radius: 0.3rem;
+  font-family: var(--md-code-font-family);
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--vs-fg);
+  background: var(--vs-panel);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 120ms, border-color 120ms, color 120ms;
+}
+.md-typeset a.vs-typeface__get:hover,
+.md-typeset a.vs-typeface__get:focus-visible {
+  border-color: var(--vs-accent);
+  color: var(--vs-accent);
+  background: var(--vs-panel);
+}
