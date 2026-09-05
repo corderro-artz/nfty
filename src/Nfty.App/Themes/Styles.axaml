@@ -1903,8 +1903,14 @@
        content and the column starts at a different x in each, which is the misalignment this app
        has now found twice. Hidden, the Panel does not measure, so the Auto column collapses to
        nothing and the table is the table it was before optional layers existed. -->
+  <!-- ONE width for the header cell and the row cells, which is what makes the Auto column safe in
+       two Grids (see the header-Grid rule in CLAUDE.md). 58 is the app's existing numeric idiom
+       (.nin), not a fresh number, and it is a budget: the field needs the 17px chevron column plus
+       three digits plus its padding, and the header needs the word ABSENT. It was 96 - roughly
+       double what anything in it measures - and read as a hole in the row rather than a field.
+       ChanceCellLayoutTests holds both halves of the budget. -->
   <Style Selector="Panel.chancecell">
-    <Setter Property="Width" Value="96" />
+    <Setter Property="Width" Value="58" />
     <Setter Property="Margin" Value="8,0,0,0" />
   </Style>
 
