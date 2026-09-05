@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <title>IconMarkExclude</title>
+  <desc>Incompatibility-rule marks. explorer.html's MARK map carries a note that help.html's legend documents these three verbatim: "Change one, change the other, or the legend stops describing the app." They are therefore kept as their own keys rather than aliased onto the visually similar IconClose / IconArrowRight, so a future change to the window chrome cannot silently redefine what a rule means. The flag's fill-only accent wash is dropped (single-stroke path).</desc>
+  <path d="M7 7l10 10M17 7 7 17"/>
+</svg>

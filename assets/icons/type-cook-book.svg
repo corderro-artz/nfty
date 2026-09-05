@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <title>IconTypeCookBook</title>
+  <desc>explorer.html tree type marks (the .ti glyphs in its ICON map: cook / recipe / ing). Each mockup glyph is several &lt;path>s: a stroked outline plus a fill-only accent detail. The stroked outlines are concatenated verbatim below; the fill-only details are dropped, since a StreamGeometry is one single-color stroked path and cannot carry a second fill. What is lost is the cookbook's accent bookmark tab, the recipe's accent corner dot and the ingredient's accent-wash top face - decoration, not the silhouette that identifies the glyph.</desc>
+  <path d="M6 3.5h11.4a.7.7 0 0 1 .7.7V20a.7.7 0 0 1-.7.7H6.3A2.3 2.3 0 0 1 4 18.4V5.8A2.3 2.3 0 0 1 6.3 3.5ZM4.4 18.1a2.3 2.3 0 0 1 1.9-1h11.8M9.4 3.5h3.4v5.2l-1.7-1.2-1.7 1.2z"/>
+</svg>

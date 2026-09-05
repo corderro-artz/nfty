@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <title>IconImport</title>
+  <desc>An arrow entering a container. Deliberately the inverse of Download, which is a tray.</desc>
+  <path d="M13 4h5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5M4 12h10M10.5 8.5 14 12l-3.5 3.5"/>
+</svg>

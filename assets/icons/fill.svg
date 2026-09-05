@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <title>IconFill</title>
+  <desc>A tipped paint bucket with its handle and a drip. The handle is what makes it read.</desc>
+  <path d="M11 5.5 4.6 11.9a1.5 1.5 0 0 0 0 2.2l4.3 4.3a1.5 1.5 0 0 0 2.2 0l6.4-6.4zM8.4 3 11 5.5M19.5 14.5c1.5 2 2 3 0 3s-1.5-1 0-3z"/>
+</svg>

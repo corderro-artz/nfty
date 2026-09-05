@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <title>IconLine</title>
+  <desc>IconLine has no counterpart in ingredient-editor.html: the mockup's toolstrip has no line tool. Drawn in the same 24-unit box and the same stroke weight as its neighbours, so the row still reads as one set. The divergence is deliberate - see the note in the view.</desc>
+  <path d="M5 19 19 5"/>
+</svg>

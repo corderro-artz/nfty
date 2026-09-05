@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <title>IconChevronLeft</title>
+  <desc>Placement steppers for a Kitchen reference layer, from variant B of docs/design/mockups/explorations/reference-panel-variants.html (its UP/DOWN glyphs, copied verbatim). Chevrons rather than arrows because a gap stepper nudges by one slot; the locked set has no reference panel and so no glyph for this. Authored in the same 24-unit box as every icon here and sized by the ico classes, never inline. --> &lt;!-- Horizontal chevrons for the inspector's prev/next. The vertical pair below is the same stroke rotated, but a rotated Path.ico would fight the shared 24-unit scale transform, so these are traced in the box like every other glyph.</desc>
+  <path d="M15 18 L9 12 L15 6"/>
+</svg>

@@ -1,163 +1,136 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <!--
-    Icon geometry, traced from the locked mockups' inline SVG. The mockups draw every glyph as a
-    24x24 stroked path (stroke-linecap/linejoin round, ~2px), and the app previously substituted
-    Unicode/emoji characters — which rendered as color emoji injecting off-palette hues (the toolbar
-    padlock sampled #f6cd6a, the edit pencil #ff822d) and, where the shipped fonts lacked the glyph,
-    as literal tofu boxes.
+    GENERATED FROM assets/icons/*.svg BY tools/icons/build.py - DO NOT HAND-EDIT.
+    Edit the SVG and re-run the script. IconSourceTests asserts the two agree, so an edit made here
+    instead fails the build rather than silently becoming the truth.
 
-    The `d` strings below are copied from the mockups verbatim where the source was a <path>. Where
-    the source used <rect>/<circle> (which StreamGeometry cannot express), the equivalent path is
-    written out here and noted per icon. Paths stay in the original 24-unit coordinate space; the
-    `Path.ico` style in Styles.axaml maps that shared 24-box onto the 12/13/14/18px icon box the way
-    an <svg viewBox> does, so every glyph is scaled by the same factor rather than by its own bounds.
+    Every glyph is a 24x24 stroked path (stroke-width 2, round caps and joins), which is why the SVG
+    sources are the natural form to keep: they are the same drawing, viewable in any tool, and they
+    scale without limit. The app previously substituted Unicode/emoji characters, which rendered as
+    color emoji injecting off-palette hues (the toolbar padlock sampled #f6cd6a, the edit pencil
+    #ff822d) and, where the shipped fonts lacked the glyph, as literal tofu boxes.
+
+    Paths stay in the original 24-unit coordinate space; the `Path.ico` style in Styles.axaml maps
+    that shared 24-box onto the 12/13/14/18px icon box the way an <svg viewBox> does, so every glyph
+    is scaled by one factor rather than by its own bounds.
   -->
 
-  <!-- landing.html: "+" leading glyph on the Create actions -->
-  <StreamGeometry x:Key="IconPlus">M12 5v14M5 12h14</StreamGeometry>
+  <!-- landing.html: the arrow trailing the "cooking metaphor" link (explorer.html reuses it as cook_go) -->
+  <StreamGeometry x:Key="IconArrowRight">M5 12h13M12 6l6 6-6 6</StreamGeometry>
+
+  <!-- wizard-*.html: the tick on the accent Create button -->
+  <StreamGeometry x:Key="IconCheck">M5 12.5l4.5 4.5L19 7.5</StreamGeometry>
+
+  <StreamGeometry x:Key="IconChevronDown">M6.5 9.5 12 15l5.5-5.5</StreamGeometry>
+
+  <!-- Placement steppers for a Kitchen reference layer, from variant B of docs/design/mockups/explorations/reference-panel-variants.html (its UP/DOWN glyphs, copied verbatim). Chevrons rather than arrows because a gap stepper nudges by one slot; the locked set has no reference panel and so no glyph for this. Authored in the same 24-unit box as every icon here and sized by the ico classes, never inline.   Horizontal chevrons for the inspector's prev/next. The vertical pair below is the same stroke rotated, but a rotated Path.ico would fight the shared 24-unit scale transform, so these are traced in the box like every other glyph. -->
+  <StreamGeometry x:Key="IconChevronLeft">M15 18 L9 12 L15 6</StreamGeometry>
+
+  <StreamGeometry x:Key="IconChevronRight">M9 18 L15 12 L9 6</StreamGeometry>
+
+  <StreamGeometry x:Key="IconChevronUp">M6.5 14.5 12 9l5.5 5.5</StreamGeometry>
+
+  <StreamGeometry x:Key="IconCircle">M19.5 12a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0z</StreamGeometry>
+
+  <StreamGeometry x:Key="IconClose">M7 7l10 10M17 7 7 17</StreamGeometry>
+
+  <!-- explorer.html ICON.dice: the recipe portrait's reroll button. A literal die face - a rounded square with four pips. The mockup draws it as a <rect> plus four filled <circle>s; both are written out as paths here since StreamGeometry expresses neither. The pips are stroked rather than filled (a Path.ico is one stroke), so they read as four small rings at 15px - close enough that the glyph is unmistakably a die, which the circular-arrow IconReroll it replaces was not. -->
+  <StreamGeometry x:Key="IconDiceFace">M7.4 4h9.2A3.4 3.4 0 0 1 20 7.4v9.2a3.4 3.4 0 0 1-3.4 3.4H7.4A3.4 3.4 0 0 1 4 16.6V7.4A3.4 3.4 0 0 1 7.4 4zM10.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zM16.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zM10.5 15a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zM16.5 15a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z</StreamGeometry>
+
+  <!-- Save-to-disk. Tray with an arrow into it: the standard download mark, not a floppy. -->
+  <StreamGeometry x:Key="IconDownload">M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3</StreamGeometry>
+
+  <!-- ingredient-editor.html: enlarge preview / fill pane with preview -->
+  <StreamGeometry x:Key="IconEnlarge">M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7</StreamGeometry>
+
+  <!-- ingredient-editor.html toolstrip. Rect/circle/marquee were <rect>/<circle> in the mockup and are written out as paths here (StreamGeometry cannot express either); the marquee's dashed stroke is lost with them, so Select reads as a plain square outline. -->
+  <StreamGeometry x:Key="IconEraser">M7 21h10M5 13l6-6 7 7-5 5H8z</StreamGeometry>
+
+  <StreamGeometry x:Key="IconFillPane">M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M3 16v3a2 2 0 0 0 2 2h3</StreamGeometry>
+
+  <!-- A tipped paint bucket with its handle and a drip. The handle is what makes it read. -->
+  <StreamGeometry x:Key="IconFill">M11 5.5 4.6 11.9a1.5 1.5 0 0 0 0 2.2l4.3 4.3a1.5 1.5 0 0 0 2.2 0l6.4-6.4zM8.4 3 11 5.5M19.5 14.5c1.5 2 2 3 0 3s-1.5-1 0-3z</StreamGeometry>
+
+  <!-- The layer-reorder grip: six dots in two columns, from variant B of docs/design/mockups/explorations/reorder-control-variants.html. The ONE glyph on this feature that is not traced from a locked mockup - the locked set has no reorder affordance at all - so it is authored in the same 24-unit box as every other icon here and drawn at the exploration's own centers (x 9.5/14.5, y 6/12/18). The mockup's circles are r=1.45 and `fill: currentColor`. A Path.ico is a single STROKED path (Fill=Transparent, StrokeThickness=2 in these 24 units), so a filled dot is expressed as a circle small enough for its own stroke to close the middle: r=0.45 plus the 1-unit stroke half-width on each side paints a solid disc of radius 1.45 - the mockup's dot exactly, arrived at by the same trick IconDiceFace uses for its pips. -->
+  <StreamGeometry x:Key="IconGrip">M9.95 6a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0M14.95 6a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0M9.95 12a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0M14.95 12a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0M9.95 18a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0M14.95 18a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0</StreamGeometry>
+
+  <StreamGeometry x:Key="IconHelp">M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0zM9.6 9.4a2.5 2.5 0 1 1 3.1 2.4c-.5.2-.8.7-.8 1.2v.6M12 16.6v.4</StreamGeometry>
+
+  <!-- An arrow entering a container. Deliberately the inverse of Download, which is a tray. -->
+  <StreamGeometry x:Key="IconImport">M13 4h5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5M4 12h10M10.5 8.5 14 12l-3.5 3.5</StreamGeometry>
+
+  <!-- An archive box - the vault of loose parts. Not a calendar, which is what it used to be. -->
+  <StreamGeometry x:Key="IconKitchen">M3.5 6.5h17v4h-17zM5.5 10.5v8a1.5 1.5 0 0 0 1.5 1.5h10a1.5 1.5 0 0 0 1.5-1.5v-8M10 14h4</StreamGeometry>
+
+  <!-- IconLine has no counterpart in ingredient-editor.html: the mockup's toolstrip has no line tool. Drawn in the same 24-unit box and the same stroke weight as its neighbours, so the row still reads as one set. The divergence is deliberate - see the note in the view. -->
+  <StreamGeometry x:Key="IconLine">M5 19 19 5</StreamGeometry>
+
+  <!-- wizard-cookbook.html: aspect-ratio link (two chain links) -->
+  <StreamGeometry x:Key="IconLink">M10 14a4 4 0 0 1 0-5.7l2-2a4 4 0 0 1 5.7 5.7l-1 1M14 10a4 4 0 0 1 0 5.7l-2 2a4 4 0 0 1-5.7-5.7l1-1</StreamGeometry>
+
+  <!-- explorer.html: padlock. Shackle path is verbatim; the body <rect x=5 y=11 w=14 h=9 rx=2> is written as the rounded-rect path below. -->
+  <StreamGeometry x:Key="IconLock">M8 11V8a4 4 0 0 1 8 0v3M7 11h10a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2z</StreamGeometry>
+
+  <!-- Incompatibility-rule marks. explorer.html's MARK map carries a note that help.html's legend documents these three verbatim: "Change one, change the other, or the legend stops describing the app." They are therefore kept as their own keys rather than aliased onto the visually similar IconClose / IconArrowRight, so a future change to the window chrome cannot silently redefine what a rule means. The flag's fill-only accent wash is dropped (single-stroke path). -->
+  <StreamGeometry x:Key="IconMarkExclude">M7 7l10 10M17 7 7 17</StreamGeometry>
+
+  <StreamGeometry x:Key="IconMarkFlag">M6.5 20.5V4.2M6.5 5h9.8l-1.8 3.4 1.8 3.4H6.5z</StreamGeometry>
+
+  <StreamGeometry x:Key="IconMarkRequire">M5 12h12M12.5 7l5 5-5 5</StreamGeometry>
+
+  <StreamGeometry x:Key="IconMaximise">M6 6h12v12H6z</StreamGeometry>
+
+  <!-- window chrome (explorer.html titlebar): minimise, maximise (<rect x=6 y=6 w=12 h=12>), close -->
+  <StreamGeometry x:Key="IconMinimise">M6 12h12</StreamGeometry>
 
   <!-- landing.html: arrow-out-of-box, the Open actions -->
   <StreamGeometry x:Key="IconOpen">M13.5 5.5H18.5V10.5M18.5 5.5 11 13M17 14.5v3.2a.8.8 0 0 1-.8.8H6.3a.8.8 0 0 1-.8-.8V7.8a.8.8 0 0 1 .8-.8h3.2</StreamGeometry>
 
-  <!-- explorer.html: download-tray, Import -->
-  <StreamGeometry x:Key="IconImport">M12 4v10M8.2 10.4 12 14.2l3.8-3.8M5 16.5v2a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2</StreamGeometry>
-
-  <!-- explorer.html: magnifier (mockup uses <circle cx=11 cy=11 r=7> + the handle path) -->
-  <StreamGeometry x:Key="IconSearch">M18 11a7 7 0 1 1-14 0 7 7 0 0 1 14 0zm3 10-4-4</StreamGeometry>
-
-  <!-- explorer.html: padlock. Shackle path is verbatim; the body <rect x=5 y=11 w=14 h=9 rx=2> is
-       written as the rounded-rect path below. -->
-  <StreamGeometry x:Key="IconLock">M8 11V8a4 4 0 0 1 8 0v3M7 11h10a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2z</StreamGeometry>
-
-  <!-- explorer.html: the unlocked variant (open shackle) -->
-  <StreamGeometry x:Key="IconUnlock">M8 11V8a4 4 0 0 1 7.5-1.9M7 11h10a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2z</StreamGeometry>
-
   <!-- ingredient-editor.html: pencil (the mockup's Brush/Edit mark) -->
   <StreamGeometry x:Key="IconPencil">M15 5l4 4M4 20l4-1L19 8a2 2 0 0 0-3-3L5 16z</StreamGeometry>
 
-  <!-- ingredient-editor.html: undo / redo -->
-  <StreamGeometry x:Key="IconUndo">M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-1</StreamGeometry>
+  <!-- Icon geometry, traced from the locked mockups' inline SVG. The mockups draw every glyph as a 24x24 stroked path (stroke-linecap/linejoin round, ~2px), and the app previously substituted Unicode/emoji characters — which rendered as color emoji injecting off-palette hues (the toolbar padlock sampled #f6cd6a, the edit pencil #ff822d) and, where the shipped fonts lacked the glyph, as literal tofu boxes. The `d` strings below are copied from the mockups verbatim where the source was a <path>. Where the source used <rect>/<circle> (which StreamGeometry cannot express), the equivalent path is written out here and noted per icon. Paths stay in the original 24-unit coordinate space; the `Path.ico` style in Styles.axaml maps that shared 24-box onto the 12/13/14/18px icon box the way an <svg viewBox> does, so every glyph is scaled by the same factor rather than by its own bounds.   landing.html: "+" leading glyph on the Create actions -->
+  <StreamGeometry x:Key="IconPlus">M12 5v14M5 12h14</StreamGeometry>
+
+  <StreamGeometry x:Key="IconRect">M6 6.5h12a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5H6a1.5 1.5 0 0 1-1.5-1.5v-8A1.5 1.5 0 0 1 6 6.5z</StreamGeometry>
+
   <StreamGeometry x:Key="IconRedo">M15 7l5 5-5 5M20 12H9a5 5 0 0 0 0 10h1</StreamGeometry>
 
   <!-- ingredient-editor.html: "Reroll sampled color" — also the recipe portrait's reroll -->
   <StreamGeometry x:Key="IconReroll">M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6</StreamGeometry>
 
-  <!-- ingredient-editor.html: enlarge preview / fill pane with preview -->
-  <StreamGeometry x:Key="IconEnlarge">M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7</StreamGeometry>
-  <StreamGeometry x:Key="IconFillPane">M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M3 16v3a2 2 0 0 0 2 2h3</StreamGeometry>
+  <!-- explorer.html: magnifier (mockup uses <circle cx=11 cy=11 r=7> + the handle path) -->
+  <StreamGeometry x:Key="IconSearch">M18 11a7 7 0 1 1-14 0 7 7 0 0 1 14 0zm3 10-4-4</StreamGeometry>
 
-  <!-- wizard-cookbook.html: aspect-ratio link (two chain links) -->
-  <StreamGeometry x:Key="IconLink">M10 14a4 4 0 0 1 0-5.7l2-2a4 4 0 0 1 5.7 5.7l-1 1M14 10a4 4 0 0 1 0 5.7l-2 2a4 4 0 0 1-5.7-5.7l1-1</StreamGeometry>
-
-  <!-- landing.html: the arrow trailing the "cooking metaphor" link (explorer.html reuses it as cook_go) -->
-  <StreamGeometry x:Key="IconArrowRight">M5 12h13M12 6l6 6-6 6</StreamGeometry>
-
-  <!-- explorer.html tree type marks (the .ti glyphs in its ICON map: cook / recipe / ing). Each
-       mockup glyph is several <path>s: a stroked outline plus a fill-only accent detail. The stroked
-       outlines are concatenated verbatim below; the fill-only details are dropped, since a
-       StreamGeometry is one single-color stroked path and cannot carry a second fill. What is lost
-       is the cookbook's accent bookmark tab, the recipe's accent corner dot and the ingredient's
-       accent-wash top face - decoration, not the silhouette that identifies the glyph. -->
-  <StreamGeometry x:Key="IconTypeCookBook">M6 3.5h11.4a.7.7 0 0 1 .7.7V20a.7.7 0 0 1-.7.7H6.3A2.3 2.3 0 0 1 4 18.4V5.8A2.3 2.3 0 0 1 6.3 3.5ZM4.4 18.1a2.3 2.3 0 0 1 1.9-1h11.8M9.4 3.5h3.4v5.2l-1.7-1.2-1.7 1.2z</StreamGeometry>
-  <StreamGeometry x:Key="IconTypeRecipe">M6 3.6h7.4L18.6 8v11.7a.7.7 0 0 1-.7.7H6a.7.7 0 0 1-.7-.7V4.3A.7.7 0 0 1 6 3.6ZM13.1 3.8V8.1h4.5M7.8 12h7M7.8 15h7</StreamGeometry>
-  <StreamGeometry x:Key="IconTypeIngredient">M12 3.4 3.4 8 12 12.6 20.6 8 12 3.4ZM3.4 12 12 16.6 20.6 12M3.4 16 12 20.6 20.6 16</StreamGeometry>
-
-  <!-- help.html "The five words": the remaining two type marks, which only the quick-reference sheet
-       shows (the Explorer tree stops at Ingredient). Same treatment as the three above - the mockup
-       builds both entirely from <rect>/<circle>, so the rounded rects are written out as paths here
-       and the fill-only accent details are dropped.
-
-       Variant (help.html:295): a picture frame (<rect x=4 y=5 w=16 h=14 rx=1.7>) with a horizon
-       stroke. Lost: the accent-filled sun (<circle cx=8.8 cy=9.3 r=1.7>) - decoration inside the
-       frame, not the silhouette.
-
-       Set (help.html:299): a 2x2 grid of <rect w=7.4 h=7.4 rx=1.5>. The mockup strokes three and
-       fills the fourth with the accent instead of stroking it; here all four are stroked, since a
-       single-stroke path cannot carry the fill and OMITTING the square would break the 2x2 grid that
-       identifies the glyph. -->
-  <StreamGeometry x:Key="IconTypeVariant">M5.7 5h12.6a1.7 1.7 0 0 1 1.7 1.7v10.6a1.7 1.7 0 0 1-1.7 1.7H5.7a1.7 1.7 0 0 1-1.7-1.7V6.7A1.7 1.7 0 0 1 5.7 5zM5 17.2 10 11.6l3 3.1 2.4-2.6L19 16.4</StreamGeometry>
-  <StreamGeometry x:Key="IconTypeSet">M5.3 3.8h4.4a1.5 1.5 0 0 1 1.5 1.5v4.4a1.5 1.5 0 0 1-1.5 1.5H5.3a1.5 1.5 0 0 1-1.5-1.5V5.3a1.5 1.5 0 0 1 1.5-1.5zM14.3 3.8h4.4a1.5 1.5 0 0 1 1.5 1.5v4.4a1.5 1.5 0 0 1-1.5 1.5h-4.4a1.5 1.5 0 0 1-1.5-1.5V5.3a1.5 1.5 0 0 1 1.5-1.5zM5.3 12.8h4.4a1.5 1.5 0 0 1 1.5 1.5v4.4a1.5 1.5 0 0 1-1.5 1.5H5.3a1.5 1.5 0 0 1-1.5-1.5v-4.4a1.5 1.5 0 0 1 1.5-1.5zM14.3 12.8h4.4a1.5 1.5 0 0 1 1.5 1.5v4.4a1.5 1.5 0 0 1-1.5 1.5h-4.4a1.5 1.5 0 0 1-1.5-1.5v-4.4a1.5 1.5 0 0 1 1.5-1.5z</StreamGeometry>
-
-  <!-- ingredient-editor.html toolstrip. Rect/circle/marquee were <rect>/<circle> in the mockup and
-       are written out as paths here (StreamGeometry cannot express either); the marquee's dashed
-       stroke is lost with them, so Select reads as a plain square outline. -->
-  <StreamGeometry x:Key="IconEraser">M7 21h10M5 13l6-6 7 7-5 5H8z</StreamGeometry>
-  <StreamGeometry x:Key="IconRect">M6 6.5h12a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5H6a1.5 1.5 0 0 1-1.5-1.5v-8A1.5 1.5 0 0 1 6 6.5z</StreamGeometry>
-  <StreamGeometry x:Key="IconCircle">M19.5 12a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0z</StreamGeometry>
-  <StreamGeometry x:Key="IconTriangle">M12 4.8 20 18.5 4 18.5Z</StreamGeometry>
-  <StreamGeometry x:Key="IconSelect">M5.5 4h13A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13A1.5 1.5 0 0 1 5.5 4z</StreamGeometry>
-  <StreamGeometry x:Key="IconFill">M4 12l7-7 7 7-7 7zM18 14c1.5 2 2 3 0 3s-1.5-1 0-3z</StreamGeometry>
-  <!-- IconLine has no counterpart in ingredient-editor.html: the mockup's toolstrip has no line
-       tool. Drawn in the same 24-unit box and the same stroke weight as its neighbours, so the row
-       still reads as one set. The divergence is deliberate - see the note in the view. -->
-  <StreamGeometry x:Key="IconLine">M5 19 19 5</StreamGeometry>
-
-  <!-- explorer.html ICON.dice: the recipe portrait's reroll button. A literal die face - a rounded
-       square with four pips. The mockup draws it as a <rect> plus four filled <circle>s; both are
-       written out as paths here since StreamGeometry expresses neither. The pips are stroked rather
-       than filled (a Path.ico is one stroke), so they read as four small rings at 15px - close
-       enough that the glyph is unmistakably a die, which the circular-arrow IconReroll it replaces
-       was not. -->
-  <StreamGeometry x:Key="IconDiceFace">M7.4 4h9.2A3.4 3.4 0 0 1 20 7.4v9.2a3.4 3.4 0 0 1-3.4 3.4H7.4A3.4 3.4 0 0 1 4 16.6V7.4A3.4 3.4 0 0 1 7.4 4zM10.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zM16.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zM10.5 15a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zM16.5 15a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z</StreamGeometry>
+  <!-- The marquee. Corners and mid-ticks drawn as segments - StreamGeometry has no dash array. -->
+  <StreamGeometry x:Key="IconSelect">M4 9V6a2 2 0 0 1 2-2h3M15 4h3a2 2 0 0 1 2 2v3M20 15v3a2 2 0 0 1-2 2h-3M9 20H6a2 2 0 0 1-2-2v-3M11 4h2M20 11v2M13 20h-2M4 13v-2</StreamGeometry>
 
   <!-- explorer.html ICON.del: the Delete affordance -->
   <StreamGeometry x:Key="IconTrash">M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13</StreamGeometry>
 
-  <!-- wizard-*.html: the tick on the accent Create button -->
-  <StreamGeometry x:Key="IconCheck">M5 12.5l4.5 4.5L19 7.5</StreamGeometry>
+  <StreamGeometry x:Key="IconTriangle">M12 4.8 20 18.5 4 18.5Z</StreamGeometry>
 
-  <!-- Incompatibility-rule marks. explorer.html's MARK map carries a note that help.html's legend
-       documents these three verbatim: "Change one, change the other, or the legend stops describing
-       the app." They are therefore kept as their own keys rather than aliased onto the visually
-       similar IconClose / IconArrowRight, so a future change to the window chrome cannot silently
-       redefine what a rule means. The flag's fill-only accent wash is dropped (single-stroke path). -->
-  <StreamGeometry x:Key="IconMarkExclude">M7 7l10 10M17 7 7 17</StreamGeometry>
-  <StreamGeometry x:Key="IconMarkRequire">M5 12h12M12.5 7l5 5-5 5</StreamGeometry>
-  <StreamGeometry x:Key="IconMarkFlag">M6.5 20.5V4.2M6.5 5h9.8l-1.8 3.4 1.8 3.4H6.5z</StreamGeometry>
+  <!-- explorer.html tree type marks (the .ti glyphs in its ICON map: cook / recipe / ing). Each mockup glyph is several <path>s: a stroked outline plus a fill-only accent detail. The stroked outlines are concatenated verbatim below; the fill-only details are dropped, since a StreamGeometry is one single-color stroked path and cannot carry a second fill. What is lost is the cookbook's accent bookmark tab, the recipe's accent corner dot and the ingredient's accent-wash top face - decoration, not the silhouette that identifies the glyph. -->
+  <StreamGeometry x:Key="IconTypeCookBook">M6 3.5h11.4a.7.7 0 0 1 .7.7V20a.7.7 0 0 1-.7.7H6.3A2.3 2.3 0 0 1 4 18.4V5.8A2.3 2.3 0 0 1 6.3 3.5ZM4.4 18.1a2.3 2.3 0 0 1 1.9-1h11.8M9.4 3.5h3.4v5.2l-1.7-1.2-1.7 1.2z</StreamGeometry>
 
-  <!-- window chrome (explorer.html titlebar): minimise, maximise (<rect x=6 y=6 w=12 h=12>), close -->
-  <StreamGeometry x:Key="IconMinimise">M6 12h12</StreamGeometry>
-  <StreamGeometry x:Key="IconMaximise">M6 6h12v12H6z</StreamGeometry>
-  <StreamGeometry x:Key="IconClose">M7 7l10 10M17 7 7 17</StreamGeometry>
+  <StreamGeometry x:Key="IconTypeIngredient">M12 3.4 3.4 8 12 12.6 20.6 8 12 3.4ZM3.4 12 12 16.6 20.6 12M3.4 16 12 20.6 20.6 16</StreamGeometry>
+
+  <StreamGeometry x:Key="IconTypeRecipe">M6 3.6h7.4L18.6 8v11.7a.7.7 0 0 1-.7.7H6a.7.7 0 0 1-.7-.7V4.3A.7.7 0 0 1 6 3.6ZM13.1 3.8V8.1h4.5M7.8 12h7M7.8 15h7</StreamGeometry>
+
+  <StreamGeometry x:Key="IconTypeSet">M5.3 3.8h4.4a1.5 1.5 0 0 1 1.5 1.5v4.4a1.5 1.5 0 0 1-1.5 1.5H5.3a1.5 1.5 0 0 1-1.5-1.5V5.3a1.5 1.5 0 0 1 1.5-1.5zM14.3 3.8h4.4a1.5 1.5 0 0 1 1.5 1.5v4.4a1.5 1.5 0 0 1-1.5 1.5h-4.4a1.5 1.5 0 0 1-1.5-1.5V5.3a1.5 1.5 0 0 1 1.5-1.5zM5.3 12.8h4.4a1.5 1.5 0 0 1 1.5 1.5v4.4a1.5 1.5 0 0 1-1.5 1.5H5.3a1.5 1.5 0 0 1-1.5-1.5v-4.4a1.5 1.5 0 0 1 1.5-1.5zM14.3 12.8h4.4a1.5 1.5 0 0 1 1.5 1.5v4.4a1.5 1.5 0 0 1-1.5 1.5h-4.4a1.5 1.5 0 0 1-1.5-1.5v-4.4a1.5 1.5 0 0 1 1.5-1.5z</StreamGeometry>
+
+  <!-- help.html "The five words": the remaining two type marks, which only the quick-reference sheet shows (the Explorer tree stops at Ingredient). Same treatment as the three above - the mockup builds both entirely from <rect>/<circle>, so the rounded rects are written out as paths here and the fill-only accent details are dropped. Variant (help.html:295): a picture frame (<rect x=4 y=5 w=16 h=14 rx=1.7>) with a horizon stroke. Lost: the accent-filled sun (<circle cx=8.8 cy=9.3 r=1.7>) - decoration inside the frame, not the silhouette. Set (help.html:299): a 2x2 grid of <rect w=7.4 h=7.4 rx=1.5>. The mockup strokes three and fills the fourth with the accent instead of stroking it; here all four are stroked, since a single-stroke path cannot carry the fill and OMITTING the square would break the 2x2 grid that identifies the glyph. -->
+  <StreamGeometry x:Key="IconTypeVariant">M5.7 5h12.6a1.7 1.7 0 0 1 1.7 1.7v10.6a1.7 1.7 0 0 1-1.7 1.7H5.7a1.7 1.7 0 0 1-1.7-1.7V6.7A1.7 1.7 0 0 1 5.7 5zM5 17.2 10 11.6l3 3.1 2.4-2.6L19 16.4</StreamGeometry>
+
+  <!-- ingredient-editor.html: undo / redo -->
+  <StreamGeometry x:Key="IconUndo">M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-1</StreamGeometry>
+
+  <!-- explorer.html: the unlocked variant (open shackle) -->
+  <StreamGeometry x:Key="IconUnlock">M8 11V8a4 4 0 0 1 7.5-1.9M7 11h10a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2z</StreamGeometry>
+
+  <StreamGeometry x:Key="IconZoomIn">M12 5v14M5 12h14</StreamGeometry>
 
   <!-- status bar: zoom out / in, and help (<circle cx=12 cy=12 r=9> + the query stroke + dot) -->
   <StreamGeometry x:Key="IconZoomOut">M6 12h12</StreamGeometry>
-  <StreamGeometry x:Key="IconZoomIn">M12 5v14M5 12h14</StreamGeometry>
-  <StreamGeometry x:Key="IconHelp">M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0zM9.6 9.4a2.5 2.5 0 1 1 3.1 2.4c-.5.2-.8.7-.8 1.2v.6M12 16.6v.4</StreamGeometry>
-
-  <!-- explorer.html titlebar: the persistent "Kitchen" workspace chip (<rect x=3.5 y=5 w=17 h=14 rx=1.8>
-       plus a divider line and two spiral-binder ticks). The mockup also fills a small accent square
-       inside the box (rect x=6.6 y=12 w=4 h=4, filled with the accent color) - StreamGeometry/Path.ico
-       is single-stroke only (one Fill/Stroke pair), so that two-tone accent tab is dropped here, same
-       approximation already used for Border.rop.require in Styles.axaml. -->
-  <StreamGeometry x:Key="IconKitchen">M5.3 5h13.4a1.8 1.8 0 0 1 1.8 1.8v10.4a1.8 1.8 0 0 1-1.8 1.8H5.3a1.8 1.8 0 0 1-1.8-1.8V6.8A1.8 1.8 0 0 1 5.3 5zM3.5 9.2h17M7 3.6v2.2M12 3.6v2.2</StreamGeometry>
-
-  <!-- Placement steppers for a Kitchen reference layer, from variant B of
-       docs/design/mockups/explorations/reference-panel-variants.html (its UP/DOWN glyphs, copied
-       verbatim). Chevrons rather than arrows because a gap stepper nudges by one slot; the locked set
-       has no reference panel and so no glyph for this. Authored in the same 24-unit box as every icon
-       here and sized by the ico classes, never inline. -->
-  <!-- Horizontal chevrons for the inspector's prev/next. The vertical pair below is the same
-       stroke rotated, but a rotated Path.ico would fight the shared 24-unit scale transform, so
-       these are traced in the box like every other glyph. -->
-  <StreamGeometry x:Key="IconChevronLeft">M15 18 L9 12 L15 6</StreamGeometry>
-  <StreamGeometry x:Key="IconChevronRight">M9 18 L15 12 L9 6</StreamGeometry>
-  <!-- Save-to-disk. Tray with an arrow into it: the standard download mark, not a floppy. -->
-  <StreamGeometry x:Key="IconDownload">M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3</StreamGeometry>
-  <StreamGeometry x:Key="IconChevronUp">M6.5 14.5 12 9l5.5 5.5</StreamGeometry>
-  <StreamGeometry x:Key="IconChevronDown">M6.5 9.5 12 15l5.5-5.5</StreamGeometry>
-
-  <!-- The layer-reorder grip: six dots in two columns, from variant B of
-       docs/design/mockups/explorations/reorder-control-variants.html. The ONE glyph on this feature
-       that is not traced from a locked mockup - the locked set has no reorder affordance at all - so
-       it is authored in the same 24-unit box as every other icon here and drawn at the exploration's
-       own centers (x 9.5/14.5, y 6/12/18).
-
-       The mockup's circles are r=1.45 and `fill: currentColor`. A Path.ico is a single STROKED path
-       (Fill=Transparent, StrokeThickness=2 in these 24 units), so a filled dot is expressed as a
-       circle small enough for its own stroke to close the middle: r=0.45 plus the 1-unit stroke
-       half-width on each side paints a solid disc of radius 1.45 - the mockup's dot exactly, arrived
-       at by the same trick IconDiceFace uses for its pips. -->
-  <StreamGeometry x:Key="IconGrip">M9.95 6a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0M14.95 6a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0M9.95 12a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0M14.95 12a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0M9.95 18a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0M14.95 18a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0</StreamGeometry>
 </ResourceDictionary>

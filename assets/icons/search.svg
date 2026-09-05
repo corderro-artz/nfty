@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <title>IconSearch</title>
+  <desc>explorer.html: magnifier (mockup uses &lt;circle cx=11 cy=11 r=7> + the handle path)</desc>
+  <path d="M18 11a7 7 0 1 1-14 0 7 7 0 0 1 14 0zm3 10-4-4"/>
+</svg>

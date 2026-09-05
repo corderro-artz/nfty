@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <title>IconPlus</title>
+  <desc>Icon geometry, traced from the locked mockups' inline SVG. The mockups draw every glyph as a 24x24 stroked path (stroke-linecap/linejoin round, ~2px), and the app previously substituted Unicode/emoji characters — which rendered as color emoji injecting off-palette hues (the toolbar padlock sampled #f6cd6a, the edit pencil #ff822d) and, where the shipped fonts lacked the glyph, as literal tofu boxes. The `d` strings below are copied from the mockups verbatim where the source was a &lt;path>. Where the source used &lt;rect>/&lt;circle> (which StreamGeometry cannot express), the equivalent path is written out here and noted per icon. Paths stay in the original 24-unit coordinate space; the `Path.ico` style in Styles.axaml maps that shared 24-box onto the 12/13/14/18px icon box the way an &lt;svg viewBox> does, so every glyph is scaled by the same factor rather than by its own bounds. --> &lt;!-- landing.html: "+" leading glyph on the Create actions</desc>
+  <path d="M12 5v14M5 12h14"/>
+</svg>

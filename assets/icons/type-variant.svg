@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <title>IconTypeVariant</title>
+  <desc>help.html "The five words": the remaining two type marks, which only the quick-reference sheet shows (the Explorer tree stops at Ingredient). Same treatment as the three above - the mockup builds both entirely from &lt;rect>/&lt;circle>, so the rounded rects are written out as paths here and the fill-only accent details are dropped. Variant (help.html:295): a picture frame (&lt;rect x=4 y=5 w=16 h=14 rx=1.7>) with a horizon stroke. Lost: the accent-filled sun (&lt;circle cx=8.8 cy=9.3 r=1.7>) - decoration inside the frame, not the silhouette. Set (help.html:299): a 2x2 grid of &lt;rect w=7.4 h=7.4 rx=1.5>. The mockup strokes three and fills the fourth with the accent instead of stroking it; here all four are stroked, since a single-stroke path cannot carry the fill and OMITTING the square would break the 2x2 grid that identifies the glyph.</desc>
+  <path d="M5.7 5h12.6a1.7 1.7 0 0 1 1.7 1.7v10.6a1.7 1.7 0 0 1-1.7 1.7H5.7a1.7 1.7 0 0 1-1.7-1.7V6.7A1.7 1.7 0 0 1 5.7 5zM5 17.2 10 11.6l3 3.1 2.4-2.6L19 16.4"/>
+</svg>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <title>IconGrip</title>
+  <desc>The layer-reorder grip: six dots in two columns, from variant B of docs/design/mockups/explorations/reorder-control-variants.html. The ONE glyph on this feature that is not traced from a locked mockup - the locked set has no reorder affordance at all - so it is authored in the same 24-unit box as every other icon here and drawn at the exploration's own centers (x 9.5/14.5, y 6/12/18). The mockup's circles are r=1.45 and `fill: currentColor`. A Path.ico is a single STROKED path (Fill=Transparent, StrokeThickness=2 in these 24 units), so a filled dot is expressed as a circle small enough for its own stroke to close the middle: r=0.45 plus the 1-unit stroke half-width on each side paints a solid disc of radius 1.45 - the mockup's dot exactly, arrived at by the same trick IconDiceFace uses for its pips.</desc>
+  <path d="M9.95 6a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0M14.95 6a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0M9.95 12a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0M14.95 12a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0M9.95 18a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0M14.95 18a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0"/>
+</svg>
