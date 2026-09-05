@@ -155,6 +155,48 @@ public static class Validator
                 else if (!target.Manifest.Variants.Any(v => string.Equals(v.Id, t.VariantId, StringComparison.Ordinal)))
                     problems.Add($"Recipe '{r.Manifest.Id}' rule references unknown variant "
                         + $"'{t.VariantId}' of ingredient '{t.IngredientId}'.");
+
+        CheckRuleSanity(problems, r);
+    }
+
+    /// <summary>
+    /// Rules that resolve fine and still cannot mean what they say. Both of these are caught at
+    /// authoring time by <c>RuleEdits.Validate</c>, so they can only reach a book that was written
+    /// by hand — which is the only way a rule could be written at all before that class existed.
+    ///
+    /// <para>They are reported rather than tolerated for the same reason the unknown-variant check
+    /// above is: each one silently changes the size of the space, and the author's first sign of it
+    /// would be a <c>UniqueSpaceExhaustedException</c> blaming the space rather than the rule.</para>
+    /// </summary>
+    private static void CheckRuleSanity(List<string> problems, LoadedRecipe r)
+    {
+        var rules = r.Manifest.Rules;
+
+        // A layer rolls exactly one variant, so a rule pointing a layer at itself is degenerate in
+        // one of two opposite ways and neither is ever intended: Exclude(bg:day, bg:day) bans
+        // bg:day from the whole collection, and Exclude(bg:day, bg:night) can never fire.
+        foreach (var rule in rules)
+            foreach (var t in rule.Targets)
+                if (string.Equals(t.IngredientId, rule.When.IngredientId, StringComparison.Ordinal))
+                    problems.Add($"Recipe '{r.Manifest.Id}' has a rule constraining layer "
+                        + $"'{t.IngredientId}' against itself. One layer rolls one variant, so the "
+                        + "rule either bans that variant outright or can never fire.");
+
+        // Exclude(W, t) alongside Require(W, t) demands that t be both absent and present whenever
+        // W is rolled, so W's own variant becomes unrollable — the space shrinks by a whole variant
+        // with nothing on screen saying so.
+        for (int i = 0; i < rules.Count; i++)
+            for (int j = i + 1; j < rules.Count; j++)
+            {
+                var (a, b) = (rules[i], rules[j]);
+                if (a.Type == b.Type || a.When != b.When) continue;
+
+                foreach (var t in a.Targets.Where(t => b.Targets.Contains(t)))
+                    problems.Add($"Recipe '{r.Manifest.Id}' rules {i + 1} and {j + 1} contradict: "
+                        + $"'{t.IngredientId}:{t.VariantId}' is both required and excluded when "
+                        + $"'{a.When.IngredientId}:{a.When.VariantId}' is rolled, so that variant "
+                        + "can never be rolled at all.");
+            }
     }
 
     /// <summary>

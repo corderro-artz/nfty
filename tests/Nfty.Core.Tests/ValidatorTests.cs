@@ -819,4 +819,73 @@ public class ValidatorTests
         Assert.Contains(Validator.ValidateRecipe(recipe),
             p => p.Contains("rule references unknown", StringComparison.OrdinalIgnoreCase));
     }
+
+    /// <summary>
+    /// A two-layer book whose recipe carries exactly the rules given, every id resolving. These
+    /// rules are all individually well-formed — they name real layers and real variants — so the
+    /// checks below are about what a resolvable rule can still MEAN, which is a separate question
+    /// from whether it parses.
+    /// </summary>
+    private static LoadedCookBook BookWithRules(params IncompatibilityRule[] rules)
+    {
+        LoadedIngredient Ing(string id, params string[] variants) => new()
+        {
+            Manifest = new IngredientManifest(id, id.ToUpperInvariant(), LayerKind.Custom, null,
+                variants.Select(v => new Variant(v, v, 1)).ToArray()),
+            VariantImages = variants.ToDictionary(
+                v => v, _ => new Image<Rgba32>(4, 4, new Rgba32(0, 0, 0, 255))),
+        };
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("cat", "Cat", new[] { "bg", "aura" }, rules),
+            Ingredients = new[] { Ing("bg", "day", "night"), Ing("aura", "none", "glow") },
+        };
+        return new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "Book", new Dimensions(4, 4),
+                new Collection("Book", "", "B"), new Dictionary<string, double> { ["cat"] = 100 }),
+            Recipes = new[] { recipe },
+        };
+    }
+
+    [Fact]
+    public void A_rule_constraining_a_layer_against_itself_is_reported()
+    {
+        // Resolvable in every way the older checks test for — real layer, real variants — and still
+        // meaningless: one layer rolls one variant, so this bans bg:day from the whole collection.
+        using var book = BookWithRules(new IncompatibilityRule(RuleType.Exclude,
+            new RuleTarget("bg", "day"), new[] { new RuleTarget("bg", "day") }));
+
+        var problems = Validator.Validate(book);
+        Assert.Contains(problems, p => p.Contains("against itself"));
+    }
+
+    [Fact]
+    public void A_rule_pair_that_both_requires_and_excludes_the_same_target_is_reported()
+    {
+        using var book = BookWithRules(
+            new IncompatibilityRule(RuleType.Exclude,
+                new RuleTarget("bg", "day"), new[] { new RuleTarget("aura", "glow") }),
+            new IncompatibilityRule(RuleType.Require,
+                new RuleTarget("bg", "day"), new[] { new RuleTarget("aura", "glow") }));
+
+        var problems = Validator.Validate(book);
+        // Names both positions, because "a rule contradicts another rule" is unactionable without
+        // saying which two.
+        Assert.Contains(problems, p => p.Contains("rules 1 and 2 contradict"));
+    }
+
+    [Fact]
+    public void Ordinary_rules_are_not_reported()
+    {
+        // The guard against the two checks above being written so broadly that a real book trips
+        // them: same layers, same variants, opposite types — and legal, because the triggers differ.
+        using var book = BookWithRules(
+            new IncompatibilityRule(RuleType.Exclude,
+                new RuleTarget("bg", "day"), new[] { new RuleTarget("aura", "glow") }),
+            new IncompatibilityRule(RuleType.Require,
+                new RuleTarget("bg", "night"), new[] { new RuleTarget("aura", "glow") }));
+
+        Assert.Empty(Validator.Validate(book));
+    }
 }

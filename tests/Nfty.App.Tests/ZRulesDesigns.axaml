@@ -1,0 +1,226 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="using:Nfty.App.Tests"
+             x:Class="Nfty.App.Tests.ZRulesDesigns"
+             x:DataType="t:ZRuleBag">
+  <Grid ColumnDefinitions="300,300,300" ColumnSpacing="26" Margin="18" Height="640">
+
+    <!-- ============================ 1 — GROUPED ============================
+         The relationship is stated in WORDS, once per group, so the mark never has to be
+         decoded. Rules sort themselves into "never together" and "always together". -->
+    <Border Grid.Column="0" Classes="rules-panel" VerticalAlignment="Stretch">
+      <Grid RowDefinitions="Auto,Auto,*">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0" Classes="sub-h" Text="RULES" />
+          <Border Grid.Column="1" Classes="tabcount"><TextBlock Text="{Binding CountText}" /></Border>
+        </Grid>
+        <Border Grid.Row="1" Height="1" Background="{DynamicResource LineBrush}" Margin="0,10,0,0" />
+
+        <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled" Margin="0,10,0,0">
+          <StackPanel Spacing="16">
+
+            <StackPanel Spacing="8" IsVisible="{Binding HasExcludes}">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Border Classes="rop exclude" Width="18" Height="18">
+                  <Path Classes="ico xs rop exclude" Data="{StaticResource IconMarkExclude}" />
+                </Border>
+                <TextBlock Classes="plabel" Text="NEVER TOGETHER" VerticalAlignment="Center" />
+                <TextBlock Classes="cv" Text="{Binding ExcludeCount}" VerticalAlignment="Center"
+                           Foreground="{DynamicResource FgMutedBrush}" />
+              </StackPanel>
+              <ItemsControl ItemsSource="{Binding Excludes}" Margin="26,0,0,0">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="t:ZRule">
+                    <Border Classes="zsep">
+                      <StackPanel Spacing="4">
+                        <Border Classes="rchip" HorizontalAlignment="Left">
+                          <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Classes="rcl" Text="{Binding A.Ingredient}" />
+                            <TextBlock Classes="rcv" Text="{Binding A.Variant}" />
+                          </StackPanel>
+                        </Border>
+                        <ItemsControl ItemsSource="{Binding Targets}">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="t:ZSide">
+                              <Border Classes="rchip" HorizontalAlignment="Left" Margin="0,0,0,4">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                  <TextBlock Classes="rcl" Text="{Binding Ingredient}" />
+                                  <TextBlock Classes="rcv" Text="{Binding Variant}" />
+                                </StackPanel>
+                              </Border>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+
+            <StackPanel Spacing="8" IsVisible="{Binding HasRequires}">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Border Classes="rop require" Width="18" Height="18">
+                  <Path Classes="ico xs rop require" Data="{StaticResource IconMarkRequire}" />
+                </Border>
+                <TextBlock Classes="plabel" Text="ALWAYS TOGETHER" VerticalAlignment="Center" />
+                <TextBlock Classes="cv" Text="{Binding RequireCount}" VerticalAlignment="Center"
+                           Foreground="{DynamicResource FgMutedBrush}" />
+              </StackPanel>
+              <ItemsControl ItemsSource="{Binding Requires}" Margin="26,0,0,0">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="t:ZRule">
+                    <Border Classes="zsep">
+                      <StackPanel Spacing="4">
+                        <Border Classes="rchip" HorizontalAlignment="Left">
+                          <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Classes="rcl" Text="{Binding A.Ingredient}" />
+                            <TextBlock Classes="rcv" Text="{Binding A.Variant}" />
+                          </StackPanel>
+                        </Border>
+                        <ItemsControl ItemsSource="{Binding Targets}">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="t:ZSide">
+                              <Border Classes="rchip" HorizontalAlignment="Left" Margin="0,0,0,4">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                  <TextBlock Classes="rcl" Text="{Binding Ingredient}" />
+                                  <TextBlock Classes="rcv" Text="{Binding Variant}" />
+                                </StackPanel>
+                              </Border>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+
+          </StackPanel>
+        </ScrollViewer>
+      </Grid>
+    </Border>
+
+    <!-- ============================ 2 — SENTENCE ============================
+         Each rule is one card that reads top-to-bottom as a sentence, with the relationship
+         spelled out on the connector line. No symbol vocabulary to learn at all. -->
+    <Border Grid.Column="1" Classes="rules-panel" VerticalAlignment="Stretch">
+      <Grid RowDefinitions="Auto,Auto,*">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0" Classes="sub-h" Text="RULES" />
+          <Border Grid.Column="1" Classes="tabcount"><TextBlock Text="{Binding CountText}" /></Border>
+        </Grid>
+        <Border Grid.Row="1" Height="1" Background="{DynamicResource LineBrush}" Margin="0,10,0,0" />
+
+        <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled" Margin="0,10,0,0">
+          <ItemsControl ItemsSource="{Binding All}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="t:ZRule">
+                <Border Classes="zcard" Margin="0,0,0,9">
+                  <StackPanel Spacing="5">
+                    <Border Classes="rchip" HorizontalAlignment="Left">
+                      <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Classes="rcl" Text="{Binding A.Ingredient}" />
+                        <TextBlock Classes="rcv" Text="{Binding A.Variant}" />
+                      </StackPanel>
+                    </Border>
+
+                    <!-- the connector line: mark + the relationship in plain words -->
+                    <StackPanel Orientation="Horizontal" Spacing="7" Margin="2,1,0,1">
+                      <Border Classes="rop" Classes.exclude="{Binding IsExclude}"
+                              Classes.require="{Binding !IsExclude}" Width="16" Height="16"
+                              VerticalAlignment="Center" Margin="0">
+                        <Panel>
+                          <Path Classes="ico xs rop exclude" Data="{StaticResource IconMarkExclude}"
+                                IsVisible="{Binding IsExclude}" />
+                          <Path Classes="ico xs rop require" Data="{StaticResource IconMarkRequire}"
+                                IsVisible="{Binding !IsExclude}" />
+                        </Panel>
+                      </Border>
+                      <TextBlock Classes="zconn" Text="{Binding ConnectorText}" VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <ItemsControl ItemsSource="{Binding Targets}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="t:ZSide">
+                          <Border Classes="rchip" HorizontalAlignment="Left" Margin="0,0,0,4">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                              <TextBlock Classes="rcl" Text="{Binding Ingredient}" />
+                              <TextBlock Classes="rcv" Text="{Binding Variant}" />
+                            </StackPanel>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Grid>
+    </Border>
+
+    <!-- ============================ 3 — TABLE ============================
+         Column heads name the two sides ONCE, so no per-row labels are needed and the list
+         scans vertically. The densest of the three; scales furthest. -->
+    <Border Grid.Column="2" Classes="rules-panel" VerticalAlignment="Stretch">
+      <Grid RowDefinitions="Auto,Auto,Auto,*">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0" Classes="sub-h" Text="RULES" />
+          <Border Grid.Column="1" Classes="tabcount"><TextBlock Text="{Binding CountText}" /></Border>
+        </Grid>
+
+        <Grid Grid.Row="1" ColumnDefinitions="*,58,*" Margin="0,12,0,6">
+          <TextBlock Grid.Column="0" Classes="data-h" Text="LAYER" />
+          <TextBlock Grid.Column="2" Classes="data-h" Text="LAYER" />
+        </Grid>
+        <Border Grid.Row="2" Height="1" Background="{DynamicResource LineBrush}" />
+
+        <ScrollViewer Grid.Row="3" HorizontalScrollBarVisibility="Disabled">
+          <ItemsControl ItemsSource="{Binding All}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="t:ZRule">
+                <Border Classes="ztrow">
+                  <Grid ColumnDefinitions="*,58,*">
+                    <StackPanel Grid.Column="0" Spacing="2">
+                      <TextBlock Classes="rcl" Text="{Binding A.Ingredient}" />
+                      <TextBlock Classes="rcv" Text="{Binding A.Variant}" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center"
+                                HorizontalAlignment="Center">
+                      <Border Classes="rop" Classes.exclude="{Binding IsExclude}"
+                              Classes.require="{Binding !IsExclude}" Width="18" Height="18"
+                              HorizontalAlignment="Center" Margin="0">
+                        <Panel>
+                          <Path Classes="ico xs rop exclude" Data="{StaticResource IconMarkExclude}"
+                                IsVisible="{Binding IsExclude}" />
+                          <Path Classes="ico xs rop require" Data="{StaticResource IconMarkRequire}"
+                                IsVisible="{Binding !IsExclude}" />
+                        </Panel>
+                      </Border>
+                      <TextBlock Classes="zmark" Text="{Binding ShortText}" HorizontalAlignment="Center" />
+                    </StackPanel>
+
+                    <ItemsControl Grid.Column="2" ItemsSource="{Binding Targets}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="t:ZSide">
+                          <StackPanel Spacing="2" Margin="0,0,0,4">
+                            <TextBlock Classes="rcl" Text="{Binding Ingredient}" />
+                            <TextBlock Classes="rcv" Text="{Binding Variant}" TextTrimming="CharacterEllipsis" />
+                          </StackPanel>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>

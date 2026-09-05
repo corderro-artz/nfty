@@ -44,6 +44,7 @@ public static partial class CommandFactory
         root.Subcommands.Add(NewGroup());
         root.Subcommands.Add(AddGroup());
         root.Subcommands.Add(MoveGroup());
+        root.Subcommands.Add(RemoveGroup());
         return root;
     }
 
@@ -59,8 +60,9 @@ public static partial class CommandFactory
                 + "lists paths without opening them.",
         };
         var cmd = new Command("inspect",
-            "Print the tree of a CookBook, Recipe or Ingredient, showing each Recipe's and "
-                + "Variant's [id] alongside its name. Those ids — not the display names — are "
+            "Print the tree of a CookBook, Recipe or Ingredient, showing each Recipe's, "
+                + "Ingredient's and Variant's [id] alongside its name, and each Recipe's rules "
+                + "with the positions `remove rule` addresses them by. Those ids — not the display names — are "
                 + "what --recipe and --variant expect elsewhere on this command line, so inspect "
                 + "is how you find them. Given a Kitchen, lists what that workspace holds.")
         { path, voxel };
@@ -157,11 +159,21 @@ public static partial class CommandFactory
             if (byId.TryGetValue(layerId, out var ing)) PrintIngredient(ing, indent + "  ");
             else Console.WriteLine($"{indent}  Ingredient: <missing '{layerId}'>");
         }
+
+        // Rules were invisible in every text surface the product has, which made `remove rule`
+        // unusable before this existed: a rule is addressed by position, and nothing printed one.
+        // Listed after the layers because every rule names them.
+        for (int i = 0; i < recipe.Manifest.Rules.Count; i++)
+            Console.WriteLine($"{indent}  Rule {i + 1}: {RuleLine(recipe.Manifest.Rules[i])}");
     }
 
     private static void PrintIngredient(LoadedIngredient ing, string indent)
     {
-        Console.WriteLine($"{indent}Ingredient: {ing.Manifest.Name} [{ing.Manifest.Kind}]");
+        // The ID as well as the kind. It used to print only the name and the kind, which was fine
+        // while nothing on the command line took an ingredient id — and stopped being fine the
+        // moment `add rule --when` did: the id was the one thing the user needed and the one thing
+        // inspect would not tell them. Found by driving the command, not by a test.
+        Console.WriteLine($"{indent}Ingredient: {ing.Manifest.Name} [{ing.Manifest.Id}] ({ing.Manifest.Kind})");
         foreach (var v in ing.Manifest.Variants)
             Console.WriteLine($"{indent}  Variant: {v.Name} [{v.Id}] (w={v.Weight})");
     }

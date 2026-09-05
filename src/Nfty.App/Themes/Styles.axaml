@@ -2869,4 +2869,34 @@
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Padding" Value="0,4,0,8" />
   </Style>
+  <!-- ZTHROWAWAY: rules-panel design comparison. Deleted with the exploration. -->
+  <Style Selector="Border.zcard">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="Padding" Value="10,9" />
+  </Style>
+  <Style Selector="TextBlock.zconn">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontStyle" Value="Italic" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="Border.zsep">
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="0,0,0,9" />
+    <Setter Property="Margin" Value="0,0,0,9" />
+  </Style>
+  <Style Selector="TextBlock.zmark">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="8.5" />
+    <Setter Property="LetterSpacing" Value="0.3" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="Border.ztrow">
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="0,9" />
+  </Style>
 </Styles>

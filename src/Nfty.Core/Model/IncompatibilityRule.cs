@@ -3,10 +3,18 @@ namespace Nfty.Core.Model;
 /// <summary>What a rule does to a rolled selection.</summary>
 public enum RuleType
 {
-    /// <summary>The targets may NOT appear alongside the trigger.</summary>
+    /// <summary>NONE of the targets may appear alongside the trigger. Any one of them present is a
+    /// violation.</summary>
     Exclude,
 
-    /// <summary>One of the targets MUST appear alongside the trigger.</summary>
+    /// <summary>ALL of the targets must appear alongside the trigger. Any one of them missing is a
+    /// violation — this is a conjunction, not a choice.</summary>
+    /// <remarks>This said "one of the targets" until 2026-09-05, which is not what
+    /// <c>RulesEngine.IsLegal</c> has ever done: it loops the targets and rejects on the first one
+    /// absent. <c>Multi_target_and_multi_rule_selections_evaluated_correctly</c> has pinned the
+    /// conjunction the whole time, so the CODE was right and this sentence was wrong — a
+    /// documentation bug that shipped in the XML docs and would have taught an author the opposite
+    /// of what their rule does. Nothing about generation changed when it was corrected.</remarks>
     Require,
 }
 

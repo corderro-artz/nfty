@@ -222,7 +222,168 @@ public static partial class CommandFactory
         group.Subcommands.Add(AddVariant());
         group.Subcommands.Add(AddIngredient());
         group.Subcommands.Add(AddRecipe());
+        group.Subcommands.Add(AddRule());
         return group;
+    }
+
+    /// <summary>
+    /// The `remove` command group. One subcommand so far, and it exists because `add rule` without
+    /// it would be a one-way door: a rule written by mistake could only be taken back by unzipping
+    /// the archive and editing the JSON, which is the state the whole feature is here to end.
+    /// </summary>
+    public static Command RemoveGroup()
+    {
+        var group = new Command("remove", "Remove an item from an existing archive.");
+        group.Subcommands.Add(RemoveRule());
+        return group;
+    }
+
+    /// <summary>
+    /// Parses a <c>layer:variant</c> pair. Colon-delimited to match the color specs
+    /// (<c>hex:d6249f</c>) the CLI already takes, and unambiguous because both halves are ids —
+    /// the id rule produces lowercase hyphen-joined words, never a colon.
+    /// </summary>
+    private static RuleTarget ParseTarget(string spec, string optionName)
+    {
+        var parts = spec.Split(':');
+        if (parts.Length != 2 || parts[0].Length == 0 || parts[1].Length == 0)
+            throw new InvalidOperationException(
+                $"{optionName} '{spec}' is not a layer:variant pair. Write it as "
+                + "<ingredient-id>:<variant-id>, for example bg:day. Run inspect on the .rcp to "
+                + "list the ids it has.");
+        return new RuleTarget(parts[0], parts[1]);
+    }
+
+    /// <summary>
+    /// `add rule`. Rules were the one part of a Recipe with no authoring path at all: every `new`
+    /// and `add` command wrote an empty rule list, so the only way a recipe got one was unzipping
+    /// the archive and hand-editing the manifest.
+    ///
+    /// <para>Two layers of refusal, catching different things. <see cref="RuleEdits.Add"/> rejects
+    /// a rule that cannot mean anything on its own — no targets, a layer constrained against
+    /// itself, a target listed twice, or one this recipe already carries.
+    /// <c>Validator.ValidateRecipe</c> then rejects one that is wrong only in CONTEXT: an id naming
+    /// nothing, or a pair that both requires and excludes the same target and so makes a variant
+    /// unrollable.</para>
+    /// </summary>
+    private static Command AddRule()
+    {
+        var rcpPath = new Argument<string>("rcp") { Description = "Path to the .rcp to modify in place." };
+        var type = new Option<RuleType>("--type")
+        {
+            Description = "exclude - none of the targets may be rolled alongside the trigger. "
+                + "require - ALL of them must be. Require is a conjunction, not a choice: pass "
+                + "--then once per target and every one of them is demanded.",
+            Required = true,
+        };
+        var when = new Option<string>("--when")
+        {
+            Description = "The trigger, as layer:variant (e.g. bg:day). The rule applies only to "
+                + "rolls that picked this variant.",
+            Required = true,
+        };
+        var then = new Option<string[]>("--then")
+        {
+            Description = "A target, as layer:variant. Repeat for more than one. With --type "
+                + "require, EVERY target given must be present.",
+            Required = true,
+            AllowMultipleArgumentsPerToken = true,
+        };
+        var cmd = new Command("rule", "Add an incompatibility rule to an existing .rcp.")
+            { rcpPath, type, when, then };
+        cmd.SetAction(parse =>
+        {
+            string path = parse.GetValue(rcpPath)!;
+            using var recipe = RecipeArchive.Read(path);
+
+            var rule = new IncompatibilityRule(
+                parse.GetValue(type),
+                ParseTarget(parse.GetValue(when)!, "--when"),
+                parse.GetValue(then)!.Select(t => ParseTarget(t, "--then")).ToList());
+
+            var manifest = RuleEdits.Add(recipe.Manifest, rule);
+            var merged = new LoadedRecipe { Manifest = manifest, Ingredients = recipe.Ingredients };
+            var problems = Validator.ValidateRecipe(merged);
+            if (problems.Count > 0) { Report(problems); return 1; }
+
+            // Read(path) closed its file handle before returning, so it's safe to replace the file
+            // now. RecipeArchive.Write opens in ZipArchiveMode.Create, which throws if the target
+            // already exists, so we write to a sibling temp file and move it into place.
+            WriteReplacing(path, p => RecipeArchive.Write(p, manifest, recipe.Ingredients));
+            Console.WriteLine($"Added rule {manifest.Rules.Count} to {path}: {RuleLine(rule)}");
+            return 0;
+        });
+        return cmd;
+    }
+
+    /// <summary>
+    /// `remove rule`. Positions are 1-based and match what `inspect` prints, because that listing
+    /// is the only way to find out which rule is which - a rule has no id, and inventing a required
+    /// one would be a real schema migration for a field generation never reads.
+    /// </summary>
+    private static Command RemoveRule()
+    {
+        var rcpPath = new Argument<string>("rcp") { Description = "Path to the .rcp to modify in place." };
+        var at = new Option<int>("--at")
+        {
+            Description = "Which rule to remove, 1-based, as `inspect` on the .rcp lists them. "
+                + "Removing one shifts every later rule down a position, so re-run inspect before "
+                + "removing a second.",
+            Required = true,
+        };
+        at.Validators.Add(r =>
+        {
+            if (r.GetValueOrDefault<int>() < 1)
+                r.AddError("--at is 1-based: the first rule is 1.");
+        });
+        var cmd = new Command("rule", "Remove one incompatibility rule from an existing .rcp.")
+            { rcpPath, at };
+        cmd.SetAction(parse =>
+        {
+            string path = parse.GetValue(rcpPath)!;
+            using var recipe = RecipeArchive.Read(path);
+
+            int position = parse.GetValue(at);
+            int count = recipe.Manifest.Rules.Count;
+
+            // Bounds-checked HERE as well as in RuleEdits, and the duplication is deliberate:
+            // RuleEdits throws ArgumentOutOfRangeException, whose Message appends "(Parameter
+            // 'index')" — and there is no `index` on this command line, there is `--at`. A library
+            // guard phrased for a caller is the wrong sentence to show a person, so the CLI says it
+            // in the CLI's own words and leaves the library guard for every other caller.
+            if (count == 0)
+                throw new InvalidOperationException(
+                    $"Recipe '{recipe.Manifest.Id}' has no rules to remove.");
+            if (position > count)
+                throw new InvalidOperationException(
+                    $"--at {position} is past the end: recipe '{recipe.Manifest.Id}' has {count} "
+                    + $"rule(s). Run inspect on the .rcp to list them with their positions.");
+
+            // Read the rule BEFORE removing it: the confirmation line names what went, which is the
+            // only way a user can tell they took out the one they meant.
+            var removed = recipe.Manifest.Rules[position - 1];
+            var manifest = RuleEdits.RemoveAt(recipe.Manifest, position - 1);
+
+            // No re-validation: removing a constraint cannot make a recipe less legal, and a book
+            // already reporting problems must not have this refused on top of them.
+            WriteReplacing(path, p => RecipeArchive.Write(p, manifest, recipe.Ingredients));
+            Console.WriteLine($"Removed rule {position} from {path}: {RuleLine(removed)}");
+            return 0;
+        });
+        return cmd;
+    }
+
+    /// <summary>
+    /// One rule as a line of text, in the same words the GUI panel uses. Shared by `inspect`,
+    /// `add rule` and `remove rule`, so the string a user reads to find a position is the string
+    /// they see confirmed back. The separator is <c>+</c> rather than a comma because a require
+    /// rule demands ALL of its targets and a comma reads like a choice.
+    /// </summary>
+    internal static string RuleLine(IncompatibilityRule rule)
+    {
+        string verb = rule.Type == RuleType.Exclude ? "never with" : "always with";
+        string targets = string.Join(" + ", rule.Targets.Select(t => $"{t.IngredientId}:{t.VariantId}"));
+        return $"{rule.When.IngredientId}:{rule.When.VariantId} {verb} {targets}";
     }
 
     private static Command AddVariant()
