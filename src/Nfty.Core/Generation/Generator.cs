@@ -345,10 +345,21 @@ public static class Generator
     /// prepared weight table, and its variants by id. All three are fixed properties of the
     /// cookbook, so they are built once per run rather than rebuilt on every roll attempt.
     /// </summary>
+    /// <param name="Ingredient">The layer.</param>
+    /// <param name="Weights">Its prepared variant weights.</param>
+    /// <param name="VariantById">Its variants by id.</param>
+    /// <param name="AbsentWeight">Weight of leaving the layer out, resolved from the recipe's
+    /// percent ONCE per run rather than per roll — it is a property of the cookbook, like the table
+    /// beside it. Zero for a layer that always appears.</param>
+    /// <param name="AlwaysAbsent">The layer never appears and is not rolled at all. Distinct from a
+    /// large <paramref name="AbsentWeight"/>, which still costs a draw: at 100% there is nothing to
+    /// choose between, and the weight has no finite value anyway.</param>
     private sealed record LayerPlan(
         LoadedIngredient Ingredient,
         WeightedRoller.WeightTable Weights,
-        IReadOnlyDictionary<string, Variant> VariantById);
+        IReadOnlyDictionary<string, Variant> VariantById,
+        double AbsentWeight,
+        bool AlwaysAbsent);
 
     /// <summary>
     /// Resolves a recipe's layers in <c>layerOrder</c>. Safe to index and to build dictionaries
@@ -362,10 +373,18 @@ public static class Generator
             .Select(id =>
             {
                 var ing = ingById[id];
+                var table = WeightedRoller.Prepare(ing.Manifest.Variants.ToDictionary(v => v.Id, v => v.Weight));
+                double percent = recipe.Manifest.AbsentPercentOf(id);
+                bool never = WeightedRoller.AlwaysAbsent(percent);
                 return new LayerPlan(
                     ing,
-                    WeightedRoller.Prepare(ing.Manifest.Variants.ToDictionary(v => v.Id, v => v.Weight)),
-                    ing.Manifest.Variants.ToDictionary(v => v.Id));
+                    table,
+                    ing.Manifest.Variants.ToDictionary(v => v.Id),
+                    // Zero for the overwhelmingly common case of a layer that always appears, and
+                    // zero is what makes the roll below bit-identical to the one that shipped
+                    // before optional layers existed.
+                    never ? 0 : WeightedRoller.AbsentWeight(percent, ing.Manifest.Variants.Sum(v => v.Weight)),
+                    never);
             })
             .ToList();
     }
@@ -410,7 +429,19 @@ public static class Generator
             {
                 var ing = layer.Ingredient;
                 string ingId = ing.Manifest.Id;
-                string variantId = WeightedRoller.Roll(layer.Weights, rng);
+
+                // A LAYER MAY BE LEFT OUT. It contributes no trait, no pixels and — deliberately —
+                // no DNA part at all, rather than a sentinel "absent" marker: a marker would have to
+                // be a string no variant id could ever equal, and omitting the part is unambiguous
+                // without one, because a layer that IS present adds a part that an absent one does
+                // not. Nothing else in the loop runs, so an absent Dynamic layer rolls no color —
+                // which is what stops two assets that both show nothing from having different DNA.
+                string? rolledId = layer.AlwaysAbsent
+                    ? null
+                    : WeightedRoller.Roll(layer.Weights, layer.AbsentWeight, rng);
+                if (rolledId is null) continue;
+
+                string variantId = rolledId;
                 var variant = layer.VariantById[variantId];
                 selection[ingId] = variantId;
                 traits.Add(new TraitSelection(ingId, ing.Manifest.Name, variantId, variant.Name));
