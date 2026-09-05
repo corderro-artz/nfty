@@ -5,7 +5,7 @@ as often as one at weight 1. They do not need to add up to anything.
 
 ## Change a variant's weight
 
-1. Unlock editing (the padlock in the toolbar).
+1. Unlock editing (click the **read-only** chip in the title bar).
 2. Select the layer in the tree and click the **pencil** to open the editor.
 3. Select the variant on the left.
 4. Type a new number into **Weight**, or use the steppers.

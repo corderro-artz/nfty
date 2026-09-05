@@ -55,9 +55,13 @@
       </StackPanel>
     </Border>
 
-    <!-- .cbk-cols: metrics + distribution left, combination space right. -->
-    <Grid ColumnDefinitions="0.82*,24,1.18*" Margin="0,17,0,0">
-      <StackPanel Grid.Column="0">
+    <!-- .cbk-cols: metrics left, combination space right - and the mint distribution UNDER BOTH.
+         It used to live inside the left column, where "full width" meant full width of that column
+         and the bar stopped halfway across a panel whose other sections run edge to edge. A share of
+         the whole collection is not a fact about the left-hand metrics, so it gets the whole width
+         rather than a share of it. -->
+    <Grid ColumnDefinitions="0.82*,24,1.18*" RowDefinitions="Auto,Auto" Margin="0,17,0,0">
+      <StackPanel Grid.Row="0" Grid.Column="0">
         <!-- metric band: statband two2 -->
         <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
           <Border Grid.Row="0" Grid.Column="0" Classes="metric" Margin="0,0,5,5">
@@ -74,65 +78,10 @@
           </Border>
         </Grid>
 
-        <TextBlock Classes="sub-h" Text="MINT DISTRIBUTION" Margin="0,16,0,9" />
-
-        <!-- FULL WIDTH, and therefore multi-bound. This was a 310px track with each segment sized
-             by SharePercent * 3.1 - a constant that is only exact while the track is exactly 310,
-             and it left the bar stopping a third of the way across a panel whose other two sections
-             already run edge to edge. Stretched, the constant stops being exact, so the segments
-             take their share of the track's OWN measured width through ShareWidthConverter - which
-             is precisely the rule the recipe mix bar (.cbar) already follows and the one CLAUDE.md
-             records for a bar in a flexible track. -->
-        <Border Classes="distbar" HorizontalAlignment="Stretch">
-          <ItemsControl ItemsSource="{Binding Recipes}">
-            <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="vm:RecipeShareRow">
-                <!-- Color comes from a token via the series class, not from a Color on the row:
-                     a brush picked in the ViewModel cannot re-resolve when the theme flips. -->
-                <Border Height="16" Classes="series"
-                        Classes.s1="{Binding IsSeries1}" Classes.s2="{Binding IsSeries2}"
-                        Classes.s3="{Binding IsSeries3}" Classes.s4="{Binding IsSeries4}"
-                        Classes.s5="{Binding IsSeries5}" Classes.s6="{Binding IsSeries6}">
-                  <Border.Width>
-                    <MultiBinding Converter="{x:Static conv:ShareWidthConverter.Instance}">
-                      <Binding Path="SharePercent" />
-                      <Binding Path="$parent[ItemsControl].Bounds.Width" />
-                    </MultiBinding>
-                  </Border.Width>
-                </Border>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </Border>
-
-        <ItemsControl ItemsSource="{Binding Recipes}" Margin="0,10,0,0">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:RecipeShareRow">
-              <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,0,14,4" VerticalAlignment="Center">
-                <Border Classes="sw series"
-                        Classes.s1="{Binding IsSeries1}" Classes.s2="{Binding IsSeries2}"
-                        Classes.s3="{Binding IsSeries3}" Classes.s4="{Binding IsSeries4}"
-                        Classes.s5="{Binding IsSeries5}" Classes.s6="{Binding IsSeries6}" />
-                <!-- Same size, different faces: .pc is mono and the name is not, and two faces at
-                     one size still have different line boxes. Top-aligned that put the percentage
-                     1.8px above the name it belongs to. -->
-                <TextBlock FontSize="12" Text="{Binding Name}" VerticalAlignment="Bottom" />
-                <TextBlock Classes="pc" FontSize="12" VerticalAlignment="Bottom"
-                           Text="{Binding SharePercent, StringFormat='{}{0}%'}" />
-              </StackPanel>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
       </StackPanel>
 
       <!-- .cspace: how each recipe's combination count is arrived at, layer by layer. -->
-      <StackPanel Grid.Column="2">
+      <StackPanel Grid.Row="0" Grid.Column="2">
         <!-- "DNA space" is what explorer.html renders; "combination space" appears only in a CSS
              comment there, never as visible text. -->
         <TextBlock Classes="sub-h" Text="DNA SPACE" Margin="0,0,0,2" />
@@ -206,6 +155,64 @@
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
+      </StackPanel>
+
+      <StackPanel Grid.Row="1" Grid.ColumnSpan="3" Margin="0,4,0,0">
+      <TextBlock Classes="sub-h" Text="MINT DISTRIBUTION" Margin="0,16,0,9" />
+
+      <!-- FULL WIDTH, and therefore multi-bound. This was a 310px track with each segment sized
+           by SharePercent * 3.1 - a constant that is only exact while the track is exactly 310,
+           and it left the bar stopping a third of the way across a panel whose other two sections
+           already run edge to edge. Stretched, the constant stops being exact, so the segments
+           take their share of the track's OWN measured width through ShareWidthConverter - which
+           is precisely the rule the recipe mix bar (.cbar) already follows and the one CLAUDE.md
+           records for a bar in a flexible track. -->
+      <Border Classes="distbar" HorizontalAlignment="Stretch">
+        <ItemsControl ItemsSource="{Binding Recipes}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:RecipeShareRow">
+              <!-- Color comes from a token via the series class, not from a Color on the row:
+                   a brush picked in the ViewModel cannot re-resolve when the theme flips. -->
+              <Border Height="16" Classes="series"
+                      Classes.s1="{Binding IsSeries1}" Classes.s2="{Binding IsSeries2}"
+                      Classes.s3="{Binding IsSeries3}" Classes.s4="{Binding IsSeries4}"
+                      Classes.s5="{Binding IsSeries5}" Classes.s6="{Binding IsSeries6}">
+                <Border.Width>
+                  <MultiBinding Converter="{x:Static conv:ShareWidthConverter.Instance}">
+                    <Binding Path="SharePercent" />
+                    <Binding Path="$parent[ItemsControl].Bounds.Width" />
+                  </MultiBinding>
+                </Border.Width>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Border>
+
+      <ItemsControl ItemsSource="{Binding Recipes}" Margin="0,10,0,0">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:RecipeShareRow">
+            <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,0,14,4" VerticalAlignment="Center">
+              <Border Classes="sw series"
+                      Classes.s1="{Binding IsSeries1}" Classes.s2="{Binding IsSeries2}"
+                      Classes.s3="{Binding IsSeries3}" Classes.s4="{Binding IsSeries4}"
+                      Classes.s5="{Binding IsSeries5}" Classes.s6="{Binding IsSeries6}" />
+              <!-- Same size, different faces: .pc is mono and the name is not, and two faces at
+                   one size still have different line boxes. Top-aligned that put the percentage
+                   1.8px above the name it belongs to. -->
+              <TextBlock FontSize="12" Text="{Binding Name}" VerticalAlignment="Bottom" />
+              <TextBlock Classes="pc" FontSize="12" VerticalAlignment="Bottom"
+                         Text="{Binding SharePercent, StringFormat='{}{0}%'}" />
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
       </StackPanel>
     </Grid>
 

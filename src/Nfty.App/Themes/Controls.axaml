@@ -404,13 +404,19 @@
     <Setter Property="Background" Value="Transparent" />
 
     <!-- Fluent's default chevron is roughly half again this and reads as the loudest thing in the
-         row. 10, down from 13: the caret is a hint about a row, not a control competing with the
+         row. 11, down from 13: the caret is a hint about a row, not a control competing with the
          name beside it, and at 13 plus a 4px gap the carets and the indent together took more of a
-         narrow pane's width than the names did. The glyph keeps its size; only the box around it
-         shrinks, so the mark itself is no harder to hit or to see. -->
+         narrow pane's width than the names did.
+
+         SQUARE, and that is the whole point. Fluent draws ONE chevron and turns it 90 degrees for
+         the expanded state, and the glyph is stretched to fit its box - so in a 10x13 box the
+         collapsed ">" was scaled to the 13 and the expanded "v" to the 10, and a tree showed
+         right-pointing carets half again the size of the down-pointing ones in the same column.
+         Narrowing the box without shortening it is what caused it; a square box makes the two
+         orientations the same drawing by construction rather than by two numbers agreeing. -->
     <Style Selector="^ /template/ ToggleButton#PART_ExpandCollapseChevron">
-      <Setter Property="Width" Value="10" />
-      <Setter Property="Height" Value="13" />
+      <Setter Property="Width" Value="11" />
+      <Setter Property="Height" Value="11" />
       <Setter Property="FontSize" Value="9" />
       <Setter Property="Padding" Value="0" />
       <Setter Property="Margin" Value="0,0,1,0" />

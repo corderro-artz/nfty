@@ -25,6 +25,18 @@ With a Kitchen open you also get:
 - the Ingredient Editor can borrow loose Ingredients from it as
   [reference layers](line-layers-up.md)
 
+## Pull a part into a CookBook
+
+Open the CookBook, unlock editing, and press **Import** in the toolbar. Pick a `.rcp` or an `.igt`
+from the Kitchen folder.
+
+- A **Recipe** joins the book, weighted at the average of the recipes already in it.
+- An **Ingredient** goes into the Recipe you have **selected** — a layer belongs to one Recipe, so
+  select it first. With only the book selected, nfty says so rather than guessing.
+
+The file is copied in. Editing the layer in the CookBook does not change the loose `.igt` it came
+from, so the same Hat can be a guaranteed item in one project and a chase item in another.
+
 !!! tip "Nothing to keep in sync"
 
     Membership is worked out by **looking at the folder**, not from a list nfty maintains. Drop a

@@ -13,13 +13,13 @@ selection.
 | **Search** | Filters the tree. ++ctrl+k++ focuses it. |
 | **Add ...** | Adds a child of whatever is selected: a Recipe to the book, an Ingredient to a Recipe, a Variant to an Ingredient. Its label follows the selection. |
 | **Delete** | Removes the selected item. |
-| **Import** | Brings in a loose file. |
-| **Padlock** *(far right)* | Toggles the edit lock. |
+| **Import** | Brings a loose `.rcp` or `.igt` into the open CookBook. A layer goes into the Recipe you have selected. |
 
 ## The edit lock
 
-A CookBook opens **read-only**. The padlock unlocks adding, deleting and reordering; the chip in the
-title bar and the message in the status bar always say which state you are in.
+A CookBook opens **read-only**. The chip in the title bar says which state you are in, and **the chip
+is also the switch** — click it to unlock adding, deleting and reordering. Unlocked, it turns carmine
+and reads **editing**. The status bar says the same thing in words.
 
 The lock governs *structure*. Opening the Ingredient Editor and painting is not gated by it.
 

@@ -31,7 +31,7 @@ it.
 The Explorer opens with your empty book. Look at the top right: it says **read-only**, and the status
 bar at the bottom says editing is locked.
 
-**Click the padlock** at the right of the toolbar. The chip changes to **editing**.
+**Click the read-only chip itself.** It turns carmine and reads **editing**.
 
 This lock exists so you cannot rearrange a book by accident. You will use it every session.
 
