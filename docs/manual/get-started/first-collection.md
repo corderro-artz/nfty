@@ -112,7 +112,7 @@ Click **Cook**, then choose an empty folder to write into.
 ![The Cook dialog reporting the finished set](../images/cook-done-light.png#only-light)
 ![The Cook dialog reporting the finished set](../images/cook-done-dark.png#only-dark)
 
-Click **Reveal** to open the folder. Inside:
+Click the folder to open it. Inside:
 
 - `images/` — your assets, numbered `0001.png` upward
 - `metadata/` — one JSON file per asset, in the format marketplaces expect
