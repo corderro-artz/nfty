@@ -66,9 +66,6 @@ public sealed partial class PaletteSwatch : ObservableObject
 /// </summary>
 public partial class IngredientEditorViewModel
 {
-    /// <summary>How many ramp slots the strip shows — Core's number, not a second opinion.</summary>
-    public static int PaletteSlots => Palette.Slots;
-
     private readonly IPaletteService _palette;
 
     /// <summary>The open CookBook's own swatches, read once when the editor opens. They show above

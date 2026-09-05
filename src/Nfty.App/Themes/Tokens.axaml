@@ -89,12 +89,6 @@
            needs a Color resource, and PanelBrush/BgAltBrush are opaque so these simply mirror them. -->
       <Color x:Key="PanelColor">#f8f3ed</Color>
       <Color x:Key="BgAltColor">#f1ece4</Color>
-      <!-- Gradient stops take a Color, not a Brush, so the wizard's accent glow needs these two.
-           The fade stop is the SAME rgb at zero alpha rather than Transparent: interpolating toward
-           #00000000 walks the color through black and leaves a gray halo. -->
-      <Color x:Key="BgAlt2Color">#ede7df</Color>
-      <Color x:Key="AccentWashColor">#14a11f31</Color>
-      <Color x:Key="AccentWashFadeColor">#00a11f31</Color>
       <!-- Whole brushes, per theme. A gradient built inside a Style Setter with DynamicResource
            GradientStops does NOT re-resolve when the theme flips - it is constructed once and shared,
            and its stops keep the values they had when the Style was first applied. That shipped the
@@ -179,9 +173,6 @@
       <BoxShadows x:Key="TitlebarHighlightShadow">inset 0 1 0 0 #0ff2ede6</BoxShadows>
       <Color x:Key="PanelColor">#0b0c10</Color>
       <Color x:Key="BgAltColor">#0a0b10</Color>
-      <Color x:Key="BgAlt2Color">#0f1118</Color>
-      <Color x:Key="AccentWashColor">#26a11f31</Color>
-      <Color x:Key="AccentWashFadeColor">#00a11f31</Color>
       <!-- See the light dictionary's note: these are whole brushes because a Setter-hosted gradient
            does not re-resolve DynamicResource stops on a theme change. -->
       <!-- The rarity share bar. A whole brush per dictionary, per the rule above CardGradientBrush:

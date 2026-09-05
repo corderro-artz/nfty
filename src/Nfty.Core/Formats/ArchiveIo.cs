@@ -53,9 +53,6 @@ internal static class ArchiveIo
         img.Save(s, new PngEncoder());
     }
 
-    public static Image<Rgba32> ReadImage(ZipArchive zip, string name) =>
-        DecodeImage(ReadImageBytes(zip, name));
-
     /// <summary>
     /// Extracts one entry's bytes without decoding them.
     /// </summary>
@@ -176,9 +173,6 @@ internal static class ArchiveIo
         await using var s = entry.Open();
         await img.SaveAsync(s, new PngEncoder(), ct);
     }
-
-    public static async Task<Image<Rgba32>> ReadImageAsync(ZipArchive zip, string name, CancellationToken ct) =>
-        DecodeImage(await ReadImageBytesAsync(zip, name, ct));
 
     /// <summary>Extracts one entry's bytes without decoding them.</summary>
     /// <param name="zip">The open archive.</param>
