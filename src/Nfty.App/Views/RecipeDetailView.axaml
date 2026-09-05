@@ -147,11 +147,20 @@
          the rows. -->
     <Border Grid.Column="1" Classes="rules-panel" VerticalAlignment="Stretch">
       <Grid RowDefinitions="Auto,Auto,Auto,*">
-        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
           <TextBlock Grid.Column="0" Classes="sub-h" Text="RULES" VerticalAlignment="Center" />
           <Border Grid.Column="1" Classes="tabcount" IsVisible="{Binding HasRules}">
             <TextBlock Text="{Binding RulesBadgeText}" />
           </Border>
+          <!-- Reserved, not conditional. The lock flips while this pane is open, and a button that
+               appeared and vanished would resize the header row under the pointer — the app's
+               "reserve the space, toggle the ink" rule. It ghosts at 0.38 like every other
+               lock-gated control. -->
+          <Button Grid.Column="2" Classes="icon" Padding="3"
+                  Command="{Binding AddRuleCommand}"
+                  ToolTip.Tip="Add a rule. Rules decide which variants may be rolled together, and unlike the pencil they are gated by the edit lock — a rule is structure, not pixels.">
+            <Path Classes="ico xs" Data="{StaticResource IconPlus}" />
+          </Button>
         </Grid>
 
         <TextBlock Grid.Row="1" Classes="muted" Text="No incompatibility rules"
@@ -171,8 +180,8 @@
           <ItemsControl ItemsSource="{Binding Rules}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:RuleRow">
-                <Border Classes="rulerow">
-                  <Grid ColumnDefinitions="*,58,*">
+                <Border Classes="rulerow ract">
+                  <Grid ColumnDefinitions="*,58,*,Auto">
                     <StackPanel Grid.Column="0" Spacing="2">
                       <TextBlock Classes="rcl" Text="{Binding When.Ingredient}"
                                  TextTrimming="CharacterEllipsis" />
@@ -211,6 +220,24 @@
                         </DataTemplate>
                       </ItemsControl.ItemTemplate>
                     </ItemsControl>
+
+                    <!-- The row's own actions, revealed on hover. Reserved by a fixed-width column
+                         so the three text cells are the same width on every row whether the pointer
+                         is over one or not — opacity, never IsVisible, or the columns would resize
+                         under the pointer that just arrived. -->
+                    <StackPanel Grid.Column="3" Classes="ractions" Orientation="Horizontal"
+                                Spacing="2" VerticalAlignment="Center">
+                      <Button Classes="icon" Padding="3"
+                              Command="{Binding $parent[ItemsControl].((vm:RecipeDetailViewModel)DataContext).EditRuleCommand}"
+                              CommandParameter="{Binding}" ToolTip.Tip="Edit this rule">
+                        <Path Classes="ico xs" Data="{StaticResource IconPencil}" />
+                      </Button>
+                      <Button Classes="icon danger" Padding="3"
+                              Command="{Binding $parent[ItemsControl].((vm:RecipeDetailViewModel)DataContext).DeleteRuleCommand}"
+                              CommandParameter="{Binding}" ToolTip.Tip="Delete this rule">
+                        <Path Classes="ico xs" Data="{StaticResource IconTrash}" />
+                      </Button>
+                    </StackPanel>
                   </Grid>
                 </Border>
               </DataTemplate>

@@ -297,7 +297,11 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
                 // image in it — on the pane for the pane's whole life, pinning the PRE-reorder graph
                 // across every later ApplyBook. That is the opposite of what the sentence above claims.
                 RecipeIdCallback((LoadedRecipe)newValue.Domain!),
-                IsEditing),
+                IsEditing,
+                // Same contract as the move callback above, and the id is hoisted out for the same
+                // reason: closing over the node would pin the pre-edit graph for the pane's life.
+                RuleEditCallback((LoadedRecipe)newValue.Domain!),
+                _dialogs),
             ExplorerNodeKind.Ingredient => newValue!.Domain is (LoadedRecipe r, LoadedIngredient i)
                 ? new IngredientDetailViewModel(i, r, _book, _bridge,
                     () => OpenEditor(i, r), () => IsEditing,
@@ -443,6 +447,16 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         return (ingredientId, depth) => MoveLayerAsync(recipeId, ingredientId, depth);
     }
 
+    /// <summary>The rule-edit callback for one recipe, with its id hoisted out of the closure for
+    /// the same reason <see cref="RecipeIdCallback"/> hoists it: capturing the node would store a
+    /// LoadedRecipe — and every decoded image under it — on the pane for the pane's whole life.</summary>
+    private Func<Func<RecipeManifest, RecipeManifest>, string, Task<LoadedCookBook?>> RuleEditCallback(
+        LoadedRecipe recipe)
+    {
+        string recipeId = recipe.Manifest.Id;
+        return (edit, what) => EditRulesAsync(recipeId, edit, what);
+    }
+
     /// <summary>
     /// The detail pane a reorder's tree rebuild must leave alone — the pane that ASKED for the move
     /// and has already applied it to itself. Null except for the duration of that rebuild.
@@ -466,6 +480,44 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     /// and let them press again. The same shape as the editor's <c>IsSaving</c>.</para>
     /// </summary>
     private bool _reordering;
+
+    /// <summary>
+    /// Applies a rule edit to one recipe and saves the book, the same shape
+    /// <see cref="MoveLayerAsync"/> uses: the pane asks, the Explorer owns the graph, the gate and
+    /// the file. Rules are STRUCTURE, so the edit lock governs them exactly as it governs add,
+    /// delete and reorder — the pencil's exemption is for pixels, not for what a recipe permits.
+    /// </summary>
+    /// <param name="recipeId">Which recipe.</param>
+    /// <param name="edit">The manifest edit — one of the <c>RuleEdits</c> methods.</param>
+    /// <param name="what">What to say the user could not do, if the lock refuses.</param>
+    /// <returns>The saved graph, or null when refused or failed — in which case the reason has
+    /// already been reported.</returns>
+    internal async Task<LoadedCookBook?> EditRulesAsync(
+        string recipeId, Func<RecipeManifest, RecipeManifest> edit, string what)
+    {
+        if (!CanEditBook(what)) return null;
+
+        // Captured BEFORE the await: whatever is on screen when the write finishes may not be this.
+        object? askedFrom = CurrentDetail;
+        try
+        {
+            var book2 = CookBookEdits.EditRecipeManifest(_book, recipeId, edit);
+            var book3 = await CookBookPersistence.PersistAsync(_session, book2);
+
+            string? selectId = ReferenceEquals(CurrentDetail, askedFrom) ? recipeId : SelectedNode?.Id;
+            // NOT kept: unlike a reorder, the pane has NOT already applied this to itself — the rule
+            // list is projected from the manifest in the constructor, so letting the tree rebuild
+            // the pane is what shows the new rule. revalidate: true, because a rule edit is exactly
+            // the kind of change Validator has something to say about.
+            ApplyBook(book3, selectId, revalidate: true);
+            return book3;
+        }
+        catch (Exception ex)
+        {
+            await ShowError("Could not save the rule", ex.Message);
+            return null;
+        }
+    }
 
     /// <summary>
     /// Reorders one of a recipe's layers, saves the book, and rebuilds the tree onto the saved graph

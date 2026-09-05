@@ -1,0 +1,100 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             x:Class="Nfty.App.Views.RuleDialogView"
+             x:DataType="vm:RuleDialogViewModel">
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Escape" Command="{Binding CancelCommand}" />
+  </UserControl.KeyBindings>
+  <!-- ONE SCREEN: relation, trigger and targets together, submitted once. A two-step wizard would
+       read more like the sentence the rule makes, and costs a click on every rule an author writes;
+       rules come in batches, so the click is the one that matters.
+
+       EVERY ID IS PICKED, NEVER TYPED. That is the whole argument for a dialog here rather than a
+       text field: an unknown layer or variant id is something Validator can only report after the
+       fact, and every rule that ever reached a book by hand-editing JSON could carry one. Offering
+       only what the recipe holds makes that class of rule unwritable. -->
+  <Border Background="{DynamicResource PanelBrush}" CornerRadius="10" Padding="24" Width="470"
+          BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1">
+    <StackPanel Spacing="13">
+      <TextBlock Text="{Binding Title}" FontWeight="Bold"
+                 Foreground="{DynamicResource AccentTextBrush}" />
+
+      <!-- The relation is a two-button tray, the same shape the ingredient editor's Dynamic/Static
+           pair uses, so a binary choice looks the same everywhere in the app. -->
+      <StackPanel Spacing="7">
+        <TextBlock Classes="plabel" Text="RELATIONSHIP" />
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="7">
+          <Button Grid.Column="0" Classes="seg-b" Classes.on="{Binding IsExclude}"
+                  Command="{Binding SetRelationCommand}" CommandParameter="exclude"
+                  HorizontalAlignment="Stretch" Content="Never together" />
+          <Button Grid.Column="1" Classes="seg-b" Classes.on="{Binding !IsExclude}"
+                  Command="{Binding SetRelationCommand}" CommandParameter="require"
+                  HorizontalAlignment="Stretch" Content="Always together" />
+        </Grid>
+        <TextBlock Text="{Binding RelationText}" Classes="muted" TextWrapping="Wrap" />
+      </StackPanel>
+
+      <StackPanel Spacing="7">
+        <TextBlock Classes="plabel" Text="WHEN THIS IS ROLLED" />
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="7">
+          <ComboBox Grid.Column="0" ItemsSource="{Binding Trigger.Layers}"
+                    SelectedItem="{Binding Trigger.Layer}" HorizontalAlignment="Stretch" />
+          <ComboBox Grid.Column="1" ItemsSource="{Binding Trigger.Variants}"
+                    SelectedItem="{Binding Trigger.Variant}" HorizontalAlignment="Stretch" />
+        </Grid>
+      </StackPanel>
+
+      <StackPanel Spacing="7">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0" Classes="plabel" Text="THESE ARE" VerticalAlignment="Center" />
+          <Button Grid.Column="1" Classes="tbtn" Padding="9,4" Content="+ Target"
+                  Command="{Binding AddTargetCommand}"
+                  ToolTip.Tip="Add another target. Every target listed is demanded or forbidden — a rule with several is a conjunction, not a choice." />
+        </Grid>
+
+        <ItemsControl ItemsSource="{Binding Targets}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:RuleTargetDraft">
+              <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="7" Margin="0,0,0,7">
+                <ComboBox Grid.Column="0" ItemsSource="{Binding Layers}"
+                          SelectedItem="{Binding Layer}" HorizontalAlignment="Stretch" />
+                <ComboBox Grid.Column="1" ItemsSource="{Binding Variants}"
+                          SelectedItem="{Binding Variant}" HorizontalAlignment="Stretch" />
+                <!-- Reserved, not conditional: a row's remove button disappearing when the list
+                     drops to one would resize every row above it under the pointer that just
+                     clicked. It ghosts instead. -->
+                <Button Grid.Column="2" Classes="icon danger" Padding="4"
+                        Command="{Binding $parent[ItemsControl].((vm:RuleDialogViewModel)DataContext).RemoveTargetCommand}"
+                        CommandParameter="{Binding}"
+                        IsEnabled="{Binding $parent[ItemsControl].((vm:RuleDialogViewModel)DataContext).CanRemoveTarget}"
+                        ToolTip.Tip="Remove this target">
+                  <Path Classes="ico xs" Data="{StaticResource IconClose}" />
+                </Button>
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <!-- The reason a rule cannot be saved, on screen while you are still looking at the control
+           that caused it — rather than on submit, which is where the CLI has to say it. -->
+      <!-- RESERVED, and the ink is what toggles. The box appearing would push Cancel and Save down
+           by its whole height — under a pointer that is on its way to Save, which is precisely the
+           harm the app-wide rule exists to stop. 58 is three wrapped lines at this width, which the
+           longest of the RuleEdits messages needs; nothing is drawn when there is no problem, so
+           the reserved space reads as form padding rather than as an empty box. -->
+      <Panel Height="58">
+        <Rectangle Classes="dashed btn" IsVisible="{Binding HasProblem}" />
+        <TextBlock Text="{Binding Problem}" TextWrapping="Wrap" Margin="10,7"
+                   IsVisible="{Binding HasProblem}" VerticalAlignment="Top"
+                   Foreground="{DynamicResource WarningBrush}" FontSize="11.5" />
+      </Panel>
+
+      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+        <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="ghost" />
+        <Button Content="{Binding ConfirmLabel}" Command="{Binding ConfirmCommand}" Classes="accent" />
+      </StackPanel>
+    </StackPanel>
+  </Border>
+</UserControl>

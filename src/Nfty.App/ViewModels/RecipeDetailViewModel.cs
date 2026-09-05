@@ -97,6 +97,14 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
     /// <see cref="CanReorder"/> permanently false in a fixture.</summary>
     private readonly Func<string, int, Task<LoadedCookBook?>>? _moveLayer;
 
+    /// <summary>Applies a rule edit and saves, through whoever owns the book. Null in a fixture and
+    /// on any pane with no file behind it, which is what leaves the three rule commands disabled.</summary>
+    private readonly Func<Func<RecipeManifest, RecipeManifest>, string, Task<LoadedCookBook?>>? _editRules;
+
+    /// <summary>The dialog layer the add/edit form is shown through. Null alongside
+    /// <see cref="_editRules"/> for the same reason.</summary>
+    private readonly IDialogService? _dialogs;
+
     // Not readonly: a reorder hands back a NEW graph (Core's edits are pure), and this pane re-projects
     // itself onto it rather than being rebuilt — see Rebind.
     private LoadedRecipe _recipe;
@@ -160,13 +168,22 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
     /// <param name="moveLayer">Moves a layer to a depth and saves, returning the saved graph — null
     /// (the default) for a pane with nothing to persist through, which disables reordering outright.</param>
     /// <param name="canReorder">Whether editing is unlocked right now.</param>
+    /// <param name="editRules">Applies a rule edit and saves, returning the saved graph — null (the
+    /// default) for a pane with nothing to persist through, which disables rule authoring outright,
+    /// exactly as a null <paramref name="moveLayer"/> disables reordering.</param>
+    /// <param name="dialogs">The dialog layer the add/edit form is shown through. Null alongside
+    /// <paramref name="editRules"/>: a form that cannot save is not worth opening.</param>
     public RecipeDetailViewModel(LoadedRecipe recipe, LoadedCookBook book, IImageBridge bridge,
         Action<string> openIngredient,
-        Func<string, int, Task<LoadedCookBook?>>? moveLayer = null, bool canReorder = false)
+        Func<string, int, Task<LoadedCookBook?>>? moveLayer = null, bool canReorder = false,
+        Func<Func<RecipeManifest, RecipeManifest>, string, Task<LoadedCookBook?>>? editRules = null,
+        IDialogService? dialogs = null)
     {
         _recipe = recipe; _book = book; _bridge = bridge; _openIngredient = openIngredient;
         _moveLayer = moveLayer;
         _canReorder = canReorder;
+        _editRules = editRules;
+        _dialogs = dialogs;
         Name = recipe.Manifest.Name;
 
         // Numbered from LayerDepth, NOT from the filtered position. The two agree on every legal book
@@ -265,6 +282,78 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
         if (book is null) return false;   // refused or failed; the owner has already said why
         await RebindAsync(book);
         return true;
+    }
+
+    /// <summary>
+    /// Whether rules can be authored here. The same gate as reordering, and for the same reason:
+    /// rules are STRUCTURE — what a recipe permits — not pixels. The pencil's deliberate exemption
+    /// from the edit lock is about looking at a layer, which this is not.
+    /// </summary>
+    public bool CanEditRules => _editRules is not null && _dialogs is not null && CanReorder;
+
+    partial void OnCanReorderChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanEditRules));
+        AddRuleCommand.NotifyCanExecuteChanged();
+        EditRuleCommand.NotifyCanExecuteChanged();
+        DeleteRuleCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>Where a row sits in the rule list. Rules is an IReadOnlyList — projected once in
+    /// the constructor and never mutated in place — so it has no IndexOf of its own, and reference
+    /// equality is the right comparison: the row IS the projection of that rule.</summary>
+    private int IndexOfRule(RuleRow row)
+    {
+        for (int i = 0; i < Rules.Count; i++)
+            if (ReferenceEquals(Rules[i], row)) return i;
+        return -1;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanEditRules))]
+    private Task AddRule() => ShowRuleDialogAsync(-1);
+
+    [RelayCommand(CanExecute = nameof(CanEditRules))]
+    private Task EditRule(RuleRow row) => ShowRuleDialogAsync(IndexOfRule(row));
+
+    /// <summary>
+    /// Shows the add/edit form and applies what comes back.
+    ///
+    /// <para>The manifest is re-read from <c>_recipe</c> INSIDE the edit rather than captured: the
+    /// dialog is open for as long as the user takes, and a rule index that was right when the form
+    /// opened is not necessarily right when it closes.</para>
+    /// </summary>
+    private async Task ShowRuleDialogAsync(int index)
+    {
+        if (_dialogs is null || _editRules is null) return;
+        if (index < 0 && Rules.Count == 0 && _recipe.Ingredients.Count == 0) return;
+
+        var rule = await _dialogs.ShowAsync<IncompatibilityRule>(
+            new RuleDialogViewModel(_dialogs, _recipe.Manifest, _recipe.Ingredients, index));
+        if (rule is null) return;   // dismissed
+
+        await _editRules(
+            m => index >= 0 && index < m.Rules.Count
+                ? RuleEdits.ReplaceAt(m, index, rule)
+                : RuleEdits.Add(m, rule),
+            index >= 0 ? "edit a rule" : "add a rule");
+    }
+
+    [RelayCommand(CanExecute = nameof(CanEditRules))]
+    private async Task DeleteRule(RuleRow row)
+    {
+        if (_dialogs is null || _editRules is null) return;
+        int index = IndexOfRule(row);
+        if (index < 0) return;
+
+        // Confirmed, because a rule is not recoverable from anything on screen once it is gone —
+        // and the prompt quotes the rule so the reader can see they picked the one they meant.
+        var ok = await _dialogs.ShowAsync<bool>(new ConfirmDialogViewModel(_dialogs, "Delete this rule?",
+            $"{row.When.Ingredient} {row.When.Variant} {row.ShortText} with "
+            + string.Join(" + ", row.Targets.Select(t => $"{t.Ingredient} {t.Variant}")) + ".",
+            "Delete"));
+        if (!ok) return;
+
+        await _editRules(m => RuleEdits.RemoveAt(m, index), "delete a rule");
     }
 
     /// <summary>Re-projects this pane onto the saved graph after a reorder: the same rows, re-seated,

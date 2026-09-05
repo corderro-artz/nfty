@@ -1,4 +1,5 @@
 using Nfty.Core.Formats;
+using Nfty.Core.Model;
 
 namespace Nfty.Core.Editing;
 
@@ -90,6 +91,41 @@ public static class CookBookEdits
             Manifest = LayerDepth.MoveTo(r.Manifest, ingredientId, toDepth),
             // Reused wholesale: the ingredient collection has no order of its own that matters —
             // layerOrder is what generation walks — so a move rewrites nothing but that one list.
+            Ingredients = r.Ingredients,
+        }).ToList();
+
+        return new LoadedCookBook
+        {
+            Manifest = book.Manifest,
+            Recipes = recipes,
+            SourceSha256 = book.SourceSha256,
+        };
+    }
+
+    /// <summary>
+    /// Applies an edit to one recipe's MANIFEST, leaving its ingredients and every image alone.
+    /// </summary>
+    /// <param name="book">The book to edit.</param>
+    /// <param name="recipeId">Which recipe.</param>
+    /// <param name="edit">The manifest edit — one of the <see cref="RuleEdits"/> methods, or
+    /// anything else pure. Taking the function rather than the finished manifest is what keeps the
+    /// caller from having to hand-splice a recipe back into a book, which is the step every one of
+    /// these methods exists to stop being written twice.</param>
+    /// <returns>A NEW graph SHARING every image the old one held, like the rest of this class — so a
+    /// caller swaps it in rather than disposing the book it replaces.</returns>
+    /// <exception cref="KeyNotFoundException">No such recipe.</exception>
+    public static LoadedCookBook EditRecipeManifest(
+        LoadedCookBook book, string recipeId, Func<RecipeManifest, RecipeManifest> edit)
+    {
+        ArgumentNullException.ThrowIfNull(edit);
+        if (!book.Recipes.Any(r => r.Manifest.Id == recipeId))
+            throw new KeyNotFoundException($"No recipe '{recipeId}' in cookbook '{book.Manifest.Id}'.");
+
+        var recipes = book.Recipes.Select(r => r.Manifest.Id != recipeId ? r : new LoadedRecipe
+        {
+            Manifest = edit(r.Manifest),
+            // Reused wholesale: a manifest edit touches no artwork, and rebuilding the collection
+            // would hand the new graph images the old one still believes it owns.
             Ingredients = r.Ingredients,
         }).ToList();
 

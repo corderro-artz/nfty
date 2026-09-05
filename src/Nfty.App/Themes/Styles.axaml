@@ -1854,6 +1854,23 @@
        difference (~0.7px at these sizes) rather than the whole size difference. -->
   <!-- The word under a rule's mark. Mono and tiny: it is a label on a badge, not a sentence, and
        at 8.5 it fits the 58px relation column at every value either word takes. -->
+  <!-- A rule row's actions: present in layout at all times, inked only under the pointer. Reserved
+       rather than toggled, because a column that appeared on hover would resize the three text cells
+       of the row the pointer just entered — which is the one thing a hover affordance must not do.
+       0 rather than IsVisible=False so the row's height and column widths are identical in both
+       states by construction. -->
+  <Style Selector="StackPanel.ractions">
+    <Setter Property="Opacity" Value="0" />
+  </Style>
+  <Style Selector="Border.ract:pointerover StackPanel.ractions">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <!-- Keyboard reaches them too: a control that only exists under a pointer is not reachable at
+       all for anyone driving the app from the keyboard. -->
+  <Style Selector="StackPanel.ractions:focus-within">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+
   <Style Selector="TextBlock.rmark">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="8.5" />

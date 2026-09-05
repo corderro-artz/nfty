@@ -834,6 +834,27 @@ public class VisualCapture
             },
                 variant, $"zz-dialog-confirm-{key}.png");
 
+            // The rule form, in both of its states. Two captures rather than one because the two
+            // differ in more than a title: the edit form opens seated on an existing rule, and only
+            // the add form shows the "pick a layer and a variant" refusal a fresh row starts in.
+            using (var ruleBook = RecipeWithRules().book)
+            {
+                var ruleRecipe = ruleBook.Recipes[0];
+                Capture(new Views.RuleDialogView
+                {
+                    DataContext = new RuleDialogViewModel(dialogs, ruleRecipe.Manifest,
+                        ruleRecipe.Ingredients, editingIndex: -1),
+                }, variant, $"zz-dialog-rule-add-{key}.png");
+
+                // Seated on rule 1, with a second target added, so the frame shows a multi-target
+                // rule and the remove control that only makes sense once there are two.
+                var editing = new RuleDialogViewModel(dialogs, ruleRecipe.Manifest,
+                    ruleRecipe.Ingredients, editingIndex: 0);
+                editing.AddTargetCommand.Execute(null);
+                Capture(new Views.RuleDialogView { DataContext = editing },
+                    variant, $"zz-dialog-rule-edit-{key}.png");
+            }
+
             // A search that matches nothing: the tree empties and the pane must say so rather than
             // simply going blank.
             using (var book = ExplorerViewModelTests.TwoRecipeBook())
