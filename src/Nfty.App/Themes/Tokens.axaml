@@ -201,8 +201,23 @@
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 
-  <FontFamily x:Key="SansFontFamily">-apple-system, Segoe UI, Helvetica Neue, Arial, sans-serif</FontFamily>
-  <FontFamily x:Key="MonoFontFamily">SF Mono, JetBrains Mono, Cascadia Code, Menlo, Consolas, monospace</FontFamily>
+  <!-- TYPEFACES. IBM Plex, embedded (Assets/Fonts, SIL OFL), not asked of the OS.
+       Both halves are one SUPERFAMILY, which is the point rather than a preference: this app pairs a
+       mono face with a sans one in every data table, and TextBaselineTests records ~1px of
+       irreducible mismatch because the two had different descents. Sharing a skeleton removes that
+       at the source.
+       They replace CSS stacks copied from the archived mockups. Those were wrong twice over -
+       `-apple-system` is a CSS KEYWORD and resolves to nothing in Avalonia ever, and the rest
+       resolved to a different face on every platform (Segoe UI + Cascadia Code on Windows, neither
+       of them on Linux). A face that varies by machine is not a theme, and this app's figures are
+       screenshotted into a manual.
+       Named by the TYPOGRAPHIC family. A legacy TTF name table can only express Regular/Bold inside
+       one family, so these files declare "IBM Plex Sans Medm" and "IBM Plex Sans SmBld" as their
+       nameID-1 families and only nameID 16 says "IBM Plex Sans". EmbeddedFontWeightTests proves the
+       four weights actually resolve to four different faces rather than being synthesised - which is
+       what a wrong name here would silently produce. -->
+  <FontFamily x:Key="SansFontFamily">avares://Nfty.App/Assets/Fonts#IBM Plex Sans</FontFamily>
+  <FontFamily x:Key="MonoFontFamily">avares://Nfty.App/Assets/Fonts#IBM Plex Mono</FontFamily>
   <CornerRadius x:Key="RadiusXs">4</CornerRadius>
   <CornerRadius x:Key="RadiusWin">10</CornerRadius>
   <CornerRadius x:Key="RadiusLg">8</CornerRadius>

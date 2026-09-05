@@ -22,11 +22,38 @@ public partial class CookDialogViewModel : ViewModelBase
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(CookCommand))] private int _count = 50;
     [ObservableProperty] private string _seed = Guid.NewGuid().ToString("N")[..8];
     [ObservableProperty] private bool _pack;
-    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(CookCommand))] [NotifyCanExecuteChangedFor(nameof(CancelCommand))] [NotifyCanExecuteChangedFor(nameof(CloseCommand))] [NotifyPropertyChangedFor(nameof(ShowForm))] private bool _isRunning;
+    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(CookCommand))] [NotifyCanExecuteChangedFor(nameof(CancelCommand))] [NotifyCanExecuteChangedFor(nameof(CloseCommand))] [NotifyPropertyChangedFor(nameof(ShowForm))] [NotifyPropertyChangedFor(nameof(FootHint))] private bool _isRunning;
     [ObservableProperty] private double _progress;
     [ObservableProperty] private string _phaseText = "";
-    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(RevealCommand))] [NotifyPropertyChangedFor(nameof(ShowForm))] private bool _isDone;
+    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(RevealCommand))] [NotifyPropertyChangedFor(nameof(ShowForm))] [NotifyPropertyChangedFor(nameof(FootHint))] private bool _isDone;
+
+    /// <summary>What the run produced, as a sentence — the counts alone.</summary>
+    /// <remarks>
+    /// Split from <see cref="OutputPath"/> deliberately. The two used to be one string
+    /// ("20 assets → C:\long\path"), which wrapped mid-path across three lines of prose and
+    /// could not be clicked: a path is a THING the user wants to go to, not a clause in a sentence
+    /// about it. Separated, the sentence can wrap and the path gets a control of its own.
+    /// </remarks>
     [ObservableProperty] private string _resultText = "";
+
+    /// <summary>The folder the Set was written to, shown as its own control and openable.</summary>
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(OutputLeaf))] [NotifyPropertyChangedFor(nameof(OutputParent))] private string _outputPath = "";
+
+    /// <summary>The folder's own name — the part a reader is actually looking for.</summary>
+    /// <remarks>
+    /// A path is read from the END: which folder, then where it sits. Trimming a long path with a
+    /// trailing ellipsis keeps the useless half (the drive and the user's home) and eats the half
+    /// that identifies it. So the leaf is stated in full and the parent is what gets trimmed.
+    /// </remarks>
+    public string OutputLeaf => string.IsNullOrEmpty(OutputPath)
+        ? ""
+        : Path.GetFileName(OutputPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+          is { Length: > 0 } leaf ? leaf : OutputPath;
+
+    /// <summary>Where that folder sits. Trimmed when it is long; the tooltip carries all of it.</summary>
+    public string OutputParent => string.IsNullOrEmpty(OutputPath)
+        ? ""
+        : Path.GetDirectoryName(OutputPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) ?? "";
 
     /// <summary>True once the chosen folder turns out to already hold a Set, so this cook is adding
     /// to it rather than starting one. Set during the run, because it depends on the folder the user
@@ -43,6 +70,12 @@ public partial class CookDialogViewModel : ViewModelBase
 
     /// <summary>Whether the options form is showing rather than the progress view.</summary>
     public bool ShowForm => !IsRunning && !IsDone;
+
+    /// <summary>The footer's left-hand hint, which is a different sentence in each of the three
+    /// states this one card passes through.</summary>
+    public string FootHint => IsRunning
+        ? "Cancel stops after the current asset"
+        : IsDone ? "Click the folder to open it" : "Same book, same seed, same collection";
 
     private bool CanCook() => !IsRunning && Count > 0;
 
@@ -81,9 +114,12 @@ public partial class CookDialogViewModel : ViewModelBase
             await SetWriter.WriteAsync(set, dir, Pack, writeProgress, _cts.Token);
 
             _outDir = dir;
+            OutputPath = dir;
+            int made = set.Assets.Count;
+            string noun = made == 1 ? "asset" : "assets";
             ResultText = IsExtending
-                ? $"+{set.Assets.Count} assets ({existing.Dnas.Count + set.Assets.Count} total) → {dir}"
-                : $"{set.Assets.Count} assets → {dir}";
+                ? $"Added +{made} {noun} — {existing.Dnas.Count + made} total in the collection."
+                : $"Cooked {made} {noun}.";
             IsDone = true;
         }
         catch (OperationCanceledException) { PhaseText = "Canceled"; }

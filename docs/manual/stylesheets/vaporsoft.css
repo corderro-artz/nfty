@@ -17,8 +17,16 @@
    ========================================================================== */
 
 :root {
-  --md-text-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  --md-code-font-family: "SF Mono", "JetBrains Mono", "Cascadia Code", ui-monospace, Menlo, Consolas, monospace;
+  /* The app EMBEDS IBM Plex (src/Nfty.App/Assets/Fonts) so it renders identically everywhere. This
+     site does not, and that divergence is deliberate rather than an oversight: mkdocs.yml sets
+     `font: false` so the manual never reaches out to a third party for a typeface, and serving the
+     faces from here would mean carrying another eight binaries for a page of prose. Plex leads the
+     stack so a reader who has it gets the app's own face; everyone else gets their system's, which
+     is what this site did before the app embedded anything.
+     Note these stacks are CSS, where `-apple-system` is a real keyword. The Avalonia tokens these
+     mirror could NOT use it — there it named nothing at all and silently resolved to a fallback. */
+  --md-text-font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --md-code-font-family: "IBM Plex Mono", "SF Mono", "Cascadia Code", ui-monospace, Menlo, Consolas, monospace;
 
   /* Shared across both schemes: the accent is one colour in the app, and only the text form of it
      shifts per theme for contrast. */

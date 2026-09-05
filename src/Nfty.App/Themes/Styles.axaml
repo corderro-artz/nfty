@@ -711,6 +711,56 @@
   <Style Selector="Border.modal.tall">
     <Setter Property="MaxHeight" Value="632" />
   </Style>
+
+  <!-- The SMALL modal: confirm, error, cook. Declared after Border.modal for the same last-one-wins
+       reason as .tall. These three were the only dialogs in the app not using the modal grammar at
+       all - a flat slab with a literal CornerRadius="10", a literal Padding="24" and buttons floating
+       in the content area with no footer band. They read as a different application's dialogs sitting
+       on top of this one. They now share the card, the glow body and the foot band with every other
+       modal; only the width differs, because 620 is a form's width and these carry a sentence.
+       Border.modal's 620 MaxHeight is simply inherited: these cards hug a sentence and never reach
+       it, so restating it would be a number stated twice. -->
+  <Style Selector="Border.modal.small">
+    <Setter Property="Width" Value="430" />
+  </Style>
+
+  <!-- A PATH is a place, not a clause. Shown as its own strip - a folder glyph, the folder's own
+       name in full, and where it sits underneath - and the whole strip is the button that opens it,
+       so there is one control for one action rather than a line of prose beside a Reveal button. The
+       cook result used to interpolate the directory into a sentence, which wrapped mid-path across
+       three lines and could not be clicked at all. -->
+  <Style Selector="Button.pathstrip">
+    <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="Padding" Value="10,8" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="Button.pathstrip:pointerover">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+  </Style>
+  <!-- Fluent paints the pressed wash on the presenter, as it does for RepeatButton; setting it on
+       the button alone changes nothing. -->
+  <Style Selector="Button.pathstrip:pressed /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+  </Style>
+  <Style Selector="Button.pathstrip TextBlock.leaf">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+  </Style>
+  <!-- The parent is what gets trimmed, never the leaf: a path is read from its end, so a trailing
+       ellipsis on the whole thing would eat the only part that identifies the folder. -->
+  <Style Selector="Button.pathstrip TextBlock.parent">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
   <!-- .body's accent glow: a soft radial wash from the top edge. -->
   <Style Selector="Border.modal-body">
     <Setter Property="Padding" Value="24,30" />
@@ -726,6 +776,13 @@
     <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
     <Setter Property="BorderThickness" Value="0,1,0,0" />
     <Setter Property="Padding" Value="16,8" />
+    <!-- The band carries the card's own bottom radius, less its 1px border. Border.modal sets
+         ClipToBounds, and a clip is to the layout RECTANGLE and not to the corner radius — so this
+         band painted a square corner over the card's arc and the border read as cut off at both
+         bottom corners. Every other footer in the app already did this (.sh-f, .ins-f, .rail-foot);
+         this one, shared by all three wizards and the report dialog, was the one that did not, and
+         nobody saw it until a small card put the footer next to the arc. -->
+    <Setter Property="CornerRadius" Value="0,0,9,9" />
   </Style>
   <!-- The bar was 58px because its two buttons disagreed: the ghost measured 29 and the accent 37,
        since the accent carries an icon row and both were padded 12,8. Pinning one height makes the
@@ -747,6 +804,13 @@
     <Setter Property="Fill" Value="{DynamicResource AccentBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="Margin" Value="0,0,0,9" />
+  </Style>
+  <!-- The problem dialog's dot. Declared after Ellipse.kdot so it wins at equal specificity. It is
+       the whole of what tells an error card apart from a confirmation card before either is read —
+       the two are otherwise the same shape, and the old dialogs left the distinction entirely to the
+       title text. -->
+  <Style Selector="Ellipse.kdot.warn">
+    <Setter Property="Fill" Value="{DynamicResource WarningBrush}" />
   </Style>
 
   <!-- .kind / .dopt choice cards. The wizards' Kind and Destination pickers are bordered cards with

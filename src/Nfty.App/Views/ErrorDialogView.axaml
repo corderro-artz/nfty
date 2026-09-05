@@ -6,12 +6,33 @@
   <UserControl.KeyBindings>
     <KeyBinding Gesture="Escape" Command="{Binding CloseCommand}" />
   </UserControl.KeyBindings>
-  <Border Background="{DynamicResource PanelBrush}" CornerRadius="10" Padding="24" MaxWidth="420"
-          BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1">
-    <StackPanel Spacing="10">
-      <TextBlock Text="{Binding Title}" FontWeight="Bold" Foreground="{DynamicResource AccentTextBrush}" />
-      <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Classes="muted" />
-      <Button Content="OK" Command="{Binding CloseCommand}" Classes="accent" HorizontalAlignment="Right" />
-    </StackPanel>
+  <!-- The modal grammar every other dialog already used. This one was a flat slab with a literal
+       radius and padding and an OK button floating in the content area — recognisably not the same
+       application as the card underneath it. -->
+  <Border Classes="modal small">
+    <Grid RowDefinitions="Auto,Auto">
+      <Border Grid.Row="0" Classes="modal-body tight">
+        <StackPanel Spacing="9">
+          <!-- The kicker says WHICH KIND of message this is, which is the thing the old dialog left
+               entirely to the title text. The dot is the warning ink, so an error and a confirmation
+               are told apart before either is read. -->
+          <StackPanel Classes="plabel-row">
+            <Ellipse Classes="kdot warn" />
+            <TextBlock Text="PROBLEM" Classes="slbl" />
+          </StackPanel>
+          <TextBlock Text="{Binding Title}" Classes="m-h" TextWrapping="Wrap" />
+          <!-- Selectable: an error message is the thing a user needs to copy into a search or a bug
+               report, and re-typing one by hand off a screenshot is how detail gets lost. -->
+          <SelectableTextBlock Text="{Binding Message}" TextWrapping="Wrap" Classes="m-sub" />
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Row="1" Classes="modal-foot">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0" Classes="keyhint" VerticalAlignment="Center" Text="Esc to dismiss" />
+          <Button Grid.Column="1" Content="OK" Command="{Binding CloseCommand}" Classes="accent" />
+        </Grid>
+      </Border>
+    </Grid>
   </Border>
 </UserControl>

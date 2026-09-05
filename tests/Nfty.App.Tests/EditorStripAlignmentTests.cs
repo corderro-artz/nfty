@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Avalonia;
 using Avalonia.Media;
@@ -112,8 +113,15 @@ public class EditorStripAlignmentTests
             Assert.Equal(buttons[0].Bounds.Y, buttons[2].Bounds.Y, 1);
             Assert.All(buttons, b => Assert.Equal(buttons[0].Bounds.Height, b.Bounds.Height, 1));
 
-            // Duplicate and Delete share the slack; Import takes only its label.
-            Assert.Equal(buttons[0].Bounds.Width, buttons[1].Bounds.Width, 1);
+            // Duplicate and Delete share the slack; Import takes only its label. Compared with a
+            // ONE PIXEL tolerance rather than for equality: they sit in two star columns, and a star
+            // split of an odd number of pixels gives one of them the spare pixel. That is arithmetic,
+            // not a layout mistake — it surfaced when the app moved to an embedded typeface and the
+            // row's content measured one pixel differently. The invariant is "these two share the
+            // slack", which 77-and-76 satisfies and 77-and-60 does not.
+            Assert.True(Math.Abs(buttons[0].Bounds.Width - buttons[1].Bounds.Width) <= 1,
+                $"Duplicate ({buttons[0].Bounds.Width}) and Delete ({buttons[1].Bounds.Width}) "
+                + "should split the slack evenly.");
             Assert.True(buttons[2].Bounds.Width < buttons[0].Bounds.Width,
                 $"Import ({buttons[2].Bounds.Width}) should be the small one");
 

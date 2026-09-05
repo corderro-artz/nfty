@@ -6,47 +6,72 @@
   <UserControl.KeyBindings>
     <KeyBinding Gesture="Escape" Command="{Binding CloseCommand}" />
   </UserControl.KeyBindings>
-  <Border Background="{DynamicResource PanelBrush}" CornerRadius="10" Padding="24" Width="380"
-          BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1">
-    <StackPanel Spacing="10">
-      <TextBlock Text="Cook" FontWeight="Bold" />
+  <Border Classes="modal small">
+    <Grid RowDefinitions="Auto,Auto">
+      <Border Grid.Row="0" Classes="modal-body tight">
+        <StackPanel Spacing="11">
+          <StackPanel Classes="plabel-row">
+            <Ellipse Classes="kdot" />
+            <TextBlock Text="COOK" Classes="slbl" />
+          </StackPanel>
+          <TextBlock Text="Cook a Set" Classes="m-h" />
 
-      <StackPanel Spacing="10" IsVisible="{Binding ShowForm}" IsEnabled="{Binding ShowForm}">
-        <!-- Both fields carry a real label. The seed used to be labeled by PlaceholderText alone,
-             and the ViewModel pre-fills a random seed - so the one thing that named the field was
-             showing exactly when the field was empty, which it never is. The user met an unexplained
-             box of hex. A Grid rather than two StackPanels so the two labels share one column and
-             stay aligned by construction. -->
-        <Grid ColumnDefinitions="60,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="10">
-          <TextBlock Grid.Row="0" Grid.Column="0" Text="Count" VerticalAlignment="Center" Classes="muted" />
-          <NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding Count}" Minimum="1"
-                         Width="140" HorizontalAlignment="Left" />
-          <TextBlock Grid.Row="1" Grid.Column="0" Text="Seed" VerticalAlignment="Center" Classes="muted" />
-          <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Seed}"
-                   ToolTip.Tip="Any word. The same book and the same seed always cook the same collection." />
-        </Grid>
-        <CheckBox Content="Pack into a single .set" IsChecked="{Binding Pack}" />
-      </StackPanel>
+          <StackPanel Spacing="11" IsVisible="{Binding ShowForm}" IsEnabled="{Binding ShowForm}">
+            <!-- Both fields carry a real label. The seed used to be labeled by PlaceholderText alone,
+                 and the ViewModel pre-fills a random seed - so the one thing that named the field was
+                 showing exactly when the field was empty, which it never is. The user met an unexplained
+                 box of hex. A Grid rather than two StackPanels so the two labels share one column and
+                 stay aligned by construction. -->
+            <Grid ColumnDefinitions="60,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="10">
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="Count" VerticalAlignment="Center" Classes="muted" />
+              <NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding Count}" Minimum="1"
+                             Width="140" HorizontalAlignment="Left" />
+              <TextBlock Grid.Row="1" Grid.Column="0" Text="Seed" VerticalAlignment="Center" Classes="muted" />
+              <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Seed}"
+                       ToolTip.Tip="Any word. The same book and the same seed always cook the same collection." />
+            </Grid>
+            <CheckBox Content="Pack into a single .set" IsChecked="{Binding Pack}" />
+          </StackPanel>
 
-      <StackPanel Spacing="8" IsVisible="{Binding IsRunning}">
-        <ProgressBar Minimum="0" Maximum="1" Value="{Binding Progress}" />
-        <TextBlock Text="{Binding PhaseText}" Classes="muted" />
-        <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="tbtn" HorizontalAlignment="Right" />
-      </StackPanel>
+          <StackPanel Spacing="9" IsVisible="{Binding IsRunning}">
+            <ProgressBar Minimum="0" Maximum="1" Value="{Binding Progress}" />
+            <TextBlock Text="{Binding PhaseText}" Classes="m-sub" />
+          </StackPanel>
 
-      <StackPanel Spacing="8" IsVisible="{Binding IsDone}">
-        <TextBlock Text="{Binding ResultText}" TextWrapping="Wrap" Classes="muted" />
-        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-          <Button Content="Reveal" Command="{Binding RevealCommand}" Classes="tbtn" />
-          <Button Content="Close" Command="{Binding CloseCommand}" Classes="tbtn" />
+          <StackPanel Spacing="10" IsVisible="{Binding IsDone}">
+            <TextBlock Text="{Binding ResultText}" TextWrapping="Wrap" Classes="m-sub" />
+            <!-- The whole strip is the button. One control for one action: a path beside a separate
+                 "Reveal" button is two things to press for the same intent, and the path was the
+                 thing being pointed at anyway. -->
+            <Button Classes="pathstrip" Command="{Binding RevealCommand}"
+                    ToolTip.Tip="{Binding OutputPath}">
+              <Grid ColumnDefinitions="Auto,*" ColumnSpacing="9">
+                <Path Grid.Column="0" Classes="ico sm" Data="{StaticResource IconOpen}"
+                      VerticalAlignment="Center" />
+                <StackPanel Grid.Column="1" Spacing="1">
+                  <TextBlock Classes="leaf" Text="{Binding OutputLeaf}" />
+                  <TextBlock Classes="parent" Text="{Binding OutputParent}" />
+                </StackPanel>
+              </Grid>
+            </Button>
+          </StackPanel>
         </StackPanel>
-      </StackPanel>
+      </Border>
 
-      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right"
-                  IsVisible="{Binding ShowForm}">
-        <Button Content="Close" Command="{Binding CloseCommand}" Classes="tbtn" />
-        <Button Content="Cook" Command="{Binding CookCommand}" Classes="accent" />
-      </StackPanel>
-    </StackPanel>
+      <Border Grid.Row="1" Classes="modal-foot">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0" Classes="keyhint" VerticalAlignment="Center"
+                     Text="{Binding FootHint}" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+            <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="tbtn"
+                    IsVisible="{Binding IsRunning}" />
+            <Button Content="Close" Command="{Binding CloseCommand}" Classes="tbtn"
+                    IsVisible="{Binding !IsRunning}" />
+            <Button Content="Cook" Command="{Binding CookCommand}" Classes="accent"
+                    IsVisible="{Binding ShowForm}" />
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
   </Border>
 </UserControl>

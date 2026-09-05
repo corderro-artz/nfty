@@ -14,6 +14,14 @@
   <ItemGroup>
     <ProjectReference Include="..\Nfty.Core\Nfty.Core.csproj" />
   </ItemGroup>
+  <!-- The typefaces ship WITH the app rather than being asked of the OS. The font tokens used to be
+       CSS stacks copied from the archived mockups, which meant the app rendered in a different face
+       on every platform - Segoe UI here, something else on Linux - and the first entry, the CSS
+       keyword `-apple-system`, could never resolve anywhere at all. This app's figures are captured
+       into a manual and compared across machines, so the face is part of what has to reproduce. -->
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\Fonts\*.ttf" />
+  </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Nfty.App.Tests" />
   </ItemGroup>

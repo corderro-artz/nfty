@@ -103,6 +103,9 @@ public class CookExtendTests
                 // Reported as an addition, not as a fresh set of one.
                 Assert.Contains("+1", second.ResultText);
                 Assert.Contains("2 total", second.ResultText);
+                // And it counts in the singular when it added one. The sentence was
+                // "Added 1 assets" for exactly as long as nothing read it.
+                Assert.Contains("1 asset ", second.ResultText);
             }
 
             var numbers = Directory.GetFiles(Path.Combine(dir, "nfty"), "*.json")

@@ -834,6 +834,25 @@ public class VisualCapture
             },
                 variant, $"zz-dialog-confirm-{key}.png");
 
+            // The cook dialog in the state that carries its riskiest layout: FINISHED, with the
+            // output path in it. That path is the longest string this card ever holds and the only
+            // one it cannot wrap, so a fixture with a short path proves nothing - this one is a real
+            // Windows path of the length a temp directory actually produces. Nothing rendered this
+            // state until the strip existed, which is exactly how it shipped as three lines of
+            // wrapped prose nobody could click.
+            using (var cookBook = RecipeWithRules().book)
+            {
+                var cookVm = new CookDialogViewModel(cookBook, new FilePickerService(),
+                    new NoopFolderRevealer(), dialogs)
+                {
+                    IsDone = true,
+                    ResultText = "Cooked 20 assets.",
+                    OutputPath = @"C:\Users\Corde\AppData\Local\Temp\nfty-demo\VaporPets-launch",
+                };
+                Capture(new Views.CookDialogView { DataContext = cookVm }, variant,
+                    $"zz-dialog-cook-done-{key}.png");
+            }
+
             // The ingredient pane for a chase layer: its absent flag beside the rule flag, and the
             // variant percentages that flag exists to explain — they read the odds of GETTING each
             // variant, not its share among its siblings.
