@@ -399,12 +399,14 @@ public static class Generator
     /// a null model marks a Custom layer, cloned as-is rather than colorized.</param>
     /// <param name="Traits">The trait selections, in layer order.</param>
     /// <param name="ColorRolls">The per-layer color record for the rich metadata.</param>
+    /// <param name="AbsentLayers">The layers this roll left out entirely.</param>
     private sealed record RolledAsset(
         string Dna,
         LoadedRecipe Recipe,
         IReadOnlyList<(Image<Rgba32> Source, RolledColor Color, ColorModel? Model)> Plan,
         IReadOnlyList<TraitSelection> Traits,
-        IReadOnlyList<ColorRoll> ColorRolls);
+        IReadOnlyList<ColorRoll> ColorRolls,
+        IReadOnlyList<AbsentLayer> AbsentLayers);
 
     /// <summary>
     /// The roll phase: consumes the RNG, decides the whole asset, and touches no pixels. Returns
@@ -419,6 +421,7 @@ public static class Generator
         var traits = new List<TraitSelection>();
         var colorRolls = new List<ColorRoll>();
         var dnaParts = new List<LayerSelection>();
+        var absentLayers = new List<AbsentLayer>();
 
         // What each layer will draw, decided here and rendered later.
         // A null model means a Custom layer, which is cloned as-is rather than colorized.
@@ -439,7 +442,14 @@ public static class Generator
                 string? rolledId = layer.AlwaysAbsent
                     ? null
                     : WeightedRoller.Roll(layer.Weights, layer.AbsentWeight, rng);
-                if (rolledId is null) continue;
+                if (rolledId is null)
+                {
+                    // Recorded, not merely skipped. Everything else about an absent layer is an
+                    // omission — no trait, no pixels, no DNA part — which leaves a finished Set
+                    // unable to tell "this asset has no hat" from "this collection has no hat".
+                    absentLayers.Add(new AbsentLayer(ingId, ing.Manifest.Name));
+                    continue;
+                }
 
                 string variantId = rolledId;
                 var variant = layer.VariantById[variantId];
@@ -484,7 +494,7 @@ public static class Generator
                 return null;
 
             return new RolledAsset(
-                Dna.Compute(recipe.Manifest.Id, dnaParts), recipe, plan, traits, colorRolls);
+                Dna.Compute(recipe.Manifest.Id, dnaParts), recipe, plan, traits, colorRolls, absentLayers);
         }
     }
 
@@ -514,6 +524,7 @@ public static class Generator
                 Image = composed,
                 Traits = rolled.Traits,
                 ColorRolls = rolled.ColorRolls,
+                AbsentLayers = rolled.AbsentLayers,
             };
         }
         catch

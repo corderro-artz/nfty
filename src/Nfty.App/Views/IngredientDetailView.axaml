@@ -55,13 +55,29 @@
             <!-- .hflag: shown ONLY when this layer is named in a rule, which is the question it
                  exists to answer. It replaces a permanently-visible "Jump to rules" button whose
                  command was an empty body - a control that looked available and did nothing. -->
-            <Button Classes="hflag" Command="{Binding JumpToRulesCommand}" IsVisible="{Binding HasRules}"
-                    HorizontalAlignment="Left" Margin="0,4,0,0" ToolTip.Tip="See rules in the recipe">
-              <StackPanel Orientation="Horizontal" Spacing="5">
-                <Path Classes="ico xs" Data="{StaticResource IconMarkFlag}" />
-                <TextBlock Text="{Binding RuleFlagText}" />
-              </StackPanel>
-            </Button>
+            <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,4,0,0">
+              <Button Classes="hflag" Command="{Binding JumpToRulesCommand}" IsVisible="{Binding HasRules}"
+                      HorizontalAlignment="Left" ToolTip.Tip="See rules in the recipe">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <Path Classes="ico xs" Data="{StaticResource IconMarkFlag}" />
+                  <TextBlock Text="{Binding RuleFlagText}" />
+                </StackPanel>
+              </Button>
+
+              <!-- Shown only when the layer can actually be left out, exactly like the rule flag
+                   beside it: it answers "is this a chase item?", and on a layer that always appears
+                   there is no question to answer.
+                   It is here because without it the percentages below are unexplainable. They
+                   already fold absence in — a chase variant reads 5% rather than its 50% share
+                   among its siblings — so a reader who does not know the layer is optional would
+                   just believe the weights are strange. Not a Button: unlike the rule flag it has
+                   nowhere to jump to, and a control that looks clickable and is not is the defect
+                   the rule flag itself replaced. -->
+              <Border Classes="hflag absent" IsVisible="{Binding IsOptional}"
+                      ToolTip.Tip="{Binding AbsentFlagTip}">
+                <TextBlock Text="{Binding AbsentFlagText}" />
+              </Border>
+            </StackPanel>
           </StackPanel>
           <Button Grid.Column="2" Command="{Binding EditIngredientCommand}" Classes="accent" VerticalAlignment="Top" ToolTip.Tip="Edit ingredient"><Path Classes="ico" Data="{StaticResource IconPencil}" /></Button>
 

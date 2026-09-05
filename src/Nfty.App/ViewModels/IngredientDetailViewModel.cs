@@ -95,6 +95,37 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     /// an ingredient with no variants, which the view treats as nothing to draw.</summary>
     public Bitmap? SelectedThumb => _variants.Count > 0 ? _variants[0].Thumbnail : null;
 
+    /// <summary>
+    /// How often the OWNING RECIPE leaves this layer out, as a percent. Zero for a layer that always
+    /// appears.
+    /// </summary>
+    /// <remarks>
+    /// It comes from the recipe, not the ingredient, because that is where it lives — the same .igt
+    /// is guaranteed in one recipe and a chase item in another. This pane is always looking at a
+    /// layer THROUGH a recipe, so it has one to ask.
+    ///
+    /// <para>It is shown because without it the variant percentages are unexplainable. They already
+    /// fold absence in, so a chase item's variants correctly read 5% rather than 50% — and a reader
+    /// with no idea the layer is optional would simply believe the weights are strange.</para>
+    /// </remarks>
+    public double AbsentPercent { get; }
+
+    /// <summary>Whether this layer may be left out at all.</summary>
+    public bool IsOptional => AbsentPercent > 0;
+
+    /// <summary>The chance as the hero's flag prints it.</summary>
+    public string AbsentFlagText => AbsentPercent >= 100
+        ? "never appears"
+        : $"absent {AbsentPercent:0.##}%";
+
+    /// <summary>What that flag means, spelled out.</summary>
+    public string AbsentFlagTip => AbsentPercent >= 100
+        ? "This recipe never includes this layer. It is shelved rather than deleted — set the "
+          + "chance back below 100 to bring it back."
+        : $"This recipe leaves this layer out of {AbsentPercent:0.##}% of its assets. The shares "
+          + "below already account for that, so they are the odds of getting each variant rather "
+          + "than its share among the others.";
+
     /// <summary>How many of the recipe's incompatibility rules mention this layer, on either side.
     /// The mockup's .hflag pill exists to answer "is this layer entangled?" at a glance, which is
     /// otherwise only discoverable by opening the recipe and reading its rules.</summary>
@@ -128,6 +159,15 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
         _picker = picker;
         _dialogs = dialogs;
 
+        // FROM THE BOOK'S COPY of the recipe, not from the one handed in — because that is where
+        // the percentages below come from. RarityCalculator is given the BOOK and filters by recipe
+        // id, so reading the chance off a different object lets the flag and the numbers it exists
+        // to explain disagree: a capture fixture that set the chance on a detached recipe showed
+        // "absent 90%" above variants still reading their 25/75 share among siblings. They resolve
+        // to the same object in the app; making them resolve to the same object BY CONSTRUCTION is
+        // what stops that being a coincidence.
+        var owning = book.Recipes.FirstOrDefault(r => r.Manifest.Id == recipe.Manifest.Id) ?? recipe;
+        AbsentPercent = owning.Manifest.AbsentPercentOf(ing.Manifest.Id);
         RuleCount = recipe.Manifest.Rules.Count(r =>
             r.When.IngredientId == ing.Manifest.Id || r.Targets.Any(t => t.IngredientId == ing.Manifest.Id));
         Name = ing.Manifest.Name;

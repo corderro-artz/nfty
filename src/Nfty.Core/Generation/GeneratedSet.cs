@@ -18,6 +18,21 @@ public record TraitSelection(string IngredientId, string IngredientName, string 
 public record ColorRoll(string LayerId, LayerKind Kind, ColorModel? Model, double? H, double? S);
 
 /// <summary>
+/// One layer the roll left out of this asset entirely.
+/// </summary>
+/// <param name="IngredientId">The layer's id.</param>
+/// <param name="IngredientName">Its display name — the trait type it would have been published
+/// under had it appeared, which is what a rarity table needs to name it.</param>
+/// <remarks>
+/// Recorded because an absent layer is otherwise INVISIBLE in a finished Set: it contributes no
+/// trait, so nothing downstream can tell "this asset has no hat" from "this collection has no hat
+/// layer". The OpenSea file still omits it — that is the standard reading of not having something,
+/// and it is built from <see cref="GeneratedAsset.Traits"/>, which an absent layer never enters.
+/// This travels in the rich nfty file instead, which is what the dual-metadata split is for.
+/// </remarks>
+public record AbsentLayer(string IngredientId, string IngredientName);
+
+/// <summary>
 /// One finished asset. Owns its composited <see cref="Image"/>: dispose the asset (or the
 /// <see cref="GeneratedSet"/> holding it) once the pixels have been written or drawn.
 /// </summary>
@@ -37,6 +52,10 @@ public class GeneratedAsset : IDisposable
     public required IReadOnlyList<TraitSelection> Traits { get; init; }
     /// <summary>The per-layer color record for the rich metadata.</summary>
     public required IReadOnlyList<ColorRoll> ColorRolls { get; init; }
+
+    /// <summary>The layers this roll left out entirely. Empty for every asset of a recipe with no
+    /// optional layers, which is every asset generated before they existed.</summary>
+    public IReadOnlyList<AbsentLayer> AbsentLayers { get; init; } = Array.Empty<AbsentLayer>();
 
     /// <summary>Frees the composited artwork.</summary>
     public void Dispose() => Image.Dispose();

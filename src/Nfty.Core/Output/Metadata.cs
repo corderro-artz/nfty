@@ -35,7 +35,8 @@ public record NftyMetadata(
     string Dna,
     string Seed,
     IReadOnlyList<RarityAttribute> Rarity,
-    IReadOnlyList<LayerColor> Layers);
+    IReadOnlyList<LayerColor> Layers,
+    IReadOnlyList<string>? AbsentLayers = null);
 
 /// <summary>How many assets one recipe produced.</summary>
 /// <param name="Recipe">The recipe's display name.</param>

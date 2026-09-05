@@ -834,6 +834,41 @@ public class VisualCapture
             },
                 variant, $"zz-dialog-confirm-{key}.png");
 
+            // The ingredient pane for a chase layer: its absent flag beside the rule flag, and the
+            // variant percentages that flag exists to explain — they read the odds of GETTING each
+            // variant, not its share among its siblings.
+            {
+                var (rawBook, chaseRecipe, _) = DynamicIngredient();
+                var optional = new LoadedRecipe
+                {
+                    Manifest = chaseRecipe.Manifest with
+                    {
+                        AbsentPercent = new Dictionary<string, double>
+                        {
+                            [chaseRecipe.Manifest.LayerOrder[^1]] = 90,
+                        },
+                    },
+                    Ingredients = chaseRecipe.Ingredients,
+                };
+                // The BOOK carries the optional recipe too. Handing the pane a detached recipe left
+                // the flag saying 90% above percentages that still read their share among siblings,
+                // because the percentages come from the book — a fixture that lies about the
+                // product is worse than no fixture.
+                var chaseBook = new LoadedCookBook
+                {
+                    Manifest = rawBook.Manifest,
+                    Recipes = new[] { optional },
+                    SourceSha256 = rawBook.SourceSha256,
+                };
+                var chaseIng = optional.Ingredients
+                    .First(i => i.Manifest.Id == optional.Manifest.LayerOrder[^1]);
+                using var chasePane = new IngredientDetailViewModel(chaseIng, optional, chaseBook,
+                    new ImageBridge(), () => { }, () => false);
+                Capture(new Views.IngredientDetailView { DataContext = chasePane }, variant,
+                    $"zz-ingredient-chase-{key}.png");
+                rawBook.Dispose();
+            }
+
             // A recipe with an optional layer, unlocked, so the frame carries the chance column,
             // its editable fields and the factor chip that counts one higher for it. Every other
             // recipe frame is a book that does not use the feature, and a state no fixture reaches

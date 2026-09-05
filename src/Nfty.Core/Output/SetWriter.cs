@@ -324,6 +324,12 @@ public static class SetWriter
             + "Every nfty/NNNN.json needs its metadata/NNNN.json sibling to extend this set.");
     }
 
+    /// <summary>
+    /// The value an absent layer is counted and reported under. One constant, because the rarity
+    /// tally and the per-item table must agree on the string or a layer's shares stop summing.
+    /// </summary>
+    private const string AbsentValue = "(none)";
+
     private static OpenSeaMetadata BuildOpenSea(GeneratedSet set, GeneratedAsset asset)
     {
         var attributes = new List<MetadataAttribute> { new(TypeTrait, asset.RecipeName) };
@@ -341,13 +347,23 @@ public static class SetWriter
         var table = new List<RarityAttribute> { rarity.For(TypeTrait, asset.RecipeName) };
         table.AddRange(asset.Traits.Select(t => rarity.For(t.IngredientName, t.VariantName)));
 
+        // An absent layer earns a rarity row of its own. "How unusual is it to have no hat" is a
+        // real question about a collection, and it is only answerable if not-having is counted like
+        // having. It goes in the RICH file only: the OpenSea attributes above are built from
+        // asset.Traits, which an absent layer never enters, so the standards-pure file stays free
+        // of a "None" trait — which is what the standard means by not having something.
+        table.AddRange(asset.AbsentLayers.Select(a => rarity.For(a.IngredientName, AbsentValue)));
+
         return new NftyMetadata(
             SetNumber: asset.SetNumber,
             Recipe: asset.RecipeId,
             Dna: asset.Dna,
             Seed: set.Seed,
             Rarity: table,
-            Layers: asset.ColorRolls.Select(ToLayerColor).ToList());
+            Layers: asset.ColorRolls.Select(ToLayerColor).ToList(),
+            AbsentLayers: asset.AbsentLayers.Count == 0
+                ? null
+                : asset.AbsentLayers.Select(a => a.IngredientName).ToList());
     }
 
     /// <summary>An existing item with its rarity restated against the enlarged collection.</summary>
@@ -437,6 +453,9 @@ public static class SetWriter
             {
                 Bump(TypeTrait, asset.RecipeName);
                 foreach (var t in asset.Traits) Bump(t.IngredientName, t.VariantName);
+                // Counted alongside the traits, so the shares of one layer still sum to 100: every
+                // asset contributes exactly one outcome per layer, and "not there" is one of them.
+                foreach (var a in asset.AbsentLayers) Bump(a.IngredientName, AbsentValue);
             }
 
             Total = existing.Count + set.Assets.Count;

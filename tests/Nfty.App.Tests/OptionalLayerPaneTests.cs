@@ -261,4 +261,93 @@ public class OptionalLayerPaneTests
         }
         finally { book.Dispose(); }
     }
+
+    // ------------------------------------------------ the panes one click away
+
+    [AvaloniaFact]
+    public void The_cookbook_card_counts_the_absence_the_recipe_pane_counts()
+    {
+        var (book, _) = Fixture(new Dictionary<string, double> { ["hat"] = 85 });
+        try
+        {
+            var card = new CookBookDetailViewModel(book, () => { }, () => { });
+            var chip = card.Recipes.Single().Factors.Single(f => f.Name == "HAT");
+
+            // Two panels one click apart showing the same arithmetic. They used to compute it
+            // independently, and the whole reason this figure is worth testing is that a factor
+            // chip in this app has already once multiplied out to a number the Unique DNA tile
+            // beside it disagreed with.
+            Assert.Equal(3, chip.VariantCount);
+            Assert.Contains("2 variants + not present", chip.Tip);
+        }
+        finally { book.Dispose(); }
+    }
+
+    [AvaloniaFact]
+    public void The_ingredient_pane_says_the_layer_is_optional_so_its_percentages_make_sense()
+    {
+        var (book, recipe) = Fixture(new Dictionary<string, double> { ["hat"] = 90 });
+        try
+        {
+            var hat = recipe.Ingredients.Single(i => i.Manifest.Id == "hat");
+            using var pane = new IngredientDetailViewModel(hat, recipe, book, new ImageBridge(),
+                () => { }, () => false);
+
+            Assert.True(pane.IsOptional);
+            Assert.Equal("absent 90%", pane.AbsentFlagText);
+
+            // The flag exists BECAUSE of this: the shares already fold absence in, so a variant of
+            // a 90%-absent layer reads 5 rather than its 50% share among its siblings. Without the
+            // flag a reader would just believe the weights are strange.
+            Assert.Equal(5, pane.Variants.First().WithinPercent);
+        }
+        finally { book.Dispose(); }
+    }
+
+    [AvaloniaFact]
+    public void A_layer_that_always_appears_flies_no_flag()
+    {
+        var (book, recipe) = Fixture(null);
+        try
+        {
+            var hat = recipe.Ingredients.Single(i => i.Manifest.Id == "hat");
+            using var pane = new IngredientDetailViewModel(hat, recipe, book, new ImageBridge(),
+                () => { }, () => false);
+            Assert.False(pane.IsOptional);
+            Assert.Equal(50, pane.Variants.First().WithinPercent);
+        }
+        finally { book.Dispose(); }
+    }
+
+    /// <summary>
+    /// The flag and the percentages it explains resolve to the SAME recipe. They come from
+    /// different arguments — the flag from a recipe handed in, the percentages from
+    /// <c>RarityCalculator</c> given the book — and a capture fixture that set the chance on a
+    /// detached recipe rendered "absent 90%" above variants still reading their 25/75 share among
+    /// siblings. In the app the two are one object; this makes that true by construction rather
+    /// than by luck.
+    /// </summary>
+    [AvaloniaFact]
+    public void The_absent_flag_and_the_percentages_read_the_same_recipe()
+    {
+        var (book, recipe) = Fixture(new Dictionary<string, double> { ["hat"] = 90 });
+        try
+        {
+            // A DETACHED copy with no chance at all, standing in for the mismatch.
+            var detached = new LoadedRecipe
+            {
+                Manifest = recipe.Manifest with { AbsentPercent = null },
+                Ingredients = recipe.Ingredients,
+            };
+            var hat = detached.Ingredients.Single(i => i.Manifest.Id == "hat");
+            using var pane = new IngredientDetailViewModel(hat, detached, book, new ImageBridge(),
+                () => { }, () => false);
+
+            // The BOOK is the authority, because the percentages are computed from it.
+            Assert.True(pane.IsOptional);
+            Assert.Equal(90, pane.AbsentPercent);
+            Assert.Equal(5, pane.Variants.First().WithinPercent);
+        }
+        finally { book.Dispose(); }
+    }
 }

@@ -228,9 +228,21 @@ public partial class CookBookDetailViewModel : ViewModelBase
                 .ToList();
             if (ordered.Count == 0) ordered = r.Ingredients.ToList();
 
+            // An optional layer's factor is one higher — "not present" is an outcome the roll can
+            // land on — and a layer that never appears counts one rather than its variants. The
+            // Recipe pane's own chips already do this; the two panels are one click apart and show
+            // the same arithmetic, so they cannot be allowed to disagree about it.
             var factors = ordered
-                .Select((i, idx) => new FactorChip(i.Manifest.Name, i.Manifest.Variants.Count,
-                                                   i.Manifest.Kind, ShowTimes: idx > 0))
+                .Select((i, idx) =>
+                {
+                    double absent = r.Manifest.AbsentPercentOf(i.Manifest.Id);
+                    int count = absent >= 100
+                        ? 1
+                        : i.Manifest.Variants.Count + (absent > 0 ? 1 : 0);
+                    return new FactorChip(i.Manifest.Name, count, i.Manifest.Kind,
+                        ShowTimes: idx > 0,
+                        Variants: i.Manifest.Variants.Count, Optional: absent > 0);
+                })
                 .ToList();
             return new RecipeShareRow(r.Manifest.Name, Math.Round(share, 1), dna, series, factors);
         }).ToList();
