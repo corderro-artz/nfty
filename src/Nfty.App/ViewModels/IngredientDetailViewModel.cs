@@ -39,9 +39,10 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     private readonly LoadedIngredient _ing;
     private readonly IReadOnlyList<VariantRow> _variants;
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Variants))]
-    private string _sortColumn = "Variant";
+    /// <summary>The variant table's sort. Shared machinery (<see cref="TableSort"/>), so this table
+    /// and the Set browser's and the Recipe's rules all follow one rule: first click ascending,
+    /// clicking the active column reverses.</summary>
+    public TableSort Sort { get; }
 
     [ObservableProperty] private Bitmap? _hero;
 
@@ -73,11 +74,21 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     /// <summary>The hue and saturation readouts.</summary>
     public IReadOnlyList<ColorwayAxis> ColorwayAxes { get; }
 
-    /// <summary>Variant rows ordered by the active sort column: "Weight" (heaviest first) or,
-    /// by default, "Variant" (name, ordinal).</summary>
-    public IReadOnlyList<VariantRow> Variants => SortColumn == "Weight"
-        ? _variants.OrderByDescending(v => v.Weight).ThenBy(v => v.Name, StringComparer.Ordinal).ToList()
-        : _variants.OrderBy(v => v.Name, StringComparer.Ordinal).ToList();
+    /// <summary>
+    /// Variant rows in the active sort order.
+    /// </summary>
+    /// <remarks>
+    /// All four data columns sort now. Two of the five used to — and neither could be reversed, so
+    /// "which is the rarest variant overall?" was a question the table could not be asked, despite
+    /// carrying the column that answers it.
+    /// </remarks>
+    public IReadOnlyList<VariantRow> Variants => Sort.Order(_variants, static (v, col) => col switch
+    {
+        "Weight" => v.Weight,
+        "InRecipe" => v.WithinPercent,
+        "Overall" => v.OverallPercent,
+        _ => v.Name,
+    });
 
     /// <summary>The 56px swatch the Custom branch of the colorways rail shows (mockup .cwcustom).
     /// A Custom layer has no hue band to display, so the rail shows the art itself instead. Null for
@@ -109,6 +120,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
         Action? jumpToRecipe = null, IStatusService? status = null,
         IFilePickerService? picker = null, IDialogService? dialogs = null)
     {
+        Sort = new TableSort("Variant", () => OnPropertyChanged(nameof(Variants)));
         _ing = ing; _bridge = bridge;
         _editIngredient = editIngredient; _isEditing = isEditing;
         _jumpToRecipe = jumpToRecipe;
@@ -238,7 +250,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     /// outside this pane and changes without it.</summary>
     public void RaiseCanExecuteChanged() => DeleteVariantCommand.NotifyCanExecuteChanged();
 
-    [RelayCommand] private void SortBy(string col) => SortColumn = col;
+
 
     [RelayCommand]
     private void SelectVariant(string id)

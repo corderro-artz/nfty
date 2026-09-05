@@ -95,18 +95,64 @@
              widths are the header words (the binding constraint at every realistic value) plus the
              8px gutter each cell carries: 48+8, 70+8, 56+8. -->
         <Border Classes="data-h">
-          <Grid ColumnDefinitions="40,*,56,78,64">
+          <Grid ColumnDefinitions="40,*,71,93,79">
             <TextBlock Grid.Column="0" Classes="data-h" Text="" />
-            <Button Grid.Column="1" Classes="ghost" Padding="0" HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Left" Command="{Binding SortByCommand}" CommandParameter="Variant">
-              <TextBlock Classes="data-h" Text="VARIANT" TextTrimming="CharacterEllipsis" />
+            <!-- All four data columns sort. Two of them did before, neither could be reversed, and
+                 IN RECIPE / OVERALL — the two a reader actually wants ordered — did not sort at
+                 all. The arrows are RESERVED in every header, so clicking one cannot shove the
+                 label of the header being clicked. -->
+            <Button Grid.Column="1" Classes="sorth" HorizontalContentAlignment="Left"
+                    Classes.on="{Binding Sort.Column, Converter={x:Static conv:SortColumnConverter.Instance}, ConverterParameter=Variant}"
+                    Command="{Binding Sort.ByCommand}" CommandParameter="Variant">
+              <StackPanel Orientation="Horizontal" Spacing="4">
+                <TextBlock Classes="data-h" Text="VARIANT" TextTrimming="CharacterEllipsis" />
+                <Panel Classes="sortslot">
+                  <Path Classes="sortarrow up" Classes.desc="{Binding Sort.Descending}"
+                        Data="{StaticResource IconChevronUp}" />
+                  <Path Classes="sortarrow down" Classes.desc="{Binding Sort.Descending}"
+                        Data="{StaticResource IconChevronDown}" />
+                </Panel>
+              </StackPanel>
             </Button>
-            <Button Grid.Column="2" Classes="ghost" Padding="0" HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Right" Command="{Binding SortByCommand}" CommandParameter="Weight">
-              <TextBlock Classes="data-h num" Text="WEIGHT" Margin="8,0,0,0" />
+            <Button Grid.Column="2" Classes="sorth" HorizontalContentAlignment="Right"
+                    Classes.on="{Binding Sort.Column, Converter={x:Static conv:SortColumnConverter.Instance}, ConverterParameter=Weight}"
+                    Command="{Binding Sort.ByCommand}" CommandParameter="Weight">
+              <StackPanel Orientation="Horizontal" Spacing="4">
+                <Panel Classes="sortslot">
+                  <Path Classes="sortarrow up" Classes.desc="{Binding Sort.Descending}"
+                        Data="{StaticResource IconChevronUp}" />
+                  <Path Classes="sortarrow down" Classes.desc="{Binding Sort.Descending}"
+                        Data="{StaticResource IconChevronDown}" />
+                </Panel>
+                <TextBlock Classes="data-h num" Text="WEIGHT" />
+              </StackPanel>
             </Button>
-            <TextBlock Grid.Column="3" Classes="data-h num" Text="IN RECIPE" Margin="8,0,0,0" />
-            <TextBlock Grid.Column="4" Classes="data-h num" Text="OVERALL" Margin="8,0,0,0" />
+            <Button Grid.Column="3" Classes="sorth" HorizontalContentAlignment="Right"
+                    Classes.on="{Binding Sort.Column, Converter={x:Static conv:SortColumnConverter.Instance}, ConverterParameter=InRecipe}"
+                    Command="{Binding Sort.ByCommand}" CommandParameter="InRecipe">
+              <StackPanel Orientation="Horizontal" Spacing="4">
+                <Panel Classes="sortslot">
+                  <Path Classes="sortarrow up" Classes.desc="{Binding Sort.Descending}"
+                        Data="{StaticResource IconChevronUp}" />
+                  <Path Classes="sortarrow down" Classes.desc="{Binding Sort.Descending}"
+                        Data="{StaticResource IconChevronDown}" />
+                </Panel>
+                <TextBlock Classes="data-h num" Text="IN RECIPE" />
+              </StackPanel>
+            </Button>
+            <Button Grid.Column="4" Classes="sorth" HorizontalContentAlignment="Right"
+                    Classes.on="{Binding Sort.Column, Converter={x:Static conv:SortColumnConverter.Instance}, ConverterParameter=Overall}"
+                    Command="{Binding Sort.ByCommand}" CommandParameter="Overall">
+              <StackPanel Orientation="Horizontal" Spacing="4">
+                <Panel Classes="sortslot">
+                  <Path Classes="sortarrow up" Classes.desc="{Binding Sort.Descending}"
+                        Data="{StaticResource IconChevronUp}" />
+                  <Path Classes="sortarrow down" Classes.desc="{Binding Sort.Descending}"
+                        Data="{StaticResource IconChevronDown}" />
+                </Panel>
+                <TextBlock Classes="data-h num" Text="OVERALL" />
+              </StackPanel>
+            </Button>
           </Grid>
         </Border>
 
@@ -114,7 +160,7 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:VariantRow">
               <Border Classes="data-row">
-                <Grid ColumnDefinitions="40,*,56,78,64">
+                <Grid ColumnDefinitions="40,*,71,93,79">
                   <Image Grid.Column="0" Source="{Binding Thumbnail}" Width="32" Height="32" VerticalAlignment="Center" />
                   <TextBlock Grid.Column="1" Classes="data-row" Text="{Binding Name}" VerticalAlignment="Center" Margin="10,0,0,0" TextTrimming="CharacterEllipsis" />
                   <TextBlock Grid.Column="2" Classes="data-row num" Text="{Binding Weight}" Margin="8,0,0,0" />

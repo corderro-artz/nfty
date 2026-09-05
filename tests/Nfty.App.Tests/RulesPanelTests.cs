@@ -170,4 +170,97 @@ public class RulesPanelTests
         }
         finally { window.Close(); vm.Dispose(); }
     }
+
+    // ------------------------------------------------------------- filtering and order
+
+    [AvaloniaFact]
+    public void The_panel_opens_in_the_order_the_manifest_stores_and_the_CLI_prints()
+    {
+        var (window, vm, view) = Render(4);
+        try
+        {
+            // Not a taste call. `remove rule --at` addresses a rule by its 1-based position in the
+            // manifest, and `inspect` is where a user reads that number — so a panel that opened in
+            // any other order would quietly disagree with the CLI about which rule is number 3.
+            Assert.Equal("Authored", vm.RuleSort.Column);
+            Assert.Equal(new[] { "never", "always", "never", "always" },
+                vm.Rules.Select(r => r.ShortText));
+        }
+        finally { window.Close(); vm.Dispose(); }
+    }
+
+    [AvaloniaFact]
+    public void Sorting_by_trigger_reorders_the_rows_and_reverses_on_a_second_click()
+    {
+        var (window, vm, view) = Render(4);
+        try
+        {
+            vm.RuleSort.ByCommand.Execute("Trigger");
+            Assert.Equal(new[] { "day", "day", "night", "night" },
+                vm.Rules.Select(r => r.When.Variant));
+            vm.RuleSort.ByCommand.Execute("Trigger");
+            Assert.Equal(new[] { "night", "night", "day", "day" },
+                vm.Rules.Select(r => r.When.Variant));
+        }
+        finally { window.Close(); vm.Dispose(); }
+    }
+
+    [AvaloniaFact]
+    public void The_filter_narrows_the_rows_but_never_the_count()
+    {
+        var (window, vm, view) = Render(4);
+        try
+        {
+            vm.FilterRulesCommand.Execute("exclude");
+            Assert.Equal(2, vm.Rules.Count);
+            Assert.All(vm.Rules, r => Assert.True(r.IsExclude));
+
+            // The badge and the hero sentence describe the RECIPE, not the view. A filtered panel
+            // that also changed the count would say the recipe has fewer rules than it has.
+            Assert.Equal("4", vm.RulesBadgeText);
+            Assert.Equal("4 rules", vm.RuleCountText);
+            Assert.True(vm.FilterHidesSome);
+
+            vm.FilterRulesCommand.Execute("all");
+            Assert.Equal(4, vm.Rules.Count);
+            Assert.False(vm.FilterHidesSome);
+        }
+        finally { window.Close(); vm.Dispose(); }
+    }
+
+    [AvaloniaFact]
+    public void An_empty_filter_and_an_empty_recipe_say_different_things()
+    {
+        var (window, vm, view) = Render(1);   // one rule, and it is an exclude
+        try
+        {
+            Assert.Equal("No incompatibility rules", new RecipeDetailViewModel(
+                Fixture(0).recipe, Fixture(0).book, new ImageBridge(), _ => { }).EmptyRuleText);
+
+            vm.FilterRulesCommand.Execute("require");
+            Assert.False(vm.HasRules);
+            // One of these two emptinesses is undone by a click and the other is not, so they must
+            // not read the same.
+            Assert.Equal("No rules of that kind", vm.EmptyRuleText);
+        }
+        finally { window.Close(); vm.Dispose(); }
+    }
+
+    [AvaloniaFact]
+    public void The_layer_table_offers_no_sortable_header()
+    {
+        var (window, vm, view) = Render(2);
+        try
+        {
+            // Deliberate, and the one table in the app that is exempt: its order IS layerOrder,
+            // which is the paint order, and Generator.RollOne walks it consuming one RNG draw per
+            // layer. A sorted view would show a stack that is not the stack — beside a drag handle
+            // that writes the real one.
+            var layerTable = view.GetVisualDescendants().OfType<Border>()
+                .First(b => b.Classes.Contains("data-h"));
+            Assert.DoesNotContain(layerTable.GetVisualDescendants().OfType<Button>(),
+                b => b.Classes.Contains("sorth"));
+        }
+        finally { window.Close(); vm.Dispose(); }
+    }
 }

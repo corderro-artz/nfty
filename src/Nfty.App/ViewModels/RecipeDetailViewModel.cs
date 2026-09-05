@@ -68,6 +68,17 @@ public partial class LayerRow : ObservableObject
 /// <param name="Ingredient">The layer's display name.</param>
 /// <param name="Variant">The variant's display name.</param>
 public record RuleTargetRow(string Ingredient, string Variant);
+/// <summary>Which relation the rules panel is showing.</summary>
+public enum RuleFilter
+{
+    /// <summary>Every rule. The default, and the zero value.</summary>
+    All,
+    /// <summary>Only "never together".</summary>
+    Exclude,
+    /// <summary>Only "always together".</summary>
+    Require,
+}
+
 /// <summary>One incompatibility rule as the Rules panel shows it.</summary>
 /// <param name="IsExclude">True for an exclude rule, false for a require — which picks the glyph.</param>
 /// <param name="When">The trigger.</param>
@@ -133,8 +144,86 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
     public string Name { get; }
     /// <summary>Its layer stack, in composite order. Observable and reordered in place.</summary>
     public ObservableCollection<LayerRow> Layers { get; }
-    /// <summary>Its incompatibility rules.</summary>
-    public IReadOnlyList<RuleRow> Rules { get; }
+    /// <summary>Its incompatibility rules, as authored — the order <c>inspect</c> prints and
+    /// <c>remove rule --at</c> addresses them by. <see cref="Rules"/> is the view over this.</summary>
+    private readonly IReadOnlyList<RuleRow> _allRules;
+
+    /// <summary>
+    /// The rules the panel shows: filtered, then sorted.
+    /// </summary>
+    /// <remarks>
+    /// The default is AS AUTHORED, and that matters beyond taste: the CLI addresses a rule by its
+    /// 1-based position in the manifest, so a panel that opened in some other order would be quietly
+    /// disagreeing with <c>nfty inspect</c> about which rule is number 3. Sorting is a view the
+    /// reader asks for, and the default is one click away again.
+    ///
+    /// <para>Rule order is otherwise meaningless — <c>RulesEngine.IsLegal</c> evaluates every rule
+    /// and short-circuits on the first violation, so no reordering can change a roll. That is what
+    /// makes sorting safe here and NOT safe on the layer table above, whose order is the paint order
+    /// and drives which RNG draw reaches which layer.</para>
+    /// </remarks>
+    public IReadOnlyList<RuleRow> Rules => RuleSort.Order(
+        _allRules.Where(Matches).ToList(),
+        static (r, col) => col switch
+        {
+            "Trigger" => r.When.Ingredient + "\u0000" + r.When.Variant,
+            "Target" => r.Targets.Count == 0
+                ? string.Empty
+                : r.Targets[0].Ingredient + "\u0000" + r.Targets[0].Variant,
+            "Relation" => r.ShortText,
+            _ => null,
+        });
+
+    /// <summary>The rules rail's sort. "Authored" is not a column any header offers — it is the
+    /// natural order, which <see cref="TableSort.Order"/> falls back to for an unknown key, so the
+    /// panel opens agreeing with the CLI.</summary>
+    public TableSort RuleSort { get; }
+
+    /// <summary>Which relation the panel is showing.</summary>
+    [ObservableProperty] private RuleFilter _ruleFilter = RuleFilter.All;
+
+    partial void OnRuleFilterChanged(RuleFilter value)
+    {
+        OnPropertyChanged(nameof(Rules));
+        OnPropertyChanged(nameof(HasRules));
+        OnPropertyChanged(nameof(EmptyRuleText));
+        OnPropertyChanged(nameof(FilterHidesSome));
+        OnPropertyChanged(nameof(HiddenRuleText));
+        OnPropertyChanged(nameof(IsFilterAll));
+        OnPropertyChanged(nameof(IsFilterExclude));
+        OnPropertyChanged(nameof(IsFilterRequire));
+    }
+
+    private bool Matches(RuleRow r) => RuleFilter switch
+    {
+        RuleFilter.Exclude => r.IsExclude,
+        RuleFilter.Require => !r.IsExclude,
+        _ => true,
+    };
+
+    /// <summary>Whether the filter is hiding anything — the panel says so rather than letting a
+    /// filtered view be mistaken for a recipe that has fewer rules than it does.</summary>
+    public bool FilterHidesSome => Rules.Count < _allRules.Count;
+
+    /// <summary>What the filter is hiding, in words.</summary>
+    public string HiddenRuleText => $"{_allRules.Count - Rules.Count} hidden by the filter";
+
+    /// <summary>Picks which relation to show.</summary>
+    /// <param name="filter">"all", "exclude" or "require".</param>
+    [RelayCommand]
+    private void FilterRules(string filter) => RuleFilter = filter switch
+    {
+        "exclude" => RuleFilter.Exclude,
+        "require" => RuleFilter.Require,
+        _ => RuleFilter.All,
+    };
+
+    /// <summary>Whether the "all" chip is the active one.</summary>
+    public bool IsFilterAll => RuleFilter == RuleFilter.All;
+    /// <summary>Whether the "never" chip is the active one.</summary>
+    public bool IsFilterExclude => RuleFilter == RuleFilter.Exclude;
+    /// <summary>Whether the "always" chip is the active one.</summary>
+    public bool IsFilterRequire => RuleFilter == RuleFilter.Require;
 
     /// <summary>The hero's factor arithmetic (mockup .rfactors): one kind-tinted chip per layer,
     /// multiplied together to reach <see cref="TotalText"/>.</summary>
@@ -157,8 +246,16 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
     /// "2 rules" beside a heading that already reads RULES says the word twice.</summary>
     public string RulesBadgeText { get; }
 
-    /// <summary>Whether the panel shows its table or its empty state.</summary>
+    /// <summary>Whether the panel shows its table or its empty state. Reads the FILTERED view, so
+    /// a filter that matches nothing shows an empty state rather than column heads over no rows —
+    /// and the empty state says which of the two emptinesses it is.</summary>
     public bool HasRules => Rules.Count > 0;
+
+    /// <summary>The empty state's sentence: a recipe with no rules and a filter that matched none
+    /// are different situations, and one of them is undone by a click.</summary>
+    public string EmptyRuleText => _allRules.Count == 0
+        ? "No incompatibility rules"
+        : "No rules of that kind";
 
     /// <summary>Builds the Recipe detail pane.</summary>
     /// <param name="recipe">The recipe to describe.</param>
@@ -199,7 +296,8 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
                     ingById[l.IngredientId].Manifest.Kind.ToString(),
                     ingById[l.IngredientId].Manifest.Variants.Count)));
 
-        Rules = recipe.Manifest.Rules.Select(r => MapRule(r, recipe)).ToList();
+        _allRules = recipe.Manifest.Rules.Select(r => MapRule(r, recipe)).ToList();
+        RuleSort = new TableSort("Authored", () => OnPropertyChanged(nameof(Rules)));
 
         var ordered = Ordered();
         Factors = BuildFactors(ordered);
@@ -209,8 +307,8 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
         LayerCountText = Layers.Count == 1 ? "1 layer" : $"{Layers.Count} layers";
         int variants = ordered.Sum(i => i.Manifest.Variants.Count);
         VariantCountText = variants == 1 ? "1 variant" : $"{variants} variants";
-        RuleCountText = Rules.Count == 1 ? "1 rule" : $"{Rules.Count} rules";
-        RulesBadgeText = Rules.Count.ToString(CultureInfo.InvariantCulture);
+        RuleCountText = _allRules.Count == 1 ? "1 rule" : $"{_allRules.Count} rules";
+        RulesBadgeText = _allRules.Count.ToString(CultureInfo.InvariantCulture);
 
         _hero = BuildHero();
     }

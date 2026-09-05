@@ -135,8 +135,14 @@ public class IngredientDetailViewModelTests
             () => { }, () => false);
 
         Assert.Equal(new[] { "Apple", "Zephyr" }, vm.Variants.Select(v => v.Name));   // default "Variant": by name
-        vm.SortByCommand.Execute("Weight");
-        Assert.Equal(new[] { "Zephyr", "Apple" }, vm.Variants.Select(v => v.Name));   // "Weight": heaviest first
+
+        // ONE RULE, NO EXCEPTIONS: the first click on a column is ascending, whatever the column
+        // holds. This used to jump straight to weight-DESCENDING with no way back, which meant a
+        // numeric column behaved differently from a text one and neither could be reversed.
+        vm.Sort.ByCommand.Execute("Weight");
+        Assert.Equal(new[] { "Apple", "Zephyr" }, vm.Variants.Select(v => v.Name));   // lightest first
+        vm.Sort.ByCommand.Execute("Weight");
+        Assert.Equal(new[] { "Zephyr", "Apple" }, vm.Variants.Select(v => v.Name));   // reversed
     }
 
     [AvaloniaFact]

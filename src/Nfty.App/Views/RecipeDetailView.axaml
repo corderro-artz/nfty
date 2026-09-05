@@ -92,6 +92,11 @@
              same width: only the glyph's ink changes (Border.grip / .grip.on in Styles.axaml). The
              exploration draws variant B prepending this column on unlock, which shifts every other
              column 26px right — the exact reflow the spec forbids. -->
+        <!-- THE ONE TABLE IN THIS APP THAT DELIBERATELY DOES NOT SORT. Its order IS layerOrder,
+             which is the paint order, and Generator.RollOne walks it consuming one WeightedRoller
+             draw per layer — so the same seed over a reordered stack rolls different variants. A
+             sorted view would show a stack that is not the stack, directly beside a drag handle
+             that writes the real one. Nothing here is missing; see TableSort's own summary. -->
         <Border Classes="data-h">
           <Grid ColumnDefinitions="26,40,*,110,90">
             <TextBlock Grid.Column="1" Classes="data-h num" Text="#" Margin="0,0,10,0" />
@@ -146,7 +151,7 @@
          a direction. A directional heading over a symmetric relation would be a small lie in half
          the rows. -->
     <Border Grid.Column="1" Classes="rules-panel" VerticalAlignment="Stretch">
-      <Grid RowDefinitions="Auto,Auto,Auto,*">
+      <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
           <TextBlock Grid.Column="0" Classes="sub-h" Text="RULES" VerticalAlignment="Center" />
           <Border Grid.Column="1" Classes="tabcount" IsVisible="{Binding HasRules}">
@@ -163,20 +168,70 @@
           </Button>
         </Grid>
 
-        <TextBlock Grid.Row="1" Classes="muted" Text="No incompatibility rules"
+        <!-- The relation filter. Three chips rather than a dropdown: they fit across the rail,
+             change in one click, and show all three states at once where a ComboBox would hide two
+             thirds of them. Always present — a filter that appeared once a recipe had "enough"
+             rules would move the table under the pointer. -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="5" Margin="0,11,0,0">
+          <Button Classes="rfilter" Classes.on="{Binding IsFilterAll}" Content="ALL"
+                  Command="{Binding FilterRulesCommand}" CommandParameter="all" />
+          <Button Classes="rfilter" Classes.on="{Binding IsFilterExclude}" Content="NEVER"
+                  Command="{Binding FilterRulesCommand}" CommandParameter="exclude" />
+          <Button Classes="rfilter" Classes.on="{Binding IsFilterRequire}" Content="ALWAYS"
+                  Command="{Binding FilterRulesCommand}" CommandParameter="require" />
+        </StackPanel>
+
+        <!-- The empty state says WHICH emptiness: a recipe with no rules and a filter that matched
+             none are different situations, and one of them is undone by a click. -->
+        <TextBlock Grid.Row="2" Classes="muted" Text="{Binding EmptyRuleText}"
                    Margin="0,12,0,0" IsVisible="{Binding !HasRules}" />
 
-        <Grid Grid.Row="1" ColumnDefinitions="*,58,*" Margin="0,12,0,6" IsVisible="{Binding HasRules}">
-          <TextBlock Grid.Column="0" Classes="data-h" Text="LAYER" />
-          <TextBlock Grid.Column="2" Classes="data-h" Text="LAYER" />
+        <!-- Sortable, and the DEFAULT IS AS AUTHORED — which is not a column any header offers.
+             The CLI addresses a rule by its 1-based position in the manifest, so a panel that opened
+             in some other order would quietly disagree with `nfty inspect` about which rule is
+             number 3. Rule order changes no roll (RulesEngine evaluates all of them), which is what
+             makes sorting safe here and NOT safe on the layer table above. -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,58,*,Auto" Margin="0,12,0,6" IsVisible="{Binding HasRules}">
+          <Button Grid.Column="0" Classes="sorth" HorizontalContentAlignment="Left"
+                  Classes.on="{Binding RuleSort.Column, Converter={x:Static conv:SortColumnConverter.Instance}, ConverterParameter=Trigger}"
+                  Command="{Binding RuleSort.ByCommand}" CommandParameter="Trigger">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <TextBlock Classes="data-h" Text="LAYER" />
+              <Panel Classes="sortslot">
+                <Path Classes="sortarrow up" Classes.desc="{Binding RuleSort.Descending}"
+                      Data="{StaticResource IconChevronUp}" />
+                <Path Classes="sortarrow down" Classes.desc="{Binding RuleSort.Descending}"
+                      Data="{StaticResource IconChevronDown}" />
+              </Panel>
+            </StackPanel>
+          </Button>
+          <!-- No header over the mark column, and no sort by relationship either. The arrow is the
+               only thing a relation header could show, and at rest an arrow is invisible — so it
+               would have been a control with no affordance, occupying the gap between the two
+               labels. The ALL / NEVER / ALWAYS filter above already groups by relationship, and
+               does it better: it removes the rows you are not asking about instead of moving them
+               below the ones you are. -->
+          <Button Grid.Column="2" Classes="sorth" HorizontalContentAlignment="Left"
+                  Classes.on="{Binding RuleSort.Column, Converter={x:Static conv:SortColumnConverter.Instance}, ConverterParameter=Target}"
+                  Command="{Binding RuleSort.ByCommand}" CommandParameter="Target">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <TextBlock Classes="data-h" Text="LAYER" />
+              <Panel Classes="sortslot">
+                <Path Classes="sortarrow up" Classes.desc="{Binding RuleSort.Descending}"
+                      Data="{StaticResource IconChevronUp}" />
+                <Path Classes="sortarrow down" Classes.desc="{Binding RuleSort.Descending}"
+                      Data="{StaticResource IconChevronDown}" />
+              </Panel>
+            </StackPanel>
+          </Button>
         </Grid>
-        <Border Grid.Row="2" Height="1" Background="{DynamicResource LineBrush}"
+        <Border Grid.Row="3" Height="1" Background="{DynamicResource LineBrush}"
                 IsVisible="{Binding HasRules}" />
 
         <!-- The ScrollViewer this panel has never had. A recipe with a dozen rules did not scroll,
              it overflowed the window: the panel Border simply grew past the bottom of the pane and
              every rule below the fold was unreachable. -->
-        <ScrollViewer Grid.Row="3" HorizontalScrollBarVisibility="Disabled">
+        <ScrollViewer Grid.Row="4" HorizontalScrollBarVisibility="Disabled">
           <ItemsControl ItemsSource="{Binding Rules}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:RuleRow">

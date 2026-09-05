@@ -1871,6 +1871,98 @@
     <Setter Property="Opacity" Value="1" />
   </Style>
 
+  <!-- ============ SORTABLE COLUMN HEADERS ============
+       A header that sorts is a Button, so it is focusable, keyboard-activatable and has a hover
+       state — none of which a TextBlock with a pointer handler would have. It draws as bare text:
+       a column head that looked like a button would put four buttons across the top of a table
+       nobody would read as a table. -->
+  <Style Selector="Button.sorth">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="Button.sorth /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <!-- Hover brightens the LABEL, not the button: a wash behind a column head reads as a selected
+       column rather than as a control under the pointer. -->
+  <Style Selector="Button.sorth:pointerover TextBlock.data-h">
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+  </Style>
+  <Style Selector="Button.sorth:pointerover Path.sortarrow">
+    <Setter Property="Opacity" Value="0.45" />
+  </Style>
+  <!-- The active column's own label stays lit, so which column is sorted is legible without
+       finding the arrow. -->
+  <Style Selector="Button.sorth.on TextBlock.data-h">
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+  </Style>
+
+  <!-- RESERVED, AND THE INK TOGGLES. An arrow that appeared on click would widen its header and
+       shove the label — in a table, under the pointer that just clicked it. Every sortable header
+       carries both arrows at all times; only their opacity moves, so the header's geometry is
+       identical in all three states. -->
+  <!-- ONE SLOT, not two. Both arrows live in a fixed-width Panel and overlap, so a header costs
+       11px whichever direction it is pointing — and, more to the point, whether it is active at all.
+       Laid out side by side they cost 26px, which the variant table's 56px WEIGHT column did not
+       have: the arrows were arranged past the column's edge and simply were not drawn, silently,
+       exactly as this app's own width-is-a-budget rule warns. Caught on a rendered frame. -->
+  <Style Selector="Panel.sortslot">
+    <Setter Property="Width" Value="11" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- On a right-aligned numeric header the slot LEADS, so the label keeps the right edge and stays
+       over the values it names — the 8px is the same gutter every cell in these tables carries. -->
+  <Style Selector="Button.sorth[HorizontalContentAlignment=Right] Panel.sortslot">
+    <Setter Property="Margin" Value="8,0,0,0" />
+  </Style>
+  <Style Selector="Path.sortarrow">
+    <!-- 11, not 9. At 9 the chevron read as a speck rather than as an arrow — also a frame call. -->
+    <Setter Property="Width" Value="11" /><Setter Property="Height" Value="11" />
+    <Setter Property="RenderTransform" Value="scale(0.4583)" />   <!-- 11/24 -->
+    <Setter Property="StrokeThickness" Value="3.2" />
+    <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.sorth.on Path.sortarrow.up:not(.desc)">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector="Button.sorth.on Path.sortarrow.down.desc">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+
+  <!-- The rules rail's relation filter: three tiny mono chips, the .seg-b vocabulary at rail
+       scale. Not a ComboBox — three options that fit across 274px are faster to read and one click
+       to change, and a dropdown would hide two thirds of the state. -->
+  <Style Selector="Button.rfilter">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="9.5" />
+    <Setter Property="LetterSpacing" Value="0.3" />
+    <Setter Property="Padding" Value="7,3" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="Button.rfilter /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.rfilter.on">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+  <Style Selector="Button.rfilter.on /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+  </Style>
+
   <Style Selector="TextBlock.rmark">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="8.5" />

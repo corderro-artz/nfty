@@ -49,7 +49,8 @@ public class ExplorerDetailTests
         var (book, recipe, ing) = Fixture();
         using var vm = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(),
             () => { }, () => false);
-        vm.SortByCommand.Execute("Weight");
-        Assert.Equal("Weight", vm.SortColumn);
+        vm.Sort.ByCommand.Execute("Weight");
+        Assert.Equal("Weight", vm.Sort.Column);
+        Assert.False(vm.Sort.Descending);   // first click on a column is always ascending
     }
 }

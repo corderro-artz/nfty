@@ -212,6 +212,7 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     public SetBrowserViewModel(LoadedSet set, IFilePickerService? picker = null,
         IDialogService? dialogs = null, IStatusService? status = null)
     {
+        RaritySort = new TableSort("Trait", () => OnPropertyChanged(nameof(SelectedRarity)));
         _set = set;
         _picker = picker ?? new FilePickerService();
         _dialogs = dialogs ?? new DialogService();
@@ -244,7 +245,24 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     /// <summary>The recipe it came from.</summary>
     public string SelectedRecipe => SelectedItem?.Item.Recipe ?? "";
     /// <summary>Its traits with collection-wide rarity.</summary>
-    public IReadOnlyList<RarityAttribute> SelectedRarity => SelectedItem?.Item.Rarity ?? Array.Empty<RarityAttribute>();
+    public IReadOnlyList<RarityAttribute> SelectedRarity => RaritySort.Order(
+        SelectedItem?.Item.Rarity ?? Array.Empty<RarityAttribute>(),
+        static (r, col) => col switch
+        {
+            "Value" => r.Value,
+            "Pct" => (object)r.RarityPct,
+            _ => r.Trait_type,
+        });
+
+    /// <summary>
+    /// The rarity table's sort. Its natural order is the metadata's own trait order, which is
+    /// stable and meaningful — so "Trait" is the default and clicking it twice returns to it.
+    /// </summary>
+    /// <remarks>
+    /// A rarity table that cannot be ordered by rarity is the one question it exists to answer,
+    /// unanswerable: "what is rarest about this asset" meant reading every row and comparing by eye.
+    /// </remarks>
+    public TableSort RaritySort { get; }
 
     /// <summary>How many Recipes the collection was rolled from.</summary>
     public int RecipeCount => _set.Manifest.Distribution.Count;

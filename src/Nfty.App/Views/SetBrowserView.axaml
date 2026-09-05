@@ -160,14 +160,64 @@
               <TextBlock Classes="sub-h" Text="RARITY" Margin="0,8,0,0" />
               <StackPanel Spacing="0">
                 <Border Classes="data-h">
-                  <!-- 56, not 46: a rarity reads "52.33%" as often as "44%", and six characters of
-                       tabular mono need ~52px. At 46 the wider values overflowed their column to
-                       the LEFT, into the value column's gap, so the value text landed at a
-                       different x depending on how many digits its percentage had. -->
-                  <Grid ColumnDefinitions="*,Auto,56">
-                    <TextBlock Grid.Column="0" Classes="data-h" Text="TRAIT" />
-                    <TextBlock Grid.Column="1" Classes="data-h" Text="VALUE" Margin="8,0" />
-                    <TextBlock Grid.Column="2" Classes="data-h num" Text="%" />
+                  <!-- 71, not 56: a rarity reads "52.33%" as often as "44%", and six characters of
+                       tabular mono need ~52px, plus the 11px sort slot and its 4px gap. At 46 the
+                       wider values overflowed their column to the LEFT, into the value column's
+                       gap, so the value text landed at a different x depending on how many digits
+                       its percentage had.
+                       VALUE IS PINNED TOO, and it was the Auto column that proved why: a header
+                       Grid and a row Grid are two Grids, and Auto sizes each independently — the
+                       header measured "VALUE" and the rows measured "Cat", so column 1 started at a
+                       different x in each and the label stood ~18px left of the values it named.
+                       Making the header sortable widened only the header, which took it to ~33 and
+                       made it visible; the mismatch was there the whole time. This is the same trap
+                       the variant table's fixed columns already record. -->
+                  <Grid ColumnDefinitions="*,84,71">
+                    <!-- Sortable, because "what is rarest about this asset" is the one question
+                         this table exists to answer, and reading it off unordered rows was the only
+                         way to ask it. Same mechanism and same rule as the variant table. -->
+                    <Button Grid.Column="0" Classes="sorth" HorizontalContentAlignment="Left"
+                            VerticalAlignment="Center"
+                            Classes.on="{Binding RaritySort.Column, Converter={x:Static appconv:SortColumnConverter.Instance}, ConverterParameter=Trait}"
+                            Command="{Binding RaritySort.ByCommand}" CommandParameter="Trait">
+                      <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock Classes="data-h" Text="TRAIT" />
+                        <Panel Classes="sortslot">
+                          <Path Classes="sortarrow up" Classes.desc="{Binding RaritySort.Descending}"
+                                Data="{StaticResource IconChevronUp}" />
+                          <Path Classes="sortarrow down" Classes.desc="{Binding RaritySort.Descending}"
+                                Data="{StaticResource IconChevronDown}" />
+                        </Panel>
+                      </StackPanel>
+                    </Button>
+                    <Button Grid.Column="1" Classes="sorth" HorizontalContentAlignment="Left"
+                            VerticalAlignment="Center"
+                            Classes.on="{Binding RaritySort.Column, Converter={x:Static appconv:SortColumnConverter.Instance}, ConverterParameter=Value}"
+                            Command="{Binding RaritySort.ByCommand}" CommandParameter="Value">
+                      <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock Classes="data-h" Text="VALUE" Margin="8,0" />
+                        <Panel Classes="sortslot">
+                          <Path Classes="sortarrow up" Classes.desc="{Binding RaritySort.Descending}"
+                                Data="{StaticResource IconChevronUp}" />
+                          <Path Classes="sortarrow down" Classes.desc="{Binding RaritySort.Descending}"
+                                Data="{StaticResource IconChevronDown}" />
+                        </Panel>
+                      </StackPanel>
+                    </Button>
+                    <Button Grid.Column="2" Classes="sorth" HorizontalContentAlignment="Right"
+                            VerticalAlignment="Center"
+                            Classes.on="{Binding RaritySort.Column, Converter={x:Static appconv:SortColumnConverter.Instance}, ConverterParameter=Pct}"
+                            Command="{Binding RaritySort.ByCommand}" CommandParameter="Pct">
+                      <StackPanel Orientation="Horizontal" Spacing="4">
+                        <Panel Classes="sortslot">
+                          <Path Classes="sortarrow up" Classes.desc="{Binding RaritySort.Descending}"
+                                Data="{StaticResource IconChevronUp}" />
+                          <Path Classes="sortarrow down" Classes.desc="{Binding RaritySort.Descending}"
+                                Data="{StaticResource IconChevronDown}" />
+                        </Panel>
+                        <TextBlock Classes="data-h num" Text="%" />
+                      </StackPanel>
+                    </Button>
                   </Grid>
                 </Border>
                 <ItemsControl ItemsSource="{Binding SelectedRarity}">
@@ -189,7 +239,7 @@
                               </MultiBinding>
                             </Rectangle.Width>
                           </Rectangle>
-                          <Grid ColumnDefinitions="*,Auto,56">
+                          <Grid ColumnDefinitions="*,84,71">
                             <TextBlock Grid.Column="0" Classes="data-row trait" Text="{Binding Trait_type}" />
                             <TextBlock Grid.Column="1" Classes="data-row" Text="{Binding Value}" Margin="8,0" />
                             <TextBlock Grid.Column="2" Classes="data-row num pct"
