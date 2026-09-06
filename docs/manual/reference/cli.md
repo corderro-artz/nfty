@@ -52,7 +52,7 @@ nfty extend   mybook.cbk ./collection --to 750
 | `--count` | How many assets. Required. |
 | `--seed` | The seed. Same book plus same seed is byte-identical output. |
 | `--out` | Where to write. Required. |
-| `--pack` | Also package the folder as a single `.set`. |
+| `--pack` | Also package the folder as a single `.set`, written **inside** the output folder and named after it. |
 | `--recipe <id>` | Restrict to one Recipe id instead of rolling by weight. |
 | `--unlimited` | Skip the uniqueness requirement. Assets may repeat; identity is the token number. Rules are still enforced. |
 | `--max-rerolls` | Per-asset reroll budget before giving up. |

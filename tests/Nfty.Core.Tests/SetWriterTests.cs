@@ -273,11 +273,45 @@ public class SetWriterTests
     }
 
     [Fact]
-    public void Pack_produces_a_set_archive()
+    public void Pack_produces_a_set_archive_INSIDE_the_output_folder()
     {
+        // Named for the folder, and IN the folder. It used to be written as a sibling one level up,
+        // which put a file the user did not name in a folder the user did not choose.
         var dir = Path.Combine(Directory.CreateTempSubdirectory().FullName, "out");
         SetWriter.Write(MakeSet(), dir, pack: true);
-        Assert.True(File.Exists(dir + ".set"));
+
+        Assert.True(File.Exists(Path.Combine(dir, "out.set")));
+        Assert.False(File.Exists(dir + ".set"));
+    }
+
+    [Fact]
+    public void Packing_the_same_folder_twice_does_not_nest_the_first_archive_in_the_second()
+    {
+        // Extend cooks into a folder that already holds a Set, so this is the ordinary second run,
+        // not an exotic one. Zipping a folder that contains last run's .set would put the whole
+        // previous collection inside the new archive and double its size every time.
+        var dir = Path.Combine(Directory.CreateTempSubdirectory().FullName, "out");
+        SetWriter.Write(MakeSet(), dir, pack: true);
+        SetWriter.Write(MakeSet(), dir, pack: true);
+
+        using var zip = System.IO.Compression.ZipFile.OpenRead(Path.Combine(dir, "out.set"));
+        Assert.DoesNotContain(zip.Entries,
+            e => e.FullName.EndsWith(".set", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(zip.Entries, e => e.FullName == "set.json");
+    }
+
+    [Fact]
+    public void A_packed_archive_holds_the_set_at_its_root_with_forward_slashes()
+    {
+        // The reader extracts a .set and looks for set.json, images/ and nfty/ at the TOP of what it
+        // extracted. Packing from inside the folder rather than from its parent is what keeps them
+        // there; a stray directory level would make every packed Set unreadable.
+        var dir = Path.Combine(Directory.CreateTempSubdirectory().FullName, "out");
+        SetWriter.Write(MakeSet(), dir, pack: true);
+
+        using var zip = System.IO.Compression.ZipFile.OpenRead(Path.Combine(dir, "out.set"));
+        Assert.Contains(zip.Entries, e => e.FullName == "set.json");
+        Assert.All(zip.Entries, e => Assert.DoesNotContain("\\", e.FullName));
     }
 
     [Fact]

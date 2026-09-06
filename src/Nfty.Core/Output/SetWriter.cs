@@ -55,7 +55,7 @@ public static class SetWriter
     /// <summary>Writes a Set.</summary>
     /// <param name="set">The generated collection.</param>
     /// <param name="outDir">Destination folder; created if missing.</param>
-    /// <param name="pack">Also zip the folder into a sibling <c>.set</c>.</param>
+    /// <param name="pack">Also zip the folder into a <c>.set</c> archive inside it, beside the images.</param>
     public static void Write(GeneratedSet set, string outDir, bool pack)
     {
         // Read BEFORE anything can overwrite set.json — see RecordedShaAt.
@@ -442,15 +442,53 @@ public static class SetWriter
             unique);
     }
 
+    /// <summary>
+    /// Zips the Set into a <c>.set</c> archive <em>inside</em> the output folder, beside the
+    /// <c>images</c> folder it packs.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>It used to land one level UP</b> — <c>Path.TrimEndingDirectorySeparator(outDir) +
+    /// ".set"</c>, a sibling of the folder. That put a file the user did not name in a folder the
+    /// user did not choose: cook into <c>Documents/chests</c> and the archive appeared in
+    /// <c>Documents</c>. Everything else a cook writes goes in the chosen folder, and the one output
+    /// that left it was the one output most likely to be handed to somebody else.</para>
+    ///
+    /// <para><b>Packing into the folder being packed needs two guards</b>, and neither is optional.
+    /// The file list is taken BEFORE the archive is created, so the archive cannot contain itself
+    /// mid-write. And every top-level <c>.set</c> is excluded, not merely the one about to be
+    /// written: cooking twice into one folder (which is exactly what extend does) would otherwise
+    /// nest the first archive inside the second and double the size on every run. A Set folder has
+    /// no business holding a packed Set other than its own.</para>
+    ///
+    /// <para>Entries are added in <see cref="StringComparer.Ordinal"/> order rather than in whatever
+    /// order the filesystem enumerates, so the same Set packs to the same archive on any machine —
+    /// the rule every other sort that reaches an output file already follows.</para>
+    /// </remarks>
     private static void Pack(string outDir)
     {
-        // TrimEndingDirectorySeparator, not bare concatenation: for an outDir given with a trailing
-        // separator ("out\"), "out\" + ".set" is "out\.set" — a file INSIDE the directory being
-        // zipped, rather than the sibling archive the caller asked for.
-        string archivePath = Path.TrimEndingDirectorySeparator(outDir) + ".set";
+        string dir = Path.TrimEndingDirectorySeparator(Path.GetFullPath(outDir));
+        // The folder's own name, which is what the sibling archive was called too, so a Set packed
+        // by an older build keeps the name people already know it by. A path with no leaf at all (a
+        // drive root) would otherwise produce a bare ".set".
+        string leaf = Path.GetFileName(dir);
+        string archivePath = Path.Combine(dir, (leaf.Length > 0 ? leaf : "collection") + ".set");
+
+        var entries = Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories)
+            .Where(p => !IsTopLevelSetArchive(dir, p))
+            .OrderBy(p => p, StringComparer.Ordinal)
+            .ToList();
+
         if (File.Exists(archivePath)) File.Delete(archivePath);
-        ZipFile.CreateFromDirectory(outDir, archivePath);
+        using var zip = ZipFile.Open(archivePath, ZipArchiveMode.Create);
+        foreach (var file in entries)
+            zip.CreateEntryFromFile(file, Path.GetRelativePath(dir, file).Replace(Path.DirectorySeparatorChar, '/'));
     }
+
+    /// <summary>Whether a file is a <c>.set</c> archive sitting directly in the Set folder — the
+    /// thing <see cref="Pack"/> must never put inside another one.</summary>
+    private static bool IsTopLevelSetArchive(string dir, string path) =>
+        string.Equals(Path.GetExtension(path), ".set", StringComparison.OrdinalIgnoreCase)
+        && string.Equals(Path.GetDirectoryName(path), dir, StringComparison.OrdinalIgnoreCase);
 
     private static string Serialize<T>(T value) => JsonSerializer.Serialize(value, Json.Options);
 

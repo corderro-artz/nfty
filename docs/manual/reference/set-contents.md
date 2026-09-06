@@ -1,7 +1,8 @@
 # What a Set contains
 
-Cooking writes a folder. With **Pack** ticked you also get the same folder as a single `.set`
-archive.
+Cooking writes a folder. With **Pack** ticked you also get the same collection as a single `.set`
+archive, written inside that folder and named after it -- everything a cook produces stays in the
+folder you chose.
 
 ```
 collection/
@@ -9,7 +10,11 @@ collection/
   metadata/     0001.json, 0002.json, ...     the standard format
   nfty/         0001.json, 0002.json, ...     the rich format
   set.json                                     the collection as a whole
+  collection.set                               with Pack ticked: all of the above, zipped
 ```
+
+The archive never contains itself, or a `.set` from an earlier cook into the same folder -- so
+cooking again, or extending, replaces it rather than nesting the old one inside the new.
 
 Two metadata files per asset, on purpose: one that marketplaces understand and one that keeps
 everything nfty knows. Neither is a subset of the other.

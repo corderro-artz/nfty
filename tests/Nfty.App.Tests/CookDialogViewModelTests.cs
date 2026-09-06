@@ -36,13 +36,17 @@ public class CookDialogViewModelTests
     }
 
     [AvaloniaFact]
-    public async Task Pack_produces_a_sibling_set_archive()
+    public async Task Pack_puts_the_set_archive_in_the_folder_the_user_chose()
     {
+        // The dialog reveals the folder it reports, so an archive written OUTSIDE that folder is one
+        // the user is shown the wrong place for.
         var dir = Directory.CreateTempSubdirectory().FullName;
         var vm = new CookDialogViewModel(Book(), new FolderPicker(dir), new RecordingRevealer(), new FakeDialogs());
         vm.Count = 2; vm.Seed = "seed1"; vm.Pack = true;
         await vm.CookCommand.ExecuteAsync(null);
-        Assert.True(File.Exists(dir + ".set"));
+
+        Assert.True(File.Exists(Path.Combine(dir, Path.GetFileName(dir) + ".set")));
+        Assert.False(File.Exists(dir + ".set"));
     }
 
     [AvaloniaFact]

@@ -59,7 +59,7 @@ public class SetReaderTests
     public void Reads_a_packed_set_and_cleans_up_temp_on_dispose()
     {
         var dir = CookTo(pack: true);
-        string archive = dir + ".set";
+        string archive = Path.Combine(dir, Path.GetFileName(dir) + ".set");
         string? tempSeen;
         using (var loaded = SetReader.Read(archive))
         {
@@ -69,7 +69,10 @@ public class SetReaderTests
         }
         // after Dispose, the extracted temp dir is gone (the archive + original dir remain)
         Assert.False(Directory.Exists(Path.GetDirectoryName(tempSeen!)));
-        Directory.Delete(dir, recursive: true); File.Delete(archive);
+        Assert.True(File.Exists(archive));
+        // One delete, not two: the archive lives INSIDE the Set folder now, so removing the folder
+        // takes it with it and a following File.Delete throws DirectoryNotFoundException.
+        Directory.Delete(dir, recursive: true);
     }
 
     [Fact]

@@ -190,7 +190,7 @@ public class AsyncIoTests
         using (var set = Generator.Generate(book, new GenerateOptions(1, "seed-1")))
             await SetWriter.WriteAsync(set, outDir, pack: true);
 
-        using var zip = System.IO.Compression.ZipFile.OpenRead(outDir + ".set");
+        using var zip = System.IO.Compression.ZipFile.OpenRead(Path.Combine(outDir, "out.set"));
         Assert.Contains(zip.Entries, e => e.FullName.EndsWith("set.json"));
         Assert.Contains(zip.Entries, e => e.FullName.EndsWith("0001.png"));
     }
