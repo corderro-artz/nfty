@@ -3,3 +3,13 @@
 # README.md's LF to CRLF on a fresh Windows clone and break its pinned SHA-256,
 # failing the suite out of the box. Treat the whole directory as opaque/binary.
 tests/fixtures/** -text
+
+# nfty archives are renamed ZIPs. Git's auto-detection gets this right today because a zip
+# contains NUL bytes, but "right by accident" is how the fixture SHAs above were nearly lost:
+# one line-ending conversion turns the embedded demo CookBook into a file the app cannot open,
+# and the only symptom is a user clicking "Open the demo CookBook" and getting an error.
+*.cbk -text
+*.rcp -text
+*.igt -text
+*.set -text
+*.ktn -text

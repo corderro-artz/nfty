@@ -14,7 +14,7 @@ public class CommandFactoryTests
     {
         var root = CommandFactory.Build();
         var names = root.Subcommands.Select(c => c.Name).ToHashSet();
-        foreach (var expected in new[] { "inspect", "validate", "stats", "preview", "generate", "extend", "move" })
+        foreach (var expected in new[] { "inspect", "validate", "stats", "preview", "generate", "extend", "move", "demo" })
             Assert.Contains(expected, names);
     }
 

@@ -139,6 +139,7 @@ nav:
   - Get started:
       - get-started/index.md
       - get-started/install.md
+      - get-started/the-demo.md
       - get-started/first-collection.md
       - get-started/first-layer.md
   - How do I…:

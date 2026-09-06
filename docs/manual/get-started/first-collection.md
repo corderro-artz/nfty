@@ -3,6 +3,9 @@
 By the end of this page you will have a folder of finished, numbered assets on your disk. It takes
 about twenty minutes, and you will draw two simple shapes — no art skill needed.
 
+If you have not looked at [the demo CookBook](the-demo.md) yet, do that first: it is one click and it
+shows you the finished shape of what this page builds up to.
+
 We will build the beginning of a collection called **Vapor Pets**.
 
 ## 1. Make a CookBook

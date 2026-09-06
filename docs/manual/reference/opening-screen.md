@@ -21,6 +21,7 @@ What nfty shows before anything is open.
 | **Open CookBook...** | An existing `.cbk` in the Explorer. |
 | **Import...** | A loose `.rcp` or `.igt`. |
 | **Open a cooked .set...** | A packed `.set` archive in the Set browser. |
+| **Open the demo CookBook** | The sample collection built into nfty. See [The demo CookBook](../get-started/the-demo.md). |
 | **Open Kitchen...** | An existing `.ktn`. |
 
 ## Recent

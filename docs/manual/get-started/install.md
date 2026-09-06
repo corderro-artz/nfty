@@ -47,4 +47,4 @@ If you see that window, you are done. Leave the terminal open — closing it clo
 
 ---
 
-**Next:** [Your first collection →](first-collection.md)
+**Next:** [The demo CookBook →](the-demo.md)

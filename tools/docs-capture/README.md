@@ -7,14 +7,18 @@ the UI moves.
 They are not `VisualCapture` frames. That harness renders the shipped controls offscreen and is the
 right tool for *testing* layout, but its fixtures are 8×8 solid fills — a manual built from them
 shows empty panels and quotes numbers like "2 unique DNA", which teaches a reader the wrong thing
-about what the app is for. These come from a real book with real art in it.
+about what the app is for. These come from a real book with real art in it — and since the demo became a shipped feature, from
+**the** book: `tools/demo/build-demo.py` builds the same `ChestDemo.cbk` that is embedded in
+`Nfty.Core`. The manual used to be screenshotted from a second demo (a pet collection) that existed
+only in this folder, so every figure showed a CookBook no reader could open.
 
 ## The whole run
 
 ```bash
-# 1. Draw the demo art and assemble a real CookBook, Kitchen and cooked Set.
-python tools/docs-capture/draw-demo-art.py    .demo/art
-python tools/docs-capture/build-demo-book.py  .demo/art  M:/nfty-demo
+# 1. Build the demo workspace: the SHIPPED demo CookBook, plus a Kitchen, loose parts and a
+#    cooked Set beside it. The book itself lives in tools/demo/ and is the one embedded in the
+#    app, so the manual shows the book a reader actually has.
+python tools/demo/build-demo.py --workspace M:/nfty-demo
 
 # 2. Launch the app and drive it to each screen by hand, capturing as you go.
 dotnet run --project src/Nfty.Desktop
@@ -31,8 +35,8 @@ lists. Any short, neutral folder works — but keep it short: it appears in the 
 
 | File | Does |
 |---|---|
-| `draw-demo-art.py` | Draws the 64×64 pixel art: three backgrounds, two cat bodies, a fox, three eyes, two auras, three hats. Gray value-maps for the Dynamic and Static layers, full color for the Custom hats. |
-| `build-demo-book.py` | Writes the manifests, calls the CLI's authoring commands, and lays out a Kitchen with a packed Set beside it. |
+| `../demo/draw-chest-art.py` | Draws the 32×32 chest sprites — bodies, bands, locks, trim, glow. Gray value-maps for the Dynamic and Static layers, full color for the Custom trim. |
+| `../demo/build-demo.py` | Assembles the demo CookBook that ships inside the app, and with `--workspace` lays out a Kitchen with a packed Set beside it. |
 | `shot.ps1` | Captures the nfty window to a PNG at the standard size below, inset by the 12px shadow gutter. |
 | `pair.py` | Captures the current screen in **both** themes and names each file by which one it actually is. |
 | `label.py` | Re-checks a whole folder of pairs the same way. Run it after a batch. |

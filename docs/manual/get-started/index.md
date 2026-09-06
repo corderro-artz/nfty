@@ -1,6 +1,6 @@
 # Get started
 
-Three pages, in order. Each one ends with something real on your disk.
+Four pages, in order. Each one ends with something real on your disk.
 
 <div class="grid cards" markdown>
 
@@ -10,13 +10,19 @@ Three pages, in order. Each one ends with something real on your disk.
 
     Build it and open the window. Five minutes.
 
--   **2. [Your first collection](first-collection.md)**
+-   **2. [The demo CookBook](the-demo.md)**
+
+    ---
+
+    A finished collection, built into nfty. One click, nothing to download.
+
+-   **3. [Your first collection](first-collection.md)**
 
     ---
 
     An empty screen to 50 finished assets, using art you have not drawn yet.
 
--   **3. [Draw your first layer](first-layer.md)**
+-   **4. [Draw your first layer](first-layer.md)**
 
     ---
 

@@ -6,4 +6,12 @@
     <PackageReference Include="SixLabors.ImageSharp" />
   </ItemGroup>
 
+  <!-- The built-in sample collection. Embedded rather than copied beside the executable because two
+       of the four published shapes are a single .exe, and a sample that is only present in the other
+       two is not "always available". Generated and committed by tools/demo/build-demo.py; see
+       Demo/DemoCookBook.cs. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Demo\ChestDemo.cbk" LogicalName="Nfty.Core.Demo.ChestDemo.cbk" />
+  </ItemGroup>
+
 </Project>

@@ -2,6 +2,7 @@ using System.IO;
 using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Models;
 using Nfty.App.Services;
+using Nfty.Core.Demo;
 using Nfty.Core.Formats;
 using Nfty.Core.Model;
 using Nfty.Core.Output;
@@ -25,6 +26,7 @@ public partial class LandingViewModel : ViewModelBase
     private readonly Func<LoadedSet, SetBrowserViewModel> _setBrowserFactory;
     private readonly Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> _looseEditorFactory;
     private readonly IKitchenSession? _kitchen;
+    private readonly IStateStore? _store;
 
     /// <summary>A snapshot, not the service's live list: bindings short-circuit when a property
     /// returns the same instance, so returning the live list would make OnPropertyChanged inert and
@@ -46,17 +48,21 @@ public partial class LandingViewModel : ViewModelBase
     /// <param name="setBrowserFactory">Opens a cooked Set in the browser.</param>
     /// <param name="looseEditorFactory">Opens a loose Ingredient in the editor.</param>
     /// <param name="kitchen">The workspace session; null leaves the Kitchen actions unavailable.</param>
+    /// <param name="store">The <c>.nfty</c> store, used only to find a folder the demo CookBook can
+    /// be unpacked into. Null falls back to a temp folder, which is what keeps a test that opens the
+    /// demo off the developer's own build output.</param>
     public LandingViewModel(INavigationService nav, IDialogService dialogs,
         IFilePickerService picker, IRecentsService recents, ICookBookSession session,
         Func<LoadedCookBook, ExplorerViewModel> explorerFactory,
         Func<LoadedSet, SetBrowserViewModel> setBrowserFactory,
         Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> looseEditorFactory,
-        IKitchenSession? kitchen = null)
+        IKitchenSession? kitchen = null, IStateStore? store = null)
     {
         _nav = nav; _dialogs = dialogs; _picker = picker; _recents = recents;
         _session = session; _explorerFactory = explorerFactory; _setBrowserFactory = setBrowserFactory;
         _looseEditorFactory = looseEditorFactory;
         _kitchen = kitchen;
+        _store = store;
         // Before the Changed subscription below, which loads it.
         KitchenShelf = new KitchenShelfViewModel(OpenKitchenCard);
 
@@ -302,6 +308,53 @@ public partial class LandingViewModel : ViewModelBase
         if (path is null) return;
         OpenPath(path);
     }
+
+    /// <summary>
+    /// Opens the demo CookBook that ships inside the app, unpacking it first if it is not already
+    /// on disk.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>It is unpacked rather than opened in place.</b> The whole point of the demo is that
+    /// it can be edited — added to, reordered, cooked — and an archive read out of the assembly has
+    /// nowhere to save back to. So the first "open the demo" writes a real <c>.cbk</c> into a real
+    /// folder and every route after that is the ordinary one: the same Explorer, the same edit lock,
+    /// the same Recent row, the same Save.</para>
+    ///
+    /// <para><b>A second open does NOT restore it.</b> <see cref="DemoCookBook.WriteTo"/> leaves an
+    /// existing copy alone, so someone who spent an evening in the demo finds their evening still
+    /// there. Getting a clean one back is deleting the file, or <c>nfty demo --force</c>.</para>
+    ///
+    /// <para>It lands in a <c>demo</c> folder BESIDE the app rather than inside <c>.nfty</c>: the
+    /// store folder is dot-prefixed because nothing in it is meant for the user to open, and this
+    /// file is the one thing here that is. Nowhere writable falls back to the temp folder, which is
+    /// worse but is not nothing.</para>
+    /// </remarks>
+    [RelayCommand]
+    private void OpenDemo()
+    {
+        string path;
+        try { path = DemoCookBook.WriteTo(DemoFolder()); }
+        catch (Exception)
+        {
+            // One retry, somewhere that is writable on every platform. A demo that cannot be
+            // unpacked beside the app is still worth having in a temp folder.
+            try { path = DemoCookBook.WriteTo(Path.Combine(Path.GetTempPath(), "nfty-demo")); }
+            catch (Exception ex)
+            {
+                ShowError("Could not unpack the demo",
+                    $"The demo CookBook could not be written anywhere on this machine — {ex.Message}");
+                return;
+            }
+        }
+        OpenPath(path);
+    }
+
+    /// <summary>Where the demo is unpacked: a <c>demo</c> folder beside the <c>.nfty</c> store, so
+    /// it sits next to the app rather than inside the app's private folder.</summary>
+    private string DemoFolder() =>
+        _store?.Resolution.Directory is { } dir && Path.GetDirectoryName(dir) is { Length: > 0 } root
+            ? Path.Combine(root, "demo")
+            : Path.Combine(Path.GetTempPath(), "nfty-demo");
 
     [RelayCommand]
     private async Task Import()

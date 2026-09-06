@@ -77,6 +77,19 @@
           <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconOpen}" /><TextBlock Classes="lbl" Text="Open a cooked .set…" /></StackPanel></Grid>
         </Button>
       </Panel>
+      <!-- The built-in sample. It is in OPEN rather than CREATE because that is what it does — the
+           archive is embedded in the program and this unpacks a real .cbk beside the app and opens
+           it, so nothing about the screen after this click is a special case. Nothing else on this
+           screen works on a fresh install without a file dialog first, which made "nfty" and "an
+           empty window" the same thing for anyone who had not built a collection yet. -->
+      <Button Classes="landing tbtn" Command="{Binding OpenDemoCommand}"
+              ToolTip.Tip="Unpacks a sample CookBook of layered chests beside the app and opens it. Edit it freely — reopening keeps your changes.">
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconTypeCookBook}" /><TextBlock Classes="lbl" Text="Open the demo CookBook" /></StackPanel>
+          <TextBlock Grid.Column="1" Classes="hk" Text="DEMO" />
+        </Grid>
+      </Button>
+
       <!-- Beyond landing.html, which has no Open-Kitchen row because it predates the Kitchen. Without
            one, IKitchenSession.Open was called only by the CREATE flow, so a workspace was reachable
            for exactly the session that made it and never again. -->
@@ -151,7 +164,11 @@
         <Rectangle Classes="dashed" />
         <StackPanel Margin="20,28" HorizontalAlignment="Center" VerticalAlignment="Center">
           <TextBlock Text="Nothing here yet" Classes="zh" />
-          <TextBlock Classes="zp"><Run Text="Cookbooks you open will collect here. Start with " /><Run Text="New CookBook" Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold" /><Run Text="." /></TextBlock>
+          <!-- Names the demo, not New CookBook. On a first run the honest next step is the one that
+               needs nothing from the user: the wizard asks for a name, a canvas and a save location
+               before showing anything at all, which is a poor first look at a tool whose whole
+               argument is visual. -->
+          <TextBlock Classes="zp"><Run Text="Cookbooks you open will collect here. Start with " /><Run Text="Open the demo CookBook" Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold" /><Run Text="." /></TextBlock>
         </StackPanel>
       </Panel>
     </StackPanel>

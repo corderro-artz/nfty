@@ -5,6 +5,12 @@ obj/
 .vs/
 [Dd]ebug/
 [Rr]elease/
+# ...but not the folder that BUILDS a release. The two patterns above are the stock .NET ones and
+# are unanchored, so `tools/release/` matched one of them and the script that produces every
+# downloadable artifact was never in the repository at all - a fresh clone could not cut a release
+# and nothing said why. A negation has to name the DIRECTORY: git does not look inside an excluded
+# folder, so `!tools/release/build.py` alone would still be ignored.
+!tools/release/
 artifacts/
 *.nupkg
 TestResults/

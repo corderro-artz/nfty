@@ -80,10 +80,12 @@ dotnet build nfty.sln
 dotnet run --project src/Nfty.Cli -- --help
 ```
 
-A first collection, end to end, against the fixture archive in this repo:
+A first collection, end to end, against the demo CookBook that is built into the program — no file
+to find, no archive to download:
 
 ```bash
-CBK=tests/fixtures/VaporPets.cbk
+dotnet run --project src/Nfty.Cli -- demo .            # writes ChestDemo.cbk here
+CBK=ChestDemo.cbk
 
 dotnet run --project src/Nfty.Cli -- inspect  $CBK          # what is in it
 dotnet run --project src/Nfty.Cli -- validate $CBK          # is it sound
@@ -91,11 +93,17 @@ dotnet run --project src/Nfty.Cli -- stats    $CBK          # what odds do its w
 dotnet run --project src/Nfty.Cli -- generate $CBK --count 8 --seed hello --out ./out
 ```
 
-The desktop app is the same engine with a UI on top:
+The desktop app is the same engine with a UI on top. Its Landing screen has **Open the demo
+CookBook**, which unpacks the same book beside the app and opens it — the demo is yours to break, and
+reopening it keeps whatever you did to it:
 
 ```bash
 dotnet run --project src/Nfty.Desktop
 ```
+
+The demo is a small collection of layered chests: two Recipes, all three layer kinds, two optional
+layers, one incompatibility rule, and about half a million distinct assets out of sixteen 32×32
+sprites — which is the argument for value-map colorization, made in a file you can open.
 
 ---
 

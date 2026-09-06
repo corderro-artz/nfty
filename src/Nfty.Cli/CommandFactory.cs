@@ -1,5 +1,6 @@
 using System.CommandLine;
 using System.Globalization;
+using Nfty.Core.Demo;
 using Nfty.Core.Editing;
 using Nfty.Core.Formats;
 using Nfty.Core.Generation;
@@ -35,6 +36,7 @@ public static partial class CommandFactory
     {
         var root = new RootCommand("nfty — layered NFT asset generator");
         root.Options.Add(VerboseOption);
+        root.Subcommands.Add(Demo());
         root.Subcommands.Add(Inspect());
         root.Subcommands.Add(Validate());
         root.Subcommands.Add(Stats());
@@ -47,6 +49,37 @@ public static partial class CommandFactory
         root.Subcommands.Add(RemoveGroup());
         root.Subcommands.Add(SetGroup());
         return root;
+    }
+
+    private static Command Demo()
+    {
+        var outDir = new Argument<string>("directory")
+        {
+            Description = "Folder to write the demo CookBook into. Created if it is not there.",
+            DefaultValueFactory = _ => ".",
+        };
+        var force = new Option<bool>("--force")
+        {
+            Description = "Overwrite a copy that is already there. Without this, an existing "
+                + "ChestDemo.cbk is left exactly as it is — the demo is meant to be edited, and "
+                + "silently reverting someone's work is worse than refusing to write.",
+        };
+        var cmd = new Command("demo",
+            "Write out the built-in demo CookBook. " + DemoCookBook.Summary
+                + " It is embedded in the program, so this works on a copy with nothing beside it.")
+        { outDir, force };
+        cmd.SetAction(parse =>
+        {
+            var dir = parse.GetValue(outDir)!;
+            var path = Path.GetFullPath(Path.Combine(dir, DemoCookBook.FileName));
+            var existed = File.Exists(path);
+            var written = DemoCookBook.WriteTo(dir, parse.GetValue(force));
+            Console.WriteLine(existed && !parse.GetValue(force)
+                ? $"{written} is already there — left as it is. Pass --force to replace it."
+                : $"Wrote {written}");
+            return 0;
+        });
+        return cmd;
     }
 
     private static Command Inspect()

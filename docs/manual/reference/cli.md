@@ -10,6 +10,15 @@ dotnet run --project src/Nfty.Cli -- <command> [args]
 
 The examples below write `nfty` for brevity.
 
+## The demo
+
+| Command | Does |
+|---|---|
+| `nfty demo <dir>` | Writes the built-in demo CookBook into a folder. The archive is inside the program, so this needs no network and no other files. |
+| `nfty demo <dir> --force` | Replaces a copy that is already there. Without it, an existing `ChestDemo.cbk` is left exactly as it is. |
+
+See [The demo CookBook](../get-started/the-demo.md) for what is in it.
+
 ## Reading
 
 | Command | Does |

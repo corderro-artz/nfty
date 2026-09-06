@@ -42,7 +42,20 @@ public static class ServiceRegistration
         services.AddTransient<NewCookBookViewModel>();
         services.AddTransient<NewRecipeViewModel>();
         services.AddTransient<NewIngredientViewModel>();
-        services.AddTransient<LandingViewModel>();
+        // Built by hand rather than by type so Landing reaches the .nfty store, which is how it
+        // finds a folder to unpack the built-in demo CookBook into. Constructed by type it would get
+        // the optional parameter's null and quietly unpack the demo into the temp folder instead.
+        services.AddTransient(sp => new LandingViewModel(
+            sp.GetRequiredService<INavigationService>(),
+            sp.GetRequiredService<IDialogService>(),
+            sp.GetRequiredService<IFilePickerService>(),
+            sp.GetRequiredService<IRecentsService>(),
+            sp.GetRequiredService<ICookBookSession>(),
+            sp.GetRequiredService<Func<LoadedCookBook, ExplorerViewModel>>(),
+            sp.GetRequiredService<Func<LoadedSet, SetBrowserViewModel>>(),
+            sp.GetRequiredService<Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel>>(),
+            sp.GetRequiredService<IKitchenSession>(),
+            sp.GetRequiredService<IStateStore>()));
 
         services.AddSingleton<Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel>>(sp =>
             (ing, recipe, book) => RememberOnSave(sp, new IngredientEditorViewModel(ing, recipe, book,
