@@ -41,6 +41,26 @@ public sealed class LoadedSet : IDisposable
 /// <summary>Opens a cooked Set — a folder, or a packed <c>.set</c> archive.</summary>
 public static class SetReader
 {
+    /// <summary>
+    /// Whether <paramref name="path"/> is a directory holding a cooked Set.
+    /// </summary>
+    /// <param name="path">The path to test.</param>
+    /// <returns>True when it is a folder with a <c>set.json</c> in it.</returns>
+    /// <remarks>
+    /// <para>A Set is the one archive kind that is also a FOLDER — <c>generate --out</c> writes one
+    /// and <c>--pack</c> is optional — so a caller dispatching on the file type has a question
+    /// <c>Archives.KindOf</c> cannot answer: that method resolves an EXTENSION, and a directory has
+    /// none. This is outside its domain rather than a second copy of it.</para>
+    ///
+    /// <para>It asks for <c>set.json</c> rather than merely for a directory, so an ordinary folder
+    /// still falls through to whatever the caller does with a path it does not recognise instead of
+    /// being guessed at — the same rule the extension table follows.</para>
+    /// </remarks>
+    public static bool IsSetFolder(string path) =>
+        !string.IsNullOrWhiteSpace(path)
+        && Directory.Exists(path)
+        && File.Exists(Path.Combine(path, "set.json"));
+
     /// <summary>Reads a Set.</summary>
     /// <param name="path">A Set folder, or a <c>.set</c> archive.</param>
     /// <returns>The manifest and items; the caller owns it and must dispose it.</returns>

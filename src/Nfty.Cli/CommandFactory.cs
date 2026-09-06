@@ -84,26 +84,34 @@ public static partial class CommandFactory
 
     private static Command Inspect()
     {
-        var path = new Argument<string>("file") { Description = "Path to a .cbk, .rcp, .igt or .ktn file." };
+        var path = new Argument<string>("file") { Description = "Path to a .cbk, .rcp, .igt, .ktn or .set file." };
         var voxel = new Option<bool>("--voxel")
         {
             Description = "Also report voxel readiness: which variants carry PARTIAL alpha, which a "
                 + "voxel converter cannot resolve (it must drop the pixel or make it solid). Partial "
                 + "alpha is legal — this is a report, not a validation — so it is opt-in, and it "
-                + "costs a full scan of every variant image. Not available for a Kitchen, which "
-                + "lists paths without opening them.",
+                + "costs a full scan of every variant image. Not available for a Kitchen or a "
+                + "cooked Set, both of which list paths without opening them.",
         };
         var cmd = new Command("inspect",
             "Print the tree of a CookBook, Recipe or Ingredient, showing each Recipe's, "
                 + "Ingredient's and Variant's [id] alongside its name, and each Recipe's rules "
                 + "with the positions `remove rule` addresses them by. Those ids — not the display names — are "
                 + "what --recipe and --variant expect elsewhere on this command line, so inspect "
-                + "is how you find them. Given a Kitchen, lists what that workspace holds.")
+                + "is how you find them. Given a Kitchen, lists what that workspace holds; given a "
+                + "cooked Set, reports what that run actually produced.")
         { path, voxel };
         cmd.SetAction(parse =>
         {
             string file = parse.GetValue(path)!;
             bool wantVoxel = parse.GetValue(voxel);
+
+            // Before KindOf, because a Set is the one kind that is also a FOLDER and KindOf resolves
+            // an extension. `generate --out ./collection` writes a folder and `--pack` is optional,
+            // so `inspect ./collection` is the very next thing a person types — and it used to fail
+            // with "has no extension", which describes the mechanism rather than the situation.
+            if (SetReader.IsSetFolder(file)) { PrintSet(file, wantVoxel); return 0; }
+
             var kind = Archives.KindOf(file);
             switch (kind)
             {
@@ -141,6 +149,10 @@ public static partial class CommandFactory
                     Console.Write(KitchenReport.Render(Kitchen.Open(file)));
                     break;
                 }
+                // The only kind here that is read but never authored, and the one most likely to
+                // have been handed to you by somebody else — which is exactly why it needs a way to
+                // be looked at. See the Set arm's note in ArchiveKind.
+                case ArchiveKind.Set: PrintSet(file, wantVoxel); break;
                 default:
                     // Archives.KindOf already rejects an unknown extension before we get here,
                     // so this only guards against a future ArchiveKind case added without a
@@ -167,6 +179,24 @@ public static partial class CommandFactory
 
         foreach (var r in cb.Recipes)
             PrintRecipe(r, cb.Manifest.RecipeWeights.GetValueOrDefault(r.Manifest.Id), "  ");
+    }
+
+    /// <summary>Prints a cooked Set's report, from a packed <c>.set</c> or from the folder one was
+    /// generated into. One method for both, because they are one question.</summary>
+    private static void PrintSet(string path, bool wantVoxel)
+    {
+        // Refused rather than quietly ignored, exactly as it is for a Kitchen, and for a reason
+        // stronger than "there is nothing to scan": a Set's images are OUTPUT. Partial alpha in one
+        // came from a variant in the book that made it, which is where it can still be fixed, so
+        // pointing there is more useful than scanning ten thousand finished PNGs to say so.
+        if (wantVoxel)
+            throw new InvalidOperationException(
+                "--voxel scans the ARTWORK a book is built from, and a cooked Set is the output "
+                + "rather than the source. Run it on the CookBook that produced this Set, where a "
+                + "partial-alpha variant is something you can still change.");
+
+        using var set = SetReader.Read(path);
+        Console.Write(SetReport.Render(set));
     }
 
     /// <summary>Prints the voxel-readiness report under whatever tree was just printed. Rendered in

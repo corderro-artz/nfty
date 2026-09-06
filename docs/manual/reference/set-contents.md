@@ -16,6 +16,10 @@ collection/
 The archive never contains itself, or a `.set` from an earlier cook into the same folder -- so
 cooking again, or extending, replaces it rather than nesting the old one inside the new.
 
+`nfty inspect` reads either form -- the folder or the `.set` -- and reports what the run produced:
+its seed, the CookBook hash behind it, whether unique DNA was required, and the trait percentages the
+collection actually came out with. See [Command line](cli.md).
+
 Two metadata files per asset, on purpose: one that marketplaces understand and one that keeps
 everything nfty knows. Neither is a subset of the other.
 

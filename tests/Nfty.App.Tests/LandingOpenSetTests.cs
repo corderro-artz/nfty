@@ -40,6 +40,16 @@ public class LandingOpenSetTests
         return dir;
     }
 
+    /// <summary>A packed Set, and the path of the archive itself — which lives INSIDE the folder it
+    /// packs and is named after it.</summary>
+    private static string CookPackedSet()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        using var generated = Generator.Generate(CoreTestBook.Tiny(), new GenerateOptions(2, "seed1"));
+        SetWriter.Write(generated, dir, pack: true);
+        return Path.Combine(dir, Path.GetFileName(dir) + ".set");
+    }
+
     [AvaloniaFact]
     public async Task Open_set_reads_and_navigates_to_the_browser()
     {
@@ -78,5 +88,40 @@ public class LandingOpenSetTests
             Assert.Null(nav.Current);
         }
         finally { Directory.Delete(tmp, recursive: true); }
+    }
+
+    [AvaloniaFact]
+    public void A_remembered_set_reopens_in_the_browser()
+    {
+        // OpenRecent used to route a .set with its own extension compare, ABOVE the dispatch, because
+        // Archives.KindOf did not know the kind — the second copy of the mapping TryKindOf exists to
+        // prevent. It goes through the enum now, and nothing else covered this path.
+        var archive = CookPackedSet();
+        var nav = new FakeNav();
+        var vm = MakeLanding(nav, new FakeDialogs(), new StubPicker(null));
+
+        vm.OpenRecentCommand.Execute(
+            new Nfty.App.Models.RecentItem("Tiny", "set · 2 assets", archive, false));
+
+        Assert.IsType<SetBrowserViewModel>(nav.Current);
+        ((SetBrowserViewModel)nav.Current!).Dispose();
+    }
+
+    [AvaloniaFact]
+    public async Task Import_opens_a_set_rather_than_calling_it_a_Kitchen()
+    {
+        // Import's picker is filtered to .cbk/.rcp/.igt, but a TYPED filename is not — the same hole
+        // that once made importing a .ktn report "Not wired yet". A .set fell past every arm into the
+        // Kitchen message, which named the wrong file type and the wrong action to use instead.
+        var archive = CookPackedSet();
+        var nav = new FakeNav();
+        var dialogs = new FakeDialogs();
+        var vm = MakeLanding(nav, dialogs, new StubPicker(archive));
+
+        await vm.ImportCommand.ExecuteAsync(null);
+
+        Assert.IsType<SetBrowserViewModel>(nav.Current);
+        Assert.IsNotType<ErrorDialogViewModel>(dialogs.Active);
+        ((SetBrowserViewModel)nav.Current!).Dispose();
     }
 }

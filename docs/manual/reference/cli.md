@@ -23,10 +23,21 @@ See [The demo CookBook](../get-started/the-demo.md) for what is in it.
 
 | Command | Does |
 |---|---|
-| `nfty inspect <file>` | Prints what is inside any `.cbk`, `.rcp`, `.igt`, `.set` or `.ktn`, plus a book's own palette. |
-| `nfty inspect <file> --voxel` | Also lists every variant carrying partial transparency. Costs a full scan of every image. Refused on a `.ktn`. |
+| `nfty inspect <file>` | Prints what is inside any `.cbk`, `.rcp`, `.igt`, `.set` or `.ktn`, plus a book's own palette. A cooked Set also works as a **folder** -- which is what `generate --out` writes when you do not pass `--pack`. |
+| `nfty inspect <file> --voxel` | Also lists every variant carrying partial transparency. Costs a full scan of every image. Refused on a `.ktn` and on a cooked Set: both list paths without opening them, and a Set is the output rather than the source -- run it on the CookBook that produced it. |
 | `nfty validate <file>` | Reports every problem it finds, rather than stopping at the first. |
 | `nfty stats <cbk>` | The odds the weights imply, trait by trait, plus the unique DNA space. |
+
+`inspect` on a cooked Set reports what a run **actually produced** -- its seed, the CookBook hash it
+came from, whether unique DNA was required, and the observed trait percentages. `stats` on the
+CookBook reports what the weights **predict**. Both group their traits the same way, so the same
+trait is in the same place in each; `stats` additionally splits its rows by Recipe, because a Set's
+rarity is collection-wide by definition.
+
+```
+nfty inspect ./collection          # what this run produced
+nfty stats   mybook.cbk            # what its weights imply
+```
 
 ## Rendering
 

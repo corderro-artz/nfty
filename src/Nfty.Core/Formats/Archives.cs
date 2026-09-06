@@ -14,6 +14,21 @@ public enum ArchiveKind
 
     /// <summary><c>.ktn</c> — the top-level workspace naming the folder it sits in.</summary>
     Kitchen,
+
+    /// <summary>
+    /// <c>.set</c> — a cooked Set: generated images plus their metadata, packed.
+    /// </summary>
+    /// <remarks>
+    /// The one kind here that is READ but never authored — nothing creates a <c>.set</c> except
+    /// <c>SetWriter</c>, and there is no <c>new set</c> command. It was left out of this enum for
+    /// that reason, and the omission cost more than it saved: <c>inspect</c> dispatches on
+    /// <see cref="Archives.KindOf"/> and so refused the one archive a person is most likely to be
+    /// handed by somebody else, while the manual said it did not. Meanwhile the GUI's
+    /// <c>OpenRecent</c> had grown its own extension compare to route a <c>.set</c> around this
+    /// enum — a second copy of the mapping, which is exactly what <see cref="Archives.TryKindOf"/>
+    /// exists to prevent.
+    /// </remarks>
+    Set,
 }
 
 /// <summary>
@@ -30,6 +45,8 @@ public static class Archives
     public const string IngredientExtension = ".igt";
     /// <summary>The Kitchen workspace extension.</summary>
     public const string KitchenExtension = ".ktn";
+    /// <summary>The cooked Set archive extension.</summary>
+    public const string SetExtension = ".set";
 
     /// <summary>
     /// The archive kind for <paramref name="path"/>. An unknown extension is an error rather
@@ -61,10 +78,12 @@ public static class Archives
             case RecipeExtension: kind = ArchiveKind.Recipe; return true;
             case IngredientExtension: kind = ArchiveKind.Ingredient; return true;
             case KitchenExtension: kind = ArchiveKind.Kitchen; return true;
+            case SetExtension: kind = ArchiveKind.Set; return true;
             default: kind = default; return false;
         }
     }
 
     private static string Expected =>
-        $"expected one of {CookBookExtension}, {RecipeExtension}, {IngredientExtension}, {KitchenExtension}.";
+        $"expected one of {CookBookExtension}, {RecipeExtension}, {IngredientExtension}, "
+        + $"{KitchenExtension}, {SetExtension}.";
 }

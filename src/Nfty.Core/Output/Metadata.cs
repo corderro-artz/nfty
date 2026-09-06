@@ -39,7 +39,13 @@ public record NftyMetadata(
     IReadOnlyList<string>? AbsentLayers = null);
 
 /// <summary>How many assets one recipe produced.</summary>
-/// <param name="Recipe">The recipe's display name.</param>
+/// <param name="Recipe">The recipe's <b>id</b> — what <c>--recipe</c> takes, and what the
+/// <c>distribution</c> array in <c>set.json</c> has always held. This said "display name" for a
+/// long time and no reader was in a position to notice: nothing rendered the field until
+/// <see cref="Nfty.Core.Stats.SetReport"/> did, and the writer takes it from
+/// <c>GeneratedAsset.RecipeId</c>. The doc is what was wrong, not the data — the array is sorted by
+/// this value with an ordinal comparer to keep <c>set.json</c> byte-identical across machines, and
+/// Sets carrying ids are out in the world.</param>
 /// <param name="Count">How many assets it produced.</param>
 /// <param name="Percent">Its share of the collection.</param>
 public record RecipeCount(string Recipe, int Count, double Percent);

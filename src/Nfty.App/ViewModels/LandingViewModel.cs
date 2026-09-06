@@ -368,6 +368,12 @@ public partial class LandingViewModel : ViewModelBase
         if (kind == ArchiveKind.CookBook) { OpenPath(path); return; }
         if (kind == ArchiveKind.Ingredient) { OpenLooseIngredient(path); return; }
         if (kind == ArchiveKind.Recipe) { OpenLooseRecipe(path); return; }
+        // A cooked Set is openable with no side effect beyond navigating, so it is OPENED rather
+        // than refused — which is what this button already does for a .cbk. The Kitchen below is
+        // refused instead, and the difference is not an oversight: opening a Kitchen changes
+        // app-wide session state (the workspace every loose save defaults into), and a button
+        // labelled Import must not do that behind the user's back.
+        if (kind == ArchiveKind.Set) { OpenSetPath(path); return; }
 
         // REACHABLE, and it used to lie about itself. There are FOUR known kinds, not three: the
         // picker is filtered to .cbk/.rcp/.igt but a typed filename is not, and Archives.KindOf
@@ -473,9 +479,6 @@ public partial class LandingViewModel : ViewModelBase
             ShowError("Missing file", $"“{item.Path}” is no longer there, so it was removed from Recents.");
             return;
         }
-        if (string.Equals(Path.GetExtension(item.Path), ".set", StringComparison.OrdinalIgnoreCase))
-        { OpenSetPath(item.Path); return; }
-
         ArchiveKind kind;
         try { kind = Archives.KindOf(item.Path); }
         catch (Exception ex) { ShowError("Can't open", ex.Message); return; }
@@ -484,6 +487,10 @@ public partial class LandingViewModel : ViewModelBase
             case ArchiveKind.CookBook: OpenPath(item.Path); return;
             case ArchiveKind.Ingredient: OpenLooseIngredient(item.Path); return;
             case ArchiveKind.Recipe: OpenLooseRecipe(item.Path); return;
+            // This used to be an extension compare ABOVE the dispatch, because .set was not one of
+            // the kinds Archives.KindOf knew. That is the second copy of the mapping the TryKindOf
+            // note warns about, and it is gone now that the enum names every archive this app opens.
+            case ArchiveKind.Set: OpenSetPath(item.Path); return;
         }
     }
 

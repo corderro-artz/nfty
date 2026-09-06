@@ -8,6 +8,10 @@ public class ArchiveKindTests
     [InlineData("VaporPets.cbk", ArchiveKind.CookBook)]
     [InlineData("cat.rcp", ArchiveKind.Recipe)]
     [InlineData("bg.igt", ArchiveKind.Ingredient)]
+    [InlineData("studio.ktn", ArchiveKind.Kitchen)]
+    // A Set is READ but never authored, which is why it was missing here for so long — and why
+    // `inspect` refused the one archive people hand each other.
+    [InlineData("launch.set", ArchiveKind.Set)]
     public void Kind_comes_from_the_extension(string path, ArchiveKind expected) =>
         Assert.Equal(expected, Archives.KindOf(path));
 
