@@ -87,8 +87,8 @@
                           RowSpacing="4">
                       <TextBlock Grid.Row="0" Grid.Column="0" Text="Passphrase" Classes="slbl" />
                       <TextBlock Grid.Row="0" Grid.Column="1" Text="Confirm" Classes="slbl" />
-                      <TextBox Grid.Row="1" Grid.Column="0" PasswordChar="•"
-                               Text="{Binding Passphrase}" />
+                      <TextBox Grid.Row="1" Grid.Column="0" x:Name="PassphraseBox"
+                               PasswordChar="•" Text="{Binding Passphrase}" />
                       <TextBox Grid.Row="1" Grid.Column="1" PasswordChar="•"
                                Text="{Binding PassphraseConfirm}" />
                     </Grid>

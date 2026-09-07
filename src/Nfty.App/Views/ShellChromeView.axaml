@@ -59,10 +59,13 @@
               <GradientStop Color="{DynamicResource BgAltColor}" Offset="1" />
             </LinearGradientBrush>
           </Border.Background>
-          <!-- 40, not the mockup's 46. The mockup is authored 1:1 and the whole shell renders at
+          <!-- 36, not the mockup's 46. The mockup is authored 1:1 and the whole shell renders at
                ShellViewModel.BaseScale (1.2), so 46 arrives as 55 device pixels and reads heavy.
-               A deliberate, user-directed divergence — see the note in CLAUDE.md. -->
-          <Grid ColumnDefinitions="Auto,*,Auto,Auto" Height="40">
+               A deliberate, user-directed divergence — see the note in CLAUDE.md. Trimmed from 40
+               with the status bar below, to give the page area back some height; the pair keeps its
+               8px difference, which is what stops the window reading as having two footers.
+               ChromeReserveTests measures both and holds the relation. -->
+          <Grid ColumnDefinitions="Auto,*,Auto,Auto" Height="36">
             <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center" Spacing="9">
               <!-- The brand is also the way out of an open document, the way a logo is "home" almost
                    everywhere. Deliberately reusing an element the locked titlebar already has rather
@@ -223,7 +226,10 @@
              steals the hover. -->
         <Panel Grid.Row="2">
         <Border Background="{DynamicResource BgAltBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0">
-          <Grid ColumnDefinitions="*,Auto" Height="34">
+          <!-- 28 + the 1px top border above = 29 drawn. Deliberately shorter than the titlebar:
+               that bar carries the brand, the document name and the window buttons, and a status
+               strip of equal weight makes the frame read as two footers. -->
+          <Grid ColumnDefinitions="*,Auto" Height="28">
             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="14" Margin="16,0" VerticalAlignment="Center">
               <!-- This used to be a hardcoded green "Valid" shown for every book, without anything
                    ever running Validator - the shell asserted a fact it had not checked. It now

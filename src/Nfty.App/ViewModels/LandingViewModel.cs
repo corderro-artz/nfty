@@ -362,6 +362,9 @@ public partial class LandingViewModel : ViewModelBase
     {
         var path = await _picker.OpenFileAsync("Import", ".cbk", ".rcp", ".igt");
         if (path is null) return;
+        // Same reason as OpenRecent's: a Set folder has no extension to resolve.
+        if (SetReader.IsSetFolder(path)) { OpenSetPath(path); return; }
+
         ArchiveKind kind;
         try { kind = Archives.KindOf(path); }
         catch (Exception ex) { ShowError("Could not import", ex.Message); return; }
@@ -538,6 +541,15 @@ public partial class LandingViewModel : ViewModelBase
             ShowError("Missing file", $"“{item.Path}” is no longer there, so it was removed from Recents.");
             return;
         }
+        // BEFORE KindOf, because a Set is the one kind that is also a FOLDER and KindOf resolves an
+        // EXTENSION. `generate --out ./collection` writes a folder, `--pack` is optional, and an
+        // export can be folder-shaped too - so a recent entry can legitimately name a directory.
+        // The guard above already says "a Set may be a folder"; this is the line that makes that
+        // true. Without it the next statement threw "has no extension", which describes the
+        // mechanism rather than the situation, and the entry could never be reopened.
+        // `CommandFactory.Inspect` has done it in this order since the CLI learned to read a Set.
+        if (SetReader.IsSetFolder(item.Path)) { OpenSetPath(item.Path); return; }
+
         ArchiveKind kind;
         try { kind = Archives.KindOf(item.Path); }
         catch (Exception ex) { ShowError("Can't open", ex.Message); return; }

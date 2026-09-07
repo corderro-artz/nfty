@@ -321,6 +321,40 @@ public class DarkModeContrastTests
             DataContext = RuleForm(dialogs),
         }, null);
 
+        // The EXPORT dialog, armed for sealing. That is its riskiest ink by a distance: the seal
+        // panel's caveat and the pinned manifest's consequence lines are both WarningBrush on a
+        // tinted ground, which is the pairing this sweep exists to catch, and the clean state paints
+        // neither. This list is hand-written, unlike the markup-derived sweeps, so a new view does
+        // NOT join it for free - and a screen that is never walked cannot be found unreadable.
+        yield return ("dialog-export", new Views.ExportDialogView
+        {
+            DataContext = new ExportDialogViewModel(VisualCapture.ExportCaptureSet(),
+                new FilePickerService(), new NoopFolderRevealer(), dialogs)
+            {
+                IsSealed = true,
+                Note = "Draft for review",
+            },
+        }, null);
+
+        // The passphrase prompt, on a seal that refuses export - so the sweep meets its "View only"
+        // caveat rather than the permissive sentence, and the sender's note on its tinted panel.
+        yield return ("dialog-passphrase", new Views.PassphraseDialogView
+        {
+            DataContext = new PassphraseDialogViewModel(
+                new Nfty.Core.Publish.SealManifest(
+                    SealId: new string('a', 32), Collection: "Chest Demo", Count: 500,
+                    Note: "Draft for review - please don't redistribute",
+                    Policy: Nfty.Core.Publish.SealPolicy.ViewOnly,
+                    PolicyMac: new string('b', 64),
+                    Kdf: new Nfty.Core.Publish.SealKdf("pbkdf2-sha256", 600000, new string('c', 32)),
+                    Cipher: new Nfty.Core.Publish.SealCipher("aes-256-gcm", 1048576, 1, 100,
+                        new string('d', 8))),
+                dialogs)
+            {
+                Error = "Either the passphrase is wrong, or the file was changed after it was sealed.",
+            },
+        }, null);
+
         yield return ("cookbook-detail-invalid",
             new Views.CookBookDetailView { DataContext = brokenVm }, null);
 

@@ -47,9 +47,21 @@ public partial class ShellViewModel : ViewModelBase
     /// <inheritdoc cref="MinWindowWidth"/>
     public const double MinWindowHeight = 924;
 
-    /// <summary>Titlebar + status bar + the frame's shadow gutter: everything a modal does NOT get
-    /// to use. Named so the minimum above and the test that checks it agree by construction.</summary>
-    public const double ChromeReserve = 40 + 30 + 24;
+    /// <summary>
+    /// Titlebar + status bar + the frame's shadow gutter: everything a modal does NOT get to use.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>These are the heights that are actually drawn, and that has to stay true.</b> This
+    /// read <c>40 + 30 + 24</c> while the status bar was 34 tall with a 1px border on top — so it
+    /// under-reserved by five, and every modal-fit calculation in the app was five pixels
+    /// optimistic. The summary here claimed the minimum and the test that checks it "agree by
+    /// construction"; nothing checked it, and they did not.</para>
+    ///
+    /// <para><c>ChromeReserveTests</c> now measures the rendered chrome and fails with the number
+    /// this should be. It stays a <c>const</c> because <see cref="MinWindowHeight"/> is one and a
+    /// window minimum cannot be computed at runtime — the test is what keeps the literal honest.</para>
+    /// </remarks>
+    public const double ChromeReserve = 36 + 29 + 24;
 
     /// <summary>Applied to the entire shell — chrome included, since "everything is small" was about
     /// the titlebar and status bar too, not just the page.</summary>

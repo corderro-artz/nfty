@@ -124,4 +124,53 @@ public class LandingOpenSetTests
         Assert.IsNotType<ErrorDialogViewModel>(dialogs.Active);
         ((SetBrowserViewModel)nav.Current!).Dispose();
     }
+
+    [AvaloniaFact]
+    public async Task A_recent_entry_naming_a_SET_FOLDER_opens_it()
+    {
+        // FOUND BY DRIVING THE RUNNING APP, and reachable from the running app the moment anything
+        // records a folder - which `export --folder` now writes and the CLI has always written.
+        //
+        // OpenRecent's own existence guard says "a Set may be a folder" and then handed the path
+        // straight to Archives.KindOf, which resolves an EXTENSION. The entry could never be
+        // reopened; it failed with "has no extension; expected one of .cbk, .rcp, .igt, .ktn, .set,
+        // .tin", which describes the mechanism rather than the situation. Every ViewModel test
+        // passed, because none of them put a directory in Recents.
+        var nav = new FakeNav();
+        var dialogs = new FakeDialogs();
+        var recents = new RecentsService(Directory.CreateTempSubdirectory().FullName);
+        var landing = new LandingViewModel(nav, dialogs, new StubPicker(null), recents,
+            new CookBookSession(),
+            book => new ExplorerViewModel(book, nav, dialogs, new ImageBridge(),
+                ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs),
+                new CookBookSession(), new FilePickerService(),
+                ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs),
+                new StatusService()),
+            s => new SetBrowserViewModel(s), (_, _, _) => null!);
+
+        var folder = CookTinySet();
+        landing.OpenRecentCommand.Execute(
+            new Models.RecentItem("Tiny", "set · 2 assets", folder, false));
+        await Task.Yield();
+
+        Assert.Null(dialogs.Active);                       // no "Can't open"
+        Assert.IsType<SetBrowserViewModel>(nav.Current);
+    }
+
+    [AvaloniaFact]
+    public void An_ordinary_folder_in_recents_still_reports_that_it_is_not_a_set()
+    {
+        // The other half: IsSetFolder asks for set.json rather than merely for a directory, so a
+        // folder that is not a Set falls through to the same message it always did instead of being
+        // guessed at - the rule the extension table follows.
+        var nav = new FakeNav();
+        var dialogs = new FakeDialogs();
+        var landing = MakeLanding(nav, dialogs, new StubPicker(null));
+
+        landing.OpenRecentCommand.Execute(new Models.RecentItem("Nope", "?",
+            Directory.CreateTempSubdirectory().FullName, false));
+
+        Assert.IsType<ErrorDialogViewModel>(dialogs.Active);
+        Assert.Null(nav.Current);
+    }
 }

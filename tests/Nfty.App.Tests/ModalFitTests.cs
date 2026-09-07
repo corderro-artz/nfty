@@ -94,6 +94,36 @@ public class ModalFitTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    // The export dialog is deliberately absent from this file. It is the one ADAPTIVE card in the
+    // app - it takes the height it is given rather than demanding one - so "does the window fit the
+    // card" is not a question about it, and a measurement here would be asserting a number that no
+    // longer describes anything. `ExportDialogLayoutTests` covers it with the assertions that do
+    // apply: the card never exceeds its host, the passphrase boxes stay on screen when the form is
+    // taller than the window, and the manifest and footer are outside the scroller entirely.
+
+    [AvaloniaFact]
+    public void The_passphrase_prompt_fits_the_smallest_window()
+    {
+        // Small, but it carries a note written by whoever sealed the file - text this app does not
+        // control the length of. Measured with a long one, since a card sized around a short note is
+        // a card that fits until somebody writes a sentence.
+        var header = new Nfty.Core.Publish.SealManifest(
+            SealId: new string('a', 32), Collection: "Chest Demo", Count: 500,
+            Note: "Draft for review - please do not redistribute this, or any part of it, to anyone "
+                + "outside the studio until the drop is announced.",
+            Policy: Nfty.Core.Publish.SealPolicy.ViewOnly, PolicyMac: new string('b', 64),
+            Kdf: new Nfty.Core.Publish.SealKdf("pbkdf2-sha256", 600000, new string('c', 32)),
+            Cipher: new Nfty.Core.Publish.SealCipher("aes-256-gcm", 1048576, 1, 100, new string('d', 8)));
+        var size = Measure(new Views.PassphraseDialogView
+        {
+            DataContext = new PassphraseDialogViewModel(header, new FakeDialogs()),
+        });
+
+        Fits("The passphrase prompt",
+            size.Width * ShellViewModel.BaseScale + 24,
+            size.Height * ShellViewModel.BaseScale + Chrome);
+    }
+
     /// <summary>
     /// A modal's footer band rounds its own bottom corners.
     /// </summary>

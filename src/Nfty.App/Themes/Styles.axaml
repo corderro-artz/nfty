@@ -708,9 +708,31 @@
        and its manifest lines are mono paths; taller because the preset row, the two columns, the
        seal panel and the manifest are four bands rather than one form. Still well inside
        ShellViewModel.MinWindowWidth/Height, which are set by the help sheet and the inspector. -->
+  <!--
+    The EXPORT modal is the only ADAPTIVE card in the app, and the difference is worth stating.
+
+    Every other modal is a fixed size that either fits the window or is cut off, which is why
+    ShellViewModel's minimum is derived from the tallest of them. This one takes the height it is
+    GIVEN: Stretch plus a gutter, so at the smallest allowed window it is exactly the page area and
+    at a full-screened one it grows to MaxHeight. Its form scrolls inside that, while the manifest
+    and the footer sit outside the scroller and are therefore always on screen.
+
+    That is the right shape for this card specifically because its content VARIES - arming the seal
+    adds a passphrase pair, a note and a caveat, about 85px more than the minimum window can show.
+    A fixed height would have to be the sealed height (too tall for the window) or the plain height
+    (which hides the passphrase box). Neither is a size; the answer is not to have one.
+
+    Fixed at 700 wide, though: the two option columns and the four preset tiles are laid out for
+    that, and a card that reflowed its columns as the window moved would be a different screen at
+    every size. Height is what the content needs to negotiate; width is a decision.
+
+    MaxHeight caps the growth so a 4K window does not produce a 1400px-tall card of mostly nothing.
+  -->
   <Style Selector="Border.modal.export">
     <Setter Property="Width" Value="700" />
-    <Setter Property="MaxHeight" Value="700" />
+    <Setter Property="VerticalAlignment" Value="Stretch" />
+    <Setter Property="Margin" Value="0,10" />
+    <Setter Property="MaxHeight" Value="900" />
   </Style>
 
   <!-- One preset tile. A starting point, not a mode: the lit tile is pushed from
