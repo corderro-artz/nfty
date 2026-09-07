@@ -13,3 +13,4 @@ tests/fixtures/** -text
 *.igt -text
 *.set -text
 *.ktn -text
+*.tin -text
