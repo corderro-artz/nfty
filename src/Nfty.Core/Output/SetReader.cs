@@ -59,7 +59,7 @@ public static class SetReader
     public static bool IsSetFolder(string path) =>
         !string.IsNullOrWhiteSpace(path)
         && Directory.Exists(path)
-        && File.Exists(Path.Combine(path, "set.json"));
+        && File.Exists(SetLayout.ManifestPath(path));
 
     /// <summary>Reads a Set.</summary>
     /// <param name="path">A Set folder, or a <c>.set</c> archive.</param>
@@ -78,15 +78,15 @@ public static class SetReader
 
         try
         {
-            string setJson = Path.Combine(dir, "set.json");
+            string setJson = SetLayout.ManifestPath(dir);
             if (!File.Exists(setJson))
                 throw new FileNotFoundException($"Not a cooked Set — 'set.json' was not found in {path}.");
 
             var manifest = JsonSerializer.Deserialize<SetManifest>(File.ReadAllText(setJson), Json.Options)
                 ?? throw new InvalidOperationException($"Could not read the Set manifest in {path}.");
 
-            string nftyDir = Path.Combine(dir, "nfty");
-            string imagesDir = Path.Combine(dir, "images");
+            string nftyDir = Path.Combine(dir, SetLayout.NftyDir);
+            string imagesDir = Path.Combine(dir, SetLayout.ImagesDir);
             var items = new List<SetItem>();
             if (Directory.Exists(nftyDir))
             {

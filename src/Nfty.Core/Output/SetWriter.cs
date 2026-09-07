@@ -139,7 +139,7 @@ public static class SetWriter
     {
         string? sha = RecordedShaAt(outDir);
 
-        var nftyDir = Path.Combine(outDir, "nfty");
+        var nftyDir = Path.Combine(outDir, SetLayout.NftyDir);
         if (!Directory.Exists(nftyDir)) return new ExistingSet(Array.Empty<string>(), 1, sha);
 
         var dnas = new List<string>();
@@ -166,7 +166,7 @@ public static class SetWriter
             ? ParseRecordedCookbookSha(await File.ReadAllTextAsync(setJson, cancellationToken))
             : null;   // the awaiting twin of RecordedShaAt; same rule, same best-effort parse
 
-        var nftyDir = Path.Combine(outDir, "nfty");
+        var nftyDir = Path.Combine(outDir, SetLayout.NftyDir);
         if (!Directory.Exists(nftyDir)) return new ExistingSet(Array.Empty<string>(), 1, sha);
 
         var dnas = new List<string>();
@@ -220,7 +220,7 @@ public static class SetWriter
     }
 
     /// <summary>Where a Set folder keeps its manifest.</summary>
-    private static string SetJsonPath(string outDir) => Path.Combine(outDir, "set.json");
+    private static string SetJsonPath(string outDir) => SetLayout.ManifestPath(outDir);
 
     /// <summary>
     /// The source-archive hash a Set recorded when it was cooked, or null when it did not record one.
@@ -268,9 +268,9 @@ public static class SetWriter
     private static Layout Prepare(string outDir)
     {
         var layout = new Layout(outDir,
-            Path.Combine(outDir, "images"),
-            Path.Combine(outDir, "metadata"),
-            Path.Combine(outDir, "nfty"));
+            Path.Combine(outDir, SetLayout.ImagesDir),
+            Path.Combine(outDir, SetLayout.MetadataDir),
+            Path.Combine(outDir, SetLayout.NftyDir));
 
         Directory.CreateDirectory(layout.ImagesDir);
         Directory.CreateDirectory(layout.MetaDir);
@@ -447,22 +447,30 @@ public static class SetWriter
     /// <c>images</c> folder it packs.
     /// </summary>
     /// <remarks>
-    /// <para><b>It used to land one level UP</b> — <c>Path.TrimEndingDirectorySeparator(outDir) +
+    /// <para><b>It used to land one level UP</b> &#8212; <c>Path.TrimEndingDirectorySeparator(outDir) +
     /// ".set"</c>, a sibling of the folder. That put a file the user did not name in a folder the
     /// user did not choose: cook into <c>Documents/chests</c> and the archive appeared in
     /// <c>Documents</c>. Everything else a cook writes goes in the chosen folder, and the one output
     /// that left it was the one output most likely to be handed to somebody else.</para>
     ///
-    /// <para><b>Packing into the folder being packed needs two guards</b>, and neither is optional.
-    /// The file list is taken BEFORE the archive is created, so the archive cannot contain itself
-    /// mid-write. And every top-level <c>.set</c> is excluded, not merely the one about to be
-    /// written: cooking twice into one folder (which is exactly what extend does) would otherwise
-    /// nest the first archive inside the second and double the size on every run. A Set folder has
-    /// no business holding a packed Set other than its own.</para>
+    /// <para><b>It packs what a Set IS, not what the folder HOLDS</b>, and that distinction is the
+    /// whole of <see cref="SetLayout"/>. This enumerated every file under the output folder and
+    /// merely excluded a top-level <c>.set</c> &#8212; which is unbounded in the wrong direction. The
+    /// output folder belongs to the user: cook into a Kitchen, whose entire purpose is to hold loose
+    /// <c>.cbk</c>, <c>.rcp</c> and <c>.igt</c> parts, and the archive swallowed the author's
+    /// complete source, verbatim, inside the file they were about to hand a buyer. Nothing in the
+    /// product said so, because the folder on disk still looked right and the reader still found
+    /// <c>set.json</c> at the top.</para>
+    ///
+    /// <para>The old exclusion is now unreachable rather than merely redundant, so it is gone: a
+    /// <c>.set</c> sits at the top level of the folder, and the top level contributes exactly one
+    /// file to the include list &#8212; <c>set.json</c>, by name. The case it was written for
+    /// (cooking twice into one folder, which is what extend does) is still covered, and still
+    /// tested.</para>
     ///
     /// <para>Entries are added in <see cref="StringComparer.Ordinal"/> order rather than in whatever
-    /// order the filesystem enumerates, so the same Set packs to the same archive on any machine —
-    /// the rule every other sort that reaches an output file already follows.</para>
+    /// order the filesystem enumerates, so the same Set packs to the same archive on any machine
+    /// &#8212; the rule every other sort that reaches an output file already follows.</para>
     /// </remarks>
     private static void Pack(string outDir)
     {
@@ -473,22 +481,14 @@ public static class SetWriter
         string leaf = Path.GetFileName(dir);
         string archivePath = Path.Combine(dir, (leaf.Length > 0 ? leaf : "collection") + ".set");
 
-        var entries = Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories)
-            .Where(p => !IsTopLevelSetArchive(dir, p))
-            .OrderBy(p => p, StringComparer.Ordinal)
-            .ToList();
+        // Taken BEFORE the archive is created, so it cannot contain itself mid-write.
+        var entries = SetLayout.FilesIn(dir);
 
         if (File.Exists(archivePath)) File.Delete(archivePath);
         using var zip = ZipFile.Open(archivePath, ZipArchiveMode.Create);
         foreach (var file in entries)
             zip.CreateEntryFromFile(file, Path.GetRelativePath(dir, file).Replace(Path.DirectorySeparatorChar, '/'));
     }
-
-    /// <summary>Whether a file is a <c>.set</c> archive sitting directly in the Set folder — the
-    /// thing <see cref="Pack"/> must never put inside another one.</summary>
-    private static bool IsTopLevelSetArchive(string dir, string path) =>
-        string.Equals(Path.GetExtension(path), ".set", StringComparison.OrdinalIgnoreCase)
-        && string.Equals(Path.GetDirectoryName(path), dir, StringComparison.OrdinalIgnoreCase);
 
     private static string Serialize<T>(T value) => JsonSerializer.Serialize(value, Json.Options);
 

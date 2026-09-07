@@ -315,6 +315,56 @@ public class SetWriterTests
     }
 
     [Fact]
+    public void Packing_does_not_swallow_the_authors_source_files()
+    {
+        // THE defect the include list exists for, and it was silent from every angle: the folder on
+        // disk still looked right and the reader still found set.json at the top of the archive.
+        // A Set folder is a folder the USER chose, and a perfectly ordinary choice is the Kitchen
+        // they work out of - a folder whose entire purpose is to hold loose .cbk/.rcp/.igt parts.
+        // Packing enumerated every file beneath it, so the archive handed to a buyer carried the
+        // complete source that made the collection.
+        var dir = Path.Combine(Directory.CreateTempSubdirectory().FullName, "out");
+        Directory.CreateDirectory(dir);
+        WriteCookBook(dir);                                          // a real .cbk beside the output
+        File.WriteAllText(Path.Combine(dir, "notes.txt"), "private");
+        Directory.CreateDirectory(Path.Combine(dir, "art"));
+        File.WriteAllText(Path.Combine(dir, "art", "body.png"), "source pixel art");
+
+        SetWriter.Write(MakeSet(), dir, pack: true);
+
+        using var zip = System.IO.Compression.ZipFile.OpenRead(Path.Combine(dir, "out.set"));
+        var names = zip.Entries.Select(e => e.FullName).ToList();
+        Assert.DoesNotContain("VaporPets.cbk", names);
+        Assert.DoesNotContain("notes.txt", names);
+        Assert.DoesNotContain(names, n => n.StartsWith("art/", StringComparison.Ordinal));
+
+        // ...and it is still a whole Set, which is the half a naive filter would break.
+        Assert.Contains("set.json", names);
+        Assert.Contains("images/0001.png", names);
+        Assert.Contains("metadata/0001.json", names);
+        Assert.Contains("nfty/0001.json", names);
+    }
+
+    [Fact]
+    public void A_packed_archive_holds_only_the_parts_a_set_is_made_of()
+    {
+        // Stated as the RULE rather than as a list of files that happened to be excluded, and read
+        // off SetLayout rather than restated here - so a part added to the format joins this test
+        // for free, and a part added to the ARCHIVE without joining SetLayout fails it.
+        var dir = Path.Combine(Directory.CreateTempSubdirectory().FullName, "out");
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, "stray.json"), "{}");
+        SetWriter.Write(MakeSet(), dir, pack: true);
+
+        using var zip = System.IO.Compression.ZipFile.OpenRead(Path.Combine(dir, "out.set"));
+        Assert.NotEmpty(zip.Entries);
+        Assert.All(zip.Entries, e => Assert.True(
+            e.FullName == SetLayout.ManifestFile
+            || SetLayout.Directories.Any(d => e.FullName.StartsWith(d + "/", StringComparison.Ordinal)),
+            $"'{e.FullName}' is in the archive but is not part of a Set."));
+    }
+
+    [Fact]
     public void Extend_preserves_existing_and_appends_new()
     {
         LoadedIngredient Ing(string id, params string[] vids) => new()
