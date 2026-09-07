@@ -1,0 +1,49 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             x:Class="Nfty.App.Views.PassphraseDialogView"
+             x:DataType="vm:PassphraseDialogViewModel">
+  <Border Classes="modal small">
+    <Grid RowDefinitions="Auto,Auto">
+      <Border Grid.Row="0" Classes="modal-body tight">
+        <StackPanel Spacing="11">
+          <StackPanel Classes="plabel-row">
+            <Ellipse Classes="kdot" />
+            <TextBlock Text="SEALED" Classes="slbl" />
+          </StackPanel>
+          <TextBlock Text="{Binding Collection}" Classes="m-h" />
+          <TextBlock Classes="m-sub">
+            <Run Text="{Binding Count}" /><Run Text=" assets" />
+          </TextBlock>
+
+          <!-- The sender's own words, shown before the passphrase is asked for. This is why the
+               seal's header sits outside the encryption at all. -->
+          <Border Classes="sealbox" IsVisible="{Binding HasNote}">
+            <TextBlock Text="{Binding Note}" TextWrapping="Wrap" Classes="m-sub" />
+          </Border>
+
+          <TextBlock Text="{Binding Policy}" Classes="caveat" />
+
+          <StackPanel Spacing="4">
+            <TextBlock Text="Passphrase" Classes="slbl" />
+            <TextBox PasswordChar="•" Text="{Binding Passphrase}" />
+          </StackPanel>
+
+          <TextBlock Classes="caveat" Text="{Binding Error}"
+                     IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Row="1" Classes="modal-foot">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0" Classes="keyhint" VerticalAlignment="Center"
+                     Text="The sender has the passphrase" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+            <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="tbtn" />
+            <Button Content="Open" Command="{Binding OpenCommand}" Classes="accent" />
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
+  </Border>
+</UserControl>

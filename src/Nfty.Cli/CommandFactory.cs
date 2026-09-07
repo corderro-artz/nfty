@@ -43,6 +43,7 @@ public static partial class CommandFactory
         root.Subcommands.Add(Preview());
         root.Subcommands.Add(Generate());
         root.Subcommands.Add(Extend());
+        root.Subcommands.Add(Export());
         root.Subcommands.Add(NewGroup());
         root.Subcommands.Add(AddGroup());
         root.Subcommands.Add(MoveGroup());
@@ -84,7 +85,16 @@ public static partial class CommandFactory
 
     private static Command Inspect()
     {
-        var path = new Argument<string>("file") { Description = "Path to a .cbk, .rcp, .igt, .ktn or .set file." };
+        var path = new Argument<string>("file")
+        {
+            Description = "Path to a .cbk, .rcp, .igt, .ktn, .set or .tin file.",
+        };
+        var key = new Option<bool>("--key")
+        {
+            Description = "Ask for the passphrase and open a sealed .tin. Without it, a sealed "
+                + "export still prints its header - what it holds and who it was for.",
+        };
+        var keyEnv = KeyEnvOption();
         var voxel = new Option<bool>("--voxel")
         {
             Description = "Also report voxel readiness: which variants carry PARTIAL alpha, which a "
@@ -99,12 +109,14 @@ public static partial class CommandFactory
                 + "with the positions `remove rule` addresses them by. Those ids — not the display names — are "
                 + "what --recipe and --variant expect elsewhere on this command line, so inspect "
                 + "is how you find them. Given a Kitchen, lists what that workspace holds; given a "
-                + "cooked Set, reports what that run actually produced.")
-        { path, voxel };
+                + "cooked Set, reports what that run actually produced; given a sealed export, says "
+                + "what it holds, and — with the passphrase — what is inside it.")
+        { path, voxel, key, keyEnv };
         cmd.SetAction(parse =>
         {
             string file = parse.GetValue(path)!;
             bool wantVoxel = parse.GetValue(voxel);
+            string? envName = parse.GetValue(keyEnv);
 
             // Before KindOf, because a Set is the one kind that is also a FOLDER and KindOf resolves
             // an extension. `generate --out ./collection` writes a folder and `--pack` is optional,
@@ -153,6 +165,16 @@ public static partial class CommandFactory
                 // have been handed to you by somebody else — which is exactly why it needs a way to
                 // be looked at. See the Set arm's note in ArchiveKind.
                 case ArchiveKind.Set: PrintSet(file, wantVoxel); break;
+                // The header prints with no passphrase at all, which is the whole reason it is
+                // outside the encryption: a recipient who has not found the key yet is still told
+                // what they are holding, rather than meeting a parse failure.
+                case ArchiveKind.Sealed:
+                    if (wantVoxel)
+                        throw new InvalidOperationException(
+                            "--voxel scans the ARTWORK a book is built from, and a sealed export "
+                            + "holds finished assets. Run it on the CookBook that produced them.");
+                    PrintSealed(file, envName, parse.GetValue(key) || envName is not null);
+                    break;
                 default:
                     // Archives.KindOf already rejects an unknown extension before we get here,
                     // so this only guards against a future ArchiveKind case added without a

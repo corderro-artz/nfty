@@ -6,6 +6,7 @@ using Nfty.Core.Demo;
 using Nfty.Core.Formats;
 using Nfty.Core.Model;
 using Nfty.Core.Output;
+using Nfty.Core.Publish;
 
 namespace Nfty.App.ViewModels;
 
@@ -374,6 +375,7 @@ public partial class LandingViewModel : ViewModelBase
         // app-wide session state (the workspace every loose save defaults into), and a button
         // labelled Import must not do that behind the user's back.
         if (kind == ArchiveKind.Set) { OpenSetPath(path); return; }
+        if (kind == ArchiveKind.Sealed) { _ = OpenSealedAsync(path); return; }
 
         // REACHABLE, and it used to lie about itself. There are FOUR known kinds, not three: the
         // picker is filtered to .cbk/.rcp/.igt but a typed filename is not, and Archives.KindOf
@@ -443,8 +445,18 @@ public partial class LandingViewModel : ViewModelBase
     [RelayCommand]
     private async Task OpenSet()
     {
-        var path = await _picker.OpenFileAsync("Open a cooked .set", ".set");
+        // Both, from one control. A .tin is a Set somebody sent you, and making the recipient
+        // discover a second "Open sealed export…" button before they can read the file in their
+        // downloads folder would be an obstacle with nothing behind it.
+        var path = await _picker.OpenFileAsync("Open a cooked Set",
+            Archives.SetExtension, Archives.SealedExtension);
         if (path is null) return;
+        if (string.Equals(Path.GetExtension(path), Archives.SealedExtension,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            _ = OpenSealedAsync(path);
+            return;
+        }
         OpenSetPath(path);
     }
 
@@ -459,6 +471,53 @@ public partial class LandingViewModel : ViewModelBase
         }
         _nav.To(_setBrowserFactory(set));
         RecordRecent(new RecentItem(set.Manifest.Name, $"set · {set.Manifest.Count} assets", path, false));
+    }
+
+    /// <summary>
+    /// Opens a sealed export: shows what it is, asks for the passphrase, then browses what is inside.
+    /// </summary>
+    /// <remarks>
+    /// <para>The header goes up BEFORE the passphrase is asked for, which is the whole reason it
+    /// sits outside the encryption — a recipient holding a file they cannot open is told what it is
+    /// and who sent it, rather than meeting a bare password box.</para>
+    ///
+    /// <para>A wrong passphrase re-asks rather than closing, because it is the expected outcome the
+    /// first time and starting over from the file picker for a typo is a punishment. The message is
+    /// the engine's own, which says both things it could be: nothing can tell a wrong passphrase
+    /// from an altered file, and neither should pretend to.</para>
+    /// </remarks>
+    /// <param name="path">The sealed export.</param>
+    private async Task OpenSealedAsync(string path)
+    {
+        SealManifest header;
+        try { header = Seal.Peek(path); }
+        catch (Exception ex) { ShowError("Could not read the sealed export", ex.Message); return; }
+
+        var prompt = new PassphraseDialogViewModel(header, _dialogs);
+        while (true)
+        {
+            var passphrase = await _dialogs.ShowAsync<string>(prompt);
+            if (string.IsNullOrEmpty(passphrase)) return;      // canceled
+
+            try
+            {
+                var set = SealedSetReader.Open(path, passphrase);
+                _nav.To(_setBrowserFactory(set));
+                RecordRecent(new RecentItem(set.Manifest.Name,
+                    $"sealed · {set.Manifest.Count} assets", path, false));
+                return;
+            }
+            catch (SealedSetException ex)
+            {
+                prompt.Error = ex.Message;
+                prompt.Passphrase = "";
+            }
+            catch (Exception ex)
+            {
+                ShowError("Could not open the sealed export", ex.Message);
+                return;
+            }
+        }
     }
 
     private void RecordRecent(RecentItem item)
@@ -491,6 +550,7 @@ public partial class LandingViewModel : ViewModelBase
             // the kinds Archives.KindOf knew. That is the second copy of the mapping the TryKindOf
             // note warns about, and it is gone now that the enum names every archive this app opens.
             case ArchiveKind.Set: OpenSetPath(item.Path); return;
+            case ArchiveKind.Sealed: _ = OpenSealedAsync(item.Path); return;
         }
     }
 

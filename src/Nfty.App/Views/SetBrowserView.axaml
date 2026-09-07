@@ -35,7 +35,8 @@
          That is the whole fix: "Seed launch" read as two unrelated words and told a first-time user
          nothing, while "SEED launch" names the field and then gives it. The tooltip carries the one
          sentence that makes a seed worth caring about. -->
-    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="9" Margin="0,0,0,14">
+    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,14">
+    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
       <TextBlock Classes="mono" FontSize="17" FontWeight="Bold" Text="{Binding Name}" VerticalAlignment="Center" />
       <Border Classes="idchip" ToolTip.Tip="How many assets this Set holds">
         <StackPanel Orientation="Horizontal" Spacing="6">
@@ -56,7 +57,27 @@
           <TextBlock Classes="cvl" Text="{Binding RecipeCount}" />
         </StackPanel>
       </Border>
+      <!-- Only on a Set opened from a sealed export. It is the one chip here that describes what
+           you may DO rather than what the collection is, which is why it carries the sealer's own
+           note on its tooltip: a recipient needs to know what they were sent and on what terms. -->
+      <Border Classes="idchip" IsVisible="{Binding IsSealed}"
+              ToolTip.Tip="{Binding SealNote}">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <TextBlock Classes="ck" Text="SEALED" />
+          <TextBlock Classes="cvl" Text="view only" />
+        </StackPanel>
+      </Border>
     </StackPanel>
+
+    <Button Grid.Column="1" Classes="tbtn" Command="{Binding ExportCommand}"
+            VerticalAlignment="Center"
+            ToolTip.Tip="Choose what leaves this machine: the art, either metadata set, the source CookBook - and whether to seal it.">
+      <StackPanel Orientation="Horizontal" Spacing="7">
+        <Path Classes="ico xs" Data="{StaticResource IconDownload}" />
+        <TextBlock Text="Export…" />
+      </StackPanel>
+    </Button>
+    </Grid>
 
     <Grid Grid.Row="1" ColumnDefinitions="*,300">
       <!-- Main: virtualized thumbnail grid (ListBox virtualizes per row; see RowChunkConverter's

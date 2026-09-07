@@ -13,8 +13,10 @@ collection/
   collection.set                               with Pack ticked: all of the above, zipped
 ```
 
-The archive never contains itself, or a `.set` from an earlier cook into the same folder -- so
-cooking again, or extending, replaces it rather than nesting the old one inside the new.
+**The archive holds those four things and nothing else.** Not whatever else is in the folder: cook
+into a Kitchen, or into a folder where you keep your `.cbk`, and the archive still carries only the
+Set. It never contains itself, or a `.set` from an earlier cook, so cooking again -- or extending --
+replaces it rather than nesting the old one inside the new.
 
 `nfty inspect` reads either form -- the folder or the `.set` -- and reports what the run produced:
 its seed, the CookBook hash behind it, whether unique DNA was required, and the trait percentages the
@@ -22,6 +24,24 @@ collection actually came out with. See [Command line](cli.md).
 
 Two metadata files per asset, on purpose: one that marketplaces understand and one that keeps
 everything nfty knows. Neither is a subset of the other.
+
+## Exports are Sets too, minus what you left out
+
+[Exporting](../how-to/share-a-collection.md) writes the same shape with parts removed -- a
+marketplace export has no `nfty/`, and one for a collaborator has a `.cbk` beside `set.json`.
+`set.json` is never optional: it is what makes the result a Set rather than a folder of pictures.
+
+A **sealed** export is the exception. It is a `.tin`, and its shape is different:
+
+```
+Chest Demo.tin
+  seal.json       plaintext: the collection, the count, the sender's note, the policy
+  payload.bin     the whole Set above, encrypted
+```
+
+`nfty inspect` reads `seal.json` without any passphrase, so a recipient is told what they are
+holding. Everything else needs the key. See
+[What sealing does and does not do](../understand/sealing.md).
 
 ## `metadata/NNNN.json`
 

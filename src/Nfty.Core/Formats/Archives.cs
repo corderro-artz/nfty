@@ -1,6 +1,6 @@
 namespace Nfty.Core.Formats;
 
-/// <summary>Which domain archive a file holds, as declared by its extension.</summary>
+/// <summary>Which archive a file holds, as declared by its extension.</summary>
 public enum ArchiveKind
 {
     /// <summary><c>.cbk</c> — an uncooked Set: the container of Recipes.</summary>
@@ -29,10 +29,23 @@ public enum ArchiveKind
     /// exists to prevent.
     /// </remarks>
     Set,
+
+    /// <summary>
+    /// <c>.tin</c> — a sealed export: a whole Set encrypted under a passphrase, marked view-only.
+    /// </summary>
+    /// <remarks>
+    /// Its own extension rather than a <c>.set</c> whose bytes happen to be ciphertext. A recipient
+    /// double-clicking it, and any tool downstream that ingests <c>.set</c> files, both have to be
+    /// told before they open it — a file that announces what it is only after failing to parse is a
+    /// worse answer than one whose name says so. It also gives <c>inspect</c> somewhere to route: a
+    /// sealed archive answers a different set of questions from an open one, and answers most of
+    /// them only with a key.
+    /// </remarks>
+    Sealed,
 }
 
 /// <summary>
-/// Dispatch over the three archive types by extension, so callers that accept "any nfty file"
+/// Dispatch over the archive types by extension, so callers that accept "any nfty file"
 /// (the CLI's <c>inspect</c>, a GUI open dialog) resolve the kind in one place.
 /// </summary>
 public static class Archives
@@ -47,6 +60,8 @@ public static class Archives
     public const string KitchenExtension = ".ktn";
     /// <summary>The cooked Set archive extension.</summary>
     public const string SetExtension = ".set";
+    /// <summary>The sealed export extension.</summary>
+    public const string SealedExtension = ".tin";
 
     /// <summary>
     /// The archive kind for <paramref name="path"/>. An unknown extension is an error rather
@@ -69,7 +84,7 @@ public static class Archives
     /// </summary>
     /// <param name="path">The path to classify.</param>
     /// <param name="kind">The kind, when the extension names one.</param>
-    /// <returns>True when the extension is one of the four.</returns>
+    /// <returns>True when the extension names one of the kinds.</returns>
     public static bool TryKindOf(string path, out ArchiveKind kind)
     {
         switch (Path.GetExtension(path).ToLowerInvariant())
@@ -79,11 +94,12 @@ public static class Archives
             case IngredientExtension: kind = ArchiveKind.Ingredient; return true;
             case KitchenExtension: kind = ArchiveKind.Kitchen; return true;
             case SetExtension: kind = ArchiveKind.Set; return true;
+            case SealedExtension: kind = ArchiveKind.Sealed; return true;
             default: kind = default; return false;
         }
     }
 
     private static string Expected =>
         $"expected one of {CookBookExtension}, {RecipeExtension}, {IngredientExtension}, "
-        + $"{KitchenExtension}, {SetExtension}.";
+        + $"{KitchenExtension}, {SetExtension}, {SealedExtension}.";
 }

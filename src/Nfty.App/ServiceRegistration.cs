@@ -120,7 +120,7 @@ public static class ServiceRegistration
 
         services.AddSingleton<Func<LoadedSet, SetBrowserViewModel>>(sp => set => new SetBrowserViewModel(
             set, sp.GetRequiredService<IFilePickerService>(), sp.GetRequiredService<IDialogService>(),
-            sp.GetRequiredService<IStatusService>()));
+            sp.GetRequiredService<IStatusService>(), sp.GetRequiredService<IFolderRevealer>()));
 
         // Further VM registrations are added incrementally by the task that creates each
         // ViewModel (see Tasks 12-13).

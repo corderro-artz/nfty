@@ -9,11 +9,21 @@ nothing is hidden.
 | `.cbk` | CookBook | `manifest.json` + `recipes/*.rcp` |
 | `.rcp` | Recipe | `manifest.json` + `ingredients/*.igt` |
 | `.igt` | Ingredient | `manifest.json` + one PNG per variant |
-| `.set` | A cooked Set | The whole output folder, packed |
+| `.set` | A cooked Set | `set.json` + `images/`, `metadata/`, `nfty/` |
 | `.ktn` | Kitchen | `manifest.json` only -- an identity, nothing else |
+| `.tin` | A sealed export | `seal.json` in the clear + an encrypted `.set` |
 
 The nesting mirrors the domain: a CookBook archive literally contains Recipe archives, which contain
 Ingredient archives, which contain your PNGs.
+
+## The one you cannot read with an unzip tool
+
+A `.tin` is still a ZIP, and `seal.json` inside it is plain text -- deliberately, so a recipient can
+be told what they are holding. `payload.bin` beside it is a whole `.set` encrypted under a
+passphrase, and no tool opens that without the passphrase. It has its own extension rather than
+being a `.set` full of ciphertext, because a file whose name says what it is beats one that
+announces itself by failing to parse. See
+[What sealing does and does not do](../understand/sealing.md).
 
 ## Looking inside one
 

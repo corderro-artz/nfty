@@ -783,6 +783,76 @@ public class VisualCapture
     /// is authored against. The shell itself renders at ShellViewModel.BaseScale, so a frame of the
     /// shell must be captured at the scaled window size (1416x864) or the same layout arrives in a
     /// window a fifth too small and correct panes look clipped.</summary>
+    /// <summary>
+    /// The export dialog, in both themes and in both of its states — closed, and armed for sealing
+    /// with its passphrase fields open and its honest-limits sentence showing.
+    /// </summary>
+    /// <remarks>
+    /// Both states are captured because the seal panel is the one place in this app that uses
+    /// <c>IsVisible</c> on something with content below it, under the reveal exception. What a frame
+    /// has to show is that opening it pushes the manifest down and moves nothing else — which is
+    /// invisible in the markup, where the panel plainly has two states.
+    /// </remarks>
+    [AvaloniaFact]
+    public void Capture_export_dialog()
+    {
+        if (Dir is null) return;   // inert unless explicitly capturing
+
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            var key = variant.Key.ToString()!.ToLowerInvariant();
+
+            var plain = new ExportDialogViewModel(ExportCaptureSet(), new FilePickerService(),
+                new NoopFolderRevealer(), new FakeDialogs());
+            Capture(new Views.ExportDialogView { DataContext = plain }, variant,
+                $"export-{key}.png", width: 1180, height: 780);
+
+            var sealing = new ExportDialogViewModel(ExportCaptureSet(), new FilePickerService(),
+                new NoopFolderRevealer(), new FakeDialogs())
+            {
+                IsSealed = true,
+                Passphrase = "correct-horse-battery",
+                PassphraseConfirm = "correct-horse-battery",
+                Note = "Draft for review - please don't redistribute",
+            };
+            Capture(new Views.ExportDialogView { DataContext = sealing }, variant,
+                $"export-sealed-{key}.png", width: 1180, height: 780);
+        }
+    }
+
+    /// <summary>A real cooked Set on disk, so the manifest lines are real counts and real sizes
+    /// rather than a fixture's idea of them.</summary>
+    internal static string ExportCaptureSet()
+    {
+        var dir = Path.Combine(Directory.CreateTempSubdirectory("nfty-cap-").FullName, "Chest Demo");
+        var ids = new[] { "a", "b", "c", "d" };
+        var ing = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("bg", "Background", LayerKind.Custom, null,
+                ids.Select(v => new Variant(v, v.ToUpperInvariant(), 1)).ToList()),
+            VariantImages = ids.ToDictionary(v => v,
+                v => new SixLabors.ImageSharp.Image<Rgba32>(8, 8, new Rgba32((byte)v[0], 40, 60, 255))),
+        };
+        using var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "Chest Demo", new Dimensions(8, 8),
+                new Collection("Chest Demo", "d", "CHST"),
+                new Dictionary<string, double> { ["chest"] = 100 }),
+            Recipes = new[]
+            {
+                new LoadedRecipe
+                {
+                    Manifest = new RecipeManifest("chest", "Chest", new[] { "bg" },
+                        Array.Empty<IncompatibilityRule>()),
+                    Ingredients = new[] { ing },
+                },
+            },
+        };
+        using var set = Generator.Generate(book, new GenerateOptions(4, "launch"));
+        SetWriter.Write(set, dir, pack: false);
+        return dir;
+    }
+
     private static void Capture(Control view, ThemeVariant variant, string fileName,
         double width = 1180, double height = 720)
     {

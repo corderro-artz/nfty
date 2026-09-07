@@ -43,4 +43,6 @@ around; if you do not, start with [Get started](../get-started/index.md).
 
     [Add more assets to a finished set](more-assets.md)
 
+    [Share a collection with somebody](share-a-collection.md)
+
 </div>

@@ -21,16 +21,41 @@ public record SetItem(int Number, string ImagePath, string Dna, string Recipe,
 
 /// <summary>A cooked Set read from disk for browsing: the manifest + per-item metadata and image
 /// paths (images are NOT decoded here). If read from a .set archive, owns the extracted temp dir.</summary>
-public sealed class LoadedSet : IDisposable
+/// <remarks>
+/// Not sealed, so <c>Publish.SealedSet</c> can BE one while also carrying the seal it came out of.
+/// A sealed Set is a loaded Set with provenance, and every screen that shows one has to show what it
+/// is permitted to do with it — a policy handed back beside the data, for the caller to remember to
+/// carry, is a policy that eventually arrives nowhere. There is no protected state and
+/// <see cref="Dispose"/> frees only what this type owns, so subclassing costs nothing.
+/// </remarks>
+public class LoadedSet : IDisposable
 {
     /// <summary>The Set's manifest.</summary>
     public required SetManifest Manifest { get; init; }
     /// <summary>Its assets, as metadata plus image paths.</summary>
     public required IReadOnlyList<SetItem> Items { get; init; }
+
+    /// <summary>
+    /// The folder this Set's files are actually in — the folder it was opened from, or the
+    /// temporary directory a <c>.set</c> was unpacked into.
+    /// </summary>
+    /// <remarks>
+    /// So a caller that already has the Set open does not have to unpack it a second time to do
+    /// something with its files. The export dialog recomputes what it is about to ship on every
+    /// checkbox, and re-extracting a ten-thousand-asset archive per keystroke is not a thing that
+    /// can be made fast afterwards.
+    ///
+    /// <para>Empty for a <see cref="LoadedSet"/> that was never read from disk — which is only ever
+    /// a test fixture, since every reader here sets it. Not <c>required</c> for that reason: making
+    /// it so would force every hand-built fixture to name a directory it does not have and would
+    /// not use.</para>
+    /// </remarks>
+    public string SourceDirectory { get; init; } = string.Empty;
+
     internal string? TempDir { get; init; }
 
     /// <summary>Releases anything the reader holds. A Set is read as paths, so this frees the
-    /// temporary extraction directory when the Set came from a packed <c>.set</c>.</summary>
+    /// temporary extraction directory when the Set came from a packed <c>.set</c> or a seal.</summary>
     public void Dispose()
     {
         if (TempDir is not null && Directory.Exists(TempDir))
@@ -101,7 +126,13 @@ public static class SetReader
                 }
             }
 
-            return new LoadedSet { Manifest = manifest, Items = items, TempDir = temp };
+            return new LoadedSet
+            {
+                Manifest = manifest,
+                Items = items,
+                SourceDirectory = dir,
+                TempDir = temp,
+            };
         }
         catch
         {

@@ -1,0 +1,179 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             x:Class="Nfty.App.Views.ExportDialogView"
+             x:DataType="vm:ExportDialogViewModel"
+             RenderOptions.BitmapInterpolationMode="None">
+  <Border Classes="modal export">
+    <Grid RowDefinitions="*,Auto,Auto">
+      <Border Grid.Row="0" Classes="modal-body tight">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Spacing="11">
+            <StackPanel Classes="plabel-row">
+              <Ellipse Classes="kdot" />
+              <TextBlock Text="EXPORT" Classes="slbl" />
+            </StackPanel>
+            <TextBlock Text="Export this Set" Classes="m-h" />
+
+            <StackPanel Spacing="11" IsVisible="{Binding ShowForm}" IsEnabled="{Binding ShowForm}">
+
+              <!-- Four starting points. Which one is lit comes from the OPTIONS, not from the click
+                   that set them, so a tile goes out the moment a box below it disagrees. -->
+              <ItemsControl ItemsSource="{Binding Presets}" Margin="0,0,-6,0">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <UniformGrid Columns="4" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ExportPresetTile">
+                    <Button Classes="preset" Classes.sel="{Binding IsSelected}"
+                            Margin="0,0,6,0"
+                            Command="{Binding $parent[ItemsControl].((vm:ExportDialogViewModel)DataContext).ApplyPresetCommand}"
+                            CommandParameter="{Binding}">
+                      <StackPanel Spacing="3">
+                        <TextBlock Classes="pn" Text="{Binding Title}" />
+                        <TextBlock Classes="pd" Text="{Binding Summary}" />
+                      </StackPanel>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <Grid ColumnDefinitions="*,150" ColumnSpacing="20">
+                <StackPanel Grid.Column="0" Spacing="4">
+                  <TextBlock Text="CONTENTS" Classes="slbl" />
+                  <CheckBox Content="Generated art" IsChecked="{Binding Images}"
+                            ToolTip.Tip="images/ — the finished PNGs." />
+                  <CheckBox Content="Marketplace metadata" IsChecked="{Binding OpenSeaMetadata}"
+                            ToolTip.Tip="metadata/ — name, description and traits: the standard ERC-721 fields." />
+                  <CheckBox Content="nfty metadata" IsChecked="{Binding NftyMetadata}"
+                            ToolTip.Tip="nfty/ — per-asset DNA, the seed, and the color rolled on every layer. What a buyer wants and a public listing has no use for." />
+                  <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                    <CheckBox Grid.Column="0" Content="Source CookBook"
+                              IsChecked="{Binding IncludeCookBook}"
+                              ToolTip.Tip="A Set records its book's hash, never the book — so the file has to be chosen." />
+                    <TextBlock Grid.Column="1" Classes="m-sub" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" Text="{Binding CookBookLeaf}" />
+                    <Button Grid.Column="2" Classes="tbtn" Content="Choose…"
+                            Command="{Binding PickCookBookCommand}" />
+                  </Grid>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Spacing="4">
+                  <TextBlock Text="SHAPE" Classes="slbl" />
+                  <RadioButton GroupName="shape" Content="Single file" IsChecked="{Binding Packed}" />
+                  <!-- Disabled rather than silently corrected on Export: a sealed export is one
+                       authenticated stream, so there is no folder form of it, and the shape shown
+                       has to be the shape that gets written. -->
+                  <RadioButton GroupName="shape" Content="Folder" IsChecked="{Binding !Packed}"
+                               IsEnabled="{Binding CanChooseFolder}"
+                               ToolTip.Tip="A sealed export is always one file." />
+                </StackPanel>
+              </Grid>
+
+              <Border Classes="sealbox" Classes.on="{Binding IsSealed}">
+                <StackPanel Spacing="10">
+                  <CheckBox Content="Seal this export" IsChecked="{Binding IsSealed}"
+                            ToolTip.Tip="Encrypt it under a passphrase and mark it view-only." />
+
+                  <!-- IsVisible rather than reserved space, under the REVEAL exception: nothing
+                       appears under the pointer that just acted (the checkbox stays exactly where it
+                       was, and this opens below it), and the alternative is a permanent 130px hole
+                       in every export that will never be sealed. Same argument the Recipe layer
+                       table's ABSENT column won on. -->
+                  <StackPanel Spacing="9" IsVisible="{Binding IsSealed}">
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="9" RowDefinitions="Auto,Auto"
+                          RowSpacing="4">
+                      <TextBlock Grid.Row="0" Grid.Column="0" Text="Passphrase" Classes="slbl" />
+                      <TextBlock Grid.Row="0" Grid.Column="1" Text="Confirm" Classes="slbl" />
+                      <TextBox Grid.Row="1" Grid.Column="0" PasswordChar="•"
+                               Text="{Binding Passphrase}" />
+                      <TextBox Grid.Row="1" Grid.Column="1" PasswordChar="•"
+                               Text="{Binding PassphraseConfirm}" />
+                    </Grid>
+                    <StackPanel Spacing="4">
+                      <TextBlock Text="Note to the recipient" Classes="slbl" />
+                      <TextBox Text="{Binding Note}"
+                               PlaceholderText="Draft for review — please don't redistribute" />
+                    </StackPanel>
+                    <!-- What sealing does and does not do is stated ONCE, in the pinned manifest
+                         below, where it cannot scroll away. Repeating it here read as thorough and
+                         cost about fifty pixels - which is what pushed the passphrase box, the one
+                         control you have to be able to see to type into, below the fold. -->
+                    <TextBlock Classes="caveat"
+                               Text="Send the passphrase by a different route than the file." />
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+
+            </StackPanel>
+
+            <StackPanel Spacing="9" IsVisible="{Binding IsRunning}">
+              <ProgressBar IsIndeterminate="True" />
+              <TextBlock Text="Writing…" Classes="m-sub" />
+            </StackPanel>
+
+            <StackPanel Spacing="10" IsVisible="{Binding IsDone}">
+              <TextBlock Text="{Binding ResultText}" TextWrapping="Wrap" Classes="m-sub" />
+              <Button Classes="pathstrip" Command="{Binding RevealCommand}"
+                      ToolTip.Tip="{Binding OutputPath}">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="9">
+                  <Path Grid.Column="0" Classes="ico sm" Data="{StaticResource IconOpen}"
+                        VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Classes="leaf" Text="{Binding OutputPath}"
+                             TextTrimming="CharacterEllipsis" />
+                </Grid>
+              </Button>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+
+      <!-- OUTSIDE the ScrollViewer, on purpose. This is the one control on the screen that has to
+           be read before Export is pressed, and with the seal panel open the form is taller than the
+           card - so inside the scroller it sat below the fold exactly when the export was most
+           consequential. Found on a rendered frame; every ViewModel test passed. -->
+      <Border Grid.Row="1" Classes="ship" Margin="24,0,24,14">
+              <!-- The point of this screen. Every line is generated by the same SetExporter.Plan
+                   call that then does the writing, so the screen cannot promise one thing and ship
+                   another - which is precisely the defect this feature exists to prevent. -->
+                <StackPanel Spacing="6">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Classes="fn" Text="{Binding OutputName}" />
+                    <TextBlock Grid.Column="1" Classes="part" VerticalAlignment="Center"
+                               Text="{Binding SizeText}" />
+                  </Grid>
+                  <ItemsControl ItemsSource="{Binding Parts}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="x:String">
+                        <TextBlock Classes="part" Text="{Binding}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <ItemsControl ItemsSource="{Binding Consequences}" Margin="0,2,0,0">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="x:String">
+                        <TextBlock Classes="caveat" Text="{Binding}" Margin="0,2,0,0" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+      </Border>
+
+      <Border Grid.Row="2" Classes="modal-foot">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+          <!-- The reason Export is unavailable, in words. A control that is dim for a reason the
+               screen does not give is a control the user has to guess at. -->
+          <TextBlock Grid.Column="0" Classes="keyhint" VerticalAlignment="Center"
+                     TextTrimming="CharacterEllipsis" Text="{Binding Problem}" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+            <Button Content="Close" Command="{Binding CloseCommand}" Classes="tbtn" />
+            <Button Content="Export" Command="{Binding ExportCommand}" Classes="accent"
+                    IsVisible="{Binding ShowForm}" />
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
+  </Border>
+</UserControl>

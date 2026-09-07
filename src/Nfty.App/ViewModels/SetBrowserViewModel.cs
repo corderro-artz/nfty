@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Services;
 using Nfty.Core.Diagnostics;
 using Nfty.Core.Output;
+using Nfty.Core.Publish;
 
 namespace Nfty.App.ViewModels;
 
@@ -184,6 +185,7 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     private readonly IFilePickerService _picker;
     private readonly IDialogService _dialogs;
     private readonly IStatusService _status;
+    private readonly IFolderRevealer _revealer;
 
     /// <summary>The collection's name.</summary>
     public string Name { get; }
@@ -209,14 +211,17 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     /// reports "canceled" — the same thing every other surface does without a window.</param>
     /// <param name="dialogs">The modal layer the inspector opens into.</param>
     /// <param name="status">Where a save result is reported.</param>
+    /// <param name="revealer">Opens the folder an export landed in.</param>
     public SetBrowserViewModel(LoadedSet set, IFilePickerService? picker = null,
-        IDialogService? dialogs = null, IStatusService? status = null)
+        IDialogService? dialogs = null, IStatusService? status = null,
+        IFolderRevealer? revealer = null)
     {
         RaritySort = new TableSort("Trait", () => OnPropertyChanged(nameof(SelectedRarity)));
         _set = set;
         _picker = picker ?? new FilePickerService();
         _dialogs = dialogs ?? new DialogService();
         _status = status ?? new StatusService();
+        _revealer = revealer ?? new NoopFolderRevealer();
         Name = set.Manifest.Name;
         Count = set.Manifest.Count;
         Seed = set.Manifest.Seed;
@@ -267,6 +272,28 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     /// <summary>How many Recipes the collection was rolled from.</summary>
     public int RecipeCount => _set.Manifest.Distribution.Count;
 
+    /// <summary>
+    /// Whether this Set came out of a sealed export, and so may be looked at but not taken.
+    /// </summary>
+    /// <remarks>
+    /// Asked of the TYPE rather than carried as a flag alongside it, because a policy the caller has
+    /// to remember to pass on is a policy that eventually arrives nowhere — which is the whole
+    /// reason <c>SealedSet</c> is a <c>LoadedSet</c> that knows its own seal.
+    /// </remarks>
+    public bool IsSealed => _set is SealedSet;
+
+    /// <summary>What the person who sealed it wanted read first, or empty.</summary>
+    public string SealNote => (_set as SealedSet)?.Header.Note ?? "";
+
+    /// <summary>Whether this Set can be exported at all.</summary>
+    /// <remarks>
+    /// Both exits are gated, not just the obvious one: Save image is an export of one asset, and a
+    /// seal that closed the Export button while leaving Save working would be a label rather than a
+    /// rule. <c>SetExporter</c> refuses a sealed source independently, so this is the screen
+    /// agreeing with the engine rather than the only thing enforcing it.
+    /// </remarks>
+    public bool CanExport => !IsSealed && _set.SourceDirectory.Length > 0;
+
     // A DNA is a SHA-256, so it is always 64 hex characters and always splits into two rows of
     // exactly 32 -- which is why the rail can center them and have both edges line up. The split is
     // still computed rather than hard-coded at 32: a Set written by some future build with a
@@ -296,7 +323,8 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     {
         if (row is null) return;
         SelectedItem = row;
-        using var vm = new SetInspectViewModel(Items, IndexOf(row), _picker, _dialogs, _status);
+        using var vm = new SetInspectViewModel(Items, IndexOf(row), _picker, _dialogs, _status,
+            allowExport: CanExport);
 
         // The inspector can walk the Set with the arrow keys, and what the user last LOOKED AT is
         // what they expect to find selected when they close it. Without this you could arrow from
@@ -313,7 +341,7 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     /// <summary>Writes the selected asset's PNG wherever the user chooses.</summary>
     /// <remarks>The source file is copied rather than re-encoded, so what lands on disk is byte-for
     /// byte the image the Set contains.</remarks>
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanExport))]
     private async Task SaveImageAsync()
     {
         if (SelectedItem is not { } row) return;
@@ -329,6 +357,18 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
             _status.Say($"Could not save {SelectedNumber}: {ex.Message}");
         }
     }
+
+    /// <summary>Opens the export dialog for this Set.</summary>
+    /// <remarks>
+    /// The dialog is handed <c>SourceDirectory</c> — where the files already are, which for a Set
+    /// opened from a packed <c>.set</c> is the temporary directory it was unpacked into. It
+    /// recomputes what it is about to ship on every checkbox, and re-extracting the archive per
+    /// click is not something that can be made fast afterwards.
+    /// </remarks>
+    [RelayCommand(CanExecute = nameof(CanExport))]
+    private async Task ExportAsync() =>
+        await _dialogs.ShowAsync<object>(
+            new ExportDialogViewModel(_set.SourceDirectory, _picker, _revealer, _dialogs));
 
     /// <summary>Frees every decoded thumbnail and the underlying Set. Rows that were never realized
     /// decoded nothing, and disposing them is a no-op — reading <c>r.Thumbnail</c> here to dispose

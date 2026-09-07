@@ -35,6 +35,12 @@ away from the work, rather than in the middle of it.
 
     What is guaranteed, what is not, and what breaks it.
 
+-   [**What sealing does and does not do**](sealing.md)
+
+    ---
+
+    The encryption is real. The view-only mark is a lock on a door, not a wall.
+
 -   [**Why nfty never resizes your art**](no-resizing.md)
 
     ---

@@ -6,6 +6,13 @@
     <PackageReference Include="SixLabors.ImageSharp" />
   </ItemGroup>
 
+  <!-- So SealTests can seal at a low PBKDF2 iteration count. The shipped 600,000 is ~1s per
+       derivation by design; paying it in every one of the two dozen tamper cases would put a minute
+       on the suite to re-prove one constant. The constant itself gets its own test. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Nfty.Core.Tests" />
+  </ItemGroup>
+
   <!-- The built-in sample collection. Embedded rather than copied beside the executable because two
        of the four published shapes are a single .exe, and a sample that is only present in the other
        two is not "always available". Generated and committed by tools/demo/build-demo.py; see

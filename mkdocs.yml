@@ -153,6 +153,7 @@ nav:
       - how-to/soft-edges.md
       - how-to/inspect-an-asset.md
       - how-to/more-assets.md
+      - how-to/share-a-collection.md
       - how-to/kitchen.md
       - how-to/raise-unique-count.md
   - How nfty works:
@@ -162,6 +163,7 @@ nav:
       - understand/layer-kinds.md
       - understand/uniqueness.md
       - understand/seeds.md
+      - understand/sealing.md
       - understand/no-resizing.md
   - Reference:
       - reference/index.md

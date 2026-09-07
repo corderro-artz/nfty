@@ -704,6 +704,100 @@
     <Setter Property="Width" Value="430" />
   </Style>
 
+  <!-- The EXPORT modal. Wider than 620 because its body is two columns (what goes, and what shape)
+       and its manifest lines are mono paths; taller because the preset row, the two columns, the
+       seal panel and the manifest are four bands rather than one form. Still well inside
+       ShellViewModel.MinWindowWidth/Height, which are set by the help sheet and the inspector. -->
+  <Style Selector="Border.modal.export">
+    <Setter Property="Width" Value="700" />
+    <Setter Property="MaxHeight" Value="700" />
+  </Style>
+
+  <!-- One preset tile. A starting point, not a mode: the lit tile is pushed from
+       ExportOptions.MatchingPreset, so it goes out the moment a box below it stops agreeing. -->
+  <Style Selector="Button.preset">
+    <Setter Property="Background" Value="{DynamicResource TileBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="Padding" Value="10,9" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <!-- Stretch, so four tiles of three, three, four and three lines are one height. Without it a
+         UniformGrid gives each an equal CELL and each button hugs its own text inside it, which
+         renders as a ragged row - visible on a frame, invisible in the markup. -->
+    <Setter Property="VerticalAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Top" />
+  </Style>
+  <Style Selector="Button.preset:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+  </Style>
+  <!-- Declared after the hover rule so a selected tile stays selected-looking under the pointer. -->
+  <Style Selector="Button.preset.sel /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+  <Style Selector="Button.preset TextBlock.pn">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+  </Style>
+  <Style Selector="Button.preset.sel TextBlock.pn">
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+  <Style Selector="Button.preset TextBlock.pd">
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+  <!-- The manifest: what is actually going. An accent rail on the leading edge rather than a full
+       card, because it is the conclusion of the form above it and not a separate object. -->
+  <Style Selector="Border.ship">
+    <Setter Property="Background" Value="{DynamicResource TileBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="Padding" Value="14,10,12,10" />
+    <!-- The leading accent bar is the tree selection's own token, not a second 2px border: a
+         BorderThickness of "2,1,1,1" would paint the thick edge in the SAME brush as the other
+         three, and a per-edge brush is not a thing Border has. -->
+    <Setter Property="BoxShadow" Value="{DynamicResource AccentBarShadow}" />
+  </Style>
+  <Style Selector="Border.ship TextBlock.part">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="Border.ship TextBlock.fn">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+  </Style>
+
+  <!-- The seal panel. It changes color when armed because sealing is the one choice on this screen
+       that cannot be undone afterwards: there is no unseal, by design. -->
+  <Style Selector="Border.sealbox">
+    <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="Padding" Value="13,11" />
+  </Style>
+  <Style Selector="Border.sealbox.on">
+    <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}" />
+  </Style>
+  <!-- The honest-limits sentence. Warning ink, because what it says is what the seal does NOT do. -->
+  <Style Selector="TextBlock.caveat">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
   <!-- A PATH is a place, not a clause. Shown as its own strip - a folder glyph, the folder's own
        name in full, and where it sits underneath - and the whole strip is the button that opens it,
        so there is one control for one action rather than a line of prose beside a Reveal button. The

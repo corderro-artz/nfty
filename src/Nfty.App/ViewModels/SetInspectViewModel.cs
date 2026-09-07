@@ -56,15 +56,23 @@ public partial class SetInspectViewModel : ViewModelBase, IDisposable
     /// <param name="picker">Used by <see cref="SaveCommand"/>.</param>
     /// <param name="dialogs">The layer this modal lives in; used to close.</param>
     /// <param name="status">Where the save result is reported.</param>
+    /// <param name="allowExport">Whether the assets may be written out. False for a Set opened from
+    /// a sealed export — saving one asset's PNG IS an export, and a seal that stopped the Export
+    /// button while leaving this one working would be theater.</param>
     public SetInspectViewModel(IReadOnlyList<SetItemRow> items, int index,
-        IFilePickerService picker, IDialogService dialogs, IStatusService status)
+        IFilePickerService picker, IDialogService dialogs, IStatusService status,
+        bool allowExport = true)
     {
+        AllowExport = allowExport;
         _items = items;
         _picker = picker;
         _dialogs = dialogs;
         _status = status;
         _index = Math.Clamp(index, 0, Math.Max(0, items.Count - 1));
     }
+
+    /// <summary>Whether Save is available. False inside a sealed export.</summary>
+    public bool AllowExport { get; }
 
     private SetItemRow? Current => _items.Count == 0 ? null : _items[Index];
 
@@ -171,7 +179,7 @@ public partial class SetInspectViewModel : ViewModelBase, IDisposable
     /// different file from the one the Set actually contains — different bytes, possibly a different
     /// color profile — for an operation whose whole point is "give me that image".</para>
     /// </summary>
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(AllowExport))]
     private async Task SaveAsync()
     {
         if (Current is null) return;
