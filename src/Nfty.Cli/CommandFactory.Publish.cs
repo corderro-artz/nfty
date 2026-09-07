@@ -20,7 +20,10 @@ public static partial class CommandFactory
         };
         var outDir = new Option<string>("--out", "-o")
         {
-            Description = "Folder to write the export into. The export is named after the Set.",
+            Description = "Folder to write the export into. The export is named after the "
+                + "COLLECTION, not the folder you cooked into - a working folder is called whatever "
+                + "you typed into a picker, and a Set opened from a .set is read out of a temporary "
+                + "one.",
             Required = true,
         };
         var preset = new Option<string?>("--preset")
