@@ -85,7 +85,7 @@ public static class CollectionReport
     /// generate reports only on failure, surfaced so a run can be sized before it starts.
     ///
     /// <para>Three outcomes, not two. An exact count prints the number. A count that saturated its
-    /// enumeration cap prints "more than N". And a book whose space is <em>undefined</em> — because
+    /// enumeration budget prints "more than N". And a book whose space is <em>undefined</em> — because
     /// it is invalid in a way that makes the question meaningless, such as a Dynamic layer with no
     /// colorization block — says so, rather than claiming "more than 0", which reads like a real
     /// lower bound.</para>

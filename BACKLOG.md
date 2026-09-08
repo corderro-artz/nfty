@@ -3,6 +3,9 @@
 Work that is deliberately not done yet, with the reason and enough context to pick it up cold.
 Nothing here is a defect in shipped behaviour; each is a decision to defer.
 
+*Done and removed from this list: splitting `UniqueSpace`'s cap into an enumeration budget and a
+reporting ceiling (0.7.2).*
+
 ---
 
 ## Reshoot the manual against the Chest Demo
@@ -28,34 +31,6 @@ window minimum. The minimum is 1200x712 now (see `ShellViewModel`), so that stan
 
 ---
 
-## Split `UniqueSpace`'s cap in two
-
-**Status:** open. Small, and it removes a tax that is paid every time the demo grows.
-
-`UniqueSpace.DefaultCap` (1,000,000) currently bounds **two different things**, and only one of them
-is expensive:
-
-1. **Enumeration.** With rules present, `RecipeShapes` walks legal selections, and `bound` — the
-   product of each layer's variant count — is what decides whether that walk is affordable. This cap
-   is real and load-bearing.
-2. **The reported total.** With no rules it is pure multiplication, and even with rules the colour
-   buckets multiply in afterwards. Saturating here costs nothing to compute and only *loses*
-   information: a book with five million distinct assets is exactly countable in one multiply, and
-   reports "more than 1000000" instead.
-
-The visible cost is that adding any layer to the demo means re-tuning quantize steps to stay under a
-ceiling that is not defending anything on the multiplication path. `DemoCookBookTests` asserts the
-count is exact, so this is a build failure rather than a cosmetic one, and it will recur.
-
-**The change:** give `Count` two limits — an enumeration budget (stays ~1e6, bounds the walk) and a
-reporting ceiling much higher, guarded against `long` overflow. `IsExact` then means "we did not
-give up", which is what every caller already reads it as.
-
-**Check before doing it:** `UniqueSpaceExhaustedException`'s message quotes the maximum, and the
-Ingredient editor prints `CountColors`. Both should read better, not worse, with a higher ceiling.
-
----
-
 ## The interactive passphrase prompt has no test
 
 **Status:** accepted, and mostly closed by `--key`.
@@ -68,3 +43,23 @@ ordinary functions with inputs and outputs, covered by `PassphraseSourceTests`.
 What is left untested is the genuinely interactive branch: key-by-key echo suppression, backspace,
 and Escape. Testing it would mean an indirection over `Console.ReadKey` whose only consumer is the
 test — worth it only if that reader grows logic worth checking. It has none today.
+
+---
+
+## `Total` is not a lower bound when the walk is skipped
+
+**Status:** open, latent, pre-dates the budget/ceiling split.
+
+When a recipe has rules and its unconstrained combination count exceeds the enumeration budget,
+`RecipeShapes` returns the budget as the total and `IsExact = false`, and front-ends render that as
+*"more than 1,000,000"*.
+
+That reads as a lower bound, and it is not one. Rules can only *remove* selections, so a book with
+two million combinations and rules excluding all but four hundred of them genuinely admits four
+hundred — while the report claims more than a million.
+
+Every other inexact result really is a floor (an under-counted bucket set, a saturated product), so
+this is the one case where the documented reading of `IsExact` is wrong. The honest options are to
+report it as uncountable (`Total == 0`, which `IsCountable` already renders as "cannot say") or to
+carry an upper bound alongside the lower one. Not urgent: it needs a rules-heavy book with more
+combinations than the budget, which nothing shipped comes close to.

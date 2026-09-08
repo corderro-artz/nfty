@@ -37,10 +37,16 @@ public record RecipeSpace(long Total, long Combos, bool IsExact)
 /// space was too large to count and <see cref="Total"/> saturated at the cap — the real
 /// figure is "more than Total", never less.
 /// </summary>
+/// <param name="Total">The distinct DNA the rollable recipes admit between them.</param>
+/// <param name="IsExact">Whether an enumeration gave up. See <see cref="UniqueSpace.DefaultReportingCeiling"/>
+/// for why this no longer also means "the number got big".</param>
+/// <param name="Budget">The enumeration budget the count ran under, for a message that has to name
+/// the limit somebody would raise.</param>
+/// <param name="Recipes">The per-recipe breakdown, shelved recipes included.</param>
 public record UniqueSpaceCount(
     long Total,
     bool IsExact,
-    long Cap,
+    long Budget,
     IReadOnlyDictionary<string, RecipeSpace> Recipes)
 {
     /// <summary>An unknown recipe id has no space at all, and no space is exactly known.</summary>
@@ -70,15 +76,46 @@ public record UniqueSpaceCount(
 /// </summary>
 public static class UniqueSpace
 {
-    /// <summary>How many buckets <see cref="Count"/> enumerates before saturating. Past this the
-    /// exact answer stops being worth its cost, and "more than N" is enough to size a run.</summary>
-    public const long DefaultCap = 1_000_000;
+    /// <summary>
+    /// How many things <see cref="Count"/> will WALK before giving up.
+    /// </summary>
+    /// <remarks>
+    /// <para>This bounds the two places that genuinely enumerate: the per-selection walk a recipe
+    /// with rules needs, and the set of distinct colour buckets a colorization fills. Both cost time
+    /// and memory proportional to the number, so both need a budget.</para>
+    ///
+    /// <para><b>It does NOT bound the answer.</b> That distinction is the whole point of there being
+    /// two numbers here — see <see cref="DefaultReportingCeiling"/>.</para>
+    /// </remarks>
+    public const long DefaultEnumerationBudget = 1_000_000;
+
+    /// <summary>
+    /// The figure at which <see cref="UniqueSpaceCount.Total"/> stops counting and saturates.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>One number used to do both jobs, and only one of them was expensive.</b> The cap was
+    /// 1,000,000 for everything, so a book with five million distinct assets reported "more than
+    /// 1000000" — a figure that is exactly computable in a single multiply, because once the walk
+    /// has happened the rest is arithmetic. Every layer added to the built-in demo therefore cost a
+    /// re-tune of its quantize steps to stay under a ceiling that was not defending anything.</para>
+    ///
+    /// <para>So the ceiling is <see cref="long.MaxValue"/>: arithmetic never gives up, it only
+    /// guards its own overflow. <see cref="UniqueSpaceCount.IsExact"/> now means exactly one thing —
+    /// <b>no enumeration gave up</b> — which is what every caller already read it as.</para>
+    /// </remarks>
+    public const long DefaultReportingCeiling = long.MaxValue;
 
     /// <summary>Counts the unique DNA a book admits.</summary>
     /// <param name="book">The book to count. May be mid-edit and invalid; this never throws.</param>
-    /// <param name="cap">Enumeration limit; see <see cref="DefaultCap"/>.</param>
+    /// <param name="enumerationBudget">How much walking is allowed; see
+    /// <see cref="DefaultEnumerationBudget"/>.</param>
+    /// <param name="reportingCeiling">Where the arithmetic saturates; see
+    /// <see cref="DefaultReportingCeiling"/>.</param>
     /// <returns>The total, whether it is exact, and the per-recipe breakdown.</returns>
-    public static UniqueSpaceCount Count(LoadedCookBook book, long cap = DefaultCap)
+    public static UniqueSpaceCount Count(
+        LoadedCookBook book,
+        long enumerationBudget = DefaultEnumerationBudget,
+        long reportingCeiling = DefaultReportingCeiling)
     {
         long total = 0;
         bool exact = true;
@@ -92,7 +129,8 @@ public static class UniqueSpace
             // same product of color buckets. An absent Dynamic layer rolls no color and contributes
             // ONE shape, so the bucket product now depends on which layers a given selection
             // actually has. RecipeSpace does the sum; see its own note.
-            var (recipeTotal, combos, recipeExact) = RecipeShapes(recipe, cap);
+            var (recipeTotal, combos, recipeExact) =
+                RecipeShapes(recipe, enumerationBudget, reportingCeiling);
 
             // Each recipe's own space is always recorded, so a caller inspecting a shelved recipe
             // still sees what it would contribute if enabled. But the cookbook total counts only
@@ -102,20 +140,24 @@ public static class UniqueSpace
             recipes[recipe.Manifest.Id] = new RecipeSpace(recipeTotal, combos, recipeExact);
             if (book.Manifest.RecipeWeights.GetValueOrDefault(recipe.Manifest.Id) <= 0)
                 continue;
-            total = Saturate(total + recipeTotal, cap);
+            total = Add(total, recipeTotal, reportingCeiling);
             exact &= recipeExact;
         }
 
-        if (total >= cap) { total = cap; exact = false; }
-        return new UniqueSpaceCount(total, exact, cap, recipes);
+        // No clamp to the budget here any more. The budget governs WALKING; summing the recipes is
+        // addition, and Add only guards its own overflow. A total that saturated the ceiling is the
+        // one arithmetic case that is not exact, and Add is where that is decided.
+        if (total >= reportingCeiling) exact = false;
+        return new UniqueSpaceCount(total, exact, enumerationBudget, recipes);
     }
 
     /// <summary>
     /// How many distinct quantized colors one colorization admits.
     /// </summary>
     /// <param name="colorization">The block to count. May be mid-edit and illegal; this never throws.</param>
-    /// <param name="cap">Enumeration limit; see <see cref="DefaultCap"/>.</param>
-    /// <returns>The bucket count, and whether it is exact rather than saturated at the cap.</returns>
+    /// <param name="enumerationBudget">How many buckets to enumerate before giving up; see
+    /// <see cref="DefaultEnumerationBudget"/>. Filling this set is real work, so it is budgeted.</param>
+    /// <returns>The bucket count, and whether it is exact rather than saturated.</returns>
     /// <remarks>
     /// This is the same counter <see cref="Count"/> multiplies per dynamic layer, exposed because an
     /// editor showing the user a colors figure must show <em>that</em> figure. The Ingredient editor
@@ -123,8 +165,9 @@ public static class UniqueSpace
     /// step of 30 and a saturation step of 20 read as "600 colors" where the layer actually admits
     /// 36, and coarsening a step — which can only ever remove colors — made the number go up.
     /// </remarks>
-    public static (long Count, bool Exact) CountColors(Colorization colorization, long cap = DefaultCap) =>
-        DistinctBuckets(colorization, cap);
+    public static (long Count, bool Exact) CountColors(
+        Colorization colorization, long enumerationBudget = DefaultEnumerationBudget) =>
+        DistinctBuckets(colorization, enumerationBudget);
 
     /// <summary>One layer's choices, as the DNA space sees them.</summary>
     /// <param name="Id">The layer id.</param>
@@ -144,7 +187,8 @@ public static class UniqueSpace
     /// The distinct DNA one recipe admits, and how many legal variant selections underlie it.
     /// </summary>
     /// <param name="recipe">The recipe. May be mid-edit and illegal; this never throws.</param>
-    /// <param name="cap">Enumeration limit.</param>
+    /// <param name="budget">How much walking is allowed.</param>
+    /// <param name="ceiling">Where the arithmetic saturates.</param>
     /// <returns>The DNA total, the legal selection count, and whether both are exact.</returns>
     /// <remarks>
     /// Two paths, and the split is the same one the rules check already made. With no rules the
@@ -155,7 +199,8 @@ public static class UniqueSpace
     /// So the enumeration sums a product per legal selection rather than multiplying one product by
     /// a count.
     /// </remarks>
-    private static (long Total, long Combos, bool Exact) RecipeShapes(LoadedRecipe recipe, long cap)
+    private static (long Total, long Combos, bool Exact) RecipeShapes(
+        LoadedRecipe recipe, long budget, long ceiling)
     {
         if (!TryResolveLayers(recipe, out var resolved))
             return (0, 0, false);
@@ -176,7 +221,7 @@ public static class UniqueSpace
                 // until the book is fixed", not an honest zero.
                 if (ing.Manifest.Colorization is not { } colorization)
                     return (0, 0, false);
-                var (b, bExact) = DistinctBuckets(colorization, cap);
+                var (b, bExact) = DistinctBuckets(colorization, budget);
                 buckets = b;
                 exact &= bExact;
             }
@@ -195,24 +240,32 @@ public static class UniqueSpace
             long combos = 1;
             foreach (var l in layers)
             {
-                product = Multiply(product, l.Shapes, cap);
-                combos = Multiply(combos, l.Variants.Count + (l.CanBeAbsent ? 1 : 0), cap);
+                product = Multiply(product, l.Shapes, ceiling);
+                combos = Multiply(combos, l.Variants.Count + (l.CanBeAbsent ? 1 : 0), ceiling);
             }
-            // BOTH have to be under the cap, not just the total. A Dynamic layer with no color
+            // NOTHING IS WALKED ON THIS PATH. With no rules the space factorizes, so the answer
+            // is two products - and a product is not enumeration, which is why it is measured
+            // against the CEILING rather than the budget. This is the case that used to report
+            // "more than 1000000" for a book it could have counted exactly in a few multiplies.
+            //
+            // Both still have to clear it, not just the total. A Dynamic layer with no color
             // entries has zero buckets, so a product that saturated on combinations can collapse
-            // back to 0 — under the cap — and re-deriving exactness from the total alone would then
-            // call a count exact that had already given up. The old split carried that signal in
-            // combosExact; folding the two products together is what nearly lost it.
-            bool ok = exact && product < cap && combos < cap;
-            return (Saturate(product, cap), Saturate(combos, cap), ok);
+            // back to 0 - under any ceiling - and re-deriving exactness from the total alone would
+            // then call a count exact that had already given up.
+            bool ok = exact && product < ceiling && combos < ceiling;
+            return (product, combos, ok);
         }
 
-        // Rules can only remove selections, so the unconstrained product bounds the walk. Only
-        // enumerate when that bound is small enough to be worth walking.
+        // Rules can only remove selections, so the unconstrained product bounds the walk - and
+        // THIS is the expensive path, so the BUDGET governs it. Measured in combinations rather
+        // than in DNA, because the walk costs one rules check per selection whatever colours those
+        // selections carry. That is exactly why the two limits had to be separated: a book with
+        // billions of distinct assets spread over a few thousand combinations is cheap to count,
+        // and now it counts.
         long bound = 1;
         foreach (var l in layers)
-            bound = Multiply(bound, l.Variants.Count + (l.CanBeAbsent ? 1 : 0), cap);
-        if (bound >= cap) return (cap, cap, false);
+            bound = Multiply(bound, l.Variants.Count + (l.CanBeAbsent ? 1 : 0), budget);
+        if (bound >= budget) return (budget, budget, false);
 
         long total = 0;
         long legal = 0;
@@ -224,7 +277,7 @@ public static class UniqueSpace
             {
                 if (!RulesEngine.IsLegal(selection, recipe.Manifest.Rules)) return;
                 legal++;
-                total = Saturate(total + bucketsSoFar, cap);
+                total = Add(total, bucketsSoFar, ceiling);
                 return;
             }
 
@@ -232,7 +285,7 @@ public static class UniqueSpace
             foreach (var v in layer.Variants)
             {
                 selection[layer.Id] = v.Id;
-                Walk(depth + 1, Multiply(bucketsSoFar, layer.Buckets, cap));
+                Walk(depth + 1, Multiply(bucketsSoFar, layer.Buckets, ceiling));
             }
             selection.Remove(layer.Id);
 
@@ -244,50 +297,9 @@ public static class UniqueSpace
         }
 
         Walk(0, 1);
-        return (total, legal, exact && total < cap);
-    }
-
-    /// <summary>Variant combinations that satisfy the recipe's rules.</summary>
-    private static (long Count, bool Exact) LegalCombinations(LoadedRecipe recipe, long cap)
-    {
-        if (!TryResolveLayers(recipe, out var resolved))
-            return (0, false);
-        var layers = resolved.Select(Reachable).ToList();
-
-        long product = 1;
-        foreach (var layer in layers)
-            product = Multiply(product, layer.Variants.Count, cap);
-
-        // No rules: every combination is legal, so the product is the answer.
-        if (recipe.Manifest.Rules.Count == 0)
-            return product >= cap ? (cap, false) : (product, true);
-
-        // Rules can only remove combinations, but knowing how many requires enumeration.
-        // Only enumerate when the unconstrained product is small enough to walk.
-        if (product >= cap)
-            return (cap, false);
-
-        long legal = 0;
-        var selection = new Dictionary<string, string>();
-
-        void Walk(int depth)
-        {
-            if (depth == layers.Count)
-            {
-                if (RulesEngine.IsLegal(selection, recipe.Manifest.Rules)) legal++;
-                return;
-            }
-            var layer = layers[depth];
-            foreach (var v in layer.Variants)
-            {
-                selection[layer.Id] = v.Id;
-                Walk(depth + 1);
-            }
-            selection.Remove(layer.Id);
-        }
-
-        Walk(0);
-        return (legal, true);
+        // The walk finished, so the selection count is exact; only the arithmetic can still have
+        // saturated, and `exact` already carries whether any colour set gave up.
+        return (total, legal, exact && total < ceiling);
     }
 
     /// <summary>One layer reduced to the variants a roll can actually land on.</summary>
@@ -343,39 +355,16 @@ public static class UniqueSpace
         return true;
     }
 
-    /// <summary>The product of every dynamic layer's distinct quantized (H,S) buckets.</summary>
-    private static (long Count, bool Exact) CountColorBuckets(LoadedRecipe recipe, long cap)
-    {
-        if (!TryResolveLayers(recipe, out var layers))
-            return (0, false);
-
-        long product = 1;
-        bool exact = true;
-
-        foreach (var ing in layers)
-        {
-            // Static and custom layers resolve to one constant bucket each.
-            if (ing.Manifest.Kind != LayerKind.Dynamic) continue;
-
-            // A Dynamic layer with no colorization block is illegal, and Validator says so — but
-            // this method is documented never to throw, precisely so a GUI can call it on a book
-            // that is mid-edit. It used to dereference this null anyway, which is why
-            // CollectionReport wrapped the call in a try/catch: the contract was stated in one file
-            // and worked around in another. Report it the way an unresolvable layer is reported —
-            // "undefined until the book is fixed", not an honest zero.
-            if (ing.Manifest.Colorization is not { } colorization)
-                return (0, false);
-
-            var (buckets, bucketsExact) = DistinctBuckets(colorization, cap);
-            exact &= bucketsExact;
-            product = Multiply(product, buckets, cap);
-            if (product >= cap) return (cap, false);
-        }
-
-        return (product, exact);
-    }
-
-    private static (long Count, bool Exact) DistinctBuckets(Colorization col, long cap)
+    /// <summary>
+    /// The distinct quantized buckets a colorization can roll.
+    /// </summary>
+    /// <remarks>
+    /// This FILLS A SET, one entry per reachable bucket, so it is the second of the two places that
+    /// genuinely enumerate - and it takes the budget rather than the ceiling for that reason. A
+    /// range at a fine quantize can reach an enormous number of buckets, and the cost of counting
+    /// them is the count itself.
+    /// </remarks>
+    private static (long Count, bool Exact) DistinctBuckets(Colorization col, long budget)
     {
         int hueQ = Math.Max(1, col.HueQuantize);
         int satQ = Math.Max(1, col.SatQuantize);
@@ -416,7 +405,7 @@ public static class UniqueSpace
                 for (long s = s0; s <= s1; s++)
                 {
                     seen.Add((h, s));
-                    if (seen.Count >= cap) return (cap, false);
+                    if (seen.Count >= budget) return (budget, false);
                 }
         }
 
@@ -451,12 +440,26 @@ public static class UniqueSpace
         return (lo, Math.Max(lo, bucket(Math.BitDecrement(sample(1.0)))));
     }
 
-    private static long Multiply(long a, long b, long cap)
+    /// <summary>Multiplies, saturating at <paramref name="ceiling"/> rather than overflowing.</summary>
+    private static long Multiply(long a, long b, long ceiling)
     {
         if (a == 0 || b == 0) return 0;
-        if (a > cap / b) return cap;
+        if (a > ceiling / b) return ceiling;
         return a * b;
     }
 
-    private static long Saturate(long value, long cap) => value > cap ? cap : value;
+    /// <summary>
+    /// Adds, saturating at <paramref name="ceiling"/> rather than overflowing.
+    /// </summary>
+    /// <remarks>
+    /// It exists because the ceiling became <see cref="long.MaxValue"/>. The old code added first
+    /// and clamped afterwards, which is safe only while the clamp sits far below the range of the
+    /// type - at a million it could never overflow, and at the new ceiling it silently would, turning
+    /// a very large space into a negative one.
+    /// </remarks>
+    private static long Add(long a, long b, long ceiling)
+    {
+        if (b <= 0) return a;
+        return a > ceiling - b ? ceiling : a + b;
+    }
 }

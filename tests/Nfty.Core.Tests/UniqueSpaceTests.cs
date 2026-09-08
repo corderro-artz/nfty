@@ -305,9 +305,13 @@ public class UniqueSpaceTests
     [Fact]
     public void A_recipe_whose_combinations_saturated_is_never_reported_exact()
     {
-        // Combinations saturate the cap (inexact), but a dynamic layer with no entries has zero
-        // buckets, so the product falls back to 0 — under the cap. Re-deriving exactness as
-        // "total < cap" then claims the count is exact when the count itself already gave up.
+        // Combinations saturate (inexact), but a dynamic layer with no entries has zero buckets,
+        // so the product falls back to 0 - UNDER the limit. Re-deriving exactness as "total <
+        // limit" then claims the count is exact when the count itself already gave up.
+        //
+        // Driven by a low reportingCeiling rather than a low cap: combinations are a product, and
+        // products are what the ceiling governs now. The invariant is unchanged - it was never
+        // about the number, only about not losing the signal.
         var many = Enumerable.Range(0, 40).Select(i => $"v{i}").ToArray();
         var empty = new LoadedIngredient
         {
@@ -322,7 +326,7 @@ public class UniqueSpaceTests
         var book = Book(Recipe("cat", Array.Empty<IncompatibilityRule>(),
             Custom("bg", many), Custom("body", many), empty));
 
-        var count = UniqueSpace.Count(book, cap: 500);
+        var count = UniqueSpace.Count(book, reportingCeiling: 500);
 
         Assert.Equal(0, count["cat"].Total);
         Assert.False(count["cat"].IsExact);
@@ -463,16 +467,84 @@ public class UniqueSpaceTests
     [Fact]
     public void Huge_space_is_capped_and_reported_inexact()
     {
-        // 40 hue buckets x 100 sat buckets x 40 variants across two dynamic layers
-        // blows past a small cap; the count saturates and reports itself inexact.
+        // Two dynamic layers over the whole colour wheel at quantize 1 reach 36,000 buckets each.
+        // Filling that set is real enumeration, so it is the BUDGET that stops it, and the count
+        // reports itself inexact.
         var many = Enumerable.Range(0, 40).Select(i => $"v{i}").ToArray();
         var book = Book(Recipe("cat", Array.Empty<IncompatibilityRule>(),
             Dynamic("a", new ColorRange(0, 360, 0, 100), hueQ: 1, satQ: 1, many),
             Dynamic("b", new ColorRange(0, 360, 0, 100), hueQ: 1, satQ: 1, many)));
 
-        var count = UniqueSpace.Count(book, cap: 1000);
+        var count = UniqueSpace.Count(book, enumerationBudget: 1000);
+
         Assert.False(count.IsExact);
-        Assert.Equal(1000, count.Total);
+
+        // And the total is NOT clamped to the budget. It is a lower bound built from an under-count
+        // of buckets, which is what "more than Total" has always meant - the old code threw that
+        // away and reported the cap itself, so a book with billions of assets and a book with a
+        // million read identically.
+        Assert.True(count.Total > 1000,
+            $"the total should be a lower bound, not the budget; it is {count.Total}");
+    }
+
+    // ---- the budget and the ceiling are two limits, and only one of them is expensive -----------
+
+    [Fact]
+    public void A_space_far_past_a_million_still_counts_exactly_when_nothing_is_walked()
+    {
+        // THE POINT OF THE SPLIT. One cap used to govern both the walking and the answer, so this
+        // book - which factorizes, and whose whole count is a handful of multiplies - reported
+        // "more than 1000000". Every layer added to the built-in demo therefore cost a re-tune of
+        // its quantize steps to stay under a ceiling that was defending nothing.
+        var many = Enumerable.Range(0, 40).Select(i => $"v{i}").ToArray();
+        var book = Book(Recipe("cat", Array.Empty<IncompatibilityRule>(),
+            Custom("a", many), Custom("b", many), Custom("c", many), Custom("d", many)));
+
+        var count = UniqueSpace.Count(book);
+
+        Assert.True(count.IsExact, "nothing here needs walking, so nothing should give up");
+        Assert.Equal(40L * 40 * 40 * 40, count.Total);          // 2,560,000
+        Assert.True(count.Total > UniqueSpace.DefaultEnumerationBudget);
+    }
+
+    [Fact]
+    public void The_budget_still_stops_a_walk_that_would_be_expensive()
+    {
+        // The other half: the budget is not decorative. With rules present the count enumerates one
+        // selection at a time, and THAT cost is real however small the resulting number is - so a
+        // book with more combinations than the budget still gives up, exactly as before.
+        var many = Enumerable.Range(0, 40).Select(i => $"v{i}").ToArray();
+        var rules = new[]
+        {
+            new IncompatibilityRule(RuleType.Exclude,
+                new RuleTarget("a", "v0"), new[] { new RuleTarget("b", "v0") }),
+        };
+        var book = Book(Recipe("cat", rules,
+            Custom("a", many), Custom("b", many), Custom("c", many), Custom("d", many)));
+
+        var count = UniqueSpace.Count(book);
+
+        Assert.False(count.IsExact);
+        Assert.Equal(UniqueSpace.DefaultEnumerationBudget, count.Total);
+    }
+
+    [Fact]
+    public void A_book_whose_recipes_each_hold_a_vast_space_saturates_rather_than_overflowing()
+    {
+        // The ceiling is long.MaxValue now, so the old "add first, clamp afterwards" would wrap and
+        // report a NEGATIVE space. Two recipes each near the top of the range is the case that used
+        // to be impossible to reach and now is not.
+        var many = Enumerable.Range(0, 60).Select(i => $"v{i}").ToArray();
+        LoadedRecipe Huge(string id) => Recipe(id, Array.Empty<IncompatibilityRule>(),
+            Dynamic(id + "x", new ColorRange(0, 360, 0, 100), hueQ: 1, satQ: 1, many),
+            Dynamic(id + "y", new ColorRange(0, 360, 0, 100), hueQ: 1, satQ: 1, many),
+            Dynamic(id + "z", new ColorRange(0, 360, 0, 100), hueQ: 1, satQ: 1, many));
+
+        var count = UniqueSpace.Count(BookWithWeights(
+            new Dictionary<string, double> { ["one"] = 1, ["two"] = 1 }, Huge("one"), Huge("two")));
+
+        Assert.True(count.Total > 0, $"the total wrapped to {count.Total}");
+        Assert.False(count.IsExact);
     }
 
     // ---- CountColors: the one figure allowed to answer "how many colors?" -----------------------

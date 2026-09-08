@@ -316,14 +316,19 @@ public static class Generator
                 + "rejected every roll. Loosen the rules or raise the reroll budget.");
         }
 
+        // Saturating, because the reporting ceiling is long.MaxValue now: a plain += over several
+        // very large recipes can overflow, and a negative "allows exactly -3 unique DNA" is a worse
+        // message than any true one. The old clamp to the cap did this job by accident, only because
+        // the cap was a million.
         long available = 0;
         bool exact = true;
         foreach (var id in inPlay)
         {
-            available += space[id].Total;
+            long recipe = space[id].Total;
+            available = available > long.MaxValue - recipe ? long.MaxValue : available + recipe;
             exact &= space[id].IsExact;
         }
-        if (available >= space.Cap) { available = space.Cap; exact = false; }
+        if (available == long.MaxValue) exact = false;
 
         string scope = opts.RecipeId is null ? "this cookbook" : $"recipe '{opts.RecipeId}'";
         string message = exact

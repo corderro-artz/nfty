@@ -106,17 +106,21 @@ public class DemoCookBookTests
     [Fact]
     public void The_demo_dna_space_is_counted_exactly()
     {
-        // NOT a check that the number is large - a check that it is KNOWN. UniqueSpace stops
-        // enumerating at a million and reports "more than 1000000", and a demo whose headline
-        // figure is a floor teaches the reader that nfty cannot count its own space. The quantize
-        // steps in build-demo.py are chosen to stay under that cap; this is what notices when a
-        // later edit pushes them over it.
+        // NOT a check that the number is large - a check that it is KNOWN. A demo whose headline
+        // figure is a floor teaches the reader that nfty cannot count its own space.
+        //
+        // This used to be a real tax on the demo: one cap governed both the walking and the answer,
+        // so every layer added meant re-tuning quantize steps to keep a pure multiplication under a
+        // million. The two are separate now - the budget bounds the walk, the ceiling bounds the
+        // arithmetic - so what this notices is a demo that became too COMPLEX to enumerate, which is
+        // the thing actually worth noticing.
         using var book = Read();
         var space = UniqueSpace.Count(book);
 
         Assert.True(space.IsExact,
-            $"the demo's DNA space saturated at {space.Cap:N0}; coarsen a quantize step in tools/demo/build-demo.py");
-        Assert.InRange(space.Total, 100_000, UniqueSpace.DefaultCap - 1);
+            $"the demo's DNA space gave up under a budget of {space.Budget:N0}; simplify a recipe "
+            + "or coarsen a quantize step in tools/demo/build-demo.py");
+        Assert.True(space.Total >= 100_000, $"the demo should be a big number; it is {space.Total:N0}");
 
         // The exact figure, because it is PUBLISHED: the manual's demo page and the README both
         // print it, and a number in prose has nothing keeping it true. Changing the demo is allowed
