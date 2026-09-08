@@ -108,8 +108,15 @@
       <Border Grid.Column="1" Classes="pane">
         <Grid RowDefinitions="Auto,Auto,*">
           <!-- .toolstrip: horizontal 30px icon bar with an ACTIVE tool, a value ramp and a swatch. -->
-          <Border Grid.Row="0" Classes="pane-hrow" Padding="12,0">
-            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+          <!-- IT WRAPS. The strip's controls need 581px and the canvas pane gets 418 at the
+               smallest window the app opens, so the last three were arranged past the pane's edge
+               and PAINTED OVER THE COLORIZE RAIL beside it - a ramp, a swatch and the brush-size
+               field lying across the rail's tabs. The old budget test measured at 1180, which is
+               200px wider than this page is ever given, so it passed the whole time. Wrapping is
+               what lets the window minimum stay where a 1366x768 laptop can open it: the alternative
+               was a 1440px floor, which is the machine class the minimum exists for. -->
+          <Border Grid.Row="0" Classes="pane-hrow toolstrip">
+            <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
               <Button Classes="ttool" Classes.on="{Binding IsToolBrush}" ToolTip.Tip="Brush"
                       Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Brush}">
                 <Path Classes="ico sm" Data="{StaticResource IconPencil}" /></Button>
@@ -176,7 +183,7 @@
                    tooltip carries the meaning the caption would have. -->
               <NumericUpDown Classes="nin" Value="{Binding BrushSize}" Minimum="1" Width="58" FormatString="0"
                              ShowButtonSpinner="False" ToolTip.Tip="Brush size (px)" />
-            </StackPanel>
+            </WrapPanel>
           </Border>
 
           <!-- ============ Palette strip ============

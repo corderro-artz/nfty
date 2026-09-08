@@ -6,7 +6,13 @@
        instead of growing - so the card fits the pane at every window the app allows, and the mint
        bar and the actions cannot be scrolled away from. `DnaSpaceLayoutTests` measures that at the
        smallest window rather than trusting it. -->
-  <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="20" RowSpacing="12">
+  <!-- Margin 16 and not 20: the Recipe and Ingredient panes beside this one both say 16, and this
+       card was the only one that did not - so the content shifted by four pixels every time the
+       selection moved between a book and a recipe. The eight pixels it returns are also most of
+       what the table needed: at the smallest window the app opens the rows host measured 26px
+       against a 35px row, so the one row it claimed to be showing was sliced in half by the mint
+       bar. `DnaSpaceLayoutTests` asserts whole rows now rather than assuming them. -->
+  <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="16" RowSpacing="10">
 
     <!-- .cbk-id: the identity card. The chips used to float here with no card around them.
          There is deliberately no "target supply" chip any more: that number is on the supply rail
@@ -164,10 +170,7 @@
           <DataTemplate x:DataType="vm:RecipeShareRow">
             <Border Classes="crow">
               <Grid ColumnDefinitions="7,*,46,204,14,118" ColumnSpacing="10">
-                <Border Grid.Column="0" Classes="cdot series"
-                        Classes.s1="{Binding IsSeries1}" Classes.s2="{Binding IsSeries2}"
-                        Classes.s3="{Binding IsSeries3}" Classes.s4="{Binding IsSeries4}"
-                        Classes.s5="{Binding IsSeries5}" Classes.s6="{Binding IsSeries6}" />
+                <Border Grid.Column="0" Classes="cdot series" />
 
                 <!-- Name and share track share the elastic column: the name takes what it needs up
                      to a cap and trims, and the TRACK takes the rest. At full screen that column is
@@ -179,10 +182,7 @@
                              MaxWidth="190" HorizontalAlignment="Left"
                              TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                   <Border Grid.Column="1" Classes="cbar" VerticalAlignment="Center">
-                    <Border HorizontalAlignment="Left" CornerRadius="999" Classes="series"
-                            Classes.s1="{Binding IsSeries1}" Classes.s2="{Binding IsSeries2}"
-                            Classes.s3="{Binding IsSeries3}" Classes.s4="{Binding IsSeries4}"
-                            Classes.s5="{Binding IsSeries5}" Classes.s6="{Binding IsSeries6}">
+                    <Border HorizontalAlignment="Left" CornerRadius="999" Classes="series">
                       <Border.Width>
                         <MultiBinding Converter="{x:Static conv:ShareWidthConverter.Instance}">
                           <Binding Path="SharePercent" />
@@ -248,12 +248,10 @@
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:RecipeShareRow">
-              <!-- Color comes from a token via the series class, not from a Color on the row: a
-                   brush picked in the ViewModel cannot re-resolve when the theme flips. -->
-              <Border Height="16" Classes="series"
-                      Classes.s1="{Binding IsSeries1}" Classes.s2="{Binding IsSeries2}"
-                      Classes.s3="{Binding IsSeries3}" Classes.s4="{Binding IsSeries4}"
-                      Classes.s5="{Binding IsSeries5}" Classes.s6="{Binding IsSeries6}">
+              <!-- Paint comes from the series class, which turns the row's HueShift around the
+                   palette's anchor token — not from a Color on the row, which could not re-resolve
+                   when the theme flips. -->
+              <Border Height="16" Classes="series">
                 <Border.Width>
                   <MultiBinding Converter="{x:Static conv:ShareWidthConverter.Instance}">
                     <Binding Path="SharePercent" />

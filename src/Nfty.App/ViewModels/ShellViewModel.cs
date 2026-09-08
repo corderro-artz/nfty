@@ -52,7 +52,25 @@ public partial class ShellViewModel : ViewModelBase
     /// chrome half of the arithmetic honest. The slack is deliberately small — every pixel of it is
     /// a pixel a laptop may not have.
     /// </remarks>
-    public const double MinWindowWidth = 1200;
+    /// <remarks>
+    /// <para><b>The width is 1366 because a PAGE needs it, not because a modal does.</b> The sheet
+    /// still only asks for 1200, and that is what this was — but driving the app at 1200 found the
+    /// Recipe pane's layer table with its LAYER column arranged at ZERO width: the detail pane gets
+    /// about 365px there once the tree and the 300px rules rail have taken theirs, the table's fixed
+    /// columns account for 362 of it, and the one star column silently absorbed the shortfall. Every
+    /// layer name on the screen was missing, and the frame still looked deliberate. Width is a
+    /// budget and an overrun is silent; this is that rule at the scale of a whole screen.</para>
+    ///
+    /// <para>1366x768 is the laptop resolution the old 1128 minimum locked out, so the width is now
+    /// exactly what the smallest common screen offers. The HEIGHT deliberately stays at 712 rather
+    /// than following it to 768: a 768-tall screen has a taskbar, and a minimum that assumed the
+    /// whole panel would be a minimum that screen cannot satisfy. Two other screens were made to fit
+    /// rather than allowed to push this further - Landing scrolls its action column (it wants 702 of
+    /// page height, which would have demanded a 931-tall window) and the editor's toolstrip wraps
+    /// (it wanted 1160 of page width, which would have demanded 1416 and locked those laptops out
+    /// all over again).</para>
+    /// </remarks>
+    public const double MinWindowWidth = 1366;
     /// <inheritdoc cref="MinWindowWidth"/>
     public const double MinWindowHeight = 712;
 

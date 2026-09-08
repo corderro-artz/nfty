@@ -15,14 +15,33 @@
        is a row of its own so the columns keep landing.html's own geometry exactly. -->
   <Grid Classes="monoform" RowDefinitions="*,Auto">
 
+  <!-- IT SCROLLS, and the Kitchen band below it does not. The action column is eleven controls tall
+       - it wants 528px and the smallest window the app opens gives the row 346 - so "Open a cooked
+       .set", "Open the demo CookBook" and "Open Kitchen…" were simply CUT, with no scrollbar and
+       nothing on screen saying there was more. Three working commands were unreachable at that size.
+       A page may scroll; that is the difference between a page and a modal, and it is why the window
+       minimum is set by the quick-reference sheet rather than by this screen's natural height (702,
+       which would have demanded a 931-tall window - taller than the 768 laptop screens the minimum
+       exists to fit). At every size the app opens at there is no scrollbar at all.
+       The shelf stays OUTSIDE the scroller: it is the workspace the screen carries, and a shelf you
+       have to scroll to is not a shelf. -->
+  <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
   <!-- landing.html .land: two equal columns, 34px gutter, 34/38 padding. -->
-  <Grid Grid.Row="0" ColumnDefinitions="*,34,*" Margin="38,34">
-    <!-- .actions is left-aligned at 272px. Stretching it inside the column centers the button
-         stack, which is what made the whole screen read as a centered splash. -->
-    <StackPanel Grid.Column="0" Spacing="7" MaxWidth="272" HorizontalAlignment="Left">
+  <Grid ColumnDefinitions="*,34,*" Margin="38,34">
+    <!-- .actions is left-aligned. Stretching it inside the column centers the button stack, which
+         is what made the whole screen read as a centered splash.
+         CREATE AND OPEN SIT SIDE BY SIDE, which the mockup's single 272px column does not do. Eleven
+         controls in one stack want 528px of vertical room and the smallest window gives this row
+         413, so the last three were off the bottom - three working commands, unreachable, with
+         nothing on screen saying so. The room they needed was never scarce, it was just in the wrong
+         direction: this screen has two half-empty columns and the recents list beside it uses 146px
+         of 400. Two stacks of five are 275 tall and fit at every size the app opens. -->
+    <StackPanel Grid.Column="0" Spacing="7" MaxWidth="560" HorizontalAlignment="Left">
       <TextBlock Classes="lwordmark"><Run Text="nft" /><Run Text="y" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
       <TextBlock Text="Asset Generator" Classes="tagline" />
 
+      <Grid ColumnDefinitions="262,26,262">
+      <StackPanel Grid.Column="0" Spacing="7">
       <TextBlock Text="CREATE" Classes="slbl" Margin="0,12,0,4" />
       <Button Classes="landing accent" Command="{Binding NewCookBookCommand}">
         <Grid ColumnDefinitions="*,Auto">
@@ -54,7 +73,10 @@
         </Button>
       </Grid>
 
-      <TextBlock Text="OPEN" Classes="slbl" Margin="0,20,0,4" />
+      </StackPanel>
+
+      <StackPanel Grid.Column="2" Spacing="7">
+      <TextBlock Text="OPEN" Classes="slbl" Margin="0,12,0,4" />
       <Button Classes="landing tbtn" Command="{Binding OpenCookBookCommand}">
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconOpen}" /><TextBlock Classes="lbl" Text="Open CookBook…" /></StackPanel>
@@ -96,6 +118,8 @@
       <Button Classes="landing tbtn" Command="{Binding OpenKitchenCommand}">
         <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconKitchen}" /><TextBlock Classes="lbl" Text="Open Kitchen…" /></StackPanel></Grid>
       </Button>
+      </StackPanel>
+      </Grid>
 
       <!-- Which workspace loose saves will default into. The titlebar chip reports this too, but only
            once a CookBook is open — on Landing there was no way to tell, and no way back out. -->
@@ -173,6 +197,7 @@
       </Panel>
     </StackPanel>
   </Grid>
+  </ScrollViewer>
 
   <!-- ==================== Kitchen shelf ====================
        Always present, always 104px — see Styles.axaml for why that is the whole argument. Wheel,

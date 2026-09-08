@@ -82,28 +82,15 @@ public record FactorChip(string Name, int VariantCount, LayerKind Kind, bool Sho
 /// count. Deliberately NOT a factorization of <paramref name="DnaSpaceText"/>: the DNA space is the
 /// legal combinations (rules applied) times each dynamic layer's quantized colors, so the chips'
 /// product is neither factor. The row draws an arrow between them rather than an equals sign.</param>
-/// <param name="Series">Which of the six mint-distribution series colors this recipe draws, 1-based
-/// and assigned by position in the book. Exposed as an index rather than a <c>Color</c> so the paint
-/// itself stays a theme token: the view switches on <see cref="IsSeries1"/>…<see cref="IsSeries6"/>
-/// and picks up <c>Series1Brush</c>…<c>Series6Brush</c> from whichever dictionary is live, which a
-/// color computed in the ViewModel could not do — the previous version hashed the recipe id into an
-/// HSV, so it was off-palette by construction and identical in both themes.</param>
+/// <param name="HueShift">How far around the color wheel this recipe's mint-distribution color is
+/// turned from the palette's anchor, in degrees. A SHIFT rather than a color, and rather than an
+/// index into a fixed set: the six series tokens it replaced cycled, so recipe seven repeated recipe
+/// one and a bar with eight segments carried two indistinguishable pairs. This level decides only
+/// how far apart the colors are; <see cref="Converters.SeriesBrushConverter"/> seats the shift on
+/// <c>SeriesAnchorBrush</c>'s own hue, saturation and lightness, so the paint still comes from
+/// whichever theme dictionary is live — which a <c>Color</c> chosen here could not do.</param>
 public record RecipeShareRow(string Name, double SharePercent, string DnaSpaceText,
-    string DnaSpaceTip, int Series, IReadOnlyList<FactorChip> Factors)
-{
-    /// <summary>True when this row draws series color 1.</summary>
-    public bool IsSeries1 => Series == 1;
-    /// <summary>True when this row draws series color 2.</summary>
-    public bool IsSeries2 => Series == 2;
-    /// <summary>True when this row draws series color 3.</summary>
-    public bool IsSeries3 => Series == 3;
-    /// <summary>True when this row draws series color 4.</summary>
-    public bool IsSeries4 => Series == 4;
-    /// <summary>True when this row draws series color 5.</summary>
-    public bool IsSeries5 => Series == 5;
-    /// <summary>True when this row draws series color 6.</summary>
-    public bool IsSeries6 => Series == 6;
-}
+    string DnaSpaceTip, double HueShift, IReadOnlyList<FactorChip> Factors);
 
 /// <summary>One page indicator in the DNA-space pager.</summary>
 /// <param name="IsCurrent">Whether this is the page showing.</param>
@@ -113,6 +100,15 @@ public partial class CookBookDetailViewModel : ViewModelBase
 {
     /// <summary>Shown where a count cannot be computed (an unvalidatable book).</summary>
     private const string Unknown = "—";
+
+    /// <summary>Degrees between one recipe's mint-distribution color and the next.</summary>
+    /// <remarks>
+    /// 360 / φ². Any rotation that is not a rational fraction of a turn avoids repeating, but this
+    /// one also keeps every prefix of the sequence spread as evenly as a sequence can be — so the
+    /// first six colors are as separated as the six hand-picked tokens this replaced, and the
+    /// hundredth is still separated from all ninety-nine before it.
+    /// </remarks>
+    public const double GoldenAngle = 137.50776405003785;
 
     private readonly Action _cook;
     private readonly Action? _showReports;
@@ -252,11 +248,14 @@ public partial class CookBookDetailViewModel : ViewModelBase
         int seriesIndex = 0;
         Recipes = book.Recipes.Select(r =>
         {
-            // By position, cycling through the six series tokens. Position rather than a hash of the
-            // id: a hash gave a stable-but-arbitrary color per recipe, which sounds like a feature
-            // until two recipes in the same book land on near-identical hues. Cycling guarantees
-            // adjacent segments differ, which is the only property a categorical scale owes.
-            int series = (seriesIndex++ % 6) + 1;
+            // By position, turned a golden angle each time. There is no cycle and so no ceiling: a
+            // book may hold any number of recipes and no two land on the same color. Position
+            // rather than a hash of the id, and generated rather than rolled, for the same reason
+            // in both cases — a hash and an RNG each put two near-identical hues side by side about
+            // as often as chance allows, and 137.5° is the rotation that keeps consecutive values
+            // as far apart on the wheel as any sequence can. Adjacent segments differing is the one
+            // property a categorical scale owes.
+            double hueShift = seriesIndex++ * GoldenAngle % 360;
             double w = book.Manifest.RecipeWeights.GetValueOrDefault(r.Manifest.Id);
             double share = totalWeight > 0 ? w / totalWeight * 100 : 0;
             var rs = space?[r.Manifest.Id];
@@ -295,7 +294,7 @@ public partial class CookBookDetailViewModel : ViewModelBase
                         Variants: i.Manifest.Variants.Count, Optional: absent > 0);
                 })
                 .ToList());
-            return new RecipeShareRow(r.Manifest.Name, Math.Round(share, 1), dna, dnaTip, series,
+            return new RecipeShareRow(r.Manifest.Name, Math.Round(share, 1), dna, dnaTip, hueShift,
                 factors);
         }).ToList();
 

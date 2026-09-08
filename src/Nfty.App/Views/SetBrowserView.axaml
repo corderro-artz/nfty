@@ -154,7 +154,13 @@
       <Border Grid.Column="1" Classes="rules-panel" Padding="0" VerticalAlignment="Stretch"
               IsVisible="{Binding SelectedItem, Converter={x:Static conv:ObjectConverters.IsNotNull}}">
         <Grid RowDefinitions="*,Auto">
-          <ScrollViewer Grid.Row="0" Padding="13,12" HorizontalScrollBarVisibility="Disabled">
+          <!-- The scrollbar is VISIBLE, not Auto. This rail holds an inspector's worth of detail in
+               whatever height is left, so at the smallest window a rarity row is usually cut across
+               the middle by the pinned Save button below it - and with the bar hidden until hover
+               that reads as a clipped panel rather than as a list with more in it. Nothing here is
+               unreachable; the bar is what says so. -->
+          <ScrollViewer Grid.Row="0" Padding="13,12" HorizontalScrollBarVisibility="Disabled"
+                        VerticalScrollBarVisibility="Visible">
             <StackPanel Spacing="10">
 
               <Grid ColumnDefinitions="*,Auto">

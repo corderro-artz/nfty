@@ -23,10 +23,14 @@ namespace Nfty.App.Tests;
 /// </remarks>
 public class ToolstripLayoutTests
 {
-    // The pane track's own minimum, as PaletteStripLayoutTests uses it: the mockups' 1180 page less
-    // the 262 variants rail and the 300 colorize rail. Below this the panes scroll rather than
-    // compress, so this is the narrowest the strip is ever asked to fit into.
-    private const double MinimumWindowWidth = 1180;
+    // DERIVED from the window minimum, not the mockups' 1180 page. That figure was 200px wider than
+    // this page is ever given: the shell renders at BaseScale, so the narrowest page the app can
+    // show is (MinWindowWidth - 24) / 1.2 = 980 logical pixels. Measured at 1180 the strip cleared
+    // its edge with room to spare while the running app painted the last two controls straight over
+    // the colorize rail beside it - the same mistake the UNIQUE DNA cell's first test made, and the
+    // same cure: measure the page the app actually hosts.
+    private static double PageWidth =>
+        (ShellViewModel.MinWindowWidth - 24) / ShellViewModel.BaseScale;
 
     private static (Window window, Views.IngredientEditorView view) Render()
     {
@@ -34,7 +38,7 @@ public class ToolstripLayoutTests
         var vm = new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(), new FakeNav(),
             new CookBookSession(), new FakeDialogs(), new FilePickerService());
         var view = new Views.IngredientEditorView { DataContext = vm };
-        var window = new Window { Content = view, Width = MinimumWindowWidth, Height = 720 };
+        var window = new Window { Content = view, Width = PageWidth, Height = 720 };
         window.Show();
         Dispatcher.UIThread.RunJobs();
         return (window, view);
@@ -54,7 +58,7 @@ public class ToolstripLayoutTests
         try
         {
             var strip = Strip(view);
-            var panel = strip.GetVisualDescendants().OfType<StackPanel>().First();
+            var panel = strip.GetVisualDescendants().OfType<WrapPanel>().First();
             Assert.True(strip.Bounds.Width > 0, "the strip itself was arranged at zero width");
             double edge = ContentRight(strip);
 
@@ -71,22 +75,33 @@ public class ToolstripLayoutTests
     }
 
     /// <summary>
-    /// The budget with its slack stated. Fitting exactly is not fitting: a tooltip's font, a
-    /// stepper's spinner column or a one-pixel border can move the total, and a strip that clears
-    /// the edge by a hair today is one style tweak from clipping again.
+    /// The strip GROWS to hold what it wraps, so no line is cut off the bottom either.
     /// </summary>
+    /// <remarks>
+    /// This replaces a "keeps ten pixels of slack" assertion, which was the right guard while the
+    /// strip was a single row that could overrun and the wrong one afterwards: a wrapped line ends
+    /// wherever the next control did not fit, so the trailing slack is arbitrary by construction and
+    /// dips to a few pixels at some widths without anything being wrong. What can still go wrong is
+    /// the other axis — <c>.pane-hrow</c> pins its siblings at 41px, and a second line inside a
+    /// fixed-height row would be cut exactly as silently as the horizontal overrun was.
+    /// </remarks>
     [AvaloniaFact]
-    public void The_toolstrip_keeps_at_least_ten_pixels_of_slack()
+    public void The_strip_is_tall_enough_for_every_line_it_wraps_onto()
     {
         var (window, view) = Render();
         try
         {
             var strip = Strip(view);
-            var panel = strip.GetVisualDescendants().OfType<StackPanel>().First();
-            var last = panel.Children.OfType<Control>().Last();
-            double right = last.TranslatePoint(default, strip)!.Value.X + last.Bounds.Width;
-            double slack = ContentRight(strip) - right;
-            Assert.True(slack >= 10, $"only {slack:0.#}px of slack left in the toolstrip");
+            var panel = strip.GetVisualDescendants().OfType<WrapPanel>().First();
+
+            double bottom = panel.Children.OfType<Control>()
+                .Select(c => c.TranslatePoint(default, strip)!.Value.Y + c.Bounds.Height)
+                .DefaultIfEmpty(0).Max();
+            double room = strip.Bounds.Height - strip.Padding.Bottom;
+
+            Assert.True(bottom <= room + 0.5,
+                $"the strip's controls reach {bottom:0.#} in a row {room:0.#} tall");
+            Assert.True(strip.Bounds.Height >= 41, "the row must not be shorter than its siblings");
         }
         finally { window.Close(); }
     }

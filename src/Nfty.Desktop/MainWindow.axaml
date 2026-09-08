@@ -4,7 +4,7 @@
         xmlns:views="using:Nfty.App.Views"
         x:Class="Nfty.Desktop.MainWindow"
         x:DataType="vm:ShellViewModel"
-        Width="1416" Height="864"
+        Width="1366" Height="768"
         MinWidth="{x:Static vm:ShellViewModel.MinWindowWidth}"
         MinHeight="{x:Static vm:ShellViewModel.MinWindowHeight}" Title="nfty"
         Background="Transparent" TransparencyLevelHint="Transparent"

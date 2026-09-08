@@ -69,7 +69,13 @@ public class DnaSpaceLayoutTests
         return new LoadedCookBook
         {
             Manifest = new CookBookManifest("cb", "8 Recipes", new Dimensions(8, 8),
-                new Collection("8 Recipes", "", "EGT"),
+                // A description that WRAPS TO TWO LINES, because the identity card sizes to it and
+                // the table gets what is left. The first version of this fixture left it empty,
+                // which bought the card 33px it does not have in the app - so the harness said the
+                // table fit while the running app sliced its only row in half.
+                new Collection("8 Recipes",
+                    "A demo collection that ships with nfty: layered chests to open, edit and "
+                    + "cook. Nothing here is precious - break it and rebuild it.", "EGT"),
                 names.Select((_, i) => $"r{i}").ToDictionary(id => id, _ => 1d),
                 TargetSupply: 1200),
             Recipes = recipes,
@@ -143,12 +149,29 @@ public class DnaSpaceLayoutTests
 
             // There is one ScrollViewer, and it is there to report a fixed height rather than to
             // scroll: both bars are off and the table pages so its content never exceeds the
-            // viewport. Asserting it CANNOT scroll is the stronger claim, and the one that would
-            // fail if paging ever stopped keeping up with the space.
+            // viewport.
             var host = Assert.Single(card.GetVisualDescendants().OfType<ScrollViewer>());
             Assert.Equal(ScrollBarVisibility.Disabled, host.VerticalScrollBarVisibility);
-            Assert.True(host.Extent.Height <= host.Viewport.Height + 0.5,
-                $"the table wants {host.Extent.Height:F1}px in a {host.Viewport.Height:F1}px viewport");
+
+            // MEASURED AGAINST THE ROW, not against the host's own Extent. Extent was the first
+            // version of this assertion and it is VACUOUS: with both bars disabled a ScrollViewer
+            // measures its child at the height it was given, so Extent reports the viewport back
+            // whatever the rows do. It read as green while the app drew 26px of a 35px row, sliced
+            // across the middle by the mint bar underneath.
+            var vm = (CookBookDetailViewModel)card.DataContext!;
+            var row = card.GetVisualDescendants().OfType<Border>()
+                .First(b => b.Classes.Contains("crow"));
+            Assert.True(row.Bounds.Height > 0);
+            Assert.True(vm.PageSize * row.Bounds.Height <= host.Viewport.Height + 0.5,
+                $"{vm.PageSize} rows of {row.Bounds.Height:F1}px in a {host.Viewport.Height:F1}px "
+                + "viewport - a page is showing a row it cannot draw whole");
+
+            // And a whole row must fit AT ALL at the smallest window, which is the claim that stops
+            // PageSize's Math.Max(1, ...) floor from papering over a card that has outgrown the
+            // window. The slack is thin by design - the card is nearly full here - so state it:
+            // furniture that grows by more than this has taken the table's last row.
+            Assert.True(host.Viewport.Height >= row.Bounds.Height,
+                $"the rows host is {host.Viewport.Height:F1}px and a row is {row.Bounds.Height:F1}px");
 
             var bar = card.GetVisualDescendants().OfType<Border>()
                 .First(b => b.Classes.Contains("distbar"));

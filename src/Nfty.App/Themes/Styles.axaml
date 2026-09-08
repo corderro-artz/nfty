@@ -1,5 +1,7 @@
 <Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:conv="using:Nfty.App.Converters"
+        xmlns:vm="using:Nfty.App.ViewModels">
   <Style Selector="Window">
     <Setter Property="Background" Value="{DynamicResource BgBrush}" />
     <Setter Property="FontFamily" Value="{DynamicResource SansFontFamily}" />
@@ -477,16 +479,30 @@
        reason TextBlock.hk needed its own on-accent override below rather than relying on
        inheritance. Left unfixed, "New CookBook"'s label rendered near-black FgBrush text on the
        accent maroon fill — illegible. -->
-  <!-- Mint-distribution series paint. One class per series, resolved from Tokens so it follows the
-       theme; the ViewModel supplies only which series a recipe is. A Color computed in the
-       ViewModel — which is what this replaced — cannot re-resolve when the theme flips, and escaped
-       the raw-hex sweep entirely because that sweep reads markup. -->
-  <Style Selector="Border.series.s1"><Setter Property="Background" Value="{DynamicResource Series1Brush}" /></Style>
-  <Style Selector="Border.series.s2"><Setter Property="Background" Value="{DynamicResource Series2Brush}" /></Style>
-  <Style Selector="Border.series.s3"><Setter Property="Background" Value="{DynamicResource Series3Brush}" /></Style>
-  <Style Selector="Border.series.s4"><Setter Property="Background" Value="{DynamicResource Series4Brush}" /></Style>
-  <Style Selector="Border.series.s5"><Setter Property="Background" Value="{DynamicResource Series5Brush}" /></Style>
-  <Style Selector="Border.series.s6"><Setter Property="Background" Value="{DynamicResource Series6Brush}" /></Style>
+  <!-- Mint-distribution series paint. There were six tokens and the assignment cycled, so recipe
+       seven repeated recipe one and an eight-recipe bar carried two indistinguishable pairs. The
+       hue is generated instead — the row supplies only how far to turn (`HueShift`), and the
+       converter seats that on SeriesAnchorBrush's own hue, saturation and lightness, reading it out
+       of whichever theme dictionary is live. So there is no ceiling on how many recipes a book may
+       have, the colors stay on-palette, and the paint still follows the theme: the variant is an
+       INPUT to the converter, which is what makes generating a color admissible at all. Declared
+       ONCE here rather than at each of the three places a series color is drawn.
+
+       Background is set twice on purpose: the plain value is the fallback the row shows while the
+       binding's inputs are still arriving, so a mid-layout pass reads as a segment rather than as a
+       transparent hole. The MultiBinding is a local value and beats it the moment it resolves. -->
+  <Style Selector="Border.series">
+    <Setter Property="Background" Value="{DynamicResource SeriesAnchorBrush}" />
+  </Style>
+  <Style Selector="Border.series" x:DataType="vm:RecipeShareRow">
+    <Setter Property="Background">
+      <MultiBinding Converter="{x:Static conv:SeriesBrushConverter.Instance}">
+        <Binding Path="HueShift" />
+        <Binding Path="$self" />
+        <Binding Path="$self.ActualThemeVariant" />
+      </MultiBinding>
+    </Setter>
+  </Style>
 
   <Style Selector="Button.landing.accent TextBlock.lbl">
     <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
@@ -546,6 +562,22 @@
        land ON that hairline rather than a pixel above it. -->
   <Style Selector="Border.pane-hrow.tabrow">
     <Setter Property="Padding" Value="16,0,16,0" />
+  </Style>
+  <!-- The editor toolstrip is the one pane-hrow that may be TALLER than 41: its controls need 581px
+       and the canvas pane is 418 wide at the smallest window, so it wraps onto a second line rather
+       than arranging its last three controls over the rail next door. Declared after .pane-hrow so
+       the height opt-out wins at equal specificity - style ordering is last-one-wins here.
+       NaN is Auto. The MinHeight keeps the row exactly as tall as its neighbours whenever one line
+       is enough, so nothing moves at the sizes where nothing had to give. -->
+  <Style Selector="Border.pane-hrow.toolstrip">
+    <Setter Property="Height" Value="NaN" />
+    <Setter Property="MinHeight" Value="41" />
+    <Setter Property="Padding" Value="12,4" />
+  </Style>
+  <!-- WrapPanel has no Spacing, so the gap the StackPanel used to supply is a trailing margin on
+       each child. The last one's margin is harmless: it falls in the strip's own padding. -->
+  <Style Selector="Border.toolstrip > WrapPanel > :is(Control)">
+    <Setter Property="Margin" Value="0,3,6,3" />
   </Style>
   <Style Selector="Button.railtab">
     <Setter Property="Background" Value="Transparent" />
