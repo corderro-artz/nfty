@@ -1,4 +1,6 @@
+using System.Globalization;
 using Avalonia.Media;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Services;
 using Nfty.Core.Formats;
@@ -21,9 +23,21 @@ namespace Nfty.App.ViewModels;
 /// factor — which it does exactly when the layer is optional. Null means they are the same.</param>
 /// <param name="Optional">Whether the layer may be left out of an asset entirely, which is what
 /// makes the factor one higher than the variant count.</param>
+/// <param name="MoreCount">When positive, this is not a layer at all but the OVERFLOW badge —
+/// the "+3" that stands for the layers past the last slot. It exists because the badge strip is a
+/// fixed number of columns: a stack deeper than that spends its last column saying how many it is
+/// not showing, rather than pushing the figures beside it out of their own columns.</param>
 public record FactorChip(string Name, int VariantCount, LayerKind Kind, bool ShowTimes,
-    int? Variants = null, bool Optional = false)
+    int? Variants = null, bool Optional = false, int MoreCount = 0)
 {
+    /// <summary>Whether this badge stands for the layers that did not fit.</summary>
+    public bool IsMore => MoreCount > 0;
+
+    /// <summary>What the badge prints: a factor, or <c>+N</c> for the overflow badge.</summary>
+    public string Label => IsMore
+        ? $"+{MoreCount.ToString(System.Globalization.CultureInfo.InvariantCulture)}"
+        : VariantCount.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
     /// <summary>Whether this layer rolls its color per asset.</summary>
     public bool IsDynamic => Kind == LayerKind.Dynamic;
     /// <summary>Whether this layer applies one fixed color.</summary>
@@ -47,6 +61,8 @@ public record FactorChip(string Name, int VariantCount, LayerKind Kind, bool Sho
             int variants = Variants ?? VariantCount;
             string plural = variants == 1 ? "variant" : "variants";
             string kind = Kind.ToString().ToLowerInvariant();
+            if (IsMore)
+                return $"{MoreCount} more layers — open the recipe to see them";
             return Optional
                 ? $"{Name} · {kind} · {variants} {plural} + not present"
                 : $"{Name} · {kind} · {variants} {plural}";
@@ -89,6 +105,10 @@ public record RecipeShareRow(string Name, double SharePercent, string DnaSpaceTe
     public bool IsSeries6 => Series == 6;
 }
 
+/// <summary>One page indicator in the DNA-space pager.</summary>
+/// <param name="IsCurrent">Whether this is the page showing.</param>
+public record PageDot(bool IsCurrent);
+
 public partial class CookBookDetailViewModel : ViewModelBase
 {
     /// <summary>Shown where a count cannot be computed (an unvalidatable book).</summary>
@@ -127,25 +147,39 @@ public partial class CookBookDetailViewModel : ViewModelBase
     /// <summary>Whether the book states an intended supply.</summary>
     public bool HasTargetSupply { get; }
 
-    /// <summary>The cookbar's sentence. With a target it reads the mockup's way — "Target supply 500
-    /// of 2,822,400,000 unique DNA" — which is the comparison that actually matters: whether the
-    /// intent fits in the space the book can generate. Without one it just states the space.</summary>
-    public string CookBarText { get; }
-
     /// <summary>How many recipes it holds.</summary>
     public int RecipeCount { get; }
     /// <summary>How many layers across all recipes.</summary>
     public int LayerCount { get; }
     /// <summary>How many variants across all layers.</summary>
     public int VariantCount { get; }
-    /// <summary>The unique-DNA figure as the tile shows it — shortened above a billion, and an em
-    /// dash for a space that cannot be counted.</summary>
+    /// <summary>
+    /// The unique-DNA figure, in full, with thousands separators.
+    /// </summary>
+    /// <remarks>
+    /// <b>Never rounded, and therefore no tooltip.</b> The cell it lives in was widened until the
+    /// widest figure a <see cref="long"/> can hold fits at the SMALLEST window the app opens —
+    /// measured, 255px of ink against 266px of room — so the compact form and the tooltip that used
+    /// to carry the exact digits are both gone. This is the number an author tunes quantize steps
+    /// against; a figure you have to hover to read is a figure you cannot compare at a glance.
+    /// </remarks>
     public string UniqueDnaText { get; }
-    /// <summary>The same figure written out in full, for the tile's tooltip. A tile is 90-odd pixels
-    /// wide and a quintillion is twenty digits, so the tile is allowed to round; the number the
-    /// author is tuning against has to be readable SOMEWHERE, and this is where.</summary>
-    public string UniqueDnaTip { get; }
-    /// <summary>Per-recipe share and DNA-space rows.</summary>
+
+    /// <summary>How much of the space the intended supply would use, 0..100.</summary>
+    /// <remarks>
+    /// Clamped at 100 for the bar's width, because a target LARGER than the space is a real state
+    /// and a bar wider than its track is not. <see cref="SupplyExceedsSpace"/> is what says which
+    /// side of the line it fell on, and the figure beside it is never clamped.
+    /// </remarks>
+    public double SupplyPercent { get; }
+    /// <summary>That percentage as the rail prints it.</summary>
+    public string SupplyPercentText { get; }
+    /// <summary>Whether the target asks for more assets than the book can produce.</summary>
+    public bool SupplyExceedsSpace { get; }
+    /// <summary>Whether the rail has anything to show: a target and a countable space.</summary>
+    public bool HasSupplyRail { get; }
+
+    /// <summary>Every recipe, in the book's own order. The mint bar and the counts read THIS.</summary>
     public IReadOnlyList<RecipeShareRow> Recipes { get; }
 
     /// <summary>Builds the CookBook identity card.</summary>
@@ -195,21 +229,24 @@ public partial class CookBookDetailViewModel : ViewModelBase
         try { space = UniqueSpace.Count(book); }
         catch { /* fall through to Unknown below */ }
 
-        var whole = space is null || !space.IsCountable ? null : ((long, SpaceCertainty)?)(space.Total, space.Certainty);
-        UniqueDnaText = Figure(whole);
-        UniqueDnaTip = Tip(whole);
+        var whole = space is null || !space.IsCountable ? null : ((long Total, SpaceCertainty Certainty)?)(space.Total, space.Certainty);
+        UniqueDnaText = Full(whole);
 
         var target = book.Manifest.TargetSupply;
         HasTargetSupply = target is not null;
-        TargetSupplyText = target?.ToString("N0") ?? Unknown;
-        // The FULL figure, not the tile's: this bar runs the width of the pane, and the comparison
-        // it exists to make — does the intended supply fit in the space? — is between two numbers
-        // that must be read at the same precision. "Target supply 5,000 of 2.82 billion" compares a
-        // exact figure against a rounded one.
-        string full = Full(whole);
-        CookBarText = target is null
-            ? $"{full} unique DNA available"
-            : $"Target supply {target.Value:N0} of {full} unique DNA";
+        TargetSupplyText = target?.ToString("N0", CultureInfo.InvariantCulture) ?? Unknown;
+
+        // The rail answers one question — does the intended supply fit in the space? — so it needs
+        // both numbers to exist. A book with no target, or one whose space cannot be counted, has
+        // nothing to measure and shows no rail rather than a bar at zero.
+        HasSupplyRail = target is { } t && whole is { Total: > 0 } w2 && w2.Total > 0;
+        double raw = HasSupplyRail ? target!.Value / (double)whole!.Value.Total * 100 : 0;
+        SupplyExceedsSpace = HasSupplyRail && target!.Value > whole!.Value.Total;
+        SupplyPercent = Math.Min(100, raw);
+        SupplyPercentText = !HasSupplyRail ? Unknown
+            : raw >= 10 ? raw.ToString("0", CultureInfo.InvariantCulture) + "%"
+            : raw >= 1 ? raw.ToString("0.0", CultureInfo.InvariantCulture) + "%"
+            : raw.ToString("0.00", CultureInfo.InvariantCulture) + "%";
 
         double totalWeight = book.Manifest.RecipeWeights.Values.Sum();
         int seriesIndex = 0;
@@ -246,7 +283,7 @@ public partial class CookBookDetailViewModel : ViewModelBase
             // land on — and a layer that never appears counts one rather than its variants. The
             // Recipe pane's own chips already do this; the two panels are one click apart and show
             // the same arithmetic, so they cannot be allowed to disagree about it.
-            var factors = ordered
+            var factors = Slotted(ordered
                 .Select((i, idx) =>
                 {
                     double absent = r.Manifest.AbsentPercentOf(i.Manifest.Id);
@@ -257,15 +294,117 @@ public partial class CookBookDetailViewModel : ViewModelBase
                         ShowTimes: idx > 0,
                         Variants: i.Manifest.Variants.Count, Optional: absent > 0);
                 })
-                .ToList();
+                .ToList());
             return new RecipeShareRow(r.Manifest.Name, Math.Round(share, 1), dna, dnaTip, series,
                 factors);
         }).ToList();
+
+        PageSize = Math.Max(1, Recipes.Count);
     }
 
     /// <summary>
-    /// One DNA-space figure as this card shows it: <see cref="SpaceText"/>'s compact form, which
-    /// prints every digit below a billion and a named magnitude above it.
+    /// How many badge columns a row has. A stack deeper than this spends the last one on a
+    /// <c>+N</c>.
+    /// </summary>
+    /// <remarks>
+    /// <b>The strip is a fixed number of columns, not a run that grows.</b> Laid out as a run, a
+    /// five-layer recipe put its first badge where a six-layer one put its second and nothing lined
+    /// up down the table; worse, a deep stack pushed the figure beside it out of the column every
+    /// other row keeps it in. Six is what the table's stated badge width holds.
+    /// </remarks>
+    public const int FactorSlots = 6;
+
+    /// <summary>
+    /// Caps a layer stack at <see cref="FactorSlots"/>, spending the last slot on a <c>+N</c>.
+    /// </summary>
+    /// <param name="all">Every layer's chip, in paint order.</param>
+    /// <returns>At most <see cref="FactorSlots"/> chips.</returns>
+    private static IReadOnlyList<FactorChip> Slotted(IReadOnlyList<FactorChip> all)
+    {
+        if (all.Count <= FactorSlots) return all;
+        var kept = all.Take(FactorSlots - 1).ToList();
+        kept.Add(new FactorChip(string.Empty, 0, LayerKind.Custom, ShowTimes: true,
+            MoreCount: all.Count - (FactorSlots - 1)));
+        return kept;
+    }
+
+    // ---- paging -------------------------------------------------------------------------------
+    //
+    // The table pages rather than scrolls, and HOW MANY it pages by is not a constant: the view
+    // measures one rendered row against the space beneath the band and sets PageSize. That is the
+    // whole "breathes with the window" behaviour - two rows at the smallest window the app opens,
+    // five at the size it opens at, the whole book at full screen - and a number chosen here would
+    // be right at one window size and wrong at every other.
+
+    /// <summary>How many rows fit on a page. Set by the view from a measured row.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(VisibleRecipes))]
+    [NotifyPropertyChangedFor(nameof(PageCount))]
+    [NotifyPropertyChangedFor(nameof(PageLabel))]
+    [NotifyPropertyChangedFor(nameof(HasPages))]
+    [NotifyPropertyChangedFor(nameof(Dots))]
+    [NotifyCanExecuteChangedFor(nameof(NextPageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviousPageCommand))]
+    private int _pageSize = 1;
+
+    /// <summary>Which page is showing, zero-based.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(VisibleRecipes))]
+    [NotifyPropertyChangedFor(nameof(PageLabel))]
+    [NotifyPropertyChangedFor(nameof(Dots))]
+    [NotifyCanExecuteChangedFor(nameof(NextPageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviousPageCommand))]
+    private int _pageIndex;
+
+    /// <summary>A page that no longer exists is not a page: shrink the window and the last page
+    /// goes with it, so the index follows rather than leaving the table blank.</summary>
+    /// <param name="value">The new page size.</param>
+    partial void OnPageSizeChanged(int value)
+    {
+        if (PageIndex > PageCount - 1) PageIndex = Math.Max(0, PageCount - 1);
+    }
+
+    /// <summary>The rows this page shows.</summary>
+    public IReadOnlyList<RecipeShareRow> VisibleRecipes =>
+        Recipes.Skip(PageIndex * Math.Max(1, PageSize)).Take(Math.Max(1, PageSize)).ToList();
+
+    /// <summary>How many pages the book comes to at the current size. At least one, always.</summary>
+    public int PageCount =>
+        Math.Max(1, (int)Math.Ceiling(Recipes.Count / (double)Math.Max(1, PageSize)));
+
+    /// <summary>Whether there is more than one page — the pager's controls stay in place either
+    /// way, so this drives the ink and never the geometry.</summary>
+    public bool HasPages => PageCount > 1;
+
+    /// <summary>One dot per page, the current one lit. Reserved even at one page, so the pager's
+    /// geometry does not change when a window resize adds or removes a page.</summary>
+    public IReadOnlyList<PageDot> Dots =>
+        Enumerable.Range(0, PageCount).Select(i => new PageDot(i == PageIndex)).ToList();
+
+    /// <summary>Which rows are showing, of how many: "1–5 of 8".</summary>
+    public string PageLabel
+    {
+        get
+        {
+            if (Recipes.Count == 0) return string.Empty;
+            int from = PageIndex * Math.Max(1, PageSize);
+            int to = Math.Min(from + Math.Max(1, PageSize), Recipes.Count);
+            return $"{from + 1}–{to} of {Recipes.Count}";
+        }
+    }
+
+    /// <summary>Shows the next page.</summary>
+    [RelayCommand(CanExecute = nameof(CanGoNext))]
+    private void NextPage() => PageIndex++;
+    private bool CanGoNext() => PageIndex < PageCount - 1;
+
+    /// <summary>Shows the previous page.</summary>
+    [RelayCommand(CanExecute = nameof(CanGoBack))]
+    private void PreviousPage() => PageIndex--;
+    private bool CanGoBack() => PageIndex > 0;
+
+    /// <summary>
+    /// One recipe's DNA-space figure as its ROW shows it: <see cref="SpaceText"/>'s compact form.
     /// </summary>
     /// <param name="space">The figure and what it is, or null when the space is undefined — the
     /// book is invalid in a way that makes the question meaningless, or counting threw.</param>
@@ -274,8 +413,12 @@ public partial class CookBookDetailViewModel : ViewModelBase
     /// <b>The wording is Core's, not this card's.</b> This method used to BE the rule — three
     /// branches, worded one way here and another in the CLI's <c>stats</c> line, which is how two
     /// surfaces showing one number came to describe it differently. What stays local is the
-    /// <see cref="Unknown"/> em dash: a metric tile has room for a figure and not for a sentence,
+    /// <see cref="Unknown"/> em dash: a table cell has room for a figure and not for a sentence,
     /// while the report has room for both and says which problem to go and fix.
+    ///
+    /// <para>The compact form survives HERE and nowhere else. A row's figure column is 118px, so it
+    /// still rounds past a billion and still carries the exact digits on its tooltip; the headline
+    /// figure has a cell wide enough to print in full and does neither.</para>
     /// </remarks>
     private static string Figure((long Total, SpaceCertainty Certainty)? space) =>
         space is not { } s ? Unknown : SpaceText.Describe(s.Total, s.Certainty, compact: true);

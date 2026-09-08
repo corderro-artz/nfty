@@ -93,21 +93,27 @@ public class ValidityIsCheckedTests
 
     // ---- target supply surfacing ---------------------------------------------------------------
 
-    /// <summary>The target-supply chip and cookbar sentence. Unset is a real state - the book has not
-    /// committed to a number - and must not render as a target of zero.</summary>
+    /// <summary>
+    /// Unset is a real state — the book has not committed to a number — so the supply rail is not
+    /// there at all rather than showing a bar at zero.
+    /// </summary>
+    /// <remarks>
+    /// This used to assert a cookbar SENTENCE, which is gone: the target and the space were being
+    /// stated in three places (a chip on the identity card, that sentence, and the figure), and the
+    /// rail now states them once, beside the figure the target is a fraction of.
+    /// </remarks>
     [AvaloniaFact]
-    public void An_unset_target_supply_hides_the_chip_and_leaves_the_cookbar_alone()
+    public void An_unset_target_supply_shows_no_supply_rail()
     {
         using var book = ExplorerViewModelTests.TwoRecipeBook();
         var vm = new CookBookDetailViewModel(book, () => { });
 
         Assert.False(vm.HasTargetSupply);
-        Assert.DoesNotContain("Target supply", vm.CookBarText);
-        Assert.Contains("unique DNA available", vm.CookBarText);
+        Assert.False(vm.HasSupplyRail);
     }
 
     [AvaloniaFact]
-    public void A_set_target_supply_shows_the_chip_and_the_mockups_comparison()
+    public void A_set_target_supply_fills_the_rail_against_the_space()
     {
         using var src = ExplorerViewModelTests.TwoRecipeBook();
         using var book = new LoadedCookBook
@@ -118,9 +124,31 @@ public class ValidityIsCheckedTests
         var vm = new CookBookDetailViewModel(book, () => { });
 
         Assert.True(vm.HasTargetSupply);
-        Assert.Equal("5,000", vm.TargetSupplyText);          // grouped, as the mockup formats it
-        // The sentence the cookbar exists for: intent measured against what the book can actually make.
-        Assert.StartsWith("Target supply 5,000 of ", vm.CookBarText);
-        Assert.EndsWith(" unique DNA", vm.CookBarText);
+        Assert.True(vm.HasSupplyRail);
+        Assert.Equal("5,000", vm.TargetSupplyText);          // grouped, as the card formats it
+
+        // This fixture's space is 2, so 5,000 asks for far more than the book can make. That is the
+        // case the rail exists for, and the one it has to read BEFORE Cook is pressed: the bar is
+        // clamped to its track while the figure beside it is not, and the state is named rather
+        // than inferred from a bar that happens to be full.
+        Assert.True(vm.SupplyExceedsSpace);
+        Assert.Equal(100, vm.SupplyPercent);
+    }
+
+    [AvaloniaFact]
+    public void A_target_inside_the_space_reads_as_a_fraction_of_it()
+    {
+        using var src = ExplorerViewModelTests.TwoRecipeBook();
+        using var book = new LoadedCookBook
+        {
+            Manifest = src.Manifest with { TargetSupply = 1 },
+            Recipes = src.Recipes,
+        };
+        var vm = new CookBookDetailViewModel(book, () => { });
+
+        Assert.True(vm.HasSupplyRail);
+        Assert.False(vm.SupplyExceedsSpace);
+        Assert.Equal(50, vm.SupplyPercent);                  // 1 of this fixture's 2
+        Assert.Equal("50%", vm.SupplyPercentText);
     }
 }

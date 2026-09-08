@@ -1287,6 +1287,15 @@
        the consuming view is expected to supply already-uppercased text. -->
 
   <!-- metric band tile (explorer.html:210-216) -->
+  <!-- CENTRED, not spread. These cells held two lines with the figure against the top and the
+       label against the bottom, which left a void through the middle of every one of them and read
+       as a small number stranded in a large box. Every cell carries the same two lines at the same
+       sizes, so centring them makes the band uniform BY CONSTRUCTION: the figures share one line
+       and the labels share another because the cells are identical, not because four paddings
+       agree. `DnaSpaceLayoutTests` measures that rather than trusting it. -->
+  <Style Selector="Border.metric > StackPanel">
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
   <Style Selector="Border.metric">
     <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
@@ -1327,11 +1336,6 @@
     <Setter Property="Height" Value="10" />
     <Setter Property="CornerRadius" Value="2" />
   </Style>
-  <Style Selector="TextBlock.pc">
-    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
-  </Style>
-
   <!-- Reusable "table" row classes for a Grid/ItemsControl in place of DataGrid
        (explorer.html:259-267, table.data th/td). Dual-purpose class names: the
        Border selector styles a row's chrome (border/background/padding); the
@@ -1992,10 +1996,12 @@
     <Setter Property="HorizontalAlignment" Value="Left" />
   </Style>
   <!-- .crow: one recipe's combination-space line -->
+  <!-- One line per recipe, so the row's band is 8 rather than the 11 a two-line row needed. That
+       is what takes a page from two rows to five at the window the app opens at. -->
   <Style Selector="Border.crow">
     <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
     <Setter Property="BorderThickness" Value="0,0,0,1" />
-    <Setter Property="Padding" Value="0,11" />
+    <Setter Property="Padding" Value="0,8" />
   </Style>
   <Style Selector="Border.cdot">
     <Setter Property="Width" Value="8" />
@@ -2007,6 +2013,7 @@
   <Style Selector="TextBlock.cname">
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="FontSize" Value="13" />
+    <Setter Property="LineHeight" Value="17" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <!-- .cbar: the per-recipe share track -->
@@ -2017,9 +2024,19 @@
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="ClipToBounds" Value="True" />
   </Style>
+  <!-- STATED LINE BOXES on the four mono runs in a DNA-space row. IBM Plex Mono's natural box is
+       far taller than its em - measured, 26px at a 10px font - so left alone these set the row's
+       height instead of the badge that looks like the tallest thing in it, and the row drew 43px
+       around 34px of content. That is the badge-clipping bug inverted, and it costs a row per page.
+       They are all ONE height, 17, rather than each ~1.25x its own size. Avalonia has no baseline
+       alignment, so three centred boxes of three heights put their baselines 1.6px apart and
+       TextBaselineTests said so; equal boxes bring them inside half a pixel. The height is
+       comfortably above every one of these faces' ascent plus descent, which is what stops a box
+       smaller than the em cutting the ink. -->
   <Style Selector="TextBlock.cshare">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="11" />
+    <Setter Property="LineHeight" Value="17" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
@@ -2041,6 +2058,7 @@
   <Style Selector="Border.fchip > TextBlock">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="11" />
+    <Setter Property="LineHeight" Value="15" />
   </Style>
   <Style Selector="Border.fchip.kdyn">
     <Setter Property="Background" Value="{DynamicResource KindDynamicWashBrush}" />
@@ -2061,6 +2079,7 @@
   <Style Selector="TextBlock.ftimes">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="11" />
+    <Setter Property="LineHeight" Value="15" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="Opacity" Value="0.5" />
     <Setter Property="VerticalAlignment" Value="Center" />
@@ -2068,6 +2087,7 @@
   <Style Selector="TextBlock.ceq">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="12" />
+    <Setter Property="LineHeight" Value="17" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="Margin" Value="3,0" />
     <Setter Property="VerticalAlignment" Value="Center" />
@@ -2076,6 +2096,7 @@
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontWeight" Value="Bold" />
     <Setter Property="FontSize" Value="13.5" />
+    <Setter Property="LineHeight" Value="17" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 
@@ -3331,9 +3352,13 @@
        the CSS pseudo-classes actually mean, rather than by threading an IsFirst/IsLast flag through
        three record types and their construction sites. A row still cannot know its own position; the
        selector asks its container, which can. -->
+  <!-- EVERY DNA-SPACE ROW IS THE SAME HEIGHT. The last one used to drop its rule and 5px of its
+       band, which is a fine flourish in a list that simply ends and a defect in one that is PAGED:
+       the view measures a row to decide how many rows fit, so a last row of a different height made
+       the answer depend on the answer, and Avalonia threw "Infinite layout loop detected". Only the
+       border goes now; the band is untouched. -->
   <Style Selector="ItemsControl > ContentPresenter:nth-last-child(1) > Border.crow">
     <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="Padding" Value="0,11,0,3" />
   </Style>
 
   <Style Selector="Border.rulerow">
@@ -3349,5 +3374,134 @@
   <Style Selector="ItemsControl > ContentPresenter:nth-child(1) > Border.cwaxis">
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Padding" Value="0,4,0,8" />
+  </Style>
+
+  <!-- ============================================================================================
+       THE DNA-SPACE TABLE AND THE SUPPLY RAIL
+       ============================================================================================ -->
+
+  <!-- The table's header. It states the same columns the rows do - Avalonia has no SharedSizeGroup,
+       so across two grids a stated pixel column is the only thing that aligns. -->
+  <Style Selector="Border.thead">
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="0,0,0,6" />
+  </Style>
+  <Style Selector="TextBlock.th">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="9" />
+    <Setter Property="LetterSpacing" Value="1.1" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="TextBlock.th.r">
+    <Setter Property="TextAlignment" Value="Right" />
+  </Style>
+
+  <!-- The pager. Present at one page as well as ten - disabled, never absent - so a resize that
+       changes the page count moves nothing beside it. -->
+  <Style Selector="TextBlock.pglabel">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="Button.pgbtn">
+    <Setter Property="Width" Value="20" />
+    <Setter Property="Height" Value="20" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+  </Style>
+  <Style Selector="Button.pgbtn:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+  </Style>
+  <!-- A chevron is disabled on the first page and on the last, which is most of the time on a small
+       book — so it is dimmed by SWAPPING THE INK, not by the app-wide 0.38 opacity. That dim is
+       legible over a full-strength foreground and not over an already-muted glyph, which is the rule
+       CLAUDE.md records; left alone these two failed the contrast sweep at 1.39 against a floor
+       of 2.0. The geometry is untouched either way. -->
+  <Style Selector="Button.pgbtn:disabled">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector="Button.pgbtn:disabled /template/ ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+  </Style>
+  <Style Selector="Border.pgdot">
+    <Setter Property="Width" Value="4" />
+    <Setter Property="Height" Value="4" />
+    <Setter Property="CornerRadius" Value="999" />
+    <Setter Property="Background" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.pgdot.on">
+    <Setter Property="Background" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+
+  <!-- The supply rail: does the intended supply fit in the space? Sized and cornered like the mint
+       bar (.distbar) below it, because the two are the same kind of object - a track read as a
+       proportion - and a thin pill beside a 16px rounded rectangle read as two unrelated controls. -->
+  <Style Selector="TextBlock.raill">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="LetterSpacing" Value="0.6" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.raill.strong">
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+  </Style>
+  <Style Selector="TextBlock.railpct">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+  </Style>
+  <Style Selector="TextBlock.railpct.over">
+    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+  </Style>
+  <Style Selector="Border.meter">
+    <Setter Property="Height" Value="10" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Border.meterfill">
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="Background" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+  <!-- Asking for more than the book admits is the case this rail exists for, and it is the one
+       state that has to read before the Cook button is pressed rather than after. -->
+  <Style Selector="Border.meterfill.over">
+    <Setter Property="Background" Value="{DynamicResource WarningBrush}" />
+  </Style>
+
+  <!-- ONE WIDTH FOR EVERY BADGE. The slot grid aligns the columns, but a badge sized to its own
+       text still drew a wider box for a two-digit count or a +N than for a single digit, and the
+       column read as ragged even though its edges were right. A stated width wide enough for two
+       characters makes the boxes themselves the grid. -->
+  <Style Selector="Border.fchip">
+    <Setter Property="Width" Value="24" />
+    <Setter Property="Padding" Value="0,1" />
+  </Style>
+  <!-- The overflow badge stands for layers it is not showing, so it is dashed rather than filled:
+       it is a count of what is hidden, not a factor like its neighbours. -->
+  <Style Selector="Border.fchip.more">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="Border.fchip.more > TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
 </Styles>

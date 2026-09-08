@@ -41,22 +41,18 @@ public class MintDistributionLayoutTests
 
         var bar = view.GetVisualDescendants().OfType<Border>().First(b => b.Classes.Contains("distbar"));
 
-        // The two sections it has to line up with, found by what they contain rather than by grid
-        // position, so moving a column does not silently retarget the measurement.
-        var metrics = view.GetVisualDescendants().OfType<TextBlock>()
-            .First(t => t.Text == "RECIPES").GetVisualAncestors().OfType<Border>()
-            .First(b => b.Classes.Contains("metric"));
-        var dnaHeading = view.GetVisualDescendants().OfType<TextBlock>().First(t => t.Text == "DNA SPACE");
+        // Measured against the IDENTITY CARD, which is the widest thing on this screen and the one
+        // that defines its edges. The old version compared the bar to a metrics tile and a DNA
+        // column that no longer exist as separate columns — the card is a single stack now, so the
+        // question is simply whether the bar runs the whole of it.
+        var card = view.GetVisualDescendants().OfType<Border>().First(b => b.Classes.Contains("cbk-id"));
 
         double Left(Visual v) => v.TranslatePoint(new Point(0, 0), view)!.Value.X;
         double Right(Visual v) => v.TranslatePoint(new Point(v.Bounds.Width, 0), view)!.Value.X;
 
-        Assert.True(Left(bar) <= Left(metrics) + 1,
-            $"the bar starts at {Left(bar)}, right of the metrics at {Left(metrics)}");
-
-        // The DNA rows are what actually reach the panel's right edge; the heading only labels them.
-        var dnaColumn = dnaHeading.GetVisualAncestors().OfType<StackPanel>().First();
-        Assert.True(Right(bar) >= Right(dnaColumn) - 1,
-            $"the bar ends at {Right(bar)}, short of the DNA space column at {Right(dnaColumn)}");
+        Assert.True(Left(bar) <= Left(card) + 1,
+            $"the bar starts at {Left(bar)}, right of the card at {Left(card)}");
+        Assert.True(Right(bar) >= Right(card) - 1,
+            $"the bar ends at {Right(bar)}, short of the card's edge at {Right(card)}");
     }
 }

@@ -2,10 +2,16 @@
              xmlns:vm="using:Nfty.App.ViewModels" xmlns:conv="using:Nfty.App.Converters"
              x:Class="Nfty.App.Views.CookBookDetailView"
              x:DataType="vm:CookBookDetailViewModel">
-  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-  <StackPanel Margin="20">
-    <!-- .cbk-id: the identity card. The chips used to float here with no card around them. -->
-    <Border Classes="cbk-id">
+  <!-- NO SCROLLER. The one thing on this card without a bound size is the recipe list, and it pages
+       instead of growing - so the card fits the pane at every window the app allows, and the mint
+       bar and the actions cannot be scrolled away from. `DnaSpaceLayoutTests` measures that at the
+       smallest window rather than trusting it. -->
+  <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="20" RowSpacing="12">
+
+    <!-- .cbk-id: the identity card. The chips used to float here with no card around them.
+         There is deliberately no "target supply" chip any more: that number is on the supply rail
+         below, beside the figure it is a fraction of, and it was being stated in three places. -->
+    <Border Grid.Row="0" Classes="cbk-id">
       <StackPanel Spacing="9">
         <StackPanel Orientation="Horizontal" Spacing="10">
           <Path Classes="ico ti" Data="{StaticResource IconTypeCookBook}" VerticalAlignment="Center" />
@@ -13,10 +19,6 @@
         </StackPanel>
         <TextBlock Classes="iddesc" Text="{Binding Description}"
                    IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-        <!-- id-chips: explorer.html .cbk-id .idchips. Each is a muted label plus a bold value. The
-             book's own Name is deliberately NOT a chip - the mockup has no such chip, and the
-             heading directly above already says it. "target supply" is the one mockup chip still
-             missing: nothing in the model carries a target yet. -->
         <StackPanel Orientation="Horizontal" Spacing="7">
           <Border Classes="idchip">
             <StackPanel Orientation="Horizontal" Spacing="5">
@@ -36,13 +38,6 @@
               <TextBlock Classes="cvl" Text="{Binding ColorizeText}" />
             </StackPanel>
           </Border>
-          <Border Classes="idchip" IsVisible="{Binding HasTargetSupply}"
-                  ToolTip.Tip="How many assets this collection intends to mint">
-            <StackPanel Orientation="Horizontal" Spacing="5">
-              <TextBlock Classes="ck" Text="target supply" />
-              <TextBlock Classes="cvl" Text="{Binding TargetSupplyText}" />
-            </StackPanel>
-          </Border>
           <Border Classes="idchip" ToolTip.Tip="{Binding StatusTip}">
             <StackPanel Orientation="Horizontal" Spacing="5">
               <TextBlock Classes="ck" Text="status" />
@@ -55,136 +50,197 @@
       </StackPanel>
     </Border>
 
-    <!-- .cbk-cols: metrics left, combination space right - and the mint distribution UNDER BOTH.
-         It used to live inside the left column, where "full width" meant full width of that column
-         and the bar stopped halfway across a panel whose other sections run edge to edge. A share of
-         the whole collection is not a fact about the left-hand metrics, so it gets the whole width
-         rather than a share of it. -->
-    <Grid ColumnDefinitions="0.92*,24,1.08*" RowDefinitions="Auto,Auto" Margin="0,17,0,0">
-      <StackPanel Grid.Row="0" Grid.Column="0">
-        <!-- metric band: statband, THREE counts over one figure.
-             It was a 2x2 and the fourth cell is not a fourth count. RECIPES, LAYERS and VARIANTS are
-             bounded by what a person can author - two digits, three at the outside - while UNIQUE
-             DNA is a product of all of them and has no upper bound at all. Sized as a quarter of
-             this column it had 98px of room at the smallest window the app opens, which is nine
-             mono characters: "2,560,000" was already at the edge and a book past a trillion drew
-             "30.64 trilli", clipped, with the control still reporting the width it was asked for.
-             Giving it the row makes the widest figure the formatter can emit fit by construction,
-             and it reads as the headline it is - the number this whole card is about. -->
-        <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto">
-          <Border Grid.Row="0" Grid.Column="0" Classes="metric" Margin="0,0,5,5">
-            <StackPanel><TextBlock Classes="mv" Text="{Binding RecipeCount}" /><TextBlock Classes="ml" Text="RECIPES" /></StackPanel>
+    <!-- The band: three counts and the figure, then the supply rail.
+         The counts are CAPPED and the figure cell takes every pixel the window adds - a count is two
+         or three digits at any size, so width does nothing for it, while this figure's width is what
+         lets it print in full. Measured, the figure has 266px at the smallest window the app opens
+         and the widest a long can hold inks at 255, which is why there is no compact form and no
+         tooltip on it.
+         All four cells hold the same two lines at the same sizes and CENTER them, so the values
+         share one line and the labels share another by construction rather than by four paddings
+         agreeing. They used to be spread top-and-bottom, which left a void through every cell. -->
+    <StackPanel Grid.Row="1" Spacing="9">
+      <!-- The three counts share ONE stated width so the band reads as three of a kind rather than
+             three cells that happen to hold short words; Auto sized each to its own label and came
+             out 74/74/88. The figure takes the rest, which is what lets it print in full - the
+             number is checked at the smallest window the app opens by DnaSpaceLayoutTests. -->
+      <Grid ColumnDefinitions="88,88,88,*" ColumnSpacing="8">
+        <Border Grid.Column="0" Classes="metric">
+          <StackPanel Spacing="4">
+            <TextBlock Classes="mv" Text="{Binding RecipeCount}" /><TextBlock Classes="ml" Text="RECIPES" />
+          </StackPanel>
+        </Border>
+        <Border Grid.Column="1" Classes="metric">
+          <StackPanel Spacing="4">
+            <TextBlock Classes="mv" Text="{Binding LayerCount}" /><TextBlock Classes="ml" Text="LAYERS" />
+          </StackPanel>
+        </Border>
+        <Border Grid.Column="2" Classes="metric">
+          <StackPanel Spacing="4">
+            <TextBlock Classes="mv" Text="{Binding VariantCount}" /><TextBlock Classes="ml" Text="VARIANTS" />
+          </StackPanel>
+        </Border>
+        <Border Grid.Column="3" Classes="metric accent">
+          <StackPanel Spacing="4">
+            <TextBlock Classes="mv" Text="{Binding UniqueDnaText}" /><TextBlock Classes="ml" Text="UNIQUE DNA" />
+          </StackPanel>
+        </Border>
+      </Grid>
+
+      <!-- The supply rail: does the intended supply fit in the space? Sized and cornered like the
+           mint bar below, because they are the same kind of object - a track read as a proportion.
+           It was a 3px line on a cell's bottom edge and read as a rule rather than a measurement. -->
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" IsVisible="{Binding HasSupplyRail}">
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+          <TextBlock Classes="raill" Text="TARGET SUPPLY" />
+          <TextBlock Classes="raill strong" Text="{Binding TargetSupplyText}" />
+        </StackPanel>
+        <Border Grid.Column="1" Classes="meter">
+          <!-- A 0.05% fill rounds to nothing, so the fill carries a minimum width: "almost none of
+               it" is a real answer, and an empty track reads as a broken control. -->
+          <Border HorizontalAlignment="Left" MinWidth="4" Classes="meterfill"
+                  Classes.over="{Binding SupplyExceedsSpace}">
+            <Border.Width>
+              <MultiBinding Converter="{x:Static conv:ShareWidthConverter.Instance}">
+                <Binding Path="SupplyPercent" />
+                <Binding Path="$parent[Border].Bounds.Width" />
+              </MultiBinding>
+            </Border.Width>
           </Border>
-          <Border Grid.Row="0" Grid.Column="1" Classes="metric" Margin="5,0,5,5">
-            <StackPanel><TextBlock Classes="mv" Text="{Binding LayerCount}" /><TextBlock Classes="ml" Text="LAYERS" /></StackPanel>
-          </Border>
-          <Border Grid.Row="0" Grid.Column="2" Classes="metric" Margin="5,0,0,5">
-            <StackPanel><TextBlock Classes="mv" Text="{Binding VariantCount}" /><TextBlock Classes="ml" Text="VARIANTS" /></StackPanel>
-          </Border>
-          <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Classes="metric accent" Margin="0,5,0,0">
-            <StackPanel ToolTip.Tip="{Binding UniqueDnaTip}"><TextBlock Classes="mv" Text="{Binding UniqueDnaText}" /><TextBlock Classes="ml" Text="UNIQUE DNA" /></StackPanel>
-          </Border>
+        </Border>
+        <TextBlock Grid.Column="2" Classes="railpct" VerticalAlignment="Center"
+                   Classes.over="{Binding SupplyExceedsSpace}" Text="{Binding SupplyPercentText}" />
+      </Grid>
+    </StackPanel>
+
+    <!-- The DNA-space table. One row per recipe, on one line, paged rather than scrolled. -->
+    <Grid Grid.Row="2" RowDefinitions="Auto,Auto,*" RowSpacing="0">
+      <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,7">
+        <TextBlock Grid.Column="0" Classes="sub-h" Text="DNA SPACE" VerticalAlignment="Center" />
+        <!-- The pager is present at one page as well as ten - disabled, never absent - so a resize
+             that changes the page count does not move anything beside it. -->
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+          <TextBlock Classes="pglabel" Text="{Binding PageLabel}" VerticalAlignment="Center" />
+          <Button Classes="pgbtn" Command="{Binding PreviousPageCommand}" Content="‹"
+                  ToolTip.Tip="Previous page" />
+          <Button Classes="pgbtn" Command="{Binding NextPageCommand}" Content="›"
+                  ToolTip.Tip="Next page" />
+          <ItemsControl ItemsSource="{Binding Dots}" VerticalAlignment="Center" Margin="2,0,0,0">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="3" /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:PageDot">
+                <Border Classes="pgdot" Classes.on="{Binding IsCurrent}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Grid>
+
+      <!-- THE HEADER AND EVERY ROW STATE THE SAME COLUMNS. Avalonia has no SharedSizeGroup, so
+           across separate grids a stated pixel column is the only thing that aligns - the same rule
+           the recipe layer table follows. Only the name and the share track flex. -->
+      <Border Grid.Row="1" Classes="thead">
+        <Grid ColumnDefinitions="7,*,46,204,14,118" ColumnSpacing="10">
+          <TextBlock Grid.Column="1" Classes="th" Text="RECIPE" />
+          <TextBlock Grid.Column="2" Classes="th r" Text="SHARE" />
+          <TextBlock Grid.Column="3" Classes="th r" Text="LAYERS" />
+          <TextBlock Grid.Column="5" Classes="th r" Text="UNIQUE DNA" />
         </Grid>
+      </Border>
 
-      </StackPanel>
+      <!-- The host exists to be MEASURED, and it is a ScrollViewer for one reason: a Panel reports
+           its content's desired height, so the star row grew with the rows, which let more rows fit,
+           which grew the row again — Avalonia calls that an infinite layout loop and it is exactly
+           what the harness caught. A ScrollViewer reports the CONSTRAINT it was given instead, so
+           the height the page size is computed from cannot depend on the page size.
+           It cannot actually scroll: both bars are disabled, and the table pages so that its content
+           never exceeds the viewport. `DnaSpaceLayoutTests` asserts that rather than trusting it. -->
+      <ScrollViewer Grid.Row="2" x:Name="RowsHost"
+                    VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Disabled">
+      <ItemsControl ItemsSource="{Binding VisibleRecipes}" VerticalAlignment="Top">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:RecipeShareRow">
+            <Border Classes="crow">
+              <Grid ColumnDefinitions="7,*,46,204,14,118" ColumnSpacing="10">
+                <Border Grid.Column="0" Classes="cdot series"
+                        Classes.s1="{Binding IsSeries1}" Classes.s2="{Binding IsSeries2}"
+                        Classes.s3="{Binding IsSeries3}" Classes.s4="{Binding IsSeries4}"
+                        Classes.s5="{Binding IsSeries5}" Classes.s6="{Binding IsSeries6}" />
 
-      <!-- .cspace: how each recipe's combination count is arrived at, layer by layer. -->
-      <StackPanel Grid.Row="0" Grid.Column="2">
-        <!-- "DNA space" is what explorer.html renders; "combination space" appears only in a CSS
-             comment there, never as visible text. -->
-        <TextBlock Classes="sub-h" Text="DNA SPACE" Margin="0,0,0,2" />
-        <ItemsControl ItemsSource="{Binding Recipes}">
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:RecipeShareRow">
-              <Border Classes="crow">
-                <StackPanel Spacing="9">
-                  <!-- THE NAME IS THE ELASTIC ONE, and getting that backwards clipped the figures.
-                       This was Auto,Auto,* - the name took its natural width and the chips and the
-                       total shared what was left. A right-aligned block given less than it needs is
-                       arranged at that width and overflows its LEADING edge, so a recipe with a long
-                       name lost the first of its factor chips: "Strongbox" drew half a badge where
-                       "Chest" drew a whole one, at the same window, in the same table. Nothing about
-                       the name deserves that priority - it is repeated in the legend below and in
-                       the tree beside it, while the chips and the figure appear nowhere else. So the
-                       name gets the star and trims, and the numbers are measured first. -->
-                  <Grid ColumnDefinitions="Auto,*,Auto">
-                    <Border Grid.Column="0" Classes="cdot series" Margin="0,0,10,0"
+                <!-- Name and share track share the elastic column: the name takes what it needs up
+                     to a cap and trims, and the TRACK takes the rest. At full screen that column is
+                     ~800px, and the one element here whose meaning improves with length is a bar -
+                     laid out any other way it was an 800px void between a five-letter name and the
+                     numbers. -->
+                <Grid Grid.Column="1" ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                  <TextBlock Grid.Column="0" Classes="cname" Text="{Binding Name}"
+                             MaxWidth="190" HorizontalAlignment="Left"
+                             TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                  <Border Grid.Column="1" Classes="cbar" VerticalAlignment="Center">
+                    <Border HorizontalAlignment="Left" CornerRadius="999" Classes="series"
                             Classes.s1="{Binding IsSeries1}" Classes.s2="{Binding IsSeries2}"
                             Classes.s3="{Binding IsSeries3}" Classes.s4="{Binding IsSeries4}"
-                            Classes.s5="{Binding IsSeries5}" Classes.s6="{Binding IsSeries6}" />
-                    <TextBlock Grid.Column="1" Classes="cname" Text="{Binding Name}"
-                               TextTrimming="CharacterEllipsis" HorizontalAlignment="Left" />
-                    <!-- factors x factors = total -->
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="5"
-                                HorizontalAlignment="Right" VerticalAlignment="Center">
-                      <ItemsControl ItemsSource="{Binding Factors}">
-                        <ItemsControl.ItemsPanel>
-                          <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="5" /></ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                          <DataTemplate x:DataType="vm:FactorChip">
-                            <StackPanel Orientation="Horizontal" Spacing="5">
-                              <TextBlock Classes="ftimes" Text="×" IsVisible="{Binding ShowTimes}" />
-                              <Border Classes="fchip"
-                                      Classes.kdyn="{Binding IsDynamic}"
-                                      Classes.kstat="{Binding IsStatic}"
-                                      Classes.kcust="{Binding IsCustom}"
-                                      ToolTip.Tip="{Binding Tip}">
-                                <TextBlock Text="{Binding VariantCount}" />
-                              </Border>
-                            </StackPanel>
-                          </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                      </ItemsControl>
-                      <!-- "→", not "=". The chips are the layer stack; the figure is unique DNA,
-                           which is the LEGAL combinations (this recipe's rules remove some) times
-                           each dynamic layer's quantized color buckets. So the chips' product is
-                           not the figure and no extra factor can make it one — Cat reads
-                           2x3x2x3x3 = 108 while its DNA space is 90 legal combinations x 7776
-                           colors. An equals sign there was arithmetic the panel could not back up.
-                           The tooltip carries the derivation the arrow leaves implicit. -->
-                      <TextBlock Classes="ceq" Text="→" VerticalAlignment="Bottom" />
-                      <TextBlock Classes="cnum" Text="{Binding DnaSpaceText}" VerticalAlignment="Bottom"
-                                 ToolTip.Tip="{Binding DnaSpaceTip}" />
-                    </StackPanel>
-                  </Grid>
-                  <Grid ColumnDefinitions="*,12,Auto">
-                    <!-- Unlike the three other bars in this app, THIS track has no fixed width — it
-                         is a star column, so it is wider than the 310px a constant multiplier
-                         assumed, and a recipe holding 100% of mints drew about four fifths of a bar.
-                         Measure the track instead. -->
-                    <Border Grid.Column="0" Classes="cbar">
-                      <Border HorizontalAlignment="Left" CornerRadius="999" Classes="series"
-                              Classes.s1="{Binding IsSeries1}" Classes.s2="{Binding IsSeries2}"
-                              Classes.s3="{Binding IsSeries3}" Classes.s4="{Binding IsSeries4}"
-                              Classes.s5="{Binding IsSeries5}" Classes.s6="{Binding IsSeries6}">
-                        <Border.Width>
-                          <MultiBinding Converter="{x:Static conv:ShareWidthConverter.Instance}">
-                            <Binding Path="SharePercent" />
-                            <Binding Path="$parent[Border].Bounds.Width" />
-                          </MultiBinding>
-                        </Border.Width>
-                      </Border>
+                            Classes.s5="{Binding IsSeries5}" Classes.s6="{Binding IsSeries6}">
+                      <Border.Width>
+                        <MultiBinding Converter="{x:Static conv:ShareWidthConverter.Instance}">
+                          <Binding Path="SharePercent" />
+                          <Binding Path="$parent[Border].Bounds.Width" />
+                        </MultiBinding>
+                      </Border.Width>
                     </Border>
-                    <TextBlock Grid.Column="2" Classes="cshare" Text="{Binding SharePercent, StringFormat='{}{0}% of mints'}" />
-                  </Grid>
-                </StackPanel>
-              </Border>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </StackPanel>
+                  </Border>
+                </Grid>
 
-      <StackPanel Grid.Row="1" Grid.ColumnSpan="3" Margin="0,4,0,0">
-      <TextBlock Classes="sub-h" Text="MINT DISTRIBUTION" Margin="0,16,0,9" />
+                <TextBlock Grid.Column="2" Classes="cshare" VerticalAlignment="Center"
+                           Text="{Binding SharePercent, StringFormat='{}{0}%'}" />
 
-      <!-- FULL WIDTH, and therefore multi-bound. This was a 310px track with each segment sized
-           by SharePercent * 3.1 - a constant that is only exact while the track is exactly 310,
-           and it left the bar stopping a third of the way across a panel whose other two sections
-           already run edge to edge. Stretched, the constant stops being exact, so the segments
-           take their share of the track's OWN measured width through ShareWidthConverter - which
-           is precisely the rule the recipe mix bar (.cbar) already follows and the one CLAUDE.md
-           records for a bar in a flexible track. -->
+                <!-- A GRID OF FIXED SLOTS, not a run. Laid out as a run, a five-layer recipe put its
+                     first badge where a six-layer one put its second and nothing lined up down the
+                     table. One slot per column means badge n sits at the same x on every row, and a
+                     stack too deep spends the LAST slot on a +N - so every +N lines up with every
+                     other, and with the final badge of the rows that need none. Each slot carries
+                     its own separator, reserved on the first and merely not inked. -->
+                <ItemsControl Grid.Column="3" ItemsSource="{Binding Factors}" VerticalAlignment="Center">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><UniformGrid Columns="6" /></ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:FactorChip">
+                      <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
+                        <TextBlock Classes="ftimes" Text="×" IsVisible="{Binding ShowTimes}" />
+                        <Border Classes="fchip"
+                                Classes.kdyn="{Binding IsDynamic}"
+                                Classes.kstat="{Binding IsStatic}"
+                                Classes.kcust="{Binding IsCustom}"
+                                Classes.more="{Binding IsMore}"
+                                ToolTip.Tip="{Binding Tip}">
+                          <TextBlock Text="{Binding Label}" HorizontalAlignment="Center" />
+                        </Border>
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- "→", not "=". The badges are the layer stack; the figure is unique DNA, which is
+                     the LEGAL combinations (this recipe's rules remove some) times each dynamic
+                     layer's quantized colors. So the badges' product is not the figure and no extra
+                     badge could make it one. The tooltip carries the derivation. -->
+                <TextBlock Grid.Column="4" Classes="ceq" Text="→" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="5" Classes="cnum" VerticalAlignment="Center"
+                           Text="{Binding DnaSpaceText}" ToolTip.Tip="{Binding DnaSpaceTip}" />
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      </ScrollViewer>
+    </Grid>
+
+    <!-- Pinned. The mint bar describes the WHOLE book, so it binds Recipes and not the page: a
+         paged view narrows what you are reading, never what the collection is. -->
+    <StackPanel Grid.Row="3" Spacing="10">
       <Border Classes="distbar" HorizontalAlignment="Stretch">
         <ItemsControl ItemsSource="{Binding Recipes}">
           <ItemsControl.ItemsPanel>
@@ -192,8 +248,8 @@
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:RecipeShareRow">
-              <!-- Color comes from a token via the series class, not from a Color on the row:
-                   a brush picked in the ViewModel cannot re-resolve when the theme flips. -->
+              <!-- Color comes from a token via the series class, not from a Color on the row: a
+                   brush picked in the ViewModel cannot re-resolve when the theme flips. -->
               <Border Height="16" Classes="series"
                       Classes.s1="{Binding IsSeries1}" Classes.s2="{Binding IsSeries2}"
                       Classes.s3="{Binding IsSeries3}" Classes.s4="{Binding IsSeries4}"
@@ -210,36 +266,8 @@
         </ItemsControl>
       </Border>
 
-      <ItemsControl ItemsSource="{Binding Recipes}" Margin="0,10,0,0">
-        <ItemsControl.ItemsPanel>
-          <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
-        <ItemsControl.ItemTemplate>
-          <DataTemplate x:DataType="vm:RecipeShareRow">
-            <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,0,14,4" VerticalAlignment="Center">
-              <Border Classes="sw series"
-                      Classes.s1="{Binding IsSeries1}" Classes.s2="{Binding IsSeries2}"
-                      Classes.s3="{Binding IsSeries3}" Classes.s4="{Binding IsSeries4}"
-                      Classes.s5="{Binding IsSeries5}" Classes.s6="{Binding IsSeries6}" />
-              <!-- Same size, different faces: .pc is mono and the name is not, and two faces at
-                   one size still have different line boxes. Top-aligned that put the percentage
-                   1.8px above the name it belongs to. -->
-              <TextBlock FontSize="12" Text="{Binding Name}" VerticalAlignment="Bottom" />
-              <TextBlock Classes="pc" FontSize="12" VerticalAlignment="Bottom"
-                         Text="{Binding SharePercent, StringFormat='{}{0}%'}" />
-            </StackPanel>
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
-      </StackPanel>
-    </Grid>
-
-    <!-- .cookbar: the footer that states what cooking will produce, then the action. -->
-    <Border BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0"
-            Margin="0,18,0,0" Padding="0,15,0,0">
       <Grid ColumnDefinitions="*,Auto">
-        <TextBlock Grid.Column="0" Classes="cshare" VerticalAlignment="Center"
-                   Text="{Binding CookBarText}" />
+        <TextBlock Grid.Column="0" Classes="sub-h" VerticalAlignment="Center" Text="MINT DISTRIBUTION" />
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
           <!-- The CLI's stats and inspect, rendered by Core so the text matches byte for byte.
                Beside Cook because both answer "is this book ready" before committing to a run. -->
@@ -258,7 +286,6 @@
           </Button>
         </StackPanel>
       </Grid>
-    </Border>
-  </StackPanel>
-  </ScrollViewer>
+    </StackPanel>
+  </Grid>
 </UserControl>

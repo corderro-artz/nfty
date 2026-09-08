@@ -64,17 +64,17 @@ public class UniqueDnaDisplayTests
     }
 
     [Fact]
-    public void A_figure_past_a_billion_rounds_on_the_tile_and_stays_whole_on_the_tooltip()
+    public void The_headline_figure_is_never_rounded()
     {
+        // It USED to round past a billion and put the exact digits on a tooltip. The cell it lives
+        // in was widened until the widest figure a long can hold fits at the smallest window the app
+        // opens, so both the compact form and the tooltip are gone from this surface: a number you
+        // have to hover to read is a number you cannot compare at a glance, and this is the one an
+        // author tunes quantize steps against.
         using var book = HugeBook();
         var vm = new CookBookDetailViewModel(book, () => { });
 
-        Assert.Equal("1.60 billion", vm.UniqueDnaText);
-        Assert.Equal("1,600,000,000 unique DNA", vm.UniqueDnaTip);
-
-        // The cookbar is a bar, not a tile: it exists to compare an intended supply against the
-        // space, and a comparison between a rounded number and an exact one is not one.
-        Assert.Contains("1,600,000,000", vm.CookBarText);
+        Assert.Equal("1,600,000,000", vm.UniqueDnaText);
     }
 
     [Fact]
@@ -86,61 +86,109 @@ public class UniqueDnaDisplayTests
         var vm = new CookBookDetailViewModel(book, () => { });
 
         Assert.Equal("2", vm.UniqueDnaText);
-        Assert.Equal("2 unique DNA", vm.UniqueDnaTip);
     }
 
     [AvaloniaFact]
-    public void The_tile_actually_carries_the_tooltip()
+    public void The_headline_figure_is_shown_whole_and_carries_no_tooltip()
     {
-        // A tooltip the ViewModel exposes and the markup never binds is the reason the tile is
-        // allowed to round, silently absent. Read it off the rendered control.
+        // The tile used to round and hang the exact digits on a tooltip. Both are gone, and the
+        // ABSENCE is the assertion: a tooltip left behind on a control that no longer needs one is
+        // how a surface comes to state the same number twice.
         using var book = HugeBook();
-        var view = new Views.CookBookDetailView
+        var view = Render(HugeBook(), out var window);
+        try
         {
-            DataContext = new CookBookDetailViewModel(book, () => { }, () => { }),
-        };
-        var window = new Window { Content = view, Width = 1180, Height = 720 };
-        window.Show();
-        Dispatcher.UIThread.RunJobs();
-
-        var label = view.GetVisualDescendants().OfType<TextBlock>().First(t => t.Text == "UNIQUE DNA");
-        var tile = label.GetVisualAncestors().OfType<StackPanel>().First();
-
-        Assert.Equal("1,600,000,000 unique DNA", ToolTip.GetTip(tile));
-
-        // And the figure beside it is the rounded one, so the pair is doing what it claims.
-        var figure = tile.GetVisualDescendants().OfType<TextBlock>()
-            .First(t => t.Classes.Contains("mv"));
-        Assert.Equal("1.60 billion", figure.Text);
+            var figure = Figure(view);
+            Assert.Equal("1,600,000,000", figure.Text);
+            Assert.Null(ToolTip.GetTip(figure));
+            Assert.Null(ToolTip.GetTip(figure.GetVisualAncestors().OfType<StackPanel>().First()));
+        }
+        finally { window.Close(); }
     }
 
     [AvaloniaFact]
-    public void The_widest_figure_the_compact_form_can_produce_still_fits_the_tile()
+    public void The_widest_figure_a_long_can_hold_fits_the_cell_at_the_smallest_window()
     {
-        // Width is a budget and an overrun is SILENT — a TextBlock is arranged to its parent and
-        // clips, reporting the width it was asked for either way. So measure the ink, against the
-        // tile's own content box, for the worst string this formatter can emit: long.MaxValue is
-        // "9.22 quintillion", sixteen characters and the ceiling of the type.
+        // THE MEASUREMENT THE WHOLE CELL EXISTS FOR. Width is a budget and an overrun is silent — a
+        // TextBlock is arranged to its parent and clips, reporting the width it was asked for either
+        // way — so this measures the INK of the worst string the formatter can emit against the
+        // cell's real content box, inside the real Explorer, at the real page area.
         //
-        // MEASURED INSIDE THE REAL EXPLORER AT THE SMALLEST PAGE THE APP ALLOWS, which is the whole
-        // point. The first version of this test rendered the detail view alone in a 1180px window —
-        // 200px wider than the page ever is, and with no tree pane taking a third of what is left —
-        // so it passed with room to spare while the running app drew "30.64 trilli". Driving the app
-        // found that; no assertion could, because the assertion was measuring a card nothing hosts.
-        using var book = HugeBook();
+        // It is the EXACT form now, not the compact one: the cell was widened until every digit
+        // fits, which is what let the compact form and the tooltip come off this surface. If this
+        // ever fails, the figure has to start rounding again — it must not start clipping.
+        var view = Render(HugeBook(), out var window);
+        try
+        {
+            var figure = Figure(view);
+            var cell = figure.GetVisualAncestors().OfType<Border>()
+                .First(b => b.Classes.Contains("metric"));
+
+            string worst = SpaceText.Exact(long.MaxValue);
+            var ink = new FormattedText(worst, CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
+                new Typeface(figure.FontFamily, figure.FontStyle, figure.FontWeight),
+                figure.FontSize, Brushes.Black);
+
+            double room = cell.Bounds.Width - cell.Padding.Left - cell.Padding.Right
+                - cell.BorderThickness.Left - cell.BorderThickness.Right;
+
+            Assert.True(ink.Width <= room,
+                $"\"{worst}\" measures {ink.Width:F1}px in a cell with {room:F1}px of room");
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public void The_three_counts_still_hold_their_own_labels()
+    {
+        // The other side of the trade. The counts size to their content now, so they cannot clip —
+        // but "cannot" is exactly the kind of claim that stops being true, and a metric label is the
+        // widest thing in its cell, not the number.
+        var view = Render(HugeBook(), out var window);
+        try
+        {
+            foreach (string name in new[] { "RECIPES", "LAYERS", "VARIANTS" })
+            {
+                var label = view.GetVisualDescendants().OfType<TextBlock>().First(t => t.Text == name);
+                var cell = label.GetVisualAncestors().OfType<Border>()
+                    .First(b => b.Classes.Contains("metric"));
+
+                // LetterSpacing is a control property and FormattedText has no setter for it, so it
+                // is added back by hand: the class states it per character, which is what makes
+                // these labels wider than they look in the markup.
+                var ink = new FormattedText(name, CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
+                    new Typeface(label.FontFamily, label.FontStyle, label.FontWeight),
+                    label.FontSize, Brushes.Black);
+                double width = ink.Width + label.LetterSpacing * name.Length;
+                double room = cell.Bounds.Width - cell.Padding.Left - cell.Padding.Right
+                    - cell.BorderThickness.Left - cell.BorderThickness.Right;
+
+                Assert.True(width <= room + 0.5,
+                    $"\"{name}\" measures {width:F1}px in a cell with {room:F1}px of room");
+            }
+        }
+        finally { window.Close(); }
+    }
+
+    /// <summary>Renders the real Explorer at the smallest page the app allows.</summary>
+    /// <param name="book">The book to open. Disposed by the caller closing the window.</param>
+    /// <param name="window">The host window, for the caller to close.</param>
+    /// <returns>The laid-out Explorer view.</returns>
+    private static Views.ExplorerView Render(LoadedCookBook book, out Window window)
+    {
         var nav = new FakeNav();
         var dialogs = new FakeDialogs();
         var session = new CookBookSession();
-        using var explorer = new ExplorerViewModel(book, nav, dialogs, new ImageBridge(),
+        var explorer = new ExplorerViewModel(book, nav, dialogs, new ImageBridge(),
             ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs),
             session, new FilePickerService(),
             ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs), new StatusService());
         var view = new Views.ExplorerView { DataContext = explorer };
 
-        // The page area at ShellViewModel's minimum window: (1200 - 24) / 1.2 wide, and
+        // The page area at ShellViewModel's minimum window: (1200 - 24) / 1.2 wide and
         // (712 - ChromeReserve) / 1.2 tall. Derived rather than typed, so a change to the minimum
         // moves this measurement with it instead of leaving it describing an old window.
-        var window = new Window
+        window = new Window
         {
             Content = view,
             Width = (ShellViewModel.MinWindowWidth - 24) / ShellViewModel.BaseScale,
@@ -148,91 +196,16 @@ public class UniqueDnaDisplayTests
         };
         window.Show();
         Dispatcher.UIThread.RunJobs();
+        return view;
+    }
 
-        var label = view.GetVisualDescendants().OfType<TextBlock>().First(t => t.Text == "UNIQUE DNA");
-        var figure = label.GetVisualAncestors().OfType<StackPanel>().First()
+    /// <summary>The headline figure's TextBlock, found by the label beside it.</summary>
+    /// <param name="view">A laid-out Explorer.</param>
+    /// <returns>The UNIQUE DNA figure.</returns>
+    private static TextBlock Figure(Visual view) =>
+        view.GetVisualDescendants().OfType<TextBlock>().First(t => t.Text == "UNIQUE DNA")
+            .GetVisualAncestors().OfType<StackPanel>().First()
             .GetVisualDescendants().OfType<TextBlock>().First(t => t.Classes.Contains("mv"));
-        var tile = label.GetVisualAncestors().OfType<Border>().First(b => b.Classes.Contains("metric"));
-
-        string worst = SpaceText.Compact(long.MaxValue);
-        var ink = new FormattedText(worst, CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
-            new Typeface(figure.FontFamily, figure.FontStyle, figure.FontWeight),
-            figure.FontSize, Brushes.Black);
-
-        double room = tile.Bounds.Width - tile.Padding.Left - tile.Padding.Right
-            - tile.BorderThickness.Left - tile.BorderThickness.Right;
-
-        Assert.True(ink.Width <= room,
-            $"\"{worst}\" measures {ink.Width:F1}px in a tile with {room:F1}px of room");
-    }
-
-    [AvaloniaFact]
-    public void Widening_the_figure_did_not_narrow_the_three_counts_past_their_labels()
-    {
-        // The other half of the trade. UNIQUE DNA took the row, so RECIPES / LAYERS / VARIANTS went
-        // from half a column each to a third — and a metric label is the widest thing in its tile,
-        // not the number. Same measurement, same window: the ink of every label against the box it
-        // sits in. Without this the fix above is one clipped control traded for three.
-        using var book = HugeBook();
-        var nav = new FakeNav();
-        var dialogs = new FakeDialogs();
-        var session = new CookBookSession();
-        using var explorer = new ExplorerViewModel(book, nav, dialogs, new ImageBridge(),
-            ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs),
-            session, new FilePickerService(),
-            ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs), new StatusService());
-        var view = new Views.ExplorerView { DataContext = explorer };
-        var window = new Window
-        {
-            Content = view,
-            Width = (ShellViewModel.MinWindowWidth - 24) / ShellViewModel.BaseScale,
-            Height = (ShellViewModel.MinWindowHeight - ShellViewModel.ChromeReserve) / ShellViewModel.BaseScale,
-        };
-        window.Show();
-        Dispatcher.UIThread.RunJobs();
-
-        foreach (string name in new[] { "RECIPES", "LAYERS", "VARIANTS" })
-        {
-            var label = view.GetVisualDescendants().OfType<TextBlock>().First(t => t.Text == name);
-            var tile = label.GetVisualAncestors().OfType<Border>().First(b => b.Classes.Contains("metric"));
-
-            // LetterSpacing is a control property and FormattedText has no setter for it, so it is
-            // added back by hand: the class states 1.0 per character, which is what makes these
-            // labels wider than they look in the markup.
-            var ink = new FormattedText(name, CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
-                new Typeface(label.FontFamily, label.FontStyle, label.FontWeight),
-                label.FontSize, Brushes.Black);
-            double width = ink.Width + label.LetterSpacing * name.Length;
-
-            double room = tile.Bounds.Width - tile.Padding.Left - tile.Padding.Right
-                - tile.BorderThickness.Left - tile.BorderThickness.Right;
-
-            Assert.True(width <= room - 4,
-                $"\"{name}\" measures {width:F1}px in a tile with {room:F1}px of room");
-        }
-
-        // And the column the width came FROM still holds its own content. Widening the metrics band
-        // narrows the DNA SPACE column beside it, whose rows are the densest thing on this card - a
-        // name, six factor chips and a figure, all on one line. Trading a clipped tile for a clipped
-        // row would be no trade at all, so both sides of the split are measured at the same window.
-        var heading = view.GetVisualDescendants().OfType<TextBlock>().First(t => t.Text == "DNA SPACE");
-        var column = heading.GetVisualAncestors().OfType<StackPanel>().First();
-        var number = view.GetVisualDescendants().OfType<TextBlock>()
-            .First(t => t.Classes.Contains("cnum"));
-        var chipRow = number.GetVisualAncestors().OfType<StackPanel>().First();
-
-        double rowLeft = chipRow.TranslatePoint(new Avalonia.Point(0, 0), column)!.Value.X;
-        double rowRight = chipRow.TranslatePoint(new Avalonia.Point(chipRow.Bounds.Width, 0), column)!.Value.X;
-        Assert.True(rowLeft >= 0 && rowRight <= column.Bounds.Width,
-            $"the recipe row spans {rowLeft:F1}..{rowRight:F1} in a {column.Bounds.Width:F1}px column");
-
-        // A star column whose children outgrow it is arranged at ZERO width, silently. The chips are
-        // the first thing that would go, so their presence is the real evidence the row still fits.
-        var chips = chipRow.GetVisualDescendants().OfType<Border>()
-            .Where(b => b.Classes.Contains("fchip")).ToList();
-        Assert.NotEmpty(chips);
-        Assert.All(chips, c => Assert.True(c.Bounds.Width > 0, "a factor chip was arranged at zero width"));
-    }
 
     /// <summary>
     /// A book whose recipe name is long and whose stack is deep — the shape that clipped.
