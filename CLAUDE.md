@@ -111,6 +111,13 @@ Every I/O entry point has an async twin; `Generate` also takes an optional `IPro
 
 Anywhere a user enters a color it must carry an explicit prefix — `hex:`, `rgb:`, `hsl:`, or `hsv:` (e.g. `hex:d6249f`, `hsv:322,83,84`). A missing/unknown prefix is a **validation error, never guessed** (`Imaging/ColorSpec.cs`). For dynamic/static colorization only `H`/`S` are taken from the color; value/lightness comes from the grayscale value-map.
 
+## Deferred work
+
+`BACKLOG.md` holds what is deliberately not done yet, with the reason and enough context to pick it
+up cold — a manual reshoot against the Chest Demo, splitting `UniqueSpace`'s cap into an enumeration
+budget and a reporting ceiling, and the one branch of the passphrase reader a test cannot reach.
+Nothing in it is a defect in shipped behaviour. Read it before concluding something was overlooked.
+
 ## Conventions
 
 - **PR-per-task, one fresh agent per major task.** Work lands on a local feature branch merged into `main` — see `docs/superpowers/` for the design spec and implementation plans. **The spec (`docs/superpowers/specs/`) wins over the plan docs (`docs/superpowers/plans/`)**, which are stale — they predate the Custom kind and describe a two-kind `LayerKind`. Where the shipped archives contradict even the spec, the archives win: `schemaVersion: 1` is out in the world, so the doc gets corrected, not the format.
