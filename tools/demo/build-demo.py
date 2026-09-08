@@ -70,7 +70,9 @@ INGREDIENTS = [
      [("planked", "Planked", 45), ("plated", "Plated", 35), ("stone", "Stone", 20)]),
     ("boxbody", "Body", "dynamic", rolled(15, 20, (TIMBER, 60), (COLD, 40)),
      [("planked", "Planked", 55), ("plated", "Plated", 45)]),
-    ("bands", "Bands", "dynamic", rolled(15, 20, (LEATHER, 50), (IRON, 50)),
+    # 30/40 rather than 15/20: adding the Feet layer doubles the space, and this is where the room
+    # comes from. Coarser steps mean fewer, more distinct band colors - which at 32px is no loss.
+    ("bands", "Bands", "dynamic", rolled(30, 40, (LEATHER, 50), (IRON, 50)),
      [("hoops", "Hoops", 45), ("corners", "Corners", 35), ("straps", "Straps", 20)]),
     # Static: ONE color for the whole collection, so every chest wears the same brass. Only the H and
     # S of the spec are used - the value comes from the art, which is why the lock still has form.
@@ -82,12 +84,19 @@ INGREDIENTS = [
      [("gilt", "Gilt", 60), ("gems", "Gems", 40)]),
     ("glow", "Glow", "dynamic", rolled(60, 40, (ARCANE, 100)),
      [("sparks", "Sparks", 65), ("runes", "Runes", 35)]),
+    # Feet sit below the plinth, so they are the one layer that cannot interact with either lid.
+    # CUSTOM for an arithmetic reason, not a stylistic one: a dynamic layer multiplies the space by
+    # its variants AND its color buckets, and this book must keep counting EXACTLY rather than
+    # saturating UniqueSpace's million cap. Two variants and no color is what fits - and it gives
+    # the demo a second Custom example beside the trim.
+    ("feet", "Feet", "custom", None,
+     [("blocks", "Blocks", 60), ("skids", "Skids", 40)]),
 ]
 
 # Bottom to top. Glow sits behind the chest, trim over the bands (a gilded hoop, not a hoop over
 # gilt), and the lock last because a lock plate is the thing bolted on top of everything else.
-CHEST_STACK = ["glow", "chestbody", "bands", "trim", "lock"]
-BOX_STACK = ["glow", "boxbody", "bands", "trim", "lock"]
+CHEST_STACK = ["glow", "feet", "chestbody", "bands", "trim", "lock"]
+BOX_STACK = ["glow", "feet", "boxbody", "bands", "trim", "lock"]
 
 # A rule you can check by looking: a stone chest has no keypad on it.
 STONE_HAS_NO_KEYPAD = {
@@ -116,7 +125,7 @@ BOOK = {
         "symbol": "CHST",
     },
     "recipeWeights": {"chest": 65, "strongbox": 35},
-    "targetSupply": 500,
+    "targetSupply": 1200,
     # The book carries its own colors, so a collection handed on brings its palette with it.
     "palette": ["hex:8a5a2b", "hex:c9a227", "hex:5c6a78",
                 "hex:ce3648", "hex:4884d6", "hex:1a1a24"],

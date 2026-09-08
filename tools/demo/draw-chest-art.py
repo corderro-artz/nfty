@@ -454,6 +454,49 @@ def glow_runes():
     return s
 
 
+# ---------------------------------------------------------------------------- feet (custom)
+# Rows 29-30, BELOW the plinth at 28, so these clear the y >= 12 overlay contract by a mile and can
+# never collide with either lid - the two silhouettes differ only above row 12.
+#
+# CUSTOM, not dynamic, and the reason is arithmetic rather than taste. A dynamic layer multiplies the
+# book's DNA space by its variants AND its colour buckets, and this book has to keep counting
+# EXACTLY rather than saturating UniqueSpace's million cap - a demo whose headline figure reads
+# "more than 1000000" teaches that nfty cannot count its own space. Two variants and no colour is
+# what fits, and it gives the demo a second Custom example beside the trim.
+# Aged pewter, deliberately NEUTRAL-WARM rather than blue-grey. The first cut was (72,78,86) - a
+# cold iron that sat fine under the stone bodies and read as a separate object under the wooden
+# ones, which are most of the collection. A hair of brown in the ramp lets one pair of feet belong
+# to both. Seen at 12x, not in the palette.
+IRONW = ((76, 71, 66), (121, 114, 105), (168, 159, 147))
+
+
+def _foot(s, x0, x1):
+    """One foot: a lit top row under the plinth and a darker row it stands on."""
+    for x in range(x0, x1 + 1):
+        s.rgb(x, 29, IRONW[1])
+        s.rgb(x, 30, IRONW[0])
+    s.rgb(x0, 29, IRONW[0])     # a shaded inside edge, so two feet do not read as one bar
+    s.rgb(x1, 29, IRONW[2])
+
+
+def feet_blocks():
+    """Two square blocks under the corners - the plain answer, and the one that reads at 32px."""
+    s = Sprite()
+    _foot(s, 5, 9)
+    _foot(s, 22, 26)
+    return s
+
+
+def feet_skids():
+    """One continuous rail, like a crate on runners. Reads as a different OBJECT rather than as the
+    blocks with more pixels, which is the whole test for a second variant at this size."""
+    s = Sprite()
+    _foot(s, 4, 27)
+    for x in (4, 5, 26, 27):
+        s.rgb(x, 30, IRONW[0])   # the rail turns down at both ends
+    return s
+
+
 # ---------------------------------------------------------------------------- the set
 SPEC = {
     "chestbody": {"planked": lambda: make_body(CHEST_LID, tex_planked),
@@ -466,6 +509,7 @@ SPEC = {
              "keypad": lock_keypad, "latch": lock_latch},
     "trim": {"gems": trim_gems, "gilt": trim_gilt},
     "glow": {"sparks": glow_sparks, "runes": glow_runes},
+    "feet": {"blocks": feet_blocks, "skids": feet_skids},
 }
 
 

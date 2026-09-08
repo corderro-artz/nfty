@@ -102,7 +102,7 @@ dotnet run --project src/Nfty.Desktop
 ```
 
 The demo is a small collection of layered chests: two Recipes, all three layer kinds, two optional
-layers, one incompatibility rule, and about half a million distinct assets out of sixteen 32×32
+layers, one incompatibility rule, and 615,600 distinct assets out of eighteen 32×32
 sprites — which is the argument for value-map colorization, made in a file you can open.
 
 ---

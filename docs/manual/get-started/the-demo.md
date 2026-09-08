@@ -26,6 +26,7 @@ A collection of layered treasure chests, drawn at 32×32.
 | **Body** | Dynamic | The chest itself — planked, plated or stone. |
 | **Bands** | Dynamic | Hoops, corner brackets or straps. |
 | **Trim** | Custom | Gilt edging or set gems. Usually absent. |
+| **Feet** | Custom | Corner blocks or a runner rail, in aged pewter. |
 | **Lock** | Static | A keyhole, latch, padlock or keypad. |
 
 Two Recipes share those layers: **Chest**, with a domed lid, and **Strongbox**, with a flat one.
@@ -33,16 +34,20 @@ Two Recipes share those layers: **Chest**, with a domed lid, and **Strongbox**, 
 That is deliberately one of everything the manual talks about:
 
 - **All three [layer kinds](../understand/layer-kinds.md).** The Body and Bands roll their own color
-  on every asset; the Lock is one fixed brass for the whole collection; the Trim is full-color art
-  composited exactly as drawn.
+  on every asset; the Lock is one fixed brass for the whole collection; the Trim and the Feet are
+  full-color art composited exactly as drawn.
 - **Two [optional layers](../how-to/rarer-trait.md).** Glow is absent 72% of the time and Trim 55%,
   which is what makes some chests plain and a few of them special.
 - **A [rule](../how-to/exclude-combinations.md).** A stone chest never carries a keypad.
 - **Weighted color bands.** A body rolls warm timber about 60% of the time and cold metal the rest,
   rather than any color at all.
 
-Sixteen small drawings, and about half a million distinct assets. That is
+Eighteen small drawings, and **615,600** distinct assets. That is
 [why the art is gray](../understand/why-gray.md), stated as a file you can open.
+
+That figure is exact, not an estimate, and it is exact on purpose: nfty counts the space rather than
+guessing at it, and the demo's quantize steps are chosen so it stays countable. Cook a thousand of
+them and every one is different.
 
 ## It is yours to break
 
