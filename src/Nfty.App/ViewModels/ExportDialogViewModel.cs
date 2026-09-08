@@ -131,6 +131,16 @@ public partial class ExportDialogViewModel : ViewModelBase
     public bool ShowForm => !IsRunning && !IsDone;
 
     /// <summary>
+    /// Whether this machine can seal at all.
+    /// </summary>
+    /// <remarks>
+    /// AES-GCM is a platform capability, not a language feature, so on a host without it sealing is
+    /// not a thing that fails - it is a thing that is not there. The checkbox is disabled rather
+    /// than left to accept a passphrase, a confirmation and a note and then throw.
+    /// </remarks>
+    public bool CanSeal => Seal.IsSupported;
+
+    /// <summary>
     /// Whether the folder shape is available. A sealed export is one authenticated stream, so there
     /// is no folder form of it — the control is disabled rather than silently corrected on Export.
     /// </summary>
@@ -254,6 +264,7 @@ public partial class ExportDialogViewModel : ViewModelBase
     private string SealProblem()
     {
         if (!IsSealed) return "";
+        if (!CanSeal) return Seal.UnsupportedMessage;
         if (!Seal.IsUsablePassphrase(Passphrase))
             return $"A sealing passphrase must be at least {Seal.MinimumPassphraseLength} characters.";
         if (Passphrase != PassphraseConfirm) return "The two passphrases do not match.";

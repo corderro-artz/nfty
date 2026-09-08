@@ -238,11 +238,28 @@ public static class Seal
             + "screen would show the difference.", nameof(passphrase));
     }
 
+    /// <summary>
+    /// Whether this platform can seal at all.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Public so a front-end can ASK before it offers the choice.</b> AES-GCM is a platform
+    /// capability rather than a language feature — .NET exposes it only where the underlying crypto
+    /// library provides it — so on a host without it, sealing is not a thing that fails, it is a
+    /// thing that is not there. A checkbox that accepts a passphrase, a confirmation and a note and
+    /// then throws is a worse answer than one that is switched off with a reason next to it.</para>
+    ///
+    /// <para>Every entry point here still checks it independently: a front-end reading this is a
+    /// courtesy, not the enforcement.</para>
+    /// </remarks>
+    public static bool IsSupported => AesGcm.IsSupported;
+
+    /// <summary>Why sealing is unavailable, for a surface that wants to say so.</summary>
+    public const string UnsupportedMessage =
+        "This platform provides no AES-GCM, so nfty cannot seal or open a sealed export here.";
+
     private static void RequireAesGcm()
     {
-        if (!AesGcm.IsSupported)
-            throw new SealedSetException(
-                "This platform provides no AES-GCM, so nfty cannot seal or open a sealed export here.");
+        if (!IsSupported) throw new SealedSetException(UnsupportedMessage);
     }
 
     /// <summary>

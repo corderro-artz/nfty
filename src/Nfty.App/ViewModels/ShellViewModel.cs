@@ -33,19 +33,28 @@ public partial class ShellViewModel : ViewModelBase
     /// <summary>
     /// The smallest the window may be, in device pixels.
     ///
-    /// <para>Set by the LARGEST MODAL, not by the pages. A page can scroll or reflow; a modal is a
-    /// fixed card that either fits or is cut off, and a quick-reference sheet with its footer sliced
-    /// away is worse than no sheet. The numbers are the sheet's and the inspector's own sizes times
-    /// <see cref="BaseScale"/>, plus the titlebar, the status bar and the shadow gutter —
-    /// <c>ShellChromeTests</c> derives that arithmetic from the real controls and fails if either
-    /// modal outgrows it.</para>
+    /// <para><b>Set by the largest FIXED modal, and there is now only one.</b> Every other card in
+    /// the app is adaptive — the export dialog, the inspector, the three wizards and the report
+    /// dialog all take the height they are given and scroll inside it, so none of them can be cut
+    /// off at any window size and none of them constrains this. The quick-reference sheet is the
+    /// exception on purpose: it is a single glance, and a glance that scrolls is not one.</para>
+    ///
+    /// <para><b>It used to be 1128 x 924, which no 1366x768 laptop could ever open.</b> The sheet
+    /// was three columns in 820 of a window that allows well over a thousand, so every description
+    /// wrapped three lines deep and the card reached 687. Four columns in 980 is both shorter and a
+    /// better shape for something you scan; with the chrome corrected and the sheet's own bands
+    /// trimmed it needs 1200 x 709, which clears a 768-tall screen with its taskbar.</para>
     /// </summary>
-    /// <remarks>Measured: the quick-reference sheet needs 1008 x 886 and the inspector 1104 x 838,
-    /// so the binding constraints are the inspector's width and the sheet's height. These carry ~24
-    /// and ~38 of slack on top.</remarks>
-    public const double MinWindowWidth = 1128;
+    /// <remarks>
+    /// Measured: the sheet is 980 x 517, so it needs 980 * <see cref="BaseScale"/> + 24 wide and
+    /// 517 * BaseScale + <see cref="ChromeReserve"/> tall. <c>ModalFitTests</c> derives that from
+    /// the real control and fails with the number it now needs; <c>ChromeReserveTests</c> keeps the
+    /// chrome half of the arithmetic honest. The slack is deliberately small — every pixel of it is
+    /// a pixel a laptop may not have.
+    /// </remarks>
+    public const double MinWindowWidth = 1200;
     /// <inheritdoc cref="MinWindowWidth"/>
-    public const double MinWindowHeight = 924;
+    public const double MinWindowHeight = 712;
 
     /// <summary>
     /// Titlebar + status bar + the frame's shadow gutter: everything a modal does NOT get to use.

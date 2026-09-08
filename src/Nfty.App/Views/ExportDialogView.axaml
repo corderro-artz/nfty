@@ -74,7 +74,10 @@
 
               <Border Classes="sealbox" Classes.on="{Binding IsSealed}">
                 <StackPanel Spacing="10">
+                  <!-- Disabled, not hidden, where the platform has no AES-GCM: a control that
+                       vanishes teaches nothing, and the footer says why it is off. -->
                   <CheckBox Content="Seal this export" IsChecked="{Binding IsSealed}"
+                            IsEnabled="{Binding CanSeal}"
                             ToolTip.Tip="Encrypt it under a passphrase and mark it view-only." />
 
                   <!-- IsVisible rather than reserved space, under the REVEAL exception: nothing

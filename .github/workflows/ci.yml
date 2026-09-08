@@ -64,8 +64,18 @@ jobs:
 
   # The engine and the CLI carry the determinism guarantees, and those are exactly what a
   # platform-specific assumption breaks. The GUI is skipped here: it needs a display stack.
-  core-on-linux:
-    runs-on: ubuntu-latest
+  #
+  # THREE operating systems, not one. Determinism is promised across machines and architectures, and
+  # `SealTests` additionally depends on `AesGcm` being present at all — a platform capability, not a
+  # language feature, which `Seal.IsSupported` exists to answer. A guard nothing ever runs on a
+  # second platform is a guard nobody has checked; macOS runs on arm64 here, which is also the only
+  # place the little-endian seed-hash rule gets exercised on different silicon.
+  core-cross-platform:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4

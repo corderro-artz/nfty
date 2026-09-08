@@ -853,6 +853,52 @@ public class VisualCapture
         return dir;
     }
 
+    /// <summary>The asset inspector, which has no capture of its own and is the second-tallest
+    /// modal in the app.</summary>
+    [AvaloniaFact]
+    public void Capture_inspector()
+    {
+        if (Dir is null) return;
+
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        using (var gen = Generator.Generate(CoreTestBook.Tiny(), new GenerateOptions(3, "seed1")))
+            SetWriter.Write(gen, dir, pack: false);
+        using var loaded = SetReader.Read(dir);
+        using var browser = new SetBrowserViewModel(loaded);
+
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            using var ins = new SetInspectViewModel(browser.Items, 0, new FilePickerService(),
+                new DialogService(), new StatusService());
+            Capture(new Views.SetInspectView { DataContext = ins }, variant,
+                $"inspector-{variant.Key.ToString()!.ToLowerInvariant()}.png", 1180, 820);
+        }
+    }
+
+    /// <summary>The Explorer at the EXACT page area the smallest allowed window gives it — the
+    /// check that lowering the window minimum did not quietly clip a page.</summary>
+    [AvaloniaFact]
+    public void Capture_explorer_at_minimum()
+    {
+        if (Dir is null) return;
+
+        var nav = new FakeNav();
+        var dialogs = new FakeDialogs();
+        var book = ExplorerViewModelTests.TwoRecipeBook();
+        var vm = new ExplorerViewModel(book, nav, dialogs, new ImageBridge(),
+            ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs),
+            new CookBookSession(), new FilePickerService(),
+            ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs),
+            new StatusService());
+        vm.SelectNodeCommand.Execute(vm.Root);
+
+        Capture(new Views.ExplorerView { DataContext = vm }, ThemeVariant.Dark,
+            "explorer-minimum.png",
+            (ShellViewModel.MinWindowWidth - 24) / ShellViewModel.BaseScale,
+            (ShellViewModel.MinWindowHeight - ShellViewModel.ChromeReserve) / ShellViewModel.BaseScale);
+        vm.Dispose();
+    }
+
     private static void Capture(Control view, ThemeVariant variant, string fileName,
         double width = 1180, double height = 720)
     {

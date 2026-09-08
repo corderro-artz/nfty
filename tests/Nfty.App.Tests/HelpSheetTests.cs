@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Avalonia.Controls.Documents;
 using Nfty.App.Services;
@@ -139,29 +140,60 @@ public class HelpSheetTests
             Assert.DoesNotContain(chips, c => c.Contains("2318", StringComparison.Ordinal));   // no Command key off macOS
     }
 
-    // Star sizing is the only thing holding the three reference columns at their design widths;
-    // equal (or Auto) columns would still render a plausible-looking sheet, so the ratios are pinned
-    // here. 1.28 / 1.06 / .9 rather than help.html's 1.35 / 1 / .82: column one gained Kitchen and
-    // column two gained COLOR, so the middle had to widen and the first to give.
+    // Star sizing is the only thing holding the four reference columns at their design widths;
+    // equal (or Auto) columns would still render a plausible-looking sheet, so the ratios are
+    // pinned here. FOUR now, not three: the sheet was 820 wide in a window that allows well over a
+    // thousand, so every description wrapped three lines deep and the card reached 687 tall -
+    // taller than a 1366x768 laptop can display at all. Columns 0 and 1 are one spread with no
+    // divider between them; the dividers fall before 2 and 3.
     [AvaloniaFact]
     public void Body_columns_hold_the_design_star_ratios()
     {
         var body = Sheet().FindControl<Grid>("SheetBody")!;
 
-        Assert.Equal(3, body.ColumnDefinitions.Count);
-        Assert.Equal(new GridLength(1.28, GridUnitType.Star), body.ColumnDefinitions[0].Width);
-        Assert.Equal(new GridLength(1.06, GridUnitType.Star), body.ColumnDefinitions[1].Width);
-        Assert.Equal(new GridLength(0.9, GridUnitType.Star), body.ColumnDefinitions[2].Width);
+        Assert.Equal(4, body.ColumnDefinitions.Count);
+        Assert.Equal(new GridLength(1.12, GridUnitType.Star), body.ColumnDefinitions[0].Width);
+        Assert.Equal(new GridLength(1.0, GridUnitType.Star), body.ColumnDefinitions[1].Width);
+        Assert.Equal(new GridLength(1.0, GridUnitType.Star), body.ColumnDefinitions[2].Width);
+        Assert.Equal(new GridLength(0.88, GridUnitType.Star), body.ColumnDefinitions[3].Width);
     }
 
-    // The sheet is a fixed-width reference card, not a panel that stretches to whatever hosts it —
-    // the placeholder this replaced filled its host and left 80% of the surface empty. 820 rather
-    // than help.html's 780: the sixth word and the second KEYS group do not fit three columns at
-    // 780 without the descriptions breaking into two-word lines.
+    // The sheet is a fixed-width reference card, not a panel that stretches to whatever hosts it -
+    // the placeholder this replaced filled its host and left 80% of the surface empty. 980 now: it
+    // is the ONE fixed modal left in the app, so it alone sets ShellViewModel's window minimum, and
+    // wider-and-shorter is what let that minimum drop far enough for a laptop to open the app.
     [AvaloniaFact]
-    public void Sheet_is_a_fixed_820px_card()
+    public void Sheet_is_a_fixed_980px_card()
     {
         var sheet = Sheet().FindControl<Border>("Sheet")!;
-        Assert.Equal(820, sheet.Width);
+        Assert.Equal(980, sheet.Width);
+    }
+
+    [AvaloniaFact]
+    public void The_sheet_is_a_single_glance_and_never_scrolls_at_the_smallest_window()
+    {
+        // Why this one card stays FIXED while every other modal became adaptive: a quick reference
+        // is read in a glance, and a glance that scrolls is not one. That is also what makes it the
+        // sole thing setting the window minimum - so if it ever outgrows that minimum, this fails
+        // here rather than shipping a sheet with its footer sliced off.
+        var view = new Views.HelpView { DataContext = new HelpViewModel(new FakeDialogs()) };
+        var window = new Window
+        {
+            Content = view,
+            Width = ShellViewModel.MinWindowWidth / ShellViewModel.BaseScale,
+            Height = (ShellViewModel.MinWindowHeight - ShellViewModel.ChromeReserve)
+                     / ShellViewModel.BaseScale,
+        };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        try
+        {
+            var sheet = view.FindControl<Border>("Sheet")!;
+            Assert.True(sheet.Bounds.Height <= view.Bounds.Height + 0.5,
+                $"the sheet is {sheet.Bounds.Height:0} tall in {view.Bounds.Height:0} of page");
+            Assert.True(sheet.Bounds.Width <= view.Bounds.Width + 0.5,
+                $"the sheet is {sheet.Bounds.Width:0} wide in {view.Bounds.Width:0} of page");
+        }
+        finally { window.Close(); }
     }
 }

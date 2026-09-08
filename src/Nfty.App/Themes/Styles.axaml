@@ -692,6 +692,25 @@
     <Setter Property="MaxHeight" Value="632" />
   </Style>
 
+  <!--
+    The three WIZARDS are adaptive, for the same reason the export card is: their height is not a
+    property of the design. New Ingredient grows by two colour bands the moment you pick Dynamic,
+    New CookBook by a description box - so a fixed height has to be the tallest state (too tall for
+    a laptop) or the shortest (which clips the form). Neither is a size.
+
+    They stretch to the page with a gutter and cap on a large display; the body already scrolled
+    inside the old MaxHeight, so it simply scrolls inside less or not at all. Hung on .monoform, which the three wizards
+    already share, rather than on Border.modal - .small (confirm, error) must go on HUGGING its
+    sentence, and stretched, a two-line message would draw a full-height card around it. Declared
+    AFTER .tall so it wins the MaxHeight at equal specificity, per this file's last-one-wins rule.
+  -->
+  <Style Selector="Border.modal.monoform">
+    <Setter Property="VerticalAlignment" Value="Stretch" />
+    <Setter Property="Margin" Value="0,10" />
+    <Setter Property="MaxHeight" Value="700" />
+  </Style>
+
+
   <!-- The SMALL modal: confirm, error, cook. Declared after Border.modal for the same last-one-wins
        reason as .tall. These three were the only dialogs in the app not using the modal grammar at
        all - a flat slab with a literal CornerRadius="10", a literal Padding="24" and buttons floating
@@ -2555,8 +2574,12 @@
        A fixed 780px three-column card, summoned over whatever the user is doing. Every class below
        is scoped `sh-` because the sheet re-uses several mockup class NAMES (.slbl, .t, .s, .k) at
        its own sizes; the shared ones stay whatever the rest of the app already made them. -->
+  <!-- 980 across four columns, not 820 across three. The sheet was tall because it was NARROW:
+       it sat in 820 of a window that allows well over a thousand, so every description wrapped
+       three lines deep and the card grew to 687 - taller than a 1366x768 laptop can show at all.
+       Wider and shorter is also simply the right shape for something you SCAN rather than read. -->
   <Style Selector="Border.sheet">
-    <Setter Property="Width" Value="820" />
+    <Setter Property="Width" Value="980" />
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
     <Setter Property="BorderThickness" Value="1" />
@@ -2567,7 +2590,7 @@
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <Style Selector="Border.sh-h">
-    <Setter Property="Padding" Value="20,15" />
+    <Setter Property="Padding" Value="20,11" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
     <Setter Property="BorderThickness" Value="0,0,0,1" />
   </Style>
@@ -2616,8 +2639,12 @@
   </Style>
 
   <!-- .col / .col + .col: the reference columns, divided by a left hairline. -->
+  <!-- 20,14,20,16. The sheet is the one modal the window minimum is still derived from, so its
+       own padding is load-bearing arithmetic rather than taste: every 2px here is 2.4px of window
+       (BaseScale) that a 1366x768 laptop either has or does not. Trimmed from 18/20 with the header
+       and footer bands, which together bought the last twenty. -->
   <Style Selector="Border.sh-col">
-    <Setter Property="Padding" Value="20,18,20,20" />
+    <Setter Property="Padding" Value="20,14,20,16" />
   </Style>
   <Style Selector="Border.sh-col.div">
     <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
@@ -2888,9 +2915,24 @@
   </Style>
 
   <!-- ===== the inspector modal ===== -->
+  <!--
+    The inspector SIZES TO ITS WINDOW, and for a viewer that is the correct behaviour rather than a
+    concession. It was a fixed 900x620 card, which meant the same postage stamp of canvas on a
+    laptop and on a 4K monitor - the one screen in this app whose entire job is "look at this
+    closely" was the one that refused to use the room it had.
+
+    Stretch with a gutter, floored so it never becomes a viewport too small to judge art in, and
+    capped so it does not sprawl on a very large display. The canvas row is already a star, so it
+    absorbs all of it; the header and footer bands are Auto and do not move.
+  -->
   <Style Selector="Border.inspect">
-    <Setter Property="Width" Value="900" />
-    <Setter Property="Height" Value="620" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="VerticalAlignment" Value="Stretch" />
+    <Setter Property="Margin" Value="16,12" />
+    <Setter Property="MinWidth" Value="720" />
+    <Setter Property="MaxWidth" Value="1180" />
+    <Setter Property="MinHeight" Value="400" />
+    <Setter Property="MaxHeight" Value="820" />
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
     <Setter Property="BorderThickness" Value="1" />
@@ -3007,7 +3049,7 @@
     <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
     <Setter Property="BorderThickness" Value="0,1,0,0" />
-    <Setter Property="Padding" Value="20,12" />
+    <Setter Property="Padding" Value="20,9" />
   </Style>
   <Style Selector="TextBlock.sh-dna">
     <Setter Property="FontSize" Value="11.5" />

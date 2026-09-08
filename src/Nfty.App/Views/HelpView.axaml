@@ -61,7 +61,17 @@
       </Border>
 
       <!-- ===== .sh-b: 1.28fr / 1.06fr / .9fr, hairline between ===== -->
-      <Grid x:Name="SheetBody" Grid.Row="1" ColumnDefinitions="1.28*,1.06*,0.9*">
+      <!-- ===== .sh-b: four columns, hairline between the two PAIRS =====
+           Four, not three, and 980 wide rather than 820. The sheet was tall because it was
+           NARROW: every description wrapped three lines deep and the card reached 687, taller
+           than a 1366x768 laptop can show at all. Wider and shorter is also the right shape
+           for something you SCAN.
+
+           Columns 0 and 1 are ONE spread with no divider between them - the six words run on
+           from the first into the second. Kitchen leads column 1, which is the layout finally
+           agreeing with what the dashed rule above it has always said: it is the sixth word
+           but NOT a link in the CookBook > Recipe > Ingredient > Variant chain. -->
+      <Grid x:Name="SheetBody" Grid.Row="1" ColumnDefinitions="1.12*,1.0*,1.0*,0.88*">
 
         <!-- ===== The six words ===== -->
         <Border Grid.Column="0" Classes="sh-col">
@@ -121,36 +131,17 @@
                 <TextBlock Classes="sh-s"><Run Text="What " /><Run Text="Cook" Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold" /><Run Text=" produces: images, metadata, rarity, seed." /></TextBlock>
               </StackPanel>
             </Grid>
-
-            <!-- Kitchen is below the rule because it is not a link in the chain above it. The dash
-                 is the signal: a solid hairline reads as a divider between peers, which is the
-                 opposite of the point.
-
-                 Avalonia's Border cannot dash, and a Height="1" Rectangle does not either — it
-                 still draws BOTH long edges, one left-to-right and one right-to-left, so their
-                 gaps land in each other's dashes and the line renders solid. It looked correct in
-                 the markup and wrong in the frame. So: a 3px rectangle whose top edge is the only
-                 one inside a 1px clip. -->
-            <Border Classes="sh-split" Height="1" ClipToBounds="True">
-              <Rectangle Height="3" VerticalAlignment="Top"
-                         Stroke="{DynamicResource LineStrongBrush}"
-                         StrokeThickness="1" StrokeDashArray="3,3" />
-            </Border>
-
-            <Grid Classes="sh-e" ColumnDefinitions="20,*" Margin="0">
-              <Panel Grid.Column="0" Classes="sh-g">
-                <Path Classes="ico ti-sh" Data="{StaticResource IconKitchen}" />
-              </Panel>
-              <StackPanel Grid.Column="1">
-                <TextBlock Classes="sh-t"><Run Text="Kitchen" /><Run Text=" .ktn" FontFamily="{DynamicResource MonoFontFamily}" FontSize="9.5" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
-                <TextBlock Classes="sh-s"><Run Text="Your shelf of " /><Run Text="loose parts" Foreground="{DynamicResource FgBrush}" /><Run Text=" — Ingredients and Recipes that belong to no one CookBook. Pull them into any project. Found by " /><Run Text="scanning the folder" Foreground="{DynamicResource FgBrush}" /><Run Text="." /></TextBlock>
-              </StackPanel>
-            </Grid>
           </StackPanel>
         </Border>
 
-        <!-- ===== Layer kinds + Rules and state + Color ===== -->
-        <Border Grid.Column="1" Classes="sh-col div">
+        <!-- ===== The layer kinds, then Kitchen =====
+             LAYER KINDS leads so all four columns start on a label at the same line; a column that
+             opened on a bare dashed rule read as a divider under an invisible heading, and its
+             content sat a row lower than its neighbours. Kitchen trails it, still below that rule,
+             which is where the rule has always belonged and what it has always meant: Kitchen is
+             the sixth word but NOT a link in the CookBook > Recipe > Ingredient > Variant chain.
+             There is no divider between this column and the last, so the two read as one spread. -->
+        <Border Grid.Column="1" Classes="sh-col">
           <StackPanel>
             <TextBlock Classes="slbl sh" Text="LAYER KINDS" />
 
@@ -178,7 +169,39 @@
               </StackPanel>
             </Grid>
 
-            <TextBlock Classes="slbl sh" Text="RULES &amp; STATE" Margin="0,20,0,14" />
+            <!-- Kitchen is below the rule because it is not a link in the chain above it. The dash
+                 is the signal: a solid hairline reads as a divider between peers, which is the
+                 opposite of the point.
+
+                 Avalonia's Border cannot dash, and a Height="1" Rectangle does not either — it
+                 still draws BOTH long edges, one left-to-right and one right-to-left, so their
+                 gaps land in each other's dashes and the line renders solid. It looked correct in
+                 the markup and wrong in the frame. So: a 3px rectangle whose top edge is the only
+                 one inside a 1px clip. -->
+            <Border Classes="sh-split" Height="1" ClipToBounds="True"
+                    Margin="0,22,0,0">
+              <Rectangle Height="3" VerticalAlignment="Top"
+                         Stroke="{DynamicResource LineStrongBrush}"
+                         StrokeThickness="1" StrokeDashArray="3,3" />
+            </Border>
+
+            <Grid Classes="sh-e" ColumnDefinitions="20,*" Margin="0">
+              <Panel Grid.Column="0" Classes="sh-g">
+                <Path Classes="ico ti-sh" Data="{StaticResource IconKitchen}" />
+              </Panel>
+              <StackPanel Grid.Column="1">
+                <TextBlock Classes="sh-t"><Run Text="Kitchen" /><Run Text=" .ktn" FontFamily="{DynamicResource MonoFontFamily}" FontSize="9.5" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
+                <TextBlock Classes="sh-s"><Run Text="Your shelf of " /><Run Text="loose parts" Foreground="{DynamicResource FgBrush}" /><Run Text=" — Ingredients and Recipes that belong to no one CookBook. Pull them into any project. Found by " /><Run Text="scanning the folder" Foreground="{DynamicResource FgBrush}" /><Run Text="." /></TextBlock>
+              </StackPanel>
+            </Grid>
+
+          </StackPanel>
+        </Border>
+
+        <!-- ===== Rules and state, then color ===== -->
+        <Border Grid.Column="2" Classes="sh-col div">
+          <StackPanel>
+            <TextBlock Classes="slbl sh" Text="RULES &amp; STATE" />
 
             <!-- The three marks MUST come from the IconMark* keys, not the visually identical
                  IconClose / IconArrowRight: this legend is the published meaning of the mark the
@@ -245,7 +268,7 @@
         </Border>
 
         <!-- ===== Keys ===== -->
-        <Border Grid.Column="2" Classes="sh-col div">
+        <Border Grid.Column="3" Classes="sh-col div">
           <StackPanel>
             <TextBlock Classes="slbl sh" Text="KEYS · ANYWHERE" />
 
@@ -298,6 +321,7 @@
             </Grid>
           </StackPanel>
         </Border>
+
       </Grid>
 
       <!-- ===== .sh-f: the DNA sentence + its arithmetic chip ===== -->

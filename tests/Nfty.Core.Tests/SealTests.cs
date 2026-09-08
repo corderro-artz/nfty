@@ -186,6 +186,18 @@ public class SealTests
         Assert.NotEqual(x.SealId, y.SealId);
     }
 
+    [Fact]
+    public void This_platform_can_actually_seal()
+    {
+        // AES-GCM is a PLATFORM capability - .NET exposes it only where the underlying crypto
+        // library provides it - so every other test in this file silently depends on it being here.
+        // Asserted rather than assumed: CI runs this project on Linux, macOS and Windows, and if a
+        // runner ever lacks it the suite should say so in one line instead of failing two dozen
+        // round-trips with tampering messages.
+        Assert.True(Seal.IsSupported);
+        Assert.False(string.IsNullOrWhiteSpace(Seal.UnsupportedMessage));
+    }
+
     // ------------------------------------------------------------------ tampering
 
     /// <summary>Rewrites one entry of a sealed archive in place.</summary>

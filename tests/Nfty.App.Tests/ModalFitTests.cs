@@ -75,31 +75,93 @@ public class ModalFitTests
         Fits("The quick-reference sheet", needW, needH);
     }
 
-    [AvaloniaFact]
-    public void The_asset_inspector_fits_the_smallest_window()
+    /// <summary>
+    /// The two ADAPTIVE cards, which this file cannot ask its usual question about.
+    /// </summary>
+    /// <remarks>
+    /// The export dialog and the asset inspector take the height they are GIVEN rather than
+    /// demanding one, so "does the window fit the card" is not a question about them and measuring
+    /// their desired size would assert a number that describes nothing. What replaces it is the
+    /// guarantee that actually matters for an adaptive card, and it holds at every size: it never
+    /// exceeds its host, so the footer can never be sliced.
+    /// </remarks>
+    [AvaloniaTheory]
+    [InlineData("inspector")]
+    [InlineData("export")]
+    public void An_adaptive_card_never_exceeds_the_page_it_is_given(string which)
     {
         var loaded = CookedSet(out var dir);
         using var browser = new SetBrowserViewModel(loaded);
+        using var ins = new SetInspectViewModel(browser.Items, 0, new FilePickerService(),
+            new DialogService(), new StatusService());
+        var export = new ExportDialogViewModel(VisualCapture.ExportCaptureSet(),
+            new FilePickerService(), new NoopFolderRevealer(), new FakeDialogs()) { IsSealed = true };
         try
         {
-            using var ins = new SetInspectViewModel(browser.Items, 0, new FilePickerService(),
-                new DialogService(), new StatusService());
-            var size = Measure(new Views.SetInspectView { DataContext = ins });
+            Control view = which == "inspector"
+                ? new Views.SetInspectView { DataContext = ins }
+                : new Views.ExportDialogView { DataContext = export };
 
-            var needW = size.Width * ShellViewModel.BaseScale + 24;
-            var needH = size.Height * ShellViewModel.BaseScale + Chrome;
+            // The page area at the app's own minimum, which is the tightest it ever gets.
+            var window = new Window
+            {
+                Content = view,
+                Width = ShellViewModel.MinWindowWidth / ShellViewModel.BaseScale,
+                Height = (ShellViewModel.MinWindowHeight - ShellViewModel.ChromeReserve)
+                         / ShellViewModel.BaseScale,
+            };
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            try
+            {
+                var card = view.GetVisualDescendants().OfType<Border>()
+                    .First(b => b.Classes.Contains("modal") || b.Classes.Contains("inspect"));
 
-            Fits("The asset inspector", needW, needH);
+                Assert.True(card.Bounds.Height <= view.Bounds.Height + 0.5,
+                    $"the {which} card is {card.Bounds.Height:0} tall in {view.Bounds.Height:0} of page");
+                Assert.True(card.Bounds.Width <= view.Bounds.Width + 0.5,
+                    $"the {which} card is {card.Bounds.Width:0} wide in {view.Bounds.Width:0} of page");
+                Assert.True(card.Bounds.Height > 0 && card.Bounds.Width > 0);
+            }
+            finally { window.Close(); }
         }
         finally { Directory.Delete(dir, recursive: true); }
     }
 
-    // The export dialog is deliberately absent from this file. It is the one ADAPTIVE card in the
-    // app - it takes the height it is given rather than demanding one - so "does the window fit the
-    // card" is not a question about it, and a measurement here would be asserting a number that no
-    // longer describes anything. `ExportDialogLayoutTests` covers it with the assertions that do
-    // apply: the card never exceeds its host, the passphrase boxes stay on screen when the form is
-    // taller than the window, and the manifest and footer are outside the scroller entirely.
+    [AvaloniaFact]
+    public void The_inspector_uses_the_room_a_larger_window_gives_it()
+    {
+        // The point of making it adaptive. A fixed card showed the same postage stamp of canvas on a
+        // laptop and on a 4K monitor - on the one screen whose whole job is looking at art closely.
+        var loaded = CookedSet(out var dir);
+        using var browser = new SetBrowserViewModel(loaded);
+        try
+        {
+            double Canvas(double pageHeight)
+            {
+                using var ins = new SetInspectViewModel(browser.Items, 0, new FilePickerService(),
+                    new DialogService(), new StatusService());
+                var view = new Views.SetInspectView { DataContext = ins };
+                var window = new Window { Content = view, Width = 1200, Height = pageHeight };
+                window.Show();
+                Dispatcher.UIThread.RunJobs();
+                try
+                {
+                    return view.GetVisualDescendants().OfType<Border>()
+                        .First(b => b.Classes.Contains("inspect")).Bounds.Height;
+                }
+                finally { window.Close(); }
+            }
+
+            Assert.True(Canvas(900) > Canvas(560),
+                "the inspector should grow with its window, not stay a fixed card");
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    // `ExportDialogLayoutTests` carries the rest of the export card's geometry: the passphrase
+    // boxes stay on screen when the form is taller than the window, and the manifest and the footer
+    // sit outside the scroller entirely.
 
     [AvaloniaFact]
     public void The_passphrase_prompt_fits_the_smallest_window()
