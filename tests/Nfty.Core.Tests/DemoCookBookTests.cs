@@ -117,6 +117,12 @@ public class DemoCookBookTests
         Assert.True(space.IsExact,
             $"the demo's DNA space saturated at {space.Cap:N0}; coarsen a quantize step in tools/demo/build-demo.py");
         Assert.InRange(space.Total, 100_000, UniqueSpace.DefaultCap - 1);
+
+        // The exact figure, because it is PUBLISHED: the manual's demo page and the README both
+        // print it, and a number in prose has nothing keeping it true. Changing the demo is allowed
+        // and this is meant to fail when you do - it fails with the new number, so updating the two
+        // documents is a copy rather than a recount.
+        Assert.Equal(615_600, space.Total);
     }
 
     [Fact]
