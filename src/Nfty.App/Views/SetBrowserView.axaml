@@ -153,15 +153,15 @@
            is exactly the same height for every asset and the button never moves. -->
       <Border Grid.Column="1" Classes="rules-panel" Padding="0" VerticalAlignment="Stretch"
               IsVisible="{Binding SelectedItem, Converter={x:Static conv:ObjectConverters.IsNotNull}}">
-        <Grid RowDefinitions="*,Auto">
-          <!-- The scrollbar is VISIBLE, not Auto. This rail holds an inspector's worth of detail in
-               whatever height is left, so at the smallest window a rarity row is usually cut across
-               the middle by the pinned Save button below it - and with the bar hidden until hover
-               that reads as a clipped panel rather than as a list with more in it. Nothing here is
-               unreachable; the bar is what says so. -->
-          <ScrollViewer Grid.Row="0" Padding="13,12" HorizontalScrollBarVisibility="Disabled"
-                        VerticalScrollBarVisibility="Visible">
-            <StackPanel Spacing="10">
+        <!-- THREE ROWS, NOT TWO, AND ONLY THE RARITY ROWS SCROLL. The whole body used to scroll
+             together, which meant the fold landed wherever the identity block happened to end - at
+             the smallest window that was across the middle of a rarity row, sliced by the pinned
+             Save band below it. The asset's number, its DNA and the table header are what you read
+             a rarity row AGAINST, so they are the wrong things to scroll away in any case.
+             The rows host is then sized to a WHOLE NUMBER of rows (SetBrowserView.OnLayoutUpdated),
+             so the fold is always on a row boundary and a half-row cannot be drawn. -->
+        <Grid RowDefinitions="Auto,*,Auto">
+            <StackPanel Grid.Row="0" Spacing="10" Margin="13,12,13,0">
 
               <Grid ColumnDefinitions="*,Auto">
                 <TextBlock Grid.Column="0" Classes="mono" FontSize="17" FontWeight="Bold"
@@ -185,7 +185,6 @@
               </StackPanel>
 
               <TextBlock Classes="sub-h" Text="RARITY" Margin="0,8,0,0" />
-              <StackPanel Spacing="0">
                 <Border Classes="data-h">
                   <!-- 71, not 56: a rarity reads "52.33%" as often as "44%", and six characters of
                        tabular mono need ~52px, plus the 11px sort slot and its 4px gap. At 46 the
@@ -247,6 +246,16 @@
                     </Button>
                   </Grid>
                 </Border>
+            </StackPanel>
+
+            <!-- The rows, and nothing else. Its height is set to a whole number of them in
+                 code-behind; VerticalAlignment Top so the leftover slack sits under the last row
+                 rather than centring the block. Auto rather than a permanent bar: with the fold on
+                 a row boundary there is no half-row to explain, so the bar only has to say "there
+                 are more", which is what Auto means. -->
+            <ScrollViewer Grid.Row="1" x:Name="RarityRows" Margin="13,0,13,12"
+                          VerticalAlignment="Top"
+                          HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                 <ItemsControl ItemsSource="{Binding SelectedRarity}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="core:RarityAttribute">
@@ -280,11 +289,9 @@
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
-              </StackPanel>
-            </StackPanel>
-          </ScrollViewer>
+            </ScrollViewer>
 
-          <Border Grid.Row="1" Classes="rail-foot">
+          <Border Grid.Row="2" Classes="rail-foot">
             <Button Classes="savebtn" HorizontalAlignment="Stretch"
                     Command="{Binding SaveImageCommand}"
                     ToolTip.Tip="Write the selected asset's PNG somewhere of your choosing">
