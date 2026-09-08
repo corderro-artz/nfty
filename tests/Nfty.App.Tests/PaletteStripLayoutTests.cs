@@ -34,7 +34,12 @@ public class PaletteStripLayoutTests
     // The pane track's own minimum: the mockups' 1180 page, less the 262 variants rail and the
     // 300 colorize rail. Below this the panes scroll rather than compress, so this is the narrowest
     // the strip is ever asked to fit into.
-    private const double MinimumWindowWidth = 1180;
+    // DERIVED, not the mockups' 1180: the shell renders at BaseScale, so the narrowest page this
+    // screen is ever given is (MinWindowWidth - 24) / 1.2. Measured at 1180 this strip cleared its
+    // pane with room to spare while the running app painted its opacity lock over the colorize rail
+    // beside it - the same blind spot ToolstripLayoutTests had, one row down.
+    private static double MinimumWindowWidth =>
+        (ShellViewModel.MinWindowWidth - 24) / ShellViewModel.BaseScale;
 
     // Button.sw's own size, from Styles.axaml. Duplicated deliberately: the point of the assertion
     // below is that the cell has room for a real swatch, which a value read back off the control

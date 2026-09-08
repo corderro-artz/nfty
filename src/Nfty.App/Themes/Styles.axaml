@@ -579,6 +579,15 @@
   <Style Selector="Border.toolstrip > WrapPanel > :is(Control)">
     <Setter Property="Margin" Value="0,3,6,3" />
   </Style>
+  <!-- Same trailing-margin trick as the toolstrip: WrapPanel has no Spacing. -->
+  <!-- HORIZONTAL ONLY, unlike the toolstrip's. The alpha slider in this strip carries Fluent's
+       cancelling -5/+5 margin, which is calibrated against the row's own centre - a vertical margin
+       here grows the row and moves that centre out from under the handle, which is exactly the
+       compensation-on-a-compensation trap the dual-range rows already taught. The strip keeps its
+       40px MinHeight, so one line is unchanged; two lines simply make it taller. -->
+  <Style Selector="Border.pstrip > WrapPanel > :is(Control)">
+    <Setter Property="Margin" Value="0,0,6,0" />
+  </Style>
   <Style Selector="Button.railtab">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Padding" Value="0" />
@@ -3185,8 +3194,13 @@
        change fill rather than count, the saved run scrolls inside its own cell instead of pushing
        its neighbours, and the alpha control is dimmed and un-hittable while locked rather than
        absent — so unlocking moves nothing. -->
+  <!-- Auto height, like the toolstrip above it and for the same reason: this strip WRAPS when the
+       canvas pane is too narrow for one line, and a fixed 40 would cut the second line off exactly
+       as silently as the old star column cut the palette. MinHeight keeps it identical to its
+       neighbours at every size where one line is enough. NaN is Auto. -->
   <Style Selector="Border.pstrip">
-    <Setter Property="Height" Value="40" />
+    <Setter Property="Height" Value="NaN" />
+    <Setter Property="MinHeight" Value="40" />
     <Setter Property="Padding" Value="12,0" />
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
@@ -3250,6 +3264,15 @@
 
   <!-- The alpha axis. Reserved in the layout at all times; dimmed and inert while the lock is on,
        which is the no-reflow rule applied to a control that only sometimes does anything. -->
+  <!-- PINNED TO 40, the same fix and the same reason as Panel.band. Fluent puts a Slider's thumb
+       25px below the control's own top whatever height it is given, and this cell's slider carries
+       the cancelling -5/+5 margin for it - which is exact for a 40px row and wrong for every other.
+       While the strip was a Grid the row supplied that 40; now that it is a WrapPanel the line is
+       only as tall as its tallest child, so the cell states the height itself and the compensation
+       is true by construction rather than by a neighbour happening to be the right size. -->
+  <Style Selector="StackPanel.alphacell">
+    <Setter Property="Height" Value="40" />
+  </Style>
   <Style Selector="StackPanel.alphacell.off">
     <Setter Property="IsHitTestVisible" Value="False" />
   </Style>

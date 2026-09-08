@@ -11,7 +11,12 @@
   <!-- Recipe detail body: a 2-column layout — a main column carrying the portrait hero and the
        full-width layer table, beside a rules rail.
        Rail column: the incompatibility rules panel. -->
-  <Grid Margin="16" ColumnDefinitions="*,300">
+  <!-- 260, not 300. The rules rail and the layer table's fixed cells together left the table's one
+       star column - the LAYER NAME - with nothing at the smallest window, so every name on the
+       screen was missing. The rail loses 40 and the fixed cells 48 (# 40 to 34, KIND 110 to 86,
+       VARIANTS 90 to 72, each still wider than its own header), which is what lets the window
+       minimum be 1200 rather than 1366. MinimumWindowFitTests measures the column by name. -->
+  <Grid Margin="16" ColumnDefinitions="*,260">
     <StackPanel Grid.Column="0" Spacing="14" Margin="0,0,16,0">
       <Border Classes="rhero">
         <Grid ColumnDefinitions="Auto,*">
@@ -127,7 +132,7 @@
              sorted view would show a stack that is not the stack, directly beside a drag handle
              that writes the real one. Nothing here is missing; see TableSort's own summary. -->
         <Border Classes="data-h">
-          <Grid ColumnDefinitions="26,40,*,110,90,Auto">
+          <Grid ColumnDefinitions="26,34,*,86,72,Auto">
             <TextBlock Grid.Column="1" Classes="data-h num" Text="#" Margin="0,0,10,0" />
             <TextBlock Grid.Column="2" Classes="data-h" Text="LAYER" />
             <TextBlock Grid.Column="3" Classes="data-h" Text="KIND" />
@@ -155,7 +160,7 @@
                         Command="{Binding $parent[ItemsControl].((vm:RecipeDetailViewModel)DataContext).OpenIngredientCommand}"
                         CommandParameter="{Binding Id}">
                   <Border Classes="data-row" Classes.sel="{Binding IsSelected}">
-                    <Grid ColumnDefinitions="26,40,*,110,90,Auto">
+                    <Grid ColumnDefinitions="26,34,*,86,72,Auto">
                       <Border Grid.Column="0" Classes="grip"
                               Classes.on="{Binding $parent[ItemsControl].((vm:RecipeDetailViewModel)DataContext).CanReorder}"
                               ToolTip.Tip="Drag to reorder — or Alt+Up / Alt+Down">

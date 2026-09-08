@@ -53,24 +53,22 @@ public partial class ShellViewModel : ViewModelBase
     /// a pixel a laptop may not have.
     /// </remarks>
     /// <remarks>
-    /// <para><b>The width is 1366 because a PAGE needs it, not because a modal does.</b> The sheet
-    /// still only asks for 1200, and that is what this was — but driving the app at 1200 found the
-    /// Recipe pane's layer table with its LAYER column arranged at ZERO width: the detail pane gets
-    /// about 365px there once the tree and the 300px rules rail have taken theirs, the table's fixed
-    /// columns account for 362 of it, and the one star column silently absorbed the shortfall. Every
-    /// layer name on the screen was missing, and the frame still looked deliberate. Width is a
-    /// budget and an overrun is silent; this is that rule at the scale of a whole screen.</para>
+    /// <para><b>Every screen was made to FIT this rather than allowed to push it up.</b> Three of
+    /// them could not, and each failed the same silent way — a control that overruns is still
+    /// arranged, still reports a sensible size, and simply is not drawn. Landing wanted 702 of page
+    /// height, which would have demanded a 931-tall window; it scrolls, and its two action groups
+    /// sit side by side so it does not have to. The editor's toolstrip wanted 1160 of page width and
+    /// its palette strip 555 in a 418px pane; both wrap. The Recipe pane's layer table had its LAYER
+    /// column arranged at ZERO width, so every layer name was missing; its rules rail and fixed
+    /// columns each gave some back.</para>
     ///
-    /// <para>1366x768 is the laptop resolution the old 1128 minimum locked out, so the width is now
-    /// exactly what the smallest common screen offers. The HEIGHT deliberately stays at 712 rather
-    /// than following it to 768: a 768-tall screen has a taskbar, and a minimum that assumed the
-    /// whole panel would be a minimum that screen cannot satisfy. Two other screens were made to fit
-    /// rather than allowed to push this further - Landing scrolls its action column (it wants 702 of
-    /// page height, which would have demanded a 931-tall window) and the editor's toolstrip wraps
-    /// (it wanted 1160 of page width, which would have demanded 1416 and locked those laptops out
-    /// all over again).</para>
+    /// <para>Raising the minimum instead was tried and reverted. 1366 fits a laptop screen exactly,
+    /// which is the point of it, but it is a 1.92:1 window — and it would not have fixed the palette
+    /// strip, which was invisible at 1366 too. The HEIGHT stays at 712 whatever the width does: a
+    /// 768-tall screen has a taskbar, and a minimum that assumed the whole panel would be a minimum
+    /// that screen cannot satisfy.</para>
     /// </remarks>
-    public const double MinWindowWidth = 1366;
+    public const double MinWindowWidth = 1200;
     /// <inheritdoc cref="MinWindowWidth"/>
     public const double MinWindowHeight = 712;
 

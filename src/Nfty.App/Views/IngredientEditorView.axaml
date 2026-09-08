@@ -191,19 +191,26 @@
                the opacity lock. Always present: on a Dynamic or Static layer it simply offers the
                grays a value-map is authored in. See Styles.axaml's block for the no-reflow rules. -->
           <Border Grid.Row="1" Classes="pstrip">
-            <!-- WIDTH IS A BUDGET. Everything but the saved run is fixed, and the saved run is the
-                 star column: at the minimum window width the canvas pane is 594px, so the fixed
-                 cells have to leave room or that column silently collapses to zero and the palette
-                 is simply absent (which is exactly what shipped in the first cut of this strip).
-                 Current fixed total: 128 + 207 + 18 + 94 + 30 + 42 gaps + 2 rules = 521. -->
-            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="6">
+            <!-- IT WRAPS, exactly as the toolstrip above it does, and for a worse version of the
+                 same reason. This was a Grid whose one star column held the saved swatches, so the
+                 fixed cells took their width first and the star absorbed whatever was left - and at
+                 the smallest window there was nothing left: the cells need about 555px and the
+                 canvas pane is 556, so THE SAVED PALETTE WAS ARRANGED AT ZERO WIDTH AND SIMPLY WAS
+                 NOT THERE, with the alpha axis and the opacity lock painted over the colorize rail
+                 next door. The comment here used to claim a 594px pane and a 521px total; both were
+                 stale, and PaletteStripLayoutTests measured at 1180 - 200px wider than this page is
+                 ever given - so it agreed with them.
+                 A WrapPanel has no star to collapse. The saved run states a width instead, so the
+                 palette is always there, and when the two groups do not fit on one line the second
+                 moves to a line of its own rather than off the edge. -->
+            <WrapPanel Orientation="Horizontal">
 
               <!-- A Custom layer has no gray mode at all: its value-map never reaches an archive,
                    so those strokes would be invisible work. The cell is a FIXED 104px either way and
                    the ink inside it swaps — a tray with a choice, or a caption with none. It is not
                    a DISABLED tray: the app dims disabled controls to 0.38 opacity, which put "Gray"
                    at 1.41:1 (DarkModeContrastTests), and unreadable is worse than absent. -->
-              <Panel Grid.Column="0" Width="128" VerticalAlignment="Center">
+              <Panel Width="128" VerticalAlignment="Center">
                 <Border Classes="seg mini" IsVisible="{Binding CanPaintGrayscale}">
                   <Grid ColumnDefinitions="*,2,*">
                     <Button Grid.Column="0" Classes="seg-b mini" Content="Gray"
@@ -223,9 +230,9 @@
                 </Border>
               </Panel>
 
-              <Border Grid.Column="1" Classes="tsep" />
+              <Border Classes="tsep" />
 
-              <ItemsControl Grid.Column="2" ItemsSource="{Binding Ramp}" VerticalAlignment="Center">
+              <ItemsControl ItemsSource="{Binding Ramp}" VerticalAlignment="Center">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="3" /></ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
@@ -242,13 +249,16 @@
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
 
-              <Border Grid.Column="3" Classes="tsep" />
+              <Border Classes="tsep" />
 
               <!-- The saved run scrolls inside its own cell: a palette that grew would otherwise
                    push the alpha axis and the lock off the strip. -->
-              <ScrollViewer Grid.Column="4" HorizontalScrollBarVisibility="Auto"
+              <!-- 120 STATED, not a star. A star is what let this vanish; a width means the saved
+                   palette is the same size in every window and scrolls inside itself when it grows,
+                   which is what its own scroller was always for. -->
+              <ScrollViewer HorizontalScrollBarVisibility="Auto"
                             VerticalScrollBarVisibility="Disabled" VerticalAlignment="Center"
-                            HorizontalAlignment="Stretch" Height="20">
+                            Width="120" Height="20">
                 <ItemsControl ItemsSource="{Binding SavedSwatches}">
                   <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="3" /></ItemsPanelTemplate>
@@ -276,13 +286,13 @@
                 </ItemsControl>
               </ScrollViewer>
 
-              <Button Grid.Column="5" Classes="sw add" Command="{Binding SaveSwatchCommand}"
+              <Button Classes="sw add" Command="{Binding SaveSwatchCommand}"
                       ToolTip.Tip="Save this color to the palette">
                 <Path Classes="ico xs" Data="{StaticResource IconPlus}" />
               </Button>
 
               <!-- Reserved whether or not the lock admits it — see Styles.axaml. -->
-              <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="6" Width="94"
+              <StackPanel Orientation="Horizontal" Spacing="6" Width="94"
                           VerticalAlignment="Center" Classes="alphacell"
                           Classes.off="{Binding IsOpacityLocked}">
                 <TextBlock Text="A" Classes="plabel" VerticalAlignment="Center" Margin="0" />
@@ -294,12 +304,12 @@
                         Margin="0,-5,0,5" VerticalAlignment="Center" ToolTip.Tip="Paint alpha" />
               </StackPanel>
 
-              <Button Grid.Column="7" Classes="ttool" Classes.on="{Binding IsOpacityLocked}"
+              <Button Classes="ttool" Classes.on="{Binding IsOpacityLocked}"
                       Command="{Binding ToggleOpacityLockCommand}"
                       ToolTip.Tip="Opacity lock — every painted pixel is fully opaque or fully erased">
                 <Path Classes="ico sm" Data="{StaticResource IconLock}" />
               </Button>
-            </Grid>
+            </WrapPanel>
           </Border>
 
           <!-- .canvas-wrap: checkerboard backdrop, 320px art tile, blip preview over the corner. -->

@@ -31,7 +31,14 @@
        the row by exactly 13px, which is not a clip - the scroller above catches it - but it summons
        a scrollbar for thirteen pixels, and a bar that appears when everything is already on screen
        reads as a broken screen. The horizontal 38 is untouched. -->
-  <Grid ColumnDefinitions="*,34,*" Margin="38,26">
+  <!-- Auto, not a star, for the action block. Two equal stars split the page evenly, which at the
+       smallest window gave this column 504px for a block whose two stacks declare 550 - so the OPEN
+       column was arranged 46px narrower than it asks for and its buttons ran to within a few pixels
+       of the recents icons beside them. An Auto column gives the block exactly what it needs at
+       every width and hands the remainder to the list, which is the one thing here that can use any
+       width at all. The gutter is 48 rather than 34: two dense columns need more air between them
+       than one column and a margin did. -->
+  <Grid ColumnDefinitions="Auto,48,*" Margin="38,26">
     <!-- .actions is left-aligned. Stretching it inside the column centers the button stack, which
          is what made the whole screen read as a centered splash.
          CREATE AND OPEN SIT SIDE BY SIDE, which the mockup's single 272px column does not do. Eleven
