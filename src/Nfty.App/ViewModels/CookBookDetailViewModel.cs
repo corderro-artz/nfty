@@ -57,8 +57,11 @@ public record FactorChip(string Name, int VariantCount, LayerKind Kind, bool Sho
 /// <summary>One recipe's row in the mint-distribution and DNA-space panels.</summary>
 /// <param name="Name">The recipe's display name.</param>
 /// <param name="SharePercent">Its share of mints, from the cookbook's weights.</param>
-/// <param name="DnaSpaceText">Its unique-DNA figure, already formatted — including the em dash used
-/// when the space is undefined rather than merely large.</param>
+/// <param name="DnaSpaceText">Its unique-DNA figure, already formatted — shortened above a billion,
+/// and an em dash when the space is undefined rather than merely large.</param>
+/// <param name="DnaSpaceTip">What the row cannot fit: the exact figure, digit for digit, and the
+/// derivation the arrow between the chips and the number leaves implicit. ONE tooltip rather than
+/// two, because the control has one.</param>
 /// <param name="Factors">The layer stack, in paint order, one chip per layer carrying its variant
 /// count. Deliberately NOT a factorization of <paramref name="DnaSpaceText"/>: the DNA space is the
 /// legal combinations (rules applied) times each dynamic layer's quantized colors, so the chips'
@@ -69,8 +72,8 @@ public record FactorChip(string Name, int VariantCount, LayerKind Kind, bool Sho
 /// and picks up <c>Series1Brush</c>…<c>Series6Brush</c> from whichever dictionary is live, which a
 /// color computed in the ViewModel could not do — the previous version hashed the recipe id into an
 /// HSV, so it was off-palette by construction and identical in both themes.</param>
-public record RecipeShareRow(string Name, double SharePercent, string DnaSpaceText, int Series,
-    IReadOnlyList<FactorChip> Factors)
+public record RecipeShareRow(string Name, double SharePercent, string DnaSpaceText,
+    string DnaSpaceTip, int Series, IReadOnlyList<FactorChip> Factors)
 {
     /// <summary>True when this row draws series color 1.</summary>
     public bool IsSeries1 => Series == 1;
@@ -135,9 +138,13 @@ public partial class CookBookDetailViewModel : ViewModelBase
     public int LayerCount { get; }
     /// <summary>How many variants across all layers.</summary>
     public int VariantCount { get; }
-    /// <summary>The unique-DNA figure as the card shows it, including the em dash for a space that
-    /// cannot be counted.</summary>
+    /// <summary>The unique-DNA figure as the tile shows it — shortened above a billion, and an em
+    /// dash for a space that cannot be counted.</summary>
     public string UniqueDnaText { get; }
+    /// <summary>The same figure written out in full, for the tile's tooltip. A tile is 90-odd pixels
+    /// wide and a quintillion is twenty digits, so the tile is allowed to round; the number the
+    /// author is tuning against has to be readable SOMEWHERE, and this is where.</summary>
+    public string UniqueDnaTip { get; }
     /// <summary>Per-recipe share and DNA-space rows.</summary>
     public IReadOnlyList<RecipeShareRow> Recipes { get; }
 
@@ -188,14 +195,21 @@ public partial class CookBookDetailViewModel : ViewModelBase
         try { space = UniqueSpace.Count(book); }
         catch { /* fall through to Unknown below */ }
 
-        UniqueDnaText = SpaceText(space is null || !space.IsCountable, space?.IsExact ?? false, space?.Total ?? 0);
+        var whole = space is null || !space.IsCountable ? null : ((long, SpaceCertainty)?)(space.Total, space.Certainty);
+        UniqueDnaText = Figure(whole);
+        UniqueDnaTip = Tip(whole);
 
         var target = book.Manifest.TargetSupply;
         HasTargetSupply = target is not null;
         TargetSupplyText = target?.ToString("N0") ?? Unknown;
+        // The FULL figure, not the tile's: this bar runs the width of the pane, and the comparison
+        // it exists to make — does the intended supply fit in the space? — is between two numbers
+        // that must be read at the same precision. "Target supply 5,000 of 2.82 billion" compares a
+        // exact figure against a rounded one.
+        string full = Full(whole);
         CookBarText = target is null
-            ? $"{UniqueDnaText} unique DNA available"
-            : $"Target supply {target.Value:N0} of {UniqueDnaText} unique DNA";
+            ? $"{full} unique DNA available"
+            : $"Target supply {target.Value:N0} of {full} unique DNA";
 
         double totalWeight = book.Manifest.RecipeWeights.Values.Sum();
         int seriesIndex = 0;
@@ -208,12 +222,12 @@ public partial class CookBookDetailViewModel : ViewModelBase
             int series = (seriesIndex++ % 6) + 1;
             double w = book.Manifest.RecipeWeights.GetValueOrDefault(r.Manifest.Id);
             double share = totalWeight > 0 ? w / totalWeight * 100 : 0;
-            string dna = Unknown;
-            if (space is not null)
-            {
-                var rs = space[r.Manifest.Id];
-                dna = SpaceText(!rs.IsCountable, rs.IsExact, rs.Total);
-            }
+            var rs = space?[r.Manifest.Id];
+            var one = rs is null || !rs.IsCountable ? null : ((long, SpaceCertainty)?)(rs.Total, rs.Certainty);
+            string dna = Figure(one);
+            string dnaTip = Tip(one) + Environment.NewLine
+                + "Legal variant combinations (this recipe's rules applied), times each dynamic "
+                + "layer's quantized colors";
             // layerOrder, not r.Ingredients. The archive's own order is arbitrary, so the same
             // recipe's chips came out in one order here and in paint order on the recipe panel -
             // the same five numbers, shuffled, two clicks apart. Resolved tolerantly (an entry
@@ -244,25 +258,49 @@ public partial class CookBookDetailViewModel : ViewModelBase
                         Variants: i.Manifest.Variants.Count, Optional: absent > 0);
                 })
                 .ToList();
-            return new RecipeShareRow(r.Manifest.Name, Math.Round(share, 1), dna, series, factors);
+            return new RecipeShareRow(r.Manifest.Name, Math.Round(share, 1), dna, dnaTip, series,
+                factors);
         }).ToList();
     }
 
     /// <summary>
-    /// One DNA-space figure as the card shows it. Three outcomes, not two: an exact count, a
-    /// saturated count that is a real lower bound, and a space that is <em>undefined</em> because
-    /// the book is invalid in a way that makes the question meaningless. The third reports zero, so
-    /// formatting it like the second would put "more than 0" on the card — which reads like a
-    /// measurement rather than a shrug.
+    /// One DNA-space figure as this card shows it: <see cref="SpaceText"/>'s compact form, which
+    /// prints every digit below a billion and a named magnitude above it.
     /// </summary>
-    /// <param name="uncountable">Whether the space is undefined rather than merely large.</param>
-    /// <param name="isExact">Whether <paramref name="total"/> is the figure rather than a floor.</param>
-    /// <param name="total">The counted figure.</param>
+    /// <param name="space">The figure and what it is, or null when the space is undefined — the
+    /// book is invalid in a way that makes the question meaningless, or counting threw.</param>
     /// <returns>Display text, never empty.</returns>
-    private static string SpaceText(bool uncountable, bool isExact, long total) =>
-        uncountable ? Unknown
-        : isExact ? total.ToString()
-        : $"more than {total}";
+    /// <remarks>
+    /// <b>The wording is Core's, not this card's.</b> This method used to BE the rule — three
+    /// branches, worded one way here and another in the CLI's <c>stats</c> line, which is how two
+    /// surfaces showing one number came to describe it differently. What stays local is the
+    /// <see cref="Unknown"/> em dash: a metric tile has room for a figure and not for a sentence,
+    /// while the report has room for both and says which problem to go and fix.
+    /// </remarks>
+    private static string Figure((long Total, SpaceCertainty Certainty)? space) =>
+        space is not { } s ? Unknown : SpaceText.Describe(s.Total, s.Certainty, compact: true);
+
+    /// <summary>
+    /// The full figure behind <see cref="Figure"/>, for the tooltip.
+    /// </summary>
+    /// <param name="space">The figure and what it is, or null when the space is undefined.</param>
+    /// <returns>Tooltip text, never empty.</returns>
+    /// <remarks>
+    /// <b>A number the product will not print in full is a number the author cannot check</b>, and
+    /// this is the figure they tune quantize steps against. The tile shortens; the tooltip never
+    /// does. Below a billion the two agree, and that is deliberate — a tooltip that carries
+    /// something only sometimes is one nobody learns to reach for.
+    /// </remarks>
+    private static string Tip((long Total, SpaceCertainty Certainty)? space) =>
+        space is null ? "This DNA space cannot be counted; run validate." : Full(space) + " unique DNA";
+
+    /// <summary>
+    /// The figure written out in full, for the surfaces wide enough to hold it.
+    /// </summary>
+    /// <param name="space">The figure and what it is, or null when the space is undefined.</param>
+    /// <returns>Display text, never empty.</returns>
+    private static string Full((long Total, SpaceCertainty Certainty)? space) =>
+        space is not { } s ? Unknown : SpaceText.Describe(s.Total, s.Certainty);
 
     /// <summary>
     /// Opens the cook dialog. Gated on <see cref="IsValid"/> because

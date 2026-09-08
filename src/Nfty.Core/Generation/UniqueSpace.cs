@@ -3,6 +3,50 @@ using Nfty.Core.Model;
 
 namespace Nfty.Core.Generation;
 
+/// <summary>
+/// What a counted space actually tells you: an answer, a bound in a stated direction, or nothing.
+/// </summary>
+/// <remarks>
+/// <para><b>This used to be a <c>bool IsExact</c>, and the bool was wrong in one case.</b> Three of
+/// the four outcomes below reported <c>false</c> together, and every surface rendered that one way -
+/// "more than N" - because two of them really are floors. The third is not: when a recipe has rules
+/// and too many combinations to walk, the count gave up and reported the BUDGET as the total, so a
+/// book whose rules exclude all but four hundred selections announced "more than 1,000,000". Rules
+/// can only REMOVE, so that number was not a lower bound at all; it was an upper one wearing the
+/// wrong label.</para>
+///
+/// <para>Naming the direction fixes it by construction. It is the rule this codebase already applies
+/// to colour specs and passphrase sources: state which kind of thing you have rather than leaving a
+/// reader to infer it from a flag that cannot carry the distinction.</para>
+/// </remarks>
+public enum SpaceCertainty
+{
+    /// <summary>The total IS the figure. Nothing gave up and nothing saturated.</summary>
+    Exact,
+
+    /// <summary>The real figure is LARGER than the total — an under-counted bucket set, or
+    /// arithmetic that saturated the reporting ceiling. Renders as "more than N".</summary>
+    AtLeast,
+
+    /// <summary>
+    /// The real figure is NO LARGER than the total — the recipe has rules and more combinations
+    /// than the enumeration budget allows walking, so the unconstrained product is reported.
+    /// </summary>
+    /// <remarks>
+    /// It is a true bound because rules only ever remove selections, and removing a selection
+    /// removes the colours it would have carried with it. Renders as "at most N", which is a real
+    /// fact about the book rather than the floor this case used to claim.
+    /// </remarks>
+    AtMost,
+
+    /// <summary>
+    /// Nothing is known and the total means nothing. The book is invalid in a way that makes the
+    /// question meaningless (a layerOrder entry naming no ingredient, a Dynamic layer with no
+    /// colorization), or the two bounds above contradict each other.
+    /// </summary>
+    Unknown,
+}
+
 /// <summary>One recipe's share of the space.</summary>
 /// <param name="Total">
 /// Legal combinations times reachable color buckets. This is the recipe's space in isolation and
@@ -15,19 +59,19 @@ namespace Nfty.Core.Generation;
 /// no reachable color buckets — and only this figure tells them apart. A caller must never read
 /// a zero <see cref="Total"/> as a rule conflict.
 /// </param>
-/// <param name="IsExact">
-/// Whether <see cref="Total"/> is the real figure rather than a floor. Decided while counting,
-/// where it was still known whether the combinations or the buckets gave up: a saturated
-/// combination count multiplied by zero buckets lands back under the cap, so this cannot be
-/// re-derived afterwards from <c>Total &lt; Cap</c>. Also false — with <see cref="Total"/> and
-/// <see cref="Combos"/> both zero — when the recipe itself could not be resolved (a layerOrder
-/// entry naming a missing ingredient): that recipe's real space is undefined until the book is
-/// fixed, not honestly zero, so it must never be read as a rule conflict either.
+/// <param name="Certainty">
+/// What <see cref="Total"/> is: the figure, a floor, a ceiling, or nothing. Decided while counting,
+/// where it is still known whether the combinations or the buckets gave up — a saturated
+/// combination count multiplied by zero buckets lands back at zero, so this cannot be re-derived
+/// afterwards from the total alone.
 /// </param>
-public record RecipeSpace(long Total, long Combos, bool IsExact)
+public record RecipeSpace(long Total, long Combos, SpaceCertainty Certainty)
 {
+    /// <summary>Whether <see cref="Total"/> is the real figure rather than a bound.</summary>
+    public bool IsExact => Certainty == SpaceCertainty.Exact;
+
     /// <inheritdoc cref="UniqueSpaceCount.IsCountable"/>
-    public bool IsCountable => IsExact || Total > 0;
+    public bool IsCountable => Certainty != SpaceCertainty.Unknown;
 }
 
 /// <summary>
@@ -38,20 +82,58 @@ public record RecipeSpace(long Total, long Combos, bool IsExact)
 /// figure is "more than Total", never less.
 /// </summary>
 /// <param name="Total">The distinct DNA the rollable recipes admit between them.</param>
-/// <param name="IsExact">Whether an enumeration gave up. See <see cref="UniqueSpace.DefaultReportingCeiling"/>
-/// for why this no longer also means "the number got big".</param>
+/// <param name="Certainty">What <see cref="Total"/> is: the figure, a floor, a ceiling, or
+/// nothing.</param>
 /// <param name="Budget">The enumeration budget the count ran under, for a message that has to name
 /// the limit somebody would raise.</param>
 /// <param name="Recipes">The per-recipe breakdown, shelved recipes included.</param>
 public record UniqueSpaceCount(
     long Total,
-    bool IsExact,
+    SpaceCertainty Certainty,
     long Budget,
     IReadOnlyDictionary<string, RecipeSpace> Recipes)
 {
+    /// <summary>Whether <see cref="Total"/> is the real figure rather than a bound.</summary>
+    public bool IsExact => Certainty == SpaceCertainty.Exact;
+
     /// <summary>An unknown recipe id has no space at all, and no space is exactly known.</summary>
     public RecipeSpace this[string recipeId] =>
-        Recipes.GetValueOrDefault(recipeId) ?? new RecipeSpace(0, 0, true);
+        Recipes.GetValueOrDefault(recipeId) ?? new RecipeSpace(0, 0, SpaceCertainty.Exact);
+
+    /// <summary>
+    /// The combined space of a SUBSET of the book's recipes — the ones a given run can actually
+    /// roll.
+    /// </summary>
+    /// <param name="recipeIds">The recipes in play. An id this count does not know contributes
+    /// nothing, exactly as the indexer says.</param>
+    /// <returns>Their summed total and combinations, and what that sum is.</returns>
+    /// <remarks>
+    /// <b>The saturating add and the certainty fold belong here, not in the caller.</b>
+    /// <c>Generator</c> needs precisely this to say how big a space a failing run had, and built it
+    /// itself — a hand-rolled overflow guard beside an <c>&amp;=</c> over <c>IsExact</c>. That
+    /// <c>&amp;=</c> is the operator <see cref="UniqueSpace.Combine"/> replaces: it cannot express a floor
+    /// summed with a ceiling, which is the case that has no answer.
+    /// </remarks>
+    public RecipeSpace Over(IEnumerable<string> recipeIds)
+    {
+        ArgumentNullException.ThrowIfNull(recipeIds);
+        long total = 0;
+        long combos = 0;
+        var certainty = SpaceCertainty.Exact;
+        foreach (string id in recipeIds)
+        {
+            var one = this[id];
+            total = UniqueSpace.Add(total, one.Total, long.MaxValue);
+            combos = UniqueSpace.Add(combos, one.Combos, long.MaxValue);
+            certainty = UniqueSpace.Combine(certainty, one.Certainty);
+        }
+
+        // Saturating the range is itself a reason the figure is only a floor, and it is checked
+        // after the fold rather than inside it: Add clamps, so a sum that reached long.MaxValue is
+        // indistinguishable from one that landed there honestly, and only this frame knows which.
+        if (total == long.MaxValue) certainty = UniqueSpace.Combine(certainty, SpaceCertainty.AtLeast);
+        return new RecipeSpace(total, combos, certainty);
+    }
 
     /// <summary>
     /// Whether this figure means anything to show a user. <see cref="IsExact"/> alone is false for
@@ -65,7 +147,7 @@ public record UniqueSpaceCount(
     /// card and its per-recipe rows — so it is decided once here instead of three times, differently.
     /// </para>
     /// </summary>
-    public bool IsCountable => IsExact || Total > 0;
+    public bool IsCountable => Certainty != SpaceCertainty.Unknown;
 }
 
 /// <summary>
@@ -118,7 +200,7 @@ public static class UniqueSpace
         long reportingCeiling = DefaultReportingCeiling)
     {
         long total = 0;
-        bool exact = true;
+        var certainty = SpaceCertainty.Exact;
         var recipes = new Dictionary<string, RecipeSpace>();
 
         foreach (var recipe in book.Recipes)
@@ -129,7 +211,7 @@ public static class UniqueSpace
             // same product of color buckets. An absent Dynamic layer rolls no color and contributes
             // ONE shape, so the bucket product now depends on which layers a given selection
             // actually has. RecipeSpace does the sum; see its own note.
-            var (recipeTotal, combos, recipeExact) =
+            var (recipeTotal, combos, recipeCertainty) =
                 RecipeShapes(recipe, enumerationBudget, reportingCeiling);
 
             // Each recipe's own space is always recorded, so a caller inspecting a shelved recipe
@@ -137,18 +219,18 @@ public static class UniqueSpace
             // rollable recipes: the cookbook rolls a recipe by weight exactly as a layer rolls a
             // variant, so a zero-weight recipe is never rolled and produces no DNA — mirroring the
             // weight>0 filter WeightedRoller applies and Generator.DescribeFailure re-derives.
-            recipes[recipe.Manifest.Id] = new RecipeSpace(recipeTotal, combos, recipeExact);
+            recipes[recipe.Manifest.Id] = new RecipeSpace(recipeTotal, combos, recipeCertainty);
             if (book.Manifest.RecipeWeights.GetValueOrDefault(recipe.Manifest.Id) <= 0)
                 continue;
             total = Add(total, recipeTotal, reportingCeiling);
-            exact &= recipeExact;
+            certainty = Combine(certainty, recipeCertainty);
         }
 
         // No clamp to the budget here any more. The budget governs WALKING; summing the recipes is
         // addition, and Add only guards its own overflow. A total that saturated the ceiling is the
         // one arithmetic case that is not exact, and Add is where that is decided.
-        if (total >= reportingCeiling) exact = false;
-        return new UniqueSpaceCount(total, exact, enumerationBudget, recipes);
+        if (total >= reportingCeiling) certainty = Combine(certainty, SpaceCertainty.AtLeast);
+        return new UniqueSpaceCount(total, certainty, enumerationBudget, recipes);
     }
 
     /// <summary>
@@ -199,14 +281,14 @@ public static class UniqueSpace
     /// So the enumeration sums a product per legal selection rather than multiplying one product by
     /// a count.
     /// </remarks>
-    private static (long Total, long Combos, bool Exact) RecipeShapes(
+    private static (long Total, long Combos, SpaceCertainty Certainty) RecipeShapes(
         LoadedRecipe recipe, long budget, long ceiling)
     {
         if (!TryResolveLayers(recipe, out var resolved))
-            return (0, 0, false);
+            return (0, 0, SpaceCertainty.Unknown);
 
         var layers = new List<LayerShapes>(resolved.Count);
-        bool exact = true;
+        bool bucketsExact = true;
         foreach (var ing in resolved)
         {
             double percent = recipe.Manifest.AbsentPercentOf(ing.Manifest.Id);
@@ -220,10 +302,10 @@ public static class UniqueSpace
                 // that is mid-edit. Report it the way an unresolvable layer is reported: "undefined
                 // until the book is fixed", not an honest zero.
                 if (ing.Manifest.Colorization is not { } colorization)
-                    return (0, 0, false);
+                    return (0, 0, SpaceCertainty.Unknown);
                 var (b, bExact) = DistinctBuckets(colorization, budget);
                 buckets = b;
-                exact &= bExact;
+                bucketsExact &= bExact;
             }
 
             layers.Add(new LayerShapes(
@@ -234,38 +316,49 @@ public static class UniqueSpace
                 percent > 0));
         }
 
-        if (recipe.Manifest.Rules.Count == 0)
+        // THE UNCONSTRAINED PRODUCT, computed once and used by both paths. It is free - a product
+        // is not enumeration - and it is two different things depending on the path: with no rules
+        // it IS the answer, and with rules it is a true UPPER bound on the answer, because a rule
+        // can only remove selections and removing a selection removes the colours it carried.
+        long product = 1;
+        long combos = 1;
+        foreach (var l in layers)
         {
-            long product = 1;
-            long combos = 1;
-            foreach (var l in layers)
-            {
-                product = Multiply(product, l.Shapes, ceiling);
-                combos = Multiply(combos, l.Variants.Count + (l.CanBeAbsent ? 1 : 0), ceiling);
-            }
-            // NOTHING IS WALKED ON THIS PATH. With no rules the space factorizes, so the answer
-            // is two products - and a product is not enumeration, which is why it is measured
-            // against the CEILING rather than the budget. This is the case that used to report
-            // "more than 1000000" for a book it could have counted exactly in a few multiplies.
-            //
-            // Both still have to clear it, not just the total. A Dynamic layer with no color
-            // entries has zero buckets, so a product that saturated on combinations can collapse
-            // back to 0 - under any ceiling - and re-deriving exactness from the total alone would
-            // then call a count exact that had already given up.
-            bool ok = exact && product < ceiling && combos < ceiling;
-            return (product, combos, ok);
+            product = Multiply(product, l.Shapes, ceiling);
+            combos = Multiply(combos, l.Variants.Count + (l.CanBeAbsent ? 1 : 0), ceiling);
         }
 
-        // Rules can only remove selections, so the unconstrained product bounds the walk - and
-        // THIS is the expensive path, so the BUDGET governs it. Measured in combinations rather
-        // than in DNA, because the walk costs one rules check per selection whatever colours those
-        // selections carry. That is exactly why the two limits had to be separated: a book with
-        // billions of distinct assets spread over a few thousand combinations is cheap to count,
-        // and now it counts.
-        long bound = 1;
-        foreach (var l in layers)
-            bound = Multiply(bound, l.Variants.Count + (l.CanBeAbsent ? 1 : 0), budget);
-        if (bound >= budget) return (budget, budget, false);
+        // BOTH have to clear the ceiling, not just the total. A Dynamic layer with no color entries
+        // has zero buckets, so a product that saturated on combinations can collapse back to 0 -
+        // under any ceiling - and re-deriving the outcome from the total alone would then call a
+        // count exact that had already given up.
+        bool saturated = product >= ceiling || combos >= ceiling;
+
+        if (recipe.Manifest.Rules.Count == 0)
+        {
+            // Nothing is walked here: with no rules the space factorizes. An under-counted bucket
+            // set or a saturated product both mean the truth is LARGER, so both are a floor.
+            return (product, combos,
+                bucketsExact && !saturated ? SpaceCertainty.Exact : SpaceCertainty.AtLeast);
+        }
+
+        // With rules the space does not factorize and has to be walked one selection at a time -
+        // THE expensive path, so the BUDGET governs it. Measured in combinations rather than in
+        // DNA, because the walk costs one rules check per selection whatever colours those
+        // selections carry. That separation is what lets a book with billions of distinct assets
+        // over a few thousand combinations count exactly.
+        if (combos >= budget)
+        {
+            // Too many to walk. `product` is a genuine upper bound - but ONLY if the buckets it was
+            // built from were themselves counted. If they were not, the product is built on an
+            // under-count and bounds the truth in neither direction, which is nothing at all.
+            //
+            // This case used to return the BUDGET with IsExact false, which every surface rendered
+            // as "more than 1,000,000" - a floor, for the one result that is the opposite of one.
+            return bucketsExact
+                ? (product, combos, SpaceCertainty.AtMost)
+                : (0, 0, SpaceCertainty.Unknown);
+        }
 
         long total = 0;
         long legal = 0;
@@ -298,8 +391,9 @@ public static class UniqueSpace
 
         Walk(0, 1);
         // The walk finished, so the selection count is exact; only the arithmetic can still have
-        // saturated, and `exact` already carries whether any colour set gave up.
-        return (total, legal, exact && total < ceiling);
+        // saturated, and an under-counted bucket set would make the total a floor.
+        return (total, legal,
+            bucketsExact && total < ceiling ? SpaceCertainty.Exact : SpaceCertainty.AtLeast);
     }
 
     /// <summary>One layer reduced to the variants a roll can actually land on.</summary>
@@ -440,6 +534,24 @@ public static class UniqueSpace
         return (lo, Math.Max(lo, bucket(Math.BitDecrement(sample(1.0)))));
     }
 
+    /// <summary>
+    /// What a SUM of two spaces is, given what each of them is.
+    /// </summary>
+    /// <remarks>
+    /// A floor plus a floor is a floor; a ceiling plus a ceiling is a ceiling; either plus an exact
+    /// figure keeps its direction. <b>A floor plus a ceiling is nothing</b> — the two bounds point
+    /// opposite ways and their sum bounds the truth in neither direction, so claiming either would
+    /// be inventing one. That combination is the reason this is a function rather than an <c>&amp;=</c>.
+    /// </remarks>
+    public static SpaceCertainty Combine(SpaceCertainty a, SpaceCertainty b)
+    {
+        if (a == SpaceCertainty.Unknown || b == SpaceCertainty.Unknown) return SpaceCertainty.Unknown;
+        if (a == b) return a;
+        if (a == SpaceCertainty.Exact) return b;
+        if (b == SpaceCertainty.Exact) return a;
+        return SpaceCertainty.Unknown;              // one floor and one ceiling
+    }
+
     /// <summary>Multiplies, saturating at <paramref name="ceiling"/> rather than overflowing.</summary>
     private static long Multiply(long a, long b, long ceiling)
     {
@@ -457,7 +569,7 @@ public static class UniqueSpace
     /// type - at a million it could never overflow, and at the new ceiling it silently would, turning
     /// a very large space into a negative one.
     /// </remarks>
-    private static long Add(long a, long b, long ceiling)
+    internal static long Add(long a, long b, long ceiling)
     {
         if (b <= 0) return a;
         return a > ceiling - b ? ceiling : a + b;

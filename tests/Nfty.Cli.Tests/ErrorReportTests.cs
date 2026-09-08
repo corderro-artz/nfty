@@ -34,7 +34,7 @@ public class ErrorReportTests
     public void Verbose_adds_the_trace_and_keeps_the_message()
     {
         Exception caught;
-        try { throw new UniqueSpaceExhaustedException(4, true, 5, 4, "allows exactly 4 unique DNA"); }
+        try { throw new UniqueSpaceExhaustedException(4, SpaceCertainty.Exact, 5, 4, "allows exactly 4 unique DNA"); }
         catch (Exception ex) { caught = ex; }   // thrown, so it has a real stack trace
 
         string report = ErrorReport.Format(caught, verbose: true);

@@ -4,7 +4,8 @@ Work that is deliberately not done yet, with the reason and enough context to pi
 Nothing here is a defect in shipped behaviour; each is a decision to defer.
 
 *Done and removed from this list: splitting `UniqueSpace`'s cap into an enumeration budget and a
-reporting ceiling (0.7.2).*
+reporting ceiling (0.7.2), and `Total` not being a lower bound when the walk is skipped (0.8.0 —
+`SpaceCertainty` names the direction, so that case reports "at most N").*
 
 ---
 
@@ -43,23 +44,3 @@ ordinary functions with inputs and outputs, covered by `PassphraseSourceTests`.
 What is left untested is the genuinely interactive branch: key-by-key echo suppression, backspace,
 and Escape. Testing it would mean an indirection over `Console.ReadKey` whose only consumer is the
 test — worth it only if that reader grows logic worth checking. It has none today.
-
----
-
-## `Total` is not a lower bound when the walk is skipped
-
-**Status:** open, latent, pre-dates the budget/ceiling split.
-
-When a recipe has rules and its unconstrained combination count exceeds the enumeration budget,
-`RecipeShapes` returns the budget as the total and `IsExact = false`, and front-ends render that as
-*"more than 1,000,000"*.
-
-That reads as a lower bound, and it is not one. Rules can only *remove* selections, so a book with
-two million combinations and rules excluding all but four hundred of them genuinely admits four
-hundred — while the report claims more than a million.
-
-Every other inexact result really is a floor (an under-counted bucket set, a saturated product), so
-this is the one case where the documented reading of `IsExact` is wrong. The honest options are to
-report it as uncountable (`Total == 0`, which `IsCountable` already renders as "cannot say") or to
-carry an upper bound alongside the lower one. Not urgent: it needs a rules-heavy book with more
-combinations than the budget, which nothing shipped comes close to.

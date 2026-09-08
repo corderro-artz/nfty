@@ -39,6 +39,36 @@ public class ReportTests
         };
     }
 
+    /// <summary>
+    /// The report is the one surface with room for every digit, so it never takes the card's
+    /// rounded form — but it does take the separators. "2560000" is a number nobody reads at a
+    /// glance, and this line exists to be read at a glance.
+    /// </summary>
+    [Fact]
+    public void The_dna_space_line_separates_its_thousands()
+    {
+        var many = Enumerable.Range(0, 40)
+            .Select(i => (Id: $"v{i}", Name: $"V{i}", Weight: 1d)).ToArray();
+        var layers = new[] { "a", "b", "c", "d" };
+        using var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb-id", "Big", new Dimensions(2, 2),
+                new Collection("Big", "d", "BG"),
+                new Dictionary<string, double> { ["cat-id"] = 1 }),
+            Recipes = new[]
+            {
+                new LoadedRecipe
+                {
+                    Manifest = new RecipeManifest("cat-id", "Cat", layers,
+                        Array.Empty<IncompatibilityRule>()),
+                    Ingredients = layers.Select(l => Ing(l, l, LayerKind.Custom, many)).ToArray(),
+                },
+            },
+        };
+
+        Assert.Equal("Unique DNA space: 2,560,000", CollectionReport.UniqueDnaLine(book));
+    }
+
     // ---- inspect ------------------------------------------------------------------------------
 
     /// <summary>The whole point of the command: ids, which the GUI never shows and which are what
@@ -133,6 +163,9 @@ public class ReportTests
 
         Assert.Contains("Recipes:", text);
         Assert.Contains("Traits (overall):", text);
+        // Thousands-separated and invariant. A report is the one surface with room for every digit,
+        // so it never takes the tile's rounded form - but it does take the separators, because
+        // "615600" is a number nobody reads at a glance.
         Assert.Contains("Unique DNA space:", text);
         Assert.Contains("Cat", text);
         Assert.Contains("Daylight", text);

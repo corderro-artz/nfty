@@ -17,6 +17,7 @@ using Avalonia.VisualTree;
 using Nfty.App;
 using Nfty.App.Services;
 using Nfty.App.ViewModels;
+using Nfty.Core.Demo;
 using Nfty.Core.Editing;
 using Nfty.Core.Formats;
 using Nfty.Core.Imaging;
@@ -354,6 +355,20 @@ public class VisualCapture
             // evidence that it renders - the same fixture blind spot as the editor's toolstrip.
             var cookBookVm = new CookBookDetailViewModel(cookBook, () => { }, () => { });
             Capture(new Views.CookBookDetailView { DataContext = cookBookVm }, variant, $"cookbook-detail-{key}.png");
+
+            // The SAME card over the built-in demo, whose DNA space is 615,600. Every other fixture
+            // in this file is a two-variant toy, so the UNIQUE DNA tile had only ever been captured
+            // holding a single digit — no frame in the set was evidence that it can hold a real
+            // figure, which is the one number on this card that has no upper bound.
+            var demoDir = Directory.CreateTempSubdirectory();
+            using (var demo = CookBookArchive.Read(DemoCookBook.WriteTo(demoDir.FullName)))
+            {
+                Capture(new Views.CookBookDetailView
+                {
+                    DataContext = new CookBookDetailViewModel(demo, () => { }, () => { }),
+                }, variant, $"cookbook-detail-demo-{key}.png");
+            }
+            demoDir.Delete(recursive: true);
 
             var (ruleBook, ruleRecipe) = RecipeWithRules();
             using (var vm = new RecipeDetailViewModel(ruleRecipe, ruleBook, new ImageBridge(), _ => { }))

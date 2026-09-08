@@ -84,16 +84,15 @@ public static class CollectionReport
     /// <summary>The largest number of unique-DNA assets this CookBook can produce — the figure
     /// generate reports only on failure, surfaced so a run can be sized before it starts.
     ///
-    /// <para>Three outcomes, not two. An exact count prints the number. A count that saturated its
-    /// enumeration budget prints "more than N". And a book whose space is <em>undefined</em> — because
-    /// it is invalid in a way that makes the question meaningless, such as a Dynamic layer with no
-    /// colorization block — says so, rather than claiming "more than 0", which reads like a real
-    /// lower bound.</para>
+    /// <para>Four outcomes, not two, and <see cref="SpaceText"/> is where they are worded — the
+    /// same formatter the GUI's card uses, so the two surfaces cannot drift. This file used to carry
+    /// its own copy of the decision and the CookBook card carried another, worded differently.</para>
     ///
-    /// <para><see cref="UniqueSpace.Count"/> reports that third case as <c>Total == 0</c> with
-    /// <c>IsExact == false</c> and is documented never to throw; the catch below is kept as
-    /// belt-and-braces, not as the mechanism. It used to be the mechanism, which meant the
-    /// no-throw contract was asserted in one file and quietly worked around in this one.</para></summary>
+    /// <para>The uncountable case adds a hint the card has no room for, and keeps
+    /// <see cref="SpaceText.Unknown"/> as its opening words rather than restating them.
+    /// <see cref="UniqueSpace.Count"/> is documented never to throw; the catch below is
+    /// belt-and-braces, not the mechanism. It used to be the mechanism, which meant the no-throw
+    /// contract was asserted in one file and quietly worked around in this one.</para></summary>
     /// <param name="book">The CookBook to size.</param>
     /// <returns>A single line, always — this never throws and never omits the line.</returns>
     public static string UniqueDnaLine(LoadedCookBook book)
@@ -102,10 +101,8 @@ public static class CollectionReport
         {
             var space = UniqueSpace.Count(book);
             if (!space.IsCountable)
-                return "Unique DNA space: cannot be counted (the CookBook has problems; run validate)";
-            return space.IsExact
-                ? $"Unique DNA space: {space.Total}"
-                : $"Unique DNA space: more than {space.Total}";
+                return $"Unique DNA space: {SpaceText.Unknown} (the CookBook has problems; run validate)";
+            return $"Unique DNA space: {SpaceText.Describe(space)}";
         }
         catch (Exception ex)
         {

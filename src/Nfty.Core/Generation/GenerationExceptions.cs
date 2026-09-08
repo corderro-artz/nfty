@@ -19,16 +19,25 @@ public class RuleConflictException : InvalidOperationException
 
 /// <summary>
 /// More unique assets were requested than the cookbook can produce. <see cref="Available"/> is
-/// the true maximum when <see cref="IsExact"/>; otherwise the space was too large to count and
-/// the real figure is greater than <see cref="Available"/> — meaning the reroll budget, not the
-/// space, is what ran out.
+/// the true maximum only when <see cref="Certainty"/> says so; otherwise it is a bound, and
+/// <see cref="Certainty"/> is what says in which direction.
 /// </summary>
+/// <remarks>
+/// This carried a <c>bool isExact</c>, and read every non-exact outcome as "the real figure is
+/// GREATER — so the reroll budget, not the space, is what ran out". One of those outcomes is the
+/// opposite: a recipe with rules and more combinations than the enumeration budget reports an upper
+/// bound, and telling a user their book allows "more than" a number it may not reach is worse than
+/// saying nothing.
+/// </remarks>
 public class UniqueSpaceExhaustedException : InvalidOperationException
 {
     /// <summary>How many unique DNA the book actually admits.</summary>
     public long Available { get; }
-    /// <summary>Whether <see cref="Available"/> is the real figure or a floor.</summary>
-    public bool IsExact { get; }
+    /// <summary>What <see cref="Available"/> is: the figure, a floor, a ceiling, or nothing.</summary>
+    public SpaceCertainty Certainty { get; }
+
+    /// <summary>Whether <see cref="Available"/> is the real figure rather than a bound.</summary>
+    public bool IsExact => Certainty == SpaceCertainty.Exact;
     /// <summary>How many assets were asked for.</summary>
     public int Requested { get; }
     /// <summary>How many were produced before the space ran out.</summary>
@@ -36,16 +45,16 @@ public class UniqueSpaceExhaustedException : InvalidOperationException
 
     /// <summary>Creates the exception.</summary>
     /// <param name="available">The space the book admits.</param>
-    /// <param name="isExact">Whether that figure is exact.</param>
+    /// <param name="certainty">What that figure is.</param>
     /// <param name="requested">How many were asked for.</param>
     /// <param name="produced">How many were produced.</param>
     /// <param name="message">The message shown to the user verbatim.</param>
     public UniqueSpaceExhaustedException(
-        long available, bool isExact, int requested, int produced, string message)
+        long available, SpaceCertainty certainty, int requested, int produced, string message)
         : base(message)
     {
         Available = available;
-        IsExact = isExact;
+        Certainty = certainty;
         Requested = requested;
         Produced = produced;
     }

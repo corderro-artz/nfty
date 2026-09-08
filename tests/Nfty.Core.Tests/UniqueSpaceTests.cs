@@ -507,12 +507,55 @@ public class UniqueSpaceTests
         Assert.True(count.Total > UniqueSpace.DefaultEnumerationBudget);
     }
 
+    private static LoadedCookBook RulesTooDenseToWalk()
+    {
+        var many = Enumerable.Range(0, 40).Select(i => $"v{i}").ToArray();
+        var rules = new[]
+        {
+            new IncompatibilityRule(RuleType.Exclude,
+                new RuleTarget("a", "v0"), new[] { new RuleTarget("b", "v0") }),
+        };
+        return Book(Recipe("cat", rules,
+            Custom("a", many), Custom("b", many), Custom("c", many), Custom("d", many)));
+    }
+
     [Fact]
     public void The_budget_still_stops_a_walk_that_would_be_expensive()
     {
-        // The other half: the budget is not decorative. With rules present the count enumerates one
-        // selection at a time, and THAT cost is real however small the resulting number is - so a
-        // book with more combinations than the budget still gives up, exactly as before.
+        // The other half of the split: the budget is not decorative. With rules present the count
+        // enumerates one selection at a time, and THAT cost is real however small the resulting
+        // number is - so a book with more combinations than the budget still gives up.
+        var count = UniqueSpace.Count(RulesTooDenseToWalk());
+
+        Assert.False(count.IsExact);
+    }
+
+    [Fact]
+    public void A_walk_that_was_skipped_reports_a_CEILING_and_says_so()
+    {
+        // THE BUG THIS MODEL EXISTS FOR. This used to report the BUDGET as the total with
+        // IsExact false, which every surface rendered as "more than 1,000,000" - a floor. Rules can
+        // only REMOVE selections, so that was the one inexact result whose truth lies in the other
+        // direction: a book like this one might admit four hundred assets, and the report claimed
+        // more than a million.
+        var count = UniqueSpace.Count(RulesTooDenseToWalk());
+
+        Assert.Equal(SpaceCertainty.AtMost, count.Certainty);
+
+        // And the ceiling is the UNCONSTRAINED product - a real fact about the book, computed in
+        // four multiplies - rather than the budget, which is a fact about this counter.
+        Assert.Equal(40L * 40 * 40 * 40, count.Total);
+        Assert.NotEqual(UniqueSpace.DefaultEnumerationBudget, count.Total);
+        Assert.StartsWith("at most ", SpaceText.Describe(count), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void An_upper_bound_is_only_reported_when_the_number_it_bounds_was_itself_counted()
+    {
+        // The ceiling is the product of combinations and colour buckets, so it is a bound on the
+        // truth only if those buckets were counted. Squeeze the budget until the bucket sets give up
+        // too and there is nothing left to say: an under-count multiplied out bounds the answer in
+        // NEITHER direction, which is not a smaller claim than "at most" - it is a different one.
         var many = Enumerable.Range(0, 40).Select(i => $"v{i}").ToArray();
         var rules = new[]
         {
@@ -520,12 +563,57 @@ public class UniqueSpaceTests
                 new RuleTarget("a", "v0"), new[] { new RuleTarget("b", "v0") }),
         };
         var book = Book(Recipe("cat", rules,
-            Custom("a", many), Custom("b", many), Custom("c", many), Custom("d", many)));
+            Dynamic("a", new ColorRange(0, 360, 0, 100), hueQ: 1, satQ: 1, many),
+            Custom("b", many), Custom("c", many), Custom("d", many)));
 
-        var count = UniqueSpace.Count(book);
+        var count = UniqueSpace.Count(book, enumerationBudget: 100);
 
-        Assert.False(count.IsExact);
-        Assert.Equal(UniqueSpace.DefaultEnumerationBudget, count.Total);
+        Assert.Equal(SpaceCertainty.Unknown, count.Certainty);
+        Assert.False(count.IsCountable);
+    }
+
+    // ---- the lattice: what a SUM of two spaces is ------------------------------------------------
+
+    [Theory]
+    [InlineData(SpaceCertainty.Exact, SpaceCertainty.Exact, SpaceCertainty.Exact)]
+    [InlineData(SpaceCertainty.Exact, SpaceCertainty.AtLeast, SpaceCertainty.AtLeast)]
+    [InlineData(SpaceCertainty.AtMost, SpaceCertainty.Exact, SpaceCertainty.AtMost)]
+    [InlineData(SpaceCertainty.AtLeast, SpaceCertainty.AtLeast, SpaceCertainty.AtLeast)]
+    [InlineData(SpaceCertainty.AtMost, SpaceCertainty.AtMost, SpaceCertainty.AtMost)]
+    [InlineData(SpaceCertainty.Unknown, SpaceCertainty.Exact, SpaceCertainty.Unknown)]
+    public void Summing_two_spaces_keeps_whichever_direction_they_agree_on(
+        SpaceCertainty a, SpaceCertainty b, SpaceCertainty expected)
+    {
+        Assert.Equal(expected, UniqueSpace.Combine(a, b));
+        Assert.Equal(expected, UniqueSpace.Combine(b, a));       // addition is commutative
+    }
+
+    [Fact]
+    public void A_floor_summed_with_a_ceiling_is_nothing_at_all()
+    {
+        // The case an &= over a bool could not express, and the reason Combine is a function. One
+        // recipe admits AT LEAST a million and another AT MOST a million; their sum is bounded in
+        // neither direction, and picking either would be inventing a fact.
+        Assert.Equal(SpaceCertainty.Unknown,
+            UniqueSpace.Combine(SpaceCertainty.AtLeast, SpaceCertainty.AtMost));
+        Assert.Equal(SpaceCertainty.Unknown,
+            UniqueSpace.Combine(SpaceCertainty.AtMost, SpaceCertainty.AtLeast));
+    }
+
+    [Fact]
+    public void Over_sums_only_the_recipes_it_is_given()
+    {
+        // What Generator asks when a run fails: a shelved recipe is never rolled, so its space must
+        // not inflate a maximum the run could not have reached.
+        var count = UniqueSpace.Count(BookWithWeights(
+            new Dictionary<string, double> { ["one"] = 1, ["two"] = 1 },
+            Recipe("one", Array.Empty<IncompatibilityRule>(), Custom("a", "x", "y")),
+            Recipe("two", Array.Empty<IncompatibilityRule>(), Custom("b", "x", "y", "z"))));
+
+        Assert.Equal(5, count.Over(new[] { "one", "two" }).Total);
+        Assert.Equal(2, count.Over(new[] { "one" }).Total);
+        Assert.Equal(0, count.Over(Array.Empty<string>()).Total);
+        Assert.Equal(SpaceCertainty.Exact, count.Over(new[] { "one" }).Certainty);
     }
 
     [Fact]

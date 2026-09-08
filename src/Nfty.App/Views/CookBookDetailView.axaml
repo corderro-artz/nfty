@@ -74,7 +74,7 @@
             <StackPanel><TextBlock Classes="mv" Text="{Binding VariantCount}" /><TextBlock Classes="ml" Text="VARIANTS" /></StackPanel>
           </Border>
           <Border Grid.Row="1" Grid.Column="1" Classes="metric accent" Margin="5,5,0,0">
-            <StackPanel><TextBlock Classes="mv" Text="{Binding UniqueDnaText}" /><TextBlock Classes="ml" Text="UNIQUE DNA" /></StackPanel>
+            <StackPanel ToolTip.Tip="{Binding UniqueDnaTip}"><TextBlock Classes="mv" Text="{Binding UniqueDnaText}" /><TextBlock Classes="ml" Text="UNIQUE DNA" /></StackPanel>
           </Border>
         </Grid>
 
@@ -127,7 +127,7 @@
                            The tooltip carries the derivation the arrow leaves implicit. -->
                       <TextBlock Classes="ceq" Text="→" VerticalAlignment="Bottom" />
                       <TextBlock Classes="cnum" Text="{Binding DnaSpaceText}" VerticalAlignment="Bottom"
-                                 ToolTip.Tip="Legal variant combinations (this recipe's rules applied), times each dynamic layer's quantized colors" />
+                                 ToolTip.Tip="{Binding DnaSpaceTip}" />
                     </StackPanel>
                   </Grid>
                   <Grid ColumnDefinitions="*,12,Auto">

@@ -298,7 +298,7 @@ public static class Generator
         // Keyed off legal COMBINATIONS, never the total — a total can also hit zero because a
         // layer has no reachable color buckets, which is not a rule conflict and must not be
         // reported as one (a rules-free recipe would otherwise be blamed on rules that do not exist).
-        var dead = inPlay.Where(id => space[id].Combos == 0).ToList();
+        var dead = inPlay.Where(id => space[id] is { Combos: 0, IsCountable: true }).ToList();
         if (dead.Count == inPlay.Count && dead.Count > 0)
             return new RuleConflictException(dead,
                 $"No legal variant combination exists for {Describe(dead)}: "
@@ -316,29 +316,39 @@ public static class Generator
                 + "rejected every roll. Loosen the rules or raise the reroll budget.");
         }
 
-        // Saturating, because the reporting ceiling is long.MaxValue now: a plain += over several
-        // very large recipes can overflow, and a negative "allows exactly -3 unique DNA" is a worse
-        // message than any true one. The old clamp to the cap did this job by accident, only because
-        // the cap was a million.
-        long available = 0;
-        bool exact = true;
-        foreach (var id in inPlay)
-        {
-            long recipe = space[id].Total;
-            available = available > long.MaxValue - recipe ? long.MaxValue : available + recipe;
-            exact &= space[id].IsExact;
-        }
-        if (available == long.MaxValue) exact = false;
-
+        // Summed by the counter itself: the saturating add and the certainty fold are one rule, and
+        // this used to be the second copy of it. Only the recipes in play, so a shelved recipe never
+        // inflates a maximum the run could not have reached.
+        var pool = space.Over(inPlay);
+        long available = pool.Total;
         string scope = opts.RecipeId is null ? "this cookbook" : $"recipe '{opts.RecipeId}'";
-        string message = exact
-            ? $"Could not produce a unique asset: {scope} allows exactly {available} unique DNA, "
-              + $"but {opts.Count} were requested ({produced} generated)."
-            : $"Could not produce a unique asset after {opts.MaxRerollsPerAsset} attempts "
-              + $"({produced} of {opts.Count} generated). {scope} allows more than {available} unique DNA, "
-              + "so the reroll budget ran out before the space did.";
+        string ran = $"after {opts.MaxRerollsPerAsset} attempts ({produced} of {opts.Count} generated)";
 
-        return new UniqueSpaceExhaustedException(available, exact, opts.Count, produced, message);
+        // FOUR sentences, because there are four things that can be true, and the middle two are
+        // opposites. "more than N" on an upper bound is the one that shipped, and it told an author
+        // whose rules admit four hundred assets that their book allowed more than a million.
+        string message = pool.Certainty switch
+        {
+            SpaceCertainty.Exact =>
+                $"Could not produce a unique asset: {scope} allows exactly {SpaceText.Exact(available)} "
+                + $"unique DNA, but {opts.Count} were requested ({produced} generated).",
+
+            SpaceCertainty.AtLeast =>
+                $"Could not produce a unique asset {ran}. {scope} allows more than "
+                + $"{SpaceText.Exact(available)} unique DNA, so the reroll budget ran out before the "
+                + "space did.",
+
+            SpaceCertainty.AtMost =>
+                $"Could not produce a unique asset {ran}. {scope} has too many combinations to count "
+                + $"exactly; its rules allow at most {SpaceText.Exact(available)} unique DNA, and "
+                + $"{opts.Count} were requested.",
+
+            _ =>
+                $"Could not produce a unique asset {ran}. {scope} has a unique DNA space that cannot "
+                + "be counted — run validate.",
+        };
+
+        return new UniqueSpaceExhaustedException(available, pool.Certainty, opts.Count, produced, message);
     }
 
     private static string Describe(IReadOnlyList<string> recipeIds) =>
