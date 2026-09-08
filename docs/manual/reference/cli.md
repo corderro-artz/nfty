@@ -24,7 +24,7 @@ See [The demo CookBook](../get-started/the-demo.md) for what is in it.
 | Command | Does |
 |---|---|
 | `nfty inspect <file>` | Prints what is inside any `.cbk`, `.rcp`, `.igt`, `.set`, `.ktn` or `.tin`, plus a book's own palette. A cooked Set also works as a **folder** -- which is what `generate --out` writes when you do not pass `--pack`. |
-| `nfty inspect <tin>` | A sealed export prints its header with **no passphrase**: the collection, the asset count, the sender's note and what you are permitted to do. Add `--key` to be asked for the passphrase, or `--key-env NAME` to read it from an environment variable, and it prints the full report of what is inside. |
+| `nfty inspect <tin>` | A sealed export prints its header with **no passphrase**: the collection, the asset count, the sender's note and what you are permitted to do. Add `--key <source>` and it prints the full report of what is inside. |
 | `nfty inspect <file> --voxel` | Also lists every variant carrying partial transparency. Costs a full scan of every image. Refused on a `.ktn` and on a cooked Set: both list paths without opening them, and a Set is the output rather than the source -- run it on the CookBook that produced it. |
 | `nfty validate <file>` | Reports every problem it finds, rather than stopping at the first. |
 | `nfty stats <cbk>` | The odds the weights imply, trait by trait, plus the unique DNA space. |
@@ -76,7 +76,7 @@ A cook writes *your* copy and holds everything. `export` writes somebody else's.
 ```bash
 nfty export ./collection --out ./dist --preset marketplace
 nfty export ./collection --out ./dist --preset fullproject --book mybook.cbk
-NFTY_KEY=... nfty export ./collection --out ./dist --preset sealedcritique --key-env NFTY_KEY
+NFTY_KEY=... nfty export ./collection --out ./dist --preset sealedcritique --key env:NFTY_KEY
 ```
 
 | Option | Does |
@@ -90,7 +90,7 @@ NFTY_KEY=... nfty export ./collection --out ./dist --preset sealedcritique --key
 | `--folder` / `--pack` | Shape. `--pack` (one archive) is the default; a sealed export is always one file. |
 | `--seal` | Encrypt it and mark it view-only. Writes a `.tin`. |
 | `--note "<text>"` | A line for the recipient. On a sealed export it travels in the clear. |
-| `--key-env NAME` | Read the passphrase from this environment variable instead of asking at the terminal. |
+| `--key <source>` | Where the passphrase comes from — see below. Omit it and nfty asks at the terminal. |
 
 `set.json` always ships -- it is what makes the result a Set rather than a folder of pictures, and it
 carries the collection-wide rarity table, so even the leanest export still answers "what is this and
@@ -100,11 +100,33 @@ book, but it is there.
 The command prints every part that went, by name, and warns when the export carries the source
 CookBook.
 
+### Where a passphrase comes from
+
+`--key` names its **source**. An unprefixed value is an error, never a guess -- the same rule a
+[color spec](../understand/layer-kinds.md) follows, and for a sharper reason: `--key hunter2` looks
+like it works, and treating it as the passphrase would put your secret in the process list.
+
+| Source | Reads |
+|---|---|
+| `env:NAME` | An environment variable. The usual answer for CI. |
+| `file:PATH` | The first line of a file. A trailing newline is dropped; spaces are kept. |
+| `stdin` | One line from standard input. Leaves nothing anywhere. |
+| `prompt` | Asks at the terminal, echoing nothing. The default when `--key` is omitted. |
+
+They are not interchangeable, which is why you pick one. An environment variable is inherited by
+every child process and readable from `/proc/<pid>/environ` by the same user on Linux; a key file
+can be mode 600; a pipe leaves no trace at all.
+
+```bash
+nfty export ./collection --out ./dist --preset sealedcritique --key file:./key.txt
+printf '%s' "$PASS" | nfty export ./collection --out ./dist --preset sealedcritique --key stdin
+```
+
 !!! warning "There is no `--passphrase`"
 
     An argument on a command line is visible to every process on the machine while it runs, lands in
-    your shell history, and is captured verbatim by CI logs. Use `--key-env`, or let nfty ask at the
-    terminal -- it echoes nothing, not even asterisks, and asks twice when sealing.
+    your shell history, and is captured verbatim by CI logs. That is why the sources above exist and
+    why an unprefixed `--key` is refused rather than accepted.
 
 See [Share a collection](../how-to/share-a-collection.md) and
 [What sealing does and does not do](../understand/sealing.md).

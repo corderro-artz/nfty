@@ -237,7 +237,7 @@ The visual-polish work is merged into `main`. **`docs/superpowers/specs/2026-08-
   nothing more** — the format is open source. Never let a surface imply otherwise; "a lock on a door,
   not a wall" is the phrasing that shipped. There is deliberately **no `unseal`**, and no
   `--passphrase` flag anywhere (argv is visible to every process, lands in shell history, and is
-  captured by CI logs) — `--key-env` or a terminal prompt.
+  captured by CI logs). `--key` NAMES a source instead — `env:NAME`, `file:PATH`, `stdin` or `prompt` — and an unprefixed value is an error, never a guess, which is the `ColorSpec` rule applied where guessing is worst: `--key hunter2` looks like it works and would put the secret in argv. More than one source because they are not interchangeable — an environment variable is inherited by every child and readable from `/proc/<pid>/environ` by the same user, a key file can be mode 600, a pipe leaves nothing. Naming the source is also what made the passphrase path TESTABLE: three of the four are ordinary functions now, and only the genuinely interactive prompt is beyond reach.
   - **Probing corrected the story about which guard carries what, and the corrected version is the
     one to trust.** The payload is framed (1 MiB) so a multi-gigabyte collection never has to be
     buffered, and framing opens four attacks. Reorder is caught by the **nonce** (a per-file random

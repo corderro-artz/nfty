@@ -70,7 +70,7 @@ says so, in those words, before you press the button.
 ```bash
 NFTY_KEY='a passphrase you chose' \
 nfty export ./collection --out ./dist --preset sealedcritique \
-    --key-env NFTY_KEY --note "Draft for review"
+    --key env:NFTY_KEY --note "Draft for review"
 ```
 
 You get `Chest Demo.tin`: the whole Set encrypted, marked view-only. Your reviewer opens it in nfty
@@ -86,8 +86,10 @@ if you lose it -- sealing copies your Set, it never consumes it, so keep the ori
 !!! note "There is no `--passphrase` flag, on purpose"
 
     An argument on a command line is visible to every process on the machine while it runs, lands in
-    your shell history, and is captured verbatim by CI logs. `--key-env` names an environment
-    variable; with neither, nfty asks at the terminal and echoes nothing.
+    your shell history, and is captured verbatim by CI logs. `--key` names a **source** instead --
+    `env:NAME`, `file:PATH`, `stdin` or `prompt` -- and an unprefixed value is refused rather than
+    taken as the passphrase. Omit it and nfty asks at the terminal, echoing nothing. See
+    [the CLI reference](../reference/cli.md#where-a-passphrase-comes-from).
 
 ## Opening what somebody sent you
 
@@ -99,5 +101,5 @@ From the terminal:
 
 ```bash
 nfty inspect ./ChestDemo.tin                      # what it is, no key needed
-nfty inspect ./ChestDemo.tin --key                # ...and what is inside it
+nfty inspect ./ChestDemo.tin --key prompt         # ...and what is inside it
 ```

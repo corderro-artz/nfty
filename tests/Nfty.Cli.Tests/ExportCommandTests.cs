@@ -82,17 +82,25 @@ public class ExportCommandTests
         // Deliberate, and worth a test rather than a comment: an argument on a command line is
         // visible to every process on the machine while it runs, lands in shell history, and is
         // captured verbatim by CI logs. Offering the flag would mean most people used it, because
-        // the convenient path is the one that gets taken. --key-env is the way in.
+        // the convenient path is the one that gets taken. --key names a source instead.
         Assert.NotEmpty(Parse("export ./c --out ./d --seal --passphrase hunter2hunter2").Errors);
         Assert.NotEmpty(Parse("inspect ./c.tin --passphrase hunter2hunter2").Errors);
 
-        Assert.Empty(Parse("export ./c --out ./d --seal --key-env NFTY_KEY").Errors);
-        Assert.Empty(Parse("inspect ./c.tin --key-env NFTY_KEY").Errors);
+        Assert.Empty(Parse("export ./c --out ./d --seal --key env:NFTY_KEY").Errors);
+        Assert.Empty(Parse("inspect ./c.tin --key env:NFTY_KEY").Errors);
     }
 
-    [Fact]
-    public void Inspect_takes_a_key_so_a_sealed_export_can_be_opened()
+    [Theory]
+    [InlineData("env:NFTY_KEY")]
+    [InlineData("file:./secret")]
+    [InlineData("stdin")]
+    [InlineData("prompt")]
+    public void Every_passphrase_source_parses_on_both_commands(string source)
     {
-        Assert.Empty(Parse("inspect ./c.tin --key").Errors);
+        // The source is NAMED rather than guessed, the way a color spec is. Which one is valid is
+        // Passphrase's job (PassphraseSourceTests); this is only that the command line accepts the
+        // shape on both of the commands that take a key.
+        Assert.Empty(Parse($"inspect ./c.tin --key {source}").Errors);
+        Assert.Empty(Parse($"export ./c --out ./d --seal --key {source}").Errors);
     }
 }

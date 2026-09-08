@@ -68,14 +68,14 @@ public static partial class CommandFactory
             Description = "A line for the recipient. On a sealed export it travels in the clear, so "
                 + "they can read it without the passphrase.",
         };
-        var keyEnv = KeyEnvOption();
+        var key = KeyOption();
 
         var cmd = new Command("export",
             "Publish a cooked Set: choose what goes with it, and in what shape. A cook writes your "
             + "working copy and holds everything; an export is addressed to somebody — a "
             + "marketplace, a buyer, a collaborator, a reviewer — and each of those wants a "
             + "different subset.")
-        { path, outDir, preset, images, noImages, openSea, noOpenSea, nfty, noNfty, book, folder, pack, seal, note, keyEnv };
+        { path, outDir, preset, images, noImages, openSea, noOpenSea, nfty, noNfty, book, folder, pack, seal, note, key };
 
         cmd.SetAction(parse =>
         {
@@ -106,7 +106,7 @@ public static partial class CommandFactory
             else if (options.IncludeCookBook) bookPath = null;   // Core reports what is missing
 
             string? passphrase = options.Sealed
-                ? Passphrase.Read(parse.GetValue(keyEnv), "Passphrase to seal with", confirm: true)
+                ? Passphrase.Read(parse.GetValue(key), "Passphrase to seal with", confirm: true)
                 : null;
 
             var result = SetExporter.Export(parse.GetValue(path)!, parse.GetValue(outDir)!,
@@ -120,11 +120,16 @@ public static partial class CommandFactory
 
     /// <summary>The option both <c>export</c> and <c>inspect</c> take a passphrase through.
     /// One declaration, so the two cannot describe it differently.</summary>
-    private static Option<string?> KeyEnvOption() => new("--key-env")
+    private static Option<string?> KeyOption() => new("--key")
     {
-        Description = "Read the passphrase from this environment variable instead of asking for it. "
-            + "There is deliberately no --passphrase: an argument on a command line is visible to "
-            + "every process on the machine and lands in your shell history.",
+        Description = $"Where the passphrase comes from: {Passphrase.Sources}. The source is NAMED "
+            + "rather than guessed, the way a color spec is - they are not interchangeable, and "
+            + "picking one silently would be picking your threat model for you. An environment "
+            + "variable is inherited by every child process and readable from /proc on Linux; a "
+            + "file can be mode 600; stdin leaves nothing anywhere. There is deliberately no "
+            + "--passphrase: an argument is visible to every process on the machine, lands in your "
+            + "shell history, and is captured verbatim by CI logs. Omit it and nfty asks at the "
+            + "terminal, echoing nothing.",
     };
 
     private static string Slug(ExportPreset preset) => preset.ToString().ToLowerInvariant();
@@ -162,9 +167,8 @@ public static partial class CommandFactory
     /// Prints a sealed export: its header always, and the Set inside it when a passphrase opens it.
     /// </summary>
     /// <param name="file">The <c>.tin</c>.</param>
-    /// <param name="envName">The variable named by <c>--key-env</c>, or null.</param>
-    /// <param name="hasKey">Whether the caller asked to open it at all.</param>
-    private static void PrintSealed(string file, string? envName, bool hasKey)
+    /// <param name="keySpec">The source named by <c>--key</c>, or null when none was given.</param>
+    private static void PrintSealed(string file, string? keySpec)
     {
         var header = Seal.Peek(file);
         Console.WriteLine($"Sealed export: {header.Collection}");
@@ -173,19 +177,18 @@ public static partial class CommandFactory
         Console.WriteLine("  Export allowed: " + (header.Policy.AllowExport ? "yes" : "no"));
         Console.WriteLine("  Edit allowed: " + (header.Policy.AllowEdit ? "yes" : "no"));
 
-        if (!hasKey)
+        if (keySpec is null)
         {
             // The header exists so this sentence can be printed. A recipient holding a file they
             // cannot open needs to be told what it is, or the only thing the format communicates is
             // that something went wrong.
             Console.WriteLine();
-            Console.WriteLine("This export is encrypted. Pass --key to read what is inside it, or "
-                + "--key-env to name an environment variable holding the passphrase.");
+            Console.WriteLine($"This export is encrypted. Pass --key ({Passphrase.Sources}) to "
+                + "read what is inside it.");
             return;
         }
 
-        using var set = SealedSetReader.Open(file,
-            Passphrase.Read(envName, "Passphrase"));
+        using var set = SealedSetReader.Open(file, Passphrase.Read(keySpec, "Passphrase"));
         Console.WriteLine();
         Console.Write(SetReport.Render(set));
     }

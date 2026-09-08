@@ -89,12 +89,7 @@ public static partial class CommandFactory
         {
             Description = "Path to a .cbk, .rcp, .igt, .ktn, .set or .tin file.",
         };
-        var key = new Option<bool>("--key")
-        {
-            Description = "Ask for the passphrase and open a sealed .tin. Without it, a sealed "
-                + "export still prints its header - what it holds and who it was for.",
-        };
-        var keyEnv = KeyEnvOption();
+        var key = KeyOption();
         var voxel = new Option<bool>("--voxel")
         {
             Description = "Also report voxel readiness: which variants carry PARTIAL alpha, which a "
@@ -111,12 +106,12 @@ public static partial class CommandFactory
                 + "is how you find them. Given a Kitchen, lists what that workspace holds; given a "
                 + "cooked Set, reports what that run actually produced; given a sealed export, says "
                 + "what it holds, and — with the passphrase — what is inside it.")
-        { path, voxel, key, keyEnv };
+        { path, voxel, key };
         cmd.SetAction(parse =>
         {
             string file = parse.GetValue(path)!;
             bool wantVoxel = parse.GetValue(voxel);
-            string? envName = parse.GetValue(keyEnv);
+            string? keySpec = parse.GetValue(key);
 
             // Before KindOf, because a Set is the one kind that is also a FOLDER and KindOf resolves
             // an extension. `generate --out ./collection` writes a folder and `--pack` is optional,
@@ -173,7 +168,7 @@ public static partial class CommandFactory
                         throw new InvalidOperationException(
                             "--voxel scans the ARTWORK a book is built from, and a sealed export "
                             + "holds finished assets. Run it on the CookBook that produced them.");
-                    PrintSealed(file, envName, parse.GetValue(key) || envName is not null);
+                    PrintSealed(file, keySpec);
                     break;
                 default:
                     // Archives.KindOf already rejects an unknown extension before we get here,
