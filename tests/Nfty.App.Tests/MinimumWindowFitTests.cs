@@ -75,6 +75,40 @@ public class MinimumWindowFitTests
     }
 
     /// <summary>
+    /// Landing does not actually need its scroller at the smallest window.
+    /// </summary>
+    /// <remarks>
+    /// The sweep above cannot see this, and that is the price of measuring desired size: a
+    /// <see cref="ScrollViewer"/> never wants more than its constraint, so a page that scrolls
+    /// passes it whether it scrolls by a thousand pixels or by thirteen. Landing overran by exactly
+    /// thirteen, which is not a clip — everything was reachable — but it put a scrollbar down the
+    /// side of a screen with nothing hidden, which reads as broken. The scroller stays as the safety
+    /// net for a window smaller than the app allows; it is asserted here that it is only that.
+    /// </remarks>
+    [AvaloniaFact]
+    public void Landing_needs_no_scrollbar_at_the_smallest_window()
+    {
+        var area = PageArea;
+        var view = new Views.LandingView
+        {
+            DataContext = new LandingViewModel(new FakeNav(), new FakeDialogs(),
+                new FilePickerService(), new RecentsService(Directory.CreateTempSubdirectory().FullName),
+                new CookBookSession(), _ => null!, _ => null!, (_, _, _) => null!, null),
+        };
+        var window = new Window { Content = view, Width = area.Width, Height = area.Height };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        try
+        {
+            var scroller = view.GetVisualDescendants().OfType<ScrollViewer>().First();
+            Assert.True(scroller.Extent.Height <= scroller.Viewport.Height + 0.5,
+                $"Landing wants {scroller.Extent.Height:F1}px in a {scroller.Viewport.Height:F1}px "
+                + "row, so it shows a scrollbar with nothing hidden behind it");
+        }
+        finally { window.Close(); }
+    }
+
+    /// <summary>
     /// The layer table's name column survives the narrowest pane it is ever given.
     /// </summary>
     /// <remarks>

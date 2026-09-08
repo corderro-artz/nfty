@@ -3301,6 +3301,25 @@
     <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
     <Setter Property="BorderThickness" Value="0,1,0,0" />
   </Style>
+  <!-- THE SHELF'S ZERO STATES, and the line height is the whole point. `.zp` is authored for a 12px
+       centered paragraph in a modal and states a 19.2 line box to match; the shelf overrides the
+       FONT to 10.5 and inherited that leading, which is 1.86x - so the moment the sentence wrapped
+       to two lines (any window under about 1150 of page width, the minimum included) the block
+       wanted 54px of a band pinned to 52 and was arranged flush against both dashed edges, cut.
+       A size and its line box belong together: stated here, once, rather than inline on each of the
+       two states, because a pair stated twice is a pair that drifts. 14 is 1.33x, inside the
+       1.25-1.5 every other line box in this file keeps. The band stays 52 - all three shelf states
+       share one grid row, and growing it for this one would restyle every Kitchen card too. -->
+  <Style Selector="Border.kshelf TextBlock.zh">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+  </Style>
+  <Style Selector="Border.kshelf TextBlock.zp">
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="LineHeight" Value="14" />
+    <Setter Property="TextAlignment" Value="Left" />
+    <Setter Property="Margin" Value="0" />
+  </Style>
 
   <!-- One card. Equal-width and filling the row, so a wider window shows more per page rather than
        leaving a gap; a short final page keeps its empty slots so the row never re-spaces itself. -->
