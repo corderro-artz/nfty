@@ -2030,10 +2030,17 @@
     <Setter Property="Padding" Value="6,3" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
+  <!-- NO LineHeight. It said 11 against an 11px font - a line box the exact height of the em, which
+       is SHORTER than the face needs, so the glyph was clipped at the ascender and the descender.
+       Whether that shows depends on where the row lands: the shell renders at 1.2, so one recipe row
+       falls on a whole device pixel and the next does not, and the same "3" drew whole in the first
+       row of the DNA-space table and broken in the second. It read as a font bug rather than a
+       layout one, which is why it survived - every glyph in the app is small and mono, and only a
+       pair of adjacent rows shows the two renderings side by side. Let the typeface state its own
+       line height; a chip is one line and has nothing to lead. -->
   <Style Selector="Border.fchip > TextBlock">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="11" />
-    <Setter Property="LineHeight" Value="11" />
   </Style>
   <Style Selector="Border.fchip.kdyn">
     <Setter Property="Background" Value="{DynamicResource KindDynamicWashBrush}" />
@@ -2446,6 +2453,12 @@
   <!-- The titlebar mark: the product's initial, turned 45 degrees inside its box. Sized and weighted
        to fill that 24px square once rotated - a diagonal glyph needs less point size than an upright
        one to occupy the same width, which is why this is smaller than it looks like it should be. -->
+  <!-- This one KEEPS its LineHeight, and the exception is the rule's own argument. The mark is a
+       lowercase "n" turned 45 degrees, and a rotation pivots on the LINE BOX - so the box's height
+       is an input to where the ink lands, and the view's cancelling translate is measured against
+       exactly this 14. Removing it (as the fchip rule below no longer has one) moved the mark 2.6px
+       off centre and WindowChromeTests said so. An "n" has neither ascender nor descender, so there
+       is nothing here for a tight box to clip. -->
   <Style Selector="TextBlock.brandmark">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="14" />

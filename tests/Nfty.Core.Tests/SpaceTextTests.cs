@@ -26,10 +26,10 @@ public class SpaceTextTests
     }
 
     [Theory]
-    [InlineData(1_000_000_000L, "1 billion")]
+    [InlineData(1_000_000_000L, "1.00 billion")]
     [InlineData(2_822_400_000L, "2.82 billion")]
-    [InlineData(4_500_000_000_000L, "4.5 trillion")]
-    [InlineData(7_000_000_000_000_000L, "7 quadrillion")]
+    [InlineData(4_500_000_000_000L, "4.50 trillion")]
+    [InlineData(7_000_000_000_000_000L, "7.00 quadrillion")]
     [InlineData(long.MaxValue, "9.22 quintillion")]
     public void Above_a_billion_a_tile_names_the_magnitude(long value, string expected)
     {
@@ -37,6 +37,31 @@ public class SpaceTextTests
         // register for a card an artist reads while sizing a collection; "1.2e7 versus 9.8e6" is a
         // comparison nobody makes at a glance.
         Assert.Equal(expected, SpaceText.Compact(value));
+    }
+
+    [Fact]
+    public void The_mantissa_is_always_two_places_so_a_column_of_them_lines_up()
+    {
+        // These are read as a COLUMN - one row per recipe, stacked - and "0.##" drops a trailing
+        // zero, so a book of 17.744 trillion over one of 12.900 printed "17.74 trillion" above
+        // "12.9 trillion" and the decimal points did not line up. Caught in the running app, not
+        // here: every assertion above passes on either format.
+        string[] column =
+        [
+            SpaceText.Compact(17_744_000_000_000L),
+            SpaceText.Compact(12_900_000_000_000L),
+            SpaceText.Compact(1_000_000_000_000L),
+        ];
+
+        Assert.Equal(["17.74 trillion", "12.90 trillion", "1.00 trillion"], column);
+
+        // Stated as the property rather than as three strings: every mantissa carries a point and
+        // exactly two digits after it, whatever the value rounds to.
+        foreach (string s in column)
+        {
+            string mantissa = s.Split(' ')[0];
+            Assert.Equal(2, mantissa.Length - mantissa.IndexOf('.', StringComparison.Ordinal) - 1);
+        }
     }
 
     [Fact]

@@ -63,13 +63,20 @@ public static class SpaceText
     /// for digit — and the rounded form appears only where no tile could have held the digits
     /// anyway. Above the threshold the exact value is still one hover away; a surface using this is
     /// expected to put <see cref="Exact"/> on the tooltip.</para>
+    ///
+    /// <para><b>The mantissa is always two decimal places, including <c>1.00 billion</c>.</b> These
+    /// figures are read as a COLUMN — one row per recipe, stacked — and <c>0.##</c> drops a trailing
+    /// zero, so a book of 17.744 and one of 12.900 trillion printed as "17.74 trillion" over "12.9
+    /// trillion" and the decimal points did not line up. A number that changes shape with its value
+    /// is the same defect the colorize range endpoints were fixed for; a fixed mantissa costs one
+    /// redundant zero on a round figure and buys a column that reads straight down.</para>
     /// </remarks>
     public static string Compact(long value)
     {
         if (value < 0) return Exact(value);
         foreach (var (unit, name) in Scales)
             if (value >= unit)
-                return string.Create(CultureInfo.InvariantCulture, $"{value / (double)unit:0.##} {name}");
+                return string.Create(CultureInfo.InvariantCulture, $"{value / (double)unit:0.00} {name}");
         return Exact(value);
     }
 

@@ -60,20 +60,28 @@
          and the bar stopped halfway across a panel whose other sections run edge to edge. A share of
          the whole collection is not a fact about the left-hand metrics, so it gets the whole width
          rather than a share of it. -->
-    <Grid ColumnDefinitions="0.82*,24,1.18*" RowDefinitions="Auto,Auto" Margin="0,17,0,0">
+    <Grid ColumnDefinitions="0.92*,24,1.08*" RowDefinitions="Auto,Auto" Margin="0,17,0,0">
       <StackPanel Grid.Row="0" Grid.Column="0">
-        <!-- metric band: statband two2 -->
-        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+        <!-- metric band: statband, THREE counts over one figure.
+             It was a 2x2 and the fourth cell is not a fourth count. RECIPES, LAYERS and VARIANTS are
+             bounded by what a person can author - two digits, three at the outside - while UNIQUE
+             DNA is a product of all of them and has no upper bound at all. Sized as a quarter of
+             this column it had 98px of room at the smallest window the app opens, which is nine
+             mono characters: "2,560,000" was already at the edge and a book past a trillion drew
+             "30.64 trilli", clipped, with the control still reporting the width it was asked for.
+             Giving it the row makes the widest figure the formatter can emit fit by construction,
+             and it reads as the headline it is - the number this whole card is about. -->
+        <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto">
           <Border Grid.Row="0" Grid.Column="0" Classes="metric" Margin="0,0,5,5">
             <StackPanel><TextBlock Classes="mv" Text="{Binding RecipeCount}" /><TextBlock Classes="ml" Text="RECIPES" /></StackPanel>
           </Border>
-          <Border Grid.Row="0" Grid.Column="1" Classes="metric" Margin="5,0,0,5">
+          <Border Grid.Row="0" Grid.Column="1" Classes="metric" Margin="5,0,5,5">
             <StackPanel><TextBlock Classes="mv" Text="{Binding LayerCount}" /><TextBlock Classes="ml" Text="LAYERS" /></StackPanel>
           </Border>
-          <Border Grid.Row="1" Grid.Column="0" Classes="metric" Margin="0,5,5,0">
+          <Border Grid.Row="0" Grid.Column="2" Classes="metric" Margin="5,0,0,5">
             <StackPanel><TextBlock Classes="mv" Text="{Binding VariantCount}" /><TextBlock Classes="ml" Text="VARIANTS" /></StackPanel>
           </Border>
-          <Border Grid.Row="1" Grid.Column="1" Classes="metric accent" Margin="5,5,0,0">
+          <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Classes="metric accent" Margin="0,5,0,0">
             <StackPanel ToolTip.Tip="{Binding UniqueDnaTip}"><TextBlock Classes="mv" Text="{Binding UniqueDnaText}" /><TextBlock Classes="ml" Text="UNIQUE DNA" /></StackPanel>
           </Border>
         </Grid>
@@ -90,12 +98,22 @@
             <DataTemplate x:DataType="vm:RecipeShareRow">
               <Border Classes="crow">
                 <StackPanel Spacing="9">
-                  <Grid ColumnDefinitions="Auto,Auto,*">
+                  <!-- THE NAME IS THE ELASTIC ONE, and getting that backwards clipped the figures.
+                       This was Auto,Auto,* - the name took its natural width and the chips and the
+                       total shared what was left. A right-aligned block given less than it needs is
+                       arranged at that width and overflows its LEADING edge, so a recipe with a long
+                       name lost the first of its factor chips: "Strongbox" drew half a badge where
+                       "Chest" drew a whole one, at the same window, in the same table. Nothing about
+                       the name deserves that priority - it is repeated in the legend below and in
+                       the tree beside it, while the chips and the figure appear nowhere else. So the
+                       name gets the star and trims, and the numbers are measured first. -->
+                  <Grid ColumnDefinitions="Auto,*,Auto">
                     <Border Grid.Column="0" Classes="cdot series" Margin="0,0,10,0"
                             Classes.s1="{Binding IsSeries1}" Classes.s2="{Binding IsSeries2}"
                             Classes.s3="{Binding IsSeries3}" Classes.s4="{Binding IsSeries4}"
                             Classes.s5="{Binding IsSeries5}" Classes.s6="{Binding IsSeries6}" />
-                    <TextBlock Grid.Column="1" Classes="cname" Text="{Binding Name}" />
+                    <TextBlock Grid.Column="1" Classes="cname" Text="{Binding Name}"
+                               TextTrimming="CharacterEllipsis" HorizontalAlignment="Left" />
                     <!-- factors x factors = total -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="5"
                                 HorizontalAlignment="Right" VerticalAlignment="Center">
