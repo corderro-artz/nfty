@@ -168,7 +168,7 @@
            across separate grids a stated pixel column is the only thing that aligns - the same rule
            the recipe layer table follows. Only the name and the share track flex. -->
       <Border Grid.Row="1" Classes="thead">
-        <Grid ColumnDefinitions="7,*,46,204,14,118" ColumnSpacing="10">
+        <Grid ColumnDefinitions="7,*,46,234,14,118" ColumnSpacing="10">
           <TextBlock Grid.Column="1" Classes="th" Text="RECIPE" />
           <TextBlock Grid.Column="2" Classes="th r" Text="SHARE" />
           <TextBlock Grid.Column="3" Classes="th r" Text="LAYERS" />
@@ -189,7 +189,7 @@
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:RecipeShareRow">
             <Border Classes="crow">
-              <Grid ColumnDefinitions="7,*,46,204,14,118" ColumnSpacing="10">
+              <Grid ColumnDefinitions="7,*,46,234,14,118" ColumnSpacing="10">
                 <Border Grid.Column="0" Classes="cdot series" />
 
                 <!-- Name and share track share the elastic column: the name takes what it needs up
@@ -216,7 +216,15 @@
                 <TextBlock Grid.Column="2" Classes="cshare" VerticalAlignment="Center"
                            Text="{Binding SharePercent, StringFormat='{}{0}%'}" />
 
-                <!-- A GRID OF FIXED SLOTS, not a run. Laid out as a run, a five-layer recipe put its
+                <!-- 234 AND NOT 204, WHICH IS SIX SLOTS OF 39 FOR CONTENT THAT NEEDS 35.
+                     At 204 each slot was 34 for a separator (7), its gap (4) and a badge (24) - one
+                     pixel short - so every right-aligned slot overflowed its LEADING edge and each
+                     x started 1px INSIDE the badge to its left, while the last badge ran 1px past
+                     the strip into the arrow column. The gaps alternated 0 and 4, which is what made
+                     the row read as unevenly spaced: the separator hugged the badge on its left
+                     instead of sitting between the two it separates. At 39 the slack is 4, so every
+                     gap in the strip is 4 and an x sits centred between its neighbours.
+                     A GRID OF FIXED SLOTS, not a run. Laid out as a run, a five-layer recipe put its
                      first badge where a six-layer one put its second and nothing lined up down the
                      table. One slot per column means badge n sits at the same x on every row, and a
                      stack too deep spends the LAST slot on a +N - so every +N lines up with every

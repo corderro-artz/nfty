@@ -240,6 +240,56 @@ public class DnaSpaceLayoutTests
     }
 
     [AvaloniaFact]
+    public void The_badge_strip_is_evenly_spaced_and_nothing_overlaps()
+    {
+        // The slots were 34 for content that needs 35 - a separator (7), its gap (4) and a badge
+        // (24) - so every right-aligned slot overflowed its LEADING edge: each x began 1px INSIDE
+        // the badge to its left, the last badge ran 1px past the strip into the arrow column, and
+        // the gaps alternated 0 and 4, which is what made the row read as unevenly spaced.
+        //
+        // Asserted as ONE distance repeated rather than as a number: the point is that a reader sees
+        // a rhythm, and a strip whose separators hug the badge on their left has none.
+        using var book = ManyRecipes();
+        var (view, _) = Render(book, 1920, 1080, out var window);
+        try
+        {
+            var card = view.GetVisualDescendants().OfType<Views.CookBookDetailView>().First();
+            var row = card.GetVisualDescendants().OfType<Border>()
+                .First(b => b.Classes.Contains("crow"));
+            var strip = row.GetVisualDescendants().OfType<UniformGrid>().First();
+
+            var marks = new List<(double Left, double Right)>();
+            foreach (var t in strip.GetVisualDescendants().OfType<TextBlock>()
+                         .Where(t => t.Classes.Contains("ftimes") && t.IsVisible && t.Bounds.Width > 0))
+            {
+                double l = t.TranslatePoint(new Avalonia.Point(0, 0), strip)!.Value.X;
+                marks.Add((l, l + t.Bounds.Width));
+            }
+            foreach (var b in strip.GetVisualDescendants().OfType<Border>()
+                         .Where(b => b.Classes.Contains("fchip")))
+            {
+                double l = b.TranslatePoint(new Avalonia.Point(0, 0), strip)!.Value.X;
+                marks.Add((l, l + b.Bounds.Width));
+            }
+
+            var ordered = marks.OrderBy(m => m.Left).ToList();
+            Assert.True(ordered.Count >= 4, "needs several marks to have a rhythm at all");
+
+            var gaps = Enumerable.Range(1, ordered.Count - 1)
+                .Select(i => Math.Round(ordered[i].Left - ordered[i - 1].Right, 1))
+                .ToList();
+
+            Assert.DoesNotContain(gaps, g => g < 0);          // nothing sits inside its neighbour
+            Assert.Single(gaps.Distinct());                    // one rhythm, not two alternating
+
+            // And the strip's own content stays inside it, which is what the last badge did not do.
+            Assert.True(ordered[^1].Right <= strip.Bounds.Width + 0.5,
+                $"the last badge runs to {ordered[^1].Right:F1} in a {strip.Bounds.Width:F1}px strip");
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
     public void Badge_column_n_is_in_the_same_place_on_every_row_including_the_overflow()
     {
         // Laid out as a RUN, a six-layer recipe put its first badge where a ten-layer one put its
