@@ -144,10 +144,18 @@ public partial class CookBookDetailViewModel : ViewModelBase
     /// <summary>Canvas size as the card renders it, with a real multiplication sign.</summary>
     public string CanvasText { get; }
 
-    /// <summary>The mockup's "colorize &lt;model&gt;" chip. A CookBook has no color model of its own —
-    /// it lives on each colorized Ingredient — so this reports what the book's dynamic and static
-    /// layers actually use, and says "mixed" when they disagree rather than silently picking one.
-    /// A book of purely Custom layers colorizes nothing, hence the em-dash.</summary>
+    /// <summary>The mockup's "colorize &lt;model&gt;" chip: <c>hsv</c>, <c>mixed</c>, or <c>none</c>.</summary>
+    /// <remarks>
+    /// A CookBook has no color model of its own — it lives on each colorized Ingredient — so this
+    /// reports what the book's dynamic and static layers actually use, and says <c>mixed</c> when
+    /// they disagree rather than silently picking one.
+    /// <para><b>"none", not an em-dash.</b> A book of purely Custom layers colorizes nothing, which
+    /// is an ordinary configuration — every pixel-art collection that never recolors is one — and it
+    /// used to print the same <see cref="Unknown"/> dash this class uses for a DNA space that cannot
+    /// be COUNTED. One glyph was standing for "there is nothing here" and "we cannot tell", and the
+    /// first is a fact while the second is a failure; on a chip labelled <c>colorize</c> the dash
+    /// read as a missing value.</para>
+    /// </remarks>
     public string ColorizeText { get; }
 
     /// <summary>The mockup's "status &lt;b&gt;● Valid&lt;/b&gt;" chip — the real result, not a claim.
@@ -233,7 +241,7 @@ public partial class CookBookDetailViewModel : ViewModelBase
             .ToList();
         ColorizeText = models.Count switch
         {
-            0 => Unknown,
+            0 => "none",          // nothing to colorize — a fact, not a missing value
             1 => models[0],
             _ => "mixed",
         };
