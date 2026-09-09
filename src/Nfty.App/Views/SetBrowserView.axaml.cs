@@ -21,7 +21,16 @@ public partial class SetBrowserView : UserControl
     }
 
     private double _lastRoom;
-    private double _lastRow;
+    /// <summary>The rarity row height, measured ONCE and then remembered.</summary>
+    /// <remarks>
+    /// Re-measuring it every pass is what killed the CookBook card: a row's measured height wobbles
+    /// for a pass after an <c>ItemsControl</c> rebuilds its containers, so a live window resize
+    /// wrote a different height on pass after pass inside one render and Avalonia threw "Infinite
+    /// layout loop detected". A rarity row is one line at every window size, so it is measured on
+    /// the first pass that draws one and never again — which leaves the ROOM as the only input, and
+    /// the room is read off a star row this handler cannot change.
+    /// </remarks>
+    private double _rowHeight;
 
     /// <summary>
     /// Sizes the rarity rows host to a WHOLE number of rows, so the fold never cuts one in half.
@@ -49,18 +58,22 @@ public partial class SetBrowserView : UserControl
                 .Sum(c => c.Bounds.Height)
             - host.Margin.Top - host.Margin.Bottom;
 
-        var row = host.GetVisualDescendants().OfType<Border>()
-            .FirstOrDefault(b => b.Classes.Contains("data-row"));
-        if (row is null || row.Bounds.Height <= 0 || room <= 0) return;
-        if (Math.Abs(room - _lastRoom) < 0.5 && Math.Abs(row.Bounds.Height - _lastRow) < 0.5) return;
+        if (_rowHeight <= 0)
+        {
+            var row = host.GetVisualDescendants().OfType<Border>()
+                .FirstOrDefault(b => b.Classes.Contains("data-row"));
+            if (row is null || row.Bounds.Height <= 0) return;
+            _rowHeight = row.Bounds.Height;
+        }
+        if (room <= 0) return;
+        if (Math.Abs(room - _lastRoom) < 0.5) return;
 
         _lastRoom = room;
-        _lastRow = row.Bounds.Height;
 
         // At least one row: a rail too short for even one is a smaller window than the app allows,
         // and showing one row that overflows beats showing none.
-        int fits = Math.Max(1, (int)(room / row.Bounds.Height));
-        double snapped = fits * row.Bounds.Height;
+        int fits = Math.Max(1, (int)(room / _rowHeight));
+        double snapped = fits * _rowHeight;
 
         // IsNaN FIRST. An unset Height is NaN, and every comparison against NaN is false - so
         // `Math.Abs(host.Height - snapped) > 0.5` was false on the very first pass, which is the one

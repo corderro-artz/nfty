@@ -229,6 +229,15 @@
   <x:Double x:Key="FieldHeight">32</x:Double>
   <x:Double x:Key="FieldHeightSm">26</x:Double>
   <x:Double x:Key="StepperWidth">17</x:Double>
+  <!-- One DNA-space row. STATED, not measured, and that is a correctness fix rather than a tidy-up:
+       CookBookDetailView divides the rows host by this to decide how many rows a page holds, and it
+       used to measure a drawn row instead. A measured row wobbles for a pass after the ItemsControl
+       rebuilds its containers, so a live window resize wrote a different PageSize on pass after
+       pass inside ONE render and Avalonia threw "Infinite layout loop detected". The host genuinely
+       varies with the window and must be measured; a row does not - it is one line at every size -
+       so pinning it makes the page size a pure function of the height, which the write cannot
+       change. Both the .crow style and the view read this key, so the pair cannot drift. -->
+  <x:Double x:Key="DnaRowHeight">35</x:Double>
 
   <!-- Color-range track fills. These are NOT palette colors and deliberately do not vary by theme:
        a hue wheel is a hue wheel in the dark. They live here rather than inline in a view so the two

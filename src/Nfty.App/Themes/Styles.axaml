@@ -2065,6 +2065,8 @@
     <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
     <Setter Property="BorderThickness" Value="0,0,0,1" />
     <Setter Property="Padding" Value="0,8" />
+    <!-- Stated, and read from the same token the page-size arithmetic uses. See Tokens.axaml. -->
+    <Setter Property="Height" Value="{DynamicResource DnaRowHeight}" />
   </Style>
   <Style Selector="Border.cdot">
     <Setter Property="Width" Value="8" />
