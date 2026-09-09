@@ -6,9 +6,11 @@ using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Nfty.App.Services;
 using Nfty.App.ViewModels;
 using Nfty.Core.Editing;
 // Both Avalonia and the engine have a PixelRect; the overlay speaks the engine's.
@@ -39,6 +41,11 @@ public partial class IngredientEditorView : UserControl
     // too late to draw with.
     private bool _movingSelection;
 
+    // The modifiers as of the last input event, pointer OR key. Held here rather than read from the
+    // pointer args at each call site because a modifier pressed mid-drag has to take effect without
+    // the hand moving - the shape snaps square while the pointer is still.
+    private KeyModifiers _mods;
+
     private Image _img = null!;
     private Canvas _overlay = null!;
     private IngredientEditorViewModel? _vm;
@@ -58,6 +65,7 @@ public partial class IngredientEditorView : UserControl
             // is silently lost with its preview still on screen. AddPoint already clamps to the
             // canvas, so a drag past the edge ends at the edge, which is what it looks like.
             e.Pointer.Capture(_img);
+            _mods = e.KeyModifiers;
             _drawing = true;
             _points.Clear();
             AddPoint(e);
@@ -65,23 +73,25 @@ public partial class IngredientEditorView : UserControl
                 && _vm.ActiveTool == EditorTool.Select
                 && _points.Count > 0
                 && _vm.SelectionContains(_points[0].x, _points[0].y);
-            _vm?.PreviewToolStroke(_points);
+            _vm?.PreviewToolStroke(Gesture());
             DrawBand();
         };
         _img.PointerMoved += (_, e) =>
         {
             if (!_drawing) return;
+            _mods = e.KeyModifiers;
             AddPoint(e);
-            _vm?.PreviewToolStroke(_points);
+            _vm?.PreviewToolStroke(Gesture());
             DrawBand();
         };
         _img.PointerReleased += (_, e) =>
         {
             if (!_drawing) return;
+            _mods = e.KeyModifiers;
             _drawing = false;
             AddPoint(e);
             if (DataContext is IngredientEditorViewModel vm && _points.Count > 0)
-                vm.ApplyToolStroke(_points.ToArray());
+                vm.ApplyToolStroke(Gesture().ToArray());
             _points.Clear();
             _movingSelection = false;
             e.Pointer.Capture(null);
@@ -91,21 +101,83 @@ public partial class IngredientEditorView : UserControl
         // Capture can be taken away — the window deactivates, another control grabs it — and then no
         // release is coming. The gesture is abandoned, so the canvas has to stop showing a stroke
         // that is never going to commit.
-        _img.PointerCaptureLost += (_, _) =>
+        _img.PointerCaptureLost += (_, _) => { if (_drawing) AbortGesture(); };
+
+        // TUNNEL, so both of these run before the UserControl's own Escape KeyBinding: mid-gesture
+        // Escape means "abandon this stroke", and only once there is no stroke does it mean "drop
+        // the marquee". Two meanings on one key, told apart by whether a drag is in progress, is
+        // what every editor does with it.
+        //
+        // handledEventsToo, because the key arrives ALREADY HANDLED - measured, not assumed: a
+        // tunnel handler without it never ran once. That is also why the gesture keys live here and
+        // not in a KeyBinding beside the others, and it is the same trap the recipe rows' Enter
+        // handler documents. Taking handled events is narrow rather than blanket: both handlers do
+        // nothing at all unless a drag is in progress, so a child that has already dealt with a key
+        // keeps it in every other state.
+        AddHandler(KeyDownEvent, (object? _, KeyEventArgs e) =>
         {
             if (!_drawing) return;
-            _drawing = false;
-            _points.Clear();
-            _movingSelection = false;
-            _vm?.CancelToolPreview();
-            DrawBand();
-        };
+            if (e.Key == Key.Escape)
+            {
+                AbortGesture();
+                e.Handled = true;
+                return;
+            }
+            OnModifiers(e.KeyModifiers);
+        }, RoutingStrategies.Tunnel, handledEventsToo: true);
+        AddHandler(KeyUpEvent, (object? _, KeyEventArgs e) =>
+        {
+            if (_drawing) OnModifiers(e.KeyModifiers);
+        }, RoutingStrategies.Tunnel, handledEventsToo: true);
+
+        // The page takes focus on arrival, because every key this screen owns - Ctrl+Z, Ctrl+Y,
+        // Escape - is a KeyBinding on this UserControl, and a KeyBinding only sees a key event that
+        // routes through it. With focus nowhere the event is raised on the Window and the whole set
+        // is silently inert. IsTabStop is off, so it takes focus without joining the tab order; the
+        // first Tab still lands on the first real control.
+        AttachedToVisualTree += (_, _) => Focus();
 
         // The marquee has to survive the gesture that made it, so it is redrawn whenever the
         // selection changes and whenever the canvas is re-laid-out under it.
         DataContextChanged += (_, _) => Rebind();
         _img.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ => DrawBand()));
         Rebind();
+    }
+
+    /// <summary>The gesture the tools should act on: the raw path, or what the held modifiers make
+    /// of it. One helper, called by the preview and by the commit, so the two cannot disagree about
+    /// what was drawn.</summary>
+    private IReadOnlyList<(int x, int y)> Gesture()
+    {
+        if (_vm is null || _img.Source is not Bitmap bmp) return _points;
+        return StrokeConstraint.Apply(
+            _vm.ActiveTool,
+            _mods.HasFlag(KeyModifiers.Shift) || _mods.HasFlag(KeyModifiers.Control),
+            _mods.HasFlag(KeyModifiers.Alt),
+            _movingSelection,
+            _points,
+            bmp.PixelSize.Width,
+            bmp.PixelSize.Height);
+    }
+
+    /// <summary>A modifier went down or came up mid-drag: re-show the gesture under the new rule
+    /// without waiting for the hand to move.</summary>
+    private void OnModifiers(KeyModifiers mods)
+    {
+        if (mods == _mods) return;
+        _mods = mods;
+        _vm?.PreviewToolStroke(Gesture());
+        DrawBand();
+    }
+
+    /// <summary>Drops the gesture in progress and everything it was showing, committing nothing.</summary>
+    private void AbortGesture()
+    {
+        _drawing = false;
+        _points.Clear();
+        _movingSelection = false;
+        _vm?.CancelToolPreview();
+        DrawBand();
     }
 
     private void Rebind()
@@ -139,9 +211,13 @@ public partial class IngredientEditorView : UserControl
         // A move in progress drags the marquee itself: the region shows where it is GOING, which is
         // the whole affordance. Drawing a fresh mark box here instead — what this did before — told
         // the user the opposite of what release was about to do.
-        bool moving = _drawing && _movingSelection && _points.Count > 0;
-        int mdx = moving ? _points[^1].x - _points[0].x : 0;
-        int mdy = moving ? _points[^1].y - _points[0].y : 0;
+        // Read through Gesture(), never off _points: with a modifier held the marquee has to be
+        // dragged along the axis the commit will use, or the ghost promises one landing place and
+        // the release picks another.
+        var path = _drawing ? Gesture() : _points;
+        bool moving = _drawing && _movingSelection && path.Count > 0;
+        int mdx = moving ? path[^1].x - path[0].x : 0;
+        int mdy = moving ? path[^1].y - path[0].y : 0;
 
         // The standing marquee, whether or not a gesture is in progress.
         if (_vm.Selection is { } sel0)
@@ -163,10 +239,10 @@ public partial class IngredientEditorView : UserControl
             _overlay.Children.Add(marquee);
         }
 
-        if (!_drawing || _points.Count == 0 || moving) return;
+        if (!_drawing || path.Count == 0 || moving) return;
 
-        var a = _points[0];
-        var b = _points[^1];
+        var a = path[0];
+        var b = path[^1];
         // +1 on the far edge: a band from pixel 3 to pixel 5 covers three whole pixels, and an
         // outline drawn to the near edge of pixel 5 would sit a pixel short of what commits.
         var p0 = ToControl(Math.Min(a.x, b.x), Math.Min(a.y, b.y));

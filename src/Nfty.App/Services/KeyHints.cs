@@ -47,6 +47,39 @@ public static class KeyHints
     public static string Undo { get; } = WithMod("Z");
     /// <summary>Redo.</summary>
     public static string Redo { get; } = WithMod("Y");
+    /// <summary>Hold while drawing: 45° for a line, a square bounding box for a shape. Ctrl does the
+    /// same thing and is deliberately not printed — the product teaches the convention, and the
+    /// second key is there so reaching for the wrong one still works.</summary>
+    public static string Constrain { get; } = OperatingSystem.IsMacOS() ? "⇧" : "Shift";
+    /// <summary>Hold while drawing a shape: the press point is its center.</summary>
+    public static string FromCenter { get; } = Alt;
+
+    // The canvas tools' tooltips are composed HERE rather than written out in the view, for the same
+    // reason every other chord in this app is: the modifier names differ by platform, and a literal
+    // "Shift"/"Alt"/"Ctrl+Z" in the markup is a hint that is simply wrong on a Mac. The tool names
+    // travel with them only because a tooltip is one string and Avalonia has no way to join a
+    // literal to an x:Static in markup.
+    private static string Tail(string what) => "  ·  " + what;
+
+    /// <summary>The brush tool's tooltip.</summary>
+    public static string BrushTool { get; } = "Brush" + Tail($"hold {Constrain} for a straight stroke");
+    /// <summary>The eraser tool's tooltip.</summary>
+    public static string EraserTool { get; } = "Eraser (writes alpha)" + Tail($"hold {Constrain} for a straight stroke");
+    /// <summary>The rectangle tool's tooltip.</summary>
+    public static string RectangleTool { get; } = "Rectangle" + Tail($"{Constrain} squares it, {FromCenter} draws from the center");
+    /// <summary>The circle tool's tooltip.</summary>
+    public static string CircleTool { get; } = "Circle" + Tail($"{Constrain} rounds it, {FromCenter} draws from the center");
+    /// <summary>The triangle tool's tooltip.</summary>
+    public static string TriangleTool { get; } = "Triangle" + Tail($"{Constrain} squares its box, {FromCenter} draws from the center");
+    /// <summary>The line tool's tooltip.</summary>
+    public static string LineTool { get; } = "Line" + Tail($"hold {Constrain} to snap to 45°");
+    /// <summary>The select tool's tooltip.</summary>
+    public static string SelectTool { get; } = "Select region, then drag it to move"
+        + Tail($"{Constrain} squares the marquee and constrains the move");
+    /// <summary>The undo button's tooltip.</summary>
+    public static string UndoTool { get; } = "Undo" + Tail(Undo);
+    /// <summary>The redo button's tooltip.</summary>
+    public static string RedoTool { get; } = "Redo" + Tail(Redo);
     /// <summary>Move the selected layer up or down the stack.</summary>
     public static string MoveLayer { get; } = Alt + Gap + "↑↓";
     /// <summary>Drop the editor's selection marquee.</summary>

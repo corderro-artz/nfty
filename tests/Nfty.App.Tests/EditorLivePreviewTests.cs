@@ -224,4 +224,167 @@ public class EditorLivePreviewTests
         }
         finally { window.Close(); vm.Dispose(); }
     }
+
+    /// <summary>
+    /// Shift while dragging snaps a line to 45 degrees, all the way through the real control: the
+    /// modifier is read off the pointer event, the preview and the commit both go through the same
+    /// constrained path, and the pixels that land are the snapped ones.
+    /// </summary>
+    /// <remarks>
+    /// StrokeConstraintTests owns the arithmetic. This owns the wiring, which is the half that can
+    /// be right in a pure function and never reach a pixel - the editor's chance field shipped
+    /// exactly that way.
+    /// </remarks>
+    [AvaloniaFact]
+    public void Shift_snaps_a_dragged_line_to_45_degrees()
+    {
+        var (window, vm, view) = Render();
+        try
+        {
+            vm.ActiveTool = EditorTool.Line;
+            vm.BrushValue = 255;
+            vm.BrushSize = 1;
+            Dispatcher.UIThread.RunJobs();
+
+            var at = Mapper(window, Art(view));
+
+            // Dragged 5 across and 1 down: unconstrained that ends at (6,2), snapped it is flat.
+            window.MouseDown(at(1, 1), MouseButton.Left, RawInputModifiers.Shift);
+            window.MouseMove(at(6, 2), RawInputModifiers.Shift);
+            Dispatcher.UIThread.RunJobs();
+            var during = Shown(vm);
+
+            window.MouseUp(at(6, 2), MouseButton.Left, RawInputModifiers.Shift);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(255, vm.ValueAt(6, 1));    // the snapped end
+            Assert.NotEqual(255, vm.ValueAt(6, 2)); // where the pointer actually was
+            Assert.Equal(during, Shown(vm));        // and the preview said so before the release
+        }
+        finally { window.Close(); vm.Dispose(); }
+    }
+
+    /// <summary>
+    /// Ctrl is accepted for constrain as well. It is not the convention - Shift is - but it is what
+    /// a good many people reach for, and refusing the key teaches nothing.
+    /// </summary>
+    [AvaloniaFact]
+    public void Ctrl_constrains_as_well_as_shift()
+    {
+        var (window, vm, view) = Render();
+        try
+        {
+            vm.ActiveTool = EditorTool.Rectangle;
+            vm.BrushValue = 255;
+            Dispatcher.UIThread.RunJobs();
+
+            var at = Mapper(window, Art(view));
+            window.MouseDown(at(1, 1), MouseButton.Left, RawInputModifiers.Control);
+            window.MouseMove(at(6, 3), RawInputModifiers.Control);
+            window.MouseUp(at(6, 3), MouseButton.Left, RawInputModifiers.Control);
+            Dispatcher.UIThread.RunJobs();
+
+            // A square off the longer side: 1..6 on both axes, not 1..3 vertically.
+            Assert.Equal(255, vm.ValueAt(6, 6));
+            Assert.Equal(255, vm.ValueAt(1, 6));
+        }
+        finally { window.Close(); vm.Dispose(); }
+    }
+
+    /// <summary>
+    /// Ctrl+Z and Ctrl+Y, which the quick-reference sheet has been printing while nothing bound
+    /// them. Driven from the window, because a KeyBinding that never fires is exactly the failure
+    /// being fixed.
+    /// </summary>
+    [AvaloniaFact]
+    public void Ctrl_Z_undoes_and_Ctrl_Y_redoes()
+    {
+        var (window, vm, view) = Render();
+        try
+        {
+            vm.ActiveTool = EditorTool.Line;
+            vm.BrushValue = 255;
+            Dispatcher.UIThread.RunJobs();
+
+            var at = Mapper(window, Art(view));
+            var before = Shown(vm);
+
+            window.MouseDown(at(1, 1), MouseButton.Left);
+            window.MouseUp(at(6, 6), MouseButton.Left);
+            Dispatcher.UIThread.RunJobs();
+            var drawn = Shown(vm);
+            Assert.NotEqual(before, drawn);
+
+            view.Focus();
+            window.KeyPressQwerty(PhysicalKey.Z, RawInputModifiers.Control);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(before, Shown(vm));
+
+            window.KeyPressQwerty(PhysicalKey.Y, RawInputModifiers.Control);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(drawn, Shown(vm));
+        }
+        finally { window.Close(); vm.Dispose(); }
+    }
+
+    /// <summary>Escape mid-drag abandons the stroke rather than dropping the marquee: two meanings
+    /// on one key, told apart by whether a gesture is in progress.</summary>
+    [AvaloniaFact]
+    public void Escape_mid_drag_abandons_the_stroke()
+    {
+        var (window, vm, view) = Render();
+        try
+        {
+            vm.ActiveTool = EditorTool.Line;
+            vm.BrushValue = 255;
+            Dispatcher.UIThread.RunJobs();
+
+            var at = Mapper(window, Art(view));
+            var before = Shown(vm);
+
+            view.Focus();
+            window.MouseDown(at(1, 1), MouseButton.Left);
+            window.MouseMove(at(6, 6));
+            Dispatcher.UIThread.RunJobs();
+            Assert.NotEqual(before, Shown(vm));
+
+            window.KeyPressQwerty(PhysicalKey.Escape, RawInputModifiers.None);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(before, Shown(vm));
+
+            // And the release that follows commits nothing, because there is no gesture any more.
+            window.MouseUp(at(6, 6), MouseButton.Left);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(before, Shown(vm));
+            Assert.False(vm.IsDirty);
+        }
+        finally { window.Close(); vm.Dispose(); }
+    }
+
+    /// <summary>With no gesture in progress Escape means what it always meant: drop the marquee.
+    /// Asserted because the gesture handler above sits in front of that KeyBinding and takes handled
+    /// events - a handler that swallowed Escape unconditionally would leave a selection nothing can
+    /// dismiss, which is the mode the KeyBinding exists to prevent.</summary>
+    [AvaloniaFact]
+    public void Escape_with_no_gesture_still_drops_the_marquee()
+    {
+        var (window, vm, view) = Render();
+        try
+        {
+            vm.ActiveTool = EditorTool.Select;
+            Dispatcher.UIThread.RunJobs();
+
+            var at = Mapper(window, Art(view));
+            view.Focus();
+            window.MouseDown(at(1, 1), MouseButton.Left);
+            window.MouseUp(at(5, 5), MouseButton.Left);
+            Dispatcher.UIThread.RunJobs();
+            Assert.NotNull(vm.Selection);
+
+            window.KeyPressQwerty(PhysicalKey.Escape, RawInputModifiers.None);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Null(vm.Selection);
+        }
+        finally { window.Close(); vm.Dispose(); }
+    }
 }

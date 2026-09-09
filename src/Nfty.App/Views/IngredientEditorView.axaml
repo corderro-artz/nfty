@@ -4,13 +4,25 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Nfty.App.ViewModels"
+             xmlns:svc="using:Nfty.App.Services"
              x:Class="Nfty.App.Views.IngredientEditorView"
              x:DataType="vm:IngredientEditorViewModel"
-             RenderOptions.BitmapInterpolationMode="None">
+             RenderOptions.BitmapInterpolationMode="None"
+             Focusable="True" IsTabStop="False">
   <!-- Escape drops the marquee. A selection you cannot dismiss without drawing another one is a
-       mode you are stuck in, and Escape is the key everyone tries first. -->
+       mode you are stuck in, and Escape is the key everyone tries first. MID-GESTURE it means
+       something else - abandon this stroke - which the code-behind takes first, on the tunnel.
+
+       Undo and redo are bound here because the quick-reference sheet has been PRINTING Ctrl+Z and
+       Ctrl+Y while nothing anywhere bound them: the only undo in the app was a toolbar button. A
+       chord the product advertises and does not honor is worse than one it never mentions.
+       Ctrl+Shift+Z is redo too - half the world reaches for it and the other half for Ctrl+Y, and
+       the sheet keeps printing one name for the pair. -->
   <UserControl.KeyBindings>
     <KeyBinding Gesture="Escape" Command="{Binding ClearSelectionCommand}" />
+    <KeyBinding Gesture="Ctrl+Z" Command="{Binding UndoCommand}" />
+    <KeyBinding Gesture="Ctrl+Y" Command="{Binding RedoCommand}" />
+    <KeyBinding Gesture="Ctrl+Shift+Z" Command="{Binding RedoCommand}" />
   </UserControl.KeyBindings>
   <!-- ingredient-editor.html .epanes: variants rail / canvas / colorize rail, full-bleed and divided
        by 1px rules, each opening with a 41px pane header. This screen was previously a functional
@@ -117,10 +129,10 @@
                was a 1440px floor, which is the machine class the minimum exists for. -->
           <Border Grid.Row="0" Classes="pane-hrow toolstrip">
             <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
-              <Button Classes="ttool" Classes.on="{Binding IsToolBrush}" ToolTip.Tip="Brush"
+              <Button Classes="ttool" Classes.on="{Binding IsToolBrush}" ToolTip.Tip="{x:Static svc:KeyHints.BrushTool}"
                       Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Brush}">
                 <Path Classes="ico sm" Data="{StaticResource IconPencil}" /></Button>
-              <Button Classes="ttool" Classes.on="{Binding IsToolEraser}" ToolTip.Tip="Eraser (writes alpha)"
+              <Button Classes="ttool" Classes.on="{Binding IsToolEraser}" ToolTip.Tip="{x:Static svc:KeyHints.EraserTool}"
                       Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Eraser}">
                 <Path Classes="ico sm" Data="{StaticResource IconEraser}" /></Button>
               <Button Classes="ttool" Classes.on="{Binding IsToolFill}" ToolTip.Tip="Fill"
@@ -136,33 +148,33 @@
                    margins and the pair carries the trailing gap the single child used to. -->
               <StackPanel Orientation="Horizontal">
                 <Border Classes="tsep" />
-                <Button Classes="ttool" Classes.on="{Binding IsToolRectangle}" ToolTip.Tip="Rectangle"
+                <Button Classes="ttool" Classes.on="{Binding IsToolRectangle}" ToolTip.Tip="{x:Static svc:KeyHints.RectangleTool}"
                         Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Rectangle}">
                   <Path Classes="ico sm" Data="{StaticResource IconRect}" /></Button>
               </StackPanel>
-              <Button Classes="ttool" Classes.on="{Binding IsToolCircle}" ToolTip.Tip="Circle"
+              <Button Classes="ttool" Classes.on="{Binding IsToolCircle}" ToolTip.Tip="{x:Static svc:KeyHints.CircleTool}"
                       Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Circle}">
                 <Path Classes="ico sm" Data="{StaticResource IconCircle}" /></Button>
-              <Button Classes="ttool" Classes.on="{Binding IsToolTriangle}" ToolTip.Tip="Triangle"
+              <Button Classes="ttool" Classes.on="{Binding IsToolTriangle}" ToolTip.Tip="{x:Static svc:KeyHints.TriangleTool}"
                       Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Triangle}">
                 <Path Classes="ico sm" Data="{StaticResource IconTriangle}" /></Button>
               <!-- Line is not in the locked mockup, and is here on purpose: the shape group offered
                    rectangle, circle and triangle but no way to draw the single most basic mark in a
                    pixel editor, and the engine already draws one (a two-point brush stroke, joined
                    by the same Bresenham walk every freehand stroke uses). -->
-              <Button Classes="ttool" Classes.on="{Binding IsToolLine}" ToolTip.Tip="Line"
+              <Button Classes="ttool" Classes.on="{Binding IsToolLine}" ToolTip.Tip="{x:Static svc:KeyHints.LineTool}"
                       Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Line}">
                 <Path Classes="ico sm" Data="{StaticResource IconLine}" /></Button>
-              <Button Classes="ttool" Classes.on="{Binding IsToolSelect}" ToolTip.Tip="Select region, then drag it to move"
+              <Button Classes="ttool" Classes.on="{Binding IsToolSelect}" ToolTip.Tip="{x:Static svc:KeyHints.SelectTool}"
                       Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Select}">
                 <Path Classes="ico sm" Data="{StaticResource IconSelect}" /></Button>
 
               <StackPanel Orientation="Horizontal">
                 <Border Classes="tsep" />
-                <Button Classes="ttool" Command="{Binding UndoCommand}" ToolTip.Tip="Undo">
+                <Button Classes="ttool" Command="{Binding UndoCommand}" ToolTip.Tip="{x:Static svc:KeyHints.UndoTool}">
                   <Path Classes="ico sm" Data="{StaticResource IconUndo}" /></Button>
               </StackPanel>
-              <Button Classes="ttool" Command="{Binding RedoCommand}" ToolTip.Tip="Redo">
+              <Button Classes="ttool" Command="{Binding RedoCommand}" ToolTip.Tip="{x:Static svc:KeyHints.RedoTool}">
                 <Path Classes="ico sm" Data="{StaticResource IconRedo}" /></Button>
 
               <!-- Paired with the group it introduces - see the note above the first rule. -->
