@@ -52,10 +52,15 @@ public partial class SetBrowserView : UserControl
         if (this.FindControl<ScrollViewer>("RarityRows") is not { } host) return;
         if (host.Parent is not Grid grid || grid.RowDefinitions.Count < 2) return;
 
-        // The star row's own height, less this host's margins: what the rows may occupy.
-        double room = grid.Bounds.Height
-            - grid.Children.OfType<Control>().Where(c => Grid.GetRow(c) != 1)
-                .Sum(c => c.Bounds.Height)
+        // THE STAR ROW'S OWN HEIGHT, asked of the Grid rather than reconstructed from its children.
+        // Reconstructing it - grid height less each sibling's Bounds - was wrong by exactly 12px at
+        // every window height, because Bounds EXCLUDES margin and the identity block above carries
+        // 12 of bottom margin. So the handler wrote a height ~12 larger than the slot it was sizing,
+        // and the rows overflowed into their own bottom margin; nothing overlapped the Save band
+        // only because that margin happened to absorb it. RowDefinitions[1] is the number itself,
+        // and it is still an input this handler cannot change: a star row takes the space left over
+        // by the Auto rows, not the space its child asks for.
+        double room = grid.RowDefinitions[1].ActualHeight
             - host.Margin.Top - host.Margin.Bottom;
 
         if (_rowHeight <= 0)

@@ -41,6 +41,11 @@ public class RarityRailSnapTests
     /// which made the first version of this test pass with the snapping deleted. A test that cannot
     /// be made to fail by breaking the code it names is decoration.
     /// </remarks>
+    /// <summary>The same twelve-trait Set, for other sweeps that need a real Set browser.</summary>
+    /// <param name="dir">The temp directory it was written to; the caller deletes it.</param>
+    /// <returns>The loaded Set.</returns>
+    internal static LoadedSet CookedSetFor(out string dir) => CookedSet(out dir);
+
     private static LoadedSet CookedSet(out string dir)
     {
         LoadedIngredient Ing(string id) => new()
@@ -113,6 +118,38 @@ public class RarityRailSnapTests
             Assert.True(Math.Abs(rows - Math.Round(rows)) < 0.02,
                 $"the rail is {host.Bounds.Height:F1}px, which is {rows:F2} rows of "
                 + $"{row.Bounds.Height:F1}px - the fold cuts one in half");
+        }
+        finally
+        {
+            window.Close();
+            vm.Dispose();
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [AvaloniaTheory]
+    [InlineData(1118, 519)]
+    [InlineData(1118, 640)]
+    [InlineData(1600, 900)]
+    public void The_rail_fits_the_row_it_sits_in(double w, double h)
+    {
+        // The snap test above asserts the host is a WHOLE number of rows, which stays true whatever
+        // the arithmetic overstates by - so it was structurally blind to the room being computed
+        // 12px too large. The room was reconstructed as "grid height less each sibling's Bounds",
+        // and Bounds excludes margin, so the identity block's 12px bottom margin went uncounted and
+        // the host was sized past its own slot at every window height. This is the other half:
+        // whatever height is written, it has to fit the star row it was written for.
+        var (window, view, vm, dir) = Render(w, h);
+        try
+        {
+            var host = view.GetVisualDescendants().OfType<ScrollViewer>()
+                .First(s => s.Name == "RarityRows");
+            var grid = Assert.IsType<Grid>(host.Parent);
+            double slot = grid.RowDefinitions[1].ActualHeight
+                - host.Margin.Top - host.Margin.Bottom;
+
+            Assert.True(host.Bounds.Height <= slot + 0.5,
+                $"the rail was sized {host.Bounds.Height:F1}px into a {slot:F1}px slot");
         }
         finally
         {
