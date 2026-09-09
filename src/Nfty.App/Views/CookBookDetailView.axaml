@@ -169,7 +169,12 @@
            the recipe layer table follows. Only the name and the share track flex. -->
       <Border Grid.Row="1" Classes="thead">
         <Grid ColumnDefinitions="7,*,46,234,14,118" ColumnSpacing="10">
-          <TextBlock Grid.Column="1" Classes="th" Text="RECIPE" />
+          <!-- SPANS THE DOT COLUMN. The value this header names is the dot AND the name - the
+               diamond is that recipe's series swatch, not decoration - so the label starts where
+               the pair starts, at the table's own left edge, in line with DNA SPACE above it and
+               TARGET SUPPLY above that. Sitting in column 1 alone it began 17px in and was the one
+               label on the card that started nowhere. -->
+          <TextBlock Grid.Column="0" Grid.ColumnSpan="2" Classes="th" Text="RECIPE" />
           <TextBlock Grid.Column="2" Classes="th r" Text="SHARE" />
           <TextBlock Grid.Column="3" Classes="th r" Text="LAYERS" />
           <TextBlock Grid.Column="5" Classes="th r" Text="UNIQUE DNA" />

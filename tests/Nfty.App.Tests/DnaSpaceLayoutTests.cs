@@ -112,6 +112,33 @@ public class DnaSpaceLayoutTests
         return (view, (CookBookDetailViewModel)card.DataContext!);
     }
 
+    [AvaloniaFact]
+    public void The_RECIPE_header_starts_at_the_cards_own_left_edge()
+    {
+        // It sat in the name column alone, 17px right of DNA SPACE directly above it and of TARGET
+        // SUPPLY above that - the one label on the card that started nowhere in particular. It spans
+        // the dot column now, because the thing it names is the series diamond AND the name, not the
+        // name on its own.
+        //
+        // Measured against the SECTION LABEL rather than a literal: the number is whatever the card's
+        // margin happens to be, and asserting 302 would pin the margin from the wrong file.
+        using var book = ManyRecipes();
+        var (view, _) = Render(book, ShellViewModel.MinWindowWidth, ShellViewModel.MinWindowHeight,
+            out var window);
+        try
+        {
+            var root = (Avalonia.Visual)view;
+            TextBlock Find(string text) => view.GetVisualDescendants().OfType<TextBlock>()
+                .First(t => t.Text == text);
+            double header = Find("RECIPE").TranslatePoint(default, root)!.Value.X;
+            double section = Find("DNA SPACE").TranslatePoint(default, root)!.Value.X;
+
+            Assert.True(Math.Abs(header - section) < 0.5,
+                $"RECIPE starts at {header:F0} and DNA SPACE above it at {section:F0}");
+        }
+        finally { window.Close(); }
+    }
+
     // ---- it pages, and the page is measured ------------------------------------------------------
 
     [AvaloniaFact]
