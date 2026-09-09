@@ -2020,11 +2020,31 @@
     <Setter Property="Padding" Value="16,14" />
     <Setter Property="Background" Value="{DynamicResource CardGradientBrush}" />
   </Style>
+  <!-- ONE STATED LINE BOX, shared with .mintname beside it. Both are mono and neither stated a
+       height, so each took the face's own box - which scales with the font, so an 18px title and a
+       10.5px suffix bottom-flushed still put their baselines 2.5px apart and TextBaselineTests said
+       so. Equal boxes are the same cure the DNA-space row uses; Avalonia has no baseline alignment,
+       so this is the only thing that aligns two sizes on one line. -->
   <Style Selector="TextBlock.idname">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontWeight" Value="Bold" />
     <Setter Property="FontSize" Value="18" />
+    <Setter Property="LineHeight" Value="24" />
     <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- The published-name suffix on the identity card's title line. Muted so it reads as a machine
+       fact beside the title rather than as a second heading.
+       19 IS MEASURED, not derived. Avalonia has no baseline alignment and it CENTERS a glyph inside
+       a stated line box, so two sizes sharing one box do not share a baseline - .idname at 24 and
+       this at 24 put them 2.8px apart with the small text HIGH, and this at 14 put them 2.5px apart
+       the other way. The box that lands them together is between; 18-20 all pass TextBaselineTests'
+       1.25px floor and 19 is the middle of that band. This is the one place in the app where an 18px
+       run and a 10.5px run share a line. -->
+  <Style Selector="TextBlock.mintname">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="LineHeight" Value="19" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
   <Style Selector="TextBlock.iddesc">
     <Setter Property="FontSize" Value="12.5" />

@@ -113,8 +113,30 @@ public partial class CookBookDetailViewModel : ViewModelBase
     private readonly Action _cook;
     private readonly Action? _showReports;
 
-    /// <summary>The collection's name.</summary>
+    /// <summary>The BOOK's name — what the titlebar, the tree and the recents list all show.</summary>
+    /// <remarks>
+    /// Deliberately not the collection's name, and the two are different fields: this one names the
+    /// <c>.cbk</c>, and <see cref="MintName"/> names what the assets are published as. The summary
+    /// here used to say "the collection's name", which is how the split went unnoticed for so long —
+    /// the card read the book and the doc described the collection.
+    /// </remarks>
     public string Name { get; }
+
+    /// <summary>What every cooked asset will be called, e.g. <c>Chest Demo #1</c>.</summary>
+    /// <remarks>
+    /// <para><b>This is the most published string in a collection and the card never showed it.</b>
+    /// <c>Collection.Name</c> is what <c>SetWriter.BuildOpenSea</c> puts in every
+    /// <c>metadata/NNNN.json</c> as <c>"{name} #{n}"</c>, and it is what an export is named after —
+    /// but the card's title is the BOOK's name, and its symbol and description come from the
+    /// collection. Three of the four fields on that card came from one object and the title from
+    /// another, with nothing saying so.</para>
+    ///
+    /// <para>They are equal for anything the GUI creates — the New CookBook wizard writes one typed
+    /// name into both — so this is redundant most of the time and exact when it is not. It is shown
+    /// unconditionally for that reason: a card that only mentions the published name when it
+    /// disagrees is a card you cannot trust when it stays quiet.</para>
+    /// </remarks>
+    public string MintName { get; }
     /// <summary>Its ticker-style symbol.</summary>
     public string Symbol { get; }
     /// <summary>Its description.</summary>
@@ -188,6 +210,9 @@ public partial class CookBookDetailViewModel : ViewModelBase
         _cook = cook;
         _showReports = showReports;
         Name = book.Manifest.Name;
+        // "#1" and not "#0001": the number is the SHAPE of the published name, and the padding is
+        // SetWriter's own business (it writes the file as NNNN and the name as "#{SetNumber}").
+        MintName = $"mints as {book.Manifest.Collection.Name} #1";
         Symbol = book.Manifest.Collection.Symbol;
         Description = book.Manifest.Collection.Description;
         // "1000 × 1000" with a real multiplication sign and spaces, as the mockup renders it.

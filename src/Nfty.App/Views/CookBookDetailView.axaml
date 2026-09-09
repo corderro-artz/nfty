@@ -19,10 +19,30 @@
          below, beside the figure it is a fraction of, and it was being stated in three places. -->
     <Border Grid.Row="0" Classes="cbk-id">
       <StackPanel Spacing="9">
-        <StackPanel Orientation="Horizontal" Spacing="10">
-          <Path Classes="ico ti" Data="{StaticResource IconTypeCookBook}" VerticalAlignment="Center" />
-          <TextBlock Classes="idname" Text="{Binding Name}" />
-        </StackPanel>
+        <!-- THE TITLE IS THE BOOK'S NAME; the suffix beside it is what the ASSETS are called.
+             They are two fields - Manifest.Name and Manifest.Collection.Name - and this card read
+             the first while taking its symbol and description from the second, so three of its four
+             values came from one object and the title from another with nothing saying so. The
+             collection name is what every metadata/NNNN.json publishes as "{name} #{n}" and what an
+             export is named after, and it appeared on no screen in the app.
+             It goes on this line because this line is the only one on the card with room: the chip
+             row below is already four chips and ~471px of the ~660 the card gets at the smallest
+             window, and a fifth would either overrun it or wrap the row and eat the DNA table's one
+             remaining row. The name takes what it needs up to a cap and the suffix trims, so a long
+             pair degrades instead of pushing the other off. -->
+        <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="10">
+          <Path Grid.Column="0" Classes="ico ti" Data="{StaticResource IconTypeCookBook}" VerticalAlignment="Center" />
+          <!-- BOTH runs are Bottom, not one Bottom and one Center: Avalonia has no baseline
+               alignment, so an 18px title and a 10.5px suffix aligned differently sat 2.5px apart
+               and TextBaselineTests said so. Bottom flushes the two boxes and leaves only the
+               descent difference. -->
+          <TextBlock Grid.Column="1" Classes="idname" Text="{Binding Name}"
+                     VerticalAlignment="Bottom"
+                     MaxWidth="330" TextTrimming="CharacterEllipsis" />
+          <TextBlock Grid.Column="2" Classes="mintname" Text="{Binding MintName}"
+                     VerticalAlignment="Bottom" TextTrimming="CharacterEllipsis"
+                     ToolTip.Tip="The collection name every cooked asset is published under. It is a separate field from the book's own name — the CLI and a hand-edited manifest can set them differently." />
+        </Grid>
         <TextBlock Classes="iddesc" Text="{Binding Description}"
                    IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
         <StackPanel Orientation="Horizontal" Spacing="7">
