@@ -23,7 +23,7 @@ namespace Nfty.App.Tests;
 /// </summary>
 /// <remarks>
 /// <para>The card used to scroll, which is how it survived being ~130px taller than the smallest
-/// window the app opens allows: at 1200x712 the detail card gets <b>654x388</b>, and everything
+/// window the app opens allows: the detail card gets a few hundred pixels either way, and everything
 /// below the fold — the mint bar and the Cook button among it — was simply out of sight. Paging the
 /// one unbounded thing on the card is what let the scroller go, and with it the possibility of
 /// scrolling the collection's own summary off the screen.</para>

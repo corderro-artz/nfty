@@ -10,13 +10,13 @@ namespace Nfty.App.Converters;
 /// was assumed to have.
 /// </summary>
 /// <remarks>
-/// <para><see cref="PercentToWidthConverter"/> multiplies by a constant — <c>share * 3.1</c> for a
-/// 310px track — which is exact only while the track really is 310px. Three of the four bars in this
-/// app pin their track (<c>.distbar</c> is <c>Width="310"</c>, <c>.rt</c> is <c>Width="120"</c>,
-/// <c>.mixbar</c> is <c>Width="270"</c>) and are fine. The DNA-space bar's track is <c>.cbar</c>,
-/// which has no width and sits in a star column, so it is wider than 310 at any real pane size — and
-/// a recipe holding 100% of mints drew a bar about four fifths full. The number was right; the track
-/// it was measured against was not.</para>
+/// <para><see cref="PercentToWidthConverter"/> multiplies by a constant, which is exact only while
+/// the track really is the width that constant was derived from. TWO bars still pin their track and
+/// are fine that way (<c>.rt</c> is <c>Width="120"</c>, <c>.mixbar</c> is <c>Width="270"</c>). The
+/// other two do not: <c>.cbar</c> sits in a star column, so it is wider than any constant at a real
+/// pane size — a recipe holding 100% of mints drew a bar about four fifths full — and <c>.distbar</c>
+/// stretches to the card. This doc used to name <c>.distbar</c> as a pinned 310px track, which it has
+/// not been since it became a stretching one; that is exactly the drift the constants invite.</para>
 ///
 /// <para>So take the track's own width as an input. That removes the magic multiplier as well as the
 /// bug: a bar is <em>this fraction of the space it is in</em>, which is what a share bar means.</para>

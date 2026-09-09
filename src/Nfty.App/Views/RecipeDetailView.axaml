@@ -15,7 +15,7 @@
        star column - the LAYER NAME - with nothing at the smallest window, so every name on the
        screen was missing. The rail loses 40 and the fixed cells 48 (# 40 to 34, KIND 110 to 86,
        VARIANTS 90 to 72, each still wider than its own header), which is what lets the window
-       minimum be 1200 rather than 1366. MinimumWindowFitTests measures the column by name. -->
+       minimum be 1280x720 rather than 1366 wide. MinimumWindowFitTests measures the column by name. -->
   <Grid Margin="16" ColumnDefinitions="*,260">
     <StackPanel Grid.Column="0" Spacing="14" Margin="0,0,16,0">
       <Border Classes="rhero">

@@ -182,5 +182,17 @@ public class MinimumWindowFitTests
             DataContext = new IngredientEditorViewModel(ing, r, b, new ImageBridge(), nav,
                 new CookBookSession(), dialogs, new FilePickerService()),
         }, b.Dispose);
+
+        // THE SET BROWSER IS A PAGE, and this sweep did not walk it. LandingViewModel navigates to
+        // it with the same _nav.To that opens the Explorer, so "every page fits the smallest window"
+        // was a claim about five of the six. It passes today - measured, it wants 922x526 of the
+        // 1046x526 it gets - which is the point: the gap was in the coverage, not the layout, and a
+        // page nothing measures is a page that can start clipping unnoticed. Selected, so the rarity
+        // rail and the pinned Save band are both laid out.
+        var set = RarityRailSnapTests.CookedSetFor(out string setDir);
+        var browser = new SetBrowserViewModel(set) ;
+        browser.SelectedItem = browser.Items[0];
+        yield return ("set-browser", new Views.SetBrowserView { DataContext = browser },
+            () => { browser.Dispose(); try { Directory.Delete(setDir, true); } catch { } });
     }
 }

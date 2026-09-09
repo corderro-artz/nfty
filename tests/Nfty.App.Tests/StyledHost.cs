@@ -6,10 +6,14 @@ namespace Nfty.App.Tests;
 /// <summary>Shows a control under the themed headless app and lays it out, so applied style
 /// values (fonts, brushes) can be read back in tests.
 ///
-/// <c>Window.LayoutManager</c> is not publicly accessible in Avalonia 11.2.3 (its getter is
-/// non-public), so instead of calling <c>ExecuteInitialLayoutPass</c> directly we flush the
-/// dispatcher queue, which runs the layout pass Avalonia already scheduled when the window
-/// was shown — see "Flushing async operations" in the Avalonia headless testing docs.
+/// Rather than calling <c>ExecuteInitialLayoutPass</c> directly, this flushes the dispatcher queue,
+/// which runs the layout pass Avalonia already scheduled when the window was shown — see "Flushing
+/// async operations" in the Avalonia headless testing docs. The original reason was that
+/// <c>Window.LayoutManager</c>'s getter was non-public; this comment named Avalonia <b>11.2.3</b>
+/// long after the pin moved to 12.1.1 (<c>Directory.Packages.props</c>), which is the same staleness
+/// <c>RowChunkConverter</c> records having hit. <b>Whether that getter is still non-public in 12.1.1
+/// has NOT been re-verified</b> — flushing the queue is correct either way, so the note is left as
+/// provenance rather than rewritten into a claim nobody checked.
 ///
 /// Each call opens its own headless <c>Window</c> and never closes it — callers read applied
 /// style values (e.g. <c>FontFamily</c>) off the returned control *after* <c>Show</c> returns,

@@ -355,6 +355,18 @@ public class DarkModeContrastTests
             },
         }, null);
 
+        // THE SET BROWSER AND ITS INSPECTOR, neither of which this sweep walked. It is a page in the
+        // same sense Landing and the Explorer are - LandingViewModel navigates to it with the same
+        // _nav.To - and this list is hand-written, so a screen it never walks cannot be found
+        // unreadable. The browser carries the rarity table's banded trait ink over a tinted share
+        // bar, and the inspector its DNA block, which are the runs here most likely to fall under
+        // the floor. Selected, so the rail draws at all.
+        var browserSet = RarityRailSnapTests.CookedSetFor(out string browserDir);
+        var browserVm = new SetBrowserViewModel(browserSet);
+        browserVm.SelectedItem = browserVm.Items[0];
+        yield return ("set-browser", new Views.SetBrowserView { DataContext = browserVm },
+            () => { browserVm.Dispose(); try { Directory.Delete(browserDir, true); } catch { } });
+
         yield return ("cookbook-detail-invalid",
             new Views.CookBookDetailView { DataContext = brokenVm }, null);
 

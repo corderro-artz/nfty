@@ -185,9 +185,11 @@ public class UniqueDnaDisplayTests
             ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs), new StatusService());
         var view = new Views.ExplorerView { DataContext = explorer };
 
-        // The page area at ShellViewModel's minimum window: (1200 - 24) / 1.2 wide and
-        // (712 - ChromeReserve) / 1.2 tall. Derived rather than typed, so a change to the minimum
-        // moves this measurement with it instead of leaving it describing an old window.
+        // The page area at ShellViewModel's own minimum, DERIVED rather than typed - so a change to
+        // the minimum moves this measurement with it instead of leaving it describing an old window.
+        // (This comment used to quote the numbers, and was itself describing an old window within
+        // two commits of saying so. The code below is the statement; prose repeating it is the part
+        // that goes stale.)
         window = new Window
         {
             Content = view,
