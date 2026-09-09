@@ -43,15 +43,8 @@ public partial class ShellViewModel : ViewModelBase
     /// was three columns in 820 of a window that allows well over a thousand, so every description
     /// wrapped three lines deep and the card reached 687. Four columns in 980 is both shorter and a
     /// better shape for something you scan; with the chrome corrected and the sheet's own bands
-    /// trimmed it needs 1200 x 709, which clears a 768-tall screen with its taskbar.</para>
+    /// trimmed it asks for 1200 x 709 — which this now clears without being set by it.</para>
     /// </summary>
-    /// <remarks>
-    /// Measured: the sheet is 980 x 517, so it needs 980 * <see cref="BaseScale"/> + 24 wide and
-    /// 517 * BaseScale + <see cref="ChromeReserve"/> tall. <c>ModalFitTests</c> derives that from
-    /// the real control and fails with the number it now needs; <c>ChromeReserveTests</c> keeps the
-    /// chrome half of the arithmetic honest. The slack is deliberately small — every pixel of it is
-    /// a pixel a laptop may not have.
-    /// </remarks>
     /// <remarks>
     /// <para><b>Every screen was made to FIT this rather than allowed to push it up.</b> Three of
     /// them could not, and each failed the same silent way — a control that overruns is still
@@ -62,15 +55,28 @@ public partial class ShellViewModel : ViewModelBase
     /// column arranged at ZERO width, so every layer name was missing; its rules rail and fixed
     /// columns each gave some back.</para>
     ///
-    /// <para>Raising the minimum instead was tried and reverted. 1366 fits a laptop screen exactly,
-    /// which is the point of it, but it is a 1.92:1 window — and it would not have fixed the palette
-    /// strip, which was invisible at 1366 too. The HEIGHT stays at 712 whatever the width does: a
-    /// 768-tall screen has a taskbar, and a minimum that assumed the whole panel would be a minimum
-    /// that screen cannot satisfy.</para>
+    /// <para><b>1280x720 is a MILESTONE, and that is the argument for it.</b> The floor was 1200x712
+    /// — two numbers that were each the smallest thing that happened to work, which is how every
+    /// screen came to be squeezed to the pixel and why four separate overruns had to be chased out
+    /// of them. 720p is a size people recognise, it is 80px wider and 8px taller than what it
+    /// replaces, and the slack is the point: nothing here should sit one style tweak from clipping.
+    /// The app opens at 1366x768, a comfortable step above it rather than a few pixels above it.</para>
+    ///
+    /// <para>1366x768 was tried as the floor and reverted. It fits a laptop screen exactly, which is
+    /// the appeal, but it is a 1.92:1 window and it would not have fixed the palette strip, which
+    /// was invisible at 1366 too. <b>The height cannot follow the width past about 728</b> whatever
+    /// milestone is chosen: a 768-tall screen has a taskbar, and a minimum that assumed the whole
+    /// panel would be a minimum that screen cannot satisfy. 720 is the largest round number under
+    /// that ceiling.</para>
+    ///
+    /// <para><c>ModalFitTests</c> derives the sheet's requirement from the real control and fails
+    /// with the number it now needs; <c>ChromeReserveTests</c> keeps the chrome half of the
+    /// arithmetic honest; <c>MinimumWindowFitTests</c> measures every PAGE at the area this gives
+    /// them.</para>
     /// </remarks>
-    public const double MinWindowWidth = 1200;
+    public const double MinWindowWidth = 1280;
     /// <inheritdoc cref="MinWindowWidth"/>
-    public const double MinWindowHeight = 712;
+    public const double MinWindowHeight = 720;
 
     /// <summary>
     /// Titlebar + status bar + the frame's shadow gutter: everything a modal does NOT get to use.
