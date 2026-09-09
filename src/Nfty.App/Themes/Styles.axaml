@@ -2098,11 +2098,18 @@
        TextBaselineTests said so; equal boxes bring them inside half a pixel. The height is
        comfortably above every one of these faces' ascent plus descent, which is what stops a box
        smaller than the em cutting the ink. -->
+  <!-- RIGHT-ALIGNED, like the header above it. Both of these sat in a fixed pixel column whose
+       header states TextAlignment=Right (.th.r) while the value stated none, so the header's ink
+       took the column's right edge and the figures were flush LEFT under it - "16%" ending 13px
+       short of "17.4%" in the same column, and the UNIQUE DNA header standing 34px right of the
+       numbers it names. That is the header-grid trap this file already records for the ingredient
+       variant table and the rarity table, in a third table of the same family. -->
   <Style Selector="TextBlock.cshare">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="11" />
     <Setter Property="LineHeight" Value="17" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="TextAlignment" Value="Right" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 
@@ -2162,6 +2169,8 @@
     <Setter Property="FontWeight" Value="Bold" />
     <Setter Property="FontSize" Value="13.5" />
     <Setter Property="LineHeight" Value="17" />
+    <!-- See .cshare: the header states Right and so must the figure under it. -->
+    <Setter Property="TextAlignment" Value="Right" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 

@@ -127,11 +127,19 @@
                       Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Fill}">
                 <Path Classes="ico sm" Data="{StaticResource IconFill}" /></Button>
 
-              <Border Classes="tsep" />
-
-              <Button Classes="ttool" Classes.on="{Binding IsToolRectangle}" ToolTip.Tip="Rectangle"
-                      Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Rectangle}">
-                <Path Classes="ico sm" Data="{StaticResource IconRect}" /></Button>
+              <!-- THE SEPARATOR TRAVELS WITH WHAT IT INTRODUCES. A WrapPanel treats a rule as an
+                   ordinary child, so a break could land just AFTER one and leave a vertical line
+                   dangling at the end of a wrapped line with nothing after it - which is what both
+                   of these strips did at the smallest window, where they wrap. Pairing the rule with
+                   the first control of the group it opens makes that unrepresentable: if the pair
+                   does not fit, both move. The geometry is unchanged - the rule keeps its own 3px
+                   margins and the pair carries the trailing gap the single child used to. -->
+              <StackPanel Orientation="Horizontal">
+                <Border Classes="tsep" />
+                <Button Classes="ttool" Classes.on="{Binding IsToolRectangle}" ToolTip.Tip="Rectangle"
+                        Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Rectangle}">
+                  <Path Classes="ico sm" Data="{StaticResource IconRect}" /></Button>
+              </StackPanel>
               <Button Classes="ttool" Classes.on="{Binding IsToolCircle}" ToolTip.Tip="Circle"
                       Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Circle}">
                 <Path Classes="ico sm" Data="{StaticResource IconCircle}" /></Button>
@@ -149,15 +157,17 @@
                       Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Select}">
                 <Path Classes="ico sm" Data="{StaticResource IconSelect}" /></Button>
 
-              <Border Classes="tsep" />
-
-              <Button Classes="ttool" Command="{Binding UndoCommand}" ToolTip.Tip="Undo">
-                <Path Classes="ico sm" Data="{StaticResource IconUndo}" /></Button>
+              <StackPanel Orientation="Horizontal">
+                <Border Classes="tsep" />
+                <Button Classes="ttool" Command="{Binding UndoCommand}" ToolTip.Tip="Undo">
+                  <Path Classes="ico sm" Data="{StaticResource IconUndo}" /></Button>
+              </StackPanel>
               <Button Classes="ttool" Command="{Binding RedoCommand}" ToolTip.Tip="Redo">
                 <Path Classes="ico sm" Data="{StaticResource IconRedo}" /></Button>
 
-              <Border Classes="tsep" />
-
+              <!-- Paired with the group it introduces - see the note above the first rule. -->
+              <StackPanel Orientation="Horizontal">
+                <Border Classes="tsep" />
               <!-- .ramp: the brightness axis. In grayscale mode it IS the color; in color mode it
                    is V of HSV, with H and S on the colorize rail's own tracks. One control, one
                    meaning ("how bright"), in both modes. -->
@@ -171,6 +181,7 @@
                 <Slider Value="{Binding BrushValue}" Minimum="0" Maximum="255"
                         Classes="overlay" ToolTip.Tip="Paint value / brightness" />
               </Panel>
+              </StackPanel>
               <Border Classes="swatch" ToolTip.Tip="{Binding BrushSpec}">
                 <Border.Background><SolidColorBrush Color="{Binding BrushSwatch}" /></Border.Background>
               </Border>
@@ -230,8 +241,9 @@
                 </Border>
               </Panel>
 
-              <Border Classes="tsep" />
-
+              <!-- Paired, as in the toolstrip: a rule may not end a wrapped line. -->
+              <StackPanel Orientation="Horizontal">
+                <Border Classes="tsep" />
               <ItemsControl ItemsSource="{Binding Ramp}" VerticalAlignment="Center">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="3" /></ItemsPanelTemplate>
@@ -249,8 +261,10 @@
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
 
-              <Border Classes="tsep" />
+              </StackPanel>
 
+              <StackPanel Orientation="Horizontal">
+                <Border Classes="tsep" />
               <!-- The saved run scrolls inside its own cell: a palette that grew would otherwise
                    push the alpha axis and the lock off the strip. -->
               <!-- 120 STATED, not a star. A star is what let this vanish; a width means the saved
@@ -285,6 +299,8 @@
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
               </ScrollViewer>
+
+              </StackPanel>
 
               <Button Classes="sw add" Command="{Binding SaveSwatchCommand}"
                       ToolTip.Tip="Save this color to the palette">

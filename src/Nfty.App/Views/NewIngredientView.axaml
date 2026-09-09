@@ -60,7 +60,13 @@
                 <RadioButton Grid.Column="2" Classes="choice" GroupName="Kind" IsChecked="{Binding IsKindCustom}">
                   <StackPanel>
                     <TextBlock Text="Custom" Classes="ct" />
-                    <TextBlock Text="full-color, as-is" Classes="csub" />
+                    <!-- A NON-BREAKING HYPHEN in "as-is". The card is a third of a fixed-width modal, so this
+                         caption wraps at every window size and in both themes, and an ordinary hyphen let
+                         the break fall INSIDE the compound - the card read "full-color, as-" / "is",
+                         which looks like a typo rather than a line break. Breaking at the space instead
+                         gives two clean lines. The first hyphen is left ordinary: "full-" / "color" is
+                         the wrap this buys, and it never happens because the space comes first. -->
+                    <TextBlock Text="full-color, as&#x2011;is" Classes="csub" />
                   </StackPanel>
                 </RadioButton>
               </Grid>
