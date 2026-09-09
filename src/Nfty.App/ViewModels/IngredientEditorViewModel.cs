@@ -802,14 +802,98 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         };
     }
 
+    /// <summary>
+    /// Whether a tool's gesture can be shown as the pixels it would commit. Everything that paints
+    /// can; the two that cannot are the two that are not a drag over pixels — Select marks a region
+    /// (the overlay's marquee is its live feedback) and Fill acts on the press point alone, so a
+    /// flood re-run on every pointer move would walk the whole canvas to draw the same thing.
+    /// </summary>
+    private static bool CanPreview(EditorTool tool) => tool is EditorTool.Brush or EditorTool.Eraser
+        or EditorTool.Line or EditorTool.Rectangle or EditorTool.Circle or EditorTool.Triangle;
+
+    // Set while the canvas on screen shows an uncommitted gesture. The SURFACE is always clean - the
+    // preview is applied, rendered and undone inside one call - so this exists only to say that the
+    // bitmap the user is looking at is ahead of the pixels, and has to be repainted if the gesture
+    // ends without committing anything.
+    private bool _previewShown;
+
+    /// <summary>
+    /// Shows the gesture in progress as the pixels it would actually commit, without committing
+    /// anything: the edit is applied to the surface, the canvas is rendered from it, and the edit is
+    /// undone again — so nothing reaches history, the dirty flag or the filmstrip.
+    /// </summary>
+    /// <remarks>
+    /// It replaces a 1px accent outline the overlay used to draw, which was a stand-in for pixels
+    /// nobody could see and disagreed with the result in every way that matters: the shape tools
+    /// fill, so a hollow band described the wrong figure; a line commits at the brush's size in the
+    /// brush's ink, so a hairline in the accent color described the wrong weight and the wrong
+    /// color; and the brush and eraser had no band at all, so a stroke was drawn blind from press to
+    /// release. Apply/Undo is exact by construction — the same command the release will build — and
+    /// region-scoped, so it costs the pixels the edit touches plus one canvas render.
+    /// </remarks>
+    /// <param name="points">The gesture's pixel path so far.</param>
+    public void PreviewToolStroke(IReadOnlyList<(int x, int y)> points)
+    {
+        if (ActiveDraft is not { } target || points.Count == 0 || !CanPreview(ActiveTool)) return;
+
+        if (IsColorMode)
+        {
+            if (BuildCommand(ColorInk, points) is not { } cmd) return;
+            var surface = target.EnsureColor();
+            cmd.Apply(surface);
+            try { ShowCanvas(); } finally { cmd.Undo(surface); }
+        }
+        else
+        {
+            if (BuildCommand(GrayInk, points) is not { } cmd) return;
+            cmd.Apply(target.Map);
+            try { ShowCanvas(); } finally { cmd.Undo(target.Map); }
+        }
+        _previewShown = true;
+    }
+
+    /// <summary>Abandons a gesture that will never commit — capture was taken away, so no release is
+    /// coming — and repaints the canvas from the pixels that are actually there.</summary>
+    public void CancelToolPreview()
+    {
+        if (!_previewShown) return;
+        _previewShown = false;
+        ShowCanvas();
+    }
+
+    /// <summary>Repaints the canvas from the surface, dropping any preview standing on it. Only the
+    /// canvas: the colorized blip is not what a hand is watching mid-gesture, and rendering it on
+    /// every pointer move would double the cost of the one thing that is.</summary>
+    private void ShowCanvas()
+    {
+        if (SelectedVariant is null) return;
+        var old = Canvas;
+        Canvas = RenderCanvas();
+        old?.Dispose();
+    }
+
     /// <summary>Commit one completed gesture as a Core edit command against the active variant, on
     /// whichever surface the paint mode is editing.</summary>
     /// <param name="points">The gesture's pixel path.</param>
     public void ApplyToolStroke(IReadOnlyList<(int x, int y)> points)
     {
-        if (ActiveDraft is not { } target || points.Count == 0) return;
+        // Every exit below has to put the canvas back if a preview is standing on it, including the
+        // ones that commit nothing - a gesture that ends in a no-op would otherwise leave the ghost
+        // of itself on screen until the next repaint.
+        bool preview = _previewShown;
+        _previewShown = false;
 
-        if (ActiveTool == EditorTool.Select && !BeginSelectGesture(points)) return;
+        if (ActiveDraft is not { } target || points.Count == 0)
+        {
+            if (preview) ShowCanvas();
+            return;
+        }
+
+        if (ActiveTool == EditorTool.Select && !BeginSelectGesture(points))
+        {
+            if (preview) ShowCanvas();
+            return;
+        }
 
         bool changed;
         if (IsColorMode)
@@ -823,7 +907,11 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
             changed = cmd is not null && _history[target.Id].Do(cmd, target.Map);
         }
         // A no-op edit changed nothing — don't dirty history, rebuild, or mark the ingredient dirty.
-        if (!changed) return;
+        if (!changed)
+        {
+            if (preview) ShowCanvas();
+            return;
+        }
 
         IsDirty = true;
         RebuildSurfaces();

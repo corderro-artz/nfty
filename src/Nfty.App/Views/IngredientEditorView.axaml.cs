@@ -20,11 +20,14 @@ namespace Nfty.App.Views;
 /// interactions that genuinely need a control reference; everything else is bound.</summary>
 /// <remarks>
 /// The pointer work lives here because it is genuinely view-shaped: it maps pointer positions onto
-/// canvas pixels, and it draws the <b>rubber band</b> — the outline of the shape you are about to
-/// commit, following the cursor. Without it every shape tool was drawn blind: press, drag across
-/// nothing, release, and find out. A user expects to see what they are making while they make it,
-/// and the cheapest honest way to show that is an overlay in control coordinates rather than
-/// re-rasterising the canvas on every pointer move.
+/// canvas pixels, and it draws the <b>selection marquee</b> in control coordinates over the art.
+/// <para>What it no longer draws is the shape tools' rubber band. That band existed because a
+/// gesture was otherwise drawn blind — press, drag across nothing, release, find out — and an
+/// accent outline was the cheap way to say something was happening. The honest way is to show the
+/// pixels, which is what <see cref="IngredientEditorViewModel.PreviewToolStroke"/> does on every
+/// pointer move; keeping the outline as well would put a second, disagreeing account of the same
+/// gesture on top of the first. Select keeps a box because marking changes no pixel, so there is
+/// nothing for a pixel preview to show.</para>
 /// </remarks>
 public partial class IngredientEditorView : UserControl
 {
@@ -50,6 +53,11 @@ public partial class IngredientEditorView : UserControl
 
         _img.PointerPressed += (_, e) =>
         {
+            // CAPTURE, or a gesture that wanders off the 320px tile is simply abandoned: moves stop
+            // arriving, the release lands on whatever is under the pointer instead, and the stroke
+            // is silently lost with its preview still on screen. AddPoint already clamps to the
+            // canvas, so a drag past the edge ends at the edge, which is what it looks like.
+            e.Pointer.Capture(_img);
             _drawing = true;
             _points.Clear();
             AddPoint(e);
@@ -57,12 +65,14 @@ public partial class IngredientEditorView : UserControl
                 && _vm.ActiveTool == EditorTool.Select
                 && _points.Count > 0
                 && _vm.SelectionContains(_points[0].x, _points[0].y);
+            _vm?.PreviewToolStroke(_points);
             DrawBand();
         };
         _img.PointerMoved += (_, e) =>
         {
             if (!_drawing) return;
             AddPoint(e);
+            _vm?.PreviewToolStroke(_points);
             DrawBand();
         };
         _img.PointerReleased += (_, e) =>
@@ -74,7 +84,21 @@ public partial class IngredientEditorView : UserControl
                 vm.ApplyToolStroke(_points.ToArray());
             _points.Clear();
             _movingSelection = false;
+            e.Pointer.Capture(null);
             DrawBand();          // clears the band and repaints the marquee in its new place
+        };
+
+        // Capture can be taken away — the window deactivates, another control grabs it — and then no
+        // release is coming. The gesture is abandoned, so the canvas has to stop showing a stroke
+        // that is never going to commit.
+        _img.PointerCaptureLost += (_, _) =>
+        {
+            if (!_drawing) return;
+            _drawing = false;
+            _points.Clear();
+            _movingSelection = false;
+            _vm?.CancelToolPreview();
+            DrawBand();
         };
 
         // The marquee has to survive the gesture that made it, so it is redrawn whenever the
@@ -149,50 +173,25 @@ public partial class IngredientEditorView : UserControl
         var p1 = ToControl(Math.Max(a.x, b.x) + 1, Math.Max(a.y, b.y) + 1);
         double w = Math.Max(1, p1.X - p0.X), h = Math.Max(1, p1.Y - p0.Y);
 
-        Shape? band = _vm.ActiveTool switch
+        // ONLY Select draws a band. Every tool that paints shows the pixels themselves now
+        // (IngredientEditorViewModel.PreviewToolStroke), and an accent outline over them would be a
+        // second, disagreeing account of the same gesture: the shape tools FILL, a line commits at
+        // the brush's size in the brush's ink, and a 1px hairline said otherwise on both counts.
+        // Select is the exception because marking changes no pixel — there is nothing for a preview
+        // to show, so the box is the whole feedback.
+        if (_vm.ActiveTool != EditorTool.Select) return;
+
+        var band = new Rectangle
         {
-            EditorTool.Rectangle => new Rectangle { Width = w, Height = h },
-            EditorTool.Circle => new Ellipse { Width = w, Height = h },
-            EditorTool.Triangle => new Polygon
-            {
-                Points = new List<Point> { new(w / 2, 0), new(w, h), new(0, h) },
-                Width = w,
-                Height = h,
-            },
-            EditorTool.Select => new Rectangle
-            {
-                Width = w,
-                Height = h,
-                StrokeDashArray = new AvaloniaList<double>(4, 3),
-            },
-            EditorTool.Line => null,   // built below: a line is two points, not a box
-            _ => null,                 // brush, eraser and fill show their result directly
+            Width = w,
+            Height = h,
+            StrokeDashArray = new AvaloniaList<double>(4, 3),
+            Stroke = Brush("AccentBrush"),
+            StrokeThickness = 1,
+            IsHitTestVisible = false,
         };
-
-        if (_vm.ActiveTool == EditorTool.Line)
-        {
-            // Through pixel CENTRES, because that is where a stamped disc lands.
-            var la = ToControl(a.x, a.y);
-            var lb = ToControl(b.x, b.y);
-            double half = scale / 2;
-            band = new Line
-            {
-                StartPoint = new Point(la.X + half, la.Y + half),
-                EndPoint = new Point(lb.X + half, lb.Y + half),
-            };
-            Canvas.SetLeft(band, 0);
-            Canvas.SetTop(band, 0);
-        }
-        else if (band is not null)
-        {
-            Canvas.SetLeft(band, p0.X);
-            Canvas.SetTop(band, p0.Y);
-        }
-
-        if (band is null) return;
-        band.Stroke = Brush("AccentBrush");
-        band.StrokeThickness = 1;
-        band.IsHitTestVisible = false;
+        Canvas.SetLeft(band, p0.X);
+        Canvas.SetTop(band, p0.Y);
         _overlay.Children.Add(band);
     }
 
