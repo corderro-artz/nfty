@@ -49,6 +49,55 @@ public class ServiceRegistrationTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>
+    /// A cook that finishes with Open Set lands on the Set browser, through the REAL container.
+    /// </summary>
+    /// <remarks>
+    /// <c>CookToExportJourneyTests</c> proves the Explorer navigates when it has a Set-browser
+    /// factory, and passes one itself — so it is blind to the composition root forgetting to supply
+    /// it. That argument is optional (61 test call sites construct an Explorer by hand and none of
+    /// them wants a browser), which means a missing argument here compiles, ships, and silently
+    /// leaves the export dialog unreachable again. This is the half that can see it.
+    /// </remarks>
+    [AvaloniaFact]
+    public void The_composition_root_lets_a_finished_cook_open_the_Set_it_wrote()
+    {
+        string recentsDir = Directory.CreateTempSubdirectory().FullName;
+        string setDir = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            using (var source = ExplorerViewModelTests.TwoRecipeBook())
+            using (var cooked = Nfty.Core.Generation.Generator.Generate(
+                source, new Nfty.Core.Generation.GenerateOptions(2, "seed1")))
+            {
+                Nfty.Core.Output.SetWriter.Write(cooked, setDir, pack: false);
+            }
+
+            var services = new ServiceCollection().AddNftyApp();
+            services.AddSingleton<IStateStore>(StateStore.At(recentsDir));
+            services.AddSingleton<IRecentsService>(new RecentsService(recentsDir));
+            // The one thing a headless test cannot drive: the modal itself. Everything downstream of
+            // its answer — the Explorer, the factory, the navigation stack — is the shipped wiring.
+            services.AddSingleton<IDialogService>(new CookToExportJourneyTests.PathDialogs(setDir));
+            using var provider = services.BuildServiceProvider();
+
+            using var book = ExplorerViewModelTests.TwoRecipeBook();
+            var explorer = provider.GetRequiredService<Func<LoadedCookBook, ExplorerViewModel>>()(book);
+            var card = Assert.IsType<CookBookDetailViewModel>(explorer.CurrentDetail);
+            card.CookCommand.Execute(null);
+
+            var nav = provider.GetRequiredService<INavigationService>();
+            var browser = Assert.IsType<SetBrowserViewModel>(nav.Current);
+            Assert.True(browser.CanExport);
+            browser.Dispose();
+        }
+        finally
+        {
+            Directory.Delete(recentsDir, recursive: true);
+            try { Directory.Delete(setDir, recursive: true); } catch { }
+        }
+    }
+
     [AvaloniaFact]
     public void Opening_a_loose_ingredient_editor_records_it_as_a_recent()
     {

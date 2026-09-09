@@ -44,7 +44,12 @@ public partial class CookDialogViewModel : ViewModelBase
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(CookCommand))] [NotifyCanExecuteChangedFor(nameof(CancelCommand))] [NotifyCanExecuteChangedFor(nameof(CloseCommand))] [NotifyPropertyChangedFor(nameof(ShowForm))] [NotifyPropertyChangedFor(nameof(FootHint))] private bool _isRunning;
     [ObservableProperty] private double _progress;
     [ObservableProperty] private string _phaseText = "";
-    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(RevealCommand))] [NotifyPropertyChangedFor(nameof(ShowForm))] [NotifyPropertyChangedFor(nameof(FootHint))] private bool _isDone;
+    // BOTH commands, not just Reveal. A CanExecute predicate is only re-read when something tells the
+    // command to re-read it, and a button's IsEnabled follows CanExecuteChanged and nothing else - so
+    // Open Set was laid out, styled, correct in its predicate and PERMANENTLY DISABLED in the running
+    // app, while a test calling OpenSetCommand.CanExecute(null) evaluated the predicate directly and
+    // passed. Driving is what found it; see CookDialogGestureTests, which asks the BUTTON.
+    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(RevealCommand))] [NotifyCanExecuteChangedFor(nameof(OpenSetCommand))] [NotifyPropertyChangedFor(nameof(ShowForm))] [NotifyPropertyChangedFor(nameof(FootHint))] private bool _isDone;
 
     /// <summary>What the run produced, as a sentence — the counts alone.</summary>
     /// <remarks>
@@ -94,7 +99,7 @@ public partial class CookDialogViewModel : ViewModelBase
     /// states this one card passes through.</summary>
     public string FootHint => IsRunning
         ? "Cancel stops after the current asset"
-        : IsDone ? "Click the folder to open it" : "Same book, same seed, same collection";
+        : IsDone ? "Open Set to browse and export it" : "Same book, same seed, same collection";
 
     private bool CanCook() => !IsRunning && Count > 0;
 
@@ -158,6 +163,22 @@ public partial class CookDialogViewModel : ViewModelBase
 
     [RelayCommand(CanExecute = nameof(CanReveal))] private void Reveal() { if (_outDir is not null) _revealer.Reveal(_outDir); }
     private bool CanReveal() => IsDone;
+
+    /// <summary>Closes the dialog and hands the caller the folder the Set was written to.</summary>
+    /// <remarks>
+    /// <para>THIS IS THE ONLY WAY TO REACH THE EXPORT DIALOG FROM A BOOK YOU JUST COOKED. Export -
+    /// pick the art, either metadata set, the source .cbk, and whether to seal - lives on the Set
+    /// browser, because it is an operation on a cooked Set and there is nothing to plan before one
+    /// exists. But cooking left you on the Explorer with a path on a card, so the only route to it
+    /// was to go back to Landing and re-open by hand the folder the app had just written. Everything
+    /// worked and the feature was unreachable in the flow that produces its input.</para>
+    ///
+    /// <para>The result is the PATH rather than a loaded Set: reading it is the caller's business,
+    /// and a Set opened here would have to be disposed by whoever failed to navigate. Packing writes
+    /// a <c>.set</c> INSIDE the folder rather than instead of it, so the folder is a readable Set
+    /// either way and the answer does not depend on that checkbox.</para>
+    /// </remarks>
+    [RelayCommand(CanExecute = nameof(CanReveal))] private void OpenSet() => _dialogs.Close(_outDir);
 
     [RelayCommand(CanExecute = nameof(CanClose))] private void Close() => _dialogs.Close(null);
     private bool CanClose() => !IsRunning;

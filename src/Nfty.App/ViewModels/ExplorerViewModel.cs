@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using Nfty.App.Services;
 using Nfty.Core.Editing;
 using Nfty.Core.Formats;
 using Nfty.Core.Model;
+using Nfty.Core.Output;
 
 namespace Nfty.App.ViewModels;
 
@@ -28,6 +30,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     private ExplorerNode _fullRoot = default!;
     private readonly Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel> _editorFactory;
     private readonly Func<LoadedCookBook, CookDialogViewModel> _cookFactory;
+    private readonly Func<LoadedSet, SetBrowserViewModel>? _setBrowserFactory;
     private readonly ICookBookSession _session;
     private readonly IFilePickerService _picker;
     private readonly IStatusService _status;
@@ -203,6 +206,8 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     /// <param name="status">The status bar's guidance channel.</param>
     /// <param name="kitchen">The open workspace, if any.</param>
     /// <param name="clipboard">Where the report dialog's Copy writes.</param>
+    /// <param name="setBrowserFactory">Opens a cooked Set, so a finished cook can hand you the
+    /// browser the export dialog lives on.</param>
     public ExplorerViewModel(LoadedCookBook book, INavigationService nav, IDialogService dialogs,
         IImageBridge bridge,
         Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel> editorFactory,
@@ -211,7 +216,8 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> looseEditorFactory,
         IStatusService status,
         IKitchenSession? kitchen = null,
-        IClipboardService? clipboard = null)
+        IClipboardService? clipboard = null,
+        Func<LoadedSet, SetBrowserViewModel>? setBrowserFactory = null)
     {
         _book = book; _nav = nav; _dialogs = dialogs; _bridge = bridge;
         _editorFactory = editorFactory;
@@ -221,6 +227,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         _status = status;
         _kitchen = kitchen;
         _clipboard = clipboard;
+        _setBrowserFactory = setBrowserFactory;
         _looseEditorFactory = looseEditorFactory;
         _fullRoot = BuildTree(book);
         Root = _fullRoot;
@@ -283,7 +290,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         CurrentDetail = newValue?.Kind switch
         {
             ExplorerNodeKind.CookBook => new CookBookDetailViewModel(_book,
-                () => _dialogs.ShowAsync<object>(_cookFactory(_book)),
+                () => _ = OpenCookDialogAsync(),
                 // stats + inspect, rendered by Core so the text matches the CLI's byte for byte.
                 () => _dialogs.ShowAsync<object>(
                     new ReportDialogViewModel(_book, _dialogs, _clipboard ?? new NoopClipboardService()))),
@@ -1039,6 +1046,30 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         {
             await _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, "Could not delete", ex.Message));
         }
+    }
+
+    /// <summary>Runs the cook dialog, and opens what it made when it says so.</summary>
+    /// <remarks>
+    /// The dialog returns the output FOLDER when the user presses Open Set and null on every other
+    /// exit, so the ordinary Close still just closes. Reading the Set is done here rather than in
+    /// the dialog because whoever loads a <see cref="LoadedSet"/> owns disposing it, and the browser
+    /// is what takes that ownership - a dialog that loaded one and then failed to navigate would
+    /// leak every decoded asset in the collection.
+    /// </remarks>
+    private async Task OpenCookDialogAsync()
+    {
+        if (await _dialogs.ShowAsync<object>(_cookFactory(_book)) is not string dir) return;
+        if (_setBrowserFactory is null || dir.Length == 0) return;
+
+        LoadedSet set;
+        try { set = SetReader.Read(dir); }
+        catch (Exception ex)
+        {
+            await _dialogs.ShowAsync<object>(
+                new ErrorDialogViewModel(_dialogs, "Could not open the set", ex.Message));
+            return;
+        }
+        _nav.To(_setBrowserFactory(set));
     }
 
     private void RebuildCrumbs()

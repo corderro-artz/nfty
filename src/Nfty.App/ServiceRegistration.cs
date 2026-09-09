@@ -116,7 +116,11 @@ public static class ServiceRegistration
                 sp.GetRequiredService<Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel>>(),
                 sp.GetRequiredService<IStatusService>(),
                 sp.GetRequiredService<IKitchenSession>(),
-                sp.GetRequiredService<IClipboardService>()));
+                sp.GetRequiredService<IClipboardService>(),
+                // So a finished cook can hand you the Set it just wrote. Export lives on the
+                // browser and nowhere else, and without this the only route to it from the book you
+                // cooked was back to Landing and open the folder by hand.
+                sp.GetRequiredService<Func<LoadedSet, SetBrowserViewModel>>()));
 
         services.AddSingleton<Func<LoadedSet, SetBrowserViewModel>>(sp => set => new SetBrowserViewModel(
             set, sp.GetRequiredService<IFilePickerService>(), sp.GetRequiredService<IDialogService>(),

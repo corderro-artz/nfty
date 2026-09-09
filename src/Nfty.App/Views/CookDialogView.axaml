@@ -79,6 +79,13 @@
                     IsVisible="{Binding IsRunning}" />
             <Button Content="Close" Command="{Binding CloseCommand}" Classes="tbtn"
                     IsVisible="{Binding !IsRunning}" />
+            <!-- The accent slot is one control that changes with the state, never two: before the
+                 run it is Cook, after it the next thing you would do with what Cook made. Export
+                 lives on the Set browser, so without this the finished run's only exit was Close
+                 and a trip back to Landing to re-open the folder the app had just written. -->
+            <Button Content="Open Set" Command="{Binding OpenSetCommand}" Classes="accent"
+                    IsVisible="{Binding IsDone}"
+                    ToolTip.Tip="Browse the assets, and export - the art, either metadata set, the source CookBook, sealed or not." />
             <Button Content="Cook" Command="{Binding CookCommand}" Classes="accent"
                     IsVisible="{Binding ShowForm}" />
           </StackPanel>
