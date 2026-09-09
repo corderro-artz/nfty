@@ -343,9 +343,11 @@
   </Style>
 
   <!-- Landing action buttons: uniform full-width, label left + hotkey right, slightly larger. -->
-  <!-- landing.html .lwordmark -->
+  <!-- landing.html .lwordmark, at 42 rather than its 30. The mark sits at the FOOT of the column
+       now instead of over the action groups, where it is signature rather than heading - nothing
+       below it competes, and at 30 it read as a caption once the three column heads lined up. -->
   <Style Selector="TextBlock.lwordmark">
-    <Setter Property="FontSize" Value="30" />
+    <Setter Property="FontSize" Value="42" />
     <Setter Property="FontWeight" Value="Bold" />
     <Setter Property="LetterSpacing" Value="-0.6" />
   </Style>
@@ -373,7 +375,7 @@
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Padding" Value="0" />
-    <Setter Property="Margin" Value="0,22,0,0" />
+    <Setter Property="Margin" Value="0,6,0,0" />
     <Setter Property="FontSize" Value="11.5" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="HorizontalAlignment" Value="Left" />
