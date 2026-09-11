@@ -62,20 +62,26 @@ public static class KeyHints
     private static string Tail(string what) => "  ·  " + what;
 
     /// <summary>The brush tool's tooltip.</summary>
-    public static string BrushTool { get; } = "Brush" + Tail($"hold {Constrain} for a straight stroke");
+    public static string BrushTool { get; } = "Brush  (B)" + Tail($"hold {Constrain} for a straight stroke");
     /// <summary>The eraser tool's tooltip.</summary>
-    public static string EraserTool { get; } = "Eraser (writes alpha)" + Tail($"hold {Constrain} for a straight stroke");
+    public static string EraserTool { get; } = "Eraser (writes alpha)  (E)" + Tail($"hold {Constrain} for a straight stroke")
+        + Tail("the right mouse button erases with any tool");
     /// <summary>The rectangle tool's tooltip.</summary>
-    public static string RectangleTool { get; } = "Rectangle" + Tail($"{Constrain} squares it, {FromCenter} draws from the center");
+    public static string RectangleTool { get; } = "Rectangle  (R)" + Tail($"{Constrain} squares it, {FromCenter} draws from the center");
     /// <summary>The circle tool's tooltip.</summary>
-    public static string CircleTool { get; } = "Circle" + Tail($"{Constrain} rounds it, {FromCenter} draws from the center");
+    public static string CircleTool { get; } = "Circle  (C)" + Tail($"{Constrain} rounds it, {FromCenter} draws from the center");
     /// <summary>The triangle tool's tooltip.</summary>
-    public static string TriangleTool { get; } = "Triangle" + Tail($"{Constrain} squares its box, {FromCenter} draws from the center");
+    public static string TriangleTool { get; } = "Triangle  (T)" + Tail($"{Constrain} squares its box, {FromCenter} draws from the center");
     /// <summary>The line tool's tooltip.</summary>
-    public static string LineTool { get; } = "Line" + Tail($"hold {Constrain} to snap to 45°");
+    public static string LineTool { get; } = "Line  (L)" + Tail($"hold {Constrain} to snap to 45°");
     /// <summary>The select tool's tooltip.</summary>
-    public static string SelectTool { get; } = "Select region, then drag it to move"
-        + Tail($"{Constrain} squares the marquee and constrains the move");
+    public static string SelectTool { get; } = "Select region, then drag it to move  (M)"
+        + Tail($"{Constrain} squares the marquee and constrains the move")
+        + Tail($"{WithMod("A")} marks everything, Delete clears what is marked");
+    /// <summary>The fill tool's tooltip.</summary>
+    public static string FillTool { get; } = "Fill  (G)";
+    /// <summary>The brush-size field's tooltip.</summary>
+    public static string BrushSizeField { get; } = "Brush size (px)" + Tail("[ and ] step it");
     /// <summary>The undo button's tooltip.</summary>
     public static string UndoTool { get; } = "Undo" + Tail(Undo);
     /// <summary>The redo button's tooltip.</summary>

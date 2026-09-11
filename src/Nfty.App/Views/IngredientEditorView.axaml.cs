@@ -10,6 +10,7 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.VisualTree;
 using Nfty.App.Services;
 using Nfty.App.ViewModels;
 using Nfty.Core.Editing;
@@ -41,6 +42,11 @@ public partial class IngredientEditorView : UserControl
     // too late to draw with.
     private bool _movingSelection;
 
+    // Set at PRESS from the button that started the gesture: the right button erases for the length
+    // of that one stroke without disturbing what the toolstrip has armed. Setting ActiveTool instead
+    // would flip the toolbar under the hand and, off Select, silently drop the marquee.
+    private bool _erasing;
+
     // The modifiers as of the last input event, pointer OR key. Held here rather than read from the
     // pointer args at each call site because a modifier pressed mid-drag has to take effect without
     // the hand moving - the shape snaps square while the pointer is still.
@@ -66,14 +72,20 @@ public partial class IngredientEditorView : UserControl
             // canvas, so a drag past the edge ends at the edge, which is what it looks like.
             e.Pointer.Capture(_img);
             _mods = e.KeyModifiers;
+            // THE RIGHT BUTTON ERASES, whatever the toolstrip has armed. Pixel editors hand the
+            // second button the second ink; this app has no second color, so the second ink is
+            // "none" — which is also the correction a hand makes most often and the one that
+            // otherwise costs a trip to the toolstrip and back.
+            _erasing = e.GetCurrentPoint(_img).Properties.IsRightButtonPressed;
             _drawing = true;
             _points.Clear();
             AddPoint(e);
-            _movingSelection = _vm is not null
+            _movingSelection = !_erasing
+                && _vm is not null
                 && _vm.ActiveTool == EditorTool.Select
                 && _points.Count > 0
                 && _vm.SelectionContains(_points[0].x, _points[0].y);
-            _vm?.PreviewToolStroke(Gesture());
+            _vm?.PreviewToolStroke(Gesture(), _gestureTool);
             DrawBand();
         };
         _img.PointerMoved += (_, e) =>
@@ -81,7 +93,7 @@ public partial class IngredientEditorView : UserControl
             if (!_drawing) return;
             _mods = e.KeyModifiers;
             AddPoint(e);
-            _vm?.PreviewToolStroke(Gesture());
+            _vm?.PreviewToolStroke(Gesture(), _gestureTool);
             DrawBand();
         };
         _img.PointerReleased += (_, e) =>
@@ -91,9 +103,10 @@ public partial class IngredientEditorView : UserControl
             _drawing = false;
             AddPoint(e);
             if (DataContext is IngredientEditorViewModel vm && _points.Count > 0)
-                vm.ApplyToolStroke(Gesture().ToArray());
+                vm.ApplyToolStroke(Gesture().ToArray(), _gestureTool);
             _points.Clear();
             _movingSelection = false;
+            _erasing = false;
             e.Pointer.Capture(null);
             DrawBand();          // clears the band and repaints the marquee in its new place
         };
@@ -116,7 +129,7 @@ public partial class IngredientEditorView : UserControl
         // keeps it in every other state.
         AddHandler(KeyDownEvent, (object? _, KeyEventArgs e) =>
         {
-            if (!_drawing) return;
+            if (!_drawing) { OnShortcut(e); return; }
             if (e.Key == Key.Escape)
             {
                 AbortGesture();
@@ -147,11 +160,15 @@ public partial class IngredientEditorView : UserControl
     /// <summary>The gesture the tools should act on: the raw path, or what the held modifiers make
     /// of it. One helper, called by the preview and by the commit, so the two cannot disagree about
     /// what was drawn.</summary>
+    /// <summary>The tool this gesture is using: the armed one, or the eraser while the right button
+    /// is down. Null means "whatever is armed", which is what the ViewModel's own default says.</summary>
+    private EditorTool? _gestureTool => _erasing ? EditorTool.Eraser : null;
+
     private IReadOnlyList<(int x, int y)> Gesture()
     {
         if (_vm is null || _img.Source is not Bitmap bmp) return _points;
         return StrokeConstraint.Apply(
-            _vm.ActiveTool,
+            _gestureTool ?? _vm.ActiveTool,
             _mods.HasFlag(KeyModifiers.Shift) || _mods.HasFlag(KeyModifiers.Control),
             _mods.HasFlag(KeyModifiers.Alt),
             _movingSelection,
@@ -160,13 +177,100 @@ public partial class IngredientEditorView : UserControl
             bmp.PixelSize.Height);
     }
 
+    /// <summary>
+    /// The canvas shortcuts: a letter per tool, the bracket keys for brush size, Ctrl+A to mark
+    /// everything and Delete to clear what is marked.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>A bare letter is only a shortcut while no text field has focus.</b> This screen
+    /// carries a name box and a weight box, and a user typing "Brush" into the first would otherwise
+    /// arm five tools on the way through. Deleting the guard fails
+    /// <c>EditorShortcutTests.A_letter_typed_into_a_field_is_text_and_not_a_shortcut</c>, which is
+    /// what makes single letters admissible at all. The ancestor walk is belt and braces and is
+    /// NOT what the test proves: focus lands on the TextBox itself, inside a
+    /// <c>NumericUpDown</c>'s template included, so <c>is TextBox</c> passes the test too. It stays
+    /// because a template is free to put a focusable child inside its box, and this reads the same
+    /// either way.</para>
+    /// <para>They live here rather than in a <c>KeyBinding</c> for the reason the gesture keys do:
+    /// the handler runs on the tunnel and takes handled events, so it sees keys a child has already
+    /// marked. That is only safe BECAUSE of the focus guard above; without it this would be a view
+    /// swallowing every letter in the app.</para>
+    /// </remarks>
+    private void OnShortcut(KeyEventArgs e)
+    {
+        if (_vm is null || !FocusIsOurs()) return;
+
+        if (e.KeyModifiers == KeyModifiers.Control)
+        {
+            if (e.Key != Key.A) return;
+            _vm.SelectAllCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+        if (e.KeyModifiers != KeyModifiers.None) return;
+
+        EditorTool? tool = e.Key switch
+        {
+            Key.B => EditorTool.Brush,
+            Key.E => EditorTool.Eraser,
+            Key.G => EditorTool.Fill,        // Photoshop's bucket key
+            Key.R => EditorTool.Rectangle,
+            Key.C => EditorTool.Circle,
+            Key.T => EditorTool.Triangle,
+            Key.L => EditorTool.Line,
+            Key.M => EditorTool.Select,      // marquee, which is what the tool draws
+            _ => null,
+        };
+        if (tool is { } t)
+        {
+            _vm.SelectToolCommand.Execute(t);
+            e.Handled = true;
+            return;
+        }
+
+        switch (e.Key)
+        {
+            case Key.OemOpenBrackets: _vm.ShrinkBrushCommand.Execute(null); e.Handled = true; break;
+            case Key.OemCloseBrackets: _vm.GrowBrushCommand.Execute(null); e.Handled = true; break;
+            // Backspace as well as Delete: a laptop keyboard often hides Delete behind a function
+            // key, and both mean "remove this" to the hand that reaches for them.
+            case Key.Delete:
+            case Key.Back:
+                if (_vm.DeleteSelectionCommand.CanExecute(null))
+                {
+                    _vm.DeleteSelectionCommand.Execute(null);
+                    e.Handled = true;
+                }
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Whether the keyboard is this page's to interpret: focus is inside this view, and not in a
+    /// text field within it.
+    /// </summary>
+    /// <remarks>
+    /// The second half is what the tests pin. The first half only matters for a modal whose content
+    /// takes focus, and it does NOT close that case in general: the dialog layer hosts its content
+    /// in a ContentControl that never focuses itself (which is why Escape is bound on the window),
+    /// so a dialog of nothing but buttons can leave focus on the page behind it and these keys live.
+    /// Worth knowing rather than worth machinery — the worst of it is arming a tool you cannot see
+    /// and one undoable clear.
+    /// </remarks>
+    private bool FocusIsOurs()
+    {
+        if (TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() is not Visual v) return false;
+        if (v.FindAncestorOfType<IngredientEditorView>(includeSelf: true) != this) return false;
+        return v.FindAncestorOfType<TextBox>(includeSelf: true) is null;
+    }
+
     /// <summary>A modifier went down or came up mid-drag: re-show the gesture under the new rule
     /// without waiting for the hand to move.</summary>
     private void OnModifiers(KeyModifiers mods)
     {
         if (mods == _mods) return;
         _mods = mods;
-        _vm?.PreviewToolStroke(Gesture());
+        _vm?.PreviewToolStroke(Gesture(), _gestureTool);
         DrawBand();
     }
 
@@ -176,6 +280,7 @@ public partial class IngredientEditorView : UserControl
         _drawing = false;
         _points.Clear();
         _movingSelection = false;
+        _erasing = false;
         _vm?.CancelToolPreview();
         DrawBand();
     }
@@ -255,7 +360,7 @@ public partial class IngredientEditorView : UserControl
         // the brush's size in the brush's ink, and a 1px hairline said otherwise on both counts.
         // Select is the exception because marking changes no pixel — there is nothing for a preview
         // to show, so the box is the whole feedback.
-        if (_vm.ActiveTool != EditorTool.Select) return;
+        if ((_gestureTool ?? _vm.ActiveTool) != EditorTool.Select) return;
 
         var band = new Rectangle
         {

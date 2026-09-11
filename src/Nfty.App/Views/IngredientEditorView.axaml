@@ -135,7 +135,7 @@
               <Button Classes="ttool" Classes.on="{Binding IsToolEraser}" ToolTip.Tip="{x:Static svc:KeyHints.EraserTool}"
                       Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Eraser}">
                 <Path Classes="ico sm" Data="{StaticResource IconEraser}" /></Button>
-              <Button Classes="ttool" Classes.on="{Binding IsToolFill}" ToolTip.Tip="Fill"
+              <Button Classes="ttool" Classes.on="{Binding IsToolFill}" ToolTip.Tip="{x:Static svc:KeyHints.FillTool}"
                       Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Fill}">
                 <Path Classes="ico sm" Data="{StaticResource IconFill}" /></Button>
 
@@ -204,8 +204,8 @@
                    separator, and no spinner column — Fluent's is two ~28px buttons for a number you
                    type once. What is left is the mockup's own numeric idiom (.nin, 58px), and the
                    tooltip carries the meaning the caption would have. -->
-              <NumericUpDown Classes="nin" Value="{Binding BrushSize}" Minimum="1" Width="58" FormatString="0"
-                             ShowButtonSpinner="False" ToolTip.Tip="Brush size (px)" />
+              <NumericUpDown Classes="nin" Value="{Binding BrushSize}" Minimum="1" Maximum="{Binding BrushSizeMax}" Width="58" FormatString="0"
+                             ShowButtonSpinner="False" ToolTip.Tip="{x:Static svc:KeyHints.BrushSizeField}" />
             </WrapPanel>
           </Border>
 

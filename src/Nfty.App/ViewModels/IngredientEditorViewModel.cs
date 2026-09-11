@@ -269,6 +269,9 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// </remarks>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelection))]
+    // Delete acts on the marquee, so its button follows the marquee. Without this the predicate is
+    // correct and never re-read, which is a permanently disabled control every ViewModel test passes.
+    [NotifyCanExecuteChangedFor(nameof(DeleteSelectionCommand))]
     private PixelRect? _selection;
 
     /// <summary>Whether a region is currently marked.</summary>
@@ -276,6 +279,39 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
 
     /// <summary>Drops the marquee. Bound to Escape, which is what a user presses.</summary>
     [RelayCommand] private void ClearSelection() => Selection = null;
+
+    /// <summary>Marks the whole canvas.</summary>
+    /// <remarks>
+    /// It switches to the Select tool as well, because a marquee only exists while that tool is
+    /// active — changing the tool drops it otherwise. Selecting all and leaving the
+    /// brush armed would mark a region and clear it in the same breath.
+    /// </remarks>
+    [RelayCommand]
+    private void SelectAll()
+    {
+        ActiveTool = EditorTool.Select;
+        Selection = new PixelRect(0, 0, _draft.Canvas.Width, _draft.Canvas.Height);
+    }
+
+    /// <summary>Clears the marked region to transparency.</summary>
+    /// <remarks>
+    /// A rectangle filled with the BLANK pixel, which is what <see cref="MoveSelection{TPixel}"/>
+    /// already clears its source with — so this adds no fourth idea of what "empty" means and no new
+    /// Core command. Under the opacity lock the blank pixel's zero alpha is admitted unchanged.
+    /// </remarks>
+    [RelayCommand(CanExecute = nameof(HasSelection))]
+    private void DeleteSelection()
+    {
+        if (ActiveDraft is not { } target || Selection is not { } sel) return;
+
+        bool changed = IsColorMode
+            ? _colorHistory[target.Id].Do(
+                new DrawShape<Rgba32>(ShapeKind.Rectangle, sel, default, OpacityMode), target.EnsureColor())
+            : _history[target.Id].Do(
+                new DrawShape<GrayPixel>(ShapeKind.Rectangle, sel, default, OpacityMode), target.Map);
+
+        if (changed) AfterEdit(target);
+    }
 
     private static bool Contains(PixelRect r, (int x, int y) p) =>
         p.x >= r.X && p.x < r.X + r.Width && p.y >= r.Y && p.y < r.Y + r.Height;
@@ -395,6 +431,9 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// never quietly allocate a raster and mask a variant the mode change missed.</summary>
     private ColorMap? ActiveColor => ActiveDraft?.Color;
     internal byte ValueAt(int x, int y) => ActiveMap!.GetValue(x, y);            // test hook
+    // Erase writes ALPHA and leaves the value alone, so a test about erasing has to ask this one -
+    // asking ValueAt would read 255 off a pixel nothing can see and call the eraser broken.
+    internal byte AlphaAt(int x, int y) => ActiveMap!.GetAlpha(x, y);            // test hook
     internal Rgba32 ColorAt(int x, int y) => ActiveDraft!.EnsureColor().Get(x, y);   // test hook
 
     /// <summary>The active variant's pixels as an image, taken from whichever surface the current
@@ -648,6 +687,26 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
 
     [RelayCommand] private void SelectTool(EditorTool tool) => ActiveTool = tool;
 
+    /// <summary>The largest brush this canvas can use: a stamp wider than the art paints the same
+    /// pixels as one exactly that wide, and the field used to accept any number at all.</summary>
+    public int BrushSizeMax => Math.Max(1, Math.Min(_draft.Canvas.Width, _draft.Canvas.Height));
+
+    // The bracket keys and the field are the same setting, so the ceiling is enforced on the
+    // PROPERTY rather than on either of them - a Maximum on the NumericUpDown would leave the keys
+    // free to walk past it. Idempotent, so the generated setter drops the equal value and it settles
+    // in one hop rather than recursing.
+    partial void OnBrushSizeChanged(int value)
+    {
+        int clamped = Math.Clamp(value, 1, BrushSizeMax);
+        if (clamped != value) BrushSize = clamped;
+    }
+
+    /// <summary>One pixel bigger — the <c>]</c> key.</summary>
+    [RelayCommand] private void GrowBrush() => BrushSize++;
+
+    /// <summary>One pixel smaller — the <c>[</c> key.</summary>
+    [RelayCommand] private void ShrinkBrush() => BrushSize--;
+
     private bool CanImport() => SelectedVariant is not null && !IsSaving;
 
     /// <summary>Replaces the selected variant's raster from a PNG on disk, into whichever surface the
@@ -782,7 +841,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
             _pendingMove = null;
             return new MoveSelection<TPixel>(move.Source, move.Dx, move.Dy, op);
         }
-        return ActiveTool switch
+        return GestureTool switch
         {
             EditorTool.Brush => new BrushStroke<TPixel>(new Brush<TPixel>(BrushSize, ink), points, op),
             EditorTool.Eraser => new EraseStroke<TPixel>(BrushSize, points, op),
@@ -808,6 +867,15 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// (the overlay's marquee is its live feedback) and Fill acts on the press point alone, so a
     /// flood re-run on every pointer move would walk the whole canvas to draw the same thing.
     /// </summary>
+    // Set for the length of ONE gesture by the two public entry points, both of which assign it
+    // unconditionally so a previous gesture's override can never leak into the next. A field rather
+    // than a parameter because BuildCommand is generic over the pixel and is reached from two
+    // branches - the same reason _pendingMove is one.
+    private EditorTool? _gestureTool;
+
+    /// <summary>The tool the gesture in hand is actually using.</summary>
+    private EditorTool GestureTool => _gestureTool ?? ActiveTool;
+
     private static bool CanPreview(EditorTool tool) => tool is EditorTool.Brush or EditorTool.Eraser
         or EditorTool.Line or EditorTool.Rectangle or EditorTool.Circle or EditorTool.Triangle;
 
@@ -832,9 +900,12 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// region-scoped, so it costs the pixels the edit touches plus one canvas render.
     /// </remarks>
     /// <param name="points">The gesture's pixel path so far.</param>
-    public void PreviewToolStroke(IReadOnlyList<(int x, int y)> points)
+    /// <param name="tool">The tool this one gesture is using, when that is not the armed one — the
+    /// right button erases whatever is selected in the toolstrip.</param>
+    public void PreviewToolStroke(IReadOnlyList<(int x, int y)> points, EditorTool? tool = null)
     {
-        if (ActiveDraft is not { } target || points.Count == 0 || !CanPreview(ActiveTool)) return;
+        _gestureTool = tool;
+        if (ActiveDraft is not { } target || points.Count == 0 || !CanPreview(tool ?? ActiveTool)) return;
 
         if (IsColorMode)
         {
@@ -875,8 +946,10 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// <summary>Commit one completed gesture as a Core edit command against the active variant, on
     /// whichever surface the paint mode is editing.</summary>
     /// <param name="points">The gesture's pixel path.</param>
-    public void ApplyToolStroke(IReadOnlyList<(int x, int y)> points)
+    /// <param name="tool">The tool this one gesture used, when that is not the armed one.</param>
+    public void ApplyToolStroke(IReadOnlyList<(int x, int y)> points, EditorTool? tool = null)
     {
+        _gestureTool = tool;
         // Every exit below has to put the canvas back if a preview is standing on it, including the
         // ones that commit nothing - a gesture that ends in a no-op would otherwise leave the ghost
         // of itself on screen until the next repaint.
@@ -889,7 +962,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        if (ActiveTool == EditorTool.Select && !BeginSelectGesture(points))
+        if (GestureTool == EditorTool.Select && !BeginSelectGesture(points))
         {
             if (preview) ShowCanvas();
             return;
@@ -913,6 +986,13 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
             return;
         }
 
+        AfterEdit(target);
+    }
+
+    /// <summary>Everything a successful edit implies, wherever it came from.</summary>
+    /// <param name="target">The variant that was edited.</param>
+    private void AfterEdit(VariantDraft target)
+    {
         IsDirty = true;
         RebuildSurfaces();
         RefreshThumbnail(target.Id);
