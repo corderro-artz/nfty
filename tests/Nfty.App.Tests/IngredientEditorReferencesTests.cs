@@ -503,6 +503,10 @@ public class IngredientEditorReferencesTests
                 vm.ShowTrueColorCommand.Execute(null);
                 vm.ShowGhostedCommand.Execute(null);
                 vm.PlaceDownCommand.Execute(vm.KitchenLayers[0]);
+                // A test that cannot detect a leak proves nothing about leaks. If the fixture ever
+                // stops decoding images, the equality below passes on two zeros.
+                Assert.True(MemoryDiagnostics.TotalUndisposedAllocationCount > before,
+                    "the fixture decoded no images, so this could not detect a leak");
                 // Note: Image.Width does NOT throw after Dispose, so a disposed image cannot be
                 // detected by poking at it - the allocation counter is the only honest witness.
                 vm.Dispose();
