@@ -154,6 +154,59 @@ public static class CookBookEdits
         };
     }
 
+    /// <summary>
+    /// Removes one variant from an ingredient.
+    /// </summary>
+    /// <remarks>
+    /// <para>Reuses every surviving image; the caller owns the removed one, exactly as
+    /// <see cref="RemoveIngredient"/> hands back the subtree it dropped.</para>
+    /// <para>It REFUSES to empty an ingredient. A layer with no variants has nothing to roll, and
+    /// <c>Validator</c> reports it as a problem - so a book saved that way is broken from then on,
+    /// reported on a screen nowhere near the delete. A front-end is expected to gray the control as
+    /// well; this is the backstop that makes the rule true of the operation rather than true of
+    /// whichever caller remembered it.</para>
+    /// </remarks>
+    /// <param name="book">The book to edit.</param>
+    /// <param name="recipeId">The recipe holding the layer.</param>
+    /// <param name="ingredientId">The layer holding the variant.</param>
+    /// <param name="variantId">The variant to remove.</param>
+    /// <returns>A book with that variant gone.</returns>
+    /// <exception cref="KeyNotFoundException">No such recipe, ingredient or variant.</exception>
+    /// <exception cref="InvalidOperationException">It is the ingredient's only variant.</exception>
+    public static LoadedCookBook RemoveVariant(LoadedCookBook book, string recipeId,
+        string ingredientId, string variantId)
+    {
+        var recipe = book.Recipes.FirstOrDefault(r => r.Manifest.Id == recipeId)
+            ?? throw new KeyNotFoundException($"No recipe '{recipeId}' in cookbook '{book.Manifest.Id}'.");
+        var ingredient = recipe.Ingredients.FirstOrDefault(i => i.Manifest.Id == ingredientId)
+            ?? throw new KeyNotFoundException($"No ingredient '{ingredientId}' in recipe '{recipeId}'.");
+        if (ingredient.Manifest.Variants.All(v => v.Id != variantId))
+            throw new KeyNotFoundException($"No variant '{variantId}' in ingredient '{ingredientId}'.");
+        if (ingredient.Manifest.Variants.Count <= 1)
+            throw new InvalidOperationException(
+                $"'{ingredient.Manifest.Name}' has one variant left. A layer with none has nothing "
+                + "to roll; delete the layer instead.");
+
+        var variants = ingredient.Manifest.Variants.Where(v => v.Id != variantId).ToList();
+        var images = ingredient.VariantImages
+            .Where(kv => kv.Key != variantId)
+            .ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal);
+        var trimmed = new LoadedIngredient
+        {
+            Manifest = ingredient.Manifest with { Variants = variants },
+            VariantImages = images,
+        };
+
+        var recipes = book.Recipes.Select(r =>
+        {
+            if (r.Manifest.Id != recipeId) return r;
+            var ings = r.Ingredients.Select(i => i.Manifest.Id == ingredientId ? trimmed : i).ToList();
+            return new LoadedRecipe { Manifest = r.Manifest, Ingredients = ings };
+        }).ToList();
+
+        return new LoadedCookBook { Manifest = book.Manifest, Recipes = recipes, SourceSha256 = book.SourceSha256 };
+    }
+
     /// <summary>Removes a recipe from a cookbook (and its selection-weight entry). Reuses every surviving
     /// image; the caller owns the removed recipe's ingredient images.</summary>
     public static LoadedCookBook RemoveRecipe(LoadedCookBook book, string recipeId)

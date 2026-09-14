@@ -175,22 +175,32 @@
         <ItemsControl ItemsSource="{Binding Variants}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:VariantRow">
-              <Border Classes="data-row">
-                <Grid ColumnDefinitions="40,*,71,93,79">
-                  <Image Grid.Column="0" Source="{Binding Thumbnail}" Width="32" Height="32" VerticalAlignment="Center" />
-                  <TextBlock Grid.Column="1" Classes="data-row" Text="{Binding Name}" VerticalAlignment="Center" Margin="10,0,0,0" TextTrimming="CharacterEllipsis" />
-                  <TextBlock Grid.Column="2" Classes="data-row num" Text="{Binding Weight}" Margin="8,0,0,0" />
-                  <TextBlock Grid.Column="3" Classes="data-row num" Text="{Binding WithinPercent, StringFormat='{}{0}%'}" Margin="8,0,0,0" />
-                  <TextBlock Grid.Column="4" Classes="data-row num" Text="{Binding OverallPercent, StringFormat='{}{0}%'}" Margin="8,0,0,0" />
-                </Grid>
-              </Border>
+              <!-- CLICKABLE, and the same shape the Recipe pane's layer table uses: a ghost Button
+                   around the row, the command reached through the ItemsControl. The table used to be
+                   inert - the hero above it was pinned to the first variant for the life of the pane
+                   and SelectVariantCommand was reachable from nothing. -->
+              <Button Classes="ghost" Padding="0" HorizontalAlignment="Stretch"
+                      HorizontalContentAlignment="Stretch"
+                      Command="{Binding $parent[ItemsControl].((vm:IngredientDetailViewModel)DataContext).SelectVariantCommand}"
+                      CommandParameter="{Binding Id}">
+                <Border Classes="data-row" Classes.sel="{Binding IsSelected}">
+                  <Grid ColumnDefinitions="40,*,71,93,79">
+                    <Image Grid.Column="0" Source="{Binding Thumbnail}" Width="32" Height="32" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Classes="data-row" Text="{Binding Name}" VerticalAlignment="Center" Margin="10,0,0,0" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="2" Classes="data-row num" Text="{Binding Weight}" Margin="8,0,0,0" />
+                    <TextBlock Grid.Column="3" Classes="data-row num" Text="{Binding WithinPercent, StringFormat='{}{0}%'}" Margin="8,0,0,0" />
+                    <TextBlock Grid.Column="4" Classes="data-row num" Text="{Binding OverallPercent, StringFormat='{}{0}%'}" Margin="8,0,0,0" />
+                  </Grid>
+                </Border>
+              </Button>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
       </StackPanel>
 
       <StackPanel Orientation="Horizontal" Spacing="8">
-        <Button Content="Delete variant" Command="{Binding DeleteVariantCommand}" Classes="tbtn" />
+        <Button Content="Delete variant" Command="{Binding DeleteVariantCommand}" Classes="tbtn"
+                ToolTip.Tip="{Binding DeleteVariantTip}" />
         <!-- The CLI's preview: writes this variant as generation would render it. The GUI could not
              get a rendered PNG out at all short of cooking a whole Set. -->
         <Button Command="{Binding ExportPreviewCommand}" Classes="tbtn"

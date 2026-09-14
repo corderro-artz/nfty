@@ -315,7 +315,10 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
                     // The rule-count pill jumps to the owning recipe, whose Rules panel is where
                     // this layer's rules actually live.
                     () => SelectedNode = FindNode(Root, r.Manifest.Id) ?? SelectedNode,
-                    _status, _picker, _dialogs)
+                    _status, _picker, _dialogs,
+                    // Deleting a variant is structure, so it goes through the same two seams every
+                    // other structural edit here does. The pane asks; this writes.
+                    variantId => DeleteVariantAsync(r, i, variantId))
                 : null,
             _ => null,
         };
@@ -1045,6 +1048,51 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         catch (Exception ex)
         {
             await _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, "Could not delete", ex.Message));
+        }
+    }
+
+    /// <summary>
+    /// Removes one variant from a layer and saves the book.
+    /// </summary>
+    /// <remarks>
+    /// <para>The Ingredient pane asks - it knows which row was selected and what it is called - and
+    /// this writes, because the book, the session and the reload live here. The same split the pane's
+    /// other actions already use, and the same two seams <see cref="DeleteSelected"/> uses:
+    /// <c>CookBookEdits</c> then <c>CookBookPersistence</c>.</para>
+    /// <para>Validated before it is persisted, like <c>AddIngredientTo</c>: the remaining variants
+    /// can be left with zero total weight, which makes the layer unrollable, and nothing on the
+    /// persistence path would have said so.</para>
+    /// </remarks>
+    /// <param name="recipe">The recipe holding the layer.</param>
+    /// <param name="ingredient">The layer holding the variant.</param>
+    /// <param name="variantId">The variant to remove.</param>
+    private async Task DeleteVariantAsync(LoadedRecipe recipe, LoadedIngredient ingredient, string variantId)
+    {
+        if (!CanEditBook("delete a variant")) return;
+        try
+        {
+            if (!ingredient.VariantImages.TryGetValue(variantId, out var orphan)) orphan = null;
+
+            var book2 = CookBookEdits.RemoveVariant(_book, recipe.Manifest.Id,
+                ingredient.Manifest.Id, variantId);
+
+            var trimmed = book2.Recipes.First(r => r.Manifest.Id == recipe.Manifest.Id)
+                .Ingredients.First(i => i.Manifest.Id == ingredient.Manifest.Id);
+            var problems = Validator.ValidateIngredient(trimmed);
+            if (problems.Count > 0)
+            {
+                await ShowError("Cannot delete that variant", string.Join(Environment.NewLine, problems));
+                return;
+            }
+
+            var book3 = await CookBookPersistence.PersistAsync(_session, book2);
+            orphan?.Dispose();                 // every surviving image is reused; this one is not
+            ApplyBook(book3, ingredient.Manifest.Id);
+            _status.Say($"Deleted a variant from \u201c{ingredient.Manifest.Name}\u201d.");
+        }
+        catch (Exception ex)
+        {
+            await ShowError("Could not delete", ex.Message);
         }
     }
 

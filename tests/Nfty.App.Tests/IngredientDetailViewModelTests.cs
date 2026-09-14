@@ -80,23 +80,76 @@ public class IngredientDetailViewModelTests
         Assert.True(jumped);
     }
 
-    /// <summary>"Delete variant" used to report itself as unbuilt, which the shell rendered as
-    /// "Not wired yet: Delete variant" — while the button sat there enabled, looking like it worked,
-    /// and while the editor had a real delete with a confirm dialog and undo history. It must never
-    /// touch the not-wired channel for a feature that exists.</summary>
+    /// <summary>
+    /// "Delete variant" deletes the selected variant.
+    /// </summary>
+    /// <remarks>
+    /// It has been wrong twice. It first reported itself as unbuilt ("Not wired yet: Delete
+    /// variant") while sitting there enabled; then it said "delete variants in the editor" and
+    /// NAVIGATED there, so a button labelled Delete variant deleted nothing and moved the reader to
+    /// another screen. Both are the same mistake, and the second is the one a bug report called
+    /// broken.
+    /// </remarks>
     [AvaloniaFact]
-    public void Delete_variant_opens_the_editor_and_never_claims_to_be_unbuilt()
+    public async Task Delete_variant_deletes_the_selected_variant()
     {
         var (book, recipe, ing) = Fixture();
         var opened = false;
-        var status = new StatusService();
-        using var vm = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(), () => opened = true, () => true, null, status);
+        string? deleted = null;
+        using var vm = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(),
+            () => opened = true, () => true, null, new StatusService(), null, new YesDialogs(),
+            id => { deleted = id; return Task.CompletedTask; });
 
-        Assert.True(vm.DeleteVariantCommand.CanExecute(null));   // enabled while editing
-        vm.DeleteVariantCommand.Execute(null);
+        Assert.True(vm.DeleteVariantCommand.CanExecute(null));
+        await vm.DeleteVariantCommand.ExecuteAsync(null);
 
-        Assert.True(opened);                                     // the editor, which owns variants
-        Assert.NotNull(status.Last);                             // it explains where deletion lives
+        Assert.Equal(vm.Selected!.Id, deleted);
+        Assert.False(opened, "it navigated to the editor instead of deleting");
+    }
+
+    /// <summary>The confirm is a gate: saying no deletes nothing.</summary>
+    [AvaloniaFact]
+    public async Task Declining_the_confirmation_deletes_nothing()
+    {
+        var (book, recipe, ing) = Fixture();
+        string? deleted = null;
+        using var vm = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(),
+            () => { }, () => true, null, new StatusService(), null, new FakeDialogs(),
+            id => { deleted = id; return Task.CompletedTask; });
+
+        await vm.DeleteVariantCommand.ExecuteAsync(null);
+        Assert.Null(deleted);
+    }
+
+    /// <summary>
+    /// The table is a selection, and the hero follows it.
+    /// </summary>
+    /// <remarks>
+    /// It was inert: the rows could not be clicked, the hero was pinned to the first variant for
+    /// the life of the pane, and <c>SelectVariantCommand</c> was reachable from no markup at all.
+    /// The wiring sweep matches commands by NAME across every view, and the ingredient EDITOR has a
+    /// command of the same name that IS bound — so a dead command on this screen looked wired.
+    /// </remarks>
+    [AvaloniaFact]
+    public void Selecting_a_row_moves_the_hero_and_what_delete_would_remove()
+    {
+        var (book, recipe, ing) = Fixture();
+        using var vm = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(),
+            () => { }, () => true, null, new StatusService(), null, new YesDialogs(),
+            _ => Task.CompletedTask);
+
+        var first = vm.Variants[0];
+        var other = vm.Variants.First(v => v.Id != first.Id);
+        Assert.True(vm.Selected!.IsSelected);
+        var heroBefore = vm.Hero;
+
+        vm.SelectVariantCommand.Execute(other.Id);
+
+        Assert.Same(other, vm.Selected);
+        Assert.True(other.IsSelected);
+        Assert.False(first.IsSelected);                 // exactly two rows change
+        Assert.NotSame(heroBefore, vm.Hero);
+        Assert.Same(other.Thumbnail, vm.SelectedThumb);
     }
 
     [AvaloniaFact]
@@ -151,10 +204,54 @@ public class IngredientDetailViewModelTests
         var (book, recipe, ing) = Fixture();
         bool editing = false;
         using var vm = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(),
-            () => { }, () => editing);
+            () => { }, () => editing, null, new StatusService(), null, new YesDialogs(),
+            _ => Task.CompletedTask);
         Assert.False(vm.DeleteVariantCommand.CanExecute(null));
         editing = true; vm.RaiseCanExecuteChanged();
         Assert.True(vm.DeleteVariantCommand.CanExecute(null));
+    }
+
+    /// <summary>
+    /// A layer needs a variant, so the last one cannot be deleted — and the tooltip says which of
+    /// the reasons it is, since a control dim for an unstated reason is one the user has to guess at.
+    /// </summary>
+    [AvaloniaFact]
+    public void The_last_variant_cannot_be_deleted()
+    {
+        var ing = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("aura", "Aura", LayerKind.Custom, null,
+                new[] { new Variant("glow", "Glow", 1) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>> { ["glow"] = new(4, 4) },
+        };
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("cat", "Cat", new[] { "aura" }, Array.Empty<IncompatibilityRule>()),
+            Ingredients = new[] { ing },
+        };
+        using var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "Book", new Dimensions(4, 4),
+                new Collection("Book", "", "B"), new Dictionary<string, double> { ["cat"] = 100 }),
+            Recipes = new[] { recipe },
+        };
+        using var vm = new IngredientDetailViewModel(ing, recipe, book, new ImageBridge(),
+            () => { }, () => true, null, new StatusService(), null, new YesDialogs(),
+            _ => Task.CompletedTask);
+
+        Assert.False(vm.DeleteVariantCommand.CanExecute(null));
+        Assert.Contains("at least one variant", vm.DeleteVariantTip);
+    }
+
+    /// <summary>Answers the confirm with a yes. <see cref="FakeDialogs"/> returns default, which is
+    /// a no.</summary>
+    private sealed class YesDialogs : IDialogService
+    {
+        public ViewModelBase? Active => null;
+        public event System.Action? Changed { add { } remove { } }
+        public System.Threading.Tasks.Task<TResult?> ShowAsync<TResult>(ViewModelBase d) =>
+            System.Threading.Tasks.Task.FromResult((TResult?)(object?)true);
+        public void Close(object? result) { }
     }
 
     [AvaloniaFact]

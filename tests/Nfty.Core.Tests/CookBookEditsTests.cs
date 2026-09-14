@@ -199,4 +199,76 @@ public class CookBookEditsTests
         Assert.Equal("Dog2", b.Recipes.Single(r => r.Manifest.Id == "dog").Manifest.Name);
         Assert.Equal(5, b.Manifest.RecipeWeights["dog"]);
     }
+
+    // ---- RemoveVariant -------------------------------------------------------------------------
+
+    private static LoadedIngredient MultiVariant(string id, params string[] variantIds) => new()
+    {
+        Manifest = new IngredientManifest(id, id, LayerKind.Custom, null,
+            variantIds.Select(v => new Variant(v, v, 1.0)).ToArray()),
+        VariantImages = variantIds.ToDictionary(v => v, _ => new Image<Rgba32>(1, 1)),
+    };
+
+    private static LoadedCookBook BookWith(LoadedIngredient ing)
+    {
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("aurora", "Aurora", new List<string> { ing.Manifest.Id },
+                System.Array.Empty<IncompatibilityRule>()),
+            Ingredients = new List<LoadedIngredient> { ing },
+        };
+        return new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("vp", "VaporPets", new Dimensions(8, 8),
+                new Collection("VaporPets", "", "VP"),
+                new Dictionary<string, double> { ["aurora"] = 1.0 }),
+            Recipes = new List<LoadedRecipe> { recipe },
+        };
+    }
+
+    [Fact]
+    public void Removing_a_variant_drops_it_from_the_manifest_and_the_images()
+    {
+        var book = BookWith(MultiVariant("body", "a", "b", "c"));
+        var next = CookBookEdits.RemoveVariant(book, "aurora", "body", "b");
+
+        var ing = next.Recipes.Single().Ingredients.Single();
+        Assert.Equal(new[] { "a", "c" }, ing.Manifest.Variants.Select(v => v.Id));
+        Assert.Equal(new[] { "a", "c" }, ing.VariantImages.Keys.OrderBy(k => k, System.StringComparer.Ordinal));
+        Assert.Equal(new[] { "body" }, next.Recipes.Single().Manifest.LayerOrder);
+    }
+
+    /// <summary>Every surviving image is REUSED, not copied - the same contract RemoveIngredient
+    /// keeps, and what makes an edit cheap on a book holding a thousand decoded PNGs.</summary>
+    [Fact]
+    public void Removing_a_variant_reuses_every_surviving_image()
+    {
+        var book = BookWith(MultiVariant("body", "a", "b"));
+        var before = book.Recipes.Single().Ingredients.Single().VariantImages["a"];
+        var next = CookBookEdits.RemoveVariant(book, "aurora", "body", "b");
+        Assert.Same(before, next.Recipes.Single().Ingredients.Single().VariantImages["a"]);
+    }
+
+    /// <summary>
+    /// It refuses to empty an ingredient. A layer with no variants has nothing to roll and Validator
+    /// reports it, so a book saved that way is broken from then on - reported on a screen nowhere
+    /// near the delete that caused it.
+    /// </summary>
+    [Fact]
+    public void The_last_variant_cannot_be_removed()
+    {
+        var book = BookWith(MultiVariant("body", "only"));
+        Assert.Throws<System.InvalidOperationException>(
+            () => CookBookEdits.RemoveVariant(book, "aurora", "body", "only"));
+    }
+
+    [Theory]
+    [InlineData("nope", "body", "a")]
+    [InlineData("aurora", "nope", "a")]
+    [InlineData("aurora", "body", "nope")]
+    public void Removing_something_that_is_not_there_is_a_caller_bug(string recipe, string ing, string variant)
+    {
+        var book = BookWith(MultiVariant("body", "a", "b"));
+        Assert.Throws<KeyNotFoundException>(() => CookBookEdits.RemoveVariant(book, recipe, ing, variant));
+    }
 }

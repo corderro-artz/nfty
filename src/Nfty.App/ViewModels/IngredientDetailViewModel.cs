@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Threading.Tasks;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -13,13 +14,46 @@ using Nfty.Core.Stats;
 namespace Nfty.App.ViewModels;
 
 /// <summary>One row of the variant table.</summary>
-/// <param name="Id">The variant's id.</param>
-/// <param name="Name">Its display name.</param>
-/// <param name="Weight">Its roll weight.</param>
-/// <param name="WithinPercent">Its share within this layer.</param>
-/// <param name="OverallPercent">Its share across the whole collection.</param>
-/// <param name="Thumbnail">A rendered swatch.</param>
-public record VariantRow(string Id, string Name, double Weight, double WithinPercent, double OverallPercent, Bitmap Thumbnail);
+/// <remarks>
+/// An observable object rather than a record because the row carries SELECTION now. The table was
+/// read-only: its rows could not be clicked, the hero above it was pinned to the first variant for
+/// the life of the pane, and <c>SelectVariantCommand</c> - which exists to move it - was reachable
+/// from nothing. (The wiring sweep matches commands by NAME across all markup, and the ingredient
+/// EDITOR has a command of the same name that is bound, so the sweep was satisfied by a binding on
+/// another screen.)
+/// </remarks>
+public partial class VariantRow : ObservableObject
+{
+    /// <summary>The variant's id.</summary>
+    public string Id { get; }
+    /// <summary>Its display name.</summary>
+    public string Name { get; }
+    /// <summary>Its roll weight.</summary>
+    public double Weight { get; }
+    /// <summary>Its share within this layer.</summary>
+    public double WithinPercent { get; }
+    /// <summary>Its share across the whole collection.</summary>
+    public double OverallPercent { get; }
+    /// <summary>A rendered swatch.</summary>
+    public Bitmap Thumbnail { get; }
+
+    /// <summary>Whether this is the row the hero and Delete variant act on.</summary>
+    [ObservableProperty] private bool _isSelected;
+
+    /// <summary>Creates a row.</summary>
+    /// <param name="id">The variant's id.</param>
+    /// <param name="name">Its display name.</param>
+    /// <param name="weight">Its roll weight.</param>
+    /// <param name="withinPercent">Its share within this layer.</param>
+    /// <param name="overallPercent">Its share across the whole collection.</param>
+    /// <param name="thumbnail">A rendered swatch.</param>
+    public VariantRow(string id, string name, double weight, double withinPercent,
+        double overallPercent, Bitmap thumbnail)
+    {
+        Id = id; Name = name; Weight = weight;
+        WithinPercent = withinPercent; OverallPercent = overallPercent; Thumbnail = thumbnail;
+    }
+}
 
 /// <summary>One line of the Colorways panel's axis readout.</summary>
 /// <param name="Label">What the axis is, e.g. "hue".</param>
@@ -30,6 +64,7 @@ public record ColorwayAxis(string Label, string Value, bool Derived);
 public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
 {
     private readonly Action _editIngredient;
+    private readonly Func<string, Task>? _deleteVariant;
     private readonly Action? _jumpToRecipe;
     private readonly IStatusService? _status;
     private readonly IFilePickerService? _picker;
@@ -93,7 +128,28 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     /// <summary>The 56px swatch the Custom branch of the colorways rail shows (mockup .cwcustom).
     /// A Custom layer has no hue band to display, so the rail shows the art itself instead. Null for
     /// an ingredient with no variants, which the view treats as nothing to draw.</summary>
-    public Bitmap? SelectedThumb => _variants.Count > 0 ? _variants[0].Thumbnail : null;
+    /// <remarks>It follows the SELECTED row, like the hero above it. It used to be pinned to
+    /// <c>_variants[0]</c>, which was correct only because nothing could select anything else.</remarks>
+    public Bitmap? SelectedThumb => Selected?.Thumbnail;
+
+    /// <summary>The row the hero, the custom swatch and Delete variant act on.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedThumb))]
+    [NotifyCanExecuteChangedFor(nameof(DeleteVariantCommand))]
+    private VariantRow? _selected;
+
+    /// <summary>Why Delete variant is unavailable, or empty when it is available.</summary>
+    /// <remarks>
+    /// On the tooltip rather than left to guess: a control that is dim for a reason the screen does
+    /// not give is a control the user has to guess at - the same argument the export dialog's
+    /// <c>Problem</c> line makes.
+    /// </remarks>
+    public string DeleteVariantTip => _deleteVariant is null
+        ? "This layer is open on its own; delete variants in the editor."
+        : !_isEditing() ? "Editing is locked. Unlock to make changes."
+        : _variants.Count <= 1 ? "A layer needs at least one variant. Delete the layer instead."
+        : Selected is null ? "Pick a variant in the table first."
+        : $"Remove \u201c{Selected.Name}\u201d from this layer";
 
     /// <summary>
     /// How often the OWNING RECIPE leaves this layer out, as a percent. Zero for a layer that always
@@ -145,15 +201,20 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     /// <param name="jumpToRecipe">Selects the owning recipe and scrolls to its rules.</param>
     /// <param name="status">The status bar's guidance channel.</param>
     /// <param name="picker">Chooses where to export a preview.</param>
-    /// <param name="dialogs">The dialog layer, for reporting an export failure.</param>
+    /// <param name="dialogs">The dialog layer, for the delete confirmation and for reporting an
+    /// export failure.</param>
+    /// <param name="deleteVariant">Removes one variant from this layer and saves the book. Null
+    /// where there is nothing to save back to, which disables the button rather than hiding it.</param>
     public IngredientDetailViewModel(LoadedIngredient ing, LoadedRecipe recipe, LoadedCookBook book,
         IImageBridge bridge, Action editIngredient, Func<bool> isEditing,
         Action? jumpToRecipe = null, IStatusService? status = null,
-        IFilePickerService? picker = null, IDialogService? dialogs = null)
+        IFilePickerService? picker = null, IDialogService? dialogs = null,
+        Func<string, Task>? deleteVariant = null)
     {
         Sort = new TableSort("Variant", () => OnPropertyChanged(nameof(Variants)));
         _ing = ing; _bridge = bridge;
         _editIngredient = editIngredient; _isEditing = isEditing;
+        _deleteVariant = deleteVariant;
         _jumpToRecipe = jumpToRecipe;
         _status = status;
         _picker = picker;
@@ -191,6 +252,11 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
                 Math.Round(t?.WithinRecipePercent ?? 0, 1), Math.Round(t?.OverallPercent ?? 0, 1),
                 VariantImagery.Render(bridge, ing, v.Id));
         }).ToList();
+
+        // The first row is the selection the pane opens on, which is the variant the hero already
+        // showed - so nothing about the screen changes until something is clicked.
+        Selected = _variants.Count > 0 ? _variants[0] : null;
+        if (Selected is not null) Selected.IsSelected = true;
 
         // A zero-variant ingredient is invalid per Validator, but CookBookArchive.Read doesn't
         // validate, so a hand-built/mid-authoring book can open one — mirror the editor's
@@ -288,32 +354,65 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
 
     /// <summary>Re-evaluates the commands whose availability depends on the edit lock, which lives
     /// outside this pane and changes without it.</summary>
-    public void RaiseCanExecuteChanged() => DeleteVariantCommand.NotifyCanExecuteChanged();
+    public void RaiseCanExecuteChanged()
+    {
+        DeleteVariantCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(DeleteVariantTip));
+    }
 
 
 
+    /// <summary>Makes one row the selection: the hero, the custom swatch and Delete variant follow
+    /// it.</summary>
+    /// <param name="id">The variant to select.</param>
     [RelayCommand]
     private void SelectVariant(string id)
     {
+        if (_variants.FirstOrDefault(v => v.Id == id) is not { } row || ReferenceEquals(row, Selected))
+            return;
+
+        // Exactly two rows can change, so exactly two are touched - the same rule the Set browser's
+        // selection follows, for the same reason.
+        if (Selected is not null) Selected.IsSelected = false;
+        Selected = row;
+        row.IsSelected = true;
+
         var old = Hero;
         Hero = VariantImagery.Render(_bridge, _ing, id);
         old?.Dispose();
+        OnPropertyChanged(nameof(DeleteVariantTip));
     }
 
-    /// <summary>Opens the editor, which owns variants — and therefore owns deleting one.
-    ///
-    /// This used to report the action as unbuilt, which the shell rendered as
-    /// "Not wired yet: Delete variant". That was wrong twice over: the button was enabled and
-    /// looked like it worked, and the feature is not unbuilt at all — the editor has a real delete
-    /// with a confirm dialog and undo history. Routing here mirrors what Add does from the
-    /// Explorer: variants live in the editor, so both actions take you to it rather than growing a
-    /// second, separately-persisted deletion path.</summary>
-    [RelayCommand(CanExecute = nameof(CanEdit))]
-    private void DeleteVariant()
+    /// <summary>
+    /// Deletes the selected variant from this layer.
+    /// </summary>
+    /// <remarks>
+    /// <para>It used to do no such thing. It said "Delete variants in the editor, where the change
+    /// can be undone" and NAVIGATED there - so a button labelled Delete variant deleted nothing and
+    /// left the reader on a different screen, which is what a bug report called broken. Before that
+    /// it reported the action as unbuilt. Both are the same mistake: a control that names an action
+    /// has to perform it.</para>
+    /// <para>Deleting a variant is STRUCTURE, so it goes the way every other structural edit in this
+    /// pane's owner goes - <c>CookBookEdits</c>, then <c>CookBookPersistence</c>, behind the edit
+    /// lock - rather than growing a second, separately-persisted deletion path. The pane asks (it
+    /// knows which row and what it is called); the Explorer writes (it owns the book, the session
+    /// and the reload).</para>
+    /// </remarks>
+    [RelayCommand(CanExecute = nameof(CanDeleteVariant))]
+    private async Task DeleteVariant()
     {
-        _status?.Say("Delete variants in the editor, where the change can be undone.");
-        _editIngredient();
+        if (_deleteVariant is null || Selected is not { } row || _dialogs is null) return;
+        var ok = await _dialogs.ShowAsync<bool>(new ConfirmDialogViewModel(_dialogs,
+            "Delete variant?",
+            $"Remove \u201c{row.Name}\u201d from \u201c{Name}\u201d. This can\u2019t be undone.",
+            "Delete"));
+        if (!ok) return;
+        await _deleteVariant(row.Id);
     }
+
+    private bool CanDeleteVariant() =>
+        _deleteVariant is not null && _dialogs is not null && _isEditing()
+        && _variants.Count > 1 && Selected is not null;
     /// <summary>Selects the owning recipe, whose Rules panel is where this layer's rules live. Used
     /// to be an empty body behind a permanently-visible "Jump to rules" button - a control that
     /// looked available and did nothing. It is now the .hflag pill, shown only when there is
