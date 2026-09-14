@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Imaging;
 using Nfty.App.Services;
+using Nfty.Core.Generation;
 using Nfty.Core.Formats;
 using Nfty.Core.Model;
 using Nfty.Core.Imaging;
@@ -108,6 +109,59 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     public IReadOnlyList<Bitmap> Colorways { get; }
     /// <summary>The hue and saturation readouts.</summary>
     public IReadOnlyList<ColorwayAxis> ColorwayAxes { get; }
+
+    /// <summary>
+    /// The colorways themselves — a sample of the quantized colors this layer can actually roll.
+    /// </summary>
+    /// <remarks>
+    /// <para>The panel is called COLORWAYS and had none: a gradient band and three text rows, then
+    /// four hundred pixels of empty rail. The band shows the hue SWEEP, which is not the same thing
+    /// — a layer quantized at 30/40 rolls a few dozen colors out of that sweep, and which ones is
+    /// the question an author is asking when they open this pane.</para>
+    ///
+    /// <para>Sampled on the quantize STEPS rather than evenly across the range, so every swatch is a
+    /// color the roller can really produce; the count beside them is
+    /// <see cref="UniqueSpace.CountColors"/>, the same counter the DNA space is built from, so this
+    /// figure and the CookBook card's cannot disagree. Value is fixed at 0.72 because the third
+    /// channel comes from the value-map and is a property of the ART, not of the colorization —
+    /// showing it at one lightness is what makes the strip about hue and saturation alone.</para>
+    /// </remarks>
+    public IReadOnlyList<Color> ColorwaySwatches { get; }
+
+    /// <summary>How many distinct colors the layer admits, as the rail prints it.</summary>
+    public string ColorwayCountText { get; }
+
+    /// <summary>Whether the rail has colorways to show — a dynamic layer with a real range.</summary>
+    public bool HasColorways => ColorwaySwatches.Count > 0;
+
+    /// <summary>How many share bars the hero draws before it stops. Six fills the hero's two
+    /// columns three deep, which is a glance; twelve is a table, and there is already one below.</summary>
+    private const int HeroBarCap = 6;
+
+    /// <summary>
+    /// The hero's share bars: the biggest slices of the layer, at most <see cref="HeroBarCap"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>IT IS CAPPED BECAUSE IT PUSHED THE PANE'S OWN BUTTONS OFF THE SCREEN. The strip is a
+    /// WrapPanel bound to every variant, so the hero grew by a row for every two variants — a layer
+    /// with twelve made the hero 433px of a 494px pane, which left the variant table nothing and put
+    /// "Delete variant" and "Export preview…" below the fold. The strip exists to show the SHAPE of
+    /// the split at a glance, and a glance does not have twelve entries in it.</para>
+    ///
+    /// <para>Biggest first rather than in the table's order: the shape of a split is what dominates
+    /// it, and the table below is where every variant is listed, in whatever order the reader asked
+    /// for. Ties keep their input order — <c>OrderByDescending</c> is stable — so a layer of equal
+    /// weights shows its first six rather than an arbitrary six.</para>
+    /// </remarks>
+    public IReadOnlyList<VariantRow> HeroBars =>
+        _variants.OrderByDescending(v => v.OverallPercent).Take(HeroBarCap).ToArray();
+
+    /// <summary>"+6 more" when the layer has more variants than the hero draws, else null.</summary>
+    public string? MoreHeroBarsText =>
+        _variants.Count > HeroBarCap ? $"+{_variants.Count - HeroBarCap} more" : null;
+
+    /// <summary>Whether the hero should draw that overflow note at all.</summary>
+    public bool HasMoreHeroBars => MoreHeroBarsText is not null;
 
     /// <summary>
     /// Variant rows in the active sort order.
@@ -240,6 +294,8 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
         ColorwaysModelText = ColorwaysModelLabel(ing.Manifest);
         HueBandStops = BuildHueBand(ing.Manifest);
         ColorwayAxes = BuildAxes(ing.Manifest);
+        ColorwaySwatches = BuildColorways(ing.Manifest);
+        ColorwayCountText = ColorwayCount(ing.Manifest);
 
         var traits = RarityCalculator.Compute(book).Traits
             .Where(t => t.RecipeId == recipe.Manifest.Id && t.IngredientId == ing.Manifest.Id)
@@ -325,6 +381,73 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
             stops.Add(Color.FromRgb(rgb.R, rgb.G, rgb.B));
         }
         return stops;
+    }
+
+    /// <summary>How many swatches the rail shows at most. Four rows of six at the rail's width; past
+    /// that the strip stops being a sample and starts being a wall.</summary>
+    private const int ColorwaySampleCap = 24;
+
+    /// <summary>Samples the colors this layer can roll, ON ITS QUANTIZE STEPS.</summary>
+    /// <remarks>
+    /// Walking the steps is what makes every swatch a color the roller can produce: sampling the
+    /// range evenly would draw hues between two buckets, which is a picture of the range rather than
+    /// of the palette. When the layer admits more than the cap, the walk STRIDES — it still lands on
+    /// real buckets and it still spans the whole range, rather than showing the first two dozen and
+    /// implying the rest are elsewhere.
+    /// </remarks>
+    private static IReadOnlyList<Color> BuildColorways(IngredientManifest m)
+    {
+        if (m.Kind != LayerKind.Dynamic || m.Colorization is null) return Array.Empty<Color>();
+        var entry = m.Colorization.Entries.FirstOrDefault(e => e.Weight > 0 && e.Range is not null);
+        if (entry?.Range is not { } range) return Array.Empty<Color>();
+
+        double hStep = Math.Max(1, m.Colorization.HueQuantize);
+        double sStep = Math.Max(1, m.Colorization.SatQuantize);
+
+        // ColorRoller samples [Min, Max) - half-open - so the bucket count is the number of STARTS
+        // in the range, and a degenerate Min == Max is the one case that reaches its endpoint.
+        var hues = Buckets(range.HueMin, range.HueMax, hStep);
+        var sats = Buckets(range.SatMin, range.SatMax, sStep);
+
+        // Six across reads as a strip; the rows follow. Striding both axes keeps the sample spread
+        // over the whole rectangle instead of clustering in one corner of it.
+        int cols = Math.Min(6, hues.Count);
+        int rows = Math.Max(1, Math.Min(ColorwaySampleCap / Math.Max(1, cols), sats.Count));
+
+        var swatches = new List<Color>(cols * rows);
+        for (int r = 0; r < rows; r++)
+            for (int c = 0; c < cols; c++)
+            {
+                double hue = hues[Pick(hues.Count, cols, c)];
+                double sat = sats[Pick(sats.Count, rows, r)];
+                var rgb = ColorConvert.HsvToRgb(hue, sat / 100.0, 0.72);
+                swatches.Add(Color.FromRgb(rgb.R, rgb.G, rgb.B));
+            }
+        return swatches;
+    }
+
+    /// <summary>The bucket STARTS in a half-open range, at a step — what the roller can land on.</summary>
+    private static List<double> Buckets(double min, double max, double step)
+    {
+        var list = new List<double>();
+        if (max <= min) { list.Add(min); return list; }
+        for (double v = Math.Floor(min / step) * step; v < max; v += step)
+            if (v >= min) list.Add(v);
+        if (list.Count == 0) list.Add(min);
+        return list;
+    }
+
+    /// <summary>Index <paramref name="i"/> of <paramref name="want"/> samples spread over
+    /// <paramref name="have"/> buckets, endpoints included.</summary>
+    private static int Pick(int have, int want, int i) =>
+        want <= 1 ? 0 : (int)Math.Round(i * (have - 1) / (double)(want - 1));
+
+    /// <summary>The admissible-color figure, or an empty string when the layer rolls no color.</summary>
+    private static string ColorwayCount(IngredientManifest m)
+    {
+        if (m.Kind != LayerKind.Dynamic || m.Colorization is null) return "";
+        var (count, exact) = UniqueSpace.CountColors(m.Colorization);
+        return exact ? $"{count:N0} colors" : "many colors";
     }
 
     private static IReadOnlyList<ColorwayAxis> BuildAxes(IngredientManifest m)

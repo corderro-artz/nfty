@@ -167,6 +167,26 @@ public partial class CookBookDetailViewModel : ViewModelBase
     /// <summary>Every problem, one per line, as the status pill's tooltip. Null when valid.</summary>
     public string? StatusTip { get; }
 
+    /// <summary>
+    /// What is actually wrong, ON THE CARD rather than on a tooltip.
+    /// </summary>
+    /// <remarks>
+    /// The card said <c>status ● 1 problem</c> and then never said what the problem was: the only
+    /// way to find out was to hover a chip, and nothing indicated that hovering would answer
+    /// anything. A book that cannot be cooked is the one state where the card has both the room to
+    /// explain itself — the DNA-space table below is a figure that cannot be computed and a Cook
+    /// button that is disabled — and the obligation to.
+    /// </remarks>
+    public IReadOnlyList<string> ShownProblems { get; }
+
+    /// <summary>"…and 4 more" when the list is longer than the card will show, else null. A long
+    /// list is bounded rather than allowed to push the mint bar off the card — the same argument the
+    /// recipe table's paging makes.</summary>
+    public string? MoreProblemsText { get; }
+
+    /// <summary>Whether the card should draw its problem panel at all.</summary>
+    public bool HasProblems => ShownProblems.Count > 0;
+
     /// <summary>The mockup's "target supply" chip. Em-dash when the book has not committed to a
     /// number — an unset target is a real state, not zero.</summary>
     public string TargetSupplyText { get; }
@@ -230,6 +250,14 @@ public partial class CookBookDetailViewModel : ViewModelBase
         IsValid = problems.Count == 0;
         StatusText = IsValid ? "Valid" : problems.Count == 1 ? "1 problem" : $"{problems.Count} problems";
         StatusTip = IsValid ? null : string.Join(Environment.NewLine, problems);
+
+        // Four fits the room the invalid state frees up; past that the list is bounded and says so,
+        // rather than growing until it pushes the mint bar and Cook off the bottom of the card.
+        const int shown = 4;
+        ShownProblems = problems.Count <= shown ? problems : problems.Take(shown - 1).ToArray();
+        MoreProblemsText = problems.Count > shown
+            ? $"…and {problems.Count - (shown - 1)} more"
+            : null;
 
         var models = book.Recipes
             .SelectMany(r => r.Ingredients)

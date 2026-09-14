@@ -1253,7 +1253,7 @@
        still holds and the geometry is identical in all three states. -->
   <Style Selector="Border.tile.sel">
     <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource TileSelectBrush}" />
     <Setter Property="BorderThickness" Value="1" />
   </Style>
   <Style Selector="Border.frame">
@@ -2042,6 +2042,35 @@
        split card pays for it in width the page already had. It is also the tallest thing in that
        card's left column, so it is what the card's slack against the smallest window is measured in:
        160 leaves about 30px, and fitting exactly is one style tweak from not fitting. -->
+  <!-- The invalid-CookBook panel: what Validator reported, on the card. Dashed rather than solid,
+       and warning-tinted rather than error-red - the book is readable and openable, it simply cannot
+       be cooked, and a solid red slab would read as a failure of the app rather than as something
+       the author has to go and fix. -->
+  <!-- One sampled colorway. Square and small: the strip is read as a PATCH of color space, and a
+       swatch big enough to judge on its own would make two dozen of them a wall. -->
+  <Style Selector="Border.cwchip">
+    <Setter Property="Height" Value="20" />
+    <Setter Property="Margin" Value="0,0,4,4" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+  </Style>
+
+  <Style Selector="Border.probpanel">
+    <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="Padding" Value="13,11" />
+    <Setter Property="Margin" Value="0,10,0,0" />
+    <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
+  </Style>
+  <Style Selector="TextBlock.probline">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="LineHeight" Value="16" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+  </Style>
+  <Style Selector="Border.cdot.warn">
+    <Setter Property="Background" Value="{DynamicResource WarningBrush}" />
+  </Style>
+
   <Style Selector="Border.impshot">
     <Setter Property="Height" Value="160" />
     <Setter Property="Background" Value="{DynamicResource TileBrush}" />

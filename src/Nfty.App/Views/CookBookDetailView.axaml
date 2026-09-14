@@ -140,7 +140,7 @@
     </StackPanel>
 
     <!-- The DNA-space table. One row per recipe, on one line, paged rather than scrolled. -->
-    <Grid Grid.Row="2" RowDefinitions="Auto,Auto,*" RowSpacing="0">
+    <Grid Grid.Row="2" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="0">
       <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,7">
         <TextBlock Grid.Column="0" Classes="sub-h" Text="DNA SPACE" VerticalAlignment="Center" />
         <!-- The pager is present at one page as well as ten - disabled, never absent - so a resize
@@ -269,6 +269,36 @@
         </ItemsControl.ItemTemplate>
       </ItemsControl>
       </ScrollViewer>
+
+      <!-- WHAT IS WRONG, on the card. The status chip said "1 problem" and the only way to learn
+           what it was, was to hover it - and nothing on screen said hovering would answer anything.
+           This is also the state with the room: an invalid book cannot be counted, so the UNIQUE DNA
+           figure is an em-dash and the table above is mostly empty panel.
+
+           An Auto row rather than an overlay, so it takes its height from the list and the rows host
+           above it gets the rest - which is what makes the page size shrink by exactly the space
+           this uses instead of the two fighting over the same pixels. -->
+      <Border Grid.Row="3" Classes="probpanel" IsVisible="{Binding HasProblems}">
+        <StackPanel Spacing="7">
+          <TextBlock Classes="sub-h" Text="WHAT IS WRONG" Foreground="{DynamicResource WarningBrush}" />
+          <ItemsControl ItemsSource="{Binding ShownProblems}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><StackPanel Spacing="4" /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="x:String">
+                <Grid ColumnDefinitions="7,10,*">
+                  <Border Grid.Column="0" Classes="cdot warn" />
+                  <TextBlock Grid.Column="2" Text="{Binding}" Classes="probline" TextWrapping="Wrap" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Classes="probline" Opacity="0.75" Margin="17,0,0,0"
+                     Text="{Binding MoreProblemsText}"
+                     IsVisible="{Binding MoreProblemsText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        </StackPanel>
+      </Border>
     </Grid>
 
     <!-- Pinned. The mint bar describes the WHOLE book, so it binds Recipes and not the page: a

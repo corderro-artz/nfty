@@ -27,9 +27,16 @@
       <ColumnDefinition Width="2*" MinWidth="0" />
       <ColumnDefinition Width="*" MinWidth="208" />
     </Grid.ColumnDefinitions>
-    <StackPanel Grid.Column="0" Spacing="14" Margin="0,0,16,0">
-      <Border Classes="vhero">
-        <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto">
+    <!-- THE ACTIONS ARE PINNED, and the variant rows are what scrolls.
+         This column was one StackPanel - hero, then the whole variant table, then the buttons - so a
+         layer with enough variants pushed "Delete variant" and "Export preview…" off the bottom of
+         the pane, and at the window the app OPENS at it does not take many. A button that names an
+         action has to be reachable to perform it. The rows take the star row and scroll inside it,
+         exactly as the Set browser's rarity rail and the CookBook card's recipe table already do,
+         and the actions sit in a band of their own that nothing can push. -->
+    <Grid Grid.Column="0" RowDefinitions="Auto,*,Auto" RowSpacing="14" Margin="0,0,16,0">
+      <Border Grid.Row="0" Classes="vhero">
+        <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto">
           <Border Grid.Column="0" Width="84" Height="84" CornerRadius="{DynamicResource RadiusMd}"
                   Background="{DynamicResource TileBrush}" ClipToBounds="True" Margin="0,0,16,0">
             <Image Source="{Binding Hero}" Stretch="UniformToFill" />
@@ -83,7 +90,10 @@
 
           <!-- .rarity: how the layer's weight actually splits, at a glance. The table below carries
                the same numbers, but a column of percentages does not show the SHAPE of the split. -->
-          <ItemsControl Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" ItemsSource="{Binding Variants}"
+          <!-- HeroBars, not Variants: bound to every variant this strip grew a row per pair and a
+               twelve-variant layer took 433px of a 494px pane, leaving the table nothing and putting
+               the pane's own buttons below the fold. See IngredientDetailViewModel.HeroBars. -->
+          <ItemsControl Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" ItemsSource="{Binding HeroBars}"
                         Margin="0,13,0,0">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
@@ -100,17 +110,22 @@
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
+
+          <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Classes="cshare"
+                     Text="{Binding MoreHeroBarsText}" IsVisible="{Binding HasMoreHeroBars}"
+                     Opacity="0.8" Margin="0,0,0,2"
+                     ToolTip.Tip="The strip shows the biggest slices; the table below lists every variant." />
         </Grid>
       </Border>
 
-      <StackPanel Spacing="0">
+      <Grid Grid.Row="1" RowDefinitions="Auto,*">
         <!-- FIXED columns, not Auto. The header and the rows are separate Grids, so an Auto column
              sizes on the header's word in one and on the widest number in the other: "WEIGHT" is
              wider than "30", which put the weight column's numbers 10px right of the header naming
              them, and every value in that column moved as soon as a weight gained a digit. The
              widths are the header words (the binding constraint at every realistic value) plus the
              8px gutter each cell carries: 48+8, 70+8, 56+8. -->
-        <Border Classes="data-h">
+        <Border Grid.Row="0" Classes="data-h">
           <Grid ColumnDefinitions="40,*,71,93,79">
             <TextBlock Grid.Column="0" Classes="data-h" Text="" />
             <!-- All four data columns sort. Two of them did before, neither could be reversed, and
@@ -172,7 +187,12 @@
           </Grid>
         </Border>
 
-        <ItemsControl ItemsSource="{Binding Variants}">
+        <!-- The HEADER stays out of the scroller. The percentages are read against it, so it is the
+             one row that must never scroll away from the numbers it names - the same split the Set
+             browser's rarity rail keeps. -->
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto">
+        <ItemsControl ItemsSource="{Binding Variants}" VerticalAlignment="Top">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:VariantRow">
               <!-- CLICKABLE, and the same shape the Recipe pane's layer table uses: a ghost Button
@@ -196,9 +216,10 @@
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
-      </StackPanel>
+        </ScrollViewer>
+      </Grid>
 
-      <StackPanel Orientation="Horizontal" Spacing="8">
+      <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8">
         <Button Content="Delete variant" Command="{Binding DeleteVariantCommand}" Classes="tbtn"
                 ToolTip.Tip="{Binding DeleteVariantTip}" />
         <!-- The CLI's preview: writes this variant as generation would render it. The GUI could not
@@ -211,7 +232,7 @@
           </StackPanel>
         </Button>
       </StackPanel>
-    </StackPanel>
+    </Grid>
 
     <Border Grid.Column="1" Classes="cw-panel" VerticalAlignment="Stretch">
       <StackPanel Spacing="10">
@@ -259,6 +280,34 @@
             Text="composited as-is" FontWeight="SemiBold" Foreground="{DynamicResource FgBrush}" /><Run
             Text=". Value-map colorization does not apply to this layer." /></TextBlock>
         </Grid>
+
+        <!-- THE COLORWAYS THEMSELVES. The panel is named for them and showed none: a hue sweep is
+             not a palette, and a layer quantized at 30/40 rolls a few dozen colors out of that
+             sweep. These are sampled on the quantize steps, so every square is a color the roller
+             can really produce, and the count is the same counter the DNA space is built from. -->
+        <StackPanel Spacing="8" IsVisible="{Binding HasColorways}" Margin="0,4,0,0">
+          <Grid ColumnDefinitions="Auto,*">
+            <TextBlock Grid.Column="0" Classes="ax" Text="ADMITS" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1" Classes="av" Text="{Binding ColorwayCountText}"
+                       VerticalAlignment="Center" TextAlignment="Right" />
+          </Grid>
+          <!-- A UNIFORM GRID, not a WrapPanel. The sample is a RECTANGLE of the color space - hue
+               across, saturation down - so the row length has to be the one the ViewModel sampled
+               at. A WrapPanel breaks on the rail's width instead, which fitted eleven per line and
+               scrambled the two axes into a ragged run where neither could be read. -->
+          <ItemsControl ItemsSource="{Binding ColorwaySwatches}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><UniformGrid Columns="6" /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Classes="cwchip">
+                  <Border.Background><SolidColorBrush Color="{Binding}" /></Border.Background>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
 
         <ItemsControl ItemsSource="{Binding ColorwayAxes}" IsVisible="{Binding !IsCustom}">
           <ItemsControl.ItemTemplate>

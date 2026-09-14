@@ -388,6 +388,8 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         Root = Filter(_fullRoot, SearchQuery);
         OnPropertyChanged(nameof(SearchSummary));
         OnPropertyChanged(nameof(TreeCountText));
+        OnPropertyChanged(nameof(SearchFoundNothing));
+        OnPropertyChanged(nameof(SearchEmptyText));
         RefreshCounts();
         if (revalidate) RefreshValidity();   // an edit can fix or introduce a problem; a reorder cannot
         SelectedNode = FindNode(Root, selectId) ?? Root;
@@ -599,6 +601,8 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         Root = Filter(_fullRoot, SearchQuery);
         OnPropertyChanged(nameof(SearchSummary));
         OnPropertyChanged(nameof(TreeCountText));
+        OnPropertyChanged(nameof(SearchFoundNothing));
+        OnPropertyChanged(nameof(SearchEmptyText));
         // Only re-home an EXISTING selection; typing must not select the root out of nowhere (which
         // would also flip AddLabel and populate the detail pane as a side effect of searching).
         if (selectedId is not null) SelectedNode = FindNode(Root, selectedId) ?? Root;
@@ -616,6 +620,26 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
             return n == 1 ? "1 recipe" : $"{n} recipes";
         }
     }
+
+    /// <summary>
+    /// Whether the search matched nothing — the state that needs an empty state of its own.
+    /// </summary>
+    /// <remarks>
+    /// The header badge already read "0 matches", and it was not enough: the tree still drew the
+    /// CookBook root with nothing under it, which is indistinguishable from a book that holds
+    /// nothing, and the count sits in the opposite corner from where the eye goes. This is the same
+    /// rule the rules panel keeps — an empty state has to say WHICH emptiness it is, because one of
+    /// them is undone by a click and the other is not.
+    /// </remarks>
+    public bool SearchFoundNothing =>
+        !string.IsNullOrWhiteSpace(SearchQuery) && Root.Children.Count == 0;
+
+    /// <summary>The query, quoted, for the empty state to name.</summary>
+    public string SearchEmptyText => $"Nothing here matches “{SearchQuery.Trim()}”.";
+
+    /// <summary>Empties the search box, which is the one click that undoes this emptiness.</summary>
+    [RelayCommand]
+    private void ClearSearch() => SearchQuery = "";
 
     /// <summary>Match count for the current query ("" when not filtering), so a zero-result query
     /// reads as such instead of an unexplained empty tree.</summary>

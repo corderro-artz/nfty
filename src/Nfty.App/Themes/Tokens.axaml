@@ -41,6 +41,14 @@
       <SolidColorBrush x:Key="OnAccentBrush" Color="#f7f2ec" />
       <SolidColorBrush x:Key="AccentWashBrush" Color="#14a11f31" />
       <SolidColorBrush x:Key="AccentLineBrush" Color="#40a11f31" />
+      <!-- THE SELECTED TILE'S EDGE, and it is its own token because one alpha cannot serve both
+           themes. AccentLineBrush was doing this job, and 25% oxblood over a near-white tile is a
+           step of about twenty levels - invisible next to the same brush at 40% over a near-black
+           one, which is a step of sixty. Measured side by side: the dark grid plainly showed which
+           tile was selected and the light grid did not. The alphas differ so the RESULT matches;
+           the thickness is 1 in both, because at 76px an added edge reads as a frame around the art
+           rather than a marker on it. -->
+      <SolidColorBrush x:Key="TileSelectBrush" Color="#b8a11f31" />
       <SolidColorBrush x:Key="KindDynamicBrush" Color="#3b5b6f" />
       <SolidColorBrush x:Key="KindStaticBrush" Color="#6a4a25" />
       <SolidColorBrush x:Key="KindCustomBrush" Color="#6d4f9c" />
@@ -140,6 +148,7 @@
       <SolidColorBrush x:Key="OnAccentBrush" Color="#f7f2ec" />
       <SolidColorBrush x:Key="AccentWashBrush" Color="#26a11f31" />
       <SolidColorBrush x:Key="AccentLineBrush" Color="#66a11f31" />
+      <SolidColorBrush x:Key="TileSelectBrush" Color="#a6e0788a" />
       <SolidColorBrush x:Key="KindDynamicBrush" Color="#7fb0c4" />
       <SolidColorBrush x:Key="KindStaticBrush" Color="#e0c28c" />
       <SolidColorBrush x:Key="KindCustomBrush" Color="#c3a6ea" />

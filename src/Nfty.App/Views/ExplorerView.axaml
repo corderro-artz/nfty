@@ -78,7 +78,14 @@
             </Grid>
           </Border>
 
+          <!-- THE NO-RESULTS STATE, and the tree is HIDDEN under it rather than drawn behind it.
+               A filtered tree with nothing in it still draws the CookBook root, which is exactly
+               what a book holding nothing looks like - and the "0 matches" badge that was supposed
+               to explain it sits in the opposite corner of the pane from where the eye goes. The
+               message names the query and carries the one click that undoes this emptiness, which
+               is what separates it from the other kind. -->
           <TreeView Grid.Row="1" Name="Tree" ItemsSource="{Binding Roots}"
+                    IsVisible="{Binding !SearchFoundNothing}"
                     SelectedItem="{Binding SelectedNode, Mode=TwoWay}"
                     Background="Transparent" Padding="10,4,10,14">
             <!-- Expansion lives on the NODE, two-way, so it survives the tree being rebuilt. A save
@@ -123,6 +130,16 @@
               </TreeDataTemplate>
             </TreeView.ItemTemplate>
           </TreeView>
+
+          <StackPanel Grid.Row="1" Spacing="10" Margin="18,26,18,0" VerticalAlignment="Top"
+                      IsVisible="{Binding SearchFoundNothing}">
+            <Path Classes="ico lg" Data="{StaticResource IconSearch}" HorizontalAlignment="Center"
+                  Opacity="0.4" />
+            <TextBlock Text="{Binding SearchEmptyText}" Classes="zp" TextWrapping="Wrap"
+                       HorizontalAlignment="Center" TextAlignment="Center" />
+            <Button Content="Clear search" Command="{Binding ClearSearchCommand}"
+                    Classes="tbtn" HorizontalAlignment="Center" />
+          </StackPanel>
         </Grid>
       </Border>
 
