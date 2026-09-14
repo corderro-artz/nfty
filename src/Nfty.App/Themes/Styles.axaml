@@ -1,7 +1,8 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:conv="using:Nfty.App.Converters"
-        xmlns:vm="using:Nfty.App.ViewModels">
+        xmlns:vm="using:Nfty.App.ViewModels"
+        xmlns:ctl="using:Nfty.App.Controls">
   <Style Selector="Window">
     <Setter Property="Background" Value="{DynamicResource BgBrush}" />
     <Setter Property="FontFamily" Value="{DynamicResource SansFontFamily}" />
@@ -1953,6 +1954,15 @@
        40 is safe: the thumb occupies 10..30 of the row, so nothing clips. -->
   <Style Selector="Panel.band">
     <Setter Property="Height" Value="40" />
+    <!-- TWO STACKED SLIDERS GIVE THE TOP ONE EVERY PRESS. Each is the full width of the band, so
+         the second one declared covers the first and a click on the low handle dragged the HIGH one
+         to the pointer - the low handle could not be moved by mouse at all, and every range in the
+         app was stuck at the minimum it opened with. DualRange arms the nearer handle while the
+         pointer is only hovering, so the press lands on the one being pointed at and Fluent still
+         does the drag. Set here rather than on each band so a band added later is covered; a band
+         without exactly two sliders (the value ramp, the brush hue and saturation strips) is left
+         alone by the behavior itself. -->
+    <Setter Property="ctl:DualRange.IsEnabled" Value="True" />
   </Style>
 
   <Style Selector="Border.dualtrack">

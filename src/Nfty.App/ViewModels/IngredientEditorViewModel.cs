@@ -594,27 +594,36 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     // Math.Round is idempotent and the generated setter drops an equal value.
     private static bool NotWhole(double v) => v != Math.Round(v);
 
+    // AND THE RANGE RUNS ASCENDING. Validator refuses a range whose min is above its max - the
+    // roller samples Min + r*(Max-Min), so an inverted one walks backwards off the axis - and
+    // nothing here stopped an author typing one into the boxes or dragging one handle past the
+    // other. Clamping at the property rather than in the control covers both, and settles in one
+    // hop for the same reason the rounding above does.
     partial void OnHueMinChanged(double value)
     {
         if (NotWhole(value)) { HueMin = Math.Round(value); return; }
+        if (value > HueMax) { HueMin = HueMax; return; }
         RebuildSurfaces(); OnPropertyChanged(nameof(HueRangeText)); ColorsChanged();
     }
 
     partial void OnHueMaxChanged(double value)
     {
         if (NotWhole(value)) { HueMax = Math.Round(value); return; }
+        if (value < HueMin) { HueMax = HueMin; return; }
         RebuildSurfaces(); OnPropertyChanged(nameof(HueRangeText)); ColorsChanged();
     }
 
     partial void OnSatMinChanged(double value)
     {
         if (NotWhole(value)) { SatMin = Math.Round(value); return; }
+        if (value > SatMax) { SatMin = SatMax; return; }
         RebuildSurfaces(); OnPropertyChanged(nameof(SatRangeText)); ColorsChanged();
     }
 
     partial void OnSatMaxChanged(double value)
     {
         if (NotWhole(value)) { SatMax = Math.Round(value); return; }
+        if (value < SatMin) { SatMax = SatMin; return; }
         RebuildSurfaces(); OnPropertyChanged(nameof(SatRangeText)); ColorsChanged();
     }
     partial void OnFixedColorChanged(string value) { RebuildSurfaces(); ColorsChanged(); }

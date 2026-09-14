@@ -95,10 +95,32 @@ public partial class NewIngredientViewModel : WizardViewModelBase
         CreateCommand.NotifyCanExecuteChanged();
     }
 
-    partial void OnHueMinChanged(double value) => OnPropertyChanged(nameof(HueRangeText));
-    partial void OnHueMaxChanged(double value) => OnPropertyChanged(nameof(HueRangeText));
-    partial void OnSatMinChanged(double value) => OnPropertyChanged(nameof(SatRangeText));
-    partial void OnSatMaxChanged(double value) => OnPropertyChanged(nameof(SatRangeText));
+    // The range runs ascending, clamped where the value is set. The same rule the editor's rail
+    // keeps, and for the same reason: Validator refuses an inverted range, so a wizard that can
+    // author one creates an ingredient the book it joins cannot validate.
+    partial void OnHueMinChanged(double value)
+    {
+        if (value > HueMax) { HueMin = HueMax; return; }
+        OnPropertyChanged(nameof(HueRangeText));
+    }
+
+    partial void OnHueMaxChanged(double value)
+    {
+        if (value < HueMin) { HueMax = HueMin; return; }
+        OnPropertyChanged(nameof(HueRangeText));
+    }
+
+    partial void OnSatMinChanged(double value)
+    {
+        if (value > SatMax) { SatMin = SatMax; return; }
+        OnPropertyChanged(nameof(SatRangeText));
+    }
+
+    partial void OnSatMaxChanged(double value)
+    {
+        if (value < SatMin) { SatMax = SatMin; return; }
+        OnPropertyChanged(nameof(SatRangeText));
+    }
 
     /// <summary>Live readouts beside each range control (mockup .cv), so the span the two handles
     /// describe is legible without reading their positions off the track. Same shape as the
