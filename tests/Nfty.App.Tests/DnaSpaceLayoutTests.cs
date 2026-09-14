@@ -36,7 +36,7 @@ namespace Nfty.App.Tests;
 public class DnaSpaceLayoutTests
 {
     /// <summary>Eight recipes, six layers each, and one with ten so the +N slot is exercised.</summary>
-    private static LoadedCookBook ManyRecipes()
+    internal static LoadedCookBook ManyRecipes()
     {
         LoadedIngredient Ing(string id) => new()
         {

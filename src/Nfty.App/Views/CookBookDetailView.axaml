@@ -249,7 +249,7 @@
                                 Classes.kcust="{Binding IsCustom}"
                                 Classes.more="{Binding IsMore}"
                                 ToolTip.Tip="{Binding Tip}">
-                          <TextBlock Text="{Binding Label}" HorizontalAlignment="Center" />
+                          <TextBlock Text="{Binding Label}" />
                         </Border>
                       </StackPanel>
                     </DataTemplate>

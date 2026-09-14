@@ -2125,12 +2125,26 @@
        falls on a whole device pixel and the next does not, and the same "3" drew whole in the first
        row of the DNA-space table and broken in the second. It read as a font bug rather than a
        layout one, which is why it survived - every glyph in the app is small and mono, and only a
-       pair of adjacent rows shows the two renderings side by side. Let the typeface state its own
-       line height; a chip is one line and has nothing to lead. -->
+       pair of adjacent rows shows the two renderings side by side. It is 15 now - 1.36x, inside the
+       1.25-1.5 band every other run in this file keeps - rather than the typeface's own, which is
+       28px at this size and would set a row height nothing asked for. -->
+  <!-- CENTERED, because the chip states a WIDTH and the digit does not fill it. A bare TextBlock is
+       Stretch, and a stretched box draws its text at its LEFT edge - so the Recipe hero's badges put
+       their numbers against their own left border with ~15px of ground beside them, and the x
+       between two of them stood 6px from one digit and 16px from the other. It was invisible while
+       the chip hugged its text (Padding 6,3, no Width); the 24px badge that makes the CookBook
+       card's slot columns line up is what turned "a box sized to the glyph" into "a box the glyph
+       sits in". The card's own template had been carrying an inline HorizontalAlignment since that
+       width was stated, which is why only one of the two screens was wrong - said once here now,
+       rather than once per template. HorizontalAlignment is the load-bearing half; TextAlignment
+       covers anything that arranges the box wider than its text. FactorChipInkTests measures the
+       INK off a frame, since a test reading these setters back would only restate them. -->
   <Style Selector="Border.fchip > TextBlock">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="11" />
     <Setter Property="LineHeight" Value="15" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="TextAlignment" Value="Center" />
   </Style>
   <Style Selector="Border.fchip.kdyn">
     <Setter Property="Background" Value="{DynamicResource KindDynamicWashBrush}" />
