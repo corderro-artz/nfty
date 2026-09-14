@@ -54,7 +54,13 @@ public partial class IngredientEditorView : UserControl
 
     private Image _img = null!;
     private Canvas _overlay = null!;
+    private Panel _backdrop = null!;
     private IngredientEditorViewModel? _vm;
+
+    // The geometry the backdrop was last built from. A brush is rebuilt only when one of these
+    // actually moves: BuildBackdrop runs off Bounds changes, which fire on every layout pass, and
+    // allocating a DrawingBrush per pass is the churn the perf work exists to prevent.
+    private (double Scale, double OffX, double OffY, int Step, bool Grid) _backdropFrom = (-1, -1, -1, -1, false);
 
     /// <summary>Loads the view.</summary>
     public IngredientEditorView()
@@ -63,6 +69,7 @@ public partial class IngredientEditorView : UserControl
 
         _img = this.FindControl<Image>("CanvasImage")!;
         _overlay = this.FindControl<Canvas>("CanvasOverlay")!;
+        _backdrop = this.FindControl<Panel>("CanvasBackdrop")!;
 
         _img.PointerPressed += (_, e) =>
         {
@@ -153,7 +160,17 @@ public partial class IngredientEditorView : UserControl
         // The marquee has to survive the gesture that made it, so it is redrawn whenever the
         // selection changes and whenever the canvas is re-laid-out under it.
         DataContextChanged += (_, _) => Rebind();
-        _img.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ => DrawBand()));
+        _img.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ =>
+        {
+            DrawBand();
+            BuildBackdrop();
+        }));
+        // AND the panel's own bounds. The art sits in a fixed 320px host centered in this panel, so
+        // the IMAGE's bounds stop changing once the host is measured while the host's POSITION keeps
+        // moving as the pane resizes - and the lattice is anchored on that position. Keyed on the
+        // image alone, the backdrop was built once from wherever the host happened to be mid-layout
+        // and then never corrected.
+        _backdrop.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ => BuildBackdrop()));
         Rebind();
     }
 
@@ -287,10 +304,129 @@ public partial class IngredientEditorView : UserControl
 
     private void Rebind()
     {
-        if (_vm is not null) _vm.PropertyChanged -= OnVmChanged;
+        if (_vm is not null)
+        {
+            _vm.PropertyChanged -= OnVmChanged;
+            _vm.BackdropChanged -= OnBackdropChanged;
+        }
         _vm = DataContext as IngredientEditorViewModel;
-        if (_vm is not null) _vm.PropertyChanged += OnVmChanged;
+        if (_vm is not null)
+        {
+            _vm.PropertyChanged += OnVmChanged;
+            _vm.BackdropChanged += OnBackdropChanged;
+        }
         DrawBand();
+        BuildBackdrop();
+    }
+
+    private void OnBackdropChanged() => BuildBackdrop();
+
+    /// <summary>
+    /// Paints the canvas backdrop as a lattice of the ART'S OWN PIXELS, or as a flat ground.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Both the square size and the PHASE come from the laid-out art.</b> A square is
+    /// <c>GridSize</c> canvas pixels wide times the scale the image was arranged at, and the tile
+    /// starts at the art's top-left corner rather than the panel's — which is the whole fix. The
+    /// backdrop was a fixed 18px checker tiled from the panel's corner, so its squares stood in no
+    /// relation to the pixels drawn on top of them: a pixel covered part of one square and part of
+    /// the next, and the amount changed with the canvas size. It is the same
+    /// <see cref="Geometry"/> the pointer and the marquee are mapped through, so the lattice and the
+    /// pixel a click lands on cannot disagree.</para>
+    ///
+    /// <para><b>Under two device pixels a square is not a square.</b> Half a lattice that fine
+    /// averages to a flat tone and the other half aliases into a moire that crawls as the window
+    /// moves - so below that floor the flat ground is drawn instead, which is what the lattice would
+    /// have looked like anyway. The grid step is the control for it, and its tooltip says so.</para>
+    ///
+    /// <para>Rebuilt only when something it depends on MOVES. It is driven off <c>Bounds</c>, which
+    /// changes on every layout pass, and a new <c>DrawingBrush</c> per pass is exactly the per-frame
+    /// churn <c>SetBrowserPerfTests</c> exists to keep out of this app.</para>
+    /// </remarks>
+    private void BuildBackdrop()
+    {
+        if (_backdrop is null) return;
+
+        int step = _vm?.GridSize ?? 1;
+        bool grid = _vm?.ShowPixelGrid ?? false;
+
+        if (!grid || !Geometry(out var scale, out var offX, out var offY)) { Flatten(step); return; }
+
+        double cell = step * scale;
+
+        // UNDER TWO DEVICE PIXELS A SQUARE IS NOT A SQUARE. Half a lattice that fine averages to a
+        // flat tone and the other half aliases into a moire that crawls as the window moves - and
+        // what it averages TO is the flat ground, so drawing that is the honest version of the same
+        // picture. The step control is what brings the lattice back on a large canvas.
+        if (cell < 2) { Flatten(step); return; }
+
+        // The art's corner in the BACKDROP's coordinates: Geometry answers in the image's, and the
+        // image sits inside the bordered host which sits inside this panel.
+        if (_img.TranslatePoint(new Point(offX, offY), _backdrop) is not { } art) return;
+
+        var next = (scale, art.X, art.Y, step, true);
+        if (_backdropFrom == next && _backdrop.Background is DrawingBrush) return;
+
+        var light = Brush("BgAltBrush");
+        var dark = Brush("BgAlt2Brush");
+        // Before the control is attached there is no theme to read a brush out of, and caching that
+        // failure would leave the backdrop unpainted for the life of the editor.
+        if (light is null || dark is null) return;
+        _backdropFrom = next;
+
+        double tile = cell * 2;
+        var group = new DrawingGroup();
+        group.Children.Add(new GeometryDrawing
+        {
+            Brush = light,
+            Geometry = new RectangleGeometry(new Rect(0, 0, tile, tile)),
+        });
+        group.Children.Add(new GeometryDrawing
+        {
+            Brush = dark,
+            Geometry = new RectangleGeometry(new Rect(0, 0, cell, cell)),
+        });
+        group.Children.Add(new GeometryDrawing
+        {
+            Brush = dark,
+            Geometry = new RectangleGeometry(new Rect(cell, cell, cell, cell)),
+        });
+
+        // THE PHASE IS THE FIX, not the size. The lattice is anchored on the ART's corner rather
+        // than on this panel's, so a square boundary falls exactly on a pixel boundary; a brush of
+        // the right size tiled from the wrong origin is the same bug with better arithmetic. The
+        // modulo keeps the start on the panel (a negative DestinationRect is not honoured) while
+        // leaving the corner on a tile boundary, which is all "in phase" means.
+        double startX = Mod(art.X, tile);
+        double startY = Mod(art.Y, tile);
+
+        _backdrop.Background = new DrawingBrush(group)
+        {
+            TileMode = TileMode.Tile,
+            SourceRect = new RelativeRect(0, 0, tile, tile, RelativeUnit.Absolute),
+            DestinationRect = new RelativeRect(startX, startY, tile, tile, RelativeUnit.Absolute),
+            Stretch = Stretch.None,
+        };
+    }
+
+    /// <summary>The flat ground: the app's own page color, which is what the lattice averages to
+    /// anyway at the sizes it is refused at.</summary>
+    /// <param name="step">The step in force, so a later pass can tell the state apart.</param>
+    private void Flatten(int step)
+    {
+        var flat = Brush("BgAltBrush");
+        if (flat is null) return;                       // no theme yet; try again after attach
+        if (ReferenceEquals(_backdrop.Background, flat)) return;
+        _backdropFrom = (0, 0, 0, step, false);
+        _backdrop.Background = flat;
+    }
+
+    /// <summary>A modulo that returns a non-negative remainder — C#'s <c>%</c> keeps the dividend's
+    /// sign, and the art can sit at a negative offset in a pane narrower than the tile.</summary>
+    private static double Mod(double value, double by)
+    {
+        double r = value % by;
+        return r < 0 ? r + by : r;
     }
 
     private void OnVmChanged(object? sender, PropertyChangedEventArgs e)

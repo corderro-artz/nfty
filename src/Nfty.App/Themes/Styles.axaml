@@ -1985,6 +1985,18 @@
        64 is what the card can afford, not a design preference - WizardFitsTests measures the form
        at the app's shipping size and the Dynamic kind (the only one that reveals BOTH range bands)
        is 12px from the fold at 76. Reclaim height elsewhere before growing it. -->
+  <!-- The canvas backdrop's own controls, opposite the preview blip. Same chrome as the blip - a
+       panel ground, a hairline and the window shadow - because they are the same KIND of thing: a
+       small control surface floating on the canvas rather than a panel the layout reserves. -->
+  <Style Selector="Border.gridchip">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource WinShadow}" />
+    <Setter Property="Padding" Value="6,5" />
+  </Style>
+
   <Style Selector="Border.impshot">
     <Setter Property="Height" Value="64" />
     <Setter Property="Background" Value="{DynamicResource TileBrush}" />

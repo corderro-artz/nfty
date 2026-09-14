@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <title>IconGrid</title>
+  <desc>A 2x2 lattice: the rect tool's rounded box crossed once each way. Two lines each way was
+  tried first and turns to mush at 12px, which is the size this is drawn at.</desc>
+  <path d="M6 4.5h12a1.5 1.5 0 0 1 1.5 1.5v12a1.5 1.5 0 0 1-1.5 1.5H6a1.5 1.5 0 0 1-1.5-1.5V6A1.5 1.5 0 0 1 6 4.5zM12 4.5v15M4.5 12h15"/>
+</svg>

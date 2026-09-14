@@ -340,20 +340,14 @@
             </WrapPanel>
           </Border>
 
-          <!-- .canvas-wrap: checkerboard backdrop, 320px art tile, blip preview over the corner. -->
-          <Panel Grid.Row="2">
-            <Panel.Background>
-              <!-- The mockup's 18px repeating-conic checkerboard. -->
-              <DrawingBrush TileMode="Tile" SourceRect="0,0,36,36" DestinationRect="0,0,36,36">
-                <DrawingBrush.Drawing>
-                  <DrawingGroup>
-                    <GeometryDrawing Brush="{DynamicResource BgAltBrush}" Geometry="M0,0 H36 V36 H0 Z" />
-                    <GeometryDrawing Brush="{DynamicResource BgAlt2Brush}" Geometry="M0,0 H18 V18 H0 Z" />
-                    <GeometryDrawing Brush="{DynamicResource BgAlt2Brush}" Geometry="M18,18 H36 V36 H18 Z" />
-                  </DrawingGroup>
-                </DrawingBrush.Drawing>
-              </DrawingBrush>
-            </Panel.Background>
+          <!-- .canvas-wrap: the pixel-grid backdrop, the 320px art tile, the blip over its corner.
+               THE BACKDROP IS BUILT IN CODE-BEHIND (BuildBackdrop), because its square size and its
+               PHASE both come from the art's laid-out geometry - how many device pixels one canvas
+               pixel occupies, and where the art's top-left corner landed. It was a fixed 18px
+               checker tiled from this Panel's own corner, so its squares stood in no relation to the
+               art's pixels: a pixel covered part of one square and part of the next, differently at
+               every canvas size, and the drawing read as out of register with its own background. -->
+          <Panel Grid.Row="2" x:Name="CanvasBackdrop">
 
             <Border Name="CanvasHost" Width="320" Height="320" CornerRadius="10"
                     BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1"
@@ -370,6 +364,29 @@
                 <!-- "Fill pane with preview": the colorized result takes over the tile. -->
                 <Image Source="{Binding Preview}" Stretch="Uniform" IsVisible="{Binding PreviewFillsPane}" />
               </Panel>
+            </Border>
+
+            <!-- .gridchip: the backdrop's own two controls, pinned to the canvas' bottom-LEFT so
+                 they sit opposite the blip and read as the pair of canvas overlays they are.
+                 NOT IN EITHER STRIP ABOVE. Both of those are width-critical enough to WRAP at the
+                 window sizes this app allows (ToolstripLayoutTests, PaletteStripLayoutTests), and a
+                 setting about how the backdrop is DRAWN belongs with the thing it draws on rather
+                 than in a row of painting tools. The two controls are the whole feature: what a
+                 square is worth, and whether to draw squares at all. -->
+            <Border Classes="gridchip" HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                    Margin="26,0,0,26">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Button Classes="ttool" Classes.on="{Binding ShowPixelGrid}"
+                        Command="{Binding ToggleGridCommand}" ToolTip.Tip="{Binding GridToggleTip}">
+                  <Path Classes="ico sm" Data="{StaticResource IconGrid}" />
+                </Button>
+                <!-- The same compact numeric idiom the brush size uses, and the same reason for no
+                     caption: the tooltip carries the meaning and the chip keeps its width. -->
+                <NumericUpDown Classes="nin" Value="{Binding GridSize}" Minimum="1"
+                               Maximum="{Binding GridSizeMax}" Width="58" FormatString="0"
+                               ShowButtonSpinner="False" IsEnabled="{Binding ShowPixelGrid}"
+                               ToolTip.Tip="How many canvas pixels one grid square covers. 1 is a true pixel grid; raise it on a large canvas, where one square per pixel is finer than the screen can draw." />
+              </StackPanel>
             </Border>
 
             <!-- .blip: the colorized preview sits ON the canvas' bottom-right corner rather than

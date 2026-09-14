@@ -52,6 +52,9 @@
   <!-- A tipped paint bucket with its handle and a drip. The handle is what makes it read. -->
   <StreamGeometry x:Key="IconFill">M11 5.5 4.6 11.9a1.5 1.5 0 0 0 0 2.2l4.3 4.3a1.5 1.5 0 0 0 2.2 0l6.4-6.4zM8.4 3 11 5.5M19.5 14.5c1.5 2 2 3 0 3s-1.5-1 0-3z</StreamGeometry>
 
+  <!-- A 2x2 lattice: the rect tool's rounded box crossed once each way. Two lines each way was tried first and turns to mush at 12px, which is the size this is drawn at. -->
+  <StreamGeometry x:Key="IconGrid">M6 4.5h12a1.5 1.5 0 0 1 1.5 1.5v12a1.5 1.5 0 0 1-1.5 1.5H6a1.5 1.5 0 0 1-1.5-1.5V6A1.5 1.5 0 0 1 6 4.5zM12 4.5v15M4.5 12h15</StreamGeometry>
+
   <!-- The layer-reorder grip: six dots in two columns, from variant B of docs/design/mockups/explorations/reorder-control-variants.html. The ONE glyph on this feature that is not traced from a locked mockup - the locked set has no reorder affordance at all - so it is authored in the same 24-unit box as every other icon here and drawn at the exploration's own centers (x 9.5/14.5, y 6/12/18). The mockup's circles are r=1.45 and `fill: currentColor`. A Path.ico is a single STROKED path (Fill=Transparent, StrokeThickness=2 in these 24 units), so a filled dot is expressed as a circle small enough for its own stroke to close the middle: r=0.45 plus the 1-unit stroke half-width on each side paints a solid disc of radius 1.45 - the mockup's dot exactly, arrived at by the same trick IconDiceFace uses for its pips. -->
   <StreamGeometry x:Key="IconGrip">M9.95 6a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0M14.95 6a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0M9.95 12a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0M14.95 12a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0M9.95 18a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0M14.95 18a0.45 0.45 0 1 1-0.9 0 0.45 0.45 0 1 1 0.9 0</StreamGeometry>
 

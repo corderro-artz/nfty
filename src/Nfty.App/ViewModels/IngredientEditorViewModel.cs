@@ -1038,6 +1038,72 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         oldTile?.Dispose();
     }
 
+    /// <summary>
+    /// How many CANVAS PIXELS one square of the backdrop grid covers.
+    /// </summary>
+    /// <remarks>
+    /// <para>One, by default, which makes the backdrop a true pixel grid: a square is a pixel, and
+    /// a stroke lands on whole squares. It used to be a fixed 18px checker tiled from the PANE's
+    /// own corner, so its squares had no relationship to the art's pixels at all — a pixel covered
+    /// part of one square and part of the next, differently at every canvas size, which reads as
+    /// the drawing being out of register with its own background.</para>
+    /// <para>Bigger values are for bigger canvases, where one square per pixel is finer than the
+    /// screen can draw: at a 512px canvas in a 320px tile a pixel is under two thirds of a device
+    /// pixel, and a checker that fine is not a pattern, it is a flat average. The step is the user's
+    /// to pick because only they know what they are counting in - a 16px sprite laid out on an 8px
+    /// grid is two squares across.</para>
+    /// </remarks>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(GridSizeText))]
+    private int _gridSize = 1;
+
+    /// <summary>Whether the backdrop draws the pixel grid rather than a flat ground.</summary>
+    /// <remarks>
+    /// Off is the theme's own page ground — the same color the app is built on — which is what to
+    /// use when the grid competes with the art rather than helping it: pixel art of small sprites on
+    /// a transparent field reads better against a lattice, and a full-bleed illustration reads
+    /// better against nothing.
+    /// </remarks>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(GridToggleTip))]
+    private bool _showPixelGrid = true;
+
+    /// <summary>The largest grid step this canvas admits: a square wider than the art is one square.
+    /// The same rule <see cref="BrushSizeMax"/> keeps, for the same reason — a ceiling belongs to the
+    /// property, so the field and anything else that writes it cannot disagree about the limit.</summary>
+    public int GridSizeMax => Math.Max(1, Math.Min(_draft.Canvas.Width, _draft.Canvas.Height));
+
+    /// <summary>The grid step as the chip prints it.</summary>
+    public string GridSizeText => GridSize == 1 ? "1 px" : $"{GridSize} px";
+
+    /// <summary>What the toggle says it will do next.</summary>
+    public string GridToggleTip => ShowPixelGrid
+        ? "Pixel grid — one square per pixel at this step. Switch to a flat background."
+        : "Flat background. Switch to the pixel grid.";
+
+    partial void OnGridSizeChanged(int value)
+    {
+        int clamped = Math.Clamp(value, 1, GridSizeMax);
+        if (clamped != value) { GridSize = clamped; return; }
+        BackdropChanged?.Invoke();
+    }
+
+    partial void OnShowPixelGridChanged(bool value) => BackdropChanged?.Invoke();
+
+    /// <summary>
+    /// Raised when the canvas backdrop has to be rebuilt.
+    /// </summary>
+    /// <remarks>
+    /// The backdrop is a BRUSH whose square size and phase come from the art's laid-out geometry —
+    /// which only the view knows — so the view owns building it and this says when. An event rather
+    /// than the view watching two properties by name, because the two are always read together and a
+    /// name missed from that list is a setting that silently stops applying.
+    /// </remarks>
+    public event Action? BackdropChanged;
+
+    /// <summary>Switches between the pixel grid and a flat ground.</summary>
+    [RelayCommand] private void ToggleGrid() => ShowPixelGrid = !ShowPixelGrid;
+
     /// <summary>Roughly 30 frames a second for the corner tile during a drag.</summary>
     private const int TileBudgetMs = 33;
 
