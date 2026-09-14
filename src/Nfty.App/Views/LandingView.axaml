@@ -140,18 +140,12 @@
            buttons. -->
       <StackPanel Grid.Row="2" Spacing="7">
 
-      <!-- Which workspace loose saves will default into. The titlebar chip reports this too, but only
-           once a CookBook is open — on Landing there was no way to tell, and no way back out. -->
-      <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,4" IsVisible="{Binding HasKitchen}">
-        <Path Grid.Column="0" Classes="ico sm" Data="{StaticResource IconKitchen}" VerticalAlignment="Center" />
-        <TextBlock Grid.Column="1" Classes="ftimes" Margin="9,0,0,0" VerticalAlignment="Center"
-                   Text="{Binding KitchenName, StringFormat='Kitchen: {0}'}" />
-        <Button Grid.Column="2" Classes="bare" Command="{Binding CloseKitchenCommand}"
-                ToolTip.Tip="Leave this Kitchen">
-          <TextBlock Classes="ftimes" Text="close" />
-        </Button>
-      </Grid>
-
+      <!-- The "Kitchen: Studio  close" row that used to sit here is GONE, and its one piece of
+           unique content moved to the shelf. It named the open Kitchen a second time - the shelf at
+           the foot of the screen already says KITCHEN · Studio · CookBooks - and it said it three
+           hundred pixels away from the thing it was describing, floating between the action columns
+           and the wordmark with nothing around it. Two controls for one fact is worse than one, and
+           the shelf is where the fact lives. -->
       <TextBlock Classes="lwordmark"><Run Text="nft" /><Run Text="y" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
       <TextBlock Text="Asset Generator" Classes="tagline" Margin="0,-2,0,0" />
 
@@ -229,17 +223,26 @@
   <Border Grid.Row="1" Classes="kshelf" Name="KitchenShelf" Focusable="True">
     <Grid RowDefinitions="20,9,52">
 
-      <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="6">
+      <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="6">
         <TextBlock Grid.Column="0" Text="KITCHEN" Classes="slbl" Margin="0" VerticalAlignment="Center" />
         <TextBlock Grid.Column="1" Text="{Binding KitchenShelf.WhereText}" Classes="rmeta"
                    Margin="4,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-        <TextBlock Grid.Column="3" Text="{Binding KitchenShelf.PageText}" Classes="rmeta"
+        <!-- LEAVE THIS KITCHEN, beside the shelf it is about. An Auto column that collapses to zero
+             when no Kitchen is open, and it sits against the ELASTIC column - so the pager beside it
+             does not move when it appears, which is the only thing the no-reflow rule asks of a
+             control that comes and goes. -->
+        <Button Grid.Column="3" Classes="bare" Command="{Binding CloseKitchenCommand}"
+                IsVisible="{Binding HasKitchen}" VerticalAlignment="Center" Margin="0,0,10,0"
+                ToolTip.Tip="Leave this Kitchen">
+          <TextBlock Classes="ftimes" Text="close" />
+        </Button>
+        <TextBlock Grid.Column="4" Text="{Binding KitchenShelf.PageText}" Classes="rmeta"
                    VerticalAlignment="Center" MinWidth="86" TextAlignment="Right" />
-        <Button Grid.Column="4" Classes="kchev" Command="{Binding KitchenShelf.PrevCommand}"
+        <Button Grid.Column="5" Classes="kchev" Command="{Binding KitchenShelf.PrevCommand}"
                 IsEnabled="{Binding KitchenShelf.CanPrev}" ToolTip.Tip="Previous page">
           <Path Classes="ico xs" Data="{StaticResource IconChevronUp}" />
         </Button>
-        <Button Grid.Column="5" Classes="kchev" Command="{Binding KitchenShelf.NextCommand}"
+        <Button Grid.Column="6" Classes="kchev" Command="{Binding KitchenShelf.NextCommand}"
                 IsEnabled="{Binding KitchenShelf.CanNext}" ToolTip.Tip="Next page">
           <Path Classes="ico xs" Data="{StaticResource IconChevronDown}" />
         </Button>
