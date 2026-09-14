@@ -5,6 +5,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Nfty.App.ViewModels"
              xmlns:svc="using:Nfty.App.Services"
+             xmlns:ctl="using:Nfty.App.Controls"
              x:Class="Nfty.App.Views.IngredientEditorView"
              x:DataType="vm:IngredientEditorViewModel"
              RenderOptions.BitmapInterpolationMode="None"
@@ -119,16 +120,24 @@
       <!-- ============ Canvas ============ -->
       <Border Grid.Column="1" Classes="pane">
         <Grid RowDefinitions="Auto,Auto,*">
-          <!-- .toolstrip: horizontal 30px icon bar with an ACTIVE tool, a value ramp and a swatch. -->
-          <!-- IT WRAPS. The strip's controls need 581px and the canvas pane gets 418 at the
-               smallest window the app opens, so the last three were arranged past the pane's edge
-               and PAINTED OVER THE COLORIZE RAIL beside it - a ramp, a swatch and the brush-size
-               field lying across the rail's tabs. The old budget test measured at 1180, which is
-               200px wider than this page is ever given, so it passed the whole time. Wrapping is
-               what lets the window minimum stay where a 1366x768 laptop can open it: the alternative
-               was a 1440px floor, which is the machine class the minimum exists for. -->
+          <!-- .toolstrip: horizontal 30px icon bar with an ACTIVE tool, a value ramp and a swatch.
+
+               IT WRAPS BY GROUP. The strip's controls do not fit the canvas pane at the smaller
+               windows the app allows - they need more than the pane has, and arranged as one run
+               they were pushed past its edge and PAINTED OVER THE COLORIZE RAIL beside it. Wrapping
+               is what lets the window minimum stay where a 1366x768 laptop can open it.
+
+               But a WrapPanel breaks between any two children, and this row handed it thirteen loose
+               controls - so at the size the app OPENS at it wanted 557px of a 556px pane and broke
+               after the swatch, leaving the brush-size box alone on a second line beside six hundred
+               pixels of empty row. Missing by ONE pixel is not a wrapped toolbar, it is a broken one.
+               StripPanel takes GROUPS, so a break always falls between whole ideas, and gives the
+               line's slack to the ramp - the one control here that is better longer. -->
           <Border Grid.Row="0" Classes="pane-hrow toolstrip">
-            <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <ctl:StripPanel Spacing="14" LineSpacing="6" VerticalAlignment="Center">
+              <!-- THE TOOLS. Eight buttons and the one rule that says something: freehand marks on
+                   the left, figures you drag out on the right. -->
+              <StackPanel Orientation="Horizontal" Spacing="3">
               <Button Classes="ttool" Classes.on="{Binding IsToolBrush}" ToolTip.Tip="{x:Static svc:KeyHints.BrushTool}"
                       Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Brush}">
                 <Path Classes="ico sm" Data="{StaticResource IconPencil}" /></Button>
@@ -169,32 +178,41 @@
                       Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Select}">
                 <Path Classes="ico sm" Data="{StaticResource IconSelect}" /></Button>
 
-              <StackPanel Orientation="Horizontal">
-                <Border Classes="tsep" />
+              </StackPanel>
+
+              <!-- HISTORY. Its own group: undo is not a tool, and a break between the two reads as
+                   the sentence it is rather than as a run that ran out of room. -->
+              <StackPanel Orientation="Horizontal" Spacing="3">
                 <Button Classes="ttool" Command="{Binding UndoCommand}" ToolTip.Tip="{x:Static svc:KeyHints.UndoTool}">
                   <Path Classes="ico sm" Data="{StaticResource IconUndo}" /></Button>
+                <Button Classes="ttool" Command="{Binding RedoCommand}" ToolTip.Tip="{x:Static svc:KeyHints.RedoTool}">
+                  <Path Classes="ico sm" Data="{StaticResource IconRedo}" /></Button>
               </StackPanel>
-              <Button Classes="ttool" Command="{Binding RedoCommand}" ToolTip.Tip="{x:Static svc:KeyHints.RedoTool}">
-                <Path Classes="ico sm" Data="{StaticResource IconRedo}" /></Button>
 
-              <!-- Paired with the group it introduces - see the note above the first rule. -->
-              <StackPanel Orientation="Horizontal">
-                <Border Classes="tsep" />
+              <!-- THE INK: how bright, what it looks like, how wide. The three controls that answer
+                   "what will this stroke lay down", so they travel together and wrap together.
+                   A GRID, NOT A STACKPANEL, and that is the whole point of marking it elastic: a
+                   StackPanel hands every child its desired width and leaves the rest as trailing
+                   space, so a group that grew simply opened a hole beside itself and the ramp stayed
+                   exactly as short as before. The star column is what turns the group's extra width
+                   into the one control that is worth more of it. -->
+              <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6" ctl:StripPanel.Elastic="True"
+                    MaxWidth="300">
               <!-- .ramp: the brightness axis. In grayscale mode it IS the color; in color mode it
                    is V of HSV, with H and S on the colorize rail's own tracks. One control, one
                    meaning ("how bright"), in both modes. -->
-              <!-- 80, not the mockup's 96. The third deliberate chrome divergence on record (after
-                   the 40px titlebar and the 7px toolbar padding): this strip carries a Line tool and
-                   a brush-size field the mockup has neither of, and at the pane's minimum width
-                   something had to give. A brightness slider is the one control here whose meaning
-                   does not depend on its exact length. See ToolstripLayoutTests. -->
-              <Panel Classes="band" Width="80" VerticalAlignment="Center">
+              <!-- THE ELASTIC ONE. It was pinned at 80 - down from the mockup's 96 - because the
+                   strip had to fit the smallest pane and a brightness slider is the one control here
+                   whose meaning does not depend on its exact length. That reasoning cuts both ways:
+                   it is also the one control that gets BETTER with length, so it is what the row
+                   spends its slack on now. 80 is the floor, not the size; the cap on the group
+                   stops a wide window turning the row into one enormous slider. -->
+              <Panel Grid.Column="0" Classes="band" MinWidth="80" VerticalAlignment="Center">
                 <Border Classes="ramp" Background="{StaticResource ValueRampBrush}" />
                 <Slider Value="{Binding BrushValue}" Minimum="0" Maximum="255"
                         Classes="overlay" ToolTip.Tip="Paint value / brightness" />
               </Panel>
-              </StackPanel>
-              <Border Classes="swatch" ToolTip.Tip="{Binding BrushSpec}">
+              <Border Grid.Column="1" Classes="swatch" ToolTip.Tip="{Binding BrushSpec}">
                 <Border.Background><SolidColorBrush Color="{Binding BrushSwatch}" /></Border.Background>
               </Border>
 
@@ -204,9 +222,10 @@
                    separator, and no spinner column — Fluent's is two ~28px buttons for a number you
                    type once. What is left is the mockup's own numeric idiom (.nin, 58px), and the
                    tooltip carries the meaning the caption would have. -->
-              <NumericUpDown Classes="nin" Value="{Binding BrushSize}" Minimum="1" Maximum="{Binding BrushSizeMax}" Width="58" FormatString="0"
+              <NumericUpDown Grid.Column="2" Classes="nin" Value="{Binding BrushSize}" Minimum="1" Maximum="{Binding BrushSizeMax}" Width="46" FormatString="0"
                              ShowButtonSpinner="False" ToolTip.Tip="{x:Static svc:KeyHints.BrushSizeField}" />
-            </WrapPanel>
+              </Grid>
+            </ctl:StripPanel>
           </Border>
 
           <!-- ============ Palette strip ============
@@ -214,19 +233,24 @@
                the opacity lock. Always present: on a Dynamic or Static layer it simply offers the
                grays a value-map is authored in. See Styles.axaml's block for the no-reflow rules. -->
           <Border Grid.Row="1" Classes="pstrip">
-            <!-- IT WRAPS, exactly as the toolstrip above it does, and for a worse version of the
-                 same reason. This was a Grid whose one star column held the saved swatches, so the
-                 fixed cells took their width first and the star absorbed whatever was left - and at
-                 the smallest window there was nothing left: the cells need about 555px and the
-                 canvas pane is 556, so THE SAVED PALETTE WAS ARRANGED AT ZERO WIDTH AND SIMPLY WAS
-                 NOT THERE, with the alpha axis and the opacity lock painted over the colorize rail
-                 next door. The comment here used to claim a 594px pane and a 521px total; both were
-                 stale, and PaletteStripLayoutTests measured at 1180 - 200px wider than this page is
-                 ever given - so it agreed with them.
-                 A WrapPanel has no star to collapse. The saved run states a width instead, so the
-                 palette is always there, and when the two groups do not fit on one line the second
-                 moves to a line of its own rather than off the edge. -->
-            <WrapPanel Orientation="Horizontal">
+            <!-- FOUR GROUPS, and the saved run takes the slack.
+
+                 This was a Grid whose one star column held the saved swatches, so the fixed cells
+                 took their width first and the star absorbed whatever was left - and at the smallest
+                 window there was nothing left: THE SAVED PALETTE WAS ARRANGED AT ZERO WIDTH AND
+                 SIMPLY WAS NOT THERE, with the alpha axis and the opacity lock painted over the
+                 colorize rail next door. A WrapPanel fixed that by giving the saved run a stated
+                 width instead of a star - but it also broke between any two children, so the strip
+                 scattered across two lines with no group intact on either.
+
+                 StripPanel takes groups, so a break falls between whole ideas; and the saved run is
+                 ELASTIC with a floor rather than a fixed width, which is what a star should always
+                 have been. A star collapses to nothing when the row is short; an elastic child with
+                 a floor makes the row WRAP instead, so the palette is always there and simply gets
+                 a line of its own when it has to. Growing it is also the one thing that makes the
+                 strip's own scroller stop appearing: more swatches fit, so fewer need scrolling
+                 to. -->
+            <ctl:StripPanel Spacing="14" LineSpacing="4">
 
               <!-- A Custom layer has no gray mode at all: its value-map never reaches an archive,
                    so those strokes would be invisible work. The cell is a FIXED 104px either way and
@@ -253,9 +277,8 @@
                 </Border>
               </Panel>
 
-              <!-- Paired, as in the toolstrip: a rule may not end a wrapped line. -->
-              <StackPanel Orientation="Horizontal">
-                <Border Classes="tsep" />
+              <!-- THE RAMP: ten canonical values for the mode in force - grays for a value-map,
+                   hues for color. A group of its own, so it never breaks mid-run. -->
               <ItemsControl ItemsSource="{Binding Ramp}" VerticalAlignment="Center">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="3" /></ItemsPanelTemplate>
@@ -273,18 +296,20 @@
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
 
-              </StackPanel>
-
-              <StackPanel Orientation="Horizontal">
-                <Border Classes="tsep" />
-              <!-- The saved run scrolls inside its own cell: a palette that grew would otherwise
-                   push the alpha axis and the lock off the strip. -->
-              <!-- 120 STATED, not a star. A star is what let this vanish; a width means the saved
-                   palette is the same size in every window and scrolls inside itself when it grows,
-                   which is what its own scroller was always for. -->
-              <ScrollViewer HorizontalScrollBarVisibility="Auto"
+              <!-- THE SAVED PALETTE, and the row's elastic child. The colors the author mixed are
+                   the one run here that is worth more of the window: a wider strip shows more of
+                   them, and the horizontal scroller below stops appearing at all. 120 is the FLOOR
+                   - the width it used to be pinned at - so a narrow pane wraps this group onto its
+                   own line rather than shrinking it away, which is the failure the stated width was
+                   introduced to prevent. A GRID for the same reason the ink group above is one: a
+                   StackPanel would leave the group's extra width as a hole between the + button and
+                   the alpha axis rather than giving it to the swatches. -->
+              <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="6" VerticalAlignment="Center"
+                    ctl:StripPanel.Elastic="True" MaxWidth="420">
+                <Border Grid.Column="0" Classes="tsep" />
+              <ScrollViewer Grid.Column="2" HorizontalScrollBarVisibility="Auto"
                             VerticalScrollBarVisibility="Disabled" VerticalAlignment="Center"
-                            Width="120" Height="20">
+                            MinWidth="120" Height="20">
                 <ItemsControl ItemsSource="{Binding SavedSwatches}">
                   <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="3" /></ItemsPanelTemplate>
@@ -312,13 +337,19 @@
                 </ItemsControl>
               </ScrollViewer>
 
-              </StackPanel>
+                <!-- + LEADS THE RUN. Trailing it, the button sat at the far end of a cell that is
+                     usually mostly empty - so the one control here that is an ACTION drifted with
+                     the window while the colors it adds to stayed put. At the head it is always in
+                     the same place, and everything to its right is palette. -->
+                <Button Grid.Column="1" Classes="sw add" Command="{Binding SaveSwatchCommand}"
+                        ToolTip.Tip="Save this color to the palette">
+                  <Path Classes="ico xs" Data="{StaticResource IconPlus}" />
+                </Button>
+              </Grid>
 
-              <Button Classes="sw add" Command="{Binding SaveSwatchCommand}"
-                      ToolTip.Tip="Save this color to the palette">
-                <Path Classes="ico xs" Data="{StaticResource IconPlus}" />
-              </Button>
-
+              <!-- HOW THE STROKE LANDS: its alpha, and whether partial alpha is admitted at all.
+                   One group, because the lock is what makes the slider mean anything. -->
+              <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
               <!-- Reserved whether or not the lock admits it — see Styles.axaml. -->
               <StackPanel Orientation="Horizontal" Spacing="6" Width="94"
                           VerticalAlignment="Center" Classes="alphacell"
@@ -337,7 +368,8 @@
                       ToolTip.Tip="Opacity lock — every painted pixel is fully opaque or fully erased">
                 <Path Classes="ico sm" Data="{StaticResource IconLock}" />
               </Button>
-            </WrapPanel>
+              </StackPanel>
+            </ctl:StripPanel>
           </Border>
 
           <!-- .canvas-wrap: the pixel-grid backdrop, the 320px art tile, the blip over its corner.

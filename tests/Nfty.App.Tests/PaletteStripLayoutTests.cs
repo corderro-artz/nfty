@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
@@ -8,6 +7,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using System.Collections.Generic;
+using Nfty.App.Controls;
 using Nfty.App.Imaging;
 using Nfty.App.Services;
 using Nfty.App.ViewModels;
@@ -46,13 +46,19 @@ public class PaletteStripLayoutTests
     // would satisfy vacuously at any size, zero included.
     private const double SwatchSize = 18;
 
+    // The window the app OPENS at. This strip does not fit one line at any window the app allows,
+    // so the question here is never "does it wrap" but "where" - and the answer used to be "after
+    // whatever happened to fit", which at 1366 put the alpha axis and its lock alone on a line with
+    // four hundred pixels of empty row beside them.
+    private static double DefaultWindowWidth => (1366 - 24) / ShellViewModel.BaseScale;
+
     private static (Window window, IngredientEditorViewModel vm, Views.IngredientEditorView view)
-        Render(int savedSwatches, ThemeVariant variant)
+        Render(int savedSwatches, ThemeVariant variant, double? pageWidth = null)
     {
         var (book, recipe, ing) = VisualCapture.DynamicIngredient();
         var palette = new PaletteService(StateStore.InMemory());
         for (int i = 0; i < savedSwatches; i++)
-            palette.Add(new RgbColor((byte)(10 + i * 7), (byte)(200 - i * 5), 40));
+            palette.Add(new RgbColor((byte)(10 + i * 7), (byte)(200 - i * 5), 40), PaletteMode.Color);
 
         var vm = new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(), new FakeNav(),
             new CookBookSession(), new FakeDialogs(), new FilePickerService(),
@@ -64,7 +70,7 @@ public class PaletteStripLayoutTests
         {
             RequestedThemeVariant = variant,
             Content = view,
-            Width = MinimumWindowWidth,
+            Width = pageWidth ?? MinimumWindowWidth,
             Height = 720,
         };
         window.Show();
@@ -138,6 +144,38 @@ public class PaletteStripLayoutTests
 
             foreach (var cell in Swatches(view).Take(Palette.Slots))
                 Assert.True(IsFullyInside(cell, strip), "a ramp slot was clipped by the strip");
+        }
+        finally { vm.Dispose(); window.Close(); }
+    }
+
+    /// <summary>
+    /// Every line the strip wraps onto carries real content — no group is left alone beside an
+    /// empty row.
+    /// </summary>
+    /// <remarks>
+    /// Measured at BOTH the minimum and the window the app opens at, because the two break
+    /// differently and only one of them was ever wrong: at 1280 the first three groups did not fit
+    /// and the strip split down the middle on its own, while at 1366 they fitted by NINE PIXELS, so
+    /// a greedy panel took them and stranded the fourth. That is the shape of a wrapping bug worth
+    /// remembering — it appears at one window size and not at the one below it, so a test that
+    /// measures a single width can agree with it completely.
+    /// </remarks>
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Every_wrapped_line_carries_real_content(bool atDefaultWindow)
+    {
+        var (window, vm, view) = Render(4, ThemeVariant.Dark,
+            atDefaultWindow ? DefaultWindowWidth : null);
+        try
+        {
+            var panel = Strip(view).GetVisualDescendants().OfType<StripPanel>().First();
+            foreach (var line in StripLines.Of(panel))
+            {
+                double used = StripLines.Used(line);
+                Assert.True(used >= panel.Bounds.Width / 2,
+                    $"a line uses {used:0.#} of {panel.Bounds.Width:0.#} - the break stranded a group");
+            }
         }
         finally { vm.Dispose(); window.Close(); }
     }

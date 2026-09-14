@@ -1,9 +1,11 @@
+using System;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Nfty.App.Controls;
 using Nfty.App.Services;
 using Nfty.App.ViewModels;
 using Xunit;
@@ -32,13 +34,17 @@ public class ToolstripLayoutTests
     private static double PageWidth =>
         (ShellViewModel.MinWindowWidth - 24) / ShellViewModel.BaseScale;
 
-    private static (Window window, Views.IngredientEditorView view) Render()
+    // The window the app OPENS at, which is where a wrapped strip is most often looked at and where
+    // the old WrapPanel missed one line by a single pixel.
+    private static double DefaultPageWidth => (1366 - 24) / ShellViewModel.BaseScale;
+
+    private static (Window window, Views.IngredientEditorView view) Render(double pageWidth)
     {
         var (book, recipe, ing) = VisualCapture.DynamicIngredient();
         var vm = new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(), new FakeNav(),
             new CookBookSession(), new FakeDialogs(), new FilePickerService());
         var view = new Views.IngredientEditorView { DataContext = vm };
-        var window = new Window { Content = view, Width = PageWidth, Height = 720 };
+        var window = new Window { Content = view, Width = pageWidth, Height = 720 };
         window.Show();
         Dispatcher.UIThread.RunJobs();
         return (window, view);
@@ -54,11 +60,11 @@ public class ToolstripLayoutTests
     [AvaloniaFact]
     public void Every_toolstrip_control_is_inside_the_pane_at_the_minimum_window_width()
     {
-        var (window, view) = Render();
+        var (window, view) = Render(PageWidth);
         try
         {
             var strip = Strip(view);
-            var panel = strip.GetVisualDescendants().OfType<WrapPanel>().First();
+            var panel = strip.GetVisualDescendants().OfType<StripPanel>().First();
             Assert.True(strip.Bounds.Width > 0, "the strip itself was arranged at zero width");
             double edge = ContentRight(strip);
 
@@ -88,11 +94,11 @@ public class ToolstripLayoutTests
     [AvaloniaFact]
     public void The_strip_is_tall_enough_for_every_line_it_wraps_onto()
     {
-        var (window, view) = Render();
+        var (window, view) = Render(PageWidth);
         try
         {
             var strip = Strip(view);
-            var panel = strip.GetVisualDescendants().OfType<WrapPanel>().First();
+            var panel = strip.GetVisualDescendants().OfType<StripPanel>().First();
 
             double bottom = panel.Children.OfType<Control>()
                 .Select(c => c.TranslatePoint(default, strip)!.Value.Y + c.Bounds.Height)
@@ -102,6 +108,65 @@ public class ToolstripLayoutTests
             Assert.True(bottom <= room + 0.5,
                 $"the strip's controls reach {bottom:0.#} in a row {room:0.#} tall");
             Assert.True(strip.Bounds.Height >= 41, "the row must not be shorter than its siblings");
+        }
+        finally { window.Close(); }
+    }
+
+    /// <summary>
+    /// At the window the app OPENS at, the strip is ONE line.
+    /// </summary>
+    /// <remarks>
+    /// This is the defect that was reported rather than measured: the strip wanted 557px of a 556px
+    /// pane, so it wrapped, and what went over the fold was the brush-size box on its own beside six
+    /// hundred pixels of empty row. Missing by one pixel is not a wrapped toolbar. Asserted at 1366
+    /// rather than at the minimum because wrapping at the minimum is the DESIGN — the strip does not
+    /// fit 1280 and never will — while wrapping at the default is a budget that has been overspent.
+    /// </remarks>
+    [AvaloniaFact]
+    public void The_strip_is_one_line_at_the_window_the_app_opens_at()
+    {
+        var (window, view) = Render(DefaultPageWidth);
+        try
+        {
+            var panel = Strip(view).GetVisualDescendants().OfType<StripPanel>().First();
+            var lines = StripLines.Of(panel);
+
+            Assert.True(lines.Count == 1,
+                $"the toolstrip wrapped onto {lines.Count} lines at the window the app opens at - "
+                + "its controls have outgrown the pane again");
+            Assert.True(lines[0].Count > 1, "the strip laid out nothing to measure");
+        }
+        finally { window.Close(); }
+    }
+
+    /// <summary>
+    /// Where it DOES wrap, a group stays whole and no line is left holding a lone control while the
+    /// row beside it is empty.
+    /// </summary>
+    /// <remarks>
+    /// A WrapPanel breaks between any two children, so the break landed wherever the arithmetic put
+    /// it; StripPanel takes groups and picks the break that leaves the least visible gap. The
+    /// assertion is on the GAP rather than on a particular split: naming the split would restate the
+    /// current widths, and the rule is that no line is much emptier than the emptiest it has to be.
+    /// </remarks>
+    [AvaloniaFact]
+    public void A_wrapped_line_is_never_mostly_empty()
+    {
+        var (window, view) = Render(PageWidth);
+        try
+        {
+            var strip = Strip(view);
+            var panel = strip.GetVisualDescendants().OfType<StripPanel>().First();
+            var lines = StripLines.Of(panel);
+            if (lines.Count < 2) return;      // one line is the best possible answer
+
+            foreach (var line in lines)
+            {
+                double used = StripLines.Used(line);
+                Assert.True(used >= panel.Bounds.Width / 2,
+                    $"a wrapped line uses {used:0.#} of {panel.Bounds.Width:0.#} - the break left a "
+                    + "control stranded beside an empty row");
+            }
         }
         finally { window.Close(); }
     }
