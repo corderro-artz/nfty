@@ -39,13 +39,7 @@ public static class SetProvenance
     public static string? Warning(string? recordedSha256, string? cookbookSha256)
     {
         if (recordedSha256 is null || cookbookSha256 is null) return null;
-
-        // Case-insensitive: both sides are written lowercase by ArchiveIo.HashFile, but set.json is
-        // plain JSON that a person can edit, and an uppercase copy of the same hash is the same hash.
-        // Ordinal-ignore-case, not the current culture's, because a hex digit must compare the same
-        // under every locale.
-        if (string.Equals(recordedSha256, cookbookSha256, StringComparison.OrdinalIgnoreCase))
-            return null;
+        if (IsSameBook(recordedSha256, cookbookSha256)) return null;
 
         return $"""
             warning: this CookBook is not the one this Set was cooked from.
@@ -58,4 +52,25 @@ public static class SetProvenance
               Pass the CookBook this Set was cooked from, or generate a fresh Set from this one.
             """;
     }
+    /// <summary>
+    /// Whether a CookBook is the one a Set was cooked from.
+    /// </summary>
+    /// <remarks>
+    /// Case-insensitive: both sides are written lowercase by <c>ArchiveIo.HashFile</c>, but
+    /// <c>set.json</c> is plain JSON a person can edit, and an uppercase copy of the same hash is
+    /// the same hash. Ordinal-ignore-case, not the current culture's, because a hex digit must
+    /// compare the same under every locale.
+    ///
+    /// <para>A null on either side is FALSE here rather than "cannot tell", which is the opposite of
+    /// what <see cref="Warning"/> does with one - and deliberately so. Warning is asked "should I
+    /// interrupt?", where silence is the honest answer to an unanswerable question; this is asked
+    /// "is this the book?", where an unanswerable question is not a yes.</para>
+    /// </remarks>
+    /// <param name="recordedSha256">What the Set recorded at cook time.</param>
+    /// <param name="cookbookSha256">The hash of a CookBook on disk.</param>
+    /// <returns>True when the two hashes are the same.</returns>
+    public static bool IsSameBook(string? recordedSha256, string? cookbookSha256) =>
+        recordedSha256 is not null && cookbookSha256 is not null
+        && string.Equals(recordedSha256, cookbookSha256, StringComparison.OrdinalIgnoreCase);
+
 }

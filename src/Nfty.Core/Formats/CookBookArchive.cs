@@ -19,6 +19,20 @@ public static class CookBookArchive
                 inner => RecipeArchive.Write(inner, r.Manifest, r.Ingredients));
     }
 
+    /// <summary>
+    /// What a Set records for this archive: the SHA-256 of its bytes, lowercase hex.
+    /// </summary>
+    /// <remarks>
+    /// The same value <see cref="LoadedCookBook.SourceSha256"/> carries and <c>set.json</c> stores
+    /// as <c>cookbookSha256</c> - without decoding the book. Answering "is this the book that Set
+    /// was cooked from?" by reading it would pull every variant PNG in the collection into memory
+    /// to compare one string, which is the argument <c>ArchivePeek</c> already makes about
+    /// manifests.
+    /// </remarks>
+    /// <param name="path">Archive path.</param>
+    /// <returns>The hash, lowercase hex.</returns>
+    public static string HashOf(string path) => ArchiveIo.HashFile(path);
+
     /// <summary>Reads a CookBook, eagerly decoding every variant image inside it.</summary>
     /// <param name="path">Archive path.</param>
     /// <returns>The loaded book. The caller owns it and must dispose it — that frees every

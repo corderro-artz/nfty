@@ -171,10 +171,14 @@ public static class SetExporter
                 "A sealed export is a single file. Sealing encrypts the whole Set as one "
                 + "authenticated stream, so there is no folder shape for it.", nameof(options));
 
+        // Worded for whoever READS it, which is a person on either front-end: the CLI prints
+        // ex.Message verbatim and the export dialog shows it where its Export button would be. An
+        // earlier version explained that "the path has to come from the caller", which is true of
+        // the API and useless to the author it was shown to.
         if (options.IncludeCookBook && string.IsNullOrWhiteSpace(cookBookPath))
             throw new ArgumentException(
-                "This export includes the source CookBook, but no .cbk was given. A Set records its "
-                + "book's hash, never the book itself, so the path has to come from the caller.",
+                "This export includes the source CookBook, but no .cbk was chosen. A Set records its "
+                + "book's hash and never the book itself, so the file has to be named.",
                 nameof(cookBookPath));
 
         if (!options.IncludeCookBook || cookBookPath is null) return;

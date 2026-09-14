@@ -241,7 +241,7 @@ public class ExportDialogTests
         var vm = Dialog();
         vm.IncludeCookBook = true;
 
-        Assert.Contains("no .cbk was given", vm.Problem);
+        Assert.Contains("no .cbk was chosen", vm.Problem);
         Assert.False(vm.ExportCommand.CanExecute(null));
         Assert.Empty(vm.Parts);
     }

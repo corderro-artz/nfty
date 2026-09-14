@@ -187,6 +187,11 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     private readonly IStatusService _status;
     private readonly IFolderRevealer _revealer;
 
+    /// <summary>CookBook paths the app can name - the open book, recent ones - for the export
+    /// dialog to check against what the Set recorded. A Func because it is read when Export opens,
+    /// not when the browser does: the open book can change in between.</summary>
+    private readonly Func<IEnumerable<string>>? _bookCandidates;
+
     /// <summary>The collection's name.</summary>
     public string Name { get; }
     /// <summary>How many assets the Set holds.</summary>
@@ -212,10 +217,14 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     /// <param name="dialogs">The modal layer the inspector opens into.</param>
     /// <param name="status">Where a save result is reported.</param>
     /// <param name="revealer">Opens the folder an export landed in.</param>
+    /// <param name="bookCandidates">CookBook paths the app can name - the open book, recent ones -
+    /// for the export dialog to check against the hash this Set recorded. Read when Export opens
+    /// rather than when the browser does, since the open book can change in between.</param>
     public SetBrowserViewModel(LoadedSet set, IFilePickerService? picker = null,
         IDialogService? dialogs = null, IStatusService? status = null,
-        IFolderRevealer? revealer = null)
+        IFolderRevealer? revealer = null, Func<IEnumerable<string>>? bookCandidates = null)
     {
+        _bookCandidates = bookCandidates;
         RaritySort = new TableSort("Trait", () => OnPropertyChanged(nameof(SelectedRarity)));
         _set = set;
         _picker = picker ?? new FilePickerService();
@@ -368,7 +377,11 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanExport))]
     private async Task ExportAsync() =>
         await _dialogs.ShowAsync<object>(
-            new ExportDialogViewModel(_set.SourceDirectory, _picker, _revealer, _dialogs));
+            new ExportDialogViewModel(_set.SourceDirectory, _picker, _revealer, _dialogs,
+                // A Set records its book's HASH and never the book, so the dialog cannot follow a
+                // path - but it can CHECK one. These are the books this app can already name; the
+                // dialog also looks beside the Set, and accepts only the one that hashes right.
+                _set.Manifest.CookbookSha256, _bookCandidates?.Invoke() ?? Array.Empty<string>()));
 
     /// <summary>Frees every decoded thumbnail and the underlying Set. Rows that were never realized
     /// decoded nothing, and disposing them is a no-op — reading <c>r.Thumbnail</c> here to dispose

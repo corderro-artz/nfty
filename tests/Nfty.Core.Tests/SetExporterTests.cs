@@ -177,7 +177,7 @@ public class SetExporterTests
         var ex = Assert.Throws<ArgumentException>(() =>
             SetExporter.Plan(CookedSet(), ExportOptions.For(ExportPreset.FullProject)));
 
-        Assert.Contains("no .cbk was given", ex.Message);
+        Assert.Contains("no .cbk was chosen", ex.Message);
     }
 
     [Fact]

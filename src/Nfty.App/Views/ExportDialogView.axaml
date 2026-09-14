@@ -52,7 +52,10 @@
                   <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
                     <CheckBox Grid.Column="0" Content="Source CookBook"
                               IsChecked="{Binding IncludeCookBook}"
-                              ToolTip.Tip="A Set records its book's hash, never the book — so the file has to be chosen." />
+                              ToolTip.Tip="A Set records its book's hash, never the book — so the book is looked for among the ones this app knows and accepted only if its hash matches. Choose the file if it is somewhere else." />
+                    <!-- The leaf name says WHICH book; whether it is the right one is in the
+                         manifest's consequences below, where every other thing worth stopping for
+                         is already stated. -->
                     <TextBlock Grid.Column="1" Classes="m-sub" VerticalAlignment="Center"
                                TextTrimming="CharacterEllipsis" Text="{Binding CookBookLeaf}" />
                     <Button Grid.Column="2" Classes="tbtn" Content="Choose…"

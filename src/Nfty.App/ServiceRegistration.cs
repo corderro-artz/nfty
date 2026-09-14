@@ -124,7 +124,20 @@ public static class ServiceRegistration
 
         services.AddSingleton<Func<LoadedSet, SetBrowserViewModel>>(sp => set => new SetBrowserViewModel(
             set, sp.GetRequiredService<IFilePickerService>(), sp.GetRequiredService<IDialogService>(),
-            sp.GetRequiredService<IStatusService>(), sp.GetRequiredService<IFolderRevealer>()));
+            sp.GetRequiredService<IStatusService>(), sp.GetRequiredService<IFolderRevealer>(),
+            // The CookBooks this app can name, for the export dialog to check against the hash the
+            // Set recorded. The open book first - cooking from it and exporting the result is the
+            // ordinary path - then whatever was opened recently. Only a HASH match is accepted, so
+            // the list is a shortlist rather than a guess.
+            () =>
+            {
+                var session = sp.GetRequiredService<ICookBookSession>();
+                var recents = sp.GetRequiredService<IRecentsService>();
+                var paths = new List<string>();
+                if (session.SourcePath is { Length: > 0 } open) paths.Add(open);
+                paths.AddRange(recents.Items.Select(i => i.Path));
+                return paths;
+            }));
 
         // Further VM registrations are added incrementally by the task that creates each
         // ViewModel (see Tasks 12-13).

@@ -151,15 +151,28 @@ public record ExportOptions
     /// Which preset these options ARE, or null when they are a combination of the author's own.
     /// </summary>
     /// <remarks>
-    /// Answered by comparing content rather than by remembering which button was pressed, so a
+    /// <para>Answered by comparing content rather than by remembering which button was pressed, so a
     /// screen cannot go on claiming a preset after a box beneath it was unticked. The note is
-    /// ignored: it is a message to a person, not part of the export's shape.
+    /// ignored: it is a message to a person, not part of the export's shape.</para>
+    ///
+    /// <para><b><see cref="Shape"/> is ignored too, and that is the correction.</b> A preset names
+    /// WHAT LEAVES the machine; folder-or-file is how it is packed, and the two are separate
+    /// questions — which is why the shape controls sit in their own column rather than among the
+    /// content boxes. Comparing it meant every preset came un-named the moment the shape was
+    /// changed: ticking all four content boxes and choosing Single file left Full project lit until
+    /// the shape was touched and then lit nothing at all, and Marketplace did the same in the other
+    /// direction, unnoticed because its default shape is the common one. The presets still START at
+    /// a shape apiece (<see cref="ExportPreset.FullProject"/> at a folder, the rest at an archive),
+    /// which is what a starting point is for.</para>
+    ///
+    /// <para>They stay distinguishable without it: the four differ in content or in the seal, never
+    /// in shape alone.</para>
     /// </remarks>
     /// <returns>The preset these options equal, or null.</returns>
     public ExportPreset? MatchingPreset()
     {
         foreach (ExportPreset p in Enum.GetValues<ExportPreset>())
-            if ((For(p) with { Note = Note }) == this) return p;
+            if ((For(p) with { Note = Note, Shape = Shape }) == this) return p;
         return null;
     }
 }

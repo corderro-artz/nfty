@@ -1,6 +1,8 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Services;
+using Nfty.Core.Formats;
+using Nfty.Core.Output;
 using Nfty.Core.Publish;
 
 namespace Nfty.App.ViewModels;
@@ -60,6 +62,7 @@ public partial class ExportDialogViewModel : ViewModelBase
     private readonly IFilePickerService _picker;
     private readonly IFolderRevealer _revealer;
     private readonly IDialogService _dialogs;
+    private readonly string? _recordedSha;
 
     /// <summary>The four starting points.</summary>
     public IReadOnlyList<ExportPresetTile> Presets { get; } =
@@ -88,7 +91,9 @@ public partial class ExportDialogViewModel : ViewModelBase
     [ObservableProperty] private string _note = "";
 
     /// <summary>The <c>.cbk</c> to ship, when the book is included.</summary>
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(CookBookLeaf))]
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CookBookLeaf))]
+    [NotifyPropertyChangedFor(nameof(CookBookIsTheSource))]
     private string? _cookBookPath;
 
     [ObservableProperty]
@@ -115,13 +120,28 @@ public partial class ExportDialogViewModel : ViewModelBase
     /// <param name="picker">Chooses the destination folder and the CookBook.</param>
     /// <param name="revealer">Opens the destination when the run finishes.</param>
     /// <param name="dialogs">The dialog layer to close through.</param>
+    /// <param name="cookBookSha256">What the Set recorded its book hashing to —
+    /// <c>SetManifest.CookbookSha256</c>. Null for a Set that predates the field or was cooked from
+    /// a book that never came from a file.</param>
+    /// <param name="cookBookCandidates">Paths the app can already name that might be that book: the
+    /// open one, recent ones. Books beside the Set are looked at as well, without being asked for.</param>
     public ExportDialogViewModel(string setDirectory, IFilePickerService picker,
-        IFolderRevealer revealer, IDialogService dialogs)
+        IFolderRevealer revealer, IDialogService dialogs,
+        string? cookBookSha256 = null, IEnumerable<string>? cookBookCandidates = null)
     {
         _setDirectory = setDirectory;
         _picker = picker;
         _revealer = revealer;
         _dialogs = dialogs;
+        _recordedSha = cookBookSha256;
+
+        // FOUND, NOT ASKED FOR. "Include the source CookBook" used to mean "and now go find the
+        // file", which is a question the app can usually answer itself: the Set records its book's
+        // hash, so a candidate can be CHECKED rather than guessed at. Nothing is accepted that is
+        // not the book, so a wrong one cannot be shipped under that label.
+        CookBookPath = CookBookLocator.Find(cookBookSha256,
+            (cookBookCandidates ?? Array.Empty<string>()).Concat(CookBookLocator.Nearby(setDirectory)));
+
         Refresh();
     }
 
@@ -148,7 +168,27 @@ public partial class ExportDialogViewModel : ViewModelBase
 
     /// <summary>The chosen CookBook's own name, which is the part a reader looks for.</summary>
     public string CookBookLeaf =>
-        CookBookPath is { Length: > 0 } p ? Path.GetFileName(p) : "none chosen";
+        CookBookPath is { Length: > 0 } p ? Path.GetFileName(p) : "none found - choose one";
+
+    /// <summary>
+    /// Whether the chosen CookBook is provably the one this Set was cooked from.
+    /// </summary>
+    /// <remarks>
+    /// Three states, not two. It is the book; it is provably NOT the book; or nothing can be said —
+    /// a Set cooked before the field existed, or from a book that never came from a file, records no
+    /// hash to compare against. A null on either side is "cannot tell" and must not be reported as
+    /// a mismatch, which is the rule <see cref="SetProvenance.Warning"/> already keeps.
+    /// </remarks>
+    public bool? CookBookIsTheSource => CookBookPath is not { Length: > 0 } path || _recordedSha is null
+        ? null
+        : SetProvenance.IsSameBook(_recordedSha, HashOf(path));
+
+    private static string? HashOf(string path)
+    {
+        try { return File.Exists(path) ? CookBookArchive.HashOf(path) : null; }
+        catch (IOException) { return null; }
+        catch (UnauthorizedAccessException) { return null; }
+    }
 
     /// <summary>Every file the export will carry, one line per part.</summary>
     [ObservableProperty] private IReadOnlyList<string> _parts = Array.Empty<string>();
@@ -240,6 +280,15 @@ public partial class ExportDialogViewModel : ViewModelBase
             if (plan.CarriesCookBook)
                 notes.Add("Carries the source CookBook: anyone who opens this can regenerate the "
                     + "collection and cook a different one from your art.");
+
+            // A WARNING, NEVER A REFUSAL - the same rule `extend` keeps about the same comparison.
+            // Shipping a book that did not cook this Set is a legitimate thing to want, and the
+            // author is the one who knows; shipping one BELIEVING it is the source is not, and
+            // nothing else on this screen would have said so.
+            if (IncludeCookBook && CookBookIsTheSource == false)
+                notes.Add("That CookBook is not the one this Set was cooked from: its hash differs "
+                    + "from the one set.json recorded. Cooking from it produces a different "
+                    + "collection, not this one.");
             if (IsSealed)
                 notes.Add("Sealed: unreadable without the passphrase. Anyone you give it to can "
                     + "still take the art - nfty declines, a screenshot does not.");
