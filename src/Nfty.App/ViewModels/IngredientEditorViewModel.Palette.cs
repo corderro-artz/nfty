@@ -80,12 +80,20 @@ public partial class IngredientEditorViewModel
     // downstream voxel conversion, which does not become more true on the second stroke.
     private bool _partialAlphaWarned;
 
+    // Likewise for leaving color mode with color strokes on the canvas; see SetPaintGrayscale.
+    private bool _leavingColorWarned;
+
     /// <summary>The ten ramp slots — grays in grayscale mode, hues in color mode. The count never
     /// changes, so swapping the mode repaints ten cells and reflows nothing.</summary>
     public ObservableCollection<PaletteSwatch> Ramp { get; } = new();
 
-    /// <summary>The saved swatches: the open book's first, the app-wide ones beneath, deduplicated
-    /// by <see cref="Palette.Combine"/> so a color saved in both appears once.</summary>
+    /// <summary>The saved swatches FOR THE MODE IN FORCE: the open book's first, the app-wide ones
+    /// beneath, deduplicated by <see cref="Palette.Combine"/> so a color saved in both appears once.
+    ///
+    /// <para>It swaps with the mode. A palette of saturated colors offered while painting a
+    /// value-map is a row of cells that all arm a gray, and half of them arm the SAME gray — which
+    /// is what the strip used to show, because the saved run was one list and the mode change never
+    /// rebuilt it.</para></summary>
     public ObservableCollection<PaletteSwatch> SavedSwatches { get; } = new();
 
     /// <summary>Which ramp the strip offers. Not a property of the artwork: switching it hands the
@@ -182,6 +190,10 @@ public partial class IngredientEditorViewModel
         }
 
         RebuildRamp();
+        // THE SAVED RUN SWAPS TOO. It did not, and the ramp above it did, so the strip changed half
+        // its colors and kept the other half - which reads as a palette that ignored the mode
+        // rather than as one control that follows it.
+        RefreshSaved();
         OnPropertyChanged(nameof(IsColorMode));
         NotifyBrushChanged();
         RebuildSurfaces();
@@ -230,7 +242,11 @@ public partial class IngredientEditorViewModel
     private void RefreshSaved()
     {
         SavedSwatches.Clear();
-        foreach (var c in Palette.Combine(_bookSwatches, _palette.Swatches))
+        // A CookBook's palette records no mode - it is a collection's colors, not one screen's - so
+        // Palette.InMode routes it by grayness, which is the answer saving in either mode would
+        // have produced.
+        foreach (var c in Palette.Combine(Palette.InMode(_bookSwatches, PaintMode),
+                                          _palette.SwatchesIn(PaintMode)))
             SavedSwatches.Add(new PaletteSwatch(c,
                 forget: _bookSwatches.Contains(c) ? null : ForgetSwatchCommand));
         SyncSwatchSelection();
@@ -273,7 +289,7 @@ public partial class IngredientEditorViewModel
     [RelayCommand]
     private void SaveSwatch()
     {
-        _palette.Add(CurrentRgb);
+        _palette.Add(CurrentRgb, PaintMode);
         RefreshSaved();
     }
 
@@ -284,15 +300,54 @@ public partial class IngredientEditorViewModel
     private void ForgetSwatch(PaletteSwatch swatch)
     {
         if (!swatch.CanForget) return;   // the command is public; the rule must not live only in the view
-        _palette.Remove(swatch.Rgb);
+        _palette.Remove(swatch.Rgb, PaintMode);
         RefreshSaved();
     }
 
-    /// <summary>Switches the strip to the gray ramp.</summary>
+    /// <summary>Whether any variant carries color strokes the author has made — which is the same
+    /// question <c>Undo</c> asks, so a color raster that exists only because entering color mode
+    /// widened the value-map does not count as art.</summary>
+    private bool HasColorArt => _draft.Variants.Any(v =>
+        _colorHistory.TryGetValue(v.Id, out var h) && h.CanUndo);
+
+    /// <summary>
+    /// Switches the strip to the gray ramp, saying first what Save will do with the color already
+    /// painted.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>The direction that needed saying is this one.</b> Gray to color is a WIDENING —
+    /// every variant's value-map is copied into a color raster and nothing is lost — so it asks
+    /// nothing. Color to gray loses no pixel either, and that is exactly what made it worth a
+    /// sentence: the strokes stay, and come back the moment color mode is entered again, but the
+    /// layer is a value-map once more and <b>Save writes the value-map</b>. So the art is on the
+    /// screen, the canvas is not showing it, and the file will not contain it — three things
+    /// disagreeing with nothing anywhere saying so.</para>
+    ///
+    /// <para>Asked at most once per editor session, like the partial-alpha warning, and only when
+    /// there is color art to leave behind. Canceling leaves color mode ON: this is a gate, not a
+    /// notice after the fact.</para>
+    /// </remarks>
     [RelayCommand]
-    private void SetPaintGrayscale()
+    private async Task SetPaintGrayscale()
     {
-        if (CanPaintGrayscale) PaintMode = PaletteMode.Grayscale;
+        if (!CanPaintGrayscale) return;
+        if (PaintMode == PaletteMode.Grayscale) return;
+
+        if (HasColorArt && !_leavingColorWarned)
+        {
+            var ok = await _dialogs.ShowAsync<bool>(new ConfirmDialogViewModel(_dialogs,
+                "Go back to painting grays?",
+                "Your color strokes are not thrown away — switch back to Color and they are still "
+                + "there, exactly as you left them.\n\n"
+                + "But this layer is a value-map again, so the canvas shows its grays and Save "
+                + "writes the value-map. The color art is not in that file, and nothing on the "
+                + "screen will say so once you are back in Gray.",
+                "Paint grays"));
+            if (!ok) return;
+            _leavingColorWarned = true;
+        }
+
+        PaintMode = PaletteMode.Grayscale;
     }
 
     /// <summary>Switches the strip to the rainbow ramp.</summary>

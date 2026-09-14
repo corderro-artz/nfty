@@ -30,9 +30,8 @@ public enum PaletteMode
 /// slots — the palette's shape never changes, only its contents.</para>
 /// </summary>
 /// <param name="Mode">Which ramp <see cref="Ramp"/> reports.</param>
-/// <param name="Swatches">The user's saved colors, in the order they were saved. Unaffected by
-/// <see cref="Mode"/>: a swatch mixed in color mode is still there in grayscale mode, because a
-/// saved color is user data rather than a property of the ramp.</param>
+/// <param name="Swatches">The user's saved colors, in the order they were saved. A palette holds the
+/// swatches for ONE mode — see <see cref="InMode"/> for why the two are kept apart.</param>
 public sealed record Palette(PaletteMode Mode, IReadOnlyList<RgbColor> Swatches)
 {
     /// <summary>How many ramp slots there are, in either mode.</summary>
@@ -84,6 +83,33 @@ public sealed record Palette(PaletteMode Mode, IReadOnlyList<RgbColor> Swatches)
         Swatches.Contains(swatch)
             ? this with { Swatches = Swatches.Where(c => c != swatch).ToArray() }
             : this;
+
+    /// <summary>Whether a color is a gray — the same channel in all three.</summary>
+    /// <param name="color">The color to test.</param>
+    /// <returns>True when the color carries no hue.</returns>
+    public static bool IsGray(RgbColor color) => color.R == color.G && color.G == color.B;
+
+    /// <summary>
+    /// The swatches that belong to a mode's palette.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>The two palettes are separate, and the rule is the color itself.</b> Grayscale mode
+    /// paints a value-map, where a color has no meaning beyond its lightness: a saved vermilion
+    /// offered there is a cell that silently arms a mid gray, and a row of twenty of them is twenty
+    /// cells the author cannot tell apart. Color mode has the opposite problem — the grays a
+    /// value-map is authored in are the least useful entries in a rainbow.</para>
+    ///
+    /// <para>Saving always writes to the palette for the mode in force, so a grayscale palette can
+    /// only ever contain grays by construction. This is for the swatches that arrive carrying no
+    /// mode at all: a CookBook's own palette, which travels in its archive, and the flat list older
+    /// builds persisted. Routing them by GRAYNESS is the only answer that needs no stored field and
+    /// agrees with what saving would have done.</para>
+    /// </remarks>
+    /// <param name="colors">Swatches from a source that records no mode.</param>
+    /// <param name="mode">The mode being offered.</param>
+    /// <returns>The swatches that belong in that mode, in order.</returns>
+    public static IReadOnlyList<RgbColor> InMode(IEnumerable<RgbColor>? colors, PaletteMode mode) =>
+        (colors ?? []).Where(c => IsGray(c) == (mode == PaletteMode.Grayscale)).ToArray();
 
     /// <summary>
     /// The two palette scopes resolved into one list: the open CookBook's swatches first, the

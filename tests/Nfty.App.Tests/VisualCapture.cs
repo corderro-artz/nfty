@@ -687,8 +687,8 @@ public class VisualCapture
             // ToggleOpacityLock: the capture is of the unlocked strip, not of the warning dialog.
             var (colBook, colRecipe, colIng) = DynamicIngredient();
             var palette = new PaletteService(StateStore.InMemory());
-            palette.Add(new RgbColor(0x6D, 0x4F, 0x9C));
-            palette.Add(new RgbColor(0x3D, 0x6B, 0x52));
+            palette.Add(new RgbColor(0x6D, 0x4F, 0x9C), PaletteMode.Color);
+            palette.Add(new RgbColor(0x3D, 0x6B, 0x52), PaletteMode.Color);
             var colVm = new IngredientEditorViewModel(colIng, colRecipe, colBook, new ImageBridge(),
                 new FakeNav(), new CookBookSession(), new FakeDialogs(),
                 new FilePickerService(), palette: palette);

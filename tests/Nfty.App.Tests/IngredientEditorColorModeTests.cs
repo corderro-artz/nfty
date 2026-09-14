@@ -47,6 +47,21 @@ public class IngredientEditorColorModeTests
         public void Close(object? result) { }
     }
 
+    /// <summary>Confirms every dialog, and counts them. Needed wherever a test crosses a gate that
+    /// asks — <see cref="FakeDialogs"/> answers <c>default</c>, which for a confirm is NO.</summary>
+    private sealed class Confirming : IDialogService
+    {
+        public int Asked { get; private set; }
+        public ViewModelBase? Active => null;
+        public event Action? Changed { add { } remove { } }
+        public Task<TResult?> ShowAsync<TResult>(ViewModelBase d)
+        {
+            Asked++;
+            return Task.FromResult((TResult?)(object?)true);
+        }
+        public void Close(object? result) { }
+    }
+
     /// <summary>Refuses every confirm — used to prove the partial-alpha warning is a GATE.</summary>
     private sealed class RefusingDialogs : IDialogService
     {
@@ -165,7 +180,7 @@ public class IngredientEditorColorModeTests
             var armed = vm.CurrentRgb;
 
             vm.SaveSwatchCommand.Execute(null);
-            Assert.Contains(armed, palette.Swatches);
+            Assert.Contains(armed, palette.SwatchesIn(PaletteMode.Color));
             var cell = Assert.Single(vm.SavedSwatches);
             Assert.Equal(armed, cell.Rgb);
             Assert.True(cell.CanForget);
@@ -175,7 +190,7 @@ public class IngredientEditorColorModeTests
 
             vm.ForgetSwatchCommand.Execute(cell);
             Assert.Empty(vm.SavedSwatches);
-            Assert.Empty(palette.Swatches);
+            Assert.Empty(palette.SwatchesIn(PaletteMode.Color));
         }
         finally { f.session.Dispose(); Directory.Delete(Path.GetDirectoryName(f.path)!, true); }
     }
@@ -187,10 +202,11 @@ public class IngredientEditorColorModeTests
     {
         var f = OnDiskWithPalette(new[] { "hex:112233" });
         var palette = new PaletteService(StateStore.InMemory());
-        palette.Add(new RgbColor(0xAA, 0xBB, 0xCC));
+        palette.Add(new RgbColor(0xAA, 0xBB, 0xCC), PaletteMode.Color);
         try
         {
             using var vm = Editor(f, palette: palette);
+            vm.PaintMode = PaletteMode.Color;      // both swatches carry a hue
 
             Assert.Equal(2, vm.SavedSwatches.Count);
             Assert.Equal(new RgbColor(0x11, 0x22, 0x33), vm.SavedSwatches[0].Rgb);
@@ -198,6 +214,173 @@ public class IngredientEditorColorModeTests
             Assert.True(vm.SavedSwatches[1].CanForget);
             Assert.Null(vm.SavedSwatches[0].ForgetCommand);
             Assert.NotNull(vm.SavedSwatches[1].ForgetCommand);
+        }
+        finally { f.session.Dispose(); Directory.Delete(Path.GetDirectoryName(f.path)!, true); }
+    }
+
+    /// <summary>
+    /// THE SAVED RUN SWAPS WITH THE MODE, and a book's own palette is routed the same way.
+    /// </summary>
+    /// <remarks>
+    /// It did not, and the ramp above it did: the strip changed half its colors on a mode switch and
+    /// kept the other half, so painting a value-map was done over a row of saturated cells that each
+    /// silently armed a gray — several of them the SAME gray. A book records no mode with its
+    /// palette, so <c>Palette.InMode</c> routes it by grayness, which is where saving it in either
+    /// mode would have put it.
+    /// </remarks>
+    [AvaloniaFact]
+    public void The_saved_run_holds_only_what_the_mode_can_paint_and_swaps_with_it()
+    {
+        var f = OnDiskWithPalette(new[] { "hex:112233", "hex:646464" });
+        var palette = new PaletteService(StateStore.InMemory());
+        palette.Add(new RgbColor(0xAA, 0xBB, 0xCC), PaletteMode.Color);
+        palette.Add(new RgbColor(0x20, 0x20, 0x20), PaletteMode.Grayscale);
+        try
+        {
+            using var vm = Editor(f, palette: palette);
+
+            Assert.False(vm.IsColorMode);
+            Assert.Equal(new[] { new RgbColor(0x64, 0x64, 0x64), new RgbColor(0x20, 0x20, 0x20) },
+                vm.SavedSwatches.Select(s => s.Rgb));
+
+            vm.SetPaintColorCommand.Execute(null);
+
+            Assert.Equal(new[] { new RgbColor(0x11, 0x22, 0x33), new RgbColor(0xAA, 0xBB, 0xCC) },
+                vm.SavedSwatches.Select(s => s.Rgb));
+        }
+        finally { f.session.Dispose(); Directory.Delete(Path.GetDirectoryName(f.path)!, true); }
+    }
+
+    /// <summary>Saving writes to the palette for the mode in force, so a color mixed in one mode
+    /// never turns up in the other's row.</summary>
+    [AvaloniaFact]
+    public void A_swatch_is_saved_into_the_palette_for_the_mode_it_was_mixed_in()
+    {
+        var f = IngredientEditorSaveTests.OnDisk(LayerKind.Dynamic);
+        var palette = new PaletteService(StateStore.InMemory());
+        try
+        {
+            using var vm = Editor(f, dialogs: new Confirming(), palette: palette);
+
+            vm.BrushValue = 90;                       // grayscale: the armed color is gray 90
+            vm.SaveSwatchCommand.Execute(null);
+
+            vm.SetPaintColorCommand.Execute(null);
+            vm.BrushHue = 200; vm.BrushSat = 80; vm.BrushValue = 255;
+            var mixed = vm.CurrentRgb;
+            vm.SaveSwatchCommand.Execute(null);
+
+            Assert.Equal(new[] { new RgbColor(90, 90, 90) }, palette.SwatchesIn(PaletteMode.Grayscale));
+            Assert.Equal(new[] { mixed }, palette.SwatchesIn(PaletteMode.Color));
+            Assert.Equal(new[] { mixed }, vm.SavedSwatches.Select(s => s.Rgb));
+        }
+        finally { f.session.Dispose(); Directory.Delete(Path.GetDirectoryName(f.path)!, true); }
+    }
+
+    /// <summary>
+    /// Leaving color mode with color strokes on the canvas asks first, and CANCELING keeps color.
+    /// </summary>
+    /// <remarks>
+    /// The direction is the point. Gray to color is a widening and loses nothing, so it asks
+    /// nothing; color to gray loses no pixel either — which is exactly why it needed saying, because
+    /// the layer is a value-map again and Save writes the value-map. Nothing on the screen said so
+    /// once the canvas was back in grays.
+    /// </remarks>
+    [AvaloniaFact]
+    public async Task Leaving_color_with_color_art_asks_first_and_canceling_stays_in_color()
+    {
+        var f = IngredientEditorSaveTests.OnDisk(LayerKind.Dynamic);
+        var refusing = new RefusingDialogs();
+        try
+        {
+            using var vm = Editor(f, dialogs: refusing);
+            vm.SetPaintColorCommand.Execute(null);
+            vm.ActiveTool = EditorTool.Fill;
+            vm.BrushHue = 0; vm.BrushSat = 100; vm.BrushValue = 255;
+            vm.ApplyToolStroke(new[] { (0, 0) });
+
+            await vm.SetPaintGrayscaleCommand.ExecuteAsync(null);
+
+            Assert.Equal(1, refusing.Asked);
+            Assert.True(vm.IsColorMode);              // a GATE, not a notice after the fact
+        }
+        finally { f.session.Dispose(); Directory.Delete(Path.GetDirectoryName(f.path)!, true); }
+    }
+
+    /// <summary>With nothing painted in color there is nothing to leave behind, so the switch is
+    /// silent — and entering color mode never asks at all, because widening loses nothing.</summary>
+    [AvaloniaFact]
+    public async Task Switching_modes_with_no_color_art_asks_nothing_in_either_direction()
+    {
+        var f = IngredientEditorSaveTests.OnDisk(LayerKind.Dynamic);
+        var dialogs = new Confirming();
+        try
+        {
+            using var vm = Editor(f, dialogs: dialogs);
+
+            vm.SetPaintColorCommand.Execute(null);
+            await vm.SetPaintGrayscaleCommand.ExecuteAsync(null);
+
+            Assert.Equal(0, dialogs.Asked);
+            Assert.False(vm.IsColorMode);
+        }
+        finally { f.session.Dispose(); Directory.Delete(Path.GetDirectoryName(f.path)!, true); }
+    }
+
+    /// <summary>Asked ONCE per editor session, like the partial-alpha warning: what Save writes does
+    /// not become more true the second time the mode is flipped.</summary>
+    [AvaloniaFact]
+    public async Task The_warning_about_leaving_color_is_asked_at_most_once()
+    {
+        var f = IngredientEditorSaveTests.OnDisk(LayerKind.Dynamic);
+        var dialogs = new Confirming();
+        try
+        {
+            using var vm = Editor(f, dialogs: dialogs);
+            vm.SetPaintColorCommand.Execute(null);
+            vm.ActiveTool = EditorTool.Fill;
+            vm.BrushHue = 0; vm.BrushSat = 100; vm.BrushValue = 255;
+            vm.ApplyToolStroke(new[] { (0, 0) });
+
+            await vm.SetPaintGrayscaleCommand.ExecuteAsync(null);
+            Assert.False(vm.IsColorMode);
+
+            vm.SetPaintColorCommand.Execute(null);
+            await vm.SetPaintGrayscaleCommand.ExecuteAsync(null);
+
+            Assert.Equal(1, dialogs.Asked);
+            Assert.False(vm.IsColorMode);
+        }
+        finally { f.session.Dispose(); Directory.Delete(Path.GetDirectoryName(f.path)!, true); }
+    }
+
+    /// <summary>
+    /// And the note stays after the warning is gone: back in gray mode with color art pending, the
+    /// footer says what Save is about to write.
+    /// </summary>
+    /// <remarks>
+    /// The one-off dialog cannot carry this — it is shown once and dismissed, and the state it
+    /// describes lasts for the rest of the session. The note is the line that persists.
+    /// </remarks>
+    [AvaloniaFact]
+    public async Task The_save_note_says_the_value_map_does_not_carry_the_color_strokes()
+    {
+        var f = IngredientEditorSaveTests.OnDisk(LayerKind.Dynamic);
+        try
+        {
+            using var vm = Editor(f, dialogs: new Confirming());
+            Assert.Null(vm.SaveNoteText);
+
+            vm.SetPaintColorCommand.Execute(null);
+            Assert.Contains("Custom ingredient", vm.SaveNoteText);
+
+            vm.ActiveTool = EditorTool.Fill;
+            vm.BrushHue = 0; vm.BrushSat = 100; vm.BrushValue = 255;
+            vm.ApplyToolStroke(new[] { (0, 0) });
+            await vm.SetPaintGrayscaleCommand.ExecuteAsync(null);
+
+            Assert.False(vm.IsColorMode);
+            Assert.Contains("value-map", vm.SaveNoteText);
         }
         finally { f.session.Dispose(); Directory.Delete(Path.GetDirectoryName(f.path)!, true); }
     }
@@ -475,7 +658,10 @@ public class IngredientEditorColorModeTests
         var png = WriteGrayPng(8, 8, 90);
         try
         {
-            using var vm = EditorWithPicker(f, new OnePicker(png));
+            // Confirming, not FakeDialogs: there IS color art here, so leaving color mode asks, and
+            // a fake that answers default would refuse the switch and leave the test in color mode.
+            using var vm = new IngredientEditorViewModel(f.ing, f.recipe, f.session.Current!,
+                new ImageBridge(), new FakeNav(), f.session, new Confirming(), new OnePicker(png));
 
             vm.SetPaintColorCommand.Execute(null);
             vm.ActiveTool = EditorTool.Fill;
@@ -483,7 +669,7 @@ public class IngredientEditorColorModeTests
             vm.ApplyToolStroke(new[] { (0, 0) });        // a real color stroke
             Assert.Equal(255, vm.ColorAt(4, 4).R);
 
-            vm.SetPaintGrayscaleCommand.Execute(null);
+            await vm.SetPaintGrayscaleCommand.ExecuteAsync(null);
             await vm.ImportImageCommand.ExecuteAsync(null);
             Assert.Equal(90, vm.ValueAt(4, 4));
 

@@ -173,12 +173,23 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// and offer grayscale painting on a layer whose value-map no longer reaches an archive.</para></summary>
     private bool IsCustom => _draft.Kind == LayerKind.Custom;
 
-    /// <summary>What Save is about to do, when that is not simply "write this layer back". Color art
-    /// can only be stored as a Custom layer, so painting a value-map layer in color changes which
-    /// ingredient Save writes — said here rather than only in the dialog that follows.</summary>
-    public string? SaveNoteText => IsColorMode && !IsCustom
-        ? "Color art saves as a Custom ingredient — Save will ask whether to add a new layer or convert this one."
-        : null;
+    /// <summary>
+    /// What Save is about to do, when that is not simply "write this layer back".
+    /// </summary>
+    /// <remarks>
+    /// Color art can only be stored as a Custom layer, so painting a value-map layer in color
+    /// changes which ingredient Save writes — said here rather than only in the dialog that follows.
+    /// <para><b>And it says so from BOTH sides.</b> Switching back to grays leaves the color strokes
+    /// intact and off the canvas, so the screen goes quiet about them at the exact moment they stop
+    /// being what Save writes; the warning on the way out is a one-off, and this is the line that
+    /// stays.</para>
+    /// </remarks>
+    public string? SaveNoteText => IsCustom ? null
+        : IsColorMode
+            ? "Color art saves as a Custom ingredient — Save will ask whether to add a new layer or convert this one."
+            : HasColorArt
+                ? "This layer has color strokes. Save writes the value-map, which does not carry them — switch to Color to save them as a Custom ingredient."
+                : null;
 
     /// <summary>Re-evaluate Save's availability and its note after anything that changes either.</summary>
     private void NotifySaveAvailability()
@@ -1168,6 +1179,8 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     private void AfterEdit(VariantDraft target)
     {
         IsDirty = true;
+        // The note reads the COLOR history, which a stroke in either mode can be the first entry in.
+        OnPropertyChanged(nameof(SaveNoteText));
         RebuildSurfaces();
         RefreshThumbnail(target.Id);
         UndoCommand.NotifyCanExecuteChanged();
