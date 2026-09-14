@@ -1206,9 +1206,22 @@
        The grid is a plain ItemsControl over rows (see SetBrowserView.axaml's note on ListBox
        virtualization) rather than a real ListBox/ListBoxItem, so there is no native :selected
        pseudo-class - selection is a bound "sel" class per SetItemRow.IsSelected. -->
+  <!-- HOVERED, and it is a different statement from selected now that the detail rail follows the
+       pointer: the ring says "this is the one the panel is describing". Kept clearly weaker than
+       the selection below it - a brighter hairline on the tile's own ground, no fill - because
+       hovering is a glance and selecting is a decision. The THICKNESS never changes, so nothing
+       moves as the pointer crosses the grid. -->
+  <Style Selector="Border.tile.hov">
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <!-- DECLARED AFTER .hov, so a tile that is both reads as selected: style ordering is last-one-wins
+       at equal specificity. The accent edge is not an added one - the tile always carries a 1px
+       border and this only changes its colour, so the "any added edge reads as a frame" note above
+       still holds and the geometry is identical in all three states. -->
   <Style Selector="Border.tile.sel">
     <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
     <Setter Property="BorderThickness" Value="1" />
   </Style>
   <Style Selector="Border.frame">

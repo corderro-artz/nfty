@@ -194,7 +194,7 @@ public class SetInspectTests
 
             Assert.True(File.Exists(target));
             Assert.Equal(File.ReadAllBytes(vm.Items[^1].ImagePath), File.ReadAllBytes(target));
-            Assert.Contains(vm.SelectedNumber, status.Last!, StringComparison.Ordinal);
+            Assert.Contains(vm.ShownNumber, status.Last!, StringComparison.Ordinal);
         }
         finally { Directory.Delete(dir, recursive: true); }
     }
@@ -212,9 +212,9 @@ public class SetInspectTests
         {
             vm.SelectedItem = vm.Items[0];
 
-            Assert.Equal(64, vm.SelectedDna.Length);
-            Assert.Equal(vm.SelectedDnaTop.Length, vm.SelectedDnaBottom.Length);
-            Assert.Equal(vm.SelectedDna, vm.SelectedDnaTop + vm.SelectedDnaBottom);
+            Assert.Equal(64, vm.ShownDna.Length);
+            Assert.Equal(vm.ShownDnaTop.Length, vm.ShownDnaBottom.Length);
+            Assert.Equal(vm.ShownDna, vm.ShownDnaTop + vm.ShownDnaBottom);
         }
         finally { Directory.Delete(dir, recursive: true); }
     }

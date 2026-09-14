@@ -1,6 +1,8 @@
 using System;
 using System.Linq;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.VisualTree;
@@ -17,6 +19,16 @@ public partial class SetBrowserView : UserControl
     {
         InitializeComponent();
         AddHandler(Button.ClickEvent, OnTileClick);
+
+        // ONE BUBBLED HANDLER FOR HOVER, not a per-tile PointerEntered. PointerEntered and
+        // PointerExited route DIRECT in Avalonia, so a handler on this view would never see a
+        // tile's - and a handler per tile is a subscription per realized container on a grid whose
+        // whole design is that containers are cheap to realize. PointerMoved bubbles, and the work
+        // is guarded on the row actually changing.
+        AddHandler(PointerMovedEvent, OnPointerMoved, RoutingStrategies.Bubble);
+        AddHandler(PointerPressedEvent, OnPointerPressed, RoutingStrategies.Tunnel);
+        PointerExited += (_, _) => Vm?.Hover(null);
+
         LayoutUpdated += OnLayoutUpdated;
     }
 
@@ -103,6 +115,46 @@ public partial class SetBrowserView : UserControl
     {
         if (DataContext is SetBrowserViewModel vm && e.Source is Button { DataContext: SetItemRow row })
             vm.InspectCommand.Execute(row);
+    }
+
+    private SetBrowserViewModel? Vm => DataContext as SetBrowserViewModel;
+
+    /// <summary>The asset under a pointer event, or null when it did not land on a tile.</summary>
+    private static SetItemRow? TileUnder(object? source) =>
+        (source as Visual)?.FindAncestorOfType<Button>(includeSelf: true) is { DataContext: SetItemRow row }
+            ? row
+            : null;
+
+    /// <summary>
+    /// The detail rail follows the pointer.
+    /// </summary>
+    /// <remarks>
+    /// A grid of 500 tiles is SCANNED, not read, and the only way to find out what one was meant
+    /// clicking it - which opens the inspector directly over the panel that answers the question, so
+    /// the rail only ever appeared to update once the modal was closed again. Moving off a tile onto
+    /// anything else clears it, so the rail cannot go on describing an asset the pointer left.
+    /// </remarks>
+    private void OnPointerMoved(object? sender, PointerEventArgs e) => Vm?.Hover(TileUnder(e.Source));
+
+    /// <summary>
+    /// The right button marks a tile active without opening it.
+    /// </summary>
+    /// <remarks>
+    /// <para>Left-click means "show me this bigger", which is the right default on a grid of
+    /// pictures. But keeping one asset in the rail - to read its rarity against another, or to Save
+    /// it - had no gesture at all short of opening the inspector and closing it again.</para>
+    /// <para>On the TUNNEL so it runs before the tile Button and the ListBox under it see the
+    /// press. Marking it handled is belt and braces and no test can make it fail: Avalonia's Button
+    /// raises Click for the LEFT button only, so the inspector was never in danger from this press.
+    /// It stays because "the right button does not open anything" should be a property of this
+    /// handler rather than a property of how Fluent's Button happens to be written.</para>
+    /// </remarks>
+    private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(this).Properties.IsRightButtonPressed) return;
+        if (TileUnder(e.Source) is not { } row) return;
+        Vm?.SelectCommand.Execute(row);
+        e.Handled = true;
     }
 
     private void InitializeComponent()

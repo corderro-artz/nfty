@@ -110,6 +110,18 @@ public partial class SetItemRow : ObservableObject, IDisposable
     [ObservableProperty]
     private bool _isSelected;
 
+    /// <summary>
+    /// Whether the pointer is over this tile, which is the asset the detail rail is describing.
+    /// </summary>
+    /// <remarks>
+    /// Fluent's own <c>:pointerover</c> would wash the cell without this, and it did — but the wash
+    /// says "the pointer is here", not "the rail is about this one", and with the rail now following
+    /// the pointer the two need to be the same statement. It is a ring on the tile, kept clearly
+    /// weaker than the selection's filled ground: hovering is a glance and selecting is a decision.
+    /// </remarks>
+    [ObservableProperty]
+    private bool _isHovered;
+
     /// <summary>Creates a row over one Set item.</summary>
     /// <param name="number">The asset's set number.</param>
     /// <param name="imagePath">Path to its PNG; not opened until <see cref="Thumbnail"/> is read.</param>
@@ -202,13 +214,82 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     public IReadOnlyList<SetItemRow> Items { get; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(SelectedDna))]
-    [NotifyPropertyChangedFor(nameof(SelectedRecipe))]
-    [NotifyPropertyChangedFor(nameof(SelectedRarity))]
-    [NotifyPropertyChangedFor(nameof(SelectedNumber))]
-    [NotifyPropertyChangedFor(nameof(SelectedDnaTop))]
-    [NotifyPropertyChangedFor(nameof(SelectedDnaBottom))]
+    [NotifyPropertyChangedFor(nameof(Shown))]
+    [NotifyPropertyChangedFor(nameof(IsShowingHover))]
+    [NotifyPropertyChangedFor(nameof(ShownDna))]
+    [NotifyPropertyChangedFor(nameof(ShownRecipe))]
+    [NotifyPropertyChangedFor(nameof(ShownRarity))]
+    [NotifyPropertyChangedFor(nameof(ShownNumber))]
+    [NotifyPropertyChangedFor(nameof(ShownDnaTop))]
+    [NotifyPropertyChangedFor(nameof(ShownDnaBottom))]
     private SetItemRow? _selectedItem;
+
+    /// <summary>
+    /// The asset the pointer is over, or null.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>The rail describes whatever is under the pointer, and falls back to the selection.</b>
+    /// A grid of 500 tiles is scanned rather than read, and clicking each one to find out what it is
+    /// meant opening the inspector over the very panel that answers the question - so the rail only
+    /// ever appeared to update once the modal was closed again.</para>
+    /// <para>Hover is not selection: it is gone the moment the pointer moves off, and it is not what
+    /// Save or the inspector act on unless it is also the selection. Moving off the grid at all
+    /// clears it, so the rail cannot keep describing an asset the pointer left behind.</para>
+    /// </remarks>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Shown))]
+    [NotifyPropertyChangedFor(nameof(IsShowingHover))]
+    [NotifyPropertyChangedFor(nameof(ShownDna))]
+    [NotifyPropertyChangedFor(nameof(ShownRecipe))]
+    [NotifyPropertyChangedFor(nameof(ShownRarity))]
+    [NotifyPropertyChangedFor(nameof(ShownNumber))]
+    [NotifyPropertyChangedFor(nameof(ShownDnaTop))]
+    [NotifyPropertyChangedFor(nameof(ShownDnaBottom))]
+    private SetItemRow? _hoveredItem;
+
+    /// <summary>The asset the detail rail is describing: what the pointer is over, or failing that,
+    /// what is selected.</summary>
+    public SetItemRow? Shown => HoveredItem ?? SelectedItem;
+
+    /// <summary>
+    /// Whether the rail is describing a hovered asset rather than the selected one.
+    /// </summary>
+    /// <remarks>
+    /// The rail says so, because otherwise the panel changes under a pointer that is nowhere near it
+    /// and the reader has no way to tell which asset Save would act on. Its line is RESERVED rather
+    /// than revealed - the geometry rule - so nothing in the rail moves as the pointer crosses the
+    /// grid, which would be the worst possible place for a reflow.
+    /// </remarks>
+    public bool IsShowingHover => HoveredItem is not null && !ReferenceEquals(HoveredItem, SelectedItem);
+
+    /// <summary>
+    /// Points the rail at an asset because the pointer is over it.
+    /// </summary>
+    /// <param name="row">The asset under the pointer, or null when the pointer is not over one.</param>
+    public void Hover(SetItemRow? row)
+    {
+        if (ReferenceEquals(row, HoveredItem)) return;      // every pointer move would raise otherwise
+        if (HoveredItem is not null) HoveredItem.IsHovered = false;
+        HoveredItem = row;
+        if (row is not null) row.IsHovered = true;
+    }
+
+    /// <summary>
+    /// Makes an asset the selection without opening anything.
+    /// </summary>
+    /// <remarks>
+    /// What the RIGHT button does on a tile. Left-click means "show me this bigger", which is the
+    /// common intent on a grid of pictures and is why it opens the inspector; but keeping an asset
+    /// in the rail to read its rarity against another one had no gesture at all short of opening the
+    /// modal and closing it again.
+    /// </remarks>
+    /// <param name="row">The asset to select.</param>
+    [RelayCommand]
+    public void Select(SetItemRow? row)
+    {
+        if (row is null) return;
+        SelectedItem = row;
+    }
 
     /// <summary>Opens a cooked Set for browsing.</summary>
     /// <param name="set">The loaded Set; this takes ownership and disposes it.</param>
@@ -225,7 +306,7 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
         IFolderRevealer? revealer = null, Func<IEnumerable<string>>? bookCandidates = null)
     {
         _bookCandidates = bookCandidates;
-        RaritySort = new TableSort("Trait", () => OnPropertyChanged(nameof(SelectedRarity)));
+        RaritySort = new TableSort("Trait", () => OnPropertyChanged(nameof(ShownRarity)));
         _set = set;
         _picker = picker ?? new FilePickerService();
         _dialogs = dialogs ?? new DialogService();
@@ -252,15 +333,15 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
         if (newValue is not null) newValue.IsSelected = true;
     }
 
-    /// <summary>The selected asset's number, formatted.</summary>
-    public string SelectedNumber => SelectedItem is null ? "" : $"#{SelectedItem.Number:D4}";
+    /// <summary>The number of the asset the rail is describing, formatted.</summary>
+    public string ShownNumber => Shown is null ? "" : $"#{Shown.Number:D4}";
     /// <summary>Its DNA.</summary>
-    public string SelectedDna => SelectedItem?.Item.Dna ?? "";
+    public string ShownDna => Shown?.Item.Dna ?? "";
     /// <summary>The recipe it came from.</summary>
-    public string SelectedRecipe => SelectedItem?.Item.Recipe ?? "";
+    public string ShownRecipe => Shown?.Item.Recipe ?? "";
     /// <summary>Its traits with collection-wide rarity.</summary>
-    public IReadOnlyList<RarityAttribute> SelectedRarity => RaritySort.Order(
-        SelectedItem?.Item.Rarity ?? Array.Empty<RarityAttribute>(),
+    public IReadOnlyList<RarityAttribute> ShownRarity => RaritySort.Order(
+        Shown?.Item.Rarity ?? Array.Empty<RarityAttribute>(),
         static (r, col) => col switch
         {
             "Value" => r.Value,
@@ -308,9 +389,9 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     // still computed rather than hard-coded at 32: a Set written by some future build with a
     // different hash would otherwise silently lose its tail.
     /// <summary>The first half of the selected DNA.</summary>
-    public string SelectedDnaTop => Half(SelectedDna, top: true);
+    public string ShownDnaTop => Half(ShownDna, top: true);
     /// <summary>The second half.</summary>
-    public string SelectedDnaBottom => Half(SelectedDna, top: false);
+    public string ShownDnaBottom => Half(ShownDna, top: false);
 
     private int IndexOf(SetItemRow row)
     {
@@ -353,17 +434,17 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanExport))]
     private async Task SaveImageAsync()
     {
-        if (SelectedItem is not { } row) return;
-        var target = await _picker.SaveFileAsync($"Save {SelectedNumber}", ".png");
+        if (Shown is not { } row) return;
+        var target = await _picker.SaveFileAsync($"Save {ShownNumber}", ".png");
         if (string.IsNullOrWhiteSpace(target)) return;
         try
         {
             File.Copy(row.ImagePath, target, overwrite: true);
-            _status.Say($"Saved {SelectedNumber} to {target}.");
+            _status.Say($"Saved {ShownNumber} to {target}.");
         }
         catch (Exception ex)
         {
-            _status.Say($"Could not save {SelectedNumber}: {ex.Message}");
+            _status.Say($"Could not save {ShownNumber}: {ex.Message}");
         }
     }
 

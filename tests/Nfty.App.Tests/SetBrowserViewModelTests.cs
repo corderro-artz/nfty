@@ -29,7 +29,7 @@ public class SetBrowserViewModelTests
         Assert.Equal(2, vm.Items.Count);
         Assert.All(vm.Items, r => Assert.NotNull(r.DecodeNow()));
         vm.SelectedItem = vm.Items[0];
-        Assert.False(string.IsNullOrEmpty(vm.SelectedDna));
+        Assert.False(string.IsNullOrEmpty(vm.ShownDna));
         vm.Dispose();
         Directory.Delete(dir, recursive: true);
     }
