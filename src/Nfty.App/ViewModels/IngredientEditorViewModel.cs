@@ -945,6 +945,32 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     private static bool CanPreview(EditorTool tool) => tool is EditorTool.Brush or EditorTool.Eraser
         or EditorTool.Line or EditorTool.Rectangle or EditorTool.Circle or EditorTool.Triangle;
 
+    /// <summary>
+    /// The move a Select gesture is currently describing, or null when it is marking rather than
+    /// moving.
+    /// </summary>
+    /// <remarks>
+    /// <para>Select is on neither side of <see cref="CanPreview"/>, because it is two gestures. A
+    /// MARK changes no pixel and the marquee is its whole feedback. A MOVE is an ordinary pixel edit
+    /// - the region is cleared and stamped somewhere else - and it was the one gesture in the editor
+    /// still drawn blind: the dashed box followed the pointer and the art underneath did not move
+    /// until the button came up.</para>
+    /// <para>It answers the same question <see cref="BeginSelectGesture"/> does on release, and
+    /// deliberately does NOT move <see cref="Selection"/> while it answers it - the overlay offsets
+    /// the marquee itself during a drag, and committing the new position on every pointer move would
+    /// make the release a move from wherever the last one landed.</para>
+    /// </remarks>
+    /// <param name="points">The gesture's pixel path so far.</param>
+    private (PixelRect Source, int Dx, int Dy)? MoveUnderway(IReadOnlyList<(int x, int y)> points)
+    {
+        if (GestureTool != EditorTool.Select || Selection is not { } sel) return null;
+        var start = points[0];
+        if (!Contains(sel, start)) return null;
+        var end = points[^1];
+        int dx = end.x - start.x, dy = end.y - start.y;
+        return dx == 0 && dy == 0 ? null : (sel, dx, dy);
+    }
+
     // Set while the canvas on screen shows an uncommitted gesture. The SURFACE is always clean - the
     // preview is applied, rendered and undone inside one call - so this exists only to say that the
     // bitmap the user is looking at is ahead of the pixels, and has to be repainted if the gesture
@@ -971,20 +997,28 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     public void PreviewToolStroke(IReadOnlyList<(int x, int y)> points, EditorTool? tool = null)
     {
         _gestureTool = tool;
-        if (ActiveDraft is not { } target || points.Count == 0 || !CanPreview(tool ?? ActiveTool)) return;
+        // Cleared on the way in, never left set on the way out: BuildCommand consumes it, but the
+        // early returns below do not reach BuildCommand, and a move left standing here would turn
+        // the NEXT gesture - a brush stroke, anything - into a MoveSelection.
+        _pendingMove = null;
+        if (ActiveDraft is not { } target || points.Count == 0) return;
+
+        var move = MoveUnderway(points);
+        if (move is null && !CanPreview(tool ?? ActiveTool)) return;
+        _pendingMove = move;
 
         if (IsColorMode)
         {
             if (BuildCommand(ColorInk, points) is not { } cmd) return;
             var surface = target.EnsureColor();
             cmd.Apply(surface);
-            try { ShowCanvas(); } finally { cmd.Undo(surface); }
+            try { ShowGesture(); } finally { cmd.Undo(surface); }
         }
         else
         {
             if (BuildCommand(GrayInk, points) is not { } cmd) return;
             cmd.Apply(target.Map);
-            try { ShowCanvas(); } finally { cmd.Undo(target.Map); }
+            try { ShowGesture(); } finally { cmd.Undo(target.Map); }
         }
         _previewShown = true;
     }
@@ -995,19 +1029,47 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     {
         if (!_previewShown) return;
         _previewShown = false;
-        ShowCanvas();
+        _pendingMove = null;
+        RebuildSurfaces();       // a gesture that ends leaves both surfaces exact
     }
 
-    /// <summary>Repaints the canvas from the surface, dropping any preview standing on it. Only the
-    /// canvas: the colorized blip is not what a hand is watching mid-gesture, and rendering it on
-    /// every pointer move would double the cost of the one thing that is.</summary>
-    private void ShowCanvas()
+    /// <summary>
+    /// Repaints what a gesture in progress looks like: the canvas every time, the corner tile at up
+    /// to <see cref="TileBudgetMs"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>The tile used to be left alone entirely, on the argument that the colorized companion
+    /// is not what a hand is watching. It is what the other eye is watching: it shows what a cook
+    /// would make of the layer, and a tile a whole gesture behind the canvas beside it is a second,
+    /// disagreeing account of the same pixels. Reported against the marquee, where a whole region
+    /// visibly sat still in the tile while it moved on the canvas.</para>
+    /// <para>The budget is there because it is not free. Measured, per pointer move: at 32px the
+    /// canvas alone is 0.05 ms and the pair 0.10; at 512px, 5.9 and 14.4; at 1000px, 20.3 and 52.6.
+    /// The canvas is the thing under the hand and is never skipped; the tile is a companion, and one
+    /// that lands within a frame or two is indistinguishable from one that never misses. Every
+    /// gesture ENDS through <see cref="RebuildSurfaces"/> - committed, canceled, or a no-op - so the
+    /// tile is exact the moment the button comes up, whatever the budget skipped.</para>
+    /// </remarks>
+    private void ShowGesture()
     {
         if (SelectedVariant is null) return;
         var old = Canvas;
         Canvas = RenderCanvas();
         old?.Dispose();
+
+        if (_tileClock.ElapsedMilliseconds < TileBudgetMs) return;
+        _tileClock.Restart();
+        var oldTile = Preview;
+        Preview = RenderPreview();
+        oldTile?.Dispose();
     }
+
+    /// <summary>Roughly 30 frames a second for the corner tile during a drag.</summary>
+    private const int TileBudgetMs = 33;
+
+    /// <summary>Time since the corner tile was last repainted mid-gesture. Starts long ago, so the
+    /// first move of any gesture always repaints it.</summary>
+    private readonly System.Diagnostics.Stopwatch _tileClock = System.Diagnostics.Stopwatch.StartNew();
 
     /// <summary>Commit one completed gesture as a Core edit command against the active variant, on
     /// whichever surface the paint mode is editing.</summary>
@@ -1016,21 +1078,27 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     public void ApplyToolStroke(IReadOnlyList<(int x, int y)> points, EditorTool? tool = null)
     {
         _gestureTool = tool;
-        // Every exit below has to put the canvas back if a preview is standing on it, including the
-        // ones that commit nothing - a gesture that ends in a no-op would otherwise leave the ghost
-        // of itself on screen until the next repaint.
+        // Every exit below has to put the surfaces back if a preview is standing on them, including
+        // the ones that commit nothing - a gesture that ends in a no-op would otherwise leave the
+        // ghost of itself on screen until the next repaint.
         bool preview = _previewShown;
         _previewShown = false;
+        // BELT AND BRACES, and no test can make it fail: the preview arms a pending move and
+        // BuildCommand consumes it in the same call, so nothing reaches here armed. It stays because
+        // the release resolves mark-versus-move for itself in BeginSelectGesture, and "a commit
+        // never inherits a preview's move" should be true of this method rather than true because of
+        // how another one happens to be written.
+        _pendingMove = null;
 
         if (ActiveDraft is not { } target || points.Count == 0)
         {
-            if (preview) ShowCanvas();
+            if (preview) RebuildSurfaces();
             return;
         }
 
         if (GestureTool == EditorTool.Select && !BeginSelectGesture(points))
         {
-            if (preview) ShowCanvas();
+            if (preview) RebuildSurfaces();
             return;
         }
 
@@ -1048,7 +1116,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         // A no-op edit changed nothing — don't dirty history, rebuild, or mark the ingredient dirty.
         if (!changed)
         {
-            if (preview) ShowCanvas();
+            if (preview) RebuildSurfaces();
             return;
         }
 
