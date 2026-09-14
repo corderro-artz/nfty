@@ -8,11 +8,15 @@
     <KeyBinding Gesture="Escape" Command="{Binding CancelCommand}" />
     <KeyBinding Gesture="Enter" Command="{Binding CreateCommand}" />
   </UserControl.KeyBindings>
-  <Border Classes="modal monoform">
+  <!-- .split, like the two wizards that grew past the card before it: this form stacked five
+       fields in a 432px column and wanted 455px of a 397px body at the smallest window, so the
+       description box and the identifier sat behind a scrollbar. The halves are what the collection
+       IS on the left and what it is MADE OF on the right. -->
+  <Border Classes="modal monoform split">
     <Grid RowDefinitions="*,Auto">
       <Border Grid.Row="0" Classes="modal-body">
         <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-        <StackPanel MaxWidth="432">
+        <StackPanel>
           <StackPanel Orientation="Horizontal" Spacing="7">
             <Ellipse Classes="kdot" />
             <TextBlock Text="CREATE" Classes="slbl" />
@@ -20,15 +24,30 @@
           <TextBlock Text="New CookBook" Classes="m-h" />
           <TextBlock Classes="m-sub"><Run Text="Makes an empty " /><Run Text=".cbk" Foreground="{DynamicResource FgBrush}" /><Run Text=" — Recipes and layers get added in the Explorer." /></TextBlock>
 
-          <StackPanel Spacing="14" Margin="0,19,0,0">
-            <StackPanel Spacing="6">
-              <TextBlock Text="NAME" Classes="plabel" />
-              <TextBox Text="{Binding Name}" PlaceholderText="VaporPets" />
-            </StackPanel>
-            <!-- wizard-cookbook.html puts SYMBOL (a fixed 132px field) and CANVAS (flex:1) on one
-                 .row rather than stacking them full width. -->
-            <Grid ColumnDefinitions="132,12,*">
-              <StackPanel Grid.Column="0" Spacing="6">
+          <Grid Classes="wizcols" ColumnDefinitions="*,25,1,25,*">
+            <Rectangle Grid.Column="2" Classes="wizrule" />
+
+            <!-- WHAT THE COLLECTION IS: the two names it publishes under, and the sentence a
+                 marketplace shows beneath them. -->
+            <StackPanel Grid.Column="0" Spacing="14">
+              <StackPanel Spacing="6">
+                <TextBlock Text="NAME" Classes="plabel" />
+                <TextBox Text="{Binding Name}" PlaceholderText="VaporPets" />
+                <!-- THE DERIVED ID SITS UNDER THE NAME IT IS DERIVED FROM.
+                     It used to be a full-width strip above the footer, under a dashed rule - the
+                     flourish a full-window mockup could afford. In a dialog card it cost every
+                     wizard about 60px of a card with a hard ceiling, and it stated its relationship
+                     to the NAME field from the far end of the form. Beneath the field, the sentence
+                     is shorter, the height is a line rather than a band, and the reader can see the
+                     id change as they type. -->
+                <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,3,0,0">
+                  <Border Classes="idchip"><TextBlock Text="{Binding DerivedIdText}" Classes="mono" FontSize="10.5" /></Border>
+                  <TextBlock Text="— the identifier, derived from the name" Classes="derived"
+                             Opacity="0.9" VerticalAlignment="Center" />
+                </StackPanel>
+              </StackPanel>
+
+              <StackPanel Spacing="6">
                 <StackPanel Classes="plabel-row">
                   <TextBlock Text="SYMBOL" Classes="plabel" />
                   <Border Classes="qmark"
@@ -39,7 +58,25 @@
                 <TextBox Text="{Binding Symbol}" MaxLength="255" PlaceholderText="VP" />
               </StackPanel>
 
-              <StackPanel Grid.Column="2" Spacing="6">
+              <StackPanel Spacing="6">
+                <TextBlock Text="DESCRIPTION" Classes="plabel" />
+                <!-- Wrap, and no horizontal scrollbar. A TextBox defaults to NoWrap even with
+                     AcceptsReturn set, so this two-line box ran its text off the right edge and
+                     Fluent drew a horizontal scrollbar under it - which the PLACEHOLDER alone was
+                     enough to trigger, so an untouched wizard opened showing a clipped sentence and
+                     a scrollbar for text the user had not typed. -->
+                <TextBox Text="{Binding Description}" AcceptsReturn="True" Height="76"
+                         TextWrapping="Wrap" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         VerticalContentAlignment="Top" Padding="11,7"
+                         PlaceholderText="A collection of neon companions, each hatched from its own recipe…" />
+              </StackPanel>
+            </StackPanel>
+
+            <!-- WHAT IT IS MADE OF: the one size every layer is validated against, and how many
+                 assets the author means to mint. Both are numbers, and both are decisions that are
+                 awkward to change later - the canvas cannot change once art exists at all. -->
+            <StackPanel Grid.Column="4" Spacing="14">
+              <StackPanel Spacing="6">
                 <StackPanel Classes="plabel-row">
                   <TextBlock Text="CANVAS" Classes="plabel" />
                   <Border Classes="qmark"
@@ -61,43 +98,23 @@
                   <NumericUpDown Grid.Column="2" Value="{Binding Height}" Minimum="1" />
                 </Grid>
               </StackPanel>
-            </Grid>
 
-            <StackPanel Spacing="6">
-              <StackPanel Classes="plabel-row">
-                <TextBlock Text="TARGET SUPPLY" Classes="plabel" />
-                <Border Classes="qmark"
-                        ToolTip.Tip="How many assets you intend to mint. Optional — leave it at 0 if you have not decided. It is declarative: it never limits a cook, which takes its count from the Cook dialog.">
-                  <TextBlock />
-                </Border>
+              <StackPanel Spacing="6">
+                <StackPanel Classes="plabel-row">
+                  <TextBlock Text="TARGET SUPPLY" Classes="plabel" />
+                  <Border Classes="qmark"
+                          ToolTip.Tip="How many assets you intend to mint. Optional — leave it at 0 if you have not decided. It is declarative: it never limits a cook, which takes its count from the Cook dialog.">
+                    <TextBlock />
+                  </Border>
+                </StackPanel>
+                <NumericUpDown Value="{Binding TargetSupply}" Minimum="0" Increment="100" />
               </StackPanel>
-              <NumericUpDown Value="{Binding TargetSupply}" Minimum="0" Increment="100" />
-            </StackPanel>
 
-            <StackPanel Spacing="6">
-              <TextBlock Text="DESCRIPTION" Classes="plabel" />
-              <!-- Wrap, and no horizontal scrollbar. A TextBox defaults to NoWrap even with
-                   AcceptsReturn set, so this two-line box ran its text off the right edge and
-                   Fluent drew a horizontal scrollbar under it - which the PLACEHOLDER alone was
-                   enough to trigger, so an untouched wizard opened showing a clipped sentence and
-                   a scrollbar for text the user had not typed. -->
-              <TextBox Text="{Binding Description}" AcceptsReturn="True" Height="54"
-                       TextWrapping="Wrap" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                       VerticalContentAlignment="Top" Padding="11,7"
-                       PlaceholderText="A collection of neon companions, each hatched from its own recipe…" />
+              <TextBlock Classes="m-sub" Margin="0" TextWrapping="Wrap"
+                         Text="Target supply is declarative: it never limits a cook, and the CookBook card reads it against the collection's unique DNA space so you can see whether the number fits." />
             </StackPanel>
-          </StackPanel>
+          </Grid>
 
-          <!-- .derived: the id the name will be saved under. Dashed rule above it, per the mockup. -->
-          <StackPanel Margin="0,15,0,0">
-            <Rectangle Height="1" HorizontalAlignment="Stretch" Stroke="{DynamicResource LineStrongBrush}"
-                       StrokeThickness="1" StrokeDashArray="3,3" />
-            <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,11,0,0">
-              <TextBlock Text="Identifier" Classes="derived" />
-              <Border Classes="idchip"><TextBlock Text="{Binding DerivedIdText}" Classes="mono" FontSize="10.5" /></Border>
-              <TextBlock Text="— derived from the name" Classes="derived" Opacity="0.9" />
-            </StackPanel>
-          </StackPanel>
         </StackPanel>
         </ScrollViewer>
       </Border>

@@ -25,6 +25,18 @@
             <StackPanel Spacing="6">
               <TextBlock Text="NAME" Classes="plabel" />
               <TextBox Text="{Binding Name}" PlaceholderText="Cat" />
+              <!-- THE DERIVED ID SITS UNDER THE NAME IT IS DERIVED FROM.
+                   It used to be a full-width strip above the footer, under a dashed rule - the
+                   flourish a full-window mockup could afford. In a dialog card it cost every
+                   wizard about 60px of a card with a hard ceiling, and it stated its relationship
+                   to the NAME field from the far end of the form. Beneath the field, the sentence
+                   is shorter, the height is a line rather than a band, and the reader can see the
+                   id change as they type. -->
+              <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,3,0,0">
+                <Border Classes="idchip"><TextBlock Text="{Binding DerivedIdText}" Classes="mono" FontSize="10.5" /></Border>
+                <TextBlock Text="— the identifier, derived from the name" Classes="derived"
+                           Opacity="0.9" VerticalAlignment="Center" />
+              </StackPanel>
             </StackPanel>
 
             <StackPanel Spacing="6">
@@ -104,15 +116,6 @@
             </StackPanel>
           </StackPanel>
 
-          <StackPanel Margin="0,15,0,0">
-            <Rectangle Height="1" HorizontalAlignment="Stretch" Stroke="{DynamicResource LineStrongBrush}"
-                       StrokeThickness="1" StrokeDashArray="3,3" />
-            <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,11,0,0">
-              <TextBlock Text="Identifier" Classes="derived" />
-              <Border Classes="idchip"><TextBlock Text="{Binding DerivedIdText}" Classes="mono" FontSize="10.5" /></Border>
-              <TextBlock Text="— derived from the name" Classes="derived" Opacity="0.9" />
-            </StackPanel>
-          </StackPanel>
         </StackPanel>
         </ScrollViewer>
       </Border>

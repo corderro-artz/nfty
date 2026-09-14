@@ -577,20 +577,12 @@
     <Setter Property="MinHeight" Value="41" />
     <Setter Property="Padding" Value="12,4" />
   </Style>
-  <!-- WrapPanel has no Spacing, so the gap the StackPanel used to supply is a trailing margin on
-       each child. The last one's margin is harmless: it falls in the strip's own padding. -->
-  <Style Selector="Border.toolstrip > WrapPanel > :is(Control)">
-    <Setter Property="Margin" Value="0,3,6,3" />
-  </Style>
-  <!-- Same trailing-margin trick as the toolstrip: WrapPanel has no Spacing. -->
-  <!-- HORIZONTAL ONLY, unlike the toolstrip's. The alpha slider in this strip carries Fluent's
-       cancelling -5/+5 margin, which is calibrated against the row's own centre - a vertical margin
-       here grows the row and moves that centre out from under the handle, which is exactly the
-       compensation-on-a-compensation trap the dual-range rows already taught. The strip keeps its
-       40px MinHeight, so one line is unchanged; two lines simply make it taller. -->
-  <Style Selector="Border.pstrip > WrapPanel > :is(Control)">
-    <Setter Property="Margin" Value="0,0,6,0" />
-  </Style>
+  <!-- Both strips used to carry a trailing MARGIN on every child, because WrapPanel has no Spacing
+       and the gap had to come from somewhere. StripPanel does, so the gap is a property of the
+       STRIP rather than of each control in it - which is what stops a control added later from
+       being the one that forgets the margin. Nothing here needs a vertical one either: the panel
+       centers every child on its line, so a cell's own height (Panel.band, StackPanel.alphacell)
+       stays true without a margin calibrating against the row it is in. -->
   <Style Selector="Button.railtab">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Padding" Value="0" />
@@ -730,10 +722,22 @@
          off screen entirely. The body scrolls inside this instead. -->
     <Setter Property="MaxHeight" Value="620" />
   </Style>
-  <!-- New Ingredient only. Declared AFTER Border.modal so it wins at equal specificity. 632 is what
-       the page area between the titlebar and the status bar actually allows at MainWindow's 720. -->
-  <Style Selector="Border.modal.tall">
-    <Setter Property="MaxHeight" Value="632" />
+  <!--
+    THE SPLIT WIZARD: two columns instead of one tall one.
+
+    A wizard was a 432px form column inside a 620px card inside a page that is 1067px wide at the
+    SMALLEST window the app allows - so the tall forms overflowed and scrolled (New Ingredient by
+    112px, Import Image by 194) while six hundred pixels of the page beside them held nothing. The
+    room was never scarce; it was in the wrong direction, which is the same mistake Landing's action
+    column made and was fixed the same way.
+
+    880 leaves 187px of gutter at the floor, and the body's two 400px columns are wide enough for the
+    three KIND cards that were the tightest row in the old 432. A wizard with a short form (New
+    Recipe) keeps the single column and the 620 card: widening a form that already fits buys nothing
+    and would make the two wizards different shapes for no reason a reader could name.
+  -->
+  <Style Selector="Border.modal.split">
+    <Setter Property="Width" Value="880" />
   </Style>
 
   <!--
@@ -742,16 +746,44 @@
     New CookBook by a description box - so a fixed height has to be the tallest state (too tall for
     a laptop) or the shortest (which clips the form). Neither is a size.
 
-    They stretch to the page with a gutter and cap on a large display; the body already scrolled
-    inside the old MaxHeight, so it simply scrolls inside less or not at all. Hung on .monoform, which the three wizards
-    already share, rather than on Border.modal - .small (confirm, error) must go on HUGGING its
-    sentence, and stretched, a two-line message would draw a full-height card around it. Declared
-    AFTER .tall so it wins the MaxHeight at equal specificity, per this file's last-one-wins rule.
+    They HUG their form and clamp to the page. Avalonia arranges a non-Stretch child at
+    min(desired, available), so Center is what gives both halves of that at once: a card that ends
+    where its form ends, and a card that can never be taller than the page it is centered in - the
+    body's scroller stays as the safety net for a window smaller than the app allows. It was Stretch,
+    which bought the clamp and paid for it with a void: New Ingredient's form is about 350px in a
+    506px card, so every wizard drew a hundred and fifty pixels of empty panel under its last field
+    and the eye read the form as unfinished rather than as short.
+
+    Hung on .monoform, which the three wizards already share, rather than on Border.modal - .small
+    (confirm, error) must go on hugging its sentence, and a two-line message in a stretched card
+    would draw a full-height panel around it.
   -->
   <Style Selector="Border.modal.monoform">
-    <Setter Property="VerticalAlignment" Value="Stretch" />
-    <Setter Property="Margin" Value="0,10" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <!-- 6, not 10. This is the gutter between the card and the page, and it is only ever SEEN on a
+         card that has run out of room - where every pixel of it is a pixel of form behind a
+         scrollbar. -->
+    <Setter Property="Margin" Value="0,6" />
     <Setter Property="MaxHeight" Value="700" />
+  </Style>
+  <!-- A split card's body carries two columns rather than one long one, so its vertical padding is
+       doing less work than the single-column wizards' 30 - and the height it gives back is the
+       difference between the import form fitting the smallest window and scrolling. -->
+  <Style Selector="Border.modal.split Border.modal-body">
+    <Setter Property="Padding" Value="24,20" />
+  </Style>
+
+  <!-- The two COLUMNS of a split wizard, and the rule between them. The column WIDTHS stay on each
+       card - Avalonia's ColumnDefinitions is not an AvaloniaProperty, so a Style cannot set them -
+       but everything else about the pair is stated once here, because two columns that drift apart
+       are two columns a reader stops trusting to line up. -->
+  <Style Selector="Grid.wizcols">
+    <Setter Property="Margin" Value="0,14,0,0" />
+  </Style>
+  <Style Selector="Rectangle.wizrule">
+    <Setter Property="Width" Value="1" />
+    <Setter Property="Fill" Value="{DynamicResource LineBrush}" />
+    <Setter Property="VerticalAlignment" Value="Stretch" />
   </Style>
 
 
@@ -1949,11 +1981,18 @@
     <Setter Property="Height" Value="{DynamicResource FieldHeightSm}" />
   </Style>
 
+  <!-- A READOUT IS RIGHT-ALIGNED, and the class has to say so. Every .cv until now sat in an Auto
+       column that hugged it, so it looked right-aligned without ever stating it - and the first one
+       put in a star column drew its text hard against the label naming it ("HUE0-360°"), which is
+       the stated-width-needs-a-stated-alignment trap one variant over: a bare TextBlock is Stretch,
+       and a Stretch TextBlock draws at the LEFT of whatever it was given. Stating it here is free in
+       an Auto column and correct in a star one. -->
   <Style Selector="TextBlock.cv">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="11" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="HorizontalAlignment" Value="Right" />
   </Style>
   <!-- The gradient band a dual range is drawn over. -->
   <!-- A slider laid over a band is always in one of these, and the height is the whole trick.
@@ -1997,8 +2036,14 @@
     <Setter Property="Padding" Value="6,5" />
   </Style>
 
+  <!-- 160, up from 64. The import form was one narrow column with a hard ceiling, so the preview was
+       squeezed to a strip - and a 64px band of a 512px drawing is a swatch, not a preview, on the one
+       screen whose whole job is showing what the art becomes before the choice is agreed to. The
+       split card pays for it in width the page already had. It is also the tallest thing in that
+       card's left column, so it is what the card's slack against the smallest window is measured in:
+       160 leaves about 30px, and fitting exactly is one style tweak from not fitting. -->
   <Style Selector="Border.impshot">
-    <Setter Property="Height" Value="64" />
+    <Setter Property="Height" Value="160" />
     <Setter Property="Background" Value="{DynamicResource TileBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
     <Setter Property="BorderThickness" Value="1" />
