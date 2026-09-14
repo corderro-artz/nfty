@@ -210,19 +210,17 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// </remarks>
     public bool ShowColorizeMode => !IsCustom && !IsColorMode;
 
-    /// <summary>Backs the "Static" toggle.</summary>
-    public bool IsModeStatic
-    {
-        get => Mode == LayerKind.Static;
-        set { if (value) Mode = LayerKind.Static; }
-    }
+    /// <summary>Backs the "Static" toggle's lit state.</summary>
+    /// <remarks>
+    /// GET-ONLY, both of these. They used to carry a setter that assigned <see cref="Mode"/>
+    /// directly, which was a second way into the kind change that skipped the confirmation
+    /// <see cref="SetModeStaticCommand"/> asks for — and nothing bound it, so it was an unused
+    /// bypass of the one guard on a destructive edit.
+    /// </remarks>
+    public bool IsModeStatic => Mode == LayerKind.Static;
 
-    /// <summary>Backs the "Dynamic" toggle.</summary>
-    public bool IsModeDynamic
-    {
-        get => Mode == LayerKind.Dynamic;
-        set { if (value) Mode = LayerKind.Dynamic; }
-    }
+    /// <summary>Backs the "Dynamic" toggle's lit state.</summary>
+    public bool IsModeDynamic => Mode == LayerKind.Dynamic;
 
     /// <summary>Per-tool flags for the toolstrip's active state. The old vertical text-button column
     /// showed no selection at all, so the user could not tell which tool was armed.</summary>
@@ -330,7 +328,32 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// <summary>The segmented Dynamic/Static control is two Buttons, not two RadioButtons, so it
     /// needs commands rather than two-way IsChecked bindings.</summary>
     [RelayCommand] private void SetModeDynamic() => Mode = LayerKind.Dynamic;
-    [RelayCommand] private void SetModeStatic() => Mode = LayerKind.Static;
+
+    /// <summary>
+    /// Switches the layer to Static, after saying what that throws away.
+    /// </summary>
+    /// <remarks>
+    /// <para>The only kind change in this editor that LOSES something. A static layer carries
+    /// exactly one fixed color — <c>Validator</c> refuses any other shape — so every rolled
+    /// hue/saturation range the layer was authored with is dropped when it is saved. The other
+    /// direction loses a single color spec, which the rail is still showing and the author can
+    /// retype; a range is a decision they cannot reconstruct from the screen afterwards.</para>
+    /// <para>Asked at the TOGGLE rather than at Save, because the rail rearranges itself the moment
+    /// the kind changes: the range controls the warning is about are gone from the screen by the
+    /// time Save is pressed.</para>
+    /// </remarks>
+    [RelayCommand]
+    private async Task SetModeStatic()
+    {
+        if (Mode == LayerKind.Static) return;
+        if (!await _dialogs.ShowAsync<bool>(new ConfirmDialogViewModel(_dialogs,
+                "Make this layer static?",
+                "A static layer carries exactly one fixed color. Saving replaces this layer's "
+                + "hue and saturation range with that color, and the range is not kept.",
+                "Make static")))
+            return;
+        Mode = LayerKind.Static;
+    }
 
     /// <summary>Pushes the rail's current state into the draft. Called on save rather than on every
     /// slider tick, so a drag across the hue track rebuilds one record at the end instead of one per
@@ -417,7 +440,12 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         // never colorized) defaults to Dynamic so the toggle has a sensible starting point.
         // Assigning Mode (as opposed to a field initializer) fires OnModeChanged, which rebuilds
         // the surfaces with the final color state.
-        Mode = ing.Manifest.Kind == LayerKind.Custom ? LayerKind.Dynamic : ing.Manifest.Kind;
+        //
+        // Inside the loading guard: OnModeChanged marks the editor dirty now, and an editor that
+        // opens dirty offers to save a layer nobody has changed.
+        _loadingLayer = true;
+        try { Mode = ing.Manifest.Kind == LayerKind.Custom ? LayerKind.Dynamic : ing.Manifest.Kind; }
+        finally { _loadingLayer = false; }
         // Fallback: if Mode's incoming value equalled its field default, OnModeChanged never
         // fired and Canvas/Preview are still unset from the ctor's perspective — build them now.
         if (Canvas is null) RebuildSurfaces();
@@ -496,6 +524,14 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(IsModeStatic));
         OnPropertyChanged(nameof(IsModeDynamic));
         RebuildSurfaces();
+
+        // THE KIND IS PART OF THE LAYER, so changing it is an edit. It was the one control on the
+        // colorize rail that did not say so - every slider, the fixed color and both quantize
+        // steppers route through ColorsChanged - and Save is gated on IsDirty, so a session whose
+        // only change was Dynamic-to-Static or back left the button dim and the change unsavable.
+        // ColorsChanged rather than a bare IsDirty: the count of admissible colors is a different
+        // number for the two kinds, and the rail prints it.
+        ColorsChanged();
     }
 
     partial void OnSelectedVariantChanged(EditorVariant? oldValue, EditorVariant? newValue)
@@ -544,7 +580,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     }
 
     // Every one of these is now part of what Save WRITES, not just of what the preview shows, so each
-    // marks the draft dirty. _loadingColorization suppresses that while the ctor fills the rail from
+    // marks the draft dirty. _loadingLayer suppresses that while the ctor fills the rail from
     // the layer's own configuration — opening a layer must not make it look edited.
     // The colors readout counts BUCKETS over the live ranges, so a range endpoint moves it exactly
     // as a quantize step does. Only the steppers used to raise it, which was correct for a figure
@@ -591,11 +627,21 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         ColorizeEdited();
     }
 
-    private bool _loadingColorization;
+    /// <summary>
+    /// True while the rail is being POPULATED from the stored layer rather than edited by a person.
+    /// </summary>
+    /// <remarks>
+    /// It guards <see cref="ColorizeEdited"/>, so opening an ingredient cannot leave the editor
+    /// dirty before the author has touched anything. It covers the constructor's <see cref="Mode"/>
+    /// assignment as well as <see cref="LoadColorization"/> — the mode change became an edit, and
+    /// without the guard every Dynamic layer (and every Custom one, which opens the toggle on
+    /// Dynamic) would open with Save already lit.
+    /// </remarks>
+    private bool _loadingLayer;
 
     private void ColorizeEdited()
     {
-        if (_loadingColorization || IsCustom) return;
+        if (_loadingLayer || IsCustom) return;
         IsDirty = true;
     }
     // The value ramp is V in color mode and the whole color in grayscale mode, so a change to it
@@ -610,8 +656,8 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     private void LoadColorization(Colorization? c)
     {
         if (c is null) return;
-        _loadingColorization = true;
-        try { LoadInto(c); } finally { _loadingColorization = false; }
+        _loadingLayer = true;
+        try { LoadInto(c); } finally { _loadingLayer = false; }
     }
 
     private void LoadInto(Colorization c)
@@ -637,16 +683,27 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// </remarks>
     private Colorization BuildColorization()
     {
-        var edited = Mode == LayerKind.Dynamic
-            ? new ColorEntry(1, new ColorRange(HueMin, HueMax, SatMin, SatMax), null)
-            : new ColorEntry(1, null, FixedColor);
+        // A STATIC LAYER IS EXACTLY ONE FIXED ENTRY. Validator says so, and the rail shows exactly
+        // that one color, so there is nothing here to pass through: splicing the fixed entry into
+        // whatever a Dynamic layer was carrying produced a two-entry static layer - an invalid
+        // cookbook, written without complaint, because nothing on the save path validated. That is
+        // the other half of why switching to Static asks first.
+        if (Mode != LayerKind.Dynamic)
+            return new Colorization(ColorModel.Hsv, HueQuantize, SatQuantize,
+                new[] { new ColorEntry(1, null, FixedColor) });
+
+        var edited = new ColorEntry(1, new ColorRange(HueMin, HueMax, SatMin, SatMax), null);
+
+        // Passing the other entries through is only right while the KIND is unchanged - it exists so
+        // a hand-authored layer with several weighted ranges keeps the ones this rail cannot show.
+        // Coming from Static there is one entry and it is the fixed color the author just replaced;
+        // keeping it made the layer roll fifty-fifty between the new range and the old color, which
+        // is not what "make this dynamic" asks for.
+        if (_ing.Manifest.Kind != LayerKind.Dynamic)
+            return new Colorization(ColorModel.Hsv, HueQuantize, SatQuantize, new[] { edited });
 
         var previous = _ing.Manifest.Colorization?.Entries ?? Array.Empty<ColorEntry>();
-        // Replace the entry the rail was showing; keep every other one exactly as it was.
-        int shown = Mode == LayerKind.Dynamic
-            ? IndexOf(previous, e => e.Range is not null)
-            : IndexOf(previous, e => e.Fixed is not null);
-
+        int shown = IndexOf(previous, e => e.Range is not null);
         var entries = previous.ToList();
         if (shown >= 0) entries[shown] = edited with { Weight = previous[shown].Weight };
         else entries.Insert(0, edited);
@@ -1242,6 +1299,20 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
             // The exporter picks each variant's raster from the draft's KIND — color for Custom,
             // value-map for everything else — so there is nothing to rebuild here.
             var (manifest, images) = IngredientDraftExporter.Export(_draft);
+
+            // NOTHING ELSE ON THIS PATH VALIDATES. CookBookPersistence writes what it is handed, and
+            // the Explorer's own Add checks the ingredient it builds before persisting it - the
+            // editor, which can change a layer's KIND and its whole colorization, did not. A layer
+            // Validator refuses is a book that fails to validate from then on, reported nowhere near
+            // the edit that caused it.
+            var problems = Validator.ValidateIngredient(
+                new LoadedIngredient { Manifest = manifest, VariantImages = images });
+            if (problems.Count > 0)
+            {
+                foreach (var i in images.Values) i.Dispose();   // ours until a save path adopts them
+                await ShowErrorAsync("Cannot save this layer", string.Join(Environment.NewLine, problems));
+                return;
+            }
 
             // Loose (.igt) save: write the ingredient straight back to its own archive.
             if (_looseSavePath is string loosePath)

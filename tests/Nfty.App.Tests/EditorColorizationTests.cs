@@ -64,9 +64,20 @@ public class EditorColorizationTests
         new(ColorModel.Hsv, hq, sq, new[] { new ColorEntry(1, new ColorRange(hMin, hMax, sMin, sMax), null) });
 
     private static IngredientEditorViewModel Editor(
-        (string path, CookBookSession session, LoadedRecipe recipe, LoadedIngredient ing) f) =>
+        (string path, CookBookSession session, LoadedRecipe recipe, LoadedIngredient ing) f,
+        IDialogService? dialogs = null) =>
         new(f.ing, f.recipe, f.session.Current!, new ImageBridge(), new FakeNav(),
-            f.session, new FakeDialogs(), new NoPicker());
+            f.session, dialogs ?? new FakeDialogs(), new NoPicker());
+
+    /// <summary>Says yes to the confirm that guards the switch to Static. <see cref="FakeDialogs"/>
+    /// returns default, which is a NO — so a test that needs the switch to happen has to answer.</summary>
+    private sealed class Confirming : IDialogService
+    {
+        public ViewModelBase? Active => null;
+        public event Action? Changed { add { } remove { } }
+        public Task<TResult?> ShowAsync<TResult>(ViewModelBase d) => Task.FromResult((TResult?)(object?)true);
+        public void Close(object? result) { }
+    }
 
     [AvaloniaFact]
     public void The_rail_opens_showing_the_layers_own_configuration()
@@ -198,15 +209,21 @@ public class EditorColorizationTests
     }
 
     /// <summary>Switching the tray to Static writes a fixed-color layer, kind and all.</summary>
+    /// <remarks>
+    /// The switch is GUARDED now — it drops the layer's rolled range, so it asks first — and the
+    /// result is exactly one entry, which is the only shape <c>Validator</c> admits for a static
+    /// layer. <c>EditorKindToggleTests</c> owns both of those rules; this test keeps its original
+    /// job, which is that the fixed color the rail shows is the one that reaches the archive.
+    /// </remarks>
     [AvaloniaFact]
     public async Task Switching_to_static_writes_a_static_layer_with_its_fixed_color()
     {
         var f = OnDisk(Ranged(170, 200, 60, 90));
         try
         {
-            using (var vm = Editor(f))
+            using (var vm = Editor(f, new Confirming()))
             {
-                vm.SetModeStaticCommand.Execute(null);
+                await vm.SetModeStaticCommand.ExecuteAsync(null);
                 vm.FixedColor = "hex:22aa44";
                 await vm.SaveCommand.ExecuteAsync(null);
             }
@@ -214,7 +231,8 @@ public class EditorColorizationTests
             using var book = CookBookArchive.Read(f.path);
             var ing = book.Recipes[0].Ingredients[0];
             Assert.Equal(LayerKind.Static, ing.Manifest.Kind);
-            Assert.Equal("hex:22aa44", ing.Manifest.Colorization!.Entries.First(e => e.Fixed is not null).Fixed);
+            var entry = Assert.Single(ing.Manifest.Colorization!.Entries);
+            Assert.Equal("hex:22aa44", entry.Fixed);
         }
         finally { f.session.Dispose(); Directory.Delete(Path.GetDirectoryName(f.path)!, true); }
     }
