@@ -83,4 +83,30 @@ public class WizardFitsTests
                 $"New Ingredient overflows its card for kind {kind}.");
         }
     }
+
+    /// <summary>
+    /// The import-an-image form fits too, in the state that shows the most.
+    /// </summary>
+    /// <remarks>
+    /// Dynamic again, for the same reason, plus this form's own additions - a preview frame and the
+    /// caveat about discarding a picture's colors. Its refusal line sits OUTSIDE the scroller, so
+    /// what this measures is the form proper; a refusal that can be scrolled away from is a disabled
+    /// button with no reason given.
+    /// </remarks>
+    [AvaloniaTheory]
+    [InlineData(LayerKind.Dynamic)]
+    [InlineData(LayerKind.Static)]
+    [InlineData(LayerKind.Custom)]
+    public void Import_image_form_fits_without_hiding_fields(LayerKind kind)
+    {
+        using var vm = VisualCapture.ImportImageForm(new FakeDialogs());
+        vm.Kind = kind;
+        var view = ShowAtShippingSize(new Views.ImportImageView { DataContext = vm });
+
+        var scroller = BodyScroller(view);
+        Assert.True(
+            scroller.Extent.Height <= scroller.Viewport.Height + 0.5,
+            $"Import image overflows its card by {scroller.Extent.Height - scroller.Viewport.Height:0.#}px "
+            + $"for kind {kind}, so the fields at the bottom are hidden behind a scrollbar.");
+    }
 }

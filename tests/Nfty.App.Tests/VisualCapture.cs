@@ -832,7 +832,44 @@ public class VisualCapture
             };
             Capture(new Views.ExportDialogView { DataContext = sealing }, variant,
                 $"export-sealed-{key}.png", width: 1180, height: 780);
+
+            using var import = ImportImageForm(new FakeDialogs());
+            Capture(new Views.ImportImageView { DataContext = import }, variant,
+                $"import-image-{key}.png", width: 1180, height: 780);
         }
+    }
+
+    /// <summary>
+    /// The import-an-image form, on the state that carries everything it can say at once: a COLOR
+    /// picture, the Dynamic kind (which discards those colors), and a name that clashes with a layer
+    /// already in the recipe.
+    /// </summary>
+    /// <remarks>
+    /// Both of its warning runs are painted only in that state, and a frame of the clean form would
+    /// show neither. The picture is a real file on disk because the form reads one - the preview,
+    /// the color check and the built layer all come off that one decode.
+    /// </remarks>
+    /// <param name="dialogs">The dialog layer.</param>
+    /// <returns>The loaded form; the caller disposes it.</returns>
+    internal static ImportImageViewModel ImportImageForm(IDialogService dialogs)
+    {
+        var dir = Directory.CreateTempSubdirectory("nfty-imp-").FullName;
+        string picture = Path.Combine(dir, "bg.png");
+        using (var img = new Image<Rgba32>(64, 64))
+        {
+            // A little drawing rather than a flat fill: a flat rectangle previews identically in
+            // color and in grayscale, which is the one thing this frame exists to tell apart.
+            for (int y = 0; y < 64; y++)
+                for (int x = 0; x < 64; x++)
+                    img[x, y] = new Rgba32((byte)(x * 4), (byte)(y * 3), (byte)(200 - x * 2), 255);
+            img.Save(picture);
+        }
+
+        var form = new ImportImageViewModel(dialogs, picture, new Dimensions(64, 64),
+            new ImageBridge(), new[] { "bg" });
+        form.TryLoad();
+        form.Kind = LayerKind.Dynamic;
+        return form;
     }
 
     /// <summary>A real cooked Set on disk, so the manifest lines are real counts and real sizes

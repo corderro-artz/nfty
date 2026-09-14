@@ -336,6 +336,13 @@ public class DarkModeContrastTests
             },
         }, null);
 
+        // Import-an-image, on a COLOR picture with the Dynamic kind chosen and a name that clashes:
+        // that is the only state carrying both of its WarningBrush runs - the "your colors will be
+        // gone" caveat and the refusal under the form - and the clean state paints neither.
+        var importForm = VisualCapture.ImportImageForm(dialogs);
+        yield return ("dialog-import-image",
+            new Views.ImportImageView { DataContext = importForm }, importForm.Dispose);
+
         // The passphrase prompt, on a seal that refuses export - so the sweep meets its "View only"
         // caveat rather than the permissive sentence, and the sender's note on its tinted panel.
         yield return ("dialog-passphrase", new Views.PassphraseDialogView

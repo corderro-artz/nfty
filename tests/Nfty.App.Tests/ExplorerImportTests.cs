@@ -225,9 +225,17 @@ public class ExplorerImportTests
         finally { Cleanup(session, path); }
     }
 
-    /// <summary>The picker is asked for exactly the two kinds a CookBook can absorb.</summary>
+    /// <summary>
+    /// The picker is asked for exactly what a CookBook can absorb: the two archive kinds, and the
+    /// picture formats an image becomes a layer from.
+    /// </summary>
+    /// <remarks>
+    /// The image half is new. Importing a drawing is how most people start a layer - they have art
+    /// before they have an <c>.igt</c> - and the only route in used to be creating an empty
+    /// ingredient, opening the editor and importing the file into its blank variant.
+    /// </remarks>
     [AvaloniaFact]
-    public async Task The_picker_offers_recipes_and_ingredients_only()
+    public async Task The_picker_offers_recipes_ingredients_and_pictures()
     {
         var (path, session) = OnDisk();
         try
@@ -238,7 +246,7 @@ public class ExplorerImportTests
 
             await explorer.ImportCommand.ExecuteAsync(null);
 
-            Assert.Equal([".rcp", ".igt"], picker.LastExtensions);
+            Assert.Equal([".rcp", ".igt", ".png", ".jpg", ".jpeg"], picker.LastExtensions);
         }
         finally { Cleanup(session, path); }
     }

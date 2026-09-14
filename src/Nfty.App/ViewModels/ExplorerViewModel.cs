@@ -933,15 +933,21 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     {
         if (!CanEditBook("import into this cookbook")) return;
 
-        string? path = await _picker.OpenFileAsync("Import into this CookBook", ".rcp", ".igt");
+        // Pictures as well as parts. Importing a drawing is the way most people start a layer -
+        // they have art before they have an .igt - and before this the only route in was to create
+        // an empty ingredient, open the editor, and import the file into its blank variant.
+        string? path = await _picker.OpenFileAsync("Import into this CookBook",
+            ".rcp", ".igt", ".png", ".jpg", ".jpeg");
         if (path is null) return;   // canceled
 
         try
         {
             if (path.EndsWith(".rcp", StringComparison.OrdinalIgnoreCase))
                 await ImportRecipe(path);
-            else
+            else if (path.EndsWith(".igt", StringComparison.OrdinalIgnoreCase))
                 await ImportIngredient(path);
+            else
+                await ImportImage(path);
         }
         catch (Exception ex)
         {
@@ -1001,6 +1007,74 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         }
         finally { ing?.Dispose(); }
     }
+    /// <summary>
+    /// Builds a layer out of a picture, in whichever recipe the selection is in.
+    /// </summary>
+    /// <remarks>
+    /// <para>The same destination rule <see cref="ImportIngredient"/> follows, and the same two
+    /// seams - <c>CookBookEdits</c> then <c>CookBookPersistence</c> - so an imported picture is
+    /// validated, saved and re-selected exactly as an Add is.</para>
+    /// <para>It lands in the EDITOR afterwards, like every other way of creating a layer here does.
+    /// A picture is a starting point: the author almost always wants to look at it composited
+    /// against the rest of the stack, and the editor is the only place that shows that.</para>
+    /// </remarks>
+    /// <param name="path">The picture to import.</param>
+    private async Task ImportImage(string path)
+    {
+        LoadedRecipe? target = SelectedNode?.Domain switch
+        {
+            LoadedRecipe r => r,
+            (LoadedRecipe r, LoadedIngredient _) => r,
+            _ => null,
+        };
+        if (target is null)
+        {
+            _status.Say("Select the recipe to import the image into first - a layer belongs to one recipe.");
+            return;
+        }
+
+        using var form = new ImportImageViewModel(_dialogs, path, _book.Manifest.Canvas, _bridge,
+            target.Ingredients.Select(i => i.Manifest.Id).ToList());
+
+        // Read and checked BEFORE the form is shown. A dialog that opens onto an unreadable file or
+        // a wrong-sized picture, only to refuse when the button is pressed, makes the reader fill in
+        // a form for nothing.
+        if (form.TryLoad() is { } refusal)
+        {
+            await ShowError("Cannot import that image", refusal);
+            return;
+        }
+
+        var result = await _dialogs.ShowAsync<ImportImageViewModel>(form);
+        if (result is null) return;   // canceled
+
+        var newIng = result.Build();   // ours until the persisted book adopts its image
+        var adopted = false;
+        try
+        {
+            var problems = Validator.ValidateIngredient(newIng);
+            if (problems.Count > 0)
+            {
+                await ShowError("Invalid ingredient", string.Join(Environment.NewLine, problems));
+                return;
+            }
+
+            var book2 = CookBookEdits.UpsertIngredient(_book, target.Manifest.Id, newIng);
+            var book3 = await CookBookPersistence.PersistAsync(_session, book2);
+            adopted = true;
+            ApplyBook(book3, newIng.Manifest.Id);
+            _status.Say($"Imported \u201c{result.SourceLeaf}\u201d as {newIng.Manifest.Name}.");
+
+            var recipe3 = book3.Recipes.First(r => r.Manifest.Id == target.Manifest.Id);
+            var ing3 = recipe3.Ingredients.First(i => i.Manifest.Id == newIng.Manifest.Id);
+            OpenEditor(ing3, recipe3);
+        }
+        finally
+        {
+            if (!adopted) newIng.Dispose();
+        }
+    }
+
     [RelayCommand] private void SelectNode(ExplorerNode node) => SelectedNode = node;
     /// <summary>Clicking a layer in the recipe detail jumps to that ingredient in the tree.</summary>
     [RelayCommand]

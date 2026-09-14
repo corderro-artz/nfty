@@ -816,19 +816,13 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
                 return;   // img itself is disposed by the finally below
             }
 
-            // Dynamic/static: the PNG becomes the variant's value-map, which stores lightness only,
-            // so a color source has to be collapsed to one channel.
-            //
-            // Desaturate FIRST rather than handing the color image straight to ValueMap.FromImage.
-            // FromImage reads the RED channel - exact and lossless for its real job, round-tripping
-            // this layer's own already-grayscale PNG, but arbitrary for foreign art: pure green would
-            // import as pure BLACK and pure red as pure WHITE, though both read as mid-bright to the
-            // eye. Grayscale() is ITU-R BT.709 luminance, so R==G==B afterwards and FromImage's own
-            // contract is left exactly as it was.
-            bool hadColor = HasColor(img);
-            if (hadColor) img.Mutate(x => x.Grayscale());
-
-            var src = ValueMap.FromImage(img);
+            // Dynamic/static: the picture becomes the variant's value-map, which stores lightness
+            // only, so a color source has to be collapsed to one channel. ImageImport owns that
+            // rule, because importing a picture as a whole new LAYER does the same thing and two
+            // copies is how the same file comes to import differently depending on which button was
+            // pressed.
+            bool hadColor = ImageImport.HasColor(img);
+            var src = ImageImport.ToValueMap(img);
             for (int y = 0; y < canvas.Height; y++)
                 for (int x = 0; x < canvas.Width; x++)
                     target.Map.Set(x, y, src.GetValue(x, y), src.GetAlpha(x, y));
@@ -858,26 +852,6 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
             NotifySaveAvailability();
         }
         finally { img.Dispose(); }
-    }
-
-    /// <summary>True if any pixel carries color (channels not all equal). Used only to warn on a
-    /// value-map import; a fully transparent pixel cannot show color, so it is skipped.</summary>
-    private static bool HasColor(Image<Rgba32> img)
-    {
-        bool found = false;
-        img.ProcessPixelRows(accessor =>
-        {
-            for (int y = 0; y < accessor.Height && !found; y++)
-            {
-                Span<Rgba32> row = accessor.GetRowSpan(y);
-                for (int x = 0; x < row.Length; x++)
-                {
-                    var p = row[x];
-                    if (p.A != 0 && (p.R != p.G || p.G != p.B)) { found = true; break; }
-                }
-            }
-        });
-        return found;
     }
 
     private async Task ShowErrorAsync(string title, string message) =>

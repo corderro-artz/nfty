@@ -1,0 +1,170 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             x:Class="Nfty.App.Views.ImportImageView"
+             x:DataType="vm:ImportImageViewModel"
+             RenderOptions.BitmapInterpolationMode="None"
+             Focusable="True">
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Escape" Command="{Binding CancelCommand}" />
+    <KeyBinding Gesture="Enter" Command="{Binding CreateCommand}" />
+  </UserControl.KeyBindings>
+  <!-- .tall/.tight, like the New Ingredient wizard: this form carries the same two range bands and
+       adds a preview, and ModalFitTests fails rather than letting it overflow the smallest window. -->
+  <Border Classes="modal monoform tall">
+    <Grid RowDefinitions="*,Auto,Auto">
+      <Border Grid.Row="0" Classes="modal-body tight">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+          <StackPanel MaxWidth="432">
+            <Grid ColumnDefinitions="Auto,*">
+              <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="7">
+                <Ellipse Classes="kdot" />
+                <TextBlock Text="IMPORT" Classes="slbl" />
+              </StackPanel>
+              <!-- The file and its size ride the eyebrow row. They had a row of their own, which
+                   cost the card 22px it does not have - see WizardFitsTests. -->
+              <TextBlock Grid.Column="1" Classes="derived" Opacity="0.9" HorizontalAlignment="Right"
+                         VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                         Text="{Binding SourceText}" />
+            </Grid>
+            <TextBlock Text="Image as Ingredient" Classes="m-h" />
+            <TextBlock Classes="m-sub"><Run Text="The picture becomes this layer's first variant. Its " /><Run Text="kind" Foreground="{DynamicResource FgBrush}" /><Run Text=" decides whether the art is kept, or reduced to a value-map and colorized." /></TextBlock>
+
+            <StackPanel Spacing="8" Margin="0,14,0,0">
+              <!-- THE PREVIEW IS THE POINT OF THIS FORM. Choosing Dynamic or Static discards the
+                   picture's colors on purpose, and the grayscale it becomes is on screen before the
+                   choice is agreed to rather than after it is written. -->
+              <Border Classes="impshot">
+                <Image Source="{Binding Preview}" Stretch="Uniform" />
+              </Border>
+
+              <StackPanel Spacing="6">
+                <TextBlock Text="NAME" Classes="plabel" />
+                <TextBox Text="{Binding Name}" PlaceholderText="Aura" />
+              </StackPanel>
+
+              <StackPanel Spacing="6">
+                <StackPanel Classes="plabel-row">
+                  <TextBlock Text="KIND" Classes="plabel" />
+                  <Border Classes="qmark"
+                          ToolTip.Tip="How this layer becomes pixels. Custom keeps the picture exactly as it is. Dynamic and Static keep only its lightness and take their color at generation time, which is how one drawing becomes thousands of colorways.">
+                    <TextBlock />
+                  </Border>
+                </StackPanel>
+                <!-- Custom FIRST here, unlike the New Ingredient wizard. That form starts from
+                     nothing and a value-map is the usual answer; this one starts from a picture
+                     somebody already drew, where keeping it is. -->
+                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                  <RadioButton Grid.Column="0" Classes="choice" GroupName="ImportKind" IsChecked="{Binding IsKindCustom}">
+                    <StackPanel>
+                      <TextBlock Text="Custom" Classes="ct" />
+                      <TextBlock Text="keep the art as&#x2011;is" Classes="csub" />
+                    </StackPanel>
+                  </RadioButton>
+                  <RadioButton Grid.Column="1" Classes="choice" GroupName="ImportKind" IsChecked="{Binding IsKindDynamic}">
+                    <StackPanel>
+                      <TextBlock Text="Dynamic" Classes="ct" />
+                      <TextBlock Text="color rolled per asset" Classes="csub" />
+                    </StackPanel>
+                  </RadioButton>
+                  <RadioButton Grid.Column="2" Classes="choice" GroupName="ImportKind" IsChecked="{Binding IsKindStatic}">
+                    <StackPanel>
+                      <TextBlock Text="Static" Classes="ct" />
+                      <TextBlock Text="one fixed color" Classes="csub" />
+                    </StackPanel>
+                  </RadioButton>
+                </Grid>
+              </StackPanel>
+
+              <!-- Said only when it is true, and LAST in its stack rather than reserved above the
+                   controls: the reference panel's banner already won this argument. Nothing sits
+                   below it to be shoved. -->
+              <TextBlock Classes="m-sub" Foreground="{DynamicResource WarningBrush}" TextWrapping="Wrap" IsVisible="{Binding LosesColor}"
+                         Text="This picture has color; a value-map keeps only lightness. Its own colors will be gone — this layer takes its color at generation time." />
+
+              <StackPanel Spacing="8" IsVisible="{Binding ShowColorRange}">
+                <StackPanel Spacing="4">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Text="HUE RANGE" Classes="plabel" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Classes="cv" Text="{Binding HueRangeText}" />
+                  </Grid>
+                  <Panel Classes="band">
+                    <Border Classes="dualtrack" Background="{StaticResource HueSpectrumBrush}" />
+                    <Slider Classes="overlay" Value="{Binding HueMin}" Minimum="0" Maximum="360"
+                            TickFrequency="1" IsSnapToTickEnabled="True" />
+                    <Slider Classes="overlay" Value="{Binding HueMax}" Minimum="0" Maximum="360"
+                            TickFrequency="1" IsSnapToTickEnabled="True" />
+                  </Panel>
+                </StackPanel>
+                <StackPanel Spacing="4">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Text="SATURATION RANGE" Classes="plabel" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Classes="cv" Text="{Binding SatRangeText}" />
+                  </Grid>
+                  <Panel Classes="band">
+                    <Border Classes="dualtrack" Background="{StaticResource SaturationRampBrush}" />
+                    <Slider Classes="overlay" Value="{Binding SatMin}" Minimum="0" Maximum="100"
+                            TickFrequency="1" IsSnapToTickEnabled="True" />
+                    <Slider Classes="overlay" Value="{Binding SatMax}" Minimum="0" Maximum="100"
+                            TickFrequency="1" IsSnapToTickEnabled="True" />
+                  </Panel>
+                </StackPanel>
+              </StackPanel>
+
+              <StackPanel Spacing="6" IsVisible="{Binding ShowFixedColor}">
+                <StackPanel Classes="plabel-row">
+                  <TextBlock Text="FIXED COLOR" Classes="plabel" />
+                  <Border Classes="qmark"
+                          ToolTip.Tip="A prefixed color spec — hex:, rgb:, hsl: or hsv:. A missing prefix is refused rather than guessed at.">
+                    <TextBlock />
+                  </Border>
+                </StackPanel>
+                <TextBox Text="{Binding FixedColor}" PlaceholderText="hex:d6249f" />
+              </StackPanel>
+
+            </StackPanel>
+
+            <StackPanel Margin="0,6,0,0">
+              <Rectangle Height="1" HorizontalAlignment="Stretch" Stroke="{DynamicResource LineStrongBrush}"
+                         StrokeThickness="1" StrokeDashArray="3,3" />
+              <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,11,0,0">
+                <TextBlock Text="Identifier" Classes="derived" />
+                <Border Classes="idchip"><TextBlock Text="{Binding DerivedIdText}" Classes="mono" FontSize="10.5" /></Border>
+                <TextBlock Text="— derived from the name" Classes="derived" Opacity="0.9" />
+              </StackPanel>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+
+      <!-- OUTSIDE THE SCROLLER. A refusal that can be scrolled away from is a disabled button with
+           no reason given, which is the thing the Problem line exists to prevent. The body scrolls;
+           this and the footer do not - the same split the export dialog's pinned manifest keeps. -->
+      <TextBlock Grid.Row="1" Classes="m-sub" Margin="20,0,20,10"
+                 Foreground="{DynamicResource WarningBrush}" TextWrapping="Wrap" Text="{Binding Problem}"
+                 IsVisible="{Binding Problem, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+      <Border Grid.Row="2" Classes="modal-foot">
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <Border Classes="kbd keys"><TextBlock Text="Enter" /></Border><TextBlock Text="import &amp; paint" Classes="keyhint" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <Border Classes="kbd keys"><TextBlock Text="Esc" /></Border><TextBlock Text="cancel" Classes="keyhint" />
+            </StackPanel>
+          </StackPanel>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+            <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="tbtn ghost" />
+            <Button Command="{Binding CreateCommand}" Classes="accent">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Path Classes="ico sm" Data="{StaticResource IconCheck}" />
+                <TextBlock Text="Import &amp; paint" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
+  </Border>
+</UserControl>
