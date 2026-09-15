@@ -8,8 +8,11 @@ using System.Globalization;
 using Nfty.App.Converters;
 using Nfty.App.Services;
 using Nfty.Core.Diagnostics;
+using Nfty.Core.Formats;
+using Nfty.Core.Generation;
 using Nfty.Core.Output;
 using Nfty.Core.Publish;
+using Nfty.Core.Stats;
 
 namespace Nfty.App.ViewModels;
 
@@ -235,6 +238,33 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     /// not when the browser does: the open book can change in between.</summary>
     private readonly Func<IEnumerable<string>>? _bookCandidates;
 
+    /// <summary>
+    /// The book this Set was cooked from, resolved into what pricing an asset needs — or null,
+    /// which is the ordinary case for a Set somebody was handed without its source.
+    /// </summary>
+    /// <remarks>
+    /// Found by HASH (<see cref="CookBookLocator"/>), so a folder of a dozen books cannot produce a
+    /// wrong answer, only no answer. Read as MANIFESTS alone
+    /// (<see cref="ArchivePeek.CookBookTree"/>): the weights and rules this needs are a few dozen
+    /// numbers, and a full read would pull every variant PNG in the collection into memory to look
+    /// at them.
+    /// </remarks>
+    private BookOdds? _sourceOdds;
+
+    /// <summary>The file name of that book, for the tooltip to name what it computed from.</summary>
+    private string? _sourceBookName;
+
+    /// <summary>
+    /// One exact chance per asset, computed on demand.
+    /// </summary>
+    /// <remarks>
+    /// The rail follows the POINTER, so this is read on every hover; a grid is scanned across
+    /// hundreds of tiles and the same asset is asked about again and again. The expensive half — the
+    /// denominator — is already resolved once, in <see cref="_sourceOdds"/>; this is the cheap half,
+    /// cached because it is asked repeatedly rather than because it is slow.
+    /// </remarks>
+    private readonly Dictionary<int, SelectionChance> _chances = new();
+
     /// <summary>The collection's name.</summary>
     public string Name { get; }
     /// <summary>How many assets the Set holds.</summary>
@@ -255,6 +285,7 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(ShownDnaBottom))]
     [NotifyPropertyChangedFor(nameof(RarestText))]
     [NotifyPropertyChangedFor(nameof(CombinedText))]
+    [NotifyPropertyChangedFor(nameof(CombinedTip))]
     private SetItemRow? _selectedItem;
 
     /// <summary>
@@ -280,6 +311,7 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(ShownDnaBottom))]
     [NotifyPropertyChangedFor(nameof(RarestText))]
     [NotifyPropertyChangedFor(nameof(CombinedText))]
+    [NotifyPropertyChangedFor(nameof(CombinedTip))]
     private SetItemRow? _hoveredItem;
 
     /// <summary>The asset the detail rail is describing: what the pointer is over, or failing that,
@@ -354,6 +386,66 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
         // cost falls under the ListBox's virtualization instead of on top of it.
         Items = set.Items.Select(i => new SetItemRow(i.Number, i.ImagePath, i)).ToList();
         SelectedItem = Items.Count > 0 ? Items[0] : null;
+        BeginSourceBookSearch();
+    }
+
+    /// <summary>
+    /// Looks for the CookBook this Set was cooked from, off the UI thread.
+    /// </summary>
+    /// <remarks>
+    /// <para>It hashes candidate files and opens zips, so it cannot happen on a binding read — the
+    /// same argument <see cref="SetItemRow.Thumbnail"/> already makes about decoding. The combined
+    /// chance shows its estimate meanwhile and swaps to the exact figure if one arrives, which is
+    /// why the two properties are raised again at the end rather than the browser waiting for it.
+    /// </para>
+    ///
+    /// <para>The candidate list is read HERE, on the UI thread: that callback reaches into app
+    /// state — the open book, the recents list — and must not be invoked from a thread pool thread.
+    /// </para>
+    /// </remarks>
+    private void BeginSourceBookSearch()
+    {
+        if (_set.Manifest.CookbookSha256 is not { Length: > 0 } hash) return;
+
+        var named = (_bookCandidates?.Invoke() ?? Array.Empty<string>()).ToList();
+        string directory = _set.SourceDirectory;
+
+        _ = Task.Run(() =>
+        {
+            string? path = CookBookLocator.Find(hash, named.Concat(CookBookLocator.Nearby(directory)));
+            if (path is null) return;
+
+            BookOdds odds;
+            // A book that is the right bytes can still be unreadable by this build — a newer schema,
+            // a file being written while this runs. The chance falls back to its estimate, which is
+            // exactly what happens when no book is found at all.
+            try { odds = SelectionOdds.Prepare(ArchivePeek.CookBookTree(path)); }
+            catch (IOException) { return; }
+            catch (InvalidDataException) { return; }
+            catch (UnauthorizedAccessException) { return; }
+            catch (UnsupportedSchemaVersionException) { return; }
+
+            string name = System.IO.Path.GetFileName(path);
+            Dispatcher.UIThread.Post(() =>
+            {
+                _sourceOdds = odds;
+                _sourceBookName = name;
+                OnPropertyChanged(nameof(CombinedText));
+                OnPropertyChanged(nameof(CombinedTip));
+            });
+        });
+    }
+
+    /// <summary>The exact chance of this asset, or null when there is no book to compute one from
+    /// or the asset cannot be mapped onto it.</summary>
+    private SelectionChance? ExactChance(SetItem item)
+    {
+        if (_sourceOdds is not { } odds) return null;
+        if (_chances.TryGetValue(item.Number, out var cached)) return cached.IsKnown ? cached : null;
+
+        var chance = odds.Of(item);
+        _chances[item.Number] = chance;
+        return chance.IsKnown ? chance : null;
     }
 
     // Keep each row's own IsSelected in sync so the grid can paint a selected-tile indicator —
@@ -458,54 +550,71 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     /// <remarks>
     /// <para>This is the "wow, one in fifty thousand" line, and it is the question a rarity table
     /// cannot answer by being read: a reader can see that the lock is 1 in 4 and the bands are 1 in
-    /// 3 and still have no idea what the whole combination is worth. It is the product of every row
-    /// in that table — the recipe's own share included, since Type is one of the rows — so the
-    /// figure below is built from exactly the numbers above it.</para>
+    /// 3 and still have no idea what the whole combination is worth.</para>
     ///
-    /// <para><b>It assumes the layers roll independently, and that is why the tooltip says so.</b>
-    /// Incompatibility rules and absent-percents both couple layers together, so a book that uses
-    /// either makes the true chance differ from this product — usually by making forbidden
-    /// combinations impossible and the surviving ones commoner. The alternative was to locate the
-    /// source CookBook by hash and compute the exact joint probability from its weights, which is a
-    /// real feature and not this one; what this must not do is print an exact-looking number and
-    /// stay quiet about the assumption behind it.</para>
+    /// <para><b>There are two figures here and the line says which one it is showing.</b> When the
+    /// source CookBook can be found — by hash, so it is the book and not a book —
+    /// <see cref="SelectionOdds"/> computes the exact chance from its own weights, incompatibility
+    /// rules and optional layers included. Otherwise this falls back to the product of the rows in
+    /// the table below, which assumes the layers roll independently; rules and absent-percents both
+    /// break that, usually by making forbidden combinations impossible and the survivors commoner,
+    /// so the estimate is marked with a <c>~</c> and its tooltip says what it assumed.</para>
     ///
-    /// <para>Computed from the shares this SET actually produced, not from the book's intent, which
-    /// is also what the table above shows. On a small collection those two differ; the figure is
-    /// about the assets in front of you.</para>
+    /// <para>The fallback is computed from the shares this SET actually produced rather than from
+    /// the book's intent, which is also what the table above shows. On a small collection those two
+    /// differ; when there is no book to ask, the assets in front of you are the only evidence there
+    /// is.</para>
     /// </remarks>
     public string CombinedText
     {
         get
         {
-            var rarity = Shown?.Item.Rarity;
-            if (rarity is null || rarity.Count == 0) return "";
+            var item = Shown?.Item;
+            if (item is null) return "";
 
-            double p = 1.0;
-            foreach (var r in rarity)
-            {
-                if (r.RarityPct <= 0) return "";     // a trait no asset carries makes the product meaningless
-                p *= r.RarityPct / 100.0;
-            }
-            if (p <= 0 || double.IsNaN(p)) return "";
+            if (ExactChance(item) is { } exact)
+                return $"this combo {SelectionOdds.Describe(exact, ShowRarityAsOdds)}";
 
-            if (!ShowRarityAsOdds)
-            {
-                // Enough places to stay non-zero however deep the stack goes: a six-layer asset is
-                // routinely a thousandth of a percent, and "0.00%" is not a figure.
-                double pct = p * 100.0;
-                string text = pct >= 0.01 ? pct.ToString("0.##", CultureInfo.InvariantCulture)
-                    : pct.ToString("0.######", CultureInfo.InvariantCulture);
-                return $"this combo {text}%";
-            }
-
-            double one = 1.0 / p;
-            // Thousands-separated and invariant, like every figure this app prints: these get read
-            // off screenshots and compared between machines.
-            return one >= 1_000_000_000_000d
-                ? "this combo 1 in over a trillion"
-                : $"this combo 1 in {Math.Round(one, MidpointRounding.AwayFromZero).ToString("N0", CultureInfo.InvariantCulture)}";
+            double p = EstimatedProbability(item);
+            if (p <= 0) return "";
+            // Rendered through the same Core formatter the exact figure uses, so the two cannot
+            // print one number two ways - the ~ is the only difference, and it is the honest one.
+            return $"this combo ~{SelectionOdds.Describe(new SelectionChance(p, SpaceCertainty.Exact), ShowRarityAsOdds)}";
         }
+    }
+
+    /// <summary>What the combined-chance line says it is: computed, or estimated and from what.</summary>
+    /// <remarks>
+    /// A figure that looks exact and is not must say so where the reader is already looking, and
+    /// naming the book is what makes the exact one checkable — the reader can open that file.
+    /// </remarks>
+    public string CombinedTip =>
+        Shown is null ? ""
+        : ExactChance(Shown.Item) is not null
+            ? $"The chance of rolling this exact combination, computed from {_sourceBookName} - the "
+              + "CookBook this Set was cooked from, matched by its hash. Incompatibility rules and "
+              + "optional layers are accounted for."
+            : "Estimated: the product of the shares this Set produced, which assumes the layers roll "
+              + "independently. Incompatibility rules and optional layers break that. Keep the source "
+              + "CookBook beside the Set and this becomes the exact figure.";
+
+    /// <summary>
+    /// The independence estimate: every row of the rarity table multiplied together, recipe share
+    /// included, since Type is one of the rows.
+    /// </summary>
+    /// <returns>The probability, or zero when the table cannot produce one.</returns>
+    private static double EstimatedProbability(SetItem item)
+    {
+        var rarity = item.Rarity;
+        if (rarity.Count == 0) return 0;
+
+        double p = 1.0;
+        foreach (var r in rarity)
+        {
+            if (r.RarityPct <= 0) return 0;     // a trait no asset carries makes the product meaningless
+            p *= r.RarityPct / 100.0;
+        }
+        return double.IsNaN(p) ? 0 : p;
     }
 
     /// <summary>How many Recipes the collection was rolled from.</summary>

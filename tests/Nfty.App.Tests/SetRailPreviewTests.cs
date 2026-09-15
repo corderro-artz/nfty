@@ -163,12 +163,14 @@ public class SetRailPreviewTests
     }
 
     /// <summary>
-    /// THE COMBINED CHANCE IS THE PRODUCT OF EVERY ROW IN THE TABLE, recipe share included.
+    /// WITH NO SOURCE BOOK, THE COMBINED CHANCE IS THE PRODUCT OF EVERY ROW IN THE TABLE, recipe
+    /// share included — and it says so with a <c>~</c>.
     /// </summary>
     /// <remarks>
     /// This is the question a rarity table cannot answer by being read: the lock is 1 in 4 and the
-    /// bands are 1 in 3 and nothing there says what the whole asset is worth. It is built from
-    /// exactly the numbers shown above it, so a reader can check it by hand.
+    /// bands are 1 in 3 and nothing there says what the whole asset is worth. Without the book it is
+    /// built from exactly the numbers shown above it, so a reader can check it by hand — and it
+    /// assumes the layers roll independently, which is what the tilde and the tooltip are for.
     /// </remarks>
     [AvaloniaFact]
     public void The_combined_chance_is_the_product_of_the_assets_traits()
@@ -182,11 +184,12 @@ public class SetRailPreviewTests
             long expected = (long)Math.Round(1.0 / p, MidpointRounding.AwayFromZero);
 
             vm.ShowRarityOddsCommand.Execute(null);
-            Assert.Equal($"this combo 1 in {expected:N0}", vm.CombinedText);
+            Assert.Equal($"this combo ~1 in {expected:N0}", vm.CombinedText);
+            Assert.StartsWith("Estimated:", vm.CombinedTip, StringComparison.Ordinal);
 
             // And the same number the other way up, under the same toggle as everything else.
             vm.ShowRarityPercentCommand.Execute(null);
-            Assert.StartsWith("this combo ", vm.CombinedText, StringComparison.Ordinal);
+            Assert.StartsWith("this combo ~", vm.CombinedText, StringComparison.Ordinal);
             Assert.EndsWith("%", vm.CombinedText, StringComparison.Ordinal);
         }
         finally { vm.Dispose(); Directory.Delete(dir, recursive: true); }
@@ -206,7 +209,7 @@ public class SetRailPreviewTests
                 .OrderBy(r => r.RarityPct).First();
 
             long combined = long.Parse(
-                vm.CombinedText.Replace("this combo 1 in ", "", StringComparison.Ordinal)
+                vm.CombinedText.Replace("this combo ~1 in ", "", StringComparison.Ordinal)
                   .Replace(",", "", StringComparison.Ordinal),
                 System.Globalization.CultureInfo.InvariantCulture);
 

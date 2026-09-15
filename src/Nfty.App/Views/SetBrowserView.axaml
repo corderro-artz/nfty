@@ -244,12 +244,17 @@
                        It sits with the id and the picture because it is a fact about the ASSET,
                        where "rarest" beside the RARITY heading is a fact about the table.
                        Reserved, like the line above it: a third text line still fits inside the
-                       66px preview beside it, so the identity block is one height either way. -->
+                       66px preview beside it, so the identity block is one height either way.
+
+                       The figure is EXACT when the source CookBook can be found by hash, and the
+                       independence product marked with a ~ when it cannot - the tooltip is bound
+                       rather than written here because it has to say which of the two this is, and
+                       name the book when it is the first. -->
                   <Panel Height="15">
                     <TextBlock Classes="combo" VerticalAlignment="Center"
                                TextTrimming="CharacterEllipsis"
                                Text="{Binding CombinedText}"
-                               ToolTip.Tip="The chance of rolling this exact combination, from the shares this Set actually produced. Layers are assumed to roll independently - incompatibility rules and optional layers can make the real chance differ." />
+                               ToolTip.Tip="{Binding CombinedTip}" />
                   </Panel>
                 </StackPanel>
               </Grid>
