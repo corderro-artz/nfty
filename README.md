@@ -223,42 +223,49 @@ why `set.json` records `uniqueDna` alongside the seed.
 ```text
 nfty/
 ├── src/
-│   ├── Nfty.Core/            The engine — no UI or CLI dependencies        (net10.0)
-│   │   ├── Model/            Immutable domain records
-│   │   ├── Formats/          ZIP + manifest IO, Validator
-│   │   ├── Imaging/          Color conversion, colorization, compositing, preview
-│   │   ├── Generation/       RNG, rollers, DNA, rules engine, orchestrator
-│   │   ├── Editing/          Layer depth, region edits, image import
-│   │   ├── Output/           Set writer, dual metadata, extend loader
-│   │   ├── Publish/          Export planning and AES-256-GCM sealing
-│   │   └── Stats/            Rarity and the text reports both front-ends print
-│   ├── Nfty.Cli/             System.CommandLine wiring                     (net10.0)
-│   ├── Nfty.App/             Avalonia GUI: Services, ViewModels, Views, Themes
-│   └── Nfty.Desktop/         Desktop head — window, clipboard, file pickers
-├── tests/                    2,088 tests across three xunit.v3 projects
-│   └── fixtures/             Archives written by an older build, so a format change cannot pass unnoticed
+│   ├── Nfty.Core/          The engine — no UI or CLI dependency   (net10.0)
+│   │   ├── Model/          Immutable domain records
+│   │   ├── Formats/        ZIP + manifest IO, Validator
+│   │   ├── Imaging/        Conversion, colorization, compositing, preview
+│   │   ├── Generation/     RNG, rollers, DNA, rules engine, orchestrator
+│   │   ├── Editing/        Layer depth, region edits, image import
+│   │   ├── Output/         Set writer, dual metadata, extend loader
+│   │   ├── Publish/        Export planning and AES-256-GCM sealing
+│   │   └── Stats/          Rarity, and the reports both front-ends print
+│   ├── Nfty.Cli/           System.CommandLine wiring              (net10.0)
+│   ├── Nfty.App/           Avalonia GUI — ViewModels, Views, Themes
+│   └── Nfty.Desktop/       Desktop head — window, clipboard, pickers
+├── tests/                  2,088 tests across three xunit.v3 projects
+│   └── fixtures/           Archives an older build wrote, and still reads
 ├── docs/
-│   ├── manual/               The end-user manual (Material for MkDocs)
-│   ├── design/archive/       A dated visual record — history, not specification
-│   └── superpowers/          Design specs, newest first
-├── tools/                    Demo generator, icon build, docs capture, release build
+│   ├── manual/             The end-user manual (Material for MkDocs)
+│   ├── design/archive/     A dated visual record — history, not spec
+│   └── superpowers/        Design specs, newest first
+├── tools/                  Demo, icons, docs capture, release build
 └── nfty.sln
 ```
 
 ### Generation Pipeline
 
 ```text
-  roll a Recipe by cookbook weight
+  roll a Recipe            by cookbook weight
       │
       ▼
-  roll each layer's Variant by ingredient weight
+  roll each Variant        by ingredient weight
       │
-      ├──► apply the Recipe's incompatibility rules   ──► re-roll on a violation
+      ├──► rules violated?      ──► re-roll
       ▼
-  colorize dynamic and static layers  (custom composites as-is)
+  colorize dynamic + static     (custom composites as-is)
       │
       ▼
-  composite in depth order  →  hash the DNA  →  reject duplicates  →  emit
+  composite in depth order
+      │
+      ▼
+  hash the DNA
+      │
+      ├──► already generated?   ──► re-roll
+      ▼
+  emit
 ```
 
 The **DNA** is a SHA-256 over the recipe id, each layer's variant id, and the *quantized* color of
