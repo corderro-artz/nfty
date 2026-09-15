@@ -164,29 +164,48 @@
         <Grid RowDefinitions="Auto,*,Auto">
             <StackPanel Grid.Row="0" Spacing="10" Margin="13,12,13,0">
 
-              <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Grid.Column="0" Classes="mono" FontSize="17" FontWeight="Bold"
-                           Text="{Binding ShownNumber}" VerticalAlignment="Center" />
-                <Border Grid.Column="1" Classes="rtag"><TextBlock Text="{Binding ShownRecipe}" /></Border>
-              </Grid>
+              <!-- THE PICTURE, BESIDE THE NUMBER. A grid of a hundred tiles is SCANNED, and the
+                   rail already followed the pointer - but it answered with an id, a hash and a
+                   table, so identifying what you were actually looking at meant going back to the
+                   tile you had just left. The preview is the same asset the rest of the rail
+                   describes, so hovering, right-click-selecting and clicking through to the
+                   inspector all move it for free: it binds to Shown, which is already "the one
+                   under the pointer, or the one that is kept".
+                   Bound straight through to Shown.Thumbnail rather than mirrored onto a property
+                   here, so the LATE decode lands too - a row's image arrives off the thread pool and
+                   raises its own change, and a snapshot taken when Shown moved would miss it. -->
+              <Grid ColumnDefinitions="Auto,*" ColumnSpacing="11">
+                <Border Grid.Column="0" Classes="railshot">
+                  <Image Source="{Binding Shown.Thumbnail}" Stretch="Uniform" />
+                </Border>
 
-              <!-- WHICH asset this is: the one under the pointer, or the one that is kept. The rail
-                   changes as the pointer crosses the grid, and without this line there is no way to
-                   tell a glance from a decision - or which one Save would act on. RESERVED, not
-                   revealed: the line is always laid out and only its ink changes, so nothing in the
-                   rail moves as the pointer travels, which would be the worst possible place for a
-                   reflow. -->
-              <Panel Height="14" Margin="0,-4,0,0">
-                <TextBlock Classes="derived" VerticalAlignment="Center"
-                           IsVisible="{Binding IsShowingHover}"
-                           Text="hovering — right-click to keep" />
-                <!-- No extra Opacity on this one. `.derived` is already muted ink, and dimming
-                     muted ink further is the trap this app records: at 0.7 it measured 3.38 against
-                     a 4.5 floor in light mode. Two different words are difference enough. -->
-                <TextBlock Classes="derived" VerticalAlignment="Center"
-                           IsVisible="{Binding !IsShowingHover}"
-                           Text="selected" />
-              </Panel>
+                <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Classes="mono" FontSize="17" FontWeight="Bold"
+                               Text="{Binding ShownNumber}" VerticalAlignment="Center" />
+                    <Border Grid.Column="1" Classes="rtag"><TextBlock Text="{Binding ShownRecipe}" /></Border>
+                  </Grid>
+
+                  <!-- WHICH asset this is: the one under the pointer, or the one that is kept. The
+                       rail changes as the pointer crosses the grid, and without this line there is
+                       no way to tell a glance from a decision - or which one Save would act on.
+                       RESERVED, not revealed: the line is always laid out and only its ink changes,
+                       so nothing in the rail moves as the pointer travels, which would be the worst
+                       possible place for a reflow. -->
+                  <Panel Height="14">
+                    <TextBlock Classes="derived" VerticalAlignment="Center"
+                               IsVisible="{Binding IsShowingHover}"
+                               Text="hovering — right-click to keep" />
+                    <!-- No extra Opacity on this one. `.derived` is already muted ink, and dimming
+                         muted ink further is the trap this app records: at 0.7 it measured 3.38
+                         against a 4.5 floor in light mode. Two different words are difference
+                         enough. -->
+                    <TextBlock Classes="derived" VerticalAlignment="Center"
+                               IsVisible="{Binding !IsShowingHover}"
+                               Text="selected" />
+                  </Panel>
+                </StackPanel>
+              </Grid>
 
               <!-- The DNA gets a box of its own and breaks at exactly half. A SHA-256 is always 64
                    hex characters, so the two rows are always 32 apiece and always the same width -
