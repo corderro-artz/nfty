@@ -109,8 +109,14 @@
                        starts after the guide rather than behind the indent. -->
                   <!-- 6, not 12. The node sat that far right of its own caret, which put every
                        name a third of the way across a narrow pane before it started. -->
+                  <!-- The row is the drag handle, and nothing about it looks like one - a grip
+                       column would cost every row 26px in the app's narrowest pane. The tip is what
+                       says so, and it names the keyboard path beside it; it goes quiet (null) the
+                       moment reordering is unavailable, so a locked or filtered tree does not
+                       advertise a gesture that will do nothing. -->
                   <Border Grid.Column="1" Classes="node" Margin="6,0,0,0"
-                          Classes.sel="{Binding $parent[TreeViewItem].IsSelected}">
+                          Classes.sel="{Binding $parent[TreeViewItem].IsSelected}"
+                          ToolTip.Tip="{Binding $parent[TreeView].((vm:ExplorerViewModel)DataContext).ReorderTip}">
                   <StackPanel Orientation="Horizontal" Spacing="8">
                     <!-- .ti type mark, on every node -->
                     <Path Classes="ico ti" Data="{StaticResource IconTypeCookBook}" IsVisible="{Binding IsRoot}" />
@@ -130,6 +136,15 @@
               </TreeDataTemplate>
             </TreeView.ItemTemplate>
           </TreeView>
+
+          <!-- The reorder drop line, over the tree. Not inside it: a TreeView owns its own scroller
+               and its own item containers, so an overlay is the only place a 2px line can be drawn
+               without giving some node a permanent gutter to hold it. Positioned by margin in the
+               TREE's coordinate space - which TranslatePoint already reports scrolled - so the line
+               tracks the rows without this view knowing what a scroll offset is.
+               Hit-test invisible (Border.dropline), so it cannot swallow the drag it is describing. -->
+          <Border Grid.Row="1" Name="TreeDropLine" Classes="dropline"
+                  Margin="0" HorizontalAlignment="Stretch" ClipToBounds="False" />
 
           <StackPanel Grid.Row="1" Spacing="10" Margin="18,26,18,0" VerticalAlignment="Top"
                       IsVisible="{Binding SearchFoundNothing}">
