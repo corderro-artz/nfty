@@ -73,7 +73,7 @@ public class ExplorerTreeReorderTests
         return (path, session);
     }
 
-    private static ExplorerViewModel Explorer(CookBookSession session)
+    private static ExplorerViewModel Explorer(ICookBookSession session)
     {
         var nav = new FakeNav();
         var dialogs = new FakeDialogs();
@@ -83,7 +83,7 @@ public class ExplorerTreeReorderTests
             ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs), new StatusService());
     }
 
-    private static void Cleanup(CookBookSession session, string path)
+    private static void Cleanup(ICookBookSession session, string path)
     {
         session.Dispose();
         Directory.Delete(Path.GetDirectoryName(path)!, recursive: true);
@@ -354,7 +354,7 @@ public class ExplorerTreeReorderTests
     /// invokes it — the same rule <c>ChanceFieldGestureTests</c> exists for.
     /// </summary>
     [AvaloniaFact]
-    public void Dragging_a_layer_over_its_sibling_shows_the_line_and_drops_it_there()
+    public async Task Dragging_a_layer_over_its_sibling_shows_the_line_and_drops_it_there()
     {
         var (path, session) = OnDisk();
         try
@@ -385,6 +385,13 @@ public class ExplorerTreeReorderTests
                 Assert.Contains("on", dropLine.Classes);
 
                 window.MouseUp(above, MouseButton.Left);
+                // The drop handler is async void: the release returns the moment the whole-book
+                // write reaches its first await, so pumping the dispatcher once is a guess rather
+                // than a wait. Await the write the gesture actually started - without this the
+                // test raced it, asserted on a stack that had not moved yet, and then deleted the
+                // temp directory out from under the half-written book.cbk.<guid>.tmp, whose
+                // IOException came out of the finally and replaced the real failure.
+                await view.PendingReorder;
                 Dispatcher.UIThread.RunJobs();
 
                 Assert.Equal(new[] { "hat", "bg", "body" }, LayerIds(vm));
@@ -440,7 +447,7 @@ public class ExplorerTreeReorderTests
     /// calling the method, the way ChanceFieldGestureTests presses Enter.
     /// </remarks>
     [AvaloniaFact]
-    public void Alt_up_moves_the_selected_layer_up_the_list()
+    public async Task Alt_up_moves_the_selected_layer_up_the_list()
     {
         var (path, session) = OnDisk();
         try
@@ -461,10 +468,12 @@ public class ExplorerTreeReorderTests
                 Assert.Equal("hat", vm.SelectedNode?.Id);
 
                 window.KeyPressQwerty(PhysicalKey.ArrowUp, RawInputModifiers.Alt);
-                // The key handler is async: it writes the whole book. Pump until the move lands
-                // rather than assuming one RunJobs is enough - without this the test raced the
-                // save and the temp directory could not even be deleted.
-                PumpUntil(() => LayerIds(vm)[1] == "hat");
+                // The key handler is async void and writes the whole book, so await the write it
+                // started rather than polling for its effect on a timer. A sleep-until-it-looks-
+                // right loop passes for the wrong reason on a fast disk and fails on a slow one;
+                // this is the same wait the drop test makes.
+                await view.PendingReorder;
+                Dispatcher.UIThread.RunJobs();
 
                 Assert.Equal(new[] { "bg", "hat", "body" }, LayerIds(vm));
             }
@@ -509,15 +518,66 @@ public class ExplorerTreeReorderTests
         finally { Cleanup(session, path); }
     }
 
-    private static void PumpUntil(Func<bool> done, int timeoutMs = 5000)
+    /// <summary>
+    /// TWO REORDERS MUST NOT OVERLAP, WHICHEVER GESTURE STARTED THEM.
+    /// </summary>
+    /// <remarks>
+    /// <para>Every reorder writes the WHOLE book back to the one source archive, so two in flight
+    /// race each other's <c>File.Move</c> onto it and the loser has already recomputed from a graph
+    /// the winner replaced. The Recipe pane's drag was guarded for exactly that reason - holding
+    /// Alt+Up fired a second move before the first had saved - and the tree then arrived with the
+    /// same reentrant <c>async void</c> chord and no guard at all.</para>
+    ///
+    /// <para>Re-entered from inside <c>Replace</c>, which is the one moment a persist is PROVABLY
+    /// mid-flight: <c>CookBookPersistence</c> calls it once the archive is written and before
+    /// <c>MoveNodeToAsync</c>'s finally can clear the flag. Starting a second gesture from the test
+    /// body and hoping it overlaps would pass on a slow disk and prove nothing on a fast one, which
+    /// is the shape of the bug this whole file is being fixed for.</para>
+    /// </remarks>
+    [AvaloniaFact]
+    public async Task A_reorder_that_arrives_while_one_is_being_written_is_refused()
     {
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-        while (!done() && sw.ElapsedMilliseconds < timeoutMs)
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        var path = Path.Combine(dir, "book.cbk");
+        using (var seed = MemoryBook())
+            CookBookArchive.Write(path, seed.Manifest, seed.Recipes);
+        var inner = new CookBookSession();
+        inner.Open(CookBookArchive.Read(path), path);
+        var session = new ReentrantSession(inner);
+        try
         {
-            Dispatcher.UIThread.RunJobs();
-            System.Threading.Thread.Sleep(1);
+            using var vm = Explorer(session);
+            vm.ToggleLockCommand.Execute(null);
+
+            Task<bool>? second = null;
+            session.OnReplace = () => second ??= vm.MoveNodeByAsync(vm.Root.Children[0].Children[0], 1);
+
+            Assert.True(await vm.MoveNodeAsync(vm.Root.Children[0].Children[2], 0));
+
+            Assert.NotNull(second);
+            Assert.False(await second);                                  // refused, never queued
+            Assert.Equal(new[] { "hat", "bg", "body" }, LayerIds(vm));   // and only the first landed
+
+            using var reread = CookBookArchive.Read(path);
+            Assert.Equal(new[] { "hat", "bg", "body" },
+                reread.Recipes.First(r => r.Manifest.Id == "cat").Manifest.LayerOrder);
         }
-        Dispatcher.UIThread.RunJobs();
+        finally { Cleanup(session, path); }
+    }
+
+    /// <summary>A session that hands a test the instant a persist is mid-flight: <c>PersistAsync</c>
+    /// calls <see cref="ICookBookSession.Replace"/> once the archive is on disk, while the reorder
+    /// guard is still held.</summary>
+    private sealed class ReentrantSession(ICookBookSession inner) : ICookBookSession
+    {
+        public Action? OnReplace { get; set; }
+        public LoadedCookBook? Current => inner.Current;
+        public string? SourcePath => inner.SourcePath;
+        public event Action? Changed { add => inner.Changed += value; remove => inner.Changed -= value; }
+        public void Open(LoadedCookBook book, string? sourcePath = null) => inner.Open(book, sourcePath);
+        public void Replace(LoadedCookBook book) { inner.Replace(book); OnReplace?.Invoke(); }
+        public void Close() => inner.Close();
+        public void Dispose() => inner.Dispose();
     }
 
     /// <summary>Slot arithmetic, off the geometry it is computed from. Midpoints rather than edges,

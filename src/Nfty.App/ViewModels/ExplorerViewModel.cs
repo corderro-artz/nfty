@@ -527,6 +527,12 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     /// saved — the two collided on <c>book.cbk.tmp</c> and the loser had already recomputed from the
     /// stale graph, so one keystroke was silently discarded on top of the error dialog.
     ///
+    /// <para>ONE FLAG, NOT ONE PER GESTURE. <see cref="MoveLayerAsync"/> is the Recipe pane's drag
+    /// and <see cref="MoveNodeToAsync"/> is the tree's drag and its own Alt+Up chord, and all three
+    /// write the WHOLE book back to the one source archive — so two in flight collide whichever
+    /// gesture started them, and a second flag would only have made each door safe against itself.
+    /// The tree arrived carrying no guard at all, which is the same door this one was opened for.</para>
+    ///
     /// <para>Refused rather than queued, deliberately. A queue would apply a move computed against a
     /// stack the user can no longer see, and the honest thing on a seconds-long write is to say so
     /// and let them press again. The same shape as the editor's <c>IsSaving</c>.</para>
@@ -1292,6 +1298,13 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     private async Task<bool> MoveNodeToAsync(ExplorerNode node, int toIndex)
     {
         if (!CanEditBook("reorder")) return false;
+        if (_reordering)
+        {
+            _status.Say("Still saving the last reorder — try that again in a moment.");
+            return false;
+        }
+
+        _reordering = true;
         try
         {
             LoadedCookBook edited;
@@ -1324,6 +1337,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
             await ShowError("Could not reorder", ex.Message);
             return false;
         }
+        finally { _reordering = false; }
     }
 
     /// <summary>

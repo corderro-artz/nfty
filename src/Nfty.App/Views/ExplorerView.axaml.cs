@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -39,6 +40,27 @@ public partial class ExplorerView : UserControl
     /// <summary>Where the drop line sits, as a slot BETWEEN siblings: 0 is above the first, Count is
     /// below the last. -1 while no drag is in flight.</summary>
     private int _dropSlot = -1;
+
+    /// <summary>
+    /// The reorder this view last started, or an already-completed task when it has never started
+    /// one.
+    /// </summary>
+    /// <remarks>
+    /// <para>An input handler has to be <c>async void</c>, so the whole-book write a drop or an
+    /// Alt+Up kicks off is otherwise UNOBSERVABLE: the gesture returns the moment the write reaches
+    /// its first await, and nothing — not the caller, not a test, not a teardown — can tell whether
+    /// the archive has been saved. That is not a theoretical gap. It cost
+    /// <c>ExplorerTreeReorderTests</c> a race that deleted the temp directory out from under the
+    /// half-written <c>book.cbk.&lt;guid&gt;.tmp</c>, and the IOException it threw from a
+    /// <c>finally</c> REPLACED the assertion failure underneath it, so the test reported a locked
+    /// file rather than the move that had not landed yet.</para>
+    ///
+    /// <para>This is that task, kept so the gesture can be AWAITED rather than slept on. It never
+    /// faults: <c>MoveNodeToAsync</c> reports its own failures and returns false. Reentrancy is
+    /// <b>not</b> this property's job — the ViewModel refuses a second reorder while one is being
+    /// written, which is where the book, the source file and the edit lock already live.</para>
+    /// </remarks>
+    internal Task PendingReorder { get; private set; } = Task.CompletedTask;
 
     /// <summary>Loads the view.</summary>
     public ExplorerView()
@@ -160,7 +182,7 @@ public partial class ExplorerView : UserControl
         EndDrag();
 
         if (!inside || slot < 0 || DataContext is not ExplorerViewModel vm) return;
-        await vm.MoveNodeAsync(node, slot);
+        await (PendingReorder = vm.MoveNodeAsync(node, slot));
     }
 
     /// <summary>Alt+Up / Alt+Down move the selected node among its siblings. Shipped WITH the drag,
@@ -184,7 +206,7 @@ public partial class ExplorerView : UserControl
         if (vm.SelectedNode is not { } node || !vm.CanMove(node)) return;
 
         e.Handled = true;
-        await vm.MoveNodeByAsync(node, places);
+        await (PendingReorder = vm.MoveNodeByAsync(node, places));
     }
 
     // ---- geometry --------------------------------------------------------------------------------
