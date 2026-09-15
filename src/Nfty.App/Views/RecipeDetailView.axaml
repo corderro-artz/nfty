@@ -17,8 +17,18 @@
        VARIANTS 90 to 72, each still wider than its own header), which is what lets the window
        minimum be 1280x720 rather than 1366 wide. MinimumWindowFitTests measures the column by name. -->
   <Grid Margin="16" ColumnDefinitions="*,260">
-    <StackPanel Grid.Column="0" Spacing="14" Margin="0,0,16,0">
-      <Border Classes="rhero">
+    <!-- THE LAYER ROWS ARE WHAT SCROLLS, and the hero and the LAYERS header do not.
+         This column was one StackPanel, so a recipe with enough layers simply ran off the bottom of
+         the pane: at the smallest window a six-layer stack showed four and a half rows, with no
+         scrollbar and nothing saying there was more - the row was cut across the middle by the
+         status bar. It is the same split the Ingredient pane's variant table and the Set browser's
+         rarity rail already keep, and it is the standing exception to "a page must FIT": a table
+         whose length is the author's to choose scrolls its ROWS rather than its screen.
+         The column header stays outside the scroller, because KIND / VARIANTS / ABSENT are what the
+         values below are read against and a header that scrolls away from its own numbers is worse
+         than no header. -->
+    <Grid Grid.Column="0" RowDefinitions="Auto,Auto,*" RowSpacing="14" Margin="0,0,16,0">
+      <Border Grid.Row="0" Classes="rhero">
         <Grid ColumnDefinitions="Auto,*">
           <!-- Nothing sits on the portrait. The reroll die used to be pinned over its bottom-right
                corner, which put a control on top of the one thing on this card that is a picture -
@@ -38,13 +48,35 @@
                     Background="{DynamicResource TileBrush}" ClipToBounds="True">
               <Image Source="{Binding Hero}" Stretch="UniformToFill" />
             </Border>
+            <!-- THE DIE ALONE, CENTRED UNDER THE PICTURE IT ROLLS. It used to read "sample 1"
+                 beside the glyph, and that number is not a fact about the recipe — it is how many
+                 times this pane has been asked for another picture since it opened, reset by
+                 navigating away and meaningless to compare against anything. Printing it invited
+                 the reader to read it as a stored sample ID or an incrementing setting. The seed is
+                 still on the tooltip, where a number nobody acts on belongs.
+                 The die is the glyph and stays the die: "roll" is this domain's own word, the
+                 button rolls one asset from this recipe, and the die glyph exists because a circular
+                 arrow was not unmistakably a roll. It has six faces and LANDS on a new one every
+                 press - never the one it is already showing, since the face is the only confirmation
+                 this button gives and a fair d6 would repeat about one press in six, reading as a
+                 button that did nothing. The tumble is a transition rather than a one-shot animation,
+                 so a second press during the first cannot strand it; see Button.sampleroll and
+                 Panel.dieroll in Styles.axaml. -->
             <Button Classes="sampleroll" Command="{Binding RerollCommand}"
                     HorizontalAlignment="Center"
-                    ToolTip.Tip="The picture is ONE roll of this recipe, not a stored asset. Press to roll another. The seed is not part of the recipe.">
-              <StackPanel Orientation="Horizontal" Spacing="5">
-                <Path Classes="ico ti" Data="{StaticResource IconDiceFace}" />
-                <TextBlock Text="{Binding RollSeed, StringFormat='sample {0}'}" />
-              </StackPanel>
+                    ToolTip.Tip="{Binding RollSeed, StringFormat='Roll another sample (now showing #{0}). The picture is ONE roll of this recipe, not a stored asset — the seed is not part of the recipe.'}">
+              <!-- The Panel is what rotates. A Path.ico's own RenderTransform IS the icon system's
+                   24-unit-box scale, so rotating the Path replaces it and the glyph draws at raw
+                   size, off the centre of the picture above it. -->
+              <Panel Classes="dieroll">
+                <Path Classes="ico ti"
+                      Data="{Binding DieFace, Converter={x:Static conv:DieFaceConverter.Instance}}" />
+                <!-- The ONE face's pip, in the accent, over the body. A Path.ico is one stroked path
+                     with one brush, so two inks means two Paths; this one's geometry is null on
+                     every other face and a Path draws null as nothing. -->
+                <Path Classes="ico ti pip1"
+                      Data="{Binding DieFace, Converter={x:Static conv:DieFaceConverter.AccentPip}}" />
+              </Panel>
             </Button>
           </StackPanel>
 
@@ -107,7 +139,7 @@
            layers panel an artist has used. The spec settles that by keeping the locked reading order
            and carrying the meaning in a label rather than in an arrow that would have to pick a
            direction to betray. Permanent also means the header never reflows on unlock. -->
-      <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="9" Margin="2,0,0,0">
+      <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="9" Margin="2,0,0,0">
         <TextBlock Grid.Column="0" Classes="sub-h" Text="LAYERS" VerticalAlignment="Center" />
         <TextBlock Grid.Column="1" Classes="hint" Text="1 → paints first, furthest back"
                    VerticalAlignment="Center" />
@@ -121,7 +153,7 @@
                 ToolTip.Tip="Let layers be left out of an asset entirely, at a chance you set per layer. The variants' own weights still decide which one shows up when it does." />
       </Grid>
 
-      <StackPanel Spacing="0">
+      <Grid Grid.Row="2" RowDefinitions="Auto,*">
         <!-- The leading 26px column is the drag grip's, and it is present in BOTH lock states at the
              same width: only the glyph's ink changes (Border.grip / .grip.on in Styles.axaml). The
              exploration draws variant B prepending this column on unlock, which shifts every other
@@ -131,7 +163,7 @@
              draw per layer — so the same seed over a reordered stack rolls different variants. A
              sorted view would show a stack that is not the stack, directly beside a drag handle
              that writes the real one. Nothing here is missing; see TableSort's own summary. -->
-        <Border Classes="data-h">
+        <Border Grid.Row="0" Classes="data-h">
           <Grid ColumnDefinitions="26,34,*,86,72,Auto">
             <TextBlock Grid.Column="1" Classes="data-h num" Text="#" Margin="0,0,10,0" />
             <TextBlock Grid.Column="2" Classes="data-h" Text="LAYER" />
@@ -150,8 +182,13 @@
           </Grid>
         </Border>
         <!-- A Panel, not a StackPanel: the drop line is an OVERLAY positioned by margin over the
-             rows, so that showing it costs no layout anywhere. -->
-        <Panel Name="LayerStack">
+             rows, so that showing it costs no layout anywhere.
+             INSIDE the scroller, with the drop line, because the drag measures every position
+             against this Panel: scrolling then moves the rows and the line together and the
+             arithmetic in RecipeDetailView.axaml.cs needs no notion of a scroll offset at all. -->
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto">
+        <Panel Name="LayerStack" VerticalAlignment="Top">
           <ItemsControl Name="LayerRows" ItemsSource="{Binding Layers}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:LayerRow">
@@ -198,8 +235,9 @@
           </ItemsControl>
           <Border Name="DropLine" Classes="dropline" />
         </Panel>
-      </StackPanel>
-    </StackPanel>
+        </ScrollViewer>
+      </Grid>
+    </Grid>
 
     <!-- RULES, as a table. The panel used to stack two bordered chips per rule with the relation
          carried only by a 20px mark in the gutter and its tooltip, which meant the reader had to

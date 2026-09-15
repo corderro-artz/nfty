@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <title>IconDie1Pip</title>
+  <desc>The one face's single pip, alone, so it can be stroked in the accent over IconDie1's body. Same 24-unit box and same centre as every other pip, so the two drawings register exactly.</desc>
+  <path d="M12.8 12a0.8 0.8 0 1 1 -1.6 0 a0.8 0.8 0 0 1 1.6 0z"/>
+</svg>

@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
+using Nfty.App.Converters;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Services;
@@ -142,6 +143,21 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
     private LoadedCookBook _book;
 
     [ObservableProperty] private int _rollSeed = 1;
+
+    /// <summary>
+    /// Which face the reroll button's die is showing, 1 to 6.
+    /// </summary>
+    /// <remarks>
+    /// <para>Pure decoration, and deliberately so: the picture above it is one roll of this recipe
+    /// and the die is the button that asks for another, so the face is FEEDBACK that a roll
+    /// happened. It is not the seed, does not reach a manifest and changes no asset.</para>
+    ///
+    /// <para>It never repeats on consecutive presses. A fair d6 lands on the same face about one
+    /// press in six, and a button whose only confirmation is a glyph that did not change reads as a
+    /// button that did not work - so <see cref="Reroll"/> picks from the five faces it is NOT
+    /// showing. That is what makes it honest about the one thing it is for.</para>
+    /// </remarks>
+    [ObservableProperty] private int _dieFace = 4;
     [ObservableProperty] private Bitmap _hero;
 
     /// <summary>Whether the layer table offers reordering — the Explorer's edit lock, pushed in.
@@ -770,6 +786,14 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
     private async Task Reroll()
     {
         RollSeed++;
+
+        // One of the five faces it is NOT showing, uniformly: draw 1..5, then step over the current
+        // face. Random.Shared rather than the engine's SplitMix64 - a decoration must never touch
+        // the RNG stream that decides assets, and nothing here needs to be reproducible.
+        // The face count is the converter's, which is the thing that owns the six glyphs.
+        int pick = Random.Shared.Next(1, DieFaceConverter.Faces);
+        DieFace = pick >= DieFace ? pick + 1 : pick;
+
         await SwapHeroAsync();
     }
 

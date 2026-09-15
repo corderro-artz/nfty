@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <title>IconDie2</title>
+  <desc>One face of the recipe portrait's reroll die. The six share one body - the rounded square that shipped as the single four-pip IconDiceFace - and differ only in their pips, so pressing the button reads as the same die landing differently rather than as the icon being swapped. The pips are stroked rather than filled, because a Path.ico is one stroke; at this size a ring that small closes into a dot. The grid is wider than the old four-pip face's so that six fit without touching.</desc>
+  <path d="M7.4 4h9.2A3.4 3.4 0 0 1 20 7.4v9.2a3.4 3.4 0 0 1-3.4 3.4H7.4A3.4 3.4 0 0 1 4 16.6V7.4A3.4 3.4 0 0 1 7.4 4zM9.5 8.7a0.8 0.8 0 1 1 -1.6 0 a0.8 0.8 0 0 1 1.6 0zM16.1 15.3a0.8 0.8 0 1 1 -1.6 0 a0.8 0.8 0 0 1 1.6 0z"/>
+</svg>
