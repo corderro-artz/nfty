@@ -677,6 +677,26 @@ public class VisualCapture
             dynVm.BrushValue = 200;
             dynVm.ApplyToolStroke(new[] { (0, 0) });
             Capture(new Views.IngredientEditorView { DataContext = dynVm }, variant, $"editor-enabled-{key}.png");
+
+            // THE SAME SCREEN, MAGNIFIED. Zoom touches four things that each map between canvas
+            // pixels and the screen - the drawn art, the pointer, the marquee and the backdrop
+            // lattice - and a frame is where the last of those is checked: the squares have to grow
+            // with the art and stay in phase with its corner, which no assertion about a scale
+            // factor can show. The pan is off-center on purpose, because a lattice anchored on the
+            // panel rather than on the art looks right until the art moves.
+            // Real pixels first: the fixture is a flood fill, and a magnified flat gray shows nothing
+            // about whether the lattice lines up with the art.
+            dynVm.ActiveTool = EditorTool.Brush;
+            dynVm.BrushSize = 1;
+            dynVm.BrushValue = 40;
+            foreach (var (x, y) in new[] { (1, 1), (2, 1), (1, 2), (4, 3), (5, 4), (6, 5), (2, 6) })
+                dynVm.ApplyToolStroke(new[] { (x, y) });
+            // Two, not four: this fixture is 8x8 in a 318px tile, so it is already forty device
+            // pixels to the art pixel before any zoom at all, and four times that shows two pixels
+            // and a half. The zoom range is sized for a 512px drawing, not for a sprite.
+            dynVm.Zoom = 2;
+            dynVm.PanBy(60, 40);
+            Capture(new Views.IngredientEditorView { DataContext = dynVm }, variant, $"editor-zoom-{key}.png");
             dynVm.Dispose();
             dynBook.Dispose();
 
@@ -752,16 +772,38 @@ public class VisualCapture
         }
     }
 
-    /// <summary>Captures the editor with its colorize rail scrolled to the reference panel — which sits
-    /// beneath the whole Colorize block and is otherwise below the fold at the mockups' own 720px.</summary>
+    /// <summary>
+    /// Captures the editor with its rail on the REFERENCES tab, which is where the reference panel
+    /// lives.
+    /// </summary>
+    /// <remarks>
+    /// <b>These four frames spent a release showing the Colorize tab.</b> The panel used to sit
+    /// beneath the whole Colorize block in one scroller, so this scrolled to the end to reach it;
+    /// splitting the rail into two tabs moved it out of that scroller entirely and the scroll became
+    /// a no-op — leaving four frames named <c>refs</c>, every one of them a picture of the colorize
+    /// rail, with the tab bar beside them announcing "REFERENCES 3/5" about a panel nothing showed.
+    /// Nothing failed, because a capture asserts nothing; it is the looking that catches this, which
+    /// is the whole argument for the harness. <c>RailTabCaptureTests</c> now fails if the frame is
+    /// taken on the wrong tab.
+    /// </remarks>
     private static void CaptureReferences(IngredientEditorViewModel vm, ThemeVariant variant, string fileName)
     {
+        vm.ShowReferencesTabCommand.Execute(null);
         var view = new Views.IngredientEditorView { DataContext = vm };
         var window = new Window { RequestedThemeVariant = variant, Content = view, Width = 1180, Height = 720 };
         window.Show();
         Dispatcher.UIThread.RunJobs();
-        view.FindControl<ScrollViewer>("ColorizeScroll")!.ScrollToEnd();
-        Dispatcher.UIThread.RunJobs();
+
+        // A CAPTURE ASSERTS NOTHING, SO THIS ONE ASSERTS THE ONE THING THAT WENT WRONG. The frame has
+        // to show the panel it is named for. IsEffectivelyVisible rather than Bounds: Avalonia leaves
+        // a control's arranged bounds alone when an ancestor goes invisible, so a panel that was ever
+        // laid out keeps reporting the size it had.
+        if (!view.GetVisualDescendants().OfType<TextBlock>()
+                 .Any(t => t.Text == "IN THIS RECIPE" && t.IsEffectivelyVisible))
+            throw new InvalidOperationException(
+                $"{fileName} was about to be captured with the reference panel off screen — "
+                + "the rail is on the wrong tab.");
+
         window.CaptureRenderedFrame()!.Save(Path.Combine(Dir!, fileName), PngBitmapEncoderOptions.Default);
         window.Close();
     }
