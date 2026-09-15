@@ -1735,6 +1735,41 @@
   <Style Selector="Button.ttool.on Path.ico">
     <Setter Property="Stroke" Value="{DynamicResource OnAccentBrush}" />
   </Style>
+  <!-- .zchip: the canvas' zoom readout, which is also its only zoom BUTTON.
+       One control rather than a minus/readout/plus run: the wheel and the +/- keys already zoom, so
+       a tray of three would be the third way to do the same thing sitting in the 418px pane that
+       both strips above already have to wrap inside. What it needs a control for is the way BACK,
+       and a button whose label is the current zoom says its own action while it is already there.
+       Width is stated so "fit" and "1600%" reserve the same box — the geometry rule, on the one
+       chip whose text changes under the pointer that just acted. -->
+  <Style Selector="Button.zchip">
+    <Setter Property="Width" Value="52" />
+    <Setter Property="Height" Value="30" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.zchip:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+  <!-- Zoomed is a STATE the reader has to be able to see from the art alone being wrong-sized, so
+       the chip takes the accent ink rather than an accent fill: it is a readout first. -->
+  <Style Selector="Button.zchip.on">
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+  <Style Selector="Button.zchip.on /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+
   <!-- .tsep: the hairline dividers grouping the strip -->
   <Style Selector="Border.tsep">
     <Setter Property="Width" Value="1" />

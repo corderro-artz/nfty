@@ -385,7 +385,16 @@
                     BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1"
                     BoxShadow="{DynamicResource WinShadow}" ClipToBounds="True"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
-              <Panel>
+              <!-- THE POINTER TALKS TO THIS PANEL, NOT TO THE IMAGE. The art carries a render
+                   transform once the canvas is zoomed, and Avalonia hit-tests and reports positions
+                   THROUGH a render transform: at sixteen times, the image's clickable region is the
+                   central twentieth of the tile and every coordinate comes back in a space the
+                   layout knows nothing about. This panel is never transformed, so it is the one
+                   surface whose coordinates mean what the geometry says they mean.
+                   Background="Transparent" because in Avalonia a null background means "nothing
+                   here" rather than "nothing painted", and a panel with no background is not
+                   hit-testable at all. -->
+              <Panel x:Name="CanvasSurface" Background="Transparent">
                 <Image x:Name="CanvasImage" Source="{Binding Canvas}" Stretch="Uniform"
                        IsVisible="{Binding ShowPaintCanvas}" />
                 <!-- The rubber band and the selection marquee. Drawn in control coordinates over
@@ -418,6 +427,13 @@
                                Maximum="{Binding GridSizeMax}" Width="58" FormatString="0"
                                ShowButtonSpinner="False" IsEnabled="{Binding ShowPixelGrid}"
                                ToolTip.Tip="How many canvas pixels one grid square covers. 1 is a true pixel grid; raise it on a large canvas, where one square per pixel is finer than the screen can draw." />
+                <Border Classes="tsep" />
+                <!-- The zoom lives in the backdrop's own chip for the same reason the grid does: it
+                     is a setting about how the canvas is LOOKED AT rather than a painting tool, and
+                     neither strip above has 52px to spare at the window sizes this app allows. -->
+                <Button Classes="zchip" Classes.on="{Binding IsZoomed}"
+                        Command="{Binding ZoomToFitCommand}"
+                        Content="{Binding ZoomText}" ToolTip.Tip="{Binding ZoomTip}" />
               </StackPanel>
             </Border>
 

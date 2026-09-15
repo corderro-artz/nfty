@@ -52,7 +52,14 @@ public partial class IngredientEditorView : UserControl
     // the hand moving - the shape snaps square while the pointer is still.
     private KeyModifiers _mods;
 
+    // A middle-button drag is a PAN, not a stroke. It is decided at press and takes the gesture
+    // outright: panning while painting would be two answers to one drag, and the middle button is
+    // the one this editor had not already spent (the right one erases).
+    private bool _panning;
+    private Point _panFrom;
+
     private Image _img = null!;
+    private Panel _surface = null!;
     private Canvas _overlay = null!;
     private Panel _backdrop = null!;
     private IngredientEditorViewModel? _vm;
@@ -68,22 +75,47 @@ public partial class IngredientEditorView : UserControl
         InitializeComponent();
 
         _img = this.FindControl<Image>("CanvasImage")!;
+        _surface = this.FindControl<Panel>("CanvasSurface")!;
         _overlay = this.FindControl<Canvas>("CanvasOverlay")!;
         _backdrop = this.FindControl<Panel>("CanvasBackdrop")!;
 
-        _img.PointerPressed += (_, e) =>
+        _surface.PointerPressed += (_, e) =>
         {
             // CAPTURE, or a gesture that wanders off the 320px tile is simply abandoned: moves stop
             // arriving, the release lands on whatever is under the pointer instead, and the stroke
             // is silently lost with its preview still on screen. AddPoint already clamps to the
             // canvas, so a drag past the edge ends at the edge, which is what it looks like.
-            e.Pointer.Capture(_img);
+            // THE SURFACE IS STILL THERE WHEN THE CANVAS IS NOT. "Fill pane with preview" hides the
+            // art and puts the colorized result over it, and the panel the pointer talks to has no
+            // opinion about that — so without this a stroke would be painted into a canvas nobody
+            // can see. It was the image's own visibility that used to answer this, back when the
+            // image was what the pointer talked to.
+            if (_vm?.ShowPaintCanvas != true) return;
+
+            e.Pointer.Capture(_surface);
             _mods = e.KeyModifiers;
+
+            // THE MIDDLE BUTTON PANS, and it is settled here rather than on the move for the same
+            // reason mark-versus-move is: a gesture has to know what it is from its first pixel.
+            var pressed = e.GetCurrentPoint(_surface).Properties;
+            // PointerUpdateKind, not IsMiddleButtonPressed: the flag reads a MODIFIER bit that says
+            // the button is being held, and on a press the only thing that is certainly true is
+            // which button caused this event. Both are checked because platforms differ about which
+            // of the two they populate on the down.
+            if (pressed.PointerUpdateKind == PointerUpdateKind.MiddleButtonPressed
+                || pressed.IsMiddleButtonPressed)
+            {
+                _panning = true;
+                _panFrom = e.GetPosition(_surface);
+                e.Handled = true;
+                return;
+            }
+
             // THE RIGHT BUTTON ERASES, whatever the toolstrip has armed. Pixel editors hand the
             // second button the second ink; this app has no second color, so the second ink is
             // "none" — which is also the correction a hand makes most often and the one that
             // otherwise costs a trip to the toolstrip and back.
-            _erasing = e.GetCurrentPoint(_img).Properties.IsRightButtonPressed;
+            _erasing = e.GetCurrentPoint(_surface).Properties.IsRightButtonPressed;
             _drawing = true;
             _points.Clear();
             AddPoint(e);
@@ -95,16 +127,26 @@ public partial class IngredientEditorView : UserControl
             _vm?.PreviewToolStroke(Gesture(), _gestureTool);
             DrawBand();
         };
-        _img.PointerMoved += (_, e) =>
+        _surface.PointerMoved += (_, e) =>
         {
+            if (_panning)
+            {
+                var now = e.GetPosition(_surface);
+                _vm?.PanBy(now.X - _panFrom.X, now.Y - _panFrom.Y);
+                // The anchor follows the pointer even where the clamp refused the move, so a drag
+                // that runs into the edge and comes back does not have to make up the lost distance.
+                _panFrom = now;
+                return;
+            }
             if (!_drawing) return;
             _mods = e.KeyModifiers;
             AddPoint(e);
             _vm?.PreviewToolStroke(Gesture(), _gestureTool);
             DrawBand();
         };
-        _img.PointerReleased += (_, e) =>
+        _surface.PointerReleased += (_, e) =>
         {
+            if (_panning) { _panning = false; e.Pointer.Capture(null); return; }
             if (!_drawing) return;
             _mods = e.KeyModifiers;
             _drawing = false;
@@ -121,7 +163,23 @@ public partial class IngredientEditorView : UserControl
         // Capture can be taken away — the window deactivates, another control grabs it — and then no
         // release is coming. The gesture is abandoned, so the canvas has to stop showing a stroke
         // that is never going to commit.
-        _img.PointerCaptureLost += (_, _) => { if (_drawing) AbortGesture(); };
+        _surface.PointerCaptureLost += (_, _) =>
+        {
+            _panning = false;
+            if (_drawing) AbortGesture();
+        };
+
+        // THE WHEEL ZOOMS, anchored on the pointer. Bare, with no modifier: the canvas is not in a
+        // scroller, so there is nothing else for a wheel over it to mean, and a magnifier that
+        // needs a chord is one nobody finds.
+        _surface.PointerWheelChanged += (_, e) =>
+        {
+            if (_vm is null || !_vm.ShowPaintCanvas || e.Delta.Y == 0) return;
+            ZoomAt(e.Delta.Y > 0 ? IngredientEditorViewModel.ZoomStep
+                                 : 1 / IngredientEditorViewModel.ZoomStep,
+                   e.GetPosition(_surface));
+            e.Handled = true;
+        };
 
         // TUNNEL, so both of these run before the UserControl's own Escape KeyBinding: mid-gesture
         // Escape means "abandon this stroke", and only once there is no stroke does it mean "drop
@@ -160,7 +218,7 @@ public partial class IngredientEditorView : UserControl
         // The marquee has to survive the gesture that made it, so it is redrawn whenever the
         // selection changes and whenever the canvas is re-laid-out under it.
         DataContextChanged += (_, _) => Rebind();
-        _img.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ =>
+        _surface.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ =>
         {
             DrawBand();
             BuildBackdrop();
@@ -224,7 +282,45 @@ public partial class IngredientEditorView : UserControl
             e.Handled = true;
             return;
         }
+        // ZOOM AND PAN, which is the keyboard path the pointer gestures are required to ship with —
+        // and the only path at all on a trackpad with no middle button. Shift is accepted alongside
+        // None because "+" is Shift and "=" on most layouts, and refusing the key someone actually
+        // pressed teaches nothing.
+        if (e.KeyModifiers is KeyModifiers.None or KeyModifiers.Shift)
+        {
+            switch (e.Key)
+            {
+                case Key.OemPlus or Key.Add:
+                    _vm.ZoomInCommand.Execute(null); e.Handled = true; return;
+                case Key.OemMinus or Key.Subtract:
+                    _vm.ZoomOutCommand.Execute(null); e.Handled = true; return;
+                case Key.D0 or Key.NumPad0:
+                    _vm.ZoomToFitCommand.Execute(null); e.Handled = true; return;
+            }
+        }
         if (e.KeyModifiers != KeyModifiers.None) return;
+
+        // An arrow moves the VIEW, so the art travels the other way — the direction every scroller
+        // has taught. Only while there is something off screen: fitted, the canvas has nowhere to go
+        // and the key belongs to whatever else wants it.
+        if (_vm.IsZoomed)
+        {
+            const double step = IngredientEditorViewModel.PanStep;
+            (double dx, double dy)? pan = e.Key switch
+            {
+                Key.Left => (step, 0),
+                Key.Right => (-step, 0),
+                Key.Up => (0, step),
+                Key.Down => (0, -step),
+                _ => null,
+            };
+            if (pan is { } p)
+            {
+                _vm.PanBy(p.dx, p.dy);
+                e.Handled = true;
+                return;
+            }
+        }
 
         EditorTool? tool = e.Key switch
         {
@@ -315,11 +411,24 @@ public partial class IngredientEditorView : UserControl
             _vm.PropertyChanged += OnVmChanged;
             _vm.BackdropChanged += OnBackdropChanged;
         }
+        // The transform is applied HERE as well as on the event: nothing has changed yet when a view
+        // is first bound, so an editor that only ever answered the change notification would open
+        // with no transform at all and the first zoom would be the one that installed it.
+        ApplyCanvasTransform();
         DrawBand();
         BuildBackdrop();
     }
 
-    private void OnBackdropChanged() => BuildBackdrop();
+    /// <summary>The canvas has been re-laid-out: re-apply the transform, rebuild the lattice under
+    /// it and redraw the marquee over it. All three follow from the same geometry and are never
+    /// wanted apart, which is why one event says so.</summary>
+    private void OnBackdropChanged()
+    {
+        ApplyCanvasTransform();
+        ClampPan();
+        BuildBackdrop();
+        DrawBand();
+    }
 
     /// <summary>
     /// Paints the canvas backdrop as a lattice of the ART'S OWN PIXELS, or as a flat ground.
@@ -360,9 +469,11 @@ public partial class IngredientEditorView : UserControl
         // picture. The step control is what brings the lattice back on a large canvas.
         if (cell < 2) { Flatten(step); return; }
 
-        // The art's corner in the BACKDROP's coordinates: Geometry answers in the image's, and the
-        // image sits inside the bordered host which sits inside this panel.
-        if (_img.TranslatePoint(new Point(offX, offY), _backdrop) is not { } art) return;
+        // The art's corner in the BACKDROP's coordinates. Translated from the SURFACE rather than
+        // from the image: the image carries the zoom as a render transform, and TranslatePoint
+        // applies one — so going through it would multiply the zoom in twice and put the lattice
+        // somewhere neither the art nor the pointer is.
+        if (_surface.TranslatePoint(new Point(offX, offY), _backdrop) is not { } art) return;
 
         var next = (scale, art.X, art.Y, step, true);
         if (_backdropFrom == next && _backdrop.Background is DrawingBrush) return;
@@ -515,26 +626,132 @@ public partial class IngredientEditorView : UserControl
     private IBrush? Brush(string key) =>
         this.TryFindResource(key, ActualThemeVariant, out var v) ? v as IBrush : null;
 
-    /// <summary>The mapping between canvas pixels and control coordinates, honouring
-    /// <c>Stretch="Uniform"</c>. False while the image has no size to map against.</summary>
+    /// <summary>
+    /// The mapping between canvas pixels and control coordinates: the letterbox a
+    /// <c>Stretch="Uniform"</c> image leaves inside its box, times the zoom, plus the pan.
+    /// </summary>
+    /// <remarks>
+    /// <b>THIS IS THE ONLY PLACE THE ZOOM EXISTS.</b> The pointer mapping, the marquee overlay and
+    /// the backdrop lattice are all mapped through this one function, so putting the magnification
+    /// here means the pixel a click lands on, the pixel the marquee is drawn around and the square
+    /// the lattice paints all move together by construction. The drawn art follows because
+    /// <see cref="ApplyCanvasTransform"/> is derived from exactly these two lines: scaling about the
+    /// CENTER is what makes a centered letterbox stay centered, so the render transform is a plain
+    /// scale-and-translate and needs no second copy of the arithmetic.
+    /// </remarks>
+    /// <param name="scale">Control pixels per canvas pixel.</param>
+    /// <param name="offX">Where the art's left edge sits, in the image control's own coordinates.</param>
+    /// <param name="offY">Where its top edge sits.</param>
+    /// <returns>False while the image has no size to map against.</returns>
     private bool Geometry(out double scale, out double offX, out double offY)
     {
         scale = offX = offY = 0;
         if (_img.Source is not Bitmap bmp) return false;
         double imgW = bmp.PixelSize.Width, imgH = bmp.PixelSize.Height;
-        double cw = _img.Bounds.Width, ch = _img.Bounds.Height;
+        double cw = _surface.Bounds.Width, ch = _surface.Bounds.Height;
         if (imgW <= 0 || imgH <= 0 || cw <= 0 || ch <= 0) return false;
-        scale = Math.Min(cw / imgW, ch / imgH);
-        offX = (cw - imgW * scale) / 2;
-        offY = (ch - imgH * scale) / 2;
+        double zoom = _vm?.Zoom ?? 1;
+        scale = Math.Min(cw / imgW, ch / imgH) * zoom;
+        offX = (cw - imgW * scale) / 2 + (_vm?.PanX ?? 0);
+        offY = (ch - imgH * scale) / 2 + (_vm?.PanY ?? 0);
         return true;
+    }
+
+    /// <summary>
+    /// Draws the art at the zoom and pan <see cref="Geometry"/> reports.
+    /// </summary>
+    /// <remarks>
+    /// <para>Origin CENTER, which is what makes this one transform rather than two. Scaling a
+    /// centered letterbox about its own center leaves it centered, so the drawn art lands exactly
+    /// where the letterbox arithmetic above puts it and the pan is a plain translate on top.</para>
+    ///
+    /// <para>The overlay is deliberately NOT transformed. It draws the marquee in control
+    /// coordinates through <see cref="Geometry"/>, so it already follows; scaling it as well would
+    /// multiply the dashed stroke's own width by the zoom and turn a hairline into a ribbon.</para>
+    /// </remarks>
+    private void ApplyCanvasTransform()
+    {
+        double zoom = _vm?.Zoom ?? 1;
+        double px = _vm?.PanX ?? 0, py = _vm?.PanY ?? 0;
+
+        if (_img.RenderTransform is TransformGroup { Children: [ScaleTransform s, TranslateTransform t] })
+        {
+            s.ScaleX = s.ScaleY = zoom;
+            t.X = px; t.Y = py;
+            return;
+        }
+
+        _img.RenderTransformOrigin = RelativePoint.Center;
+        _img.RenderTransform = new TransformGroup
+        {
+            Children = { new ScaleTransform(zoom, zoom), new TranslateTransform(px, py) },
+        };
+    }
+
+    /// <summary>
+    /// Keeps the art overlapping the tile it is drawn in.
+    /// </summary>
+    /// <remarks>
+    /// One rule covers both directions and falls out of the centered letterbox: the pan is measured
+    /// from CENTERED, so the art stays in contact with the tile exactly while the pan is no further
+    /// than half the difference between the tile and the art. Zoomed in that reads as "the window
+    /// stays inside the art"; fitted it collapses to zero, which is the same rule said about art
+    /// that has nowhere to go. It lives in the view because only the view knows how big the art was
+    /// drawn, the same division of labour the backdrop already keeps.
+    /// </remarks>
+    private void ClampPan()
+    {
+        if (_vm is null || _img.Source is not Bitmap bmp) return;
+        double fit = Math.Min(_surface.Bounds.Width / bmp.PixelSize.Width,
+                              _surface.Bounds.Height / bmp.PixelSize.Height);
+        if (!double.IsFinite(fit) || fit <= 0) return;
+
+        double scale = fit * _vm.Zoom;
+        double roomX = Math.Abs(_surface.Bounds.Width - bmp.PixelSize.Width * scale) / 2;
+        double roomY = Math.Abs(_surface.Bounds.Height - bmp.PixelSize.Height * scale) / 2;
+
+        // Assigned unconditionally: the generated setter drops an equal value, so this settles in
+        // one hop rather than re-entering through the notification it would otherwise raise.
+        _vm.PanX = Math.Clamp(_vm.PanX, -roomX, roomX);
+        _vm.PanY = Math.Clamp(_vm.PanY, -roomY, roomY);
+    }
+
+    /// <summary>
+    /// Zooms by a factor, keeping whatever is under the given point under it.
+    /// </summary>
+    /// <remarks>
+    /// An anchored zoom is the whole difference between a magnifier and a control you fight: the
+    /// pixel being pointed at is the one the reader wants more of. Derived from
+    /// <see cref="Geometry"/> rather than written alongside it — the canvas pixel under the pointer
+    /// is the inverse of that mapping, and the new pan is whatever puts the same pixel back under
+    /// the same point at the new scale.
+    /// </remarks>
+    /// <param name="factor">How much bigger to draw it.</param>
+    /// <param name="at">The point to hold still, in the image control's coordinates.</param>
+    private void ZoomAt(double factor, Point at)
+    {
+        if (_vm is null || _img.Source is not Bitmap bmp) return;
+        if (!Geometry(out double scale, out double offX, out double offY)) return;
+
+        double before = _vm.Zoom;
+        _vm.Zoom *= factor;
+        double after = _vm.Zoom;
+        if (after == before) return;                  // already at a limit
+
+        double newScale = scale * (after / before);
+        double imgW = bmp.PixelSize.Width, imgH = bmp.PixelSize.Height;
+        double cx = (at.X - offX) / scale, cy = (at.Y - offY) / scale;
+
+        _vm.PanX = at.X - cx * newScale - (_surface.Bounds.Width - imgW * newScale) / 2;
+        _vm.PanY = at.Y - cy * newScale - (_surface.Bounds.Height - imgH * newScale) / 2;
+        ClampPan();
     }
 
     // Map the pointer position (control space) to canvas pixel coords.
     private void AddPoint(PointerEventArgs e)
     {
         if (_img.Source is not Bitmap bmp || !Geometry(out var scale, out var offX, out var offY)) return;
-        var p = e.GetPosition(_img);
+        var p = e.GetPosition(_surface);
         int px = Math.Clamp((int)((p.X - offX) / scale), 0, bmp.PixelSize.Width - 1);
         int py = Math.Clamp((int)((p.Y - offY) / scale), 0, bmp.PixelSize.Height - 1);
         var pt = (px, py);
