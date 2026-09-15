@@ -28,7 +28,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     private readonly IImageBridge _bridge;
     private LoadedCookBook _book;
     private ExplorerNode _fullRoot = default!;
-    private readonly Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel> _editorFactory;
+    private readonly Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, Func<bool>, IngredientEditorViewModel> _editorFactory;
     private readonly Func<LoadedCookBook, CookDialogViewModel> _cookFactory;
     private readonly Func<LoadedSet, SetBrowserViewModel>? _setBrowserFactory;
     private readonly ICookBookSession _session;
@@ -53,13 +53,24 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     partial void OnIsEditingChanged(bool value)
     {
         if (CurrentDetail is RecipeDetailViewModel recipe) recipe.CanReorder = value;
+        // The tree's own drag affordance follows the same lock, and the tree stays put while it
+        // flips - so this is a notification rather than a rebuild, exactly as the line above is.
+        OnPropertyChanged(nameof(CanReorderTree));
+        OnPropertyChanged(nameof(ReorderTip));
     }
 
     [ObservableProperty] private ExplorerNode _root = default!;
 
     [ObservableProperty] private string _searchQuery = "";
 
-    partial void OnSearchQueryChanged(string value) => ApplyFilter();
+    partial void OnSearchQueryChanged(string value)
+    {
+        ApplyFilter();
+        // A filtered tree shows a SUBSET of each parent's children, so a drop slot in it names a
+        // position the reader cannot see; CanReorderTree goes false while a query is running.
+        OnPropertyChanged(nameof(CanReorderTree));
+        OnPropertyChanged(nameof(ReorderTip));
+    }
 
     /// <summary>Wraps the single Root as a one-element sequence so a TreeView (which binds to a
     /// collection of roots) can display it.</summary>
@@ -106,6 +117,26 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     /// if you can find out what they are without running the CLI's validate command.</summary>
     public string? ValidityTip => IsValid ? null : string.Join(Environment.NewLine, _problems);
 
+    /// <summary>What the status bar's validity button promises. It says the same thing in both
+    /// states, because the point of the button is that the answer is worth opening either way.</summary>
+    public string ValidityButtonTip => IsValid
+        ? "The book validates - open the report to see what was checked"
+        : "Open the full report and read every problem";
+
+    /// <summary>
+    /// Opens the full validation report — what the status bar's count is a count OF.
+    /// </summary>
+    /// <remarks>
+    /// The count was on a tooltip and four of the problems were on the CookBook card; past that the
+    /// only way to read the rest was to run the CLI's <c>validate</c>. A screen that reports a count
+    /// owes the reader the thing it counted, and a tooltip is not a place a list of sentences can
+    /// live. It opens on a VALID book too, and says what was checked: a green light nobody can
+    /// interrogate is a green light nobody should trust.
+    /// </remarks>
+    [RelayCommand]
+    private Task ShowValidity() =>
+        _dialogs.ShowAsync<object>(new ValidityDialogViewModel(_dialogs, _book, _problems));
+
     private void RefreshValidity()
     {
         // Validator REPORTS, never throws - that is its contract, precisely so a broken book can be
@@ -114,6 +145,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(IsValid));
         OnPropertyChanged(nameof(ValidityText));
         OnPropertyChanged(nameof(ValidityTip));
+        OnPropertyChanged(nameof(ValidityButtonTip));
     }
 
     private void RefreshCounts()
@@ -210,7 +242,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     /// browser the export dialog lives on.</param>
     public ExplorerViewModel(LoadedCookBook book, INavigationService nav, IDialogService dialogs,
         IImageBridge bridge,
-        Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel> editorFactory,
+        Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, Func<bool>, IngredientEditorViewModel> editorFactory,
         Func<LoadedCookBook, CookDialogViewModel> cookFactory, ICookBookSession session,
         IFilePickerService picker,
         Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> looseEditorFactory,
@@ -293,7 +325,10 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
                 () => _ = OpenCookDialogAsync(),
                 // stats + inspect, rendered by Core so the text matches the CLI's byte for byte.
                 () => _dialogs.ShowAsync<object>(
-                    new ReportDialogViewModel(_book, _dialogs, _clipboard ?? new NoopClipboardService()))),
+                    new ReportDialogViewModel(_book, _dialogs, _clipboard ?? new NoopClipboardService())),
+                // The card's status chip and the status bar's open the SAME report, because they
+                // state the same count and a reader who clicks either is asking the same question.
+                () => ShowValidityCommand.Execute(null)),
             ExplorerNodeKind.Recipe => new RecipeDetailViewModel((LoadedRecipe)newValue!.Domain!, _book, _bridge,
                 id => OpenIngredientCommand.Execute(id),
                 // The pane asks; the Explorer owns the graph, the gate and the file. It reads _book at
@@ -337,7 +372,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         // make changes." The lock governs the Explorer's structural edits (add, delete, reorder);
         // the pencil is deliberately NOT gated by it, so that sentence sat under a canvas that
         // painted perfectly well, claiming the opposite. Say something true on the way in.
-        var editor = _editorFactory(i, r, _book);
+        var editor = _editorFactory(i, r, _book, () => IsEditing);
         editor.Saved += OnEditorSaved;
         editor.Closed += () => { if (ReferenceEquals(_openEditor, editor)) _openEditor = null; };
         _openEditor = editor;
@@ -345,7 +380,12 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
 
         // AFTER the navigation, not before: the shell clears the status on every page change, so a
         // line said first would be wiped by the very push that shows the editor.
-        _status.Say($"Editing “{i.Manifest.Name}” - Save writes it back into the CookBook.");
+        // And it says which of the two editors this is. The pencil opens on a locked book too, where
+        // painting works and Save does not — promising that Save "writes it back" would be the same
+        // kind of untrue sentence this line was written to replace.
+        _status.Say(IsEditing
+            ? $"Editing “{i.Manifest.Name}” - Save writes it back into the CookBook."
+            : $"“{i.Manifest.Name}” is read-only - paint freely, but unlock the CookBook to save.");
     }
 
     /// <summary>The editor persisted an ingredient; the session now holds the spliced graph. Rebuild
@@ -702,8 +742,18 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     /// very push that displays it. Saying it again on arrival also covers coming BACK from the
     /// editor, which used to leave the editor's line standing over the Explorer.</para></summary>
     internal void SayLockState() => _status.Say(IsEditing
-        ? "Editing unlocked - you can add, delete and edit."
+        ? "Editing unlocked - you can add, delete, edit and drag to reorder."
         : "Editing locked - unlock to make changes.");
+
+    /// <summary>What the tree's rows say about being draggable, or null when they are not.
+    ///
+    /// <para>A tree row carries no drag grip - one would cost every row a 26px gutter in the app's
+    /// narrowest pane - so the row itself is the handle and there is nothing on screen that looks
+    /// like one. This is what the row has instead, and it names the keyboard path in the same breath
+    /// for the reader who will never find a gesture by waving at it.</para></summary>
+    public string? ReorderTip => CanReorderTree
+        ? "Drag to reorder within this level - or Alt+Up / Alt+Down"
+        : null;
 
     /// <summary>Tooltip that states the CURRENT state and what clicking will do.</summary>
     public string LockTip => IsEditing
@@ -1146,6 +1196,133 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         catch (Exception ex)
         {
             await _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, "Could not delete", ex.Message));
+        }
+    }
+
+    // ---- tree reorder --------------------------------------------------------------------------
+
+    /// <summary>
+    /// Whether a node in the Contents tree can be dragged to a new place among its siblings.
+    /// </summary>
+    /// <remarks>
+    /// <para>The lock and a source file, like every other structural edit here — and one gate the
+    /// others do not need: <b>a filtered tree cannot be reordered</b>. What the reader sees while a
+    /// search is running is a subset of each parent's children, so "put this one third" names a
+    /// third row that is not the third layer, and the move would land somewhere the screen never
+    /// showed. Rather than translate between the two orders and hope, the affordance goes quiet
+    /// until the query is cleared.</para>
+    /// </remarks>
+    public bool CanReorderTree =>
+        IsEditing && _session.SourcePath is not null && string.IsNullOrWhiteSpace(SearchQuery);
+
+    /// <summary>The node whose <c>Children</c> contains <paramref name="node"/>, or null for the
+    /// root (and for a node from a tree this Explorer is not showing).</summary>
+    internal ExplorerNode? ParentOf(ExplorerNode node) => Parent(Root, node);
+
+    private static ExplorerNode? Parent(ExplorerNode from, ExplorerNode target)
+    {
+        foreach (var child in from.Children)
+        {
+            if (ReferenceEquals(child, target)) return from;
+            if (Parent(child, target) is { } found) return found;
+        }
+        return null;
+    }
+
+    /// <summary>Whether this node is one the tree lets the reader move at all: a Recipe or an
+    /// Ingredient, never the single root, and never an only child.</summary>
+    internal bool CanMove(ExplorerNode node) =>
+        CanReorderTree && node is not null && !node.IsRoot
+        && ParentOf(node) is { } parent && parent.Children.Count > 1;
+
+    /// <summary>
+    /// Moves a node to a SLOT among its siblings — the gap the drop line is sitting in, where 0 is
+    /// above the first sibling and <c>Count</c> is below the last.
+    /// </summary>
+    /// <param name="node">The Recipe or Ingredient being moved.</param>
+    /// <param name="slot">The gap to drop it into.</param>
+    /// <returns>True when something actually moved and was saved.</returns>
+    public Task<bool> MoveNodeAsync(ExplorerNode node, int slot)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+        if (ParentOf(node) is not { } parent) return Task.FromResult(false);
+
+        int from = IndexIn(parent, node);
+        if (from < 0) return Task.FromResult(false);
+
+        // A slot below the dragged row is one place higher once that row is lifted out of the list —
+        // the same correction the Recipe pane's layer drag makes, and for the same reason.
+        int to = Math.Clamp(slot > from ? slot - 1 : slot, 0, parent.Children.Count - 1);
+        return to == from ? Task.FromResult(false) : MoveNodeToAsync(node, to);
+    }
+
+    /// <summary>Moves a node by whole places — what Alt+Up and Alt+Down do. Clamped, so a nudge at
+    /// either end is a no-op rather than an error, and therefore not a pointless save either.</summary>
+    /// <param name="node">The Recipe or Ingredient being moved.</param>
+    /// <param name="places">Negative moves it up the list, positive down.</param>
+    /// <returns>True when something actually moved and was saved.</returns>
+    public Task<bool> MoveNodeByAsync(ExplorerNode node, int places)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+        if (ParentOf(node) is not { } parent) return Task.FromResult(false);
+        int from = IndexIn(parent, node);
+        if (from < 0) return Task.FromResult(false);
+        int to = Math.Clamp(from + places, 0, parent.Children.Count - 1);
+        return to == from ? Task.FromResult(false) : MoveNodeToAsync(node, to);
+    }
+
+    private static int IndexIn(ExplorerNode parent, ExplorerNode node)
+    {
+        for (int i = 0; i < parent.Children.Count; i++)
+            if (ReferenceEquals(parent.Children[i], node)) return i;
+        return -1;
+    }
+
+    /// <summary>
+    /// The one place a tree move is written. Two different edits wear one gesture: a Recipe move is
+    /// PRESENTATION and an Ingredient move is the paint order.
+    /// </summary>
+    /// <remarks>
+    /// The status line says which, every time, because they are not the same act and the tree cannot
+    /// show the difference: moving a layer moves which RNG draw reaches it, so the same seed over the
+    /// reordered book rolls different variants and the collection is a different collection — while
+    /// moving a Recipe cannot change a single asset, because <c>WeightedRoller.Prepare</c> sorts its
+    /// keys ordinally before it rolls anything.
+    /// </remarks>
+    private async Task<bool> MoveNodeToAsync(ExplorerNode node, int toIndex)
+    {
+        if (!CanEditBook("reorder")) return false;
+        try
+        {
+            LoadedCookBook edited;
+            string said;
+            switch (node.Kind)
+            {
+                case ExplorerNodeKind.Recipe:
+                    edited = CookBookEdits.MoveRecipe(_book, node.Id, toIndex);
+                    said = $"Moved “{node.Name}” to #{toIndex + 1}. Listing only - the assets are unchanged.";
+                    break;
+
+                case ExplorerNodeKind.Ingredient when node.Domain is (LoadedRecipe recipe, _):
+                    // The tree lists layers bottom-first, exactly as the Recipe pane's table does, so
+                    // the row index and the 1-based depth are the same number one apart.
+                    edited = CookBookEdits.MoveLayer(_book, recipe.Manifest.Id, node.Id, toIndex + 1);
+                    said = $"Moved “{node.Name}” to depth {toIndex + 1} - the same seed now rolls a different collection.";
+                    break;
+
+                default:
+                    return false;
+            }
+
+            var saved = await CookBookPersistence.PersistAsync(_session, edited);
+            ApplyBook(saved, node.Id);
+            _status.Say(said);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            await ShowError("Could not reorder", ex.Message);
+            return false;
         }
     }
 

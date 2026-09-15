@@ -57,8 +57,8 @@ public static class ServiceRegistration
             sp.GetRequiredService<IKitchenSession>(),
             sp.GetRequiredService<IStateStore>()));
 
-        services.AddSingleton<Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel>>(sp =>
-            (ing, recipe, book) => RememberOnSave(sp, new IngredientEditorViewModel(ing, recipe, book,
+        services.AddSingleton<Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, Func<bool>, IngredientEditorViewModel>>(sp =>
+            (ing, recipe, book, isEditing) => RememberOnSave(sp, new IngredientEditorViewModel(ing, recipe, book,
                 sp.GetRequiredService<IImageBridge>(),
                 sp.GetRequiredService<INavigationService>(),
                 sp.GetRequiredService<ICookBookSession>(),
@@ -73,7 +73,11 @@ public static class ServiceRegistration
                 // The app-wide saved swatches. The editor defaults to an in-memory palette when this
                 // is omitted, which is right for a test and wrong for the app: without it every
                 // swatch the author saved would be gone at the next launch.
-                palette: sp.GetRequiredService<IPaletteService>())));
+                palette: sp.GetRequiredService<IPaletteService>(),
+                // The Explorer's edit lock. The pencil opens this editor in either state — it is
+                // also how you look at a layer — but Save rewrites the layer's manifest and
+                // persists the whole book, which is exactly what the lock refuses everywhere else.
+                isEditing: isEditing)));
 
         // Loose (.igt) editor: same editor, but with a save-straight-to-.igt path and the synthetic
         // wrapper book it owns. Built directly (not via the cookbook editor factory) so it can pass
@@ -109,7 +113,7 @@ public static class ServiceRegistration
                 sp.GetRequiredService<INavigationService>(),
                 sp.GetRequiredService<IDialogService>(),
                 sp.GetRequiredService<IImageBridge>(),
-                sp.GetRequiredService<Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel>>(),
+                sp.GetRequiredService<Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, Func<bool>, IngredientEditorViewModel>>(),
                 sp.GetRequiredService<Func<LoadedCookBook, CookDialogViewModel>>(),
                 sp.GetRequiredService<ICookBookSession>(),
                 sp.GetRequiredService<IFilePickerService>(),

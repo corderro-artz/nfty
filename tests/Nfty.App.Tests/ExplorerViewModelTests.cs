@@ -37,13 +37,16 @@ public class ExplorerViewModelTests
 
     /// <summary>Shared stub editor factory for tests that construct an <see cref="ExplorerViewModel"/>
     /// but don't exercise the Ingredient Editor navigation itself.</summary>
-    internal static Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, IngredientEditorViewModel> EditorFactory(
+    internal static Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, Func<bool>, IngredientEditorViewModel> EditorFactory(
         INavigationService nav, ICookBookSession? session = null, IDialogService? dialogs = null)
     {
         var s = session ?? new CookBookSession();
         var d = dialogs ?? new FakeDialogs();
-        return (i, r, b) => new IngredientEditorViewModel(i, r, b, new ImageBridge(), nav, s, d,
-            new FilePickerService());
+        // The lock is threaded through, exactly as the composition root does it: an editor built
+        // without it would save into a read-only book, and a stub that quietly omitted it would make
+        // every test of that gate pass for the wrong reason.
+        return (i, r, b, isEditing) => new IngredientEditorViewModel(i, r, b, new ImageBridge(), nav, s, d,
+            new FilePickerService(), isEditing: isEditing);
     }
 
     /// <summary>Shared stub loose-editor factory (for a standalone .igt): builds the editor over a
@@ -178,7 +181,7 @@ public class ExplorerViewModelTests
             // Select the ingredient, then open + save its editor the way the Explorer wires it.
             var ingNode = explorer.Root.Children[0].Children[0];
             explorer.SelectNodeCommand.Execute(ingNode);
-            var editor = editorFactory(ing, recipe, session.Current!);
+            var editor = editorFactory(ing, recipe, session.Current!, () => true);
             editor.Saved += explorer.OnEditorSaved;
             editor.ActiveTool = EditorTool.Fill; editor.BrushValue = 123;
             editor.ApplyToolStroke(new[] { (0, 0) });

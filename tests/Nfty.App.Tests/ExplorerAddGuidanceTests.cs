@@ -123,29 +123,44 @@ public class ExplorerAddGuidanceTests
     /// <summary>
     /// The pencil opens the editor whether or not the edit-lock is on -- that is deliberate, the lock
     /// governs the Explorer's structural edits -- so the editor must not arrive under the Explorer's
-    /// "Editing locked" sentence.
+    /// own sentence about it, and must say something true about ITSELF instead.
     /// </summary>
     /// <remarks>
-    /// The status line is a last-message board. Whatever was said last stays up, and what the
+    /// <para>The status line is a last-message board. Whatever was said last stays up, and what the
     /// Explorer says on selection is the lock state, so the editor opened with "Editing locked -
     /// unlock to make changes." standing over a canvas that painted perfectly well. Found by driving
-    /// the running app and painting a pixel the status bar said was impossible.
+    /// the running app and painting a pixel the status bar said was impossible.</para>
+    ///
+    /// <para>This used to assert the replacement contained the word "Save" and not the word "lock",
+    /// which was right only while the editor could ALWAYS save. It cannot: Save rewrites the layer's
+    /// manifest and persists the whole book, so it is gated by the lock even though the pencil that
+    /// opens the editor is not. There are two true sentences now, one per lock state, and what this
+    /// asserts is that each one is the editor's own and describes the saving it will actually do.</para>
     /// </remarks>
-    [AvaloniaFact]
-    public void Opening_the_editor_while_locked_does_not_leave_the_lock_message_standing()
+    [AvaloniaTheory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void The_editor_opens_under_its_own_sentence_about_saving(bool unlocked)
     {
         var (vm, status, session, path, _) = Explorer();
         try
         {
+            if (unlocked) vm.ToggleLockCommand.Execute(null);
+
             var ing = vm.Root.Children[0].Children[0];
             vm.SelectNodeCommand.Execute(ing);                        // says the lock state
-            Assert.Contains("lock", status.Last!, System.StringComparison.OrdinalIgnoreCase);
+            var onSelect = status.Last!;
 
             var detail = Assert.IsType<IngredientDetailViewModel>(vm.CurrentDetail);
             detail.EditIngredientCommand.Execute(null);               // pencil: NOT gated by the lock
 
-            Assert.DoesNotContain("lock", status.Last!, System.StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("Save", status.Last!, System.StringComparison.Ordinal);
+            // Whatever the Explorer said last is gone, and the layer's own name is in its place.
+            Assert.NotEqual(onSelect, status.Last);
+            Assert.Contains("Aura", status.Last!, System.StringComparison.Ordinal);
+
+            // And the sentence agrees with what Save is actually going to do.
+            Assert.Equal(unlocked, status.Last!.Contains("Save writes it back", System.StringComparison.Ordinal));
+            Assert.Equal(!unlocked, status.Last!.Contains("read-only", System.StringComparison.Ordinal));
             vm.Dispose();
         }
         finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }

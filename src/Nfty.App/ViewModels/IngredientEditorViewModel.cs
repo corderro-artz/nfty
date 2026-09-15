@@ -89,6 +89,11 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     // NEW ingredient on the loose path means writing a different file, and the editor then targets it.
     private string? _looseSavePath;
     private readonly LoadedCookBook? _ownedBook;   // the synthetic wrapper book, owned only on the loose path
+    // The owning book's edit lock, or null when there is no book to lock (the loose .igt path).
+    // Read live rather than snapshotted at open, so the property cannot go stale — though in
+    // practice it cannot change while this page is up: the lock's only control is on the Explorer,
+    // which the editor covers.
+    private readonly Func<bool>? _isEditing;
     private LoadedIngredient _ing;
     private readonly IngredientDraft _draft;
 
@@ -161,8 +166,28 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// variant genuinely had no pixels anywhere; now every variant of a Custom draft carries a
     /// <see cref="ColorMap"/> from the moment it is added, so the worst case is saving a blank
     /// layer — exactly what adding an unpainted variant to a Dynamic layer has always done.</para></summary>
-    public bool CanSave => IsDirty && !IsSaving
+    public bool CanSave => IsDirty && !IsSaving && !IsReadOnly
         && (_looseSavePath is not null || _session.SourcePath is not null);
+
+    /// <summary>
+    /// Whether the owning CookBook's edit lock is closed, so nothing here can be written back.
+    /// </summary>
+    /// <remarks>
+    /// <para>THE PENCIL IS NOT GATED BY THE LOCK AND SAVE MUST BE. Opening the editor on a
+    /// read-only book is deliberate — it is also how you LOOK at a layer, which is why
+    /// <c>EditIngredientCommand</c> carries no <c>CanExecute</c> — but looking is not writing, and
+    /// Save here does not write a pixel: it rewrites the layer's manifest, can change its KIND and
+    /// its whole colorization, and persists the entire book. The Explorer refuses add, delete and
+    /// reorder for exactly that reason while saying "read-only" in the titlebar and the status bar;
+    /// this path did all three of those things anyway, with nothing anywhere disagreeing.</para>
+    ///
+    /// <para>Painting stays live. A read-only editor is a scratch surface — undo, the filmstrip, the
+    /// colorize rail and both previews all work — and the one thing that cannot happen is the thing
+    /// the lock exists to prevent. <see cref="SaveNoteText"/> says so from the moment the page
+    /// opens rather than at the press, because a disabled button with no reason given is the defect
+    /// this app has already fixed twice elsewhere.</para>
+    /// </remarks>
+    public bool IsReadOnly => _isEditing is not null && !_isEditing();
 
     /// <summary>Whether what this editor is going to write composites as-is rather than being
     /// colorized.
@@ -184,7 +209,9 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// being what Save writes; the warning on the way out is a one-off, and this is the line that
     /// stays.</para>
     /// </remarks>
-    public string? SaveNoteText => IsCustom ? null
+    public string? SaveNoteText => IsReadOnly
+            ? "This CookBook is read-only. Paint freely — nothing here can be saved until the lock is opened in the Explorer."
+        : IsCustom ? null
         : IsColorMode
             ? "Color art saves as a Custom ingredient — Save will ask whether to add a new layer or convert this one."
             : HasColorArt
@@ -392,15 +419,19 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// <param name="palette">The app-wide saved swatches. Null falls back to a palette held entirely
     /// in memory, so a caller that never wires one — every test — cannot reach the user's real store
     /// by omission; the composition root passes the registered service.</param>
+    /// <param name="isEditing">Whether the owning CookBook's edit lock is open. Null means there is
+    /// no lock to consult — a loose <c>.igt</c> belongs to no book — and the editor saves freely.</param>
     public IngredientEditorViewModel(LoadedIngredient ing, LoadedRecipe recipe, LoadedCookBook book,
         IImageBridge bridge, INavigationService nav, ICookBookSession session,
         IDialogService dialogs, IFilePickerService picker, string? looseSavePath = null,
-        IKitchenSession? kitchen = null, IPaletteService? palette = null)
+        IKitchenSession? kitchen = null, IPaletteService? palette = null,
+        Func<bool>? isEditing = null)
     {
         _ing = ing; _bridge = bridge; _nav = nav;
         _recipe = recipe; _session = session; _dialogs = dialogs; _picker = picker;
         _looseSavePath = looseSavePath;
         _kitchen = kitchen;
+        _isEditing = isEditing;
         _palette = palette ?? new PaletteService(StateStore.InMemory());
         _bookSwatches = Palette.FromSpecs(book.Manifest.Palette);
         // A loose (standalone .igt) editor owns its synthetic wrapper book — dispose it with the editor.
@@ -1414,6 +1445,12 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     {
         // Guarded by CanSave; belt-and-suspenders against a bypassed CanExecute (need a save target).
         if (_looseSavePath is null && _session.SourcePath is null) return;
+
+        // THE LOCK IS CHECKED HERE TOO, AND NOT ONLY IN CanSave. A generated RelayCommand's
+        // ExecuteAsync does not consult its own CanExecute, so the disabled button was the entire
+        // enforcement — and a disabled button is a label. Probed: without this line
+        // Executing_save_on_a_locked_book_writes_nothing fails with the archive's bytes changed.
+        if (IsReadOnly) return;
 
         // Ask BEFORE anything is written: the answer decides whether this becomes a new ingredient
         // beside the original or replaces it, and the replacement is not recoverable.

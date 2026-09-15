@@ -38,7 +38,7 @@ public class SmokeTests
                 (_, _, _) => null!),
             new ExplorerViewModel(smokeBook, nav, dialogs, new ImageBridge(), editorFactory, cookFactory, new CookBookSession(),
                 new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs), new StatusService()),
-            editorFactory(cat.Ingredients[0], cat, smokeBook),
+            editorFactory(cat.Ingredients[0], cat, smokeBook, () => true),
             new HelpViewModel(dialogs),
             new NewCookBookViewModel(dialogs),
             new NewRecipeViewModel(dialogs),
