@@ -3164,6 +3164,24 @@
     </Style.Animations>
   </Style>
 
+  <!-- A MISSING IMAGE IS NOT A SLOW ONE, AND IT MUST NOT LOOK LIKE ONE. The decode falls back to a
+       1x1 transparent bitmap rather than throwing - a browser over a damaged Set should show the
+       damage, not refuse to open - but the moment that placeholder lands, IsLoading goes false and
+       the breathing diamond goes with it, leaving a flat square that reads as a tile still thinking.
+       It is also exactly what a fully transparent asset looks like, which is a legal thing to mint.
+       So: the same diamond, so an unfilled tile still looks like part of the product, but STATIC and
+       in the warning ink. Static is the point - a pulse means "coming", and nothing is coming. -->
+  <Style Selector="Border.tmissing">
+    <Setter Property="Width" Value="13" />
+    <Setter Property="Height" Value="13" />
+    <Setter Property="CornerRadius" Value="2" />
+    <Setter Property="Background" Value="{DynamicResource WarningBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="RenderTransform" Value="rotate(45deg)" />
+    <Setter Property="Opacity" Value="0.55" />
+  </Style>
+
   <!-- ===== Set browser: hover, the rail, and the asset inspector ===== -->
 
   <!-- Hover is a row AND a cell, which together read as a crosshair over the grid: the row washes,

@@ -20,6 +20,7 @@ public partial class SetItemRow : ObservableObject, IDisposable
 {
     private const int ThumbW = 128;
     private volatile Bitmap? _thumbnail;
+    private volatile bool _imageMissing;
     private bool _decodeStarted;
     private bool _disposed;
 
@@ -60,6 +61,24 @@ public partial class SetItemRow : ObservableObject, IDisposable
     /// <summary>Whether the image is still on its way, so the tile should show its placeholder.</summary>
     public bool IsLoading => _thumbnail is null;
 
+    /// <summary>
+    /// Whether this asset's PNG could not be read — missing from the folder, or corrupt.
+    /// </summary>
+    /// <remarks>
+    /// <para>A FILE THAT IS NOT THERE USED TO LOOK EXACTLY LIKE ONE STILL LOADING, FOREVER. The
+    /// decode returns a 1x1 transparent placeholder rather than throwing, which is right - a browser
+    /// over a damaged Set should show the damage rather than refuse to open - but the moment that
+    /// placeholder was published <see cref="IsLoading"/> went false, the breathing diamond that
+    /// covers a pending decode went with it, and the tile settled into a flat empty square that says
+    /// nothing. Indistinguishable from a decode still in flight, and from a fully transparent asset,
+    /// which is a legal thing to mint.</para>
+    ///
+    /// <para>Found by opening a Set whose folder had been half cleaned up: twenty-four images for a
+    /// sixty-asset Set, and thirty-six tiles that looked like they were still thinking. An empty
+    /// state must say WHICH emptiness it is.</para>
+    /// </remarks>
+    public bool ImageMissing => _imageMissing;
+
     /// <summary>Whether this row has actually paid for its image yet. Read by the performance tests
     /// to prove the decode is still falling under the ListBox's virtualization rather than on top
     /// of it.</summary>
@@ -81,7 +100,7 @@ public partial class SetItemRow : ObservableObject, IDisposable
         var path = ImagePath;
         _ = Task.Run(() =>
         {
-            var bitmap = Decode(path);
+            var (bitmap, missing) = Decode(path);
             // Back to the UI thread through the dispatcher rather than a captured
             // SynchronizationContext: a binding may read Thumbnail from a measure pass that has no
             // context to capture, and FromCurrentSynchronizationContext throws outright when there
@@ -90,8 +109,10 @@ public partial class SetItemRow : ObservableObject, IDisposable
             {
                 if (_disposed) { bitmap.Dispose(); return; }   // torn down while it was decoding
                 _thumbnail = bitmap;
+                _imageMissing = missing;
                 OnPropertyChanged(nameof(Thumbnail));
                 OnPropertyChanged(nameof(IsLoading));
+                OnPropertyChanged(nameof(ImageMissing));
             });
         });
     }
@@ -104,7 +125,10 @@ public partial class SetItemRow : ObservableObject, IDisposable
     internal Bitmap DecodeNow()
     {
         _decodeStarted = true;
-        return _thumbnail ??= Decode(ImagePath);
+        if (_thumbnail is not null) return _thumbnail;
+        var (bitmap, missing) = Decode(ImagePath);
+        _imageMissing = missing;
+        return _thumbnail = bitmap;
     }
 
     /// <summary>Whether this tile is the selected one, so the grid can paint an indicator — the
@@ -135,7 +159,10 @@ public partial class SetItemRow : ObservableObject, IDisposable
         Item = item;
     }
 
-    private static Bitmap Decode(string path)
+    /// <summary>Decodes a thumbnail, and says whether it had to fall back.</summary>
+    /// <param name="path">The asset's PNG.</param>
+    /// <returns>The bitmap, and whether the file could not be read at all.</returns>
+    private static (Bitmap Bitmap, bool Missing) Decode(string path)
     {
         // Named so a scroll's cost splits into "decoding images" and "building controls", which are
         // two different problems with two different fixes.
@@ -149,14 +176,16 @@ public partial class SetItemRow : ObservableObject, IDisposable
             // small one never was.
             var w = Math.Min(ThumbW, PngWidth(fs));
             fs.Position = 0;
-            return Bitmap.DecodeToWidth(fs, w);
+            return (Bitmap.DecodeToWidth(fs, w), false);
         }
         catch
         {
             // Tolerant placeholder: 1x1 transparent bitmap if the image is missing or corrupt. A
-            // browser over a damaged Set should show the damage, not refuse to open.
-            return new WriteableBitmap(new PixelSize(1, 1), new Vector(96, 96),
-                PixelFormat.Bgra8888, AlphaFormat.Unpremul);
+            // browser over a damaged Set should show the damage, not refuse to open - and the flag
+            // is what lets the tile SAY it is damage rather than settling into a blank square that
+            // reads as a decode still in flight.
+            return (new WriteableBitmap(new PixelSize(1, 1), new Vector(96, 96),
+                PixelFormat.Bgra8888, AlphaFormat.Unpremul), true);
         }
     }
 

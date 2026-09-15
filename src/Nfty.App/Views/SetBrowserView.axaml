@@ -129,6 +129,12 @@
                                  diamond, so an unfilled tile looks like part of the product rather
                                  than a hole in it. -->
                             <Border Classes="tload" IsVisible="{Binding IsLoading}" />
+                            <!-- And the mark for a file that is not coming at all. Reading Thumbnail
+                                 is what starts the decode, so the binding order here matters: the
+                                 Image below asks for it, and this flag is only meaningful once that
+                                 has answered. -->
+                            <Border Classes="tmissing" IsVisible="{Binding ImageMissing}"
+                                    ToolTip.Tip="This asset's image file is missing from the Set folder" />
                             <Image Source="{Binding Thumbnail}" Width="120" Height="120"
                                    Stretch="UniformToFill" />
                           </Panel>
@@ -176,7 +182,13 @@
                    raises its own change, and a snapshot taken when Shown moved would miss it. -->
               <Grid ColumnDefinitions="Auto,*" ColumnSpacing="11">
                 <Border Grid.Column="0" Classes="railshot">
-                  <Image Source="{Binding Shown.Thumbnail}" Stretch="Uniform" />
+                  <Panel>
+                    <Image Source="{Binding Shown.Thumbnail}" Stretch="Uniform" />
+                    <!-- The same mark the tile carries. Without it the rail's preview is a blank
+                         square for a missing file, which is the defect one level over. -->
+                    <Border Classes="tmissing" IsVisible="{Binding Shown.ImageMissing}"
+                            ToolTip.Tip="This asset's image file is missing from the Set folder" />
+                  </Panel>
                 </Border>
 
                 <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
