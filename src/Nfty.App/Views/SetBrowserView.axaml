@@ -69,14 +69,34 @@
       </Border>
     </StackPanel>
 
-    <Button Grid.Column="1" Classes="tbtn" Command="{Binding ExportCommand}"
-            VerticalAlignment="Center"
-            ToolTip.Tip="Choose what leaves this machine: the art, either metadata set, the source CookBook - and whether to seal it.">
-      <StackPanel Orientation="Horizontal" Spacing="7">
-        <Path Classes="ico xs" Data="{StaticResource IconDownload}" />
-        <TextBlock Text="Export…" />
-      </StackPanel>
-    </Button>
+    <!-- THE RARITY UNIT IS A PAGE-LEVEL CHOICE, so it lives at page level. It governs the whole
+         rarity column AND the asset's own combined chance, which sit in two different panels - a
+         toggle bolted to one of them says it belongs to that one. Beside Export because both are
+         CONTROLS, where everything left of here is a fact about the Set; labelled, because a bare
+         "% | 1 in N" next to a collection's name says nothing about what it switches. -->
+    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+      <TextBlock Classes="seglbl" Text="RARITY" />
+      <Border Classes="seg tiny" VerticalAlignment="Center"
+              ToolTip.Tip="How every rarity on this screen reads - the trait table and the asset's own combined chance.">
+        <StackPanel Orientation="Horizontal">
+          <Button Classes="seg-b tiny" Content="%"
+                  Classes.on="{Binding !ShowRarityAsOdds}"
+                  Command="{Binding ShowRarityPercentCommand}" />
+          <Button Classes="seg-b tiny" Content="1 in N"
+                  Classes.on="{Binding ShowRarityAsOdds}"
+                  Command="{Binding ShowRarityOddsCommand}" />
+        </StackPanel>
+      </Border>
+
+      <Button Classes="tbtn" Command="{Binding ExportCommand}"
+              VerticalAlignment="Center"
+              ToolTip.Tip="Choose what leaves this machine: the art, either metadata set, the source CookBook - and whether to seal it.">
+        <StackPanel Orientation="Horizontal" Spacing="7">
+          <Path Classes="ico xs" Data="{StaticResource IconDownload}" />
+          <TextBlock Text="Export…" />
+        </StackPanel>
+      </Button>
+    </StackPanel>
     </Grid>
 
     <Grid Grid.Row="1" ColumnDefinitions="*,300">
@@ -258,7 +278,7 @@
                    is a fact already in the table below rather than a score this project would have
                    to invent - multiplying the shares would assume the layers roll independently,
                    which rules and absent-percents both break. -->
-              <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,8,0,0" ColumnSpacing="8">
+              <Grid ColumnDefinitions="Auto,*" Margin="0,8,0,0" ColumnSpacing="8">
                 <TextBlock Grid.Column="0" Classes="sub-h" Text="RARITY" VerticalAlignment="Center" />
                 <!-- LABELLED, and the label is part of the RUN rather than a second TextBlock
                      beside it. "Keypad · 1 in 4" next to the word RARITY is a value with nothing
@@ -269,18 +289,7 @@
                 <TextBlock Grid.Column="1" Classes="derived" VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis" Text="{Binding RarestText}"
                            ToolTip.Tip="The rarest single trait this asset carries, of the ones listed below" />
-                <Border Grid.Column="2" Classes="seg tiny">
-                  <StackPanel Orientation="Horizontal">
-                    <Button Classes="seg-b tiny" Content="%"
-                            Classes.on="{Binding !ShowRarityAsOdds}"
-                            Command="{Binding ShowRarityPercentCommand}"
-                            ToolTip.Tip="Show each trait's share of the collection" />
-                    <Button Classes="seg-b tiny" Content="1 in N"
-                            Classes.on="{Binding ShowRarityAsOdds}"
-                            Command="{Binding ShowRarityOddsCommand}"
-                            ToolTip.Tip="Show the same share as odds - one asset in how many" />
-                  </StackPanel>
-                </Border>
+
               </Grid>
                 <Border Classes="data-h">
                   <!-- 71, not 56: a rarity reads "52.33%" as often as "44%", and six characters of

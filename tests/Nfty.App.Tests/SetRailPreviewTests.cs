@@ -217,6 +217,70 @@ public class SetRailPreviewTests
     }
 
     /// <summary>
+    /// ONE TOGGLE, EVERY RARITY ON THE SCREEN — the column header, the rarest-trait line and the
+    /// asset's own combined chance, which sit in two different panels.
+    /// </summary>
+    /// <remarks>
+    /// That is why the control is in the page header rather than bolted to the rarity table: a
+    /// toggle inside one panel says it belongs to that panel, and this one does not. A reader who
+    /// switches to odds and then finds one figure still in percent has been told the screen is
+    /// inconsistent about its own numbers.
+    /// </remarks>
+    [AvaloniaFact]
+    public void One_toggle_changes_every_rarity_on_the_screen()
+    {
+        var loaded = CookedSet(out var dir);
+        var vm = new SetBrowserViewModel(loaded);
+        try
+        {
+            Assert.Equal("%", vm.RarityUnitLabel);
+            Assert.Contains("%", vm.RarestText, StringComparison.Ordinal);
+            Assert.Contains("%", vm.CombinedText, StringComparison.Ordinal);
+            Assert.DoesNotContain("1 in ", vm.RarestText, StringComparison.Ordinal);
+            Assert.DoesNotContain("1 in ", vm.CombinedText, StringComparison.Ordinal);
+
+            vm.ShowRarityOddsCommand.Execute(null);
+
+            Assert.Equal("ODDS", vm.RarityUnitLabel);
+            Assert.Contains("1 in ", vm.RarestText, StringComparison.Ordinal);
+            Assert.Contains("1 in ", vm.CombinedText, StringComparison.Ordinal);
+            Assert.DoesNotContain("%", vm.RarestText, StringComparison.Ordinal);
+            Assert.DoesNotContain("%", vm.CombinedText, StringComparison.Ordinal);
+        }
+        finally { vm.Dispose(); Directory.Delete(dir, recursive: true); }
+    }
+
+    /// <summary>The control lives in the PAGE header, beside Export — not inside the rarity panel it
+    /// used to sit in, because it governs a figure in the panel above that one too.</summary>
+    [AvaloniaFact]
+    public void The_toggle_is_in_the_page_header()
+    {
+        var loaded = CookedSet(out var dir);
+        var vm = new SetBrowserViewModel(loaded);
+        var view = new Views.SetBrowserView { DataContext = vm };
+        var window = new Window { Content = view, Width = 1180, Height = 720 };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        try
+        {
+            var tray = view.GetVisualDescendants().OfType<Border>()
+                .Where(b => b.Classes.Contains("seg")).ToList();
+            var only = Assert.Single(tray);          // exactly one, not one per panel
+
+            // Above the rail's own rarity table, and on the same line as Export.
+            var export = view.GetVisualDescendants().OfType<Button>()
+                .First(b => b.Classes.Contains("tbtn"));
+            var trayTop = only.TranslatePoint(default, view)!.Value.Y;
+            var exportTop = export.TranslatePoint(default, view)!.Value.Y;
+
+            Assert.True(Math.Abs(trayTop - exportTop) < 20,
+                $"the toggle at {trayTop:0} is not on Export's line at {exportTop:0}");
+            Assert.True(trayTop < 80, $"the toggle at {trayTop:0} is not in the page header");
+        }
+        finally { vm.Dispose(); window.Close(); Directory.Delete(dir, recursive: true); }
+    }
+
+    /// <summary>
     /// RAREST is the rarest TRAIT, not a score. Multiplying the shares would assume the layers roll
     /// independently, which incompatibility rules and absent-percents both break; a rarity score is
     /// a convention this project has never adopted and would have to invent. The rarest trait needs

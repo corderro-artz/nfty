@@ -1792,6 +1792,18 @@
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
 
+  <!-- The word that says what a header-level tray switches. Same grammar as the idchip labels it
+       sits beside (mono, 10.5, muted): a bare TextBlock.ck is only styled INSIDE Border.idchip, so
+       outside one it takes the inherited 14 and reads a size larger than every chip on the row -
+       which is how a label ends up looking like a heading. Stated as a class rather than inline,
+       because a font size and its line box travel together. -->
+  <Style Selector="TextBlock.seglbl">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
   <!-- The same tray, compact, for a panel HEADER rather than a form. The full-size one is 4,7 and
        sits in a column of its own; here it shares a line with a sub-heading and must not make that
        line taller than the headings above and below it. Same grammar, same states, smaller box -
