@@ -204,6 +204,21 @@
                                IsVisible="{Binding !IsShowingHover}"
                                Text="selected" />
                   </Panel>
+
+                  <!-- THE HEADLINE THE TABLE CANNOT GIVE. A reader can see the lock is 1 in 4 and
+                       the bands 1 in 3 and still have no idea what the whole combination is worth;
+                       this is the "one in fifty thousand" line, and it is the product of every row
+                       in that table - the recipe's share included, since Type is one of the rows.
+                       It sits with the id and the picture because it is a fact about the ASSET,
+                       where "rarest" beside the RARITY heading is a fact about the table.
+                       Reserved, like the line above it: a third text line still fits inside the
+                       66px preview beside it, so the identity block is one height either way. -->
+                  <Panel Height="15">
+                    <TextBlock Classes="combo" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"
+                               Text="{Binding CombinedText}"
+                               ToolTip.Tip="The chance of rolling this exact combination, from the shares this Set actually produced. Layers are assumed to roll independently - incompatibility rules and optional layers can make the real chance differ." />
+                  </Panel>
                 </StackPanel>
               </Grid>
 
@@ -222,7 +237,39 @@
                 </Border>
               </StackPanel>
 
-              <TextBlock Classes="sub-h" Text="RARITY" Margin="0,8,0,0" />
+              <!-- THE SAME NUMBER, SAID TWO WAYS. A percentage compares traits to each other; odds
+                   are what "how rare is this one" actually asks, and 4.17% against 2.08% reads as a
+                   near-miss where "1 in 24" against "1 in 48" does not. The toggle is a segment tray
+                   rather than a checkbox because it is one choice between two namings, and both
+                   namings should be legible before either is picked.
+                   RAREST is the single answer beside it: the rarest TRAIT this asset carries, which
+                   is a fact already in the table below rather than a score this project would have
+                   to invent - multiplying the shares would assume the layers roll independently,
+                   which rules and absent-percents both break. -->
+              <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,8,0,0" ColumnSpacing="8">
+                <TextBlock Grid.Column="0" Classes="sub-h" Text="RARITY" VerticalAlignment="Center" />
+                <!-- LABELLED, and the label is part of the RUN rather than a second TextBlock
+                     beside it. "Keypad · 1 in 4" next to the word RARITY is a value with nothing
+                     saying what it is a value of, and a label that only exists on hover is not a
+                     label - but two runs of different sizes on one line is the baseline trap this
+                     app already records (measured at 1.6px here, against a 1.25px floor). One run
+                     cannot have a baseline mismatch with itself. -->
+                <TextBlock Grid.Column="1" Classes="derived" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" Text="{Binding RarestText}"
+                           ToolTip.Tip="The rarest single trait this asset carries, of the ones listed below" />
+                <Border Grid.Column="2" Classes="seg tiny">
+                  <StackPanel Orientation="Horizontal">
+                    <Button Classes="seg-b tiny" Content="%"
+                            Classes.on="{Binding !ShowRarityAsOdds}"
+                            Command="{Binding ShowRarityPercentCommand}"
+                            ToolTip.Tip="Show each trait's share of the collection" />
+                    <Button Classes="seg-b tiny" Content="1 in N"
+                            Classes.on="{Binding ShowRarityAsOdds}"
+                            Command="{Binding ShowRarityOddsCommand}"
+                            ToolTip.Tip="Show the same share as odds - one asset in how many" />
+                  </StackPanel>
+                </Border>
+              </Grid>
                 <Border Classes="data-h">
                   <!-- 71, not 56: a rarity reads "52.33%" as often as "44%", and six characters of
                        tabular mono need ~52px, plus the 11px sort slot and its 4px gap. At 46 the
@@ -279,7 +326,7 @@
                           <Path Classes="sortarrow down" Classes.desc="{Binding RaritySort.Descending}"
                                 Data="{StaticResource IconChevronDown}" />
                         </Panel>
-                        <TextBlock Classes="data-h num" Text="%" />
+                        <TextBlock Classes="data-h num" Text="{Binding RarityUnitLabel}" />
                       </StackPanel>
                     </Button>
                   </Grid>
@@ -320,7 +367,19 @@
                                        Classes.rare="{Binding RarityPct, Converter={x:Static appconv:RarityBandConverter.Rare}}"
                                        Classes.mid="{Binding RarityPct, Converter={x:Static appconv:RarityBandConverter.Mid}}"
                                        Classes.common="{Binding RarityPct, Converter={x:Static appconv:RarityBandConverter.Common}}"
-                                       Text="{Binding RarityPct, StringFormat='{}{0}%'}" />
+                                       TextTrimming="CharacterEllipsis">
+                              <!-- Multi-bound so the cell re-renders the moment the unit flips. The
+                                   row is Core's RarityAttribute - a record written into
+                                   nfty/NNNN.json - so a display preference has no business in it,
+                                   and the odds are derived from the percentage rather than stored
+                                   beside it, which is what stops the two drifting. -->
+                              <TextBlock.Text>
+                                <MultiBinding Converter="{x:Static appconv:RarityUnitConverter.Instance}">
+                                  <Binding Path="RarityPct" />
+                                  <Binding Path="$parent[ItemsControl].((vm:SetBrowserViewModel)DataContext).ShowRarityAsOdds" />
+                                </MultiBinding>
+                              </TextBlock.Text>
+                            </TextBlock>
                           </Grid>
                         </Panel>
                       </Border>

@@ -4,6 +4,8 @@ using Avalonia.Threading;
 using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.Globalization;
+using Nfty.App.Converters;
 using Nfty.App.Services;
 using Nfty.Core.Diagnostics;
 using Nfty.Core.Output;
@@ -222,6 +224,8 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(ShownNumber))]
     [NotifyPropertyChangedFor(nameof(ShownDnaTop))]
     [NotifyPropertyChangedFor(nameof(ShownDnaBottom))]
+    [NotifyPropertyChangedFor(nameof(RarestText))]
+    [NotifyPropertyChangedFor(nameof(CombinedText))]
     private SetItemRow? _selectedItem;
 
     /// <summary>
@@ -245,6 +249,8 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(ShownNumber))]
     [NotifyPropertyChangedFor(nameof(ShownDnaTop))]
     [NotifyPropertyChangedFor(nameof(ShownDnaBottom))]
+    [NotifyPropertyChangedFor(nameof(RarestText))]
+    [NotifyPropertyChangedFor(nameof(CombinedText))]
     private SetItemRow? _hoveredItem;
 
     /// <summary>The asset the detail rail is describing: what the pointer is over, or failing that,
@@ -358,6 +364,120 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     /// unanswerable: "what is rarest about this asset" meant reading every row and comparing by eye.
     /// </remarks>
     public TableSort RaritySort { get; }
+
+    /// <summary>
+    /// Whether the rarity column reads as odds ("1 in 24") rather than a percentage ("4.17%").
+    /// </summary>
+    /// <remarks>
+    /// <para>Both readings are useful and neither is right on its own. A percentage compares traits
+    /// to each other; odds are what "how rare is this one" actually asks, and 4.17% against 2.08%
+    /// looks like a near-miss where "1 in 24" against "1 in 48" does not. It is the same number
+    /// either way - the odds are derived, never stored - so the two cannot disagree.</para>
+    ///
+    /// <para>Session state, deliberately: it describes how this reader wants to look at the table,
+    /// not anything about the Set, so it does not belong in a file and does not follow the asset.</para>
+    /// </remarks>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RarityUnitLabel))]
+    [NotifyPropertyChangedFor(nameof(RarestText))]
+    [NotifyPropertyChangedFor(nameof(CombinedText))]
+    private bool _showRarityAsOdds;
+
+    /// <summary>What the rarity column's header says in the current unit.</summary>
+    public string RarityUnitLabel => ShowRarityAsOdds ? "ODDS" : "%";
+
+    /// <summary>Shows the rarity column as a percentage.</summary>
+    [RelayCommand] private void ShowRarityPercent() => ShowRarityAsOdds = false;
+
+    /// <summary>Shows the rarity column as odds.</summary>
+    [RelayCommand] private void ShowRarityOdds() => ShowRarityAsOdds = true;
+
+    /// <summary>
+    /// The single answer to "how rare is this one": the rarest trait it carries, in the active unit.
+    /// </summary>
+    /// <remarks>
+    /// <b>The rarest TRAIT, not a score.</b> The obvious alternative is to multiply the trait shares
+    /// into a combined chance, and that number would be wrong here: it assumes the layers roll
+    /// independently, which incompatibility rules and absent-percents both break. A rarity SCORE
+    /// (the sum of the reciprocals) is a convention this project has never adopted and would have to
+    /// invent. The rarest trait needs no assumption at all - it is a fact already in the table
+    /// below, and it is the one a reader is scanning that table to find.
+    /// </remarks>
+    public string RarestText
+    {
+        get
+        {
+            var rarity = Shown?.Item.Rarity;
+            if (rarity is null || rarity.Count == 0) return "";
+            RarityAttribute? rarest = null;
+            foreach (var r in rarity)
+                if (r.RarityPct > 0 && (rarest is null || r.RarityPct < rarest.RarityPct)) rarest = r;
+            if (rarest is null) return "";
+            var unit = (string)RarityUnitConverter.Instance.Convert(
+                new object?[] { rarest.RarityPct, ShowRarityAsOdds }, typeof(string), null,
+                CultureInfo.InvariantCulture);
+            // The word is part of the RUN, not a second TextBlock beside it: two runs of different
+            // sizes on one line is the baseline trap this app already records, and one run cannot
+            // mismatch itself.
+            return $"rarest {rarest.Value} · {unit}";
+        }
+    }
+
+    /// <summary>
+    /// The chance of rolling THIS EXACT ASSET — every trait it carries, together.
+    /// </summary>
+    /// <remarks>
+    /// <para>This is the "wow, one in fifty thousand" line, and it is the question a rarity table
+    /// cannot answer by being read: a reader can see that the lock is 1 in 4 and the bands are 1 in
+    /// 3 and still have no idea what the whole combination is worth. It is the product of every row
+    /// in that table — the recipe's own share included, since Type is one of the rows — so the
+    /// figure below is built from exactly the numbers above it.</para>
+    ///
+    /// <para><b>It assumes the layers roll independently, and that is why the tooltip says so.</b>
+    /// Incompatibility rules and absent-percents both couple layers together, so a book that uses
+    /// either makes the true chance differ from this product — usually by making forbidden
+    /// combinations impossible and the surviving ones commoner. The alternative was to locate the
+    /// source CookBook by hash and compute the exact joint probability from its weights, which is a
+    /// real feature and not this one; what this must not do is print an exact-looking number and
+    /// stay quiet about the assumption behind it.</para>
+    ///
+    /// <para>Computed from the shares this SET actually produced, not from the book's intent, which
+    /// is also what the table above shows. On a small collection those two differ; the figure is
+    /// about the assets in front of you.</para>
+    /// </remarks>
+    public string CombinedText
+    {
+        get
+        {
+            var rarity = Shown?.Item.Rarity;
+            if (rarity is null || rarity.Count == 0) return "";
+
+            double p = 1.0;
+            foreach (var r in rarity)
+            {
+                if (r.RarityPct <= 0) return "";     // a trait no asset carries makes the product meaningless
+                p *= r.RarityPct / 100.0;
+            }
+            if (p <= 0 || double.IsNaN(p)) return "";
+
+            if (!ShowRarityAsOdds)
+            {
+                // Enough places to stay non-zero however deep the stack goes: a six-layer asset is
+                // routinely a thousandth of a percent, and "0.00%" is not a figure.
+                double pct = p * 100.0;
+                string text = pct >= 0.01 ? pct.ToString("0.##", CultureInfo.InvariantCulture)
+                    : pct.ToString("0.######", CultureInfo.InvariantCulture);
+                return $"this combo {text}%";
+            }
+
+            double one = 1.0 / p;
+            // Thousands-separated and invariant, like every figure this app prints: these get read
+            // off screenshots and compared between machines.
+            return one >= 1_000_000_000_000d
+                ? "this combo 1 in over a trillion"
+                : $"this combo 1 in {Math.Round(one, MidpointRounding.AwayFromZero).ToString("N0", CultureInfo.InvariantCulture)}";
+        }
+    }
 
     /// <summary>How many Recipes the collection was rolled from.</summary>
     public int RecipeCount => _set.Manifest.Distribution.Count;

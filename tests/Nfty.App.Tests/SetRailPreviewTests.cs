@@ -115,6 +115,134 @@ public class SetRailPreviewTests
     }
 
     /// <summary>
+    /// THE SAME NUMBER, SAID TWO WAYS. A percentage compares traits to each other; odds are what
+    /// "how rare is this one" actually asks, and 4.17% against 2.08% reads as a near-miss where
+    /// "1 in 24" against "1 in 48" does not.
+    /// </summary>
+    /// <remarks>
+    /// The odds are DERIVED from the percentage rather than stored beside it, so the two cannot
+    /// drift — and they are rounded to whole assets, because you cannot own a fraction of one.
+    /// </remarks>
+    [AvaloniaTheory]
+    [InlineData(50.0, false, "50%")]
+    [InlineData(50.0, true, "1 in 2")]
+    [InlineData(4.17, true, "1 in 24")]
+    [InlineData(2.08, true, "1 in 48")]
+    [InlineData(100.0, true, "1 in 1")]
+    // A trait no asset carries has no odds, and infinity is not an answer anyone wants on a card.
+    [InlineData(0.0, true, "—")]
+    public void A_share_reads_as_a_percentage_or_as_odds(double pct, bool odds, string expected)
+    {
+        var text = Nfty.App.Converters.RarityUnitConverter.Instance.Convert(
+            new object?[] { pct, odds }, typeof(string), null,
+            System.Globalization.CultureInfo.InvariantCulture);
+
+        Assert.Equal(expected, text);
+    }
+
+    /// <summary>The toggle drives the column's header as well as its cells — a column of "1 in 24"
+    /// under a "%" heading is two statements about one number.</summary>
+    [AvaloniaFact]
+    public void The_column_header_follows_the_unit()
+    {
+        var loaded = CookedSet(out var dir);
+        var vm = new SetBrowserViewModel(loaded);
+        try
+        {
+            Assert.False(vm.ShowRarityAsOdds);
+            Assert.Equal("%", vm.RarityUnitLabel);
+
+            vm.ShowRarityOddsCommand.Execute(null);
+            Assert.True(vm.ShowRarityAsOdds);
+            Assert.Equal("ODDS", vm.RarityUnitLabel);
+
+            vm.ShowRarityPercentCommand.Execute(null);
+            Assert.Equal("%", vm.RarityUnitLabel);
+        }
+        finally { vm.Dispose(); Directory.Delete(dir, recursive: true); }
+    }
+
+    /// <summary>
+    /// THE COMBINED CHANCE IS THE PRODUCT OF EVERY ROW IN THE TABLE, recipe share included.
+    /// </summary>
+    /// <remarks>
+    /// This is the question a rarity table cannot answer by being read: the lock is 1 in 4 and the
+    /// bands are 1 in 3 and nothing there says what the whole asset is worth. It is built from
+    /// exactly the numbers shown above it, so a reader can check it by hand.
+    /// </remarks>
+    [AvaloniaFact]
+    public void The_combined_chance_is_the_product_of_the_assets_traits()
+    {
+        var loaded = CookedSet(out var dir);
+        var vm = new SetBrowserViewModel(loaded);
+        try
+        {
+            double p = 1.0;
+            foreach (var r in vm.Shown!.Item.Rarity) p *= r.RarityPct / 100.0;
+            long expected = (long)Math.Round(1.0 / p, MidpointRounding.AwayFromZero);
+
+            vm.ShowRarityOddsCommand.Execute(null);
+            Assert.Equal($"this combo 1 in {expected:N0}", vm.CombinedText);
+
+            // And the same number the other way up, under the same toggle as everything else.
+            vm.ShowRarityPercentCommand.Execute(null);
+            Assert.StartsWith("this combo ", vm.CombinedText, StringComparison.Ordinal);
+            Assert.EndsWith("%", vm.CombinedText, StringComparison.Ordinal);
+        }
+        finally { vm.Dispose(); Directory.Delete(dir, recursive: true); }
+    }
+
+    /// <summary>It is rarer than any single trait it is built from — the assertion that catches a
+    /// product computed the wrong way up, which would otherwise look plausible.</summary>
+    [AvaloniaFact]
+    public void The_whole_asset_is_rarer_than_its_rarest_trait()
+    {
+        var loaded = CookedSet(out var dir);
+        var vm = new SetBrowserViewModel(loaded);
+        try
+        {
+            vm.ShowRarityOddsCommand.Execute(null);
+            var rarest = vm.Shown!.Item.Rarity.Where(r => r.RarityPct > 0)
+                .OrderBy(r => r.RarityPct).First();
+
+            long combined = long.Parse(
+                vm.CombinedText.Replace("this combo 1 in ", "", StringComparison.Ordinal)
+                  .Replace(",", "", StringComparison.Ordinal),
+                System.Globalization.CultureInfo.InvariantCulture);
+
+            Assert.True(combined >= Math.Round(100.0 / rarest.RarityPct),
+                $"the whole asset ({combined}) came out commoner than its rarest trait");
+        }
+        finally { vm.Dispose(); Directory.Delete(dir, recursive: true); }
+    }
+
+    /// <summary>
+    /// RAREST is the rarest TRAIT, not a score. Multiplying the shares would assume the layers roll
+    /// independently, which incompatibility rules and absent-percents both break; a rarity score is
+    /// a convention this project has never adopted and would have to invent. The rarest trait needs
+    /// no assumption — it is a fact already in the table, and the one a reader scans it to find.
+    /// </summary>
+    [AvaloniaFact]
+    public void The_rarest_line_names_the_rarest_trait_in_the_active_unit()
+    {
+        var loaded = CookedSet(out var dir);
+        var vm = new SetBrowserViewModel(loaded);
+        try
+        {
+            var rarity = vm.Shown!.Item.Rarity;
+            var rarest = rarity.Where(r => r.RarityPct > 0).OrderBy(r => r.RarityPct).First();
+
+            Assert.Contains(rarest.Value, vm.RarestText, StringComparison.Ordinal);
+            Assert.Contains("%", vm.RarestText, StringComparison.Ordinal);
+
+            vm.ShowRarityOddsCommand.Execute(null);
+            Assert.Contains(rarest.Value, vm.RarestText, StringComparison.Ordinal);
+            Assert.Contains("1 in ", vm.RarestText, StringComparison.Ordinal);
+        }
+        finally { vm.Dispose(); Directory.Delete(dir, recursive: true); }
+    }
+
+    /// <summary>
     /// The identity block is ONE HEIGHT for every asset. The rail changes as the pointer crosses the
     /// grid, which is the worst possible place for a reflow — the "hovering / selected" line beside
     /// the preview is reserved for the same reason, and a preview that sized itself to its art would

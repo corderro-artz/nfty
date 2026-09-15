@@ -1792,6 +1792,22 @@
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
 
+  <!-- The same tray, compact, for a panel HEADER rather than a form. The full-size one is 4,7 and
+       sits in a column of its own; here it shares a line with a sub-heading and must not make that
+       line taller than the headings above and below it. Same grammar, same states, smaller box -
+       a second tray family for one control would be two vocabularies for one idea. -->
+  <Style Selector="Border.seg.tiny">
+    <Setter Property="Padding" Value="2" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+  </Style>
+  <Style Selector="Button.seg-b.tiny">
+    <Setter Property="Padding" Value="7,1" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+  </Style>
+
   <!-- .vcard: a horizontal variant row, selected = accent wash + inset bar -->
   <Style Selector="Button.vcard">
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
@@ -3214,6 +3230,15 @@
        and the rarity rows keep the room they had.
        The tile ground shows through wherever the art does not, which is what makes a transparent
        asset read as transparent rather than as a smaller picture. -->
+  <!-- The asset's own odds, beside its id. Accent ink at the rail's small size: it is the one
+       figure in the identity block that is a FINDING rather than a label, and a reader scanning a
+       grid is looking for exactly this. Mono, because it is a number read against other numbers. -->
+  <Style Selector="TextBlock.combo">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+
   <Style Selector="Border.railshot">
     <Setter Property="Width" Value="66" />
     <Setter Property="Height" Value="66" />
