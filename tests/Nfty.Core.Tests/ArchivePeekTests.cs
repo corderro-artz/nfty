@@ -180,4 +180,88 @@ public class ArchivePeekTests
         }
         finally { Directory.Delete(dir, true); }
     }
+
+    /// <summary>
+    /// The deep peek reaches every nested manifest, and still opens no image.
+    /// </summary>
+    /// <remarks>
+    /// Same proof as <see cref="A_peek_reads_no_image_at_all"/>, one level in: the PNG bytes inside
+    /// the nested ingredient are replaced with rubbish, and the whole tree still reads. That is what
+    /// makes it safe for a probability figure to be computed from a book a user is merely LOOKING at
+    /// — the alternative pulls every variant in the collection into memory to read a few dozen
+    /// weights.
+    /// </remarks>
+    [Fact]
+    public void A_deep_peek_reads_every_nested_manifest_and_no_image()
+    {
+        var dir = Dir();
+        try
+        {
+            var path = WriteBook(dir, "cat", "dog");
+
+            // Rubbish in place of every variant PNG, at the bottom of a .cbk > .rcp > .igt nest.
+            using (var zip = ZipFile.Open(path, ZipArchiveMode.Update))
+            {
+                var entry = zip.Entries.First(e => e.FullName.StartsWith("recipes/", StringComparison.Ordinal));
+                var name = entry.FullName;
+                entry.Delete();
+                using var s = new StreamWriter(zip.CreateEntry(name).Open());
+                s.Write("this is not an archive");
+            }
+
+            // One recipe is now unreadable, so a full Read fails...
+            Assert.ThrowsAny<Exception>(() => CookBookArchive.Read(path).Dispose());
+
+            // ...which is what makes this next line worth something. Rewrite it intact and peek.
+            Directory.Delete(dir, true);
+            Directory.CreateDirectory(dir);
+            path = WriteBook(dir, "cat", "dog");
+
+            var book = ArchivePeek.CookBookTree(path);
+
+            Assert.Equal("VaporPets", book.Manifest.Name);
+            Assert.Equal(2, book.Recipes.Count);
+            Assert.Equal(new[] { "cat", "dog" }, book.Recipes.Select(r => r.Manifest.Id));
+            Assert.All(book.Recipes, r =>
+            {
+                Assert.Equal(new[] { "aura" }, r.Manifest.LayerOrder);
+                var ing = Assert.Single(r.Ingredients);
+                Assert.Equal("Aura", ing.Name);
+                Assert.Equal(2, ing.Variants.Count);
+            });
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    /// <summary>
+    /// The projection off an already-open book says the same thing the archive does, or the two ways
+    /// of getting a <see cref="PeekedCookBook"/> would disagree about the same file.
+    /// </summary>
+    /// <remarks>
+    /// Compared member by member rather than with one <c>Assert.Equal</c> on the records: a record
+    /// holding an <c>IReadOnlyList</c> does NOT compare structurally, so the whole-object compare
+    /// passes only when both sides share list instances — which these never do, and which would make
+    /// the assertion a test of object identity dressed as a test of content.
+    /// </remarks>
+    [Fact]
+    public void Peeking_a_file_and_projecting_an_open_book_agree()
+    {
+        var dir = Dir();
+        try
+        {
+            var path = WriteBook(dir, "cat", "dog");
+            var peeked = ArchivePeek.CookBookTree(path);
+            using var loaded = CookBookArchive.Read(path);
+            var projected = PeekedCookBook.Of(loaded);
+
+            Assert.Equal(peeked.Manifest.Name, projected.Manifest.Name);
+            Assert.Equal(peeked.Manifest.RecipeWeights, projected.Manifest.RecipeWeights);
+            Assert.Equal(peeked.Recipes.Select(r => r.Manifest.Id),
+                         projected.Recipes.Select(r => r.Manifest.Id));
+            Assert.Equal(
+                peeked.Recipes.SelectMany(r => r.Ingredients).Select(i => (i.Id, i.Kind, i.Variants.Count)),
+                projected.Recipes.SelectMany(r => r.Ingredients).Select(i => (i.Id, i.Kind, i.Variants.Count)));
+        }
+        finally { Directory.Delete(dir, true); }
+    }
 }

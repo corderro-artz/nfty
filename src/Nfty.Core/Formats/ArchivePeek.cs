@@ -42,6 +42,41 @@ public static class ArchivePeek
     /// <exception cref="UnsupportedSchemaVersionException">It declares a newer schema than this build reads.</exception>
     public static IngredientManifest Ingredient(string path) => Peek<IngredientManifest>(path);
 
+    /// <summary>
+    /// Reads a CookBook and every manifest nested inside it — recipes and their ingredients —
+    /// without decoding a single variant image.
+    /// </summary>
+    /// <remarks>
+    /// The whole argument for this type, applied one level deeper: see <see cref="PeekedCookBook"/>
+    /// for what the shape is for and what it deliberately does not carry. Same
+    /// <see cref="ArchiveIo.ReadManifest{T}"/> gate at every level, so a nested archive declaring a
+    /// newer schema is refused here exactly as it would be by a full read.
+    /// </remarks>
+    /// <param name="path">Path to a <c>.cbk</c>.</param>
+    /// <returns>The book's manifests, recipes ordinally by id.</returns>
+    /// <exception cref="InvalidDataException">The archive or a manifest inside it is unreadable.</exception>
+    /// <exception cref="UnsupportedSchemaVersionException">It, or something inside it, declares a
+    /// newer schema than this build reads.</exception>
+    public static PeekedCookBook CookBookTree(string path)
+    {
+        using var zip = ZipFile.OpenRead(path);
+        var manifest = ArchiveIo.ReadManifest<CookBookManifest>(zip);
+        var recipes = new List<PeekedRecipe>();
+        foreach (var name in ArchiveIo.EntryNamesUnder(zip, "recipes/").OrderBy(n => n, StringComparer.Ordinal))
+            recipes.Add(ArchiveIo.ReadNested(zip, name, PeekRecipe));
+        return new PeekedCookBook(manifest, recipes);
+    }
+
+    /// <summary>One nested <c>.rcp</c>, as manifests.</summary>
+    private static PeekedRecipe PeekRecipe(ZipArchive zip)
+    {
+        var manifest = ArchiveIo.ReadManifest<RecipeManifest>(zip);
+        var ingredients = new List<IngredientManifest>();
+        foreach (var name in ArchiveIo.EntryNamesUnder(zip, "ingredients/").OrderBy(n => n, StringComparer.Ordinal))
+            ingredients.Add(ArchiveIo.ReadNested(zip, name, ArchiveIo.ReadManifest<IngredientManifest>));
+        return new PeekedRecipe(manifest, ingredients);
+    }
+
     private static T Peek<T>(string path) where T : ISchemaVersioned
     {
         using var zip = ZipFile.OpenRead(path);
