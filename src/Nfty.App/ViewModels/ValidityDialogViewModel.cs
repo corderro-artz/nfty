@@ -50,6 +50,35 @@ public partial class ValidityDialogViewModel : ViewModelBase
     /// invalid one.</summary>
     public string Summary { get; }
 
+    /// <summary>
+    /// The sentence a HALF-BUILT book gets, or null for one that is genuinely broken.
+    /// </summary>
+    /// <remarks>
+    /// <para>A brand-new CookBook validates as "CookBook has zero total recipe weight", and a
+    /// brand-new Recipe as "has an empty layerOrder, so it would generate a fully-transparent
+    /// asset". Both are true, both are what the CLI prints, and both read to a first-time author as
+    /// an ERROR THEY CAUSED - on a book where they have not done anything yet and the only actual
+    /// news is "add something". Validator's own strings are not the place to fix that: they are the
+    /// CLI's too, and Core is the single source for how a problem is worded.</para>
+    ///
+    /// <para>So the dialog leads with the explanation, and it is derived from the BOOK rather than
+    /// matched against those strings - a message that changes wording must not silently stop being
+    /// recognised. An unstarted book also gets the neutral dot instead of the warning one: nothing
+    /// is wrong with it, it is just not finished.</para>
+    /// </remarks>
+    public string? Guidance { get; }
+
+    /// <summary>Whether there is a guidance line to draw.</summary>
+    public bool HasGuidance => Guidance is not null;
+
+    /// <summary>Whether the only thing wrong is that the book has not been filled in yet — which is
+    /// not a fault, and should not wear the fault's colour.</summary>
+    public bool IsUnstarted => Guidance is not null;
+
+    /// <summary>Whether this is a genuinely broken book rather than an unfinished one — the state
+    /// that earns the warning ink.</summary>
+    public bool IsBroken => HasProblems && !IsUnstarted;
+
     /// <summary>Creates the dialog over a book's problems.</summary>
     /// <param name="dialogs">The dialog layer to close through.</param>
     /// <param name="book">The open book, for its name and its size.</param>
@@ -70,6 +99,25 @@ public partial class ValidityDialogViewModel : ViewModelBase
         int recipes = book.Recipes.Count;
         int layers = book.Recipes.Sum(r => r.Ingredients.Count);
         int variants = book.Recipes.Sum(r => r.Ingredients.Sum(i => i.Manifest.Variants.Count));
+        // Derived from the graph, never from Validator's wording. Empty recipes are named so the
+        // reader knows WHICH one to go and fill in: on a book with three recipes and one empty,
+        // "add an Ingredient" without saying where is barely better than the raw problem.
+        var empty = book.Recipes.Where(r => r.Manifest.LayerOrder.Count == 0)
+            .Select(r => r.Manifest.Name).ToArray();
+        Guidance = IsValid ? null
+            : book.Recipes.Count == 0
+                ? "This CookBook has no Recipes yet. Add one, then add Ingredients to it — until "
+                  + "there is something to stack, there is nothing to cook. Nothing below is a "
+                  + "mistake you made."
+            : empty.Length == book.Recipes.Count
+                ? $"{Plural(empty.Length, "Recipe")} with no layers. Add an Ingredient to "
+                  + $"{Join(empty)} and there is something to composite — until then every asset "
+                  + "would be fully transparent. Nothing below is a mistake you made."
+            : empty.Length > 0
+                ? $"{Join(empty)} has no layers yet, so it would generate a fully-transparent asset. "
+                  + "Add an Ingredient to it. Anything else listed below is a real problem."
+                : null;
+
         // Named rather than counted-and-left: "checked 2 recipes" says the check ran AND how much of
         // the book it covered, which is what makes a green light mean anything.
         Summary = IsValid
@@ -77,10 +125,23 @@ public partial class ValidityDialogViewModel : ViewModelBase
               + $"{Plural(variants, "variant")} — ids, layer order, canvas sizes, colorization kinds, "
               + "rules and trait names. Nothing to report."
             : $"Across {Plural(recipes, "recipe")}, {Plural(layers, "layer")} and "
-              + $"{Plural(variants, "variant")}. Cooking is refused until these are fixed.";
+              + $"{Plural(variants, "variant")}. "
+              // Both sentences are TRUE - you genuinely cannot cook an empty book. The split is
+              // about what the line is FOR. On an unstarted book the reader has just been told
+              // exactly what to do one line above, so a refusal underneath adds no information and
+              // only lands as a telling-off; on a broken one the refusal IS the news.
+              + (Guidance is null ? "Cooking is refused until these are fixed."
+                                  : "There is nothing to cook yet.");
     }
 
     private static string Plural(int n, string noun) => $"{n} {noun}{(n == 1 ? "" : "s")}";
+
+    /// <summary>Names in quotes, as a list a person would say out loud.</summary>
+    private static string Join(IReadOnlyList<string> names) =>
+        names.Count == 1 ? $"“{names[0]}”"
+        : names.Count == 2 ? $"“{names[0]}” and “{names[1]}”"
+        : string.Join(", ", names.Take(names.Count - 1).Select(n => $"“{n}”"))
+          + $" and “{names[^1]}”";
 
     /// <summary>Dismisses the dialog.</summary>
     [RelayCommand] private void Close() => _dialogs.Close(null);

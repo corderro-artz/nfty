@@ -20,12 +20,23 @@
           <!-- The kicker's dot is the answer before the words are read: warning ink for a problem,
                the success ink for a clean book. -->
           <StackPanel Classes="plabel-row">
-            <Ellipse Classes="kdot warn" IsVisible="{Binding HasProblems}" />
+            <!-- THREE STATES, NOT TWO. A half-built book is not a broken one, and painting its
+                 kicker in the warning ink tells a first-time author they have done something wrong
+                 on a book where they have not done anything yet. The plain dot is the third: no
+                 alarm, no green light either, because the book genuinely is not finished. -->
+            <Ellipse Classes="kdot warn" IsVisible="{Binding IsBroken}" />
+            <Ellipse Classes="kdot" IsVisible="{Binding IsUnstarted}" />
             <Ellipse Classes="kdot ok" IsVisible="{Binding IsValid}" />
             <TextBlock Text="VALIDATION" Classes="slbl" />
           </StackPanel>
           <TextBlock Text="{Binding Title}" Classes="m-h" TextWrapping="Wrap" />
           <TextBlock Text="{Binding BookName}" Classes="m-sub" TextWrapping="Wrap" />
+          <!-- THE EXPLANATION COMES FIRST on a book that is simply not finished. "CookBook has zero
+               total recipe weight" is exactly what the CLI prints and exactly what reads as an error
+               the author caused, on a book where the only news is "add something". -->
+          <Border Classes="probpanel" IsVisible="{Binding HasGuidance}" Margin="0,4,0,0">
+            <TextBlock Classes="probline" Text="{Binding Guidance}" TextWrapping="Wrap" />
+          </Border>
         </StackPanel>
       </Border>
 

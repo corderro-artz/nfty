@@ -120,6 +120,79 @@ public class ValidityReportTests
         Assert.Contains("Nothing to report", vm.Summary, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// A BRAND-NEW BOOK IS NOT A BROKEN ONE, AND THE DIALOG SAYS SO FIRST.
+    /// </summary>
+    /// <remarks>
+    /// An empty CookBook validates as "CookBook has zero total recipe weight" — true, and what the
+    /// CLI prints, and exactly what reads to a first-time author as an error they caused on a book
+    /// where they have not done anything yet. The guidance is derived from the GRAPH rather than
+    /// matched against Validator's wording, so a reworded message cannot silently stop being
+    /// recognised.
+    /// </remarks>
+    [AvaloniaFact]
+    public void A_cookbook_with_no_recipes_is_told_to_add_one()
+    {
+        var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "Fresh", new Dimensions(8, 8),
+                new Collection("Fresh", "", "F"), new Dictionary<string, double>()),
+            Recipes = Array.Empty<LoadedRecipe>(),
+        };
+        var problems = Validator.Validate(book);
+        Assert.NotEmpty(problems);          // it really does report something
+
+        var vm = new ValidityDialogViewModel(new FakeDialogs(), book, problems);
+
+        Assert.True(vm.IsUnstarted);
+        Assert.False(vm.IsBroken);          // no warning ink on a book nobody has filled in
+        Assert.NotNull(vm.Guidance);
+        Assert.Contains("no Recipes yet", vm.Guidance!, StringComparison.Ordinal);
+        Assert.Contains("Nothing below is a mistake you made", vm.Guidance!, StringComparison.Ordinal);
+        // And the footer stops accusing: "cooking is refused until these are fixed" is true and
+        // reads as a telling-off on a book nobody has started.
+        Assert.Contains("nothing to cook yet", vm.Summary, StringComparison.Ordinal);
+        Assert.DoesNotContain("refused", vm.Summary, StringComparison.Ordinal);
+    }
+
+    /// <summary>The same for a Recipe nobody has added a layer to — and it NAMES the recipe, because
+    /// "add an Ingredient" without saying where is barely better than the raw problem.</summary>
+    [AvaloniaFact]
+    public void A_recipe_with_no_layers_is_named_and_explained()
+    {
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("cat", "Cat", Array.Empty<string>(),
+                Array.Empty<IncompatibilityRule>()),
+            Ingredients = Array.Empty<LoadedIngredient>(),
+        };
+        var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "Fresh", new Dimensions(8, 8),
+                new Collection("Fresh", "", "F"),
+                new Dictionary<string, double> { ["cat"] = 1 }),
+            Recipes = new[] { recipe },
+        };
+        var vm = new ValidityDialogViewModel(new FakeDialogs(), book, Validator.Validate(book));
+
+        Assert.True(vm.IsUnstarted);
+        Assert.Contains("“Cat”", vm.Guidance!, StringComparison.Ordinal);
+        Assert.Contains("Add an Ingredient", vm.Guidance!, StringComparison.Ordinal);
+    }
+
+    /// <summary>A book that is broken for a REAL reason gets no reassurance and keeps the warning
+    /// ink — the guidance must not become a blanket excuse for every problem.</summary>
+    [AvaloniaFact]
+    public void A_genuinely_broken_book_is_not_excused()
+    {
+        var book = BrokenBook();        // stacks two layers it does not carry
+        var vm = new ValidityDialogViewModel(new FakeDialogs(), book, Validator.Validate(book));
+
+        Assert.False(vm.IsUnstarted);
+        Assert.True(vm.IsBroken);
+        Assert.Null(vm.Guidance);
+    }
+
     // ---- the two ways in ---------------------------------------------------------------------
 
     [AvaloniaFact]
