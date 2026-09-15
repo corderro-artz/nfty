@@ -6,6 +6,37 @@ namespace Nfty.Core.Formats;
 /// <summary>Reads and writes <c>.cbk</c> archives — a manifest plus one nested <c>.rcp</c> per recipe.</summary>
 public static class CookBookArchive
 {
+    /// <summary>
+    /// The recipe entries in the order the book asks for: <see cref="CookBookManifest.RecipeOrder"/>
+    /// first, then anything it does not mention, ordinally.
+    /// </summary>
+    /// <remarks>
+    /// <para>The order used to be the ZIP entry names sorted ordinally, which is the recipe IDS
+    /// sorted ordinally — a book had no say in how its own recipes were listed, and no field to say
+    /// it with. Ordinal is still the answer for every archive that carries no order, so a v1 book
+    /// reads back exactly as it always did; the sort key is simply (rank, name) with an unlisted
+    /// recipe ranked last, and with no field at all every rank ties and the name decides.</para>
+    ///
+    /// <para>Nothing here validates. An id in the order that names no entry is skipped by not
+    /// matching anything, and an entry the order forgets sorts after the ones it remembers — the
+    /// listing is a preference, and a preference that has gone stale must not stop a book opening.
+    /// </para>
+    /// </remarks>
+    private static IEnumerable<string> InOrder(IEnumerable<string> names, CookBookManifest manifest)
+    {
+        var rank = new Dictionary<string, int>(StringComparer.Ordinal);
+        if (manifest.RecipeOrder is { } order)
+            for (int i = 0; i < order.Count; i++)
+                rank.TryAdd(order[i], i);
+
+        return names
+            .OrderBy(n => rank.TryGetValue(IdOf(n), out int i) ? i : int.MaxValue)
+            .ThenBy(n => n, StringComparer.Ordinal);
+    }
+
+    /// <summary>The recipe id an entry name carries: <c>recipes/chest.rcp</c> is <c>chest</c>.</summary>
+    private static string IdOf(string entryName) => Path.GetFileNameWithoutExtension(entryName);
+
     /// <summary>Writes a CookBook.</summary>
     /// <param name="path">Destination path.</param>
     /// <param name="manifest">The book's manifest.</param>
@@ -46,7 +77,7 @@ public static class CookBookArchive
         var recipes = new List<LoadedRecipe>();
         try
         {
-            foreach (var name in ArchiveIo.EntryNamesUnder(zip, "recipes/").OrderBy(n => n, StringComparer.Ordinal))
+            foreach (var name in InOrder(ArchiveIo.EntryNamesUnder(zip, "recipes/"), manifest))
                 recipes.Add(ArchiveIo.ReadNested(zip, name, RecipeArchive.Read));
 
             // Inside the try, not after it. The hash reads the whole file and can fail — on I/O, or
@@ -99,7 +130,7 @@ public static class CookBookArchive
             using (var zip = ZipFile.OpenRead(path))
             {
                 manifest = await ArchiveIo.ReadManifestAsync<CookBookManifest>(zip, ct);
-                foreach (var name in ArchiveIo.EntryNamesUnder(zip, "recipes/").OrderBy(n => n, StringComparer.Ordinal))
+                foreach (var name in InOrder(ArchiveIo.EntryNamesUnder(zip, "recipes/"), manifest))
                     recipes.Add(await ArchiveIo.ReadNestedAsync(zip, name, RecipeArchive.ReadAsync, ct));
             }
 

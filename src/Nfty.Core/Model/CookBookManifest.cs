@@ -32,6 +32,23 @@ namespace Nfty.Core.Model;
 ///
 /// Added after schemaVersion 1, and therefore OPTIONAL with a null default, for exactly the reasons
 /// spelled out for <see cref="TargetSupply"/> above — Schema.Current is deliberately NOT bumped.</param>
+/// <param name="RecipeOrder">The order the Recipes are listed in, by id, or null to list them
+/// ordinally by id — which is what every book written before this field did, and still does.
+///
+/// It is PRESENTATION AND NOTHING ELSE, and that is worth being exact about, because the layer order
+/// one level down is the opposite. <see cref="Generation.WeightedRoller.Prepare"/> sorts its keys
+/// with <c>StringComparer.Ordinal</c> before it builds the cumulative table, so which Recipe a given
+/// random number lands on cannot depend on the order they happen to be listed in — that ordinal sort
+/// is the same one that makes a seed reproducible across machine locales, and it makes this field
+/// unable to change a single asset. Reordering a Recipe therefore does NOT reroll the collection, and
+/// reordering a Recipe's LAYERS very much does.
+///
+/// Unknown ids are ignored and unlisted Recipes sort after the listed ones, ordinally — so an entry
+/// left behind by a deleted Recipe is not an error and cannot hide one that is really there. This is
+/// the one place the file's order is allowed to be wrong without the book being wrong.
+///
+/// Added after schemaVersion 1, and therefore OPTIONAL with a null default, for exactly the reasons
+/// spelled out for <see cref="TargetSupply"/> above — Schema.Current is deliberately NOT bumped.</param>
 public record CookBookManifest(
     string Id,
     string Name,
@@ -40,4 +57,5 @@ public record CookBookManifest(
     IReadOnlyDictionary<string, double> RecipeWeights,
     int SchemaVersion = Schema.Current,
     int? TargetSupply = null,
-    IReadOnlyList<string>? Palette = null) : ISchemaVersioned;
+    IReadOnlyList<string>? Palette = null,
+    IReadOnlyList<string>? RecipeOrder = null) : ISchemaVersioned;

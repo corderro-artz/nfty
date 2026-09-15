@@ -207,6 +207,57 @@ public static class CookBookEdits
         return new LoadedCookBook { Manifest = book.Manifest, Recipes = recipes, SourceSha256 = book.SourceSha256 };
     }
 
+    /// <summary>
+    /// Moves one recipe to a position in the book's listing, shifting the recipes it passes.
+    /// </summary>
+    /// <param name="book">The book to edit.</param>
+    /// <param name="recipeId">The recipe to move.</param>
+    /// <param name="toIndex">Where to put it, 0-based; clamped to the list rather than rejected, so
+    /// nudging the first or last recipe off the end is a no-op exactly as
+    /// <see cref="LayerDepth.MoveTo"/> makes it one for a layer.</param>
+    /// <returns>A NEW graph SHARING every image with the previous book. Only the manifest's
+    /// <see cref="CookBookManifest.RecipeOrder"/> and the order of <c>Recipes</c> differ. Nothing is
+    /// disposed.</returns>
+    /// <exception cref="KeyNotFoundException">No such recipe.</exception>
+    /// <remarks>
+    /// <para>THIS CHANGES NOTHING ABOUT WHAT A COOK PRODUCES, and that is the whole difference
+    /// between it and <see cref="MoveLayer"/> one level down. <c>WeightedRoller.Prepare</c> sorts
+    /// its keys ordinally before building the cumulative table, so which Recipe a random number
+    /// lands on is decided by the ids and their weights and never by the listing; a layer move, by
+    /// contrast, moves which RNG draw reaches which layer and produces a different collection from
+    /// the same seed. A reader who knows the layer rule would reasonably assume this one reorders
+    /// their assets too. It does not.</para>
+    ///
+    /// <para>The order is written WHOLE rather than as a patch — every id in the book, in the new
+    /// order — so the field never describes a partial listing that the reader has to merge with a
+    /// fallback to interpret.</para>
+    /// </remarks>
+    public static LoadedCookBook MoveRecipe(LoadedCookBook book, string recipeId, int toIndex)
+    {
+        ArgumentNullException.ThrowIfNull(book);
+        int from = -1;
+        for (int i = 0; i < book.Recipes.Count; i++)
+            if (string.Equals(book.Recipes[i].Manifest.Id, recipeId, StringComparison.Ordinal)) from = i;
+        if (from < 0)
+            throw new KeyNotFoundException($"No recipe '{recipeId}' in cookbook '{book.Manifest.Id}'.");
+
+        int to = Math.Clamp(toIndex, 0, book.Recipes.Count - 1);
+        var recipes = book.Recipes.ToList();
+        var moved = recipes[from];
+        recipes.RemoveAt(from);
+        recipes.Insert(to, moved);
+
+        return new LoadedCookBook
+        {
+            Manifest = book.Manifest with
+            {
+                RecipeOrder = recipes.Select(r => r.Manifest.Id).ToArray(),
+            },
+            Recipes = recipes,
+            SourceSha256 = book.SourceSha256,
+        };
+    }
+
     /// <summary>Removes a recipe from a cookbook (and its selection-weight entry). Reuses every surviving
     /// image; the caller owns the removed recipe's ingredient images.</summary>
     public static LoadedCookBook RemoveRecipe(LoadedCookBook book, string recipeId)
