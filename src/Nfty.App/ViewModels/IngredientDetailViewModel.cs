@@ -134,34 +134,96 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     /// <summary>Whether the rail has colorways to show — a dynamic layer with a real range.</summary>
     public bool HasColorways => ColorwaySwatches.Count > 0;
 
-    /// <summary>How many share bars the hero draws before it stops. Six fills the hero's two
-    /// columns three deep, which is a glance; twelve is a table, and there is already one below.</summary>
-    private const int HeroBarCap = 6;
-
     /// <summary>
-    /// The hero's share bars: the biggest slices of the layer, at most <see cref="HeroBarCap"/>.
+    /// How many share bars one page of the hero strip holds: a 2×2 block.
     /// </summary>
     /// <remarks>
-    /// <para>IT IS CAPPED BECAUSE IT PUSHED THE PANE'S OWN BUTTONS OFF THE SCREEN. The strip is a
-    /// WrapPanel bound to every variant, so the hero grew by a row for every two variants — a layer
-    /// with twelve made the hero 433px of a 494px pane, which left the variant table nothing and put
-    /// "Delete variant" and "Export preview…" below the fold. The strip exists to show the SHAPE of
-    /// the split at a glance, and a glance does not have twelve entries in it.</para>
+    /// <para>IT IS A BLOCK, NOT A RUN, AND THAT IS WHY IT CAN BE A CONSTANT. The strip used to cap
+    /// at six and wrap, so the hero was two rows tall for three variants and three rows tall for
+    /// five — its height was a property of the layer, and everything below it moved when a variant
+    /// was added. Four in a fixed 2×2 makes the hero exactly one height for every layer in every
+    /// book, which is what the app's own "geometry is fixed" rule asks for and what stops this strip
+    /// pushing the pane's buttons around ever again.</para>
+    ///
+    /// <para>Four rather than six because a bar is read as a PROPORTION and two side by side is the
+    /// comparison; six was chosen when the strip's job was to be a summary of everything, which is
+    /// the job the table below actually has. The rest are a page away rather than cut off — the same
+    /// pager the CookBook card's recipe table uses, for the same reason: an unbounded list pushes
+    /// the things pinned under it off the card.</para>
+    /// </remarks>
+    public const int HeroBarsPerPage = 4;
+
+    /// <summary>
+    /// Every variant as a share bar, biggest slice first — what <see cref="VisibleHeroBars"/> pages
+    /// through four at a time.
+    /// </summary>
+    /// <remarks>
+    /// <para>IT IS PAGED BECAUSE IT PUSHED THE PANE'S OWN BUTTONS OFF THE SCREEN. The strip was a
+    /// WrapPanel bound to every variant, so the hero grew by a row for every two — a layer with
+    /// twelve made it 433px of a 494px pane, which left the variant table nothing and put "Delete
+    /// variant" and "Export preview…" below the fold. Capping it at six fixed that and left the
+    /// height still varying with the layer (one row at two variants, three at five), and a stack of
+    /// six labelled percentages is a table drawn as bars — which is the job the real table below
+    /// already has.</para>
     ///
     /// <para>Biggest first rather than in the table's order: the shape of a split is what dominates
     /// it, and the table below is where every variant is listed, in whatever order the reader asked
     /// for. Ties keep their input order — <c>OrderByDescending</c> is stable — so a layer of equal
-    /// weights shows its first six rather than an arbitrary six.</para>
+    /// weights pages through them in its own order rather than an arbitrary one.</para>
     /// </remarks>
     public IReadOnlyList<VariantRow> HeroBars =>
-        _variants.OrderByDescending(v => v.OverallPercent).Take(HeroBarCap).ToArray();
+        _variants.OrderByDescending(v => v.OverallPercent).ToArray();
 
-    /// <summary>"+6 more" when the layer has more variants than the hero draws, else null.</summary>
-    public string? MoreHeroBarsText =>
-        _variants.Count > HeroBarCap ? $"+{_variants.Count - HeroBarCap} more" : null;
+    /// <summary>Which page of the hero strip is showing, zero-based.</summary>
+    /// <remarks>Reset to 0 is deliberately NOT wired to anything: the pane is rebuilt whenever the
+    /// selection moves, so there is no stale index to clear — the same reason the CookBook card's
+    /// own index only ever follows a page-size change.</remarks>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(VisibleHeroBars))]
+    [NotifyPropertyChangedFor(nameof(HeroDots))]
+    [NotifyPropertyChangedFor(nameof(HeroPageLabel))]
+    [NotifyCanExecuteChangedFor(nameof(NextHeroPageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviousHeroPageCommand))]
+    private int _heroPageIndex;
 
-    /// <summary>Whether the hero should draw that overflow note at all.</summary>
-    public bool HasMoreHeroBars => MoreHeroBarsText is not null;
+    /// <summary>The four bars this page shows, biggest slice first.</summary>
+    public IReadOnlyList<VariantRow> VisibleHeroBars =>
+        HeroBars.Skip(HeroPageIndex * HeroBarsPerPage).Take(HeroBarsPerPage).ToArray();
+
+    /// <summary>How many pages the layer's variants come to. At least one, always.</summary>
+    public int HeroPageCount =>
+        Math.Max(1, (int)Math.Ceiling(_variants.Count / (double)HeroBarsPerPage));
+
+    /// <summary>Whether there is more than one page. Drives the INK on the pager, never its
+    /// geometry — the controls are present on a two-variant layer as well as a twenty-variant one,
+    /// so adding a variant cannot move the hero's contents under the pointer.</summary>
+    public bool HasHeroPages => HeroPageCount > 1;
+
+    /// <summary>One dot per page, the current one lit.</summary>
+    public IReadOnlyList<PageDot> HeroDots =>
+        Enumerable.Range(0, HeroPageCount).Select(i => new PageDot(i == HeroPageIndex)).ToArray();
+
+    /// <summary>Which bars are showing, of how many: "1–4 of 7".</summary>
+    public string HeroPageLabel
+    {
+        get
+        {
+            if (_variants.Count == 0) return string.Empty;
+            int from = HeroPageIndex * HeroBarsPerPage;
+            int to = Math.Min(from + HeroBarsPerPage, _variants.Count);
+            return $"{from + 1}–{to} of {_variants.Count}";
+        }
+    }
+
+    /// <summary>Shows the next four slices.</summary>
+    [RelayCommand(CanExecute = nameof(CanHeroNext))]
+    private void NextHeroPage() => HeroPageIndex++;
+    private bool CanHeroNext() => HeroPageIndex < HeroPageCount - 1;
+
+    /// <summary>Shows the previous four slices.</summary>
+    [RelayCommand(CanExecute = nameof(CanHeroBack))]
+    private void PreviousHeroPage() => HeroPageIndex--;
+    private bool CanHeroBack() => HeroPageIndex > 0;
 
     /// <summary>
     /// Variant rows in the active sort order.
@@ -594,7 +656,11 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
         _dialogs is null
             ? Task.CompletedTask
             : _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, "Could not export preview", message));
-    private bool CanEdit() => _isEditing();
+    // There is deliberately no CanEdit here any more. One existed, referenced by nothing — a
+    // predicate written to gate the pencil and never attached to it — which read as though the
+    // pencil were lock-gated while EditIngredientCommand carries no CanExecute at all. The pencil
+    // stays ungated on purpose (the editor is also how you LOOK at a layer); what is gated is the
+    // editor's Save, see IngredientEditorViewModel.IsReadOnly.
 
     /// <summary>Frees every rendered swatch and thumbnail.</summary>
     public void Dispose()

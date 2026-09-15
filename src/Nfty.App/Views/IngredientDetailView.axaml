@@ -90,31 +90,71 @@
 
           <!-- .rarity: how the layer's weight actually splits, at a glance. The table below carries
                the same numbers, but a column of percentages does not show the SHAPE of the split. -->
-          <!-- HeroBars, not Variants: bound to every variant this strip grew a row per pair and a
-               twelve-variant layer took 433px of a 494px pane, leaving the table nothing and putting
-               the pane's own buttons below the fold. See IngredientDetailViewModel.HeroBars. -->
-          <ItemsControl Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" ItemsSource="{Binding HeroBars}"
+          <!-- A 2x2 BLOCK, PAGED - not a stack that grows.
+               Bound to every variant this strip grew a row per pair, and a twelve-variant layer took
+               433px of a 494px pane: the table got nothing and the pane's own buttons went below the
+               fold. Capping it at six stopped that and left the hero a different height for every
+               layer (one row at two variants, three at five), so everything under it moved whenever
+               a variant was added - and six labelled percentages stacked down the card is a table
+               drawn as bars, which the real table below already is.
+               Four in a fixed UniformGrid gives the hero ONE height in every book, puts two bars
+               side by side where they can be compared, and sends the rest a page away rather than
+               cutting them off. The pager is the CookBook card's, down to its dots. -->
+          <ItemsControl Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" ItemsSource="{Binding VisibleHeroBars}"
                         Margin="0,13,0,0">
             <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+              <!-- Rows AND Columns stated: a UniformGrid given only Columns grows rows to fit, which
+                   is the varying height this replaced. Two by two, always, even on a one-variant
+                   layer - the empty cells cost nothing and the card keeps its shape. -->
+              <ItemsPanelTemplate><UniformGrid Rows="2" Columns="2" /></ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:VariantRow">
-                <StackPanel Orientation="Horizontal" Spacing="9" Margin="0,0,30,11" VerticalAlignment="Center">
-                  <TextBlock Classes="cshare" Text="{Binding Name}" MinWidth="52" TextTrimming="CharacterEllipsis" />
-                  <Border Classes="rt">
+                <!-- THE NAME IS THE ELASTIC ONE. Laid out as a run with a MinWidth name it fitted a
+                     WrapPanel's full width and not half of one: at the smallest pane a cell is about
+                     215px and 52 + 120 + 34 plus gaps does not go in. The track is a stated 120
+                     (Border.rt, and PercentToWidthConverter.ForBarWidth120 is the same number), the
+                     percent is a stated 34, and the name takes what is left and trims - the same
+                     rule the DNA-space rows follow, and for the same reason: a right-aligned block
+                     given less than it asks for overflows its LEADING edge and eats the label. -->
+                <Grid ColumnDefinitions="*,Auto,34" ColumnSpacing="8" Margin="0,0,14,11"
+                      VerticalAlignment="Center">
+                  <TextBlock Grid.Column="0" Classes="cshare" Text="{Binding Name}"
+                             VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                  <Border Grid.Column="1" Classes="rt" VerticalAlignment="Center">
                     <Border Width="{Binding OverallPercent, Converter={x:Static conv:PercentToWidthConverter.ForBarWidth120}}" />
                   </Border>
-                  <TextBlock Classes="cshare" Text="{Binding OverallPercent, StringFormat='{}{0}%'}" MinWidth="34" />
-                </StackPanel>
+                  <TextBlock Grid.Column="2" Classes="cshare" VerticalAlignment="Center"
+                             TextAlignment="Right"
+                             Text="{Binding OverallPercent, StringFormat='{}{0}%'}" />
+                </Grid>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
 
-          <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Classes="cshare"
-                     Text="{Binding MoreHeroBarsText}" IsVisible="{Binding HasMoreHeroBars}"
-                     Opacity="0.8" Margin="0,0,0,2"
-                     ToolTip.Tip="The strip shows the biggest slices; the table below lists every variant." />
+          <!-- The pager is PRESENT at one page as well as five - disabled, never absent - so adding
+               a variant cannot move the block above it. Right-aligned under the bars, which is where
+               the DNA SPACE rail puts the same control. -->
+          <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal"
+                      Spacing="6" HorizontalAlignment="Right" VerticalAlignment="Center"
+                      Margin="0,0,0,2"
+                      ToolTip.Tip="The biggest slices first, four at a time. The table below lists every variant.">
+            <TextBlock Classes="pglabel" Text="{Binding HeroPageLabel}" VerticalAlignment="Center" />
+            <Button Classes="pgbtn" Command="{Binding PreviousHeroPageCommand}" Content="‹"
+                    ToolTip.Tip="Previous four" />
+            <Button Classes="pgbtn" Command="{Binding NextHeroPageCommand}" Content="›"
+                    ToolTip.Tip="Next four" />
+            <ItemsControl ItemsSource="{Binding HeroDots}" VerticalAlignment="Center" Margin="2,0,0,0">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="3" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:PageDot">
+                  <Border Classes="pgdot" Classes.on="{Binding IsCurrent}" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
         </Grid>
       </Border>
 
