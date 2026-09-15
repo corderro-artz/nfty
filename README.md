@@ -34,6 +34,13 @@ of them, out of eighteen 32×32 sprites.
 [![Avalonia 12](https://img.shields.io/badge/Avalonia-12.1.1-8B44AC)](https://avaloniaui.net/)
 [![Platform](https://img.shields.io/badge/platform-windows%20%7C%20linux%20%7C%20macOS-lightgrey)](https://github.com/corderro-artz/nfty)
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/corderro-artz/nfty/main/assets/readme/hero-dark.png">
+    <img alt="The nfty Explorer with the built-in demo CookBook open: a layer tree on the left, and a card reading 2 recipes, 12 layers, 31 variants and 615,600 unique DNA, over a per-recipe DNA-space table and a mint-distribution bar." src="https://raw.githubusercontent.com/corderro-artz/nfty/main/assets/readme/hero-light.png" width="900">
+  </picture>
+</p>
+
 > **Using the app rather than working on it?** Read the
 > **[User Manual](https://www.vaporsoft.dev/nfty/)** instead — this file is for developers. Its
 > source is in [`docs/manual/`](docs/manual/index.md).

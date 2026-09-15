@@ -28,7 +28,32 @@ clobbering an `-H` parameter; a blind `Ctrl+T` that yields the same theme twice)
 which is worse than one consistently old one. The tutorial prose has to move with the pictures.
 
 **Note the capture size changed.** Page frames were captured at 1416x950 against the old 1128x924
-window minimum. The minimum is 1200x712 now (see `ShellViewModel`), so that standard is stale.
+window minimum. The minimum is 1280x720 now (see `ShellViewModel`), so that standard is stale.
+
+**The README's hero is already current and is NOT part of this pass.** `assets/readme/` holds one
+fresh pair of the Chest Demo, shot with the same tools; see its README. Leave it where it is — a
+figure inside the manual has to agree with the prose beside it, and that is what makes this a single
+pass; the hero answers to nobody.
+
+---
+
+## The README has no project icon beside the Vaporsoft one
+
+**Status:** deferred by the author, 2026-09-14. Cosmetic; nothing is wrong without it.
+
+`akira` and `kata` both open with two badges — the Vaporsoft logo, then the project's own icon linked
+to its home. nfty opens with one, because it has no icon file to link.
+
+**The mark already exists and has a generator.** `tools/icons/make-app-icon.py` reproduces the
+titlebar's mark — a lowercase `n` in IBM Plex Mono Bold turned 45 degrees, on the washed and outlined
+tile — from the theme's own token values, and writes `src/Nfty.Desktop/nfty.ico` at every size Windows
+asks for. So the work is not drawing anything; it is teaching that script to also emit a web-sized
+`icons/nfty-icon.png`, and adding the second badge line to the README.
+
+**Do it through the script, not by exporting the `.ico`.** A second copy nobody generates is exactly
+the drift `IconSourceTests` exists to prevent, and the values are named in one place on purpose. An
+SVG with a `<text>` element is not an option either: GitHub will not have IBM Plex, so the mark would
+render in whatever face the reader's browser falls back to.
 
 ---
 
