@@ -33,6 +33,8 @@ public static class ServiceRegistration
             new RecentsService(sp.GetRequiredService<IStateStore>(), RecentsService.LegacyFile));
         services.AddSingleton<IPaletteService>(sp =>
             new PaletteService(sp.GetRequiredService<IStateStore>()));
+        services.AddSingleton<IEditorViewState>(sp =>
+            new EditorViewStateService(sp.GetRequiredService<IStateStore>()));
         services.AddSingleton<IImageBridge, ImageBridge>();
         services.AddSingleton<IFolderRevealer, NoopFolderRevealer>();
         services.AddSingleton<IClipboardService, NoopClipboardService>();
@@ -77,7 +79,12 @@ public static class ServiceRegistration
                 // The Explorer's edit lock. The pencil opens this editor in either state — it is
                 // also how you look at a layer — but Save rewrites the layer's manifest and
                 // persists the whole book, which is exactly what the lock refuses everywhere else.
-                isEditing: isEditing)));
+                isEditing: isEditing,
+                // How the canvas was last set up to LOOK — the pixel grid, its step, the preview
+                // size, which half of the rail. Omitted, the editor keeps them for the session only,
+                // which is right for a test and wrong for an author who picks the same lattice step
+                // on every layer they open.
+                viewState: sp.GetRequiredService<IEditorViewState>())));
 
         // Loose (.igt) editor: same editor, but with a save-straight-to-.igt path and the synthetic
         // wrapper book it owns. Built directly (not via the cookbook editor factory) so it can pass
@@ -99,7 +106,8 @@ public static class ServiceRegistration
                     sp.GetRequiredService<IDialogService>(), sp.GetRequiredService<IFilePickerService>(),
                     looseSavePath: path,
                     kitchen: sp.GetRequiredService<IKitchenSession>(),
-                    palette: sp.GetRequiredService<IPaletteService>());
+                    palette: sp.GetRequiredService<IPaletteService>(),
+                    viewState: sp.GetRequiredService<IEditorViewState>());
             });
 
         services.AddSingleton<Func<LoadedCookBook, CookDialogViewModel>>(sp =>

@@ -421,11 +421,13 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// by omission; the composition root passes the registered service.</param>
     /// <param name="isEditing">Whether the owning CookBook's edit lock is open. Null means there is
     /// no lock to consult — a loose <c>.igt</c> belongs to no book — and the editor saves freely.</param>
+    /// <param name="viewState">The view preferences to open in and write back to. Null falls back to
+    /// a store held in memory, for the same reason <paramref name="palette"/> does.</param>
     public IngredientEditorViewModel(LoadedIngredient ing, LoadedRecipe recipe, LoadedCookBook book,
         IImageBridge bridge, INavigationService nav, ICookBookSession session,
         IDialogService dialogs, IFilePickerService picker, string? looseSavePath = null,
         IKitchenSession? kitchen = null, IPaletteService? palette = null,
-        Func<bool>? isEditing = null)
+        Func<bool>? isEditing = null, IEditorViewState? viewState = null)
     {
         _ing = ing; _bridge = bridge; _nav = nav;
         _recipe = recipe; _session = session; _dialogs = dialogs; _picker = picker;
@@ -491,6 +493,12 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         // Fallback: if Mode's incoming value equalled its field default, OnModeChanged never
         // fired and Canvas/Preview are still unset from the ctor's perspective — build them now.
         if (Canvas is null) RebuildSurfaces();
+
+        // LAST, and after _draft exists: the grid step clamps against the canvas, so applying a
+        // remembered one before the draft is built would clamp against nothing. Defaults to a store
+        // held in memory, so a test or a fixture constructed without one can never reach the real
+        // file — the rule every other service here already follows.
+        ApplyViewState(viewState ?? new EditorViewStateService(StateStore.InMemory()));
     }
 
     private VariantDraft? ActiveDraft =>
@@ -1128,9 +1136,14 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         int clamped = Math.Clamp(value, 1, GridSizeMax);
         if (clamped != value) { GridSize = clamped; return; }
         BackdropChanged?.Invoke();
+        SaveViewState();
     }
 
-    partial void OnShowPixelGridChanged(bool value) => BackdropChanged?.Invoke();
+    partial void OnShowPixelGridChanged(bool value)
+    {
+        BackdropChanged?.Invoke();
+        SaveViewState();
+    }
 
     /// <summary>
     /// Raised when the canvas backdrop has to be rebuilt.
@@ -1140,6 +1153,11 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// which only the view knows — so the view owns building it and this says when. An event rather
     /// than the view watching two properties by name, because the two are always read together and a
     /// name missed from that list is a setting that silently stops applying.
+    ///
+    /// <para>It says "the canvas has been re-laid-out", which is more than the grid: zoom and pan
+    /// move the art under the same lattice, so they raise this too and the view answers it by
+    /// re-applying the transform, rebuilding the lattice and redrawing the marquee. One event for
+    /// three consequences that are never wanted apart.</para>
     /// </remarks>
     public event Action? BackdropChanged;
 
@@ -1544,6 +1562,8 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(PreviewHeight))]
     [NotifyPropertyChangedFor(nameof(EnlargePreviewTip))]
     private bool _previewEnlarged;
+
+    partial void OnPreviewEnlargedChanged(bool value) => SaveViewState();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowPaintCanvas))]

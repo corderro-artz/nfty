@@ -238,6 +238,7 @@ public partial class IngredientEditorViewModel
     {
         OnPropertyChanged(nameof(IsColorizeTab));
         OnPropertyChanged(nameof(IsReferencesTab));
+        SaveViewState();
     }
 
     /// <summary>Shows the colorize half.</summary>
