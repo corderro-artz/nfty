@@ -64,14 +64,19 @@
               <TextBlock Classes="cvl" Text="{Binding ColorizeText}" />
             </StackPanel>
           </Border>
-          <Border Classes="idchip" ToolTip.Tip="{Binding StatusTip}">
+          <!-- The one chip on this card that is a BUTTON. It states a count, the panel below shows
+               four of them, and this is where the rest live - the same report the status bar's chip
+               opens. Styled as the chip it already was (Button.idchip), so the row still reads as a
+               row of facts rather than sprouting a control. -->
+          <Button Classes="idchip" Command="{Binding ShowValidityCommand}"
+                  ToolTip.Tip="{Binding StatusTip}">
             <StackPanel Orientation="Horizontal" Spacing="5">
               <TextBlock Classes="ck" Text="status" />
               <Ellipse Width="6" Height="6" VerticalAlignment="Center"
                        Classes="vdot" Classes.ok="{Binding IsValid}" />
               <TextBlock Classes="cvl vstate" Classes.ok="{Binding IsValid}" Text="{Binding StatusText}" />
             </StackPanel>
-          </Border>
+          </Button>
         </StackPanel>
       </StackPanel>
     </Border>

@@ -112,6 +112,7 @@ public partial class CookBookDetailViewModel : ViewModelBase
 
     private readonly Action _cook;
     private readonly Action? _showReports;
+    private readonly Action? _showValidity;
 
     /// <summary>The BOOK's name — what the titlebar, the tree and the recents list all show.</summary>
     /// <remarks>
@@ -232,11 +233,14 @@ public partial class CookBookDetailViewModel : ViewModelBase
     /// <param name="book">The open book.</param>
     /// <param name="cook">Opens the cook dialog.</param>
     /// <param name="showReports">Opens the stats/inspect reports; null leaves that button unavailable.</param>
+    /// <param name="showValidity">Opens the full validation report; null leaves the status chip inert,
+    /// which is what a fixture with no dialog layer gets.</param>
     public CookBookDetailViewModel(LoadedCookBook book, Action cook,
-        Action? showReports = null)
+        Action? showReports = null, Action? showValidity = null)
     {
         _cook = cook;
         _showReports = showReports;
+        _showValidity = showValidity;
         Name = book.Manifest.Name;
         // "#1" and not "#0001": the number is the SHAPE of the published name, and the padding is
         // SetWriter's own business (it writes the file as NNNN and the name as "#{SetNumber}").
@@ -452,6 +456,19 @@ public partial class CookBookDetailViewModel : ViewModelBase
             return $"{from + 1}–{to} of {Recipes.Count}";
         }
     }
+
+    /// <summary>
+    /// Opens the full validation report — the same one the status bar's chip opens.
+    /// </summary>
+    /// <remarks>
+    /// The card lists four problems and then says "…and N more", which is the right shape for a card
+    /// (an unbounded list pushes the mint bar and Cook off it) and the wrong place to stop. The chip
+    /// that states the count is what opens the rest. It is live on a VALID book too: the question
+    /// "what did it actually check?" is one a green light always invites and nothing here answered.
+    /// </remarks>
+    [RelayCommand(CanExecute = nameof(CanShowValidity))]
+    private void ShowValidity() => _showValidity?.Invoke();
+    private bool CanShowValidity() => _showValidity is not null;
 
     /// <summary>Shows the next page.</summary>
     [RelayCommand(CanExecute = nameof(CanGoNext))]

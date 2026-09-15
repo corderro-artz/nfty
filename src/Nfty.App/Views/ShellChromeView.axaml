@@ -235,14 +235,21 @@
                    ever running Validator - the shell asserted a fact it had not checked. It now
                    reports the real result, turns warning-colored when there are problems, and lists
                    them on the tooltip. Hidden with no cookbook open: there is nothing to validate. -->
-              <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center"
-                          IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}"
-                          ToolTip.Tip="{Binding CurrentExplorer.ValidityTip}">
-                <Ellipse Width="6" Height="6" VerticalAlignment="Center"
-                         Classes.ok="{Binding CurrentExplorer.IsValid}" Classes="vdot" />
-                <TextBlock Classes="sbar vstate" Classes.ok="{Binding CurrentExplorer.IsValid}"
-                           Text="{Binding CurrentExplorer.ValidityText}" />
-              </StackPanel>
+              <!-- A BUTTON, because it is a count and a count owes the reader the thing it counted.
+                   The problems used to live only on this tooltip, where a list of sentences cannot
+                   be read, copied or scrolled - and past the four the CookBook card shows, the only
+                   way to see the rest was to run the CLI's validate. It opens on a valid book too:
+                   a green light nobody can interrogate is a green light nobody should trust. -->
+              <Button Classes="vchip" Command="{Binding CurrentExplorer.ShowValidityCommand}"
+                      IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}"
+                      ToolTip.Tip="{Binding CurrentExplorer.ValidityButtonTip}">
+                <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                  <Ellipse Width="6" Height="6" VerticalAlignment="Center"
+                           Classes.ok="{Binding CurrentExplorer.IsValid}" Classes="vdot" />
+                  <TextBlock Classes="sbar vstate" Classes.ok="{Binding CurrentExplorer.IsValid}"
+                             Text="{Binding CurrentExplorer.ValidityText}" />
+                </StackPanel>
+              </Button>
               <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"
                           IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}">
                 <!-- explorer.html's .statusbar .state.editing switches to the accent color, so the

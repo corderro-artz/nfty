@@ -1,0 +1,63 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             x:Class="Nfty.App.Views.ValidityDialogView"
+             x:DataType="vm:ValidityDialogViewModel">
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Escape" Command="{Binding CloseCommand}" />
+  </UserControl.KeyBindings>
+  <!-- THE LIST SCROLLS AND THE HEADER AND FOOTER DO NOT, like the export dialog and unlike every
+       other modal here. "No modal scrolls" is a rule about a card being CUT OFF at the smallest
+       window, and it holds where the card's height is a property of the DESIGN. It is not one here:
+       how many problems a book has is the book's business, and the two honest alternatives — a card
+       tall enough for the worst case, or one that silently shows the first few — are the two things
+       this dialog exists to replace. So it hugs a short list, grows with a long one, caps, and
+       scrolls only the part that can be unbounded. -->
+  <Border Classes="modal validity">
+    <Grid RowDefinitions="Auto,*,Auto">
+      <Border Grid.Row="0" Classes="modal-body tight">
+        <StackPanel Spacing="9">
+          <!-- The kicker's dot is the answer before the words are read: warning ink for a problem,
+               the success ink for a clean book. -->
+          <StackPanel Classes="plabel-row">
+            <Ellipse Classes="kdot warn" IsVisible="{Binding HasProblems}" />
+            <Ellipse Classes="kdot ok" IsVisible="{Binding IsValid}" />
+            <TextBlock Text="VALIDATION" Classes="slbl" />
+          </StackPanel>
+          <TextBlock Text="{Binding Title}" Classes="m-h" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding BookName}" Classes="m-sub" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <!-- The problems. Selectable, because a Validator message is the thing a reader copies into a
+           search or pastes at whoever authored the book, and it is the same string the CLI prints. -->
+      <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Auto" Margin="24,0,24,0"
+                    IsVisible="{Binding HasProblems}">
+        <ItemsControl ItemsSource="{Binding Problems}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:ValidityProblem">
+              <Grid ColumnDefinitions="24,*" Margin="0,0,0,10">
+                <!-- The number is the position `validate` lists it at, so a reader can talk about
+                     "the third one" across the two surfaces. -->
+                <TextBlock Grid.Column="0" Classes="probnum" Text="{Binding Number}" />
+                <SelectableTextBlock Grid.Column="1" Classes="probline" Text="{Binding Text}"
+                                     TextWrapping="Wrap" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+
+      <Border Grid.Row="2" Classes="modal-foot">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+          <!-- What was checked. In the valid case this IS the content: a dialog that opens empty on
+               a healthy book reads as a broken control rather than a clean book. -->
+          <TextBlock Grid.Column="0" Classes="keyhint" VerticalAlignment="Center"
+                     Text="{Binding Summary}" TextWrapping="Wrap" />
+          <Button Grid.Column="1" Content="OK" Command="{Binding CloseCommand}" Classes="accent" />
+        </Grid>
+      </Border>
+    </Grid>
+  </Border>
+</UserControl>
