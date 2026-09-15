@@ -37,26 +37,6 @@ pass; the hero answers to nobody.
 
 ---
 
-## The README has no project icon beside the Vaporsoft one
-
-**Status:** deferred by the author, 2026-09-14. Cosmetic; nothing is wrong without it.
-
-`akira` and `kata` both open with two badges — the Vaporsoft logo, then the project's own icon linked
-to its home. nfty opens with one, because it has no icon file to link.
-
-**The mark already exists and has a generator.** `tools/icons/make-app-icon.py` reproduces the
-titlebar's mark — a lowercase `n` in IBM Plex Mono Bold turned 45 degrees, on the washed and outlined
-tile — from the theme's own token values, and writes `src/Nfty.Desktop/nfty.ico` at every size Windows
-asks for. So the work is not drawing anything; it is teaching that script to also emit a web-sized
-`icons/nfty-icon.png`, and adding the second badge line to the README.
-
-**Do it through the script, not by exporting the `.ico`.** A second copy nobody generates is exactly
-the drift `IconSourceTests` exists to prevent, and the values are named in one place on purpose. An
-SVG with a `<text>` element is not an option either: GitHub will not have IBM Plex, so the mark would
-render in whatever face the reader's browser falls back to.
-
----
-
 ## The interactive passphrase prompt has no test
 
 **Status:** accepted, and mostly closed by `--key`.

@@ -2,35 +2,50 @@
 
     python tools/icons/make-app-icon.py
 
-The titlebar draws its mark live, as a rotated glyph on a washed, outlined tile; Windows needs the
-same thing as a file. Rather than exporting a screenshot, this reproduces the recipe from the theme's
-own values, so the two can only differ if somebody changes one and not the other -- and the values
-are named here, in one place, rather than sampled off a rendered pixel.
+The titlebar draws its mark live (src/Nfty.App/Views/BrandMarkView.axaml); Windows needs the same
+thing as a file. Rather than exporting a screenshot, this reproduces the recipe from the theme's own
+values, so the two can only differ if somebody changes one and not the other -- and the values are
+named here, in one place, rather than sampled off a rendered pixel.
+
+THE MARK IS THE LAYER STACK, which is what the shipped brand icon carries
+(corderro-artz.github.io/public/nfty). It replaced a lowercase `n` turned 45 degrees: a letter
+rotated into a diamond spelled the name and said nothing about the product, while offset diamonds
+are what an asset IS here -- a stack of layers with the top one live.
+
+THE TILE, NOT THE CARD. The 256px brand icon is a card: near-black ground, hairline inset, the
+oxblood rail, the symbol, a divider and the NFTY wordmark. None of that survives the sizes this file
+exists for -- the wordmark is unreadable below 64 and a near-black ground disappears into a dark
+taskbar, which is the size and the place a user sees this most. So the icon carries the card's
+SYMBOL on the app's own washed and outlined tile, which is also exactly what the titlebar shows, and
+the card stays the 256px web form.
 
 Writes src/Nfty.Desktop/nfty.ico with every size Windows actually asks for: 16 and 32 in the taskbar
 and Explorer's small views, 48 and 64 in medium, 128 and 256 for large tiles and the Alt-Tab card.
 A single 256 scaled down by the shell looks muddy at 16, which is the size a user sees most.
 """
-import io
-import math
 import os
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 
 OUT = os.path.join('src', 'Nfty.Desktop', 'nfty.ico')
-FONT = os.path.join('src', 'Nfty.App', 'Assets', 'Fonts', 'IBMPlexMono-Bold.ttf')
 
 # Straight from Themes/Tokens.axaml's DARK dictionary. The icon sits on a taskbar, not on the app's
 # own ground, and the dark tile reads on both light and dark Windows themes where the light one
 # disappears against a pale taskbar.
 PANEL = (15, 17, 24, 255)        # #0f1118 - the tile
-ACCENT = (161, 31, 49, 255)      # #a11f31 - the edge and the glyph
+ACCENT = (161, 31, 49, 255)      # #a11f31 - the edge and the live layer
 WASH = (38, 14, 20, 255)         # the accent wash over the panel, flattened
+INK = (242, 237, 230)            # #f2ede6 - FgBrush (dark), the layers under the live one
 SIZES = [16, 32, 48, 64, 128, 256]
 
 
+def diamond(cx, cy, w, h):
+    """The four points of one layer, flat side to side, as the card draws them."""
+    return [(cx - w / 2, cy), (cx, cy - h / 2), (cx + w / 2, cy), (cx, cy + h / 2)]
+
+
 def draw(size):
-    """One square, drawn at 4x and downsampled so the arcs and the rotated glyph stay clean."""
+    """One square, drawn at 4x and downsampled so the arcs and the diagonals stay clean."""
     ss = 4
     n = size * ss
     img = Image.new('RGBA', (n, n), (0, 0, 0, 0))
@@ -42,11 +57,11 @@ def draw(size):
     inset = max(1, int(n * 0.03))
     border = max(1, int(n * 0.045))
 
-    # SMALL SIZES ARE TUNED, not merely scaled. At 16 the outline eats most of the tile and an
-    # accent glyph on the dim wash has almost no contrast left to spend, so the mark dissolves into a
-    # dark square - and 16 is the size in the taskbar, which is where this is seen most. Below 32 the
-    # tile fills with the accent and the letter is knocked out of it instead: the same mark, with the
-    # figure and ground swapped so there is real contrast at the size that has none to spare.
+    # SMALL SIZES ARE TUNED, not merely scaled, and the tuning is now about HOW MANY LAYERS rather
+    # than about the letter's contrast. At 16 the outline eats most of the tile and three rows of
+    # anything is a smear, so the tile fills with the accent and ONE layer is knocked out of it -
+    # figure and ground swapped, for real contrast at the size that has none to spare. Below 64 the
+    # stack reads from two, which is the cut the 64px web favicon already makes.
     small = size <= 24
     if small:
         d.rounded_rectangle([inset, inset, n - inset - 1, n - inset - 1],
@@ -55,23 +70,34 @@ def draw(size):
         d.rounded_rectangle([inset, inset, n - inset - 1, n - inset - 1],
                             radius=radius, fill=WASH, outline=ACCENT, width=border)
 
-    # The glyph, rotated on its own transparent layer so the rotation resamples the letter rather
-    # than the tile under it.
-    glyph = Image.new('RGBA', (n, n), (0, 0, 0, 0))
-    gd = ImageDraw.Draw(glyph)
-    try:
-        font = ImageFont.truetype(FONT, int(n * (0.70 if small else 0.62)))
-    except OSError:
-        raise SystemExit('missing %s - the app fonts must be present' % FONT)
+    # The layers on their own transparent sheet: the lower ones are drawn at less than full alpha,
+    # and ImageDraw REPLACES pixels rather than blending into them - drawn straight onto the tile a
+    # translucent stroke would punch a hole in it instead of dimming over it.
+    layers = Image.new('RGBA', (n, n), (0, 0, 0, 0))
+    ld = ImageDraw.Draw(layers)
 
-    box = gd.textbbox((0, 0), 'n', font=font)
-    gd.text(((n - (box[2] - box[0])) / 2 - box[0],
-             (n - (box[3] - box[1])) / 2 - box[1]), 'n', font=font,
-            fill=PANEL if small else ACCENT)
+    if small:
+        # One layer, knocked out of the accent tile in the panel color. Larger than a layer's share
+        # of the stack above, because it is not sharing: at 16px a diamond drawn to the stack's own
+        # proportions is ten pixels by four and reads as a speck on a red chip rather than as a mark.
+        ld.polygon(diamond(n / 2, n / 2, n * 0.70, n * 0.32), fill=PANEL)
+    else:
+        # The card's own proportions, scaled up to fill a tile that has no rail or wordmark taking
+        # width from it: a layer is 0.55 wide by 0.19 tall, and they sit 0.257 apart, which leaves a
+        # gap wider than the stroke. The 256px card shipped these overlapping at first, and touching
+        # strokes read as a lattice rather than as a stack.
+        w, h, gap = n * 0.55, n * 0.19, n * 0.257
+        stroke = max(1, int(n * 0.034))
+        rows = [-1, 0, 1] if size >= 64 else [-0.545, 0.545]
+        alphas = [255, 217, 153] if size >= 64 else [255, 191]
+        for i, (row, alpha) in enumerate(zip(rows, alphas)):
+            pts = diamond(n / 2, n / 2 + row * gap, w, h)
+            if i == 0:
+                ld.polygon(pts, fill=ACCENT)          # the live layer
+            else:
+                ld.polygon(pts, outline=INK + (alpha,), width=stroke)
 
-    glyph = glyph.rotate(45, resample=Image.BICUBIC, center=(n / 2, n / 2))
-    img = Image.alpha_composite(img, glyph)
-
+    img = Image.alpha_composite(img, layers)
     return img.resize((size, size), Image.LANCZOS)
 
 

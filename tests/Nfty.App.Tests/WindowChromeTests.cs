@@ -236,22 +236,28 @@ public class WindowChromeTests
     }
 
     /// <summary>
-    /// The brand mark's ink is centered in its tile — measured off a RENDERED frame.
+    /// The brand mark's ink is centered in its tile — measured off a RENDERED frame — and both of
+    /// its inks are actually drawn.
     /// </summary>
     /// <remarks>
-    /// <para>The mark is a lowercase <c>n</c> turned 45 degrees. A rotation pivots on the glyph's
-    /// LINE BOX, and an <c>n</c> has neither ascender nor descender, so its ink sits low inside that
-    /// box and turning the box about its own centre swings the ink down and to the right. It shipped
-    /// 2.5 and 2.9 pixels out of the tile's middle, which at 24px reads as a mark stuck to one
-    /// corner. The view cancels it with a translate composed after the rotation.</para>
+    /// <para>The mark is the application icon's symbol: a live layer in the accent over a dimmed one
+    /// in the foreground ink (<see cref="Views.BrandMarkView"/>). Every property involved is already
+    /// correct — the tile is centered, the canvas is centered, the paths are where the markup says —
+    /// and what a mark gets wrong lives entirely in where the pixels land, which is the one thing the
+    /// markup does not state. So the frame is captured and the ink inside the tile is measured.</para>
     ///
-    /// <para>This has to render. Every property involved is already correct — the tile is centered,
-    /// the TextBlock is centered, the angle is right — and the defect lives entirely in where the
-    /// pixels land, which is the one thing the markup does not state. So the frame is captured and
-    /// the accent ink inside the tile is measured, exactly as it was found.</para>
+    /// <para>BOTH inks are required, not merely some ink. The two layers are painted from different
+    /// brushes, and a <c>DynamicResource</c> that fails to resolve does not throw — the property
+    /// silently keeps its default, which for a <c>Path</c> is no paint at all. Half a mark would
+    /// otherwise still centre acceptably and pass.</para>
     ///
-    /// <para>The tolerance is 1px because that is what anti-aliasing costs on a diagonal stroke;
-    /// probing it by deleting the translate puts the error at 3, which fails.</para>
+    /// <para>The tile's own hairline is the accent too, at 40% over a near-black ground, so a
+    /// brightness floor separates the live layer from the edge around it; probing that floor by
+    /// removing the accent path finds no saturated red at all.</para>
+    ///
+    /// <para>The tolerance is 1px because that is what anti-aliasing costs on a diagonal. The stack
+    /// is not quite symmetric about its own middle — the dimmed layer carries a stroke and the live
+    /// one is filled — which spends about a third of a pixel of it.</para>
     /// </remarks>
     [AvaloniaFact]
     public void The_brand_mark_is_centered_in_its_tile()
@@ -261,10 +267,10 @@ public class WindowChromeTests
         window.Show();
         Dispatcher.UIThread.RunJobs();
 
-        // The tile is the Border that owns the mark, found through the glyph rather than by shape,
-        // so nothing else round and 24px wide can be measured by accident.
-        var glyph = view.GetVisualDescendants().OfType<TextBlock>().First(t => t.Classes.Contains("brandmark"));
-        var tile = glyph.GetVisualAncestors().OfType<Border>().First();
+        // The tile is found through the mark's own control rather than by shape, so nothing else
+        // round and 24px wide can be measured by accident.
+        var mark = view.GetVisualDescendants().OfType<Views.BrandMarkView>().First();
+        var tile = mark.GetVisualDescendants().OfType<Border>().First();
 
         using var frame = window.CaptureRenderedFrame()!;
 
@@ -283,12 +289,11 @@ public class WindowChromeTests
         int stride = rect.Width * 4;
         var pixels = Marshal.AllocHGlobal(stride * rect.Height);
         int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
+        bool sawAccent = false, sawInk = false;
         try
         {
             frame.CopyPixels(rect, pixels, stride * rect.Height, stride);
 
-            // The ink is the only saturated red in the tile: the wash behind it and the hairline
-            // around it are both dim, so a brightness floor separates the glyph from its container.
             // RGBA: red leads. Checked against the frame rather than assumed from the format name -
             // read as Bgra this finds no saturated red at all, which is how the order was caught.
             for (int y = 0; y < rect.Height; y++)
@@ -298,15 +303,22 @@ public class WindowChromeTests
                 byte r = Marshal.ReadByte(pixels, i);
                 byte g = Marshal.ReadByte(pixels, i + 1);
                 byte b = Marshal.ReadByte(pixels, i + 2);
-                if (r > 150 && r - g > 70 && r - b > 50)
-                {
-                    minX = Math.Min(minX, x); maxX = Math.Max(maxX, x);
-                    minY = Math.Min(minY, y); maxY = Math.Max(maxY, y);
-                }
+
+                // The live layer is saturated; the dimmed one is the near-neutral cream of FgBrush.
+                bool accent = r > 150 && r - g > 70 && r - b > 50;
+                bool ink = r > 150 && g > 140 && b > 130 && r - g < 40;
+                if (!accent && !ink) continue;
+
+                sawAccent |= accent;
+                sawInk |= ink;
+                minX = Math.Min(minX, x); maxX = Math.Max(maxX, x);
+                minY = Math.Min(minY, y); maxY = Math.Max(maxY, y);
             }
         }
         finally { Marshal.FreeHGlobal(pixels); }
-        Assert.True(minX != int.MaxValue, "no accent ink found inside the brand tile");
+
+        Assert.True(sawAccent, "no accent ink found inside the brand tile - the live layer is missing");
+        Assert.True(sawInk, "no foreground ink found inside the brand tile - the dimmed layer is missing");
 
         // Both centers are put back into VIEW coordinates before comparing. The crop's own origin is
         // an integer pixel and the tile's is not (ChromeScale is 1.2), so measuring the ink against

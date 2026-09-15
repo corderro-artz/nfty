@@ -1,0 +1,39 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Nfty.App.Views.BrandMarkView">
+  <!--
+    THE BRAND MARK: the application icon's own symbol, at tile size.
+
+    The mark used to be a lowercase "n" turned 45 degrees, drawn in the mono face. It is the layer
+    stack now, which is what the shipped icon carries (corderro-artz.github.io/public/nfty) - a
+    letter rotated into a diamond said the name and nothing about the product, while three offset
+    diamonds are what an asset IS here: a stack of layers, the top one live.
+
+    TWO diamonds, not the icon's three. This box is 24px and the shipped favicon makes the same cut
+    at 64 for the same reason - at this size a third row is a smear rather than a layer, and the
+    stack reads from two. The card with all three is the 256px form.
+
+    One control, used by the titlebar and by the quick-reference sheet, because a mark stated twice
+    is a mark that drifts: the sheet's tile had already become a plain rotated square while the
+    titlebar's was a letter, and nothing in the product said they were meant to be the same thing.
+
+    Theme-aware by construction rather than by a second drawing: the ink is FgBrush and the live
+    layer is AccentBrush, so the light and dark dictionaries supply their own values and there is no
+    second mark to keep in step - the same argument the icon set itself runs on.
+  -->
+  <Border Width="24" Height="24" CornerRadius="{DynamicResource RadiusSm}"
+          Background="{DynamicResource AccentWashBrush}"
+          BorderBrush="{DynamicResource AccentLineBrush}" BorderThickness="1"
+          ClipToBounds="True">
+    <!-- Authored at final size in an 18x16 box rather than in the icons' shared 24-unit box and
+         scaled: Path.ico's scale transform is the ICON system, one stroked path in one brush, and
+         this is two paths in two inks. Sized so the strokes land near whole pixels at the shell's
+         1.2 scale. The gap is 2 units against a 1.4 stroke - the 256px card had these overlapping
+         at first, which reads as a lattice rather than a stack. -->
+    <Canvas Width="18" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center">
+      <Path Data="M0,4 L9,1 L18,4 L9,7 Z" Fill="{DynamicResource AccentBrush}" />
+      <Path Data="M0,12 L9,9 L18,12 L9,15 Z" Stroke="{DynamicResource FgBrush}"
+            StrokeThickness="1.4" StrokeJoin="Miter" Opacity="0.75" />
+    </Canvas>
+  </Border>
+</UserControl>

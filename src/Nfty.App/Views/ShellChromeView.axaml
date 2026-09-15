@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Nfty.App.ViewModels"
+             xmlns:views="using:Nfty.App.Views"
              x:Class="Nfty.App.Views.ShellChromeView"
              x:DataType="vm:ShellViewModel">
   <!--
@@ -76,34 +77,12 @@
               <Button Classes="bare" Command="{Binding CloseDocumentCommand}"
                       ToolTip.Tip="Close and return to the start screen  ·  Ctrl+W">
                 <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
-                  <!-- The mark is the product's own initial, turned 45 degrees, on the dim wash
-                       inside the brighter edge. It replaced a plain rotated square, which said
-                       nothing: a diamond is a shape every second app uses, and this one at least
-                       spells the name. Drawn in the app's own mono face rather than as a path so it
-                       cannot drift from the wordmark beside it, and rendered from the CENTRE so the
-                       rotation pivots about the glyph instead of swinging it out of its box. -->
-                  <Border Width="24" Height="24" CornerRadius="{DynamicResource RadiusSm}"
-                          Background="{DynamicResource AccentWashBrush}"
-                          BorderBrush="{DynamicResource AccentLineBrush}" BorderThickness="1"
-                          ClipToBounds="True">
-                    <TextBlock Text="n" Classes="brandmark"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"
-                               RenderTransformOrigin="50%,50%">
-                      <!-- The rotation pivots on the LINE BOX, and an `n` has no ascender or
-                           descender: its ink sits low and slightly right inside that box, so turning
-                           the box about its own centre swings the ink down-right and out of the
-                           tile's middle - measured at 2.5 and 2.9 device-independent pixels off, on
-                           a captured frame rather than by eye. The translate cancels exactly that
-                           swing; it is not a nudge to taste, and it composes after the rotation
-                           because it corrects the rotation's result. -->
-                      <TextBlock.RenderTransform>
-                        <TransformGroup>
-                          <RotateTransform Angle="-45" />
-                          <TranslateTransform X="-2.5" Y="-3" />
-                        </TransformGroup>
-                      </TextBlock.RenderTransform>
-                    </TextBlock>
-                  </Border>
+                  <!-- The mark is the application icon's own symbol: a stack of layers, the top
+                       one live. It replaced the product's initial turned 45 degrees, which spelled
+                       the name and said nothing about what the app makes - and before that a plain
+                       rotated square, which said less. One control, shared with the quick-reference
+                       sheet, so the two tiles cannot drift; see BrandMarkView.axaml. -->
+                  <views:BrandMarkView />
                   <TextBlock Classes="wordmark" VerticalAlignment="Center"><Run Text="nft" /><Run Text="y" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
                 </StackPanel>
               </Button>
