@@ -189,11 +189,12 @@ public class SpriteSheetTests
 
             SpriteSheet.Write(set.Items, new SpriteSheetLayout(3, 2, 4, 4),
                 Path.Combine(dir, "sheet.png"),
-                new Progress<SpriteSheetProgress>(seen.Add));
+                new SynchronousProgress<SpriteSheetProgress>(seen.Add));
 
-            // Progress<T> posts through the synchronization context, so a report can still be in
-            // flight; what must hold is that the last one seen is the finished one.
-            Assert.Contains(seen, p => p.Placed == 6 && p.Fraction == 1);
+            // Reporting is inline, so every report is in hand here and the last one seen really is
+            // the last one sent — which is the invariant this test is about.
+            Assert.Equal(6, seen[^1].Placed);
+            Assert.Equal(1, seen[^1].Fraction);
             Assert.All(seen, p => Assert.Equal(6, p.Total));
         }
         finally { Directory.Delete(dir, recursive: true); }
@@ -274,16 +275,31 @@ public class SpriteSheetTests
             var options = new ExportOptions { SpriteSheet = true, Shape = ExportShape.Folder };
 
             await SetExporter.ExportAsync(dir, outDir, options,
-                progress: new Progress<ExportProgress>(seen.Add));
+                progress: new SynchronousProgress<ExportProgress>(seen.Add));
 
             Assert.NotEmpty(seen);
             Assert.All(seen, p => Assert.InRange(p.Fraction, 0, 1));
-            Assert.Contains(seen, p => p.Fraction == 1);
+            Assert.Equal(1, seen[^1].Fraction);
         }
         finally
         {
             Directory.Delete(dir, recursive: true);
             Directory.Delete(outDir, recursive: true);
         }
+    }
+
+    /// <summary>
+    /// <see cref="Progress{T}"/> hands the callback to the captured SynchronizationContext, and a
+    /// console test run has none — so it queues to the thread pool and the reports land after the
+    /// assertions have already read the list. That is not a slow machine or a flaky runner: over
+    /// 2000 isolated trials the list was still empty 1811 times and short of the final report 158
+    /// more. Real work between reports usually lets the pool drain first, which is what made this
+    /// fail only sometimes, and only on the runners with the least headroom. Reporting inline makes
+    /// delivery ordered and complete by the time the awaited call returns.
+    /// <para>Both reporting paths here are sequential, so a plain list is safe to accumulate into.</para>
+    /// </summary>
+    private sealed class SynchronousProgress<T>(Action<T> handler) : IProgress<T>
+    {
+        public void Report(T value) => handler(value);
     }
 }
