@@ -151,4 +151,76 @@ public class ValidityIsCheckedTests
         Assert.Equal(50, vm.SupplyPercent);                  // 1 of this fixture's 2
         Assert.Equal("50%", vm.SupplyPercentText);
     }
+
+    /// <summary>
+    /// A book whose bucket set overruns the enumeration budget, so its space comes back as a FLOOR.
+    /// </summary>
+    /// <remarks>
+    /// The hue range runs past its axis, which is the only way to fill a million buckets - the whole
+    /// circle at a one-degree step is 360. Validator reports that range, and this card counts books
+    /// Validator would reject on purpose: reading an archive does not validate it, so a hand-edited
+    /// manifest reaches this pane and the figures still have to be honest about what they are.
+    /// </remarks>
+    private static LoadedCookBook FlooredSpaceBook(int targetSupply)
+    {
+        var ing = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("sky", "Sky", LayerKind.Dynamic,
+                new Colorization(ColorModel.Hsv, 1, 1,
+                    new[] { new ColorEntry(1, new ColorRange(0, 2_000_000, 0, 0), null) }),
+                new[] { new Variant("open", "Open", 1) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>>
+            {
+                ["open"] = new Image<Rgba32>(2, 2, new Rgba32(3, 3, 3, 255)),
+            },
+        };
+        return new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("b", "Book", new Dimensions(2, 2),
+                new Collection("Book", "BK", ""),
+                new Dictionary<string, double> { ["cat"] = 1 },
+                TargetSupply: targetSupply),
+            Recipes =
+            [
+                new LoadedRecipe
+                {
+                    Manifest = new RecipeManifest("cat", "Cat", new[] { "sky" },
+                        Array.Empty<IncompatibilityRule>()),
+                    Ingredients = new[] { ing },
+                },
+            ],
+        };
+    }
+
+    [AvaloniaFact]
+    public void A_TARGET_OVER_A_FLOOR_IS_NOT_A_TARGET_OVER_THE_SPACE()
+    {
+        // The rail compared the two numbers and nothing else, so an AtLeast count - where the total
+        // is a FLOOR and the real space may be orders of magnitude larger - turned the bar
+        // warning-red and told the author their supply would not fit. That is exactly the count a
+        // big or finely quantized book produces, so the warning misfired precisely where it would
+        // be believed. Only Exact and AtMost bound the space from ABOVE and can carry the claim.
+        using var book = FlooredSpaceBook(targetSupply: 5_000_000);
+        var vm = new CookBookDetailViewModel(book, () => { });
+
+        Assert.True(vm.HasSupplyRail);
+        Assert.StartsWith("more than", vm.UniqueDnaFullText, StringComparison.Ordinal);
+        Assert.False(vm.SupplyExceedsSpace);
+    }
+
+    [AvaloniaFact]
+    public void A_target_over_an_exact_space_still_warns()
+    {
+        // The other side of the same line: the warning must not have been switched off, only
+        // narrowed to the two directions that support it.
+        using var src = ExplorerViewModelTests.TwoRecipeBook();
+        using var book = new LoadedCookBook
+        {
+            Manifest = src.Manifest with { TargetSupply = 5000 },
+            Recipes = src.Recipes,
+        };
+        var vm = new CookBookDetailViewModel(book, () => { });
+
+        Assert.True(vm.SupplyExceedsSpace);
+    }
 }

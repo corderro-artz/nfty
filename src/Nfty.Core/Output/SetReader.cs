@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO.Compression;
 using System.Text.Json;
 using Nfty.Core.Formats;
@@ -115,12 +116,25 @@ public static class SetReader
             var items = new List<SetItem>();
             if (Directory.Exists(nftyDir))
             {
-                foreach (var file in Directory.EnumerateFiles(nftyDir, "*.json")
-                             .OrderBy(f => f, StringComparer.Ordinal))
+                // ORDERED BY THE NUMBER, NOT BY THE FILENAME. The stem is zero-padded to FOUR, so
+                // it stops padding at 9,999 and "10000.json" sorts ordinally BEFORE "9999.json" —
+                // which made a collection past ten thousand assets load with its last ten thousand
+                // in front. That is the order the Set browser's grid shows and the order this list
+                // carries, so it was a real ordering bug rather than a cosmetic one.
+                //
+                // Fixed HERE rather than by widening the pad, deliberately. The stem is part of a
+                // layout that has shipped: `metadata/NNNN.json` records its own image path, so
+                // renaming would strand every URL already published from a cooked Set, and `extend`
+                // adds assets to a Set whose existing files are already named — a collection-wide
+                // width would leave one Set holding two paddings. Sorting by the number nfty
+                // actually has is correct at every size and changes no byte on disk.
+                foreach (var m in Directory.EnumerateFiles(nftyDir, "*.json")
+                             .Select(f => JsonSerializer.Deserialize<NftyMetadata>(
+                                 File.ReadAllText(f), Json.Options))
+                             .Where(m => m is not null)
+                             .OrderBy(m => m!.SetNumber))
                 {
-                    var m = JsonSerializer.Deserialize<NftyMetadata>(File.ReadAllText(file), Json.Options);
-                    if (m is null) continue;
-                    string stem = m.SetNumber.ToString("D4");
+                    string stem = m!.SetNumber.ToString("D4", CultureInfo.InvariantCulture);
                     items.Add(new SetItem(m.SetNumber, Path.Combine(imagesDir, $"{stem}.png"),
                         m.Dna, m.Recipe, m.Rarity, m.Layers, m.AbsentLayers));
                 }

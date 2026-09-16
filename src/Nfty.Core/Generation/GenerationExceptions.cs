@@ -32,7 +32,13 @@ public class RuleConflictException : InvalidOperationException
 public class UniqueSpaceExhaustedException : InvalidOperationException
 {
     /// <summary>How many unique DNA the book actually admits.</summary>
-    public long Available { get; }
+    /// <remarks>
+    /// A <see cref="System.Numerics.BigInteger"/>, like the count it comes from: a book whose space
+    /// is too big to fit a <see cref="long"/> is exactly the book most likely to exhaust a caller's
+    /// reroll budget for some other reason, so this is the last place the figure should be a
+    /// saturated sentinel.
+    /// </remarks>
+    public System.Numerics.BigInteger Available { get; }
     /// <summary>What <see cref="Available"/> is: the figure, a floor, a ceiling, or nothing.</summary>
     public SpaceCertainty Certainty { get; }
 
@@ -50,7 +56,8 @@ public class UniqueSpaceExhaustedException : InvalidOperationException
     /// <param name="produced">How many were produced.</param>
     /// <param name="message">The message shown to the user verbatim.</param>
     public UniqueSpaceExhaustedException(
-        long available, SpaceCertainty certainty, int requested, int produced, string message)
+        System.Numerics.BigInteger available, SpaceCertainty certainty, int requested, int produced,
+        string message)
         : base(message)
     {
         Available = available;

@@ -30,6 +30,15 @@ public record RarityReport(IReadOnlyList<RecipeOdds> Recipes, IReadOnlyList<Trai
 
 /// <summary>Computes the odds a cookbook's weights imply. Distinct from the rarity written into a
 /// Set, which counts what was actually minted rather than what was intended.</summary>
+/// <remarks>
+/// <b>NOTHING HERE IS ROUNDED, AND IT USED TO BE.</b> Every share came out of this class already
+/// rounded to two places, which is a DISPLAY decision taken in a data source — and it did real
+/// damage at the far end of the scale: a deep book's rare traits all collapsed onto exactly 0, so
+/// the ingredient pane could not tell them apart, sorted them arbitrarily (<c>OrderBy</c> is stable,
+/// so they kept whatever order they arrived in) and printed each of them as "0%" beside a trait no
+/// asset carries. The figures are exact here and <see cref="RarityText"/> decides what a surface
+/// prints, which is the same split <c>SpaceText</c> already makes for the DNA space.
+/// </remarks>
 public static class RarityCalculator
 {
     /// <summary>Computes the odds.</summary>
@@ -45,7 +54,7 @@ public static class RarityCalculator
         {
             double recipeWeight = book.Manifest.RecipeWeights.GetValueOrDefault(r.Manifest.Id);
             double recipePct = recipeTotal > 0 ? recipeWeight / recipeTotal * 100 : 0;
-            recipes.Add(new RecipeOdds(r.Manifest.Id, r.Manifest.Name, Math.Round(recipePct, 2)));
+            recipes.Add(new RecipeOdds(r.Manifest.Id, r.Manifest.Name, recipePct));
 
             // Driven by LayerOrder, exactly as Generator rolls: an ingredient present in the
             // archive but absent from layerOrder is never rolled, so reporting odds for it
@@ -71,8 +80,7 @@ public static class RarityCalculator
                     double within = (layerTotal > 0 ? v.Weight / layerTotal * 100 : 0) * presentShare;
                     double overall = recipePct / 100 * within;
                     traits.Add(new TraitOdds(r.Manifest.Id, r.Manifest.Name,
-                        ing.Manifest.Id, ing.Manifest.Name, v.Id, v.Name,
-                        Math.Round(within, 2), Math.Round(overall, 2)));
+                        ing.Manifest.Id, ing.Manifest.Name, v.Id, v.Name, within, overall));
                 }
             }
         }

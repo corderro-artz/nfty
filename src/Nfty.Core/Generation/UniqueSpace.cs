@@ -1,3 +1,4 @@
+using System.Numerics;
 using Nfty.Core.Formats;
 using Nfty.Core.Model;
 
@@ -24,8 +25,17 @@ public enum SpaceCertainty
     /// <summary>The total IS the figure. Nothing gave up and nothing saturated.</summary>
     Exact,
 
-    /// <summary>The real figure is LARGER than the total — an under-counted bucket set, or
-    /// arithmetic that saturated the reporting ceiling. Renders as "more than N".</summary>
+    /// <summary>
+    /// The real figure is LARGER than the total: a colorization filled more buckets than the
+    /// enumeration budget allowed collecting, so every product built on it is short. Renders as
+    /// "more than N".
+    /// </summary>
+    /// <remarks>
+    /// <b>Saturated arithmetic used to be the other way in here, and is not any more.</b> The totals
+    /// are <see cref="System.Numerics.BigInteger"/>, so a product has no ceiling to hit and nothing
+    /// about the ARITHMETIC can make a figure inexact. What remains is the one thing that genuinely
+    /// gives up — a walk that stopped — which is what this was always meant to name.
+    /// </remarks>
     AtLeast,
 
     /// <summary>
@@ -61,11 +71,10 @@ public enum SpaceCertainty
 /// </param>
 /// <param name="Certainty">
 /// What <see cref="Total"/> is: the figure, a floor, a ceiling, or nothing. Decided while counting,
-/// where it is still known whether the combinations or the buckets gave up — a saturated
-/// combination count multiplied by zero buckets lands back at zero, so this cannot be re-derived
-/// afterwards from the total alone.
+/// where it is still known WHICH half gave up — a under-counted bucket set multiplied by zero
+/// combinations lands back at zero, so this cannot be re-derived afterwards from the total alone.
 /// </param>
-public record RecipeSpace(long Total, long Combos, SpaceCertainty Certainty)
+public record RecipeSpace(BigInteger Total, BigInteger Combos, SpaceCertainty Certainty)
 {
     /// <summary>Whether <see cref="Total"/> is the real figure rather than a bound.</summary>
     public bool IsExact => Certainty == SpaceCertainty.Exact;
@@ -77,9 +86,17 @@ public record RecipeSpace(long Total, long Combos, SpaceCertainty Certainty)
 /// <summary>
 /// How many distinct DNA a cookbook can produce. Counts only rollable recipes — a zero-weight
 /// recipe is shelved and never rolled, so its space is excluded from <see cref="Total"/> even
-/// though it still appears in <see cref="Recipes"/>. <see cref="IsExact"/> is false when the
-/// space was too large to count and <see cref="Total"/> saturated at the cap — the real
-/// figure is "more than Total", never less.
+/// though it still appears in <see cref="Recipes"/>.
+///
+/// <para><b><see cref="Total"/> is a <see cref="BigInteger"/>, and that is not future-proofing.</b>
+/// A layer's shapes are its variants times its reachable colors, and the recipe's space is those
+/// multiplied together — so six layers of ten variants at a 10°/10% quantize is
+/// <c>(10 × 360)^6 ≈ 2.2e21</c>, which is two hundred times what a <see cref="long"/> holds. On a
+/// <c>long</c> that book reported <c>more than 9,223,372,036,854,775,807</c>: a constant, printed
+/// where the headline figure goes, on a card whose entire job is to let an author size a
+/// collection. The old ceiling was raised from a million to <c>long.MaxValue</c> for exactly this
+/// reason and merely moved the wall; there is no wall now, and the arithmetic cannot make a count
+/// inexact at all.</para>
 /// </summary>
 /// <param name="Total">The distinct DNA the rollable recipes admit between them.</param>
 /// <param name="Certainty">What <see cref="Total"/> is: the figure, a floor, a ceiling, or
@@ -88,7 +105,7 @@ public record RecipeSpace(long Total, long Combos, SpaceCertainty Certainty)
 /// the limit somebody would raise.</param>
 /// <param name="Recipes">The per-recipe breakdown, shelved recipes included.</param>
 public record UniqueSpaceCount(
-    long Total,
+    BigInteger Total,
     SpaceCertainty Certainty,
     long Budget,
     IReadOnlyDictionary<string, RecipeSpace> Recipes)
@@ -108,40 +125,38 @@ public record UniqueSpaceCount(
     /// nothing, exactly as the indexer says.</param>
     /// <returns>Their summed total and combinations, and what that sum is.</returns>
     /// <remarks>
-    /// <b>The saturating add and the certainty fold belong here, not in the caller.</b>
-    /// <c>Generator</c> needs precisely this to say how big a space a failing run had, and built it
-    /// itself — a hand-rolled overflow guard beside an <c>&amp;=</c> over <c>IsExact</c>. That
-    /// <c>&amp;=</c> is the operator <see cref="UniqueSpace.Combine"/> replaces: it cannot express a floor
-    /// summed with a ceiling, which is the case that has no answer.
+    /// <b>The certainty fold belongs here, not in the caller.</b> <c>Generator</c> needs precisely
+    /// this to say how big a space a failing run had, and built it itself — a hand-rolled overflow
+    /// guard beside an <c>&amp;=</c> over <c>IsExact</c>. That <c>&amp;=</c> is the operator
+    /// <see cref="UniqueSpace.Combine"/> replaces: it cannot express a floor summed with a ceiling,
+    /// which is the case that has no answer. The overflow guard is gone with the type that needed
+    /// one — a <see cref="BigInteger"/> sum has nothing to clamp, and the follow-up check for "did
+    /// this land on the ceiling honestly or by saturating?" is a question that can no longer be
+    /// asked.
     /// </remarks>
     public RecipeSpace Over(IEnumerable<string> recipeIds)
     {
         ArgumentNullException.ThrowIfNull(recipeIds);
-        long total = 0;
-        long combos = 0;
+        BigInteger total = 0;
+        BigInteger combos = 0;
         var certainty = SpaceCertainty.Exact;
         foreach (string id in recipeIds)
         {
             var one = this[id];
-            total = UniqueSpace.Add(total, one.Total, long.MaxValue);
-            combos = UniqueSpace.Add(combos, one.Combos, long.MaxValue);
+            total += one.Total;
+            combos += one.Combos;
             certainty = UniqueSpace.Combine(certainty, one.Certainty);
         }
 
-        // Saturating the range is itself a reason the figure is only a floor, and it is checked
-        // after the fold rather than inside it: Add clamps, so a sum that reached long.MaxValue is
-        // indistinguishable from one that landed there honestly, and only this frame knows which.
-        if (total == long.MaxValue) certainty = UniqueSpace.Combine(certainty, SpaceCertainty.AtLeast);
         return new RecipeSpace(total, combos, certainty);
     }
 
     /// <summary>
     /// Whether this figure means anything to show a user. <see cref="IsExact"/> alone is false for
-    /// two unrelated situations: the space saturated the enumeration cap ("more than
-    /// <see cref="Total"/>", a real lower bound), and the space is <em>undefined</em> because the
-    /// book is invalid in a way that makes the question meaningless. The second reports
-    /// <c>Total == 0</c>, and rendering that as "more than 0" states a bound that is technically
-    /// true and reads like an answer.
+    /// two unrelated situations: a bucket set was under-counted ("more than <see cref="Total"/>", a
+    /// real lower bound), and the space is <em>undefined</em> because the book is invalid in a way
+    /// that makes the question meaningless. The second reports <c>Total == 0</c>, and rendering that
+    /// as "more than 0" states a bound that is technically true and reads like an answer.
     ///
     /// <para>Every front-end needs this distinction — the CLI's <c>stats</c>, the GUI's identity
     /// card and its per-recipe rows — so it is decided once here instead of three times, differently.
@@ -166,40 +181,41 @@ public static class UniqueSpace
     /// with rules needs, and the set of distinct colour buckets a colorization fills. Both cost time
     /// and memory proportional to the number, so both need a budget.</para>
     ///
-    /// <para><b>It does NOT bound the answer.</b> That distinction is the whole point of there being
-    /// two numbers here — see <see cref="DefaultReportingCeiling"/>.</para>
-    /// </remarks>
-    public const long DefaultEnumerationBudget = 1_000_000;
-
-    /// <summary>
-    /// The figure at which <see cref="UniqueSpaceCount.Total"/> stops counting and saturates.
-    /// </summary>
-    /// <remarks>
-    /// <para><b>One number used to do both jobs, and only one of them was expensive.</b> The cap was
-    /// 1,000,000 for everything, so a book with five million distinct assets reported "more than
-    /// 1000000" — a figure that is exactly computable in a single multiply, because once the walk
-    /// has happened the rest is arithmetic. Every layer added to the built-in demo therefore cost a
-    /// re-tune of its quantize steps to stay under a ceiling that was not defending anything.</para>
-    ///
-    /// <para>So the ceiling is <see cref="long.MaxValue"/>: arithmetic never gives up, it only
-    /// guards its own overflow. <see cref="UniqueSpaceCount.IsExact"/> now means exactly one thing —
+    /// <para><b>It does NOT bound the answer, and there is no longer a second number that does.</b>
+    /// The cap was 1,000,000 for everything once, so a book with five million distinct assets
+    /// reported "more than 1000000" — a figure exactly computable in a single multiply, because once
+    /// the walk has happened the rest is arithmetic. That was split into a budget and a reporting
+    /// ceiling of <c>long.MaxValue</c>, which fixed the million and moved the wall to 9.2e18, where
+    /// six ordinary layers walk straight through it. A <see cref="BigInteger"/> total has no wall at
+    /// all, so the reporting ceiling is GONE rather than raised again: arithmetic is free and is now
+    /// treated as free, and <see cref="UniqueSpaceCount.IsExact"/> means exactly one thing —
     /// <b>no enumeration gave up</b> — which is what every caller already read it as.</para>
     /// </remarks>
-    public const long DefaultReportingCeiling = long.MaxValue;
+    public const long DefaultEnumerationBudget = 1_000_000;
 
     /// <summary>Counts the unique DNA a book admits.</summary>
     /// <param name="book">The book to count. May be mid-edit and invalid; this never throws.</param>
     /// <param name="enumerationBudget">How much walking is allowed; see
-    /// <see cref="DefaultEnumerationBudget"/>.</param>
-    /// <param name="reportingCeiling">Where the arithmetic saturates; see
-    /// <see cref="DefaultReportingCeiling"/>.</param>
+    /// <see cref="DefaultEnumerationBudget"/>. Must be positive.</param>
     /// <returns>The total, whether it is exact, and the per-recipe breakdown.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">The budget is zero or negative.</exception>
+    /// <remarks>
+    /// <b>The budget is validated even though this method is otherwise documented never to throw.</b>
+    /// Those are different promises: the no-throw contract is about the BOOK, which a GUI hands over
+    /// mid-edit and invalid by design, and the budget is the CALLER's own argument. A negative one
+    /// used to be laundered into an answer — <see cref="DistinctBuckets"/> tripped its budget check
+    /// on the first entry and returned the budget itself, so a layer reported a NEGATIVE bucket
+    /// count, which the old saturating multiply then turned into the ceiling because
+    /// <c>a &gt; ceiling / b</c> is true for a negative <c>b</c>. The card printed the largest
+    /// number it could hold. Refusing the argument is the fix; guarding the multiply against the
+    /// consequences of accepting it is not.
+    /// </remarks>
     public static UniqueSpaceCount Count(
         LoadedCookBook book,
-        long enumerationBudget = DefaultEnumerationBudget,
-        long reportingCeiling = DefaultReportingCeiling)
+        long enumerationBudget = DefaultEnumerationBudget)
     {
-        long total = 0;
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(enumerationBudget);
+        BigInteger total = 0;
         var certainty = SpaceCertainty.Exact;
         var recipes = new Dictionary<string, RecipeSpace>();
 
@@ -212,7 +228,7 @@ public static class UniqueSpace
             // ONE shape, so the bucket product now depends on which layers a given selection
             // actually has. RecipeSpace does the sum; see its own note.
             var (recipeTotal, combos, recipeCertainty) =
-                RecipeShapes(recipe, enumerationBudget, reportingCeiling);
+                RecipeShapes(recipe, enumerationBudget);
 
             // Each recipe's own space is always recorded, so a caller inspecting a shelved recipe
             // still sees what it would contribute if enabled. But the cookbook total counts only
@@ -222,14 +238,13 @@ public static class UniqueSpace
             recipes[recipe.Manifest.Id] = new RecipeSpace(recipeTotal, combos, recipeCertainty);
             if (book.Manifest.RecipeWeights.GetValueOrDefault(recipe.Manifest.Id) <= 0)
                 continue;
-            total = Add(total, recipeTotal, reportingCeiling);
+            total += recipeTotal;
             certainty = Combine(certainty, recipeCertainty);
         }
 
-        // No clamp to the budget here any more. The budget governs WALKING; summing the recipes is
-        // addition, and Add only guards its own overflow. A total that saturated the ceiling is the
-        // one arithmetic case that is not exact, and Add is where that is decided.
-        if (total >= reportingCeiling) certainty = Combine(certainty, SpaceCertainty.AtLeast);
+        // Nothing is clamped here and nothing is re-checked afterwards. The budget governs WALKING;
+        // summing the recipes is addition, and a BigInteger sum cannot overflow, so the certainty
+        // the recipes carry is the whole of what this total is.
         return new UniqueSpaceCount(total, certainty, enumerationBudget, recipes);
     }
 
@@ -247,9 +262,13 @@ public static class UniqueSpace
     /// step of 30 and a saturation step of 20 read as "600 colors" where the layer actually admits
     /// 36, and coarsening a step — which can only ever remove colors — made the number go up.
     /// </remarks>
+    /// <exception cref="ArgumentOutOfRangeException">The budget is zero or negative.</exception>
     public static (long Count, bool Exact) CountColors(
-        Colorization colorization, long enumerationBudget = DefaultEnumerationBudget) =>
-        DistinctBuckets(colorization, enumerationBudget);
+        Colorization colorization, long enumerationBudget = DefaultEnumerationBudget)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(enumerationBudget);
+        return DistinctBuckets(colorization, enumerationBudget);
+    }
 
     /// <summary>One layer's choices, as the DNA space sees them.</summary>
     /// <param name="Id">The layer id.</param>
@@ -262,7 +281,14 @@ public static class UniqueSpace
         /// <summary>Distinct DNA contributions this layer can make on its own: every present
         /// variant times the colors it can wear, plus one for being absent, which is a single shape
         /// however many colors the layer could have worn had it shown up.</summary>
-        public long Shapes => Variants.Count * Buckets + (CanBeAbsent ? 1 : 0);
+        /// <remarks>
+        /// <b>Widened before multiplying, not after.</b> This was the one product in the file that
+        /// did not go through the saturating helper beside it: <c>int × long</c> in a <c>long</c>,
+        /// safe only by an argument about how big each factor could get. The factors are unchanged
+        /// — <see cref="Buckets"/> is still bounded by the enumeration budget — but the argument is
+        /// no longer load-bearing, because the result has nowhere to wrap to.
+        /// </remarks>
+        public BigInteger Shapes => (BigInteger)Variants.Count * Buckets + (CanBeAbsent ? 1 : 0);
     }
 
     /// <summary>
@@ -270,7 +296,6 @@ public static class UniqueSpace
     /// </summary>
     /// <param name="recipe">The recipe. May be mid-edit and illegal; this never throws.</param>
     /// <param name="budget">How much walking is allowed.</param>
-    /// <param name="ceiling">Where the arithmetic saturates.</param>
     /// <returns>The DNA total, the legal selection count, and whether both are exact.</returns>
     /// <remarks>
     /// Two paths, and the split is the same one the rules check already made. With no rules the
@@ -281,8 +306,8 @@ public static class UniqueSpace
     /// So the enumeration sums a product per legal selection rather than multiplying one product by
     /// a count.
     /// </remarks>
-    private static (long Total, long Combos, SpaceCertainty Certainty) RecipeShapes(
-        LoadedRecipe recipe, long budget, long ceiling)
+    private static (BigInteger Total, BigInteger Combos, SpaceCertainty Certainty) RecipeShapes(
+        LoadedRecipe recipe, long budget)
     {
         if (!TryResolveLayers(recipe, out var resolved))
             return (0, 0, SpaceCertainty.Unknown);
@@ -320,26 +345,20 @@ public static class UniqueSpace
         // is not enumeration - and it is two different things depending on the path: with no rules
         // it IS the answer, and with rules it is a true UPPER bound on the answer, because a rule
         // can only remove selections and removing a selection removes the colours it carried.
-        long product = 1;
-        long combos = 1;
+        BigInteger product = 1;
+        BigInteger combos = 1;
         foreach (var l in layers)
         {
-            product = Multiply(product, l.Shapes, ceiling);
-            combos = Multiply(combos, l.Variants.Count + (l.CanBeAbsent ? 1 : 0), ceiling);
+            product *= l.Shapes;
+            combos *= l.Variants.Count + (l.CanBeAbsent ? 1 : 0);
         }
-
-        // BOTH have to clear the ceiling, not just the total. A Dynamic layer with no color entries
-        // has zero buckets, so a product that saturated on combinations can collapse back to 0 -
-        // under any ceiling - and re-deriving the outcome from the total alone would then call a
-        // count exact that had already given up.
-        bool saturated = product >= ceiling || combos >= ceiling;
 
         if (recipe.Manifest.Rules.Count == 0)
         {
-            // Nothing is walked here: with no rules the space factorizes. An under-counted bucket
-            // set or a saturated product both mean the truth is LARGER, so both are a floor.
-            return (product, combos,
-                bucketsExact && !saturated ? SpaceCertainty.Exact : SpaceCertainty.AtLeast);
+            // Nothing is walked here: with no rules the space factorizes. The only way the truth can
+            // be LARGER than this product is an under-counted bucket set, which is a floor; the
+            // product itself is exact however big it gets.
+            return (product, combos, bucketsExact ? SpaceCertainty.Exact : SpaceCertainty.AtLeast);
         }
 
         // With rules the space does not factorize and has to be walked one selection at a time -
@@ -360,17 +379,17 @@ public static class UniqueSpace
                 : (0, 0, SpaceCertainty.Unknown);
         }
 
-        long total = 0;
+        BigInteger total = 0;
         long legal = 0;
         var selection = new Dictionary<string, string>();
 
-        void Walk(int depth, long bucketsSoFar)
+        void Walk(int depth, BigInteger bucketsSoFar)
         {
             if (depth == layers.Count)
             {
                 if (!RulesEngine.IsLegal(selection, recipe.Manifest.Rules)) return;
                 legal++;
-                total = Add(total, bucketsSoFar, ceiling);
+                total += bucketsSoFar;
                 return;
             }
 
@@ -378,7 +397,7 @@ public static class UniqueSpace
             foreach (var v in layer.Variants)
             {
                 selection[layer.Id] = v.Id;
-                Walk(depth + 1, Multiply(bucketsSoFar, layer.Buckets, ceiling));
+                Walk(depth + 1, bucketsSoFar * layer.Buckets);
             }
             selection.Remove(layer.Id);
 
@@ -390,10 +409,9 @@ public static class UniqueSpace
         }
 
         Walk(0, 1);
-        // The walk finished, so the selection count is exact; only the arithmetic can still have
-        // saturated, and an under-counted bucket set would make the total a floor.
-        return (total, legal,
-            bucketsExact && total < ceiling ? SpaceCertainty.Exact : SpaceCertainty.AtLeast);
+        // The walk finished, so the selection count is exact and the sum of what it found is too.
+        // An under-counted bucket set is the only thing left that can make the total a floor.
+        return (total, legal, bucketsExact ? SpaceCertainty.Exact : SpaceCertainty.AtLeast);
     }
 
     /// <summary>One layer reduced to the variants a roll can actually land on.</summary>
@@ -453,10 +471,11 @@ public static class UniqueSpace
     /// The distinct quantized buckets a colorization can roll.
     /// </summary>
     /// <remarks>
-    /// This FILLS A SET, one entry per reachable bucket, so it is the second of the two places that
-    /// genuinely enumerate - and it takes the budget rather than the ceiling for that reason. A
-    /// range at a fine quantize can reach an enormous number of buckets, and the cost of counting
-    /// them is the count itself.
+    /// This FILLS A SET, one entry per reachable bucket, so it is the one place left that genuinely
+    /// enumerates a colorization, and the budget is what bounds it. A range at a fine quantize can
+    /// reach an enormous number of buckets, and the cost of counting them is the count itself — the
+    /// reason a bucket count, alone among the figures here, is still a <c>long</c> and still capped.
+    /// It is also the only remaining way a space can come back inexact.
     /// </remarks>
     private static (long Count, bool Exact) DistinctBuckets(Colorization col, long budget)
     {
@@ -552,26 +571,10 @@ public static class UniqueSpace
         return SpaceCertainty.Unknown;              // one floor and one ceiling
     }
 
-    /// <summary>Multiplies, saturating at <paramref name="ceiling"/> rather than overflowing.</summary>
-    private static long Multiply(long a, long b, long ceiling)
-    {
-        if (a == 0 || b == 0) return 0;
-        if (a > ceiling / b) return ceiling;
-        return a * b;
-    }
-
-    /// <summary>
-    /// Adds, saturating at <paramref name="ceiling"/> rather than overflowing.
-    /// </summary>
-    /// <remarks>
-    /// It exists because the ceiling became <see cref="long.MaxValue"/>. The old code added first
-    /// and clamped afterwards, which is safe only while the clamp sits far below the range of the
-    /// type - at a million it could never overflow, and at the new ceiling it silently would, turning
-    /// a very large space into a negative one.
-    /// </remarks>
-    internal static long Add(long a, long b, long ceiling)
-    {
-        if (b <= 0) return a;
-        return a > ceiling - b ? ceiling : a + b;
-    }
+    // THE SATURATING Multiply AND Add USED TO LIVE HERE, AND THEIR DELETION IS THE POINT OF THE
+    // CHANGE RATHER THAN A TIDY-UP. Both were correct for positive operands — `a > ceiling / b` is
+    // the standard overflow idiom and it is sound — and both were silently wrong for a negative
+    // one, which an unvalidated budget could produce. More to the point, they were machinery for
+    // keeping a number inside a type too small to hold the answer. BigInteger is the standard
+    // library's answer to that, so the guards go with the ceiling they guarded.
 }

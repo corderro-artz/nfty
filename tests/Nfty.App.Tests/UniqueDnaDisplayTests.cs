@@ -64,17 +64,32 @@ public class UniqueDnaDisplayTests
     }
 
     [Fact]
-    public void The_headline_figure_is_never_rounded()
+    public void The_headline_figure_is_shown_whole_while_it_fits()
     {
-        // It USED to round past a billion and put the exact digits on a tooltip. The cell it lives
-        // in was widened until the widest figure a long can hold fits at the smallest window the app
-        // opens, so both the compact form and the tooltip are gone from this surface: a number you
-        // have to hover to read is a number you cannot compare at a glance, and this is the one an
-        // author tunes quantize steps against.
+        // The card opens on the real digits and only ever narrows from there, which is what keeps a
+        // ViewModel test - which has no frame to measure against - looking at the number rather
+        // than at an abbreviation of it.
         using var book = HugeBook();
         var vm = new CookBookDetailViewModel(book, () => { });
 
         Assert.Equal("1,600,000,000", vm.UniqueDnaText);
+        Assert.Equal("1,600,000,000", vm.UniqueDnaFullText);
+        Assert.True(vm.UniqueDnaFits);
+    }
+
+    [Fact]
+    public void A_headline_that_cannot_fit_narrows_and_the_tooltip_still_carries_every_digit()
+    {
+        // THE OTHER HALF OF THE RULE. "Never rounded" was earned by a measurement - the cell was
+        // widened until the widest figure a LONG could hold fitted at the smallest window - and it
+        // rested entirely on long having a widest figure. BigInteger has none, so the guarantee is
+        // replaced by a measurement the view takes at the window it actually has, and the exact
+        // digits move to a tooltip that is there unconditionally rather than sometimes.
+        using var book = HugeBook();
+        var vm = new CookBookDetailViewModel(book, () => { }) { UniqueDnaFits = false };
+
+        Assert.Equal("1.60 billion", vm.UniqueDnaText);
+        Assert.Contains("1,600,000,000", vm.UniqueDnaTip, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -89,19 +104,19 @@ public class UniqueDnaDisplayTests
     }
 
     [AvaloniaFact]
-    public void The_headline_figure_is_shown_whole_and_carries_no_tooltip()
+    public void The_headline_figure_is_shown_whole_and_the_tooltip_repeats_it()
     {
-        // The tile used to round and hang the exact digits on a tooltip. Both are gone, and the
-        // ABSENCE is the assertion: a tooltip left behind on a control that no longer needs one is
-        // how a surface comes to state the same number twice.
-        using var book = HugeBook();
+        // At the smallest window, on a book whose figure fits: the digits are on the card AND on the
+        // tooltip. The tooltip is deliberately not conditional - a tooltip that carries something
+        // only sometimes is one nobody learns to reach for, which is the argument the per-recipe
+        // column beside it already won on.
         var view = Render(HugeBook(), out var window);
         try
         {
             var figure = Figure(view);
             Assert.Equal("1,600,000,000", figure.Text);
-            Assert.Null(ToolTip.GetTip(figure));
-            Assert.Null(ToolTip.GetTip(figure.GetVisualAncestors().OfType<StackPanel>().First()));
+            Assert.Contains("1,600,000,000", ToolTip.GetTip(figure)?.ToString() ?? "",
+                StringComparison.Ordinal);
         }
         finally { window.Close(); }
     }
@@ -114,9 +129,12 @@ public class UniqueDnaDisplayTests
         // way — so this measures the INK of the worst string the formatter can emit against the
         // cell's real content box, inside the real Explorer, at the real page area.
         //
-        // It is the EXACT form now, not the compact one: the cell was widened until every digit
-        // fits, which is what let the compact form and the tooltip come off this surface. If this
-        // ever fails, the figure has to start rounding again — it must not start clipping.
+        // WHAT THIS NUMBER MEANS CHANGED, AND THE MEASUREMENT DID NOT. The cell was widened until
+        // the widest figure a long could hold fitted, which once made "print every digit" safe by
+        // construction. Totals are BigInteger now and have no widest figure, so this is a BUDGET
+        // rather than a guarantee: it is the size the view's own fit measurement is spending, and a
+        // book past it narrows to the compact form instead of clipping. If this ever fails, books
+        // that used to print in full at the smallest window have quietly stopped doing so.
         var view = Render(HugeBook(), out var window);
         try
         {

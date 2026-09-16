@@ -31,10 +31,23 @@ public partial class VariantRow : ObservableObject
     public string Name { get; }
     /// <summary>Its roll weight.</summary>
     public double Weight { get; }
-    /// <summary>Its share within this layer.</summary>
+    /// <summary>Its share within this layer, unrounded.</summary>
+    /// <remarks>
+    /// <b>The raw figure, because this is what the table SORTS and what the bar is a fraction of.</b>
+    /// It used to arrive rounded to one decimal place, which made every trait under a twentieth of a
+    /// percent land on exactly 0 — so a deep book's rare variants were indistinguishable from each
+    /// other, sorted in whatever order they happened to arrive in, and each printed "0%" beside a
+    /// variant no asset carries. <see cref="WithinText"/> is where the rounding belongs.
+    /// </remarks>
     public double WithinPercent { get; }
-    /// <summary>Its share across the whole collection.</summary>
+    /// <summary>Its share across the whole collection, unrounded.</summary>
+    /// <inheritdoc cref="WithinPercent" path="/remarks"/>
     public double OverallPercent { get; }
+
+    /// <summary>Its share within this layer, as the table prints it.</summary>
+    public string WithinText => RarityText.Percent(WithinPercent);
+    /// <summary>Its share across the whole collection, as the table prints it.</summary>
+    public string OverallText => RarityText.Percent(OverallPercent);
     /// <summary>A rendered swatch.</summary>
     public Bitmap Thumbnail { get; }
 
@@ -367,7 +380,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
         {
             traits.TryGetValue(v.Id, out var t);
             return new VariantRow(v.Id, v.Name, v.Weight,
-                Math.Round(t?.WithinRecipePercent ?? 0, 1), Math.Round(t?.OverallPercent ?? 0, 1),
+                t?.WithinRecipePercent ?? 0, t?.OverallPercent ?? 0,
                 VariantImagery.Render(bridge, ing, v.Id));
         }).ToList();
 

@@ -126,7 +126,7 @@
                   </Border>
                   <TextBlock Grid.Column="2" Classes="cshare" VerticalAlignment="Center"
                              TextAlignment="Right"
-                             Text="{Binding OverallPercent, StringFormat='{}{0}%'}" />
+                             Text="{Binding OverallText}" />
                 </Grid>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
@@ -248,8 +248,8 @@
                     <Image Grid.Column="0" Source="{Binding Thumbnail}" Width="32" Height="32" VerticalAlignment="Center" />
                     <TextBlock Grid.Column="1" Classes="data-row" Text="{Binding Name}" VerticalAlignment="Center" Margin="10,0,0,0" TextTrimming="CharacterEllipsis" />
                     <TextBlock Grid.Column="2" Classes="data-row num" Text="{Binding Weight}" Margin="8,0,0,0" />
-                    <TextBlock Grid.Column="3" Classes="data-row num" Text="{Binding WithinPercent, StringFormat='{}{0}%'}" Margin="8,0,0,0" />
-                    <TextBlock Grid.Column="4" Classes="data-row num" Text="{Binding OverallPercent, StringFormat='{}{0}%'}" Margin="8,0,0,0" />
+                    <TextBlock Grid.Column="3" Classes="data-row num" Text="{Binding WithinText}" Margin="8,0,0,0" />
+                    <TextBlock Grid.Column="4" Classes="data-row num" Text="{Binding OverallText}" Margin="8,0,0,0" />
                   </Grid>
                 </Border>
               </Button>

@@ -113,7 +113,13 @@
         </Border>
         <Border Grid.Column="3" Classes="metric accent">
           <StackPanel Spacing="4">
-            <TextBlock Classes="mv" Text="{Binding UniqueDnaText}" /><TextBlock Classes="ml" Text="UNIQUE DNA" />
+            <!-- Named so the code-behind can measure its ink against this cell: the figure is a
+                 BigInteger and has no widest form, so "does it fit?" is a measurement taken at the
+                 window the user has rather than a guarantee the cell width bought. The tooltip
+                 carries every digit unconditionally - this is the number quantize steps are tuned
+                 against, and a tooltip that is there only sometimes is one nobody reaches for. -->
+            <TextBlock x:Name="DnaFigure" Classes="mv" Text="{Binding UniqueDnaText}"
+                       ToolTip.Tip="{Binding UniqueDnaTip}" /><TextBlock Classes="ml" Text="UNIQUE DNA" />
           </StackPanel>
         </Border>
       </Grid>

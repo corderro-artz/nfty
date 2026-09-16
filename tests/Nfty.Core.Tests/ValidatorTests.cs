@@ -1,3 +1,4 @@
+using System.Globalization;
 using Nfty.Core.Formats;
 using Nfty.Core.Model;
 using SixLabors.ImageSharp;
@@ -354,6 +355,56 @@ public class ValidatorTests
     public void Range_spanning_the_full_axes_has_no_problems() =>
         // The inclusive bounds are legal; only crossing them is not.
         Assert.Empty(ValidateRange(new ColorRange(0, 360, 0, 100)));
+
+    // --- non-finite endpoints: every check above is FALSE for NaN ------------------------------
+    //
+    // NaN > NaN, NaN < 0 and NaN > 360 are all false, so a range carrying one passed the inverted
+    // check AND both axis checks and validated clean. This file already knows the trap - every
+    // weight and absent-percent here is guarded and WeightedRoller comments it twice - and a range
+    // was the one axis it had never been applied to. The endpoint then reaches ColorRoller, which
+    // samples it into a non-finite hue, which ColorBuckets folds into a bucket by a floating-point
+    // conversion: the book cooks, and what it produces is decided by a saturating cast.
+
+    [Theory]
+    [InlineData(double.NaN, 360, 0, 100)]
+    [InlineData(0, double.NaN, 0, 100)]
+    [InlineData(0, 360, double.NaN, 100)]
+    [InlineData(0, 360, 0, double.NaN)]
+    [InlineData(double.PositiveInfinity, double.PositiveInfinity, 0, 100)]
+    [InlineData(0, 360, double.NegativeInfinity, 100)]
+    public void A_non_finite_range_endpoint_is_reported(double hMin, double hMax, double sMin, double sMax) =>
+        Assert.Contains(ValidateRange(new ColorRange(hMin, hMax, sMin, sMax)),
+            p => p.Contains("non-finite", StringComparison.Ordinal));
+
+    [Fact]
+    public void A_non_finite_range_is_reported_once_rather_than_on_every_check_it_defeats()
+    {
+        // All four endpoints come out of one JSON object, so a book that says NaN says it because
+        // the object is wrong. Reporting it per endpoint AND per axis would turn one broken range
+        // into five sentences in the validity dialog.
+        var problems = ValidateRange(new ColorRange(double.NaN, double.NaN, double.NaN, double.NaN));
+
+        Assert.Single(problems, p => p.Contains("non-finite", StringComparison.Ordinal));
+        Assert.DoesNotContain(problems, p => p.Contains("0..360", StringComparison.Ordinal));
+        Assert.DoesNotContain(problems, p => p.Contains("greater than", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void A_range_problem_is_worded_invariantly()
+    {
+        // Num() exists for exactly this and CheckRange was the one place that did not call it: the
+        // endpoints were interpolated bare, which takes the CURRENT culture, so a machine set to
+        // de-DE reported "hueMin (350,5)" in a message meant to be pasted at whoever wrote the book.
+        var original = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = new CultureInfo("de-DE");
+            Assert.Contains(ValidateRange(new ColorRange(350.5, 10.25, 0, 100)),
+                p => p.Contains("350.5", StringComparison.Ordinal)
+                     && p.Contains("10.25", StringComparison.Ordinal));
+        }
+        finally { CultureInfo.CurrentCulture = original; }
+    }
 
     // --- id uniqueness (finding 3) ---
 

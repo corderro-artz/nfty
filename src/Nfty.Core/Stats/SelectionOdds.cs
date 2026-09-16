@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Numerics;
 using Nfty.Core.Formats;
 using Nfty.Core.Generation;
 using Nfty.Core.Model;
@@ -91,10 +92,17 @@ public static class SelectionOdds
     /// time, so a caller pricing a grid of five hundred assets must not pay for it five hundred
     /// times.
     /// </remarks>
+    /// <exception cref="ArgumentOutOfRangeException">The budget is zero or negative.</exception>
     public static BookOdds Prepare(PeekedCookBook book,
         long enumerationBudget = UniqueSpace.DefaultEnumerationBudget)
     {
         ArgumentNullException.ThrowIfNull(book);
+        // A non-positive budget is the caller's own argument and is refused, exactly as
+        // UniqueSpace.Count refuses one. Left unchecked it does not merely give a wrong answer: the
+        // walk below is gated on `combos >= budget`, which a zero or negative budget makes true
+        // immediately, so every recipe reports itself unwalkable and the whole book silently
+        // downgrades to a floor.
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(enumerationBudget);
         return new BookOdds(book, enumerationBudget);
     }
 
@@ -152,8 +160,16 @@ public static class SelectionOdds
             return bounded ? $"at least {text}%" : $"{text}%";
         }
 
+        // PAST A TRILLION THE DIGITS ARE NOISE, and the BOUNDED wording here was wrong outright.
+        // `bounded` means the probability is a FLOOR, so the odds are a CEILING: all that is known
+        // is `odds <= one`, and `one` is itself at least a trillion. "at most 1 in a trillion"
+        // substitutes a trillion for `one` and so states a TIGHTER bound than the arithmetic
+        // supports — the true odds could be one in three trillion, which that sentence denies.
+        // Saying "over a trillion" on both sides keeps the ceiling honest; only the "at most"
+        // distinguishes them, which is exactly the direction this method exists to get right.
         double one = chance.OneIn;
-        if (one >= 1_000_000_000_000d) return bounded ? "at most 1 in a trillion" : "1 in over a trillion";
+        if (one >= 1_000_000_000_000d)
+            return bounded ? "at most 1 in over a trillion" : "1 in over a trillion";
         string odds = Math.Round(one, MidpointRounding.AwayFromZero)
             .ToString("N0", CultureInfo.InvariantCulture);
         return bounded ? $"at most 1 in {odds}" : $"1 in {odds}";
@@ -403,7 +419,15 @@ public sealed class BookOdds
             return product;
         }
 
-        long combos = 1;
+        // A BigInteger, because this was the one product in the project that guarded nothing. It
+        // was `long combos *= branches`, safe only by an argument about the factors: the check is
+        // inside the loop, so `combos` stays under the budget until the last multiply, and a
+        // million times an int cannot overflow. That argument holds for the DEFAULT budget and for
+        // no other — `enumerationBudget` is a public parameter, and at a large one the check never
+        // trips, `combos` wraps to a negative, the gate opens and Walk recurses over a space that
+        // was too big to walk. Widening costs nothing here (a handful of multiplies, once per
+        // recipe) and removes the argument rather than restating it.
+        BigInteger combos = 1;
         foreach (var l in layers)
         {
             combos *= Math.Max(1, l.Branches);

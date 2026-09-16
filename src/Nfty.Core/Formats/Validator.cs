@@ -540,21 +540,45 @@ public static class Validator
     /// A colorization range must run ascending and stay on its axis. Hue is 0..360 degrees and
     /// saturation 0..100 percent, both inclusive; wrap-around is not a feature (the roller
     /// samples <c>Min + r*(Max-Min)</c>, so an inverted range walks backwards off the range).
+    ///
+    /// <para><b>FINITENESS IS CHECKED FIRST, AND THAT ORDER IS LOAD-BEARING.</b> Every comparison
+    /// below is FALSE for <c>NaN</c> — <c>NaN &gt; NaN</c>, <c>NaN &lt; 0</c> and <c>NaN &gt; 360</c>
+    /// alike — so a range carrying one used to pass all four checks and validate clean. This file
+    /// already knows the trap: <c>WeightedRoller.Prepare</c> comments it in two places and
+    /// every weight and absent-percent here is guarded, and a range was the one axis it was never
+    /// applied to. A non-finite endpoint reaches <c>ColorRoller.Roll</c>, which samples it into a
+    /// non-finite hue, which <c>ColorBuckets</c> then folds into a bucket by a floating-point
+    /// conversion — so the book cooks, and what it produces is decided by a saturating cast rather
+    /// than by anything the author wrote.</para>
     /// </summary>
     private static void CheckRange(List<string> problems, string where, ColorRange range)
     {
+        // Reported once for the whole range rather than per endpoint: all four come from one JSON
+        // object, and a book that says "NaN" says it because the object is wrong, not the number.
+        if (!double.IsFinite(range.HueMin) || !double.IsFinite(range.HueMax)
+            || !double.IsFinite(range.SatMin) || !double.IsFinite(range.SatMax))
+        {
+            problems.Add($"{where} has a colorization range with a non-finite endpoint "
+                + $"(hue {Num(range.HueMin)}..{Num(range.HueMax)}, "
+                + $"sat {Num(range.SatMin)}..{Num(range.SatMax)}); every endpoint must be a finite "
+                + "number. Nothing below this line can judge one: every comparison against NaN is "
+                + "false, so an unchecked range would be reported as being on its axis and running "
+                + "ascending.");
+            return;
+        }
+
         if (range.HueMin > range.HueMax)
-            problems.Add($"{where} has a colorization range whose hueMin ({range.HueMin}) is "
-                + $"greater than its hueMax ({range.HueMax}); ranges do not wrap around.");
+            problems.Add($"{where} has a colorization range whose hueMin ({Num(range.HueMin)}) is "
+                + $"greater than its hueMax ({Num(range.HueMax)}); ranges do not wrap around.");
         if (range.SatMin > range.SatMax)
-            problems.Add($"{where} has a colorization range whose satMin ({range.SatMin}) is "
-                + $"greater than its satMax ({range.SatMax}); ranges do not wrap around.");
+            problems.Add($"{where} has a colorization range whose satMin ({Num(range.SatMin)}) is "
+                + $"greater than its satMax ({Num(range.SatMax)}); ranges do not wrap around.");
 
         if (range.HueMin < 0 || range.HueMin > 360 || range.HueMax < 0 || range.HueMax > 360)
-            problems.Add($"{where} has a colorization hue range {range.HueMin}..{range.HueMax} "
+            problems.Add($"{where} has a colorization hue range {Num(range.HueMin)}..{Num(range.HueMax)} "
                 + "outside the hue axis 0..360.");
         if (range.SatMin < 0 || range.SatMin > 100 || range.SatMax < 0 || range.SatMax > 100)
-            problems.Add($"{where} has a colorization sat range {range.SatMin}..{range.SatMax} "
+            problems.Add($"{where} has a colorization sat range {Num(range.SatMin)}..{Num(range.SatMax)} "
                 + "outside the saturation axis 0..100.");
     }
 }

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Numerics;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -201,16 +202,46 @@ public partial class CookBookDetailViewModel : ViewModelBase
     /// <summary>How many variants across all layers.</summary>
     public int VariantCount { get; }
     /// <summary>
-    /// The unique-DNA figure, in full, with thousands separators.
+    /// The unique-DNA figure as the cell can currently hold it: every digit when they fit, a named
+    /// magnitude or an exponent when they do not.
     /// </summary>
     /// <remarks>
-    /// <b>Never rounded, and therefore no tooltip.</b> The cell it lives in was widened until the
-    /// widest figure a <see cref="long"/> can hold fits at the SMALLEST window the app opens —
-    /// measured, 255px of ink against 266px of room — so the compact form and the tooltip that used
-    /// to carry the exact digits are both gone. This is the number an author tunes quantize steps
-    /// against; a figure you have to hover to read is a figure you cannot compare at a glance.
+    /// <para><b>It used to be "never rounded, and therefore no tooltip".</b> That rule was earned —
+    /// the cell was widened until the widest figure a <see cref="long"/> could hold fitted at the
+    /// smallest window, measured, 255px of ink against 266px of room — and it rested entirely on
+    /// <c>long</c> having a widest figure. A <see cref="BigInteger"/> has none, so the guarantee is
+    /// gone and what replaces it is a MEASUREMENT: <c>CookBookDetailView</c> measures these digits
+    /// against the cell it actually has, at the window the user actually has, and sets
+    /// <see cref="UniqueDnaFits"/>. A wide monitor or a maximised window prints the whole number;
+    /// the smallest window prints as much of it as is true.</para>
+    ///
+    /// <para><b>And the tooltip is back, unconditionally.</b> This is still the figure an author
+    /// tunes quantize steps against, so it must always be readable in full somewhere — and a
+    /// tooltip that carries something only sometimes is one nobody learns to reach for, which is
+    /// the argument the per-recipe column already won on.</para>
     /// </remarks>
-    public string UniqueDnaText { get; }
+    public string UniqueDnaText => UniqueDnaFits ? UniqueDnaFullText : UniqueDnaCompactText;
+
+    /// <summary>Every digit, with thousands separators — what the cell shows when it can.</summary>
+    public string UniqueDnaFullText { get; }
+
+    /// <summary>The same figure shortened, for when the digits do not fit.</summary>
+    public string UniqueDnaCompactText { get; }
+
+    /// <summary>The headline's tooltip: the figure in full, always.</summary>
+    public string UniqueDnaTip { get; }
+
+    /// <summary>
+    /// Whether the full digits fit the cell right now. Written by the view from a rendered frame.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to true so the card opens showing the real figure and only ever narrows — which is
+    /// also what keeps a ViewModel test, which has no frame to measure, looking at the number
+    /// rather than at an abbreviation of it.
+    /// </remarks>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UniqueDnaText))]
+    private bool _uniqueDnaFits = true;
 
     /// <summary>How much of the space the intended supply would use, 0..100.</summary>
     /// <remarks>
@@ -290,8 +321,12 @@ public partial class CookBookDetailViewModel : ViewModelBase
         try { space = UniqueSpace.Count(book); }
         catch { /* fall through to Unknown below */ }
 
-        var whole = space is null || !space.IsCountable ? null : ((long Total, SpaceCertainty Certainty)?)(space.Total, space.Certainty);
-        UniqueDnaText = Full(whole);
+        var whole = space is null || !space.IsCountable
+            ? null
+            : ((BigInteger Total, SpaceCertainty Certainty)?)(space.Total, space.Certainty);
+        UniqueDnaFullText = Full(whole);
+        UniqueDnaCompactText = Figure(whole);
+        UniqueDnaTip = Tip(whole);
 
         var target = book.Manifest.TargetSupply;
         HasTargetSupply = target is not null;
@@ -300,9 +335,18 @@ public partial class CookBookDetailViewModel : ViewModelBase
         // The rail answers one question — does the intended supply fit in the space? — so it needs
         // both numbers to exist. A book with no target, or one whose space cannot be counted, has
         // nothing to measure and shows no rail rather than a bar at zero.
-        HasSupplyRail = target is { } t && whole is { Total: > 0 } w2 && w2.Total > 0;
+        HasSupplyRail = target is not null && whole is { } w2 && w2.Total.Sign > 0;
         double raw = HasSupplyRail ? target!.Value / (double)whole!.Value.Total * 100 : 0;
-        SupplyExceedsSpace = HasSupplyRail && target!.Value > whole!.Value.Total;
+
+        // A TARGET OVER THE FIGURE ONLY EXCEEDS THE SPACE IF THE FIGURE IS AN UPPER BOUND. This
+        // compared the two numbers and nothing else, so an AtLeast count - where the total is a
+        // FLOOR and the real space may be orders of magnitude larger - turned the bar warning-red
+        // and told the author their supply would not fit. That is exactly the count a big or finely
+        // quantized book produces, so the warning misfired precisely where it would be believed.
+        // Exact and AtMost both bound the space from above and can carry the claim; AtLeast cannot.
+        SupplyExceedsSpace = HasSupplyRail
+            && whole!.Value.Certainty is SpaceCertainty.Exact or SpaceCertainty.AtMost
+            && target!.Value > whole.Value.Total;
         SupplyPercent = Math.Min(100, raw);
         SupplyPercentText = !HasSupplyRail ? Unknown
             : raw >= 10 ? raw.ToString("0", CultureInfo.InvariantCulture) + "%"
@@ -324,7 +368,7 @@ public partial class CookBookDetailViewModel : ViewModelBase
             double w = book.Manifest.RecipeWeights.GetValueOrDefault(r.Manifest.Id);
             double share = totalWeight > 0 ? w / totalWeight * 100 : 0;
             var rs = space?[r.Manifest.Id];
-            var one = rs is null || !rs.IsCountable ? null : ((long, SpaceCertainty)?)(rs.Total, rs.Certainty);
+            var one = rs is null || !rs.IsCountable ? null : ((BigInteger, SpaceCertainty)?)(rs.Total, rs.Certainty);
             string dna = Figure(one);
             string dnaTip = Tip(one) + Environment.NewLine
                 + "Legal variant combinations (this recipe's rules applied), times each dynamic "
@@ -497,7 +541,7 @@ public partial class CookBookDetailViewModel : ViewModelBase
     /// still rounds past a billion and still carries the exact digits on its tooltip; the headline
     /// figure has a cell wide enough to print in full and does neither.</para>
     /// </remarks>
-    private static string Figure((long Total, SpaceCertainty Certainty)? space) =>
+    private static string Figure((BigInteger Total, SpaceCertainty Certainty)? space) =>
         space is not { } s ? Unknown : SpaceText.Describe(s.Total, s.Certainty, compact: true);
 
     /// <summary>
@@ -511,7 +555,7 @@ public partial class CookBookDetailViewModel : ViewModelBase
     /// does. Below a billion the two agree, and that is deliberate — a tooltip that carries
     /// something only sometimes is one nobody learns to reach for.
     /// </remarks>
-    private static string Tip((long Total, SpaceCertainty Certainty)? space) =>
+    private static string Tip((BigInteger Total, SpaceCertainty Certainty)? space) =>
         space is null ? "This DNA space cannot be counted; run validate." : Full(space) + " unique DNA";
 
     /// <summary>
@@ -519,7 +563,7 @@ public partial class CookBookDetailViewModel : ViewModelBase
     /// </summary>
     /// <param name="space">The figure and what it is, or null when the space is undefined.</param>
     /// <returns>Display text, never empty.</returns>
-    private static string Full((long Total, SpaceCertainty Certainty)? space) =>
+    private static string Full((BigInteger Total, SpaceCertainty Certainty)? space) =>
         space is not { } s ? Unknown : SpaceText.Describe(s.Total, s.Certainty);
 
     /// <summary>

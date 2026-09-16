@@ -3,6 +3,7 @@ using Nfty.Core.Generation;
 using Nfty.Core.Model;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using System.Numerics;
 
 namespace Nfty.Core.Tests;
 
@@ -211,7 +212,7 @@ public class UniqueSpaceTests
         var book = Book(Recipe("cat", Array.Empty<IncompatibilityRule>(),
             Dynamic("aura", new ColorRange(0, 90, 0, 0), hueQ: 30, satQ: 10, "glow")));
 
-        long total = UniqueSpace.Count(book).Total;
+        var total = UniqueSpace.Count(book).Total;
 
         using (var set = Generator.Generate(book, new GenerateOptions((int)total, "seed")))
             Assert.Equal(total, set.Assets.Select(a => a.Dna).Distinct().Count());
@@ -303,16 +304,20 @@ public class UniqueSpaceTests
     }
 
     [Fact]
-    public void A_recipe_whose_combinations_saturated_is_never_reported_exact()
+    public void A_recipe_whose_buckets_gave_up_is_never_reported_exact_even_at_a_total_of_zero()
     {
-        // Combinations saturate (inexact), but a dynamic layer with no entries has zero buckets,
-        // so the product falls back to 0 - UNDER the limit. Re-deriving exactness as "total <
-        // limit" then claims the count is exact when the count itself already gave up.
+        // A ZERO THAT IS NOT AN ANSWER. One layer's bucket set overruns the budget, so the count
+        // has already given up; a second Dynamic layer carries no colour entries at all, so it
+        // contributes ZERO buckets and drags the whole product back to 0. Re-deriving exactness
+        // from the total afterwards - "it is small, so nothing saturated" - would call that count
+        // exact when it is a floor.
         //
-        // Driven by a low reportingCeiling rather than a low cap: combinations are a product, and
-        // products are what the ceiling governs now. The invariant is unchanged - it was never
-        // about the number, only about not losing the signal.
-        var many = Enumerable.Range(0, 40).Select(i => $"v{i}").ToArray();
+        // This used to be driven by a low reportingCeiling, because the product was the thing that
+        // could give up. It cannot any more: the totals are BigInteger and arithmetic never gives
+        // up, so the only remaining source of inexactness is an under-counted bucket set and that
+        // is what drives it now. The invariant is unchanged - it was never about the number, only
+        // about not losing the signal.
+        var wide = Dynamic("sky", new ColorRange(0, 360, 0, 100), hueQ: 1, satQ: 1, "open");
         var empty = new LoadedIngredient
         {
             Manifest = new IngredientManifest("aura", "aura", LayerKind.Dynamic,
@@ -323,13 +328,27 @@ public class UniqueSpaceTests
                 ["glow"] = new Image<Rgba32>(2, 2, new Rgba32(2, 2, 2, 255)),
             },
         };
-        var book = Book(Recipe("cat", Array.Empty<IncompatibilityRule>(),
-            Custom("bg", many), Custom("body", many), empty));
+        var book = Book(Recipe("cat", Array.Empty<IncompatibilityRule>(), wide, empty));
 
-        var count = UniqueSpace.Count(book, reportingCeiling: 500);
+        var count = UniqueSpace.Count(book, enumerationBudget: 100);
 
         Assert.Equal(0, count["cat"].Total);
         Assert.False(count["cat"].IsExact);
+        Assert.Equal(SpaceCertainty.AtLeast, count["cat"].Certainty);
+    }
+
+    [Fact]
+    public void A_budget_the_caller_got_wrong_is_refused_rather_than_answered()
+    {
+        // It used to be laundered into an answer. DistinctBuckets tripped `seen.Count >= budget` on
+        // its first entry and returned the BUDGET, so a layer reported a negative bucket count; the
+        // saturating multiply then turned that into the ceiling, because `a > ceiling / b` is true
+        // for a negative b. The card printed the largest number a long can hold for a book with
+        // four colours in it.
+        var book = Book(Recipe("cat", Array.Empty<IncompatibilityRule>(), Custom("bg", "a", "b")));
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => UniqueSpace.Count(book, enumerationBudget: -1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => UniqueSpace.Count(book, enumerationBudget: 0));
     }
 
     // --- weights the rollers can never land on ---
@@ -617,11 +636,20 @@ public class UniqueSpaceTests
     }
 
     [Fact]
-    public void A_book_whose_recipes_each_hold_a_vast_space_saturates_rather_than_overflowing()
+    public void A_book_whose_space_outgrows_a_long_is_counted_exactly_rather_than_saturated()
     {
-        // The ceiling is long.MaxValue now, so the old "add first, clamp afterwards" would wrap and
-        // report a NEGATIVE space. Two recipes each near the top of the range is the case that used
-        // to be impossible to reach and now is not.
+        // THE WHOLE ARGUMENT FOR BigInteger, AS A NUMBER. Each layer is 60 variants over the full
+        // hue circle at a 1-degree step and the full saturation axis at a 1% step - 360 x 100 =
+        // 36,000 buckets, so 2,160,000 shapes - and each recipe stacks three of them. That is
+        // 2,160,000^3 per recipe and twice that for the book: 2.02e19, against a long's ceiling of
+        // 9.22e18.
+        //
+        // This test used to assert the OPPOSITE and was right to: the total saturated, and what it
+        // pinned was that saturation did not wrap the sum to a negative. Nothing saturates now, so
+        // the figure is simply the figure - which is the point, because a card reading "more than
+        // 9,223,372,036,854,775,807" is printing a constant where an author is trying to read a
+        // count. Nothing here enumerates either: with no rules the space factorizes, so this is a
+        // handful of multiplies however big the answer is.
         var many = Enumerable.Range(0, 60).Select(i => $"v{i}").ToArray();
         LoadedRecipe Huge(string id) => Recipe(id, Array.Empty<IncompatibilityRule>(),
             Dynamic(id + "x", new ColorRange(0, 360, 0, 100), hueQ: 1, satQ: 1, many),
@@ -631,8 +659,14 @@ public class UniqueSpaceTests
         var count = UniqueSpace.Count(BookWithWeights(
             new Dictionary<string, double> { ["one"] = 1, ["two"] = 1 }, Huge("one"), Huge("two")));
 
-        Assert.True(count.Total > 0, $"the total wrapped to {count.Total}");
-        Assert.False(count.IsExact);
+        var perRecipe = BigInteger.Pow(60 * 360 * 100, 3);
+        Assert.Equal(perRecipe, count["one"].Total);
+        Assert.Equal(perRecipe * 2, count.Total);
+        Assert.True(count.Total > long.MaxValue, $"{count.Total} should outgrow a long");
+        Assert.True(count.IsExact, "nothing enumerated, so nothing gave up");
+        Assert.Equal("20,155,392,000,000,000,000", SpaceText.Exact(count.Total));
+        // Still on the named ladder: 2.02e19 is twenty quintillion, not a thousand of them.
+        Assert.Equal("20.16 quintillion", SpaceText.Compact(count.Total));
     }
 
     // ---- CountColors: the one figure allowed to answer "how many colors?" -----------------------

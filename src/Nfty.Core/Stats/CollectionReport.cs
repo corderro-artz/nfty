@@ -27,16 +27,35 @@ public static class CollectionReport
         sb.AppendLine("Recipes:");
         foreach (var r in report.Recipes)
             sb.AppendLine(string.Create(CultureInfo.InvariantCulture,
-                $"  {r.RecipeName,-16} {r.Percent,6:0.00}%"));
+                $"  {r.RecipeName,-16} {Pct(r.Percent)}"));
 
         sb.AppendLine("Traits (overall):");
         foreach (var t in report.Traits)
             sb.AppendLine(string.Create(CultureInfo.InvariantCulture,
-                $"  {t.RecipeName,-12} {t.IngredientName,-14} {t.VariantName,-14} {t.OverallPercent,6:0.00}%"));
+                $"  {t.RecipeName,-12} {t.IngredientName,-14} {t.VariantName,-14} {Pct(t.OverallPercent)}"));
 
         AppendOptionalLayers(sb, book);
         sb.AppendLine(UniqueDnaLine(book));
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// One share, in the fixed six-wide column this report has always used.
+    /// </summary>
+    /// <param name="percent">The share, out of 100.</param>
+    /// <returns>e.g. <c>"  4.17%"</c>, or <c>" &lt;0.01%"</c> for a share too small to print.</returns>
+    /// <remarks>
+    /// <b>Every line this has ever printed is byte-identical</b>: <c>"4.17".PadLeft(6)</c> is what
+    /// <c>{x,6:0.00}</c> produced, and the only input whose rendering changes is one that used to
+    /// come out as <c>"  0.00%"</c> — indistinguishable from a trait no asset carries. These reports
+    /// are diffed between machines, so the floor had to be added without moving the column.
+    /// </remarks>
+    private static string Pct(double percent)
+    {
+        string figure = percent > 0 && percent < RarityText.Smallest
+            ? string.Create(CultureInfo.InvariantCulture, $"<{RarityText.Smallest:0.##}")
+            : percent.ToString("0.00", CultureInfo.InvariantCulture);
+        return figure.PadLeft(6) + "%";
     }
 
     /// <summary>

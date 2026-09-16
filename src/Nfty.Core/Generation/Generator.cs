@@ -1,3 +1,4 @@
+using System.Numerics;
 using Nfty.Core.Formats;
 using Nfty.Core.Imaging;
 using Nfty.Core.Model;
@@ -298,7 +299,9 @@ public static class Generator
         // Keyed off legal COMBINATIONS, never the total — a total can also hit zero because a
         // layer has no reachable color buckets, which is not a rule conflict and must not be
         // reported as one (a rules-free recipe would otherwise be blamed on rules that do not exist).
-        var dead = inPlay.Where(id => space[id] is { Combos: 0, IsCountable: true }).ToList();
+        // Written as a predicate rather than a property pattern because Combos is a BigInteger and
+        // a pattern cannot match one against a constant — there is no BigInteger literal.
+        var dead = inPlay.Where(id => space[id] is { IsCountable: true } s && s.Combos.IsZero).ToList();
         if (dead.Count == inPlay.Count && dead.Count > 0)
             return new RuleConflictException(dead,
                 $"No legal variant combination exists for {Describe(dead)}: "
@@ -320,7 +323,7 @@ public static class Generator
         // this used to be the second copy of it. Only the recipes in play, so a shelved recipe never
         // inflates a maximum the run could not have reached.
         var pool = space.Over(inPlay);
-        long available = pool.Total;
+        BigInteger available = pool.Total;
         string scope = opts.RecipeId is null ? "this cookbook" : $"recipe '{opts.RecipeId}'";
         string ran = $"after {opts.MaxRerollsPerAsset} attempts ({produced} of {opts.Count} generated)";
 

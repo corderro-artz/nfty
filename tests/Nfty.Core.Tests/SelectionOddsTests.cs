@@ -253,6 +253,43 @@ public class SelectionOddsTests
     public void A_figure_reads_the_same_everywhere_it_is_printed(double p, bool asOdds, string expected) =>
         Assert.Equal(expected, SelectionOdds.Describe(new SelectionChance(p, SpaceCertainty.Exact), asOdds));
 
+    [Fact]
+    public void A_BOUND_PAST_A_TRILLION_DOES_NOT_TIGHTEN_ITSELF_ON_THE_WAY_OUT()
+    {
+        // THE ONE BRANCH OF Describe THAT OVERCLAIMED, and the only one no test covered: the
+        // trillion case was exercised unbounded and never bounded.
+        //
+        // `bounded` means the PROBABILITY is a floor, so the odds are a CEILING - all that is known
+        // is `odds <= one`, and `one` is itself at least a trillion. Saying "at most 1 in a
+        // trillion" substitutes a trillion for `one` and states a TIGHTER bound than the arithmetic
+        // supports: true odds of one in three trillion satisfy what was computed and are denied by
+        // what was printed. Both sides say "over a trillion" now, and only the "at most"
+        // distinguishes them - which is the direction this method exists to get right.
+        var bounded = new SelectionChance(1e-15, SpaceCertainty.AtLeast);
+
+        Assert.Equal("at most 1 in over a trillion", SelectionOdds.Describe(bounded, asOdds: true));
+        Assert.DoesNotContain("in a trillion", SelectionOdds.Describe(bounded, asOdds: true),
+            StringComparison.Ordinal);
+
+        // The unbounded wording is unchanged, so the pair still differs only by its direction.
+        Assert.Equal("1 in over a trillion",
+            SelectionOdds.Describe(new SelectionChance(1e-15, SpaceCertainty.Exact), asOdds: true));
+    }
+
+    [Fact]
+    public void A_budget_the_caller_got_wrong_is_refused_rather_than_downgrading_the_whole_book()
+    {
+        // Left unchecked it does not merely give a wrong answer. The walk is gated on
+        // `combos >= budget`, which a zero or negative budget makes true on the first layer, so
+        // every recipe reports itself unwalkable and the book silently comes back as a floor -
+        // indistinguishable from a book that genuinely could not be counted.
+        using var book = Ruled();
+        var peeked = PeekedCookBook.Of(book);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => SelectionOdds.Prepare(peeked, 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => SelectionOdds.Prepare(peeked, -1));
+    }
+
     /// <summary>
     /// THE ORACLE: four thousand real rolls, counted.
     /// </summary>

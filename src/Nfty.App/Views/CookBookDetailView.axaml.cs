@@ -1,7 +1,9 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media;
 using Avalonia.VisualTree;
 using Nfty.App.ViewModels;
 
@@ -16,6 +18,7 @@ public partial class CookBookDetailView : UserControl
     {
         InitializeComponent();
         LayoutUpdated += OnLayoutUpdated;
+        LayoutUpdated += OnDnaFigureLayoutUpdated;
     }
 
     private void InitializeComponent()
@@ -70,5 +73,52 @@ public partial class CookBookDetailView : UserControl
 
         int fits = Math.Max(1, (int)(host.Bounds.Height / rowHeight));
         if (fits != vm.PageSize) vm.PageSize = fits;
+    }
+
+    /// <summary>
+    /// Tells the ViewModel whether the unique-DNA figure fits its cell, from a rendered frame.
+    /// </summary>
+    /// <param name="sender">The view.</param>
+    /// <param name="e">Unused.</param>
+    /// <remarks>
+    /// <para><b>The cell used to carry a guarantee and now carries a budget.</b> It was widened
+    /// until the widest figure a <c>long</c> could hold fitted at the smallest window, which made
+    /// "print every digit" safe by construction. The totals are <c>BigInteger</c> now and have no
+    /// widest figure, so the only honest rule left is to measure: print the digits when they fit
+    /// the cell the window actually gives, and shorten when they do not. A maximised window on a
+    /// wide monitor therefore shows a figure the smallest window abbreviates, which is the right
+    /// way round — the room is real and it should be spent on the number.</para>
+    ///
+    /// <para><b>The INK is measured, not the control.</b> A TextBlock is arranged to its parent and
+    /// clips, reporting the width it was asked for either way, so asking the control how wide it is
+    /// answers a different question than the one being asked. This is the same measurement
+    /// <c>UniqueDnaDisplayTests</c> makes, against the same content box.</para>
+    ///
+    /// <para><b>It only reads inputs it cannot change.</b> That is the rule the infinite-layout-loop
+    /// crash was fixed by, and it holds here for two reasons: the string measured is the FULL
+    /// figure, which is a property of the book and never of what is on screen, and the cell sits in
+    /// a STAR column, whose width the Grid decides from the room it was given rather than from what
+    /// is put in it. Writing the flag can change the text; it cannot change either input, so the
+    /// next pass computes the same answer and the setter drops it.</para>
+    /// </remarks>
+    private void OnDnaFigureLayoutUpdated(object? sender, EventArgs e)
+    {
+        if (DataContext is not CookBookDetailViewModel vm) return;
+        if (this.FindControl<TextBlock>("DnaFigure") is not { } figure) return;
+        if (figure.GetVisualAncestors().OfType<Border>()
+                .FirstOrDefault(b => b.Classes.Contains("metric")) is not { Bounds.Width: > 0 } cell)
+        {
+            return;
+        }
+
+        double room = cell.Bounds.Width - cell.Padding.Left - cell.Padding.Right
+            - cell.BorderThickness.Left - cell.BorderThickness.Right;
+
+        var ink = new FormattedText(vm.UniqueDnaFullText, CultureInfo.InvariantCulture,
+            FlowDirection.LeftToRight,
+            new Typeface(figure.FontFamily, figure.FontStyle, figure.FontWeight),
+            figure.FontSize, Brushes.Black);
+
+        vm.UniqueDnaFits = ink.Width <= room;
     }
 }

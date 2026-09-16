@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using Avalonia.Data.Converters;
+using Nfty.Core.Stats;
 
 namespace Nfty.App.Converters;
 
@@ -24,6 +25,15 @@ namespace Nfty.App.Converters;
 /// of an asset, and printing "1 in 23.98" would be arithmetic showing through. A zero share is an
 /// em dash rather than a division — a trait no asset carries has no odds, and infinity is not an
 /// answer anyone wants on a card.</para>
+///
+/// <para><b>BOTH UNITS ARE WORDED IN CORE NOW, AND BOTH WERE WRONG HERE IN THEIR OWN WAY.</b> The
+/// percentage was interpolated bare — <c>$"{pct}%"</c> — which takes the CURRENT culture, so a
+/// machine set to de-DE printed <c>4,17%</c> two lines below a comment promising every figure on
+/// this screen is invariant. And the odds were formatted <c>"0"</c> where
+/// <c>SelectionOdds.Describe</c>, which renders the combined-chance line an inch up the same rail,
+/// formats <c>"N0"</c>: <c>1 in 100000</c> against <c>1 in 100,000</c>, the same unit in two shapes,
+/// visible only once a collection is big enough to reach five digits. <see cref="RarityText"/> is
+/// the single wording for both.</para>
 /// </remarks>
 public sealed class RarityUnitConverter : IMultiValueConverter
 {
@@ -39,13 +49,12 @@ public sealed class RarityUnitConverter : IMultiValueConverter
     public object Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
     {
         ArgumentNullException.ThrowIfNull(values);
-        if (values.Count < 2 || values[0] is not double pct) return "—";
+        if (values.Count < 2 || values[0] is not double pct) return RarityText.None;
         bool odds = values[1] is true;
 
-        if (!odds) return $"{pct}%";
-        if (pct <= 0) return "—";
         // Invariant, like every other figure this app prints: these are read off screenshots and
-        // compared across machines.
-        return $"1 in {Math.Round(100.0 / pct, MidpointRounding.AwayFromZero).ToString("0", CultureInfo.InvariantCulture)}";
+        // compared across machines. Both forms live in Core so the CLI's reports, this column and
+        // the combined-chance line beside it cannot say one number three ways.
+        return odds ? RarityText.Odds(pct) : RarityText.Percent(pct);
     }
 }

@@ -1,4 +1,6 @@
+using System;
 using System.IO;
+using System.Linq;
 using Nfty.Core.Formats;
 using Nfty.Core.Generation;
 using Nfty.Core.Model;
@@ -40,6 +42,43 @@ public class SetReaderTests
         using var set = Generator.Generate(TinyBook(), new GenerateOptions(Count: 2, Seed: "seed1"));
         SetWriter.Write(set, dir, pack);
         return dir;
+    }
+
+    [Fact]
+    public void A_SET_PAST_TEN_THOUSAND_ASSETS_LOADS_IN_NUMBER_ORDER()
+    {
+        // THE STEM IS PADDED TO FOUR, SO IT STOPS PADDING AT 9,999. The reader used to order its
+        // items by the FILENAME, ordinally - and "10000.json" sorts before "9999.json", so a
+        // collection past ten thousand assets loaded with its last ten thousand in front. That is
+        // the order the Set browser's grid shows and the order this list carries, so it was a real
+        // ordering bug rather than a cosmetic one about how a file manager lists a folder.
+        //
+        // Fixed by sorting on the number rather than by widening the pad. The stem is part of a
+        // layout that has shipped: metadata/NNNN.json records its own image path, so renaming would
+        // strand every URL already published from a cooked Set, and extend adds assets to a Set
+        // whose existing files are already named - a collection-wide width would leave one Set
+        // holding two paddings.
+        var dir = CookTo(pack: false);
+        try
+        {
+            string nfty = Path.Combine(dir, "nfty");
+            string template = File.ReadAllText(Path.Combine(nfty, "0001.json"));
+            foreach (var f in Directory.EnumerateFiles(nfty, "*.json")) File.Delete(f);
+
+            // Written in the order that makes the ordinal sort WRONG, so a reader that kept the
+            // enumeration order by accident still fails this.
+            foreach (int n in new[] { 10_000, 9_999, 10_001 })
+            {
+                File.WriteAllText(Path.Combine(nfty, $"{n:D4}.json"),
+                    template.Replace("\"setNumber\": 1", $"\"setNumber\": {n}",
+                        StringComparison.Ordinal));
+            }
+
+            using var loaded = SetReader.Read(dir);
+
+            Assert.Equal(new[] { 9_999, 10_000, 10_001 }, loaded.Items.Select(i => i.Number));
+        }
+        finally { Directory.Delete(dir, recursive: true); }
     }
 
     [Fact]
