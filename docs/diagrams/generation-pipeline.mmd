@@ -1,0 +1,14 @@
+flowchart LR
+    R["roll a Recipe<br/>by cookbook weight"]
+    L["roll each layer<br/>variant by weight,<br/>colour rolled here"]
+    RULES{"rules<br/>violated?"}
+    D["hash the DNA<br/>selection + colours"]
+    DUP{"already<br/>generated?"}
+    REN["render<br/>colorize, then<br/>composite in depth order"]
+    E(["emit"])
+
+    R --> L --> RULES
+    RULES -->|no| D --> DUP
+    DUP -->|no| REN --> E
+    RULES -->|"re-roll"| R
+    DUP -->|"re-roll"| R
