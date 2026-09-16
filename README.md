@@ -255,26 +255,24 @@ nfty/
 
 ### Generation Pipeline
 
-```text
-  roll a Recipe            by cookbook weight
-      │
-      ▼
-  roll each Variant        by ingredient weight
-      │
-      ├──► rules violated?      ──► re-roll
-      ▼
-  colorize dynamic + static     (custom composites as-is)
-      │
-      ▼
-  composite in depth order
-      │
-      ▼
-  hash the DNA
-      │
-      ├──► already generated?   ──► re-roll
-      ▼
-  emit
+```mermaid
+flowchart TD
+    R["roll a Recipe<br/>by cookbook weight"]
+    L["roll each layer<br/>variant by ingredient weight, colour rolled here"]
+    RULES{"rules violated?"}
+    D["hash the DNA<br/>from the selection and the rolled colours"]
+    DUP{"already generated?<br/>only when uniqueness is on"}
+    REN["render<br/>colorize, then composite in depth order"]
+    E(["emit"])
+
+    R --> L --> RULES
+    RULES -->|"re-roll"| R
+    RULES -->|no| D --> DUP
+    DUP -->|"re-roll"| R
+    DUP -->|no| REN --> E
 ```
+
+Both rejections re-enter at the recipe roll and share one `MaxRerollsPerAsset` budget per asset. Spending it throws `RuleConflictException` or `UniqueSpaceExhaustedException`, depending on the cause. Dedup runs before the render, so a collision never costs a composited canvas.
 
 The **DNA** is a SHA-256 over the recipe id, each layer's variant id, and the *quantized* color of
 each colorized layer. Quantizing folds a continuous color space into something countable, which is
