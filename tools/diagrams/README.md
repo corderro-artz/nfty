@@ -14,7 +14,10 @@ browser either way; mermaid-cli would drag puppeteer and a second Chromium in to
 "Source:" caption under the README figure stays true. Edit the `.mmd`, run the script, commit all
 three.
 
-## Two traps, both of which shipped
+## Two traps this script hit
+
+Neither is hypothetical — both were live in this script before it worked, and neither shows
+in the .mmd or in a code review.
 
 **Mermaid returns HTML-serialized markup.** A `<br/>` in a label comes back as a bare `<br>`, and a
 `.svg` is parsed as XML — so that one unclosed tag is a fatal parse error and the whole diagram
