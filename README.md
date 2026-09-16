@@ -255,22 +255,13 @@ nfty/
 
 ### Generation Pipeline
 
-```mermaid
-flowchart TD
-    R["roll a Recipe<br/>by cookbook weight"]
-    L["roll each layer<br/>variant by ingredient weight, colour rolled here"]
-    RULES{"rules violated?"}
-    D["hash the DNA<br/>from the selection and the rolled colours"]
-    DUP{"already generated?<br/>only when uniqueness is on"}
-    REN["render<br/>colorize, then composite in depth order"]
-    E(["emit"])
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/generation-pipeline-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/diagrams/generation-pipeline-light.svg">
+  <img alt="NFTY generation pipeline: roll a recipe, roll each layer, check rules, hash the DNA, check for a duplicate, then render and emit. Both rejections re-roll from the recipe." src="docs/diagrams/generation-pipeline-light.svg">
+</picture>
 
-    R --> L --> RULES
-    RULES -->|"re-roll"| R
-    RULES -->|no| D --> DUP
-    DUP -->|"re-roll"| R
-    DUP -->|no| REN --> E
-```
+<sub>Source: <a href="docs/diagrams/generation-pipeline.mmd"><code>docs/diagrams/generation-pipeline.mmd</code></a></sub>
 
 Both rejections re-enter at the recipe roll and share one `MaxRerollsPerAsset` budget per asset. Spending it throws `RuleConflictException` or `UniqueSpaceExhaustedException`, depending on the cause. Dedup runs before the render, so a collision never costs a composited canvas.
 
