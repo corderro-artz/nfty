@@ -1,5 +1,5 @@
-[![Vaporsoft](https://raw.githubusercontent.com/corderro-artz/corderro-artz.github.io/ddb761c320225187ead71568b1c3f460e15bbd4a/public/vaporsoft/vaporsoft-logo.svg)](https://www.vaporsoft.dev)
-[![nfty](https://raw.githubusercontent.com/corderro-artz/corderro-artz.github.io/main/public/nfty/nfty-icon.svg)](https://github.com/corderro-artz/nfty)
+[![Vaporsoft](https://raw.githubusercontent.com/corderro-artz/corderro-artz.github.io/main/public/brand/vaporsoft/vaporsoft-logo.svg)](https://www.vaporsoft.dev)
+[![nfty](https://raw.githubusercontent.com/corderro-artz/corderro-artz.github.io/main/public/brand/nfty/nfty-icon.svg)](https://github.com/corderro-artz/nfty)
 
 # nfty
 
