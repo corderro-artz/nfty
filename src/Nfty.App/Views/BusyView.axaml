@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             x:Class="Nfty.App.Views.BusyView"
+             x:DataType="vm:BusyViewModel">
+  <!-- The smallest card in the app, because it is the one nobody chose to open. It says what is
+       happening and how far along it is, and gets out of the way - anything more would be a screen
+       asking to be read while the reader is waiting to do something else. -->
+  <Border Classes="modal busy">
+    <StackPanel Spacing="14" Margin="24,20">
+      <StackPanel Classes="plabel-row">
+        <Ellipse Classes="kdot" />
+        <TextBlock Text="WORKING" Classes="slbl" />
+      </StackPanel>
+      <TextBlock Text="{Binding Title}" Classes="m-h" />
+
+      <!-- Determinate where the work can count and indeterminate where it cannot. Unpacking an
+           archive reports nothing until it is done, and a bar that invented a percentage there
+           would be lying; a spinning one says "working, no idea how long", which is true. -->
+      <ProgressBar Minimum="0" Maximum="1" Value="{Binding Progress}"
+                   IsIndeterminate="{Binding IsIndeterminate}" />
+      <TextBlock Text="{Binding PhaseText}" Classes="m-sub" TextWrapping="Wrap" />
+
+      <!-- Reserved, not revealed: a job that can be stopped and one that cannot are the same card
+           with one button lit, so the card does not change size when it turns out to be the slow
+           kind. -->
+      <Button Content="Cancel" Classes="tbtn" HorizontalAlignment="Right"
+              Command="{Binding CancelCommand}"
+              IsVisible="{Binding CanCancel}" />
+    </StackPanel>
+  </Border>
+</UserControl>

@@ -1,7 +1,11 @@
 using System.IO.Compression;
 using System.Text.Json;
 using Nfty.Core.Formats;
+using Nfty.Core.Imaging;
 using Nfty.Core.Output;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Nfty.Core.Publish;
 
@@ -27,7 +31,25 @@ public record ExportEntry(string Source, string Name, long Bytes);
 public record ExportPlan(
     IReadOnlyList<ExportEntry> Entries, string Collection, int Count, string OutputName)
 {
+    /// <summary>
+    /// The sheet this export will stitch, or null when it is not making one.
+    /// </summary>
+    /// <remarks>
+    /// <b>The one part of an export that does not exist yet.</b> Every <see cref="ExportEntry"/>
+    /// names a file on disk and carries its real size; a sheet is built BY the export, so at plan
+    /// time there is a grid and a pixel size and no bytes. It is described here rather than left out
+    /// of the plan, because the plan is what the screen promises and a sheet that appeared in the
+    /// output without appearing in the list is exactly the defect this seam exists to prevent. The
+    /// plan <see cref="ExportResult"/> carries has it as an ordinary entry, with its real size.
+    /// </remarks>
+    public SpriteSheetLayout? SpriteSheet { get; init; }
+
     /// <summary>The total size of everything being shipped.</summary>
+    /// <remarks>
+    /// A planned <see cref="SpriteSheet"/> contributes nothing, because nothing has encoded it yet
+    /// and a guess would be worse than an omission — <see cref="Parts"/> names it so the reader
+    /// still knows it is coming.
+    /// </remarks>
     public long Bytes => Entries.Sum(e => e.Bytes);
 
     /// <summary>
@@ -42,14 +64,29 @@ public record ExportPlan(
     /// renders it for the reason the reports in <c>Stats/</c> are rendered here — the terminal and
     /// the dialog have to say the identical thing, not something similar.
     /// </remarks>
-    public IReadOnlyList<string> Parts() => Entries
-        .GroupBy(e => e.Name.Contains('/') ? e.Name[..e.Name.IndexOf('/')] + "/" : e.Name)
-        .OrderBy(g => g.Key, StringComparer.Ordinal)
-        .Select(g => g.Count() == 1
-            ? g.Key
-            : string.Create(System.Globalization.CultureInfo.InvariantCulture,
-                $"{g.Key}  {g.Count()} files"))
-        .ToList();
+    public IReadOnlyList<string> Parts()
+    {
+        var parts = Entries
+            .GroupBy(e => e.Name.Contains('/') ? e.Name[..e.Name.IndexOf('/')] + "/" : e.Name)
+            .OrderBy(g => g.Key, StringComparer.Ordinal)
+            .Select(g => g.Count() == 1
+                ? g.Key
+                : string.Create(System.Globalization.CultureInfo.InvariantCulture,
+                    $"{g.Key}  {g.Count()} files"))
+            .ToList();
+
+        // Listed with its GRID rather than its size, which is the honest thing to say about a file
+        // that does not exist yet - and the two numbers a reader would want to check anyway. Only
+        // while it is still a plan: once written it is an ordinary entry and is grouped above.
+        if (SpriteSheet is { } sheet && !Entries.Any(e => e.Name == SpriteSheetName))
+            parts.Add(string.Create(System.Globalization.CultureInfo.InvariantCulture,
+                $"{SpriteSheetName}  {sheet.Columns} x {sheet.Rows} cells, {sheet.SizeText()}"));
+
+        return parts;
+    }
+
+    /// <summary>What a stitched sheet is called inside an export.</summary>
+    public const string SpriteSheetName = "spritesheet.png";
 
     /// <summary>The total, for a person: <c>636 KB</c>, <c>1.2 MB</c>.</summary>
     /// <returns>The size as text, invariant like every other figure this product prints.</returns>
@@ -72,6 +109,23 @@ public record ExportPlan(
 /// <param name="Path">The folder or file that was written.</param>
 /// <param name="Plan">What went into it.</param>
 public record ExportResult(string Path, ExportPlan Plan);
+
+/// <summary>How far an export has got.</summary>
+/// <param name="Done">Steps finished.</param>
+/// <param name="Total">Steps in the whole run.</param>
+/// <param name="Phase">What is happening, in the words a person would use.</param>
+/// <remarks>
+/// <b>A step is a FILE, and the sheet is counted in the same units as everything else.</b> An
+/// export is one long stretch of copying with an optional image stitch in front of it, and a bar
+/// that ran to the end and then sat still through the slowest part of the run would be worse than
+/// no bar. So stitching one asset and copying one file are each one step, which makes the fraction
+/// roughly track the work rather than the file count.
+/// </remarks>
+public record ExportProgress(int Done, int Total, string Phase)
+{
+    /// <summary>Progress as a 0..1 fraction. Zero when there is nothing to do.</summary>
+    public double Fraction => Total <= 0 ? 0 : Math.Clamp((double)Done / Total, 0, 1);
+}
 
 /// <summary>
 /// Publishes a cooked Set: decides what leaves the machine, and in what shape.
@@ -124,7 +178,36 @@ public static class SetExporter
     /// <exception cref="ArgumentException">The options ask for something that cannot be built.</exception>
     /// <exception cref="SealedSetException">The source is itself sealed, or sealing failed.</exception>
     public static ExportResult Export(string setPath, string outDir, ExportOptions options,
-        string? cookBookPath = null, string? passphrase = null)
+        string? cookBookPath = null, string? passphrase = null) =>
+        ExportAsync(setPath, outDir, options, cookBookPath, passphrase).GetAwaiter().GetResult();
+
+    /// <summary>
+    /// Exports a Set, reporting progress and stopping when asked.
+    /// </summary>
+    /// <param name="setPath">The Set to export: a folder, or a <c>.set</c> archive.</param>
+    /// <param name="outDir">The folder to write into; created if missing.</param>
+    /// <param name="options">What to include, and in what shape.</param>
+    /// <param name="cookBookPath">The <c>.cbk</c> to ship, when
+    /// <see cref="ExportOptions.IncludeCookBook"/> is set.</param>
+    /// <param name="passphrase">Required when <see cref="ExportOptions.Sealed"/> is set.</param>
+    /// <param name="progress">One step per asset stitched and per file written.</param>
+    /// <param name="cancellationToken">Stops between steps.</param>
+    /// <returns>Where it landed, and what went into it.</returns>
+    /// <exception cref="ArgumentException">The options ask for something that cannot be built.</exception>
+    /// <exception cref="SealedSetException">The source is itself sealed, or sealing failed.</exception>
+    /// <remarks>
+    /// <para><b>The async one is the real implementation and the sync twin blocks on it</b>, rather
+    /// than the other way round: an export is stream work end to end - unpacking a <c>.set</c>,
+    /// encoding a sheet, copying or zipping every file - so there is genuinely something to await.
+    /// Blocking is safe because nothing in Core captures a synchronization context.</para>
+    ///
+    /// <para><b>The sheet is stitched FIRST</b>, so a grid that cannot be built fails before
+    /// anything has been written to the destination - and so the slowest part of the run is the part
+    /// the bar spends most of its time on rather than a pause after it reaches the end.</para>
+    /// </remarks>
+    public static async Task<ExportResult> ExportAsync(string setPath, string outDir,
+        ExportOptions options, string? cookBookPath = null, string? passphrase = null,
+        IProgress<ExportProgress>? progress = null, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(setPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(outDir);
@@ -149,12 +232,172 @@ public static class SetExporter
             throw new ArgumentException(
                 $"'{destination}' is the Set being exported. Choose a different folder.", nameof(outDir));
 
-        if (options.Shape == ExportShape.Folder) WriteFolder(plan, destination);
-        else if (!options.Sealed) WriteArchive(plan, destination);
-        else WriteSealed(plan, destination, options, passphrase!);
+        string? sheetTemp = null;
+        string? artTemp = null;
+        try
+        {
+            // STAMPING COMES FIRST, so the sheet is stitched from the art that will actually ship.
+            // Doing it the other way round would hand a debug export a clean sheet beside numbered
+            // sprites - the one combination nobody wants, since the sheet is where the numbering is
+            // easiest to read.
+            int stamped = 0;
+            if (options.NumberWatermark)
+            {
+                (plan, artTemp, stamped) = await StampAsync(
+                    source.Dir, plan, options, progress, cancellationToken).ConfigureAwait(false);
+            }
 
-        return new ExportResult(destination, plan);
+            int stitched = 0;
+            if (plan.SpriteSheet is { } layout)
+            {
+                (plan, sheetTemp, stitched) = await StitchAsync(
+                    source.Dir, plan, layout, artTemp, stamped, progress, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
+            stitched += stamped;
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            int total = stitched + plan.Entries.Count;
+            Report(progress, stitched, total, "Writing...");
+
+            if (options.Shape == ExportShape.Folder)
+                WriteFolder(plan, destination, progress, stitched, total, cancellationToken);
+            else if (!options.Sealed)
+                WriteArchive(plan, destination, progress, stitched, total, cancellationToken);
+            else
+                WriteSealed(plan, destination, options, passphrase!, progress, stitched, total,
+                    cancellationToken);
+
+            Report(progress, total, total, "Done");
+            return new ExportResult(destination, plan);
+        }
+        finally
+        {
+            if (sheetTemp is not null && File.Exists(sheetTemp))
+                try { File.Delete(sheetTemp); } catch { /* best effort */ }
+            if (artTemp is not null && Directory.Exists(artTemp))
+                try { Directory.Delete(artTemp, recursive: true); } catch { /* best effort */ }
+        }
     }
+
+    /// <summary>
+    /// Renders a stamped copy of every asset and points the plan's art entries at it.
+    /// </summary>
+    /// <param name="setDir">The Set being exported, already unpacked.</param>
+    /// <param name="plan">The plan so far.</param>
+    /// <param name="options">The request, for the corner.</param>
+    /// <param name="progress">The run's progress sink.</param>
+    /// <param name="cancellationToken">Stops between assets.</param>
+    /// <returns>The plan pointing at the stamped art, the temp folder, and the steps spent.</returns>
+    /// <remarks>
+    /// <para><b>The author's Set is never written to.</b> A stamp is destructive and irreversible -
+    /// the number is painted into the pixels - so it is rendered into a temporary folder and the
+    /// entry's SOURCE is swapped. Every shape downstream then carries the stamped art through the
+    /// entry list it already walks, exactly as the sheet does.</para>
+    ///
+    /// <para><b>The number comes from the FILENAME, which is the one place it is already written
+    /// down.</b> An asset's stem is its set number, and reading it back costs nothing where opening
+    /// every <c>nfty/NNNN.json</c> to look up the same integer would cost a file read apiece. A stem
+    /// that is not a number is left unstamped rather than guessed at.</para>
+    /// </remarks>
+    private static async Task<(ExportPlan Plan, string Temp, int Steps)> StampAsync(string setDir,
+        ExportPlan plan, ExportOptions options, IProgress<ExportProgress>? progress,
+        CancellationToken cancellationToken)
+    {
+        string temp = Directory.CreateTempSubdirectory("nfty-stamp-").FullName;
+        string prefix = SetLayout.ImagesDir + "/";
+        var art = plan.Entries.Where(e => e.Name.StartsWith(prefix, StringComparison.Ordinal)).ToList();
+
+        int total = art.Count * 2 + plan.Entries.Count;
+        var entries = plan.Entries.ToList();
+
+        for (int i = 0; i < art.Count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var entry = art[i];
+
+            string stem = Path.GetFileNameWithoutExtension(entry.Source);
+            string target = Path.Combine(temp, Path.GetFileName(entry.Source));
+
+            if (int.TryParse(stem, System.Globalization.NumberStyles.Integer,
+                    System.Globalization.CultureInfo.InvariantCulture, out int number))
+            {
+                using var image = await Image.LoadAsync<Rgba32>(entry.Source, cancellationToken)
+                    .ConfigureAwait(false);
+                NumberStamp.Draw(image, number, options.WatermarkCorner);
+                await image.SaveAsync(target, new PngEncoder(), cancellationToken)
+                    .ConfigureAwait(false);
+
+                entries[entries.IndexOf(entry)] = Entry(target, entry.Name);
+            }
+
+            Report(progress, i + 1, total, "Numbering...");
+        }
+
+        return (plan with { Entries = entries }, temp, art.Count);
+    }
+
+    /// <summary>
+    /// Builds the sheet into a temporary file and folds it into the plan as an ordinary entry.
+    /// </summary>
+    /// <param name="setDir">The Set being exported, already unpacked.</param>
+    /// <param name="plan">The plan so far.</param>
+    /// <param name="layout">The grid to stitch into.</param>
+    /// <param name="stampedArt">Where the numbered copies were rendered, or null when none were.</param>
+    /// <param name="stamped">Steps already spent stamping, so the bar keeps running forward.</param>
+    /// <param name="progress">The run's progress sink.</param>
+    /// <param name="cancellationToken">Stops between assets.</param>
+    /// <returns>The plan with the sheet in it, the temp file to clean up, and the steps spent.</returns>
+    /// <remarks>
+    /// <b>Written to a temp file rather than straight into the destination</b>, so every shape
+    /// carries a sheet without three copies of the arithmetic: a folder export copies it, an archive
+    /// zips it and a sealed export encrypts it, all through the entry list they already walk. It
+    /// also means a sheet that fails to build leaves nothing behind in the output folder.
+    /// </remarks>
+    private static async Task<(ExportPlan Plan, string Temp, int Steps)> StitchAsync(string setDir,
+        ExportPlan plan, SpriteSheetLayout layout, string? stampedArt, int stamped,
+        IProgress<ExportProgress>? progress, CancellationToken cancellationToken)
+    {
+        using var set = await SetReader.ReadAsync(setDir, cancellationToken).ConfigureAwait(false);
+
+        if (SpriteSheet.ProblemWith(layout, set.Items.Count) is { } problem)
+            throw new ArgumentException(problem, nameof(layout));
+
+        // Stitched from the STAMPED art when there is any, so a debug export's sheet carries the
+        // same numbers its sprites do. The stamped copy keeps each asset's filename, so the swap is
+        // a folder substitution and the cell order is untouched.
+        var items = stampedArt is null
+            ? set.Items
+            : set.Items
+                .Select(i => i with
+                {
+                    ImagePath = File.Exists(Path.Combine(stampedArt, Path.GetFileName(i.ImagePath)))
+                        ? Path.Combine(stampedArt, Path.GetFileName(i.ImagePath))
+                        : i.ImagePath,
+                })
+                .ToList();
+
+        string temp = Path.Combine(Path.GetTempPath(),
+            "nfty-sheet-" + Guid.NewGuid().ToString("N") + ".png");
+
+        int total = stamped + items.Count + plan.Entries.Count + 1;
+        var sheetProgress = progress is null
+            ? null
+            : new Progress<SpriteSheetProgress>(
+                sp => Report(progress, stamped + sp.Placed, total, sp.Phase));
+
+        await SpriteSheet.WriteAsync(items, layout, temp, sheetProgress, cancellationToken)
+            .ConfigureAwait(false);
+
+        var entries = plan.Entries.ToList();
+        entries.Add(Entry(temp, ExportPlan.SpriteSheetName));
+        return (plan with { Entries = entries }, temp, items.Count);
+    }
+
+    private static void Report(IProgress<ExportProgress>? progress, int done, int total, string phase) =>
+        progress?.Report(new ExportProgress(done, total, phase));
 
     /// <summary>
     /// The rules that make a request buildable at all, checked once for both entry points so
@@ -271,7 +514,62 @@ public static class SetExporter
         string name = options.Shape == ExportShape.Folder ? stem
             : stem + (options.Sealed ? Archives.SealedExtension : Archives.SetExtension);
 
-        return new ExportPlan(entries, manifest.Name, manifest.Count, name);
+        return new ExportPlan(entries, manifest.Name, manifest.Count, name)
+        {
+            SpriteSheet = options.SpriteSheet ? SheetLayoutFor(setDir, manifest.Count, options) : null,
+        };
+    }
+
+    /// <summary>
+    /// The grid a sheet will use: the author's numbers where they gave any, the squarest fit where
+    /// they did not.
+    /// </summary>
+    /// <param name="setDir">The Set being exported.</param>
+    /// <param name="count">How many assets it holds.</param>
+    /// <param name="options">The request, for the column and row overrides.</param>
+    /// <returns>The layout, or null when the Set has no readable art to measure a cell from.</returns>
+    /// <remarks>
+    /// <b>The cell size is IDENTIFIED, not decoded.</b> Every asset is the CookBook's canvas by
+    /// construction, so one header read answers it for the whole collection — the same argument
+    /// <c>ArchivePeek</c> makes about a manifest, and the reason planning a sheet over a ten
+    /// thousand asset Set costs one file open rather than ten thousand.
+    /// </remarks>
+    private static SpriteSheetLayout? SheetLayoutFor(string setDir, int count, ExportOptions options)
+    {
+        if (count <= 0) return null;
+
+        string imagesDir = Path.Combine(setDir, SetLayout.ImagesDir);
+        if (!Directory.Exists(imagesDir)) return null;
+        string? first = Directory.EnumerateFiles(imagesDir, "*.png")
+            .OrderBy(f => f, StringComparer.Ordinal).FirstOrDefault();
+        if (first is null) return null;
+
+        int cellW, cellH;
+        try
+        {
+            var info = Image.Identify(first);
+            cellW = info.Width;
+            cellH = info.Height;
+        }
+        catch (Exception ex) when (ex is UnknownImageFormatException
+                                       or InvalidImageContentException
+                                       or IOException)
+        {
+            return null;
+        }
+
+        if (cellW <= 0 || cellH <= 0) return null;
+
+        var fit = SpriteSheet.Fit(count, cellW, cellH);
+        int columns = options.SpriteSheetColumns is > 0 ? options.SpriteSheetColumns.Value : fit.Columns;
+
+        // Rows follow the columns when nobody stated them, so entering one number is enough and the
+        // grid that comes back always holds the collection.
+        int rows = options.SpriteSheetRows is > 0
+            ? options.SpriteSheetRows.Value
+            : (count + columns - 1) / columns;
+
+        return new SpriteSheetLayout(columns, rows, cellW, cellH);
     }
 
     private static ExportEntry Entry(string source, string name) =>
@@ -320,27 +618,37 @@ public static class SetExporter
         }
     }
 
-    private static void WriteFolder(ExportPlan plan, string destination)
+    private static void WriteFolder(ExportPlan plan, string destination,
+        IProgress<ExportProgress>? progress, int done, int total, CancellationToken ct)
     {
         Directory.CreateDirectory(destination);
         foreach (var e in plan.Entries)
         {
+            ct.ThrowIfCancellationRequested();
             string target = Path.Combine(destination, e.Name.Replace('/', Path.DirectorySeparatorChar));
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
             File.Copy(e.Source, target, overwrite: true);
+            Report(progress, ++done, total, "Writing...");
         }
     }
 
-    private static void WriteArchive(ExportPlan plan, string destination)
+    private static void WriteArchive(ExportPlan plan, string destination,
+        IProgress<ExportProgress>? progress, int done, int total, CancellationToken ct)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
         if (File.Exists(destination)) File.Delete(destination);
         using var zip = ZipFile.Open(destination, ZipArchiveMode.Create);
-        foreach (var e in plan.Entries) zip.CreateEntryFromFile(e.Source, e.Name);
+        foreach (var e in plan.Entries)
+        {
+            ct.ThrowIfCancellationRequested();
+            zip.CreateEntryFromFile(e.Source, e.Name);
+            Report(progress, ++done, total, "Packing...");
+        }
     }
 
     private static void WriteSealed(ExportPlan plan, string destination, ExportOptions options,
-        string passphrase)
+        string passphrase, IProgress<ExportProgress>? progress, int done, int total,
+        CancellationToken ct)
     {
         // Packed to a temporary .set first, then encrypted whole. One archive inside one ciphertext,
         // rather than an encrypted entry per file: per-file encryption would leave the file NAMES
@@ -349,7 +657,12 @@ public static class SetExporter
         string staging = Path.Combine(Path.GetTempPath(), "nfty-seal-" + Guid.NewGuid().ToString("N") + ".set");
         try
         {
-            WriteArchive(plan, staging);
+            WriteArchive(plan, staging, progress, done, total, ct);
+            ct.ThrowIfCancellationRequested();
+
+            // Sealing is one authenticated stream over the whole staged archive, so there is nothing
+            // per-file to report from inside it. The phase is the honest unit of progress here.
+            Report(progress, done + plan.Entries.Count, total, "Sealing...");
             using var payload = File.OpenRead(staging);
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
             Seal.Write(destination, payload, plan.Collection, plan.Count, options.Note,

@@ -1,3 +1,5 @@
+using Nfty.Core.Imaging;
+
 namespace Nfty.Core.Publish;
 
 /// <summary>Whether an export lands as a folder or as one file.</summary>
@@ -94,6 +96,50 @@ public record ExportOptions
 
     /// <summary>What the recipient should read first. Travels in the clear on a sealed export.</summary>
     public string? Note { get; init; }
+
+    /// <summary>
+    /// Also stitch every asset into one <c>spritesheet.png</c>.
+    /// </summary>
+    /// <remarks>
+    /// <b>A fifth content axis, not a fifth shape.</b> It travels with the export rather than
+    /// replacing it — a sheet is what an engine loads and the numbered PNGs are what a marketplace
+    /// mints, and a collection handed to a game developer usually wants both. So it is a checkbox
+    /// beside the other four and not a preset, and it is the one entry in an export that does not
+    /// exist on disk until the export makes it.
+    /// </remarks>
+    public bool SpriteSheet { get; init; }
+
+    /// <summary>Cells across the sheet, or null to fall to the squarest grid that fits.</summary>
+    /// <remarks>
+    /// <b>Null is a real answer and not a zero.</b> Most people want "just lay it out", and asking
+    /// two numbers of somebody who has no opinion is how a checkbox becomes a form. The default is
+    /// <c>SpriteSheet.Fit</c>, and either number may be given alone — the other follows from the
+    /// count.
+    /// </remarks>
+    public int? SpriteSheetColumns { get; init; }
+
+    /// <summary>Cells down the sheet, or null to derive it from the columns and the count.</summary>
+    public int? SpriteSheetRows { get; init; }
+
+    /// <summary>
+    /// Stamp each asset's set number into a corner of its art.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>A debug mark, and it says so.</b> Loose sprites lose their filenames the moment they
+    /// are dragged into an engine, a sprite editor or a chat window, and a folder of five hundred
+    /// near-identical characters is unsortable without one. The number stamped is the asset's own
+    /// set number, so a stamped sprite cross-references <c>nfty/NNNN.json</c> with nothing else
+    /// having to be recorded.</para>
+    ///
+    /// <para><b>It is destructive, so it only ever happens on the way OUT.</b> The export renders a
+    /// stamped copy and ships that; the author's Set is never touched. A stamped export is for
+    /// working with, not for minting - which is why it is a box you tick rather than part of any
+    /// preset.</para>
+    /// </remarks>
+    public bool NumberWatermark { get; init; }
+
+    /// <summary>Which corner the stamp sits in.</summary>
+    public StampCorner WatermarkCorner { get; init; } = StampCorner.BottomRight;
 
     /// <summary>The options a preset starts from.</summary>
     /// <param name="preset">Which one.</param>

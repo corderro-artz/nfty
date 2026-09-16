@@ -59,6 +59,11 @@ public class LandingOpenSetTests
             var nav = new FakeNav();
             var vm = MakeLanding(nav, new FakeDialogs(), new StubPicker(dir));
             await vm.OpenSetCommand.ExecuteAsync(null);
+
+            // Opening a Set is off the UI thread now, so the click only STARTS it; PendingOpen is
+            // the handle that gesture leaves, exactly as ExplorerView.PendingReorder is for a drop.
+            await vm.PendingOpen!;
+
             Assert.IsType<SetBrowserViewModel>(nav.Current);
             ((SetBrowserViewModel)nav.Current!).Dispose();
         }
@@ -71,6 +76,7 @@ public class LandingOpenSetTests
         var nav = new FakeNav();
         var vm = MakeLanding(nav, new FakeDialogs(), new StubPicker(null));
         await vm.OpenSetCommand.ExecuteAsync(null);
+        if (vm.PendingOpen is { } pending) await pending;
         Assert.Null(nav.Current);
     }
 
@@ -84,6 +90,8 @@ public class LandingOpenSetTests
             var dialogs = new FakeDialogs();
             var vm = MakeLanding(nav, dialogs, new StubPicker(tmp));
             await vm.OpenSetCommand.ExecuteAsync(null);
+            await vm.PendingOpen!;
+
             Assert.IsType<ErrorDialogViewModel>(dialogs.Active);
             Assert.Null(nav.Current);
         }
@@ -91,7 +99,7 @@ public class LandingOpenSetTests
     }
 
     [AvaloniaFact]
-    public void A_remembered_set_reopens_in_the_browser()
+    public async Task A_remembered_set_reopens_in_the_browser()
     {
         // OpenRecent used to route a .set with its own extension compare, ABOVE the dispatch, because
         // Archives.KindOf did not know the kind — the second copy of the mapping TryKindOf exists to
@@ -102,6 +110,7 @@ public class LandingOpenSetTests
 
         vm.OpenRecentCommand.Execute(
             new Nfty.App.Models.RecentItem("Tiny", "set · 2 assets", archive, false));
+        await vm.PendingOpen!;
 
         Assert.IsType<SetBrowserViewModel>(nav.Current);
         ((SetBrowserViewModel)nav.Current!).Dispose();
@@ -119,6 +128,7 @@ public class LandingOpenSetTests
         var vm = MakeLanding(nav, dialogs, new StubPicker(archive));
 
         await vm.ImportCommand.ExecuteAsync(null);
+        await vm.PendingOpen!;
 
         Assert.IsType<SetBrowserViewModel>(nav.Current);
         Assert.IsNotType<ErrorDialogViewModel>(dialogs.Active);
@@ -151,7 +161,9 @@ public class LandingOpenSetTests
         var folder = CookTinySet();
         landing.OpenRecentCommand.Execute(
             new Models.RecentItem("Tiny", "set · 2 assets", folder, false));
-        await Task.Yield();
+        // A yield is NOT a wait - it posts to the same thread and returns, so a read that finishes
+        // off-thread a microsecond later is simply missed. PendingOpen is the handle.
+        await landing.PendingOpen!;
 
         Assert.Null(dialogs.Active);                       // no "Can't open"
         Assert.IsType<SetBrowserViewModel>(nav.Current);

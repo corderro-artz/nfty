@@ -463,10 +463,32 @@ public partial class LandingViewModel : ViewModelBase
         OpenSetPath(path);
     }
 
-    private void OpenSetPath(string path)
+    /// <summary>
+    /// Opens a cooked Set, off the UI thread and behind a busy card.
+    /// </summary>
+    /// <param name="path">The <c>.set</c> or the folder.</param>
+    /// <remarks>
+    /// <para><b>It used to be <c>SetReader.Read</c> on the UI thread.</b> That unpacks a <c>.set</c>
+    /// into a temporary directory and reads a JSON file per asset, so a real collection froze the
+    /// window for seconds with nothing on screen saying why. The async twin has always existed;
+    /// nothing was calling it, which is the whole class of defect the sync/async pairs exist to
+    /// prevent and the reason they are worth keeping in step.</para>
+    ///
+    /// <para><b>Fire-and-forget, deliberately, and every caller is a gesture.</b> Nothing here waits
+    /// for a Set to open - a click on a recent row, a drop, a picker - so the task is started and
+    /// the handler returns. It owes no observable handle for the same reason: unlike the tree
+    /// reorder, it writes nothing, so there is no second gesture that could collide with it and
+    /// nothing a test could race against except the navigation it ends with.</para>
+    /// </remarks>
+    private async Task OpenSetPathAsync(string path)
     {
         LoadedSet set;
-        try { set = SetReader.Read(path); }
+        try
+        {
+            set = await BusyViewModel.RunAsync(_dialogs, "Opening Set",
+                Directory.Exists(path) ? "Reading the collection…" : "Unpacking…",
+                (_, ct) => SetReader.ReadAsync(path, ct));
+        }
         catch (Exception ex)
         {
             ShowError("Could not open the set", ex.Message);
@@ -475,6 +497,22 @@ public partial class LandingViewModel : ViewModelBase
         _nav.To(_setBrowserFactory(set));
         RecordRecent(new RecentItem(set.Manifest.Name, $"set · {set.Manifest.Count} assets", path, false));
     }
+
+    /// <summary>
+    /// The open this screen last started, which is the one observable trace a fire-and-forget
+    /// gesture leaves.
+    /// </summary>
+    /// <remarks>
+    /// <b>The same handle <c>ExplorerView.PendingReorder</c> is, for the same reason.</b> Opening a
+    /// Set is now a task nobody awaits - every caller is a gesture - and a test that asserted on the
+    /// navigation right after the click would simply be looking before the read had finished, which
+    /// on a fast machine passes and on a slow one does not. <c>Dispatcher.RunJobs</c> cannot help: it
+    /// drains what has been POSTED and returns, so a continuation landing a microsecond later is
+    /// missed. Awaiting this is the only thing that is not a race.
+    /// </remarks>
+    internal Task? PendingOpen { get; private set; }
+
+    private void OpenSetPath(string path) => PendingOpen = OpenSetPathAsync(path);
 
     /// <summary>
     /// Opens a sealed export: shows what it is, asks for the passphrase, then browses what is inside.

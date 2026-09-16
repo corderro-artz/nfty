@@ -1,8 +1,10 @@
+using Avalonia.Layout;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Services;
 using Nfty.Core.Formats;
 using Nfty.Core.Output;
+using Nfty.Core.Imaging;
 using Nfty.Core.Publish;
 
 namespace Nfty.App.ViewModels;
@@ -56,6 +58,58 @@ public partial class ExportPresetTile : ObservableObject
 /// <see cref="ExportOptions"/>, which is a description of the export that a view model holds, binds
 /// and would reasonably be logged while debugging.</para>
 /// </remarks>
+/// <summary>
+/// One corner of the watermark picker, drawn as the corner it is.
+/// </summary>
+/// <param name="corner">Which corner.</param>
+/// <remarks>
+/// <b>The control's SHAPE says what it does.</b> Four radio buttons labelled "Top left / Top right
+/// / Bottom left / Bottom right" is four strings to read where a 2x2 of squares with the mark in
+/// the matching corner is one glance - and this is a debug option, reached by someone who is in a
+/// hurry by definition. The alignments live here rather than in the markup so each cell is the same
+/// template with the value it was given, the way the preset tiles already work.
+/// </remarks>
+public partial class CornerOption(StampCorner corner) : ObservableObject
+{
+    /// <summary>Which corner this cell picks.</summary>
+    public StampCorner Corner { get; } = corner;
+
+    /// <summary>Where the mark sits across the cell.</summary>
+    public HorizontalAlignment Dot =>
+        Corner is StampCorner.TopLeft or StampCorner.BottomLeft
+            ? HorizontalAlignment.Left
+            : HorizontalAlignment.Right;
+
+    /// <summary>Where the mark sits down the cell.</summary>
+    public VerticalAlignment DotV =>
+        Corner is StampCorner.TopLeft or StampCorner.TopRight
+            ? VerticalAlignment.Top
+            : VerticalAlignment.Bottom;
+
+    /// <summary>Whether this is the armed corner.</summary>
+    [ObservableProperty] private bool _isSelected;
+}
+
+/// <summary>Which page of the export card is showing.</summary>
+/// <remarks>
+/// <b>Three short pages instead of one long one.</b> The card grew a spritesheet grid and a
+/// watermark corner and became the only modal in the app that scrolled its form far enough to hide
+/// a control - which is the exact defect the passphrase box was already moved once to escape. The
+/// manifest and the footer sit OUTSIDE the tabs, so what is going and what is stopping it are
+/// readable from every page: those are the two things a reader must never have to go looking for.
+/// </remarks>
+public enum ExportTab
+{
+    /// <summary>What leaves the machine, and in what shape.</summary>
+    Contents,
+
+    /// <summary>What is done to the art on the way out.</summary>
+    Images,
+
+    /// <summary>Encryption and the note that travels with it.</summary>
+    Seal,
+}
+
 public partial class ExportDialogViewModel : ViewModelBase
 {
     private readonly string _setDirectory;
@@ -73,6 +127,61 @@ public partial class ExportDialogViewModel : ViewModelBase
     [ObservableProperty] private bool _nftyMetadata = true;
     [ObservableProperty] private bool _includeCookBook;
     [ObservableProperty] private bool _packed = true;
+
+    /// <summary>Which page is showing.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsContentsTab))]
+    [NotifyPropertyChangedFor(nameof(IsImagesTab))]
+    [NotifyPropertyChangedFor(nameof(IsSealTab))]
+    private ExportTab _tab = ExportTab.Contents;
+
+    /// <summary>Whether the contents page is showing.</summary>
+    public bool IsContentsTab => Tab == ExportTab.Contents;
+    /// <summary>Whether the images page is showing.</summary>
+    public bool IsImagesTab => Tab == ExportTab.Images;
+    /// <summary>Whether the seal page is showing.</summary>
+    public bool IsSealTab => Tab == ExportTab.Seal;
+
+    /// <summary>Also stitch every asset into one sheet.</summary>
+    /// <remarks>
+    /// Named for the ACTION rather than the thing, because <c>SpriteSheet</c> is the Core type that
+    /// builds it and a property of that name here shadows it inside this class - so
+    /// <c>SpriteSheet.ProblemWith</c> would resolve to a bool. A collision a compiler catches is
+    /// still a name worth not having.
+    /// </remarks>
+    [ObservableProperty] private bool _makeSpriteSheet;
+
+    /// <summary>Cells across the sheet.</summary>
+    /// <remarks>
+    /// <b>Seeded with a real grid rather than left blank or at zero.</b> Core accepts null for
+    /// "lay it out for me", and a box showing nothing is a form asking a question the reader has no
+    /// opinion about. Ticking the box shows the squarest grid that holds this collection, already
+    /// filled in, which is both the answer most people want and an explanation of what the two
+    /// numbers mean.
+    /// </remarks>
+    [ObservableProperty] private int _sheetColumns = 1;
+
+    /// <summary>Cells down the sheet.</summary>
+    [ObservableProperty] private int _sheetRows = 1;
+
+    /// <summary>The sheet's pixel size, as the card prints it.</summary>
+    [ObservableProperty] private string _sheetSizeText = "";
+
+    /// <summary>Stamp each asset's set number into a corner of its art.</summary>
+    [ObservableProperty] private bool _numberWatermark;
+
+    /// <summary>Which corner the stamp sits in.</summary>
+    [ObservableProperty] private StampCorner _watermarkCorner = StampCorner.BottomRight;
+
+    /// <summary>The four corners, for the picker.</summary>
+    public IReadOnlyList<CornerOption> Corners { get; } =
+        Enum.GetValues<StampCorner>().Select(c => new CornerOption(c)).ToList();
+
+    /// <summary>How far the run has got, 0..1.</summary>
+    [ObservableProperty] private double _progress;
+
+    /// <summary>What the run is doing, in the words a person would use.</summary>
+    [ObservableProperty] private string _phaseText = "";
 
     /// <summary>Encrypt the export and mark it view-only.</summary>
     [ObservableProperty]
@@ -99,7 +208,10 @@ public partial class ExportDialogViewModel : ViewModelBase
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowForm))]
     [NotifyCanExecuteChangedFor(nameof(ExportCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CancelCommand))]
     private bool _isRunning;
+
+    private CancellationTokenSource? _cts;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowForm))]
@@ -142,6 +254,8 @@ public partial class ExportDialogViewModel : ViewModelBase
         CookBookPath = CookBookLocator.Find(cookBookSha256,
             (cookBookCandidates ?? Array.Empty<string>()).Concat(CookBookLocator.Nearby(setDirectory)));
 
+        SeedSheetGrid();
+        OnWatermarkCornerChanged(WatermarkCorner);
         Refresh();
     }
 
@@ -231,6 +345,11 @@ public partial class ExportDialogViewModel : ViewModelBase
         Shape = Packed ? ExportShape.Archive : ExportShape.Folder,
         Sealed = IsSealed,
         Note = string.IsNullOrWhiteSpace(Note) ? null : Note.Trim(),
+        SpriteSheet = MakeSpriteSheet,
+        SpriteSheetColumns = MakeSpriteSheet ? SheetColumns : null,
+        SpriteSheetRows = MakeSpriteSheet ? SheetRows : null,
+        NumberWatermark = NumberWatermark,
+        WatermarkCorner = WatermarkCorner,
     };
 
     /// <summary>Applies a preset. Every box stays editable afterwards — a preset is a starting
@@ -247,6 +366,29 @@ public partial class ExportDialogViewModel : ViewModelBase
         IncludeCookBook = o.IncludeCookBook;
         IsSealed = o.Sealed;
         Packed = o.Shape == ExportShape.Archive;
+    }
+
+    /// <summary>Shows a page of the card.</summary>
+    /// <param name="tab">Which one.</param>
+    [RelayCommand]
+    private void ShowTab(ExportTab tab) => Tab = tab;
+
+    /// <summary>Puts the stamp in a corner.</summary>
+    /// <param name="corner">Which one.</param>
+    /// <remarks>
+    /// A command rather than four radio buttons: the picker is a 2x2 of corners drawn as the corners
+    /// they are, which is the one control on this card where the SHAPE says what it does and a label
+    /// would be the worse answer.
+    /// </remarks>
+    [RelayCommand]
+    private void PickCorner(CornerOption? corner)
+    {
+        if (corner is not null) WatermarkCorner = corner.Corner;
+    }
+
+    partial void OnWatermarkCornerChanged(StampCorner value)
+    {
+        foreach (var c in Corners) c.IsSelected = c.Corner == value;
     }
 
     /// <summary>Chooses the CookBook to ship.</summary>
@@ -295,8 +437,22 @@ public partial class ExportDialogViewModel : ViewModelBase
             if (!Images)
                 notes.Add("No art. A metadata drop, useful only where the images are hosted "
                     + "somewhere else.");
+            if (!Images && MakeSpriteSheet)
+                notes.Add("The sheet is stitched from art this export is not carrying. It ships "
+                    + "alone, which is a contact sheet rather than a collection.");
+            if (NumberWatermark)
+                notes.Add("Numbered art: the set number is painted into every asset and into the "
+                    + "sheet. A debug copy, not a mintable one.");
             Consequences = notes;
-            Problem = SealProblem();
+
+            SheetSizeText = plan.SpriteSheet is { } sheet
+                ? $"{sheet.SizeText()} px"
+                : "";
+
+            // The grid's own problem is reported through the SAME footer the seal uses, so a
+            // refusal reads the same wherever it came from - and Core words it, so the dialog and
+            // the command line cannot disagree about the same grid.
+            Problem = SheetProblem() is { Length: > 0 } grid ? grid : SealProblem();
         }
         catch (Exception ex)
         {
@@ -307,6 +463,50 @@ public partial class ExportDialogViewModel : ViewModelBase
             SizeText = "";
             Consequences = Array.Empty<string>();
             Problem = ex.Message;
+        }
+    }
+
+    /// <summary>
+    /// Fills the grid boxes with the layout Core would pick, so the page opens on a real answer.
+    /// </summary>
+    /// <remarks>
+    /// Asked of <c>SetExporter.Plan</c> rather than worked out here, so the numbers the boxes show
+    /// are the numbers the export would use - the same rule the manifest strip below follows. A Set
+    /// that cannot be planned at all leaves the 1x1 default and the footer says why.
+    /// </remarks>
+    private void SeedSheetGrid()
+    {
+        try
+        {
+            var plan = SetExporter.Plan(_setDirectory, Options with { SpriteSheet = true }, null);
+            if (plan.SpriteSheet is { } layout)
+            {
+                SheetColumns = layout.Columns;
+                SheetRows = layout.Rows;
+            }
+        }
+        catch (Exception ex) when (ex is ArgumentException or IOException
+                                       or UnauthorizedAccessException or CorruptSetException)
+        {
+            // Left at the default. Refresh() reports whatever is actually wrong with the Set.
+        }
+    }
+
+    /// <summary>Why the chosen grid cannot be built, or empty.</summary>
+    private string SheetProblem()
+    {
+        if (!MakeSpriteSheet) return "";
+        try
+        {
+            var plan = SetExporter.Plan(_setDirectory, Options, CookBookPath);
+            return plan.SpriteSheet is { } layout
+                ? SpriteSheet.ProblemWith(layout, plan.Count) ?? ""
+                : "";
+        }
+        catch (Exception ex) when (ex is ArgumentException or IOException
+                                       or UnauthorizedAccessException or CorruptSetException)
+        {
+            return "";
         }
     }
 
@@ -340,7 +540,8 @@ public partial class ExportDialogViewModel : ViewModelBase
     {
         nameof(Images), nameof(OpenSeaMetadata), nameof(NftyMetadata), nameof(IncludeCookBook),
         nameof(Packed), nameof(IsSealed), nameof(Passphrase), nameof(PassphraseConfirm),
-        nameof(Note), nameof(CookBookPath),
+        nameof(Note), nameof(CookBookPath), nameof(MakeSpriteSheet), nameof(SheetColumns),
+        nameof(SheetRows), nameof(NumberWatermark), nameof(WatermarkCorner),
     };
 
     /// <summary>Recomputes the manifest whenever anything it depends on changes.</summary>
@@ -361,12 +562,26 @@ public partial class ExportDialogViewModel : ViewModelBase
         if (dir is null) return;
 
         IsRunning = true;
+        Progress = 0;
+        PhaseText = "Starting...";
+        _cts = new CancellationTokenSource();
         try
         {
             var options = Options;
             string? passphrase = IsSealed ? Passphrase : null;
-            var result = await Task.Run(() =>
-                SetExporter.Export(_setDirectory, dir, options, CookBookPath, passphrase));
+
+            // A REAL BAR, NOT AN INDETERMINATE ONE. This used to spin whatever the run was doing,
+            // which is the right answer only while nothing can report - and every step of an export
+            // can. A stamped, stitched export of a large collection is minutes of work, and a
+            // barber pole for minutes is indistinguishable from a hang.
+            var reporter = new Progress<ExportProgress>(p =>
+            {
+                Progress = p.Fraction;
+                PhaseText = p.Phase;
+            });
+
+            var result = await SetExporter.ExportAsync(_setDirectory, dir, options, CookBookPath,
+                passphrase, reporter, _cts.Token);
 
             _written = result.Path;
             OutputPath = result.Path;
@@ -376,6 +591,10 @@ public partial class ExportDialogViewModel : ViewModelBase
                 : $"Exported {result.Plan.Count} assets.";
             IsDone = true;
         }
+        catch (OperationCanceledException)
+        {
+            PhaseText = "Canceled";
+        }
         catch (Exception ex)
         {
             await _dialogs.ShowAsync<object>(
@@ -384,6 +603,8 @@ public partial class ExportDialogViewModel : ViewModelBase
         finally
         {
             IsRunning = false;
+            _cts?.Dispose();
+            _cts = null;
 
             // The passphrase is not kept after the run. It is of no further use here, and the
             // dialog stays alive until the user closes it.
@@ -391,6 +612,16 @@ public partial class ExportDialogViewModel : ViewModelBase
             PassphraseConfirm = "";
         }
     }
+
+    /// <summary>Stops the run at the next step.</summary>
+    /// <remarks>
+    /// Between steps rather than mid-file, so a canceled export never leaves a half-written PNG
+    /// behind - the same position the cook dialog takes about an asset.
+    /// </remarks>
+    [RelayCommand(CanExecute = nameof(CanCancel))]
+    private void Cancel() => _cts?.Cancel();
+
+    private bool CanCancel() => IsRunning;
 
     private bool CanReveal() => IsDone;
 

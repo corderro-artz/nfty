@@ -864,9 +864,23 @@ public class VisualCapture
             Capture(new Views.ExportDialogView { DataContext = plain }, variant,
                 $"export-{key}.png", width: 1180, height: 780);
 
+            // THE IMAGES PAGE, WITH BOTH GROUPS ARMED. A capture of a tab nothing switched to is a
+            // picture of the tab beside it - the same way four `editor-refs` frames were four
+            // pictures of the colorize rail. Each of these states its Tab explicitly.
+            var images = new ExportDialogViewModel(ExportCaptureSet(), new FilePickerService(),
+                new NoopFolderRevealer(), new FakeDialogs())
+            {
+                Tab = ExportTab.Images,
+                MakeSpriteSheet = true,
+                NumberWatermark = true,
+            };
+            Capture(new Views.ExportDialogView { DataContext = images }, variant,
+                $"export-images-{key}.png", width: 1180, height: 780);
+
             var sealing = new ExportDialogViewModel(ExportCaptureSet(), new FilePickerService(),
                 new NoopFolderRevealer(), new FakeDialogs())
             {
+                Tab = ExportTab.Seal,
                 IsSealed = true,
                 Passphrase = "correct-horse-battery",
                 PassphraseConfirm = "correct-horse-battery",
@@ -874,6 +888,15 @@ public class VisualCapture
             };
             Capture(new Views.ExportDialogView { DataContext = sealing }, variant,
                 $"export-sealed-{key}.png", width: 1180, height: 780);
+
+            // The busy card, in the state it is actually seen in: mid-job, with a real phase line.
+            var busy = new BusyViewModel(new FakeDialogs(), "Opening Set", "Unpacking...")
+            {
+                IsIndeterminate = false,
+                Progress = 0.42,
+            };
+            Capture(new Views.BusyView { DataContext = busy }, variant,
+                $"busy-{key}.png", width: 1180, height: 400);
 
             using var import = ImportImageForm(new FakeDialogs());
             Capture(new Views.ImportImageView { DataContext = import }, variant,

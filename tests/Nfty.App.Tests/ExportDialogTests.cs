@@ -108,6 +108,13 @@ public class ExportDialogTests
             nameof(ExportDialogViewModel.Consequences), nameof(ExportDialogViewModel.IsRunning),
             nameof(ExportDialogViewModel.IsDone), nameof(ExportDialogViewModel.OutputPath),
             nameof(ExportDialogViewModel.ResultText),
+
+            // Outputs of the RUN rather than inputs to the plan: which page is showing, and how far
+            // the export has got. Listing them here is what keeps the sweep honest - a genuine input
+            // added later still has to be registered, and only the things that cannot change what
+            // ships are exempt.
+            nameof(ExportDialogViewModel.Tab), nameof(ExportDialogViewModel.Progress),
+            nameof(ExportDialogViewModel.PhaseText), nameof(ExportDialogViewModel.SheetSizeText),
         };
 
         var settable = typeof(ExportDialogViewModel)

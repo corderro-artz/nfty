@@ -26,7 +26,7 @@ of them, out of eighteen 32×32 sprites.
 **Delivery**  
 [![CI](https://img.shields.io/github/actions/workflow/status/corderro-artz/nfty/ci.yml?branch=main&label=CI&logo=githubactions&logoColor=white)](https://github.com/corderro-artz/nfty/actions/workflows/ci.yml)
 [![Docs](https://img.shields.io/github/actions/workflow/status/corderro-artz/nfty/docs.yml?branch=main&label=Docs&logo=githubactions&logoColor=white)](https://github.com/corderro-artz/nfty/actions/workflows/docs.yml)
-[![Tests](https://img.shields.io/badge/tests-2263%20passing-3d6b52)](#testing)
+[![Tests](https://img.shields.io/badge/tests-2286%20passing-3d6b52)](#testing)
 [![Warnings](https://img.shields.io/badge/warnings-0-3d6b52)](#house-rules)
 [![License: MIT](https://img.shields.io/badge/License-MIT-a11f31?logo=open-source-initiative&logoColor=white)](LICENSE)
 
@@ -243,7 +243,7 @@ nfty/
 │   ├── Nfty.Cli/           System.CommandLine wiring              (net10.0)
 │   ├── Nfty.App/           Avalonia GUI — ViewModels, Views, Themes
 │   └── Nfty.Desktop/       Desktop head — window, clipboard, pickers
-├── tests/                  2,263 tests across three xunit.v3 projects
+├── tests/                  2,286 tests across three xunit.v3 projects
 │   └── fixtures/           Archives an older build wrote, and still reads
 ├── docs/
 │   ├── manual/             The end-user manual (Material for MkDocs)

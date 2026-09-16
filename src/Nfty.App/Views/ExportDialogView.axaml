@@ -5,17 +5,44 @@
              x:DataType="vm:ExportDialogViewModel"
              RenderOptions.BitmapInterpolationMode="None">
   <Border Classes="modal export">
-    <Grid RowDefinitions="*,Auto,Auto">
-      <Border Grid.Row="0" Classes="modal-body tight">
-        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-          <StackPanel Spacing="11">
-            <StackPanel Classes="plabel-row">
-              <Ellipse Classes="kdot" />
-              <TextBlock Text="EXPORT" Classes="slbl" />
-            </StackPanel>
-            <TextBlock Text="Export this Set" Classes="m-h" />
+    <Grid RowDefinitions="Auto,*,Auto,Auto">
 
-            <StackPanel Spacing="11" IsVisible="{Binding ShowForm}" IsEnabled="{Binding ShowForm}">
+      <!-- THE HEAD AND THE TABS DO NOT SCROLL. The card grew a spritesheet grid and a watermark
+           corner, and one long form put controls below a fold that only appears on some windows -
+           the exact defect the passphrase box was already moved once to escape. Three short pages
+           instead, with the manifest and the footer pinned below them, so what is going and what is
+           stopping it are readable from every page. -->
+      <StackPanel Grid.Row="0" Spacing="11" Margin="24,20,24,0">
+        <StackPanel Classes="plabel-row">
+          <Ellipse Classes="kdot" />
+          <TextBlock Text="EXPORT" Classes="slbl" />
+        </StackPanel>
+        <TextBlock Text="Export this Set" Classes="m-h" />
+
+        <!-- Underline tabs, the vocabulary the Ingredient editor's rail already uses. Each carries
+             its 2px underline in BOTH states - transparent when off - so switching moves nothing. -->
+        <Border Classes="tabrow exporttabs" IsVisible="{Binding ShowForm}">
+          <StackPanel Orientation="Horizontal" Spacing="18">
+            <Button Classes="railtab" Classes.on="{Binding IsContentsTab}" Content="CONTENTS"
+                    Command="{Binding ShowTabCommand}"
+                    CommandParameter="{x:Static vm:ExportTab.Contents}" />
+            <Button Classes="railtab" Classes.on="{Binding IsImagesTab}" Content="IMAGES"
+                    Command="{Binding ShowTabCommand}"
+                    CommandParameter="{x:Static vm:ExportTab.Images}" />
+            <Button Classes="railtab" Classes.on="{Binding IsSealTab}" Content="SEAL"
+                    Command="{Binding ShowTabCommand}"
+                    CommandParameter="{x:Static vm:ExportTab.Seal}" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+
+      <Border Grid.Row="1" Classes="modal-body tight">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Spacing="11" Classes="exportpages">
+
+            <!-- ============================ CONTENTS ============================ -->
+            <StackPanel Spacing="12" IsVisible="{Binding IsContentsTab}"
+                        IsEnabled="{Binding ShowForm}">
 
               <!-- Four starting points. Which one is lit comes from the OPTIONS, not from the click
                    that set them, so a tile goes out the moment a box below it disagrees. -->
@@ -74,7 +101,73 @@
                                ToolTip.Tip="A sealed export is always one file." />
                 </StackPanel>
               </Grid>
+            </StackPanel>
 
+            <!-- ============================= IMAGES ============================= -->
+            <StackPanel Spacing="14" IsVisible="{Binding IsImagesTab}"
+                        IsEnabled="{Binding ShowForm}">
+
+              <!-- SPRITESHEET. The grid boxes open on the squarest layout that holds this
+                   collection, filled in - a box showing nothing is a form asking a question the
+                   reader has no opinion about. The size beside them is the answer those two numbers
+                   produce, so the control explains itself without a sentence. -->
+              <StackPanel Spacing="7">
+                <TextBlock Text="SPRITESHEET" Classes="slbl" />
+                <CheckBox Content="Stitch every asset into one sheet"
+                          IsChecked="{Binding MakeSpriteSheet}"
+                          ToolTip.Tip="spritesheet.png, laid out left to right and top to bottom in the Set's own numbering — so cell n is asset n+1." />
+                <Grid ColumnDefinitions="Auto,86,Auto,86,*" ColumnSpacing="9"
+                      IsEnabled="{Binding MakeSpriteSheet}" Margin="24,2,0,0">
+                  <TextBlock Grid.Column="0" Text="Columns" Classes="m-sub" VerticalAlignment="Center" />
+                  <NumericUpDown Grid.Column="1" Classes="nin" Minimum="1" Maximum="4096"
+                                 FormatString="0" Value="{Binding SheetColumns}" />
+                  <TextBlock Grid.Column="2" Text="Rows" Classes="m-sub" VerticalAlignment="Center" />
+                  <NumericUpDown Grid.Column="3" Classes="nin" Minimum="1" Maximum="4096"
+                                 FormatString="0" Value="{Binding SheetRows}" />
+                  <TextBlock Grid.Column="4" Classes="m-sub" VerticalAlignment="Center"
+                             Margin="6,0,0,0" Text="{Binding SheetSizeText}" />
+                </Grid>
+              </StackPanel>
+
+              <Border Classes="optsplit" />
+
+              <!-- WATERMARK. The corner picker is a 2x2 of corners drawn as the corners they are:
+                   the one control on this card where the SHAPE says what it does, and four radio
+                   labels reading "Top left / Top right / …" would be the worse answer. -->
+              <StackPanel Spacing="7">
+                <TextBlock Text="DEBUG MARK" Classes="slbl" />
+                <CheckBox Content="Stamp each asset's set number in a corner"
+                          IsChecked="{Binding NumberWatermark}"
+                          ToolTip.Tip="Painted into the pixels of the exported copy — never into your Set. A folder of loose sprites is unsortable without it; a stamped export is for working with, not for minting." />
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14"
+                      IsEnabled="{Binding NumberWatermark}" Margin="24,2,0,0">
+                  <ItemsControl Grid.Column="0" ItemsSource="{Binding Corners}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <UniformGrid Columns="2" Rows="2" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:CornerOption">
+                        <Button Classes="cornerpick" Classes.on="{Binding IsSelected}"
+                                Command="{Binding $parent[ItemsControl].((vm:ExportDialogViewModel)DataContext).PickCornerCommand}"
+                                CommandParameter="{Binding}">
+                          <Border Classes="cornerdot"
+                                  HorizontalAlignment="{Binding Dot}"
+                                  VerticalAlignment="{Binding DotV}" />
+                        </Button>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <TextBlock Grid.Column="1" Classes="m-sub" VerticalAlignment="Center"
+                             TextWrapping="Wrap"
+                             Text="The number is painted into the exported copy. Your Set is untouched." />
+                </Grid>
+              </StackPanel>
+            </StackPanel>
+
+            <!-- ============================== SEAL ============================== -->
+            <StackPanel Spacing="11" IsVisible="{Binding IsSealTab}" IsEnabled="{Binding ShowForm}">
               <Border Classes="sealbox" Classes.on="{Binding IsSealed}">
                 <StackPanel Spacing="10">
                   <!-- Disabled, not hidden, where the platform has no AES-GCM: a control that
@@ -112,12 +205,15 @@
                   </StackPanel>
                 </StackPanel>
               </Border>
-
             </StackPanel>
 
+            <!-- A REAL BAR. It used to be indeterminate whatever the run was doing, which is the
+                 right answer only while nothing can report - and every step of an export can now. A
+                 stamped, stitched export of a large collection is minutes of work, and a barber pole
+                 for minutes is indistinguishable from a hang. -->
             <StackPanel Spacing="9" IsVisible="{Binding IsRunning}">
-              <ProgressBar IsIndeterminate="True" />
-              <TextBlock Text="Writing…" Classes="m-sub" />
+              <ProgressBar Minimum="0" Maximum="1" Value="{Binding Progress}" />
+              <TextBlock Text="{Binding PhaseText}" Classes="m-sub" />
             </StackPanel>
 
             <StackPanel Spacing="10" IsVisible="{Binding IsDone}">
@@ -136,11 +232,12 @@
         </ScrollViewer>
       </Border>
 
-      <!-- OUTSIDE the ScrollViewer, on purpose. This is the one control on the screen that has to
-           be read before Export is pressed, and with the seal panel open the form is taller than the
-           card - so inside the scroller it sat below the fold exactly when the export was most
-           consequential. Found on a rendered frame; every ViewModel test passed. -->
-      <Border Grid.Row="1" Classes="ship" Margin="24,0,24,14">
+      <!-- OUTSIDE the ScrollViewer and outside the tabs, on purpose. This is the one control on the
+           screen that has to be read before Export is pressed, and it describes the whole request
+           rather than whichever page is showing - so a sheet armed on the IMAGES page is listed
+           here while the reader is back on CONTENTS. Found on a rendered frame; every ViewModel
+           test passed. -->
+      <Border Grid.Row="2" Classes="ship" Margin="24,0,24,14">
               <!-- The point of this screen. Every line is generated by the same SetExporter.Plan
                    call that then does the writing, so the screen cannot promise one thing and ship
                    another - which is precisely the defect this feature exists to prevent. -->
@@ -167,14 +264,17 @@
                 </StackPanel>
       </Border>
 
-      <Border Grid.Row="2" Classes="modal-foot">
+      <Border Grid.Row="3" Classes="modal-foot">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
           <!-- The reason Export is unavailable, in words. A control that is dim for a reason the
                screen does not give is a control the user has to guess at. -->
           <TextBlock Grid.Column="0" Classes="keyhint" VerticalAlignment="Center"
                      TextTrimming="CharacterEllipsis" Text="{Binding Problem}" />
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-            <Button Content="Close" Command="{Binding CloseCommand}" Classes="tbtn" />
+            <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="tbtn"
+                    IsVisible="{Binding IsRunning}" />
+            <Button Content="Close" Command="{Binding CloseCommand}" Classes="tbtn"
+                    IsVisible="{Binding !IsRunning}" />
             <Button Content="Export" Command="{Binding ExportCommand}" Classes="accent"
                     IsVisible="{Binding ShowForm}" />
           </StackPanel>
