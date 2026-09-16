@@ -243,7 +243,7 @@ nfty/
 │   ├── Nfty.Cli/           System.CommandLine wiring              (net10.0)
 │   ├── Nfty.App/           Avalonia GUI — ViewModels, Views, Themes
 │   └── Nfty.Desktop/       Desktop head — window, clipboard, pickers
-├── tests/                  2,286 tests across three xunit.v3 projects
+├── tests/                  2,291 tests across three xunit.v3 projects
 │   └── fixtures/           Archives an older build wrote, and still reads
 ├── docs/
 │   ├── manual/             The end-user manual (Material for MkDocs)
@@ -258,12 +258,12 @@ nfty/
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/generation-pipeline-dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="docs/diagrams/generation-pipeline-light.svg">
-  <img alt="NFTY generation pipeline: roll a recipe, roll each layer, check rules, hash the DNA, check for a duplicate, then render and emit. Both rejections re-roll from the recipe." src="docs/diagrams/generation-pipeline-light.svg">
+  <img alt="NFTY generation pipeline: roll a recipe, roll each layer (a variant by weight, or absent by chance, with its color), check the rules, hash the DNA, check for a duplicate, then render and emit. Both rejections re-roll from the recipe." src="docs/diagrams/generation-pipeline-light.svg">
 </picture>
 
 <sub>Source: <a href="docs/diagrams/generation-pipeline.mmd"><code>docs/diagrams/generation-pipeline.mmd</code></a></sub>
 
-Both rejections re-enter at the recipe roll and share one `MaxRerollsPerAsset` budget per asset. Spending it throws `RuleConflictException` or `UniqueSpaceExhaustedException`, depending on the cause. Dedup runs before the render, so a collision never costs a composited canvas.
+Both rejections re-enter at the recipe roll and share one `MaxRerollsPerAsset` budget per asset. Spending it throws `RuleConflictException` or `UniqueSpaceExhaustedException`, depending on the cause. Dedup runs before the render, so a collision never costs a composited canvas — and it is the step **Allow repeats** turns off, which is why that mode can fill any count from any book.
 
 The **DNA** is a SHA-256 over the recipe id, each layer's variant id, and the *quantized* color of
 each colorized layer. Quantizing folds a continuous color space into something countable, which is
