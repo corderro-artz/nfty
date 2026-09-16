@@ -131,10 +131,11 @@ public class ExportDialogLayoutTests
     [AvaloniaFact]
     public void Armed_for_sealing_the_passphrase_boxes_are_still_on_screen()
     {
-        // Sealing adds two fields, a note and a caveat - about 85px more than the smallest window
-        // can show - so the form scrolls, and WHAT it scrolls past is the design decision. The
-        // passphrase pair is the one thing you cannot type into without seeing, so the reveal
-        // scrolls to it; the note, which is optional, is what goes under.
+        // Sealing adds two fields, a note and a caveat. That used to be about 85px more than the
+        // smallest window could show; the card fits now, so at the app's own minimum nothing
+        // scrolls and this passes without the reveal doing anything - which is precisely why the
+        // sibling test below pins a window where it still does. What is asserted here is the claim
+        // that has to hold at the size users actually get: the passphrase pair is on screen.
         //
         // ARMED AFTER LAYOUT, which is what a user does. Constructing the view already sealed skips
         // the transition, and the transition IS the behaviour: an earlier version of this test did
@@ -161,16 +162,20 @@ public class ExportDialogLayoutTests
     [AvaloniaFact]
     public void In_a_short_window_the_reveal_scrolls_the_passphrase_into_view()
     {
-        // At today's minimum window the passphrase pair happens to land above the fold with a few
-        // pixels to spare, so the test above passes with or without the scroll - which makes it no
-        // evidence for the scroll at all. This one is set at a height where it does NOT land there,
-        // and fails outright if the reveal stops scrolling to it.
+        // At today's minimum window the passphrase pair lands above the fold with room to spare, so
+        // the test above passes with or without the scroll - which makes it no evidence for the
+        // scroll at all. This one is set at a height where it does NOT land there, and fails
+        // outright if the reveal stops scrolling to it.
         //
-        // Not a hypothetical size. It is the margin the window minimum would move into if the app
-        // ever targeted a 1366x768 laptop, and it is what one more line of wrapped caveat text costs
-        // at the current one. The alternative was a card sized so the boxes happened to fit, which
-        // is a fix that passes today and breaks silently for whoever edits the copy next.
-        var (window, view) = Open(sealing: false, windowHeight: 780);
+        // It was 780, chosen when the card was 254px taller than it is now and overflowed at every
+        // window the app allows. The card has since been measured against the page area a modal is
+        // actually given rather than against a capture frame, and it now fits the 720 minimum with
+        // 30px to spare and stops scrolling at all above a ~700 window. So 780 stopped being short
+        // and this assertion stopped meaning anything - which the check below is here to say out
+        // loud rather than let it rot into a green test of nothing. 680 is measured: the card
+        // clamps to 481 there and the body wants 251 in 236. The scroll path is still worth
+        // guarding, because a longer caveat or one more sealed field brings it straight back.
+        var (window, view) = Open(sealing: false, windowHeight: 680);
         try
         {
             ((ExportDialogViewModel)view.DataContext!).IsSealed = true;

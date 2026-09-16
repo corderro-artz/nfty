@@ -844,23 +844,28 @@
   <Style Selector="Border.modal.export">
     <Setter Property="Width" Value="700" />
     <Setter Property="VerticalAlignment" Value="Center" />
-    <Setter Property="Margin" Value="0,10" />
+    <!-- 6 rather than 10: the card fitted the smallest window by FOUR pixels, which is the state
+         this file's own rule calls one style tweak from clipping. -->
+    <Setter Property="Margin" Value="0,6" />
     <Setter Property="MaxHeight" Value="900" />
   </Style>
 
   <!-- ONE HEIGHT FOR ALL THREE PAGES, so switching tabs moves nothing below them - the manifest and
-       the footer are the two controls on this card a reader must never have to go looking for. It
-       is the tallest page's height (CONTENTS: four preset tiles over four checkboxes), measured off
-       a rendered frame rather than guessed; the shorter pages spend the difference on air above the
+       the footer are the two controls on this card a reader must never have to go looking for. It is
+       the TALLEST page's height, measured: CONTENTS 246, IMAGES 251, SEAL 213. It said 262 and
+       credited that to CONTENTS, and both halves were wrong - the number came off a capture rendered
+       780px tall, 254 more than the 526 a modal is ever given, so the card photographed tidy while
+       the running app scrolled every tab. The shorter pages spend the difference on air above the
        manifest instead of on moving it. -->
   <Style Selector="Border.modal.export StackPanel.exportpages">
-    <Setter Property="MinHeight" Value="262" />
+    <Setter Property="MinHeight" Value="251" />
   </Style>
 
-  <!-- The export card's tab row. It is NOT a pane-hrow: that class is a pane header with a fixed
-       41px height, and this sits inside a modal's own padding where the head above it already
-       provides the spacing. All it owns is the hairline the tabs' underlines land on. -->
-  <Style Selector="Border.exporttabs">
+  <!-- The export card's head: the title and the tabs on one row, over one hairline. It is NOT a
+       pane-hrow - that class is a pane header with a fixed 41px height, and this sits inside a
+       modal's own padding. All it owns is the rule the tabs' underlines land on, which is also the
+       rule under the title, because they are one row now rather than two stacked ones. -->
+  <Style Selector="Border.exporthead">
     <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
     <Setter Property="BorderThickness" Value="0,0,0,1" />
     <Setter Property="Padding" Value="0,0,0,7" />
@@ -912,6 +917,32 @@
   </Style>
   <Style Selector="Button.cornerpick.on Border.cornerdot">
     <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+  </Style>
+
+  <!-- UNAVAILABLE, THE CELLS STAY AND THE MARK DIMS. The app-wide `Button:disabled` dim is 0.38,
+       which is legible over full-strength ink and not over an already-muted one - the rule this file
+       already states for muted TEXT, and a cell whose ground is TileBrush and whose edge is a
+       LineBrush hairline is the same case: at 0.38 both vanished into the card, and the control that
+       is supposed to say what it does BY ITS SHAPE became four unexplained 7px specks with the note
+       beside them reading as though it sat inside the grid. Found by driving the running app; no
+       frame showed it, because every capture of this card had both boxes already ticked. So the
+       cells keep their own strength and the DOT carries the state instead. Declared after the `.on`
+       rule because Avalonia takes the last matching setter, and an unavailable picker must not show
+       an armed corner in the accent. -->
+  <Style Selector="Button.cornerpick:disabled">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <!-- Opacity alone was not enough, and the reason is this file's other standing Fluent rule: the
+       cell's edge is drawn by PART_ContentPresenter, whose BorderBrush is template-bound to the
+       Button at REST and REPLACED by Fluent's own disabled-state setter the moment the control goes
+       unavailable. Not painting hands the state back to Fluent, so the edge has to be asked for
+       again, explicitly, exactly as the `Transparent` background one line up does. -->
+  <Style Selector="Button.cornerpick:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+  </Style>
+  <Style Selector="Button.cornerpick:disabled Border.cornerdot">
+    <Setter Property="Background" Value="{DynamicResource LineStrongBrush}" />
   </Style>
 
   <!-- One preset tile. A starting point, not a mode: the lit tile is pushed from
@@ -967,6 +998,16 @@
          BorderThickness of "2,1,1,1" would paint the thick edge in the SAME brush as the other
          three, and a per-edge brush is not a thing Border has. -->
     <Setter Property="BoxShadow" Value="{DynamicResource AccentBarShadow}" />
+  </Style>
+  <!-- THE MANIFEST IS RESERVED AT ITS TALLEST, on the export card only. Its content genuinely
+       changes - a spritesheet adds a part and a debug caveat - so it measured 68px on CONTENTS, 100
+       on IMAGES and 85 on SEAL, and since the card is centered and sizes to content, switching tabs
+       grew the card and shifted every row in it. The pages already share one height for exactly this
+       reason; the block BELOW them was the half nobody reserved. 100 is the measured tallest, and
+       the card has the room: 502 of the 506 a modal is given at the smallest window. -->
+  <Style Selector="Border.modal.export Border.ship">
+    <Setter Property="MinHeight" Value="96" />
+    <Setter Property="Padding" Value="14,8,12,8" />
   </Style>
   <Style Selector="Border.ship TextBlock.part">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />

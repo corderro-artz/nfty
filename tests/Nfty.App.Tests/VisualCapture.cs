@@ -1016,9 +1016,56 @@ public class VisualCapture
         vm.Dispose();
     }
 
+    /// <summary>The width the page area really has at the smallest window the app allows.</summary>
+    internal static readonly double PageWidth =
+        ShellViewModel.MinWindowWidth / ShellViewModel.BaseScale;
+
+    /// <summary>The height it really has, once the titlebar and status bar are taken off.</summary>
+    internal static readonly double PageHeight =
+        (ShellViewModel.MinWindowHeight - ShellViewModel.ChromeReserve) / ShellViewModel.BaseScale;
+
+    /// <summary>
+    /// Whether this view is content for the DIALOG LAYER rather than a page.
+    /// </summary>
+    /// <param name="view">The view about to be captured.</param>
+    /// <returns>True for a modal, the quick-reference sheet, or the inspector.</returns>
+    /// <remarks>
+    /// Derived from the MARKUP — the root's own style class — rather than from a hand-written list
+    /// of view names, for the reason <c>PixelPerfectRenderingTests</c> and <c>ThemeResourceTests</c>
+    /// already enumerate themselves: a list is a second statement of the fact, and the one screen
+    /// nobody remembers to add to it is the one that goes unchecked. A modal added later is framed
+    /// correctly without anyone touching this file.
+    /// </remarks>
+    private static bool IsDialogLayer(Control view) =>
+        view is UserControl { Content: Border root }
+            && (root.Classes.Contains("modal") || root.Classes.Contains("sheet")
+                || root.Classes.Contains("inspect"));
+
+    /// <summary>
+    /// Renders one view into a themed window and saves the frame.
+    /// </summary>
+    /// <param name="view">The view to draw.</param>
+    /// <param name="variant">Which theme.</param>
+    /// <param name="fileName">Where to save it, inside the capture directory.</param>
+    /// <param name="width">Page width. Ignored for dialog-layer content.</param>
+    /// <param name="height">Page height. Ignored for dialog-layer content.</param>
+    /// <remarks>
+    /// <b>A MODAL IS CAPTURED AT THE AREA THE APP REALLY GIVES IT, AND A PAGE IS NOT.</b> A page may
+    /// scroll, so 1180x720 is the right frame for one: it is the mockups' own units, and the pane
+    /// track alone needs 1014px, so a narrower capture makes a correct layout look clipped. A modal
+    /// may NOT scroll, so the only frame that says anything true about one is the page area it is
+    /// actually handed — <c>MinWindow / BaseScale</c> by <c>(MinWindow - ChromeReserve) /
+    /// BaseScale</c>, about 1067x526. The export card was being drawn at 780 tall, 254px more than
+    /// any window this app allows, so it photographed as a tidy card while the running app scrolled
+    /// it on every tab — the same defect this file has already shipped twice, once when a card was
+    /// rendered alone in a 1180px window 200px wider than the page ever is, and once when five
+    /// wizards were measured at a raw 1180x720 and all five overflowed in the app. A frame of a card
+    /// nothing hosts is not evidence.
+    /// </remarks>
     private static void Capture(Control view, ThemeVariant variant, string fileName,
         double width = 1180, double height = 720)
     {
+        if (IsDialogLayer(view)) (width, height) = (PageWidth, PageHeight);
         var window = new Window { RequestedThemeVariant = variant, Content = view, Width = width, Height = height };
         window.Show();
         Dispatcher.UIThread.RunJobs();
