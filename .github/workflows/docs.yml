@@ -1,4 +1,15 @@
-# Publishes the user manual to GitHub Pages.
+# Builds the user manual and checks it.
+#
+# It does not publish. The manual is served at www.vaporsoft.dev/nfty/docs/
+# by the Vaporsoft site, which clones this repository and runs this same
+# pinned toolchain on every deploy. It cannot be published from here: a
+# repository with its own GitHub Pages site reserves /<repo>/** on the parent
+# user site and redirects whatever that site builds, which is what used to
+# make /nfty/ the manual instead of the project's own page. Pages is
+# deliberately disabled on this repository.
+#
+# The check still earns its place: a broken link or a missing figure fails
+# here, on the commit that caused it, rather than in the site's deploy later.
 #
 # The site is BUILT here rather than committed: docs/manual/ is the source, .mkdocs-site/ is a build
 # product, and committing a generated copy of something already in the repository is how the two
@@ -9,7 +20,7 @@
 # include src/Nfty.App/Assets/Fonts, because tools/mkdocs-hooks/fonts.py zips the app's own font
 # files into the site as the typeface download. A sparse checkout of docs/ alone would silently
 # publish a page whose download link 404s.
-name: docs
+name: docs (build check)
 
 on:
   push:
@@ -23,17 +34,16 @@ on:
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 
-# Least privilege: read the code, write Pages, and mint the deploy token. Nothing else.
+# Least privilege: this reads the code and builds. It publishes nothing, so it
+# needs neither Pages write nor a deploy token.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 # One deploy at a time, and never cancel one midway — a half-published site is worse than a stale
 # one, so an in-flight run finishes rather than being replaced.
 concurrency:
-  group: pages
-  cancel-in-progress: false
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -61,17 +71,10 @@ jobs:
       - name: Check the typeface bundle was built
         run: test -s .mkdocs-site/assets/fonts/ibm-plex-nfty.zip
 
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      # Kept for inspection, not for publishing — the site builds its own copy.
+      - name: Upload the built manual
+        uses: actions/upload-artifact@v4
         with:
+          name: nfty-manual
           path: .mkdocs-site
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          retention-days: 7
