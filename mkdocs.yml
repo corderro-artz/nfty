@@ -13,7 +13,7 @@ site_name: nfty
 # address. The account has one configured, so corderro-artz.github.io/nfty 301s here - and declaring
 # that as canonical would have pointed every search engine at a URL that redirects away from the
 # page it is supposed to identify. Taken from `gh api repos/.../pages`, not guessed.
-site_url: https://www.vaporsoft.dev/nfty/
+site_url: https://www.vaporsoft.dev/nfty/docs/
 site_description: The nfty manual - how to draw a handful of layers and cook them into a collection.
 site_author: Vaporsoft
 repo_url: https://github.com/corderro-artz/nfty
