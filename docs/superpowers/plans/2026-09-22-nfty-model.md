@@ -1361,10 +1361,9 @@ public class SetModelWriterTests
     private static string CookDemo(int count)
     {
         string dir = Directory.CreateTempSubdirectory().FullName;
-        string cbk = Path.Combine(dir, "demo.cbk");
-        DemoCookBook.WriteTo(cbk);
+        string cbk = DemoCookBook.WriteTo(dir);   // takes a DIRECTORY, returns the written path
         using var book = CookBookArchive.Read(cbk);
-        using var set = Generator.Generate(book, new GenerateOptions { Seed = "models", Count = count });
+        using var set = Generator.Generate(book, new GenerateOptions(Count: count, Seed: "models"));
         SetWriter.Write(set, Path.Combine(dir, "out"));
         return Path.Combine(dir, "out");
     }

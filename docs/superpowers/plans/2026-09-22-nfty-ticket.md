@@ -103,14 +103,11 @@ public class TicketFreezeTests
         string dir = Directory.CreateTempSubdirectory().FullName;
         try
         {
-            string cbk = Path.Combine(dir, "demo.cbk");
-            DemoCookBook.WriteTo(cbk);
+            string cbk = DemoCookBook.WriteTo(dir);   // takes a DIRECTORY, returns the written path
             using var book = CookBookArchive.Read(cbk);
-            using var set = Generator.Generate(book, new GenerateOptions
-            {
-                Seed = Seed,
-                Count = Count,
-            });
+            // GenerateOptions is a POSITIONAL record; Count and Seed have no defaults, so an
+            // object initializer does not compile. Use the constructor.
+            using var set = Generator.Generate(book, new GenerateOptions(Count: Count, Seed: Seed));
 
             var sb = new System.Text.StringBuilder();
             foreach (var asset in set.Assets)
@@ -1124,11 +1121,10 @@ public class TicketRollEquivalenceTests
         string dir = Directory.CreateTempSubdirectory().FullName;
         try
         {
-            string cbk = Path.Combine(dir, "demo.cbk");
-            DemoCookBook.WriteTo(cbk);
+            string cbk = DemoCookBook.WriteTo(dir);   // takes a DIRECTORY, returns the written path
             using var book = CookBookArchive.Read(cbk);
 
-            using var set = Generator.Generate(book, new GenerateOptions { Seed = seed, Count = 50 });
+            using var set = Generator.Generate(book, new GenerateOptions(Count: 50, Seed: seed));
 
             // The same loop Generator runs, driven directly: one RNG from the same seed, reroll on a
             // rules rejection, dedup on DNA.
@@ -1154,8 +1150,7 @@ public class TicketRollEquivalenceTests
         string dir = Directory.CreateTempSubdirectory().FullName;
         try
         {
-            string cbk = Path.Combine(dir, "demo.cbk");
-            DemoCookBook.WriteTo(cbk);
+            string cbk = DemoCookBook.WriteTo(dir);   // takes a DIRECTORY, returns the written path
             using var book = CookBookArchive.Read(cbk);
             var menu = MenuProjection.From(book);
 
@@ -1330,8 +1325,7 @@ public class MenuWriterTests
     private static (string dir, LoadedCookBook book) Demo()
     {
         string dir = Directory.CreateTempSubdirectory().FullName;
-        string cbk = Path.Combine(dir, "demo.cbk");
-        DemoCookBook.WriteTo(cbk);
+        string cbk = DemoCookBook.WriteTo(dir);   // takes a DIRECTORY, returns the written path
         return (dir, CookBookArchive.Read(cbk));
     }
 
@@ -1622,11 +1616,10 @@ public class MenuFidelityTests
         string dir = Directory.CreateTempSubdirectory().FullName;
         try
         {
-            string cbk = Path.Combine(dir, "demo.cbk");
-            DemoCookBook.WriteTo(cbk);
+            string cbk = DemoCookBook.WriteTo(dir);   // takes a DIRECTORY, returns the written path
             using var book = CookBookArchive.Read(cbk);
 
-            using var set = Generator.Generate(book, new GenerateOptions { Seed = seed, Count = 8 });
+            using var set = Generator.Generate(book, new GenerateOptions(Count: 8, Seed: seed));
 
             string mnu = Path.Combine(dir, "game.mnu");
             MenuWriter.Write(book, mnu, new MenuWriteOptions { Art = art });
