@@ -12,6 +12,8 @@ public class ArchiveKindTests
     // A Set is READ but never authored, which is why it was missing here for so long — and why
     // `inspect` refused the one archive people hand each other.
     [InlineData("launch.set", ArchiveKind.Set)]
+    [InlineData("box.tin", ArchiveKind.Sealed)]
+    [InlineData("game.mnu", ArchiveKind.Menu)]
     public void Kind_comes_from_the_extension(string path, ArchiveKind expected) =>
         Assert.Equal(expected, Archives.KindOf(path));
 

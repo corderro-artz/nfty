@@ -42,6 +42,12 @@ public enum ArchiveKind
     /// them only with a key.
     /// </remarks>
     Sealed,
+
+    /// <summary>
+    /// <c>.mnu</c> — a Menu: a CookBook's every weight, rule and colorization plus its art, so an
+    /// asset can be rolled and rendered at runtime with no <c>.cbk</c> present.
+    /// </summary>
+    Menu,
 }
 
 /// <summary>
@@ -62,6 +68,8 @@ public static class Archives
     public const string SetExtension = ".set";
     /// <summary>The sealed export extension.</summary>
     public const string SealedExtension = ".tin";
+    /// <summary>The Menu archive extension.</summary>
+    public const string MenuExtension = ".mnu";
 
     /// <summary>
     /// The archive kind for <paramref name="path"/>. An unknown extension is an error rather
@@ -95,11 +103,12 @@ public static class Archives
             case KitchenExtension: kind = ArchiveKind.Kitchen; return true;
             case SetExtension: kind = ArchiveKind.Set; return true;
             case SealedExtension: kind = ArchiveKind.Sealed; return true;
+            case MenuExtension: kind = ArchiveKind.Menu; return true;
             default: kind = default; return false;
         }
     }
 
     private static string Expected =>
         $"expected one of {CookBookExtension}, {RecipeExtension}, {IngredientExtension}, "
-        + $"{KitchenExtension}, {SetExtension}, {SealedExtension}.";
+        + $"{KitchenExtension}, {SetExtension}, {SealedExtension}, {MenuExtension}.";
 }

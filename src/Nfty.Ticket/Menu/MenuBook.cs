@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Nfty.Core.Model;
 
 namespace Nfty.Ticket;
@@ -77,8 +78,15 @@ public record MenuRecipe(
 /// <param name="CollectionSymbol">The collection's symbol.</param>
 /// <param name="Recipes">Its recipes.</param>
 /// <param name="Art">Where the art is.</param>
+/// <remarks>
+/// <see cref="SchemaVersion"/> is written and read as <c>menuSchemaVersion</c>, never the plain
+/// <c>schemaVersion</c> camelCase would produce — a Menu's schema line is separate from
+/// <see cref="Nfty.Core.Model.Schema"/>, the CookBook manifest line, and a shared key name between
+/// two independently evolving formats is how one gets bumped and silently changes what the other
+/// means.
+/// </remarks>
 public record MenuBook(
-    int SchemaVersion,
+    [property: JsonPropertyName("menuSchemaVersion")] int SchemaVersion,
     string? SourceCookBookSha256,
     Dimensions Canvas,
     string CollectionName,
