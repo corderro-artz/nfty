@@ -1596,6 +1596,7 @@ using Nfty.Core.Demo;
 using Nfty.Core.Formats;
 using Nfty.Core.Generation;
 using Nfty.Core.Imaging;
+using Nfty.Core.Model;
 using Nfty.Core.Publish;
 using Nfty.Ticket;
 using SixLabors.ImageSharp;
@@ -1608,7 +1609,7 @@ namespace Nfty.Core.Tests;
 /// The Menu carries enough to reproduce an asset EXACTLY. Cook one the normal way, then rebuild the
 /// same asset from the .mnu alone and compare pixels.
 ///
-/// This is the test the whole format exists to pass. It exercises the atlas rects, the rolled colour,
+/// This is the test the whole format exists to pass. It exercises the atlas rects, the rolled color,
 /// the paint order and the absent layers at once, in both art modes.
 /// </summary>
 public class MenuFidelityTests
