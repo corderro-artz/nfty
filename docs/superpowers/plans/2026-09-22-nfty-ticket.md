@@ -671,10 +671,15 @@ public sealed record AssetTicket(string Dna, string RecipeId, IReadOnlyList<Tick
         foreach (var l in Layers)
         {
             string head = $"{l.IngredientId}:{l.VariantId}";
+            // ENUMS GO OUT BY NAME, NEVER BY ORDINAL. An (int) cast would pin the DECLARATION
+            // ORDER of LayerKind and ColorModel into the wire format, so reordering either enum
+            // would silently change what every stored ticket means - a Custom layer reading back as
+            // Dynamic, with no error and the wrong pixels. Names are also what Json.Options already
+            // does for every enum this product persists (JsonStringEnumConverter).
             parts.Add(l.Hue is double h && l.Sat is double s && l.Model is ColorModel m
                 ? string.Create(CultureInfo.InvariantCulture,
-                    $"{head}@{h:R},{s:R},{(int)m},{l.HueQuantize},{l.SatQuantize},{(int)l.Kind}")
-                : string.Create(CultureInfo.InvariantCulture, $"{head}@,,,,,{(int)l.Kind}"));
+                    $"{head}@{h:R},{s:R},{m},{l.HueQuantize},{l.SatQuantize},{l.Kind}")
+                : string.Create(CultureInfo.InvariantCulture, $"{head}@,,,,,{l.Kind}"));
         }
         parts.Add(Dna);
         return string.Join("|", parts);
@@ -712,8 +717,8 @@ public sealed record AssetTicket(string Dna, string RecipeId, IReadOnlyList<Tick
                 ingId, varId,
                 f[0].Length == 0 ? null : Num(f[0]),
                 f[1].Length == 0 ? null : Num(f[1]),
-                f[2].Length == 0 ? null : (ColorModel)Int(f[2]),
-                (LayerKind)Int(f[5]),
+                f[2].Length == 0 ? null : Enum.Parse<ColorModel>(f[2]),
+                Enum.Parse<LayerKind>(f[5]),
                 f[3].Length == 0 ? 0 : Int(f[3]),
                 f[4].Length == 0 ? 0 : Int(f[4])));
         }
