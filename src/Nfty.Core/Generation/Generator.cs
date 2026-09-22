@@ -2,6 +2,7 @@ using System.Numerics;
 using Nfty.Core.Formats;
 using Nfty.Core.Imaging;
 using Nfty.Core.Model;
+using Nfty.Ticket;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
@@ -14,6 +15,11 @@ namespace Nfty.Core.Generation;
 /// <para>Rolling and rendering are separate deliberately: the DNA is a function of the selection
 /// alone, so a collision is discarded without paying for the pixels that would have been thrown
 /// away with it.</para>
+///
+/// <para><b>The roll itself lives in <see cref="Ticketer"/>.</b> This class projects the book into
+/// a <see cref="MenuBook"/> (<see cref="MenuProjection"/>) and keeps only the render — resolving a
+/// ticket's ids to the actual decoded images, colorizing, compositing. There is exactly one
+/// definition of the order in which layers consume the RNG.</para>
 /// </summary>
 public static class Generator
 {
@@ -27,8 +33,8 @@ public static class Generator
     /// the duplicate check, and both depend on the exact order every asset is decided in — so the
     /// roll phase is sequential, always, and produces the identical stream of decisions this method
     /// has always produced. Rendering is then a pure function of one asset's own already-decided
-    /// roll: colorize each layer, composite them, done. Nothing it does can observe another asset,
-    /// the thread it runs on, or how many threads there are.</para>
+    /// ticket: resolve each layer's image, colorize, composite, done. Nothing it does can observe
+    /// another asset, the thread it runs on, or how many threads there are.</para>
     ///
     /// <para>That is what makes this safe for reproducibility, and it is a stronger claim than
     /// "same machine": results cannot vary with core count or scheduling because no parallel step
@@ -47,11 +53,11 @@ public static class Generator
         IProgress<GenerationProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        var (recipeById, recipeWeights) = Prepare(book, opts);
-        var rolls = RollAll(book, opts, recipeById, recipeWeights, existingDnas, startNumber,
-            cancellationToken);
+        var (recipeById, menu) = Prepare(book, opts);
+        var rolls = RollAll(book, opts, menu, existingDnas, startNumber, cancellationToken);
 
         var canvas = book.Manifest.Canvas;
+        var ingByRecipe = IngredientsByRecipe(recipeById);
         var assets = new GeneratedAsset[rolls.Count];
         var progressGate = new Lock();
         int done = 0;
@@ -59,7 +65,9 @@ public static class Generator
         {
             ParallelWork.For(rolls.Count, cancellationToken, i =>
             {
-                assets[i] = Render(canvas, rolls[i].Rolled, rolls[i].Number);
+                var (ticket, number) = rolls[i];
+                assets[i] = Render(
+                    canvas, recipeById[ticket.RecipeId], ingByRecipe[ticket.RecipeId], ticket, number);
 
                 // A caller's IProgress handler is still invoked ONE AT A TIME, in increasing order,
                 // exactly as it was when this loop was sequential. That is a contract, not a
@@ -122,9 +130,8 @@ public static class Generator
         // work, and before the cookbook is even validated. Non-positive is rejected outright:
         // unlike extend's --to (an absolute target that can legally already be met), Count is a
         // direct request with no benign zero/negative reading, so both fail the same way.
-        var (recipeById, recipeWeights) = Prepare(book, opts);
-        return Stream(book, opts, recipeById, recipeWeights, existingDnas, startNumber,
-            progress, cancellationToken);
+        var (recipeById, menu) = Prepare(book, opts);
+        return Stream(book, opts, recipeById, menu, existingDnas, startNumber, progress, cancellationToken);
     }
 
     /// <summary>
@@ -132,9 +139,9 @@ public static class Generator
     /// </summary>
     /// <param name="book">The cookbook.</param>
     /// <param name="opts">The run's options.</param>
-    /// <returns>The recipes by id, and the weights this run rolls them by.</returns>
-    private static (IReadOnlyDictionary<string, LoadedRecipe> ById,
-                    IReadOnlyDictionary<string, double> Weights)
+    /// <returns>The recipes by id (for resolving a ticket's ids to images), and the prepared Menu
+    /// this run rolls through.</returns>
+    private static (IReadOnlyDictionary<string, LoadedRecipe> ById, PreparedMenu Menu)
         Prepare(LoadedCookBook book, GenerateOptions opts)
     {
         // Count is a per-run parameter, not a property of the book, so it is checked here rather
@@ -150,17 +157,33 @@ public static class Generator
         if (problems.Count > 0)
             throw new InvalidOperationException("Invalid cookbook:\n" + string.Join("\n", problems));
 
-        var recipeById = book.Recipes.ToDictionary(r => r.Manifest.Id);
+        var recipeById = book.Recipes.ToDictionary(r => r.Manifest.Id, StringComparer.Ordinal);
         if (opts.RecipeId is not null && !recipeById.ContainsKey(opts.RecipeId))
             throw new InvalidOperationException($"Recipe '{opts.RecipeId}' not found in cookbook.");
 
-        IReadOnlyDictionary<string, double> recipeWeights =
-            opts.RecipeId is null
-                ? book.Manifest.RecipeWeights
-                : new Dictionary<string, double> { [opts.RecipeId] = 1 };
+        var projected = MenuProjection.From(book);
+        if (opts.RecipeId is not null)
+        {
+            // Restricting to one recipe overrides the weights entirely, so that recipe is in play
+            // whatever the book weights it — the same override the old recipeWeights table applied.
+            var only = projected.Recipes.Single(r => r.Id == opts.RecipeId);
+            projected = projected with { Recipes = [only with { Weight = 1 }] };
+        }
 
-        return (recipeById, recipeWeights);
+        return (recipeById, Ticketer.Prepare(projected));
     }
+
+    /// <summary>
+    /// Every recipe's ingredients by id, resolved once per run rather than once per asset — a fixed
+    /// property of the cookbook that <see cref="Render"/> needs to turn a ticket's ids into images.
+    /// </summary>
+    private static Dictionary<string, IReadOnlyDictionary<string, LoadedIngredient>> IngredientsByRecipe(
+        IReadOnlyDictionary<string, LoadedRecipe> recipeById) =>
+        recipeById.ToDictionary(
+            kv => kv.Key,
+            kv => (IReadOnlyDictionary<string, LoadedIngredient>)
+                kv.Value.Ingredients.ToDictionary(i => i.Manifest.Id, StringComparer.Ordinal),
+            StringComparer.Ordinal);
 
     /// <summary>
     /// The roll phase for the whole run, in order, on one thread.
@@ -171,38 +194,34 @@ public static class Generator
     /// decisions depend on every decision before it. Splitting it would change the collection.
     /// It touches no pixels, which is why doing it all up front is cheap.
     /// </remarks>
-    private static List<(RolledAsset Rolled, int Number)> RollAll(
+    private static List<(AssetTicket Ticket, int Number)> RollAll(
         LoadedCookBook book,
         GenerateOptions opts,
-        IReadOnlyDictionary<string, LoadedRecipe> recipeById,
-        IReadOnlyDictionary<string, double> recipeWeights,
+        PreparedMenu menu,
         IReadOnlyList<string>? existingDnas,
         int startNumber,
         CancellationToken cancellationToken)
     {
         var rng = new SplitMix64Rng(SeedHash.ToUlong(opts.Seed));
         var seen = new HashSet<string>(existingDnas ?? Array.Empty<string>());
-        var recipeTable = WeightedRoller.Prepare(recipeWeights);
-        var layerPlans = recipeById.ToDictionary(kv => kv.Key, kv => PlanLayers(kv.Value));
 
-        var rolls = new List<(RolledAsset, int)>(opts.Count);
+        var rolls = new List<(AssetTicket, int)>(opts.Count);
         int number = startNumber;
 
         for (int i = 0; i < opts.Count; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            RolledAsset? rolled = null;
+            AssetTicket? rolled = null;
             for (int attempt = 0; attempt < opts.MaxRerollsPerAsset; attempt++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                string recipeId = WeightedRoller.Roll(recipeTable, rng);
-                var candidate = RollOne(recipeById[recipeId], layerPlans[recipeId], rng);
-                if (candidate is null) continue;                       // rule violation → reroll
-                if (opts.EnforceUniqueDna && !seen.Add(candidate.Dna)) continue;
+                var ticket = Ticketer.TryRoll(menu, rng);
+                if (ticket is null) continue;                          // rule violation → reroll
+                if (opts.EnforceUniqueDna && !seen.Add(ticket.Dna)) continue;
 
-                rolled = candidate;
+                rolled = ticket;
                 break;
             }
 
@@ -219,7 +238,7 @@ public static class Generator
         LoadedCookBook book,
         GenerateOptions opts,
         IReadOnlyDictionary<string, LoadedRecipe> recipeById,
-        IReadOnlyDictionary<string, double> recipeWeights,
+        PreparedMenu menu,
         IReadOnlyList<string>? existingDnas,
         int startNumber,
         IProgress<GenerationProgress>? progress,
@@ -228,12 +247,8 @@ public static class Generator
         var rng = new SplitMix64Rng(SeedHash.ToUlong(opts.Seed));
         var seen = new HashSet<string>(existingDnas ?? Array.Empty<string>());
         int number = startNumber;
-
-        // Resolved once per run, not per roll attempt: draw order, running weight totals, and the
-        // per-layer lookups are all fixed properties of the cookbook. Built here — inside the
-        // iterator, off local state — so nothing is shared between calls or between enumerations.
-        var recipeTable = WeightedRoller.Prepare(recipeWeights);
-        var layerPlans = recipeById.ToDictionary(kv => kv.Key, kv => PlanLayers(kv.Value));
+        var canvas = book.Manifest.Canvas;
+        var ingByRecipe = IngredientsByRecipe(recipeById);
 
         for (int i = 0; i < opts.Count; i++)
         {
@@ -248,9 +263,8 @@ public static class Generator
                 // as UniqueSpaceExhaustedException instead of OperationCanceledException.
                 cancellationToken.ThrowIfCancellationRequested();
 
-                string recipeId = WeightedRoller.Roll(recipeTable, rng);
-                var rolled = RollOne(recipeById[recipeId], layerPlans[recipeId], rng);
-                if (rolled is null) continue;                // rule violation → reroll
+                var ticket = Ticketer.TryRoll(menu, rng);
+                if (ticket is null) continue;                // rule violation → reroll
 
                 // Dedup BEFORE rendering. The DNA is a function of the selection and the rolled
                 // colors, all of which the roll phase already has, so a collision can be detected
@@ -261,9 +275,10 @@ public static class Generator
                 //
                 // With uniqueness off, a repeated DNA is accepted: identity comes from the token id,
                 // not the DNA, so there is nothing to dedup and nothing to exhaust.
-                if (opts.EnforceUniqueDna && !seen.Add(rolled.Dna)) continue;
+                if (opts.EnforceUniqueDna && !seen.Add(ticket.Dna)) continue;
 
-                asset = Render(book.Manifest.Canvas, rolled, number);
+                asset = Render(
+                    canvas, recipeById[ticket.RecipeId], ingByRecipe[ticket.RecipeId], ticket, number);
                 break;
             }
 
@@ -360,190 +375,66 @@ public static class Generator
             : "recipes " + string.Join(", ", recipeIds.Select(r => $"'{r}'"));
 
     /// <summary>
-    /// One recipe layer with everything the roll needs already resolved: the ingredient, its
-    /// prepared weight table, and its variants by id. All three are fixed properties of the
-    /// cookbook, so they are built once per run rather than rebuilt on every roll attempt.
+    /// The render phase: no RNG, only pixels. Resolves a ticket's ids to the recipe's decoded
+    /// images, colorizes Dynamic/Static layers with the ticket's rolled (H,S), composites Custom
+    /// layers as-is, and rebuilds the rich metadata (<see cref="TraitSelection"/>,
+    /// <see cref="ColorRoll"/>, <see cref="AbsentLayer"/>) the roll itself has no reason to carry.
     /// </summary>
-    /// <param name="Ingredient">The layer.</param>
-    /// <param name="Weights">Its prepared variant weights.</param>
-    /// <param name="VariantById">Its variants by id.</param>
-    /// <param name="AbsentWeight">Weight of leaving the layer out, resolved from the recipe's
-    /// percent ONCE per run rather than per roll — it is a property of the cookbook, like the table
-    /// beside it. Zero for a layer that always appears.</param>
-    /// <param name="AlwaysAbsent">The layer never appears and is not rolled at all. Distinct from a
-    /// large <paramref name="AbsentWeight"/>, which still costs a draw: at 100% there is nothing to
-    /// choose between, and the weight has no finite value anyway.</param>
-    private sealed record LayerPlan(
-        LoadedIngredient Ingredient,
-        WeightedRoller.WeightTable Weights,
-        IReadOnlyDictionary<string, Variant> VariantById,
-        double AbsentWeight,
-        bool AlwaysAbsent);
-
-    /// <summary>
-    /// Resolves a recipe's layers in <c>layerOrder</c>. Safe to index and to build dictionaries
-    /// from: <see cref="Validator"/> has already rejected unknown or repeated layerOrder entries
-    /// and duplicate variant ids before any of this runs.
-    /// </summary>
-    private static IReadOnlyList<LayerPlan> PlanLayers(LoadedRecipe recipe)
-    {
-        var ingById = recipe.Ingredients.ToDictionary(i => i.Manifest.Id);
-        return recipe.Manifest.LayerOrder
-            .Select(id =>
-            {
-                var ing = ingById[id];
-                var table = WeightedRoller.Prepare(ing.Manifest.Variants.ToDictionary(v => v.Id, v => v.Weight));
-                double percent = recipe.Manifest.AbsentPercentOf(id);
-                bool never = WeightedRoller.AlwaysAbsent(percent);
-                return new LayerPlan(
-                    ing,
-                    table,
-                    ing.Manifest.Variants.ToDictionary(v => v.Id),
-                    // Zero for the overwhelmingly common case of a layer that always appears, and
-                    // zero is what makes the roll below bit-identical to the one that shipped
-                    // before optional layers existed.
-                    never ? 0 : WeightedRoller.AbsentWeight(percent, ing.Manifest.Variants.Sum(v => v.Weight)),
-                    never);
-            })
-            .ToList();
-    }
-
-    /// <summary>
-    /// One asset's decisions, complete and costing no pixels. Holds everything the DNA is computed
-    /// from, which is what lets the caller detect a duplicate before paying to render one.
-    /// </summary>
-    /// <param name="Dna">The identity this roll would produce.</param>
-    /// <param name="Recipe">The recipe rolled.</param>
-    /// <param name="Plan">Per layer: the source image, its rolled color, and the color model —
-    /// a null model marks a Custom layer, cloned as-is rather than colorized.</param>
-    /// <param name="Traits">The trait selections, in layer order.</param>
-    /// <param name="ColorRolls">The per-layer color record for the rich metadata.</param>
-    /// <param name="AbsentLayers">The layers this roll left out entirely.</param>
-    private sealed record RolledAsset(
-        string Dna,
-        LoadedRecipe Recipe,
-        IReadOnlyList<(Image<Rgba32> Source, RolledColor Color, ColorModel? Model)> Plan,
-        IReadOnlyList<TraitSelection> Traits,
-        IReadOnlyList<ColorRoll> ColorRolls,
-        IReadOnlyList<AbsentLayer> AbsentLayers);
-
-    /// <summary>
-    /// The roll phase: consumes the RNG, decides the whole asset, and touches no pixels. Returns
-    /// null when the recipe's rules reject the selection.
-    /// </summary>
-    private static RolledAsset? RollOne(
+    /// <param name="canvas">The book's canvas — every variant is validated against it.</param>
+    /// <param name="recipe">The rolled recipe, decoded.</param>
+    /// <param name="ingById">That recipe's ingredients by id.</param>
+    /// <param name="ticket">The roll to render.</param>
+    /// <param name="number">The asset's number within the Set.</param>
+    private static GeneratedAsset Render(
+        Dimensions canvas,
         LoadedRecipe recipe,
-        IReadOnlyList<LayerPlan> layers,
-        IRng rng)
+        IReadOnlyDictionary<string, LoadedIngredient> ingById,
+        AssetTicket ticket,
+        int number)
     {
-        var selection = new Dictionary<string, string>();
-        var traits = new List<TraitSelection>();
-        var colorRolls = new List<ColorRoll>();
-        var dnaParts = new List<LayerSelection>();
-        var absentLayers = new List<AbsentLayer>();
-
-        // What each layer will draw, decided here and rendered later.
-        // A null model means a Custom layer, which is cloned as-is rather than colorized.
-        var plan = new List<(Image<Rgba32> Source, RolledColor Color, ColorModel? Model)>();
-
-        {
-            foreach (var layer in layers)
-            {
-                var ing = layer.Ingredient;
-                string ingId = ing.Manifest.Id;
-
-                // A LAYER MAY BE LEFT OUT. It contributes no trait, no pixels and — deliberately —
-                // no DNA part at all, rather than a sentinel "absent" marker: a marker would have to
-                // be a string no variant id could ever equal, and omitting the part is unambiguous
-                // without one, because a layer that IS present adds a part that an absent one does
-                // not. Nothing else in the loop runs, so an absent Dynamic layer rolls no color —
-                // which is what stops two assets that both show nothing from having different DNA.
-                string? rolledId = layer.AlwaysAbsent
-                    ? null
-                    : WeightedRoller.Roll(layer.Weights, layer.AbsentWeight, rng);
-                if (rolledId is null)
-                {
-                    // Recorded, not merely skipped. Everything else about an absent layer is an
-                    // omission — no trait, no pixels, no DNA part — which leaves a finished Set
-                    // unable to tell "this asset has no hat" from "this collection has no hat".
-                    absentLayers.Add(new AbsentLayer(ingId, ing.Manifest.Name));
-                    continue;
-                }
-
-                string variantId = rolledId;
-                var variant = layer.VariantById[variantId];
-                selection[ingId] = variantId;
-                traits.Add(new TraitSelection(ingId, ing.Manifest.Name, variantId, variant.Name));
-
-                var srcImage = ing.VariantImages[variantId];
-                var kind = ing.Manifest.Kind;
-                switch (kind)
-                {
-                    case LayerKind.Dynamic or LayerKind.Static:
-                    {
-                        // Both kinds are grayscale value-maps colorized with an (H,S). The ONLY
-                        // difference is where that color comes from: dynamic rolls it per asset,
-                        // static resolves its single fixed color and consumes NO RNG (spec 5.3).
-                        var col = ing.Manifest.Colorization!;
-                        var color = kind == LayerKind.Dynamic
-                            ? ColorRoller.Roll(col, rng)
-                            : ColorRoller.FromFixed(col.Entries[0].Fixed!, col.Model);
-
-                        colorRolls.Add(new ColorRoll(ingId, kind, col.Model, color.H, color.S));
-                        plan.Add((srcImage, color, col.Model));
-                        dnaParts.Add(new LayerSelection(ingId, variantId, color.H, color.S, col.HueQuantize, col.SatQuantize));
-                        break;
-                    }
-                    default: // LayerKind.Custom
-                    {
-                        // Full-color image composited as-is; never colorized.
-                        colorRolls.Add(new ColorRoll(ingId, LayerKind.Custom, null, null, null));
-                        plan.Add((srcImage, default, null));
-                        dnaParts.Add(new LayerSelection(ingId, variantId, null, null, 1, 1));
-                        break;
-                    }
-                }
-            }
-
-            // Legality is a function of the variant selection alone, so it is decided before any
-            // pixel is touched: a roll the rules reject costs only the rolls themselves. The
-            // rolls above must stay above this line — they consume the RNG, and the draw order
-            // is part of the determinism contract.
-            if (!RulesEngine.IsLegal(selection, recipe.Manifest.Rules))
-                return null;
-
-            return new RolledAsset(
-                Dna.Compute(recipe.Manifest.Id, dnaParts), recipe, plan, traits, colorRolls, absentLayers);
-        }
-    }
-
-    /// <summary>
-    /// The render phase: no RNG, only pixels. Separated from the roll so a duplicate DNA can be
-    /// discarded without ever paying for the colorize and composite that produced it.
-    /// </summary>
-    private static GeneratedAsset Render(Dimensions canvas, RolledAsset rolled, int number)
-    {
-        var images = new List<Image<Rgba32>>(rolled.Plan.Count);
+        var images = new List<Image<Rgba32>>(ticket.Layers.Count);
+        var traits = new List<TraitSelection>(ticket.Layers.Count);
+        var colorRolls = new List<ColorRoll>(ticket.Layers.Count);
         try
         {
-            foreach (var (source, color, model) in rolled.Plan)
-                images.Add(model is null
-                    ? source.Clone()
-                    : Colorizer.Apply(source, color.H, color.S, model.Value));
+            foreach (var layer in ticket.Layers)
+            {
+                var ing = ingById[layer.IngredientId];
+                var variant = ing.Manifest.Variants.First(v => v.Id == layer.VariantId);
+                traits.Add(new TraitSelection(layer.IngredientId, ing.Manifest.Name, layer.VariantId, variant.Name));
+
+                var source = ing.VariantImages[layer.VariantId];
+                // A null Model means a Custom layer, cloned as-is rather than colorized — the ticket
+                // already carries which case this is, so nothing here re-derives it from the kind.
+                images.Add(layer.Model is ColorModel model
+                    ? Colorizer.Apply(source, layer.Hue!.Value, layer.Sat!.Value, model)
+                    : source.Clone());
+
+                colorRolls.Add(new ColorRoll(layer.IngredientId, layer.Kind, layer.Model, layer.Hue, layer.Sat));
+            }
 
             var composed = Compositor.Composite(canvas, images);
             foreach (var img in images) img.Dispose();
 
+            // AbsentLayers is the ticket's present layers subtracted from the recipe's whole
+            // layerOrder — an omission in the ticket rather than a marker, exactly as the roll
+            // itself treats it (see Ticketer.TryRoll).
+            var present = new HashSet<string>(ticket.Layers.Select(l => l.IngredientId), StringComparer.Ordinal);
+            var absentLayers = recipe.Manifest.LayerOrder
+                .Where(id => !present.Contains(id))
+                .Select(id => new AbsentLayer(id, ingById[id].Manifest.Name))
+                .ToList();
+
             return new GeneratedAsset
             {
                 SetNumber = number,
-                Dna = rolled.Dna,
-                RecipeId = rolled.Recipe.Manifest.Id,
-                RecipeName = rolled.Recipe.Manifest.Name,
+                Dna = ticket.Dna,
+                RecipeId = recipe.Manifest.Id,
+                RecipeName = recipe.Manifest.Name,
                 Image = composed,
-                Traits = rolled.Traits,
-                ColorRolls = rolled.ColorRolls,
-                AbsentLayers = rolled.AbsentLayers,
+                Traits = traits,
+                ColorRolls = colorRolls,
+                AbsentLayers = absentLayers,
             };
         }
         catch
