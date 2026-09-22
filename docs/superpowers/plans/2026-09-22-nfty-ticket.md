@@ -211,9 +211,10 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
     NO #if IN LOGIC. Should a second target framework ever be added, whatever it needs is written
     unconditionally: one code path cannot diverge from itself.
   -->
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-  </PropertyGroup>
+  <!-- No PropertyGroup: Directory.Build.props already sets TargetFramework, Nullable,
+       ImplicitUsings, LangVersion, the version stamp and the documentation settings. Restating one
+       here is the duplication that file's own comment warns about - seven csproj copies had already
+       drifted before it existed. -->
 
 </Project>
 ```
