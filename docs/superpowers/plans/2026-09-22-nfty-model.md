@@ -1241,7 +1241,7 @@ public class ModelCommandTests
     [Fact]
     public void The_model_command_parses_for_a_png()
     {
-        var r = CommandFactory.Create().Parse("model sprite.png --out sprite.glb --depth 3");
+        var r = CommandFactory.Build().Parse("model sprite.png --out sprite.glb --depth 3");
         Assert.Empty(r.Errors);
     }
 
@@ -1250,16 +1250,16 @@ public class ModelCommandTests
     {
         // The rule `preview` already keeps: an option belonging to the other form is REJECTED, never
         // ignored, because an option that silently does nothing is worse than one that says no.
-        Assert.Empty(CommandFactory.Create()
+        Assert.Empty(CommandFactory.Build()
             .Parse("model hat.igt --variant a --out hat.glb").Errors);
-        Assert.NotEmpty(CommandFactory.Create()
+        Assert.NotEmpty(CommandFactory.Build()
             .Parse("model sprite.png --variant a --out sprite.glb").Errors);
     }
 
     [Fact]
     public void An_unknown_mode_is_refused()
     {
-        Assert.NotEmpty(CommandFactory.Create()
+        Assert.NotEmpty(CommandFactory.Build()
             .Parse("model sprite.png --out a.glb --mode sideways").Errors);
     }
 }

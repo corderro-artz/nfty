@@ -1806,14 +1806,14 @@ public class MenuCommandTests
     [Fact]
     public void The_menu_command_parses()
     {
-        var result = CommandFactory.Create().Parse("menu book.cbk --out game.mnu --art loose");
+        var result = CommandFactory.Build().Parse("menu book.cbk --out game.mnu --art loose");
         Assert.Empty(result.Errors);
     }
 
     [Fact]
     public void An_unknown_art_mode_is_refused()
     {
-        var result = CommandFactory.Create().Parse("menu book.cbk --out game.mnu --art sideways");
+        var result = CommandFactory.Build().Parse("menu book.cbk --out game.mnu --art sideways");
         Assert.NotEmpty(result.Errors);
     }
 
@@ -1822,13 +1822,13 @@ public class MenuCommandTests
     {
         // The same rule `preview` keeps: an option belonging to the other form is REJECTED, never
         // ignored, because an option that silently does nothing is worse than one that says no.
-        Assert.Empty(CommandFactory.Create()
+        Assert.Empty(CommandFactory.Build()
             .Parse("serve game.mnu --seed abc --out a.png").Errors);
-        Assert.Empty(CommandFactory.Create()
+        Assert.Empty(CommandFactory.Build()
             .Parse("serve game.mnu --ticket v1|x --out a.png").Errors);
-        Assert.NotEmpty(CommandFactory.Create()
+        Assert.NotEmpty(CommandFactory.Build()
             .Parse("serve game.mnu --seed abc --ticket v1|x --out a.png").Errors);
-        Assert.NotEmpty(CommandFactory.Create()
+        Assert.NotEmpty(CommandFactory.Build()
             .Parse("serve game.mnu --out a.png").Errors);
     }
 }
