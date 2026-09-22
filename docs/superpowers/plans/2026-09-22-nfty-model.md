@@ -119,7 +119,8 @@ Expected: PASS, zero warnings.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add -A
+# Stage the files you changed BY NAME. A blanket add has swept an unrelated uncommitted
+# edit into an implementer commit once on this branch.
 git commit -m "build: add the Nfty.Model project
 
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
@@ -1289,7 +1290,8 @@ Open `/tmp/a.glb` in a viewer and look at it.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add -A
+# Stage the files you changed BY NAME. A blanket add has swept an unrelated uncommitted
+# edit into an implementer commit once on this branch.
 git commit -m "feat: nfty model
 
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
@@ -1441,7 +1443,8 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add -A
+# Stage the files you changed BY NAME. A blanket add has swept an unrelated uncommitted
+# edit into an implementer commit once on this branch.
 git commit -m "feat: a cooked Set may carry models/NNNN.glb
 
 SetLayout is an include list, so adding the directory is what makes Pack carry
@@ -1564,7 +1567,8 @@ so the next person to touch the stamp knows what it protects.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add -A
+# Stage the files you changed BY NAME. A blanket add has swept an unrelated uncommitted
+# edit into an implementer commit once on this branch.
 git commit -m "test: the debug number stamp never reaches an exported model
 
 The stamp is a mark added on the way out of the door, not part of the asset.
@@ -1666,7 +1670,8 @@ Open two of `/tmp/set/models/*.glb` in a viewer. **Look at them.**
 - [ ] **Step 6: Commit**
 
 ```bash
-git add -A
+# Stage the files you changed BY NAME. A blanket add has swept an unrelated uncommitted
+# edit into an implementer commit once on this branch.
 git commit -m "feat: cook with models, export them as their own content axis
 
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"

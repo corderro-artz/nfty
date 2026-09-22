@@ -275,7 +275,8 @@ this task; if one needed editing, the namespaces were not preserved.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add -A
+# Stage the files you changed BY NAME. A blanket add has swept an unrelated uncommitted
+# edit into an implementer commit once on this branch.
 git commit -m "refactor: move the image-free roll into a new Nfty.Ticket assembly
 
 Namespaces are deliberately unchanged, so nothing else in the repo edits a
@@ -1289,7 +1290,8 @@ consuming a draw, `AlwaysAbsent` being rolled anyway, or `ToDictionary` without
 - [ ] **Step 6: Commit**
 
 ```bash
-git add -A
+# Stage the files you changed BY NAME. A blanket add has swept an unrelated uncommitted
+# edit into an implementer commit once on this branch.
 git commit -m "refactor: Generator rolls through Ticketer and keeps only the render
 
 RollOne, PlanLayers and LayerPlan are gone; there is now one definition of the
@@ -1570,7 +1572,8 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add -A
+# Stage the files you changed BY NAME. A blanket add has swept an unrelated uncommitted
+# edit into an implementer commit once on this branch.
 git commit -m "feat: read a .mnu, gate its schema, and teach Archives the extension
 
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
@@ -1869,7 +1872,8 @@ image by hand has a defect the tests did not reach.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add -A
+# Stage the files you changed BY NAME. A blanket add has swept an unrelated uncommitted
+# edit into an implementer commit once on this branch.
 git commit -m "feat: nfty menu, nfty serve, and inspect for .mnu
 
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
@@ -1883,18 +1887,26 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 - Modify: `CLAUDE.md`
 - Modify: `BACKLOG.md`
 - Modify: `README.md`
-- Modify: the ten stale `RollOne` references listed in Step 0
+- Modify: the fifteen stale `RollOne` references listed in Step 0
 - Rename: `tests/Nfty.Core.Tests/GeneratorRollOneDisposalTests.cs`
 
 - [ ] **Step 0: retire the name `Generator.RollOne`, which no longer exists**
 
-Task 6 deleted `Generator.RollOne`, `PlanLayers` and `LayerPlan`. Ten prose references to them
-survive across eight files. In a repo whose comments carry the reasoning, a comment naming a method
-that does not exist is worse than no comment: the next reader goes looking for it.
+Task 6 deleted `Generator.RollOne`, `PlanLayers` and `LayerPlan`. **Fifteen** prose references to
+them survive — twelve in source and tests, and three in `CLAUDE.md`. In a repo whose comments carry
+the reasoning, a comment naming a method that does not exist is worse than no comment: the next
+reader goes looking for it.
 
-**Nine are a rewording.** Each explains that the roll walks `layerOrder` consuming one RNG draw per
-layer. That is still true - it simply happens in `Ticketer.TryRoll` now. Say so; do not merely
-delete the sentence, because the fact it records is the reason the surrounding code exists.
+Re-run the search before starting, since line numbers drift:
+
+```
+grep -rn "RollOne\|PlanLayers\|LayerPlan" src tests --include=*.cs
+grep -rn "RollOne" CLAUDE.md README.md BACKLOG.md docs/manual
+```
+
+**Nine are a plain rewording.** Each explains that the roll walks `layerOrder` consuming one RNG
+draw per layer. That is still true - it simply happens in `Ticketer.TryRoll` now. Say so; do not
+merely delete the sentence, because the fact it records is the reason the surrounding code exists.
 
 ```
 src/Nfty.App/ViewModels/TableSort.cs:23
@@ -1908,7 +1920,27 @@ tests/Nfty.Core.Tests/StackPreviewTests.cs:381
 tests/Nfty.Core.Tests/GeneratorRollRenderSplitTests.cs:136
 ```
 
-**The tenth is not a rewording, and needs judgement.**
+**`src/Nfty.Core/Stats/SelectionOdds.cs:345` is the one that might be a real defect.** It reads
+"The arithmetic mirrors `Generator.PlanLayers` and ..." — a claim that this code's arithmetic tracks
+a specific other method's, and that method was deleted. Unlike the fourteen others, which name a
+dead symbol while stating something still true, this one may be making a claim that is **no longer
+true**. Read `SelectionOdds` and `Ticketer.Prepare`/`TryRoll` before rewording: if the arithmetic
+still mirrors what `Ticketer` does, say so and name it; if it has drifted, that is a finding to
+REPORT, not to reword around.
+
+**Three more are prose in `CLAUDE.md`** — lines 45, 185 and 271, each explaining that
+`Generator.RollOne` walks `layerOrder` consuming one draw per layer. These matter most of the
+fifteen: `CLAUDE.md` is the first file every future agent reads, so a dead symbol there sends each
+new reader hunting for a method that does not exist. Same rule — the fact is still true, reword
+rather than delete — but each sits inside a longer argument that must not be damaged.
+
+**Do not find-and-replace.** Nine are a rewording, one needs the arithmetic checked, one is a file
+premise, one is a class name handled by `git mv`, and three sit inside longer prose arguments. A
+blanket substitution leaves several sentences grammatical and wrong. Heed this repo's own bulk-edit
+lesson: scoping by indentation does not scope — a 14-space pattern is a substring of a 20-space
+line, and that once stripped 75 attributes where 8 were intended.
+
+**One is not a rewording, and needs judgement.**
 `tests/Nfty.Core.Tests/GeneratorRollRenderSplitTests.cs:11` is the file's own summary, and it
 describes the PREMISE of the whole file: that `RollOne` ran in two phases and the RNG draws stayed in
 the first. That arrangement still holds, but it is now a split across two ASSEMBLIES - `Ticketer`
@@ -1922,14 +1954,19 @@ since Task 6 renamed its only test to `Render_disposes_an_earlier_layers_image_w
 Use `git mv` so history follows, and update the two references to the old name (`AssemblyInfo.cs:3`,
 `StackPreviewTests.cs:381`).
 
-Run `dotnet test nfty.sln` afterwards: these are comments and a rename, so the count must be
-unchanged and every test must still pass.
+Afterwards the two searches above must return **nothing** (except any sentence deliberately
+describing the history, which you should call out in your report). Then run `dotnet test nfty.sln`:
+these are comments and a rename, so the count must be UNCHANGED and every test must still pass. A
+changed count means the rename took something with it.
 
 - [ ] **Step 1: `CLAUDE.md`**
 
 Add `Nfty.Ticket` to the project layout section; add **Menu** and **Ticket** to the six-term
 vocabulary table; add `.mnu` to the archive-extension paragraph and note `ArchiveKind` now names
 **seven** kinds; record that the roll lives in `Nfty.Ticket` and `Generator` keeps only the render.
+
+**And reword the three `Generator.RollOne` references at lines 45, 185 and 271**, per Step 0. They
+are part of that same count and are listed here because this is the step that edits this file.
 
 - [ ] **Step 2: `BACKLOG.md`** — add an entry with the cost of the deferred TFM
 
@@ -1952,6 +1989,26 @@ target ever has to reconcile is framework API surface.
 run different code to compute a DNA — invisible in review and to any single-target test.
 ```
 
+Add a **second** entry for the `--voxel` refusal Task 10 ships:
+
+```markdown
+## `inspect --voxel` is refused on a `.mnu`
+
+**Status:** deferred on scope, not on principle.
+
+`--voxel` reports which variants carry partial alpha. It is refused on a `.ktn` (which lists paths
+without opening them), on a `.tin` (sealed), and on a cooked Set (the output rather than the source
+art). **A Menu is the one refused kind where the information genuinely IS present** — it carries
+the source variants, uncolorized, which is exactly what the flag scans.
+
+What is missing is the traversal, not the measurement: every `VoxelReport.Scan` overload takes a
+`Loaded*` decoded from a `.cbk`, so a Menu needs its atlas decoded and cropped per cell.
+`VoxelReport.CountPartial(Image<Rgba32>)` is already public and already does the per-image work.
+
+The refusal message says so in those terms, deliberately — a "cannot" borrowed from one of the other
+three arms would be false here, and a wrong reason in an error message is worse than a terse one.
+```
+
 - [ ] **Step 3: `README.md`** — one line for `nfty menu` and `nfty serve` in the command list.
 
 - [ ] **Step 4: Full verification**
@@ -1964,8 +2021,10 @@ Expected: PASS, zero warnings, every pre-existing test unedited.
 
 - [ ] **Step 5: Commit**
 
+Stage the files you changed BY NAME. Do not use `git add -A` — a blanket add has already swept an
+unrelated uncommitted edit into an implementer's commit once on this branch.
+
 ```bash
-git add -A
 git commit -m "docs: record Nfty.Ticket, the Menu format, and the deferred TFM
 
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
