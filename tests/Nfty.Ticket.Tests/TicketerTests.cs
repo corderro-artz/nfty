@@ -148,4 +148,57 @@ public class TicketerTests
         Assert.Equal(LayerKind.Custom, ticket.Layers[1].Kind);
         Assert.Null(ticket.Layers[1].Model);
     }
+
+    /// <summary>
+    /// Defends the RULES CHECK'S PLACEMENT: it must run once, after every layer has been rolled —
+    /// never per layer as each is added — because a rejected roll has to consume the same draws a
+    /// successful one does, or the very next roll in the sequence (the caller's reroll) starts from
+    /// a different RNG state than it would have. An early short-circuit is invisible in the ticket
+    /// it produces (both placements can reject the very same selection), so this has to be told
+    /// apart by DRAW COUNT, not by outcome.
+    ///
+    /// <para><b>An Exclude rule cannot discriminate this, and that is why every other rejection test
+    /// here uses Exclude.</b> <c>RulesEngine.IsLegal</c> only fails an Exclude rule when its target
+    /// is PRESENT in the selection — which requires the target's layer to have already been rolled.
+    /// A per-layer check evaluated right after each layer is added can therefore never see an
+    /// Exclude violation before every relevant layer is in, so it can never fire early and this
+    /// probe would pass under both placements no matter how the fixture were shaped.</para>
+    ///
+    /// <para>A Require rule is the opposite: it fails when the target is NOT present, and "not
+    /// present" is indistinguishable from "not rolled yet" in a partial selection. So a recipe with
+    /// three Custom layers (a, b, c) and a Require rule whose When is on <c>a</c> and whose target
+    /// is on <c>b</c> — one rule per variant of <c>a</c>, so it fires whichever variant is rolled —
+    /// makes a per-layer check reject immediately after <c>a</c>, before <c>b</c> or <c>c</c> are
+    /// ever rolled. Correct placement rolls all three layers before checking at all: 1 draw for the
+    /// recipe plus 1 per layer is 4. An early short-circuit after <c>a</c> is 1 + 1 is 2. Asserted
+    /// unconditionally, because it holds whether the final roll is accepted or rejected — this test
+    /// is about how many draws were SPENT getting to that answer, not what the answer is.</para>
+    /// </summary>
+    [Fact]
+    public void The_rules_check_runs_once_after_every_layer_not_per_layer_as_each_is_rolled()
+    {
+        var layers = new[]
+        {
+            Layer("a", LayerKind.Custom, null),
+            Layer("b", LayerKind.Custom, null),
+            Layer("c", LayerKind.Custom, null),
+        };
+        var book = new MenuBook(1, null, new Dimensions(2, 2), "C", "SYM",
+            [new MenuRecipe("cat", "Cat", 1, ["a", "b", "c"], layers,
+                // Whichever variant "a" rolls ("a" or "b"), the matching rule requires "b" to have
+                // rolled "a" — a target that cannot be known until "b" itself has been rolled.
+                [
+                    new IncompatibilityRule(RuleType.Require, new RuleTarget("a", "a"),
+                        [new RuleTarget("b", "a")]),
+                    new IncompatibilityRule(RuleType.Require, new RuleTarget("a", "b"),
+                        [new RuleTarget("b", "a")]),
+                ],
+                new Dictionary<string, double>())],
+            new MenuArt(MenuArtMode.Loose, 0, 0, []));
+
+        var rng = new CountingRng(0.5);
+        Ticketer.TryRoll(Ticketer.Prepare(book), rng);
+
+        Assert.Equal(4, rng.Draws);   // recipe + a + b + c — never short-circuited after "a"
+    }
 }
