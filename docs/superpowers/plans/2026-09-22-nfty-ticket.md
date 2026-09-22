@@ -1882,6 +1882,47 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 - Modify: `CLAUDE.md`
 - Modify: `BACKLOG.md`
 - Modify: `README.md`
+- Modify: the ten stale `RollOne` references listed in Step 0
+- Rename: `tests/Nfty.Core.Tests/GeneratorRollOneDisposalTests.cs`
+
+- [ ] **Step 0: retire the name `Generator.RollOne`, which no longer exists**
+
+Task 6 deleted `Generator.RollOne`, `PlanLayers` and `LayerPlan`. Ten prose references to them
+survive across eight files. In a repo whose comments carry the reasoning, a comment naming a method
+that does not exist is worse than no comment: the next reader goes looking for it.
+
+**Nine are a rewording.** Each explains that the roll walks `layerOrder` consuming one RNG draw per
+layer. That is still true - it simply happens in `Ticketer.TryRoll` now. Say so; do not merely
+delete the sentence, because the fact it records is the reason the surrounding code exists.
+
+```
+src/Nfty.App/ViewModels/TableSort.cs:23
+src/Nfty.Core/Imaging/StackRoll.cs:133
+tests/Nfty.App.Tests/ExplorerTreeReorderTests.cs:157
+tests/Nfty.App.Tests/RulesPanelTests.cs:257
+tests/Nfty.Core.Tests/AssemblyInfo.cs:3
+tests/Nfty.Core.Tests/LayerDepthTests.cs:195
+tests/Nfty.Core.Tests/LayerDepthTests.cs:251
+tests/Nfty.Core.Tests/StackPreviewTests.cs:381
+tests/Nfty.Core.Tests/GeneratorRollRenderSplitTests.cs:136
+```
+
+**The tenth is not a rewording, and needs judgement.**
+`tests/Nfty.Core.Tests/GeneratorRollRenderSplitTests.cs:11` is the file's own summary, and it
+describes the PREMISE of the whole file: that `RollOne` ran in two phases and the RNG draws stayed in
+the first. That arrangement still holds, but it is now a split across two ASSEMBLIES - `Ticketer`
+rolls, `Generator.Render` renders - which is a stronger version of the same guarantee, not a weaker
+one. Rewrite the summary to describe what the file actually pins today. Read the tests first and make
+the prose match them; a find-and-replace on the method name would leave the file claiming to test
+something it no longer reaches.
+
+**Also rename the class and file** `GeneratorRollOneDisposalTests` -> `GeneratorRenderDisposalTests`,
+since Task 6 renamed its only test to `Render_disposes_an_earlier_layers_image_when_a_later_layers_colorizer_throws`.
+Use `git mv` so history follows, and update the two references to the old name (`AssemblyInfo.cs:3`,
+`StackPreviewTests.cs:381`).
+
+Run `dotnet test nfty.sln` afterwards: these are comments and a rename, so the count must be
+unchanged and every test must still pass.
 
 - [ ] **Step 1: `CLAUDE.md`**
 
