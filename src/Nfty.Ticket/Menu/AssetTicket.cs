@@ -10,8 +10,14 @@ namespace Nfty.Ticket;
 /// <param name="VariantId">The variant rolled.</param>
 /// <param name="Hue">The rolled hue in degrees, or null for a Custom layer.</param>
 /// <param name="Sat">The rolled saturation as a 0..1 fraction, or null for a Custom layer.</param>
-/// <param name="Model">The color space, or null for a Custom layer.</param>
-/// <param name="Kind">Dynamic, Static or Custom.</param>
+/// <param name="Model">The color space, or null for a Custom layer. Carried so a ticket can be
+/// verified standalone; NOT part of the DNA hash (<c>Dna.Compute</c> hashes the ingredient id,
+/// variant id and quantized hue/saturation only), so this field is not authoritative — a renderer
+/// takes the color model from the Menu, where it is fixed per <c>(recipeId, ingredientId)</c> and
+/// cannot legitimately vary per asset.</param>
+/// <param name="Kind">Dynamic, Static or Custom. Carried so a ticket can be verified standalone;
+/// NOT part of the DNA hash, so this field is not authoritative — the same boundary as
+/// <c>Model</c> above.</param>
 /// <param name="HueQuantize">The layer's hue bucket width, carried so the DNA can be recomputed
 /// from the ticket alone.</param>
 /// <param name="SatQuantize">The layer's saturation bucket width, likewise.</param>
@@ -74,8 +80,14 @@ public sealed record AssetTicket(string Dna, string RecipeId, IReadOnlyList<Tick
     /// <exception cref="FormatException">The wire is malformed, is a version this build does not
     /// read, or carries a DNA its own contents do not produce.</exception>
     /// <remarks>
-    /// <b>The DNA is recomputed and compared, never trusted.</b> A ticket altered in transit fails
-    /// to parse rather than rendering an asset nobody rolled.
+    /// <b>The DNA is recomputed and compared, never trusted.</b> This catches an alteration to the
+    /// recipe id, an ingredient id, a variant id, a rolled hue/saturation, or a quantize value —
+    /// exactly the fields <c>Dna.Compute</c> hashes. <b><c>Kind</c> and <c>Model</c> sit OUTSIDE the
+    /// DNA</b> (the hash never sees them), so a wire altered in only those two fields still recomputes
+    /// to the same DNA and parses successfully — this check cannot catch that. It is not meant to:
+    /// consumers take a layer's kind and color model from the MENU, which is authoritative — for a
+    /// given <c>(recipeId, ingredientId)</c> both are fixed by the book and cannot legitimately vary
+    /// per asset. The ticket says what was rolled; the Menu says what the layer IS.
     /// </remarks>
     public static AssetTicket Parse(string wire)
     {

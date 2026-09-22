@@ -67,6 +67,25 @@ public class AssetTicketWireTests
     }
 
     [Fact]
+    public void A_kind_only_alteration_parses_successfully_because_kind_is_outside_the_dna()
+    {
+        // Documents the boundary rather than pretending it does not exist: Dna.Compute hashes the
+        // ingredient id, variant id and quantized hue/saturation - never Kind or Model - so a wire
+        // tampered in only that field recomputes to the SAME dna and Parse accepts it. This is why
+        // Parse's own docs say Kind/Model are not authoritative and consumers must read them from
+        // the Menu instead: this test is the negative space of
+        // A_tampered_wire_is_refused_rather_than_rendered, and would fail if Dna.Compute were ever
+        // changed to fold Kind into the hash without this test being revisited.
+        var ticket = Make(Dynamic("bg", "a", 137.5, 0.62));
+        string tampered = ticket.ToWire().Replace(",Dynamic|", ",Static|", StringComparison.Ordinal);
+
+        var parsed = AssetTicket.Parse(tampered);
+
+        Assert.Equal(LayerKind.Static, parsed.Layers[0].Kind);
+        Assert.Equal(ticket.Dna, parsed.Dna);
+    }
+
+    [Fact]
     public void A_wire_from_a_future_version_is_refused()
     {
         var ticket = Make(Custom("bg", "a"));

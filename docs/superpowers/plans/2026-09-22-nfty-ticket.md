@@ -1732,12 +1732,28 @@ public static class Plating
         ArgumentNullException.ThrowIfNull(menu);
         ArgumentNullException.ThrowIfNull(ticket);
 
+        // KIND AND COLOR MODEL COME FROM THE MENU, NEVER FROM THE TICKET, and that is a
+        // correctness rule rather than a tidiness one. Dna.Compute hashes LayerSelection, which
+        // carries the variant id and the quantized (H,S) and NOT the kind or the model - so a wire
+        // altered in only those two fields recomputes to the same DNA and Parse accepts it. Reading
+        // them from the ticket would then let a tampered ticket keep its provable identity while
+        // rendering different pixels: flip Custom to Dynamic and the client colorizes art that
+        // should composite as-is.
+        //
+        // The Menu is authoritative and the redundancy is not real: for a given
+        // (recipeId, ingredientId) the kind and the color model are fixed BY THE BOOK and cannot
+        // legitimately vary per asset. The ticket says what was ROLLED; the Menu says what the layer
+        // IS.
+        var recipe = menu.Book.Recipes.Single(r => r.Id == ticket.RecipeId);
+        var layerById = recipe.Layers.ToDictionary(l => l.Id, StringComparer.Ordinal);
+
         var draws = new List<Draw>(ticket.Layers.Count);
         foreach (var layer in ticket.Layers)
         {
             string key = MenuBook.CellKey(ticket.RecipeId, layer.IngredientId, layer.VariantId);
-            draws.Add(new Draw(key, menu.Cell(key), layer.Kind,
-                layer.Hue ?? 0, layer.Sat ?? 0, layer.Model ?? ColorModel.Hsv));
+            var definition = layerById[layer.IngredientId];
+            draws.Add(new Draw(key, menu.Cell(key), definition.Kind,
+                layer.Hue ?? 0, layer.Sat ?? 0, definition.Colorization?.Model ?? ColorModel.Hsv));
         }
         return draws;
     }
