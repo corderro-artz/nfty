@@ -23,6 +23,12 @@ public class FixtureFreezeTests
     // when the app-wide switch to US spelling reached "colour" in three of its lines. That is the
     // only reason this entry may ever be re-pinned, and it is not a precedent for the three
     // archives above it — theirs move only by being replaced, never by being rewritten.
+    //
+    // roll-baseline-chest-demo.txt is a different kind of frozen fixture — TicketFreezeTests's own
+    // baseline of the demo book's roll, captured before Nfty.Ticket existed, rather than an archive
+    // FixtureArchiveTests reads for format compatibility. It belongs in this set for the same
+    // reason: nothing but convention would otherwise stop a failing roll-comparison test from being
+    // "fixed" by regenerating the very thing it is meant to catch a change in.
     private static readonly IReadOnlyDictionary<string, string> ExpectedHashes =
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
@@ -30,6 +36,8 @@ public class FixtureFreezeTests
             ["cat.rcp"] = "a43d3f298dc559a7e9bbcbc271005b380fdc1959bc401331a50f57042bd57a0d",
             ["aura.igt"] = "f8b6156072fd99edcf49b2daa3457b11d5edac3c26819b625da11dc9d9703ccb",
             ["README.md"] = "014dca73500d52fc639e8bbddfc26e2c8f87ef5624a5fbf55f1990512861b7aa",
+            ["roll-baseline-chest-demo.txt"] =
+                "f3dc8dba3b1d5bcdf529ba1db3f77d5e01c9487c8977e9eb9b772e16072f32e2",
         };
 
     private static string FixturesDir => Path.Combine(AppContext.BaseDirectory, "fixtures");
