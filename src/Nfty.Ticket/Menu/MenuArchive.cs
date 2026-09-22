@@ -41,9 +41,18 @@ public sealed class MenuArchive : IDisposable
     /// carry a default without reordering the parameter list, which would break every existing
     /// positional <c>new MenuBook(...)</c> call in this repo (including pre-existing tests) for a
     /// field that is legitimately absent whenever a book never came from a file. Left off for that
-    /// reason; <see cref="JsonSerializerOptions.RespectNullableAnnotations"/> alone still rejects an
-    /// explicit <c>null</c> for a genuinely non-nullable field, which is the defensive behavior that
-    /// matters most for a hand-edited or truncated manifest.</para>
+    /// reason.</para>
+    ///
+    /// <para><b><see cref="JsonSerializerOptions.RespectNullableAnnotations"/> does NOT cover a
+    /// truncated manifest</b> — it rejects an explicit <c>null</c> for a non-nullable field, not an
+    /// absent key, which a first draft of this comment claimed and was wrong about. Without
+    /// <c>RespectRequiredConstructorParameters</c>, a manifest missing <c>canvas</c>, <c>recipes</c>,
+    /// or any other required field simply deserializes with that member left at its CLR default
+    /// (<c>null</c> for a reference type) and no exception — which is a Menu that opens fine and
+    /// fails later with a <see cref="NullReferenceException"/> deep inside <c>Ticketer.Prepare</c>,
+    /// nowhere near the actual problem. <see cref="ReadBook"/> closes that hole itself, explicitly,
+    /// via <see cref="ValidateBook"/> — naming the missing member rather than letting the gap stand
+    /// on the theory that nullable annotations alone were enough.</para>
     /// </remarks>
     private static readonly JsonSerializerOptions WireOptions = new()
     {
@@ -144,7 +153,52 @@ public sealed class MenuArchive : IDisposable
             throw new InvalidDataException($"manifest.json is not a readable Menu: {ex.Message}", ex);
         }
 
-        return book ?? throw new InvalidDataException("manifest.json deserialized to null.");
+        if (book is null) throw new InvalidDataException("manifest.json deserialized to null.");
+        ValidateBook(book);
+        return book;
+    }
+
+    /// <summary>
+    /// Checks that every member <see cref="WireOptions"/> cannot enforce on its own is actually
+    /// present, naming whichever one is not.
+    /// </summary>
+    /// <param name="book">The just-deserialized book.</param>
+    /// <exception cref="InvalidDataException">A required member is missing or, for an atlas Menu,
+    /// structurally empty.</exception>
+    /// <remarks>
+    /// <see cref="JsonSerializerOptions.RespectRequiredConstructorParameters"/> is deliberately off
+    /// (see the remarks on <see cref="WireOptions"/>), which means <c>System.Text.Json</c> silently
+    /// leaves a missing member at its CLR default instead of throwing. Every one of those defaults is
+    /// distinguishable from a genuine value here — <c>null</c> for every reference-typed member, and
+    /// zero for the two atlas dimensions, which a real atlas can never legitimately have — so this is
+    /// a complete check, not a best-effort one, for exactly the members <see cref="MenuBook"/>
+    /// declares.
+    /// </remarks>
+    private static void ValidateBook(MenuBook book)
+    {
+        if (book.Canvas is null)
+            throw new InvalidDataException("Menu manifest is missing 'canvas'.");
+        if (book.CollectionName is null)
+            throw new InvalidDataException("Menu manifest is missing 'collectionName'.");
+        if (book.CollectionSymbol is null)
+            throw new InvalidDataException("Menu manifest is missing 'collectionSymbol'.");
+        if (book.Recipes is null)
+            throw new InvalidDataException("Menu manifest is missing 'recipes'.");
+        if (book.Art is null)
+            throw new InvalidDataException("Menu manifest is missing 'art'.");
+
+        // Loose mode legitimately carries a zero-size atlas and no cells - every cell rect IS the
+        // whole image in that mode, per MenuArt's own doc comment - so these two checks apply to
+        // atlas Menus only.
+        if (book.Art.Mode == MenuArtMode.Atlas)
+        {
+            if (book.Art.AtlasWidth <= 0 || book.Art.AtlasHeight <= 0)
+                throw new InvalidDataException(
+                    "Menu manifest's 'art' is atlas mode but 'atlasWidth'/'atlasHeight' are not "
+                    + "positive.");
+            if (book.Art.Cells is null || book.Art.Cells.Count == 0)
+                throw new InvalidDataException("Menu manifest's 'art' is atlas mode but 'cells' is empty.");
+        }
     }
 
     private static int ReadSchemaVersion(byte[] manifestBytes)

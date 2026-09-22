@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO.Compression;
 using System.Text;
 
@@ -12,6 +13,27 @@ public class MenuArchiveTests
         using (var w = new StreamWriter(zip.CreateEntry("manifest.json").Open(), Encoding.UTF8))
             w.Write(manifestJson);
         return ms.ToArray();
+    }
+
+    /// <summary>
+    /// A well-formed loose-mode manifest with every top-level field <see cref="MenuArchive"/> now
+    /// checks for, minus whichever names appear in <paramref name="omit"/> — built with plain string
+    /// concatenation rather than a raw interpolated string, since this file already hit CS9007 once
+    /// from JSON's own braces colliding with a raw string's interpolation-hole syntax.
+    /// </summary>
+    private static string ManifestOmitting(params string[] omit)
+    {
+        var fields = new Dictionary<string, string>
+        {
+            ["menuSchemaVersion"] = MenuSchema.Current.ToString(CultureInfo.InvariantCulture),
+            ["canvas"] = "{\"width\":2,\"height\":2}",
+            ["collectionName"] = "\"C\"",
+            ["collectionSymbol"] = "\"S\"",
+            ["recipes"] = "[]",
+            ["art"] = "{\"mode\":\"loose\",\"atlasWidth\":0,\"atlasHeight\":0,\"cells\":[]}",
+        };
+        foreach (var name in omit) fields.Remove(name);
+        return "{" + string.Join(",", fields.Select(kv => $"\"{kv.Key}\":{kv.Value}")) + "}";
     }
 
     [Fact]
@@ -47,6 +69,76 @@ public class MenuArchiveTests
         using var menu = MenuArchive.Open(new MemoryStream(bytes));
         var ex = Assert.Throws<KeyNotFoundException>(() => menu.ArtBytes("cat/bg/a"));
         Assert.Contains("cat/bg/a", ex.Message, StringComparison.Ordinal);
+    }
+
+    // A manifest missing a required member is a Menu that used to open fine and fail later with a
+    // NullReferenceException somewhere deep inside Ticketer.Prepare - far from the actual problem.
+    // These pin that MenuArchive.Open refuses it up front and names the member that is missing.
+
+    [Fact]
+    public void A_manifest_missing_canvas_names_it()
+    {
+        var ex = Assert.Throws<InvalidDataException>(
+            () => MenuArchive.Open(new MemoryStream(ZipWith(ManifestOmitting("canvas")))));
+        Assert.Contains("canvas", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_manifest_missing_collectionName_names_it()
+    {
+        var ex = Assert.Throws<InvalidDataException>(
+            () => MenuArchive.Open(new MemoryStream(ZipWith(ManifestOmitting("collectionName")))));
+        Assert.Contains("collectionName", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_manifest_missing_collectionSymbol_names_it()
+    {
+        var ex = Assert.Throws<InvalidDataException>(
+            () => MenuArchive.Open(new MemoryStream(ZipWith(ManifestOmitting("collectionSymbol")))));
+        Assert.Contains("collectionSymbol", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_manifest_missing_recipes_names_it()
+    {
+        var ex = Assert.Throws<InvalidDataException>(
+            () => MenuArchive.Open(new MemoryStream(ZipWith(ManifestOmitting("recipes")))));
+        Assert.Contains("recipes", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_manifest_missing_art_names_it()
+    {
+        var ex = Assert.Throws<InvalidDataException>(
+            () => MenuArchive.Open(new MemoryStream(ZipWith(ManifestOmitting("art")))));
+        Assert.Contains("art", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void An_atlas_manifest_with_non_positive_atlas_dimensions_names_it()
+    {
+        // Cells present so only the width/height check is what fires.
+        byte[] bytes = ZipWith(
+            "{\"menuSchemaVersion\":" + MenuSchema.Current.ToString(CultureInfo.InvariantCulture)
+            + ",\"canvas\":{\"width\":2,\"height\":2},\"collectionName\":\"C\","
+            + "\"collectionSymbol\":\"S\",\"recipes\":[],"
+            + "\"art\":{\"mode\":\"atlas\",\"atlasWidth\":0,\"atlasHeight\":0,"
+            + "\"cells\":[{\"key\":\"cat/bg/a\",\"x\":0,\"y\":0,\"width\":1,\"height\":1}]}}");
+        var ex = Assert.Throws<InvalidDataException>(() => MenuArchive.Open(new MemoryStream(bytes)));
+        Assert.Contains("atlasWidth", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void An_atlas_manifest_with_no_cells_names_it()
+    {
+        byte[] bytes = ZipWith(
+            "{\"menuSchemaVersion\":" + MenuSchema.Current.ToString(CultureInfo.InvariantCulture)
+            + ",\"canvas\":{\"width\":2,\"height\":2},\"collectionName\":\"C\","
+            + "\"collectionSymbol\":\"S\",\"recipes\":[],"
+            + "\"art\":{\"mode\":\"atlas\",\"atlasWidth\":2,\"atlasHeight\":2,\"cells\":[]}}");
+        var ex = Assert.Throws<InvalidDataException>(() => MenuArchive.Open(new MemoryStream(bytes)));
+        Assert.Contains("cells", ex.Message, StringComparison.Ordinal);
     }
 
     [Fact]

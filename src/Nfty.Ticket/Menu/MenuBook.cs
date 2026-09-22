@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using Nfty.Core.Model;
 
 namespace Nfty.Ticket;
@@ -70,7 +69,7 @@ public record MenuRecipe(
 /// A CookBook flattened for runtime: every weight, rule and colorization, plus where the art is,
 /// and not one decoded pixel.
 /// </summary>
-/// <param name="SchemaVersion">The Menu schema this was written against.</param>
+/// <param name="MenuSchemaVersion">The Menu schema this was written against.</param>
 /// <param name="SourceCookBookSha256">The hash of the <c>.cbk</c> this came from, or null when it
 /// was built from a book that never came from a file. Null means "cannot tell", never "differs".</param>
 /// <param name="Canvas">The canvas every variant shares.</param>
@@ -79,14 +78,20 @@ public record MenuRecipe(
 /// <param name="Recipes">Its recipes.</param>
 /// <param name="Art">Where the art is.</param>
 /// <remarks>
-/// <see cref="SchemaVersion"/> is written and read as <c>menuSchemaVersion</c>, never the plain
-/// <c>schemaVersion</c> camelCase would produce — a Menu's schema line is separate from
+/// <see cref="MenuSchemaVersion"/> is named — and therefore written and read — as
+/// <c>menuSchemaVersion</c> rather than the plain <c>schemaVersion</c> a member called
+/// <c>SchemaVersion</c> would camelCase to. A Menu's schema line is separate from
 /// <see cref="Nfty.Core.Model.Schema"/>, the CookBook manifest line, and a shared key name between
 /// two independently evolving formats is how one gets bumped and silently changes what the other
-/// means.
+/// means. Named this way deliberately rather than overridden with a
+/// <c>System.Text.Json.Serialization.JsonPropertyName</c> attribute — no manifest record in this
+/// project carries a JSON attribute; the wire policy is supplied centrally
+/// (<c>Nfty.Core.Formats.Json.Options</c> on the write side, <c>MenuArchive.WireOptions</c> on the
+/// read side), and a property whose own name already produces the right key needs no exception to
+/// that rule.
 /// </remarks>
 public record MenuBook(
-    [property: JsonPropertyName("menuSchemaVersion")] int SchemaVersion,
+    int MenuSchemaVersion,
     string? SourceCookBookSha256,
     Dimensions Canvas,
     string CollectionName,

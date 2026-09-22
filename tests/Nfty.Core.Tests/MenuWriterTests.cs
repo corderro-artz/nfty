@@ -76,6 +76,48 @@ public class MenuWriterTests
     }
 
     [Fact]
+    public void The_same_book_writes_a_byte_identical_atlas_every_time()
+    {
+        // Same cookbook, same atlas is the central promise a Menu makes - untested, this is the
+        // weakest point in the format. Written twice in one run, from the same in-memory book, so
+        // any nondeterminism in the content-hash grouping or the placement order would show up as a
+        // byte difference here.
+        var (dir, book) = Demo();
+        using (book)
+        {
+            string mnu1 = Path.Combine(dir, "one.mnu");
+            string mnu2 = Path.Combine(dir, "two.mnu");
+            MenuWriter.Write(book, mnu1, new MenuWriteOptions { Art = MenuArtMode.Atlas });
+            MenuWriter.Write(book, mnu2, new MenuWriteOptions { Art = MenuArtMode.Atlas });
+
+            using (var zip1 = ZipFile.OpenRead(mnu1))
+            using (var zip2 = ZipFile.OpenRead(mnu2))
+            {
+                Assert.Equal(ReadEntryBytes(zip1, "atlas.png"), ReadEntryBytes(zip2, "atlas.png"));
+            }
+
+            using var menu1 = MenuArchive.Open(mnu1);
+            using var menu2 = MenuArchive.Open(mnu2);
+            // The rects are half of what makes a Menu reproducible - identical atlas bytes with a
+            // shuffled cell list would still be a Menu that reads different art at the same key on
+            // two "identical" writes.
+            Assert.Equal(
+                menu1.Book.Art.Cells.Select(c => (c.Key, c.X, c.Y, c.Width, c.Height)).ToList(),
+                menu2.Book.Art.Cells.Select(c => (c.Key, c.X, c.Y, c.Width, c.Height)).ToList());
+        }
+        Directory.Delete(dir, recursive: true);
+    }
+
+    private static byte[] ReadEntryBytes(ZipArchive zip, string entryName)
+    {
+        var entry = zip.GetEntry(entryName) ?? throw new InvalidOperationException($"No {entryName}.");
+        using var s = entry.Open();
+        using var ms = new MemoryStream();
+        s.CopyTo(ms);
+        return ms.ToArray();
+    }
+
+    [Fact]
     public void A_book_too_big_for_one_atlas_is_refused_with_the_numbers()
     {
         // Build a book whose atlas would exceed the pixel ceiling, and assert the refusal names the
