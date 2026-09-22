@@ -30,7 +30,11 @@ public static class Plating
     /// <param name="menu">The Menu the ticket was rolled against.</param>
     /// <param name="ticket">The roll.</param>
     /// <returns>One draw per present layer, bottom-first.</returns>
-    /// <exception cref="KeyNotFoundException">The Menu has no art for a layer the ticket names.</exception>
+    /// <exception cref="KeyNotFoundException">The Menu has no recipe named by
+    /// <see cref="AssetTicket.RecipeId"/>; that recipe has no layer for one of the ticket's
+    /// ingredient ids (both from <see cref="MenuArchive.Layer"/>); or the Menu has no art cell for
+    /// one of the ticket's rolled variants (from <see cref="MenuArchive.Cell"/>). All three name the
+    /// specific id that was not found.</exception>
     public static IReadOnlyList<Draw> Plate(MenuArchive menu, AssetTicket ticket)
     {
         ArgumentNullException.ThrowIfNull(menu);
@@ -48,14 +52,11 @@ public static class Plating
         // (recipeId, ingredientId) the kind and the color model are fixed BY THE BOOK and cannot
         // legitimately vary per asset. The ticket says what was ROLLED; the Menu says what the layer
         // IS.
-        var recipe = menu.Book.Recipes.Single(r => r.Id == ticket.RecipeId);
-        var layerById = recipe.Layers.ToDictionary(l => l.Id, StringComparer.Ordinal);
-
         var draws = new List<Draw>(ticket.Layers.Count);
         foreach (var layer in ticket.Layers)
         {
             string key = MenuBook.CellKey(ticket.RecipeId, layer.IngredientId, layer.VariantId);
-            var definition = layerById[layer.IngredientId];
+            var definition = menu.Layer(ticket.RecipeId, layer.IngredientId);
             draws.Add(new Draw(key, menu.Cell(key), definition.Kind,
                 layer.Hue ?? 0, layer.Sat ?? 0, definition.Colorization?.Model ?? ColorModel.Hsv));
         }

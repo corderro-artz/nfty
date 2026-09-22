@@ -63,6 +63,7 @@ public sealed class MenuArchive : IDisposable
 
     private readonly ZipArchive _zip;
     private readonly Dictionary<string, MenuCell> _cellsByKey;
+    private readonly Dictionary<string, Dictionary<string, MenuLayer>> _layersByRecipeId;
     private bool _disposed;
 
     /// <summary>The Menu's manifest: every weight, rule, colorization and cell rect.</summary>
@@ -74,6 +75,17 @@ public sealed class MenuArchive : IDisposable
         Book = book;
         _cellsByKey = new Dictionary<string, MenuCell>(StringComparer.Ordinal);
         foreach (var cell in book.Art.Cells) _cellsByKey[cell.Key] = cell;
+
+        // Built once at Open, the same reasoning _cellsByKey already follows: a lookup a caller
+        // (Plating.Plate, chiefly) will make once per layer per rolled asset must not re-scan the
+        // recipe list and re-build a fresh dictionary on every call.
+        _layersByRecipeId = new Dictionary<string, Dictionary<string, MenuLayer>>(StringComparer.Ordinal);
+        foreach (var recipe in book.Recipes)
+        {
+            var byId = new Dictionary<string, MenuLayer>(StringComparer.Ordinal);
+            foreach (var layer in recipe.Layers) byId[layer.Id] = layer;
+            _layersByRecipeId[recipe.Id] = byId;
+        }
     }
 
     /// <summary>Opens a <c>.mnu</c> file for reading.</summary>
@@ -258,6 +270,31 @@ public sealed class MenuArchive : IDisposable
         return _cellsByKey.TryGetValue(cellKey, out var cell)
             ? cell
             : throw new KeyNotFoundException($"No cell for '{cellKey}'.");
+    }
+
+    /// <summary>
+    /// One layer's definition — kind, colorization and variants — as the recipe it belongs to
+    /// records it.
+    /// </summary>
+    /// <param name="recipeId">The recipe.</param>
+    /// <param name="ingredientId">The layer within that recipe.</param>
+    /// <returns>The layer, exactly as the Menu manifest carries it.</returns>
+    /// <exception cref="KeyNotFoundException">The Menu has no recipe named <paramref name="recipeId"/>,
+    /// or that recipe has no layer named <paramref name="ingredientId"/>. Both cases are reported by
+    /// this single method — naming which of the two failed — so a caller (<c>Plating.Plate</c>,
+    /// chiefly) never has to reach into <see cref="Book"/> itself to answer the question, and never
+    /// hits the BCL's unnamed default message for either.</exception>
+    public MenuLayer Layer(string recipeId, string ingredientId)
+    {
+        ArgumentNullException.ThrowIfNull(recipeId);
+        ArgumentNullException.ThrowIfNull(ingredientId);
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        if (!_layersByRecipeId.TryGetValue(recipeId, out var byId))
+            throw new KeyNotFoundException($"No recipe '{recipeId}' in this Menu.");
+        if (!byId.TryGetValue(ingredientId, out var layer))
+            throw new KeyNotFoundException($"Recipe '{recipeId}' has no layer '{ingredientId}'.");
+        return layer;
     }
 
     /// <summary>Closes the underlying archive, and the file it was opened from.</summary>
