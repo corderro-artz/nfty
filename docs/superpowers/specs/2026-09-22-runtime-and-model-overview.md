@@ -20,9 +20,15 @@ each other; the third depends on the second.
 | 1 | **`Nfty.Ticket`** — the roll, extracted; the `.mnu` runtime Menu format; `nfty menu` / `nfty serve` | nothing | `2026-09-22-nfty-ticket-design.md` |
 | 2 | **`Nfty.Model`** — PNG → Z-extruded glTF 2.0, ported from `mixel` | nothing | `2026-09-22-nfty-model-design.md` |
 | 3 | **Models in a Set, and the UI for both** | project 2 | `2026-09-22-nfty-model-design.md` §"Project 3" |
+| 4 | **In-app 3D preview** — a software rasterizer with orbit, pan and zoom | project 2, tasks 2–6 only | `2026-09-22-model-preview-design.md` |
 
 Build order: **1 and 2 can proceed in parallel** (different files, different dependencies, no shared
-seam). **3 follows 2.** Each gets its own branch, its own plan and its own merge.
+seam). **4 follows project 2's geometry tasks and can overlap project 3.** **3 follows 2.** Each gets
+its own branch, its own plan and its own merge.
+
+Project 4 is the first 3D surface in the app, and it depends on project 2's *geometry* only — not on
+its GLB writer, because the preview renders a `Mesh` and never parses a `.glb`. So it can start as
+soon as `MeshBuilder` exists, well before models reach a Set.
 
 ## Why they are separate
 
