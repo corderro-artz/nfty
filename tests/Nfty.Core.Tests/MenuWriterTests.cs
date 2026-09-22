@@ -1,8 +1,11 @@
 using System.IO.Compression;
 using Nfty.Core.Demo;
 using Nfty.Core.Formats;
+using Nfty.Core.Model;
 using Nfty.Core.Publish;
 using Nfty.Ticket;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Nfty.Core.Tests;
 
@@ -13,6 +16,44 @@ public class MenuWriterTests
         string dir = Directory.CreateTempSubdirectory().FullName;
         string cbk = DemoCookBook.WriteTo(dir);   // takes a DIRECTORY, returns the written path
         return (dir, CookBookArchive.Read(cbk));
+    }
+
+    /// <summary>
+    /// A book whose walk order and ordinal order DISAGREE: the recipe's ingredient list — which is
+    /// what the writer walks, and therefore the order its dictionaries are populated in — is zebra
+    /// then apple, while "rec/apple/v" sorts before "rec/zebra/v". Each layer's single variant is a
+    /// different solid fill, so the two never collapse into one deduped cell.
+    /// </summary>
+    private static LoadedCookBook DisagreeingOrderBook()
+    {
+        static LoadedIngredient Layer(string id, Rgba32 fill) => new()
+        {
+            Manifest = new IngredientManifest(id, id, LayerKind.Custom, null,
+                new[] { new Variant("v", "v", 1) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>>
+            {
+                ["v"] = new Image<Rgba32>(2, 2, fill),
+            },
+        };
+
+        return new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "Orders", new Dimensions(2, 2),
+                new Collection("Orders", "d", "ORD"), new Dictionary<string, double> { ["rec"] = 1 }),
+            Recipes = new[]
+            {
+                new LoadedRecipe
+                {
+                    Manifest = new RecipeManifest("rec", "Rec", new[] { "zebra", "apple" },
+                        Array.Empty<IncompatibilityRule>()),
+                    Ingredients = new[]
+                    {
+                        Layer("zebra", new Rgba32(200, 30, 30, 255)),
+                        Layer("apple", new Rgba32(30, 30, 200, 255)),
+                    },
+                },
+            },
+        };
     }
 
     [Theory]
@@ -106,6 +147,52 @@ public class MenuWriterTests
                 menu2.Book.Art.Cells.Select(c => (c.Key, c.X, c.Y, c.Width, c.Height)).ToList());
         }
         Directory.Delete(dir, recursive: true);
+    }
+
+    /// <summary>
+    /// Which grid slot an image lands in follows its ordinally-least cell key, never the order the
+    /// writer happened to walk the book in.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>This is needed ON TOP of the byte-diff above, and the byte-diff cannot replace
+    /// it.</b> Writing twice in one run proves the two writes agree with EACH OTHER; it does not
+    /// prove the order is stable ACROSS PROCESSES, which is what reproducibility actually means
+    /// here. The writer groups cell keys in a <c>Dictionary</c>, and a dictionary's iteration order
+    /// is only stable within a single process: .NET randomizes string hash seeds per process, so
+    /// bucket order genuinely differs between separate runs of the program. Delete the ordinal
+    /// <c>OrderBy</c> in <c>MenuWriter</c> and the byte-diff stays green while two invocations of
+    /// the CLI on one cookbook produce different atlas layouts — same book, different file.</para>
+    ///
+    /// <para>So this pins the PLACEMENT rather than the agreement, on a fixture whose walk order and
+    /// ordinal order disagree. Note the manifest's cell LIST is sorted ordinally again when it is
+    /// built, so the cell order carries no evidence either way — the rects are the only thing that
+    /// records which image went into which slot.</para>
+    /// </remarks>
+    [Fact]
+    public void The_atlas_slot_an_image_lands_in_follows_the_ordinal_cell_key()
+    {
+        string dir = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            using var book = DisagreeingOrderBook();
+            string mnu = Path.Combine(dir, "order.mnu");
+            MenuWriter.Write(book, mnu, new MenuWriteOptions { Art = MenuArtMode.Atlas });
+
+            using var menu = MenuArchive.Open(mnu);
+            var apple = menu.Cell(MenuBook.CellKey("rec", "apple", "v"));
+            var zebra = menu.Cell(MenuBook.CellKey("rec", "zebra", "v"));
+
+            // "rec/apple/v" sorts before "rec/zebra/v", so apple takes slot 0 - the atlas origin -
+            // even though zebra is the layer the writer encoded and grouped first.
+            Assert.Equal(0, apple.X);
+            Assert.Equal(0, apple.Y);
+            Assert.False(zebra.X == 0 && zebra.Y == 0,
+                "zebra took the origin, so placement followed the walk order rather than the cell key");
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
     }
 
     private static byte[] ReadEntryBytes(ZipArchive zip, string entryName)
