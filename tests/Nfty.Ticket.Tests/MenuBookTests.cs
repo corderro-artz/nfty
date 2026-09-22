@@ -19,6 +19,21 @@ public class MenuBookTests
             MenuBook.CellKey("dog", "bg", "a"));
     }
 
+    /// <summary>
+    /// The format IS the contract between the writer, the reader, and any future version of the
+    /// file: <c>MenuWriter</c> computes a cell key when writing a <c>.mnu</c> and <c>MenuArchive</c>
+    /// looks it up when reading one, possibly on a different machine, months later. This pins both
+    /// halves of that contract — that identical inputs always produce identical output, and the
+    /// exact literal shape of the string — so it fails loudly if someone "tidies" the separator or
+    /// otherwise lets the key drift.
+    /// </summary>
+    [Fact]
+    public void CellKey_is_a_deterministic_slash_separated_literal()
+    {
+        Assert.Equal(MenuBook.CellKey("cat", "bg", "a"), MenuBook.CellKey("cat", "bg", "a"));
+        Assert.Equal("cat/bg/a", MenuBook.CellKey("cat", "bg", "a"));
+    }
+
     [Fact]
     public void A_layer_with_no_absent_percent_is_always_present()
     {

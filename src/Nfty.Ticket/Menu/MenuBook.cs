@@ -8,7 +8,9 @@ public enum MenuArtMode
     /// <summary>Every variant stitched into one PNG, addressed by the rects in the manifest.</summary>
     Atlas,
 
-    /// <summary>One PNG per variant, under <c>art/</c>.</summary>
+    /// <summary>One PNG per variant, nested under <c>art/</c> by recipe, ingredient and variant —
+    /// <c>art/&lt;recipeId&gt;/&lt;ingredientId&gt;/&lt;variantId&gt;.png</c>, the same path
+    /// <see cref="MenuBook.CellKey"/> spells with <c>/</c> in place of the file's own separator.</summary>
     Loose,
 }
 
