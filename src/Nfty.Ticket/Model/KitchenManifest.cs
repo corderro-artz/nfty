@@ -10,7 +10,7 @@ namespace Nfty.Core.Model;
 /// <param name="Description">Optional free text; empty when the author did not write one.</param>
 /// <remarks>
 /// This manifest deliberately does NOT list what the Kitchen contains. Membership is whatever sits
-/// in the folder beside the .ktn, discovered on open — see <see cref="Formats.Kitchen"/>. A recorded
+/// in the folder beside the .ktn, discovered on open — see <c>Formats.Kitchen</c>. A recorded
 /// list would go stale the moment a file was renamed or moved outside the app, and the Kitchen would
 /// then be describing a workspace that no longer exists.
 /// </remarks>

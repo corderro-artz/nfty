@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    THE ROLL, AND NOTHING ELSE. This assembly decides what an asset IS and never draws one, so it
+    carries no imaging library and no package reference of any kind. That is the point of it: a host
+    that only needs to roll — a game server, an engine, a tool — takes this and nothing else.
+
+    It is also the ONLY definition of every decision an asset is made of. Nfty.Core's Generator calls
+    into here rather than keeping a second copy of the roll, because two copies is how "the server
+    and the client agree" stops being true.
+
+    NO #if IN LOGIC. Should a second target framework ever be added, whatever it needs is written
+    unconditionally: one code path cannot diverge from itself.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+</Project>

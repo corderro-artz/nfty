@@ -29,7 +29,7 @@ public static class ColorRoller
     }
 
     /// <summary>
-    /// The hue this range yields for a unit sample. Split out so <see cref="UniqueSpace"/> can
+    /// The hue this range yields for a unit sample. Split out so <c>UniqueSpace</c> can
     /// evaluate the <em>same</em> expression at its endpoints instead of re-deriving the reachable
     /// interval algebraically — the count is a promise about what <see cref="Roll"/> produces, and
     /// re-derivation is what let the two drift apart before.

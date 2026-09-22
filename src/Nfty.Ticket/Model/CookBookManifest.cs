@@ -12,7 +12,7 @@ namespace Nfty.Core.Model;
 /// author has not committed to a number. Purely declarative: nothing in the generation pipeline
 /// reads it — <c>generate</c> takes its count from the caller — so setting it can never change what
 /// a cook produces. It exists so the book can state its intent, and so a UI can hold that intent up
-/// against <see cref="Generation.UniqueSpace"/>'s count and say whether it is actually achievable.
+/// against <c>UniqueSpace</c>'s count and say whether it is actually achievable.
 ///
 /// Added after schemaVersion 1 and therefore OPTIONAL with a null default, which is what lets a v1
 /// archive still read as valid — see UnsupportedSchemaVersionException.Require. Schema.Current is
@@ -22,7 +22,7 @@ namespace Nfty.Core.Model;
 /// <param name="Palette">The swatches this collection carries, as prefixed color specs
 /// (<c>hex:d6249f</c>), or null when the book has never saved one. Book-scoped so a collection's
 /// colors travel with it when it is handed to someone else — the app-wide palette in the
-/// <c>.nfty</c> store sits beneath these, see <see cref="Imaging.Palette.Combine"/>.
+/// <c>.nfty</c> store sits beneath these, see <c>Palette.Combine</c>.
 ///
 /// Specs rather than a color record because that is already how a manifest spells a color
 /// (<see cref="ColorEntry.Fixed"/>), so a palette reads the same as everything around it and

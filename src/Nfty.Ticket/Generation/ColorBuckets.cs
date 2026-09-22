@@ -4,7 +4,7 @@ namespace Nfty.Core.Generation;
 /// The one place a rolled color is folded into the quantized bucket that identifies it.
 ///
 /// <para>Two callers must agree exactly: <see cref="Dna"/>, which decides whether two assets are the
-/// same asset, and <see cref="UniqueSpace"/>, which promises how many distinct assets exist. They
+/// same asset, and <c>UniqueSpace</c>, which promises how many distinct assets exist. They
 /// used to compute it separately and disagreed, because <see cref="ColorRoller.Roll"/> divides
 /// saturation by 100 and the DNA multiplies it back — and that round-trip is not the identity:
 /// <c>(29/100.0)*100.0</c> is <c>28.999999999999996</c>, which floors to 28, not 29. The counter
@@ -13,7 +13,7 @@ namespace Nfty.Core.Generation;
 /// exactly N unique DNA, but N were requested".</para>
 ///
 /// <para>Sharing one function is the fix: equivalent-looking arithmetic in two files is what broke,
-/// so the arithmetic now exists once. <see cref="UniqueSpace"/> reaches saturation through
+/// so the arithmetic now exists once. <c>UniqueSpace</c> reaches saturation through
 /// <see cref="ColorRoller.SampleSat"/> and then <see cref="Sat"/>, rather than shortcutting from the
 /// stored percentage to <c>percent / quantize</c> — the <c>/100</c> round-trip's rounding is
 /// <em>load-bearing</em>, because it is what the shipped DNA of every Set ever generated already
