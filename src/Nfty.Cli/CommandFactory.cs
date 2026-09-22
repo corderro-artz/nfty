@@ -7,9 +7,13 @@ using Nfty.Core.Generation;
 using Nfty.Core.Imaging;
 using Nfty.Core.Model;
 using Nfty.Core.Output;
+using Nfty.Core.Publish;
 using Nfty.Core.Stats;
+using Nfty.Ticket;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace Nfty.Cli;
 
@@ -43,6 +47,8 @@ public static partial class CommandFactory
         root.Subcommands.Add(Preview());
         root.Subcommands.Add(Generate());
         root.Subcommands.Add(Extend());
+        root.Subcommands.Add(Menu());
+        root.Subcommands.Add(Serve());
         root.Subcommands.Add(Export());
         root.Subcommands.Add(NewGroup());
         root.Subcommands.Add(AddGroup());
@@ -170,6 +176,26 @@ public static partial class CommandFactory
                             + "holds finished assets. Run it on the CookBook that produced them.");
                     PrintSealed(file, keySpec);
                     break;
+                case ArchiveKind.Menu:
+                {
+                    // Unlike the Kitchen and Set refusals above, this is NOT "there is nothing to
+                    // scan": a Menu carries its source variants, uncolorized — exactly the art
+                    // --voxel wants. What is missing is the second decode path a Menu's atlas would
+                    // need (crop each cell out of one packed PNG rather than reading a standalone
+                    // variant image), which nothing has built yet. Said plainly as a scope gap
+                    // rather than worded as though a Menu could not carry the answer.
+                    if (wantVoxel)
+                        throw new InvalidOperationException(
+                            "--voxel needs the art decoded and cropped per cell, and this build "
+                            + "does not do that for a Menu yet. That's a scope gap, not a category "
+                            + "one: a Menu carries its source variants, uncolorized, which is "
+                            + "exactly what --voxel wants — it is just not wired up to read them "
+                            + "from an atlas cell. Run --voxel on the CookBook that produced this "
+                            + "Menu instead.");
+                    using var menu = MenuArchive.Open(file);
+                    PrintMenu(menu);
+                    break;
+                }
                 default:
                     // Archives.KindOf already rejects an unknown extension before we get here,
                     // so this only guards against a future ArchiveKind case added without a
@@ -273,6 +299,55 @@ public static partial class CommandFactory
         Console.WriteLine(
             $"{indent}Ingredient: {ing.Manifest.Name} [{ing.Manifest.Id}] ({ing.Manifest.Kind}){absent}");
         foreach (var v in ing.Manifest.Variants)
+            Console.WriteLine($"{indent}  Variant: {v.Name} [{v.Id}] (w={v.Weight})");
+    }
+
+    /// <summary>
+    /// A Menu's tree: recipes, layers, variants, its art mode/size, and the source book's hash —
+    /// the same shape <see cref="PrintCookBook"/> prints, over the Menu's own flattened types
+    /// rather than the <c>Loaded*</c> ones, since a Menu carries no decoded pixels to build those
+    /// from.
+    /// </summary>
+    private static void PrintMenu(MenuArchive menu)
+    {
+        var book = menu.Book;
+        Console.WriteLine($"Menu: {book.CollectionName} ({book.Canvas.Width}x{book.Canvas.Height})");
+        Console.WriteLine("  Source book: " + (book.SourceCookBookSha256 ?? "(unknown — not built from a file)"));
+        Console.WriteLine(book.Art.Mode == MenuArtMode.Atlas
+            ? $"  Art: atlas {book.Art.AtlasWidth}x{book.Art.AtlasHeight}, "
+                + $"{book.Art.Cells.Count} cell{(book.Art.Cells.Count == 1 ? "" : "s")}"
+            : $"  Art: loose, {book.Art.Cells.Count} cell{(book.Art.Cells.Count == 1 ? "" : "s")}");
+
+        foreach (var recipe in book.Recipes) PrintMenuRecipe(recipe, "  ");
+    }
+
+    private static void PrintMenuRecipe(MenuRecipe recipe, string indent)
+    {
+        Console.WriteLine($"{indent}Recipe: {recipe.Name} [{recipe.Id}] (weight={recipe.Weight})");
+
+        var byId = new Dictionary<string, MenuLayer>(StringComparer.Ordinal);
+        foreach (var layer in recipe.Layers) byId[layer.Id] = layer;
+        foreach (string layerId in recipe.LayerOrder)
+        {
+            if (byId.TryGetValue(layerId, out var layer))
+                PrintMenuLayer(layer, indent + "  ", recipe.AbsentPercentOf(layerId));
+            else
+                Console.WriteLine($"{indent}  Ingredient: <missing '{layerId}'>");
+        }
+
+        for (int i = 0; i < recipe.Rules.Count; i++)
+            Console.WriteLine($"{indent}  Rule {i + 1}: {RuleLine(recipe.Rules[i])}");
+    }
+
+    private static void PrintMenuLayer(MenuLayer layer, string indent, double absentPercent)
+    {
+        string absent = absentPercent > 0
+            ? absentPercent >= 100
+                ? "  never appears"
+                : $"  absent {Pct(absentPercent)}"
+            : string.Empty;
+        Console.WriteLine($"{indent}Ingredient: {layer.Name} [{layer.Id}] ({layer.Kind}){absent}");
+        foreach (var v in layer.Variants)
             Console.WriteLine($"{indent}  Variant: {v.Name} [{v.Id}] (w={v.Weight})");
     }
 
@@ -792,6 +867,166 @@ public static partial class CommandFactory
             return 0;
         });
         return cmd;
+    }
+
+    private static Command Menu()
+    {
+        var path = new Argument<string>("cookbook") { Description = "Path to a .cbk file." };
+        var outp = new Option<string>("--out")
+        {
+            Description = "The .mnu Menu to write.",
+            Required = true,
+        };
+        var art = new Option<string>("--art")
+        {
+            Description = "How to pack the book's art. atlas (the default) stitches every "
+                + "distinct variant image into one PNG, addressed by the rects the manifest "
+                + "records — identical art is packed once. loose writes one PNG per variant "
+                + "instead, the escape hatch for a book whose art would not fit one atlas.",
+            DefaultValueFactory = _ => "atlas",
+        };
+        art.AcceptOnlyFromAmong("atlas", "loose");
+
+        var cmd = new Command("menu",
+            "Write a .mnu Menu: a CookBook's every weight, rule, colorization and art, flattened "
+                + "so a runtime host can roll and render an asset with no .cbk present. See serve.")
+        { path, outp, art };
+        cmd.SetAction(parse =>
+        {
+            using var book = CookBookArchive.Read(parse.GetValue(path)!);
+            string outPath = parse.GetValue(outp)!;
+            var mode = parse.GetValue(art) == "loose" ? MenuArtMode.Loose : MenuArtMode.Atlas;
+
+            MenuWriter.Write(book, outPath, new MenuWriteOptions { Art = mode });
+
+            // Re-opened rather than kept from the book that was just read: what gets printed here
+            // is what a reader of the FILE would see, and MenuWriter is the only thing that knows
+            // the atlas's final packed size and cell count.
+            using var menu = MenuArchive.Open(outPath);
+            int recipes = menu.Book.Recipes.Count;
+            int layers = menu.Book.Recipes.Sum(r => r.Layers.Count);
+            int variants = menu.Book.Recipes.Sum(r => r.Layers.Sum(l => l.Variants.Count));
+            string artText = menu.Book.Art.Mode == MenuArtMode.Atlas
+                ? $"atlas {menu.Book.Art.AtlasWidth}x{menu.Book.Art.AtlasHeight}"
+                : "loose";
+            Console.WriteLine($"Wrote {outPath} — {Num(recipes)} recipe{(recipes == 1 ? "" : "s")}, "
+                + $"{Num(layers)} layer{(layers == 1 ? "" : "s")}, "
+                + $"{Num(variants)} variant{(variants == 1 ? "" : "s")}, {artText}, "
+                + $"{Num(menu.Book.Art.Cells.Count)} cell{(menu.Book.Art.Cells.Count == 1 ? "" : "s")}");
+            return 0;
+        });
+        return cmd;
+    }
+
+    private static Command Serve()
+    {
+        var path = new Argument<string>("menu") { Description = "Path to a .mnu Menu." };
+        var seed = new Option<string?>("--seed")
+        {
+            Description = "Roll a fresh asset from this RNG seed — the same roll `generate` would "
+                + "produce for the first asset of a run seeded the same way. Exactly one of --seed "
+                + "or --ticket is required.",
+        };
+        var ticket = new Option<string?>("--ticket")
+        {
+            Description = "Render an already-rolled ticket instead of rolling a new one — the "
+                + "wire form AssetTicket.ToWire produces. Its DNA is verified against its own "
+                + "contents before anything is rendered. The wire contains '|', which an unquoted "
+                + "shell reads as a pipe — quote the whole value. Exactly one of --seed or "
+                + "--ticket is required.",
+        };
+        var outp = new Option<string>("--out") { Description = "Output PNG path.", Required = true };
+
+        var cmd = new Command("serve",
+            "Roll (--seed) or render (--ticket) one asset from a .mnu Menu. Plates the ticket into "
+                + "draws, then renders them through Core's own Colorizer and Compositor — the same "
+                + "render generate uses, so a client rendering a server's ticket reproduces the "
+                + "identical pixels.")
+        { path, seed, ticket, outp };
+
+        // Enforced at parse time, the same rule and the same reason preview's form split states:
+        // silently ignoring the option that does not apply is how a user comes to believe it did
+        // something.
+        cmd.Validators.Add(result =>
+        {
+            bool Given(Option option) => result.GetResult(option) is { Implicit: false };
+            bool hasSeed = Given(seed);
+            bool hasTicket = Given(ticket);
+            if (hasSeed == hasTicket)
+                result.AddError(hasSeed
+                    ? "--seed and --ticket ask for different things — roll a fresh asset, or "
+                        + "render an already-rolled one. Pass exactly one."
+                    : "serve needs exactly one of --seed (roll a fresh asset) or --ticket (render "
+                        + "an already-rolled one).");
+        });
+
+        cmd.SetAction(parse =>
+        {
+            using var menu = MenuArchive.Open(parse.GetValue(path)!);
+            string outPath = parse.GetValue(outp)!;
+
+            string? seedValue = parse.GetValue(seed);
+            AssetTicket ticketValue = seedValue is not null
+                ? RollTicket(menu, seedValue)
+                : AssetTicket.Parse(parse.GetValue(ticket)!);
+
+            var draws = Plating.Plate(menu, ticketValue);
+            using (var asset = RenderTicket(menu, draws))
+                asset.Save(outPath, new PngEncoder());
+
+            Console.WriteLine($"Wrote {outPath} — dna {ticketValue.Dna}, recipe '{ticketValue.RecipeId}'");
+            return 0;
+        });
+        return cmd;
+    }
+
+    /// <summary>Rolls one asset from a seed, exactly as <c>Generator</c> rolls the first asset of a
+    /// run seeded the same way — same RNG construction, same reroll-on-rule-violation loop.</summary>
+    /// <exception cref="InvalidOperationException">The recipe's rules rejected every roll within the
+    /// budget.</exception>
+    private static AssetTicket RollTicket(MenuArchive menu, string seedValue)
+    {
+        var prepared = Ticketer.Prepare(menu.Book);
+        var rng = new SplitMix64Rng(SeedHash.ToUlong(seedValue));
+
+        for (int attempt = 0; attempt < GenerateOptions.DefaultMaxRerolls; attempt++)
+        {
+            var ticket = Ticketer.TryRoll(prepared, rng);
+            if (ticket is not null) return ticket;
+        }
+
+        throw new InvalidOperationException(
+            $"Could not produce a legal asset from seed '{seedValue}' after "
+            + $"{GenerateOptions.DefaultMaxRerolls} attempts: the incompatibility rules rejected "
+            + "every roll.");
+    }
+
+    /// <summary>
+    /// Renders a plated ticket through Core's own render: crop each layer's art out of the Menu's
+    /// atlas (or take it whole, in loose mode), colorize Dynamic/Static layers and leave Custom
+    /// ones as-is, then composite. The same loop <c>MenuFidelityTests</c> proves reproduces a
+    /// cooked asset exactly — kept as one definition rather than a second copy of it here, because
+    /// two renderers is how "the client cooks the same dish the server rolled" stops being true.
+    /// </summary>
+    private static Image<Rgba32> RenderTicket(MenuArchive menu, IReadOnlyList<Draw> draws)
+    {
+        var layers = new List<Image<Rgba32>>(draws.Count);
+        try
+        {
+            foreach (var draw in draws)
+            {
+                using var whole = Image.Load<Rgba32>(menu.ArtBytes(draw.ImageKey));
+                var cell = draw.Source;
+                using var cropped = whole.Clone(
+                    c => c.Crop(new Rectangle(cell.X, cell.Y, cell.Width, cell.Height)));
+
+                layers.Add(draw.Kind == LayerKind.Custom
+                    ? cropped.Clone()
+                    : Colorizer.Apply(cropped, draw.Hue, draw.Sat, draw.Model));
+            }
+            return Compositor.Composite(menu.Book.Canvas, layers);
+        }
+        finally { foreach (var l in layers) l.Dispose(); }
     }
 
     /// <summary>
