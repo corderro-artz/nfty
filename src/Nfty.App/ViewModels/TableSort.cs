@@ -20,7 +20,7 @@ namespace Nfty.App.ViewModels;
 /// <para><b>Which tables get one is a judgement, not a default.</b> A table's row order either
 /// belongs to the DATA or belongs to the READER, and only the second kind sorts. The Recipe's layer
 /// table is the standing counter-example: its order IS <c>layerOrder</c>, which is the paint order,
-/// and <c>Generator.RollOne</c> walks it consuming one RNG draw per layer — so a sorted view would
+/// and <c>Ticketer.TryRoll</c> walks it consuming one RNG draw per layer — so a sorted view would
 /// show a stack that is not the stack, beside a drag handle that writes the real one.</para>
 /// </summary>
 public partial class TableSort : ObservableObject

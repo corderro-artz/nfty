@@ -154,7 +154,7 @@ public class ExplorerTreeReorderTests
     /// LOCKED MEANS LOCKED, ON EVERY ROUTE INTO A REORDER.
     /// </summary>
     /// <remarks>
-    /// <para>A layer move is not a restack: <c>Generator.RollOne</c> walks <c>layerOrder</c>
+    /// <para>A layer move is not a restack: <c>Ticketer.TryRoll</c> walks <c>layerOrder</c>
     /// consuming one <c>WeightedRoller.Roll</c> per layer, so moving a layer moves which draw
     /// reaches it — and depth IS the paint order, so even an unchanged selection composites
     /// differently. The same seed over a reordered recipe is a different collection. That is exactly

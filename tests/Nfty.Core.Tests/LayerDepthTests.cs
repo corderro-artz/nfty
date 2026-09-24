@@ -192,7 +192,7 @@ public class LayerDepthTests
     /// reordered layers have ONE variant each, so no reorder can change what they roll. The general
     /// claim — "a reorder changes the pixels but not the DNA" — is FALSE, and
     /// <see cref="Reordering_layers_that_each_have_several_variants_reassigns_the_rolls"/> disproves
-    /// it: <c>Generator.RollOne</c> walks the layers in <c>layerOrder</c> consuming one roll each, so
+    /// it: <c>Ticketer.TryRoll</c> walks the layers in <c>layerOrder</c> consuming one roll each, so
     /// moving a layer moves which draw reaches it. What is actually pinned here is the narrower fact
     /// the compatibility argument needs — a GIVEN selection hashes the same in any order.</para>
     /// </summary>
@@ -248,7 +248,7 @@ public class LayerDepthTests
 
     /// <summary>
     /// The boundary of that invariance, pinned because it is easy to over-read. Identity is
-    /// order-independent, but the SELECTION being hashed need not survive a reorder: <c>RollOne</c>
+    /// order-independent, but the SELECTION being hashed need not survive a reorder: <c>TryRoll</c>
     /// walks <c>layerOrder</c> consuming one draw per layer, so moving a layer moves which draw
     /// reaches it. Where every layer has one variant that changes nothing (the test above); where
     /// layers have several, a regenerated collection is genuinely a different collection, not merely

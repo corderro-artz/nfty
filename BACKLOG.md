@@ -49,3 +49,72 @@ ordinary functions with inputs and outputs, covered by `PassphraseSourceTests`.
 What is left untested is the genuinely interactive branch: key-by-key echo suppression, backspace,
 and Escape. Testing it would mean an indirection over `Console.ReadKey` whose only consumer is the
 test — worth it only if that reader grows logic worth checking. It has none today.
+
+---
+
+## `Nfty.Ticket` does not target `netstandard2.1`
+
+**Status:** deferred deliberately; engine embedding is not a current goal.
+
+`Nfty.Ticket` targets `net10.0` alone. A game engine loading it as a managed plugin would want
+`netstandard2.1`, and adding that target later costs: replacing `SHA256.HashData`,
+`Convert.ToHexString` and `ArgumentNullException.ThrowIfNull`; an `IsExternalInit` shim for `init`
+accessors; and a hand-written reader for the Menu manifest, since `System.Text.Json` is a package
+rather than in-box below `net6.0`.
+
+**The rule that keeps it cheap:** `Nfty.Ticket` takes NO package dependency. The only thing a second
+target ever has to reconcile is framework API surface.
+
+**And the rule that keeps it correct:** whatever is replaced is replaced UNCONDITIONALLY, not behind
+`#if`. A conditional would mean the assembly an engine embeds and the assembly the desktop app loads
+run different code to compute a DNA — invisible in review and to any single-target test.
+
+---
+
+## `inspect --voxel` is refused on a `.mnu`
+
+**Status:** deferred on scope, not on principle.
+
+`--voxel` reports which variants carry partial alpha. It is refused on a `.ktn` (which lists paths
+without opening them), on a `.tin` (sealed), and on a cooked Set (the output rather than the source
+art). **A Menu is the one refused kind where the information genuinely IS present** — it carries
+the source variants, uncolorized, which is exactly what the flag scans.
+
+What is missing is the traversal, not the measurement: every `VoxelReport.Scan` overload takes a
+`Loaded*` decoded from a `.cbk`, so a Menu needs its atlas decoded and cropped per cell.
+`VoxelReport.CountPartial(Image<Rgba32>)` is already public and already does the per-image work.
+
+The refusal message says so in those terms, deliberately — a "cannot" borrowed from one of the other
+three arms would be false here, and a wrong reason in an error message is worse than a terse one.
+
+---
+
+## `extend` rebuilds a Set's DNA index by opening every asset file
+
+**Status:** deferred; real and measured, but it only bites at large Sets.
+
+`SetWriter.ReadExisting`/`ReadExistingAsync` enumerates `nfty/*.json` and does one
+`File.ReadAllText` plus `JsonDocument.Parse` **per already-minted asset**, sequentially, on every
+`extend` run — including under `--unlimited`, where the reconstructed DNA set is not used for dedup
+at all.
+
+**What is NOT the problem.** The uniqueness check itself is already O(1): `Generator.RollAll` builds
+one `HashSet<string>` and calls `seen.Add` per attempt, measured flat from an empty set to one
+preloaded with 500,000 DNAs. And the rerolls that pile up as a book's space fills cannot be helped
+by any index — expected attempts per success tracks `N/(N-k)` (about 13 at 90% full, 30 at 99%),
+because rejection sampling keeps proposing combinations already taken rather than because checking
+is slow. Sampling from the remaining space instead would need an enumeration `UniqueSpace`
+deliberately refuses, or a change to RNG consumption per draw, which would change every collection
+ever generated.
+
+**The shape of the fix, if it is ever wanted:** an append-only `nfty/_index.jsonl` sidecar written as
+each asset is written, preferred by `ReadExisting` when present AND consistent (line count against
+the `nfty/*.json` count), falling back to today's per-file walk otherwise. Determinism is untouched:
+it changes only what `ReadExisting` reads to populate `existingDnas`/`startNumber`, which are
+consumed identically downstream, so no sort order and no RNG draw count moves.
+
+**The staleness check is the load-bearing part, not the index.** A user who hand-edits a Set folder
+leaves an index that either claims a DNA is taken when it is not (harmless — one needless reroll) or
+fails to report one that is (breaks the uniqueness guarantee `extend` exists to preserve). Same
+posture `CookBookManifest.RecipeOrder` already keeps: never trust a possibly-stale listing, verify
+or fall back.

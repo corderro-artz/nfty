@@ -342,11 +342,15 @@ public sealed class BookOdds
     /// <param name="layers">Its layers, empty when it could not be resolved.</param>
     /// <returns>Whether every layer resolved.</returns>
     /// <remarks>
-    /// The arithmetic mirrors <c>Generator.PlanLayers</c> and
+    /// The arithmetic mirrors <c>Ticketer.Prepare</c> and
     /// <see cref="WeightedRoller.AbsentWeight"/> exactly: the absent weight solves <c>a/(a+W) = p</c>,
     /// so the absent outcome's probability IS the stored percent over a hundred, and each variant's
     /// share of what is left is its weight over the layer's whole variant total — the total
     /// including shelved zero-weight variants, which contribute nothing to it either way.
+    /// Pinned by <c>SelectionOddsTests.The_predicted_chance_matches_what_the_generator_actually_rolls</c>,
+    /// which cooks 4,000 assets through <see cref="Generator.Generate"/> — rolling through
+    /// <c>Ticketer</c> — over a book with a rule, an absent percent and uneven recipe weights, and
+    /// checks the prediction against the observed rate.
     /// </remarks>
     private static bool TryLayers(PeekedRecipe recipe, out List<LayerOdds> layers)
     {

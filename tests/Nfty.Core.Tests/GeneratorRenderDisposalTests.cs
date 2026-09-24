@@ -28,7 +28,7 @@ namespace Nfty.Core.Tests;
 /// <see cref="MemoryDiagnostics.TotalUndisposedAllocationCount"/> (see
 /// <see cref="ArchiveReadDisposalTests"/> for why this counter and not a GC-based check).
 /// </summary>
-public class GeneratorRollOneDisposalTests
+public class GeneratorRenderDisposalTests
 {
     private static readonly MethodInfo RenderMethod =
         typeof(Generator).GetMethod("Render", BindingFlags.NonPublic | BindingFlags.Static)

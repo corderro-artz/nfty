@@ -130,7 +130,7 @@ public static class StackRoll
         // Two statements rather than two arguments to one constructor: both consume the RNG, so
         // their ORDER is the determinism contract, and inlining them would hand that contract to
         // C#'s argument-evaluation order and to whatever order PreviewLayer happens to declare its
-        // members in. Variant first, then color — the order Generator.RollOne uses.
+        // members in. Variant first, then color — the order Ticketer.TryRoll uses.
         string variant = variantId ?? RollVariant(ingredient, rng);
         var (spec, rolled) = ColorFor(ingredient, rng);
         return new PreviewLayer(ingredient, variant, spec, rolled);

@@ -378,7 +378,7 @@ public class StackPreviewTests
 
     /// <summary>The same guarantee for a failure inside the renderer rather than a check around it: a
     /// pre-disposed value-map makes <c>Colorizer.Apply</c>'s internal <c>Clone()</c> throw halfway up
-    /// the stack — the shape <c>GeneratorRollOneDisposalTests</c> drives <c>Generator.Render</c> with.</summary>
+    /// the stack — the shape <c>GeneratorRenderDisposalTests</c> drives <c>Generator.Render</c> with.</summary>
     [Fact]
     public void A_layer_that_throws_while_rendering_disposes_the_layers_below_it()
     {

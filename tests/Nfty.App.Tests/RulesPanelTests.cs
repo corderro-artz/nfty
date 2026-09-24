@@ -254,7 +254,7 @@ public class RulesPanelTests
         try
         {
             // Deliberate, and the one table in the app that is exempt: its order IS layerOrder,
-            // which is the paint order, and Generator.RollOne walks it consuming one RNG draw per
+            // which is the paint order, and Ticketer.TryRoll walks it consuming one RNG draw per
             // layer. A sorted view would show a stack that is not the stack — beside a drag handle
             // that writes the real one.
             var layerTable = view.GetVisualDescendants().OfType<Border>()

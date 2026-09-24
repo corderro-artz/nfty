@@ -8,14 +8,19 @@ using SixLabors.ImageSharp.PixelFormats;
 namespace Nfty.Core.Tests;
 
 /// <summary>
-/// RollOne runs in two phases: a roll phase that consumes the RNG and decides the selection, then
-/// a render phase that colorizes and composites. The rules are applied between them, so a roll the
-/// rules reject never renders anything.
+/// The roll and the render are two ASSEMBLIES now, not merely two phases of one method:
+/// <c>Ticketer.TryRoll</c> (<c>Nfty.Ticket</c>) consumes the RNG, decides the selection and applies
+/// the recipe's rules — returning <see langword="null"/> on a rejection — and touches no pixel;
+/// <c>Generator.Render</c> (<c>Nfty.Core</c>) then resolves the accepted ticket's ids to decoded
+/// images, colorizes and composites. That is a stronger version of the same guarantee a phase split
+/// inside one method would give: <c>Nfty.Ticket</c> takes no dependency on ImageSharp at all, so
+/// there is no image type for the roll to touch even by accident.
 ///
 /// The split is only safe because legality is a function of the variant selection alone. These
 /// tests pin the two things that would break if the phases were ever resequenced: the RNG draws
-/// must stay in the roll phase (or a rejected roll would consume a different amount of the stream
-/// and the same seed would stop reproducing), and a rejected roll must still leave nothing behind.
+/// must stay inside <c>Ticketer.TryRoll</c> (or a rejected roll would consume a different amount of
+/// the stream and the same seed would stop reproducing), and a rejected roll must still leave
+/// nothing behind for <c>Generator.Render</c> to dispose.
 /// </summary>
 public class GeneratorRollRenderSplitTests
 {
@@ -133,7 +138,7 @@ public class GeneratorRollRenderSplitTests
     {
         // A rejected roll returns before the render phase, so it should allocate no layer image at
         // all; an accepted one must dispose its per-layer images once composited. Asserted through
-        // ImageSharp's process-wide leak counter, as in GeneratorRollOneDisposalTests.
+        // ImageSharp's process-wide leak counter, as in GeneratorRenderDisposalTests.
         int before = MemoryDiagnostics.TotalUndisposedAllocationCount;
 
         using (var book = RuleBook())

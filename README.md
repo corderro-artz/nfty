@@ -299,12 +299,14 @@ dotnet run --project src/Nfty.Cli -- --help
 | Command | What it does |
 | --- | --- |
 | `demo <dir>` | Write out the built-in demo CookBook — embedded, so it works on a copy with nothing beside it |
-| `inspect <file>` | Print the tree of a `.cbk` / `.rcp` / `.igt` / `.set` / `.tin`, or list a `.ktn`. `--voxel` adds a partial-alpha report |
+| `inspect <file>` | Print the tree of a `.cbk` / `.rcp` / `.igt` / `.set` / `.tin` / `.mnu`, or list a `.ktn`. `--voxel` adds a partial-alpha report |
 | `validate <cbk>` | Report **every** problem found, not just the first |
 | `stats <cbk>` | The odds the weights imply, per Recipe and per Variant |
 | `preview <file>` | Render a PNG exactly as generation would — one variant, or a whole rolled stack |
 | `generate <cbk>` | Generate a Set |
 | `extend <cbk> <set>` | Grow an existing Set, recomputing rarity across all of it |
+| `menu <cbk> --out <mnu>` | Write a `.mnu` Menu: the book's weights, rules, colorization and art, flattened so a runtime host can roll and render an asset with no `.cbk` present |
+| `serve <mnu>` | Roll (`--seed`) or render (`--ticket`) one asset from a `.mnu` Menu, through the same render `generate` uses |
 | `export <set>` | Publish a cooked Set: choose what goes with it, and in what shape |
 | `new ingredient\|recipe\|cookbook\|kitchen` | Build an archive from a manifest and its parts |
 | `add variant\|ingredient\|recipe\|rule` | Append to an existing archive |
