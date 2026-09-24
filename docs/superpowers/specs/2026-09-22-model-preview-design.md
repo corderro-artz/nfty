@@ -64,6 +64,12 @@ redraw while the pointer is moving.
 This is the same judgment `NumberStamp` already made when it drew a 3×5 bitmap font rather than take
 a font library: the general-purpose answer is much larger than the problem.
 
+**CONFIRMED by the author, 2026-09-24 — with a future in view.** They want the option of GPU
+acceleration later, for every part of the app where it is relevant, and have deferred scoping that to
+the next worktree (see `BACKLOG.md`, "An app-wide toggle for GPU acceleration"). Build the preview so
+a GPU path could sit BESIDE this one rather than replace it: keep the rasterizer behind a narrow seam,
+and keep the software path the default and the one the test suite renders.
+
 ## Architecture
 
 ```
@@ -175,6 +181,11 @@ not inherit the number without inheriting that.
 The second is better: a library default of "one voxel" is correct and predictable, and choosing a
 flattering starting point is a presentation decision. Recorded here so it is decided rather than
 inherited.
+
+**DECIDED by the author, 2026-09-24: the second.** `ExtrudeOptions.Depth` stays `1` in the library,
+so the CLI and anyone scripting it get a predictable unit that does not depend on the input. The
+`ModelDialog` opens at a depth proportional to the art (⅛ of its smaller side is the starting
+figure, so 64px art opens 8 deep) and shows the ratio beside the number.
 
 ## What the preview will honestly reveal
 

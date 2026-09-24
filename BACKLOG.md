@@ -118,3 +118,27 @@ leaves an index that either claims a DNA is taken when it is not (harmless — o
 fails to report one that is (breaks the uniqueness guarantee `extend` exists to preserve). Same
 posture `CookBookManifest.RecipeOrder` already keeps: never trust a possibly-stale listing, verify
 or fall back.
+
+## An app-wide toggle for GPU acceleration
+
+**Status:** deferred by the author (2026-09-24) to the NEXT worktree, where they will scope it.
+
+The 3D preview (`docs/superpowers/specs/2026-09-22-model-preview-design.md`) is being built as a
+**software rasterizer**, deliberately: `Avalonia.Headless` has no GL context, so a GPU surface would
+be the one screen in the app that `VisualCapture`, `DarkModeContrastTests` and
+`PixelPerfectRenderingTests` cannot see. A CPU renderer draws identically on screen and under test,
+needs no package, and is ample for a few hundred triangles of extruded pixel art.
+
+The author wants the option of GPU acceleration later, **for every part of the application where it
+is relevant** — not the preview alone. Recorded here so the preview is built in a way that does not
+foreclose it.
+
+**The constraint that must survive the toggle:** the software path stays the DEFAULT and stays the
+path the test suite renders. A GPU path that became the only one exercised by real use would be a
+second renderer with no test coverage — the exact failure this repo's visual rules exist to prevent.
+Whatever the toggle switches, the headless sweeps must keep seeing a frame.
+
+**What to decide when it is picked up:** which surfaces actually benefit (the preview certainly; the
+Set browser grid and the editor canvas are candidates worth measuring, not assuming); whether the
+toggle is per-surface or global; and how a GPU frame is verified at all, given the harness cannot
+render one.
