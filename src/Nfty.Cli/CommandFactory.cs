@@ -180,17 +180,13 @@ public static partial class CommandFactory
                 {
                     // Unlike the Kitchen and Set refusals above, this is NOT "there is nothing to
                     // scan": a Menu carries its source variants, uncolorized — exactly the art
-                    // --voxel wants. What is missing is the second decode path a Menu's atlas would
-                    // need (crop each cell out of one packed PNG rather than reading a standalone
-                    // variant image), which nothing has built yet. Said plainly as a scope gap
-                    // rather than worded as though a Menu could not carry the answer.
+                    // --voxel wants. What is missing is a second decode path (crop each cell out of
+                    // one packed PNG rather than reading a standalone variant image), which nothing
+                    // has built yet — a build limitation, not a limit of the format.
                     if (wantVoxel)
                         throw new InvalidOperationException(
-                            "--voxel needs the art decoded and cropped per cell, and this build "
-                            + "does not do that for a Menu yet. That's a scope gap, not a category "
-                            + "one: a Menu carries its source variants, uncolorized, which is "
-                            + "exactly what --voxel wants — it is just not wired up to read them "
-                            + "from an atlas cell. Run --voxel on the CookBook that produced this "
+                            "--voxel needs each variant decoded on its own, and this build does not "
+                            + "decode a Menu's art yet. Run it on the CookBook that produced this "
                             + "Menu instead.");
                     using var menu = MenuArchive.Open(file);
                     PrintMenu(menu);
@@ -936,13 +932,14 @@ public static partial class CommandFactory
                 + "--ticket is required.",
         };
         var outp = new Option<string>("--out") { Description = "Output PNG path.", Required = true };
+        var maxRerolls = MaxRerollsOption();
 
         var cmd = new Command("serve",
             "Roll (--seed) or render (--ticket) one asset from a .mnu Menu. Plates the ticket into "
                 + "draws, then renders them through Core's own Colorizer and Compositor — the same "
                 + "render generate uses, so a client rendering a server's ticket reproduces the "
                 + "identical pixels.")
-        { path, seed, ticket, outp };
+        { path, seed, ticket, outp, maxRerolls };
 
         // Enforced at parse time, the same rule and the same reason preview's form split states:
         // silently ignoring the option that does not apply is how a user comes to believe it did
@@ -958,6 +955,12 @@ public static partial class CommandFactory
                         + "render an already-rolled one. Pass exactly one."
                     : "serve needs exactly one of --seed (roll a fresh asset) or --ticket (render "
                         + "an already-rolled one).");
+
+            // --max-rerolls governs the ROLL, and --ticket has nothing to roll — it renders a
+            // selection that was already made. Rejected rather than quietly ignored, same rule.
+            if (hasTicket && Given(maxRerolls))
+                result.AddError("--max-rerolls applies to a --seed roll; --ticket renders an "
+                    + "already-rolled ticket, so there is nothing left to reroll.");
         });
 
         cmd.SetAction(parse =>
@@ -967,7 +970,7 @@ public static partial class CommandFactory
 
             string? seedValue = parse.GetValue(seed);
             AssetTicket ticketValue = seedValue is not null
-                ? RollTicket(menu, seedValue)
+                ? RollTicket(menu, seedValue, parse.GetValue(maxRerolls))
                 : AssetTicket.Parse(parse.GetValue(ticket)!);
 
             var draws = Plating.Plate(menu, ticketValue);
@@ -982,23 +985,25 @@ public static partial class CommandFactory
 
     /// <summary>Rolls one asset from a seed, exactly as <c>Generator</c> rolls the first asset of a
     /// run seeded the same way — same RNG construction, same reroll-on-rule-violation loop.</summary>
+    /// <param name="menu">The Menu to roll against.</param>
+    /// <param name="seedValue">The RNG seed.</param>
+    /// <param name="maxRerolls">Per-asset reroll budget, from <c>--max-rerolls</c>.</param>
     /// <exception cref="InvalidOperationException">The recipe's rules rejected every roll within the
     /// budget.</exception>
-    private static AssetTicket RollTicket(MenuArchive menu, string seedValue)
+    private static AssetTicket RollTicket(MenuArchive menu, string seedValue, int maxRerolls)
     {
         var prepared = Ticketer.Prepare(menu.Book);
         var rng = new SplitMix64Rng(SeedHash.ToUlong(seedValue));
 
-        for (int attempt = 0; attempt < GenerateOptions.DefaultMaxRerolls; attempt++)
+        for (int attempt = 0; attempt < maxRerolls; attempt++)
         {
             var ticket = Ticketer.TryRoll(prepared, rng);
             if (ticket is not null) return ticket;
         }
 
         throw new InvalidOperationException(
-            $"Could not produce a legal asset from seed '{seedValue}' after "
-            + $"{GenerateOptions.DefaultMaxRerolls} attempts: the incompatibility rules rejected "
-            + "every roll.");
+            $"Could not produce a legal asset from seed '{seedValue}' after {maxRerolls} attempts: "
+            + "the incompatibility rules rejected every roll.");
     }
 
     /// <summary>

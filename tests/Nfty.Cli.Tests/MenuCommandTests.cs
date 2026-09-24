@@ -149,7 +149,7 @@ public class MenuCommandTests
     }
 
     [Fact]
-    public void Inspect_voxel_on_a_menu_is_refused_and_names_the_scope_gap()
+    public void Inspect_voxel_on_a_menu_is_refused_and_points_to_the_source_cookbook()
     {
         var dir = Directory.CreateTempSubdirectory().FullName;
         try
@@ -161,10 +161,11 @@ public class MenuCommandTests
             var ex = Assert.Throws<InvalidOperationException>(
                 () => CommandFactory.Build().Parse(["inspect", mnu, "--voxel"]).Invoke(NonThrowing));
 
-            // Amendment D: the refusal must say the information IS present (source variants,
-            // uncolorized) and that this build simply does not scan it yet — not that a Menu
-            // cannot carry the answer.
-            Assert.Contains("Menu", ex.Message, StringComparison.Ordinal);
+            // Substantive rather than a bare "does the word 'Menu' appear" check (that passed even
+            // against a wrong, category-framed message a reviewer swapped in) — this pins the one
+            // thing amendment D actually requires: the refusal redirects the reader to the source
+            // CookBook, not merely that it mentions the word "Menu" somewhere.
+            Assert.Contains("CookBook that produced this Menu", ex.Message, StringComparison.Ordinal);
         }
         finally { Directory.Delete(dir, recursive: true); }
     }
@@ -247,6 +248,215 @@ public class MenuCommandTests
             Assert.Throws<FormatException>(() => CommandFactory.Build()
                 .Parse(["serve", mnu, "--ticket", "v1|cat|not-real", "--out", Path.Combine(dir, "x.png")])
                 .Invoke(NonThrowing));
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void Max_rerolls_is_refused_alongside_a_ticket()
+    {
+        // --max-rerolls governs a ROLL, and --ticket renders a selection that was already made —
+        // there is nothing left to reroll, so this is refused rather than silently ignored, the
+        // same rule the seed/ticket split above already keeps.
+        var result = CommandFactory.Build()
+            .Parse("serve game.mnu --ticket v1|x --max-rerolls 5 --out a.png");
+        Assert.NotEmpty(result.Errors);
+    }
+
+    // --- fixture: a rule tight enough that roughly half of all rolls are illegal, so the
+    // reroll-on-rule-violation loop is exercised for real rather than trivially passing on the
+    // first attempt of every seed. ---
+
+    private static string WriteCookBookWithTightRule(string dir)
+    {
+        using var glow = new Image<Rgba32>(2, 2, new Rgba32(200, 200, 200, 255));
+        using var spark = new Image<Rgba32>(2, 2, new Rgba32(220, 220, 220, 255));
+        using var mark = new Image<Rgba32>(2, 2, new Rgba32(10, 20, 30, 255));
+
+        var aura = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest(
+                Id: "aura",
+                Name: "Aura",
+                Kind: LayerKind.Dynamic,
+                Colorization: new Colorization(
+                    Model: ColorModel.Hsv,
+                    HueQuantize: 12,
+                    SatQuantize: 4,
+                    Entries: [new ColorEntry(Weight: 1, Range: new ColorRange(0, 360, 40, 100), Fixed: null)]),
+                Variants: [new Variant("glow", "Glow", Weight: 1), new Variant("spark", "Spark", Weight: 1)]),
+            VariantImages = new Dictionary<string, Image<Rgba32>> { ["glow"] = glow, ["spark"] = spark },
+        };
+        var badge = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest(
+                Id: "badge",
+                Name: "Badge",
+                Kind: LayerKind.Custom,
+                Colorization: null,
+                Variants: [new Variant("mark", "Mark", Weight: 1)]),
+            VariantImages = new Dictionary<string, Image<Rgba32>> { ["mark"] = mark },
+        };
+
+        var recipe = new LoadedRecipe
+        {
+            // "badge" has exactly one variant, "mark", so it is what every roll of that layer
+            // produces. An Exclude rule forbidding badge:mark whenever aura rolls "glow" therefore
+            // rejects every asset that rolls aura=glow outright — with the two aura variants
+            // equally weighted, about half the roll space is illegal, which is tight enough to
+            // force a reroll on most seeds without making every seed unrollable.
+            Manifest = new RecipeManifest("cat", "Cat", LayerOrder: ["aura", "badge"],
+                Rules: [new IncompatibilityRule(RuleType.Exclude, new RuleTarget("aura", "glow"),
+                    [new RuleTarget("badge", "mark")])]),
+            Ingredients = [aura, badge],
+        };
+
+        var path = Path.Combine(dir, "book.cbk");
+        var cookbook = new CookBookManifest(
+            Id: "cb",
+            Name: "VaporPets",
+            Canvas: new Dimensions(2, 2),
+            Collection: new Collection("VaporPets", "test fixture", "VP"),
+            RecipeWeights: new Dictionary<string, double> { ["cat"] = 100 });
+        CookBookArchive.Write(path, cookbook, [recipe]);
+        return path;
+    }
+
+    /// <summary>
+    /// A real, reproducible seed for which the FIRST roll against <paramref name="menu"/> is
+    /// illegal (a rule violation) and the SECOND succeeds — found by trying candidates against the
+    /// same <see cref="Ticketer"/> primitive <c>serve</c> itself rolls through, rather than guessed
+    /// or asserted probabilistically. This is what lets the tests below force a real reroll
+    /// deterministically instead of relying on chance.
+    /// </summary>
+    private static string FindSeedNeedingOneReroll(MenuArchive menu)
+    {
+        var prepared = Ticketer.Prepare(menu.Book);
+        for (int i = 0; i < 10_000; i++)
+        {
+            string candidate = $"reroll-{i}";
+            var rng = new SplitMix64Rng(SeedHash.ToUlong(candidate));
+            if (Ticketer.TryRoll(prepared, rng) is null && Ticketer.TryRoll(prepared, rng) is not null)
+                return candidate;
+        }
+        throw new InvalidOperationException("No seed needing exactly one reroll found in 10,000 candidates.");
+    }
+
+    [Fact]
+    public void Serve_still_succeeds_when_the_first_roll_is_illegal_and_a_reroll_is_needed()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            var cbk = WriteCookBookWithTightRule(dir);
+            var mnu = Path.Combine(dir, "game.mnu");
+            Run("menu", cbk, "--out", mnu);
+
+            string seed;
+            using (var menu = MenuArchive.Open(mnu)) seed = FindSeedNeedingOneReroll(menu);
+
+            var png = Path.Combine(dir, "asset.png");
+            var (code, _, _) = Capture("serve", mnu, "--seed", seed, "--out", png);
+
+            Assert.Equal(0, code);
+            Assert.True(File.Exists(png));
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void An_impossibly_low_max_rerolls_fails_and_names_the_rules()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            var cbk = WriteCookBookWithTightRule(dir);
+            var mnu = Path.Combine(dir, "game.mnu");
+            Run("menu", cbk, "--out", mnu);
+
+            string seed;
+            using (var menu = MenuArchive.Open(mnu)) seed = FindSeedNeedingOneReroll(menu);
+
+            // 1 attempt is exactly what this seed's FIRST roll cannot satisfy (that is how the
+            // seed was found), so this must fail — never succeed by luck — and name the rules.
+            var ex = Assert.Throws<InvalidOperationException>(() => CommandFactory.Build()
+                .Parse(["serve", mnu, "--seed", seed, "--max-rerolls", "1", "--out", Path.Combine(dir, "x.png")])
+                .Invoke(NonThrowing));
+
+            Assert.Contains("incompatibility rules", ex.Message, StringComparison.Ordinal);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    // --- fixture: absent-percent layers, so PrintMenuLayer's two non-trivial branches (a partial
+    // percent, and the exactly-100 "never appears" boundary) are both exercised. ---
+
+    private static string WriteCookBookWithAbsentLayers(string dir)
+    {
+        using var glow = new Image<Rgba32>(2, 2, new Rgba32(200, 200, 200, 255));
+        using var spark = new Image<Rgba32>(2, 2, new Rgba32(220, 220, 220, 255));
+        using var mark = new Image<Rgba32>(2, 2, new Rgba32(10, 20, 30, 255));
+
+        var aura = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest(
+                Id: "aura",
+                Name: "Aura",
+                Kind: LayerKind.Dynamic,
+                Colorization: new Colorization(
+                    Model: ColorModel.Hsv,
+                    HueQuantize: 12,
+                    SatQuantize: 4,
+                    Entries: [new ColorEntry(Weight: 1, Range: new ColorRange(0, 360, 40, 100), Fixed: null)]),
+                Variants: [new Variant("glow", "Glow", Weight: 1), new Variant("spark", "Spark", Weight: 1)]),
+            VariantImages = new Dictionary<string, Image<Rgba32>> { ["glow"] = glow, ["spark"] = spark },
+        };
+        var badge = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest(
+                Id: "badge",
+                Name: "Badge",
+                Kind: LayerKind.Custom,
+                Colorization: null,
+                Variants: [new Variant("mark", "Mark", Weight: 1)]),
+            VariantImages = new Dictionary<string, Image<Rgba32>> { ["mark"] = mark },
+        };
+
+        var recipe = new LoadedRecipe
+        {
+            // "badge" at 30 exercises the partial-percent branch ("absent 30%"); "aura" at exactly
+            // 100 exercises the boundary ("never appears").
+            Manifest = new RecipeManifest("cat", "Cat", LayerOrder: ["aura", "badge"], Rules: [],
+                AbsentPercent: new Dictionary<string, double> { ["badge"] = 30, ["aura"] = 100 }),
+            Ingredients = [aura, badge],
+        };
+
+        var path = Path.Combine(dir, "book.cbk");
+        var cookbook = new CookBookManifest(
+            Id: "cb",
+            Name: "VaporPets",
+            Canvas: new Dimensions(2, 2),
+            Collection: new Collection("VaporPets", "test fixture", "VP"),
+            RecipeWeights: new Dictionary<string, double> { ["cat"] = 100 });
+        CookBookArchive.Write(path, cookbook, [recipe]);
+        return path;
+    }
+
+    [Fact]
+    public void Inspect_prints_a_partial_absent_percent_and_the_never_appears_boundary()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            var cbk = WriteCookBookWithAbsentLayers(dir);
+            var mnu = Path.Combine(dir, "game.mnu");
+            Run("menu", cbk, "--out", mnu);
+
+            var (code, text, _) = Capture("inspect", mnu);
+
+            Assert.Equal(0, code);
+            Assert.Contains("absent 30%", text, StringComparison.Ordinal);
+            Assert.Contains("never appears", text, StringComparison.Ordinal);
         }
         finally { Directory.Delete(dir, recursive: true); }
     }
