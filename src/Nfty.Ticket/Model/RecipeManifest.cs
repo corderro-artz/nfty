@@ -34,13 +34,18 @@ namespace Nfty.Core.Model;
 /// weight of 0 already means one level up. Added after schemaVersion 1 and therefore OPTIONAL with
 /// a null default, for the same reasons spelled out on <see cref="CookBookManifest.TargetSupply"/>:
 /// <c>Schema.Current</c> is deliberately NOT bumped.</para></param>
+/// <param name="PartialAlpha">Whether any variant under this manifest carries a partial-alpha
+/// pixel — the book-level value is what the UI calls "2D only". A listing cache: writers stamp it
+/// from the pixels on every write, and anything that decoded the pixels recomputes it rather than
+/// reading it.</param>
 public record RecipeManifest(
     string Id,
     string Name,
     IReadOnlyList<string> LayerOrder,
     IReadOnlyList<IncompatibilityRule> Rules,
     int SchemaVersion = Schema.Current,
-    IReadOnlyDictionary<string, double>? AbsentPercent = null) : ISchemaVersioned
+    IReadOnlyDictionary<string, double>? AbsentPercent = null,
+    bool PartialAlpha = false) : ISchemaVersioned
 {
     /// <summary>How often one layer is left out, as a percent. Zero for a layer that always
     /// appears, which is every layer of a recipe that does not use the feature.</summary>

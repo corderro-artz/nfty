@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using Nfty.Core.Imaging;
 using Nfty.Core.Model;
 
 namespace Nfty.Core.Formats;
@@ -7,13 +8,20 @@ namespace Nfty.Core.Formats;
 /// ingredient. The <c>ZipArchive</c> overloads exist so a CookBook can nest one without a file.</summary>
 public static class RecipeArchive
 {
+    /// <summary>Stamps <see cref="RecipeManifest.PartialAlpha"/> from the ingredients' own pixels
+    /// rather than trusting whatever the caller (a writer) or the file (a reader) said. Shared by
+    /// every sync/async write and read path so they cannot drift on the definition.</summary>
+    private static RecipeManifest Stamped(RecipeManifest manifest, IReadOnlyList<LoadedIngredient> ingredients) =>
+        manifest with { PartialAlpha = ingredients.Any(Opacity.HasPartialAlpha) };
+
     /// <summary>Writes a Recipe into an already-open archive.</summary>
     /// <param name="zip">The open archive.</param>
-    /// <param name="manifest">The recipe's manifest.</param>
+    /// <param name="manifest">The recipe's manifest. Its <c>PartialAlpha</c> is ignored — the
+    /// written value is recomputed from <paramref name="ingredients"/>' images.</param>
     /// <param name="ingredients">Its ingredients, nested as <c>.igt</c> entries.</param>
     public static void Write(ZipArchive zip, RecipeManifest manifest, IReadOnlyList<LoadedIngredient> ingredients)
     {
-        ArchiveIo.WriteManifest(zip, manifest);
+        ArchiveIo.WriteManifest(zip, Stamped(manifest, ingredients));
         foreach (var ing in ingredients)
             ArchiveIo.WriteNested(zip, $"ingredients/{ing.Manifest.Id}.igt",
                 inner => IngredientArchive.Write(inner, ing.Manifest, ing.VariantImages));
@@ -21,7 +29,8 @@ public static class RecipeArchive
 
     /// <summary>Reads a Recipe from an already-open archive, decoding every variant PNG.</summary>
     /// <param name="zip">The open archive.</param>
-    /// <returns>The loaded recipe; the caller owns it.</returns>
+    /// <returns>The loaded recipe; the caller owns it. Its manifest's <c>PartialAlpha</c> is
+    /// recomputed from its loaded ingredients rather than trusting the stored value.</returns>
     public static LoadedRecipe Read(ZipArchive zip)
     {
         var manifest = ArchiveIo.ReadManifest<RecipeManifest>(zip);
@@ -38,7 +47,7 @@ public static class RecipeArchive
             foreach (var ing in ingredients) ing.Dispose();
             throw;
         }
-        return new LoadedRecipe { Manifest = manifest, Ingredients = ingredients };
+        return new LoadedRecipe { Manifest = Stamped(manifest, ingredients), Ingredients = ingredients };
     }
 
     /// <summary>Writes a Recipe to a file.</summary>
@@ -69,7 +78,7 @@ public static class RecipeArchive
     public static async Task WriteAsync(ZipArchive zip, RecipeManifest manifest,
         IReadOnlyList<LoadedIngredient> ingredients, CancellationToken ct = default)
     {
-        await ArchiveIo.WriteManifestAsync(zip, manifest, ct);
+        await ArchiveIo.WriteManifestAsync(zip, Stamped(manifest, ingredients), ct);
         foreach (var ing in ingredients)
             await ArchiveIo.WriteNestedAsync(zip, $"ingredients/{ing.Manifest.Id}.igt",
                 inner => IngredientArchive.WriteAsync(inner, ing.Manifest, ing.VariantImages, ct), ct);
@@ -78,7 +87,8 @@ public static class RecipeArchive
     /// <summary>Reads a Recipe from an already-open archive.</summary>
     /// <param name="zip">The open archive.</param>
     /// <param name="ct">Cancels the read; anything already decoded is disposed first.</param>
-    /// <returns>The loaded recipe; the caller owns it.</returns>
+    /// <returns>The loaded recipe; the caller owns it. Its manifest's <c>PartialAlpha</c> is
+    /// recomputed from its loaded ingredients rather than trusting the stored value.</returns>
     public static async Task<LoadedRecipe> ReadAsync(ZipArchive zip, CancellationToken ct = default)
     {
         var manifest = await ArchiveIo.ReadManifestAsync<RecipeManifest>(zip, ct);
@@ -93,7 +103,7 @@ public static class RecipeArchive
             foreach (var ing in ingredients) ing.Dispose();
             throw;
         }
-        return new LoadedRecipe { Manifest = manifest, Ingredients = ingredients };
+        return new LoadedRecipe { Manifest = Stamped(manifest, ingredients), Ingredients = ingredients };
     }
 
     /// <summary>Writes a Recipe to a file.</summary>

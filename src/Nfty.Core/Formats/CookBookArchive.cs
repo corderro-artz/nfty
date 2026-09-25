@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using Nfty.Core.Imaging;
 using Nfty.Core.Model;
 
 namespace Nfty.Core.Formats;
@@ -6,6 +7,12 @@ namespace Nfty.Core.Formats;
 /// <summary>Reads and writes <c>.cbk</c> archives — a manifest plus one nested <c>.rcp</c> per recipe.</summary>
 public static class CookBookArchive
 {
+    /// <summary>Stamps <see cref="CookBookManifest.PartialAlpha"/> from the recipes' own pixels
+    /// rather than trusting whatever the caller (a writer) or the file (a reader) said. Shared by
+    /// every sync/async write and read path so they cannot drift on the definition.</summary>
+    private static CookBookManifest Stamped(CookBookManifest manifest, IReadOnlyList<LoadedRecipe> recipes) =>
+        manifest with { PartialAlpha = recipes.Any(Opacity.HasPartialAlpha) };
+
     /// <summary>
     /// The recipe entries in the order the book asks for: <see cref="CookBookManifest.RecipeOrder"/>
     /// first, then anything it does not mention, ordinally.
@@ -39,12 +46,13 @@ public static class CookBookArchive
 
     /// <summary>Writes a CookBook.</summary>
     /// <param name="path">Destination path.</param>
-    /// <param name="manifest">The book's manifest.</param>
+    /// <param name="manifest">The book's manifest. Its <c>PartialAlpha</c> is ignored — the
+    /// written value is recomputed from <paramref name="recipes"/>' images.</param>
     /// <param name="recipes">Recipes to nest inside it.</param>
     public static void Write(string path, CookBookManifest manifest, IReadOnlyList<LoadedRecipe> recipes)
     {
         using var zip = ZipFile.Open(path, ZipArchiveMode.Create);
-        ArchiveIo.WriteManifest(zip, manifest);
+        ArchiveIo.WriteManifest(zip, Stamped(manifest, recipes));
         foreach (var r in recipes)
             ArchiveIo.WriteNested(zip, $"recipes/{r.Manifest.Id}.rcp",
                 inner => RecipeArchive.Write(inner, r.Manifest, r.Ingredients));
@@ -67,7 +75,8 @@ public static class CookBookArchive
     /// <summary>Reads a CookBook, eagerly decoding every variant image inside it.</summary>
     /// <param name="path">Archive path.</param>
     /// <returns>The loaded book. The caller owns it and must dispose it — that frees every
-    /// decoded image in the tree.</returns>
+    /// decoded image in the tree. Its manifest's <c>PartialAlpha</c> is recomputed from its loaded
+    /// recipes rather than trusting the stored value.</returns>
     /// <exception cref="InvalidDataException">The archive or a manifest inside it is unreadable.</exception>
     /// <exception cref="UnsupportedSchemaVersionException">It declares a newer schema than this build reads.</exception>
     public static LoadedCookBook Read(string path)
@@ -85,7 +94,7 @@ public static class CookBookArchive
             // variant image in the book with no other owner to free them.
             return new LoadedCookBook
             {
-                Manifest = manifest,
+                Manifest = Stamped(manifest, recipes),
                 Recipes = recipes,
                 SourceSha256 = ArchiveIo.HashFile(path),
             };
@@ -102,7 +111,8 @@ public static class CookBookArchive
 
     /// <summary>Writes a CookBook.</summary>
     /// <param name="path">Destination path.</param>
-    /// <param name="manifest">The book's manifest.</param>
+    /// <param name="manifest">The book's manifest. Its <c>PartialAlpha</c> is ignored — the
+    /// written value is recomputed from <paramref name="recipes"/>' images.</param>
     /// <param name="recipes">Recipes to nest inside it.</param>
     /// <param name="ct">Cancels the write.</param>
     /// <returns>A task that completes when the archive is written.</returns>
@@ -110,7 +120,7 @@ public static class CookBookArchive
         IReadOnlyList<LoadedRecipe> recipes, CancellationToken ct = default)
     {
         using var zip = ZipFile.Open(path, ZipArchiveMode.Create);
-        await ArchiveIo.WriteManifestAsync(zip, manifest, ct);
+        await ArchiveIo.WriteManifestAsync(zip, Stamped(manifest, recipes), ct);
         foreach (var r in recipes)
             await ArchiveIo.WriteNestedAsync(zip, $"recipes/{r.Manifest.Id}.rcp",
                 inner => RecipeArchive.WriteAsync(inner, r.Manifest, r.Ingredients, ct), ct);
@@ -120,7 +130,8 @@ public static class CookBookArchive
     /// <param name="path">Archive path.</param>
     /// <param name="ct">Cancels the read. Anything already decoded is disposed before the
     /// cancellation propagates.</param>
-    /// <returns>The loaded book; the caller owns it.</returns>
+    /// <returns>The loaded book; the caller owns it. Its manifest's <c>PartialAlpha</c> is
+    /// recomputed from its loaded recipes rather than trusting the stored value.</returns>
     public static async Task<LoadedCookBook> ReadAsync(string path, CancellationToken ct = default)
     {
         var recipes = new List<LoadedRecipe>();
@@ -140,7 +151,7 @@ public static class CookBookArchive
             // stranded every decoded image in the book.
             return new LoadedCookBook
             {
-                Manifest = manifest,
+                Manifest = Stamped(manifest, recipes),
                 Recipes = recipes,
                 SourceSha256 = await ArchiveIo.HashFileAsync(path, ct),
             };

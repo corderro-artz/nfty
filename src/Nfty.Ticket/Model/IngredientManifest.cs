@@ -10,10 +10,15 @@ namespace Nfty.Core.Model;
 /// <see cref="LayerKind.Custom"/>, and must be present for the other two.</param>
 /// <param name="Variants">The weighted images this layer can roll.</param>
 /// <param name="SchemaVersion">The manifest format version; see <see cref="Schema"/>.</param>
+/// <param name="PartialAlpha">Whether any variant under this manifest carries a partial-alpha
+/// pixel — the book-level value is what the UI calls "2D only". A listing cache: writers stamp it
+/// from the pixels on every write, and anything that decoded the pixels recomputes it rather than
+/// reading it.</param>
 public record IngredientManifest(
     string Id,
     string Name,
     LayerKind Kind,
     Colorization? Colorization,
     IReadOnlyList<Variant> Variants,
-    int SchemaVersion = Schema.Current) : ISchemaVersioned;
+    int SchemaVersion = Schema.Current,
+    bool PartialAlpha = false) : ISchemaVersioned;

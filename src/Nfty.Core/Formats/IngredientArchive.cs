@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using Nfty.Core.Imaging;
 using Nfty.Core.Model;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -9,27 +10,36 @@ namespace Nfty.Core.Formats;
 /// <c>ZipArchive</c> overloads exist so a Recipe can nest one without going through a file.</summary>
 public static class IngredientArchive
 {
+    /// <summary>Stamps <see cref="IngredientManifest.PartialAlpha"/> from the actual pixels rather
+    /// than trusting whatever the caller (a writer) or the file (a reader) said. Shared by every
+    /// sync/async write and read path so they cannot drift on the definition.</summary>
+    private static IngredientManifest Stamped(IngredientManifest manifest,
+        IReadOnlyDictionary<string, Image<Rgba32>> variantImages) =>
+        manifest with { PartialAlpha = Opacity.HasPartialAlpha(variantImages.Values) };
+
     /// <summary>Writes an Ingredient into an already-open archive.</summary>
     /// <param name="zip">The open archive.</param>
-    /// <param name="manifest">The ingredient's manifest.</param>
+    /// <param name="manifest">The ingredient's manifest. Its <c>PartialAlpha</c> is ignored — the
+    /// written value is recomputed from <paramref name="variantImages"/>.</param>
     /// <param name="variantImages">One image per variant id.</param>
     public static void Write(ZipArchive zip, IngredientManifest manifest,
         IReadOnlyDictionary<string, Image<Rgba32>> variantImages)
     {
-        ArchiveIo.WriteManifest(zip, manifest);
+        ArchiveIo.WriteManifest(zip, Stamped(manifest, variantImages));
         foreach (var v in manifest.Variants)
             ArchiveIo.WriteImage(zip, $"variants/{v.Id}.png", variantImages[v.Id]);
     }
 
     /// <summary>Reads an Ingredient from an already-open archive, decoding every variant PNG.</summary>
     /// <param name="zip">The open archive.</param>
-    /// <returns>The loaded ingredient; the caller owns it.</returns>
+    /// <returns>The loaded ingredient; the caller owns it. Its manifest's <c>PartialAlpha</c> is
+    /// recomputed from the decoded images rather than trusting the stored value.</returns>
     public static LoadedIngredient Read(ZipArchive zip)
     {
         var manifest = ArchiveIo.ReadManifest<IngredientManifest>(zip);
         EnsureUniqueVariantIds(manifest);
         var images = DecodeVariants(zip, manifest);
-        return new LoadedIngredient { Manifest = manifest, VariantImages = images };
+        return new LoadedIngredient { Manifest = Stamped(manifest, images), VariantImages = images };
     }
 
     /// <summary>
@@ -77,7 +87,7 @@ public static class IngredientArchive
     public static async Task WriteAsync(ZipArchive zip, IngredientManifest manifest,
         IReadOnlyDictionary<string, Image<Rgba32>> variantImages, CancellationToken ct = default)
     {
-        await ArchiveIo.WriteManifestAsync(zip, manifest, ct);
+        await ArchiveIo.WriteManifestAsync(zip, Stamped(manifest, variantImages), ct);
         foreach (var v in manifest.Variants)
             await ArchiveIo.WriteImageAsync(zip, $"variants/{v.Id}.png", variantImages[v.Id], ct);
     }
@@ -85,15 +95,17 @@ public static class IngredientArchive
     /// <summary>Reads an Ingredient from an already-open archive.</summary>
     /// <param name="zip">The open archive.</param>
     /// <param name="ct">Cancels the read; anything already decoded is disposed first.</param>
-    /// <returns>The loaded ingredient; the caller owns it.</returns>
+    /// <returns>The loaded ingredient; the caller owns it. Its manifest's <c>PartialAlpha</c> is
+    /// recomputed from the decoded images rather than trusting the stored value.</returns>
     public static async Task<LoadedIngredient> ReadAsync(ZipArchive zip, CancellationToken ct = default)
     {
         var manifest = await ArchiveIo.ReadManifestAsync<IngredientManifest>(zip, ct);
         EnsureUniqueVariantIds(manifest);
+        var images = await DecodeVariantsAsync(zip, manifest, ct);
         return new LoadedIngredient
         {
-            Manifest = manifest,
-            VariantImages = await DecodeVariantsAsync(zip, manifest, ct),
+            Manifest = Stamped(manifest, images),
+            VariantImages = images,
         };
     }
 

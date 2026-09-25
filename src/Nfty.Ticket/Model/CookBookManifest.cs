@@ -49,6 +49,10 @@ namespace Nfty.Core.Model;
 ///
 /// Added after schemaVersion 1, and therefore OPTIONAL with a null default, for exactly the reasons
 /// spelled out for <see cref="TargetSupply"/> above — Schema.Current is deliberately NOT bumped.</param>
+/// <param name="PartialAlpha">Whether any variant under this manifest carries a partial-alpha
+/// pixel — the book-level value is what the UI calls "2D only". A listing cache: writers stamp it
+/// from the pixels on every write, and anything that decoded the pixels recomputes it rather than
+/// reading it.</param>
 public record CookBookManifest(
     string Id,
     string Name,
@@ -58,4 +62,5 @@ public record CookBookManifest(
     int SchemaVersion = Schema.Current,
     int? TargetSupply = null,
     IReadOnlyList<string>? Palette = null,
-    IReadOnlyList<string>? RecipeOrder = null) : ISchemaVersioned;
+    IReadOnlyList<string>? RecipeOrder = null,
+    bool PartialAlpha = false) : ISchemaVersioned;
