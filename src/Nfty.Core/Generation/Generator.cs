@@ -404,8 +404,16 @@ public static class Generator
                 traits.Add(new TraitSelection(layer.IngredientId, ing.Manifest.Name, layer.VariantId, variant.Name));
 
                 var source = ing.VariantImages[layer.VariantId];
-                // A null Model means a Custom layer, cloned as-is rather than colorized — the ticket
-                // already carries which case this is, so nothing here re-derives it from the kind.
+                // Reading Kind/Model off the TICKET here is the one place in the product that does
+                // - everywhere else (Plating.Plate, chiefly) they come from the Menu/book, never
+                // from the ticket, because a wire ticket's kind and model are not covered by
+                // Dna.Compute and a tampered ticket could otherwise keep its provable identity while
+                // rendering different pixels (see Plating.Plate's own remarks). That risk does not
+                // exist here: this ticket was produced IN-PROCESS, earlier in this same Generate
+                // call, by Ticketer rolling this exact LoadedCookBook (via MenuProjection) - there is
+                // no wire, no second party and no chance the ticket disagrees with the book it came
+                // from. This is the one sanctioned exemption from that rule, not a second copy of the
+                // mistake it guards against.
                 images.Add(layer.Model is ColorModel model
                     ? Colorizer.Apply(source, layer.Hue!.Value, layer.Sat!.Value, model)
                     : source.Clone());

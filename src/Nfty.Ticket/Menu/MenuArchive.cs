@@ -57,7 +57,13 @@ public sealed class MenuArchive : IDisposable
     private static readonly JsonSerializerOptions WireOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
+
+        // allowIntegerValues: false - the default JsonStringEnumConverter reads a raw integer
+        // (e.g. "kind":1) just as readily as the named string, which would let a hand-edited or
+        // corrupted manifest silently pick a different LayerKind/ColorModel/etc. than the one its
+        // author wrote and typed as a name. Refused instead, the same way an unnamed value already
+        // is.
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false) },
         RespectNullableAnnotations = true,
     };
 
@@ -151,9 +157,19 @@ public sealed class MenuArchive : IDisposable
         // refusal say "too new" instead of a confusing JSON error about missing fields.
         int version = ReadSchemaVersion(bytes);
         if (!MenuSchema.IsSupported(version, MenuSchema.Current))
-            throw new NotSupportedException(
-                $"Menu manifest declares menuSchemaVersion {version}; this build of nfty supports "
-                + $"up to {MenuSchema.Current}.");
+        {
+            // Below Oldest and above Current are different failures and read differently: nothing
+            // has ever been older than schema 1, so a version below it is a malformed manifest, not
+            // an old Menu this build has merely outgrown support for - the "supports up to N"
+            // phrasing otherwise reads as an invitation to upgrade something that was never valid.
+            string message = version < MenuSchema.Oldest
+                ? $"Menu manifest declares menuSchemaVersion {version}, which is older than the "
+                    + $"oldest schema this build of nfty reads ({MenuSchema.Oldest}); the manifest "
+                    + "is not a valid Menu."
+                : $"Menu manifest declares menuSchemaVersion {version}; this build of nfty supports "
+                    + $"up to {MenuSchema.Current}.";
+            throw new NotSupportedException(message);
+        }
 
         MenuBook? book;
         try
@@ -199,17 +215,44 @@ public sealed class MenuArchive : IDisposable
         if (book.Art is null)
             throw new InvalidDataException("Menu manifest is missing 'art'.");
 
-        // Loose mode legitimately carries a zero-size atlas and no cells - every cell rect IS the
-        // whole image in that mode, per MenuArt's own doc comment - so these two checks apply to
-        // atlas Menus only.
+        // Cells is required in BOTH modes - a loose Menu's rects are the whole image rather than a
+        // sub-rect, but MenuWriter still writes one MenuCell per variant so a reader can treat both
+        // modes through one code path (Cell() and ArtBytes() do not branch on Mode). A manifest
+        // missing the key entirely deserializes this to null (RespectRequiredConstructorParameters
+        // is off - see WireOptions), and MenuArchive's own constructor foreaches over it
+        // unconditionally, so an unchecked null here reached the caller as a bare
+        // NullReferenceException instead of a named refusal.
+        if (book.Art.Cells is null)
+            throw new InvalidDataException("Menu manifest's 'art' is missing 'cells'.");
+
+        // Loose mode legitimately carries a zero-size atlas - every cell rect IS the whole image in
+        // that mode, per MenuArt's own doc comment - so these two checks apply to atlas Menus only.
         if (book.Art.Mode == MenuArtMode.Atlas)
         {
             if (book.Art.AtlasWidth <= 0 || book.Art.AtlasHeight <= 0)
                 throw new InvalidDataException(
                     "Menu manifest's 'art' is atlas mode but 'atlasWidth'/'atlasHeight' are not "
                     + "positive.");
-            if (book.Art.Cells is null || book.Art.Cells.Count == 0)
+            if (book.Art.Cells.Count == 0)
                 throw new InvalidDataException("Menu manifest's 'art' is atlas mode but 'cells' is empty.");
+        }
+
+        // Per-recipe members a malformed manifest can omit the same way - each reached a bare
+        // NullReferenceException downstream (MenuArchive's own constructor foreaches Layers;
+        // AbsentPercentOf's dictionary lookup needs AbsentPercent; Ticketer walks LayerOrder and
+        // Rules) rather than naming which recipe and which field was missing.
+        foreach (var recipe in book.Recipes)
+        {
+            if (recipe.Id is null)
+                throw new InvalidDataException("A recipe in the Menu manifest is missing 'id'.");
+            if (recipe.LayerOrder is null)
+                throw new InvalidDataException($"Recipe '{recipe.Id}' is missing 'layerOrder'.");
+            if (recipe.Layers is null)
+                throw new InvalidDataException($"Recipe '{recipe.Id}' is missing 'layers'.");
+            if (recipe.Rules is null)
+                throw new InvalidDataException($"Recipe '{recipe.Id}' is missing 'rules'.");
+            if (recipe.AbsentPercent is null)
+                throw new InvalidDataException($"Recipe '{recipe.Id}' is missing 'absentPercent'.");
         }
     }
 
@@ -220,7 +263,17 @@ public sealed class MenuArchive : IDisposable
             using var doc = JsonDocument.Parse(manifestBytes);
             if (!doc.RootElement.TryGetProperty("menuSchemaVersion", out var v))
                 throw new InvalidDataException("manifest.json is missing menuSchemaVersion.");
-            return v.GetInt32();
+
+            // v.GetInt32() on a non-number JsonElement throws InvalidOperationException, which the
+            // JsonException catch below does not see - so a manifest carrying
+            // "menuSchemaVersion":"1" (a string, not a number) reached the caller as a bare,
+            // unnamed InvalidOperationException instead of the same InvalidDataException every
+            // other malformed-manifest case throws. TryGetInt32 never throws: it reports false for
+            // a non-number element and for a number with a fractional or out-of-range value alike.
+            if (v.ValueKind != JsonValueKind.Number || !v.TryGetInt32(out int version))
+                throw new InvalidDataException(
+                    "manifest.json's menuSchemaVersion must be a whole number.");
+            return version;
         }
         catch (JsonException ex)
         {
