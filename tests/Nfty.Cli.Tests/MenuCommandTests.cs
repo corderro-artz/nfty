@@ -240,6 +240,109 @@ public class MenuCommandTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    // --- menu carries a .cbk's depth maps and 2D-only flag through the real CLI pipeline ---
+
+    /// <summary>The same one-recipe/two-layer shape as <see cref="WriteCookBook"/>, except "badge"'s
+    /// one variant carries a painted, non-flat <see cref="DepthMap"/> (front=42, back=99 at (0,0),
+    /// fully opaque so the writer's zero-over-transparency rule leaves it untouched), and "aura"'s
+    /// variant carries one partially-transparent pixel — so writing this book through the real
+    /// <c>menu</c> command exercises the whole <c>CookBookArchive.Write</c> → <c>.Read</c> →
+    /// <c>MenuWriter.Write</c> chain a user's CLI invocation actually runs, not a shortcut into
+    /// <c>MenuWriter</c> alone.</summary>
+    private static string WriteCookBookWithDepthAndPartialAlpha(string dir)
+    {
+        using var glow = new Image<Rgba32>(2, 2, new Rgba32(200, 200, 200, 128)); // partial alpha
+        using var mark = new Image<Rgba32>(2, 2, new Rgba32(10, 20, 30, 255)); // opaque - depth survives
+
+        var aura = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest(
+                Id: "aura",
+                Name: "Aura",
+                Kind: LayerKind.Dynamic,
+                Colorization: new Colorization(
+                    Model: ColorModel.Hsv,
+                    HueQuantize: 12,
+                    SatQuantize: 4,
+                    Entries: [new ColorEntry(Weight: 1, Range: new ColorRange(0, 360, 40, 100), Fixed: null)]),
+                Variants: [new Variant("glow", "Glow", Weight: 1)]),
+            VariantImages = new Dictionary<string, Image<Rgba32>> { ["glow"] = glow },
+        };
+        var badge = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest(
+                Id: "badge",
+                Name: "Badge",
+                Kind: LayerKind.Custom,
+                Colorization: null,
+                Variants: [new Variant("mark", "Mark", Weight: 1)]),
+            VariantImages = new Dictionary<string, Image<Rgba32>> { ["mark"] = mark },
+            Depths = new Dictionary<string, DepthMap> { ["mark"] = DepthMap.Flat(2, 2).With(0, 0, 42, 99) },
+        };
+
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("cat", "Cat", LayerOrder: ["aura", "badge"], Rules: []),
+            Ingredients = [aura, badge],
+        };
+
+        var path = Path.Combine(dir, "book.cbk");
+        var cookbook = new CookBookManifest(
+            Id: "cb",
+            Name: "VaporPets",
+            Canvas: new Dimensions(2, 2),
+            Collection: new Collection("VaporPets", "test fixture", "VP"),
+            RecipeWeights: new Dictionary<string, double> { ["cat"] = 100 });
+        CookBookArchive.Write(path, cookbook, [recipe]);
+        return path;
+    }
+
+    [Fact]
+    public void Menu_written_by_the_cli_carries_a_cbk_variants_depth_map_and_partial_alpha_flag()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            var cbk = WriteCookBookWithDepthAndPartialAlpha(dir);
+            var mnu = Path.Combine(dir, "game.mnu");
+
+            Run("menu", cbk, "--out", mnu);
+
+            using var menu = MenuArchive.Open(mnu);
+            Assert.True(menu.Book.PartialAlpha);
+
+            string key = MenuBook.CellKey("cat", "badge", "mark");
+            var map = menu.Depth(key);
+            Assert.NotNull(map);
+            Assert.Equal(42, map!.Front(0, 0));
+            Assert.Equal(99, map.Back(0, 0));
+
+            // "aura"'s variant carries no depth data - null, not a flat map, is what the real
+            // pipeline must report for it too.
+            string auraKey = MenuBook.CellKey("cat", "aura", "glow");
+            Assert.Null(menu.Depth(auraKey));
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void Menu_written_by_the_cli_has_no_depth_or_partial_alpha_when_the_cbk_has_neither()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            var cbk = WriteCookBook(dir);
+            var mnu = Path.Combine(dir, "game.mnu");
+
+            Run("menu", cbk, "--out", mnu);
+
+            using var menu = MenuArchive.Open(mnu);
+            Assert.False(menu.Book.PartialAlpha);
+            Assert.Null(menu.Depth(MenuBook.CellKey("cat", "badge", "mark")));
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
     [Fact]
     public void Inspect_voxel_on_a_menu_is_refused_and_points_to_the_source_cookbook()
     {
