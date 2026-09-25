@@ -21,9 +21,6 @@ public sealed record KitchenContents(
 {
     /// <summary>Nothing has been put in this Kitchen yet — a fresh workspace, not a broken one.</summary>
     public bool IsEmpty => CookBooks.Count == 0 && Recipes.Count == 0 && Ingredients.Count == 0;
-
-    /// <summary>Total items across all three kinds.</summary>
-    public int ItemCount => CookBooks.Count + Recipes.Count + Ingredients.Count;
 }
 
 /// <summary>Why <see cref="Kitchen.TryFindIn"/> did or did not find a workspace.</summary>
@@ -99,15 +96,6 @@ public static class Kitchen
             Scan(dir, Archives.RecipeExtension),
             Scan(dir, Archives.IngredientExtension));
     }
-
-    /// <summary>The .ktn a folder is a workspace for, or null when it is not one. Convenience over
-    /// <see cref="TryFindIn"/> for callers that genuinely do not care <em>why</em> — most do, since
-    /// "this folder is not a workspace" and "this folder holds two of them" need different things
-    /// said to the user.</summary>
-    /// <param name="directory">The folder to look in.</param>
-    /// <returns>The path to the single <c>.ktn</c>, or null.</returns>
-    public static string? FindIn(string directory) =>
-        TryFindIn(directory) is (KitchenLookup.Found, var path) ? path : null;
 
     /// <summary>
     /// Looks for the <c>.ktn</c> a folder is a workspace for, and says which of the three outcomes

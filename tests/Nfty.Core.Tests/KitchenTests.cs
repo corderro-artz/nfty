@@ -158,7 +158,6 @@ public class KitchenTests
         var contents = Kitchen.Open(path);
 
         Assert.True(contents.IsEmpty);
-        Assert.Equal(0, contents.ItemCount);
         Assert.Empty(contents.CookBooks);
         Assert.Empty(contents.Recipes);
         Assert.Empty(contents.Ingredients);
@@ -179,7 +178,6 @@ public class KitchenTests
         Assert.Single(contents.CookBooks);
         Assert.Single(contents.Recipes);
         Assert.Equal(2, contents.Ingredients.Count);
-        Assert.Equal(4, contents.ItemCount);
         Assert.False(contents.IsEmpty);
         Assert.Equal(dir, contents.Directory);
     }
@@ -293,7 +291,7 @@ public class KitchenTests
         Assert.Equal(sync.Manifest, async.Manifest);
         Assert.Equal(sync.CookBooks, async.CookBooks);
         Assert.Equal(sync.Ingredients, async.Ingredients);
-        Assert.Equal(sync.ItemCount, async.ItemCount);
+        Assert.Equal(sync.Recipes, async.Recipes);
     }
 
     /// <summary>Listing returns PATHS, so opening a workspace does not decode every PNG in it.</summary>
@@ -308,40 +306,6 @@ public class KitchenTests
 
         Assert.All(contents.CookBooks, p => Assert.True(File.Exists(p)));
         Assert.IsType<string>(Assert.Single(contents.CookBooks));
-    }
-
-    // ---- finding the Kitchen for a folder --------------------------------------------------------
-
-    [Fact]
-    public void FindIn_returns_the_single_kitchen_in_a_folder()
-    {
-        var dir = NewDir();
-        var path = MakeKitchen(dir);
-        Assert.Equal(path, Kitchen.FindIn(dir));
-    }
-
-    [Fact]
-    public void FindIn_returns_null_for_a_plain_folder()
-    {
-        Assert.Null(Kitchen.FindIn(NewDir()));
-    }
-
-    [Fact]
-    public void FindIn_returns_null_for_a_folder_that_does_not_exist()
-    {
-        Assert.Null(Kitchen.FindIn(Path.Combine(NewDir(), "nope")));
-    }
-
-    /// <summary>Two .ktn files in one folder is ambiguous, not "first one wins": picking silently
-    /// would give two Kitchens identical contents and neither would be wrong.</summary>
-    [Fact]
-    public void FindIn_refuses_to_guess_between_two_kitchens()
-    {
-        var dir = NewDir();
-        MakeKitchen(dir, "One");
-        MakeKitchen(dir, "Two");
-
-        Assert.Null(Kitchen.FindIn(dir));
     }
 
     // ---- extension registry ----------------------------------------------------------------------

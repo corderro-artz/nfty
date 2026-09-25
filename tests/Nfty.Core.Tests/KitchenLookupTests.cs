@@ -31,7 +31,6 @@ public class KitchenLookupTests
 
         Assert.Equal(KitchenLookup.Found, outcome);
         Assert.Equal(path, found);
-        Assert.Equal(path, Kitchen.FindIn(dir));
     }
 
     [Fact]
@@ -64,7 +63,6 @@ public class KitchenLookupTests
 
         Assert.Equal(KitchenLookup.Ambiguous, outcome);
         Assert.Null(found);
-        Assert.Null(Kitchen.FindIn(dir));   // the old shape still behaves as before
     }
 
     // ---- the listing --------------------------------------------------------------------------
