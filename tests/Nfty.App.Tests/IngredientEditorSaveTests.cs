@@ -75,6 +75,64 @@ public class IngredientEditorSaveTests
         finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
     }
 
+    // As OnDisk(kind), but the ingredient's one variant carries a depth map before the book is
+    // written — so a save that only paints a pixel can be checked for whether it kept it.
+    private static (string path, CookBookSession session, LoadedRecipe recipe, LoadedIngredient ing) OnDiskWithDepth()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        var path = Path.Combine(dir, "book.cbk");
+        var coloriz = new Colorization(ColorModel.Hsv, 12, 4,
+            new[] { new ColorEntry(1, new ColorRange(0, 360, 40, 100), null) });
+        var depth = DepthMap.Flat(8, 8).With(1, 1, front: 11, back: 22);
+        var ing = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("aura", "Aura", LayerKind.Dynamic, coloriz,
+                new[] { new Variant("glow", "Glow", 1) }),
+            // Opaque, not the usual blank/transparent test fixture: a depth map is zeroed over any
+            // transparent pixel on write, and (1,1) here must survive to prove the carry-through.
+            VariantImages = new Dictionary<string, Image<Rgba32>>
+            {
+                ["glow"] = new(8, 8, new Rgba32(128, 128, 128, 255)),
+            },
+            Depths = new Dictionary<string, DepthMap> { ["glow"] = depth },
+        };
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("cat", "Cat", new[] { "aura" }, System.Array.Empty<IncompatibilityRule>()),
+            Ingredients = new[] { ing },
+        };
+        var manifest = new CookBookManifest("cb", "Book", new Dimensions(8, 8),
+            new Collection("Book", "", "B"), new Dictionary<string, double> { ["cat"] = 100 });
+        CookBookArchive.Write(path, manifest, new[] { recipe });
+        var book = CookBookArchive.Read(path);      // fresh graph with real images + hash + depths
+        var session = new CookBookSession();
+        session.Open(book, path);
+        var r = book.Recipes[0];
+        return (path, session, r, r.Ingredients[0]);
+    }
+
+    [AvaloniaFact]
+    public async Task Saving_a_painted_pixel_keeps_the_variants_depth_map()
+    {
+        var (path, session, recipe, ing) = OnDiskWithDepth();
+        try
+        {
+            var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
+                new FakeNav(), session, new FakeDialogs(), new FilePickerService());
+            vm.ActiveTool = EditorTool.Fill; vm.BrushValue = 200;
+            vm.ApplyToolStroke(new[] { (0, 0) });           // one edited pixel; depth map untouched by the paint
+            await vm.SaveCommand.ExecuteAsync(null);
+            vm.Dispose();
+
+            using var reread = CookBookArchive.Read(path);
+            var rip = reread.Recipes[0].Ingredients.Single(i => i.Manifest.Id == "aura");
+            Assert.True(rip.Depths.ContainsKey("glow"));
+            Assert.Equal(11, rip.Depths["glow"].Front(1, 1));
+            Assert.Equal(22, rip.Depths["glow"].Back(1, 1));
+        }
+        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
+    }
+
     [AvaloniaFact]
     public void CanSave_is_gated_by_dirty_source_and_kind()
     {

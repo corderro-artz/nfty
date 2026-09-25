@@ -191,10 +191,14 @@ public static class CookBookEdits
         var images = ingredient.VariantImages
             .Where(kv => kv.Key != variantId)
             .ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal);
+        var depths = ingredient.Depths
+            .Where(kv => kv.Key != variantId)
+            .ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal);
         var trimmed = new LoadedIngredient
         {
             Manifest = ingredient.Manifest with { Variants = variants },
             VariantImages = images,
+            Depths = depths,
         };
 
         var recipes = book.Recipes.Select(r =>

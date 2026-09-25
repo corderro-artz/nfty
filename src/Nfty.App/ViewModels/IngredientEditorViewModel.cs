@@ -1505,7 +1505,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
                 var tmp = loosePath + ".tmp";
                 try
                 {
-                    await IngredientArchive.WriteAsync(tmp, manifest, images);
+                    await IngredientArchive.WriteAsync(tmp, manifest, images, _ing.Depths);
                     File.Move(tmp, loosePath, overwrite: true);
                 }
                 finally
@@ -1519,7 +1519,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
 
             // Splice a loaded ingredient over the draft's export into the live book (we own its images
             // until Upsert adopts them), then persist (temp write → atomic move → rehash → Replace).
-            var newIng = new LoadedIngredient { Manifest = manifest, VariantImages = images };
+            var newIng = new LoadedIngredient { Manifest = manifest, VariantImages = images, Depths = _ing.Depths };
             var book2 = CookBookEdits.UpsertIngredient(_session.Current!, _recipe.Manifest.Id, newIng);
 
             // Only a save that REPLACED this ingredient orphans its images. Saving color art as a

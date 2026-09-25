@@ -54,7 +54,7 @@ public static class LooseWorkspace
         var tmp = path + ".tmp";
         try
         {
-            IngredientArchive.Write(tmp, ing.Manifest, ing.VariantImages);
+            IngredientArchive.Write(tmp, ing.Manifest, ing.VariantImages, ing.Depths);
             File.Move(tmp, path, overwrite: true);
         }
         finally

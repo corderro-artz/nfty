@@ -292,6 +292,45 @@ public class AuthoringCommandsTests
     }
 
     [Fact]
+    public void Add_variant_keeps_the_existing_variants_depth_map()
+    {
+        var tmp = Directory.CreateTempSubdirectory();
+        try
+        {
+            string ings = Path.Combine(tmp.FullName, "ings");
+            Directory.CreateDirectory(ings);
+            BuildIgt(ings, "aura", LayerKind.Dynamic, Hsv(), "glow");
+            string igt = Path.Combine(ings, "aura.igt");
+
+            // BuildIgt writes with no depth data (CLAUDE.md: `new ingredient` passes DepthMaps.None
+            // explicitly). Add one to the existing "glow" variant directly, the way an earlier Rise
+            // authoring step would have.
+            using (var existing = IngredientArchive.Read(igt))
+            {
+                var depth = DepthMap.Flat(4, 4).With(2, 1, front: 33, back: 44);
+                string tmp2 = igt + ".tmp";
+                IngredientArchive.Write(tmp2, existing.Manifest, existing.VariantImages,
+                    new Dictionary<string, DepthMap> { ["glow"] = depth });
+                File.Move(tmp2, igt, overwrite: true);
+            }
+
+            string sparkPng = Path.Combine(tmp.FullName, "spark2.png");
+            using (var img = new Image<Rgba32>(4, 4, new Rgba32(150, 150, 150, 255)))
+                img.Save(sparkPng, new PngEncoder());
+
+            int code = Run("add", "variant", igt, "--id", "spark", "--name", "Spark",
+                "--weight", "2", "--image", sparkPng);
+            Assert.Equal(0, code);
+
+            using var loaded = IngredientArchive.Read(igt);
+            Assert.True(loaded.Depths.ContainsKey("glow"));
+            Assert.Equal(33, loaded.Depths["glow"].Front(2, 1));
+            Assert.Equal(44, loaded.Depths["glow"].Back(2, 1));
+        }
+        finally { tmp.Delete(recursive: true); }
+    }
+
+    [Fact]
     public void Add_variant_rejects_a_duplicate_id()
     {
         var tmp = Directory.CreateTempSubdirectory();

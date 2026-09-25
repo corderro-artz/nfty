@@ -98,7 +98,7 @@ public static partial class CommandFactory
                 var problems = Validator.ValidateIngredient(ing);
                 if (problems.Count > 0) { Report(problems); return 1; }
 
-                IngredientArchive.Write(parse.GetValue(outPath)!, m, loaded);
+                IngredientArchive.Write(parse.GetValue(outPath)!, m, loaded, DepthMaps.None);
                 Console.WriteLine($"Wrote {parse.GetValue(outPath)} ({loaded.Count} variants)");
                 return 0;
             }
@@ -506,7 +506,7 @@ public static partial class CommandFactory
                 // file now. IngredientArchive.Write opens in ZipArchiveMode.Create, which throws
                 // if the target already exists, so we write to a sibling temp file and move it
                 // into place rather than deleting the original first.
-                WriteReplacing(path, p => IngredientArchive.Write(p, manifest, images));
+                WriteReplacing(path, p => IngredientArchive.Write(p, manifest, images, existing.Depths));
                 Console.WriteLine($"Added variant '{vid}' to {path}");
                 return 0;
             }
