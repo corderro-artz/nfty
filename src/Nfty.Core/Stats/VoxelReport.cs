@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using Nfty.Core.Formats;
+using Nfty.Core.Imaging;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
@@ -95,8 +96,7 @@ public static class VoxelReport
                 Span<Rgba32> row = accessor.GetRowSpan(y);
                 for (int x = 0; x < row.Length; x++)
                 {
-                    byte a = row[x].A;
-                    if (a != 0 && a != 255) partial++;
+                    if (Opacity.IsPartial(row[x])) partial++;
                 }
             }
         });
