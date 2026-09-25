@@ -44,7 +44,7 @@ public class PlatingTests
             new Dictionary<string, double>());
         string key = MenuBook.CellKey(recipeId, ingredientId, "a");
         var art = new MenuArt(MenuArtMode.Loose, 0, 0, [new MenuCell(key, 0, 0, 2, 2)]);
-        var book = new MenuBook(1, null, new Dimensions(2, 2), "C", "SYM", [recipe], art);
+        var book = new MenuBook(MenuSchema.Current, null, new Dimensions(2, 2), "C", "SYM", [recipe], art);
         return OpenMenu(book);
     }
 

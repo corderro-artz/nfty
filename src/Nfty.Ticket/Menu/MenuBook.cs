@@ -77,6 +77,13 @@ public record MenuRecipe(
 /// <param name="CollectionSymbol">The collection's symbol.</param>
 /// <param name="Recipes">Its recipes.</param>
 /// <param name="Art">Where the art is.</param>
+/// <param name="PartialAlpha">Whether any variant image anywhere in the book carries partial alpha —
+/// the same definition <c>Nfty.Core.Imaging.Opacity</c> stamps onto every archive manifest,
+/// projected here so a runtime host can tell 2D-only art (safe to lift with depth maps alone) from
+/// art with a transparency gradient Rise cannot resolve, with no <c>.cbk</c> present. Defaults to
+/// <c>false</c> so schema 1 wire data — which predates this field — reads as "no partial alpha
+/// recorded" rather than failing to deserialize; a Menu at schema 2 or above always carries a real,
+/// stamped value.</param>
 /// <remarks>
 /// <see cref="MenuSchemaVersion"/> is named — and therefore written and read — as
 /// <c>menuSchemaVersion</c> rather than the plain <c>schemaVersion</c> a member called
@@ -97,7 +104,8 @@ public record MenuBook(
     string CollectionName,
     string CollectionSymbol,
     IReadOnlyList<MenuRecipe> Recipes,
-    MenuArt Art)
+    MenuArt Art,
+    bool PartialAlpha = false)
 {
     /// <summary>
     /// The key one variant's art is stored under.

@@ -154,12 +154,15 @@ public class MenuArchiveTests
     [Fact]
     public void The_schema_gate_accepts_older_and_refuses_newer()
     {
-        // `current` is a parameter so the RANGE is testable while Current is still 1 — the same
-        // argument Schema.IsSupported makes about itself.
-        Assert.True(MenuSchema.IsSupported(1, current: 3));
-        Assert.True(MenuSchema.IsSupported(3, current: 3));
-        Assert.False(MenuSchema.IsSupported(4, current: 3));
-        Assert.False(MenuSchema.IsSupported(0, current: 3));
+        // `current` is a parameter so the RANGE above Oldest is testable independent of Current's
+        // real value — the same argument Schema.IsSupported makes about itself. Oldest is NOT a
+        // parameter of IsSupported, so this is pinned against the real constant (2, as of the
+        // depth-map/partialAlpha schema bump) rather than a hardcoded 1 that would silently stop
+        // meaning "the oldest readable version" the next time Oldest moves.
+        Assert.True(MenuSchema.IsSupported(MenuSchema.Oldest, current: MenuSchema.Oldest + 2));
+        Assert.True(MenuSchema.IsSupported(MenuSchema.Oldest + 2, current: MenuSchema.Oldest + 2));
+        Assert.False(MenuSchema.IsSupported(MenuSchema.Oldest + 3, current: MenuSchema.Oldest + 2));
+        Assert.False(MenuSchema.IsSupported(MenuSchema.Oldest - 1, current: MenuSchema.Oldest + 2));
     }
 
     [Fact]
@@ -256,6 +259,84 @@ public class MenuArchiveTests
         byte[] bytes = ZipWith("""{"menuSchemaVersion":0}""");
         var ex = Assert.Throws<NotSupportedException>(() => MenuArchive.Open(new MemoryStream(bytes)));
         Assert.DoesNotContain("supports up to", ex.Message, StringComparison.Ordinal);
+    }
+
+    // --- schema 2: depth maps and the 2D-only flag ---
+
+    [Fact]
+    public void A_menu_from_schema_1_is_refused_and_names_1()
+    {
+        // Schema 1 predates depth maps and the partialAlpha flag; Oldest moved to 2 when those
+        // became load-bearing, so a schema-1 manifest is now too OLD, not malformed — but the
+        // refusal must still name the version it saw.
+        byte[] bytes = ZipWith("""{"menuSchemaVersion":1}""");
+        var ex = Assert.Throws<NotSupportedException>(() => MenuArchive.Open(new MemoryStream(bytes)));
+        Assert.Contains("1", ex.Message, StringComparison.Ordinal);
+    }
+
+    private static byte[] ZipWithManifestAndEntry(string manifestJson, string entryName, byte[] entryBytes)
+    {
+        using var ms = new MemoryStream();
+        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            using (var w = new StreamWriter(zip.CreateEntry("manifest.json").Open(), Encoding.UTF8))
+                w.Write(manifestJson);
+            using var es = zip.CreateEntry(entryName).Open();
+            es.Write(entryBytes, 0, entryBytes.Length);
+        }
+        return ms.ToArray();
+    }
+
+    private static string LooseManifestWithOneCell(string key, int width, int height) =>
+        "{\"menuSchemaVersion\":" + MenuSchema.Current.ToString(CultureInfo.InvariantCulture)
+        + ",\"canvas\":{\"width\":2,\"height\":2},\"collectionName\":\"C\","
+        + "\"collectionSymbol\":\"S\",\"recipes\":[],"
+        + "\"art\":{\"mode\":\"loose\",\"atlasWidth\":0,\"atlasHeight\":0,"
+        + $"\"cells\":[{{\"key\":\"{key}\",\"x\":0,\"y\":0,\"width\":{width},\"height\":{height}}}]}}}}";
+
+    [Fact]
+    public void A_cell_with_no_depth_entry_returns_null()
+    {
+        byte[] bytes = ZipWith(LooseManifestWithOneCell("cat/bg/a", 2, 2));
+        using var menu = MenuArchive.Open(new MemoryStream(bytes));
+        Assert.Null(menu.Depth("cat/bg/a"));
+    }
+
+    [Fact]
+    public void A_cell_with_a_depth_entry_returns_a_map_sized_to_the_cell()
+    {
+        byte[] depthBytes = [10, 20, 0, 0, 0, 0, 0, 0]; // front=10, back=20 at (0,0); rest flat
+        byte[] bytes = ZipWithManifestAndEntry(
+            LooseManifestWithOneCell("cat/bg/a", 2, 2), "depth/cat/bg/a.dep", depthBytes);
+
+        using var menu = MenuArchive.Open(new MemoryStream(bytes));
+        var map = menu.Depth("cat/bg/a");
+
+        Assert.NotNull(map);
+        Assert.Equal(2, map!.Width);
+        Assert.Equal(2, map.Height);
+        Assert.Equal(10, map.Front(0, 0));
+        Assert.Equal(20, map.Back(0, 0));
+    }
+
+    [Fact]
+    public void A_depth_entry_of_the_wrong_length_names_the_key()
+    {
+        byte[] bytes = ZipWithManifestAndEntry(
+            LooseManifestWithOneCell("cat/bg/a", 2, 2), "depth/cat/bg/a.dep", [1, 2, 3]);
+
+        using var menu = MenuArchive.Open(new MemoryStream(bytes));
+        var ex = Assert.Throws<InvalidDataException>(() => menu.Depth("cat/bg/a"));
+        Assert.Contains("cat/bg/a", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Asking_for_the_depth_of_a_cell_the_menu_does_not_have_names_the_key()
+    {
+        byte[] bytes = ZipWith(LooseManifestWithOneCell("cat/bg/a", 2, 2));
+        using var menu = MenuArchive.Open(new MemoryStream(bytes));
+        var ex = Assert.Throws<KeyNotFoundException>(() => menu.Depth("nope/bg/a"));
+        Assert.Equal("No cell for 'nope/bg/a'.", ex.Message);
     }
 
     [Fact]

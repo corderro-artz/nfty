@@ -1,3 +1,4 @@
+using Nfty.Core.Imaging;
 using Nfty.Core.Model;
 using Nfty.Ticket;
 
@@ -18,15 +19,23 @@ public static class MenuProjection
     public static MenuBook From(LoadedCookBook book)
     {
         ArgumentNullException.ThrowIfNull(book);
-        return From(PeekedCookBook.Of(book), book.SourceSha256);
+        return From(PeekedCookBook.Of(book), book.SourceSha256, Opacity.HasPartialAlpha(book));
     }
 
     /// <summary>Projects a manifest-only book.</summary>
     /// <param name="book">The peeked book.</param>
     /// <returns>Its image-free form.</returns>
-    public static MenuBook From(PeekedCookBook book) => From(book, null);
+    /// <remarks>
+    /// <see cref="MenuBook.PartialAlpha"/> is taken straight from <paramref name="book"/>'s own
+    /// stored <see cref="CookBookManifest.PartialAlpha"/> here, unlike the <see cref="LoadedCookBook"/>
+    /// overload, which recomputes it from pixels. A peeked book decodes no image — that is the whole
+    /// point of <see cref="ArchivePeek"/> — so there are no pixels to recompute from, and the same
+    /// "trust the writer's stamp" rule <see cref="ArchivePeek"/> already follows for every other
+    /// flag applies here too.
+    /// </remarks>
+    public static MenuBook From(PeekedCookBook book) => From(book, null, book.Manifest.PartialAlpha);
 
-    private static MenuBook From(PeekedCookBook book, string? sha)
+    private static MenuBook From(PeekedCookBook book, string? sha, bool partialAlpha)
     {
         ArgumentNullException.ThrowIfNull(book);
 
@@ -53,6 +62,7 @@ public static class MenuProjection
             book.Manifest.Collection.Name, book.Manifest.Collection.Symbol,
             recipes,
             // Art is filled in by a later task's MenuWriter; a projection for rolling alone needs none.
-            new MenuArt(MenuArtMode.Loose, 0, 0, []));
+            new MenuArt(MenuArtMode.Loose, 0, 0, []),
+            partialAlpha);
     }
 }

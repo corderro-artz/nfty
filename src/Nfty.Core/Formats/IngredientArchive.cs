@@ -27,7 +27,15 @@ public static class IngredientArchive
     /// <param name="map">The depth map as authored, before transparency is zeroed.</param>
     /// <exception cref="ArgumentException"><paramref name="map"/>'s dimensions differ from
     /// <paramref name="image"/>'s — a caller bug, not a file problem.</exception>
-    private static byte[]? DepthBytesToWrite(string ingredientId, string variantId,
+    /// <remarks>
+    /// <b>Internal, not private</b> — <c>MenuWriter</c> (<c>Nfty.Core.Publish</c>) writes the same
+    /// <c>depth/</c> entries into a <c>.mnu</c> and must apply the exact same zero-over-transparency
+    /// rule; a map already zeroed by an <c>.igt</c> write is not something a Menu write can rely on
+    /// (the Menu is projected straight from the in-memory <see cref="LoadedIngredient.Depths"/>, not
+    /// from a round trip through a written <c>.igt</c>), so the rule has to run again either way.
+    /// Shared here rather than copy-pasted so the two writers cannot drift on the definition.
+    /// </remarks>
+    internal static byte[]? DepthBytesToWrite(string ingredientId, string variantId,
         Image<Rgba32> image, DepthMap map)
     {
         if (map.Width != image.Width || map.Height != image.Height)

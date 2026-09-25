@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Nfty.Core.Model;
 
 namespace Nfty.Ticket;
 
@@ -158,14 +159,16 @@ public sealed class MenuArchive : IDisposable
         int version = ReadSchemaVersion(bytes);
         if (!MenuSchema.IsSupported(version, MenuSchema.Current))
         {
-            // Below Oldest and above Current are different failures and read differently: nothing
-            // has ever been older than schema 1, so a version below it is a malformed manifest, not
-            // an old Menu this build has merely outgrown support for - the "supports up to N"
-            // phrasing otherwise reads as an invitation to upgrade something that was never valid.
+            // Below Oldest and above Current are different failures and read differently: a version
+            // below Oldest is either a malformed manifest or a real, older Menu (schema 1, from
+            // before depth maps and the 2D-only flag) written by a build of nfty this one no longer
+            // reads - either way, "supports up to N" reads as an invitation to upgrade something
+            // that might never have been valid at all, so that phrasing is reserved for the other
+            // branch.
             string message = version < MenuSchema.Oldest
-                ? $"Menu manifest declares menuSchemaVersion {version}, which is older than the "
-                    + $"oldest schema this build of nfty reads ({MenuSchema.Oldest}); the manifest "
-                    + "is not a valid Menu."
+                ? $"Menu manifest declares menuSchemaVersion {version}, older than the oldest schema "
+                    + $"this build of nfty reads ({MenuSchema.Oldest}); it is either malformed or was "
+                    + "written by a build of nfty this one no longer reads."
                 : $"Menu manifest declares menuSchemaVersion {version}; this build of nfty supports "
                     + $"up to {MenuSchema.Current}.";
             throw new NotSupportedException(message);
@@ -323,6 +326,51 @@ public sealed class MenuArchive : IDisposable
         return _cellsByKey.TryGetValue(cellKey, out var cell)
             ? cell
             : throw new KeyNotFoundException($"No cell for '{cellKey}'.");
+    }
+
+    /// <summary>
+    /// One variant's depth map, when it has one.
+    /// </summary>
+    /// <param name="cellKey">A key from <see cref="MenuBook.CellKey"/>.</param>
+    /// <returns><c>null</c> when the variant carries no depth data — "paper" for the Rise feature —
+    /// otherwise a <see cref="DepthMap"/> sized to that cell's <see cref="MenuCell.Width"/> and
+    /// <see cref="MenuCell.Height"/>.</returns>
+    /// <exception cref="KeyNotFoundException">The Menu has no cell for <paramref name="cellKey"/> —
+    /// the same check, and the same message, <see cref="Cell"/> makes.</exception>
+    /// <exception cref="InvalidDataException">A stored depth entry's length disagrees with the
+    /// cell's dimensions, naming the key.</exception>
+    /// <remarks>
+    /// <b>Read lazily, like <see cref="ArtBytes"/></b> — not eagerly at <see cref="Open(string)"/> —
+    /// for the same reason: most variants carry no depth data at all, and this assembly stays
+    /// package-free, so nothing here decodes a pixel either way; a <c>.dep</c> entry is already raw
+    /// bytes in the exact layout <see cref="DepthMap.FromBytes"/> expects.
+    /// </remarks>
+    public DepthMap? Depth(string cellKey)
+    {
+        ArgumentNullException.ThrowIfNull(cellKey);
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        if (!_cellsByKey.TryGetValue(cellKey, out var cell))
+            throw new KeyNotFoundException($"No cell for '{cellKey}'.");
+
+        var entry = _zip.GetEntry("depth/" + cellKey + ".dep");
+        if (entry is null) return null;
+
+        byte[] bytes;
+        using (var s = entry.Open())
+        using (var ms = new MemoryStream())
+        {
+            s.CopyTo(ms);
+            bytes = ms.ToArray();
+        }
+
+        int expected = cell.Width * cell.Height * 2;
+        if (bytes.Length != expected)
+            throw new InvalidDataException(
+                $"Menu depth entry for '{cellKey}' is {bytes.Length} bytes; its "
+                + $"{cell.Width}x{cell.Height} cell needs {expected}.");
+
+        return DepthMap.FromBytes(cell.Width, cell.Height, bytes);
     }
 
     /// <summary>

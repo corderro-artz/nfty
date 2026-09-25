@@ -7,11 +7,14 @@ public static class MenuSchema
 {
     /// <summary>The schema version this build WRITES. It reads this and every earlier one — see
     /// <see cref="IsSupported"/>.</summary>
-    public const int Current = 1;
+    public const int Current = 2;
 
-    /// <summary>The oldest schema this build can read. Nothing predates 1, so a lower number is a
-    /// malformed Menu rather than an old one.</summary>
-    public const int Oldest = 1;
+    /// <summary>The oldest schema this build can read. A version below this is either a malformed
+    /// manifest or a real, older Menu — schema 1, from before depth maps and the 2D-only
+    /// (<c>partialAlpha</c>) flag existed — written by a build of nfty this one no longer reads.
+    /// Both cases are refused the same way (see <see cref="IsSupported"/>); this build does not try
+    /// to tell them apart, since neither is readable here.</summary>
+    public const int Oldest = 2;
 
     /// <summary>Whether <paramref name="version"/> is readable by a build whose newest schema is
     /// <paramref name="current"/>.

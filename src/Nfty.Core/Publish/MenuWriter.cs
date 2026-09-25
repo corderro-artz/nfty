@@ -95,6 +95,15 @@ public static class MenuWriter
 
         // Encode every variant to PNG bytes exactly once, keyed by its cell key.
         var encoded = new Dictionary<string, byte[]>(total, StringComparer.Ordinal);
+
+        // One depth/ entry's bytes per cell key whose variant has a non-flat depth map. Computed
+        // here, alongside the PNG encode, rather than by opening what MenuWriter itself just wrote:
+        // the depth-zeroing rule (zero over any pixel that is not fully opaque) must run against
+        // THIS book's pixels regardless of whether they ever passed through an .igt at all — a
+        // book built in memory (a test fixture, a GUI session that never saved) carries a
+        // LoadedIngredient.Depths dictionary that has never been zeroed by any writer.
+        var depthBytesByKey = new Dictionary<string, byte[]>(StringComparer.Ordinal);
+
         int written = 0;
         foreach (var recipe in book.Recipes)
         {
@@ -108,6 +117,13 @@ public static class MenuWriter
                     using var ms = new MemoryStream();
                     await img.SaveAsync(ms, new PngEncoder(), ct).ConfigureAwait(false);
                     encoded[key] = ms.ToArray();
+
+                    if (ing.Depths.TryGetValue(v.Id, out var map))
+                    {
+                        var bytes = IngredientArchive.DepthBytesToWrite(ing.Manifest.Id, v.Id, img, map);
+                        if (bytes is not null) depthBytesByKey[key] = bytes;
+                    }
+
                     written++;
                     progress?.Report(new MenuWriteProgress(written, total, "Encoding art…"));
                 }
@@ -154,6 +170,15 @@ public static class MenuWriter
         using (var zip = new ZipArchive(fileStream, ZipArchiveMode.Create))
         {
             await ArchiveIo.WriteManifestAsync(zip, finished, ct).ConfigureAwait(false);
+
+            // Depth entries are written under the CELL key regardless of art mode - unlike art,
+            // they are never deduped across cells sharing identical pixels, since MenuArchive.Depth
+            // looks one up by the same key Cell() takes (see the type's remarks).
+            foreach (var (key, bytes) in depthBytesByKey)
+            {
+                ct.ThrowIfCancellationRequested();
+                await ArchiveIo.WriteBytesAsync(zip, "depth/" + key + ".dep", bytes, ct).ConfigureAwait(false);
+            }
 
             if (options.Art == MenuArtMode.Atlas)
             {
