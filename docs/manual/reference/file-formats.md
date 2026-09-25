@@ -40,9 +40,10 @@ file in or out with your file manager and the app agrees immediately.
 
 ## Versioning
 
-Every manifest carries a `schemaVersion`. nfty reads its own version and older ones, and **refuses
-anything newer** -- a field a build cannot see could change what the file means, so it stops rather
-than guessing.
+Every manifest carries a `schemaVersion`. nfty reads a range of versions -- its own and some older
+ones -- and **refuses anything outside that range**, older or newer: a field a build cannot see
+could change what the file means, so it stops rather than guessing. The oldest version this build
+still reads is 2; version 1 is no longer supported.
 
 !!! note "Editing a manifest by hand"
 

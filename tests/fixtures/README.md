@@ -12,8 +12,15 @@ instead of failing the test that should have caught it.
 
 If a fixture test fails, the question is *"what did I change about the format?"*, not *"how do I
 refresh the file?"*. A deliberate format change means bumping `Schema.Current`
-(`src/Nfty.Core/Model/Schema.cs`) and adding a *new* fixture alongside this one, so the old
+(`src/Nfty.Ticket/Model/Schema.cs`) and adding a *new* fixture alongside this one, so the old
 version stays covered by whatever compatibility path you write for it.
+
+**Rise, 2026-09-25 is the one deliberate exception to that rule**, not a precedent for the next
+one. The author decided to drop v1 outright — `Schema.Oldest` moved from 1 to 2, no v1 archives
+kept anywhere, see CLAUDE.md — so the three files below were *replaced* with v2 ones, in place,
+rather than a fourth fixture being added beside v1 versions nothing can read any more. From v2
+on, the ordinary rule is back in force: the next format change adds a fixture beside these, it
+does not rewrite them.
 
 ## What's here
 
@@ -34,6 +41,12 @@ archive does:
 
 One incompatibility rule: **`bg=grid` excludes `aura=spark`**.
 
+`aura`'s **`glow`** variant also carries a depth map (`depth/glow.dep`, `.igt`/schema-2 only): every
+solid pixel in the top half is front 2 / back 1, the bottom half is untouched (flat, 0/0) — added
+deliberately when the fixtures were regenerated at v2, so `depth/{variantId}.dep` has one real
+archive covering it. `spark` carries no depth map at all (nothing painted there → nothing written,
+same rule a real `.igt` write follows). See `IngredientArchive.Write`/`DepthMap` for the byte layout.
+
 ## These are placeholders, not art
 
 The images are synthetic: solid fills for the custom layer, vertical grayscale gradients for the
@@ -49,7 +62,13 @@ HSV throughout).
 
 ## Provenance
 
-Written by `CookBookArchive.Write` / `RecipeArchive.Write` / `IngredientArchive.Write` at
-schemaVersion 1, from a throwaway program, on 2026-07-16. The structure above is the complete
+Originally written by `CookBookArchive.Write` / `RecipeArchive.Write` / `IngredientArchive.Write`
+at schemaVersion 1, from a throwaway program, on 2026-07-16.
+
+**Regenerated at schemaVersion 2 on 2026-09-25**, by the author's own decision to drop v1 (Rise
+step 4 — see CLAUDE.md): a one-shot temporary test read the v1 files with the still-v1-reading
+build, added the `glow` depth map described above, and wrote all three back to the same paths
+through the current (v2) writers, before `Schema.Oldest` moved to 2 and the temporary test was
+deleted. Nothing else about the structure changed. The structure above is the complete
 description — `FixtureArchiveTests` asserts every part of it, so the tests double as the spec
 for what these files contain.
