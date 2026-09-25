@@ -1,13 +1,11 @@
 using Nfty.Core.Demo;
 using Nfty.Core.Formats;
 using Nfty.Core.Generation;
-using Nfty.Core.Imaging;
 using Nfty.Core.Model;
 using Nfty.Core.Publish;
 using Nfty.Ticket;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
 
 namespace Nfty.Core.Tests;
 
@@ -69,7 +67,7 @@ public class MenuFidelityTests
                 foreach (string layerId in recipe.LayerOrder)
                     (present.Contains(layerId) ? everPresent : everAbsent).Add(layerId);
 
-                using var rebuilt = RenderFromMenu(menu, draws, menu.Book.Canvas);
+                using var rebuilt = MenuRenderer.Render(menu, ticket);
                 AssertPixelIdentical(set.Assets[i].Image, rebuilt);
             }
 
@@ -91,30 +89,6 @@ public class MenuFidelityTests
                 + "absent-percent roll was never exercised, only layers a recipe never has at all.");
         }
         finally { Directory.Delete(dir, recursive: true); }
-    }
-
-    /// <summary>Renders a set of draws using Core's own Colorizer and Compositor over the Menu's
-    /// art.</summary>
-    private static Image<Rgba32> RenderFromMenu(
-        MenuArchive menu, IReadOnlyList<Draw> draws, Dimensions canvas)
-    {
-        var layers = new List<Image<Rgba32>>();
-        try
-        {
-            foreach (var draw in draws)
-            {
-                using var whole = Image.Load<Rgba32>(menu.ArtBytes(draw.ImageKey));
-                var cell = draw.Source;
-                using var cropped = whole.Clone(c =>
-                    c.Crop(new Rectangle(cell.X, cell.Y, cell.Width, cell.Height)));
-
-                layers.Add(draw.Kind == LayerKind.Custom
-                    ? cropped.Clone()
-                    : Colorizer.Apply(cropped, draw.Hue, draw.Sat, draw.Model));
-            }
-            return Compositor.Composite(canvas, layers);
-        }
-        finally { foreach (var l in layers) l.Dispose(); }
     }
 
     private static void AssertPixelIdentical(Image<Rgba32> expected, Image<Rgba32> actual)

@@ -977,8 +977,7 @@ public static partial class CommandFactory
                 ? RollTicket(menu, seedValue, parse.GetValue(maxRerolls))
                 : AssetTicket.Parse(parse.GetValue(ticket)!);
 
-            var draws = Plating.Plate(menu, ticketValue);
-            using (var asset = RenderTicket(menu, draws))
+            using (var asset = MenuRenderer.Render(menu, ticketValue))
                 asset.Save(outPath, new PngEncoder());
 
             Console.WriteLine($"Wrote {outPath} — dna {ticketValue.Dna}, recipe '{ticketValue.RecipeId}'");
@@ -1008,34 +1007,6 @@ public static partial class CommandFactory
         throw new InvalidOperationException(
             $"Could not produce a legal asset from seed '{seedValue}' after {maxRerolls} attempts: "
             + "the incompatibility rules rejected every roll.");
-    }
-
-    /// <summary>
-    /// Renders a plated ticket through Core's own render: crop each layer's art out of the Menu's
-    /// atlas (or take it whole, in loose mode), colorize Dynamic/Static layers and leave Custom
-    /// ones as-is, then composite. The same loop <c>MenuFidelityTests</c> proves reproduces a
-    /// cooked asset exactly — kept as one definition rather than a second copy of it here, because
-    /// two renderers is how "the client cooks the same dish the server rolled" stops being true.
-    /// </summary>
-    private static Image<Rgba32> RenderTicket(MenuArchive menu, IReadOnlyList<Draw> draws)
-    {
-        var layers = new List<Image<Rgba32>>(draws.Count);
-        try
-        {
-            foreach (var draw in draws)
-            {
-                using var whole = Image.Load<Rgba32>(menu.ArtBytes(draw.ImageKey));
-                var cell = draw.Source;
-                using var cropped = whole.Clone(
-                    c => c.Crop(new Rectangle(cell.X, cell.Y, cell.Width, cell.Height)));
-
-                layers.Add(draw.Kind == LayerKind.Custom
-                    ? cropped.Clone()
-                    : Colorizer.Apply(cropped, draw.Hue, draw.Sat, draw.Model));
-            }
-            return Compositor.Composite(menu.Book.Canvas, layers);
-        }
-        finally { foreach (var l in layers) l.Dispose(); }
     }
 
     /// <summary>

@@ -74,7 +74,15 @@ public class MenuCommandTests
     {
         using var glow = new Image<Rgba32>(2, 2, new Rgba32(200, 200, 200, 255));
         using var spark = new Image<Rgba32>(2, 2, new Rgba32(220, 220, 220, 255));
-        using var mark = new Image<Rgba32>(2, 2, new Rgba32(10, 20, 30, 255));
+
+        // "mark" used to be an OPAQUE fill over the whole 2x2 canvas, which made the composite
+        // always equal to badge's own pixels regardless of what aura rolled — a colorize bug in
+        // aura (wrong hue, wrong quantize, wrong model) could not be SEEN by any test built on
+        // this fixture. Only the top-left texel carries mark's color; the rest are fully
+        // transparent, so the colorized aura layer beneath shows through the other three texels
+        // and a wrong hue there changes the composite's pixels.
+        using var mark = new Image<Rgba32>(2, 2, new Rgba32(10, 20, 30, 0));
+        mark[0, 0] = new Rgba32(10, 20, 30, 255);
 
         var aura = new LoadedIngredient
         {
@@ -183,23 +191,23 @@ public class MenuCommandTests
             Run("menu", cbk, "--out", mnu);
 
             const string seed = "hand-run-seed";
-            using var book = CookBookArchive.Read(cbk);
-            using var expectedSet = Generator.Generate(book, new GenerateOptions(Count: 1, Seed: seed));
+
+            // Compared against `generate --count 1`'s own PNG bytes — the actual CLI command a
+            // cook runs — rather than an in-process Generator.Generate call, so this proves serve
+            // and generate are the same product's two front doors rather than two renderers that
+            // happen to agree today.
+            var outDir = Path.Combine(dir, "cooked");
+            Assert.Equal(0, Run("generate", cbk, "--count", "1", "--seed", seed, "--out", outDir));
+            var expectedBytes = File.ReadAllBytes(Path.Combine(outDir, "images", "0001.png"));
 
             var png = Path.Combine(dir, "asset.png");
             var (code, text, _) = Capture("serve", mnu, "--seed", seed, "--out", png);
 
             Assert.Equal(0, code);
             Assert.True(File.Exists(png));
-            Assert.Contains(expectedSet.Assets[0].Dna, text, StringComparison.Ordinal);
 
-            using var served = Image.Load<Rgba32>(png);
-            var expected = expectedSet.Assets[0].Image;
-            Assert.Equal(expected.Width, served.Width);
-            Assert.Equal(expected.Height, served.Height);
-            for (int y = 0; y < expected.Height; y++)
-                for (int x = 0; x < expected.Width; x++)
-                    Assert.Equal(expected[x, y], served[x, y]);
+            var servedBytes = File.ReadAllBytes(png);
+            Assert.Equal(expectedBytes, servedBytes);
         }
         finally { Directory.Delete(dir, recursive: true); }
     }
