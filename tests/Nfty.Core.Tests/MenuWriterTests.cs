@@ -159,11 +159,14 @@ public class MenuWriterTests
     /// <para><b>This is needed ON TOP of the byte-diff above, and the byte-diff cannot replace
     /// it.</b> Writing twice in one run proves the two writes agree with EACH OTHER; it does not
     /// prove the order is stable ACROSS PROCESSES, which is what reproducibility actually means
-    /// here. The writer groups cell keys in a <c>Dictionary</c>, and a dictionary's iteration order
-    /// is only stable within a single process: .NET randomizes string hash seeds per process, so
-    /// bucket order genuinely differs between separate runs of the program. Delete the ordinal
-    /// <c>OrderBy</c> in <c>MenuWriter</c> and the byte-diff stays green while two invocations of
-    /// the CLI on one cookbook produce different atlas layouts — same book, different file.</para>
+    /// here. The writer groups cell keys in a <c>Dictionary</c>, and with no removals a
+    /// <c>Dictionary</c> enumerates in INSERTION order, not hash-bucket order — but that insertion
+    /// order is itself just whatever order the book's own collections happened to walk in, an
+    /// implementation detail nobody chose and nothing here contracts to keep stable. Delete the
+    /// ordinal <c>OrderBy</c> in <c>MenuWriter</c> and the byte-diff stays green (one process, one
+    /// walk order, self-consistent) while the actual placement silently stops being a function of
+    /// the cell key — same book, a layout that tracks whatever the walk order happens to be rather
+    /// than the key that is supposed to decide it.</para>
     ///
     /// <para>So this pins the PLACEMENT rather than the agreement, on a fixture whose walk order and
     /// ordinal order disagree. Note the manifest's cell LIST is sorted ordinally again when it is

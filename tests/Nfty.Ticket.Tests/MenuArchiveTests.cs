@@ -52,7 +52,13 @@ public class MenuArchiveTests
         using var ms = new MemoryStream();
         using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
             zip.CreateEntry("nothing.txt");
-        Assert.ThrowsAny<Exception>(() => MenuArchive.Open(new MemoryStream(ms.ToArray())));
+
+        // ThrowsAny<Exception> passes for a NullReferenceException just as readily as for a real
+        // refusal - pinned to the specific type and message MenuArchive.Open actually throws for a
+        // missing manifest.
+        var ex = Assert.Throws<InvalidDataException>(
+            () => MenuArchive.Open(new MemoryStream(ms.ToArray())));
+        Assert.Equal("Menu is missing manifest.json.", ex.Message);
     }
 
     [Fact]
@@ -68,7 +74,11 @@ public class MenuArchiveTests
             """);
         using var menu = MenuArchive.Open(new MemoryStream(bytes));
         var ex = Assert.Throws<KeyNotFoundException>(() => menu.ArtBytes("cat/bg/a"));
-        Assert.Contains("cat/bg/a", ex.Message, StringComparison.Ordinal);
+
+        // .NET's own dictionary-indexer KeyNotFoundException already contains the missing key,
+        // which a bare Contains(key, ...) cannot tell apart from - pinned to the actual message
+        // ArtBytes throws.
+        Assert.Equal("No cell for 'cat/bg/a'.", ex.Message);
     }
 
     // A manifest missing a required member is a Menu that used to open fine and fail later with a

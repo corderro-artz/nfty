@@ -134,7 +134,11 @@ public class PlatingTests
         using var menu = OneLayerMenu("cat", "bg", LayerKind.Custom, null);
 
         var ex = Assert.Throws<KeyNotFoundException>(() => menu.Layer("dog", "bg"));
-        Assert.Contains("dog", ex.Message, StringComparison.Ordinal);
+
+        // .NET's own dictionary-indexer KeyNotFoundException already contains the missing key in
+        // its message, so a bare Contains("dog", ...) passes against that BCL default too - this
+        // pins the actual text MenuArchive.Layer throws, which a bare indexer would never produce.
+        Assert.Equal("No recipe 'dog' in this Menu.", ex.Message);
     }
 
     [Fact]
@@ -163,6 +167,10 @@ public class PlatingTests
             [new TicketLayer("bg", "a", null, null, null, LayerKind.Custom, 0, 0)]);
 
         var ex = Assert.Throws<KeyNotFoundException>(() => Plating.Plate(menu, ticket));
-        Assert.Contains("dog", ex.Message, StringComparison.Ordinal);
+
+        // Plate resolves the recipe through MenuArchive.Layer, not MenuArchive.Cell - a bare
+        // Contains("dog", ...) passes whichever of the two throws, so this pins the specific
+        // message Layer produces to prove it is the one that actually ran.
+        Assert.Equal("No recipe 'dog' in this Menu.", ex.Message);
     }
 }

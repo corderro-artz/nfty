@@ -16,11 +16,17 @@ namespace Nfty.Core.Tests;
 /// inside one method would give: <c>Nfty.Ticket</c> takes no dependency on ImageSharp at all, so
 /// there is no image type for the roll to touch even by accident.
 ///
-/// The split is only safe because legality is a function of the variant selection alone. These
-/// tests pin the two things that would break if the phases were ever resequenced: the RNG draws
-/// must stay inside <c>Ticketer.TryRoll</c> (or a rejected roll would consume a different amount of
-/// the stream and the same seed would stop reproducing), and a rejected roll must still leave
-/// nothing behind for <c>Generator.Render</c> to dispose.
+/// The split is only safe because legality is a function of the variant selection alone. Note that
+/// the same-seed-twice tests below do NOT pin the resequencing risk directly — a deterministic
+/// reorder would reproduce itself just as faithfully as the current order does, so two identical
+/// runs agreeing proves nothing about which phase consumes the RNG. What they DO pin is that a
+/// rejected roll still advances the stream deterministically (no hidden nondeterminism in the
+/// reroll path) and that a rejected roll leaves nothing behind for <c>Generator.Render</c> to
+/// dispose. The actual guarantee that the roll happens inside <c>Ticketer.TryRoll</c> and nowhere
+/// else is <c>Nfty.Ticket.Tests.TicketerTests
+/// .The_rules_check_runs_once_after_every_layer_not_per_layer_as_each_is_rolled</c> and this
+/// project's own <c>TicketFreezeTests</c> suite, which pin the RNG draw count and sequence
+/// directly rather than by inference from two runs matching.
 /// </summary>
 public class GeneratorRollRenderSplitTests
 {
@@ -82,8 +88,10 @@ public class GeneratorRollRenderSplitTests
         // Rejected rolls consume RNG. If the rolls ever moved relative to the rule check, the
         // stream would advance by a different amount on a rejection and this would diverge.
         var opts = new GenerateOptions(12, "reroll-seed");
-        using var first = Generator.Generate(RuleBook(), opts);
-        using var second = Generator.Generate(RuleBook(), opts);
+        using var book1 = RuleBook();
+        using var book2 = RuleBook();
+        using var first = Generator.Generate(book1, opts);
+        using var second = Generator.Generate(book2, opts);
 
         Assert.Equal(first.Assets.Select(a => a.Dna), second.Assets.Select(a => a.Dna));
     }
@@ -94,8 +102,10 @@ public class GeneratorRollRenderSplitTests
         // The color roll is the RNG draw most sensitive to a resequenced phase, because it comes
         // after the variant draw within the same layer.
         var opts = new GenerateOptions(12, "reroll-seed");
-        using var first = Generator.Generate(RuleBook(), opts);
-        using var second = Generator.Generate(RuleBook(), opts);
+        using var book1 = RuleBook();
+        using var book2 = RuleBook();
+        using var first = Generator.Generate(book1, opts);
+        using var second = Generator.Generate(book2, opts);
 
         Assert.Equal(
             first.Assets.SelectMany(a => a.ColorRolls).Select(c => (c.H, c.S)),
@@ -108,7 +118,8 @@ public class GeneratorRollRenderSplitTests
         // Both entry points share the roll/render core and the per-run precomputation, so they
         // must walk the same RNG stream and produce the same assets in the same order.
         var opts = new GenerateOptions(12, "reroll-seed");
-        using var buffered = Generator.Generate(RuleBook(), opts);
+        using var bufferedBook = RuleBook();
+        using var buffered = Generator.Generate(bufferedBook, opts);
 
         using var book = RuleBook();
         var streamed = new List<string>();
@@ -124,7 +135,8 @@ public class GeneratorRollRenderSplitTests
     [Fact]
     public void No_generated_asset_violates_the_recipe_rules()
     {
-        using var set = Generator.Generate(RuleBook(), new GenerateOptions(12, "reroll-seed"));
+        using var book = RuleBook();
+        using var set = Generator.Generate(book, new GenerateOptions(12, "reroll-seed"));
 
         foreach (var asset in set.Assets)
         {
@@ -156,8 +168,10 @@ public class GeneratorRollRenderSplitTests
         // A duplicate DNA is discarded and re-rolled, another path that advances the stream
         // without emitting. Requesting close to the whole space forces several of them.
         var opts = new GenerateOptions(24, "dup-seed");
-        using var first = Generator.Generate(RuleBook(), opts);
-        using var second = Generator.Generate(RuleBook(), opts);
+        using var book1 = RuleBook();
+        using var book2 = RuleBook();
+        using var first = Generator.Generate(book1, opts);
+        using var second = Generator.Generate(book2, opts);
 
         Assert.Equal(first.Assets.Select(a => a.Dna), second.Assets.Select(a => a.Dna));
         Assert.Equal(24, first.Assets.Select(a => a.Dna).Distinct().Count());
