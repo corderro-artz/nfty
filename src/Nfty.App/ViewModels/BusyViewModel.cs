@@ -28,7 +28,6 @@ namespace Nfty.App.ViewModels;
 /// </remarks>
 public partial class BusyViewModel : ViewModelBase
 {
-    private readonly IDialogService _dialogs;
     private readonly CancellationTokenSource? _cts;
 
     /// <summary>What is being done, as a heading.</summary>
@@ -46,15 +45,13 @@ public partial class BusyViewModel : ViewModelBase
     /// <summary>Whether this job can be stopped.</summary>
     public bool CanCancel => _cts is not null;
 
-    /// <summary>Creates the card.</summary>
-    /// <param name="dialogs">The dialog layer, for the cancel path to close through.</param>
+    /// <summary>Creates the card. It holds no dialog layer: cancelling never closes it (see
+    /// <see cref="Cancel"/>), so only <see cref="RunAsync{T}"/>, which does, needs one.</summary>
     /// <param name="title">What is being done.</param>
     /// <param name="phase">The opening line.</param>
     /// <param name="cancellation">The run's token source, or null for a job that cannot be stopped.</param>
-    public BusyViewModel(IDialogService dialogs, string title, string phase,
-        CancellationTokenSource? cancellation = null)
+    public BusyViewModel(string title, string phase, CancellationTokenSource? cancellation = null)
     {
-        _dialogs = dialogs;
         _cts = cancellation;
         Title = title;
         _phaseText = phase;
@@ -96,7 +93,7 @@ public partial class BusyViewModel : ViewModelBase
         ArgumentNullException.ThrowIfNull(work);
 
         using var cts = cancellable ? new CancellationTokenSource() : null;
-        var busy = new BusyViewModel(dialogs, title, phase, cts);
+        var busy = new BusyViewModel(title, phase, cts);
         _ = dialogs.ShowAsync<object>(busy);
         try
         {

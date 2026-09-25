@@ -56,28 +56,11 @@ public class VisualCapture
         return tb;
     }
 
-    private static Button Btn(string content, string cls) =>
-        new() { Content = content, Classes = { cls }, Margin = new Thickness(0, 0, 8, 0) };
-
     private static Button Btn(string content, params string[] classes)
     {
         var btn = new Button { Content = content, Margin = new Thickness(0, 0, 8, 0) };
         foreach (var cls in classes) btn.Classes.Add(cls);
         return btn;
-    }
-
-    /// <summary>Mirrors MainWindow.axaml's wordmark TextBlock: "nft" in default foreground, "y" in
-    /// AccentTextBrush.</summary>
-    private static TextBlock Wordmark(ThemeVariant variant)
-    {
-        var tb = new TextBlock { Margin = new Thickness(0, 2) };
-        tb.Classes.Add("wordmark");
-        tb.Inlines = new InlineCollection
-        {
-            new Run("nft"),
-            new Run("y") { Foreground = Res("AccentTextBrush", variant) },
-        };
-        return tb;
     }
 
     /// <summary>A kind chip as the app actually draws it: `fchip` plus the kind modifier. The gallery
@@ -94,9 +77,6 @@ public class VisualCapture
     /// <summary>Theme-resource lookups for the synthetic swatches below; magenta marks a miss.</summary>
     private static IBrush Res(string key, ThemeVariant variant) =>
         Application.Current!.TryGetResource(key, variant, out var v) ? (IBrush)v! : Brushes.Magenta;
-
-    private static Avalonia.Media.Color ResColor(string key, ThemeVariant variant) =>
-        Application.Current!.TryGetResource(key, variant, out var v) ? (Avalonia.Media.Color)v! : Colors.Magenta;
 
     /// <summary>The real application shell — ShellChromeView is the very control MainWindow hosts,
     /// so this frame shows the shipped titlebar and status bar rather than a replica of them. It is
@@ -890,7 +870,7 @@ public class VisualCapture
                 $"export-sealed-{key}.png", width: 1180, height: 780);
 
             // The busy card, in the state it is actually seen in: mid-job, with a real phase line.
-            var busy = new BusyViewModel(new FakeDialogs(), "Opening Set", "Unpacking...")
+            var busy = new BusyViewModel("Opening Set", "Unpacking...")
             {
                 IsIndeterminate = false,
                 Progress = 0.42,
