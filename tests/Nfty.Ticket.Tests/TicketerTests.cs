@@ -34,7 +34,7 @@ public class TicketerTests
         new(id, id, kind, c, [new Variant("a", "A", 1), new Variant("b", "B", 1)]);
 
     [Fact]
-    public void A_custom_layer_costs_one_draw_for_its_variant_and_no_colour()
+    public void A_custom_layer_costs_one_draw_for_its_variant_and_no_color()
     {
         var rng = new CountingRng(0.5);
         Ticketer.TryRoll(Ticketer.Prepare(Book(Layer("body", LayerKind.Custom, null))), rng);
@@ -42,15 +42,15 @@ public class TicketerTests
     }
 
     [Fact]
-    public void A_static_layer_consumes_no_rng_for_its_colour()
+    public void A_static_layer_consumes_no_rng_for_its_color()
     {
         var rng = new CountingRng(0.5);
         Ticketer.TryRoll(Ticketer.Prepare(Book(Layer("bg", LayerKind.Static, Fixed()))), rng);
-        Assert.Equal(2, rng.Draws);   // 1 recipe + 1 variant, and NOTHING for the fixed colour
+        Assert.Equal(2, rng.Draws);   // 1 recipe + 1 variant, and NOTHING for the fixed color
     }
 
     [Fact]
-    public void A_dynamic_range_layer_costs_three_draws_for_its_colour()
+    public void A_dynamic_range_layer_costs_three_draws_for_its_color()
     {
         var rng = new CountingRng(0.5);
         Ticketer.TryRoll(Ticketer.Prepare(Book(Layer("bg", LayerKind.Dynamic, Range()))), rng);
@@ -59,11 +59,11 @@ public class TicketerTests
 
     /// <summary>Falsifiable in the direction the previous test cannot see: a fixed color entry must
     /// cost exactly ONE draw (to pick the entry) and zero more, so a regression that adds a second
-    /// draw for "picking the fixed colour itself" — as opposed to picking the entry — shows up here
+    /// draw for "picking the fixed color itself" — as opposed to picking the entry — shows up here
     /// even though the overall count for a single-entry Dynamic colorization would coincidentally
     /// still look plausible if only the total were checked.</summary>
     [Fact]
-    public void A_dynamic_fixed_entry_costs_one_draw_for_its_colour()
+    public void A_dynamic_fixed_entry_costs_one_draw_for_its_color()
     {
         var rng = new CountingRng(0.5);
         Ticketer.TryRoll(Ticketer.Prepare(Book(Layer("bg", LayerKind.Dynamic, Fixed()))), rng);
@@ -71,7 +71,7 @@ public class TicketerTests
     }
 
     [Fact]
-    public void A_dynamic_layer_records_its_colour_and_a_custom_layer_does_not()
+    public void A_dynamic_layer_records_its_color_and_a_custom_layer_does_not()
     {
         var ticket = Ticketer.TryRoll(Ticketer.Prepare(
             Book(Layer("bg", LayerKind.Dynamic, Range()), Layer("body", LayerKind.Custom, null))),
@@ -136,7 +136,7 @@ public class TicketerTests
     /// copying them from the <see cref="MenuLayer"/> being rolled, this is the test that would
     /// catch it — asserting only that a ticket exists would not.</summary>
     [Fact]
-    public void A_ticket_layer_carries_its_kind_and_colour_model_from_the_menu()
+    public void A_ticket_layer_carries_its_kind_and_color_model_from_the_menu()
     {
         var ticket = Ticketer.TryRoll(Ticketer.Prepare(
             Book(Layer("bg", LayerKind.Static, Fixed()), Layer("body", LayerKind.Custom, null))),

@@ -30,7 +30,7 @@ public class AssetTicketWireTests
     public void The_wire_form_is_invariant_across_locales()
     {
         // A comma decimal separator under de-DE would collide with the field separator and produce
-        // a ticket that parses to a different colour, or not at all. Every figure that reaches a
+        // a ticket that parses to a different color, or not at all. Every figure that reaches a
         // wire or a file in this product is invariant for this reason.
         var ticket = Make(Dynamic("bg", "a", 137.5, 0.62));
         var previous = Thread.CurrentThread.CurrentCulture;

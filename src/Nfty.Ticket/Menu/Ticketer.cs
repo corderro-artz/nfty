@@ -104,7 +104,7 @@ public static class Ticketer
         {
             // A LAYER MAY BE LEFT OUT. It contributes no trait, no pixels and no DNA part — an
             // omission rather than a sentinel, because a PRESENT layer adds a part an absent one does
-            // not. Nothing else in this iteration runs, so an absent Dynamic layer rolls no colour,
+            // not. Nothing else in this iteration runs, so an absent Dynamic layer rolls no color,
             // which is what stops two assets that both show nothing from having different DNA.
             string? variantId = lp.AlwaysAbsent
                 ? null
@@ -118,12 +118,12 @@ public static class Ticketer
                 case LayerKind.Dynamic or LayerKind.Static:
                 {
                     var c = lp.Layer.Colorization!;
-                    // The ONLY difference between the kinds is where the colour comes from: dynamic
-                    // rolls it per asset, static resolves its one fixed colour and consumes NO RNG.
-                    var colour = lp.Layer.Kind == LayerKind.Dynamic
+                    // The ONLY difference between the kinds is where the color comes from: dynamic
+                    // rolls it per asset, static resolves its one fixed color and consumes NO RNG.
+                    var color = lp.Layer.Kind == LayerKind.Dynamic
                         ? ColorRoller.Roll(c, rng)
                         : ColorRoller.FromFixed(c.Entries[0].Fixed!, c.Model);
-                    layers.Add(new TicketLayer(lp.Layer.Id, variantId, colour.H, colour.S,
+                    layers.Add(new TicketLayer(lp.Layer.Id, variantId, color.H, color.S,
                         c.Model, lp.Layer.Kind, c.HueQuantize, c.SatQuantize));
                     break;
                 }
