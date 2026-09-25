@@ -40,8 +40,9 @@ internal sealed record LayerPlan(
 /// The roll: decides a whole asset and touches no pixels.
 /// </summary>
 /// <remarks>
-/// <b>This is the only roll in the product.</b> <c>Generator</c> calls it and keeps only the render,
-/// so there is exactly one definition of the order in which layers consume the RNG. Two copies is
+/// <b>This is the only roll of an asset in the product.</b> <c>Generator</c> calls it and keeps only
+/// the render, and <c>StackRoll.ForRecipe</c> (the recipe preview) calls it too, so there is exactly
+/// one definition of the order in which an asset's layers consume the RNG. Two copies is
 /// how "the same seed produces the same collection" stops being true, and the difference would be
 /// invisible until a server and a client disagreed about what had been dropped.
 /// </remarks>

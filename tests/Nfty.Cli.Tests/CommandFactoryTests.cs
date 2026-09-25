@@ -368,6 +368,52 @@ public class CommandFactoryTests
         }
     }
 
+    /// <summary>
+    /// A layer the roll leaves out has no entry in the rolled stack, so the rolled list is no longer
+    /// one-per-<c>layerOrder</c>-entry and cannot be paired with it by index. Paired that way, the
+    /// present "aura" at depth 2 was labeled as the absent "ghost" at depth 1 — and then filtered
+    /// out by <c>--only aura</c>, so the one layer asked for was not drawn at all.
+    /// </summary>
+    [Fact]
+    public void Preview_labels_a_layer_by_its_own_depth_when_one_below_it_is_absent()
+    {
+        var tmp = Directory.CreateTempSubdirectory();
+        try
+        {
+            string rcp = Path.Combine(tmp.FullName, "cat.rcp");
+            using (var ghostArt = new Image<Rgba32>(1, 1, new Rgba32(10, 10, 10, 255)))
+            using (var glowArt = new Image<Rgba32>(1, 1, new Rgba32(200, 200, 200, 255)))
+            {
+                var ghost = new LoadedIngredient
+                {
+                    Manifest = new IngredientManifest("ghost", "Ghost", LayerKind.Custom, null,
+                        [new Variant("boo", "Boo", 1)]),
+                    VariantImages = new Dictionary<string, Image<Rgba32>> { ["boo"] = ghostArt },
+                };
+                var aura = new LoadedIngredient
+                {
+                    Manifest = new IngredientManifest("aura", "Aura", LayerKind.Custom, null,
+                        [new Variant("glow", "Glow", 1)]),
+                    VariantImages = new Dictionary<string, Image<Rgba32>> { ["glow"] = glowArt },
+                };
+                RecipeArchive.Write(rcp, new RecipeManifest("cat", "Cat", ["ghost", "aura"], [],
+                    AbsentPercent: new Dictionary<string, double> { ["ghost"] = 100 }), [ghost, aura]);
+            }
+
+            string png = Path.Combine(tmp.FullName, "out.png");
+            var parse = CommandFactory.Build().Parse(
+                ["preview", rcp, "--seed", "alpha", "--only", "aura", "--out", png]);
+            string output = RunAndCaptureStdout(() => parse.Invoke(NonThrowingConfig));
+
+            Assert.Contains("  2  aura", output, StringComparison.Ordinal);
+            Assert.DoesNotContain("ghost", output, StringComparison.Ordinal);
+        }
+        finally
+        {
+            tmp.Delete(recursive: true);
+        }
+    }
+
     // --- move ingredient: the destination flags are mutually exclusive -----------------------------
 
     [Theory]

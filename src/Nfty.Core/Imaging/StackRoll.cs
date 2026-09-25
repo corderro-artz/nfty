@@ -2,6 +2,7 @@ using System.Globalization;
 using Nfty.Core.Formats;
 using Nfty.Core.Generation;
 using Nfty.Core.Model;
+using Nfty.Ticket;
 
 namespace Nfty.Core.Imaging;
 
@@ -9,18 +10,21 @@ namespace Nfty.Core.Imaging;
 /// Rolls a whole Recipe into the <see cref="PreviewLayer"/> stack <see cref="StackPreview.Render"/>
 /// draws — one deterministic roll from a seed, in generation's own draw order.
 ///
-/// <para><b>Why this is in Core.</b> The draw order <i>is</i> the determinism contract: a variant is
-/// rolled per layer walking <c>layerOrder</c> bottom-to-top, a Dynamic layer then consumes its color
-/// draws and a Static one consumes none. A front-end that re-derived that walk would be a second copy
-/// of the rule, and the first reorder or new layer kind would make the two disagree silently. So the
-/// walk lives here, beside the roller it calls, and the CLI's <c>preview</c> and a GUI panel share
-/// it.</para>
+/// <para><b>The recipe's stack is decided by <see cref="Ticketer.TryRoll"/>, not by a walk of its
+/// own.</b> The draw order <i>is</i> the determinism contract — which layers are left out, which
+/// variant each present one gets, which color a Dynamic one rolls — and this used to be a second copy
+/// of it. The copy never learned about optional layers, so on any book using them it previewed stacks
+/// the seed would never cook. <see cref="ForRecipe"/> now projects the recipe into a one-recipe
+/// <see cref="MenuBook"/> and rolls it exactly as <c>Generator</c> does, so the two cannot disagree.
+/// <see cref="ForIngredient"/> still rolls a single loose layer itself: it has no recipe, so no
+/// absent chance and no rules, and it is not the roll of an asset.</para>
 ///
-/// <para><b>What it does not reproduce.</b> A cooked asset also rolls <i>which recipe</i> it is, from
-/// the CookBook's weights, before any of this — so previewing <c>cat.rcp</c> at seed <c>s</c> is not
-/// the first asset of generating its CookBook at seed <c>s</c>, and is not meant to be. What it does
-/// reproduce is what one Recipe's stack looks like when rolled: the same layers, in the same order,
-/// with colors drawn from the same distribution.</para>
+/// <para><b>What it does not reproduce.</b> The roll includes the recipe draw every asset starts with,
+/// taken against a book that holds only this recipe — so for a CookBook whose ONLY recipe this is,
+/// previewing it at seed <c>s</c> is the first asset of generating that book at seed <c>s</c>. In a
+/// book of several recipes that draw would have picked among them, so the preview is then what this
+/// recipe's stack looks like when rolled — the same layers, in the same order, with colors drawn from
+/// the same distribution — and not any particular asset.</para>
 /// </summary>
 public static class StackRoll
 {
@@ -40,23 +44,28 @@ public static class StackRoll
     }
 
     /// <summary>
-    /// Rolls every layer of a recipe, bottom-to-top, honouring its incompatibility rules.
+    /// Rolls a recipe's stack, bottom-to-top, honoring its absent chances and its incompatibility
+    /// rules — through <see cref="Ticketer.TryRoll"/>, the product's one roll of an asset.
     /// </summary>
     /// <param name="recipe">The recipe whose stack to roll.</param>
-    /// <param name="rng">The run's RNG, from <see cref="RngFor"/>. Consumed in generation's order:
-    /// one variant draw per layer, then that layer's color draws.</param>
+    /// <param name="rng">The run's RNG, from <see cref="RngFor"/>. Consumed exactly as generation
+    /// consumes it: per attempt, one recipe draw, then per layer its absent-or-variant draw and, for a
+    /// present Dynamic layer, its color draws.</param>
     /// <param name="maxAttempts">How many whole-stack rolls to try before giving up on the rules.
     /// Defaults to the same budget generation uses, so a recipe that previews is a recipe that
     /// cooks.</param>
-    /// <returns>One layer per <c>layerOrder</c> entry, in paint order — ready for
-    /// <see cref="StackPreview.Render"/>.</returns>
+    /// <returns>One layer per PRESENT layer, in paint order — ready for
+    /// <see cref="StackPreview.Render"/>. A layer the roll left out has no entry, exactly as it has no
+    /// pixels in a cooked asset.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="recipe"/> or <paramref name="rng"/>
     /// is null.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxAttempts"/> is not
     /// positive.</exception>
     /// <exception cref="KeyNotFoundException">The layer order names an ingredient the recipe does not
     /// carry — a malformed recipe, which <c>Validator.ValidateRecipe</c> reports properly.</exception>
-    /// <exception cref="InvalidOperationException">The recipe's rules rejected every attempt.</exception>
+    /// <exception cref="InvalidOperationException">The recipe's rules rejected every attempt; or a
+    /// stacked colorized layer carries no usable colorization (checked for every stacked layer before
+    /// anything is rolled, including one the roll would have left out).</exception>
     public static IReadOnlyList<PreviewLayer> ForRecipe(
         LoadedRecipe recipe, IRng rng, int maxAttempts = GenerateOptions.DefaultMaxRerolls)
     {
@@ -70,34 +79,84 @@ public static class StackRoll
         var byId = new Dictionary<string, LoadedIngredient>(StringComparer.Ordinal);
         foreach (var ing in recipe.Ingredients) byId[ing.Manifest.Id] = ing;
 
+        // Every malformation this method has always named is named BEFORE the roll, in the words it
+        // always used: Ticketer trusts a Validator-clean book and would fail on these with a bare
+        // KeyNotFoundException or NullReferenceException instead.
+        foreach (var layerId in recipe.Manifest.LayerOrder)
+        {
+            if (!byId.TryGetValue(layerId, out var ingredient))
+                throw new KeyNotFoundException(
+                    $"Recipe '{recipe.Manifest.Id}' stacks an ingredient '{layerId}' that it does "
+                    + "not carry, so there is nothing to roll for that layer.");
+            if (ingredient.Manifest.Kind != LayerKind.Custom) SpecOrColorization(ingredient);
+        }
+
+        var menu = Ticketer.Prepare(OneRecipeMenu(recipe, byId));
+
         for (int attempt = 0; attempt < maxAttempts; attempt++)
         {
-            var layers = new List<PreviewLayer>(recipe.Manifest.LayerOrder.Count);
-            var selection = new Dictionary<string, string>(StringComparer.Ordinal);
-
-            foreach (var layerId in recipe.Manifest.LayerOrder)
-            {
-                if (!byId.TryGetValue(layerId, out var ingredient))
-                    throw new KeyNotFoundException(
-                        $"Recipe '{recipe.Manifest.Id}' stacks an ingredient '{layerId}' that it does "
-                        + "not carry, so there is nothing to roll for that layer.");
-
-                var layer = ForIngredient(ingredient, rng);
-                layers.Add(layer);
-                selection[layerId] = layer.VariantId;
-            }
-
             // The same gate generation applies, in the same place: legality is a function of the
             // variant selection alone, and an illegal roll is discarded and re-rolled. A preview that
             // skipped this would happily show a combination the collection can never contain — the
             // same class of lie as scaling a layer to fit.
-            if (RulesEngine.IsLegal(selection, recipe.Manifest.Rules)) return layers;
+            var ticket = Ticketer.TryRoll(menu, rng);
+            if (ticket is null) continue;
+
+            return ticket.Layers.Select(t => ToPreview(byId[t.IngredientId], t)).ToList();
         }
 
         throw new InvalidOperationException(
             $"Could not roll a legal stack for recipe '{recipe.Manifest.Id}' after {maxAttempts} "
             + "attempts: its incompatibility rules rejected every roll. Loosen the rules, or run "
             + "validate to see what the recipe allows.");
+    }
+
+    /// <summary>
+    /// The recipe as the only recipe of a <see cref="MenuBook"/> — what <see cref="Ticketer"/> rolls.
+    /// </summary>
+    /// <remarks>
+    /// Built here rather than through <c>MenuProjection</c>, which takes a whole book and throws on a
+    /// duplicate id; this keeps the tolerance a preview has always had (a duplicate ingredient id
+    /// resolves last-wins, above, and a duplicate variant id first-wins, as <c>RollVariant</c>
+    /// does). For a well-formed recipe the layers are exactly the ones <c>MenuProjection</c> makes.
+    /// The canvas is never read by the roll, so a zero one stands in for the book's.
+    /// </remarks>
+    private static MenuBook OneRecipeMenu(LoadedRecipe recipe, IReadOnlyDictionary<string, LoadedIngredient> byId)
+    {
+        var layers = recipe.Manifest.LayerOrder
+            .Distinct(StringComparer.Ordinal)
+            .Select(id => byId[id].Manifest)
+            .Select(m => new MenuLayer(m.Id, m.Name, m.Kind, m.Colorization,
+                m.Variants.DistinctBy(v => v.Id, StringComparer.Ordinal).ToList()))
+            .ToList();
+
+        var menuRecipe = new MenuRecipe(recipe.Manifest.Id, recipe.Manifest.Name, 1,
+            recipe.Manifest.LayerOrder, layers, recipe.Manifest.Rules,
+            recipe.Manifest.AbsentPercent ?? new Dictionary<string, double>(StringComparer.Ordinal));
+
+        return new MenuBook(MenuSchema.Current, null, new Dimensions(0, 0), string.Empty, string.Empty,
+            [menuRecipe], new MenuArt(MenuArtMode.Loose, 0, 0, []));
+    }
+
+    /// <summary>
+    /// One rolled layer as a <see cref="PreviewLayer"/>. The kind comes from the INGREDIENT, never the
+    /// ticket — the rule <c>Plating.Plate</c> keeps. A Dynamic layer carries the ticket's unrounded
+    /// (H,S) as <see cref="PreviewLayer.Rolled"/> beside its readable spec; a Static one carries its
+    /// author-written spec verbatim; a Custom one carries neither.
+    /// </summary>
+    private static PreviewLayer ToPreview(LoadedIngredient ingredient, TicketLayer rolled)
+    {
+        switch (ingredient.Manifest.Kind)
+        {
+            case LayerKind.Custom:
+                return new PreviewLayer(ingredient, rolled.VariantId, null, null);
+            case LayerKind.Static:
+                return new PreviewLayer(ingredient, rolled.VariantId, SpecOrColorization(ingredient).Spec, null);
+            default:
+                var color = new RolledColor(rolled.Hue!.Value, rolled.Sat!.Value);
+                return new PreviewLayer(ingredient, rolled.VariantId,
+                    SpecFor(color, SpecOrColorization(ingredient).Colorization.Model), color);
+        }
     }
 
     /// <summary>
@@ -130,7 +189,9 @@ public static class StackRoll
         // Two statements rather than two arguments to one constructor: both consume the RNG, so
         // their ORDER is the determinism contract, and inlining them would hand that contract to
         // C#'s argument-evaluation order and to whatever order PreviewLayer happens to declare its
-        // members in. Variant first, then color — the order Ticketer.TryRoll uses.
+        // members in. Variant first, then color — the order Ticketer.TryRoll uses for a present
+        // layer. There is no absent draw here: a loose ingredient belongs to no recipe, so it has no
+        // absent chance to roll.
         string variant = variantId ?? RollVariant(ingredient, rng);
         var (spec, rolled) = ColorFor(ingredient, rng);
         return new PreviewLayer(ingredient, variant, spec, rolled);
@@ -198,30 +259,40 @@ public static class StackRoll
     /// resolves that same string through that same parser — it is already exact.</returns>
     private static (string? Spec, RolledColor? Rolled) ColorFor(LoadedIngredient ingredient, IRng rng)
     {
-        var kind = ingredient.Manifest.Kind;
-
         // Composited as-is, never colorized: no color, and no draw.
-        if (kind == LayerKind.Custom) return (null, null);
+        if (ingredient.Manifest.Kind == LayerKind.Custom) return (null, null);
 
+        var (spec, colorization) = SpecOrColorization(ingredient);
+
+        // Verbatim, and no RNG — the same two properties generation gives a Static layer. Passing the
+        // author's own spec through rather than resolving and re-formatting it also keeps this case
+        // exact, where a rolled color cannot be.
+        if (spec is not null) return (spec, null);
+
+        var color = ColorRoller.Roll(colorization, rng);
+        return (SpecFor(color, colorization.Model), color);
+    }
+
+    /// <summary>
+    /// A colorized layer's colorization, and for a Static layer its one fixed spec — or the
+    /// InvalidOperationException that names the layer when it has neither. Shared by the loose roll
+    /// and the recipe roll, which checks every stacked layer with it before rolling.
+    /// </summary>
+    private static (string? Spec, Colorization Colorization) SpecOrColorization(LoadedIngredient ingredient)
+    {
+        var kind = ingredient.Manifest.Kind;
         var colorization = ingredient.Manifest.Colorization
             ?? throw new InvalidOperationException(
                 $"Ingredient '{ingredient.Manifest.Name}' is {kind.ToString().ToLowerInvariant()} but "
                 + "carries no colorization block, so there is no color to roll.");
 
-        if (kind == LayerKind.Static)
-        {
-            // Verbatim, and no RNG — the same two properties generation gives a Static layer. Passing
-            // the author's own spec through rather than resolving and re-formatting it also keeps this
-            // case exact, where a rolled color cannot be.
-            var entry = colorization.Entries.Count == 1 ? colorization.Entries[0] : null;
-            return (entry?.Fixed
-                ?? throw new InvalidOperationException(
-                    $"Ingredient '{ingredient.Manifest.Name}' is static, so it must carry exactly one "
-                    + "fixed color to be drawn in; run validate on the recipe to see what is wrong."),
-                null);
-        }
+        if (kind != LayerKind.Static) return (null, colorization);
 
-        var color = ColorRoller.Roll(colorization, rng);
-        return (SpecFor(color, colorization.Model), color);
+        var entry = colorization.Entries.Count == 1 ? colorization.Entries[0] : null;
+        return (entry?.Fixed
+            ?? throw new InvalidOperationException(
+                $"Ingredient '{ingredient.Manifest.Name}' is static, so it must carry exactly one "
+                + "fixed color to be drawn in; run validate on the recipe to see what is wrong."),
+            colorization);
     }
 }

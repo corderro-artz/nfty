@@ -13,9 +13,10 @@ namespace Nfty.Core.Tests;
 /// <c>nfty preview cat.rcp --seed alpha</c> is.
 ///
 /// <para>The properties worth pinning are all about <b>what the roll costs</b> rather than what it
-/// returns. The draw order is the determinism contract: one weighted draw per layer walking
-/// <c>layerOrder</c> bottom-first, then that layer's color draws — and a Static layer takes none,
-/// because generation's does not. Every one of those is asserted against a <see cref="ScriptedRng"/>
+/// returns. The draw order is the determinism contract, and it is <c>Ticketer</c>'s: one recipe draw
+/// (taken even though the preview's book holds one recipe, because generation takes it too), then one
+/// weighted draw per layer walking <c>layerOrder</c> bottom-first, then that layer's color draws — and
+/// a Static layer takes none, because generation's does not. Every one of those is asserted against a <see cref="ScriptedRng"/>
 /// with a counted, fixed sequence rather than against a seed, so the assertions say exactly which
 /// draw reached which layer instead of merely that two runs agreed.</para>
 /// </summary>
@@ -70,7 +71,8 @@ public class StackRollTests
     /// The one the spec's Correction rests on, stated at preview level: <b>moving a layer moves which
     /// draw reaches it.</b> Same script, same two layers, same two variants each — only the order
     /// differs, and that alone swaps which layer gets which variant. A seed-based version of this
-    /// would only show that the two runs differed; the script shows why.
+    /// would only show that the two runs differed; the script shows why. The leading 0 of each script
+    /// is the recipe draw every roll starts with.
     /// </summary>
     [Fact]
     public void Reordering_the_stack_moves_which_draw_reaches_which_layer()
@@ -79,7 +81,7 @@ public class StackRollTests
         using var two = Custom("two", "a", "b");
 
         var bottomFirst = Recipe(one, two);
-        var rolled = StackRoll.ForRecipe(bottomFirst, new ScriptedRng(0.1, 0.9));
+        var rolled = StackRoll.ForRecipe(bottomFirst, new ScriptedRng(0, 0.1, 0.9));
         Assert.Equal(new[] { "a", "b" }, rolled.Select(l => l.VariantId));
 
         // The same two layers, the same two draws — only "two" now sits at depth 1.
@@ -88,7 +90,7 @@ public class StackRollTests
             Manifest = LayerDepth.MoveTo(bottomFirst.Manifest, "two", 1),
             Ingredients = bottomFirst.Ingredients,
         };
-        var reRolled = StackRoll.ForRecipe(topFirst, new ScriptedRng(0.1, 0.9));
+        var reRolled = StackRoll.ForRecipe(topFirst, new ScriptedRng(0, 0.1, 0.9));
 
         Assert.Equal(new[] { "two", "one" }, reRolled.Select(l => l.Ingredient.Manifest.Id));
         Assert.Equal(new[] { "a", "b" }, reRolled.Select(l => l.VariantId));
@@ -111,12 +113,12 @@ public class StackRollTests
         using var custom = Custom("hat", "v");
         using var dyn = Dynamic("body", ColorModel.Hsv, "v");
 
-        var rng = new ScriptedRng(0.5, 0.5, 0.5, 0.5, 0.25, 0.75);
+        var rng = new ScriptedRng(0, 0.5, 0.5, 0.5, 0.5, 0.25, 0.75);
         StackRoll.ForRecipe(Recipe(stat, custom, dyn), rng);
 
-        // 1 variant draw each for static and custom (no color), then the dynamic layer's variant
-        // draw plus its entry pick, hue sample and saturation sample.
-        Assert.Equal(1 + 1 + 4, rng.Calls);
+        // The recipe draw, then 1 variant draw each for static and custom (no color), then the
+        // dynamic layer's variant draw plus its entry pick, hue sample and saturation sample.
+        Assert.Equal(1 + 1 + 1 + 4, rng.Calls);
     }
 
     [Fact]
@@ -146,6 +148,53 @@ public class StackRollTests
         var again = StackRoll.ForRecipe(recipe, StackRoll.RngFor("alpha"));
 
         Assert.Equal(first.Select(l => (l.VariantId, l.ColorSpec)), again.Select(l => (l.VariantId, l.ColorSpec)));
+    }
+
+    /// <summary>
+    /// A preview must show a stack the seed would actually cook, and on a book with optional layers it
+    /// did not: this walked <c>layerOrder</c> itself and never read <c>AbsentPercent</c>, so a layer
+    /// shelved at 100% cost it a variant draw that <c>Ticketer</c> never takes, and a partly-absent one
+    /// cost a draw over <c>W</c> where Ticketer draws over <c>absent + W</c>. Every draw after that
+    /// layer then reached a different layer. Asserted against <c>Generator</c> itself — the first
+    /// asset of a one-recipe book at the same seed — across enough seeds that agreement by accident
+    /// is not the reason it passes.
+    /// </summary>
+    [Theory]
+    [InlineData(100.0)]
+    [InlineData(40.0)]
+    public void A_recipe_with_an_optional_layer_previews_what_generation_cooks(double absentPercent)
+    {
+        using var ghost = Custom("ghost", "a", "b");
+        using var body = Dynamic("body", ColorModel.Hsv, "round", "slim", "tall");
+        using var hat = Custom("hat", "cap", "top");
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("cat", "Cat", ["ghost", "body", "hat"], [],
+                AbsentPercent: new Dictionary<string, double> { ["ghost"] = absentPercent }),
+            Ingredients = [ghost, body, hat],
+        };
+        var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "Cb", Canvas, new Collection("Cb", "d", "CB"),
+                new Dictionary<string, double> { ["cat"] = 1 }),
+            Recipes = [recipe],
+        };
+
+        for (int i = 0; i < 20; i++)
+        {
+            string seed = $"seed-{i}";
+            using var cooked = Generator.Generate(book, new GenerateOptions(1, seed));
+            var asset = Assert.Single(cooked.Assets);
+
+            var previewed = StackRoll.ForRecipe(recipe, StackRoll.RngFor(seed));
+
+            Assert.Equal(
+                asset.Traits.Select(t => (t.IngredientId, t.VariantId)),
+                previewed.Select(l => (l.Ingredient.Manifest.Id, l.VariantId)));
+            var roll = asset.ColorRolls.Single(c => c.LayerId == "body");
+            var drawn = previewed.Single(l => l.Ingredient.Manifest.Id == "body").Rolled!.Value;
+            Assert.Equal((roll.H, roll.S), ((double?)drawn.H, (double?)drawn.S));
+        }
     }
 
     // ---- color, and the one place the path is lossy ---------------------------------------------

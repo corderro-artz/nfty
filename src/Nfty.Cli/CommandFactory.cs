@@ -620,15 +620,19 @@ public static partial class CommandFactory
         var rng = StackRoll.RngFor(seed);
         var rolled = StackRoll.ForRecipe(recipe, rng);
 
+        // The roll returns only the PRESENT layers - one the recipe's absent chance left out has no
+        // entry - so a rolled layer is paired with its depth by id, never by index. By index, every
+        // layer above an absent one was labeled, and --only-filtered, as the layer below it.
         var drawn = new List<(string Depth, PreviewLayer Layer, string? Source)>();
-        for (int i = 0; i < rolled.Count; i++)
+        foreach (var layer in rolled)
         {
-            string id = recipe.Manifest.LayerOrder[i];
+            string id = layer.Ingredient.Manifest.Id;
             if (keep is not null && !keep.Contains(id)) continue;
 
             // The layer's own depth, not its position among the drawn ones: --only hides layers, it
             // does not renumber them, and a printed "1, 3, 4" is what says so.
-            drawn.Add((Num(i + 1), rolled[i], null));
+            int depth = recipe.Manifest.LayerOrder.ToList().IndexOf(id) + 1;
+            drawn.Add((Num(depth), layer, null));
         }
 
         LoadedIngredient? loose = null;
@@ -658,7 +662,7 @@ public static partial class CommandFactory
             using var img = StackPreview.Render(canvas, drawn.Select(d => d.Layer).ToList());
             img.Save(outPath, new PngEncoder());
 
-            ReportStack(outPath, recipe, canvas, seed, rolled.Count, drawn);
+            ReportStack(outPath, recipe, canvas, seed, recipe.Manifest.LayerOrder.Count, drawn);
             return 0;
         }
         finally { loose?.Dispose(); }
