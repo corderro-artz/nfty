@@ -24,15 +24,17 @@ public class MenuWriterTests
     /// then apple, while "rec/apple/v" sorts before "rec/zebra/v". Each layer's single variant is a
     /// different solid fill, so the two never collapse into one deduped cell.
     /// </summary>
-    private static LoadedCookBook DisagreeingOrderBook()
+    /// <param name="appleSize">The apple variant's side. Anything but the canvas's 2 makes a book
+    /// <c>Validator</c> refuses.</param>
+    private static LoadedCookBook DisagreeingOrderBook(int appleSize = 2)
     {
-        static LoadedIngredient Layer(string id, Rgba32 fill) => new()
+        static LoadedIngredient Layer(string id, Rgba32 fill, int size = 2) => new()
         {
             Manifest = new IngredientManifest(id, id, LayerKind.Custom, null,
                 new[] { new Variant("v", "v", 1) }),
             VariantImages = new Dictionary<string, Image<Rgba32>>
             {
-                ["v"] = new Image<Rgba32>(2, 2, fill),
+                ["v"] = new Image<Rgba32>(size, size, fill),
             },
         };
 
@@ -49,7 +51,7 @@ public class MenuWriterTests
                     Ingredients = new[]
                     {
                         Layer("zebra", new Rgba32(200, 30, 30, 255)),
-                        Layer("apple", new Rgba32(30, 30, 200, 255)),
+                        Layer("apple", new Rgba32(30, 30, 200, 255), appleSize),
                     },
                 },
             },
@@ -214,5 +216,38 @@ public class MenuWriterTests
             MenuWriter.CheckAtlasFits(columns: 200, rows: 200, cellWidth: 1000, cellHeight: 1000));
         Assert.Contains("loose", ex.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("200000", ex.Message, StringComparison.Ordinal);
+    }
+
+    // ------------------------------------------------------------------ validation
+
+    /// <summary>
+    /// A book <c>generate</c> refuses must not become a Menu either. The case chosen is the one whose
+    /// damage is quietest: a variant larger than the canvas was packed into a canvas-sized rect, so
+    /// <c>serve</c> cropped it — and in atlas mode drew part of its NEIGHBOR's cell. Refused the way
+    /// <c>Generator</c> refuses it, and before a byte reaches the destination.
+    /// </summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_book_the_validator_refuses_is_not_written(bool async)
+    {
+        using var book = DisagreeingOrderBook(appleSize: 3);   // canvas is 2x2
+        Assert.NotEmpty(Validator.Validate(book));
+
+        string dir = Directory.CreateTempSubdirectory().FullName;
+        string mnu = Path.Combine(dir, "game.mnu");
+        try
+        {
+            var options = new MenuWriteOptions { Art = MenuArtMode.Atlas };
+            var ex = async
+                ? await Assert.ThrowsAsync<InvalidOperationException>(
+                    () => MenuWriter.WriteAsync(book, mnu, options, null, TestContext.Current.CancellationToken))
+                : Assert.Throws<InvalidOperationException>(() => MenuWriter.Write(book, mnu, options));
+
+            Assert.StartsWith("Invalid cookbook:", ex.Message, StringComparison.Ordinal);
+            Assert.Contains("apple", ex.Message, StringComparison.Ordinal);
+            Assert.False(File.Exists(mnu));
+        }
+        finally { Directory.Delete(dir, recursive: true); }
     }
 }

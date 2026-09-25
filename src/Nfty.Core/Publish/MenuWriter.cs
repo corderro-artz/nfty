@@ -50,8 +50,9 @@ public static class MenuWriter
     /// <param name="book">The book to project and pack. The caller keeps ownership.</param>
     /// <param name="path">The <c>.mnu</c> to write.</param>
     /// <param name="options">Atlas or loose.</param>
-    /// <exception cref="InvalidOperationException">The atlas would exceed the pixel ceiling; retry
-    /// with <see cref="MenuArtMode.Loose"/>.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="Validator"/> reports a problem with the
+    /// book (the message lists every one, as <c>Generator</c>'s does, and nothing is written); or the
+    /// atlas would exceed the pixel ceiling — retry with <see cref="MenuArtMode.Loose"/>.</exception>
     public static void Write(LoadedCookBook book, string path, MenuWriteOptions options) =>
         WriteAsync(book, path, options, null, default).GetAwaiter().GetResult();
 
@@ -63,8 +64,9 @@ public static class MenuWriter
     /// <param name="options">Atlas or loose.</param>
     /// <param name="progress">One step per cell encoded, then per cell placed or written.</param>
     /// <param name="ct">Stops between cells.</param>
-    /// <exception cref="InvalidOperationException">The atlas would exceed the pixel ceiling; retry
-    /// with <see cref="MenuArtMode.Loose"/>.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="Validator"/> reports a problem with the
+    /// book (the message lists every one, as <c>Generator</c>'s does, and nothing is written); or the
+    /// atlas would exceed the pixel ceiling — retry with <see cref="MenuArtMode.Loose"/>.</exception>
     /// <remarks>
     /// <b>This is the real implementation and the sync twin blocks on it</b> — a Menu write is
     /// stream and PNG-codec work end to end, the same reasoning <c>SetExporter.ExportAsync</c> gives
@@ -76,6 +78,16 @@ public static class MenuWriter
         ArgumentNullException.ThrowIfNull(book);
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         ArgumentNullException.ThrowIfNull(options);
+
+        // A MENU IS A BOOK THAT HAS BEEN PROMISED TO COOK, so it is refused where Generator refuses,
+        // in the same words. Skipping this let a book generate would refuse become a runtime file: a
+        // variant off the canvas packed into a canvas-sized rect (serve then cropped a neighbor's
+        // cell), a Static layer carrying a range failed at serve time rather than here, and a
+        // dangling layerOrder id surfaced from MenuProjection as an unnamed KeyNotFoundException.
+        // Checked before anything is encoded or opened, so a refused book leaves no file behind.
+        var problems = Validator.Validate(book);
+        if (problems.Count > 0)
+            throw new InvalidOperationException("Invalid cookbook:\n" + string.Join("\n", problems));
 
         var menuBook = MenuProjection.From(book);
 
