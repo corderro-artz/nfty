@@ -15,7 +15,7 @@ public class ModelTests
 
         Assert.Equal(512, cb.Canvas.Width);
         Assert.Equal(70, cb.RecipeWeights["cat"]);
-        Assert.Equal(1, cb.SchemaVersion);
+        Assert.Equal(Schema.Current, cb.SchemaVersion);
     }
 
     [Fact]

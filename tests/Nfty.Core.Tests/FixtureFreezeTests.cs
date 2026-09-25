@@ -13,29 +13,40 @@ namespace Nfty.Core.Tests;
 public class FixtureFreezeTests
 {
     // Pinned SHA-256 of every file under tests/fixtures/, computed from the files as they exist
-    // right now (2026-07-19). If this test fails, DO NOT update a hash to match a changed file:
-    // either the change was accidental (restore the original file), or it is a deliberate format
-    // change, in which case bump Schema.Current and add a NEW fixture beside this one — the old
-    // fixture and its pinned hash stay exactly as they are.
+    // right now (2026-07-19; the three archives replaced 2026-09-25, see below). If this test
+    // fails, DO NOT update a hash to match a changed file: either the change was accidental
+    // (restore the original file), or it is a deliberate format change, in which case bump
+    // Schema.Current and add a NEW fixture beside this one — the old fixture and its pinned hash
+    // stay exactly as they are.
     //
     // README.md IS THE ONE EXCEPTION, and only because it carries no format: it is prose ABOUT the
-    // archives, so editing it cannot launder a format change. Its hash moved once, on 2026-09-04,
-    // when the app-wide switch to US spelling reached "colour" in three of its lines. That is the
-    // only reason this entry may ever be re-pinned, and it is not a precedent for the three
-    // archives above it — theirs move only by being replaced, never by being rewritten.
+    // archives, so editing it cannot launder a format change. Its hash has moved twice: on
+    // 2026-09-04, when the app-wide switch to US spelling reached "colour" in three of its lines,
+    // and on 2026-09-25, when it was rewritten to describe the v2 fixtures (provenance, the new
+    // depth map, the one-time exception to "don't regenerate"). That is the only reason this entry
+    // may ever be re-pinned, and it is not a precedent for the three archives above it — theirs
+    // move only by being replaced, never by being rewritten.
+    //
+    // VaporPets.cbk, cat.rcp and aura.igt moved a SECOND time on 2026-09-25, and this is not a
+    // second exception either: the author's own decision to drop v1 (Rise step 4), spelled out in
+    // CLAUDE.md and tests/fixtures/README.md, replaced the v1 files outright with v2 ones — same
+    // structure, plus one depth map on aura/glow — rather than adding a fourth fixture beside them,
+    // because nothing after this point can read the old ones to compare against. From here on the
+    // ordinary rule (replace, never rewrite) applies again, against the v2 hashes below.
     //
     // roll-baseline-chest-demo.txt is a different kind of frozen fixture — TicketFreezeTests's own
     // baseline of the demo book's roll, captured before Nfty.Ticket existed, rather than an archive
     // FixtureArchiveTests reads for format compatibility. It belongs in this set for the same
     // reason: nothing but convention would otherwise stop a failing roll-comparison test from being
-    // "fixed" by regenerating the very thing it is meant to catch a change in.
+    // "fixed" by regenerating the very thing it is meant to catch a change in. It did NOT move on
+    // 2026-09-25 — the demo's content is identical at schema 2, only its schema moved.
     private static readonly IReadOnlyDictionary<string, string> ExpectedHashes =
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["VaporPets.cbk"] = "9cfef410bdee4134a3bfdc51d5777073919d00fbe60c078e5eb0ddd6b501542b",
-            ["cat.rcp"] = "a43d3f298dc559a7e9bbcbc271005b380fdc1959bc401331a50f57042bd57a0d",
-            ["aura.igt"] = "f8b6156072fd99edcf49b2daa3457b11d5edac3c26819b625da11dc9d9703ccb",
-            ["README.md"] = "014dca73500d52fc639e8bbddfc26e2c8f87ef5624a5fbf55f1990512861b7aa",
+            ["VaporPets.cbk"] = "389266f23b16b24953b228afdbaccbf152ba540cdfd0a812b74dd3897b100459",
+            ["cat.rcp"] = "a5f6fc479c45d144e58fd7b8f4a46b65ae943508ee1c9c601d8ebf0ea7a84cad",
+            ["aura.igt"] = "3e4561142f7250e0206303d9b470b9d9d2ebe049bee9c85abe7664b9c76f870e",
+            ["README.md"] = "d95bb2bc48d7eb4f12413185c9b8f2df288ed64919172de8792798bc99df3c76",
             ["roll-baseline-chest-demo.txt"] =
                 "f3dc8dba3b1d5bcdf529ba1db3f77d5e01c9487c8977e9eb9b772e16072f32e2",
         };

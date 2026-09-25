@@ -15,11 +15,17 @@ public static class Schema
 {
     /// <summary>The schema version this build WRITES. It reads this and every earlier one — see
     /// <see cref="IsSupported"/>.</summary>
-    public const int Current = 1;
+    public const int Current = 2;
 
-    /// <summary>The oldest schema this build can read. Nothing predates 1, so a lower number is a
-    /// malformed manifest rather than an old one.</summary>
-    public const int Oldest = 1;
+    /// <summary>The oldest schema this build can read.
+    ///
+    /// Rise, 2026-09-25: v1 dropped by the author's decision — no v1 archives kept, and every fixture
+    /// under tests/fixtures/ was regenerated at v2 (see tests/fixtures/README.md and CLAUDE.md). A
+    /// schemaVersion below 2 is therefore refused exactly like one above <see cref="Current"/>: named
+    /// by name, not silently misparsed (see Nfty.Core's UnsupportedSchemaVersionException — this
+    /// project stays dependency-free, so it cannot cref that type). Nothing predates 1, so a version
+    /// below 1 stays a malformed manifest rather than an old one.</summary>
+    public const int Oldest = 2;
 
     /// <summary>Whether <paramref name="version"/> is readable by a build whose newest schema is
     /// <paramref name="current"/>.

@@ -16,12 +16,16 @@ namespace Nfty.Core.Tests;
 /// exactly that kind of silent format break. A version gate whose only safe value is the one it
 /// already has is not a gate.
 ///
-/// It now accepts 1..Current and refuses anything newer. Reading older is only sound because of a
-/// contract this project keeps deliberately: every field added after v1 is OPTIONAL and defaults to
-/// "absent". These tests pin both halves — the range, and the contract.
+/// It accepts Oldest..Current and refuses anything newer. Reading older is only sound because of a
+/// contract this project keeps deliberately: every field added after the floor schema is OPTIONAL
+/// and defaults to "absent". These tests pin both halves — the range, and the contract.
 ///
-/// <see cref="SchemaVersionTests"/> covers the future-version rejection per archive type; this file
-/// covers the boundaries and the round-trip of a post-v1 field.</summary>
+/// Rise, 2026-09-25: the floor moved. <see cref="Schema.Oldest"/> is 2 now — v1 is dropped by the
+/// author's decision, no archives kept (see CLAUDE.md) — so "older" below means schema 2, and a v1
+/// manifest is refused exactly like a too-new one, pinned in <see cref="SchemaVersionTests"/>.
+///
+/// <see cref="SchemaVersionTests"/> covers the future- and past-version rejection per archive type;
+/// this file covers the boundaries and the round-trip of a post-floor field.</summary>
 public class SchemaCompatibilityTests
 {
     private static string TempDir() => Directory.CreateTempSubdirectory().FullName;
@@ -86,22 +90,29 @@ public class SchemaCompatibilityTests
 
     // ---- the accepted range -------------------------------------------------------------------
 
-    /// <summary>The range rule itself, pinned against a HYPOTHETICAL current version.
+    /// <summary>The range rule itself, pinned against a HYPOTHETICAL current version — but the real
+    /// <see cref="Schema.Oldest"/> (2), since that half of the gate is a fixed constant, not a
+    /// parameter.
     ///
-    /// This matters more than it looks. With <see cref="Schema.Current"/> at 1, the range 1..Current
-    /// contains exactly one value, so every test written against the real constant passes whether the
-    /// gate accepts a range or demands exact equality — I proved that by mutation-probing the widened
-    /// gate back to `==` and watching all sixteen tests stay green. Passing a hypothetical current is
-    /// what makes "older versions are readable" actually testable before a version 2 exists.</summary>
+    /// This matters more than it looks. With <see cref="Schema.Current"/> at <see cref="Schema.Oldest"/>,
+    /// the range Oldest..Current contains exactly one value, so every test written against the real
+    /// constant passes whether the gate accepts a range or demands exact equality — I proved that by
+    /// mutation-probing the widened gate back to `==` and watching all sixteen tests stay green.
+    /// Passing a hypothetical current is what makes "older versions are readable" actually testable
+    /// before a version past Current exists.
+    ///
+    /// Rise, 2026-09-25: version 1 moved from "the oldest readable" to "below the floor" when v1 was
+    /// dropped — this theory's cases moved with it, from 1 to <see cref="Schema.Oldest"/> (2).</summary>
     [Theory]
     // version, current, expected
-    [InlineData(1, 1, true)]     // the only case reachable today
-    [InlineData(1, 2, true)]     // THE point: an old archive read by a newer build
-    [InlineData(1, 9, true)]
-    [InlineData(2, 3, true)]
-    [InlineData(3, 3, true)]     // current itself
-    [InlineData(2, 1, false)]    // newer than the build understands
-    [InlineData(4, 3, false)]
+    [InlineData(2, 2, true)]     // the only case reachable today
+    [InlineData(2, 3, true)]     // THE point: an old (but not too old) archive read by a newer build
+    [InlineData(2, 9, true)]
+    [InlineData(3, 4, true)]
+    [InlineData(4, 4, true)]     // current itself
+    [InlineData(3, 2, false)]    // newer than the build understands
+    [InlineData(5, 4, false)]
+    [InlineData(1, 5, false)]    // below the floor: v1, dropped
     [InlineData(0, 1, false)]    // not a schema at all
     [InlineData(-1, 5, false)]
     public void The_supported_range_is_oldest_through_current(int version, int current, bool expected)
@@ -174,9 +185,14 @@ public class SchemaCompatibilityTests
 
     // ---- the contract that makes reading older sound --------------------------------------------
 
-    /// <summary>A manifest whose JSON omits every field added after v1 must still read. This is the
-    /// literal shape of an archive written by an older build, hand-rolled rather than produced by
-    /// this one, so it cannot accidentally include a field the test is meant to prove is optional.</summary>
+    /// <summary>A manifest whose JSON omits every field added after v2 must still read. This is the
+    /// literal shape of a floor-schema archive, hand-rolled rather than produced by this one, so it
+    /// cannot accidentally include a field the test is meant to prove is optional.
+    ///
+    /// Rise, 2026-09-25: this used to pin schemaVersion 1, the archive's actual floor at the time.
+    /// v1 is dropped (see CLAUDE.md; <see cref="Schema.Oldest"/> is now 2), so the floor this
+    /// contract has to hold at moved to 2 with it — the shape below is what a bare schemaVersion-2
+    /// manifest looks like, and every field this build added since must still default to absent.</summary>
     [Fact]
     public void A_manifest_written_before_a_field_existed_still_reads()
     {
@@ -188,7 +204,7 @@ public class SchemaCompatibilityTests
           "canvas": { "width": 2, "height": 2 },
           "collection": { "name": "VaporPets", "description": "d", "symbol": "VP" },
           "recipeWeights": { "cat": 1 },
-          "schemaVersion": 1
+          "schemaVersion": 2
         }
         """;
 
@@ -209,19 +225,22 @@ public class SchemaCompatibilityTests
         using var read = CookBookArchive.Read(path);
 
         Assert.Equal("cb", read.Manifest.Id);
-        Assert.Equal(1, read.Manifest.SchemaVersion);
+        Assert.Equal(2, read.Manifest.SchemaVersion);
         Assert.Null(read.Manifest.TargetSupply);   // absent means unset, not zero
+        Assert.False(read.Manifest.PartialAlpha);  // recomputed from pixels either way, but absent too
     }
 
     [Fact]
-    public void The_shipped_v1_fixture_still_reads_after_the_gate_change()
+    public void The_shipped_fixture_still_reads_after_the_gate_change()
     {
-        // The whole point of tests/fixtures is that an OLDER build wrote them and they still read.
-        // If the gate change broke backward compatibility, this is where it shows.
+        // The whole point of tests/fixtures is that an older build wrote them and they still read.
+        // Rise, 2026-09-25: "older build" now means the v2 build that regenerated these fixtures
+        // when v1 was dropped (see tests/fixtures/README.md) — if the gate change broke backward
+        // compatibility with schema 2, this is where it shows.
         var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "VaporPets.cbk");
         using var book = CookBookArchive.Read(fixture);
 
-        Assert.Equal(1, book.Manifest.SchemaVersion);
+        Assert.Equal(2, book.Manifest.SchemaVersion);
         Assert.NotEmpty(book.Recipes);
         Assert.Null(book.Manifest.TargetSupply);
     }
@@ -255,15 +274,12 @@ public class SchemaCompatibilityTests
             Assert.Equal(JsonValueKind.Null, prop.ValueKind);
     }
 
-    [Fact]
-    public void Adding_target_supply_did_not_bump_the_schema()
-    {
-        // Deliberate: the change is purely additive and System.Text.Json ignores unknown properties,
-        // so older builds read these archives fine. Bumping would instead make every SHIPPED build -
-        // whose gate demands exact equality - reject them. If a future change genuinely breaks the
-        // format, bump Current and this assertion is the reminder to think about it.
-        Assert.Equal(1, Schema.Current);
-    }
+    // Adding_target_supply_did_not_bump_the_schema used to pin Schema.Current == 1 as a reminder
+    // that the purely-additive target-supply field required no bump. Rise, 2026-09-25: Current is
+    // 2 now, for an unrelated reason (depth maps + partial alpha, see CLAUDE.md) — the reminder did
+    // its job by failing here and forcing this comment instead of a silent drift. Target supply's
+    // own claim (additive, no bump needed on its own) is still true and still covered by the two
+    // tests above; there is no longer a single historical constant worth pinning for it.
 
     [Theory]
     [InlineData(0)]

@@ -129,7 +129,7 @@ BOOK = {
     # The book carries its own colors, so a collection handed on brings its palette with it.
     "palette": ["hex:8a5a2b", "hex:c9a227", "hex:5c6a78",
                 "hex:ce3648", "hex:4884d6", "hex:1a1a24"],
-    "schemaVersion": 1,
+    "schemaVersion": 2,
 }
 
 
@@ -156,7 +156,7 @@ def build(work):
         with open(p, "w", encoding="utf-8") as f:
             json.dump({"id": iid, "name": name, "kind": kind, "colorization": col,
                        "variants": [{"id": v, "name": n, "weight": w} for v, n, w in variants],
-                       "schemaVersion": 1}, f, indent=2)
+                       "schemaVersion": 2}, f, indent=2)
         run(["new", "ingredient", os.path.join(igt, iid + ".igt"),
              "--manifest", p, "--images", os.path.join(art, iid)])
 
@@ -164,7 +164,7 @@ def build(work):
         p = os.path.join(man, rid + ".rcp.json")
         with open(p, "w", encoding="utf-8") as f:
             json.dump({"id": rid, "name": name, "layerOrder": order, "rules": rules,
-                       "absentPercent": absent, "schemaVersion": 1}, f, indent=2)
+                       "absentPercent": absent, "schemaVersion": 2}, f, indent=2)
         run(["new", "recipe", os.path.join(rcp, rid + ".rcp"), "--manifest", p, "--ingredients", igt])
 
     p = os.path.join(man, "book.json")

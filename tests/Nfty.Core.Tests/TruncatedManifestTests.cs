@@ -7,7 +7,7 @@ namespace Nfty.Core.Tests;
 /// <summary>
 /// A manifest missing its required members used to be accepted. Positional records declare their
 /// optionality in the type — <c>Colorization?</c> may be absent, <c>string Id</c> may not — but
-/// nothing enforced it, so <c>{"schemaVersion":1}</c> deserialized into a record with every member
+/// nothing enforced it, so <c>{"schemaVersion":2}</c> deserialized into a record with every member
 /// null and the reader handed it back as a valid CookBook.
 ///
 /// <para>The first thing to touch it then threw <see cref="NullReferenceException"/>, and that thing
@@ -32,7 +32,7 @@ public class TruncatedManifestTests
     [Fact]
     public void A_cookbook_manifest_with_no_fields_is_rejected_when_it_is_read()
     {
-        string path = WriteArchive(".cbk", """{"schemaVersion":1}""");
+        string path = WriteArchive(".cbk", """{"schemaVersion":2}""");
 
         var ex = Assert.Throws<InvalidDataException>(() => CookBookArchive.Read(path));
 
@@ -43,7 +43,7 @@ public class TruncatedManifestTests
     [Fact]
     public async Task The_async_reader_rejects_it_identically()
     {
-        string path = WriteArchive(".cbk", """{"schemaVersion":1}""");
+        string path = WriteArchive(".cbk", """{"schemaVersion":2}""");
 
         var ex = await Assert.ThrowsAsync<InvalidDataException>(() => CookBookArchive.ReadAsync(path));
 
@@ -53,7 +53,7 @@ public class TruncatedManifestTests
     [Fact]
     public void A_recipe_manifest_missing_its_layer_order_is_rejected()
     {
-        string path = WriteArchive(".rcp", """{"id":"r","name":"R","schemaVersion":1}""");
+        string path = WriteArchive(".rcp", """{"id":"r","name":"R","schemaVersion":2}""");
 
         Assert.Throws<InvalidDataException>(() => RecipeArchive.Read(path));
     }
@@ -61,7 +61,7 @@ public class TruncatedManifestTests
     [Fact]
     public void An_ingredient_manifest_missing_its_variants_is_rejected()
     {
-        string path = WriteArchive(".igt", """{"id":"i","name":"I","kind":"custom","schemaVersion":1}""");
+        string path = WriteArchive(".igt", """{"id":"i","name":"I","kind":"custom","schemaVersion":2}""");
 
         Assert.Throws<InvalidDataException>(() => IngredientArchive.Read(path));
     }
@@ -71,7 +71,7 @@ public class TruncatedManifestTests
     [Fact]
     public void The_rejection_names_the_manifest_rather_than_a_clr_type()
     {
-        string path = WriteArchive(".cbk", """{"schemaVersion":1}""");
+        string path = WriteArchive(".cbk", """{"schemaVersion":2}""");
 
         var ex = Assert.Throws<InvalidDataException>(() => CookBookArchive.Read(path));
 

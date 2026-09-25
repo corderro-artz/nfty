@@ -108,7 +108,7 @@ public class AsyncIoTests
     {
         var path = Path.Combine(TempDir(), "future.igt");
         var ing = Ingredient();
-        var future = ing.Manifest with { SchemaVersion = 2 };
+        var future = ing.Manifest with { SchemaVersion = Schema.Current + 1 };
         IngredientArchive.Write(path, future, ing.VariantImages, DepthMaps.None);
 
         await Assert.ThrowsAsync<UnsupportedSchemaVersionException>(

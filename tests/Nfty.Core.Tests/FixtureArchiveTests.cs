@@ -45,6 +45,59 @@ public class FixtureArchiveTests
     }
 
     [Fact]
+    public void Every_fixture_manifest_is_schema_2_with_no_partial_alpha()
+    {
+        // Rise, 2026-09-25: the fixtures were regenerated at schemaVersion 2 (see
+        // tests/fixtures/README.md). PartialAlpha is a recomputed listing cache, not authored
+        // data — these placeholder images are all fully opaque or fully transparent per pixel,
+        // so it must read false at every level, nested included.
+        using var book = CookBookArchive.Read(Fixture("VaporPets.cbk"));
+        using var recipe = RecipeArchive.Read(Fixture("cat.rcp"));
+        using var ing = IngredientArchive.Read(Fixture("aura.igt"));
+
+        Assert.Equal(2, book.Manifest.SchemaVersion);
+        Assert.False(book.Manifest.PartialAlpha);
+
+        var nestedRecipe = Assert.Single(book.Recipes);
+        Assert.Equal(2, nestedRecipe.Manifest.SchemaVersion);
+        Assert.False(nestedRecipe.Manifest.PartialAlpha);
+        Assert.Equal(2, recipe.Manifest.SchemaVersion);
+        Assert.False(recipe.Manifest.PartialAlpha);
+
+        foreach (var i in nestedRecipe.Ingredients)
+        {
+            Assert.Equal(2, i.Manifest.SchemaVersion);
+            Assert.False(i.Manifest.PartialAlpha);
+        }
+        Assert.Equal(2, ing.Manifest.SchemaVersion);
+        Assert.False(ing.Manifest.PartialAlpha);
+    }
+
+    [Fact]
+    public void The_aura_glow_variant_carries_the_depth_map_added_when_regenerated()
+    {
+        // Rise, 2026-09-25: one depth map added to the v2 fixtures deliberately, so the .igt
+        // depth/{variantId}.dep path has a real archive covering it. glow's top half was painted
+        // front 2 / back 1 over every solid pixel; the bottom half, and spark entirely, were left
+        // untouched (flat, so spark gets no depth/ entry at all — see IngredientArchive.Write).
+        using var ing = IngredientArchive.Read(Fixture("aura.igt"));
+
+        Assert.True(ing.Depths.TryGetValue("glow", out var glow));
+        var image = ing.VariantImages["glow"];
+        Assert.Equal(image.Width, glow!.Width);
+        Assert.Equal(image.Height, glow.Height);
+
+        // A solid pixel in the top half: painted.
+        Assert.Equal(2, glow.Front(0, 0));
+        Assert.Equal(1, glow.Back(0, 0));
+        // A solid pixel in the bottom half: never painted.
+        Assert.Equal(0, glow.Front(0, image.Height - 1));
+        Assert.Equal(0, glow.Back(0, image.Height - 1));
+
+        Assert.False(ing.Depths.ContainsKey("spark"));
+    }
+
+    [Fact]
     public void The_cookbook_fixture_carries_its_incompatibility_rule()
     {
         using var book = CookBookArchive.Read(Fixture("VaporPets.cbk"));

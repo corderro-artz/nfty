@@ -134,7 +134,7 @@ public class CookBookPaletteTests
           "canvas": { "width": 2, "height": 2 },
           "collection": { "name": "VaporPets", "description": "d", "symbol": "VP" },
           "recipeWeights": { "cat": 1 },
-          "schemaVersion": 1
+          "schemaVersion": 2
         }
         """;
 
@@ -169,7 +169,7 @@ public class CookBookPaletteTests
 
         Assert.NotNull(older);
         Assert.Equal("cb", older!.Id);
-        Assert.Equal(1, older.SchemaVersion);
+        Assert.Equal(Schema.Current, older.SchemaVersion);
     }
 
     [Fact]
@@ -187,31 +187,30 @@ public class CookBookPaletteTests
         Assert.Equal(a.Assets.Select(x => x.Dna), b.Assets.Select(x => x.Dna));
     }
 
-    [Fact]
-    public void Adding_the_palette_did_not_bump_the_schema()
-    {
-        // Purely additive, so older builds keep reading these archives. A bump here would orphan
-        // every archive already written. If a future change genuinely breaks the format, bump
-        // Current and this assertion is the reminder to think about it.
-        Assert.Equal(1, Schema.Current);
-    }
+    // Adding_the_palette_did_not_bump_the_schema used to pin Schema.Current == 1, the reminder that
+    // this purely-additive field needed no bump on its own. Rise, 2026-09-25: Current is 2 now, for
+    // an unrelated reason (depth maps + partial alpha, see CLAUDE.md) — the reminder did its job by
+    // failing here. The palette's own claim (additive, no bump needed on its own) is still true and
+    // still covered by the tests above; there is no longer a single historical constant worth
+    // pinning for it.
 
     [Fact]
-    public void The_shipped_v1_fixture_still_reads_and_carries_no_palette()
+    public void The_shipped_fixture_still_reads_and_carries_no_palette()
     {
-        // tests/fixtures exists because an OLDER build wrote it. Never regenerated to make a test
-        // pass — that launders a format change instead of catching it.
+        // tests/fixtures exists because an older build wrote it. Never regenerated to make a test
+        // pass — that launders a format change instead of catching it. Rise, 2026-09-25: "older
+        // build" now means the v2 build that regenerated these fixtures when v1 was dropped.
         var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "VaporPets.cbk");
         using var book = CookBookArchive.Read(fixture);
 
-        Assert.Equal(1, book.Manifest.SchemaVersion);
+        Assert.Equal(2, book.Manifest.SchemaVersion);
         Assert.Null(book.Manifest.Palette);
         Assert.Equal("VaporPets", book.Manifest.Name);
         Assert.Empty(Validator.Validate(book));
     }
 
-    /// <summary>A stand-in for the CookBookManifest an older build compiled: every v1 member, and no
-    /// palette.</summary>
+    /// <summary>A stand-in for the CookBookManifest an older build compiled: every v2-floor member,
+    /// and no palette.</summary>
     private sealed record OlderCookBookManifest(
         string Id,
         string Name,

@@ -124,7 +124,7 @@ public class ArchiveFailureMessageTests
     public void A_missing_variant_png_names_the_entry()
     {
         string path = Zip(".igt", zip => Write(zip, "manifest.json",
-            """{"id":"i","name":"I","kind":"custom","colorization":null,"variants":[{"id":"v","name":"V","weight":1}],"schemaVersion":1}"""));
+            """{"id":"i","name":"I","kind":"custom","colorization":null,"variants":[{"id":"v","name":"V","weight":1}],"schemaVersion":2}"""));
 
         var ex = Assert.Throws<InvalidDataException>(() => IngredientArchive.Read(path));
 
@@ -142,7 +142,7 @@ public class ArchiveFailureMessageTests
         string path = Zip(".cbk", zip =>
         {
             Write(zip, "manifest.json",
-                """{"id":"cb","name":"B","canvas":{"width":2,"height":2},"collection":{"name":"B","description":"","symbol":"B"},"recipeWeights":{},"schemaVersion":1}""");
+                """{"id":"cb","name":"B","canvas":{"width":2,"height":2},"collection":{"name":"B","description":"","symbol":"B"},"recipeWeights":{},"schemaVersion":2}""");
             Write(zip, "recipes/README.txt", "notes to self");
         });
 

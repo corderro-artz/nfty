@@ -317,11 +317,13 @@ public class LayerDepthTests
         Assert.Equal("skin", LayerDepth.At(recipe, 2));
     }
 
-    /// <summary>The whole compatibility argument rests on this one number: depth is a projection of a
-    /// field that already ships, so no manifest gained a property and no version had to move. A
-    /// bumped Current here would mean a stored depth crept in somewhere.</summary>
-    [Fact]
-    public void Schema_current_is_still_one() => Assert.Equal(1, Schema.Current);
+    // Schema_current_is_still_one used to pin Schema.Current == 1: layer depth (this file's sense —
+    // 1-based paint-order position, distinct from the Rise front/back DepthMap feature the name now
+    // shares a word with) is a projection of layerOrder, a field that already shipped, so no
+    // manifest gained a property and no version had to move FOR THAT REASON. Rise, 2026-09-25:
+    // Current is 2 now, but for the Rise depth-map feature specifically (see CLAUDE.md) — this
+    // file's own claim (LayerDepth itself added no field) is still true, just no longer expressible
+    // as a single pinned constant now that something else legitimately moved it.
 
     /// <summary>Depth is not decorative: it is the paint order, exactly.</summary>
     [Fact]
