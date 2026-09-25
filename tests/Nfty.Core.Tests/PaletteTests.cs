@@ -79,67 +79,6 @@ public class PaletteTests
         var expected = mode == PaletteMode.Color ? Palette.RainbowRamp : Palette.GrayRamp;
 
         Assert.Same(expected, Palette.RampFor(mode));
-        Assert.Same(expected, (Palette.Empty with { Mode = mode }).Ramp);
-    }
-
-    // ---- swapping offers colors, it does not touch artwork -------------------------------------
-
-    [Fact]
-    public void Swapping_the_ramp_changes_what_is_offered_and_nothing_else()
-    {
-        var red = new RgbColor(200, 30, 30);
-        var gray = Palette.Empty.WithSwatch(red).WithSwatch(new RgbColor(9, 9, 9));
-
-        var color = gray.WithMode(PaletteMode.Color);
-
-        // The ten slots are different...
-        Assert.NotEqual(gray.Ramp, color.Ramp);
-        // ...and the user's own colors are untouched, in the same order.
-        Assert.Equal(gray.Swatches, color.Swatches);
-        // Swapping back is a round trip, not a lossy one.
-        Assert.Equal(gray, color.WithMode(PaletteMode.Grayscale));
-    }
-
-    [Fact]
-    public void Swapping_to_the_mode_already_set_is_the_same_palette()
-        => Assert.Same(Palette.Empty, Palette.Empty.WithMode(PaletteMode.Grayscale));
-
-    // ---- swatches ------------------------------------------------------------------------------
-
-    [Fact]
-    public void Saving_a_swatch_appends_it_and_leaves_the_original_alone()
-    {
-        var first = Palette.Empty.WithSwatch(new RgbColor(1, 2, 3));
-        var second = first.WithSwatch(new RgbColor(4, 5, 6));
-
-        Assert.Empty(Palette.Empty.Swatches);
-        Assert.Equal(new[] { new RgbColor(1, 2, 3) }, first.Swatches);
-        Assert.Equal(new[] { new RgbColor(1, 2, 3), new RgbColor(4, 5, 6) }, second.Swatches);
-    }
-
-    [Fact]
-    public void Saving_a_swatch_already_present_neither_duplicates_nor_reorders_it()
-    {
-        var p = Palette.Empty.WithSwatch(new RgbColor(1, 2, 3)).WithSwatch(new RgbColor(4, 5, 6));
-
-        var again = p.WithSwatch(new RgbColor(1, 2, 3));
-
-        Assert.Same(p, again);
-        Assert.Equal(new[] { new RgbColor(1, 2, 3), new RgbColor(4, 5, 6) }, again.Swatches);
-    }
-
-    [Fact]
-    public void Forgetting_a_swatch_removes_only_that_one()
-    {
-        var p = Palette.Empty
-            .WithSwatch(new RgbColor(1, 1, 1))
-            .WithSwatch(new RgbColor(2, 2, 2))
-            .WithSwatch(new RgbColor(3, 3, 3));
-
-        var without = p.WithoutSwatch(new RgbColor(2, 2, 2));
-
-        Assert.Equal(new[] { new RgbColor(1, 1, 1), new RgbColor(3, 3, 3) }, without.Swatches);
-        Assert.Same(p, p.WithoutSwatch(new RgbColor(9, 9, 9)));   // not present → no-op
     }
 
     // ---- the two scopes ------------------------------------------------------------------------

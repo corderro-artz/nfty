@@ -19,7 +19,7 @@ public enum PaletteMode
 
 /// <summary>
 /// The palette a painting front-end offers: <see cref="Slots"/> ramp entries that change with the
-/// <see cref="Mode"/>, plus the swatches the user has saved.
+/// <see cref="PaletteMode"/>, plus the rules for the swatches a user saves beside them.
 ///
 /// <para>It lives in Core, not in a front-end, for the same reason <c>VariantPreview</c> does: the
 /// CLI and the GUI must agree on what "the fifth gray" is, and two copies is how that stops being
@@ -29,17 +29,10 @@ public enum PaletteMode
 /// <para>Both ramps are exactly <see cref="Slots"/> long, and swapping the mode reuses the same ten
 /// slots — the palette's shape never changes, only its contents.</para>
 /// </summary>
-/// <param name="Mode">Which ramp <see cref="Ramp"/> reports.</param>
-/// <param name="Swatches">The user's saved colors, in the order they were saved. A palette holds the
-/// swatches for ONE mode — see <see cref="InMode"/> for why the two are kept apart.</param>
-public sealed record Palette(PaletteMode Mode, IReadOnlyList<RgbColor> Swatches)
+public static class Palette
 {
     /// <summary>How many ramp slots there are, in either mode.</summary>
     public const int Slots = 10;
-
-    /// <summary>A grayscale palette with no saved swatches — the state a first run starts in, and
-    /// the state a corrupt or unreachable store loads as.</summary>
-    public static Palette Empty { get; } = new(PaletteMode.Grayscale, Array.Empty<RgbColor>());
 
     /// <summary>Ten ascending grays from black to white, evenly spaced across the full 0..255 range.
     ///
@@ -59,30 +52,6 @@ public sealed record Palette(PaletteMode Mode, IReadOnlyList<RgbColor> Swatches)
     /// <returns>Exactly <see cref="Slots"/> colors.</returns>
     public static IReadOnlyList<RgbColor> RampFor(PaletteMode mode) =>
         mode == PaletteMode.Color ? RainbowRamp : GrayRamp;
-
-    /// <summary>The ten slots this palette currently offers.</summary>
-    public IReadOnlyList<RgbColor> Ramp => RampFor(Mode);
-
-    /// <summary>Swaps the ramp, keeping every saved swatch.</summary>
-    /// <param name="mode">The mode to switch to.</param>
-    /// <returns>The same palette offering the other ramp.</returns>
-    public Palette WithMode(PaletteMode mode) => Mode == mode ? this : this with { Mode = mode };
-
-    /// <summary>Saves a swatch, appending it. Re-saving a color already present is a no-op rather
-    /// than a duplicate or a reorder — a palette is a board the author arranges, so an entry that
-    /// moved because it was picked again would be the palette rearranging itself under them.</summary>
-    /// <param name="swatch">The color to save.</param>
-    /// <returns>The palette with the swatch in it.</returns>
-    public Palette WithSwatch(RgbColor swatch) =>
-        Swatches.Contains(swatch) ? this : this with { Swatches = [.. Swatches, swatch] };
-
-    /// <summary>Forgets a swatch. Removing one that is not saved is a no-op.</summary>
-    /// <param name="swatch">The color to forget.</param>
-    /// <returns>The palette without it.</returns>
-    public Palette WithoutSwatch(RgbColor swatch) =>
-        Swatches.Contains(swatch)
-            ? this with { Swatches = Swatches.Where(c => c != swatch).ToArray() }
-            : this;
 
     /// <summary>Whether a color is a gray — the same channel in all three.</summary>
     /// <param name="color">The color to test.</param>
