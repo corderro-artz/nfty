@@ -35,6 +35,8 @@ public static class Plating
     /// ingredient ids (both from <see cref="MenuArchive.Layer"/>); or the Menu has no art cell for
     /// one of the ticket's rolled variants (from <see cref="MenuArchive.Cell"/>). All three name the
     /// specific id that was not found.</exception>
+    /// <exception cref="FormatException">A colorized layer's hue or saturation quantize differs
+    /// from the Menu's colorization for that layer. The message names the layer.</exception>
     public static IReadOnlyList<Draw> Plate(MenuArchive menu, AssetTicket ticket)
     {
         ArgumentNullException.ThrowIfNull(menu);
@@ -52,11 +54,25 @@ public static class Plating
         // (recipeId, ingredientId) the kind and the color model are fixed BY THE BOOK and cannot
         // legitimately vary per asset. The ticket says what was ROLLED; the Menu says what the layer
         // IS.
+        //
+        // QUANTIZE IS THE SAME KIND OF FIELD, AND IS CHECKED RATHER THAN MERELY IGNORED. Dna.Compute
+        // hashes the BUCKET a color lands in, not the color, so the bucket width decides how far a
+        // hue may move without changing the DNA: hue 100 at a 10-degree step is bucket 10, and so is
+        // hue 205 at a 20-degree step. A wire that re-quantizes carries a DNA its own contents really
+        // do produce, so Parse cannot see it - and the hue is the one field this method must take
+        // from the ticket, because it is what was rolled. So the step it was bucketed at must be the
+        // Menu's own, or a forged ticket keeps its identity while drawing a different color.
         var draws = new List<Draw>(ticket.Layers.Count);
         foreach (var layer in ticket.Layers)
         {
             string key = MenuBook.CellKey(ticket.RecipeId, layer.IngredientId, layer.VariantId);
             var definition = menu.Layer(ticket.RecipeId, layer.IngredientId);
+            if (definition.Colorization is { } c
+                && (layer.HueQuantize != c.HueQuantize || layer.SatQuantize != c.SatQuantize))
+                throw new FormatException(
+                    $"Layer '{layer.IngredientId}' of recipe '{ticket.RecipeId}' carries quantize " +
+                    $"{layer.HueQuantize}/{layer.SatQuantize}, but the Menu colorizes it at " +
+                    $"{c.HueQuantize}/{c.SatQuantize}; the ticket was not rolled against this Menu.");
             draws.Add(new Draw(key, menu.Cell(key), definition.Kind,
                 layer.Hue ?? 0, layer.Sat ?? 0, definition.Colorization?.Model ?? ColorModel.Hsv));
         }

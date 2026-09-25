@@ -96,6 +96,36 @@ public class PlatingTests
         Assert.Equal(ColorModel.Hsv, draw.Model);   // the Menu's answer, not the ticket's Hsl
     }
 
+    // ------------------------------------------------------------------ quantize: Menu is authoritative
+
+    /// <summary>
+    /// The quantize a ticket carries is NOT authoritative either. <c>Dna.Compute</c> hashes the
+    /// BUCKET index, so a hue moved to another value inside a re-quantized bucket keeps the DNA:
+    /// hue 100 at a 10-degree step is bucket 10, and so is hue 205 at a 20-degree step. That forged
+    /// wire parses — its DNA is genuinely the DNA its contents produce — and without a check against
+    /// the Menu it plates a hue 105 degrees away from the one that was rolled.
+    /// </summary>
+    [Fact]
+    public void Plate_refuses_a_ticket_whose_quantize_differs_from_the_menu()
+    {
+        using var menu = OneLayerMenu("cat", "bg", LayerKind.Dynamic, Range(ColorModel.Hsv));
+        TicketLayer[] rolled = [new("bg", "a", 100, 0.5, ColorModel.Hsv, LayerKind.Dynamic, 10, 10)];
+        var genuine = new AssetTicket(AssetTicket.ComputeDna("cat", rolled), "cat", rolled);
+
+        string forgedWire = genuine.ToWire().Replace(
+            "bg:a@100,0.5,Hsv,10,10,", "bg:a@205,0.5,Hsv,20,10,", StringComparison.Ordinal);
+        Assert.NotEqual(genuine.ToWire(), forgedWire);
+        var forged = AssetTicket.Parse(forgedWire);          // same DNA, so the wire check passes
+        Assert.Equal(genuine.Dna, forged.Dna);
+
+        var ex = Assert.Throws<FormatException>(() => Plating.Plate(menu, forged));
+        Assert.Contains("bg", ex.Message, StringComparison.Ordinal);
+
+        // The genuine ticket still plates, at the hue that was rolled.
+        var draw = Assert.Single(Plating.Plate(menu, AssetTicket.Parse(genuine.ToWire())));
+        Assert.Equal(100, draw.Hue);
+    }
+
     // ------------------------------------------------------------------ MenuArchive.Layer naming
 
     [Fact]

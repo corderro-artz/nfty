@@ -19,7 +19,8 @@ namespace Nfty.Ticket;
 /// NOT part of the DNA hash, so this field is not authoritative — the same boundary as
 /// <c>Model</c> above.</param>
 /// <param name="HueQuantize">The layer's hue bucket width, carried so the DNA can be recomputed
-/// from the ticket alone.</param>
+/// from the ticket alone. Not authoritative: <c>Plating.Plate</c> refuses a ticket whose quantize
+/// differs from the Menu's.</param>
 /// <param name="SatQuantize">The layer's saturation bucket width, likewise.</param>
 public readonly record struct TicketLayer(
     string IngredientId, string VariantId, double? Hue, double? Sat,
@@ -81,13 +82,17 @@ public sealed record AssetTicket(string Dna, string RecipeId, IReadOnlyList<Tick
     /// read, or carries a DNA its own contents do not produce.</exception>
     /// <remarks>
     /// <b>The DNA is recomputed and compared, never trusted.</b> This catches an alteration to the
-    /// recipe id, an ingredient id, a variant id, a rolled hue/saturation, or a quantize value —
-    /// exactly the fields <c>Dna.Compute</c> hashes. <b><c>Kind</c> and <c>Model</c> sit OUTSIDE the
-    /// DNA</b> (the hash never sees them), so a wire altered in only those two fields still recomputes
-    /// to the same DNA and parses successfully — this check cannot catch that. It is not meant to:
-    /// consumers take a layer's kind and color model from the MENU, which is authoritative — for a
-    /// given <c>(recipeId, ingredientId)</c> both are fixed by the book and cannot legitimately vary
-    /// per asset. The ticket says what was rolled; the Menu says what the layer IS.
+    /// recipe id, an ingredient id, a variant id, or a rolled hue/saturation that moves it to another
+    /// BUCKET — <c>Dna.Compute</c> hashes the quantized bucket index, so the DNA pins a color only to
+    /// its bucket, never to a value. <b><c>Kind</c>, <c>Model</c> and the quantize steps are not
+    /// pinned by it</b>: the hash never sees the first two, and it sees a quantize step only through
+    /// the bucket index it produces, so a wire that re-quantizes (hue 100 at step 10 and hue 205 at
+    /// step 20 are both bucket 10) recomputes to the same DNA and parses successfully. This check
+    /// cannot catch that and is not meant to: all three are fixed by the book for a given
+    /// <c>(recipeId, ingredientId)</c> and cannot legitimately vary per asset, so they are verified
+    /// against the MENU at plating — <c>Plating.Plate</c> takes kind and model from the Menu and
+    /// refuses a ticket whose quantize differs from it. The ticket says what was rolled; the Menu says
+    /// what the layer IS.
     /// </remarks>
     public static AssetTicket Parse(string wire)
     {
