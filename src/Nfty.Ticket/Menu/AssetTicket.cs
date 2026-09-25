@@ -55,11 +55,18 @@ public sealed record AssetTicket(string Dna, string RecipeId, IReadOnlyList<Tick
     /// <c>v1|recipe|ing:var[@hue,sat,model,hq,sq]|...|dna</c>. Every figure is INVARIANT — a comma
     /// decimal separator under a European locale would collide with the field separator itself.
     /// </returns>
+    /// <exception cref="InvalidOperationException">An id carries a character the wire uses as a
+    /// separator where <see cref="Parse"/> would read it as one: <c>|</c> in any id, or <c>:</c> in
+    /// an ingredient id. <c>Validator</c> refuses both in every id, so only a hand-built Menu can
+    /// reach this; <c>@</c> is legal and is carried.</exception>
     public string ToWire()
     {
+        Carriable(RecipeId, "Recipe", '|');
         var parts = new List<string>(Layers.Count + 3) { Version, RecipeId };
         foreach (var l in Layers)
         {
+            Carriable(l.IngredientId, "Ingredient", '|', ':');
+            Carriable(l.VariantId, "Variant", '|');
             string head = $"{l.IngredientId}:{l.VariantId}";
             // ENUMS GO OUT BY NAME, NEVER BY ORDINAL. An (int) cast would pin the DECLARATION
             // ORDER of LayerKind and ColorModel into the wire format, so reordering either enum
@@ -108,8 +115,11 @@ public sealed record AssetTicket(string Dna, string RecipeId, IReadOnlyList<Tick
 
         for (int i = 2; i < parts.Length - 1; i++)
         {
-            var (head, tail) = Split(parts[i], '@');
-            var (ingId, varId) = Split(head, ':');
+            // The LAST '@', because an id may contain one (Validator admits it) and the figures
+            // after the separator never do. The FIRST ':', because an ingredient id may not contain
+            // one and a variant id, though Validator refuses it there too, then still reads back.
+            var (head, tail) = Split(parts[i], parts[i].LastIndexOf('@'), '@');
+            var (ingId, varId) = Split(head, head.IndexOf(':'), ':');
             var f = tail.Split(',');
             if (f.Length != 6) throw new FormatException($"Layer '{parts[i]}' has {f.Length} fields; expected 6.");
 
@@ -131,11 +141,18 @@ public sealed record AssetTicket(string Dna, string RecipeId, IReadOnlyList<Tick
         return new AssetTicket(dna, recipeId, layers);
     }
 
-    private static (string, string) Split(string s, char at)
+    private static (string, string) Split(string s, int i, char at)
     {
-        int i = s.IndexOf(at);
         if (i < 0) throw new FormatException($"Expected '{at}' in '{s}'.");
         return (s[..i], s[(i + 1)..]);
+    }
+
+    private static void Carriable(string id, string what, params char[] separators)
+    {
+        foreach (char c in separators)
+            if (id.Contains(c))
+                throw new InvalidOperationException(
+                    $"{what} id '{id}' contains '{c}', which a ticket's wire form uses as a separator.");
     }
 
     private static double Num(string s) => double.Parse(s, CultureInfo.InvariantCulture);

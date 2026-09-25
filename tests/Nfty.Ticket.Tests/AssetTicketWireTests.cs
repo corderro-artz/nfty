@@ -169,4 +169,35 @@ public class AssetTicketWireTests
 
         Assert.Throws<FormatException>(() => AssetTicket.Parse(mangled));
     }
+
+    // --- Ids: what Validator admits, the wire must carry ---
+
+    [Fact]
+    public void An_id_containing_at_survives_the_round_trip()
+    {
+        // Validator admits '@' in an id - it is an ordinary file-name character, and "hat@2x" is
+        // exactly how an artist names a double-size sprite. The layer field is "ing:var@figures", so
+        // splitting it on the FIRST '@' cut the id in half and the figures after it no longer counted
+        // six. The figures never contain '@', so the LAST one is the separator.
+        var original = Make(Dynamic("hat@2x", "brim@2x", 137.5, 0.62), Custom("bg@1", "a@b@c"));
+        var parsed = AssetTicket.Parse(original.ToWire());
+
+        Assert.Equal(original.Dna, parsed.Dna);
+        Assert.Equal(original.Layers, parsed.Layers);
+    }
+
+    [Theory]
+    [InlineData("a|b", "v")]
+    [InlineData("a:b", "v")]
+    [InlineData("a", "v|w")]
+    public void ToWire_refuses_an_id_the_wire_cannot_carry(string ingredientId, string variantId)
+    {
+        // Validator already refuses '|' and ':' in every id, so no cooked book can reach here with
+        // one - but a MenuBook can be built by hand, and a ticket written with one would come back
+        // from Parse as a different ticket or as nothing. Refusing it at the writer names the id;
+        // letting it through names nothing until a reader somewhere fails on the stored line.
+        var ticket = Make(Custom(ingredientId, variantId));
+        var ex = Assert.Throws<InvalidOperationException>(() => ticket.ToWire());
+        Assert.Contains(ingredientId == "a" ? variantId : ingredientId, ex.Message, StringComparison.Ordinal);
+    }
 }
