@@ -1,4 +1,5 @@
 using System.CommandLine;
+using System.Globalization;
 using Nfty.Cli;
 using Nfty.Core.Formats;
 using Nfty.Core.Generation;
@@ -124,6 +125,89 @@ public class MenuCommandTests
             RecipeWeights: new Dictionary<string, double> { ["cat"] = 100 });
         CookBookArchive.Write(path, cookbook, [recipe]);
         return path;
+    }
+
+    /// <summary>The same one-recipe/two-layer shape as <see cref="WriteCookBook"/>, except the
+    /// recipe weight and one variant weight are FRACTIONAL — 1.5 and 2.5 — so a culture that spells
+    /// the decimal point differently (de-DE uses a comma) would visibly change what <c>inspect</c>
+    /// prints for a Menu.</summary>
+    private static string WriteCookBookWithFractionalWeights(string dir)
+    {
+        using var glow = new Image<Rgba32>(2, 2, new Rgba32(200, 200, 200, 255));
+        using var mark = new Image<Rgba32>(2, 2, new Rgba32(10, 20, 30, 255));
+
+        var aura = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest(
+                Id: "aura",
+                Name: "Aura",
+                Kind: LayerKind.Dynamic,
+                Colorization: new Colorization(
+                    Model: ColorModel.Hsv,
+                    HueQuantize: 12,
+                    SatQuantize: 4,
+                    Entries: [new ColorEntry(Weight: 1, Range: new ColorRange(0, 360, 40, 100), Fixed: null)]),
+                Variants: [new Variant("glow", "Glow", Weight: 2.5)]),
+            VariantImages = new Dictionary<string, Image<Rgba32>> { ["glow"] = glow },
+        };
+        var badge = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest(
+                Id: "badge",
+                Name: "Badge",
+                Kind: LayerKind.Custom,
+                Colorization: null,
+                Variants: [new Variant("mark", "Mark", Weight: 1)]),
+            VariantImages = new Dictionary<string, Image<Rgba32>> { ["mark"] = mark },
+        };
+
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("cat", "Cat", LayerOrder: ["aura", "badge"], Rules: []),
+            Ingredients = [aura, badge],
+        };
+
+        var path = Path.Combine(dir, "book.cbk");
+        var cookbook = new CookBookManifest(
+            Id: "cb",
+            Name: "VaporPets",
+            Canvas: new Dimensions(2, 2),
+            Collection: new Collection("VaporPets", "test fixture", "VP"),
+            RecipeWeights: new Dictionary<string, double> { ["cat"] = 1.5 });
+        CookBookArchive.Write(path, cookbook, [recipe]);
+        return path;
+    }
+
+    [Fact]
+    public void Inspect_prints_menu_weights_invariantly_under_a_comma_decimal_culture()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        var prevCulture = CultureInfo.CurrentCulture;
+        try
+        {
+            var cbk = WriteCookBookWithFractionalWeights(dir);
+            var mnu = Path.Combine(dir, "game.mnu");
+            Run("menu", cbk, "--out", mnu);
+
+            // de-DE spells 1.5 as "1,5" — if PrintMenuRecipe/PrintMenuLayer interpolated a double
+            // with the current culture instead of formatting it invariantly, this would print a
+            // comma and the report would read differently on a machine set to this culture than on
+            // one set to en-US, even though it describes the same Menu.
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("de-DE");
+
+            var (code, text, _) = Capture("inspect", mnu);
+
+            Assert.Equal(0, code);
+            Assert.Contains("weight=1.5", text, StringComparison.Ordinal);
+            Assert.Contains("w=2.5", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("1,5", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("2,5", text, StringComparison.Ordinal);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = prevCulture;
+            Directory.Delete(dir, recursive: true);
+        }
     }
 
     // --- menu writes a readable .mnu ---

@@ -248,7 +248,9 @@ public static partial class CommandFactory
 
     private static void PrintRecipe(LoadedRecipe recipe, double? weight, string indent)
     {
-        string suffix = weight is double w ? $" (weight={w})" : string.Empty;
+        string suffix = weight is double w
+            ? $" (weight={w.ToString(CultureInfo.InvariantCulture)})"
+            : string.Empty;
         Console.WriteLine($"{indent}Recipe: {recipe.Manifest.Name} [{recipe.Manifest.Id}]{suffix}");
 
         // inspect is a diagnostic run on any file, including a malformed one — the very case a
@@ -295,7 +297,8 @@ public static partial class CommandFactory
         Console.WriteLine(
             $"{indent}Ingredient: {ing.Manifest.Name} [{ing.Manifest.Id}] ({ing.Manifest.Kind}){absent}");
         foreach (var v in ing.Manifest.Variants)
-            Console.WriteLine($"{indent}  Variant: {v.Name} [{v.Id}] (w={v.Weight})");
+            Console.WriteLine(
+                $"{indent}  Variant: {v.Name} [{v.Id}] (w={v.Weight.ToString(CultureInfo.InvariantCulture)})");
     }
 
     /// <summary>
@@ -319,7 +322,8 @@ public static partial class CommandFactory
 
     private static void PrintMenuRecipe(MenuRecipe recipe, string indent)
     {
-        Console.WriteLine($"{indent}Recipe: {recipe.Name} [{recipe.Id}] (weight={recipe.Weight})");
+        Console.WriteLine(
+            $"{indent}Recipe: {recipe.Name} [{recipe.Id}] (weight={recipe.Weight.ToString(CultureInfo.InvariantCulture)})");
 
         var byId = new Dictionary<string, MenuLayer>(StringComparer.Ordinal);
         foreach (var layer in recipe.Layers) byId[layer.Id] = layer;
@@ -344,7 +348,8 @@ public static partial class CommandFactory
             : string.Empty;
         Console.WriteLine($"{indent}Ingredient: {layer.Name} [{layer.Id}] ({layer.Kind}){absent}");
         foreach (var v in layer.Variants)
-            Console.WriteLine($"{indent}  Variant: {v.Name} [{v.Id}] (w={v.Weight})");
+            Console.WriteLine(
+                $"{indent}  Variant: {v.Name} [{v.Id}] (w={v.Weight.ToString(CultureInfo.InvariantCulture)})");
     }
 
     private static Command Validate()
