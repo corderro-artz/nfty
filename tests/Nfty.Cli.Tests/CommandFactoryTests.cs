@@ -547,7 +547,7 @@ public class CommandFactoryTests
         using var spark = new Image<Rgba32>(1, 1, new Rgba32(220, 220, 220, 255));
 
         IngredientArchive.Write(path, manifest,
-            new Dictionary<string, Image<Rgba32>> { ["glow"] = glow, ["spark"] = spark });
+            new Dictionary<string, Image<Rgba32>> { ["glow"] = glow, ["spark"] = spark }, DepthMaps.None);
     }
 
     /// <summary>
@@ -589,6 +589,6 @@ public class CommandFactoryTests
         using var image = new Image<Rgba32>(1, 1);
         image[0, 0] = new Rgba32(10, 20, 30, 255);
 
-        IngredientArchive.Write(path, manifest, new Dictionary<string, Image<Rgba32>> { ["only"] = image });
+        IngredientArchive.Write(path, manifest, new Dictionary<string, Image<Rgba32>> { ["only"] = image }, DepthMaps.None);
     }
 }

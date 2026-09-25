@@ -83,7 +83,7 @@ public class ExplorerImportTests
     {
         string p = Path.Combine(Path.GetDirectoryName(bookPath)!, id + ".igt");
         using var ing = Ing(id, "one", "two");
-        IngredientArchive.Write(p, ing.Manifest, ing.VariantImages);
+        IngredientArchive.Write(p, ing.Manifest, ing.VariantImages, DepthMaps.None);
         return p;
     }
 

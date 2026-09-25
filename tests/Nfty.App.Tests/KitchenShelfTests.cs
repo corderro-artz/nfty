@@ -270,7 +270,7 @@ public class KitchenShelfTests
     private static void WriteIngredient(string path, LayerKind kind, int variants)
     {
         using var ing = Ingredient(kind, variants);
-        IngredientArchive.Write(path, ing.Manifest, ing.VariantImages);
+        IngredientArchive.Write(path, ing.Manifest, ing.VariantImages, DepthMaps.None);
     }
 
     private static LoadedIngredient Ingredient(LayerKind kind, int variants)

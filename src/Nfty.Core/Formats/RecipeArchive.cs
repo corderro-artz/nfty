@@ -24,7 +24,7 @@ public static class RecipeArchive
         ArchiveIo.WriteManifest(zip, Stamped(manifest, ingredients));
         foreach (var ing in ingredients)
             ArchiveIo.WriteNested(zip, $"ingredients/{ing.Manifest.Id}.igt",
-                inner => IngredientArchive.Write(inner, ing.Manifest, ing.VariantImages));
+                inner => IngredientArchive.Write(inner, ing.Manifest, ing.VariantImages, ing.Depths));
     }
 
     /// <summary>Reads a Recipe from an already-open archive, decoding every variant PNG.</summary>
@@ -81,7 +81,7 @@ public static class RecipeArchive
         await ArchiveIo.WriteManifestAsync(zip, Stamped(manifest, ingredients), ct);
         foreach (var ing in ingredients)
             await ArchiveIo.WriteNestedAsync(zip, $"ingredients/{ing.Manifest.Id}.igt",
-                inner => IngredientArchive.WriteAsync(inner, ing.Manifest, ing.VariantImages, ct), ct);
+                inner => IngredientArchive.WriteAsync(inner, ing.Manifest, ing.VariantImages, ing.Depths, ct), ct);
     }
 
     /// <summary>Reads a Recipe from an already-open archive.</summary>

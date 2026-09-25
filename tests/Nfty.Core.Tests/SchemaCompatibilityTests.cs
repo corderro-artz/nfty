@@ -159,7 +159,7 @@ public class SchemaCompatibilityTests
     {
         var igt = TempPath("future.igt");
         var ing = Ing();
-        IngredientArchive.Write(igt, ing.Manifest with { SchemaVersion = Schema.Current + 1 }, ing.VariantImages);
+        IngredientArchive.Write(igt, ing.Manifest with { SchemaVersion = Schema.Current + 1 }, ing.VariantImages, DepthMaps.None);
         Assert.Throws<UnsupportedSchemaVersionException>(() => IngredientArchive.Read(igt));
 
         var rcp = TempPath("future.rcp");

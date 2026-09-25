@@ -47,7 +47,7 @@ public class ArchiveReadDisposalTests
         using var imgA = new Image<Rgba32>(2, 2, new Rgba32(1, 2, 3, 255));
         using var imgB = new Image<Rgba32>(2, 2, new Rgba32(4, 5, 6, 255));
         IngredientArchive.Write(path, manifest,
-            new Dictionary<string, Image<Rgba32>> { ["a"] = imgA, ["b"] = imgB });
+            new Dictionary<string, Image<Rgba32>> { ["a"] = imgA, ["b"] = imgB }, DepthMaps.None);
 
         using var zip = ZipFile.Open(path, ZipArchiveMode.Update);
         zip.GetEntry("variants/b.png")!.Delete();

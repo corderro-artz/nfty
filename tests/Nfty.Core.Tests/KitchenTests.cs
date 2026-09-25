@@ -60,7 +60,7 @@ public class KitchenTests
         };
         using (ing)
             IngredientArchive.Write(Path.Combine(dir, id + Archives.IngredientExtension),
-                ing.Manifest, ing.VariantImages);
+                ing.Manifest, ing.VariantImages, DepthMaps.None);
     }
 
     private static void PutRecipe(string dir, string id)

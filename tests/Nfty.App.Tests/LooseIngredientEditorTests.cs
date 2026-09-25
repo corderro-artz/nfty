@@ -25,7 +25,7 @@ public class LooseIngredientEditorTests
             : new Colorization(ColorModel.Hsv, 12, 4, new[] { new ColorEntry(1, new ColorRange(0, 360, 40, 100), null) });
         var manifest = new IngredientManifest("aura", "Aura", kind, coloriz, new[] { new Variant("glow", "Glow", 1) });
         var images = new Dictionary<string, Image<Rgba32>> { ["glow"] = new(8, 8) };
-        IngredientArchive.Write(path, manifest, images);
+        IngredientArchive.Write(path, manifest, images, DepthMaps.None);
         foreach (var i in images.Values) i.Dispose();
         return (path, IngredientArchive.Read(path));
     }

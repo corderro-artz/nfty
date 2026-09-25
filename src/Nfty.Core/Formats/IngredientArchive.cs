@@ -6,8 +6,9 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace Nfty.Core.Formats;
 
-/// <summary>Reads and writes <c>.igt</c> archives — a manifest plus one PNG per variant. The
-/// <c>ZipArchive</c> overloads exist so a Recipe can nest one without going through a file.</summary>
+/// <summary>Reads and writes <c>.igt</c> archives — a manifest plus one PNG per variant, plus an
+/// optional depth map per variant. The <c>ZipArchive</c> overloads exist so a Recipe can nest one
+/// without going through a file.</summary>
 public static class IngredientArchive
 {
     /// <summary>Stamps <see cref="IngredientManifest.PartialAlpha"/> from the actual pixels rather
@@ -17,29 +18,146 @@ public static class IngredientArchive
         IReadOnlyDictionary<string, Image<Rgba32>> variantImages) =>
         manifest with { PartialAlpha = Opacity.HasPartialAlpha(variantImages.Values) };
 
+    /// <summary>The bytes to write for one variant's depth map, or <c>null</c> when nothing should
+    /// be written at all — either the map was never painted (flat), or painting over a since-erased
+    /// pixel left it flat once the write zeroes depth over transparency.</summary>
+    /// <param name="ingredientId">The owning ingredient's id, for the size-mismatch message.</param>
+    /// <param name="variantId">The variant's id, for the size-mismatch message.</param>
+    /// <param name="image">The variant's decoded image — the map must share its dimensions.</param>
+    /// <param name="map">The depth map as authored, before transparency is zeroed.</param>
+    /// <exception cref="ArgumentException"><paramref name="map"/>'s dimensions differ from
+    /// <paramref name="image"/>'s — a caller bug, not a file problem.</exception>
+    private static byte[]? DepthBytesToWrite(string ingredientId, string variantId,
+        Image<Rgba32> image, DepthMap map)
+    {
+        if (map.Width != image.Width || map.Height != image.Height)
+            throw new ArgumentException(
+                $"Depth map for ingredient '{ingredientId}' variant '{variantId}' is "
+                + $"{map.Width}x{map.Height}; its image is {image.Width}x{image.Height}.");
+
+        var bytes = map.ToBytes();
+        image.ProcessPixelRows(accessor =>
+        {
+            for (int y = 0; y < accessor.Height; y++)
+            {
+                var row = accessor.GetRowSpan(y);
+                for (int x = 0; x < row.Length; x++)
+                {
+                    if (Opacity.IsSolid(row[x])) continue;
+                    int i = (y * map.Width + x) * 2;
+                    bytes[i] = 0;
+                    bytes[i + 1] = 0;
+                }
+            }
+        });
+
+        var zeroed = DepthMap.FromBytes(map.Width, map.Height, bytes);
+        return zeroed.IsFlat ? null : zeroed.ToBytes();
+    }
+
     /// <summary>Writes an Ingredient into an already-open archive.</summary>
     /// <param name="zip">The open archive.</param>
     /// <param name="manifest">The ingredient's manifest. Its <c>PartialAlpha</c> is ignored — the
     /// written value is recomputed from <paramref name="variantImages"/>.</param>
     /// <param name="variantImages">One image per variant id.</param>
+    /// <param name="depths">Depth maps by variant id. A variant with no entry, or whose entry is
+    /// flat once zeroed over transparency, gets no <c>depth/</c> entry at all. An entry whose key
+    /// is not one of this manifest's variants is ignored.</param>
     public static void Write(ZipArchive zip, IngredientManifest manifest,
-        IReadOnlyDictionary<string, Image<Rgba32>> variantImages)
+        IReadOnlyDictionary<string, Image<Rgba32>> variantImages,
+        IReadOnlyDictionary<string, DepthMap> depths)
     {
         ArchiveIo.WriteManifest(zip, Stamped(manifest, variantImages));
         foreach (var v in manifest.Variants)
-            ArchiveIo.WriteImage(zip, $"variants/{v.Id}.png", variantImages[v.Id]);
+        {
+            var image = variantImages[v.Id];
+            ArchiveIo.WriteImage(zip, $"variants/{v.Id}.png", image);
+            if (depths.TryGetValue(v.Id, out var map))
+            {
+                var bytes = DepthBytesToWrite(manifest.Id, v.Id, image, map);
+                if (bytes is not null)
+                    ArchiveIo.WriteBytes(zip, $"depth/{v.Id}.dep", bytes);
+            }
+        }
+    }
+
+    /// <summary>For each variant, the wrong-length message <see cref="ReadDepths"/> and its async
+    /// twin both throw — shared so they cannot drift on wording.</summary>
+    private static InvalidDataException WrongLength(
+        string ingredientId, string variantId, int len, Image<Rgba32> image) =>
+        new($"Ingredient '{ingredientId}' variant '{variantId}' has a {len}-byte depth map; "
+            + $"its {image.Width}x{image.Height} image needs {image.Width * image.Height * 2}.");
+
+    /// <summary>Reads every variant's depth map, when it has one.</summary>
+    /// <param name="zip">The open archive.</param>
+    /// <param name="manifest">The ingredient's manifest.</param>
+    /// <param name="images">The already-decoded variant images, to check each map's size against.</param>
+    /// <exception cref="InvalidDataException">A stored depth entry's length disagrees with its
+    /// variant image's dimensions.</exception>
+    private static Dictionary<string, DepthMap> ReadDepths(
+        ZipArchive zip, IngredientManifest manifest, IReadOnlyDictionary<string, Image<Rgba32>> images)
+    {
+        var depths = new Dictionary<string, DepthMap>();
+        foreach (var v in manifest.Variants)
+        {
+            var bytes = ArchiveIo.TryReadBytes(zip, $"depth/{v.Id}.dep");
+            if (bytes is null) continue;
+            var image = images[v.Id];
+            int expected = image.Width * image.Height * 2;
+            if (bytes.Length != expected)
+                throw WrongLength(manifest.Id, v.Id, bytes.Length, image);
+            depths[v.Id] = DepthMap.FromBytes(image.Width, image.Height, bytes);
+        }
+        return depths;
+    }
+
+    /// <summary>Reads every variant's depth map, when it has one.</summary>
+    /// <param name="zip">The open archive.</param>
+    /// <param name="manifest">The ingredient's manifest.</param>
+    /// <param name="images">The already-decoded variant images, to check each map's size against.</param>
+    /// <param name="ct">Cancels the read.</param>
+    /// <exception cref="InvalidDataException">A stored depth entry's length disagrees with its
+    /// variant image's dimensions.</exception>
+    private static async Task<Dictionary<string, DepthMap>> ReadDepthsAsync(
+        ZipArchive zip, IngredientManifest manifest, IReadOnlyDictionary<string, Image<Rgba32>> images,
+        CancellationToken ct)
+    {
+        var depths = new Dictionary<string, DepthMap>();
+        foreach (var v in manifest.Variants)
+        {
+            var bytes = await ArchiveIo.TryReadBytesAsync(zip, $"depth/{v.Id}.dep", ct);
+            if (bytes is null) continue;
+            var image = images[v.Id];
+            int expected = image.Width * image.Height * 2;
+            if (bytes.Length != expected)
+                throw WrongLength(manifest.Id, v.Id, bytes.Length, image);
+            depths[v.Id] = DepthMap.FromBytes(image.Width, image.Height, bytes);
+        }
+        return depths;
     }
 
     /// <summary>Reads an Ingredient from an already-open archive, decoding every variant PNG.</summary>
     /// <param name="zip">The open archive.</param>
     /// <returns>The loaded ingredient; the caller owns it. Its manifest's <c>PartialAlpha</c> is
     /// recomputed from the decoded images rather than trusting the stored value.</returns>
+    /// <exception cref="InvalidDataException">A stored depth entry's length disagrees with its
+    /// variant image's dimensions.</exception>
     public static LoadedIngredient Read(ZipArchive zip)
     {
         var manifest = ArchiveIo.ReadManifest<IngredientManifest>(zip);
         EnsureUniqueVariantIds(manifest);
         var images = DecodeVariants(zip, manifest);
-        return new LoadedIngredient { Manifest = Stamped(manifest, images), VariantImages = images };
+        Dictionary<string, DepthMap> depths;
+        try
+        {
+            depths = ReadDepths(zip, manifest, images);
+        }
+        catch
+        {
+            foreach (var img in images.Values) img.Dispose();
+            throw;
+        }
+        return new LoadedIngredient { Manifest = Stamped(manifest, images), VariantImages = images, Depths = depths };
     }
 
     /// <summary>
@@ -62,11 +180,13 @@ public static class IngredientArchive
     /// <param name="path">Destination path.</param>
     /// <param name="manifest">The ingredient's manifest.</param>
     /// <param name="variantImages">One image per variant id.</param>
+    /// <param name="depths">Depth maps by variant id.</param>
     public static void Write(string path, IngredientManifest manifest,
-        IReadOnlyDictionary<string, Image<Rgba32>> variantImages)
+        IReadOnlyDictionary<string, Image<Rgba32>> variantImages,
+        IReadOnlyDictionary<string, DepthMap> depths)
     {
         using var zip = ZipFile.Open(path, ZipArchiveMode.Create);
-        Write(zip, manifest, variantImages);
+        Write(zip, manifest, variantImages, depths);
     }
 
     /// <summary>Reads an Ingredient from a file, decoding every variant PNG.</summary>
@@ -82,14 +202,25 @@ public static class IngredientArchive
     /// <param name="zip">The open archive.</param>
     /// <param name="manifest">The ingredient's manifest.</param>
     /// <param name="variantImages">One image per variant id.</param>
+    /// <param name="depths">Depth maps by variant id. See the sync overload for the write rules.</param>
     /// <param name="ct">Cancels the write.</param>
     /// <returns>A task that completes when it is written.</returns>
     public static async Task WriteAsync(ZipArchive zip, IngredientManifest manifest,
-        IReadOnlyDictionary<string, Image<Rgba32>> variantImages, CancellationToken ct = default)
+        IReadOnlyDictionary<string, Image<Rgba32>> variantImages,
+        IReadOnlyDictionary<string, DepthMap> depths, CancellationToken ct = default)
     {
         await ArchiveIo.WriteManifestAsync(zip, Stamped(manifest, variantImages), ct);
         foreach (var v in manifest.Variants)
-            await ArchiveIo.WriteImageAsync(zip, $"variants/{v.Id}.png", variantImages[v.Id], ct);
+        {
+            var image = variantImages[v.Id];
+            await ArchiveIo.WriteImageAsync(zip, $"variants/{v.Id}.png", image, ct);
+            if (depths.TryGetValue(v.Id, out var map))
+            {
+                var bytes = DepthBytesToWrite(manifest.Id, v.Id, image, map);
+                if (bytes is not null)
+                    await ArchiveIo.WriteBytesAsync(zip, $"depth/{v.Id}.dep", bytes, ct);
+            }
+        }
     }
 
     /// <summary>Reads an Ingredient from an already-open archive.</summary>
@@ -97,15 +228,28 @@ public static class IngredientArchive
     /// <param name="ct">Cancels the read; anything already decoded is disposed first.</param>
     /// <returns>The loaded ingredient; the caller owns it. Its manifest's <c>PartialAlpha</c> is
     /// recomputed from the decoded images rather than trusting the stored value.</returns>
+    /// <exception cref="InvalidDataException">A stored depth entry's length disagrees with its
+    /// variant image's dimensions.</exception>
     public static async Task<LoadedIngredient> ReadAsync(ZipArchive zip, CancellationToken ct = default)
     {
         var manifest = await ArchiveIo.ReadManifestAsync<IngredientManifest>(zip, ct);
         EnsureUniqueVariantIds(manifest);
         var images = await DecodeVariantsAsync(zip, manifest, ct);
+        Dictionary<string, DepthMap> depths;
+        try
+        {
+            depths = await ReadDepthsAsync(zip, manifest, images, ct);
+        }
+        catch
+        {
+            foreach (var img in images.Values) img.Dispose();
+            throw;
+        }
         return new LoadedIngredient
         {
             Manifest = Stamped(manifest, images),
             VariantImages = images,
+            Depths = depths,
         };
     }
 
@@ -113,13 +257,15 @@ public static class IngredientArchive
     /// <param name="path">Destination path.</param>
     /// <param name="manifest">The ingredient's manifest.</param>
     /// <param name="variantImages">One image per variant id.</param>
+    /// <param name="depths">Depth maps by variant id.</param>
     /// <param name="ct">Cancels the write.</param>
     /// <returns>A task that completes when it is written.</returns>
     public static async Task WriteAsync(string path, IngredientManifest manifest,
-        IReadOnlyDictionary<string, Image<Rgba32>> variantImages, CancellationToken ct = default)
+        IReadOnlyDictionary<string, Image<Rgba32>> variantImages,
+        IReadOnlyDictionary<string, DepthMap> depths, CancellationToken ct = default)
     {
         using var zip = ZipFile.Open(path, ZipArchiveMode.Create);
-        await WriteAsync(zip, manifest, variantImages, ct);
+        await WriteAsync(zip, manifest, variantImages, depths, ct);
     }
 
     /// <summary>Reads an Ingredient from a file.</summary>

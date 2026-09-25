@@ -59,7 +59,7 @@ public class PartialAlphaFlagTests
             var path = Path.Combine(dir, "aura.igt");
             using var ing = Ing("aura", "Aura", alpha: 128, claimPartial: false);
 
-            IngredientArchive.Write(path, ing.Manifest, ing.VariantImages);
+            IngredientArchive.Write(path, ing.Manifest, ing.VariantImages, DepthMaps.None);
 
             using var doc = ReadRawManifest(path);
             Assert.True(doc.RootElement.GetProperty("partialAlpha").GetBoolean());
@@ -148,7 +148,7 @@ public class PartialAlphaFlagTests
         {
             var path = Path.Combine(dir, "aura.igt");
             using (var ing = Ing("aura", "Aura", alpha: 255))
-                IngredientArchive.Write(path, ing.Manifest, ing.VariantImages);
+                IngredientArchive.Write(path, ing.Manifest, ing.VariantImages, DepthMaps.None);
 
             // The write above stamped false (the pixel is fully opaque). Hand-edit the stored
             // manifest text to lie about it — a plain string swap, so the test does not depend on

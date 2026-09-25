@@ -580,7 +580,7 @@ public class VisualCapture
             { ["v1"] = new(8, 8), ["v2"] = new(8, 8) },
         })
         {
-            IngredientArchive.Write(Path.Combine(dir, "aura.igt"), loose.Manifest, loose.VariantImages);
+            IngredientArchive.Write(Path.Combine(dir, "aura.igt"), loose.Manifest, loose.VariantImages, DepthMaps.None);
         }
 
         var ktn = Path.Combine(dir, "Studio.ktn");

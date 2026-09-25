@@ -184,7 +184,7 @@ public class InspectReportingTests
             var igt = Path.Combine(dir, "aura.igt");
             var images = new Dictionary<string, Image<Rgba32>> { ["glow"] = Solid(128) };
             IngredientArchive.Write(igt, new IngredientManifest("aura", "Aura", LayerKind.Custom, null,
-                new[] { new Variant("glow", "Glow", 1) }), images);
+                new[] { new Variant("glow", "Glow", 1) }), images, DepthMaps.None);
             foreach (var i in images.Values) i.Dispose();
 
             var (code, text, _) = Capture("inspect", igt, "--voxel");

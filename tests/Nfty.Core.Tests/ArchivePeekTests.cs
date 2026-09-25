@@ -101,7 +101,7 @@ public class ArchivePeekTests
         {
             var path = Path.Combine(dir, "aura.igt");
             using var ing = Ing("aura", "Aura", LayerKind.Dynamic, 4);
-            IngredientArchive.Write(path, ing.Manifest, ing.VariantImages);
+            IngredientArchive.Write(path, ing.Manifest, ing.VariantImages, DepthMaps.None);
 
             var manifest = ArchivePeek.Ingredient(path);
 
@@ -128,7 +128,7 @@ public class ArchivePeekTests
         {
             var path = Path.Combine(dir, "aura.igt");
             using (var ing = Ing("aura", "Aura", LayerKind.Dynamic, 2))
-                IngredientArchive.Write(path, ing.Manifest, ing.VariantImages);
+                IngredientArchive.Write(path, ing.Manifest, ing.VariantImages, DepthMaps.None);
 
             // Replace one variant's PNG bytes with something that is not a PNG.
             using (var zip = ZipFile.Open(path, ZipArchiveMode.Update))
@@ -161,7 +161,7 @@ public class ArchivePeekTests
         {
             var path = Path.Combine(dir, "aura.igt");
             using (var ing = Ing("aura", "Aura", LayerKind.Dynamic, 1))
-                IngredientArchive.Write(path, ing.Manifest, ing.VariantImages);
+                IngredientArchive.Write(path, ing.Manifest, ing.VariantImages, DepthMaps.None);
 
             using (var zip = ZipFile.Open(path, ZipArchiveMode.Update))
             {

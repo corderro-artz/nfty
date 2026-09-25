@@ -37,7 +37,7 @@ public class IngredientDraftExporterTests
         var (manifest, images) = IngredientDraftExporter.Export(TwoVariantDraft());
         var dir = System.IO.Directory.CreateTempSubdirectory();
         var path = System.IO.Path.Combine(dir.FullName, "body.igt");
-        IngredientArchive.Write(path, manifest, images);
+        IngredientArchive.Write(path, manifest, images, DepthMaps.None);
         foreach (var img in images.Values) img.Dispose();
 
         using var loaded = IngredientArchive.Read(path);

@@ -95,7 +95,7 @@ public class IngredientEditorReferencesTests
             IngredientArchive.Write(Path.Combine(dir, id + ".igt"),
                 new IngredientManifest(id, id, LayerKind.Custom, null,
                     new[] { new Variant("a", "A", 1) }),
-                new Dictionary<string, Image<Rgba32>> { ["a"] = img });
+                new Dictionary<string, Image<Rgba32>> { ["a"] = img }, DepthMaps.None);
         }
 
         var session = new KitchenSession();

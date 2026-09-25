@@ -32,7 +32,7 @@ public class IngredientArchiveDuplicateVariantIdTests
     public void Duplicate_variant_id_is_rejected_by_the_sync_reader_with_a_named_message()
     {
         var path = TempPath("dup.igt");
-        IngredientArchive.Write(path, DuplicateManifest(), OneImage());
+        IngredientArchive.Write(path, DuplicateManifest(), OneImage(), DepthMaps.None);
 
         var ex = Assert.Throws<InvalidDataException>(() => IngredientArchive.Read(path));
 
@@ -45,7 +45,7 @@ public class IngredientArchiveDuplicateVariantIdTests
     public async Task Duplicate_variant_id_is_rejected_by_the_async_reader_with_the_same_message()
     {
         var path = TempPath("dup.igt");
-        IngredientArchive.Write(path, DuplicateManifest(), OneImage());
+        IngredientArchive.Write(path, DuplicateManifest(), OneImage(), DepthMaps.None);
 
         var ex = await Assert.ThrowsAsync<InvalidDataException>(() => IngredientArchive.ReadAsync(path));
 

@@ -80,6 +80,31 @@ internal static class ArchiveIo
     /// <returns>The decoded image; the caller owns it.</returns>
     public static Image<Rgba32> DecodeImage(byte[] bytes) => Image.Load<Rgba32>(bytes);
 
+    /// <summary>Writes one entry's raw bytes, unencoded.</summary>
+    /// <param name="zip">The open archive.</param>
+    /// <param name="name">The entry to write.</param>
+    /// <param name="bytes">The bytes to write verbatim.</param>
+    public static void WriteBytes(ZipArchive zip, string name, byte[] bytes)
+    {
+        var entry = zip.CreateEntry(name);
+        using var s = entry.Open();
+        s.Write(bytes, 0, bytes.Length);
+    }
+
+    /// <summary>Reads one entry's raw bytes, unencoded, when the entry exists.</summary>
+    /// <param name="zip">The open archive.</param>
+    /// <param name="name">The entry to read.</param>
+    /// <returns>The entry's bytes, or <c>null</c> when no such entry is in the archive.</returns>
+    public static byte[]? TryReadBytes(ZipArchive zip, string name)
+    {
+        var entry = zip.GetEntry(name);
+        if (entry is null) return null;
+        using var s = entry.Open();
+        using var ms = new MemoryStream();
+        s.CopyTo(ms);
+        return ms.ToArray();
+    }
+
     public static void WriteNested(ZipArchive zip, string entryName, Action<ZipArchive> build)
     {
         using var ms = new MemoryStream();
@@ -183,6 +208,33 @@ internal static class ArchiveIo
     public static async Task<byte[]> ReadImageBytesAsync(ZipArchive zip, string name, CancellationToken ct)
     {
         var entry = zip.GetEntry(name) ?? throw new InvalidDataException($"Archive is missing {name}.");
+        await using var s = entry.Open();
+        using var ms = new MemoryStream();
+        await s.CopyToAsync(ms, ct);
+        return ms.ToArray();
+    }
+
+    /// <summary>Writes one entry's raw bytes, unencoded.</summary>
+    /// <param name="zip">The open archive.</param>
+    /// <param name="name">The entry to write.</param>
+    /// <param name="bytes">The bytes to write verbatim.</param>
+    /// <param name="ct">Cancels the write.</param>
+    public static async Task WriteBytesAsync(ZipArchive zip, string name, byte[] bytes, CancellationToken ct)
+    {
+        var entry = zip.CreateEntry(name);
+        await using var s = entry.Open();
+        await s.WriteAsync(bytes, ct);
+    }
+
+    /// <summary>Reads one entry's raw bytes, unencoded, when the entry exists.</summary>
+    /// <param name="zip">The open archive.</param>
+    /// <param name="name">The entry to read.</param>
+    /// <param name="ct">Cancels the read.</param>
+    /// <returns>The entry's bytes, or <c>null</c> when no such entry is in the archive.</returns>
+    public static async Task<byte[]?> TryReadBytesAsync(ZipArchive zip, string name, CancellationToken ct)
+    {
+        var entry = zip.GetEntry(name);
+        if (entry is null) return null;
         await using var s = entry.Open();
         using var ms = new MemoryStream();
         await s.CopyToAsync(ms, ct);

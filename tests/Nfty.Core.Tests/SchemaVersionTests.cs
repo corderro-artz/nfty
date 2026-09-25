@@ -36,7 +36,7 @@ public class SchemaVersionTests
     {
         var path = TempPath("future.igt");
         var ing = Ingredient(schemaVersion: 2);
-        IngredientArchive.Write(path, ing.Manifest, ing.VariantImages);
+        IngredientArchive.Write(path, ing.Manifest, ing.VariantImages, DepthMaps.None);
 
         var ex = Assert.Throws<UnsupportedSchemaVersionException>(() => IngredientArchive.Read(path));
 

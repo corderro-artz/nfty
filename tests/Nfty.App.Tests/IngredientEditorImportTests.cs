@@ -365,7 +365,7 @@ public class IngredientEditorImportTests
             var manifest = new IngredientManifest("art", "Art", LayerKind.Custom, null,
                 new[] { new Variant("v1", "V1", 1) });
             var seed = new Dictionary<string, Image<Rgba32>> { ["v1"] = new(8, 8) };
-            IngredientArchive.Write(igt, manifest, seed);
+            IngredientArchive.Write(igt, manifest, seed, DepthMaps.None);
             foreach (var i in seed.Values) i.Dispose();
 
             for (int pass = 0; pass < 2; pass++)

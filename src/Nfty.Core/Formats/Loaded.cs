@@ -15,6 +15,11 @@ public class LoadedIngredient : IDisposable
     /// <summary>Decoded variant images by variant id. Owned by this object.</summary>
     public required IReadOnlyDictionary<string, Image<Rgba32>> VariantImages { get; init; }
 
+    /// <summary>Per-pixel front/back depth maps, keyed by variant id. A variant with no entry here
+    /// is flat — "paper" — for the Rise feature. Never as large as <see cref="VariantImages"/>: most
+    /// variants carry no depth data at all.</summary>
+    public IReadOnlyDictionary<string, DepthMap> Depths { get; init; } = DepthMaps.None;
+
     /// <summary>Frees every image this object owns. Reading an archive eagerly decodes them all,
     /// so this is how a caller gives them back.</summary>
     public void Dispose()
