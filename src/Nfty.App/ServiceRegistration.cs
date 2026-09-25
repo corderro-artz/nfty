@@ -24,13 +24,11 @@ public static class ServiceRegistration
         // workspace chip is "fixed for every item below it".
         services.AddSingleton<IKitchenSession, KitchenSession>();
 
-        // The .nfty store, and the two things that live in it. Built by hand rather than by type so
-        // the Kitchen session reaches the store (rule 3 of its discovery order) and so the legacy
-        // %APPDATA% recents file is named HERE, at the composition root, and nowhere else - a test
-        // that constructs a RecentsService can then never reach the developer's own list.
+        // The .nfty store, and the things that live in it. Built by hand rather than by type so the
+        // Kitchen session reaches the store (rule 3 of its discovery order).
         services.AddSingleton<IStateStore>(sp => new StateStore(sp.GetRequiredService<IKitchenSession>()));
         services.AddSingleton<IRecentsService>(sp =>
-            new RecentsService(sp.GetRequiredService<IStateStore>(), RecentsService.LegacyFile));
+            new RecentsService(sp.GetRequiredService<IStateStore>()));
         services.AddSingleton<IPaletteService>(sp =>
             new PaletteService(sp.GetRequiredService<IStateStore>()));
         services.AddSingleton<IEditorViewState>(sp =>
