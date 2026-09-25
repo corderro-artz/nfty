@@ -200,4 +200,49 @@ public class AssetTicketWireTests
         var ex = Assert.Throws<InvalidOperationException>(() => ticket.ToWire());
         Assert.Contains(ingredientId == "a" ? variantId : ingredientId, ex.Message, StringComparison.Ordinal);
     }
+
+    // --- Enum and number fields: the wire says a name or a finite figure, or it is refused ---
+
+    [Theory]
+    [InlineData("7")]        // no LayerKind has this ordinal
+    [InlineData("0")]        // an ordinal that happens to be defined is still an ordinal
+    [InlineData("Sparkly")]  // a name no LayerKind has
+    public void A_kind_that_is_not_a_kind_name_is_refused_naming_the_field(string kind)
+    {
+        // Kind sits outside the DNA, so the substitution below leaves the stated DNA correct and
+        // nothing but the field parse itself can refuse it. Enum.Parse took "7" as an undefined
+        // LayerKind and "0" as whatever happens to be declared first - the ordinal dependence the
+        // writer's own comment says the format never has - and threw ArgumentException, not the
+        // FormatException Parse documents, for a name it did not know.
+        var ticket = Make(Dynamic("bg", "a", 137.5, 0.62));
+        string wire = ticket.ToWire().Replace(",Dynamic|", "," + kind + "|", StringComparison.Ordinal);
+
+        var ex = Assert.Throws<FormatException>(() => AssetTicket.Parse(wire));
+        Assert.Contains("kind", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_color_model_given_as_an_ordinal_is_refused_naming_the_field()
+    {
+        var ticket = Make(Dynamic("bg", "a", 137.5, 0.62));
+        string wire = ticket.ToWire().Replace(",Hsv,", ",1,", StringComparison.Ordinal);
+
+        var ex = Assert.Throws<FormatException>(() => AssetTicket.Parse(wire));
+        Assert.Contains("model", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    public void A_non_finite_hue_is_refused_naming_the_field(double hue)
+    {
+        // The DNA is computed OVER the non-finite hue, so the stated DNA is exactly what the
+        // contents produce and the integrity check cannot be what refuses it. double.Parse reads
+        // "NaN" and "Infinity" happily; ColorBuckets then folds them into a bucket by a saturating
+        // cast and the colorizer draws whatever that makes.
+        var ticket = Make(Dynamic("bg", "a", hue, 0.62));
+
+        var ex = Assert.Throws<FormatException>(() => AssetTicket.Parse(ticket.ToWire()));
+        Assert.Contains("hue", ex.Message, StringComparison.Ordinal);
+    }
 }

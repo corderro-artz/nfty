@@ -85,8 +85,9 @@ public sealed record AssetTicket(string Dna, string RecipeId, IReadOnlyList<Tick
     /// <summary>Reads a ticket back from <see cref="ToWire"/>.</summary>
     /// <param name="wire">The wire form.</param>
     /// <returns>The ticket.</returns>
-    /// <exception cref="FormatException">The wire is malformed, is a version this build does not
-    /// read, or carries a DNA its own contents do not produce.</exception>
+    /// <exception cref="FormatException">The wire is malformed (including an enum given by anything
+    /// but its name, or a figure that is not finite — the message names the layer and the field), is
+    /// a version this build does not read, or carries a DNA its own contents do not produce.</exception>
     /// <remarks>
     /// <b>The DNA is recomputed and compared, never trusted.</b> This catches an alteration to the
     /// recipe id, an ingredient id, a variant id, or a rolled hue/saturation that moves it to another
@@ -125,12 +126,12 @@ public sealed record AssetTicket(string Dna, string RecipeId, IReadOnlyList<Tick
 
             layers.Add(new TicketLayer(
                 ingId, varId,
-                f[0].Length == 0 ? null : Num(f[0]),
-                f[1].Length == 0 ? null : Num(f[1]),
-                f[2].Length == 0 ? null : Enum.Parse<ColorModel>(f[2]),
-                Enum.Parse<LayerKind>(f[5]),
-                f[3].Length == 0 ? 0 : Int(f[3]),
-                f[4].Length == 0 ? 0 : Int(f[4])));
+                f[0].Length == 0 ? null : Num(f[0], ingId, "hue"),
+                f[1].Length == 0 ? null : Num(f[1], ingId, "sat"),
+                f[2].Length == 0 ? null : Name<ColorModel>(f[2], ingId, "model"),
+                Name<LayerKind>(f[5], ingId, "kind"),
+                f[3].Length == 0 ? 0 : Int(f[3], ingId, "hueQuantize"),
+                f[4].Length == 0 ? 0 : Int(f[4], ingId, "satQuantize")));
         }
 
         string recomputed = ComputeDna(recipeId, layers);
@@ -155,6 +156,30 @@ public sealed record AssetTicket(string Dna, string RecipeId, IReadOnlyList<Tick
                     $"{what} id '{id}' contains '{c}', which a ticket's wire form uses as a separator.");
     }
 
-    private static double Num(string s) => double.Parse(s, CultureInfo.InvariantCulture);
-    private static int Int(string s) => int.Parse(s, CultureInfo.InvariantCulture);
+    /// <summary>A figure, finite. <c>double.Parse</c> reads "NaN" and "Infinity" without a word, and
+    /// either one reaches <c>ColorBuckets</c> as a saturating cast and the colorizer as garbage.</summary>
+    private static double Num(string s, string layer, string field) =>
+        double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out double v) && double.IsFinite(v)
+            ? v
+            : throw new FormatException($"Layer '{layer}' field '{field}' is '{s}', which is not a finite number.");
+
+    private static int Int(string s, string layer, string field) =>
+        int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out int v)
+            ? v
+            : throw new FormatException($"Layer '{layer}' field '{field}' is '{s}', which is not an integer.");
+
+    /// <summary>
+    /// An enum BY NAME, exactly as <see cref="ToWire"/> writes it. <c>Enum.Parse</c> also takes an
+    /// ordinal ("7" is an undefined <see cref="LayerKind"/>, "0" is whichever is declared first),
+    /// which is the declaration-order dependence the writer refuses to create; and it throws
+    /// <see cref="ArgumentException"/> for a name it does not know, where this method documents
+    /// <see cref="FormatException"/>. Matched ordinally against the declared names, so an ordinal,
+    /// a sign, surrounding space, another casing or a flags-style list is simply not a name.
+    /// </summary>
+    private static T Name<T>(string s, string layer, string field) where T : struct, Enum =>
+        Enum.GetNames<T>().Contains(s, StringComparer.Ordinal)
+            ? Enum.Parse<T>(s)
+            : throw new FormatException(
+                $"Layer '{layer}' field '{field}' is '{s}'; expected one of " +
+                string.Join(", ", Enum.GetNames<T>()) + ".");
 }
