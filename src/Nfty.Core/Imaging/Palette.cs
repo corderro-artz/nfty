@@ -70,9 +70,9 @@ public static class Palette
     ///
     /// <para>Saving always writes to the palette for the mode in force, so a grayscale palette can
     /// only ever contain grays by construction. This is for the swatches that arrive carrying no
-    /// mode at all: a CookBook's own palette, which travels in its archive, and the flat list older
-    /// builds persisted. Routing them by GRAYNESS is the only answer that needs no stored field and
-    /// agrees with what saving would have done.</para>
+    /// mode at all: a CookBook's own palette, which travels in its archive. Routing them by
+    /// GRAYNESS is the only answer that needs no stored field and agrees with what saving would have
+    /// done.</para>
     /// </remarks>
     /// <param name="colors">Swatches from a source that records no mode.</param>
     /// <param name="mode">The mode being offered.</param>

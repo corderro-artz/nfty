@@ -107,25 +107,13 @@ public sealed class PaletteService : IPaletteService
 
         try
         {
-            // MIGRATION, and it needs no version field. Older builds wrote a bare JSON ARRAY of
-            // specs for one shared palette; the modes are an OBJECT. The two shapes cannot be
-            // confused, so which one is on disk is readable from the first character - and a flat
-            // list splits by grayness, exactly as Palette.InMode routes a book's own swatches, so a
-            // palette saved before this existed lands where saving it today would have put it.
-            if (json.TrimStart().StartsWith('['))
-            {
-                var flat = Palette.FromSpecs(JsonSerializer.Deserialize<List<string?>>(json, Json));
-                foreach (var mode in Modes) loaded[mode].AddRange(Palette.InMode(flat, mode));
-                return loaded;
-            }
-
             var stored = JsonSerializer.Deserialize<Stored>(json, Json);
             loaded[PaletteMode.Grayscale].AddRange(Palette.FromSpecs(stored?.Grayscale));
             loaded[PaletteMode.Color].AddRange(Palette.FromSpecs(stored?.Color));
             return loaded;
         }
         // FromSpecs skips what it cannot parse, so one mangled swatch costs only itself; a file that
-        // is not JSON at all lands here and loads as empty.
+        // is not JSON, or not an object, lands here and loads as empty.
         catch { return Fresh(); }
     }
 

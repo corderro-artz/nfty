@@ -21,7 +21,6 @@ public class PaletteServiceTests
     private static readonly RgbColor Pink = new(214, 36, 159);
     private static readonly RgbColor Teal = new(61, 127, 143);
     private static readonly RgbColor Gray = new(61, 61, 61);
-    private static readonly RgbColor Gray2 = new(200, 200, 200);
 
     [Fact]
     public void A_first_run_has_no_swatches_in_either_mode()
@@ -138,31 +137,6 @@ public class PaletteServiceTests
             Assert.Equal(new[] { Teal }, svc.SwatchesIn(PaletteMode.Color));
             Assert.Equal(new[] { Teal },
                 new PaletteService(StateStore.At(dir)).SwatchesIn(PaletteMode.Color));
-        }
-        finally { Directory.Delete(dir, recursive: true); }
-    }
-
-    /// <summary>
-    /// A palette written before the modes existed was a bare JSON ARRAY, and it still loads.
-    /// </summary>
-    /// <remarks>
-    /// The two shapes cannot be confused — an array is not an object — so the file needs no version
-    /// field. Splitting by GRAYNESS is what <c>Palette.InMode</c> does for a CookBook's own palette,
-    /// which also records no mode, so a migrated swatch lands where saving it today would put it.
-    /// </remarks>
-    [Fact]
-    public void A_palette_written_before_the_modes_existed_splits_by_grayness()
-    {
-        var dir = TempDir();
-        try
-        {
-            File.WriteAllText(Path.Combine(dir, PaletteService.FileName),
-                """["hex:d6249f", "hex:3d3d3d", "hex:3d7f8f", "hex:c8c8c8"]""");
-
-            var svc = new PaletteService(StateStore.At(dir));
-
-            Assert.Equal(new[] { Pink, Teal }, svc.SwatchesIn(PaletteMode.Color));
-            Assert.Equal(new[] { Gray, Gray2 }, svc.SwatchesIn(PaletteMode.Grayscale));
         }
         finally { Directory.Delete(dir, recursive: true); }
     }
