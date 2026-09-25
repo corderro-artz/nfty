@@ -70,15 +70,6 @@ public static class Perf
     public static Scope Measure(string name) =>
         Enabled ? new Scope(name, Stopwatch.GetTimestamp(), GC.GetAllocatedBytesForCurrentThread()) : default;
 
-    /// <summary>Records one already-timed operation, for call sites that cannot wrap a block.</summary>
-    /// <param name="name">The scope's name.</param>
-    /// <param name="elapsed">How long it took.</param>
-    public static void Record(string name, TimeSpan elapsed)
-    {
-        if (!Enabled) return;
-        Add(name, (long)(elapsed.TotalSeconds * Stopwatch.Frequency), 0);
-    }
-
     private static void Add(string name, long ticks, long bytes)
     {
         lock (Gate)
