@@ -12,7 +12,7 @@ Everything here is a summary. Where this file and `CLAUDE.md` disagree, `CLAUDE.
 
 ```bash
 dotnet build nfty.sln     # must stay at 0 warnings — TreatWarningsAsErrors is on
-dotnet test nfty.sln      # all three projects
+dotnet test nfty.sln      # all four projects
 ```
 
 ## The things that will bite you
@@ -47,7 +47,7 @@ dotnet test nfty.sln      # all three projects
   1-based, dense, bottom-first — depth 1 paints first and sits furthest back. Do not add an integer
   `z` to a manifest; a list makes "two layers at one depth" unrepresentable rather than merely
   invalid, and `Validator`'s existing bijection rules already *are* the depth invariant.
-- **Reordering a recipe produces a different collection, not a re-render.** `Generator.RollOne` walks
+- **Reordering a recipe produces a different collection, not a re-render.** `Ticketer.TryRoll` walks
   the layers in `layerOrder` taking one roll each, so moving a layer moves which RNG draw reaches it:
   same seed + reordered book ⇒ different pixels *and* different identities. Depth must never enter
   the DNA hash — that would invalidate every Set ever minted.

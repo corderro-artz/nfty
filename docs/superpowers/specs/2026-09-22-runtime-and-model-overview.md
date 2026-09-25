@@ -33,7 +33,7 @@ soon as `MeshBuilder` exists, well before models reach a Set.
 ## Why they are separate
 
 Project 1 is about **deciding** an asset without drawing it. Its whole value is that no pixel is
-touched, so its dependency budget is zero and its output is ~100 bytes.
+touched, so its dependency budget is zero and its output is a few hundred bytes.
 
 Project 2 is about **drawing** an asset in a different dimension. It needs a glTF library, an image
 library, and a mesh builder. Its output is megabytes.
@@ -82,7 +82,7 @@ other archive in this product is named after what it *is* rather than what was d
 | Term | Extension | What it is |
 |------|-----------|-----------|
 | **Menu** | `.mnu` | A CookBook flattened for runtime: every weight, rule and colorization, plus the art, and no authoring ability. What a game ships. |
-| **Ticket** | *(no file)* | One roll. A recipe, a variant per layer, a colour per colorized layer, and the DNA. ~100 bytes on a wire, one row in a database. |
+| **Ticket** | *(no file)* | One roll. A recipe, a variant per layer, a colour per colorized layer, and the DNA. A few hundred bytes on a wire, one row in a database. |
 
 The pair is the kitchen's own: **the client holds the menu, the server sends a ticket, the client
 cooks the dish.** It also gives the domain a noun for "one rolled asset", which it has never had —

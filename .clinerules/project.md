@@ -12,12 +12,12 @@ Everything here is a summary. Where this file and `CLAUDE.md` disagree, `CLAUDE.
 
 ```bash
 dotnet build nfty.sln     # must stay at 0 warnings — TreatWarningsAsErrors is on
-dotnet test nfty.sln      # all three projects
+dotnet test nfty.sln      # all four projects
 ```
 
 ## The things that will bite you
 
-- **Do not upgrade `SixLabors.ImageSharp` past 3.1.11.** 4.0.0 needs a build-time licence key that is
+- **Do not upgrade `SixLabors.ImageSharp` past 3.1.11.** 4.0.0 needs a build-time license key that is
   account-specific and gitignored, so upgrading makes the repo unbuildable for everyone else.
 - **Do not regenerate `tests/fixtures/`.** Those archives were written by an older build and the
   point of them is that they still read. Regenerating one to make a failing test pass launders a
@@ -40,14 +40,14 @@ dotnet test nfty.sln      # all three projects
 - **Verify GUI changes from a rendered frame, not from the markup.** Nearly every visual defect this
   project has had was found by looking at a PNG and would have been missed by reading XAML:
   `NFTY_CAPTURE=1 NFTY_CAPTURE_DIR=<dir> dotnet test tests/Nfty.App.Tests --filter FullyQualifiedName~VisualCapture`.
-- **Colours live in `Themes/Tokens.axaml` only**, and a new one goes in *both* theme dictionaries.
+- **Colors live in `Themes/Tokens.axaml` only**, and a new one goes in *both* theme dictionaries.
   Avalonia hex is `#AARRGGBB`; the mockups' CSS is `#RRGGBBAA`, so the alpha moves to the front.
 - **Tests must never touch the real `%APPDATA%`** — inject a temp directory into `RecentsService`.
 - **Layer depth is `layerOrder` read a second way, never a stored field.** `LayerDepth` projects it:
   1-based, dense, bottom-first — depth 1 paints first and sits furthest back. Do not add an integer
   `z` to a manifest; a list makes "two layers at one depth" unrepresentable rather than merely
   invalid, and `Validator`'s existing bijection rules already *are* the depth invariant.
-- **Reordering a recipe produces a different collection, not a re-render.** `Generator.RollOne` walks
+- **Reordering a recipe produces a different collection, not a re-render.** `Ticketer.TryRoll` walks
   the layers in `layerOrder` taking one roll each, so moving a layer moves which RNG draw reaches it:
   same seed + reordered book ⇒ different pixels *and* different identities. Depth must never enter
   the DNA hash — that would invalidate every Set ever minted.

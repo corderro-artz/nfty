@@ -7,7 +7,7 @@
 
 A game ships a **Menu** (`.mnu`) — a CookBook flattened for runtime. When a drop happens, something
 rolls a **Ticket** against that Menu: a recipe, one variant per layer, a colour per colorized layer,
-and the DNA. The Ticket is ~100 bytes. The art is rendered from the Menu, on demand, by whoever is
+and the DNA. The Ticket is a few hundred bytes. The art is rendered from the Menu, on demand, by whoever is
 displaying it.
 
 No collection is cooked ahead of time. Storage per drop is a row, not a PNG. Supply is

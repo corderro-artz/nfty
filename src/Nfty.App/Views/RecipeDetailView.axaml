@@ -159,7 +159,7 @@
              exploration draws variant B prepending this column on unlock, which shifts every other
              column 26px right — the exact reflow the spec forbids. -->
         <!-- THE ONE TABLE IN THIS APP THAT DELIBERATELY DOES NOT SORT. Its order IS layerOrder,
-             which is the paint order, and Generator.RollOne walks it consuming one WeightedRoller
+             which is the paint order, and Ticketer.TryRoll walks it consuming one WeightedRoller
              draw per layer — so the same seed over a reordered stack rolls different variants. A
              sorted view would show a stack that is not the stack, directly beside a drag handle
              that writes the real one. Nothing here is missing; see TableSort's own summary. -->
