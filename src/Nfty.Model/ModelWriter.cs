@@ -26,6 +26,8 @@ public static class ModelWriter
         SkipMetadata = true,
     };
 
+    private const string DataUriPrefix = "data:application/octet-stream;base64,";
+
     /// <summary>Writes one model.</summary>
     /// <param name="mesh">The mesh, from <see cref="Riser.TryBuild"/>.</param>
     /// <param name="texture">The picture the mesh was risen from — the same size. Not modified.</param>
@@ -36,8 +38,7 @@ public static class ModelWriter
     /// <exception cref="ArgumentException">The texture is another size than the mesh was risen from,
     /// or the base name is not a plain file name.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="options"/>'s
-    /// <see cref="RiseOptions.Format"/> names <see cref="ModelFormat.GltfWithBin"/> or
-    /// <see cref="ModelFormat.GltfEmbedded"/> — not yet implemented.</exception>
+    /// <see cref="RiseOptions.Format"/> is not one of <see cref="ModelFormat"/>'s named values.</exception>
     public static IReadOnlyList<ModelFile> Write(Mesh mesh, Image<Rgba32> texture, RiseOptions options, string baseName)
     {
         ArgumentNullException.ThrowIfNull(mesh);
@@ -58,7 +59,21 @@ public static class ModelWriter
         var (root, bin) = GltfBuilder.Build(mesh, EncodeTexture(texture));
         return options.Format switch
         {
-            ModelFormat.Glb => new[] { new ModelFile(baseName + ".glb", GlbContainer.Frame(GltfJson.Serialize(root), bin)) },
+            ModelFormat.Glb => new[]
+            {
+                new ModelFile(baseName + ".glb", GlbContainer.Frame(GltfJson.Serialize(root), bin)),
+            },
+            // The .bin is named by a RELATIVE URI, which glTF requires to be percent-encoded; the
+            // file on disk keeps the name the caller gave.
+            ModelFormat.GltfWithBin => new[]
+            {
+                new ModelFile(baseName + ".gltf", GltfJson.Serialize(WithBufferUri(root, Uri.EscapeDataString(baseName + ".bin")))),
+                new ModelFile(baseName + ".bin", bin),
+            },
+            ModelFormat.GltfEmbedded => new[]
+            {
+                new ModelFile(baseName + ".gltf", GltfJson.Serialize(WithBufferUri(root, DataUriPrefix + Convert.ToBase64String(bin)))),
+            },
             _ => throw new ArgumentOutOfRangeException(nameof(options), options.Format, "Unknown model format."),
         };
     }
@@ -69,4 +84,9 @@ public static class ModelWriter
         texture.Save(stream, TextureEncoder);
         return stream.ToArray();
     }
+
+    /// <summary>The same document with the buffer's location set — in the object model, never by
+    /// editing serialized text (mixel's D2).</summary>
+    private static GltfRoot WithBufferUri(GltfRoot root, string uri) =>
+        root with { Buffers = [root.Buffers[0] with { Uri = uri }] };
 }

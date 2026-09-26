@@ -142,3 +142,47 @@ Whatever the toggle switches, the headless sweeps must keep seeing a frame.
 Set browser grid and the editor canvas are candidates worth measuring, not assuming); whether the
 toggle is per-surface or global; and how a GPU frame is verified at all, given the harness cannot
 render one.
+
+---
+
+## A cross-quad `(position, normal, uv)` vertex dedup for risen meshes
+
+**Status:** deferred; measured (`RisePerfTests`), not added, per the step-6 task brief's instruction
+to add this entry rather than the pass itself if the numbers argued for one.
+
+`Mesh`'s vertex rule is deliberate: a vertex is shared only within its own quad (`VertexCount` is
+always exactly twice `TriangleCount`), never merged across quads, because two quads meeting at an
+edge usually disagree on normal or UV. `RisePerfTests` measured a 512px disc (24,892 triangles,
+49,784 vertices, a 1,900,004-byte GLB): vertex data (position + normal + UV, 32 bytes/vertex) is
+1,593,088 bytes — **83.85% of the file**. Indices add another 298,704 bytes (15.72%), so vertex +
+index data together are 99.57% of the GLB; the PNG texture and JSON scaffolding are the remaining
+0.43% (~8.2 KB).
+
+That 83.85% is a hard ceiling on what any dedup could ever remove, not an estimate of what it would
+actually save — index count is unaffected by merging (the same number of triangles still needs three
+vertex references each), and only vertices sharing the *exact* same position, normal AND UV can
+merge at all. In practice that limits merges to touching quads of the *same* orientation (e.g. two
+adjoining front-face rectangles from `GreedyRects`, or two adjoining back-face ones); a front face
+meeting a wall, or two walls meeting at a corner, have different normals and can never merge under
+this key. A separate, uncommitted timing split of `Riser.TryBuild`'s internals on the same 512px
+fixture (scan ~10.3 ms, `GreedyRects.Merge` ~10.0 ms, face emission ~4.1 ms, wall emission ~16.0 ms)
+found 9,208 wall segments against only 3,238 merged front/back rectangles — this fixture's Dome
+depth pattern (8 rings) turns most of the disc into wall, which is exactly the geometry a
+same-orientation dedup helps least. So the real, achievable saving is well below the 83.85% ceiling
+and depends heavily on how "steppy" a given book's art is; it is not knowable without building the
+merge and measuring it on real (not synthetic-ring) demo art.
+
+**If picked up:** key on `(position, normal, uv)` exactly (no epsilon — the same float bit patterns
+already flow through one deterministic pipeline), dedup per mesh after `EmitWalls`, and keep the
+"`VertexCount == 2 * TriangleCount`" invariant as documentation of the *un-deduped* builder output
+only, moving the real invariant to a new test asserting no two indices reference bit-identical
+vertices where it would be safe to merge them. Any change here must stay byte-identical for
+identical input (`Every_format_is_byte_identical_when_written_twice` and its GLB sibling), so the
+merge's own ordering needs to be as deterministic as `GreedyRects`' discovery order is today.
+
+**Also open, from the same measurement:** `Riser.TryBuild` at 512px is dominated by wall emission
+(~16.0 ms), not by `GreedyRects.Merge` (~10.0 ms) — wall emission alone costs more than the merge
+step, and roughly as much as scanning plus merging combined. `EmitWalls` walks every pixel and
+checks all four neighbors regardless of how many walls it finds, so its cost tracks image area more
+than solid-pixel count; if 512px+ art becomes routine, that loop is the one worth revisiting first,
+before a vertex dedup.
