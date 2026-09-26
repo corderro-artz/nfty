@@ -74,6 +74,22 @@ public class FixtureArchiveTests
     }
 
     [Fact]
+    public void The_stored_partial_alpha_flag_is_also_false_at_every_peeked_level()
+    {
+        // The test above reads through *Archive.Read, which RECOMPUTES PartialAlpha from decoded
+        // pixels on every read — so it cannot tell a correctly-stored flag from one the reader
+        // silently overwrote. ArchivePeek.CookBookTree is the one reader that trusts the manifest's
+        // own stored value: it decodes nothing, so a wrong flag here is a wrong flag on disk.
+        var tree = ArchivePeek.CookBookTree(Fixture("VaporPets.cbk"));
+
+        Assert.False(tree.Manifest.PartialAlpha);
+        var recipe = Assert.Single(tree.Recipes);
+        Assert.False(recipe.Manifest.PartialAlpha);
+        foreach (var ing in recipe.Ingredients)
+            Assert.False(ing.PartialAlpha);
+    }
+
+    [Fact]
     public void The_aura_glow_variant_carries_the_depth_map_added_when_regenerated()
     {
         // Rise, 2026-09-25: one depth map added to the v2 fixtures deliberately, so the .igt
