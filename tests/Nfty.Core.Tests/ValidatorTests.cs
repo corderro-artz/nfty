@@ -819,6 +819,51 @@ public class ValidatorTests
             p => p.Contains("differing sizes", StringComparison.OrdinalIgnoreCase));
 
     [Fact]
+    public void ValidateIngredient_reports_a_depth_map_sized_differently_from_its_variant_image()
+    {
+        var ing = DynIng("d", Range(), ("a", new Rgba32(120, 120, 120, 255), 4, 4));
+        ing = new LoadedIngredient
+        {
+            Manifest = ing.Manifest,
+            VariantImages = ing.VariantImages,
+            Depths = new Dictionary<string, DepthMap> { ["a"] = DepthMap.Flat(8, 8) },
+        };
+        Assert.Contains(Validator.ValidateIngredient(ing),
+            p => p.Contains("'d'", StringComparison.Ordinal)
+                && p.Contains("'a'", StringComparison.Ordinal)
+                && p.Contains("8x8", StringComparison.Ordinal)
+                && p.Contains("4x4", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ValidateIngredient_reports_a_depth_map_naming_no_variant()
+    {
+        var ing = DynIng("d", Range(), ("a", new Rgba32(120, 120, 120, 255), 4, 4));
+        ing = new LoadedIngredient
+        {
+            Manifest = ing.Manifest,
+            VariantImages = ing.VariantImages,
+            Depths = new Dictionary<string, DepthMap> { ["ghost"] = DepthMap.Flat(4, 4) },
+        };
+        Assert.Contains(Validator.ValidateIngredient(ing),
+            p => p.Contains("'ghost'", StringComparison.Ordinal)
+                && p.Contains("does not exist", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void ValidateIngredient_passes_a_depth_map_matching_its_variant_image()
+    {
+        var ing = DynIng("d", Range(), ("a", new Rgba32(120, 120, 120, 255), 4, 4));
+        ing = new LoadedIngredient
+        {
+            Manifest = ing.Manifest,
+            VariantImages = ing.VariantImages,
+            Depths = new Dictionary<string, DepthMap> { ["a"] = DepthMap.Flat(4, 4) },
+        };
+        Assert.Empty(Validator.ValidateIngredient(ing));
+    }
+
+    [Fact]
     public void ValidateIngredient_reports_a_custom_layer_carrying_a_colorization() =>
         Assert.Contains(
             Validator.ValidateIngredient(new LoadedIngredient

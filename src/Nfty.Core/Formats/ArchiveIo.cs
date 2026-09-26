@@ -94,11 +94,23 @@ internal static class ArchiveIo
     /// <summary>Reads one entry's raw bytes, unencoded, when the entry exists.</summary>
     /// <param name="zip">The open archive.</param>
     /// <param name="name">The entry to read.</param>
+    /// <param name="expectedLength">When given, the entry's stored length — the uncompressed size
+    /// from the central directory, known before a single byte is read — is checked against it FIRST,
+    /// so a malformed or hostile entry declaring gigabytes is refused before it is inflated. Omit to
+    /// read unconditionally, as every caller but a fixed-size format (a depth map) does.</param>
+    /// <param name="wrongLength">Builds the exception to throw when <paramref name="expectedLength"/>
+    /// is given and disagrees, so the early refusal reports the exact same problem, in the exact same
+    /// words, as a caller's own post-read length check. Falls back to a generic message when omitted.</param>
     /// <returns>The entry's bytes, or <c>null</c> when no such entry is in the archive.</returns>
-    public static byte[]? TryReadBytes(ZipArchive zip, string name)
+    public static byte[]? TryReadBytes(ZipArchive zip, string name,
+        long? expectedLength = null, Func<long, Exception>? wrongLength = null)
     {
         var entry = zip.GetEntry(name);
         if (entry is null) return null;
+        if (expectedLength is { } expected && entry.Length != expected)
+            throw wrongLength?.Invoke(entry.Length)
+                ?? new InvalidDataException(
+                    $"Entry '{name}' is {entry.Length} bytes; expected {expected}.");
         using var s = entry.Open();
         using var ms = new MemoryStream();
         s.CopyTo(ms);
@@ -230,11 +242,20 @@ internal static class ArchiveIo
     /// <param name="zip">The open archive.</param>
     /// <param name="name">The entry to read.</param>
     /// <param name="ct">Cancels the read.</param>
+    /// <param name="expectedLength">See the sync overload: checked against the entry's stored length
+    /// before anything is read.</param>
+    /// <param name="wrongLength">See the sync overload: builds the exception for a mismatch, so the
+    /// early refusal matches a caller's own post-read check word for word.</param>
     /// <returns>The entry's bytes, or <c>null</c> when no such entry is in the archive.</returns>
-    public static async Task<byte[]?> TryReadBytesAsync(ZipArchive zip, string name, CancellationToken ct)
+    public static async Task<byte[]?> TryReadBytesAsync(ZipArchive zip, string name, CancellationToken ct,
+        long? expectedLength = null, Func<long, Exception>? wrongLength = null)
     {
         var entry = zip.GetEntry(name);
         if (entry is null) return null;
+        if (expectedLength is { } expected && entry.Length != expected)
+            throw wrongLength?.Invoke(entry.Length)
+                ?? new InvalidDataException(
+                    $"Entry '{name}' is {entry.Length} bytes; expected {expected}.");
         await using var s = entry.Open();
         using var ms = new MemoryStream();
         await s.CopyToAsync(ms, ct);

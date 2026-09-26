@@ -356,6 +356,16 @@ public sealed class MenuArchive : IDisposable
         var entry = _zip.GetEntry("depth/" + cellKey + ".dep");
         if (entry is null) return null;
 
+        int expected = cell.Width * cell.Height * 2;
+
+        // Refuse a malformed or hostile entry BEFORE it is inflated: entry.Length is the
+        // uncompressed size from the central directory, known without reading a byte. The post-read
+        // check just below stays as the authority — same exception, same message either way.
+        if (entry.Length != expected)
+            throw new InvalidDataException(
+                $"Menu depth entry for '{cellKey}' is {entry.Length} bytes; its "
+                + $"{cell.Width}x{cell.Height} cell needs {expected}.");
+
         byte[] bytes;
         using (var s = entry.Open())
         using (var ms = new MemoryStream())
@@ -364,7 +374,6 @@ public sealed class MenuArchive : IDisposable
             bytes = ms.ToArray();
         }
 
-        int expected = cell.Width * cell.Height * 2;
         if (bytes.Length != expected)
             throw new InvalidDataException(
                 $"Menu depth entry for '{cellKey}' is {bytes.Length} bytes; its "

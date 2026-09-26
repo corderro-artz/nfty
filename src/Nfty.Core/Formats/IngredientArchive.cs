@@ -90,9 +90,11 @@ public static class IngredientArchive
     }
 
     /// <summary>For each variant, the wrong-length message <see cref="ReadDepths"/> and its async
-    /// twin both throw — shared so they cannot drift on wording.</summary>
+    /// twin both throw — shared so they cannot drift on wording, and reused by
+    /// <see cref="ArchiveIo.TryReadBytes"/>'s early, pre-read refusal so a mismatch is reported in
+    /// the exact same words whether it is caught before or after the entry is inflated.</summary>
     private static InvalidDataException WrongLength(
-        string ingredientId, string variantId, int len, Image<Rgba32> image) =>
+        string ingredientId, string variantId, long len, Image<Rgba32> image) =>
         new($"Ingredient '{ingredientId}' variant '{variantId}' has a {len}-byte depth map; "
             + $"its {image.Width}x{image.Height} image needs {image.Width * image.Height * 2}.");
 
@@ -108,10 +110,14 @@ public static class IngredientArchive
         var depths = new Dictionary<string, DepthMap>();
         foreach (var v in manifest.Variants)
         {
-            var bytes = ArchiveIo.TryReadBytes(zip, $"depth/{v.Id}.dep");
-            if (bytes is null) continue;
             var image = images[v.Id];
             int expected = image.Width * image.Height * 2;
+            // The size check happens twice on purpose: ArchiveIo refuses early, against the entry's
+            // stored (uncompressed) length, before a hostile or malformed entry is inflated at all;
+            // this one stays as the authority, checking the bytes that were actually read.
+            var bytes = ArchiveIo.TryReadBytes(zip, $"depth/{v.Id}.dep", expected,
+                len => WrongLength(manifest.Id, v.Id, len, image));
+            if (bytes is null) continue;
             if (bytes.Length != expected)
                 throw WrongLength(manifest.Id, v.Id, bytes.Length, image);
             depths[v.Id] = DepthMap.FromBytes(image.Width, image.Height, bytes);
@@ -133,10 +139,11 @@ public static class IngredientArchive
         var depths = new Dictionary<string, DepthMap>();
         foreach (var v in manifest.Variants)
         {
-            var bytes = await ArchiveIo.TryReadBytesAsync(zip, $"depth/{v.Id}.dep", ct);
-            if (bytes is null) continue;
             var image = images[v.Id];
             int expected = image.Width * image.Height * 2;
+            var bytes = await ArchiveIo.TryReadBytesAsync(zip, $"depth/{v.Id}.dep", ct, expected,
+                len => WrongLength(manifest.Id, v.Id, len, image));
+            if (bytes is null) continue;
             if (bytes.Length != expected)
                 throw WrongLength(manifest.Id, v.Id, bytes.Length, image);
             depths[v.Id] = DepthMap.FromBytes(image.Width, image.Height, bytes);

@@ -324,6 +324,28 @@ public static class Validator
         CheckKind(problems, where, ing.Manifest.Kind, ing.Manifest.Colorization);
         CheckColorEntries(problems, where, ing.Manifest.Colorization);
         CheckVariantImagesPresentAndGray(problems, where, ing);
+        CheckDepths(problems, where, ing);
+    }
+
+    /// <summary>
+    /// A depth map whose dimensions differ from its variant's image, or whose key names no variant
+    /// at all, is reported rather than thrown — the writer (<c>IngredientArchive.DepthBytesToWrite</c>)
+    /// keeps its own throw as the backstop for the file it is about to write, but an in-memory
+    /// mismatch reaching Save today surfaces mid-write with no Validator problem to explain it first.
+    /// </summary>
+    private static void CheckDepths(List<string> problems, string where, LoadedIngredient ing)
+    {
+        foreach (var (variantId, depth) in ing.Depths)
+        {
+            if (!ing.VariantImages.TryGetValue(variantId, out var img))
+            {
+                problems.Add($"{where} has a depth map for variant '{variantId}', which does not exist.");
+                continue;
+            }
+            if (depth.Width != img.Width || depth.Height != img.Height)
+                problems.Add($"{where} variant '{variantId}' has a depth map sized {depth.Width}x{depth.Height}, "
+                    + $"but its image is {img.Width}x{img.Height}; they must match.");
+        }
     }
 
     /// <summary>Each layer kind admits exactly one shape of colorization — see spec 4.1.</summary>
