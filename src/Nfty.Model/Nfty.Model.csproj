@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    RISE: PIXEL ART TO A 3D MODEL, AND NOTHING CORE DEPENDS ON. The arrow runs one way on purpose:
+    Nfty.Core does NOT reference this, so a consumer that only wants to generate a collection never
+    pulls mesh code into its graph.
+
+    It takes NO package of its own. ImageSharp arrives through Nfty.Core, which already pins it, and
+    there is no glTF library: a GLB is a 12-byte header and two length-prefixed chunks around a JSON
+    document of fixed shape, so the container is written here - which is also what makes the output
+    byte-identical for identical input, and that is what lets a model be frozen by a test at all.
+  -->
+  <!-- No PropertyGroup: Directory.Build.props already sets TargetFramework, Nullable,
+       ImplicitUsings, LangVersion, the version stamp and the documentation settings. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\Nfty.Core\Nfty.Core.csproj" />
+  </ItemGroup>
+
+  <!-- GreedyRects is internal: it is how faces are built, not something a caller should choose. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Nfty.Model.Tests" />
+  </ItemGroup>
+
+</Project>

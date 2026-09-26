@@ -83,3 +83,6 @@ jobs:
           global-json-file: global.json
       - run: dotnet test tests/Nfty.Core.Tests -c Release
       - run: dotnet test tests/Nfty.Cli.Tests -c Release
+      # A model's bytes are promised identical for identical input on any machine, exactly as a
+      # cooked Set's are, so the engine that writes them is checked on all three systems too.
+      - run: dotnet test tests/Nfty.Model.Tests -c Release
