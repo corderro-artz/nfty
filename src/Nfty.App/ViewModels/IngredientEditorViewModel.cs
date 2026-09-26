@@ -103,6 +103,12 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     private readonly Dictionary<string, EditHistory<GrayPixel>> _history = new(StringComparer.Ordinal);
     private readonly Dictionary<string, EditHistory<Rgba32>> _colorHistory = new(StringComparer.Ordinal);
 
+    // Per-variant depth maps, seeded from the loaded ingredient and owned by this VM from then on —
+    // mirrors _history/_colorHistory. NextVariantId reuses the smallest free "variant-N" id, so a
+    // stale entry left here after a delete would be inherited by the next variant added under that
+    // id (see DeleteVariant); Save writes only the keys that still name a surviving draft variant.
+    private readonly Dictionary<string, DepthMap> _depths;
+
     [ObservableProperty] private EditorTool _activeTool = EditorTool.Brush;
     [ObservableProperty] private int _brushValue = 128;
     // Set from the canvas in the constructor: a fixed 8 covers an entire 8x8 variant in one stamp,
@@ -447,6 +453,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
             ing.Manifest.Variants.Select(v => new VariantDraft(v.Id, v.Name, v.Weight,
                 ValueMap.FromImage(ing.VariantImages[v.Id]),
                 ing.Manifest.Kind == LayerKind.Custom ? ColorMap.FromImage(ing.VariantImages[v.Id]) : null)));
+        _depths = new Dictionary<string, DepthMap>(ing.Depths, StringComparer.Ordinal);
         foreach (var v in _draft.Variants)
         {
             _history[v.Id] = new EditHistory<GrayPixel>();
@@ -1367,6 +1374,9 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         var vd = _draft.DuplicateVariant(src.Id, NextVariantId(), $"{src.Name} copy");
         _history[vd.Id] = new EditHistory<GrayPixel>();
         _colorHistory[vd.Id] = new EditHistory<Rgba32>();
+        // The relief is part of the art: a duplicated lid keeps its bump the same way it keeps its
+        // pixels. DepthMap is immutable, so sharing the reference is safe.
+        if (_depths.TryGetValue(src.Id, out var depth)) _depths[vd.Id] = depth;
         var ev = new EditorVariant(vd.Id, vd.Name, vd.Weight, RenderThumbFor(vd));
         Variants.Add(ev);
         SelectedVariant = ev;
@@ -1385,9 +1395,10 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         var idx = Variants.IndexOf(target);
         _draft.RemoveVariant(target.Id);
         // NextVariantId reuses the smallest free id, so a stale stack would be inherited by the next
-        // added variant — drop both with the variant.
+        // added variant — drop all three (history, color history, depth) with the variant.
         _history.Remove(target.Id);
         _colorHistory.Remove(target.Id);
+        _depths.Remove(target.Id);
         Variants.Remove(target);
         target.Thumbnail.Dispose();
         SelectedVariant = Variants.Count == 0 ? null : Variants[Math.Max(0, idx - 1)];
@@ -1485,13 +1496,20 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
             // value-map for everything else — so there is nothing to rebuild here.
             var (manifest, images) = IngredientDraftExporter.Export(_draft);
 
+            // Only the surviving draft variants' depth maps: a deleted variant's key was already
+            // dropped from _depths (DeleteVariant), but filtering here too means a stale key left by
+            // any other path can never reach the file.
+            var depths = _depths
+                .Where(kv => _draft.Variants.Any(v => v.Id == kv.Key))
+                .ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal);
+
             // NOTHING ELSE ON THIS PATH VALIDATES. CookBookPersistence writes what it is handed, and
             // the Explorer's own Add checks the ingredient it builds before persisting it - the
             // editor, which can change a layer's KIND and its whole colorization, did not. A layer
             // Validator refuses is a book that fails to validate from then on, reported nowhere near
             // the edit that caused it.
             var problems = Validator.ValidateIngredient(
-                new LoadedIngredient { Manifest = manifest, VariantImages = images });
+                new LoadedIngredient { Manifest = manifest, VariantImages = images, Depths = depths });
             if (problems.Count > 0)
             {
                 foreach (var i in images.Values) i.Dispose();   // ours until a save path adopts them
@@ -1505,7 +1523,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
                 var tmp = loosePath + ".tmp";
                 try
                 {
-                    await IngredientArchive.WriteAsync(tmp, manifest, images, _ing.Depths);
+                    await IngredientArchive.WriteAsync(tmp, manifest, images, depths);
                     File.Move(tmp, loosePath, overwrite: true);
                 }
                 finally
@@ -1519,7 +1537,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
 
             // Splice a loaded ingredient over the draft's export into the live book (we own its images
             // until Upsert adopts them), then persist (temp write → atomic move → rehash → Replace).
-            var newIng = new LoadedIngredient { Manifest = manifest, VariantImages = images, Depths = _ing.Depths };
+            var newIng = new LoadedIngredient { Manifest = manifest, VariantImages = images, Depths = depths };
             var book2 = CookBookEdits.UpsertIngredient(_session.Current!, _recipe.Manifest.Id, newIng);
 
             // Only a save that REPLACED this ingredient orphans its images. Saving color art as a
