@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json.Nodes;
 using Nfty.Core.Model;
+using Nfty.Model.Gltf;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.Formats.Png.Chunks;
@@ -99,6 +100,23 @@ public class GlbWriterTests
     }
 
     [Fact]
+    public void GlbContainer_pads_a_bin_chunk_that_is_not_already_four_byte_aligned()
+    {
+        // GltfBuilder always hands Frame an already-padded buffer, so Frame's own Pad4(bin.Length)
+        // is never exercised through the writer. Call the seam directly with an unpadded buffer.
+        byte[] json = "{}"u8.ToArray();
+        byte[] bin = [1, 2, 3, 4, 5];
+        byte[] glb = GlbContainer.Frame(json, bin);
+
+        int binHeader = 20 + GlbContainer.Pad4(json.Length);
+        int binLength = System.Buffers.Binary.BinaryPrimitives.ReadInt32LittleEndian(glb.AsSpan(binHeader));
+        Assert.Equal(8, binLength);
+        Assert.Equal(glb.Length, binHeader + 8 + binLength);
+        byte[] storedBin = glb.AsSpan(binHeader + 8, binLength).ToArray();
+        Assert.Equal((byte[])[1, 2, 3, 4, 5, 0, 0, 0], storedBin);
+    }
+
+    [Fact]
     public void The_texture_is_the_art_unaltered()
     {
         // nfty resamples, blurs and recolors nothing; the texture is the whole picture, pixel for pixel.
@@ -116,7 +134,8 @@ public class GlbWriterTests
     public void The_same_pixels_give_the_same_file_whatever_metadata_the_picture_carried()
     {
         // A picture decoded from disk carries its PNG's metadata — color type, bit depth, text, a
-        // resolution. None of it is the picture, so none of it may reach the model's bytes.
+        // resolution, an interlace method. None of it is the picture, so none of it may reach the
+        // model's bytes.
         var options = new RiseOptions();
         using var plain = Art.FromAscii(Plus);
         using var decorated = plain.Clone();
@@ -126,6 +145,7 @@ public class GlbWriterTests
         png.ColorType = PngColorType.Palette;
         png.BitDepth = PngBitDepth.Bit4;
         png.TextData.Add(new PngTextData("Comment", "made elsewhere", "", ""));
+        png.InterlaceMethod = PngInterlaceMode.Adam7;
 
         var mesh = Riser.TryBuild(plain, null, options)!;
         Assert.Equal(

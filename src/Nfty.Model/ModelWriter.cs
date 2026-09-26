@@ -14,11 +14,15 @@ namespace Nfty.Model;
 public static class ModelWriter
 {
     // Stated in full so the source image's own PNG metadata (palette color type, bit depth, text,
-    // resolution) can never reach a model: the same pixels always encode to the same bytes.
+    // resolution, interlacing) can never reach a model: the same pixels always encode to the same
+    // bytes. SkipMetadata alone does not cover InterlaceMethod — ImageSharp 3.1.11 falls back to
+    // the source image's own PngMetadata.InterlaceMethod when the encoder leaves it null — so it is
+    // stated here explicitly, same as ColorType and BitDepth.
     private static readonly PngEncoder TextureEncoder = new()
     {
         ColorType = PngColorType.RgbWithAlpha,
         BitDepth = PngBitDepth.Bit8,
+        InterlaceMethod = PngInterlaceMode.None,
         SkipMetadata = true,
     };
 
@@ -31,6 +35,9 @@ public static class ModelWriter
     /// two (<c>.gltf</c> then <c>.bin</c>) for <see cref="ModelFormat.GltfWithBin"/>.</returns>
     /// <exception cref="ArgumentException">The texture is another size than the mesh was risen from,
     /// or the base name is not a plain file name.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="options"/>'s
+    /// <see cref="RiseOptions.Format"/> names <see cref="ModelFormat.GltfWithBin"/> or
+    /// <see cref="ModelFormat.GltfEmbedded"/> — not yet implemented.</exception>
     public static IReadOnlyList<ModelFile> Write(Mesh mesh, Image<Rgba32> texture, RiseOptions options, string baseName)
     {
         ArgumentNullException.ThrowIfNull(mesh);
