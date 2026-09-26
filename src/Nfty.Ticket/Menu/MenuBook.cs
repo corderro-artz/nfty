@@ -81,9 +81,9 @@ public record MenuRecipe(
 /// the same definition <c>Nfty.Core.Imaging.Opacity</c> stamps onto every archive manifest,
 /// projected here so a runtime host can tell 2D-only art (safe to lift with depth maps alone) from
 /// art with a transparency gradient Rise cannot resolve, with no <c>.cbk</c> present. Defaults to
-/// <c>false</c> so schema 1 wire data — which predates this field — reads as "no partial alpha
-/// recorded" rather than failing to deserialize; a Menu at schema 2 or above always carries a real,
-/// stamped value.</param>
+/// <c>false</c> — schema 1 Menus are refused outright, so this default now matters only for a
+/// hand-written schema 2 manifest that omits the field; every Menu this build actually writes
+/// carries a real, stamped value.</param>
 /// <remarks>
 /// <see cref="MenuSchemaVersion"/> is named — and therefore written and read — as
 /// <c>menuSchemaVersion</c> rather than the plain <c>schemaVersion</c> a member called

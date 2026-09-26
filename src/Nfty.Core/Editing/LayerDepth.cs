@@ -9,7 +9,8 @@ namespace Nfty.Core.Editing;
 /// <para>There is no stored depth field, deliberately. An integer <c>z</c> on the manifest would make
 /// two layers at the same depth <i>expressible</i>, which is the very collision depth was asked for to
 /// prevent; it would then need a <c>Validator</c> rule, a tie-break for every archive already on disk,
-/// and an absent-default on every read path for every <c>schemaVersion: 1</c> archive in existence. A
+/// and an absent-default on every read path — the same cost every optional field pays for the floor
+/// schema it was added after. A
 /// list makes the illegal state unrepresentable rather than merely invalid. So <c>layerOrder</c> stays
 /// authoritative — it is already what <c>Generator</c> walks and what <c>Compositor</c> draws — and
 /// depth is that same field read a second way. Nothing here can drift out of agreement with paint

@@ -14,11 +14,12 @@ namespace Nfty.Core.Model;
 /// a cook produces. It exists so the book can state its intent, and so a UI can hold that intent up
 /// against <c>UniqueSpace</c>'s count and say whether it is actually achievable.
 ///
-/// Added after schemaVersion 1 and therefore OPTIONAL with a null default, which is what lets a v1
-/// archive still read as valid — see UnsupportedSchemaVersionException.Require. Schema.Current is
-/// deliberately NOT bumped for it: the change is purely additive, System.Text.Json ignores unknown
-/// properties so older builds read these archives fine, and a bump would instead make every already
-/// shipped build reject them.</param>
+/// Added after schemaVersion 1 and therefore OPTIONAL with a null default — the pattern that let a
+/// v1 archive missing the field still read as valid back when v1 was still accepted (it is now
+/// refused outright; see UnsupportedSchemaVersionException.Require and Schema.Oldest). Schema.Current
+/// was deliberately NOT bumped for it: the change is purely additive, System.Text.Json ignores
+/// unknown properties so older builds read these archives fine, and a bump would instead make every
+/// already shipped build reject them.</param>
 /// <param name="Palette">The swatches this collection carries, as prefixed color specs
 /// (<c>hex:d6249f</c>), or null when the book has never saved one. Book-scoped so a collection's
 /// colors travel with it when it is handed to someone else — the app-wide palette in the

@@ -26,8 +26,9 @@ public static class Json
         //
         // Turning this on moves the failure to the boundary, where the exception can name the
         // property that is missing. It costs nothing in format compatibility, because the rule
-        // CLAUDE.md already sets for schema evolution — every field added after v1 is optional and
-        // defaults to absent — is expressed precisely by declaring those fields nullable.
+        // CLAUDE.md already sets for schema evolution — every field added after the floor schema
+        // (v2, as of the Rise purge of v1) is optional and defaults to absent — is expressed
+        // precisely by declaring those fields nullable.
         RespectNullableAnnotations = true,
 
         // The companion rule, and the one that actually catches a truncated manifest: nullable
