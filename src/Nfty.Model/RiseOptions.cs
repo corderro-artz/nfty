@@ -40,6 +40,6 @@ public sealed record RiseOptions
     /// <summary>Which point of the bounding box lands on the origin.</summary>
     public Pivot Pivot { get; init; } = Pivot.BottomCenter;
 
-    /// <summary>The file shape <c>ModelWriter</c> produces.</summary>
+    /// <summary>The file shape <see cref="ModelWriter"/> produces.</summary>
     public ModelFormat Format { get; init; } = ModelFormat.Glb;
 }
