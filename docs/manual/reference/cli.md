@@ -51,6 +51,32 @@ An `.igt` renders one variant; a `.rcp` renders the whole stack rolled at a seed
 `--with` to include or exclude layers. Options belonging to the other form are **rejected**, not
 ignored.
 
+## Making a 3D model
+
+```bash
+nfty model sprite.png --out sprite.glb
+nfty model sprite.png --out sprite.glb --front 2 --back 1
+nfty model hat.igt --variant red --out hat.gltf --format gltf
+```
+
+Every fully opaque pixel becomes a column of voxels: one for the paper, plus its **front** depth
+toward you and its **back** depth away from you. The column's sides take the pixel's own color. A
+`.png` has no stored depth, so it is flat paper unless you fill it; an `.igt` variant uses the depth
+stored with it.
+
+| Option | Does |
+|---|---|
+| `--out` | The model to write. Required. Its extension must match the format: `.glb`, or `.gltf`. |
+| `--variant <id>` | Which variant of an `.igt` to rise. Required for an `.igt`, refused for a `.png`. |
+| `--front N --back M` | Fill-all: every opaque pixel gets front `N` and back `M` (0 to 255 each), replacing any stored depth. Pass both or neither. |
+| `--format` | `glb` (one file, the default), `gltf` (text plus a `.bin` beside it) or `gltf-embedded` (one text file). |
+| `--pivot` | Which point of the model sits at the origin: `bottom-center` (the default), `center` or `min-corner`. |
+| `--voxel-size` | World units per pixel. Defaults to 1. |
+
+A picture with a **partly transparent** pixel is refused, naming it: a voxel is either there or not,
+and nfty does not round your art for you. `nfty inspect <file> --voxel` lists the variants that carry
+partial transparency. Options belonging to the other form are **rejected**, not ignored.
+
 ## Cooking
 
 ```bash

@@ -240,6 +240,7 @@ nfty/
 │   │   ├── Output/         Set writer, dual metadata, extend loader
 │   │   ├── Publish/        Export planning and AES-256-GCM sealing
 │   │   └── Stats/          Rarity, and the reports both front-ends print
+│   ├── Nfty.Model/         Rise: pixel art to a 3D model, glTF    (net10.0)
 │   ├── Nfty.Cli/           System.CommandLine wiring              (net10.0)
 │   ├── Nfty.App/           Avalonia GUI — ViewModels, Views, Themes
 │   └── Nfty.Desktop/       Desktop head — window, clipboard, pickers
@@ -307,6 +308,7 @@ dotnet run --project src/Nfty.Cli -- --help
 | `extend <cbk> <set>` | Grow an existing Set, recomputing rarity across all of it |
 | `menu <cbk> --out <mnu>` | Write a `.mnu` Menu: the book's weights, rules, colorization and art, flattened so a runtime host can roll and render an asset with no `.cbk` present |
 | `serve <mnu>` | Roll (`--seed`) or render (`--ticket`) one asset from a `.mnu` Menu, through the same render `generate` uses |
+| `model <png\|igt>` | Rise a picture (or one Ingredient variant, with its stored depth) into a 3D model: GLB, glTF + `.bin`, or glTF with the buffer inline. `--front N --back M` raises every opaque pixel at once |
 | `export <set>` | Publish a cooked Set: choose what goes with it, and in what shape |
 | `new ingredient\|recipe\|cookbook\|kitchen` | Build an archive from a manifest and its parts |
 | `add variant\|ingredient\|recipe\|rule` | Append to an existing archive |
