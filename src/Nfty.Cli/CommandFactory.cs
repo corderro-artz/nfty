@@ -45,6 +45,7 @@ public static partial class CommandFactory
         root.Subcommands.Add(Validate());
         root.Subcommands.Add(Stats());
         root.Subcommands.Add(Preview());
+        root.Subcommands.Add(ModelCommand());
         root.Subcommands.Add(Generate());
         root.Subcommands.Add(Extend());
         root.Subcommands.Add(Menu());
