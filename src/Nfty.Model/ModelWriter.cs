@@ -80,6 +80,20 @@ public static class ModelWriter
 
     private static byte[] EncodeTexture(Image<Rgba32> texture)
     {
+        // Image.Load of an animated/multi-frame PNG yields every frame, but Riser only ever rises
+        // frame 0 (the root frame, via ProcessPixelRows). Encoding the whole multi-frame image would
+        // embed frames nobody asked for and that have nothing to do with the mesh, breaking the
+        // "same pixels, same bytes" determinism promise. Encode frame 0 alone.
+        if (texture.Frames.Count > 1)
+        {
+            using var frame0 = texture.Frames.CloneFrame(0);
+            return EncodeSingleFrame(frame0);
+        }
+        return EncodeSingleFrame(texture);
+    }
+
+    private static byte[] EncodeSingleFrame(Image<Rgba32> texture)
+    {
         using var stream = new MemoryStream();
         texture.Save(stream, TextureEncoder);
         return stream.ToArray();

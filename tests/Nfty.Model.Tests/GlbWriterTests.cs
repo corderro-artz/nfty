@@ -154,6 +154,29 @@ public class GlbWriterTests
     }
 
     [Fact]
+    public void A_multi_frame_texture_is_encoded_from_frame_zero_alone()
+    {
+        // Image.Load of an animated/multi-frame PNG yields every frame, but Riser only ever rises
+        // frame 0 (the root frame, via ProcessPixelRows). The texture must match: no extra frame,
+        // and no per-frame metadata from a frame that has nothing to do with the mesh.
+        var options = new RiseOptions();
+        using var art = Art.FromAscii(Plus);
+        var secondFrame = new Rgba32[art.Width * art.Height];
+        Array.Fill(secondFrame, new Rgba32(255, 0, 0, 255));
+        art.Frames.AddFrame(secondFrame);
+        Assert.Equal(2, art.Frames.Count);
+
+        var mesh = Riser.TryBuild(art, null, options)!;
+        var (json, bin) = GltfValidator.ReadGlb(Assert.Single(ModelWriter.Write(mesh, art, options, "a")).Bytes);
+        using var texture = Image.Load<Rgba32>(GltfValidator.ReadImage(json, bin));
+
+        Assert.Equal(1, texture.Frames.Count);
+        for (int y = 0; y < art.Height; y++)
+            for (int x = 0; x < art.Width; x++)
+                Assert.Equal(art[x, y], texture[x, y]);
+    }
+
+    [Fact]
     public void The_same_input_gives_byte_identical_files()
     {
         // Owning the writer is what makes this assertable at all: no version stamp, no timestamp,
