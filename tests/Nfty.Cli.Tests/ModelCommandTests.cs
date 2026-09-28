@@ -103,6 +103,18 @@ public class ModelCommandTests
         Assert.NotEmpty(Parse("model s.png --out s.glb --pivot top").Errors);
     }
 
+    [Theory]
+    [InlineData(".glb")]
+    [InlineData(".gltf")]
+    public void An_out_path_with_no_file_name_before_the_extension_is_refused(string outPath)
+    {
+        var error = Assert.Single(Parse($"model s.png --out {outPath}").Errors);
+        Assert.DoesNotContain("baseName", error.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("cannot be an empty string", error.Message, StringComparison.Ordinal);
+        Assert.Contains("--out", error.Message, StringComparison.Ordinal);
+        Assert.Contains("file name", error.Message, StringComparison.Ordinal);
+    }
+
     // --- running ---
 
     [Fact]

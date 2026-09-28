@@ -128,6 +128,12 @@ public static partial class CommandFactory
             }
 
             string? outPath = result.GetValue(outp);
+            if (outPath is not null && string.IsNullOrWhiteSpace(Path.GetFileNameWithoutExtension(outPath)))
+            {
+                result.AddError($"--out '{outPath}' has no file name before the extension; "
+                    + $"give it one, e.g. 'model{Path.GetExtension(outPath)}'.");
+                return;
+            }
 
             // Read as a raw TOKEN, never through GetValue: format.AcceptOnlyFromAmong has already
             // flagged an unrecognized value (like "obj") as its own parse error, and calling
