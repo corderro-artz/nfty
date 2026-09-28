@@ -186,3 +186,55 @@ step, and roughly as much as scanning plus merging combined. `EmitWalls` walks e
 checks all four neighbors regardless of how many walls it finds, so its cost tracks image area more
 than solid-pixel count; if 512px+ art becomes routine, that loop is the one worth revisiting first,
 before a vertex dedup.
+
+---
+
+## Step 7's model files were never opened in a real glTF viewer
+
+**Status:** a process gap, not a doubt about the mesh math; needs a human or a desktop-capable agent.
+
+Task 7's manual CLI run wrote three model files (a GLB, a `.gltf`+`.bin` pair, and an `.igt` GLB) and
+checked them the way the plan's own fallback allows when "no viewer is available to the
+implementer": an independent Python checker verified orientation (front-facing +Z, no mirroring, not
+upside down against glTF's own conventions), enclosed volume, edge balance on the quarter-unit
+lattice, wall UVs landing on the correct texel, and determinism across two runs. None of that is in
+doubt — it is exactly the reasoning `MeshChecks` and `GltfValidator` already pin in the test suite.
+
+What is still missing is the one thing analysis cannot stand in for: actual pixels on an actual
+screen. Nobody has opened those three files in Windows 3D Viewer, Blender, or
+gltf-viewer.donmccurdy.com to confirm by eye that nothing is mirrored or upside-down, the edge colors
+read right, the pixels are crisp (no mip filtering blur), and nothing is see-through from the back.
+Do this once, on the files Task 7 already produced (or freshly regenerated ones — they are
+byte-identical either way), and close this entry.
+
+---
+
+## M5 deferred: `Mesh`/`MeshBuilder` copies vertex data three times
+
+**Status:** deferred; harmless at today's scale, worth revisiting before step 8.
+
+`MeshBuilder` accumulates vertex data in `List<float>` fields as it walks a picture's faces and
+walls. `MeshBuilder.ToMesh` calls `ToArray()` on each of them — copy one — and `Mesh`'s own
+constructor clones its array parameters again — copy two — so building one mesh moves the same bytes
+three times before anything is written to disk. Harmless at the sizes this branch ships (a 512px
+disc's GLB is 1.9 MB; the copies are microseconds against `EmitWalls`' own cost, see the vertex-dedup
+entry above), but step 8 builds a model for every asset of a whole Set, in parallel — worth an
+internal no-copy constructor, or an ownership-transfer overload that takes `MeshBuilder`'s arrays
+directly, before that multiplies the copy count by collection size.
+
+---
+
+## M6 deferred: fractional CLI options parse culture-sensitively
+
+**Status:** pre-existing precedent, not introduced by this branch; deferred as one family, not a
+piecemeal per-option fix.
+
+`--voxel-size` parses via System.CommandLine's built-in `float` converter, which reads the current
+culture — under `de-DE`, `--voxel-size 0.5` parses as `5` (the culture's decimal separator is a
+comma, so `.` is read as a thousands separator instead). The same is true of every other fractional
+CLI option nfty has (`--weight`, `--absent`) and any future one, since none of them supplies an
+invariant-culture parser to override the default. This is not new to `model` — it is the same trap
+`ColorSpec`'s explicit-prefix rule exists to avoid for color input, just not yet closed for numeric
+options — and worth fixing once, for the whole family (a shared invariant-culture argument parser
+each option opts into), rather than patching `--voxel-size` alone and leaving the next fractional
+option to rediscover it.
