@@ -229,6 +229,46 @@ public class ModelCommandTests
     }
 
     [Fact]
+    public void The_gltf_embedded_format_writes_the_buffer_as_a_data_uri()
+    {
+        string dir = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            string png = WritePicture(dir, "sprite.png", 2, 2, new Rgba32(200, 40, 40, 255));
+            string gltf = Path.Combine(dir, "sprite.gltf");
+
+            Assert.Equal(0, Run("model", png, "--out", gltf, "--format", "gltf-embedded"));
+
+            Assert.False(File.Exists(Path.Combine(dir, "sprite.bin")));
+            var json = JsonNode.Parse(File.ReadAllBytes(gltf))!;
+            string uri = json["buffers"]![0]!["uri"]!.GetValue<string>();
+            Assert.StartsWith("data:", uri, StringComparison.Ordinal);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void A_non_default_pivot_moves_the_written_geometrys_origin()
+    {
+        // RiseOptions.Pivot defaults to bottom-center (covered by
+        // A_picture_rises_into_a_glb_one_voxel_thick); center moves the origin to the middle of
+        // every axis, not just X and Z.
+        string dir = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            string png = WritePicture(dir, "sprite.png", 2, 1, new Rgba32(200, 40, 40, 255));
+            string glb = Path.Combine(dir, "sprite.glb");
+
+            Assert.Equal(0, Run("model", png, "--out", glb, "--pivot", "center"));
+
+            var (min, max) = PositionBounds(File.ReadAllBytes(glb));
+            Assert.Equal(new[] { -1f, -0.5f, -0.5f }, min);
+            Assert.Equal(new[] { 1f, 0.5f, 0.5f }, max);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
     public void A_partly_transparent_picture_is_refused_by_name_and_nothing_is_written()
     {
         string dir = Directory.CreateTempSubdirectory().FullName;
