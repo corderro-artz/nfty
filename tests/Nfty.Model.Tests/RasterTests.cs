@@ -23,12 +23,19 @@ public class RasterTests
 
         // A generic camera angle on a closed cube shows exactly three of its six faces — this camera
         // was placed in the +X+Y+Z octant on purpose so the three UnitCube marks "front" (+X, +Y, +Z)
-        // are exactly the three that are visible. Shading darkens whatever shows, so this checks
-        // absence of the back texel rather than an exact lit color: backColor is never sampled at all
-        // when culling is correct, regardless of what brightness multiplies it by.
+        // are exactly the three that are visible.
         var colors = target.Color.Where(c => c.A > 0).Distinct().ToList();
         Assert.NotEmpty(colors);
-        Assert.DoesNotContain(backColor, colors);
+
+        // Shading multiplies whatever texel shows by a brightness in (0,1], so an exact-literal
+        // Assert.DoesNotContain(backColor, colors) is shading-invariant only in the direction that
+        // hides bugs: a wrongly-culled backColor face renders as a genuinely wrong, non-empty,
+        // uniformly-shaded green image, but shaded green essentially never equals the raw unshaded
+        // texel — so that assertion could pass on badly broken code. Assert on the channel signature
+        // instead (green nonzero, red and blue exactly zero — true of backColor at any brightness,
+        // since scaling a pure-channel color keeps its zero channels zero), which a mutation probe
+        // confirms actually catches a flipped cull sign.
+        Assert.DoesNotContain(colors, c => c.R == 0 && c.B == 0 && c.G > 0);
     }
 
     [Fact]
