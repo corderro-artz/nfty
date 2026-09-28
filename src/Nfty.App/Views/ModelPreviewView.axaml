@@ -1,0 +1,14 @@
+<!-- RenderOptions.BitmapInterpolationMode=None on the root: the rasterized output is pixel-exact
+     and must never be resampled when Avalonia scales this control to its layout size. Set on the
+     root rather than the Image below, per house convention (see e.g. IngredientEditorView.axaml) —
+     the setting composites during rendering rather than being stored per-visual, so a child reads
+     Unspecified and inherits its nearest ancestor's at draw time; PixelPerfectRenderingTests reads
+     it off the root exactly because that is what every other view here states it on. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Nfty.App.Views.ModelPreviewView"
+             Focusable="True" IsTabStop="True"
+             RenderOptions.BitmapInterpolationMode="None"
+             Background="{DynamicResource Model3DBackgroundBrush}">
+  <Image x:Name="PART_Surface" Stretch="Uniform" />
+</UserControl>

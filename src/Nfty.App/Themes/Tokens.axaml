@@ -94,6 +94,10 @@
            needs a Color resource, and PanelBrush/BgAltBrush are opaque so these simply mirror them. -->
       <Color x:Key="PanelColor">#f8f3ed</Color>
       <Color x:Key="BgAltColor">#f1ece4</Color>
+      <!-- The 3D preview viewport's ground. A token, not the panel brush itself, so the viewport can
+           be tuned separately from every other panel once a real page hosts it — but it starts equal
+           to the panel color, so it reads as part of the page rather than a hole cut into it. -->
+      <SolidColorBrush x:Key="Model3DBackgroundBrush" Color="{StaticResource PanelColor}" />
       <!-- Whole brushes, per theme. A gradient built inside a Style Setter with DynamicResource
            GradientStops does NOT re-resolve when the theme flips - it is constructed once and shared,
            and its stops keep the values they had when the Style was first applied. That shipped the
@@ -175,6 +179,8 @@
       <BoxShadows x:Key="TitlebarHighlightShadow">inset 0 1 0 0 #0ff2ede6</BoxShadows>
       <Color x:Key="PanelColor">#0b0c10</Color>
       <Color x:Key="BgAltColor">#0a0b10</Color>
+      <!-- The 3D preview viewport's ground; see the light dictionary's note. -->
+      <SolidColorBrush x:Key="Model3DBackgroundBrush" Color="{StaticResource PanelColor}" />
       <!-- See the light dictionary's note: these are whole brushes because a Setter-hosted gradient
            does not re-resolve DynamicResource stops on a theme change. -->
       <!-- The rarity share bar. A whole brush per dictionary, per the rule above CardGradientBrush:
