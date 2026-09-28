@@ -13,6 +13,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Nfty.Core\Nfty.Core.csproj" />
+    <ProjectReference Include="..\Nfty.Model\Nfty.Model.csproj" />
   </ItemGroup>
   <!-- The typefaces ship WITH the app rather than being asked of the OS. The font tokens used to be
        CSS stacks copied from the archived mockups, which meant the app rendered in a different face
