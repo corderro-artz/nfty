@@ -95,6 +95,29 @@ public class CameraTests
     }
 
     [Fact]
+    public void Pan_moves_the_target_along_the_cameras_own_screen_aligned_axes()
+    {
+        var camera = new Camera(Vector3.Zero, distance: 4f, yaw: 0f, pitch: 0f);
+        var panned = camera.Pan(new Vector2(50f, 0f), viewportHeight: 200);
+
+        Assert.NotEqual(Vector3.Zero, panned.Target);
+        // A pure horizontal screen delta at zero yaw/pitch moves the target along the camera's own
+        // right axis only — no vertical (Y) component.
+        Assert.Equal(0f, panned.Target.Y, precision: 5);
+        Assert.Equal(camera.Distance, panned.Distance, precision: 5);
+        Assert.Equal(camera.Yaw, panned.Yaw, precision: 5);
+        Assert.Equal(camera.Pitch, panned.Pitch, precision: 5);
+    }
+
+    [Fact]
+    public void Panning_by_zero_leaves_the_target_unchanged()
+    {
+        var camera = new Camera(new Vector3(1, 2, 3), 4f, 0.3f, 0.2f);
+        var panned = camera.Pan(Vector2.Zero, viewportHeight: 200);
+        Assert.Equal(camera.Target, panned.Target);
+    }
+
+    [Fact]
     public void Reset_reframes_on_the_given_bounds_regardless_of_current_orientation()
     {
         var camera = new Camera(new Vector3(50, 50, 50), 500f, yaw: 9f, pitch: 1.4f);
