@@ -64,13 +64,37 @@ public class StackDepthTests
     }
 
     [Fact]
-    public void A_partial_pixel_is_not_solid_so_it_owns_no_depth()
+    public void A_partial_pixel_in_any_layer_is_refused_before_compositing()
     {
-        // Riser refuses the partial pixel later, by name; the combine rule just never gives it depth.
+        // Combine enforces the same one-solid-test rule Riser enforces on a single picture, extended
+        // to every layer of the stack: a partial pixel throws, it is never silently skipped.
         using var half = Row(new Rgba32(200, 0, 0, 128));
-        var (art, depth) = StackDepth.Combine([(half, Map(2, 2))]);
-        using (art)
-            Assert.True(depth.IsFlat);
+        Assert.Throws<PartialAlphaException>(() => StackDepth.Combine([(half, Map(2, 2))]));
+    }
+
+    [Fact]
+    public void A_partial_pixel_over_an_opaque_layer_is_refused_not_silently_composited()
+    {
+        // Source-over of a partial pixel over an opaque one composites to alpha 255, so the composite
+        // alone can't catch this — Combine must scan each layer's own pixels, not just the result.
+        using var bottom = Row(Red);
+        using var top = Row(new Rgba32(0, 0, 200, 128));
+
+        var ex = Assert.Throws<PartialAlphaException>(
+            () => StackDepth.Combine([(bottom, null), (top, null)]));
+        Assert.Contains("layer 2", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_partial_pixel_in_a_non_topmost_layer_is_still_caught()
+    {
+        using var bottom = Row(Red);
+        using var middle = Row(new Rgba32(0, 200, 0, 128));
+        using var top = Row(Clear);
+
+        var ex = Assert.Throws<PartialAlphaException>(
+            () => StackDepth.Combine([(bottom, null), (middle, null), (top, null)]));
+        Assert.Contains("layer 2", ex.Message, StringComparison.Ordinal);
     }
 
     [Fact]
