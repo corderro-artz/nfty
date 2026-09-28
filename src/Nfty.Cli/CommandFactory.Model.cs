@@ -210,10 +210,25 @@ public static partial class CommandFactory
         string dir = Path.GetDirectoryName(Path.GetFullPath(outPath))!;
         var files = ModelWriter.Write(mesh, art, options, Path.GetFileNameWithoutExtension(outPath));
         Directory.CreateDirectory(dir);
-        foreach (var f in files)
-            File.WriteAllBytes(Path.Combine(dir, f.FileName), f.Bytes);
 
-        Console.WriteLine($"Wrote {string.Join(" and ", files.Select(f => Path.Combine(dir, f.FileName)))} ("
+        // ModelWriter names every file with ITS OWN canonical lower-case extension (.glb, .gltf,
+        // .bin); the validator only compared --out's extension case-INsensitively, so the casing
+        // the user actually typed (e.g. "Model.GLB") must be restored here for the one file --out
+        // names. A sibling file with a different extension (the .bin next to a .gltf) was never
+        // named by --out, so its casing is untouched.
+        string outExt = Path.GetExtension(outPath);
+        var written = new List<string>(files.Count);
+        foreach (var f in files)
+        {
+            string name = string.Equals(Path.GetExtension(f.FileName), outExt, StringComparison.OrdinalIgnoreCase)
+                ? Path.GetFileNameWithoutExtension(f.FileName) + outExt
+                : f.FileName;
+            string path = Path.Combine(dir, name);
+            File.WriteAllBytes(path, f.Bytes);
+            written.Add(path);
+        }
+
+        Console.WriteLine($"Wrote {string.Join(" and ", written)} ("
             + mesh.TriangleCount.ToString("N0", CultureInfo.InvariantCulture) + " triangles)");
         return 0;
     }

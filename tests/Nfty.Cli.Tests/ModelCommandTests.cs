@@ -189,6 +189,34 @@ public class ModelCommandTests
     }
 
     [Fact]
+    public void An_upper_case_out_extension_is_kept_not_re_cased_to_lower()
+    {
+        // The validator compares --out's extension to --format case-insensitively, but the writer
+        // must not silently canonicalize the casing the user typed: --out Thing.GLB writes
+        // Thing.GLB, not Thing.glb, and the printed line names the exact path written.
+        string dir = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            string png = WritePicture(dir, "sprite.png", 1, 1, new Rgba32(200, 40, 40, 255));
+            string glb = Path.Combine(dir, "Thing.GLB");
+
+            var previous = Console.Out;
+            var sw = new StringWriter();
+            Console.SetOut(sw);
+            int exit;
+            try { exit = Run("model", png, "--out", glb); }
+            finally { Console.SetOut(previous); }
+
+            Assert.Equal(0, exit);
+            Assert.Contains("Thing.GLB", sw.ToString(), StringComparison.Ordinal);
+            // NTFS itself is case-insensitive but preserves the case a file was created with, so the
+            // directory's own entry is the portable way to check the writer didn't re-case it.
+            Assert.Contains(glb, Directory.GetFiles(dir), StringComparer.Ordinal);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
     public void A_partly_transparent_picture_is_refused_by_name_and_nothing_is_written()
     {
         string dir = Directory.CreateTempSubdirectory().FullName;
