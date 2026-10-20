@@ -28,9 +28,16 @@ public class RasterPerfTests(ITestOutputHelper output)
         Perf.Enable();
         try
         {
-            Perf.Reset();
+            // One unmeasured warm-up call (JIT, pool fill), then five measured: the mean is what a
+            // drag pays per frame, the cold call is what the first frame pays.
             target.Clear(new Rgba32(0, 0, 0, 0));
-            Raster.Render(mesh, art, camera.ViewProjection(512, 512), target);
+            Raster.Render(mesh, art, camera, target);
+            Perf.Reset();
+            for (int i = 0; i < 5; i++)
+            {
+                target.Clear(new Rgba32(0, 0, 0, 0));
+                Raster.Render(mesh, art, camera, target);
+            }
 
             Assert.Contains("Raster.Render", Perf.Snapshot().Select(e => e.Name));
             output.WriteLine(string.Create(CultureInfo.InvariantCulture,

@@ -232,7 +232,7 @@ public class ModelPreviewGestureTests
 
             var expected = new RenderTarget(width, height);
             expected.Clear(new Rgba32(0, 0, 0, 0));
-            Raster.Render(view.Mesh!, view.Texture!, vm.CameraState.ViewProjection(width, height), expected);
+            Raster.Render(view.Mesh!, view.Texture!, vm.CameraState, expected);
 
             using var fb = bitmap.Lock();
             unsafe

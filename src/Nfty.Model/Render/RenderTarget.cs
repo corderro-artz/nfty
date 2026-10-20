@@ -4,7 +4,8 @@ namespace Nfty.Model.Render;
 
 /// <summary>A plain pixel-and-depth surface <c>Raster</c> writes into: one background-filled
 /// color per pixel and a z-buffer initialized to "nothing here yet". The array references are fixed
-/// at construction (D7); their contents mutate freely as <c>Raster</c> draws.</summary>
+/// at construction (D7); their contents mutate freely as <c>Raster</c> draws. Single owner; not
+/// thread-safe.</summary>
 public sealed class RenderTarget
 {
     /// <summary>Pixels across.</summary>

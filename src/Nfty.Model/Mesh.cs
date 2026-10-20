@@ -21,6 +21,21 @@ namespace Nfty.Model;
 /// </remarks>
 public sealed class Mesh
 {
+    // The private copies behind the read-only views above, kept so the rasterizer can read them as
+    // spans instead of through IReadOnlyList's interface dispatch. Never exposed writable.
+    private readonly float[] _positions;
+    private readonly float[] _normals;
+    private readonly float[] _texCoords;
+    private readonly uint[] _indices;
+
+    internal ReadOnlySpan<float> PositionData => _positions;
+
+    internal ReadOnlySpan<float> NormalData => _normals;
+
+    internal ReadOnlySpan<float> TexCoordData => _texCoords;
+
+    internal ReadOnlySpan<uint> IndexData => _indices;
+
     /// <summary>Builds a mesh, copying every array.</summary>
     /// <param name="positions">xyz per vertex.</param>
     /// <param name="normals">One xyz unit normal per vertex.</param>
@@ -66,9 +81,13 @@ public sealed class Mesh
 
         float[] p = (float[])positions.Clone();
         Positions = Array.AsReadOnly(p);
-        Normals = Array.AsReadOnly((float[])normals.Clone());
-        TexCoords = Array.AsReadOnly((float[])texCoords.Clone());
-        Indices = Array.AsReadOnly((uint[])indices.Clone());
+        _positions = p;
+        _normals = (float[])normals.Clone();
+        _texCoords = (float[])texCoords.Clone();
+        _indices = (uint[])indices.Clone();
+        Normals = Array.AsReadOnly(_normals);
+        TexCoords = Array.AsReadOnly(_texCoords);
+        Indices = Array.AsReadOnly(_indices);
         VertexCount = vertexCount;
         TriangleCount = indices.Length / 3;
         TextureWidth = textureWidth;

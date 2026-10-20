@@ -189,7 +189,7 @@ public sealed partial class ModelPreviewView : UserControl
 
         var target = new RenderTarget(width, height);
         target.Clear(new Rgba32(0, 0, 0, 0)); // the WriteableBitmap composites over the control's own themed Background
-        Raster.Render(mesh, texture, vm.CameraState.ViewProjection(width, height), target);
+        Raster.Render(mesh, texture, vm.CameraState, target);
 
         var bitmap = new WriteableBitmap(new PixelSize(width, height), new Vector(96, 96),
             PixelFormat.Rgba8888, AlphaFormat.Unpremul);
