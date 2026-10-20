@@ -14,8 +14,8 @@ public sealed partial class ModelPreviewViewModel : ObservableObject
     private const float KeyOrbitStepRadians = 15f * MathF.PI / 180f;
     private const float ZoomStepFactor = 0.9f;
 
-    private readonly Vector3 _boundsMin;
-    private readonly Vector3 _boundsMax;
+    private Vector3 _boundsMin;
+    private Vector3 _boundsMax;
 
     [ObservableProperty]
     private Camera _cameraState;
@@ -39,11 +39,13 @@ public sealed partial class ModelPreviewViewModel : ObservableObject
     public void Pan(Vector2 pointerDeltaPixels, int viewportHeight) =>
         CameraState = CameraState.Pan(pointerDeltaPixels, viewportHeight);
 
-    /// <summary>One wheel event, anchored on the pointer.</summary>
+    /// <summary>One wheel event, anchored on the pointer. The step honors the delta's magnitude (a
+    /// trackpad sending many small deltas zooms smoothly, a notched wheel sends a whole 1.0): wheel up
+    /// (positive) zooms in by <c>0.9^delta</c>.</summary>
     public void Zoom(float wheelDelta, Vector2 pointerScreen, int width, int height)
     {
         if (wheelDelta == 0f) return;
-        float factor = MathF.Pow(ZoomStepFactor, MathF.Sign(wheelDelta));
+        float factor = MathF.Pow(ZoomStepFactor, wheelDelta);
         CameraState = CameraState.ZoomAnchored(factor, pointerScreen, width, height);
     }
 
@@ -58,6 +60,21 @@ public sealed partial class ModelPreviewViewModel : ObservableObject
     public void ZoomStep(float sign) =>
         CameraState = CameraState.Zoom(sign > 0 ? ZoomStepFactor : 1f / ZoomStepFactor);
 
-    /// <summary>Home or double-click: back to the original framed camera, discarding orientation.</summary>
-    public void Reset() => CameraState = Camera.FramedOn(_boundsMin, _boundsMax);
+    /// <summary>Replaces the bounds Home/double-click frame, WITHOUT moving the camera: orientation,
+    /// target and distance are kept. The view calls this whenever its mesh changes, so there is one
+    /// source of truth for the subject's extent (the mesh) and a depth edit cannot leave Reset framing
+    /// stale bounds.</summary>
+    /// <param name="boundsMin">Minimum corner of the subject's bounding box.</param>
+    /// <param name="boundsMax">Maximum corner of the subject's bounding box.</param>
+    public void SetSubject(Vector3 boundsMin, Vector3 boundsMax)
+    {
+        _boundsMin = boundsMin;
+        _boundsMax = boundsMax;
+    }
+
+    /// <summary>Home or double-click: back to the framed camera on the current subject bounds,
+    /// discarding orientation.</summary>
+    /// <param name="aspect">The viewport's width divided by its height, so a non-square viewport is
+    /// framed to fit its narrower axis (see <see cref="Camera.FramedOn"/>).</param>
+    public void Reset(float aspect = 1f) => CameraState = Camera.FramedOn(_boundsMin, _boundsMax, aspect);
 }

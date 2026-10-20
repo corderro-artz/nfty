@@ -29,7 +29,7 @@ namespace Nfty.App.Tests;
 /// proves nothing about whether the drag reaches it.</summary>
 public class ModelPreviewGestureTests
 {
-    private static Mesh TinyQuad()
+    internal static Mesh TinyQuad()
     {
         float[] positions = [-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, 1, 0];
         float[] normals = [0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1];
@@ -38,16 +38,17 @@ public class ModelPreviewGestureTests
         return new Mesh(positions, normals, uvs, indices, textureWidth: 2, textureHeight: 2);
     }
 
-    private static Image<Rgba32> TinyTexture()
+    internal static Image<Rgba32> TinyTexture()
     {
         var img = new Image<Rgba32>(2, 2);
         img.Mutate(ctx => ctx.BackgroundColor(new Rgba32(200, 100, 50, 255)));
         return img;
     }
 
-    private static (Window Window, ModelPreviewViewModel Vm, ModelPreviewView View) Render()
+    internal static (Window Window, ModelPreviewViewModel Vm, ModelPreviewView View) Render()
     {
-        var vm = new ModelPreviewViewModel(new Vector3(-1, -1, -1), new Vector3(1, 1, 1));
+        // The VM's bounds are the quad's own: the view hands the mesh's bounds to the VM on Mesh set.
+        var vm = new ModelPreviewViewModel(new Vector3(-1, -1, 0), new Vector3(1, 1, 0));
         var view = new ModelPreviewView { DataContext = vm, Mesh = TinyQuad(), Texture = TinyTexture() };
         var window = new Window { Content = view, Width = 400, Height = 400 };
         window.Show();
@@ -229,15 +230,19 @@ public class ModelPreviewGestureTests
             var surface = view.GetVisualDescendants().OfType<Image>().Single();
             var bitmap = (Avalonia.Media.Imaging.WriteableBitmap)surface.Source!;
             int width = (int)view.Bounds.Width, height = (int)view.Bounds.Height;
+            // Size first: reading width*height*4 bytes from a smaller bitmap would over-read native memory.
+            Assert.Equal(new PixelSize(width, height), bitmap.PixelSize);
 
             var expected = new RenderTarget(width, height);
             expected.Clear(new Rgba32(0, 0, 0, 0));
             Raster.Render(view.Mesh!, view.Texture!, vm.CameraState, expected);
+            Assert.Contains(expected.Color, c => c.A > 0); // two empty images would trivially agree
 
             using var fb = bitmap.Lock();
+            Assert.Equal(width * 4, fb.RowBytes);
             unsafe
             {
-                var actual = new ReadOnlySpan<byte>((void*)fb.Address, expected.Color.Length * 4);
+                var actual = new ReadOnlySpan<byte>((void*)fb.Address, width * height * 4);
                 var expectedBytes = System.Runtime.InteropServices.MemoryMarshal.AsBytes<Rgba32>(expected.Color);
                 Assert.True(actual.SequenceEqual(expectedBytes));
             }
