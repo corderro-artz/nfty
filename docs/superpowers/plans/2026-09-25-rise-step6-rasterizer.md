@@ -1725,10 +1725,10 @@ git commit -m "feat(app): ModelPreviewView — WriteableBitmap surface, orbit/pa
   `2026-09-22-model-preview-design.md` states perspective vs. orthographic. Ruling: perspective,
   40° vertical FOV — the spec explicitly aligns the camera's *feel* with `<model-viewer>`'s default
   ("this is also what `<model-viewer>` does by default, so the feel will be familiar"), and
-  `<model-viewer>` is a perspective camera. Cost if wrong: swapping
-  `Matrix4x4.CreatePerspectiveFieldOfView` for `Matrix4x4.CreateOrthographic` inside
-  `Camera.ViewProjection` is a one-line, fully contained change — no caller anywhere depends on which
-  kind of matrix it is, only that it is *a* view-projection matrix.
+  `<model-viewer>` is a perspective camera. Cost if wrong: NOT a one-line swap, as this note first
+  claimed — the final review found `Pan` and `ZoomAnchored` restate the perspective world-per-pixel
+  formula, and `Zoom` (moving the eye) would stop magnifying under an orthographic matrix. Switching
+  means reworking those three as well.
 - **Final review: dispatch on Opus 5.5**, per the user's explicit instruction this segment — every
   step's final review, and especially this one, must not be the place an issue slips through before
   merge.
