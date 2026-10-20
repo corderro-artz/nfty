@@ -126,9 +126,12 @@ reporting and never releases.
 it is a general rule here: pointer-only is an incomplete feature, not a scoped-down one. The keys
 above are the path.
 
-**The view takes focus on attach** (`Focusable`, `IsTabStop=False`), or the key bindings are silently
-inert — the defect the editor page already hit, where every chord the screen owned was raised on the
-Window instead.
+**The view takes focus on its first attach** (`Focusable`, `IsTabStop=True`), or the key bindings are
+silently inert — the defect the editor page already hit, where every chord the screen owned was raised
+on the Window instead. *Amended 2026-10-20 (step 6 final review, M6):* `IsTabStop` is True so the
+keyboard path stays reachable by Tab once the view is a tile beside other controls, and focus is taken
+on the FIRST attach only, so a host re-parenting the control (the Rise page's tile/canvas swap) does
+not steal focus from the canvas.
 
 ## Rendering
 

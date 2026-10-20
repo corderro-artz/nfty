@@ -113,6 +113,8 @@ public sealed partial class ModelPreviewView : UserControl
         this.GetObservable(TextureProperty).Subscribe(new Sub<Image<Rgba32>?>(_ => MarkDirty()));
         this.GetObservable(DataContextProperty).Subscribe(new Sub<object?>(dc =>
         {
+            // Either may arrive first; a VM set after the mesh must still learn the mesh's extent.
+            if (dc is ModelPreviewViewModel vm && Mesh is { } mesh) vm.SetSubject(mesh.Min, mesh.Max);
             Subscribe(dc as ModelPreviewViewModel);
             MarkDirty();
         }));
@@ -273,6 +275,11 @@ public sealed partial class ModelPreviewView : UserControl
         // owns. Attaching marks dirty again.
         if (VisualRoot is null) return;
         if (Mesh is not { } mesh || Texture is not { } texture || DataContext is not ModelPreviewViewModel vm)
+            return;
+        // A host swapping mesh and texture sets one property before the other; Raster refuses the
+        // mismatched pair, and an exception here would come out of the UI thread. The second set
+        // marks dirty again, so the frame catches up as soon as the pair agrees.
+        if (texture.Width != mesh.TextureWidth || texture.Height != mesh.TextureHeight)
             return;
 
         int width = (int)Bounds.Width;

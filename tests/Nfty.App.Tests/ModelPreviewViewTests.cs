@@ -303,6 +303,61 @@ public class ModelPreviewViewTests
         finally { window.Close(); }
     }
 
+    [AvaloniaFact]
+    public void A_view_model_set_after_the_mesh_still_learns_the_mesh_bounds()
+    {
+        float[] positions = [-40, -40, -3, 40, -40, -3, 40, 40, 3, -40, 40, 3];
+        float[] normals = [0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1];
+        float[] uvs = [0, 1, 1, 1, 1, 0, 0, 0];
+        var big = new Mesh(positions, normals, uvs, [0u, 1, 2, 0, 2, 3], 2, 2);
+        var view = new ModelPreviewView { Mesh = big, Texture = ModelPreviewGestureTests.TinyTexture() };
+        var window = new Window { Content = view, Width = 400, Height = 400 };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        try
+        {
+            // The VM arrives last, built on stale bounds far smaller than the mesh.
+            var vm = new ModelPreviewViewModel(new Vector3(-1, -1, 0), new Vector3(1, 1, 0));
+            view.DataContext = vm;
+            view.Focus();
+
+            window.KeyPressQwerty(PhysicalKey.Home, RawInputModifiers.None);
+
+            var vp = vm.CameraState.ViewProjection((int)view.Bounds.Width, (int)view.Bounds.Height);
+            foreach (var x in new[] { big.Min.X, big.Max.X })
+            foreach (var y in new[] { big.Min.Y, big.Max.Y })
+            {
+                var clip = Vector4.Transform(new Vector4(x, y, 0f, 1f), vp);
+                Assert.True(clip.W > 0f);
+                Assert.InRange(clip.X / clip.W, -1f, 1f);
+                Assert.InRange(clip.Y / clip.W, -1f, 1f);
+            }
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public void A_mesh_and_texture_briefly_out_of_step_draw_nothing_rather_than_throw()
+    {
+        var (window, _, view) = Render();
+        try
+        {
+            view.RepaintNow();
+            var before = view.Surface.Source;
+            float[] positions = [-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, 1, 0];
+            float[] normals = [0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1];
+            float[] uvs = [0, 1, 1, 1, 1, 0, 0, 0];
+            // A host swapping both properties sets one first: the mesh now expects a 7x5 texture.
+            view.Mesh = new Mesh(positions, normals, uvs, [0u, 1, 2, 0, 2, 3], 7, 5);
+
+            var thrown = Record.Exception(() => view.RepaintNow());
+
+            Assert.Null(thrown);
+            Assert.Same(before, view.Surface.Source); // the last good frame stands until the pair agrees
+        }
+        finally { window.Close(); }
+    }
+
     // ---- M4, M7 --------------------------------------------------------------------------------
 
     [AvaloniaFact]
