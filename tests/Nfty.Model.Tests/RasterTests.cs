@@ -63,7 +63,7 @@ public class RasterTests
     }
 
     [Fact]
-    public void Nearest_neighbour_sampling_of_an_eight_by_eight_checker_produces_exactly_two_colours()
+    public void Nearest_neighbor_sampling_of_an_eight_by_eight_checker_produces_exactly_two_colors()
     {
         var mesh = SingleQuadFacingCamera(size: 2f);
         using var texture = Checker(8, new Rgba32(255, 255, 255, 255), new Rgba32(0, 0, 0, 255));
@@ -77,14 +77,14 @@ public class RasterTests
         Assert.Equal(2, onFace.Count);
         // Black is invariant under the brightness multiply (0 × anything is 0), so it is the one
         // exact literal this test can still pin regardless of shading. The checker's white texel
-        // becomes some shaded grey instead — asserted as "equal channels, brighter than black" rather
+        // becomes some shaded gray instead — asserted as "equal channels, brighter than black" rather
         // than a literal (255,255,255,255) that shading would make false.
         Assert.Contains(onFace, c => c.R == 0 && c.G == 0 && c.B == 0);
         Assert.Contains(onFace, c => c.R == c.G && c.G == c.B && c.R > 0);
     }
 
     [Fact]
-    public void Flat_shading_makes_every_pixel_of_one_face_the_same_colour()
+    public void Flat_shading_makes_every_pixel_of_one_face_the_same_color()
     {
         var mesh = SingleQuadFacingCamera(size: 2f);
         using var texture = SolidTexture(new Rgba32(128, 64, 200, 255));

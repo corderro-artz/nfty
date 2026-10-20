@@ -7,7 +7,7 @@ namespace Nfty.Model.Render;
 
 /// <summary>
 /// The software rasterizer: transforms a <see cref="Mesh"/> by a view-projection matrix, culls
-/// back faces, resolves visibility with a z-buffer, samples the texture with nearest-neighbour
+/// back faces, resolves visibility with a z-buffer, samples the texture with nearest-neighbor
 /// filtering, and shades with flat, quantized lighting — the whole rendering pipeline the spec lists
 /// (see <c>docs/superpowers/specs/2026-09-22-model-preview-design.md</c>, "Rendering"). Pure CPU
 /// pixel arithmetic: it renders identically headless and on screen, which is the entire reason this
@@ -20,7 +20,7 @@ public static class Raster
     private static readonly Vector3 LightDirection = Vector3.Normalize(new Vector3(0.4f, 1f, 0.6f));
 
     /// <summary>Draws every triangle of <paramref name="mesh"/>, sampling <paramref name="texture"/>
-    /// nearest-neighbour, into <paramref name="target"/>. Does not clear <paramref name="target"/>
+    /// nearest-neighbor, into <paramref name="target"/>. Does not clear <paramref name="target"/>
     /// first — the caller owns the background and calls <see cref="RenderTarget.Clear"/> itself.</summary>
     public static void Render(Mesh mesh, Image<Rgba32> texture, Matrix4x4 viewProjection, RenderTarget target)
     {

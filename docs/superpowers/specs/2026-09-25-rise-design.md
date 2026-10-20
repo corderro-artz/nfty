@@ -280,10 +280,13 @@ at the minimum window (1280×720) before they are called done.
 
   | Input | Action |
   |-------|--------|
-  | Right-click | front +1 |
-  | Left-click | back +1 |
-  | Shift + right-click | front −1 (floors at 0) |
-  | Shift + left-click | back −1 (floors at 0) |
+  | Left-click | front +1 |
+  | Right-click | back +1 |
+  | Shift + left-click | front −1 (floors at 0) |
+  | Shift + right-click | back −1 (floors at 0) |
+
+  *Swapped by the author 2026-10-20 (was right = front, left = back): the primary button raises
+  toward the viewer, as in most tools.*
   | Ctrl while drawing | constrain (45° lines, square shapes) — Shift is taken here |
 
 - **Tools** — brush (size 1 is mixel's click), line, rect, same-color fill, select — reused from the
