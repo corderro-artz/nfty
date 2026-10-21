@@ -75,6 +75,59 @@ public class ModelBatchTests
         Assert.All(zip.Entries, e => Assert.Equal(1980, e.LastWriteTime.Year));
     }
 
+    [Theory]
+    [InlineData("CON", "CON_")]
+    [InlineData("nul", "nul_")]
+    [InlineData("Com1", "Com1_")]
+    [InlineData("LPT9.txt", "LPT9_.txt")]
+    [InlineData("CONSOLE", "CONSOLE")]
+    [InlineData("COM0", "COM0")]
+    public void Windows_device_names_are_neutralized(string asked, string expected) =>
+        Assert.Equal(expected, ModelBatch.SafeBaseName(asked));
+
+    [Fact]
+    public void Build_sanitizes_every_name_itself_and_never_escapes_the_folder()
+    {
+        using var art = Art.FromAscii("#");
+        var result = ModelBatch.Build(new[]
+        {
+            new ModelInput("../x", art, null), new ModelInput("CON", art, null), new ModelInput("a/b", art, null),
+        }, new RiseOptions());
+        Assert.Equal(new[] { "-x.glb", "CON_.glb", "a-b.glb" }, result.Files.Select(f => f.FileName));
+    }
+
+    [Fact]
+    public void Build_gives_duplicate_names_a_deterministic_suffix_and_names_skips_by_it()
+    {
+        using var art = Art.FromAscii("#");
+        using var see = Art.FromAscii("~");
+        var result = ModelBatch.Build(new[]
+        {
+            new ModelInput("Lock", art, null), new ModelInput("lock", art, null), new ModelInput("Lock", see, null),
+        }, new RiseOptions());
+        Assert.Equal(new[] { "Lock.glb", "lock-2.glb" }, result.Files.Select(f => f.FileName));
+        Assert.StartsWith("Lock-3:", result.Skipped.Single());
+    }
+
+    [Theory]
+    [InlineData("../x.glb")]
+    [InlineData("a/../../x.glb")]
+    [InlineData("/abs.glb")]
+    [InlineData("C:\\abs.glb")]
+    [InlineData("..\\x.glb")]
+    public void The_writers_refuse_a_file_name_that_is_rooted_or_leaves_the_folder(string name)
+    {
+        var files = new[] { new ModelFile(name, new byte[] { 1 }) };
+        var root = Directory.CreateTempSubdirectory("nfty-esc-").FullName;
+        var dir = Path.Combine(root, "out");
+        var ex = Assert.Throws<ArgumentException>(() => ModelBatch.WriteFolder(dir, files));
+        Assert.Contains(name, ex.Message);
+        Assert.False(File.Exists(Path.Combine(root, "x.glb")));
+        var zip = Path.Combine(root, "o.zip");
+        var ez = Assert.Throws<ArgumentException>(() => ModelBatch.WriteZip(zip, files));
+        Assert.Contains(name, ez.Message);
+    }
+
     [Fact]
     public void A_folder_receives_every_file()
     {

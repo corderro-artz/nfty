@@ -7,7 +7,7 @@ using SixLabors.ImageSharp.PixelFormats;
 namespace Nfty.Model;
 
 /// <summary>One picture to rise in a batch.</summary>
-/// <param name="BaseName">The file name without extension; run through <see cref="ModelBatch.SafeBaseName"/> by the caller.</param>
+/// <param name="BaseName">The file name without extension; <see cref="ModelBatch.Build"/> sanitizes and de-duplicates it itself, so any text is safe here.</param>
 /// <param name="Art">The finished picture. Borrowed: the batch does not dispose it.</param>
 /// <param name="Depth">Its depth map, or <c>null</c> for paper.</param>
 public sealed record ModelInput(string BaseName, Image<Rgba32> Art, DepthMap? Depth);
@@ -34,7 +34,46 @@ public static class ModelBatch
         foreach (char c in name)
             sb.Append(c < 0x20 || Array.IndexOf(Reserved, c) >= 0 ? '-' : c);
         var trimmed = sb.ToString().Trim(' ', '.');
-        return trimmed.Length == 0 ? "model" : trimmed;
+        if (trimmed.Length == 0) return "model";
+        // Windows treats CON, CON.txt, con.x … as the device whatever the extension.
+        int dot = trimmed.IndexOf('.');
+        string stem = (dot < 0 ? trimmed : trimmed[..dot]).TrimEnd(' ');
+        return IsDeviceName(stem) ? stem + "_" + trimmed[stem.Length..] : trimmed;
+    }
+
+    private static bool IsDeviceName(string stem)
+    {
+        if (stem.Equals("CON", StringComparison.OrdinalIgnoreCase) || stem.Equals("PRN", StringComparison.OrdinalIgnoreCase)
+            || stem.Equals("AUX", StringComparison.OrdinalIgnoreCase) || stem.Equals("NUL", StringComparison.OrdinalIgnoreCase))
+            return true;
+        return stem.Length == 4 && stem[3] is >= '1' and <= '9'
+            && (stem.StartsWith("COM", StringComparison.OrdinalIgnoreCase) || stem.StartsWith("LPT", StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>Sanitizes <paramref name="name"/> and makes it distinct from every name already in
+    /// <paramref name="taken"/> (ignoring case), recording it there.</summary>
+    private static string Claim(HashSet<string> taken, string name)
+    {
+        var safe = SafeBaseName(name);
+        var candidate = safe;
+        for (int i = 2; !taken.Add(candidate); i++) candidate = $"{safe}-{i}";
+        return candidate;
+    }
+
+    /// <summary>Throws unless <paramref name="fileName"/> stays inside whatever folder it is given.</summary>
+    private static void CheckPlain(string fileName)
+    {
+        // A fake root: the check is about the NAME, so no real folder is needed.
+        string root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "nfty-root"));
+        bool bad = string.IsNullOrWhiteSpace(fileName) || Path.IsPathRooted(fileName)
+            || fileName.AsSpan().IndexOfAny('\\', ':') >= 0;
+        if (!bad)
+        {
+            string full = Path.GetFullPath(Path.Combine(root, fileName));
+            bad = !full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.Ordinal);
+        }
+        if (bad)
+            throw new ArgumentException($"'{fileName}' is rooted or leaves the destination folder.", nameof(fileName));
     }
 
     /// <summary>Makes a list of names safe and distinct, ignoring case.</summary>
@@ -44,15 +83,7 @@ public static class ModelBatch
     {
         ArgumentNullException.ThrowIfNull(names);
         var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var result = new List<string>(names.Count);
-        foreach (var n in names)
-        {
-            var safe = SafeBaseName(n);
-            var candidate = safe;
-            for (int i = 2; !taken.Add(candidate); i++) candidate = $"{safe}-{i}";
-            result.Add(candidate);
-        }
-        return result;
+        return names.Select(n => Claim(taken, n)).ToList();
     }
 
     /// <summary>The file names <see cref="ModelWriter.Write"/> writes for a base name.</summary>
@@ -82,19 +113,22 @@ public static class ModelBatch
         ArgumentNullException.ThrowIfNull(options);
         var files = new List<ModelFile>();
         var skipped = new List<string>();
+        var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var input in inputs)
         {
+            // The one gate: whatever the caller named it, the file name is made plain and distinct here.
+            string name = Claim(taken, input.BaseName);
             try
             {
-                var mesh = Riser.TryBuild(input.Art, input.Depth, options, $"'{input.BaseName}'");
+                var mesh = Riser.TryBuild(input.Art, input.Depth, options, $"'{name}'");
                 if (mesh is null)
-                    skipped.Add($"{input.BaseName}: nothing in it is fully opaque, so there is nothing to rise");
+                    skipped.Add($"{name}: nothing in it is fully opaque, so there is nothing to rise");
                 else
-                    files.AddRange(ModelWriter.Write(mesh, input.Art, options, input.BaseName));
+                    files.AddRange(ModelWriter.Write(mesh, input.Art, options, name));
             }
             catch (PartialAlphaException ex)
             {
-                skipped.Add($"{input.BaseName}: {ex.Message}");
+                skipped.Add($"{name}: {ex.Message}");
             }
         }
         return new ModelBatchResult(files, skipped);
@@ -107,8 +141,14 @@ public static class ModelBatch
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(directory);
         ArgumentNullException.ThrowIfNull(files);
+        foreach (var f in files) CheckPlain(f.FileName);
         Directory.CreateDirectory(directory);
-        foreach (var f in files) File.WriteAllBytes(Path.Combine(directory, f.FileName), f.Bytes);
+        foreach (var f in files)
+        {
+            string target = Path.Combine(directory, f.FileName);
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            File.WriteAllBytes(target, f.Bytes);
+        }
     }
 
     /// <summary>Writes the files into a zip: ordinal-sorted entries, fixed timestamp, so identical
@@ -119,6 +159,7 @@ public static class ModelBatch
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(zipPath);
         ArgumentNullException.ThrowIfNull(files);
+        foreach (var f in files) CheckPlain(f.FileName);
         var stamp = new DateTimeOffset(1980, 1, 1, 0, 0, 0, TimeSpan.Zero);
         using var stream = new FileStream(zipPath, FileMode.Create, FileAccess.Write);
         using var zip = new ZipArchive(stream, ZipArchiveMode.Create);
