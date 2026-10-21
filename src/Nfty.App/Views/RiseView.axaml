@@ -1,0 +1,616 @@
+<!-- RenderOptions.BitmapInterpolationMode=None on the root: pixel art scales with nearest neighbour,
+     never a filter. It inherits to every Image below, and PixelPerfectRenderingTests fails naming any
+     view that drops it. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             xmlns:svc="using:Nfty.App.Services"
+             xmlns:ctl="using:Nfty.App.Controls"
+             xmlns:conv="using:Nfty.App.Converters"
+             xmlns:rise="using:Nfty.App.Rise"
+             xmlns:views="using:Nfty.App.Views"
+             x:Class="Nfty.App.Views.RiseView"
+             x:Name="Root"
+             x:DataType="vm:RiseViewModel"
+             RenderOptions.BitmapInterpolationMode="None"
+             Focusable="True" IsTabStop="False">
+  <!-- The Rise page: a source rail, the depth canvas with its 3D tile, and a depth / export rail,
+       full-bleed and divided by 1px rules like the Ingredient editor's three panes. Every pane opens
+       with the same 41px header, and the footer is the editor's.
+
+       GEOMETRY IS FIXED. Anything that comes and goes with the source or the selection (the Save
+       button, the SHAPE section, the "2D" flags, the read-only pill) keeps its box and only changes
+       its ink; see Styles.axaml's .inkslot. The few IsVisible switches here are all constant for the
+       life of the page (which rail, the pill, the die) or the recorded positional exception (the
+       2D ONLY section, last in its rail). -->
+  <Grid RowDefinitions="*,Auto">
+    <Grid Grid.Row="0" ColumnDefinitions="262,*,300">
+
+      <!-- ============ SOURCE rail ============ -->
+      <Border Grid.Column="0" Classes="pane">
+        <Grid RowDefinitions="Auto,Auto,*,Auto">
+          <Border Grid.Row="0" Classes="pane-hrow">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Grid.Column="0" Text="{Binding Source.Kicker}" Classes="pane-h"
+                         VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+              <TextBlock Grid.Column="1" Classes="hcount" Text="{Binding Items.Count}" />
+            </Grid>
+          </Border>
+
+          <!-- What the source is, in facts; and the warning that none of it can rise. -->
+          <Border Grid.Row="1" Padding="12,10,12,2">
+            <StackPanel>
+              <ItemsControl ItemsSource="{Binding Facts}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="x:String">
+                    <Border Classes="idchip" Margin="0,0,6,6">
+                      <TextBlock Classes="ck" Text="{Binding}" />
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <Border Classes="idchip warn" Margin="0,0,0,6" HorizontalAlignment="Left"
+                      IsVisible="{Binding BookIsTwoDOnly}"
+                      ToolTip.Tip="This book has art with partial alpha, which cannot rise: a voxel is solid or empty.">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <Path Classes="ico xs" Data="{StaticResource IconRect}" />
+                  <TextBlock Classes="ck" Text="2D only" />
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </Border>
+
+          <!-- THE LIST. Three templates, exactly one visible, and the variant and tile rails are
+               virtualizing ListBoxes: a Set can hold ten thousand assets and a row's thumbnail is
+               decoded the first time a view reads it, so a row that is never realized never decodes.
+               ListBox.tiles neutralizes every state Fluent paints on a ListBoxItem - the unit here
+               is a ROW, which nobody selects, and the app's own marks sit on top of whatever Fluent
+               would add. -->
+          <Panel Grid.Row="2">
+            <!-- VARIANTS: one card per variant; the card selects, the box ticks. -->
+            <ListBox Classes="tiles" Background="Transparent" Padding="12,12,12,5"
+                     ItemsSource="{Binding Items}" IsVisible="{Binding IsVariantRail}"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="rise:RiseItem">
+                  <Panel Margin="0,0,0,7">
+                    <Button Classes="vcard" Classes.sel="{Binding IsSelected}"
+                            Command="{Binding $parent[ListBox].((vm:RiseViewModel)DataContext).SelectItemCommand}"
+                            CommandParameter="{Binding}">
+                      <Grid ColumnDefinitions="24,40,*,Auto" ColumnSpacing="8">
+                        <Border Grid.Column="1" Classes="rthumb" Width="40" Height="40">
+                          <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+                        </Border>
+                        <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
+                          <TextBlock Text="{Binding Name}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Text="{Binding Caption}" Classes="rmeta" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <Border Grid.Column="3" Classes="idchip dchip inkslot"
+                                Classes.on="{Binding IsChipShown}" Classes.warn="{Binding IsChipWarning}">
+                          <TextBlock Classes="ck" Text="{Binding DepthChip}"
+                                     HorizontalAlignment="Center" TextAlignment="Center" />
+                        </Border>
+                      </Grid>
+                    </Button>
+                    <ToggleButton Classes="cbxtog" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                  Margin="6,0,0,0" IsChecked="{Binding IsChecked}"
+                                  ToolTip.Tip="Include in the batch export">
+                      <Border Classes="cbx" Classes.on="{Binding IsChecked}">
+                        <Path Classes="ico xs" Data="{StaticResource IconCheck}" />
+                      </Border>
+                    </ToggleButton>
+                  </Panel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- RECIPE: the layers of one roll, bottom first. Inert - they are read from the roll,
+                 and the one thing on the page is the combined picture. -->
+            <ScrollViewer IsVisible="{Binding IsRecipeRail}" HorizontalScrollBarVisibility="Disabled">
+              <ItemsControl Margin="12,12,12,5" ItemsSource="{Binding LayerRows}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="rise:RiseLayerRow">
+                    <Border Classes="rrow" Margin="0,0,0,7" Padding="8,7"
+                            Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource LineBrush}"
+                            BorderThickness="1" CornerRadius="{DynamicResource RadiusMd}">
+                      <Grid ColumnDefinitions="18,32,*,13" ColumnSpacing="8">
+                        <TextBlock Grid.Column="0" Classes="dpt" Width="18" Text="{Binding Depth}" />
+                        <Border Grid.Column="1" Classes="rthumb" Width="32" Height="32">
+                          <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+                        </Border>
+                        <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
+                          <TextBlock Classes="vname" Text="{Binding Name}" />
+                          <TextBlock Classes="rmeta" Text="{Binding Caption}" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <TextBlock Grid.Column="3" Classes="kmark" Text="{Binding KindMark}"
+                                   Classes.kdyn="{Binding IsDynamic}" Classes.kstat="{Binding IsStatic}"
+                                   Classes.kcust="{Binding IsCustom}" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+
+            <!-- SET: tiles, three to a row. The ListBox's unit is the ROW (it virtualizes one element
+                 per item), so the items are chunked by RiseTileRowConverter and each row is a run of
+                 three; see RowChunkConverter for why a grid is built this way in Avalonia. -->
+            <ListBox Classes="tiles" Background="Transparent" Padding="6,8,6,5"
+                     ItemsSource="{Binding Items, Converter={x:Static conv:RiseTileRowConverter.Instance}}"
+                     IsVisible="{Binding IsTileRail}"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="conv:RiseTileRow">
+                  <ItemsControl ItemsSource="{Binding Tiles}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="0" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="rise:RiseItem">
+                        <Panel Width="82">
+                          <Button Classes="ghost tcell" Padding="4" Margin="2" HorizontalAlignment="Stretch"
+                                  HorizontalContentAlignment="Center"
+                                  Command="{Binding $parent[ListBox].((vm:RiseViewModel)DataContext).SelectItemCommand}"
+                                  CommandParameter="{Binding}">
+                            <StackPanel Spacing="4" HorizontalAlignment="Center">
+                              <Border Classes="tile" Classes.sel="{Binding IsSelected}" Width="66" Height="66"
+                                      ClipToBounds="True">
+                                <Panel>
+                                  <Border Classes="tload"
+                                          IsVisible="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNull}}" />
+                                  <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+                                </Panel>
+                              </Border>
+                              <TextBlock Classes="mono tcap" FontSize="10.5" HorizontalAlignment="Center"
+                                         Classes.accent="{Binding IsSelected}" Text="{Binding Name}" />
+                            </StackPanel>
+                          </Button>
+                          <ToggleButton Classes="cbxtog" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                        Margin="5,5,0,0" IsChecked="{Binding IsChecked}"
+                                        ToolTip.Tip="Include in the batch export">
+                            <Border Classes="cbx" Classes.on="{Binding IsChecked}">
+                              <Path Classes="ico xs" Data="{StaticResource IconCheck}" />
+                            </Border>
+                          </ToggleButton>
+                          <Border Classes="twodflag inkslot" Classes.on="{Binding IsChipWarning}"
+                                  IsHitTestVisible="False" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                  Margin="0,8,9,0">
+                            <TextBlock Text="2D" />
+                          </Border>
+                        </Panel>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Panel>
+
+          <!-- THE RAIL FOOT: exactly 47 in every source (the editor footer's own band), so the list
+               above it is one height whatever the page is showing. A source that exports shows what
+               is ticked and the way to tick it all; one that does not says why. -->
+          <Border Grid.Row="3" Classes="modal-foot" Height="47" CornerRadius="0" Padding="12,8">
+            <Panel>
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" IsVisible="{Binding Source.CanBatch}">
+                <TextBlock Grid.Column="0" Classes="smallmono" TextTrimming="CharacterEllipsis"
+                           Text="{Binding CheckedSummary}" />
+                <Button Grid.Column="1" Classes="tbtn" Padding="9,0" Content="{Binding CheckAllLabel}"
+                        Command="{Binding ToggleCheckAllCommand}" />
+              </Grid>
+              <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center"
+                          IsVisible="{Binding !Source.CanBatch}">
+                <Path Classes="ico xs" Data="{StaticResource IconLock}" />
+                <TextBlock Classes="vlock" Text="{Binding Source.RailFootNote}" TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+            </Panel>
+          </Border>
+        </Grid>
+      </Border>
+
+      <!-- ============ CANVAS ============ -->
+      <Border Grid.Column="1" Classes="pane">
+        <Grid RowDefinitions="Auto,*,Auto">
+          <!-- The toolstrip wraps by GROUP, as the editor's does (StripPanel). Five tools, the brush
+               size, history, the die when the source rolls, and the mouse map. -->
+          <Border Grid.Row="0" Classes="pane-hrow toolstrip">
+            <ctl:StripPanel Spacing="14" LineSpacing="6" VerticalAlignment="Center">
+              <StackPanel Orientation="Horizontal" Spacing="3">
+                <Button Classes="ttool" Classes.on="{Binding IsToolBrush}" ToolTip.Tip="{x:Static svc:KeyHints.RiseBrushTool}"
+                        Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Brush}">
+                  <Path Classes="ico sm" Data="{StaticResource IconPencil}" /></Button>
+                <Button Classes="ttool" Classes.on="{Binding IsToolLine}" ToolTip.Tip="{x:Static svc:KeyHints.RiseLineTool}"
+                        Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Line}">
+                  <Path Classes="ico sm" Data="{StaticResource IconLine}" /></Button>
+                <Button Classes="ttool" Classes.on="{Binding IsToolRectangle}" ToolTip.Tip="{x:Static svc:KeyHints.RiseRectangleTool}"
+                        Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Rectangle}">
+                  <Path Classes="ico sm" Data="{StaticResource IconRect}" /></Button>
+                <Button Classes="ttool" Classes.on="{Binding IsToolFill}" ToolTip.Tip="{x:Static svc:KeyHints.RiseFillTool}"
+                        Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Fill}">
+                  <Path Classes="ico sm" Data="{StaticResource IconFill}" /></Button>
+                <Button Classes="ttool" Classes.on="{Binding IsToolSelect}" ToolTip.Tip="{x:Static svc:KeyHints.RiseSelectTool}"
+                        Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Select}">
+                  <Path Classes="ico sm" Data="{StaticResource IconSelect}" /></Button>
+              </StackPanel>
+
+              <NumericUpDown Classes="nin" Value="{Binding BrushSize}" Minimum="1" Maximum="{Binding BrushSizeMax}"
+                             Width="46" FormatString="0" ShowButtonSpinner="False"
+                             ToolTip.Tip="{x:Static svc:KeyHints.BrushSizeField}" />
+
+              <StackPanel Orientation="Horizontal" Spacing="3">
+                <Button Classes="ttool" Command="{Binding UndoCommand}" ToolTip.Tip="{x:Static svc:KeyHints.UndoTool}">
+                  <Path Classes="ico sm" Data="{StaticResource IconUndo}" /></Button>
+                <Button Classes="ttool" Command="{Binding RedoCommand}" ToolTip.Tip="{x:Static svc:KeyHints.RedoTool}">
+                  <Path Classes="ico sm" Data="{StaticResource IconRedo}" /></Button>
+              </StackPanel>
+
+              <!-- The die: a recipe source rolls, nothing else does. Constant for the page's life. -->
+              <Button Classes="sampleroll" Command="{Binding RerollCommand}" IsVisible="{Binding HasDie}"
+                      ToolTip.Tip="Roll another sample of this recipe. The picture is ONE roll, not a stored asset.">
+                <Panel Classes="dieroll">
+                  <Path Classes="ico ti" Data="{Binding DieFace, Converter={x:Static conv:DieFaceConverter.Instance}}" />
+                  <Path Classes="ico ti pip1" Data="{Binding DieFace, Converter={x:Static conv:DieFaceConverter.AccentPip}}" />
+                </Panel>
+              </Button>
+
+              <!-- The mouse map. Only a source that can be painted has one to print; constant per page. -->
+              <TextBlock Classes="smallmono" Text="{x:Static svc:KeyHints.RiseLegend}"
+                         IsVisible="{Binding Source.IsEditable}" />
+            </ctl:StripPanel>
+          </Border>
+
+          <!-- The canvas, built exactly as the editor's: a fixed 320px host in the middle of a
+               backdrop that is drawn in code-behind as a lattice of the art's OWN pixels. -->
+          <Panel Grid.Row="1" x:Name="CanvasBackdrop">
+            <Border x:Name="CanvasHost" Width="320" Height="320" CornerRadius="10"
+                    BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1"
+                    BoxShadow="{DynamicResource WinShadow}" ClipToBounds="True"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+              <!-- The pointer talks to this untransformed panel, never to the image (which carries the
+                   zoom as a render transform). Background="Transparent" so it hit-tests at all. -->
+              <Panel x:Name="CanvasSurface" Background="Transparent">
+                <Image x:Name="CanvasImage" Source="{Binding Canvas}" Stretch="Uniform"
+                       IsVisible="{Binding ShowPaintCanvas}" />
+                <!-- The thickness of each solid pixel, once a cell is big enough to hold a number. -->
+                <ctl:DepthLabelLayer x:Name="DepthLabels" IsHitTestVisible="False"
+                                     IsVisible="{Binding ShowPaintCanvas}" />
+                <Canvas x:Name="CanvasOverlay" IsHitTestVisible="False" IsVisible="{Binding ShowPaintCanvas}" />
+              </Panel>
+            </Border>
+
+            <!-- WHERE THE 3D VIEW LIVES WHEN IT HAS TAKEN THE PANE. Empty otherwise, and a Border
+                 with no background is not hit-testable, so the canvas under it keeps the pointer. -->
+            <Border x:Name="BigHost" />
+
+            <!-- The same ink at the size of the pane, for a 2D-only picture while the 3D view has the
+                 big slot. An overlay in a Panel cell occupies no layout, so IsVisible moves nothing. -->
+            <StackPanel IsHitTestVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6">
+              <StackPanel.IsVisible>
+                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                  <Binding Path="PreviewSwapped" />
+                  <Binding Path="ShowTwoDOnly" />
+                </MultiBinding>
+              </StackPanel.IsVisible>
+              <TextBlock Classes="twodink" FontSize="14" Text="2D only" />
+              <TextBlock Classes="twodnote" FontSize="11" Text="partial alpha cannot rise" />
+            </StackPanel>
+
+            <!-- Read-only pill, top centre. Constant per page: a source is read-only or it is not. -->
+            <Border Classes="idchip" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,12,0,0"
+                    IsVisible="{Binding ShowReadOnlyPill}">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Path Classes="ico xs" Data="{StaticResource IconLock}" />
+                <TextBlock Classes="ck" Text="{Binding ReadOnlyPill}" />
+              </StackPanel>
+            </Border>
+
+            <!-- The editor's own grid chip, verbatim. -->
+            <Border Classes="gridchip" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="26,0,0,26">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Button Classes="ttool" Classes.on="{Binding ShowPixelGrid}"
+                        Command="{Binding ToggleGridCommand}" ToolTip.Tip="{Binding GridToggleTip}">
+                  <Path Classes="ico sm" Data="{StaticResource IconGrid}" />
+                </Button>
+                <NumericUpDown Classes="nin" Value="{Binding GridSize}" Minimum="1"
+                               Maximum="{Binding GridSizeMax}" Width="58" FormatString="0"
+                               ShowButtonSpinner="False" IsEnabled="{Binding ShowPixelGrid}"
+                               ToolTip.Tip="How many canvas pixels one grid square covers. 1 is a true pixel grid; raise it on a large canvas, where one square per pixel is finer than the screen can draw." />
+                <Border Classes="tsep" />
+                <Button Classes="zchip" Classes.on="{Binding IsZoomed}"
+                        Command="{Binding ZoomToFitCommand}"
+                        Content="{Binding ZoomText}" ToolTip.Tip="{Binding ZoomTip}" />
+              </StackPanel>
+            </Border>
+
+            <!-- THE MODEL TILE. Always present, the way the editor's blip is, so the swap is a toggle
+                 and not a one-way door: the small tile shows whichever of the pair the big slot is
+                 NOT, so the caption names something that is on screen exactly once. The ONE
+                 ModelPreviewView lives in TileHost by default and is MOVED to BigHost (never
+                 duplicated) when the two trade places; RiseView.axaml.cs does the moving. -->
+            <Border x:Name="ModelTile" Width="{Binding TileSize}" Height="{Binding TileSize}"
+                    CornerRadius="10" ClipToBounds="True"
+                    BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1"
+                    Background="{DynamicResource TileBrush}" BoxShadow="{DynamicResource WinShadow}"
+                    HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,26,26">
+              <Panel>
+                <Border x:Name="TileHost">
+                  <!-- Inked only while there is a model. ModelPreviewView leaves its last frame standing
+                       when the mesh goes null (a 2D-only picture was selected), so without this the
+                       tile showed the PREVIOUS item's model under the "2D only" ink. Reserved, not
+                       removed: it keeps its box and a way back to hit-testing. -->
+                  <views:ModelPreviewView x:Name="ModelView" DataContext="{Binding Preview}"
+                                          Classes="inkslot"
+                                          Classes.on="{Binding #Root.((vm:RiseViewModel)DataContext).Mesh, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                          Mesh="{Binding #Root.((vm:RiseViewModel)DataContext).Mesh}"
+                                          Texture="{Binding #Root.((vm:RiseViewModel)DataContext).Texture}" />
+                </Border>
+                <Image Source="{Binding Canvas}" Stretch="UniformToFill" IsVisible="{Binding PreviewSwapped}" />
+                <!-- A picture with partial alpha cannot rise: say so over the empty tile. An overlay in a Panel cell
+                     occupies no layout, so showing it moves nothing; the big slot says the same when the 3D
+                     view has traded places with the canvas. -->
+                <StackPanel IsHitTestVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Spacing="3" Margin="8,0">
+                  <StackPanel.IsVisible>
+                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                      <Binding Path="!PreviewSwapped" />
+                      <Binding Path="ShowTwoDOnly" />
+                    </MultiBinding>
+                  </StackPanel.IsVisible>
+                  <TextBlock Classes="twodink" Text="2D only" />
+                  <TextBlock Classes="twodnote" Text="partial alpha cannot rise" />
+                </StackPanel>
+                <Border VerticalAlignment="Bottom" Height="26" Background="{DynamicResource ScrimBrush}">
+                  <Grid ColumnDefinitions="*,Auto,Auto" Margin="6,0">
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                      <!-- Placeholder glyph: the page's own mark replaces it with the Rise icons. -->
+                      <Path Classes="ico xs" Data="{StaticResource IconLock}" />
+                      <TextBlock Text="{Binding TileCaption}" Classes="plabel" VerticalAlignment="Center"
+                                 TextTrimming="None" ClipToBounds="False" FontSize="7.5" Margin="0" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Classes="icon" Padding="2" Classes.unlocked="{Binding PreviewEnlarged}"
+                            Command="{Binding EnlargePreviewCommand}" ToolTip.Tip="{Binding EnlargeTip}">
+                      <Path Classes="ico xs" Data="{StaticResource IconEnlarge}" /></Button>
+                    <Button Grid.Column="2" Classes="icon" Padding="2" Classes.unlocked="{Binding PreviewSwapped}"
+                            Command="{Binding SwapPreviewCommand}" ToolTip.Tip="{Binding SwapTip}">
+                      <Path Classes="ico xs" Data="{StaticResource IconFillPane}" /></Button>
+                  </Grid>
+                </Border>
+              </Panel>
+            </Border>
+          </Panel>
+
+          <!-- The readout: one line, reserved, so hovering a pixel moves nothing. -->
+          <Border Grid.Row="2" Classes="readout">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Grid.Column="0" Classes="readtxt" Text="{Binding ReadoutText}" TextTrimming="CharacterEllipsis" />
+              <TextBlock Grid.Column="1" Classes="readtxt" Text="{Binding DimensionsText}" />
+            </Grid>
+          </Border>
+        </Grid>
+      </Border>
+
+      <!-- ============ DEPTH / EXPORT rail ============ -->
+      <Border Grid.Column="2" Classes="pane last">
+        <Grid RowDefinitions="Auto,*,Auto">
+          <Border Grid.Row="0" Classes="pane-hrow tabrow">
+            <StackPanel Orientation="Horizontal" Spacing="18">
+              <Button Classes="railtab" Classes.on="{Binding IsDepthTab}"
+                      Command="{Binding ShowDepthTabCommand}" Content="DEPTH" />
+              <Button Classes="railtab" Classes.on="{Binding IsExportTab}"
+                      Command="{Binding ShowExportTabCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="7">
+                  <TextBlock Text="EXPORT" VerticalAlignment="Center" />
+                  <Border Classes="tabcount">
+                    <TextBlock Text="{Binding ExportBadge}" />
+                  </Border>
+                </StackPanel>
+              </Button>
+            </StackPanel>
+          </Border>
+
+          <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="13,13,13,16" Spacing="15">
+
+              <!-- ==================== DEPTH ==================== -->
+              <StackPanel Spacing="15" IsVisible="{Binding IsDepthTab}">
+                <!-- FILL ALL: one depth for every solid pixel, as one undo step. -->
+                <StackPanel Spacing="8">
+                  <Grid Classes="ctlh" ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Text="FILL ALL" Classes="plabel" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Classes="cv" Text="{Binding SolidHeader}" />
+                  </Grid>
+                  <Grid ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="7">
+                    <TextBlock Grid.Column="0" Text="Front" Classes="cshare" TextAlignment="Left" VerticalAlignment="Center" />
+                    <NumericUpDown Grid.Column="1" Classes="nin" MinWidth="0" Width="58" HorizontalAlignment="Left"
+                                   Value="{Binding FillFront}" Minimum="0" Maximum="255" FormatString="0" />
+                    <TextBlock Grid.Column="2" Text="Back" Classes="cshare" TextAlignment="Left" VerticalAlignment="Center" />
+                    <NumericUpDown Grid.Column="3" Classes="nin" MinWidth="0" Width="58" HorizontalAlignment="Left"
+                                   Value="{Binding FillBack}" Minimum="0" Maximum="255" FormatString="0" />
+                  </Grid>
+                  <Button Classes="tbtn" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                          Content="{Binding FillAllLabel}" Command="{Binding FillAllCommand}" />
+                </StackPanel>
+
+                <!-- THICKNESS: how many pixels are how many voxels thick. -->
+                <StackPanel Spacing="8">
+                  <Grid Classes="ctlh" ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Text="THICKNESS" Classes="plabel" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Classes="cv" Text="{Binding DeepestText}" />
+                  </Grid>
+                  <ItemsControl ItemsSource="{Binding Thickness}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:ThicknessRow">
+                        <Grid ColumnDefinitions="62,*,44" ColumnSpacing="8" Height="20">
+                          <TextBlock Grid.Column="0" Classes="rhint" Text="{Binding Label}" />
+                          <Border Grid.Column="1" Classes="thtrack" x:Name="ThTrack">
+                            <Border Height="7">
+                              <Border.Width>
+                                <MultiBinding Converter="{x:Static conv:ShareWidthConverter.Instance}"
+                                              ConverterParameter="fraction">
+                                  <Binding Path="Share" />
+                                  <Binding ElementName="ThTrack" Path="Bounds.Width" />
+                                </MultiBinding>
+                              </Border.Width>
+                            </Border>
+                          </Border>
+                          <TextBlock Grid.Column="2" Classes="rhint" HorizontalAlignment="Right" TextAlignment="Right"
+                                     Text="{Binding CountText}" />
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+
+                <!-- What the depth means, and where it comes from. -->
+                <Panel>
+                  <Rectangle Classes="dashed btn" />
+                  <TextBlock Classes="vlock" Margin="10,9" Text="{Binding DepthNote}" />
+                </Panel>
+
+                <!-- 2D ONLY: LAST in the rail, the recorded positional exception - nothing sits below
+                     it to be shoved when it appears. -->
+                <StackPanel Spacing="8" IsVisible="{Binding HasPartialAlphaRows}">
+                  <Grid Classes="ctlh" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                    <Path Grid.Column="0" Classes="ico xs" Data="{StaticResource IconRect}" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="2D ONLY" Classes="plabel" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="2" Classes="cv twodcount" Text="{Binding PartialAlphaCountText}" />
+                  </Grid>
+                  <ItemsControl ItemsSource="{Binding PartialAlphaRows}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="rise:PartialAlphaRow">
+                        <Border Classes="twodrow" Margin="0,0,0,4">
+                          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <TextBlock Grid.Column="0" Classes="vname" Text="{Binding Name}" />
+                            <TextBlock Grid.Column="1" Classes="twodcount" Text="{Binding CountText}" />
+                          </Grid>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <TextBlock Classes="vlock" Text="A voxel is solid or empty, so partial alpha cannot rise." />
+                </StackPanel>
+              </StackPanel>
+
+              <!-- ==================== EXPORT ==================== -->
+              <StackPanel Spacing="15" IsVisible="{Binding IsExportTab}">
+                <StackPanel Spacing="7">
+                  <TextBlock Text="FORMAT" Classes="plabel" Margin="0" />
+                  <ItemsControl ItemsSource="{Binding FormatCards}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:FormatCard">
+                        <Button Classes="preset" Classes.sel="{Binding IsSelected}" Margin="0,0,0,6"
+                                Command="{Binding $parent[ItemsControl].((vm:RiseViewModel)DataContext).PickFormatCommand}"
+                                CommandParameter="{Binding}">
+                          <StackPanel Spacing="3">
+                            <TextBlock Classes="pn" Text="{Binding Title}" />
+                            <TextBlock Classes="pd" Text="{Binding Summary}" />
+                          </StackPanel>
+                        </Button>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+
+                <StackPanel Spacing="5">
+                  <TextBlock Text="PIVOT" Classes="plabel" Margin="0,0,0,2" />
+                  <RadioButton Classes="rchoice" GroupName="pivot" IsChecked="{Binding IsPivotBottomCenter}">
+                    <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Bottom center" />
+                      <TextBlock Grid.Column="1" Classes="rhint" Text="feet on the floor" /></Grid>
+                  </RadioButton>
+                  <RadioButton Classes="rchoice" GroupName="pivot" IsChecked="{Binding IsPivotCenter}">
+                    <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Center" />
+                      <TextBlock Grid.Column="1" Classes="rhint" Text="middle of the box" /></Grid>
+                  </RadioButton>
+                  <RadioButton Classes="rchoice" GroupName="pivot" IsChecked="{Binding IsPivotMinCorner}">
+                    <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Min corner" />
+                      <TextBlock Grid.Column="1" Classes="rhint" Text="the box's origin" /></Grid>
+                  </RadioButton>
+                </StackPanel>
+
+                <StackPanel Spacing="7">
+                  <TextBlock Text="VOXEL SIZE" Classes="plabel" Margin="0" />
+                  <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                    <NumericUpDown Grid.Column="0" Classes="qnt" Width="94" Value="{Binding VoxelSize}"
+                                   Minimum="0.01" Increment="0.25" FormatString="0.##"
+                                   ToolTip.Tip="World units per pixel: how big one voxel is in the exported model." />
+                    <TextBlock Grid.Column="1" Classes="cv" Text="{Binding ModelDimensionsText}" />
+                  </Grid>
+                </StackPanel>
+
+                <!-- SHAPE only means anything for a batch, and it is ALWAYS laid out: it is inked when
+                     two or more models are going, so ticking a second row moves nothing. -->
+                <StackPanel Spacing="5" Classes="inkslot" Classes.on="{Binding IsBatch}">
+                  <TextBlock Text="SHAPE" Classes="plabel" Margin="0,0,0,2" />
+                  <RadioButton Classes="rchoice" GroupName="shape" IsChecked="{Binding IsPackedShape}">
+                    <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Single file" />
+                      <TextBlock Grid.Column="1" Classes="rhint" Text=".zip" /></Grid>
+                  </RadioButton>
+                  <RadioButton Classes="rchoice" GroupName="shape" IsChecked="{Binding IsFolderShape}">
+                    <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Folder" />
+                      <TextBlock Grid.Column="1" Classes="rhint" Text="one file per model" /></Grid>
+                  </RadioButton>
+                </StackPanel>
+              </StackPanel>
+            </StackPanel>
+          </ScrollViewer>
+
+          <!-- THE MANIFEST AND THE EXPORT BUTTON, pinned below the scroller on the EXPORT tab: what
+               is going, and the one control that sends it - two things the reader must never have to
+               scroll to. Bottom-anchored, so the button stays where it is whatever the manifest
+               above it says. -->
+          <StackPanel Grid.Row="2" Spacing="9" Margin="13,0,13,13" IsVisible="{Binding IsExportTab}">
+            <Border Classes="ship" MinHeight="76">
+              <StackPanel Spacing="4">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                  <TextBlock Grid.Column="0" Classes="fn" Text="{Binding ManifestTitle}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="1" Classes="part" Text="{Binding ManifestSize}" VerticalAlignment="Center" />
+                </Grid>
+                <ItemsControl ItemsSource="{Binding ManifestParts}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="x:String">
+                      <TextBlock Classes="part" Margin="0,0,10,0" TextWrapping="Wrap" Text="{Binding}" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Classes="caveat" Text="{Binding ExportProblem}" />
+              </StackPanel>
+            </Border>
+            <Button Classes="accent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    Command="{Binding ExportCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Path Classes="ico sm" Data="{StaticResource IconDownload}" />
+                <TextBlock Text="{Binding ExportLabel}" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- Footer: what Save would do (or why it will not), and the way out. -->
+    <Border Grid.Row="1" Classes="modal-foot">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Grid.Column="0" Classes="cshare" TextAlignment="Left" TextTrimming="CharacterEllipsis"
+                   Text="{Binding FooterText}" />
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+          <Button Content="Back" Command="{Binding BackCommand}" Classes="tbtn ghost" />
+          <!-- Always laid out: a source that cannot save keeps the button's box and loses its ink,
+               so the footer is the same footer for every source. -->
+          <Panel Classes="inkslot" Classes.on="{Binding ShowSave}">
+            <Button Command="{Binding SaveCommand}" Classes="accent">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Path Classes="ico sm" Data="{StaticResource IconCheck}" />
+                <TextBlock Text="Save depth" />
+              </StackPanel>
+            </Button>
+          </Panel>
+        </StackPanel>
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>

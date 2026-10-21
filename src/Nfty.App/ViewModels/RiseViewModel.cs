@@ -84,6 +84,15 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
     /// <summary>The rail's rows.</summary>
     public IReadOnlyList<RiseItem> Items => Source.Items;
 
+    /// <summary>The chips under the rail's header. Read from the source every time: a rerolled recipe
+    /// changes its seed fact in place.</summary>
+    public IReadOnlyList<string> Facts => Source.Facts;
+
+    /// <summary>The layers of the roll, bottom first, for a recipe source; empty for any other. A
+    /// reroll hands the source a new list, so the page re-reads this on every source change.</summary>
+    public IReadOnlyList<RiseLayerRow> LayerRows =>
+        Source is RecipeRiseSource recipe ? recipe.Layers : Array.Empty<RiseLayerRow>();
+
     /// <summary>The row on the canvas.</summary>
     [ObservableProperty] private RiseItem _selectedItem;
 
@@ -552,6 +561,13 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(DepthNote));
         OnPropertyChanged(nameof(ReadoutText));
         OnPropertyChanged(nameof(DimensionsText));
+        // Loading an item changes which pictures are listed as 2D only; a reroll changes the layers
+        // and the seed fact. The page binds all of them.
+        OnPropertyChanged(nameof(PartialAlphaRows));
+        OnPropertyChanged(nameof(HasPartialAlphaRows));
+        OnPropertyChanged(nameof(PartialAlphaCountText));
+        OnPropertyChanged(nameof(LayerRows));
+        OnPropertyChanged(nameof(Facts));
         UndoCommand.NotifyCanExecuteChanged();
         RedoCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(DepthNote));

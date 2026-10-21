@@ -194,5 +194,16 @@ public class MinimumWindowFitTests
         browser.SelectedItem = browser.Items[0];
         yield return ("set-browser", new Views.SetBrowserView { DataContext = browser },
             () => { browser.Dispose(); try { Directory.Delete(setDir, true); } catch { } });
+
+        // THE RISE PAGE, in its three source kinds: the list rail is a different template in each, and
+        // a rail that is a scroller never wants more than it is given - so what this catches is the
+        // fixed parts (the toolstrip, the footer, the pinned manifest) outgrowing the area.
+        var variantRise = RisePages.VariantVm();
+        yield return ("rise/variant", new Views.RiseView { DataContext = variantRise }, variantRise.Dispose);
+        var recipeRise = RisePages.RecipeVm();
+        yield return ("rise/recipe", new Views.RiseView { DataContext = recipeRise }, recipeRise.Dispose);
+        var (setRise, setOwner) = RisePages.SetVm();
+        yield return ("rise/set", new Views.RiseView { DataContext = setRise },
+            () => { setRise.Dispose(); setOwner.Dispose(); });
     }
 }

@@ -378,6 +378,18 @@ public class DarkModeContrastTests
         yield return ("set-browser", new Views.SetBrowserView { DataContext = browserVm },
             () => { browserVm.Dispose(); try { Directory.Delete(browserDir, true); } catch { } });
 
+        // THE RISE PAGE, in the states that carry its riskiest ink. A 2D-only picture on the canvas
+        // paints the warning chips, the 2D ONLY rows and a disabled Fill-all button; a sealed Set on
+        // the EXPORT tab paints the manifest's caveat and a disabled Export button. The clean state
+        // paints neither, and this list is hand-written.
+        var riseGhost = RisePages.VariantVm();
+        riseGhost.SelectItemCommand.Execute(riseGhost.Items.First(i => i.Name == "Ghost"));
+        yield return ("rise-2d-only", new Views.RiseView { DataContext = riseGhost }, riseGhost.Dispose);
+        var (riseSealed, riseSealedOwner) = RisePages.SealedSetVm();
+        riseSealed.ShowExportTabCommand.Execute(null);
+        yield return ("rise-sealed-export", new Views.RiseView { DataContext = riseSealed },
+            () => { riseSealed.Dispose(); riseSealedOwner.Dispose(); });
+
         yield return ("cookbook-detail-invalid",
             new Views.CookBookDetailView { DataContext = brokenVm }, null);
 

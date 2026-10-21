@@ -46,6 +46,19 @@ public sealed class RiseLayerRow : IDisposable
     /// <summary>The layer's kind.</summary>
     public LayerKind Kind { get; }
 
+    /// <summary>The layer is Dynamic: the kind mark's color class.</summary>
+    public bool IsDynamic => Kind == LayerKind.Dynamic;
+
+    /// <summary>The layer is Static: the kind mark's color class.</summary>
+    public bool IsStatic => Kind == LayerKind.Static;
+
+    /// <summary>The layer is Custom: the kind mark's color class.</summary>
+    public bool IsCustom => Kind == LayerKind.Custom;
+
+    /// <summary>The second line of the row: the rolled variant and its own depth, or the left-out
+    /// wording on its own.</summary>
+    public string Caption => IsAbsent || DepthText.Length == 0 ? VariantName : $"{VariantName} · {DepthText}";
+
     /// <summary>Whether the roll left this layer out entirely.</summary>
     public bool IsAbsent { get; }
 

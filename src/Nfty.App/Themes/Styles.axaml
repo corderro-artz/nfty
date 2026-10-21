@@ -4107,4 +4107,180 @@
   <Style Selector="Border.fchip.more > TextBlock">
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
+
+  <!-- ===================== Rise page ===================== -->
+
+  <!-- A SLOT THAT IS ALWAYS LAID OUT AND ONLY SOMETIMES INKED. The Rise page's Save button, its SHAPE
+       section and its tile's 2D flag come and go with the source or the selection, and none of them
+       may move anything when they do: the geometry rule is reserve space, toggle ink. Opacity and
+       hit-testing are the toggle; the control keeps its box either way. A local IsHitTestVisible
+       (an ink that must never take the pointer) outranks this, deliberately. -->
+  <Style Selector=":is(Control).inkslot">
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+  </Style>
+  <Style Selector=":is(Control).inkslot.on">
+    <Setter Property="Opacity" Value="1" />
+    <Setter Property="IsHitTestVisible" Value="True" />
+  </Style>
+
+  <!-- The checkbox on a rail row. A real ToggleButton, so the tick is two-way bound and keyboard
+       reachable, with every Fluent chrome state neutralized EXPLICITLY (not painting a state hands
+       it back to Fluent's stock blue); the visible box is the same Border.cbx the reference panel
+       draws. 24 square is the hit target, the 15px box sits centered in it. -->
+  <Style Selector="ToggleButton.cbxtog">
+    <Setter Property="Width" Value="24" />
+    <Setter Property="Height" Value="24" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="ToggleButton.cbxtog /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="ToggleButton.cbxtog:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="ToggleButton.cbxtog:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="ToggleButton.cbxtog:checked /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="ToggleButton.cbxtog:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="ToggleButton.cbxtog:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+
+  <!-- The depth chip on a variant row and the "2D only" chip under the rail header: .idchip's shape,
+       a stated width so "2D only" and "paper" are one column, and a warning edge for a picture that
+       cannot rise. An Avalonia type selector matches the EXACT type, so these are Border rules. -->
+  <Style Selector="Border.idchip.dchip">
+    <Setter Property="MinWidth" Value="56" />
+    <Setter Property="Padding" Value="4,2" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.idchip.warn">
+    <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}" />
+  </Style>
+  <Style Selector="Border.idchip.warn TextBlock.ck">
+    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+  </Style>
+  <Style Selector="Border.idchip.warn Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource WarningBrush}" />
+  </Style>
+
+  <!-- The thumbnail frame on a rail row: the tile ground shows through where the art does not, which
+       is what makes a transparent picture read as transparent. -->
+  <Style Selector="Border.rthumb">
+    <Setter Property="Background" Value="{DynamicResource TileBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="ClipToBounds" Value="True" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- THICKNESS histogram: a track and a fill that is a fraction of the track it is actually in. -->
+  <Style Selector="Border.thtrack">
+    <Setter Property="Height" Value="7" />
+    <Setter Property="CornerRadius" Value="999" />
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="ClipToBounds" Value="True" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.thtrack > Border">
+    <Setter Property="Background" Value="{DynamicResource RarityBarBrush}" />
+    <Setter Property="CornerRadius" Value="999" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="MinWidth" Value="7" />
+  </Style>
+
+  <!-- 2D ONLY rows on the DEPTH tab: a name and a count of the pixels that cannot rise. -->
+  <Style Selector="Border.twodrow">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="Padding" Value="9,6" />
+  </Style>
+  <Style Selector="TextBlock.twodcount">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- The "2D" flag on a tile and the ink laid over the 3D tile of a picture that cannot rise. -->
+  <Style Selector="Border.twodflag">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="Padding" Value="3,0" />
+  </Style>
+  <Style Selector="Border.twodflag > TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="9" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+  </Style>
+  <Style Selector="TextBlock.twodink">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.twodnote">
+    <Setter Property="FontSize" Value="9" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+  <!-- A radio row on the EXPORT tab: the choice, and a faint hint at the trailing edge. -->
+  <Style Selector="RadioButton.rchoice">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Padding" Value="8,2,0,2" />
+  </Style>
+  <Style Selector="TextBlock.rhint">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- The readout under the canvas: fixed height, hairline on top. What it says changes under the
+       pointer, so the row is reserved and only its ink changes. -->
+  <Style Selector="Border.readout">
+    <Setter Property="Height" Value="28" />
+    <Setter Property="Padding" Value="16,0" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+  </Style>
+  <Style Selector="TextBlock.readtxt">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- Small mono muted text on one line: the mouse map in the toolstrip, the ticked count in the rail
+       foot. 10px, because both sit in a row whose width is a budget. -->
+  <Style Selector="TextBlock.smallmono">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
 </Styles>

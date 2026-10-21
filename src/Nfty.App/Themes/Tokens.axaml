@@ -98,6 +98,11 @@
            be tuned separately from every other panel once a real page hosts it — but it starts equal
            to the panel color, so it reads as part of the page rather than a hole cut into it. -->
       <SolidColorBrush x:Key="Model3DBackgroundBrush" Color="{StaticResource PanelColor}" />
+      <!-- ART-RELATIVE ink, not theme-relative: the Rise page's depth numbers are drawn on top of
+           the ARTWORK's own pixels, so which of the two reads is decided by the pixel under it and
+           is the same in both themes. Dark ink for a light pixel, light ink for a dark one. -->
+      <SolidColorBrush x:Key="CellLabelOnLightBrush" Color="#B30A0A0C" />
+      <SolidColorBrush x:Key="CellLabelOnDarkBrush" Color="#D1FFFFFF" />
       <!-- Whole brushes, per theme. A gradient built inside a Style Setter with DynamicResource
            GradientStops does NOT re-resolve when the theme flips - it is constructed once and shared,
            and its stops keep the values they had when the Style was first applied. That shipped the
@@ -181,6 +186,11 @@
       <Color x:Key="BgAltColor">#0a0b10</Color>
       <!-- The 3D preview viewport's ground; see the light dictionary's note. -->
       <SolidColorBrush x:Key="Model3DBackgroundBrush" Color="{StaticResource PanelColor}" />
+      <!-- ART-RELATIVE ink, not theme-relative: the Rise page's depth numbers are drawn on top of
+           the ARTWORK's own pixels, so which of the two reads is decided by the pixel under it and
+           is the same in both themes. Dark ink for a light pixel, light ink for a dark one. -->
+      <SolidColorBrush x:Key="CellLabelOnLightBrush" Color="#B30A0A0C" />
+      <SolidColorBrush x:Key="CellLabelOnDarkBrush" Color="#D1FFFFFF" />
       <!-- See the light dictionary's note: these are whole brushes because a Setter-hosted gradient
            does not re-resolve DynamicResource stops on a theme change. -->
       <!-- The rarity share bar. A whole brush per dictionary, per the rule above CardGradientBrush:

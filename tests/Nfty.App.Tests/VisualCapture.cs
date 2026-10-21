@@ -1275,6 +1275,131 @@ public class VisualCapture
         }
     }
 
+    /// <summary>
+    /// The Rise page, in every state its layout has to survive, in both themes, at the mockups' 1180x720
+    /// AND at the area the smallest window really gives a page (<c>-min</c>).
+    /// </summary>
+    /// <remarks>
+    /// <b>A CAPTURE ASSERTS NOTHING, SO EACH ARRANGED STATE IS VERIFIED INSIDE THE HELPER BEFORE THE
+    /// FRAME IS SAVED.</b> A frame named <c>set-sealed-export</c> that is really a picture of the DEPTH
+    /// tab is exactly how <c>editor-refs-*</c> spent a release photographing the wrong rail. The
+    /// verification reads what the page itself says is on screen (the tab, the pill, the caveat), not
+    /// the view model alone.
+    /// </remarks>
+    [AvaloniaFact]
+    public void Capture_rise_page()
+    {
+        if (Dir is null) return;   // inert unless explicitly capturing
+
+        var states = new (string Name, Func<(RiseViewModel Vm, IDisposable? Owner)> Build, Action<RisePage> Arrange)[]
+        {
+            // Oak with a front/back pattern; 8px art is 40 device px a cell at fit, so the numbers show.
+            ("variant-painted", () => (RisePages.VariantVm(oakDepth: RisePages.PaintedOak()), null),
+                _ => { }),
+            // Locked book: painting is a scratch surface, and the footer says why Save is not live.
+            ("variant-locked", () => (RisePages.VariantVm(isEditing: () => false, oakDepth: RisePages.PaintedOak()), null),
+                p => p.Vm.ApplyDepthStroke(new[] { (2, 2) }, Nfty.Core.Editing.DepthSide.Front, lower: false)),
+            // A picture with partial alpha: listed under 2D ONLY, flagged on its row, inked on the tile.
+            ("variant-ghost", () => (RisePages.VariantVm(), null),
+                p => p.Vm.SelectItemCommand.Execute(p.Vm.Items.First(i => i.Name == "Ghost"))),
+            ("recipe", () => (RisePages.RecipeVm(), null), _ => { }),
+            ("set-batch-export", () => { var (v, o) = RisePages.SetVm(); return (v, o); },
+                p =>
+                {
+                    foreach (var item in p.Vm.Items.Take(5)) item.IsChecked = true;
+                    p.Vm.ShowExportTabCommand.Execute(null);
+                }),
+            ("set-sealed-export", () => { var (v, o) = RisePages.SealedSetVm(); return (v, o); },
+                p => p.Vm.ShowExportTabCommand.Execute(null)),
+            ("swapped", () => (RisePages.VariantVm(oakDepth: RisePages.PaintedOak()), null),
+                p => p.Vm.SwapPreviewCommand.Execute(null)),
+            ("enlarged", () => (RisePages.VariantVm(oakDepth: RisePages.PaintedOak()), null),
+                p => p.Vm.EnlargePreviewCommand.Execute(null)),
+        };
+
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            string theme = variant.Key.ToString()!.ToLowerInvariant();
+            foreach (var (name, build, arrange) in states)
+            {
+                foreach (var (suffix, w, h) in new[]
+                {
+                    ("", 1180d, 720d),
+                    ("-min", RisePages.MinArea.Width, RisePages.MinArea.Height),
+                })
+                {
+                    var (vm, owner) = build();
+                    using var page = RisePages.Show(vm, w, h, variant, owner);
+                    arrange(page);
+                    var model = page.View.FindControl<Views.ModelPreviewView>("ModelView")!;
+                    model.RepaintNow();     // the 3D view paints on a posted job; the frame must not beat it
+                    Dispatcher.UIThread.RunJobs();
+
+                    var file = $"rise-{name}-{theme}{suffix}.png";
+                    using var frame = page.Window.CaptureRenderedFrame()!;
+                    VerifyRiseState(name, page, file);
+                    frame.Save(Path.Combine(Dir!, file), PngBitmapEncoderOptions.Default);
+                }
+            }
+        }
+    }
+
+    /// <summary>Fails the capture if the page is not showing what the file is named for.</summary>
+    private static void VerifyRiseState(string state, RisePage page, string file)
+    {
+        void Need(bool ok, string what)
+        {
+            if (!ok) throw new InvalidOperationException($"{file} was about to be captured but {what}.");
+        }
+        var vm = page.Vm;
+        var view = page.View;
+        var model = view.FindControl<Views.ModelPreviewView>("ModelView")!;
+        bool Shown(Func<TextBlock, bool> match) =>
+            view.GetVisualDescendants().OfType<TextBlock>().Any(t => t.IsEffectivelyVisible && t.Bounds.Width > 0 && match(t));
+        var labels = view.FindControl<Controls.DepthLabelLayer>("DepthLabels")!;
+
+        switch (state)
+        {
+            case "variant-painted":
+                Need(vm.Surface.Get(3, 1).Front > 0, "no depth was painted");
+                Need(labels.LastLabelCount > 0, "the cell labels did not draw");
+                Need(model.RepaintCount > 0, "the 3D tile never painted");
+                break;
+            case "variant-locked":
+                Need(vm.Source.IsLocked && vm.HasUnsavedDepth, "the book is not locked with unsaved depth");
+                Need(Shown(t => t.Text is { } s && s.Contains("read-only", StringComparison.Ordinal)), "the footer does not say read-only");
+                break;
+            case "variant-ghost":
+                Need(vm.SelectedItem.Name == "Ghost" && vm.ShowTwoDOnly, "the ghost is not on the canvas");
+                Need(Shown(t => t.Text == "2D ONLY"), "the 2D ONLY section is not on screen");
+                Need(Shown(t => t.Text == "partial alpha cannot rise"), "the tile ink is not showing");
+                break;
+            case "recipe":
+                Need(vm.IsRecipeRail && vm.LayerRows.Count == 2, "the layer rail is not showing the roll");
+                Need(Shown(t => t.Text == "combined depth · read-only"), "the read-only pill is not on screen");
+                Need(view.GetVisualDescendants().OfType<Button>().Any(b => b.Classes.Contains("sampleroll") && b.IsEffectivelyVisible), "the die is missing");
+                break;
+            case "set-batch-export":
+                Need(vm.IsExportTab && vm.IsBatch, "the EXPORT tab is not showing a batch");
+                Need(vm.IsTileRail && Shown(t => t.Text == "SHAPE"), "the SHAPE section is not on screen");
+                Need(view.GetVisualDescendants().OfType<Border>().Any(b => b.Classes.Contains("ship") && b.IsEffectivelyVisible && b.Bounds.Height > 0), "the manifest is not on screen");
+                break;
+            case "set-sealed-export":
+                Need(vm.IsExportTab && vm.ExportProblem is { } p && p.Contains("sealed", StringComparison.Ordinal), "the sealed refusal is not the manifest's caveat");
+                Need(Shown(t => t.Text is { } s && s.Contains("sealed", StringComparison.Ordinal)), "the refusal is not on screen");
+                break;
+            case "swapped":
+                Need(vm.PreviewSwapped && ReferenceEquals(model.Parent, view.FindControl<Border>("BigHost")), "the 3D view is not in the big slot");
+                Need(model.RepaintCount > 0, "the big 3D view never painted");
+                break;
+            case "enlarged":
+                Need(vm.PreviewEnlarged && view.FindControl<Border>("ModelTile")!.Bounds.Width >= 208, "the tile is not enlarged");
+                break;
+            default:
+                throw new InvalidOperationException("unknown state " + state);
+        }
+    }
+
     /// <summary>A book with a layerOrder entry naming no ingredient — reported by Validator, so the
     /// detail card takes its invalid branch.</summary>
     private static Nfty.Core.Formats.LoadedCookBook InvalidBook()

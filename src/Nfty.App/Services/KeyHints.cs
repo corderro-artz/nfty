@@ -88,6 +88,24 @@ public static class KeyHints
     public static string UndoTool { get; } = "Undo" + Tail(Undo);
     /// <summary>The redo button's tooltip.</summary>
     public static string RedoTool { get; } = "Redo" + Tail(Redo);
+    /// <summary>Hold while drawing on the Rise canvas: 45° for a line, a square box for a shape. Ctrl,
+    /// not <see cref="Constrain"/>, because Shift is what lowers the depth there.</summary>
+    public static string RiseConstrain { get; } = OperatingSystem.IsMacOS() ? "⌃" : "Ctrl";
+    /// <summary>The Rise brush's tooltip.</summary>
+    public static string RiseBrushTool { get; } = "Brush  (B)" + Tail($"hold {RiseConstrain} for a straight stroke");
+    /// <summary>The Rise line tool's tooltip.</summary>
+    public static string RiseLineTool { get; } = "Line  (L)" + Tail($"hold {RiseConstrain} to snap to 45°");
+    /// <summary>The Rise rectangle tool's tooltip.</summary>
+    public static string RiseRectangleTool { get; } = "Rectangle  (R)"
+        + Tail($"{RiseConstrain} squares it, {FromCenter} draws from the center");
+    /// <summary>The Rise same-color fill's tooltip.</summary>
+    public static string RiseFillTool { get; } = "Same-color fill  (G)";
+    /// <summary>The Rise select tool's tooltip.</summary>
+    public static string RiseSelectTool { get; } = "Select a region, then click inside it to raise it  (M)";
+    /// <summary>The mouse map, printed once on the toolstrip. Abbreviated on purpose: the strip has to
+    /// stay one line at the window the app opens at, and the spelled-out form ("left front · right
+    /// back") was nine pixels too wide for it; the opening line and the tools' tooltips spell it out.</summary>
+    public static string RiseLegend { get; } = $"L front · R back · {LowerDepth} lowers";
     /// <summary>Move the selected layer up or down the stack.</summary>
     public static string MoveLayer { get; } = Alt + Gap + "↑↓";
     /// <summary>Drop the editor's selection marquee.</summary>
