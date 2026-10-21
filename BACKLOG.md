@@ -262,3 +262,8 @@ from. Not during a drag (previews never ask), only on commit. Cheap at the sizes
 at 512px it doubles the commit cost. The fix is a debounce (recount ~250 ms after the last change,
 the figure blank or marked stale meanwhile) or counting off the UI thread from the export snapshot;
 either keeps "exact, never estimated". Measure first.
+
+**Rise, a Set's book arrival that throws part-way:** `SetRiseSource.Arrive` publishes `ExportReady` in a
+`finally`, so an export is never left waiting, but an exception from a listener or a reseed mid-loop leaves
+some loaded subjects reseeded with the book's depth and some not, and the next export snapshots that mixed
+state. Reachable only after an exception has already escaped the dispatcher; noted, not fixed.
