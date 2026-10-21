@@ -75,6 +75,7 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
         _brushSize = 1;
         source.Changed += OnSourceChanged;
         if (source is VariantRiseSource variant) variant.Saved += OnVariantSaved;
+        InitExport();
     }
 
     /// <summary>What the page is showing.</summary>
@@ -582,6 +583,7 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
         UndoStanding();
         _disposed = true;
         Source.Changed -= OnSourceChanged;
+        DisposeExport();
         if (Source is VariantRiseSource variant) variant.Saved -= OnVariantSaved;
         Canvas.Dispose();
         Source.Dispose();

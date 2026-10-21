@@ -139,5 +139,6 @@ public sealed partial class RiseViewModel
         OnPropertyChanged(nameof(HasUnsavedDepth));
         OnPropertyChanged(nameof(FooterText));
         SaveCommand.NotifyCanExecuteChanged();
+        RefreshExport(size: true);
     }
 }

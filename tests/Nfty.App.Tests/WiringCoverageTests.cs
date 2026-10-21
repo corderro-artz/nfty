@@ -46,6 +46,8 @@ public class WiringCoverageTests
         ["FillAllCommand"] = "Rise page markup lands in Task 10",
         ["ShowDepthTabCommand"] = "Rise page markup lands in Task 10",
         ["ShowExportTabCommand"] = "Rise page markup lands in Task 10",
+        ["PickFormatCommand"] = "Rise page markup lands in Task 10",
+        ["ToggleCheckAllCommand"] = "Rise page markup lands in Task 10",
     };
 
     private static string RepoRoot()
