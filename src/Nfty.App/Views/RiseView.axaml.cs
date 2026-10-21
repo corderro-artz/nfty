@@ -498,8 +498,6 @@ public partial class RiseView : UserControl
             _points.Clear();
             _applyingSelection = false;
             e.Pointer.Capture(null);
-            // A stroke the model refused raises nothing; the budget still has to end.
-            _model.HostInteracting = false;
             DrawBand();
         };
 

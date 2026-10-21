@@ -264,13 +264,20 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
     /// <param name="lower">True to lower by one instead of raise.</param>
     public void ApplyDepthStroke(IReadOnlyList<(int x, int y)> points, DepthSide side, bool lower)
     {
+        // EVERY exit ends the gesture: a refused stroke (read-only source, empty path) must still lift
+        // the 3D view's repaint budget, so the view needs no workaround of its own.
+        try { ApplyDepthStrokeCore(points, side, lower); }
+        finally { GestureEnded?.Invoke(); }
+    }
+
+    private void ApplyDepthStrokeCore(IReadOnlyList<(int x, int y)> points, DepthSide side, bool lower)
+    {
         if (points.Count == 0) return;
         if (ActiveTool == EditorTool.Select && !SelectionContains(points[0].x, points[0].y))
         {
             // Marking changes no depth, so it works on a page that cannot paint.
             var start = points[0]; var end = points[^1];
             Selection = start == end ? null : ClampToArt(BoundsOf(points));
-            GestureEnded?.Invoke();
             return;
         }
         if (!IsPaintable) return;
@@ -289,7 +296,6 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
             _lastMeshMs = NowMs();
             AfterDepthEdit();
         }
-        GestureEnded?.Invoke();
     }
 
     /// <summary>Abandons a gesture: the depth goes back to exactly what it was.</summary>

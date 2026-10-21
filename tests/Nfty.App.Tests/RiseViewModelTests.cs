@@ -21,6 +21,24 @@ public class RiseViewModelTests
     }
 
     [AvaloniaFact]
+    public void A_refused_stroke_still_raises_GestureEnded()
+    {
+        using var recipe = RisePages.RecipeVm();
+        int ended = 0;
+        recipe.GestureEnded += () => ended++;
+        recipe.ApplyDepthStroke(new[] { (2, 2) }, DepthSide.Front, lower: false);   // read-only source
+        Assert.Equal(1, ended);
+
+        using var oak = OakVm();
+        oak.GestureEnded += () => ended++;
+        oak.ApplyDepthStroke(System.Array.Empty<(int x, int y)>(), DepthSide.Front, lower: false);   // empty path
+        Assert.Equal(2, ended);
+
+        oak.ApplyDepthStroke(new[] { (2, 2) }, DepthSide.Front, lower: false);      // accepted: once, not twice
+        Assert.Equal(3, ended);
+    }
+
+    [AvaloniaFact]
     public void A_click_raises_the_front_by_one_and_is_one_undo_step()
     {
         using var vm = OakVm();
