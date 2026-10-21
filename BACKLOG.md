@@ -243,11 +243,13 @@ option to rediscover it.
 
 ## Rise page: a 512px mesh rebuild costs about two frames
 
-**Status:** measured in `RisePagePerfTests`, not optimized; the canvas is never skipped, so this
-costs 3D smoothness only.
+**Status:** measured in `RisePagePerfTests` (Debug build), not optimized.
 
 At 512px art `Rise.MeshRebuild` (all of it `Riser.TryBuild`) averages 33 ms and peaks near 63 ms,
 over the 33 ms interaction budget; the 3D repaint (`Raster.Render`) is 27 ms mean. At 256px a
-rebuild is 8 ms and at 64px 1.3 ms. During a drag the 3D tile therefore updates at roughly 15 fps
-on 512px art and the exact model lands on release. The levers are the already-noted cross-quad
-vertex dedup and an incremental rebuild of only the columns a stroke touched.
+rebuild is 8 ms and at 64px 1.3 ms. The rebuild runs synchronously on the UI thread inside
+`RiseViewModel.PreviewDepthStroke`, so it is not only the 3D tile that lags: the throttle caps
+rebuilds at roughly half the UI thread, and canvas input during a 512px drag is handled in 33-63 ms
+chunks (delayed, never dropped). The exact model lands on release. The levers are the already-noted
+cross-quad vertex dedup, an incremental rebuild of only the columns a stroke touched, and moving the
+rebuild off the UI thread (it is a pure function of art + depth). Re-measure in Release first.

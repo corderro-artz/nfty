@@ -102,7 +102,7 @@ public sealed class RecipeRiseSource : RiseSource
     public override string? ReadOnlyPill => "combined depth · read-only";
 
     /// <inheritdoc />
-    public override string RailFootNote => "Layers are read-only here until write-through.";
+    public override string RailFootNote => "Layers are read-only here.";
 
     /// <inheritdoc />
     public override string DepthNote => Problem is { } p
