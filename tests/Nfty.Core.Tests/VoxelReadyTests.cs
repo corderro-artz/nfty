@@ -148,6 +148,22 @@ public class VoxelReadyTests
     }
 
     [Fact]
+    public void The_partial_alpha_listing_flag_follows_the_pixels_through_apply_and_undo()
+    {
+        var ing = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("body", "Body", LayerKind.Custom, null,
+                new[] { new Variant("d", "d", 1) }, PartialAlpha: true),
+            VariantImages = new Dictionary<string, Image<Rgba32>> { ["d"] = Row(127, 255) },
+        };
+        using var book = Book(Recipe("cat", ing));
+        using var result = VoxelReady.Apply(book);
+        Assert.False(result.Book.Recipes[0].Ingredients[0].Manifest.PartialAlpha);
+        using var restored = VoxelReady.Undo(result.Book, result);
+        Assert.True(restored.Recipes[0].Ingredients[0].Manifest.PartialAlpha);
+    }
+
+    [Fact]
     public void Disposing_the_result_frees_the_originals()
     {
         using var book = DirtyBook();
