@@ -75,6 +75,8 @@ public record RecipeCount(string Recipe, int Count, double Percent);
 /// cannot say, and claiming they were unique would be inventing a fact. Additive and optional, so
 /// <c>Schema.Current</c> is deliberately NOT bumped — older builds ignore unknown properties,
 /// whereas a bump would make them reject the file outright.</para></param>
+/// <param name="Models">The 3D models the cook made, or null (and absent from the file) when it made
+/// none. Additive and optional, no schema bump.</param>
 public record SetManifest(
     string Name,
     int Count,
@@ -83,4 +85,24 @@ public record SetManifest(
     string GeneratorVersion,
     IReadOnlyList<RecipeCount> Distribution,
     IReadOnlyList<RarityAttribute> Rarity,
-    bool? UniqueDna = null);
+    bool? UniqueDna = null,
+    [property: System.Text.Json.Serialization.JsonIgnore(
+        Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    SetModels? Models = null);
+
+/// <summary>
+/// <c>set.json</c>'s record of the 3D models a cook made. Additive and optional, so
+/// <c>Schema.Current</c> is not bumped; absent means the Set was cooked without models.
+/// </summary>
+/// <param name="Format">The model format token, as the CLI spells it (<c>glb</c>, ...).</param>
+/// <param name="Pivot">The pivot token, as the CLI spells it (<c>bottom-center</c>, ...).</param>
+/// <param name="VoxelSize">World units per voxel.</param>
+/// <param name="Skipped">Set numbers with no model because nothing in them is fully opaque,
+/// ascending. Null when none.</param>
+public sealed record SetModels(
+    string Format,
+    string Pivot,
+    float VoxelSize,
+    [property: System.Text.Json.Serialization.JsonIgnore(
+        Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    IReadOnlyList<int>? Skipped = null);

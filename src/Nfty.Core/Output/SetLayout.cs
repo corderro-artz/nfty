@@ -38,9 +38,13 @@ public static class SetLayout
     /// <summary>The rich nfty metadata — dna, seed, rarity, per-layer color — one per asset.</summary>
     public const string NftyDir = "nfty";
 
-    /// <summary>The three subdirectories, in the order a listing reads best.</summary>
+    /// <summary>The 3D models a modeled cook writes, one per fully-opaque asset. Absent from a Set
+    /// cooked without models. Taken whole like the other directories: it is nfty's namespace.</summary>
+    public const string ModelsDir = "models";
+
+    /// <summary>The subdirectories, in the order a listing reads best.</summary>
     public static IReadOnlyList<string> Directories { get; } =
-        [ImagesDir, MetadataDir, NftyDir];
+        [ImagesDir, MetadataDir, NftyDir, ModelsDir];
 
     /// <summary>Where a Set folder keeps its manifest.</summary>
     /// <param name="setDir">The Set folder.</param>
