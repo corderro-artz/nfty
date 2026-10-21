@@ -1,5 +1,6 @@
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Nfty.App.ViewModels;
 using Nfty.Core.Editing;
 
 namespace Nfty.App.Rise;
@@ -17,9 +18,12 @@ public sealed partial class RiseItem : ObservableObject, IDisposable
     /// <param name="exportBaseName">File name stem when exported.</param>
     /// <param name="thumbnail">Row picture, if any.</param>
     /// <param name="ownsThumbnail">Whether disposing the row disposes the thumbnail.</param>
+    /// <param name="thumbnailRow">A Set browser row whose lazily decoded picture this item shows straight
+    /// through; never snapshotted, so nothing decodes until a view reads <see cref="Thumbnail"/>.</param>
     public RiseItem(string id, string name, string caption, string exportBaseName, Bitmap? thumbnail,
-        bool ownsThumbnail)
+        bool ownsThumbnail, SetItemRow? thumbnailRow = null)
     {
+        _row = thumbnailRow;
         Id = id;
         Name = name;
         _caption = caption;
@@ -54,7 +58,22 @@ public sealed partial class RiseItem : ObservableObject, IDisposable
     }
 
     /// <summary>Row picture.</summary>
-    [ObservableProperty] private Bitmap? _thumbnail;
+    public Bitmap? Thumbnail
+    {
+        get => _row is { } r ? r.Thumbnail : _thumbnail;   // reading a Set row's picture is what starts its decode
+        set
+        {
+            if (ReferenceEquals(_thumbnail, value)) return;
+            _thumbnail = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private Bitmap? _thumbnail;
+    private readonly SetItemRow? _row;
+
+    /// <summary>Tells the view the row's picture changed (its decode landed).</summary>
+    internal void NotifyThumbnail() => OnPropertyChanged(nameof(Thumbnail));
 
     /// <summary>Whether the row is ticked for batch export.</summary>
     [ObservableProperty] private bool _isChecked;
@@ -125,6 +144,6 @@ public sealed partial class RiseItem : ObservableObject, IDisposable
     public void Dispose()
     {
         Subject?.Dispose();
-        if (_ownsThumbnail) Thumbnail?.Dispose();
+        if (_ownsThumbnail) _thumbnail?.Dispose();
     }
 }

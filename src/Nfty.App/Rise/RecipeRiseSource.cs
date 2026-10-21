@@ -28,6 +28,7 @@ public sealed class RecipeRiseSource : RiseSource
     private readonly RiseItem _item;
     private readonly RiseItem[] _items;
     private List<RiseLayerRow> _layers = new();
+    private string? _refusal;
 
     /// <summary>Rolls the recipe once.</summary>
     /// <param name="book">The book the recipe belongs to; borrowed.</param>
@@ -46,6 +47,7 @@ public sealed class RecipeRiseSource : RiseSource
 
         var rolled = Roll();
         Problem = rolled.Problem;
+        _refusal = rolled.Refusal;
         _layers = rolled.Rows;
         _item = new RiseItem("roll", recipe.Manifest.Name, CaptionFor(seed), BaseNameFor(seed),
             bridge.ToBitmap(rolled.Art), ownsThumbnail: true);
@@ -106,7 +108,8 @@ public sealed class RecipeRiseSource : RiseSource
     public override string DepthNote => Problem is { } p
         ? $"This book cannot cook, so there is no roll to rise: {p}"
         : "A recipe shows its stack's combined depth: each pixel takes the depth of the topmost solid layer. "
-          + "Change a layer's depth on its own variant.";
+          + "Change a layer's depth on its own variant."
+          + (_refusal is { } why ? $" {why} The stack has no combined depth, so it is paper." : "");
 
     /// <inheritdoc />
     public override string OpeningLine => Problem is null
@@ -123,6 +126,7 @@ public sealed class RecipeRiseSource : RiseSource
         Seed++;
         var rolled = Roll();
         Problem = rolled.Problem;
+        _refusal = rolled.Refusal;
 
         var oldRows = _layers;
         var oldThumb = _item.Thumbnail;
@@ -139,28 +143,36 @@ public sealed class RecipeRiseSource : RiseSource
 
     private string BaseNameFor(int seed) => string.Create(CultureInfo.InvariantCulture, $"{_recipe.Manifest.Name}-{seed}");
 
-    private sealed record Rolled(Image<Rgba32> Art, DepthMap? Depth, string? Problem, List<RiseLayerRow> Rows);
+    private sealed record Rolled(Image<Rgba32> Art, DepthMap? Depth, string? Problem, List<RiseLayerRow> Rows,
+        string? Refusal = null);
 
     private Rolled Roll()
     {
         GeneratedAsset? asset = null;
+        Image<Rgba32>? art = null;
+        var rows = new List<RiseLayerRow>();
         try
         {
             asset = Generator.GenerateStreaming(_book, new GenerateOptions(1,
                 Seed.ToString(CultureInfo.InvariantCulture), _recipe.Manifest.Id, EnforceUniqueDna: false)).First();
-            var art = asset.Image.Clone();
+            art = asset.Image.Clone();
             var present = asset.Traits.Select(t => (t.IngredientId, t.VariantId)).ToList();
             DepthMap? depth = null;
+            string? refusal = null;
             if (present.Count > 0)
             {
                 try { depth = StackDepth.ForSelection(_recipe, present, $"the {_recipe.Manifest.Name} recipe"); }
-                catch (PartialAlphaException) { /* the subject's own partial count marks the item 2D only */ }
+                catch (PartialAlphaException ex) { refusal = ex.Message; }   // which layer keeps the stack 2D
             }
-            return new Rolled(art, depth, null, RowsFor(asset));
+            FillRows(asset, rows);
+            return new Rolled(art, depth, null, rows, refusal);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            // An invalid book (or no roll at all) is a state to show, not a crash: a clear canvas, the reason.
+            // An invalid book (or no roll at all) is a state to show, not a crash: a clear canvas, the
+            // reason. Whatever was built before the failure is given back, not leaked.
+            art?.Dispose();
+            foreach (var r in rows) r.Dispose();
             var c = _book.Manifest.Canvas;
             return new Rolled(new Image<Rgba32>(c.Width, c.Height), null, ex.Message, new List<RiseLayerRow>());
         }
@@ -170,9 +182,8 @@ public sealed class RecipeRiseSource : RiseSource
         }
     }
 
-    private List<RiseLayerRow> RowsFor(GeneratedAsset asset)
+    private void FillRows(GeneratedAsset asset, List<RiseLayerRow> rows)
     {
-        var rows = new List<RiseLayerRow>();
         var byId = new Dictionary<string, LoadedIngredient>(StringComparer.Ordinal);
         foreach (var ing in _recipe.Ingredients) byId[ing.Manifest.Id] = ing;
         var picked = asset.Traits.ToDictionary(t => t.IngredientId, t => t, StringComparer.Ordinal);
@@ -197,7 +208,6 @@ public sealed class RecipeRiseSource : RiseSource
             rows.Add(new RiseLayerRow(depth, ing.Manifest.Name, trait.VariantName, ing.Manifest.Kind,
                 RiseItem.ChipFor(own), isAbsent: false, thumbnail: _bridge.ToBitmap(rendered)));
         }
-        return rows;
     }
 
     /// <inheritdoc />

@@ -32,7 +32,7 @@ public class SetRiseSourceTests
         var (s, path) = RiseFixtures.OnDisk(RiseFixtures.ChestBook(FlatDepth(2)));
         bookPath = path;
         var setDir = Path.Combine(Path.GetDirectoryName(path)!, "Chest Set");
-        using (var cooked = Generator.Generate(s.Current!, new GenerateOptions(6, "launch", EnforceUniqueDna: false)))
+        using (var cooked = Generator.Generate(s.Current!, new GenerateOptions(20, "launch", EnforceUniqueDna: false)))
             SetWriter.Write(cooked, setDir, pack: false);
         s.Dispose();
         return setDir;
@@ -106,7 +106,9 @@ public class SetRiseSourceTests
     {
         var setDir = CookedBesideBook(out _);
         using var set = SetReader.Read(setDir);
-        var src = new SetRiseSource(set, set.Items[0].Number, () => Array.Empty<string>(), new ImageBridge());
+        LoadedCookBook? read = null;
+        var src = new SetRiseSource(set, set.Items[0].Number, () => Array.Empty<string>(), new ImageBridge(),
+            p => read = CookBookArchive.Read(p));
         int raised = 0;
         src.Changed += () => raised++;
 
@@ -116,6 +118,119 @@ public class SetRiseSourceTests
 
         Assert.Null(src.BookName);
         Assert.Equal(0, raised);
+        // The late book is given back, not leaked: its decoded images are disposed.
+        Assert.NotNull(read);
+        var image = read!.Recipes[0].Ingredients[0].VariantImages.Values.First();
+        Assert.Throws<ObjectDisposedException>(() => _ = image[0, 0]);
+    }
+
+    [AvaloniaFact]
+    public async Task A_book_that_reads_as_corrupt_is_not_found_and_never_faults_the_search()
+    {
+        var setDir = CookedBesideBook(out _);
+        using var set = SetReader.Read(setDir);
+        using var src = new SetRiseSource(set, set.Items[0].Number, () => Array.Empty<string>(), new ImageBridge(),
+            _ => throw new System.Text.Json.JsonException("bad manifest"));
+
+        await src.BookSearch;     // would throw here if the search faulted
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Null(src.BookName);
+        Assert.Contains("was not found", src.DepthNote);
+    }
+
+    [AvaloniaFact]
+    public void Constructing_a_source_decodes_no_thumbnail_until_one_is_read()
+    {
+        var setDir = CookedBesideBook(out _);
+        using var set = SetReader.Read(setDir);
+        using var src = new SetRiseSource(set, set.Items[0].Number, null, new ImageBridge());
+
+        PumpFor(150);
+        Assert.All(src.Items, i => Assert.False(src.RowOf(i).IsThumbnailDecoded));
+
+        _ = src.Items[3].Thumbnail;                 // a view realizing one tile
+        PumpUntilDecoded(() => src.RowOf(src.Items[3]).IsThumbnailDecoded);
+
+        Assert.True(src.RowOf(src.Items[3]).IsThumbnailDecoded);
+        Assert.Equal(1, src.Items.Count(i => src.RowOf(i).IsThumbnailDecoded));
+    }
+
+    [AvaloniaFact]
+    public void A_landed_thumbnail_is_announced_so_a_bound_tile_repaints()
+    {
+        var setDir = CookedBesideBook(out _);
+        using var set = SetReader.Read(setDir);
+        using var src = new SetRiseSource(set, set.Items[0].Number, null, new ImageBridge());
+        var item = src.Items[2];
+        int told = 0;
+        item.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(RiseItem.Thumbnail)) told++; };
+
+        _ = item.Thumbnail;
+        PumpUntilDecoded(() => src.RowOf(item).IsThumbnailDecoded);
+
+        Assert.True(told >= 1);
+        Assert.NotNull(item.Thumbnail);
+        Assert.Same(src.RowOf(item).Thumbnail, item.Thumbnail);
+    }
+
+    private static void PumpFor(int ms) => PumpUntilDecoded(() => false, ms);
+
+    private static void PumpUntilDecoded(Func<bool> done, int timeoutMs = 5000)
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        while (!done() && sw.ElapsedMilliseconds < timeoutMs)
+        {
+            Dispatcher.UIThread.RunJobs();
+            System.Threading.Thread.Sleep(1);
+        }
+        Dispatcher.UIThread.RunJobs();
+    }
+
+    [AvaloniaFact]
+    public async Task The_unmatched_note_follows_the_selected_asset_and_selection_is_announced()
+    {
+        var setDir = CookedBesideBook(out _);
+        using var real = SetReader.Read(setDir);
+        var odd = real.Items[0] with
+        {
+            Rarity = real.Items[0].Rarity.Select(r => r.Trait_type == "Body" ? r with { Value = "Mahogany" } : r).ToList(),
+        };
+        using var set = new LoadedSet
+        {
+            Manifest = real.Manifest, SourceDirectory = real.SourceDirectory,
+            Items = new[] { odd }.Concat(real.Items.Skip(1)).ToList(),
+        };
+        using var src = new SetRiseSource(set, odd.Number, () => Array.Empty<string>(), new ImageBridge());
+        await src.BookSearch;
+        Dispatcher.UIThread.RunJobs();
+        src.Open(src.Items[0]);
+        Assert.Contains("could not be matched", src.DepthNote);
+        int raised = 0;
+        src.Changed += () => raised++;
+
+        src.Items[0].IsSelected = false;
+        src.Items[1].IsSelected = true;           // selection moves; nothing is opened
+
+        Assert.DoesNotContain("could not be matched", src.DepthNote);
+        Assert.True(raised >= 1);
+    }
+
+    [AvaloniaFact]
+    public async Task An_asset_with_a_partial_alpha_layer_says_which_layer_in_the_note()
+    {
+        var setDir = CookedBesideBook(out _);
+        using var set = SetReader.Read(setDir);
+        var ghost = set.Items.First(i => i.Rarity.Any(r => r.Trait_type == "Body" && r.Value == "Ghost"));
+        using var src = new SetRiseSource(set, ghost.Number, () => Array.Empty<string>(), new ImageBridge());
+        await src.BookSearch;
+        Dispatcher.UIThread.RunJobs();
+
+        src.Open(src.InitialItem);
+
+        Assert.Contains("cannot be risen", src.DepthNote);
+        Assert.Contains("partly transparent", src.DepthNote);
+        Assert.Contains("so it is paper", src.DepthNote);
     }
 
     [AvaloniaFact]

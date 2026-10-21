@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Globalization;
+using System.Text.Json;
 using Avalonia.Threading;
 using Nfty.App.Services;
 using Nfty.App.ViewModels;
@@ -33,7 +34,8 @@ public sealed class SetRiseSource : RiseSource
     private LoadedCookBook? _book;
     private bool _searchDone;
     private bool _disposed;
-    private int _current;
+    private readonly Dictionary<int, string> _refusals = new();
+    private readonly Func<string, LoadedCookBook> _readBook;
 
     /// <summary>Opens the source and starts looking for the book.</summary>
     /// <param name="set">The Set; borrowed.</param>
@@ -41,10 +43,13 @@ public sealed class SetRiseSource : RiseSource
     /// <param name="bookCandidates">Paths of CookBooks the app can already name (open, recent); read
     /// HERE, on the calling thread, because it reaches into app state.</param>
     /// <param name="bridge">Required for symmetry with the other sources.</param>
+    /// <param name="readBook">How a found CookBook is read; null reads the archive. A seam so a test can
+    /// see the book a late result is dropped with, and make the read fail.</param>
     public SetRiseSource(LoadedSet set, int selectedNumber, Func<IEnumerable<string>>? bookCandidates,
-        IImageBridge bridge)
+        IImageBridge bridge, Func<string, LoadedCookBook>? readBook = null)
     {
         ArgumentNullException.ThrowIfNull(set);
+        _readBook = readBook ?? CookBookArchive.Read;
         ArgumentNullException.ThrowIfNull(bridge);
         if (set.Items.Count == 0) throw new ArgumentException("The Set has no assets to rise.", nameof(set));
         _set = set;
@@ -54,18 +59,17 @@ public sealed class SetRiseSource : RiseSource
         {
             var row = new SetItemRow(si.Number, si.ImagePath, si);
             string id = string.Create(CultureInfo.InvariantCulture, $"{si.Number:D4}");
+            // The item reads THROUGH to the row, never snapshots it: reading the row's picture is what
+            // starts its off-thread decode, so only a view that realizes the tile pays for it. Reading
+            // it here would decode every asset of a ten-thousand-asset Set at open.
             var item = new RiseItem(id, $"#{id}", si.Recipe,
-                $"{set.Manifest.Name}-{id}", null, ownsThumbnail: false);
-
-            // The item shows the row's thumbnail as it lands. Reading the property is what starts the
-            // off-thread decode, so it is read once here and again on every change.
+                $"{set.Manifest.Name}-{id}", null, ownsThumbnail: false, thumbnailRow: row);
             void OnRowChanged(object? sender, PropertyChangedEventArgs e)
             {
-                if (e.PropertyName == nameof(SetItemRow.Thumbnail)) item.Thumbnail = row.Thumbnail;
+                if (e.PropertyName == nameof(SetItemRow.Thumbnail)) item.NotifyThumbnail();
             }
             row.PropertyChanged += OnRowChanged;
             _detach.Add(() => row.PropertyChanged -= OnRowChanged);
-            item.Thumbnail = row.Thumbnail;
 
             _rows[id] = row;
             _setItems[id] = si;
@@ -74,7 +78,19 @@ public sealed class SetRiseSource : RiseSource
         }
         _initial = initial ?? _items[0];
         _initial.IsSelected = true;
-        _current = _setItems[_initial.Id].Number;
+
+        // The depth note describes the SELECTED asset, so a selection change is a change the page
+        // must re-read.
+        foreach (var item in _items)
+        {
+            void OnItemChanged(object? sender, PropertyChangedEventArgs e)
+            {
+                if (e.PropertyName == nameof(RiseItem.IsSelected)) RaiseChanged();
+            }
+            item.PropertyChanged += OnItemChanged;
+            var captured = item;
+            _detach.Add(() => captured.PropertyChanged -= OnItemChanged);
+        }
 
         BookSearch = StartBookSearch(bookCandidates);
     }
@@ -134,8 +150,11 @@ public sealed class SetRiseSource : RiseSource
             if (!_searchDone) return "Looking for the CookBook that cooked this Set…";
             if (_book is null) return "The CookBook that cooked this Set was not found, so every asset is paper.";
             var note = $"Depth comes from {BookName}, the book that cooked this Set.";
-            if (_unmapped.Contains(_current))
+            int number = _setItems[(_items.FirstOrDefault(i => i.IsSelected) ?? _initial).Id].Number;
+            if (_unmapped.Contains(number))
                 note += " This asset's layers could not be matched to that book by name, so it is paper.";
+            if (_refusals.TryGetValue(number, out var why))
+                note += $" {why} The stack has no combined depth, so it is paper.";
             return note;
         }
     }
@@ -144,11 +163,13 @@ public sealed class SetRiseSource : RiseSource
     public override string OpeningLine =>
         $"Rising “{Title}” — assets come out of the Set read-only; depth is recovered from the CookBook that cooked it.";
 
+    /// <summary>The Set browser row behind an item (its lazily decoded picture); for tests.</summary>
+    internal SetItemRow RowOf(RiseItem item) => _rows[item.Id];
+
     /// <inheritdoc />
     public override RiseSubject Open(RiseItem item)
     {
         ArgumentNullException.ThrowIfNull(item);
-        _current = _setItems[item.Id].Number;
         if (item.Subject is { } loaded) return loaded;
 
         var art = LoadArt(_rows[item.Id].ImagePath);
@@ -209,6 +230,7 @@ public sealed class SetRiseSource : RiseSource
             return null;
         }
         _unmapped.Remove(item.Number);
+        _refusals.Remove(item.Number);
 
         // An all-absent roll has no layers: it rises as nothing, and is never handed to the stack rule.
         if (present.Count == 0) return null;
@@ -218,8 +240,9 @@ public sealed class SetRiseSource : RiseSource
             // A picture of another size than the book's canvas cannot take the book's depth.
             return map.Width == art.Width && map.Height == art.Height ? map : null;
         }
-        catch (PartialAlphaException)
+        catch (PartialAlphaException ex)
         {
+            _refusals[item.Number] = ex.Message;   // which layer keeps this asset 2D, said in the note
             return null;
         }
     }
@@ -248,9 +271,10 @@ public sealed class SetRiseSource : RiseSource
                     // Right bytes can still be unreadable by this build: a newer schema, a file mid-write.
                     try
                     {
-                        found = CookBookArchive.Read(path);
+                        found = _readBook(path);
                         name = Path.GetFileName(path);
                     }
+                    catch (JsonException) { }
                     catch (IOException) { }
                     catch (InvalidDataException) { }
                     catch (UnauthorizedAccessException) { }

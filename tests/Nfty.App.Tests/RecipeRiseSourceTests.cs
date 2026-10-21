@@ -89,6 +89,11 @@ public class RecipeRiseSourceTests
         // Gold paints over the one half-alpha pixel, so the composite is solid or clear: it is the
         // layer that cannot rise, and the stack rule refuses it by name, leaving paper.
         Assert.Equal("paper", src.Items[0].DepthChip);
+        Assert.Contains("partly transparent", src.DepthNote);   // and it says why, not just "paper"
+        Assert.Contains("no combined depth", src.DepthNote);
+
+        src.Reroll();                                            // the reason belongs to the roll that had it
+        Assert.Equal(src.Layers[0].VariantName == "Ghost", src.DepthNote.Contains("partly transparent"));
         Assert.True(src.Open(src.Items[0]).Depth.SameDepthAs(null));
     }
 
