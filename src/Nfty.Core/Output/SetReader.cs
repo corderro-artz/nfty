@@ -91,11 +91,16 @@ public static class SetReader
     /// <param name="path">A Set folder, or a <c>.set</c> archive.</param>
     /// <returns>The manifest and items; the caller owns it and must dispose it.</returns>
     /// <exception cref="CorruptSetException">The Set is missing or malformed.</exception>
-    public static LoadedSet Read(string path)
+    public static LoadedSet Read(string path) => Read(path, NewTemp);
+
+    private static string NewTemp() => Directory.CreateTempSubdirectory("nfty-set-").FullName;
+
+    /// <summary><see cref="Read(string)"/> with the temp directory supplied, so a test can watch it go.</summary>
+    internal static LoadedSet Read(string path, Func<string> newTemp)
     {
         if (!File.Exists(path)) return Load(path, null, path, CancellationToken.None);
         // A .set archive (or any file) → extract to a temp dir, which goes again if anything fails.
-        string temp = Directory.CreateTempSubdirectory("nfty-set-").FullName;
+        string temp = newTemp();
         try { ZipFile.ExtractToDirectory(path, temp); }
         catch { DeleteQuietly(temp); throw; }
         return Load(temp, temp, path, CancellationToken.None);
@@ -176,10 +181,13 @@ public static class SetReader
     /// <param name="path">A Set folder, or a <c>.set</c> archive.</param>
     /// <param name="ct">Cancels the read.</param>
     /// <returns>The manifest and items; the caller owns it and must dispose it.</returns>
-    public static async Task<LoadedSet> ReadAsync(string path, CancellationToken ct = default)
+    public static Task<LoadedSet> ReadAsync(string path, CancellationToken ct = default) => ReadAsync(path, ct, NewTemp);
+
+    /// <summary><see cref="ReadAsync(string, CancellationToken)"/> with the temp directory supplied.</summary>
+    internal static async Task<LoadedSet> ReadAsync(string path, CancellationToken ct, Func<string> newTemp)
     {
         if (!File.Exists(path)) return await Task.Run(() => Load(path, null, path, ct), ct);
-        string temp = Directory.CreateTempSubdirectory("nfty-set-").FullName;
+        string temp = newTemp();
         try
         {
             await ZipFile.ExtractToDirectoryAsync(path, temp, ct);

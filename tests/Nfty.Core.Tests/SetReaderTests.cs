@@ -57,6 +57,37 @@ public class SetReaderTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => SetReader.ReadAsync(dir, cts.Token));
     }
 
+    /// <summary>Hands out temp directories under one root the test owns, so "nothing left behind"
+    /// can be asserted without racing other tests over the shared TEMP.</summary>
+    private static (string Root, Func<string> NewTemp) TempRoot()
+    {
+        var root = Directory.CreateTempSubdirectory("nfty-set-root-").FullName;
+        return (root, () => Directory.CreateDirectory(Path.Combine(root, Guid.NewGuid().ToString("N"))).FullName);
+    }
+
+    [Fact]
+    public async Task An_archive_that_fails_to_unpack_leaves_no_temp_copy()
+    {
+        var bad = Path.Combine(Directory.CreateTempSubdirectory().FullName, "broken.set");
+        File.WriteAllText(bad, "not a zip");
+        var (root, newTemp) = TempRoot();
+
+        Assert.ThrowsAny<Exception>(() => SetReader.Read(bad, newTemp));
+        await Assert.ThrowsAnyAsync<Exception>(() => SetReader.ReadAsync(bad, CancellationToken.None, newTemp));
+        Assert.Empty(Directory.GetFileSystemEntries(root));
+    }
+
+    [Fact]
+    public async Task A_canceled_unpack_leaves_no_temp_copy()
+    {
+        var archive = Directory.GetFiles(CookTo(pack: true), "*.set").Single();
+        var (root, newTemp) = TempRoot();
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => SetReader.ReadAsync(archive, cts.Token, newTemp));
+        Assert.Empty(Directory.GetFileSystemEntries(root));
+    }
+
     [Fact]
     public void A_read_canceled_between_assets_stops_and_deletes_the_unpacked_copy()
     {
