@@ -23,6 +23,13 @@ public class SetModelsWriterTests
         }
     }
 
+    private sealed class BadOnModeler(SetModels options, int badNumber) : IAssetModeler
+    {
+        public SetModels Options { get; } = options;
+        public IReadOnlyList<SetFile>? Model(GeneratedAsset asset, string baseName) =>
+            [new SetFile(asset.SetNumber == badNumber ? "../x" : $"{baseName}.fake", [1])];
+    }
+
     private static readonly SetModels Fake = new("fake", "center", 0.5f);
 
     private static GeneratedSet SetOf(params int[] numbers) => new(
@@ -145,19 +152,48 @@ public class SetModelsWriterTests
         Assert.False(Directory.Exists(Path.Combine(dir, "models")));
     }
 
-    [Fact]
-    public void Extending_with_different_options_is_refused_naming_both()
+    [Theory]
+    [InlineData("glb", "center", 0.5f)]    // format only
+    [InlineData("fake", "bottom-center", 0.5f)]   // pivot only
+    [InlineData("fake", "center", 2f)]     // voxel size only
+    public void Extending_with_different_options_is_refused_naming_both(string format, string pivot, float voxel)
     {
         string dir = Tmp();
         using (var set = SetOf(1)) SetWriter.Write(set, dir, false, new FakeModeler(Fake));
 
         using var more = SetOf(2);
         var ex = Assert.Throws<InvalidOperationException>(() => SetWriter.Write(
-            more, dir, false, new FakeModeler(new SetModels("fake", "bottom-center", 2f))));
+            more, dir, false, new FakeModeler(new SetModels(format, pivot, voxel))));
 
-        Assert.Contains("center", ex.Message, StringComparison.Ordinal);
-        Assert.Contains("bottom-center", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("fake, center, voxel 0.5", ex.Message, StringComparison.Ordinal);
+        Assert.Contains($"{format}, {pivot}, voxel", ex.Message, StringComparison.Ordinal);
         Assert.False(File.Exists(Path.Combine(dir, "images", "0002.png")));
+    }
+
+    [Fact]
+    public void A_bad_model_file_name_on_a_late_asset_leaves_nothing_new_on_disk()
+    {
+        string dir = Path.Combine(Tmp(), "fresh");
+        using var set = SetOf(1, 2, 3);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            SetWriter.Write(set, dir, false, new BadOnModeler(Fake, 3)));
+
+        Assert.False(Directory.Exists(dir));
+    }
+
+    [Fact]
+    public void Re_making_a_modeled_number_as_a_skip_removes_its_stale_model()
+    {
+        string dir = Tmp();
+        using (var set = SetOf(1, 2)) SetWriter.Write(set, dir, false, new FakeModeler(Fake));
+        Assert.True(File.Exists(Path.Combine(dir, "models", "0002.fake")));
+
+        using (var again = SetOf(2)) SetWriter.Write(again, dir, false, new FakeModeler(Fake, 2));
+
+        Assert.False(File.Exists(Path.Combine(dir, "models", "0002.fake")));
+        Assert.True(File.Exists(Path.Combine(dir, "models", "0001.fake")));
+        Assert.Equal([2], ManifestAt(dir).Models!.Skipped);
     }
 
     [Fact]
