@@ -59,7 +59,9 @@ public sealed partial class RiseViewModel
         IsSaving = true;
         try
         {
-            await Source.SaveAsync();
+            var running = Source.SaveAsync();
+            _saveInFlight = running;
+            await running;
         }
         catch (Exception ex)
         {
@@ -67,16 +69,27 @@ public sealed partial class RiseViewModel
         }
         finally
         {
+            _saveInFlight = null;
             IsSaving = false;
             OnDepthEdited();
         }
     }
+
+    private Task? _saveInFlight;
 
     /// <summary>Leaves the page, asking first when there is depth that leaving would lose.</summary>
     [RelayCommand]
     private async Task Back()
     {
         CancelDepthPreview();
+        // A save that is writing decides what is unsaved. Asking now would offer to discard depth that
+        // is about to land anyway, and leaving now would hand the Explorer a book a moment before the
+        // save replaces it, so the Explorer's next whole-book write would start from the old one.
+        if (_saveInFlight is { } saving)
+        {
+            try { await saving; }
+            catch (Exception) { /* Save itself says why; the page then asks as usual */ }
+        }
         int n = DirtyCount;
         if (!Source.IsEditable || n == 0)
         {

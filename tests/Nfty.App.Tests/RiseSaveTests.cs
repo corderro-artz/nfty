@@ -41,6 +41,45 @@ public class RiseSaveTests
     }
 
     [AvaloniaFact]
+    public async Task A_stroke_painted_while_a_save_is_in_flight_stays_unsaved()
+    {
+        var (s, path) = RiseFixtures.OnDisk(RiseFixtures.ChestBook());
+        var nav = new FakeNav();
+        var dialogs = new ScriptedDialogs(LeaveChoice.Stay);
+        using var vm = Vm(RiseFixtures.Variant(s), nav, dialogs);
+        vm.ApplyDepthStroke(new[] { (2, 1) }, DepthSide.Front, false);
+        var saving = vm.SaveCommand.ExecuteAsync(null);        // the write is snapshotted, then awaits the disk
+        Assert.False(saving.IsCompleted);
+        vm.ApplyDepthStroke(new[] { (2, 1) }, DepthSide.Front, false);   // painted after the snapshot
+        await saving;
+
+        Assert.Equal(1, OakFront(path));                       // what was written: the first stroke only
+        Assert.Equal(2, vm.Surface.Get(2, 1).Front);
+        Assert.True(vm.HasUnsavedDepth);
+        Assert.Equal("unsaved depth on 1 variant", vm.FooterText);
+        await vm.BackCommand.ExecuteAsync(null);
+        Assert.IsType<LeaveDialogViewModel>(dialogs.Shown);
+        Assert.Equal(0, nav.BackCount);
+    }
+
+    [AvaloniaFact]
+    public async Task Back_during_a_save_waits_for_it_and_then_decides()
+    {
+        var (s, path) = RiseFixtures.OnDisk(RiseFixtures.ChestBook());
+        var nav = new FakeNav();
+        var dialogs = new ScriptedDialogs(LeaveChoice.Stay);
+        using var vm = Vm(RiseFixtures.Variant(s), nav, dialogs);
+        vm.ApplyDepthStroke(new[] { (2, 1) }, DepthSide.Front, false);
+        var saving = vm.SaveCommand.ExecuteAsync(null);
+        Assert.True(vm.IsSaving);
+        await vm.BackCommand.ExecuteAsync(null);               // must not offer to discard what is being written
+        await saving;
+        Assert.Null(dialogs.Shown);
+        Assert.Equal(1, nav.BackCount);
+        Assert.Equal(1, OakFront(path));
+    }
+
+    [AvaloniaFact]
     public async Task Back_with_unsaved_depth_asks_and_Stay_keeps_the_page()
     {
         var (s, _) = RiseFixtures.OnDisk(RiseFixtures.ChestBook());

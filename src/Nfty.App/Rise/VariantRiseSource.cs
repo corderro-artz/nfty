@@ -169,11 +169,16 @@ public sealed class VariantRiseSource : RiseSource
         // the bytes it had; replace only the maps of variants whose painting differs from stored.
         var depths = new Dictionary<string, DepthMap>(live.Depths, StringComparer.Ordinal);
         var ids = live.Manifest.Variants.Select(v => v.Id).ToHashSet(StringComparer.Ordinal);
+        // The snapshot is kept per subject: what is WRITTEN is what gets marked saved afterwards, so a
+        // stroke painted while the write awaits the disk stays dirty.
+        var written = new List<(RiseSubject Subject, DepthMap? Map)>();
         foreach (var item in _items)
         {
             if (item.Subject is not { IsDirty: true } s || !ids.Contains(item.Id)) continue;
-            if (s.Depth.ToDepthMap() is { } map) depths[item.Id] = map;
+            var map = s.Depth.ToDepthMap();
+            if (map is not null) depths[item.Id] = map;
             else depths.Remove(item.Id);
+            written.Add((s, map));
         }
 
         LoadedCookBook? persisted = null;
@@ -205,11 +210,8 @@ public sealed class VariantRiseSource : RiseSource
 
         // Marked BEFORE anyone is told: the write is done, so a handler that throws must not leave
         // the subjects looking unsaved after a good write.
-        foreach (var item in _items)
-        {
-            item.Subject?.MarkSaved();
-            item.RefreshDepth();
-        }
+        foreach (var (subject, map) in written) subject.MarkSaved(map);
+        foreach (var item in _items) item.RefreshDepth();
         if (persisted is not null) Saved?.Invoke(persisted);
         RaiseChanged();
     }

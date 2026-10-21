@@ -43,8 +43,12 @@ public sealed class RiseSubject : IDisposable
     /// <summary>Whether the painted depth differs from what was last stored or saved.</summary>
     public bool IsDirty => !Depth.SameDepthAs(_saved);
 
-    /// <summary>Records the current depth as the stored one.</summary>
-    public void MarkSaved() => _saved = Depth.ToDepthMap();
+    /// <summary>Records what a save WROTE as the stored depth.</summary>
+    /// <param name="written">The map the save took from this subject and wrote, or null for paper.</param>
+    /// <remarks>Never "the current depth": the page stays live while a save awaits the disk, so a stroke
+    /// painted after the snapshot was taken is not in the file, and marking the surface as it is now
+    /// would call that stroke saved — the footer clean, Back asking nothing, the stroke lost.</remarks>
+    public void MarkSaved(DepthMap? written) => _saved = written;
 
     /// <summary>Starts over from a stored depth: a new surface, an empty history, nothing dirty.</summary>
     /// <param name="stored">The stored depth, or null for paper.</param>
