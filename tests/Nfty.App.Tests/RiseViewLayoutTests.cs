@@ -74,6 +74,38 @@ public class RiseViewLayoutTests
     // ------------------------------------------------------------------ 2 + 3. the swap keeps a way back, in a sized slot
 
     [AvaloniaFact]
+    public void The_swapped_tile_shows_the_whole_of_a_wide_picture_not_a_crop()
+    {
+        string[] wide = { "AAAAAAAA", "AAAAAAAA", "BBBBBBBB", "BBBBBBBB" };
+        var ing = new Nfty.Core.Formats.LoadedIngredient
+        {
+            Manifest = new Nfty.Core.Model.IngredientManifest("band", "Band", Nfty.Core.Model.LayerKind.Custom, null,
+                new[] { new Nfty.Core.Model.Variant("w", "Wide", 1) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>> { ["w"] = RiseFixtures.Picture(wide) },
+        };
+        var recipe = new Nfty.Core.Formats.LoadedRecipe
+        {
+            Manifest = new Nfty.Core.Model.RecipeManifest("r", "R", new[] { "band" }, Array.Empty<Nfty.Core.Model.IncompatibilityRule>()),
+            Ingredients = new[] { ing },
+        };
+        var src = new Nfty.App.Rise.VariantRiseSource(recipe, ing, "w", new ImageBridge(), new CookBookSession(),
+            looseSavePath: System.IO.Path.Combine(System.IO.Path.GetTempPath(), "band.igt"));
+        using var page = RisePages.Show(RisePages.Vm(src), Min.Width, Min.Height);
+        page.Vm.SwapPreviewCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+
+        var tile = page.View.FindControl<Border>("ModelTile")!;
+        var image = tile.GetVisualDescendants().OfType<Avalonia.Controls.Image>().Single(i => i.IsVisible && ReferenceEquals(i.Source, page.Vm.Canvas));
+        var host = (Control)image.GetVisualParent()!;
+        // Fitted, the picture's whole width sits inside the tile and its height is half of it; cropped
+        // to fill, it would be as tall as the tile and twice as wide, its ends cut off.
+        Assert.True(image.Bounds.Width <= host.Bounds.Width + 0.5,
+            $"the picture is {image.Bounds.Width:0.#} wide in a {host.Bounds.Width:0.#} tile");
+        Assert.Equal(2.0, image.Bounds.Width / image.Bounds.Height, 2);
+        ing.VariantImages["w"].Dispose();
+    }
+
+    [AvaloniaFact]
     public void Swapping_moves_the_one_3d_view_between_its_homes_and_the_tile_stays_a_way_back()
     {
         using var page = RisePages.Show(RisePages.VariantVm(), Min.Width, Min.Height);

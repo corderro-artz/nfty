@@ -354,7 +354,7 @@
                                           Mesh="{Binding #Root.((vm:RiseViewModel)DataContext).Mesh}"
                                           Texture="{Binding #Root.((vm:RiseViewModel)DataContext).Texture}" />
                 </Border>
-                <Image Source="{Binding Canvas}" Stretch="UniformToFill" IsVisible="{Binding PreviewSwapped}" />
+                <Image Source="{Binding Canvas}" Stretch="Uniform" IsVisible="{Binding PreviewSwapped}" />
                 <!-- A picture with partial alpha cannot rise: say so over the empty tile. An overlay in a Panel cell
                      occupies no layout, so showing it moves nothing; the big slot says the same when the 3D
                      view has traded places with the canvas. -->
