@@ -72,13 +72,10 @@ public class DepthEditingTests
     public void A_step_hands_the_base_each_coordinate_at_most_once()
     {
         // The base contract ("each coordinate at most once") is invisible through Apply — repeated
-        // writes of one value land the same — so ask ComputePixels directly.
+        // writes of one value land the same — so ask for the plan directly.
         var s = Surface("###");
         var step = new DepthStep(new[] { (0, 0), (1, 0), (0, 0), (1, 0) }, DepthSide.Front, +1);
-        var compute = typeof(RegionEditCommand<DepthPixel>).GetMethod(
-            "ComputePixels", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
-        var computed = (IReadOnlyList<(int x, int y, DepthPixel pixel)>)compute.Invoke(step, new object[] { s })!;
-        Assert.Equal(2, computed.Count);
+        Assert.Equal(2, step.Plan(s).Count);
     }
 
     [Fact]

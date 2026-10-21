@@ -36,6 +36,12 @@ public abstract class RegionEditCommand<TPixel> : IEditCommand<TPixel> where TPi
     /// <returns>The pixels to write, before the opacity lock is applied to them.</returns>
     protected abstract IReadOnlyList<(int x, int y, TPixel pixel)> ComputePixels(IEditSurface<TPixel> surface);
 
+    /// <summary>The pixels this edit plans to write, before the opacity lock. Test seam: lets a test
+    /// check the "each coordinate at most once" contract, which <see cref="Apply"/> hides.</summary>
+    /// <param name="surface">The surface being edited.</param>
+    /// <returns>What <see cref="ComputePixels"/> returned.</returns>
+    internal IReadOnlyList<(int x, int y, TPixel pixel)> Plan(IEditSurface<TPixel> surface) => ComputePixels(surface);
+
     /// <summary>
     /// Stamps a filled round disc of diameter <paramref name="size"/> along <paramref name="path"/>,
     /// visiting each in-bounds pixel at most once. Only the pixel a coordinate takes differs between

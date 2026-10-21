@@ -42,6 +42,23 @@ public class FootprintTests
     }
 
     [Fact]
+    public void Region_floods_in_all_four_directions()
+    {
+        // Seed bottom-right of a U; every cell is reachable only by going up, left or down.
+        //   . # .      '.' = 0 (region), '#' = wall
+        //   . # .
+        //   . . .
+        var map = new ValueMap(3, 3);
+        var wall = new BrushStroke<GrayPixel>(new Brush<GrayPixel>(1, new GrayPixel(50, 255)), new[] { (1, 0), (1, 1) });
+        wall.Apply(map);
+        var region = Footprint.Region(map, 2, 0);
+        Assert.Equal(7, region.Count);
+        Assert.Contains((0, 0), region);
+        Assert.DoesNotContain((1, 0), region);
+        Assert.Equal(region.Count, region.Distinct().Count());
+    }
+
+    [Fact]
     public void Region_of_an_out_of_bounds_seed_is_empty() =>
         Assert.Empty(Footprint.Region(new ValueMap(2, 2), 5, 5));
 
