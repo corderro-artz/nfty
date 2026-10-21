@@ -4198,7 +4198,7 @@
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <Style Selector="Border.thtrack > Border">
-    <Setter Property="Background" Value="{DynamicResource RarityBarBrush}" />
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
     <Setter Property="CornerRadius" Value="999" />
     <Setter Property="HorizontalAlignment" Value="Left" />
     <Setter Property="MinWidth" Value="7" />

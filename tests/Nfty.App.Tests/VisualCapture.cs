@@ -1307,7 +1307,7 @@ public class VisualCapture
             string theme = variant.Key.ToString()!.ToLowerInvariant();
             foreach (var (cls, px) in new[] { ("xs", 12), ("", 14), ("ti", 18) })
             {
-                var panel = new WrapPanel { Margin = new Thickness(12) };
+                var panel = new WrapPanel { Margin = new Thickness(12), Width = 880 };
                 foreach (var key in order)
                 {
                     var path = new Avalonia.Controls.Shapes.Path { Data = all[key] };
@@ -1318,7 +1318,10 @@ public class VisualCapture
                     cell.Children.Add(new TextBlock { Text = key.Substring(4), FontSize = 9 });
                     panel.Children.Add(cell);
                 }
-                var window = new Window { RequestedThemeVariant = variant, Width = 900, Height = 360, Content = panel };
+                // Three times larger: a 12px glyph at 1:1 cannot be inspected, and the stroke weight, the cut
+                // corners and the gap to its neighbour are exactly what this sheet is for.
+                var big = new LayoutTransformControl { LayoutTransform = new ScaleTransform(3, 3), Child = panel };
+                var window = new Window { RequestedThemeVariant = variant, Width = 2700, Height = 1080, Content = big };
                 window.Show();
                 Dispatcher.UIThread.RunJobs();
                 using var frame = window.CaptureRenderedFrame()!;

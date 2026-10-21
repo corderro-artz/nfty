@@ -305,6 +305,8 @@
                   <Binding Path="ShowTwoDOnly" />
                 </MultiBinding>
               </StackPanel.IsVisible>
+              <Path Classes="ico ti" Data="{StaticResource Icon2dOnly}" Stroke="{DynamicResource WarningBrush}"
+                    HorizontalAlignment="Center" />
               <TextBlock Classes="twodink" FontSize="14" Text="2D only" />
               <TextBlock Classes="twodnote" FontSize="11" Text="partial alpha cannot rise" />
             </StackPanel>
@@ -364,6 +366,8 @@
                       <Binding Path="ShowTwoDOnly" />
                     </MultiBinding>
                   </StackPanel.IsVisible>
+                  <Path Classes="ico sm" Data="{StaticResource Icon2dOnly}" Stroke="{DynamicResource WarningBrush}"
+                        HorizontalAlignment="Center" />
                   <TextBlock Classes="twodink" Text="2D only" />
                   <TextBlock Classes="twodnote" Text="partial alpha cannot rise" />
                 </StackPanel>

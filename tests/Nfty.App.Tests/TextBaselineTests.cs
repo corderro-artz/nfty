@@ -135,6 +135,17 @@ public class TextBaselineTests
                    ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs), new StatusService()))
             Sweep("explorer", new Views.ExplorerView { DataContext = explorer });
 
+        // THE RISE PAGE: the painted-depth state (readout, chips, listing) and the export tab (cards,
+        // manifest). Set source for the second so the manifest carries its Set facts.
+        var riseDepth = RisePages.VariantVm(oakDepth: RisePages.PaintedOak());
+        Sweep("rise-depth", new Views.RiseView { DataContext = riseDepth });
+        riseDepth.Dispose();
+        var (riseExport, riseOwner) = RisePages.SetVm();
+        riseExport.ShowExportTabCommand.Execute(null);
+        Sweep("rise-export", new Views.RiseView { DataContext = riseExport });
+        riseExport.Dispose();
+        riseOwner.Dispose();
+
         var dir = Directory.CreateTempSubdirectory().FullName;
         try
         {

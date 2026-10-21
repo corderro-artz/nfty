@@ -66,6 +66,17 @@ public class MinimumWindowFitTests
                     + $"in {area.Width:F0}x{area.Height:F0}");
             }
 
+            // A star cell arranged at ZERO still reports a desired size that fits, so the Rise canvas
+            // pane is asserted by name: its host must lie wholly inside the backdrop it sits in.
+            if (view.FindControl<Border>("CanvasHost") is { } host
+                && view.FindControl<Panel>("CanvasBackdrop") is { } backdrop)
+            {
+                var r = new Rect(host.TranslatePoint(default, backdrop)!.Value, host.Bounds.Size);
+                if (r.Width < 160 || r.Left < -0.5 || r.Top < -0.5
+                    || r.Right > backdrop.Bounds.Width + 0.5 || r.Bottom > backdrop.Bounds.Height + 0.5)
+                    over.Add($"{name} canvas host {r} is not inside its pane {backdrop.Bounds.Size}");
+            }
+
             window.Close();
             dispose?.Invoke();
         }
@@ -205,5 +216,9 @@ public class MinimumWindowFitTests
         var (setRise, setOwner) = RisePages.SetVm();
         yield return ("rise/set", new Views.RiseView { DataContext = setRise },
             () => { setRise.Dispose(); setOwner.Dispose(); });
+        var (exportRise, exportOwner) = RisePages.SetVm();
+        exportRise.ShowExportTabCommand.Execute(null);
+        yield return ("rise/set-export", new Views.RiseView { DataContext = exportRise },
+            () => { exportRise.Dispose(); exportOwner.Dispose(); });
     }
 }

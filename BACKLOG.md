@@ -238,3 +238,16 @@ invariant-culture parser to override the default. This is not new to `model` —
 options — and worth fixing once, for the whole family (a shared invariant-culture argument parser
 each option opts into), rather than patching `--voxel-size` alone and leaving the next fractional
 option to rediscover it.
+
+---
+
+## Rise page: a 512px mesh rebuild costs about two frames
+
+**Status:** measured in `RisePagePerfTests`, not optimized; the canvas is never skipped, so this
+costs 3D smoothness only.
+
+At 512px art `Rise.MeshRebuild` (all of it `Riser.TryBuild`) averages 33 ms and peaks near 63 ms,
+over the 33 ms interaction budget; the 3D repaint (`Raster.Render`) is 27 ms mean. At 256px a
+rebuild is 8 ms and at 64px 1.3 ms. During a drag the 3D tile therefore updates at roughly 15 fps
+on 512px art and the exact model lands on release. The levers are the already-noted cross-quad
+vertex dedup and an incremental rebuild of only the columns a stroke touched.

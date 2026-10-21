@@ -163,6 +163,25 @@ public class ModalFitTests
     // boxes stay on screen when the form is taller than the window, and the manifest and the footer
     // sit outside the scroller entirely.
 
+    [AvaloniaTheory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void The_Rise_leave_card_fits_the_smallest_window(bool canSave)
+    {
+        // The message names the layer and the variant, and both are the author's words, so it is
+        // measured with a long pair rather than the short one the capture uses.
+        var size = Measure(new Views.LeaveDialogView
+        {
+            DataContext = new LeaveDialogViewModel(new FakeDialogs(), "Leave Rise?",
+                "Background Scenery With A Very Long Layer Name / Sunset Over The Western Harbour has "
+                + "unsaved depth on 12 variants. Leaving discards it.", canSave),
+        });
+
+        Fits("The Rise leave card",
+            size.Width * ShellViewModel.BaseScale + 24,
+            size.Height * ShellViewModel.BaseScale + Chrome);
+    }
+
     [AvaloniaFact]
     public void The_passphrase_prompt_fits_the_smallest_window()
     {
