@@ -52,6 +52,41 @@ public class SpriteSheetTests
     private static string Cook(int count, int variants = 6) => SpriteSheetFixture.Cook(count, variants);
 
     [Fact]
+    public void A_sheet_nfty_writes_carries_its_grid()
+    {
+        string dir = Cook(3);
+        try
+        {
+            using var set = SetReader.Read(dir);
+            string png = Path.Combine(dir, "sheet.png");
+            var layout = SpriteSheet.Fit(3, 4, 4);
+
+            SpriteSheet.Write(set.Items, layout, png);
+
+            Assert.Equal(new SheetGrid(layout.Columns, layout.Rows, 4, 4, 3), SheetGrid.Read(png));
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void Writing_a_sheet_twice_gives_identical_bytes()
+    {
+        string dir = Cook(3);
+        try
+        {
+            using var set = SetReader.Read(dir);
+            string a = Path.Combine(dir, "a.png"), b = Path.Combine(dir, "b.png");
+            var layout = SpriteSheet.Fit(3, 4, 4);
+
+            SpriteSheet.Write(set.Items, layout, a);
+            SpriteSheet.Write(set.Items, layout, b);
+
+            Assert.Equal(File.ReadAllBytes(a), File.ReadAllBytes(b));
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
     public void A_SHEET_PLACES_ASSETS_LEFT_TO_RIGHT_THEN_TOP_TO_BOTTOM()
     {
         // THE ASSERTION THE WHOLE FEATURE IS. Cell n must be asset n+1 in the Set's own numbering -

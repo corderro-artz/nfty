@@ -2,6 +2,7 @@ using System.Globalization;
 using Nfty.Core.Output;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.Formats.Png.Chunks;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
@@ -237,6 +238,16 @@ public static class SpriteSheet
 
         string? dir = Path.GetDirectoryName(Path.GetFullPath(destination));
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+
+        // The grid travels in the file, so the sheet can slice itself back up with nothing recorded
+        // beside it (spec: the nfty-grid chunk). Count 0 cannot be expressed and has no cells to name.
+        if (items.Count > 0)
+        {
+            var grid = new SheetGrid(layout.Columns, layout.Rows, layout.CellWidth, layout.CellHeight, items.Count);
+            sheet.Metadata.GetPngMetadata().TextData.Add(
+                new PngTextData(SheetGrid.ChunkKeyword, grid.ToChunkText(), "", ""));
+        }
+
         await sheet.SaveAsync(destination, new PngEncoder(), cancellationToken).ConfigureAwait(false);
 
         return layout;
