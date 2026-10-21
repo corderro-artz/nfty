@@ -166,6 +166,8 @@ public static class ModelBatch
     /// <param name="options">How to rise and write.</param>
     /// <param name="destination">A folder or a zip.</param>
     /// <param name="progress">Told how many pictures are done (written or skipped) after each one.</param>
+    /// <param name="onWritten">Told each file's name once it is in the destination, on the thread
+    /// doing the export; how a caller knows whether a stopped batch wrote anything.</param>
     /// <param name="cancellation">Checked before each picture. A canceled zip is never left behind (it is
     /// written beside its destination and moved over it only when complete); a canceled folder keeps
     /// the models finished before the stop, each whole, since a file is written only once its model is.</param>
@@ -176,7 +178,7 @@ public static class ModelBatch
     /// identical bytes either way.</remarks>
     public static ModelExportResult Export(IReadOnlyList<string> baseNames, Func<int, ModelInput> open,
         Action<ModelInput>? release, RiseOptions options, ModelDestination destination,
-        IProgress<int>? progress = null, CancellationToken cancellation = default)
+        IProgress<int>? progress = null, CancellationToken cancellation = default, Action<string>? onWritten = null)
     {
         ArgumentNullException.ThrowIfNull(baseNames);
         ArgumentNullException.ThrowIfNull(open);
@@ -209,6 +211,7 @@ public static class ModelBatch
                     foreach (var f in ModelWriter.Write(mesh, input.Art, options, name))
                     {
                         sink.Add(f);
+                        onWritten?.Invoke(f.FileName);
                         written.Add(f.FileName);
                     }
                 }

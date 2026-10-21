@@ -309,6 +309,40 @@ public class RiseExportSafetyTests
         Assert.Empty(Directory.GetFileSystemEntries(root));
     }
 
+    [AvaloniaFact]
+    public async Task A_folder_batch_stopped_after_a_model_landed_names_the_folder_holding_it()
+    {
+        var setDir = CookedBesideBook();
+        using var set = SetReader.Read(setDir);
+        var src = new SetRiseSource(set, set.Items[0].Number, () => Array.Empty<string>(), new ImageBridge());
+        await src.BookSearch;
+        Dispatcher.UIThread.RunJobs();
+        var status = new StatusService();
+        var dialogs = new Dialogs();
+        var root = Temp();
+        using var vm = Vm(src, new Picker(folder: root), dialogs, status);
+        vm.Packed = false;
+        vm.ToggleCheckAllCommand.Execute(null);
+        vm.FileWritten = _ => dialogs.Busy.Single().CancelCommand.Execute(null);   // stop after the first file
+
+        await vm.ExportCommand.ExecuteAsync(null);
+
+        var folder = Directory.GetDirectories(root).Single();
+        Assert.Single(Directory.GetFiles(folder));
+        Assert.Equal($"Export canceled. The models finished before the stop are in {folder}.", status.Last);
+    }
+
+    [Fact]
+    public void A_stopped_folder_batch_names_its_folder_only_when_a_file_reached_it()
+    {
+        // Skipped models are done but write nothing, and the folder is created by the first file: a
+        // stop after only skips must not point at a folder that may not exist.
+        Assert.Equal("Export canceled. No models were written.", RiseViewModel.CanceledText(false, 0, @"C:\out"));
+        Assert.Equal(@"Export canceled. The models finished before the stop are in C:\out.",
+            RiseViewModel.CanceledText(false, 2, @"C:\out"));
+        Assert.Equal("Export canceled. No zip was written.", RiseViewModel.CanceledText(true, 5, @"C:\m.zip"));
+    }
+
     // ------------------------------------------------------------------ a Set lets go of what it left
 
     [AvaloniaFact]

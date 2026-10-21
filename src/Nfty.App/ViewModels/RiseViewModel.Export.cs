@@ -509,7 +509,7 @@ public sealed partial class RiseViewModel
         string where = packed ? destination : Path.Combine(destination, stem);
         var target = packed ? ModelDestination.Zip(destination) : ModelDestination.Folder(where);
         int n = items.Count;
-        int finished = 0;
+        int written = 0;
         ModelExportResult result;
         try
         {
@@ -532,22 +532,17 @@ public sealed partial class RiseViewModel
                         busy.Progress = (double)done / n;
                         if (!token.IsCancellationRequested) busy.PhaseText = RisingText(done, n);
                     });
-                    // Counted on the worker as well as shown: the cancel message must know whether
-                    // anything was written, and Progress<T> reports only by posting.
-                    var progress = new Relay(done => { Volatile.Write(ref finished, done); ((IProgress<int>)shown).Report(done); });
+                    // Files are counted as they land, on the worker: the cancel message must know
+                    // whether anything was WRITTEN (a skipped model is done but wrote nothing, and
+                    // the folder is created only by the first file), and Progress<T> only posts.
                     return await Task.Run(() => ModelBatch.Export(bases, i => snapshot.Open(i, bases[i]),
-                        RiseExportSnapshot.Release, options, target, progress, token));
+                        RiseExportSnapshot.Release, options, target, shown, token,
+                        onWritten: name => { Interlocked.Increment(ref written); FileWritten?.Invoke(name); }));
                 }, cancellable: true);
         }
         catch (OperationCanceledException)
         {
-            // A zip is moved into place only when complete, so a stop leaves none; a folder keeps the
-            // models finished before the stop, each whole.
-            _status.Say(packed
-                ? "Export canceled. No zip was written."
-                : Volatile.Read(ref finished) == 0
-                    ? "Export canceled. No models were written."
-                    : $"Export canceled. The models finished before the stop are in {where}.");
+            _status.Say(CanceledText(packed, Volatile.Read(ref written), where));
             return;
         }
 
@@ -567,11 +562,20 @@ public sealed partial class RiseViewModel
             $"Exported {models} {(models == 1 ? "model" : "models")} ({result.FileNames.Count} files) to {where}.") + replaced + tail);
     }
 
-    /// <summary>Reports on the reporting thread (the worker), unlike <see cref="Progress{T}"/>.</summary>
-    private sealed class Relay(Action<int> report) : IProgress<int>
-    {
-        public void Report(int value) => report(value);
-    }
+    /// <summary>Called on the export's worker as each batch file lands; a test stops a batch mid-way with it.</summary>
+    internal Action<string>? FileWritten { get; set; }
+
+    /// <summary>What a stopped batch says. A zip is moved into place only when complete, so a stop
+    /// leaves none; a folder keeps the models whose files were written before the stop, each whole,
+    /// and is named only when it holds one (it is created by the first file).</summary>
+    /// <param name="packed">A zip, not a folder.</param>
+    /// <param name="filesWritten">Files that reached the folder.</param>
+    /// <param name="where">The folder.</param>
+    /// <returns>The status line.</returns>
+    internal static string CanceledText(bool packed, int filesWritten, string where) =>
+        packed ? "Export canceled. No zip was written."
+        : filesWritten == 0 ? "Export canceled. No models were written."
+        : $"Export canceled. The models finished before the stop are in {where}.";
 
     private static string RisingText(int done, int total) =>
         string.Create(CultureInfo.InvariantCulture, $"Rising {done} of {total} models…");

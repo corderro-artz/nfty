@@ -92,6 +92,16 @@ public class ModelBatchExportTests
     }
 
     [Fact]
+    public void Written_names_only_files_that_reached_the_destination_never_a_skip()
+    {
+        var written = new List<string>();
+        var pics = new Pictures("~", "..", "#");
+        ModelBatch.Export(new[] { "a", "b", "c" }, pics.Open, pics.Release, new RiseOptions(),
+            ModelDestination.Folder(Path.Combine(Temp("nfty-stream-w-"), "out")), onWritten: written.Add);
+        Assert.Equal(new[] { "c.glb" }, written);
+    }
+
+    [Fact]
     public void A_canceled_zip_leaves_nothing_behind_and_an_existing_zip_untouched()
     {
         var root = Temp("nfty-stream-cancel-");
