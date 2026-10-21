@@ -15,9 +15,12 @@ public class SetModelsWriterTests
     {
         public string? NameOverride { get; init; }
         public SetModels Options { get; } = options;
+        public Action? OnModel { get; init; }
+        public IReadOnlyList<string> FileNames(string baseName) => [NameOverride ?? $"{baseName}.fake"];
 
         public IReadOnlyList<SetFile>? Model(GeneratedAsset asset, string baseName)
         {
+            OnModel?.Invoke();
             if (Array.IndexOf(nullFor, asset.SetNumber) >= 0) return null;
             return [new SetFile(NameOverride ?? $"{baseName}.fake", [(byte)asset.SetNumber])];
         }
@@ -26,8 +29,10 @@ public class SetModelsWriterTests
     private sealed class BadOnModeler(SetModels options, int badNumber) : IAssetModeler
     {
         public SetModels Options { get; } = options;
+        public IReadOnlyList<string> FileNames(string baseName) =>
+            [baseName == badNumber.ToString("D4") ? "../x" : $"{baseName}.fake"];
         public IReadOnlyList<SetFile>? Model(GeneratedAsset asset, string baseName) =>
-            [new SetFile(asset.SetNumber == badNumber ? "../x" : $"{baseName}.fake", [1])];
+            [new SetFile(FileNames(baseName)[0], [1])];
     }
 
     private static readonly SetModels Fake = new("fake", "center", 0.5f);
@@ -180,6 +185,30 @@ public class SetModelsWriterTests
             SetWriter.Write(set, dir, false, new BadOnModeler(Fake, 3)));
 
         Assert.False(Directory.Exists(dir));
+    }
+
+    [Fact]
+    public void Models_are_built_and_written_one_at_a_time_never_held_for_the_whole_set()
+    {
+        string dir = Tmp();
+        int started = 0, worst = 0;
+        string models = Path.Combine(dir, "models");
+        var modeler = new FakeModeler(Fake)
+        {
+            OnModel = () =>
+            {
+                int begun = Interlocked.Increment(ref started);
+                int onDisk = Directory.Exists(models) ? Directory.GetFiles(models).Length : 0;
+                int outstanding = begun - onDisk;
+                int seen;
+                while (outstanding > (seen = Volatile.Read(ref worst))
+                       && Interlocked.CompareExchange(ref worst, outstanding, seen) != seen) { }
+            },
+        };
+        using (var set = SetOf(Enumerable.Range(1, 400).ToArray())) SetWriter.Write(set, dir, false, modeler);
+
+        // Eager building would peak near 400 here; one-at-a-time is bounded by the worker count.
+        Assert.True(worst <= Environment.ProcessorCount * 2 + 2, $"outstanding peaked at {worst}");
     }
 
     [Fact]

@@ -68,9 +68,11 @@ public static class SetWriter
         // Read BEFORE anything can overwrite set.json — see RecordedShaAt.
         string? recorded = RecordedShaAt(outDir);
         var recordedModels = CheckModels(outDir, models);
-        // Modeled and validated for EVERY asset before the first file is written, so a bad name on
-        // asset 300 refuses the run as cleanly as a mismatched option does.
-        var made = MakeModels(models, set);
+        // Every file NAME is validated for every asset before the first file is written, so a bad
+        // name on asset 300 refuses the run as cleanly as a mismatched option does. Names are asked
+        // of the modeler without building any model, so this costs no memory.
+        ValidateModelNames(models, set);
+        var skipped = models is null ? null : new bool[set.Assets.Count];
         var layout = Prepare(outDir, models is not null);
         var existing = LoadExisting(layout, set);
         var rarity = new Rarity(existing, set);
@@ -88,8 +90,10 @@ public static class SetWriter
             File.WriteAllText(metaPath, Serialize(BuildOpenSea(set, asset)));
             File.WriteAllText(nftyPath, Serialize(BuildNfty(set, asset, rarity)));
 
-            var files = made?[slots[asset.SetNumber]];
-            ClearStaleModels(layout, asset, files, made is not null);
+            // Built, written and dropped one at a time: memory is one model per worker, never the set.
+            var files = ModelFor(models, asset);
+            if (skipped is not null && files is null) skipped[slots[asset.SetNumber]] = true;
+            ClearStaleModels(layout, asset, files, models is not null);
             if (files is not null)
                 foreach (var file in files) File.WriteAllBytes(Path.Combine(layout.ModelsDir, file.FileName), file.Bytes);
         });
@@ -100,7 +104,7 @@ public static class SetWriter
 
         File.WriteAllText(SetJsonPath(outDir),
             Serialize(BuildSetManifest(set, existing, rarity, recorded, RecordedUniqueAt(outDir),
-                MergedModels(models, recordedModels, set, made))));
+                MergedModels(models, recordedModels, set, skipped))));
 
         if (pack) Pack(outDir);
     }
@@ -126,9 +130,9 @@ public static class SetWriter
         // Read BEFORE anything can overwrite set.json — see RecordedShaAt.
         string? recorded = RecordedShaAt(outDir);
         var recordedModels = CheckModels(outDir, models);
-        // As in Write: every asset modeled and validated before anything is written. The modeler is
-        // synchronous CPU work, so it is offloaded rather than faked async.
-        var made = await Task.Run(() => MakeModels(models, set), cancellationToken);
+        // As in Write: every name validated before anything is written.
+        ValidateModelNames(models, set);
+        var skipped = models is null ? null : new bool[set.Assets.Count];
         var layout = Prepare(outDir, models is not null);
         var existing = await LoadExistingAsync(layout, set, cancellationToken);
         var rarity = new Rarity(existing, set);
@@ -143,8 +147,10 @@ public static class SetWriter
             await File.WriteAllTextAsync(metaPath, Serialize(BuildOpenSea(set, asset)), ct);
             await File.WriteAllTextAsync(nftyPath, Serialize(BuildNfty(set, asset, rarity)), ct);
 
-            var files = made?[slots[asset.SetNumber]];
-            ClearStaleModels(layout, asset, files, made is not null);
+            // The modeler is synchronous CPU work; it is not faked async. One model at a time per worker.
+            var files = ModelFor(models, asset);
+            if (skipped is not null && files is null) skipped[slots[asset.SetNumber]] = true;
+            ClearStaleModels(layout, asset, files, models is not null);
             if (files is not null)
                 foreach (var file in files)
                     await File.WriteAllBytesAsync(Path.Combine(layout.ModelsDir, file.FileName), file.Bytes, ct);
@@ -161,7 +167,7 @@ public static class SetWriter
 
         await File.WriteAllTextAsync(SetJsonPath(outDir),
             Serialize(BuildSetManifest(set, existing, rarity, recorded, RecordedUniqueAt(outDir),
-                MergedModels(models, recordedModels, set, made))),
+                MergedModels(models, recordedModels, set, skipped))),
             cancellationToken);
 
         // ZipFile has no async API; keep the UI thread free rather than pretend.
@@ -450,7 +456,7 @@ public static class SetWriter
         return File.Exists(setJson) ? ParseRecordedCookbookSha(File.ReadAllText(setJson)) : null;
     }
 
-    /// <summary>Set number to its slot in the per-asset model array; read-only once built.</summary>
+    /// <summary>Set number to its slot in the per-asset <c>skipped</c> array; read-only once built.</summary>
     private static Dictionary<int, int> SlotsOf(GeneratedSet set)
     {
         var slots = new Dictionary<int, int>(set.Assets.Count);
@@ -459,29 +465,46 @@ public static class SetWriter
     }
 
     /// <summary>
-    /// Runs the modeler over every asset and validates every file name, before anything is written.
-    /// Slot i holds asset i's files, or null when it could not be modeled (a skip). One slot per
-    /// asset, so no two threads share a write. Null array when there is no modeler.
+    /// Asks the modeler for the file names it will use for every asset and refuses any that is not a
+    /// bare file name, before anything is written. Asking for names builds no model.
     /// </summary>
-    private static IReadOnlyList<SetFile>?[]? MakeModels(IAssetModeler? models, GeneratedSet set)
+    private static void ValidateModelNames(IAssetModeler? models, GeneratedSet set)
+    {
+        if (models is null) return;
+        foreach (var asset in set.Assets)
+            foreach (string name in models.FileNames(asset.SetNumber.ToString("D4")))
+                CheckModelFileName(name);
+    }
+
+    private static void CheckModelFileName(string name)
+    {
+        if (string.IsNullOrEmpty(name) || name is "." or ".." || Path.GetFileName(name) != name
+            || name.Contains('/') || name.Contains('\\') || Path.IsPathRooted(name))
+            throw new InvalidOperationException(
+                $"A model file name must be a bare file name inside '{SetLayout.ModelsDir}/', "
+                + $"but the modeler named '{name}'.");
+    }
+
+    /// <summary>
+    /// Builds one asset's model, or null when it cannot be modeled (a skip). A returned name the
+    /// modeler did not declare up front is refused, so the up-front check cannot be sidestepped.
+    /// </summary>
+    private static IReadOnlyList<SetFile>? ModelFor(IAssetModeler? models, GeneratedAsset asset)
     {
         if (models is null) return null;
-        var made = new IReadOnlyList<SetFile>?[set.Assets.Count];
-        var slots = SlotsOf(set);
-        ParallelWork.ForEach(set.Assets, CancellationToken.None, asset =>
-            made[slots[asset.SetNumber]] = models.Model(asset, asset.SetNumber.ToString("D4")));
+        string baseName = asset.SetNumber.ToString("D4");
+        var files = models.Model(asset, baseName);
+        if (files is null) return null;
 
-        foreach (var files in made)
-            foreach (var file in files ?? [])
-            {
-                string name = file.FileName;
-                if (string.IsNullOrEmpty(name) || name is "." or ".." || Path.GetFileName(name) != name
-                    || name.Contains('/') || name.Contains('\\') || Path.IsPathRooted(name))
-                    throw new InvalidOperationException(
-                        $"A model file name must be a bare file name inside '{SetLayout.ModelsDir}/', "
-                        + $"but the modeler returned '{name}'.");
-            }
-        return made;
+        var declared = models.FileNames(baseName);
+        foreach (var file in files)
+        {
+            CheckModelFileName(file.FileName);
+            if (!declared.Contains(file.FileName, StringComparer.Ordinal))
+                throw new InvalidOperationException(
+                    $"The modeler wrote '{file.FileName}' for asset {baseName} without declaring it in FileNames.");
+        }
+        return files;
     }
 
     /// <summary>
@@ -549,13 +572,13 @@ public static class SetWriter
     /// <summary>The block for <c>set.json</c>: this run's options, skipped = recorded (minus any
     /// number this run re-made) union this run's, ascending, null when empty.</summary>
     private static SetModels? MergedModels(
-        IAssetModeler? models, SetModels? recorded, GeneratedSet set, IReadOnlyList<SetFile>?[]? made)
+        IAssetModeler? models, SetModels? recorded, GeneratedSet set, bool[]? skipped)
     {
-        if (models is null || made is null) return null;
+        if (models is null || skipped is null) return null;
         var mine = new HashSet<int>(set.Assets.Select(a => a.SetNumber));
         var all = new SortedSet<int>((recorded?.Skipped ?? []).Where(n => !mine.Contains(n)));
-        for (int i = 0; i < made.Length; i++)
-            if (made[i] is null) all.Add(set.Assets[i].SetNumber);
+        for (int i = 0; i < skipped.Length; i++)
+            if (skipped[i]) all.Add(set.Assets[i].SetNumber);
         return models.Options with { Skipped = all.Count == 0 ? null : all.ToList() };
     }
 

@@ -18,6 +18,13 @@ public interface IAssetModeler
     /// <see cref="SetModels.Skipped"/> is ignored here; the writer fills it in.</summary>
     SetModels Options { get; }
 
+    /// <summary>Every file name <see cref="Model"/> may return for an asset, derivable without building
+    /// any model. The writer validates these for the whole Set before writing anything, then refuses
+    /// a model file whose name was not declared here.</summary>
+    /// <param name="baseName">The asset's zero-padded number.</param>
+    /// <returns>The bare file names.</returns>
+    IReadOnlyList<string> FileNames(string baseName);
+
     /// <summary>Files for one asset, named from <paramref name="baseName"/> (<c>"0007"</c> becomes
     /// <c>"0007.glb"</c>), or null when nothing in it is fully opaque. Called concurrently for
     /// different assets, so it must be a pure function of its input.</summary>
