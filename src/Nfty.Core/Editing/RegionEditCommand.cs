@@ -43,15 +43,8 @@ public abstract class RegionEditCommand<TPixel> : IEditCommand<TPixel> where TPi
     /// <paramref name="paint"/> supplies that per pixel and the disc geometry lives here once,
     /// payload-free.
     /// </summary>
-    /// <remarks>
-    /// The path is <b>joined</b>, not merely visited: a disc is stamped at every pixel on the line
-    /// between consecutive points, not only at the points themselves. A pointer reports samples at
-    /// whatever rate the device and the UI thread manage, so a stroke drawn at any speed arrives as
-    /// a handful of scattered coordinates — stamping only those turns a fast stroke into a row of
-    /// dots with gaps between them, which is what the editor shipped before this. Joining here
-    /// rather than in the front-end makes it a property of "a stroke" rather than of one caller's
-    /// sample rate, and fixes every stroke tool at once.
-    /// </remarks>
+    /// <remarks>The geometry, including joining the path so a fast stroke has no gaps, is
+    /// <see cref="Footprint.Discs"/>; this only projects it onto pixels.</remarks>
     /// <param name="surface">The surface being edited; supplies bounds and any read-back the paint needs.</param>
     /// <param name="path">The gesture's pixel path; discs are stamped along it.</param>
     /// <param name="size">Disc diameter in pixels; anything below 1 is treated as 1.</param>
@@ -61,49 +54,10 @@ public abstract class RegionEditCommand<TPixel> : IEditCommand<TPixel> where TPi
         IEditSurface<TPixel> surface, IReadOnlyList<(int x, int y)> path, int size,
         Func<int, int, TPixel> paint)
     {
-        int d = Math.Max(1, size);
-        double r = d / 2.0;
-        int ir = (int)Math.Ceiling(r);
-        var seen = new HashSet<(int, int)>();
-        var pixels = new List<(int, int, TPixel)>();
-
-        void Stamp(int cx, int cy)
-        {
-            for (int dy = -ir; dy <= ir; dy++)
-                for (int dx = -ir; dx <= ir; dx++)
-                {
-                    int x = cx + dx, y = cy + dy;
-                    if (!surface.InBounds(x, y)) continue;
-                    if (dx * dx + dy * dy > r * r) continue; // round disc; size 1 (r=0.5) collapses to one pixel
-                    if (!seen.Add((x, y))) continue;
-                    pixels.Add((x, y, paint(x, y)));
-                }
-        }
-
-        if (path.Count == 0) return pixels;
-        Stamp(path[0].x, path[0].y);
-        for (int i = 1; i < path.Count; i++)
-            foreach (var (x, y) in Between(path[i - 1], path[i]))
-                Stamp(x, y);
+        var cells = Footprint.Discs(surface.Width, surface.Height, path, size);
+        var pixels = new List<(int x, int y, TPixel pixel)>(cells.Count);
+        foreach (var (x, y) in cells) pixels.Add((x, y, paint(x, y)));
         return pixels;
-    }
-
-    /// <summary>Every pixel from <paramref name="a"/> to <paramref name="b"/> inclusive of the end
-    /// and exclusive of the start (the caller has already stamped it), by Bresenham — integer only,
-    /// so the same gesture joins up identically on every machine.</summary>
-    private static IEnumerable<(int x, int y)> Between((int x, int y) a, (int x, int y) b)
-    {
-        int x = a.x, y = a.y;
-        int dx = Math.Abs(b.x - x), dy = -Math.Abs(b.y - y);
-        int sx = x < b.x ? 1 : -1, sy = y < b.y ? 1 : -1;
-        int err = dx + dy;
-        while (x != b.x || y != b.y)
-        {
-            int e2 = 2 * err;
-            if (e2 >= dy) { err += dy; x += sx; }
-            if (e2 <= dx) { err += dx; y += sy; }
-            yield return (x, y);
-        }
     }
 
     /// <summary>

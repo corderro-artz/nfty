@@ -39,30 +39,7 @@ public sealed class FloodFill<TPixel> : RegionEditCommand<TPixel> where TPixel :
         // partial alpha still changes the region, so comparing the raw one would skip a real edit.
         if (cmp.Equals(target, Admit(surface, _fill))) return pixels;
 
-        var seen = new HashSet<(int, int)>();
-        var queue = new Queue<(int, int)>();
-        queue.Enqueue((_seedX, _seedY));
-        seen.Add((_seedX, _seedY));
-        while (queue.Count > 0)
-        {
-            var (x, y) = queue.Dequeue();
-            if (!surface.InBounds(x, y)) continue;
-            if (!cmp.Equals(surface.Get(x, y), target)) continue;
-            pixels.Add((x, y, _fill));
-
-            // Enqueued one at a time rather than by iterating a freshly-allocated 4-tuple array:
-            // that array was allocated once per VISITED PIXEL, so a 2048x2048 fill made roughly four
-            // million of them for nothing.
-            Visit(x + 1, y);
-            Visit(x - 1, y);
-            Visit(x, y + 1);
-            Visit(x, y - 1);
-        }
+        foreach (var (x, y) in Footprint.Region(surface, _seedX, _seedY)) pixels.Add((x, y, _fill));
         return pixels;
-
-        void Visit(int nx, int ny)
-        {
-            if (surface.InBounds(nx, ny) && seen.Add((nx, ny))) queue.Enqueue((nx, ny));
-        }
     }
 }
