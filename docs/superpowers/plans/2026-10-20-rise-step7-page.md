@@ -134,9 +134,11 @@ alignment; `MinWidth="0"` before any `Width` < 64 on `TextBox`/`NumericUpDown`; 
     appends **Make voxel-ready** at the end of that section, so its arrival moves nothing either. No
     copy anywhere mentions the unbuilt button (a control that reports itself unbuilt is a known defect).
 11. **Preview carry-ins (step 6 `progress.md` "Carry into step 7", all six):**
-    (a) eye entering the sprite → `Camera` minimum distance becomes **1.05 × Radius** (eye always
-    outside the bounding sphere), proven by a "fully zoomed in is never blank" test, retuned only if
-    the rendered frame says so; (b) MarkDirty-ahead-of-input → a **33 ms repaint budget that applies
+    (a) eye entering the sprite → **CONTROLLER AMENDMENT (supersedes the planner's 1.05 × Radius):**
+    the camera keeps the eye outside the subject's **box**, not its bounding sphere. A sphere floor
+    stops a flat 512px sprite at ~3× magnification — too far out to see pixels in a pixel-art tool.
+    See Task 3 Step 1 for the rule; proven by the "fully zoomed in is never blank" test plus a
+    "close enough to inspect pixels" test; (b) MarkDirty-ahead-of-input → a **33 ms repaint budget that applies
     only while interacting** (`HostInteracting` or the view's own drag), so the idle coalescing tests
     keep their meaning, and `HostInteracting = false` repaints exactly; (c) Auto slot → the tile and
     the canvas slot are both sized (bound tile size; star cell); (d) `SetSubject` keeps the old radius
@@ -869,14 +871,32 @@ public void Fully_zoomed_in_the_frame_is_never_blank(float yawDeg, float pitchDe
     Assert.True(target.Color.Count(c => c.A == 255) > 0, "the eye is inside the sprite: blank frame");
 }
 ```
-Run → red at 0.05 (record which cases). Change `MinDistanceFactor` to **1.05f**, update the XML doc
-(`1.05 × Radius`: the eye stays outside the subject's bounding sphere) and update `CameraTests`'
-`Zoom_scales_distance_and_clamps_at_the_minimum` (`0.05f` → `1.05f`) and rename/adjust
-`Zooming_far_out_stops_at_twenty_radii_and_back_in_stops_at_a_twentieth` to the new floor. Re-run →
-green. Capture `preview-zoomed-in-{light,dark}.png` (Task 10 wires the page; here use a 200×200
-`ModelPreviewView` in a window, `ZoomStep(1)` ×40, `RepaintNow`) and LOOK: if 1.05 still lands the eye
-uncomfortably close, raise it; if the zoom stops too far out to inspect a 512px sprite, lower it no
-further than the test allows. Record the chosen factor and why in the report.
+Run → red at 0.05 (record which cases).
+
+**CONTROLLER AMENDMENT — the floor is the subject's BOX, not a radius multiple.** Do NOT change the
+factor to 1.05 (that stops a flat 512px sprite at ~3× magnification — useless for inspecting pixels).
+Instead:
+- `Camera` carries the subject box (`BoundsMin`, `BoundsMax`, immutable; `Radius` stays, derived from
+  the box, so step 6's `MaxDistance = 20 · Radius` and the clip planes are unchanged). The constructor
+  takes the box instead of a bare radius; `FramedOn`/`Reset`/`WithSubject` pass it; every mutator
+  carries it.
+- **Target stays inside the box:** `Pan` (and `ZoomAnchored`'s corrective pan) clamp `Target` to the
+  box. You orbit and zoom about a point on the model, never about empty space beside it.
+- **Eye stays outside the box:** with the target inside, `MinDistance` for the current orientation is
+  the distance from `Target` along the eye direction to where that ray EXITS the box (slab method),
+  plus a margin of `0.02 · Radius`. The constructor clamps `Distance` up to it, so `Orbit` near the
+  floor pushes the eye out as the exit distance grows sideways — the eye can never enter the solid
+  from any yaw/pitch. Keep a `MinDistance` property (now orientation-dependent) for callers/tests.
+- Tests (red first, mutation-probed): the "never blank" theory above (all three angles) AND
+  `Fully_zoomed_in_on_a_512px_sprite_a_single_pixel_spans_many_screen_pixels`: frame a 512×512×3 slab
+  head-on (yaw 0, pitch 0), zoom in to the floor, assert one voxel spans ≥ 8 px on a 512×512 target
+  (hand-computed from distance and the 40° FOV). Plus: panning far past an edge keeps `Target` within
+  the box; orbiting 90° at the floor leaves the eye outside the box (all three axes checked).
+- Update `CameraTests`' minimum-distance tests to the new rule.
+
+Re-run → green. Capture `preview-zoomed-in-{light,dark}.png` (Task 10 wires the page; here use a
+200×200 `ModelPreviewView` in a window, `ZoomStep(1)` ×40, `RepaintNow`) and LOOK: the frame must show
+the art large and crisp, not blank and not clipped by the near plane. Record what you saw in the report.
 
 - [ ] **Step 2 (d): `Camera.WithSubject` + VM.** Factor the radius formula out of `FramedOn` into a
   private static `RadiusOf(min, max)` (`MathF.Max(Vector3.Distance(min, max) / 2f, MinRadius)`), used

@@ -416,7 +416,7 @@ every fix shown red first and mutation-probed.
 - **Stamp:** a model exported with the debug mark armed matches the unstamped asset.
 - **Sheet:** `nfty-grid` written by `SpriteSheet` and read back; auto-detect on gutters; foreign-sheet
   rewrite keeps every pixel identical.
-- **Rise page:** gesture tests driving real pointer events (right-click adds front, Shift+left
+- **Rise page:** gesture tests driving real pointer events (left-click adds front, Shift+right
   subtracts back, one ±1 per gesture however long the stroke); rendered frames at the minimum
   window in both themes; joins `DarkModeContrastTests`' `Screens()` in its riskiest state (a 2D-only
   book with the listing showing); the corner-tile swap keeps its way back.
