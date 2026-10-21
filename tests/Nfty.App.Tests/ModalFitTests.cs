@@ -285,6 +285,31 @@ public class ModalFitTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>
+    /// Escape over a busy card never takes the card down: the job owns that. A card closed by Escape
+    /// left the page live under work still reading it (the Rise export), and told the user the job had
+    /// stopped while it ran on. A job that can be stopped is asked to stop instead.
+    /// </summary>
+    [AvaloniaFact]
+    public void Escape_over_a_busy_card_asks_a_cancellable_job_to_stop_and_never_closes_the_card()
+    {
+        var dialogs = new DialogService();
+        var shell = new ShellViewModel(new FakeNav(), dialogs, new StubThemeService(), new StatusService());
+
+        var plain = new BusyViewModel("Opening", "Reading…");
+        _ = dialogs.ShowAsync<object>(plain);
+        shell.CloseDialogCommand.Execute(null);
+        Assert.Same(plain, dialogs.Active);
+
+        using var cts = new System.Threading.CancellationTokenSource();
+        var stoppable = new BusyViewModel("Exporting", "Rising…", cts);
+        _ = dialogs.ShowAsync<object>(stoppable);
+        shell.CloseDialogCommand.Execute(null);
+        Assert.Same(stoppable, dialogs.Active);
+        Assert.True(cts.IsCancellationRequested);
+        Assert.Equal("Stopping…", stoppable.PhaseText);
+    }
+
     private sealed class StubThemeService : IThemeService
     {
         public bool IsDark { get; private set; }

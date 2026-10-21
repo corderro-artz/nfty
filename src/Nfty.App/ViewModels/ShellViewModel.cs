@@ -195,9 +195,21 @@ public partial class ShellViewModel : ViewModelBase
     /// <para>Hence the guard: with no dialog open the command refuses, the window's KeyBinding does
     /// not handle the key, and it still reaches the page underneath — the editor drops its selection
     /// marquee on the same key.</para>
+    ///
+    /// <para>A busy card is the exception: its job closes it (see <see cref="BusyViewModel"/>). Escape
+    /// asks a job that can stop to stop, and otherwise does nothing — the key is still handled, so it
+    /// cannot reach the page the job is working from.</para>
     /// </summary>
     [RelayCommand(CanExecute = nameof(HasDialog))]
-    private void CloseDialog() => _dialogs.Close(null);
+    private void CloseDialog()
+    {
+        if (_dialogs.Active is BusyViewModel busy)
+        {
+            if (busy.CancelCommand.CanExecute(null)) busy.CancelCommand.Execute(null);
+            return;
+        }
+        _dialogs.Close(null);
+    }
 
     /// <summary>Whether a modal is open.</summary>
     public bool HasDialog => ActiveDialog is not null;
