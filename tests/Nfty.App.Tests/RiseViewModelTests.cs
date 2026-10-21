@@ -395,6 +395,100 @@ public class RiseViewModelTests
         Assert.Null(surface.ToDepthMap());
     }
 
+    [AvaloniaFact]
+    public void The_mesh_throttle_counts_from_the_end_of_a_rebuild_not_its_start()
+    {
+        using var vm = OakVm();
+        long t = 1000;
+        int rebuilds = 0;
+        vm.NowMs = () => t;
+        vm.MeshRebuilt = () => { rebuilds++; t += 50; };       // each rebuild costs more than the budget
+        vm.PreviewDepthStroke(new[] { (2, 2), (3, 2) }, DepthSide.Front, false);
+        Assert.Equal(1, rebuilds);                             // first move of a gesture always rebuilds
+        vm.PreviewDepthStroke(new[] { (2, 2), (4, 2) }, DepthSide.Front, false);
+        Assert.Equal(1, rebuilds);                             // the rebuild just finished: not due again
+        t += RiseViewModel.MeshBudgetMs;
+        vm.PreviewDepthStroke(new[] { (2, 2), (5, 2) }, DepthSide.Front, false);
+        Assert.Equal(2, rebuilds);
+        Assert.Equal(1, vm.Surface.Get(5, 2).Front);           // the labels were never throttled
+    }
+
+    [AvaloniaFact]
+    public void A_preview_on_a_page_that_cannot_paint_leaves_the_surface_untouched()
+    {
+        var (s, _) = RiseFixtures.OnDisk(RiseFixtures.ChestBook());
+        using var recipe = Vm(new RecipeRiseSource(s.Current!, s.Current!.Recipes.Single(), 3, new ImageBridge()));
+        recipe.PreviewDepthStroke(new[] { (3, 3), (4, 3) }, DepthSide.Front, false);
+        Assert.Null(recipe.Surface.ToDepthMap());
+
+        using var ghost = OakVm("ghost");
+        ghost.PreviewDepthStroke(new[] { (2, 2), (4, 2) }, DepthSide.Front, false);
+        Assert.Null(ghost.Surface.ToDepthMap());
+    }
+
+    [AvaloniaFact]
+    public void A_select_drag_with_no_mark_previews_nothing_and_does_not_throw()
+    {
+        using var vm = OakVm();
+        vm.ActiveTool = EditorTool.Select;
+        vm.PreviewDepthStroke(new[] { (1, 1), (3, 3) }, DepthSide.Front, false);
+        Assert.Null(vm.Surface.ToDepthMap());
+        Assert.False(vm.UndoCommand.CanExecute(null));
+    }
+
+    [AvaloniaFact]
+    public void A_click_that_changes_nothing_pushes_no_history_and_rebuilds_nothing()
+    {
+        using var vm = OakVm();
+        int rebuilds = 0, depth = 0;
+        vm.MeshRebuilt = () => rebuilds++;
+        vm.DepthChanged += () => depth++;
+        vm.ApplyDepthStroke(new[] { (2, 2) }, DepthSide.Front, lower: true);   // paper: floored at 0
+        vm.ApplyDepthStroke(new[] { (0, 0) }, DepthSide.Front, lower: false);  // clear pixel
+        Assert.Equal(0, rebuilds);
+        Assert.Equal(0, depth);
+        Assert.False(vm.UndoCommand.CanExecute(null));
+    }
+
+    [AvaloniaFact]
+    public void A_click_that_ends_a_preview_that_changed_things_does_rebuild()
+    {
+        using var vm = OakVm();
+        vm.PreviewDepthStroke(new[] { (2, 2) }, DepthSide.Front, false);
+        int rebuilds = 0;
+        vm.MeshRebuilt = () => rebuilds++;
+        vm.ApplyDepthStroke(new[] { (2, 2) }, DepthSide.Front, lower: true);   // undoes preview, then floors: net no change
+        Assert.Equal(1, rebuilds);
+        Assert.Equal(0, vm.Surface.Get(2, 2).Front);
+    }
+
+    [AvaloniaFact]
+    public void Undo_and_redo_bodies_refuse_on_a_page_that_cannot_paint()
+    {
+        var (s, _) = RiseFixtures.OnDisk(RiseFixtures.ChestBook());
+        using var vm = Vm(new RecipeRiseSource(s.Current!, s.Current!.Recipes.Single(), 3, new ImageBridge()));
+        var subject = vm.Subject;
+        subject.History.Do(new DepthStep(new[] { (3, 3) }, DepthSide.Front, 1), subject.Depth);
+        Assert.Equal(1, vm.Surface.Get(3, 3).Front);
+        vm.UndoCommand.Execute(null);                  // Execute does not consult CanExecute
+        Assert.Equal(1, vm.Surface.Get(3, 3).Front);
+        subject.History.Undo(subject.Depth);
+        vm.RedoCommand.Execute(null);
+        Assert.Equal(0, vm.Surface.Get(3, 3).Front);
+    }
+
+    [AvaloniaFact]
+    public void A_marquee_is_clamped_to_the_art()
+    {
+        using var vm = OakVm();
+        vm.ActiveTool = EditorTool.Select;
+        vm.ApplyDepthStroke(new[] { (5, 5), (20, 20) }, DepthSide.Front, false);
+        Assert.Equal(new PixelRect(5, 5, 3, 3), vm.Selection);
+        vm.Selection = null;
+        vm.ApplyDepthStroke(new[] { (10, 10), (12, 12) }, DepthSide.Front, false);
+        Assert.Null(vm.Selection);
+    }
+
     private static class CanvasMappingZoom
     {
         public const double Fit = RiseViewModel.ZoomMin;

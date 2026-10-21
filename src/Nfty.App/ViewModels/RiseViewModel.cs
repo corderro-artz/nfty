@@ -235,13 +235,20 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
         if (step.Apply(Surface)) _standing = (step, Surface);
         DepthChanged?.Invoke();
         OnPropertyChanged(nameof(ReadoutText));
-        long now = Environment.TickCount64;
-        if (now - _lastMeshMs >= MeshBudgetMs)
+        if (NowMs() - _lastMeshMs >= MeshBudgetMs)
         {
             RebuildMesh();
-            _lastMeshMs = now;
+            // Stamped AFTER the rebuild: a rebuild that itself costs more than the budget (39 ms at
+            // 512px) would otherwise leave the next move due at once, a duty cycle of 100%.
+            _lastMeshMs = NowMs();
         }
     }
+
+    /// <summary>The clock the mesh throttle reads; a test replaces it.</summary>
+    internal Func<long> NowMs { get; set; } = () => Environment.TickCount64;
+
+    /// <summary>Called after every mesh rebuild; a test counts them and charges them a cost.</summary>
+    internal Action? MeshRebuilt { get; set; }
 
     /// <summary>Commits a stroke as one undo step, or marks a region when Select starts outside one.</summary>
     /// <param name="points">The gesture's pixel path, after the view's constraint transform.</param>
@@ -254,19 +261,26 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
         {
             // Marking changes no depth, so it works on a page that cannot paint.
             var start = points[0]; var end = points[^1];
-            Selection = start == end ? null : BoundsOf(points);
+            Selection = start == end ? null : ClampToArt(BoundsOf(points));
             GestureEnded?.Invoke();
             return;
         }
         if (!IsPaintable) return;
 
+        bool hadStanding = _standing is not null;
         UndoStanding();
         var step = new DepthStep(RegionOf(points), side, lower ? -1 : 1);
+        bool changed;
         using (Perf.Measure("Rise.DepthClick"))
-            Subject.History.Do(step, Surface);
-        RebuildMesh();
-        _lastMeshMs = Environment.TickCount64;
-        AfterDepthEdit();
+            changed = Subject.History.Do(step, Surface);
+        // A click that changed nothing (floored at 0, capped, on a clear pixel) pushed no history, so
+        // the model and the labels are as they were: nothing to rebuild unless a preview was undone.
+        if (changed || hadStanding)
+        {
+            RebuildMesh();
+            _lastMeshMs = NowMs();
+            AfterDepthEdit();
+        }
         GestureEnded?.Invoke();
     }
 
@@ -312,6 +326,15 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
         }
     }
 
+    /// <summary>The marquee never extends past the art, whatever points the view hands over.</summary>
+    private PixelRect? ClampToArt(PixelRect r)
+    {
+        var s = Surface;
+        int x0 = Math.Max(0, r.X), y0 = Math.Max(0, r.Y);
+        int x1 = Math.Min(s.Width, r.X + r.Width), y1 = Math.Min(s.Height, r.Y + r.Height);
+        return x1 > x0 && y1 > y0 ? new PixelRect(x0, y0, x1 - x0, y1 - y0) : null;
+    }
+
     private static PixelRect BoundsOf(IReadOnlyList<(int x, int y)> pts)
     {
         var (ax, ay) = pts[0]; var (bx, by) = pts[^1];
@@ -331,6 +354,7 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
     {
         Mesh = BuildMesh();
         if (Mesh is { } m) _preview?.SetSubject(m.Min, m.Max);
+        MeshRebuilt?.Invoke();
     }
 
     partial void OnDepthEdited();
@@ -353,6 +377,7 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanUndo))]
     private void Undo()
     {
+        if (!CanUndo()) return;     // RelayCommand.Execute does not consult CanExecute
         UndoStanding();
         var s = Subject;
         s.History.Undo(s.Depth);
@@ -365,6 +390,7 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanRedo))]
     private void Redo()
     {
+        if (!CanRedo()) return;
         UndoStanding();
         var s = Subject;
         s.History.Redo(s.Depth);
