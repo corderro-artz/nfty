@@ -160,8 +160,16 @@ public sealed class SetRiseSource : RiseSource
     }
 
     /// <inheritdoc />
-    public override string OpeningLine =>
-        $"Rising “{Title}” — assets come out of the Set read-only; depth is recovered from the CookBook that cooked it.";
+    public override string OpeningLine
+    {
+        get
+        {
+            var selected = _items.FirstOrDefault(i => i.IsSelected) ?? _initial;
+            int number = _setItems[selected.Id].Number;
+            return string.Create(CultureInfo.InvariantCulture, $"Viewing #{number:D4} of a cooked Set. Read-only.")
+                + (IsSealed ? " Sealed: it can be viewed here, not exported." : "");
+        }
+    }
 
     /// <summary>The Set browser row behind an item (its lazily decoded picture); for tests.</summary>
     internal SetItemRow RowOf(RiseItem item) => _rows[item.Id];

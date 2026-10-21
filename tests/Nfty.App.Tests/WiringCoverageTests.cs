@@ -43,6 +43,9 @@ public class WiringCoverageTests
         // sweep (which matches by name) cannot see them; RiseWiringTests (Task 13) will.
         ["SelectItemCommand"] = "Rise page markup lands in Task 10",
         ["SwapPreviewCommand"] = "Rise page markup lands in Task 10",
+        ["FillAllCommand"] = "Rise page markup lands in Task 10",
+        ["ShowDepthTabCommand"] = "Rise page markup lands in Task 10",
+        ["ShowExportTabCommand"] = "Rise page markup lands in Task 10",
     };
 
     private static string RepoRoot()

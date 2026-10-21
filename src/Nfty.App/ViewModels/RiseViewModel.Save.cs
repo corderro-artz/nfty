@@ -1,0 +1,112 @@
+using System.Globalization;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Nfty.App.Rise;
+using Nfty.Core.Formats;
+
+namespace Nfty.App.ViewModels;
+
+public sealed partial class RiseViewModel
+{
+    private int DirtyCount => Items.Count(i => i.IsDirty);
+
+    /// <summary>Whether any variant's depth differs from what was last saved. Undoing back to the saved
+    /// depth is clean: dirty is a comparison, not "history is not empty".</summary>
+    public bool HasUnsavedDepth => DirtyCount > 0;
+
+    /// <summary>A save is running.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanSave))]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    private bool _isSaving;
+
+    /// <summary>The Save button is inked: the source is one depth can be saved into. Space is reserved
+    /// either way; a locked book keeps the button, dimmed, beside the sentence that says why.</summary>
+    public bool ShowSave => Source.IsEditable;
+
+    /// <summary>Whether Save would write something right now.</summary>
+    public bool CanSave => SaveGate && !IsSaving;
+
+    // Everything Save needs except "no save is running": a second press during a save joins the first
+    // (the source hands back the running task) rather than being refused.
+    private bool SaveGate => Source.IsEditable && !Source.IsLocked && HasUnsavedDepth;
+
+    /// <summary>The line in the footer: what Save would do, or why it will not.</summary>
+    public string FooterText
+    {
+        get
+        {
+            if (!Source.IsEditable) return "read-only source — nothing to save";
+            int n = DirtyCount;
+            if (n == 0) return "no unsaved depth";
+            var text = string.Create(CultureInfo.InvariantCulture,
+                $"unsaved depth on {n} {(n == 1 ? "variant" : "variants")}");
+            return Source.IsLocked
+                ? text + " · the CookBook is read-only — unlock it in the Explorer to save"
+                : text;
+        }
+    }
+
+    /// <summary>Writes the painted depth where it came from. Any gesture still down is dropped first,
+    /// or its preview would be saved as if it had been committed.</summary>
+    [RelayCommand(CanExecute = nameof(CanSave))]
+    private async Task Save()
+    {
+        CancelDepthPreview();
+        // A disabled button is a label: the generated command does not consult CanExecute, so the gate
+        // is checked here too. The source checks the lock again before it writes.
+        if (!SaveGate) return;
+        IsSaving = true;
+        try
+        {
+            await Source.SaveAsync();
+        }
+        catch (Exception ex)
+        {
+            await _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, "Could not save depth", ex.Message));
+        }
+        finally
+        {
+            IsSaving = false;
+            OnDepthEdited();
+        }
+    }
+
+    /// <summary>Leaves the page, asking first when there is depth that leaving would lose.</summary>
+    [RelayCommand]
+    private async Task Back()
+    {
+        CancelDepthPreview();
+        int n = DirtyCount;
+        if (!Source.IsEditable || n == 0)
+        {
+            _nav.Back();
+            return;
+        }
+        var message = string.Create(CultureInfo.InvariantCulture,
+            $"{Source.Title} has unsaved depth on {n} {(n == 1 ? "variant" : "variants")}. Leaving discards it.");
+        var card = new LeaveDialogViewModel(_dialogs, "Leave Rise?", message, canSave: !Source.IsLocked);
+        var choice = await _dialogs.ShowAsync<LeaveChoice>(card);
+        switch (choice)
+        {
+            case LeaveChoice.Discard:
+                _nav.Back();
+                break;
+            case LeaveChoice.SaveAndLeave:
+                await Save();
+                if (!HasUnsavedDepth) _nav.Back();
+                break;
+            default:
+                break;      // Stay, and a card dismissed without an answer
+        }
+    }
+
+    /// <summary>Raised with the book the session holds after a save, for the Explorer to refresh from.</summary>
+    public event Action<LoadedCookBook>? Saved;
+
+    private void OnVariantSaved(LoadedCookBook book) => Saved?.Invoke(book);
+
+    /// <summary>Says the page's opening line. The shell calls this AFTER navigation, because it clears
+    /// the status line on every page change.</summary>
+    internal void SayOpeningLine() => _status.Say(Source.OpeningLine);
+}

@@ -74,6 +74,7 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
             : new ModelPreviewViewModel(-Vector3.One, Vector3.One);
         _brushSize = 1;
         source.Changed += OnSourceChanged;
+        if (source is VariantRiseSource variant) variant.Saved += OnVariantSaved;
     }
 
     /// <summary>What the page is showing.</summary>
@@ -130,9 +131,6 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
 
     /// <summary>Text of the read-only pill.</summary>
     public string? ReadOnlyPill => Source.ReadOnlyPill;
-
-    /// <summary>The source's explanation under the depth tools, for the selected item.</summary>
-    public string DepthNote => Source.DepthNote;
 
     // ---------------------------------------------------------------- tools
 
@@ -555,6 +553,9 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(DimensionsText));
         UndoCommand.NotifyCanExecuteChanged();
         RedoCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(DepthNote));
+        FillAllCommand.NotifyCanExecuteChanged();
+        OnDepthEdited();
         DepthChanged?.Invoke();
     }
 
@@ -581,6 +582,7 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
         UndoStanding();
         _disposed = true;
         Source.Changed -= OnSourceChanged;
+        if (Source is VariantRiseSource variant) variant.Saved -= OnVariantSaved;
         Canvas.Dispose();
         Source.Dispose();
     }

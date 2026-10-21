@@ -113,7 +113,7 @@ public sealed class RecipeRiseSource : RiseSource
 
     /// <inheritdoc />
     public override string OpeningLine => Problem is null
-        ? $"Rising a roll of “{_recipe.Manifest.Name}” — seed {Seed}. Reroll for another."
+        ? $"Rolled with seed {Seed} — reroll from the toolstrip. Depth is combined from the layers and read-only here."
         : $"“{_recipe.Manifest.Name}” cannot be rolled: {Problem}";
 
     /// <inheritdoc />

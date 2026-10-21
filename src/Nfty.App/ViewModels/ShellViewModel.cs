@@ -135,6 +135,7 @@ public partial class ShellViewModel : ViewModelBase
         // does: its lock state, which the chip in the titlebar shows at the same time, and which the
         // two must never disagree about.
         (value as ExplorerViewModel)?.SayLockState();
+        (value as RiseViewModel)?.SayOpeningLine();
 
         OnPropertyChanged(nameof(CurrentExplorer));
         OnPropertyChanged(nameof(HasOpenDocument));

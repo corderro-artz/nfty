@@ -108,6 +108,16 @@ public static class ServiceRegistration
                     viewState: sp.GetRequiredService<IEditorViewState>());
             });
 
+        // The Rise page, built over a source. The factory the "Rise" buttons call; the page owns the
+        // source it is handed and disposes it.
+        services.AddSingleton<Func<Nfty.App.Rise.RiseSource, RiseViewModel>>(sp =>
+            source => new RiseViewModel(source,
+                sp.GetRequiredService<IImageBridge>(),
+                sp.GetRequiredService<INavigationService>(),
+                sp.GetRequiredService<IDialogService>(),
+                sp.GetRequiredService<IFilePickerService>(),
+                sp.GetRequiredService<IStatusService>()));
+
         services.AddSingleton<Func<LoadedCookBook, CookDialogViewModel>>(sp =>
             book => new CookDialogViewModel(book,
                 sp.GetRequiredService<IFilePickerService>(),

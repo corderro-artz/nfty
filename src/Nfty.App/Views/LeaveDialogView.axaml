@@ -1,0 +1,35 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             x:Class="Nfty.App.Views.LeaveDialogView"
+             x:DataType="vm:LeaveDialogViewModel">
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Escape" Command="{Binding StayCommand}" />
+  </UserControl.KeyBindings>
+  <Border Classes="modal small">
+    <Grid RowDefinitions="Auto,Auto">
+      <Border Grid.Row="0" Classes="modal-body tight">
+        <StackPanel Spacing="9">
+          <StackPanel Classes="plabel-row">
+            <Ellipse Classes="kdot" />
+            <TextBlock Text="CONFIRM" Classes="slbl" />
+          </StackPanel>
+          <TextBlock Text="{Binding Title}" Classes="m-h" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Classes="m-sub" />
+        </StackPanel>
+      </Border>
+
+      <!-- Esc keeps editing: the safe answer is the one a stray key gives. Discard is the quiet button,
+           Save and leave carries the accent. -->
+      <Border Grid.Row="1" Classes="modal-foot">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0" Classes="keyhint" VerticalAlignment="Center" Text="Esc to keep editing" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+            <Button Content="Discard changes" Command="{Binding DiscardCommand}" Classes="tbtn" />
+            <Button Content="Save and leave" Command="{Binding SaveAndLeaveCommand}" Classes="accent" />
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
+  </Border>
+</UserControl>

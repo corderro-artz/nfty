@@ -49,6 +49,24 @@ public class ServiceRegistrationTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>The factory the Rise buttons will call resolves from the real container and builds a
+    /// page over a source.</summary>
+    [AvaloniaFact]
+    public void The_rise_page_factory_resolves_and_builds_a_page_from_a_variant_source()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            using var provider = Container(dir);
+            var make = provider.GetRequiredService<Func<Nfty.App.Rise.RiseSource, RiseViewModel>>();
+            var (s, _) = RiseFixtures.OnDisk(RiseFixtures.ChestBook());
+            using var page = make(RiseFixtures.Variant(s));
+            Assert.Equal("Body / Oak", page.Source.Title);
+            Assert.True(page.IsPaintable);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
     /// <summary>
     /// A cook that finishes with Open Set lands on the Set browser, through the REAL container.
     /// </summary>

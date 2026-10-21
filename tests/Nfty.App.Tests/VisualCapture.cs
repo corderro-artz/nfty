@@ -1134,6 +1134,13 @@ public class VisualCapture
             },
                 variant, $"zz-dialog-confirm-{key}.png");
 
+            Capture(new Views.LeaveDialogView
+            {
+                DataContext = new LeaveDialogViewModel(dialogs, "Leave Rise?",
+                    "Body / Oak has unsaved depth on 2 variants. Leaving discards it.", canSave: true),
+            },
+                variant, $"zz-dialog-leave-{key}.png");
+
             // The colorize save prompt, in its riskiest state: the overwrite box TICKED, which is
             // the one path that discards a colorization nothing on disk can rebuild. It had never
             // been captured at all, which is how it stayed a flat slab with a literal radius long
