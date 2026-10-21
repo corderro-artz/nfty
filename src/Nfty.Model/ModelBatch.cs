@@ -154,6 +154,83 @@ public static class ModelBatch
         return new ModelBatchResult(files, skipped);
     }
 
+    /// <summary>Rises a batch and writes it as it goes: each model is built, written and let go before
+    /// the next picture is asked for, so a batch of ten thousand holds one model, never ten thousand.</summary>
+    /// <param name="baseNames">One wanted name per picture; made safe and distinct exactly as
+    /// <see cref="Build"/> does, in this order.</param>
+    /// <param name="open">Hands over picture <c>i</c>. Called once per index, on the calling thread,
+    /// never before the previous picture has been released. Its <see cref="ModelInput.BaseName"/> is
+    /// ignored: the name is <paramref name="baseNames"/>'s.</param>
+    /// <param name="release">Called once for every opened picture as soon as its files are written (or
+    /// its build failed); null when the caller keeps ownership.</param>
+    /// <param name="options">How to rise and write.</param>
+    /// <param name="destination">A folder or a zip.</param>
+    /// <param name="progress">Told how many pictures are done (written or skipped) after each one.</param>
+    /// <param name="cancellation">Checked before each picture. A canceled zip is never left behind (it is
+    /// written beside its destination and moved over it only when complete); a canceled folder keeps
+    /// the models finished before the stop, each whole, since a file is written only once its model is.</param>
+    /// <returns>The file names written, the pictures skipped, and the files that already existed.</returns>
+    /// <remarks>Models are written in ordinal order of their first file name, each model's files in
+    /// the writer's order: for a one-file format that is exactly ordinal order of every entry, so a
+    /// zip has the bytes <see cref="WriteZip"/> would give the built files. Identical input gives
+    /// identical bytes either way.</remarks>
+    public static ModelExportResult Export(IReadOnlyList<string> baseNames, Func<int, ModelInput> open,
+        Action<ModelInput>? release, RiseOptions options, ModelDestination destination,
+        IProgress<int>? progress = null, CancellationToken cancellation = default)
+    {
+        ArgumentNullException.ThrowIfNull(baseNames);
+        ArgumentNullException.ThrowIfNull(open);
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(destination);
+
+        var names = UniqueBaseNames(baseNames);
+        var order = Enumerable.Range(0, names.Count)
+            .OrderBy(i => FileNamesFor(names[i], options.Format)[0], StringComparer.Ordinal).ToList();
+        foreach (var n in names)
+            foreach (var f in FileNamesFor(n, options.Format)) CheckPlain(f);
+
+        var written = new List<string>();
+        var skipped = new List<SkippedModel>();
+        var replaced = new List<string>();
+        using var sink = destination.Open(replaced);
+        int done = 0;
+        foreach (int i in order)
+        {
+            cancellation.ThrowIfCancellationRequested();
+            string name = names[i];
+            var input = open(i);
+            try
+            {
+                var mesh = Riser.TryBuild(input.Art, input.Depth, options, $"'{name}'");
+                if (mesh is null)
+                    skipped.Add(new SkippedModel(name, SkipReason.NothingSolid, "nothing in it is fully opaque, so there is nothing to rise"));
+                else
+                {
+                    foreach (var f in ModelWriter.Write(mesh, input.Art, options, name))
+                    {
+                        sink.Add(f);
+                        written.Add(f.FileName);
+                    }
+                }
+            }
+            catch (PartialAlphaException ex)
+            {
+                skipped.Add(new SkippedModel(name, SkipReason.PartialAlpha, ex.Message));
+            }
+            finally
+            {
+                release?.Invoke(input);
+            }
+            progress?.Report(++done);
+        }
+        sink.Complete();
+        // Skips are reported in the caller's order, as Build reports them.
+        var rank = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        for (int k = 0; k < names.Count; k++) rank[names[k]] = k;
+        skipped.Sort((x, y) => rank[x.Name].CompareTo(rank[y.Name]));
+        return new ModelExportResult(written, skipped, replaced);
+    }
+
     /// <summary>Writes the files into a folder, creating it.</summary>
     /// <param name="directory">The folder.</param>
     /// <param name="files">The files.</param>
@@ -189,6 +266,134 @@ public static class ModelBatch
             entry.LastWriteTime = stamp;
             using var es = entry.Open();
             es.Write(f.Bytes);
+        }
+    }
+}
+
+/// <summary>What a streamed batch wrote.</summary>
+/// <param name="FileNames">Every file written, in the order written.</param>
+/// <param name="Skipped">One entry per picture that could not rise, in the caller's order.</param>
+/// <param name="Replaced">Files (or the zip) that existed before and were overwritten.</param>
+public sealed record ModelExportResult(IReadOnlyList<string> FileNames, IReadOnlyList<SkippedModel> Skipped,
+    IReadOnlyList<string> Replaced);
+
+/// <summary>Where a streamed batch goes: a folder of files, or one zip.</summary>
+public abstract class ModelDestination
+{
+    private protected ModelDestination() { }
+
+    /// <summary>A folder, created on the first file.</summary>
+    /// <param name="directory">The folder.</param>
+    /// <returns>The destination.</returns>
+    public static ModelDestination Folder(string directory)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(directory);
+        return new FolderDestination(directory);
+    }
+
+    /// <summary>One zip: ordinal entries, fixed timestamps, in place only once complete.</summary>
+    /// <param name="zipPath">The zip to create or replace.</param>
+    /// <returns>The destination.</returns>
+    public static ModelDestination Zip(string zipPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(zipPath);
+        return new ZipDestination(zipPath);
+    }
+
+    internal abstract Sink Open(List<string> replaced);
+
+    // Every field here is readonly (rule D7): state that changes lives in collections the sink owns,
+    // never in a field written after construction.
+    internal abstract class Sink : IDisposable
+    {
+        public abstract void Add(ModelFile file);
+        public abstract void Complete();
+        public abstract void Dispose();
+    }
+
+    private sealed class FolderDestination : ModelDestination
+    {
+        private readonly string _directory;
+        public FolderDestination(string directory) => _directory = directory;
+        internal override Sink Open(List<string> replaced) => new FolderSink(_directory, replaced);
+
+        private sealed class FolderSink : Sink
+        {
+            private readonly string _directory;
+            private readonly List<string> _replaced;
+
+            public FolderSink(string directory, List<string> replaced)
+            {
+                _directory = directory;
+                _replaced = replaced;
+            }
+
+            public override void Add(ModelFile file)
+            {
+                Directory.CreateDirectory(_directory);
+                string target = Path.Combine(_directory, file.FileName);
+                if (File.Exists(target)) _replaced.Add(file.FileName);
+                File.WriteAllBytes(target, file.Bytes);
+            }
+
+            public override void Complete() { }
+
+            public override void Dispose() { }
+        }
+    }
+
+    private sealed class ZipDestination : ModelDestination
+    {
+        private readonly string _path;
+        public ZipDestination(string path) => _path = path;
+        internal override Sink Open(List<string> replaced) => new ZipSink(_path, replaced);
+
+        private sealed class ZipSink : Sink
+        {
+            private static readonly DateTimeOffset Stamp = new(1980, 1, 1, 0, 0, 0, TimeSpan.Zero);
+            private readonly string _path;
+            private readonly string _temp;
+            private readonly List<string> _replaced;
+            private readonly List<string> _entries = new();
+            private readonly FileStream _stream;
+            private readonly ZipArchive _zip;
+
+            public ZipSink(string path, List<string> replaced)
+            {
+                _path = Path.GetFullPath(path);
+                // Written BESIDE the destination and moved over it only when complete: a canceled or
+                // failed batch never leaves half a zip, and never touches the zip that was there.
+                _temp = $"{_path}.{Guid.NewGuid():N}.tmp";
+                _replaced = replaced;
+                _stream = new FileStream(_temp, FileMode.CreateNew, FileAccess.Write);
+                _zip = new ZipArchive(_stream, ZipArchiveMode.Create);
+            }
+
+            public override void Add(ModelFile file)
+            {
+                var entry = _zip.CreateEntry(file.FileName, CompressionLevel.Optimal);
+                entry.LastWriteTime = Stamp;
+                using (var es = entry.Open()) es.Write(file.Bytes);
+                _entries.Add(file.FileName);
+            }
+
+            public override void Complete()
+            {
+                _zip.Dispose();
+                _stream.Dispose();
+                if (_entries.Count == 0) return;      // nothing could rise: no zip, as before (Dispose removes the temp)
+                if (File.Exists(_path)) _replaced.Add(Path.GetFileName(_path));
+                File.Move(_temp, _path, overwrite: true);
+            }
+
+            public override void Dispose()
+            {
+                _zip.Dispose();
+                _stream.Dispose();
+                try { if (File.Exists(_temp)) File.Delete(_temp); }
+                catch (IOException) { /* best effort */ }
+                catch (UnauthorizedAccessException) { /* best effort */ }
+            }
         }
     }
 }
