@@ -498,6 +498,32 @@ public class RiseViewLayoutTests
         }
     }
 
+    [AvaloniaTheory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void The_wheel_scrolls_each_rail_to_its_end_and_back_at_the_smallest_window(bool exportTab)
+    {
+        // The EXPORT rail overflows at the smallest window itself. The DEPTH rail fits there with this
+        // fixture, so it is shown 120px shorter: the wheel has to reach the end of a rail that scrolls.
+        using var page = RisePages.Show(RisePages.VariantVm(oakDepth: RisePages.PaintedOak(), withPine: true),
+            Min.Width, exportTab ? Min.Height : Min.Height - 120);
+        if (exportTab) page.Vm.ShowExportTabCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+
+        var scroll = page.View.FindControl<ScrollViewer>("RailScroll")!;
+        double max = scroll.Extent.Height - scroll.Viewport.Height;
+        Assert.True(max > 20, $"nothing to scroll ({scroll.Extent.Height:0} in {scroll.Viewport.Height:0}): the test proves nothing");
+
+        // REAL wheel events at a point over the rail, never Offset assigned: a snap or a handler that
+        // swallows the wheel only shows up through the pointer.
+        var over = scroll.TranslatePoint(new Point(scroll.Bounds.Width / 2, scroll.Bounds.Height / 2), page.Window)!.Value;
+        for (int i = 0; i < 40; i++) { page.Window.MouseWheel(over, new Vector(0, -1)); Dispatcher.UIThread.RunJobs(); }
+        Assert.True(scroll.Offset.Y >= max - 1, $"the wheel stopped at {scroll.Offset.Y:0.#} of {max:0.#}: the rail's end is unreachable");
+
+        for (int i = 0; i < 40; i++) { page.Window.MouseWheel(over, new Vector(0, 1)); Dispatcher.UIThread.RunJobs(); }
+        Assert.Equal(0, scroll.Offset.Y, 0.5);
+    }
+
     [AvaloniaFact]
     public void Pivot_is_fully_visible_on_the_export_tab_at_the_smallest_window()
     {

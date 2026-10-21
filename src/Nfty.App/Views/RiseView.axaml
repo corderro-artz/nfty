@@ -408,8 +408,7 @@
             </StackPanel>
           </Border>
 
-          <ScrollViewer x:Name="RailScroll" Grid.Row="1" VerticalAlignment="Top" HorizontalScrollBarVisibility="Disabled"
-                        VerticalSnapPointsType="Mandatory">
+          <ScrollViewer x:Name="RailScroll" Grid.Row="1" VerticalAlignment="Top" HorizontalScrollBarVisibility="Disabled">
             <StackPanel x:Name="RailBody" Margin="13,13,13,16" Spacing="15">
 
               <!-- ==================== DEPTH ==================== -->
