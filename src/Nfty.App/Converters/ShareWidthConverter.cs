@@ -23,14 +23,31 @@ namespace Nfty.App.Converters;
 /// </remarks>
 public sealed class ShareWidthConverter : IMultiValueConverter
 {
-    /// <summary>The shared instance; the converter holds no state.</summary>
-    public static readonly ShareWidthConverter Instance = new();
+    /// <summary>What the first input means.</summary>
+    public enum ShareScale
+    {
+        /// <summary>0-100: the percentages the rarity and mint-distribution bars carry.</summary>
+        Percent,
 
-    /// <summary>Multiplies a percentage by its track's width.</summary>
-    /// <param name="values">The share (0-100), then the track's width in pixels.</param>
+        /// <summary>0-1: a fraction, as the Rise thickness rows carry.</summary>
+        Fraction,
+    }
+
+    /// <summary>The shared instance for a share in percent; the converter holds no state.</summary>
+    public static readonly ShareWidthConverter Instance = new(ShareScale.Percent);
+
+    /// <summary>The shared instance for a share that is a 0-1 fraction.</summary>
+    public static readonly ShareWidthConverter FractionInstance = new(ShareScale.Fraction);
+
+    private readonly ShareScale _scale;
+
+    private ShareWidthConverter(ShareScale scale) => _scale = scale;
+
+    /// <summary>Multiplies a share by its track's width.</summary>
+    /// <param name="values">The share (0-100, or 0-1 for <see cref="FractionInstance"/>), then the
+    /// track's width in pixels.</param>
     /// <param name="targetType">Ignored.</param>
-    /// <param name="parameter">The string <c>"fraction"</c> when the share is 0-1 rather than 0-100;
-    /// anything else is ignored.</param>
+    /// <param name="parameter">Ignored.</param>
     /// <param name="culture">Ignored.</param>
     /// <returns>The fill width, or 0 while either input is still unset — a bar cannot be measured
     /// before its track has been, and a mid-layout pass hands both through as unset.</returns>
@@ -39,8 +56,7 @@ public sealed class ShareWidthConverter : IMultiValueConverter
         if (values.Count < 2) return 0d;
         if (values[0] is not double share || values[1] is not double track) return 0d;
         if (double.IsNaN(share) || double.IsNaN(track) || track <= 0) return 0d;
-        // A share that is already a fraction (0-1, as the Rise thickness rows carry) says so.
-        if (parameter is "fraction") share *= 100;
+        if (_scale == ShareScale.Fraction) share *= 100;
         return Math.Clamp(share, 0, 100) / 100d * track;
     }
 }

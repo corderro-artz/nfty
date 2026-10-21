@@ -217,7 +217,11 @@
                size, history, the die when the source rolls, and the mouse map. -->
           <Border Grid.Row="0" Classes="pane-hrow toolstrip">
             <ctl:StripPanel Spacing="14" LineSpacing="6" VerticalAlignment="Center">
-              <StackPanel Orientation="Horizontal" Spacing="3">
+              <!-- The tools mean nothing on a page that cannot paint (a roll, a cooked Set, a picture
+                   with partial alpha), so they are disabled there - and a disabled ARMED tool is drawn
+                   neutral, not as a red tool waiting to be used (Button.ttool.on:disabled). A LOCKED
+                   book still paints, as a scratch surface, so it keeps them live. -->
+              <StackPanel Orientation="Horizontal" Spacing="3" IsEnabled="{Binding IsPaintable}">
                 <Button Classes="ttool" Classes.on="{Binding IsToolBrush}" ToolTip.Tip="{x:Static svc:KeyHints.RiseBrushTool}"
                         Command="{Binding SelectToolCommand}" CommandParameter="{x:Static vm:EditorTool.Brush}">
                   <Path Classes="ico sm" Data="{StaticResource IconPencil}" /></Button>
@@ -236,7 +240,7 @@
               </StackPanel>
 
               <NumericUpDown Classes="nin" Value="{Binding BrushSize}" Minimum="1" Maximum="{Binding BrushSizeMax}"
-                             Width="46" FormatString="0" ShowButtonSpinner="False"
+                             Width="46" FormatString="0" ShowButtonSpinner="False" IsEnabled="{Binding IsPaintable}"
                              ToolTip.Tip="{x:Static svc:KeyHints.BrushSizeField}" />
 
               <StackPanel Orientation="Horizontal" Spacing="3">
@@ -257,7 +261,8 @@
 
               <!-- The mouse map. Only a source that can be painted has one to print; constant per page. -->
               <TextBlock Classes="smallmono" Text="{x:Static svc:KeyHints.RiseLegend}"
-                         IsVisible="{Binding Source.IsEditable}" />
+                         IsVisible="{Binding Source.IsEditable}"
+                         ToolTip.Tip="{x:Static svc:KeyHints.RiseLegendTip}" />
             </ctl:StripPanel>
           </Border>
 
@@ -307,7 +312,7 @@
             </Border>
 
             <!-- The editor's own grid chip, verbatim. -->
-            <Border Classes="gridchip" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="26,0,0,26">
+            <Border x:Name="GridChip" Classes="gridchip" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="26,0,0,26">
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <Button Classes="ttool" Classes.on="{Binding ShowPixelGrid}"
                         Command="{Binding ToggleGridCommand}" ToolTip.Tip="{Binding GridToggleTip}">
@@ -336,13 +341,7 @@
                     HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,26,26">
               <Panel>
                 <Border x:Name="TileHost">
-                  <!-- Inked only while there is a model. ModelPreviewView leaves its last frame standing
-                       when the mesh goes null (a 2D-only picture was selected), so without this the
-                       tile showed the PREVIOUS item's model under the "2D only" ink. Reserved, not
-                       removed: it keeps its box and a way back to hit-testing. -->
                   <views:ModelPreviewView x:Name="ModelView" DataContext="{Binding Preview}"
-                                          Classes="inkslot"
-                                          Classes.on="{Binding #Root.((vm:RiseViewModel)DataContext).Mesh, Converter={x:Static ObjectConverters.IsNotNull}}"
                                           Mesh="{Binding #Root.((vm:RiseViewModel)DataContext).Mesh}"
                                           Texture="{Binding #Root.((vm:RiseViewModel)DataContext).Texture}" />
                 </Border>
@@ -366,8 +365,7 @@
                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                       <!-- Placeholder glyph: the page's own mark replaces it with the Rise icons. -->
                       <Path Classes="ico xs" Data="{StaticResource IconLock}" />
-                      <TextBlock Text="{Binding TileCaption}" Classes="plabel" VerticalAlignment="Center"
-                                 TextTrimming="None" ClipToBounds="False" FontSize="7.5" Margin="0" />
+                      <TextBlock Text="{Binding TileCaption}" Classes="plabel tilecap" />
                     </StackPanel>
                     <Button Grid.Column="1" Classes="icon" Padding="2" Classes.unlocked="{Binding PreviewEnlarged}"
                             Command="{Binding EnlargePreviewCommand}" ToolTip.Tip="{Binding EnlargeTip}">
@@ -393,7 +391,7 @@
 
       <!-- ============ DEPTH / EXPORT rail ============ -->
       <Border Grid.Column="2" Classes="pane last">
-        <Grid RowDefinitions="Auto,*,Auto">
+        <Grid x:Name="RailGrid" RowDefinitions="Auto,*,Auto">
           <Border Grid.Row="0" Classes="pane-hrow tabrow">
             <StackPanel Orientation="Horizontal" Spacing="18">
               <Button Classes="railtab" Classes.on="{Binding IsDepthTab}"
@@ -410,11 +408,12 @@
             </StackPanel>
           </Border>
 
-          <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Margin="13,13,13,16" Spacing="15">
+          <ScrollViewer x:Name="RailScroll" Grid.Row="1" VerticalAlignment="Top" HorizontalScrollBarVisibility="Disabled"
+                        VerticalSnapPointsType="Mandatory">
+            <StackPanel x:Name="RailBody" Margin="13,13,13,16" Spacing="15">
 
               <!-- ==================== DEPTH ==================== -->
-              <StackPanel Spacing="15" IsVisible="{Binding IsDepthTab}">
+              <StackPanel x:Name="DepthStack" Spacing="15" IsVisible="{Binding IsDepthTab}">
                 <!-- FILL ALL: one depth for every solid pixel, as one undo step. -->
                 <StackPanel Spacing="8">
                   <Grid Classes="ctlh" ColumnDefinitions="*,Auto">
@@ -447,8 +446,7 @@
                           <Border Grid.Column="1" Classes="thtrack" x:Name="ThTrack">
                             <Border Height="7">
                               <Border.Width>
-                                <MultiBinding Converter="{x:Static conv:ShareWidthConverter.Instance}"
-                                              ConverterParameter="fraction">
+                                <MultiBinding Converter="{x:Static conv:ShareWidthConverter.FractionInstance}">
                                   <Binding Path="Share" />
                                   <Binding ElementName="ThTrack" Path="Bounds.Width" />
                                 </MultiBinding>
@@ -494,16 +492,17 @@
               </StackPanel>
 
               <!-- ==================== EXPORT ==================== -->
-              <StackPanel Spacing="15" IsVisible="{Binding IsExportTab}">
+              <StackPanel x:Name="ExportStack" Spacing="15" IsVisible="{Binding IsExportTab}">
                 <StackPanel Spacing="7">
                   <TextBlock Text="FORMAT" Classes="plabel" Margin="0" />
                   <ItemsControl ItemsSource="{Binding FormatCards}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:FormatCard">
-                        <Button Classes="preset" Classes.sel="{Binding IsSelected}" Margin="0,0,0,6"
+                        <Button Classes="preset tight" Classes.sel="{Binding IsSelected}" Margin="0,0,0,3"
+                                ToolTip.Tip="{Binding Summary}"
                                 Command="{Binding $parent[ItemsControl].((vm:RiseViewModel)DataContext).PickFormatCommand}"
                                 CommandParameter="{Binding}">
-                          <StackPanel Spacing="3">
+                          <StackPanel Spacing="1">
                             <TextBlock Classes="pn" Text="{Binding Title}" />
                             <TextBlock Classes="pd" Text="{Binding Summary}" />
                           </StackPanel>
@@ -513,7 +512,7 @@
                   </ItemsControl>
                 </StackPanel>
 
-                <StackPanel Spacing="5">
+                <StackPanel Spacing="2">
                   <TextBlock Text="PIVOT" Classes="plabel" Margin="0,0,0,2" />
                   <RadioButton Classes="rchoice" GroupName="pivot" IsChecked="{Binding IsPivotBottomCenter}">
                     <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Bottom center" />
@@ -561,7 +560,7 @@
                scroll to. Bottom-anchored, so the button stays where it is whatever the manifest
                above it says. -->
           <StackPanel Grid.Row="2" Spacing="9" Margin="13,0,13,13" IsVisible="{Binding IsExportTab}">
-            <Border Classes="ship" MinHeight="76">
+            <Border Classes="ship" MinHeight="64" Padding="14,8,12,8">
               <StackPanel Spacing="4">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                   <TextBlock Grid.Column="0" Classes="fn" Text="{Binding ManifestTitle}" TextTrimming="CharacterEllipsis" />
@@ -573,7 +572,8 @@
                   </ItemsControl.ItemsPanel>
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="x:String">
-                      <TextBlock Classes="part" Margin="0,0,10,0" TextWrapping="Wrap" Text="{Binding}" />
+                      <TextBlock Classes="part" Margin="0,0,10,0" TextTrimming="CharacterEllipsis" Text="{Binding}"
+                                 ToolTip.Tip="{Binding}" />
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>

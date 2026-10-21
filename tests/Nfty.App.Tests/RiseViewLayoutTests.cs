@@ -361,16 +361,17 @@ public class RiseViewLayoutTests
         int Says() => page.View.GetVisualDescendants().OfType<TextBlock>()
             .Count(t => t.Text == "partial alpha cannot rise" && t.IsEffectivelyVisible);
 
-        Assert.True(model.Opacity > 0.99);
+        model.RepaintNow();
+        Assert.NotNull(model.Surface.Source);
         Assert.Equal(0, Says());
 
         page.Vm.SelectItemCommand.Execute(page.Vm.Items.First(i => i.Name == "Ghost"));
         Dispatcher.UIThread.RunJobs();
-        // ModelPreviewView leaves its last frame standing when the mesh goes null, so the page blanks
-        // it: otherwise the tile showed the PREVIOUS item's model under the "2D only" ink.
+        model.RepaintNow();
+        // The control itself clears its frame when the mesh goes null (ModelPreviewViewTests), so the
+        // tile shows no model under the "2D only" ink - not the PREVIOUS item's.
         Assert.Null(model.Mesh);
-        Assert.True(model.Opacity < 0.01);
-        Assert.False(model.IsHitTestVisible);
+        Assert.Null(model.Surface.Source);
         Assert.Equal(1, Says());                                  // in the tile
 
         page.Vm.SwapPreviewCommand.Execute(null);
@@ -402,6 +403,152 @@ public class RiseViewLayoutTests
         // And it is what the screen shows, not only what the view model says.
         Assert.Contains(page.View.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "seed 2");
         Assert.Equal(2, page.View.GetVisualDescendants().OfType<Border>().Count(b => b.Classes.Contains("rrow")));
+    }
+
+    // ------------------------------------------------------------------ fix round 1
+
+    private static Rect RectOf(Control c, Visual relativeTo) =>
+        new(c.TranslatePoint(default, relativeTo)!.Value, c.Bounds.Size);
+
+    [AvaloniaTheory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void Fit_never_puts_the_art_under_the_tile_or_the_grid_chip(bool minimum, bool enlarged)
+    {
+        double w = minimum ? Min.Width : 1180, h = minimum ? Min.Height : 720;
+        using var page = RisePages.Show(RisePages.VariantVm(oakDepth: RisePages.PaintedOak()), w, h);
+        if (enlarged) page.Vm.EnlargePreviewCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+
+        var backdrop = page.View.FindControl<Panel>("CanvasBackdrop")!;
+        var host = RectOf(page.View.FindControl<Border>("CanvasHost")!, backdrop);
+        var tile = RectOf(page.View.FindControl<Border>("ModelTile")!, backdrop);
+        var chip = RectOf(page.View.FindControl<Border>("GridChip")!, backdrop);
+
+        Assert.False(host.Intersects(tile), $"the canvas {host} runs under the 3D tile {tile}");
+        Assert.False(host.Intersects(chip), $"the canvas {host} runs under the grid chip {chip}");
+        Assert.True(host.Width >= 160 && host.Left >= 0 && host.Top >= 0
+                    && host.Right <= backdrop.Bounds.Width && host.Bottom <= backdrop.Bounds.Height);
+        // Where there is room it is still the centered 320 the editor draws.
+        if (!minimum && !enlarged) Assert.Equal(320, host.Width);
+    }
+
+    [AvaloniaFact]
+    public void The_art_is_mapped_through_the_host_it_was_moved_to()
+    {
+        using var page = RisePages.Show(RisePages.VariantVm(oakDepth: RisePages.PaintedOak()), Min.Width, Min.Height);
+        var layer = page.View.FindControl<DepthLabelLayer>("DepthLabels")!;
+        var surface = page.View.FindControl<Panel>("CanvasSurface")!;
+        // The labels' frame is the one the pointer would use: its scale is the host's side over 8 pixels.
+        Assert.Equal(surface.Bounds.Width / 8, layer.Frame.Scale, 0.01);
+        Assert.True(layer.Frame.Scale >= DepthLabelLayer.MinCellPx);
+    }
+
+    [AvaloniaFact]
+    public void The_paint_tools_are_disabled_where_nothing_can_be_painted_and_live_where_it_can()
+    {
+        Button Brush(RisePage p) => p.View.GetVisualDescendants().OfType<Button>()
+            .First(b => b.Classes.Contains("ttool") && b.Classes.Contains("on"));
+
+        using var variant = RisePages.Show(RisePages.VariantVm(), Min.Width, Min.Height);
+        Assert.True(Brush(variant).IsEffectivelyEnabled);
+
+        // A locked book still paints, as a scratch surface (the page says so in its footer).
+        using var locked = RisePages.Show(RisePages.VariantVm(isEditing: () => false), Min.Width, Min.Height);
+        Assert.True(Brush(locked).IsEffectivelyEnabled);
+
+        variant.Vm.SelectItemCommand.Execute(variant.Vm.Items.First(i => i.Name == "Ghost"));
+        Dispatcher.UIThread.RunJobs();
+        Assert.False(Brush(variant).IsEffectivelyEnabled);          // partial alpha: nothing to paint
+
+        using var recipe = RisePages.Show(RisePages.RecipeVm(), Min.Width, Min.Height);
+        Assert.False(Brush(recipe).IsEffectivelyEnabled);
+        var (setVm, owner) = RisePages.SetVm();
+        using var set = RisePages.Show(setVm, Min.Width, Min.Height, owner: owner);
+        Assert.False(Brush(set).IsEffectivelyEnabled);
+        var size = set.View.GetVisualDescendants().OfType<NumericUpDown>().First(n => n.Classes.Contains("nin"));
+        Assert.False(size.IsEffectivelyEnabled);
+    }
+
+    [AvaloniaTheory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void The_rails_fold_never_cuts_a_section_in_half_at_any_window_height(bool exportTab)
+    {
+        // Every height from the smallest the app allows up: a fold that happens to land between two
+        // sections at one height proves nothing about the next.
+        for (double h = Min.Height; h <= Min.Height + 120; h += 9)
+        {
+            using var page = RisePages.Show(RisePages.VariantVm(oakDepth: RisePages.PaintedOak(), withPine: true), Min.Width, h);
+            if (exportTab) page.Vm.ShowExportTabCommand.Execute(null);
+            Dispatcher.UIThread.RunJobs();
+
+            var scroll = page.View.FindControl<ScrollViewer>("RailScroll")!;
+            var stack = page.View.FindControl<StackPanel>(exportTab ? "ExportStack" : "DepthStack")!;
+            double viewport = scroll.Bounds.Height;
+            foreach (var section in stack.Children.Where(c => c.IsVisible && c.Bounds.Height > 0))
+            {
+                double top = section.TranslatePoint(default, scroll)!.Value.Y;
+                double bottom = top + section.Bounds.Height;
+                Assert.True(bottom <= viewport + 0.5 || top >= viewport - 0.5,
+                    $"at height {h:0}: a section runs {top:0.#}..{bottom:0.#} across the fold at {viewport:0.#}");
+            }
+        }
+    }
+
+    [AvaloniaFact]
+    public void Pivot_is_fully_visible_on_the_export_tab_at_the_smallest_window()
+    {
+        using var page = RisePages.Show(RisePages.VariantVm(oakDepth: RisePages.PaintedOak(), withPine: true), Min.Width, Min.Height);
+        page.Vm.ShowExportTabCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+        var scroll = page.View.FindControl<ScrollViewer>("RailScroll")!;
+        var stack = page.View.FindControl<StackPanel>("ExportStack")!;
+        var pivot = stack.Children.OfType<StackPanel>()
+            .First(c => c.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text == "PIVOT"));
+        var y = pivot.TranslatePoint(default, scroll)!.Value.Y;
+        Assert.True(y + pivot.Bounds.Height <= scroll.Bounds.Height + 0.5, "PIVOT is not fully visible at the smallest window");
+    }
+
+    [AvaloniaFact]
+    public void The_legend_and_its_tooltip_are_the_key_hints_not_literals()
+    {
+        using var page = RisePages.Show(RisePages.VariantVm(), Min.Width, Min.Height);
+        var legend = page.View.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Text == KeyHints.RiseLegend);
+        Assert.Contains(KeyHints.LowerDepth, legend.Text);
+        var tip = Assert.IsType<string>(ToolTip.GetTip(legend));
+        Assert.Equal(KeyHints.RiseLegendTip, tip);
+        Assert.Contains("mouse button", tip);                          // the editor's wording for the mouse
+        Assert.Contains(KeyHints.LowerDepth, tip);
+        Assert.Contains(KeyHints.RiseConstrain, tip);
+    }
+
+    [AvaloniaFact]
+    public void The_tile_caption_is_the_editors_caption_class()
+    {
+        using var page = RisePages.Show(RisePages.VariantVm(), Min.Width, Min.Height);
+        var rise = page.View.FindControl<Border>("ModelTile")!.GetVisualDescendants().OfType<TextBlock>()
+            .Single(t => t.Text == "3D");
+
+        var (book, recipe, ing) = VisualCapture.DynamicIngredient();
+        var vm = new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(), new FakeNav(),
+            new CookBookSession(), new FakeDialogs(), new FilePickerService());
+        var editorView = new IngredientEditorView { DataContext = vm };
+        var window = new Window { Content = editorView, Width = 1180, Height = 720 };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        try
+        {
+            var editor = editorView.FindControl<Border>("PreviewTile")!.GetVisualDescendants().OfType<TextBlock>()
+                .First(t => t.Classes.Contains("tilecap"));
+            Assert.Contains("tilecap", rise.Classes);
+            Assert.Equal(editor.FontSize, rise.FontSize);
+            Assert.Equal(editor.Margin, rise.Margin);
+            Assert.Equal(7.5, rise.FontSize);
+        }
+        finally { window.Close(); }
     }
 
     // ------------------------------------------------------------------ the rail virtualizes

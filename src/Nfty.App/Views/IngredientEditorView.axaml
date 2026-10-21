@@ -466,9 +466,7 @@
                        which clipped "PREVIEW" to "PREVIEV". The buttons are the working part; the
                        caption gives up the space and keeps its meaning in the tooltip. -->
                   <Grid ColumnDefinitions="*,Auto,Auto,Auto" Margin="6,0">
-                    <TextBlock Grid.Column="0" Text="{Binding PreviewBlipLabel}" Classes="plabel"
-                               VerticalAlignment="Center"
-                               TextTrimming="None" ClipToBounds="False" FontSize="7.5"
+                    <TextBlock Grid.Column="0" Text="{Binding PreviewBlipLabel}" Classes="plabel tilecap"
                                ToolTip.Tip="{Binding PreviewBlipTip}" />
                     <Button Grid.Column="1" Classes="icon" Padding="2" Command="{Binding RerollPreviewCommand}"
                             ToolTip.Tip="Reroll sampled color">

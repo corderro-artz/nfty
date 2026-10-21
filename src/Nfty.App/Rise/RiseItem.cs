@@ -87,12 +87,23 @@ public sealed partial class RiseItem : ObservableObject, IDisposable
 
     internal void Attach(RiseSubject subject)
     {
+        var old = Replace(subject);
+        if (old is not null && !ReferenceEquals(old, subject)) old.Dispose();
+    }
+
+    /// <summary>Puts a new subject on the row and hands back the old one UNDISPOSED, for a caller that
+    /// must tell the page before the old picture goes: the page's bindings still read it until they
+    /// have been told.</summary>
+    /// <param name="subject">The new subject.</param>
+    /// <returns>The subject it replaced, or null.</returns>
+    internal RiseSubject? Replace(RiseSubject subject)
+    {
         var old = Subject;
         Subject = subject;
-        if (old is not null && !ReferenceEquals(old, subject)) old.Dispose();
         RefreshDepth();
         OnPropertyChanged(nameof(IsChipShown));
         OnPropertyChanged(nameof(IsRisableOrUnknown));
+        return old;
     }
 
     /// <summary>The depth chip: "2D only", "empty", "paper", "f · b", "varied", or "" when not loaded.</summary>

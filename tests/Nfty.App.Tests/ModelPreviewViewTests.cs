@@ -359,6 +359,34 @@ public class ModelPreviewViewTests
         finally { window.Close(); }
     }
 
+    [AvaloniaTheory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Losing_the_mesh_or_the_texture_clears_the_frame_instead_of_leaving_the_last_model_standing(bool mesh)
+    {
+        var (window, _, view) = Render();
+        try
+        {
+            view.RepaintNow();
+            var drawn = (WriteableBitmap)view.Surface.Source!;
+            Assert.NotNull(drawn);
+
+            if (mesh) view.Mesh = null; else view.Texture = null;
+            view.RepaintNow();
+
+            // Null "draws nothing": a stale model under a host's own words ("2D only") is a lie.
+            Assert.Null(view.Surface.Source);
+            Assert.Throws<ObjectDisposedException>(() => drawn.Lock());
+
+            // And it comes back when there is something to draw again.
+            view.Mesh = ModelPreviewGestureTests.TinyQuad();
+            view.Texture = ModelPreviewGestureTests.TinyTexture();
+            view.RepaintNow();
+            Assert.NotNull(view.Surface.Source);
+        }
+        finally { window.Close(); }
+    }
+
     // ---- M4, M7 --------------------------------------------------------------------------------
 
     [AvaloniaFact]

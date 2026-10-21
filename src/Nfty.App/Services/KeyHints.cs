@@ -102,6 +102,11 @@ public static class KeyHints
     public static string RiseFillTool { get; } = "Same-color fill  (G)";
     /// <summary>The Rise select tool's tooltip.</summary>
     public static string RiseSelectTool { get; } = "Select a region, then click inside it to raise it  (M)";
+    /// <summary>The legend's tooltip: the same map spelled out, in the words the editor's tooltips use for
+    /// the mouse ("the right mouse button erases").</summary>
+    public static string RiseLegendTip { get; } =
+        "The left mouse button raises the front by one" + Tail("the right mouse button raises the back")
+        + Tail($"hold {LowerDepth} to lower instead") + Tail($"hold {RiseConstrain} to constrain");
     /// <summary>The mouse map, printed once on the toolstrip. Abbreviated on purpose: the strip has to
     /// stay one line at the window the app opens at, and the spelled-out form ("left front · right
     /// back") was nine pixels too wide for it; the opening line and the tools' tooltips spell it out.</summary>

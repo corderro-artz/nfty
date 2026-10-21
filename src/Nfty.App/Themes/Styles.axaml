@@ -4283,4 +4283,39 @@
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
+
+  <!-- THE CAPTION ON A CORNER TILE'S SCRIM BAR: the editor's PREVIEW blip and the Rise page's 3D tile.
+       One class so the two cannot drift. 7.5px because the editor's own word, PREVIEW, has to fit the
+       bar beside three 18px buttons (at a larger size it clipped to "PREVIEV"); declared AFTER
+       .plabel, which sets a bottom margin that would otherwise lift the word off the bar's middle. -->
+  <Style Selector="TextBlock.tilecap">
+    <Setter Property="FontSize" Value="7.5" />
+    <Setter Property="Margin" Value="0" />
+    <Setter Property="TextTrimming" Value="None" />
+    <Setter Property="ClipToBounds" Value="False" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- A disabled ARMED tool is neutral. The armed look is a red fill, and the app dims a disabled
+       control to 0.38 - which left a dimmed red tool reading as "armed, just paler" on a page that
+       cannot paint at all. Armed is a statement about what a click will do; where a click does
+       nothing, the statement is withdrawn. -->
+  <Style Selector="Button.ttool.on:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+  </Style>
+  <Style Selector="Button.ttool.on:disabled Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource FgBrush}" />
+  </Style>
+
+  <!-- A format card on the Rise EXPORT tab: the title and ONE line. The description is the whole
+       sentence on the tooltip; three cards of three wrapped lines pushed PIVOT, VOXEL SIZE and SHAPE
+       out of the rail at the smallest window. -->
+  <Style Selector="Button.preset.tight">
+    <Setter Property="Padding" Value="10,3" />
+  </Style>
+  <Style Selector="Button.preset.tight TextBlock.pd">
+    <Setter Property="TextWrapping" Value="NoWrap" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
 </Styles>

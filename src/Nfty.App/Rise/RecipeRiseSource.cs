@@ -133,10 +133,15 @@ public sealed class RecipeRiseSource : RiseSource
         _layers = rolled.Rows;
         _item.Thumbnail = _bridge.ToBitmap(rolled.Art);
         _item.Relabel(CaptionFor(Seed), BaseNameFor(Seed));
-        _item.Attach(new RiseSubject(rolled.Art, rolled.Depth, ownsArt: true));   // disposes the old subject
+        var oldSubject = _item.Replace(new RiseSubject(rolled.Art, rolled.Depth, ownsArt: true));
+        RaiseChanged();
+
+        // The old picture, thumbnails and layer rows go only AFTER the page has been told: until it
+        // has, its bindings (the 3D view's texture, the layer rail) still read them, and anything
+        // that paints synchronously inside the change would be reading disposed images.
+        oldSubject?.Dispose();
         oldThumb?.Dispose();
         foreach (var r in oldRows) r.Dispose();
-        RaiseChanged();
     }
 
     private string CaptionFor(int seed) => string.Create(CultureInfo.InvariantCulture, $"seed {seed}");

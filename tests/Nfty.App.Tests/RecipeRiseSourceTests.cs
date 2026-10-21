@@ -110,6 +110,28 @@ public class RecipeRiseSourceTests
     }
 
     [AvaloniaFact]
+    public void Reroll_keeps_the_old_picture_alive_until_the_page_has_been_told_and_frees_it_after()
+    {
+        using var book = RiseFixtures.ChestBook();
+        var recipe = book.Recipes.Single();
+        using var src = new RecipeRiseSource(book, recipe, seed: 7, new ImageBridge());
+        var oldArt = src.Items[0].Subject!.Art;
+        var oldRows = src.Layers;
+        Exception? whileTold = null;
+        // A subscriber that reads the old picture the way a synchronous painter would.
+        src.Changed += () => whileTold = Record.Exception(() =>
+        {
+            _ = oldArt[0, 0];
+            _ = oldRows[0].Thumbnail!.PixelSize;
+        });
+
+        src.Reroll();
+
+        Assert.Null(whileTold);                                       // not disposed under a binding that still reads it
+        Assert.Throws<ObjectDisposedException>(() => _ = oldArt[0, 0]); // and not leaked either
+    }
+
+    [AvaloniaFact]
     public void Reroll_moves_the_seed_and_replaces_the_subject()
     {
         using var book = RiseFixtures.ChestBook();

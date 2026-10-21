@@ -35,6 +35,14 @@ public class ShareBarWidthTests
         Assert.Equal(expected, (double)ShareWidthConverter.Instance
             .Convert(new object?[] { share, track }, typeof(double), null, null!));
 
+    [Theory]
+    [InlineData(1.0, 400, 400)]
+    [InlineData(0.5, 400, 200)]
+    [InlineData(0.25, 310, 77.5)]
+    public void The_fraction_instance_reads_its_share_as_0_to_1(double share, double track, double expected) =>
+        Assert.Equal(expected, (double)ShareWidthConverter.FractionInstance
+            .Convert(new object?[] { share, track }, typeof(double), null, null!));
+
     /// <summary>A mid-layout pass hands through unset values, and a bar cannot be measured before its
     /// track has been. Zero, not a crash and not a full bar.</summary>
     [Theory]

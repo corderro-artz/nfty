@@ -341,8 +341,15 @@ public sealed partial class ModelPreviewView : UserControl
         // Detached: the buffers were released on detach; drawing now would allocate a bitmap nothing
         // owns. Attaching marks dirty again.
         if (VisualRoot is null) return;
-        if (Mesh is not { } mesh || Texture is not { } texture || DataContext is not ModelPreviewViewModel vm)
+        if (DataContext is not ModelPreviewViewModel vm) return;
+        // NULL DRAWS NOTHING, and that has to include what was drawn before: a mesh or texture that
+        // goes away (the host selected a picture that cannot rise) used to leave the last frame
+        // standing, so a host's own "2D only" words sat over the PREVIOUS model.
+        if (Mesh is not { } mesh || Texture is not { } texture)
+        {
+            ClearFrame();
             return;
+        }
         // A host swapping mesh and texture sets one property before the other; Raster refuses the
         // mismatched pair, and an exception here would come out of the UI thread. The second set
         // marks dirty again, so the frame catches up as soon as the pair agrees.
@@ -402,6 +409,16 @@ public sealed partial class ModelPreviewView : UserControl
             _surface.InvalidateVisual();
         }
         RepaintCount++;
+    }
+
+    /// <summary>Drops the frame on screen. The bitmap stops being the Source before it is disposed
+    /// (measure reads the Source), and the next frame allocates afresh.</summary>
+    private void ClearFrame()
+    {
+        _surface.Source = null;
+        _bitmap?.Dispose();
+        _bitmap = null;
+        _target = null;
     }
 
     // Device pixels per logical pixel of THIS control: the window's render scaling times whatever

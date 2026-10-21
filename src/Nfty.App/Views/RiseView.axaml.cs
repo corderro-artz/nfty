@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using Avalonia;
 using Avalonia.Collections;
 using Avalonia.Controls;
@@ -36,6 +38,12 @@ public partial class RiseView : UserControl
     private Border _tileHost = null!;
     private Border _bigHost = null!;
     private ModelPreviewView _model = null!;
+    private Border _host = null!;
+    private Border _tile = null!;
+    private Border _gridChip = null!;
+    private ScrollViewer _railScroll = null!;
+    private Grid _railGrid = null!;
+    private StackPanel _railBody = null!;
     private RiseViewModel? _vm;
 
     // The geometry the backdrop was last built from; rebuilt only when one of these actually moves
@@ -55,6 +63,12 @@ public partial class RiseView : UserControl
         _tileHost = this.FindControl<Border>("TileHost")!;
         _bigHost = this.FindControl<Border>("BigHost")!;
         _model = this.FindControl<ModelPreviewView>("ModelView")!;
+        _host = this.FindControl<Border>("CanvasHost")!;
+        _tile = this.FindControl<Border>("ModelTile")!;
+        _gridChip = this.FindControl<Border>("GridChip")!;
+        _railScroll = this.FindControl<ScrollViewer>("RailScroll")!;
+        _railGrid = this.FindControl<Grid>("RailGrid")!;
+        _railBody = this.FindControl<StackPanel>("RailBody")!;
 
         // The page takes focus on arrival: its keys are KeyBindings, which only see a key that routes
         // through this control. The 3D view takes focus only on ITS first attach (the page wins here).
@@ -64,7 +78,11 @@ public partial class RiseView : UserControl
         _surface.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ => Reframe()));
         // And the backdrop's own bounds: the art sits in a fixed host centered in it, so the host's
         // POSITION keeps moving as the pane resizes after the image has stopped changing size.
-        _backdrop.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ => BuildBackdrop()));
+        _backdrop.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ => { FitHost(); BuildBackdrop(); }));
+        // The things the canvas must keep clear of: the tile (which changes size) and the grid chip.
+        _tile.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ => FitHost()));
+        _gridChip.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ => FitHost()));
+        LayoutUpdated += (_, _) => SnapRailFold();
         // The bitmap is what the geometry is mapped against: a new picture is a new frame. Watched on
         // the Image itself, so the frame is never read against a bitmap the binding has not delivered.
         _img.GetObservable(Image.SourceProperty).Subscribe(new Sub<IImage?>(_ => Reframe()));
@@ -258,6 +276,106 @@ public partial class RiseView : UserControl
         if (ReferenceEquals(_backdrop.Background, flat)) return;
         _backdropFrom = (0, 0, 0, step, false);
         _backdrop.Background = flat;
+    }
+
+    /// <summary>The side the canvas host is drawn at when nothing is in its way.</summary>
+    private const double HostSide = 320;
+
+    /// <summary>The smallest the host shrinks to rather than sit under a corner control.</summary>
+    private const double HostMinSide = 160;
+
+    private const double HostGap = 8;
+
+    /// <summary>
+    /// Sizes and places the canvas host so the art is never UNDER the corner tile or the grid chip.
+    /// </summary>
+    /// <remarks>
+    /// <para>Centered at 320 is right wherever it clears them, and that is every window a frame is
+    /// normally looked at; at the smallest window the backdrop is only ~400 tall, and a centered host
+    /// put the bottom-right of the art under the 3D tile and the bottom-left under the grid chip. So
+    /// the candidates are tried in order of how little they move it - centered, centered at the top,
+    /// top-left, left-centered - at 320 and then at smaller sides, and the first that clears both
+    /// (with a gap) wins. "Fit" therefore means fit in the free part of the pane, which is what the
+    /// pointer, the lattice and the labels follow, as they all map through the surface's real bounds.</para>
+    /// <para>It reads only the backdrop, the tile and the chip, all of which are placed by alignment
+    /// and so cannot be moved by what this writes: no layout loop.</para>
+    /// </remarks>
+    private void FitHost()
+    {
+        double w = _backdrop.Bounds.Width, h = _backdrop.Bounds.Height;
+        if (w < 1 || h < 1) return;
+
+        var avoid = new List<Rect>();
+        if (_tile.Bounds.Width > 0) avoid.Add(_tile.Bounds.Inflate(HostGap));
+        if (_gridChip.Bounds.Width > 0) avoid.Add(_gridChip.Bounds.Inflate(HostGap));
+
+        const double edge = 8;
+        for (double side = HostSide; side >= HostMinSide; side -= 8)
+        {
+            double cx = (w - side) / 2, cy = (h - side) / 2;
+            foreach (var (x, y) in new[] { (cx, cy), (cx, edge), (edge, edge), (edge, cy) })
+            {
+                if (x < 0 || y < 0 || x + side > w || y + side > h) continue;
+                var r = new Rect(x, y, side, side);
+                if (avoid.Any(a => a.Intersects(r))) continue;
+                PlaceHost(side, x, y);
+                return;
+            }
+        }
+        PlaceHost(HostMinSide, edge, edge);       // nothing clears: the smallest, out of the way
+    }
+
+    private void PlaceHost(double side, double x, double y)
+    {
+        // Margins from the top-left corner, so alignment is Left/Top whatever was chosen. Compared
+        // against what is there before assigning: layout re-enters this on every pass.
+        var margin = new Thickness(x, y, 0, 0);
+        if (_host.Width != side) { _host.Width = side; _host.Height = side; }
+        if (_host.HorizontalAlignment != Avalonia.Layout.HorizontalAlignment.Left)
+            _host.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left;
+        if (_host.VerticalAlignment != Avalonia.Layout.VerticalAlignment.Top)
+            _host.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top;
+        if (_host.Margin != margin) _host.Margin = margin;
+    }
+
+    /// <summary>
+    /// Ends the rail's scroller between two sections, so its fold never cuts a section header in half.
+    /// </summary>
+    /// <remarks>
+    /// <para>Sized from the one input it cannot change: the star row's own height, which the Grid
+    /// decides from the window and the pinned manifest, never from what the scroller holds. The
+    /// sections (the children of the visible tab) are measured with the scroller's content, which is
+    /// laid out at its natural height whatever viewport it is shown in. Everything that fits is left
+    /// alone (Height NaN); otherwise the viewport is cut back to the last section that fits whole.</para>
+    /// <para>Written only when the answer changes, with NaN tested first.</para>
+    /// </remarks>
+    private void SnapRailFold()
+    {
+        var row = _railGrid.RowDefinitions.Count > 1 ? _railGrid.RowDefinitions[1] : null;
+        if (row is null) return;
+        double room = row.ActualHeight;
+        if (room <= 0) return;
+
+        var sections = _railBody.Children.OfType<Panel>().FirstOrDefault(p => p.IsVisible);
+        if (sections is null) return;
+        double top = _railBody.Margin.Top + sections.Bounds.Y;
+        double natural = _railBody.Bounds.Height;
+        double target = double.NaN;
+        if (natural > room + 0.5)
+        {
+            double best = 0;
+            foreach (var c in sections.Children.Where(c => c.IsVisible && c.Bounds.Height > 0))
+            {
+                double bottom = top + c.Bounds.Bottom + 4;
+                if (bottom <= room + 0.5) best = bottom;
+            }
+            // Never smaller than the first section: a rail that shows nothing is worse than a cut one.
+            target = best > 0 ? best : room;
+        }
+
+        double have = _railScroll.Height;
+        bool same = double.IsNaN(have) ? double.IsNaN(target) : !double.IsNaN(target) && Math.Abs(have - target) <= 0.5;
+        if (!same) _railScroll.Height = target;
     }
 
     /// <summary>Repaints the overlay: the standing marquee, as a dashed accent outline. Select marks
