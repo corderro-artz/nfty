@@ -452,13 +452,23 @@ public sealed partial class RiseViewModel
     }
 
     /// <summary>Waits until every item's depth is final, behind a card when that takes a moment (a Set
-    /// still looking for its book), so the export is the depth the page goes on showing.</summary>
-    private async Task WaitForFinalDepthAsync()
+    /// still looking for its book), so the export is the depth the page goes on showing. The card can
+    /// be stopped, as the batch's identical wait can.</summary>
+    /// <returns>False when the user stopped it: nothing is exported.</returns>
+    private async Task<bool> WaitForFinalDepthAsync()
     {
         var ready = Source.ExportReady;
-        if (ready.IsCompleted) return;
-        await BusyViewModel.RunAsync(_dialogs, "Exporting models", "Looking for the CookBook that cooked this Set…",
-            async (_, _) => { await ready; return 0; });
+        if (ready.IsCompleted) return true;
+        try
+        {
+            await BusyViewModel.RunAsync(_dialogs, "Exporting models", "Looking for the CookBook that cooked this Set…",
+                async (_, token) => { await ready.WaitAsync(token); return 0; }, cancellable: true);
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
     }
 
     private async Task ExportOneAsync(RiseItem item)
@@ -474,7 +484,11 @@ public sealed partial class RiseViewModel
         string dir = Path.GetDirectoryName(full)!;
         string stem = Path.GetFileNameWithoutExtension(full);
 
-        await WaitForFinalDepthAsync();
+        if (!await WaitForFinalDepthAsync())
+        {
+            _status.Say("Export canceled. Nothing was written.");
+            return;
+        }
         // Taken HERE, on the UI thread: the picture is cloned and the depth copied, so nothing the page
         // does while the model is written can reach it, and nothing it frees can be under the build.
         using var snapshot = Source.SnapshotExport(new[] { item });

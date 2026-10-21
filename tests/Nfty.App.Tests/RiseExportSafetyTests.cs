@@ -290,6 +290,32 @@ public class RiseExportSafetyTests
     }
 
     [AvaloniaFact]
+    public async Task Cancel_stops_a_single_export_still_waiting_for_the_book()
+    {
+        var setDir = CookedBesideBook();
+        using var set = SetReader.Read(setDir);
+        using var gate = new ManualResetEventSlim(false);
+        var src = new SetRiseSource(set, set.Items[0].Number, () => Array.Empty<string>(), new ImageBridge(),
+            readBook: p => { gate.Wait(TimeSpan.FromSeconds(30)); return CookBookArchive.Read(p); });
+        var status = new StatusService();
+        var dialogs = new Dialogs(cancelBusy: true);
+        var root = Temp();
+        using var vm = Vm(src, new Picker(save: Path.Combine(root, "one.glb")), dialogs, status);
+        Assert.Equal(1, vm.ExportCount);
+        try
+        {
+            var exporting = vm.ExportCommand.ExecuteAsync(null);
+            var first = await Task.WhenAny(exporting, Task.Delay(TimeSpan.FromSeconds(10)));
+            Assert.Same(exporting, first);
+            Assert.True(dialogs.Busy.Single().CanCancel);
+            Assert.Equal("Export canceled. Nothing was written.", status.Last);
+            Assert.Empty(Directory.GetFiles(root));
+            Assert.DoesNotContain(dialogs.Shown, d => d is ErrorDialogViewModel);
+        }
+        finally { gate.Set(); }
+    }
+
+    [AvaloniaFact]
     public async Task A_folder_batch_canceled_before_any_model_says_none_was_written()
     {
         var setDir = CookedBesideBook();
