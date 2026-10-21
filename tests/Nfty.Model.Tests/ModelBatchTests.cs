@@ -43,8 +43,11 @@ public class ModelBatchTests
         }, new RiseOptions());
         Assert.Equal(new[] { "a.glb" }, result.Files.Select(f => f.FileName));
         Assert.Equal(2, result.Skipped.Count);
-        Assert.StartsWith("b:", result.Skipped[0]);
-        Assert.StartsWith("c:", result.Skipped[1]);
+        Assert.StartsWith("b:", result.Skipped[0].ToString());
+        Assert.StartsWith("c:", result.Skipped[1].ToString());
+        Assert.Equal("b", result.Skipped[0].Name);
+        Assert.Equal(SkipReason.PartialAlpha, result.Skipped[0].Reason);
+        Assert.Equal(SkipReason.NothingSolid, result.Skipped[1].Reason);
     }
 
     [Fact]
@@ -106,7 +109,7 @@ public class ModelBatchTests
             new ModelInput("Lock", art, null), new ModelInput("lock", art, null), new ModelInput("Lock", see, null),
         }, new RiseOptions());
         Assert.Equal(new[] { "Lock.glb", "lock-2.glb" }, result.Files.Select(f => f.FileName));
-        Assert.StartsWith("Lock-3:", result.Skipped.Single());
+        Assert.StartsWith("Lock-3:", result.Skipped.Single().ToString());
     }
 
     [Theory]

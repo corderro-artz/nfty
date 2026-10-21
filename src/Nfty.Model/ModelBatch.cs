@@ -14,8 +14,28 @@ public sealed record ModelInput(string BaseName, Image<Rgba32> Art, DepthMap? De
 
 /// <summary>What a batch made.</summary>
 /// <param name="Files">Every file written for the pictures that could rise.</param>
-/// <param name="Skipped">One line per picture that could not, naming it and why.</param>
-public sealed record ModelBatchResult(IReadOnlyList<ModelFile> Files, IReadOnlyList<string> Skipped);
+/// <param name="Skipped">One entry per picture that could not, naming it and why.</param>
+public sealed record ModelBatchResult(IReadOnlyList<ModelFile> Files, IReadOnlyList<SkippedModel> Skipped);
+
+/// <summary>Why a picture in a batch could not rise.</summary>
+public enum SkipReason
+{
+    /// <summary>It has partly transparent pixels, which a voxel cannot be.</summary>
+    PartialAlpha,
+
+    /// <summary>Nothing in it is fully opaque.</summary>
+    NothingSolid,
+}
+
+/// <summary>A picture a batch left out.</summary>
+/// <param name="Name">The file name stem it would have had (already made safe and distinct).</param>
+/// <param name="Reason">Why, decided by which check refused it, never by reading a message.</param>
+/// <param name="Message">The sentence that says so, for people.</param>
+public sealed record SkippedModel(string Name, SkipReason Reason, string Message)
+{
+    /// <summary>The line form: <c>name: message</c>.</summary>
+    public override string ToString() => $"{Name}: {Message}";
+}
 
 /// <summary>Rises many pictures at once and delivers the files to a folder or a zip.</summary>
 public static class ModelBatch
@@ -112,7 +132,7 @@ public static class ModelBatch
         ArgumentNullException.ThrowIfNull(inputs);
         ArgumentNullException.ThrowIfNull(options);
         var files = new List<ModelFile>();
-        var skipped = new List<string>();
+        var skipped = new List<SkippedModel>();
         var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var input in inputs)
         {
@@ -122,13 +142,13 @@ public static class ModelBatch
             {
                 var mesh = Riser.TryBuild(input.Art, input.Depth, options, $"'{name}'");
                 if (mesh is null)
-                    skipped.Add($"{name}: nothing in it is fully opaque, so there is nothing to rise");
+                    skipped.Add(new SkippedModel(name, SkipReason.NothingSolid, "nothing in it is fully opaque, so there is nothing to rise"));
                 else
                     files.AddRange(ModelWriter.Write(mesh, input.Art, options, name));
             }
             catch (PartialAlphaException ex)
             {
-                skipped.Add($"{name}: {ex.Message}");
+                skipped.Add(new SkippedModel(name, SkipReason.PartialAlpha, ex.Message));
             }
         }
         return new ModelBatchResult(files, skipped);

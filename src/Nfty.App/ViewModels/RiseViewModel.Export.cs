@@ -55,6 +55,9 @@ public sealed partial class RiseViewModel
             new FormatCard(ModelFormat.GltfEmbedded, "glTF embedded", "One text file with the buffer inside. Largest; easiest to paste."),
         };
         foreach (var card in FormatCards) card.IsSelected = card.Format == Format;
+        // The item the page opened on starts ticked, so the EXPORT tab opens naming one model. Only the
+        // opening one: an item reached later by selection is not ticked behind the user's back.
+        if (Source.CanBatch && SelectedItem.IsRisableOrUnknown) SelectedItem.IsChecked = true;
         foreach (var item in Items) item.PropertyChanged += OnItemExportChanged;
     }
 
@@ -369,7 +372,10 @@ public sealed partial class RiseViewModel
             SizeBuilds++;
             var result = ModelBatch.Build(Source.ExportInputs(items, BaseNames(items)), ExportOptions);
             if (result.Files.Count == 0) return;
-            _manifestSize = SizeText(result.Files.Sum(f => (long)f.Bytes.Length));
+            // The .gltf names its .bin, so its bytes depend on the stem the user has not picked yet:
+            // that format's figure is said to be approximate; the other two carry no name at all.
+            _manifestSize = (Format == ModelFormat.GltfWithBin ? "~" : "")
+                + SizeText(result.Files.Sum(f => (long)f.Bytes.Length));
         }
         catch (Exception)
         {
@@ -413,14 +419,16 @@ public sealed partial class RiseViewModel
 
     private async Task ExportOneAsync(RiseItem item)
     {
-        string ext = Format == ModelFormat.Glb ? ".glb" : ".gltf";
+        // Everything the file depends on is read BEFORE the picker opens: a picker that stays open
+        // while the user changes the format must not leave a .glb name on glTF bytes.
+        var options = ExportOptions;
+        string ext = options.Format == ModelFormat.Glb ? ".glb" : ".gltf";
         var path = await _picker.SaveFileAsync($"Export {ManifestTitle}", ext);
         if (string.IsNullOrEmpty(path)) return;
 
         string full = Path.GetFullPath(path);
         string dir = Path.GetDirectoryName(full)!;
         string stem = Path.GetFileNameWithoutExtension(full);
-        var options = ExportOptions;
 
         // The first input is taken HERE, on the UI thread: it snapshots the depth, so a stroke painted
         // while the model is written cannot be half in it, and it keeps the enumerator (which may own
@@ -435,6 +443,7 @@ public sealed partial class RiseViewModel
             return built;
         });
 
+        MarkSkippedItems(result.Skipped, new[] { item }, new[] { stem });
         if (result.Files.Count == 0)
         {
             _status.Say("Nothing exported: " + SkippedText(result.Skipped) + ".");
@@ -472,6 +481,7 @@ public sealed partial class RiseViewModel
                 return built;
             }));
 
+        MarkSkippedItems(result.Skipped, items, bases);
         var skipped = result.Skipped.Select(SkippedName).Concat(knownFlat).ToList();
         string tail = skipped.Count == 0 ? "" : " Skipped " + string.Join(", ", skipped) + ".";
         if (result.Files.Count == 0)
@@ -484,16 +494,24 @@ public sealed partial class RiseViewModel
             $"Exported {models} {(models == 1 ? "model" : "models")} ({result.Files.Count} files) to {where}.") + tail);
     }
 
-    private static string SkippedName(string line)
+    /// <summary>Items the writer refused become known to be 2D, so the manifest, badge and label stop
+    /// promising them and a second export does not repeat the loss.</summary>
+    private static void MarkSkippedItems(IReadOnlyList<SkippedModel> skipped, IReadOnlyList<RiseItem> items, IReadOnlyList<string> bases)
     {
-        int colon = line.IndexOf(": ", StringComparison.Ordinal);
-        if (colon < 0) return line;
-        string name = line[..colon];
-        return line.Contains("partly transparent", StringComparison.Ordinal)
-            ? $"{name} (partial alpha)"
-            : $"{name} (nothing solid)";
+        foreach (var skip in skipped)
+        {
+            // Names were made safe and distinct before the build, so the writer's name is the one we gave.
+            for (int i = 0; i < items.Count; i++)
+                if (string.Equals(bases[i], skip.Name, StringComparison.OrdinalIgnoreCase)) items[i].MarkSkipped(skip.Reason);
+        }
     }
 
-    private static string SkippedText(IReadOnlyList<string> skipped) =>
+    private static string SkippedName(SkippedModel skip) => skip.Reason switch
+    {
+        SkipReason.PartialAlpha => $"{skip.Name} (partial alpha)",
+        _ => $"{skip.Name} (nothing solid)",
+    };
+
+    private static string SkippedText(IReadOnlyList<SkippedModel> skipped) =>
         skipped.Count == 0 ? "nothing could rise" : "skipped " + string.Join(", ", skipped.Select(SkippedName));
 }

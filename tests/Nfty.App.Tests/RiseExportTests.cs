@@ -25,13 +25,14 @@ public class RiseExportTests
 {
     private const string Pass = "correct-horse-battery-staple";
 
-    private sealed class ScriptedPicker(string? save = null, string? folder = null, bool throwIfAsked = false) : IFilePickerService
+    private sealed class ScriptedPicker(string? save = null, string? folder = null, bool throwIfAsked = false, Action? onSave = null) : IFilePickerService
     {
         public int Asked { get; private set; }
         public Task<string?> OpenFileAsync(string title, params string[] extensions) => throw new InvalidOperationException();
         public Task<string?> SaveFileAsync(string title, string defaultExtension)
         {
             Asked++;
+            onSave?.Invoke();
             return throwIfAsked ? throw new InvalidOperationException("asked") : Task.FromResult(save);
         }
         public Task<string?> PickFolderAsync(string title)
@@ -351,6 +352,74 @@ public class RiseExportTests
         Assert.Equal(20 - ghosts, Directory.GetFiles(Directory.GetDirectories(root).Single()).Length);
         Assert.Contains("(partial alpha)", status.Last);
         Assert.StartsWith($"Exported {20 - ghosts} models", status.Last);
+
+        // The refused asset is now known to be 2D: the manifest, badge and label stop promising it.
+        var refused = vm.Items.Single(i => i.DepthChip == "2D only");
+        Assert.False(refused.IsChecked);
+        Assert.False(refused.IsRisableOrUnknown);
+        Assert.Equal(20 - ghosts, vm.ExportCount);
+        Assert.Equal($"{20 - ghosts} models", vm.ManifestParts[0]);
+        Assert.Equal($"{20 - ghosts} files", vm.ManifestParts[1]);
+        Assert.Equal($"Export {20 - ghosts} models…", vm.ExportLabel);
+        Assert.Equal($"{20 - ghosts} of {20 - ghosts} checked for export", vm.CheckedSummary);
+    }
+
+    [AvaloniaFact]
+    public void The_item_the_page_opened_on_starts_ticked_and_names_one_model()
+    {
+        using var vm = BodyVm(new ScriptedPicker());
+        Assert.Equal(1, vm.ExportCount);
+        Assert.Equal("Body-Oak.glb", vm.ManifestTitle);
+        Assert.Null(vm.ExportProblem);
+        Assert.True(vm.ExportCommand.CanExecute(null));
+        Assert.Equal(new[] { "Oak" }, vm.Items.Where(i => i.IsChecked).Select(i => i.Name));
+
+        // Reaching another item by selection does not tick it behind the user's back.
+        vm.SelectedItem = Item(vm, "Pine");
+        Assert.False(Item(vm, "Pine").IsChecked);
+        Assert.Equal(1, vm.ExportCount);
+    }
+
+    [AvaloniaFact]
+    public void A_set_opens_with_its_opening_asset_ticked()
+    {
+        var (s, path) = RiseFixtures.OnDisk(RiseFixtures.ChestBook());
+        var setDir = Path.Combine(Path.GetDirectoryName(path)!, "Chest Set");
+        using (var cooked = Generator.Generate(s.Current!, new GenerateOptions(6, "launch", EnforceUniqueDna: false)))
+            SetWriter.Write(cooked, setDir, pack: false);
+        s.Dispose();
+        using var set = SetReader.Read(setDir);
+        using var vm = Vm(new SetRiseSource(set, set.Items[2].Number, () => Array.Empty<string>(), new ImageBridge()),
+            new ScriptedPicker());
+        Assert.Equal(1, vm.ExportCount);
+        Assert.True(vm.SelectedItem.IsChecked);
+        Assert.Equal(1, vm.Items.Count(i => i.IsChecked));
+    }
+
+    [AvaloniaFact]
+    public async Task A_format_changed_while_the_picker_is_open_does_not_change_what_the_file_was_named_for()
+    {
+        var dir = Temp();
+        RiseViewModel? vm = null;
+        var picker = new ScriptedPicker(save: Path.Combine(dir, "pick.glb"), onSave: () => vm!.Format = ModelFormat.GltfEmbedded);
+        vm = BodyVm(picker);
+        using (vm)
+        {
+            await vm.ExportCommand.ExecuteAsync(null);
+            Assert.Equal(new[] { "pick.glb" }, Names(dir));
+            Assert.Equal("glTF", System.Text.Encoding.ASCII.GetString(File.ReadAllBytes(Path.Combine(dir, "pick.glb")), 0, 4));
+        }
+    }
+
+    [AvaloniaFact]
+    public void The_gltf_with_bin_size_is_marked_approximate_because_the_stem_is_not_chosen_yet()
+    {
+        using var vm = BodyVm(new ScriptedPicker());
+        vm.Format = ModelFormat.GltfWithBin;
+        vm.ShowExportTabCommand.Execute(null);
+        Assert.StartsWith("~", vm.ManifestSize);
+        vm.Format = ModelFormat.Glb;
+        Assert.DoesNotContain("~", vm.ManifestSize);
     }
 
     [AvaloniaFact]
@@ -375,6 +444,7 @@ public class RiseExportTests
     public void A_2d_only_selection_says_why_in_words()
     {
         using var vm = BodyVm(new ScriptedPicker(), pine: false);
+        Item(vm, "Oak").IsChecked = false;
         Item(vm, "Ghost").IsChecked = true;
         Assert.Equal(0, vm.ExportCount);
         Assert.False(vm.ExportCommand.CanExecute(null));

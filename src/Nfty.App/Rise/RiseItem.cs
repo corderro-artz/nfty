@@ -2,6 +2,7 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Nfty.App.ViewModels;
 using Nfty.Core.Editing;
+using Nfty.Model;
 
 namespace Nfty.App.Rise;
 
@@ -99,7 +100,8 @@ public sealed partial class RiseItem : ObservableObject, IDisposable
     {
         get
         {
-            return Subject is { } s ? ChipFor(s.Depth) : "";
+            if (Subject is { } s) return ChipFor(s.Depth);
+            return _skipped switch { SkipReason.PartialAlpha => "2D only", SkipReason.NothingSolid => "empty", _ => "" };
         }
     }
 
@@ -121,13 +123,28 @@ public sealed partial class RiseItem : ObservableObject, IDisposable
     }
 
     /// <summary>Whether the chip warns: the picture has partial alpha and cannot rise.</summary>
-    public bool IsChipWarning => Subject is { } s && s.Depth.PartialCount > 0;
+    public bool IsChipWarning => Subject is { } s ? s.Depth.PartialCount > 0 : _skipped == SkipReason.PartialAlpha;
 
     /// <summary>Whether there is a chip to show: the subject is loaded.</summary>
-    public bool IsChipShown => Subject is not null;
+    public bool IsChipShown => Subject is not null || _skipped is not null;
 
     /// <summary>Whether the picture can rise, or is not yet loaded and so not known to be unable.</summary>
-    public bool IsRisableOrUnknown => Subject?.IsRisable ?? true;
+    public bool IsRisableOrUnknown => _skipped is null && (Subject?.IsRisable ?? true);
+
+    private SkipReason? _skipped;
+
+    /// <summary>An export built this picture, found it cannot rise, and left it out: from now on it is
+    /// known to be 2D without ever having been loaded onto the page, so the manifest stops promising it.</summary>
+    /// <param name="reason">Why the writer refused it.</param>
+    internal void MarkSkipped(SkipReason reason)
+    {
+        _skipped = reason;
+        IsChecked = false;
+        OnPropertyChanged(nameof(IsRisableOrUnknown));
+        OnPropertyChanged(nameof(IsChipShown));
+        OnPropertyChanged(nameof(IsChipWarning));
+        OnPropertyChanged(nameof(DepthChip));
+    }
 
     /// <summary>Whether the loaded subject has unsaved depth.</summary>
     public bool IsDirty => Subject?.IsDirty ?? false;

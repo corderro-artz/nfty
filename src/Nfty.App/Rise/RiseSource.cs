@@ -100,6 +100,8 @@ public abstract class RiseSource : IDisposable
     /// <param name="items">The items to export.</param>
     /// <param name="baseNames">One file name stem per item.</param>
     /// <returns>One input per item; art and depth are borrowed from the subjects.</returns>
+    /// <remarks>A batch export enumerates this on a pool thread, so an override must not <c>Attach</c> a
+    /// subject to an item: that raises the item's change events off the UI thread.</remarks>
     public virtual IEnumerable<ModelInput> ExportInputs(IReadOnlyList<RiseItem> items, IReadOnlyList<string> baseNames)
     {
         for (int i = 0; i < items.Count; i++)
