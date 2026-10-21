@@ -43,6 +43,19 @@ public class SetRiseSourceTests
             set.Items.Single(x => x.Number == int.Parse(i.Id)).Rarity.Any(r => r.Trait_type == "Body" && r.Value == body));
 
     [AvaloniaFact]
+    public void An_open_set_says_which_asset_it_is_viewing_and_that_it_is_read_only()
+    {
+        var setDir = CookedBesideBook(out _);
+        using var set = SetReader.Read(setDir);
+        var chosen = set.Items[3].Number;
+        using var src = new SetRiseSource(set, chosen, () => Array.Empty<string>(), new ImageBridge());
+        Assert.Equal($"Viewing #{chosen:D4} of a cooked Set. Read-only.", src.OpeningLine);
+        src.InitialItem.IsSelected = false;
+        src.Items.Single(i => int.Parse(i.Id) == set.Items[0].Number).IsSelected = true;
+        Assert.Equal($"Viewing #{set.Items[0].Number:D4} of a cooked Set. Read-only.", src.OpeningLine);
+    }
+
+    [AvaloniaFact]
     public async Task A_found_book_gives_each_asset_its_combined_depth()
     {
         var setDir = CookedBesideBook(out _);
@@ -321,6 +334,8 @@ public class SetRiseSourceTests
         using var src = new SetRiseSource(set, set.Items[0].Number, null, new ImageBridge());
 
         Assert.True(src.IsSealed);
+        Assert.Equal($"Viewing #{set.Items[0].Number:D4} of a cooked Set. Read-only. Sealed: it can be viewed here, not exported.",
+            src.OpeningLine);
         Assert.NotNull(src.ExportRefusal);
         var art = src.Open(src.InitialItem).Art;
         using var onDisk = Image.Load<Rgba32>(set.Items[0].ImagePath);

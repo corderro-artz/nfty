@@ -107,4 +107,22 @@ public class RiseDepthRailTests
         Assert.NotEqual(oakNote, vm.DepthNote);
         Assert.Equal("This item has partial alpha, so it stays 2D: a voxel is solid or empty.", vm.DepthNote);
     }
+
+    [AvaloniaFact]
+    public void Two_ghosts_are_two_items_and_one_solid_pixel_is_singular()
+    {
+        var (s, _) = RiseFixtures.OnDisk(RiseFixtures.ChestBook(withSecondGhost: true));
+        using var two = Vm(RiseFixtures.Variant(s));
+        Assert.Equal("2 items", two.PartialAlphaCountText);
+
+        var (s2, _) = RiseFixtures.OnDisk(RiseFixtures.ChestBook());
+        var recipe = s2.Current!.Recipes[0];
+        var lck = recipe.Ingredients.Single(i => i.Manifest.Id == "lock");
+        var img = lck.VariantImages["gold"];
+        for (int y = 0; y < img.Height; y++)
+            for (int x = 0; x < img.Width; x++)
+                if ((x, y) != (3, 3)) img[x, y] = default;
+        using var one = Vm(new VariantRiseSource(recipe, lck, "gold", new ImageBridge(), s2, () => true));
+        Assert.Equal("Apply to 1 solid pixel", one.FillAllLabel);
+    }
 }

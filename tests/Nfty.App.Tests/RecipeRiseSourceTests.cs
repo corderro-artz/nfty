@@ -28,6 +28,18 @@ public class RecipeRiseSourceTests
     }
 
     [AvaloniaFact]
+    public void The_opening_line_names_the_seed_and_says_the_depth_is_combined_and_read_only()
+    {
+        using var book = RiseFixtures.ChestBook();
+        var recipe = book.Recipes.Single(r => r.Manifest.Id == "chest");
+        using var src = new RecipeRiseSource(book, recipe, seed: 7, new ImageBridge());
+        Assert.Equal("Rolled with seed 7 — reroll from the toolstrip. Depth is combined from the layers and read-only here.",
+            src.OpeningLine);
+        src.Reroll();
+        Assert.StartsWith("Rolled with seed 8 —", src.OpeningLine);
+    }
+
+    [AvaloniaFact]
     public void The_roll_is_the_recipe_panes_hero_for_the_same_seed()
     {
         using var book = RiseFixtures.ChestBook();

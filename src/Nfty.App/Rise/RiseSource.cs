@@ -119,6 +119,12 @@ public abstract class RiseSource : IDisposable
     /// <summary>Raised when something the page shows has changed.</summary>
     public event Action? Changed;
 
+    /// <summary>Tells the page the edit lock flipped. <see cref="IsLocked"/> is read from the lock's owner
+    /// on demand and nothing pushes it, so whoever owns the lock (the Explorer, through the factory
+    /// that builds the page) calls this when it changes: the Save button, the footer and the depth
+    /// note then refresh at once instead of at the next edit.</summary>
+    public void NotifyLockChanged() => RaiseChanged();
+
     /// <summary>Raises <see cref="Changed"/>.</summary>
     protected void RaiseChanged() => Changed?.Invoke();
 

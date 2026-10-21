@@ -98,6 +98,86 @@ public class RiseSaveTests
     }
 
     [AvaloniaFact]
+    public async Task Flipping_the_lock_refreshes_save_footer_and_note_with_no_edit_between()
+    {
+        var (s, _) = RiseFixtures.OnDisk(RiseFixtures.ChestBook());
+        bool editing = true;
+        var src = RiseFixtures.Variant(s, "oak", () => editing);
+        using var vm = Vm(src, new FakeNav(), new FakeDialogs());
+        vm.ApplyDepthStroke(new[] { (2, 1) }, DepthSide.Front, false);
+        Assert.True(vm.SaveCommand.CanExecute(null));
+        Assert.Equal("unsaved depth on 1 variant", vm.FooterText);
+        var openNote = vm.DepthNote;
+
+        // The labels and the button are PULLED on demand, so reading them proves nothing: what the
+        // view needs is the push. Record what the page announces.
+        var announced = new System.Collections.Generic.List<string>();
+        vm.PropertyChanged += (_, e) => announced.Add(e.PropertyName!);
+        int canExecuteRaised = 0;
+        vm.SaveCommand.CanExecuteChanged += (_, _) => canExecuteRaised++;
+
+        editing = false;
+        src.NotifyLockChanged();
+
+        Assert.Contains(nameof(RiseViewModel.FooterText), announced);
+        Assert.Contains(nameof(RiseViewModel.DepthNote), announced);
+        Assert.True(canExecuteRaised > 0);
+        Assert.False(vm.SaveCommand.CanExecute(null));
+        Assert.Contains("unlock it in the Explorer", vm.FooterText);
+        Assert.NotEqual(openNote, vm.DepthNote);
+
+        editing = true;
+        src.NotifyLockChanged();
+        Assert.True(vm.SaveCommand.CanExecute(null));
+        Assert.Equal("unsaved depth on 1 variant", vm.FooterText);
+        await Task.CompletedTask;
+    }
+
+    [AvaloniaFact]
+    public async Task One_and_two_dirty_variants_are_worded_in_the_footer_and_on_the_leave_card()
+    {
+        var (s, _) = RiseFixtures.OnDisk(RiseFixtures.ChestBook(withPine: true));
+        var dialogs = new ScriptedDialogs(LeaveChoice.Stay);
+        using var vm = Vm(RiseFixtures.Variant(s), new FakeNav(), dialogs);
+
+        vm.ApplyDepthStroke(new[] { (2, 1) }, DepthSide.Front, false);
+        Assert.Equal("unsaved depth on 1 variant", vm.FooterText);
+        await vm.BackCommand.ExecuteAsync(null);
+        Assert.Equal("Body / Oak has unsaved depth on 1 variant. Leaving discards it.",
+            ((LeaveDialogViewModel)dialogs.Shown!).Message);
+
+        vm.SelectedItem = vm.Items.Single(i => i.Id == "pine");
+        vm.ApplyDepthStroke(new[] { (2, 1) }, DepthSide.Front, false);
+        Assert.Equal("unsaved depth on 2 variants", vm.FooterText);
+        await vm.BackCommand.ExecuteAsync(null);
+        Assert.Equal("Body / Oak has unsaved depth on 2 variants. Leaving discards it.",
+            ((LeaveDialogViewModel)dialogs.Shown!).Message);
+    }
+
+    [AvaloniaFact]
+    public void The_variant_opening_lines_for_an_unlocked_and_a_locked_book_use_the_key_hints()
+    {
+        var (s, _) = RiseFixtures.OnDisk(RiseFixtures.ChestBook());
+        Assert.Equal($"Rising “Body / Oak” — left raises the front, right the back, {KeyHints.LowerDepth} lowers. Save depth writes it into the CookBook.",
+            RiseFixtures.Variant(s).OpeningLine);
+        Assert.Equal("“Body” is read-only — try depth freely, but unlock the CookBook to save it.",
+            RiseFixtures.Variant(s, editing: false).OpeningLine);
+    }
+
+    [AvaloniaFact]
+    public async Task Saving_two_dirty_variants_writes_both_and_leaves_the_footer_clean()
+    {
+        var (s, path) = RiseFixtures.OnDisk(RiseFixtures.ChestBook(withPine: true));
+        using var vm = Vm(RiseFixtures.Variant(s), new FakeNav(), new FakeDialogs());
+        vm.ApplyDepthStroke(new[] { (2, 1) }, DepthSide.Front, false);
+        vm.SelectedItem = vm.Items.Single(i => i.Id == "pine");
+        vm.ApplyDepthStroke(new[] { (2, 1) }, DepthSide.Front, false);
+        await vm.SaveCommand.ExecuteAsync(null);
+        Assert.Equal("no unsaved depth", vm.FooterText);
+        Assert.Equal(1, OakFront(path));
+    }
+
+    [AvaloniaFact]
     public async Task A_dismissed_leave_card_keeps_editing()
     {
         // Stay is the enum's zero, so a card closed with no answer (Esc, backdrop) is Stay.

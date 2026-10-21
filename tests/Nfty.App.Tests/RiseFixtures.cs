@@ -45,20 +45,19 @@ internal static class RiseFixtures
     /// <summary>The book in memory: recipe "chest" = layers ["body", "lock"]; body variants oak (weight 3),
     /// ghost (1); lock variant gold.</summary>
     internal static LoadedCookBook ChestBook(DepthMap? oakDepth = null, DepthMap? ghostDepth = null,
-        DepthMap? goldDepth = null)
+        DepthMap? goldDepth = null, bool withPine = false, bool withSecondGhost = false)
     {
         var bodyDepths = new Dictionary<string, DepthMap>();
         if (oakDepth is not null) bodyDepths["oak"] = oakDepth;
         if (ghostDepth is not null) bodyDepths["ghost"] = ghostDepth;
+        var variants = new List<Variant> { new("oak", "Oak", 3), new("ghost", "Ghost", 1) };
+        var images = new Dictionary<string, Image<Rgba32>> { ["oak"] = Picture(Oak), ["ghost"] = Picture(Ghost) };
+        if (withPine) { variants.Add(new Variant("pine", "Pine", 1)); images["pine"] = Picture(Oak); }
+        if (withSecondGhost) { variants.Add(new Variant("ghost2", "Ghost Two", 1)); images["ghost2"] = Picture(Ghost); }
         var body = new LoadedIngredient
         {
-            Manifest = new IngredientManifest("body", "Body", LayerKind.Custom, null,
-                new[] { new Variant("oak", "Oak", 3), new Variant("ghost", "Ghost", 1) }),
-            VariantImages = new Dictionary<string, Image<Rgba32>>
-            {
-                ["oak"] = Picture(Oak),
-                ["ghost"] = Picture(Ghost),
-            },
+            Manifest = new IngredientManifest("body", "Body", LayerKind.Custom, null, variants),
+            VariantImages = images,
             Depths = bodyDepths,
         };
         var lck = new LoadedIngredient
@@ -93,9 +92,12 @@ internal static class RiseFixtures
     }
 
     internal static VariantRiseSource Variant(CookBookSession s, string variant = "oak", bool editing = true)
+        => Variant(s, variant, () => editing);
+
+    internal static VariantRiseSource Variant(CookBookSession s, string variant, System.Func<bool> isEditing)
     {
         var recipe = s.Current!.Recipes.Single(r => r.Manifest.Id == "chest");
         var body = recipe.Ingredients.Single(i => i.Manifest.Id == "body");
-        return new VariantRiseSource(recipe, body, variant, new ImageBridge(), s, () => editing);
+        return new VariantRiseSource(recipe, body, variant, new ImageBridge(), s, isEditing);
     }
 }
