@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Numerics;
 using Avalonia;
 using Avalonia.Controls;
@@ -8,6 +9,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
 using Nfty.App.ViewModels;
+using Nfty.Core.Diagnostics;
 using Nfty.Model;
 using Nfty.Model.Render;
 using SixLabors.ImageSharp;
@@ -63,6 +65,34 @@ public sealed partial class ModelPreviewView : UserControl
     private RenderTarget? _target;
     private WriteableBitmap? _bitmap;
     private bool _focusedOnce;
+    private long _lastRepaint;
+    private IDisposable? _budgetTimer;
+    private bool _hostInteracting;
+
+    /// <summary>At most one repaint per this long while a gesture is running (about 30 per second): a
+    /// 512px frame costs more than a dispatcher turn at 60 Hz, so an orbit or pan paints at the pace
+    /// it can sustain instead of queueing. Idle changes (a mesh swap, a resize) are never held.</summary>
+    internal static readonly TimeSpan RepaintBudget = TimeSpan.FromMilliseconds(33);
+
+    /// <summary>The clock the budget reads, in <see cref="Stopwatch"/> ticks. A seam so a test can
+    /// freeze time and make "inside the budget" deterministic.</summary>
+    internal Func<long> Clock { get; set; } = Stopwatch.GetTimestamp;
+
+    /// <summary>True while a host-driven gesture (a slider drag, a stroke painting the depth this view
+    /// shows) is running. Repaints are budgeted exactly as for this view's own pointer drags, and the
+    /// true-to-false edge brings a held frame up to date at once.</summary>
+    internal bool HostInteracting
+    {
+        get => _hostInteracting;
+        set
+        {
+            bool ended = _hostInteracting && !value;
+            _hostInteracting = value;
+            if (ended && RepaintPending) RepaintNow(); // gesture end: exact, never left to the budget
+        }
+    }
+
+    private bool Interacting => HostInteracting || _dragOrigin is not null;
 
     /// <summary>True while a repaint has been requested (a camera, mesh, texture or bounds change)
     /// but not yet drawn. The handle step 7's 30-per-second budget hangs on, and the one tests use:
@@ -166,6 +196,8 @@ public sealed partial class ModelPreviewView : UserControl
     {
         base.OnDetachedFromVisualTree(e);
         Subscribe(null);
+        _budgetTimer?.Dispose();
+        _budgetTimer = null;
         _surface.Source = null; // never dispose a bitmap that is still the Source: measure reads it
         _bitmap?.Dispose();
         _bitmap = null;
@@ -260,10 +292,43 @@ public sealed partial class ModelPreviewView : UserControl
     {
         if (RepaintPending) return;
         RepaintPending = true;
+        if (Interacting && BudgetRemaining() is { } wait)
+        {
+            ScheduleBudgeted(wait);
+            return;
+        }
         Dispatcher.UIThread.Post(() =>
         {
             if (RepaintPending) RepaintNow(); // already drawn by a gesture end: nothing left to do
         }, DispatcherPriority.Render);
+    }
+
+    // How long until the budget since the last frame has elapsed; null once it has.
+    private TimeSpan? BudgetRemaining()
+    {
+        long budgetTicks = (long)(RepaintBudget.TotalSeconds * Stopwatch.Frequency);
+        long left = budgetTicks - (Clock() - _lastRepaint);
+        return left > 0 ? TimeSpan.FromSeconds(left / (double)Stopwatch.Frequency) : null;
+    }
+
+    private void ScheduleBudgeted(TimeSpan wait)
+    {
+        _budgetTimer?.Dispose();
+        _budgetTimer = DispatcherTimer.RunOnce(OnBudgetElapsed, wait, DispatcherPriority.Render);
+    }
+
+    // Repaints only if a frame is still wanted AND the clock agrees the budget is spent; otherwise it
+    // waits out the remainder, so a frozen test clock holds deterministically.
+    private void OnBudgetElapsed()
+    {
+        _budgetTimer = null;
+        if (!RepaintPending) return;
+        if (Interacting && BudgetRemaining() is { } wait)
+        {
+            ScheduleBudgeted(wait);
+            return;
+        }
+        RepaintNow();
     }
 
     /// <summary>Draws the current frame synchronously and clears the pending request. Gesture ends
@@ -271,6 +336,8 @@ public sealed partial class ModelPreviewView : UserControl
     internal void RepaintNow()
     {
         RepaintPending = false;
+        _budgetTimer?.Dispose(); // a held frame is being drawn right now
+        _budgetTimer = null;
         // Detached: the buffers were released on detach; drawing now would allocate a bitmap nothing
         // owns. Attaching marks dirty again.
         if (VisualRoot is null) return;
@@ -282,9 +349,16 @@ public sealed partial class ModelPreviewView : UserControl
         if (texture.Width != mesh.TextureWidth || texture.Height != mesh.TextureHeight)
             return;
 
-        int width = (int)Bounds.Width;
-        int height = (int)Bounds.Height;
-        if (width < 1 || height < 1) return;
+        if ((int)Bounds.Width < 1 || (int)Bounds.Height < 1) return;
+
+        // One bitmap pixel per DEVICE pixel: the shell scales its whole content by a layout transform
+        // (and the window may sit on a scaled display), so a bitmap sized to the logical Bounds would be
+        // stretched and soft. Gesture and camera maths keep using logical Bounds (the aspect is the same).
+        double scale = DeviceScale();
+        int width = (int)Math.Ceiling(Bounds.Width * scale);
+        int height = (int)Math.Ceiling(Bounds.Height * scale);
+        using var _ = Perf.Measure("ModelPreviewView.Repaint");
+        _lastRepaint = Clock();
 
         if (_target is null || _target.Width != width || _target.Height != height)
             _target = new RenderTarget(width, height);
@@ -292,10 +366,12 @@ public sealed partial class ModelPreviewView : UserControl
         Raster.Render(mesh, texture, vm.CameraState, _target);
 
         var size = new PixelSize(width, height);
-        bool reused = _bitmap is not null && _bitmap.PixelSize == size;
+        // The DPI makes the bitmap lay out at the control's logical Bounds whatever its pixel count.
+        var dpi = new Vector(96 * scale, 96 * scale);
+        bool reused = _bitmap is not null && _bitmap.PixelSize == size && _bitmap.Dpi == dpi;
         var bitmap = reused
             ? _bitmap!
-            : new WriteableBitmap(size, new Vector(96, 96), PixelFormat.Rgba8888, AlphaFormat.Unpremul);
+            : new WriteableBitmap(size, dpi, PixelFormat.Rgba8888, AlphaFormat.Unpremul);
 
         using (var fb = bitmap.Lock())
         {
@@ -326,6 +402,17 @@ public sealed partial class ModelPreviewView : UserControl
             _surface.InvalidateVisual();
         }
         RepaintCount++;
+    }
+
+    // Device pixels per logical pixel of THIS control: the window's render scaling times whatever
+    // scale the ancestors apply (the shell's LayoutTransformControl shows up in the visual-to-top transform).
+    private double DeviceScale()
+    {
+        var top = TopLevel.GetTopLevel(this);
+        double rendering = top?.RenderScaling ?? 1;
+        double layout = top is not null && this.TransformToVisual(top) is { } m ? Math.Abs(m.M11) : 1;
+        double scale = rendering * layout;
+        return double.IsFinite(scale) && scale > 0 ? scale : 1;
     }
 
     /// <summary>Minimal <see cref="IObserver{T}"/> for an Avalonia property subscription — the

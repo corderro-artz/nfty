@@ -7,8 +7,22 @@ public class CameraTests
 {
     private const float Radius = 2f;
 
-    private static Camera Cam(float distance, float yaw = 0f, float pitch = 0f, float radius = Radius) =>
-        new(Vector3.Zero, distance, yaw, pitch, radius);
+    // A cube centered on the origin whose half-diagonal (the camera's Radius) is `radius`.
+    private static (Vector3 Min, Vector3 Max) CubeOf(float radius) =>
+        (Vector3.One * (-radius / MathF.Sqrt(3f)), Vector3.One * (radius / MathF.Sqrt(3f)));
+
+    private static Camera Cam(float distance, float yaw = 0f, float pitch = 0f, float radius = Radius)
+    {
+        var (min, max) = CubeOf(radius);
+        return new(Vector3.Zero, distance, yaw, pitch, min, max);
+    }
+
+    // A 512 x 512 x 3 slab, BottomCenter placement: the box Riser makes of 512px art.
+    private static readonly Vector3 SlabMin = new(-256f, 0f, -1.5f);
+    private static readonly Vector3 SlabMax = new(256f, 512f, 1.5f);
+
+    private static bool Inside(Vector3 p, Vector3 min, Vector3 max) =>
+        p.X >= min.X && p.X <= max.X && p.Y >= min.Y && p.Y <= max.Y && p.Z >= min.Z && p.Z <= max.Z;
 
     [Fact]
     public void A_cube_viewed_down_minus_z_lands_its_eight_corners_at_hand_computed_pixels()
@@ -65,12 +79,14 @@ public class CameraTests
         Assert.Equal(2f, closer.Distance, precision: 4);
 
         var clamped = camera.Zoom(0.00001f);
-        Assert.Equal(0.05f * Radius, camera.MinDistance, precision: 5);
+        // Head-on at yaw 0 / pitch 0 the ray exits the +Z face: half-extent h = R / sqrt(3), plus the
+        // 0.02 R margin.
+        Assert.Equal((Radius / MathF.Sqrt(3f)) + (0.02f * Radius), camera.MinDistance, precision: 5);
         Assert.Equal(camera.MinDistance, clamped.Distance, precision: 5);
     }
 
     [Fact]
-    public void Zooming_far_out_stops_at_twenty_radii_and_back_in_stops_at_a_twentieth()
+    public void Zooming_far_out_stops_at_twenty_radii_and_back_in_stops_at_the_box_floor()
     {
         var camera = Cam(4f, radius: 3f);
         Assert.Equal(60f, camera.MaxDistance, precision: 4);
@@ -80,19 +96,25 @@ public class CameraTests
         Assert.Equal(60f, farthest.Zoom(1.1f).Distance, precision: 4);
 
         var nearest = farthest.Zoom(1e-6f);
-        Assert.Equal(0.15f, nearest.Distance, precision: 5);
+        Assert.Equal((3f / MathF.Sqrt(3f)) + (0.02f * 3f), nearest.Distance, precision: 5);
     }
 
     [Fact]
-    public void Every_apparent_mutator_carries_the_radius_through()
+    public void Every_apparent_mutator_carries_the_box_and_radius_through()
     {
-        var camera = Cam(4f, radius: 7f);
+        var camera = Cam(12f, radius: 7f);
         var pointer = new Vector2(10f, 10f);
 
-        Assert.Equal(7f, camera.Orbit(0.1f, 0.1f).Radius);
-        Assert.Equal(7f, camera.Zoom(0.9f).Radius);
-        Assert.Equal(7f, camera.Pan(new Vector2(5, 5), 100).Radius);
-        Assert.Equal(7f, camera.ZoomAnchored(0.9f, pointer, 100, 100).Radius);
+        foreach (var moved in new[]
+        {
+            camera.Orbit(0.1f, 0.1f), camera.Zoom(0.9f), camera.Pan(new Vector2(5, 5), 100),
+            camera.ZoomAnchored(0.9f, pointer, 100, 100),
+        })
+        {
+            Assert.Equal(7f, moved.Radius);
+            Assert.Equal(camera.BoundsMin, moved.BoundsMin);
+            Assert.Equal(camera.BoundsMax, moved.BoundsMax);
+        }
         // Reset reframes on new bounds, so it carries THEIR radius: half the box diagonal.
         Assert.Equal(MathF.Sqrt(3f), camera.Reset(-Vector3.One, Vector3.One).Radius, precision: 5);
     }
@@ -230,7 +252,7 @@ public class CameraTests
     [Fact]
     public void Panning_by_zero_leaves_the_target_unchanged()
     {
-        var camera = new Camera(new Vector3(1, 2, 3), 4f, 0.3f, 0.2f, Radius);
+        var camera = new Camera(new Vector3(1, 2, 3), 12f, 0.3f, 0.2f, new Vector3(-5), new Vector3(5));
         var panned = camera.Pan(Vector2.Zero, viewportHeight: 200);
         Assert.Equal(camera.Target, panned.Target);
     }
@@ -238,11 +260,115 @@ public class CameraTests
     [Fact]
     public void Reset_reframes_on_the_given_bounds_regardless_of_current_orientation()
     {
-        var camera = new Camera(new Vector3(50, 50, 50), 500f, yaw: 9f, pitch: 1.4f, radius: 50f);
+        var camera = new Camera(new Vector3(50, 50, 50), 500f, yaw: 9f, pitch: 1.4f, new Vector3(0), new Vector3(100));
         var reset = camera.Reset(new Vector3(-1, -1, -1), new Vector3(1, 1, 1));
 
         Assert.Equal(Vector3.Zero, reset.Target);
         Assert.True(reset.Distance < 10f); // framed tight on a 2-unit box, not left at 500
+    }
+
+    [Theory]
+    [InlineData(0f, 0f)]
+    [InlineData(30f, 20f)]
+    [InlineData(90f, 0f)]
+    [InlineData(-135f, -60f)]
+    [InlineData(10f, 89f)]
+    [InlineData(200f, -89f)]
+    public void At_the_floor_the_eye_is_outside_the_box_from_every_angle(float yawDeg, float pitchDeg)
+    {
+        foreach (var (min, max) in new[] { (SlabMin, SlabMax), (new Vector3(-8, 0, -1.5f), new Vector3(8, 16, 1.5f)), CubeOf(2f) })
+        {
+            var framed = Camera.FramedOn(min, max);
+            var camera = new Camera(framed.Target, framed.Distance, yawDeg * MathF.PI / 180f,
+                pitchDeg * MathF.PI / 180f, min, max).Zoom(1e-6f);
+
+            Assert.Equal(camera.MinDistance, camera.Distance, precision: 4);
+            Assert.False(Inside(camera.Eye, min, max), $"eye {camera.Eye} is inside {min}..{max}");
+        }
+    }
+
+    [Fact]
+    public void Orbiting_ninety_degrees_at_the_floor_pushes_the_eye_out_instead_of_into_the_box()
+    {
+        var framed = Camera.FramedOn(SlabMin, SlabMax);
+        var head = new Camera(framed.Target, framed.Distance, 0f, 0f, SlabMin, SlabMax).Zoom(1e-6f);
+        float floorHeadOn = head.Distance; // z half-thickness 1.5 plus margin: a few units
+
+        foreach (var (dyaw, dpitch) in new[] { (MathF.PI / 2, 0f), (-MathF.PI / 2, 0f), (0f, MathF.PI / 2), (0f, -MathF.PI / 2) })
+        {
+            var turned = head.Orbit(dyaw, dpitch);
+            Assert.False(Inside(turned.Eye, SlabMin, SlabMax), $"eye {turned.Eye} entered the slab");
+            Assert.True(turned.Distance >= turned.MinDistance - 1e-3f);
+            Assert.True(turned.Distance > floorHeadOn, "the eye should have been pushed out as the exit distance grew");
+        }
+    }
+
+    [Fact]
+    public void Panning_far_past_an_edge_keeps_the_target_in_the_box_and_slides_along_it()
+    {
+        var framed = Camera.FramedOn(SlabMin, SlabMax);
+        var camera = new Camera(framed.Target, framed.Distance, 0f, 0f, SlabMin, SlabMax);
+
+        var panned = camera.Pan(new Vector2(-1e6f, 1e6f), 200);
+        Assert.True(Inside(panned.Target, SlabMin, SlabMax));
+        Assert.Equal(SlabMax.X, panned.Target.X, precision: 3); // dragging left moves the target right
+        Assert.Equal(SlabMax.Y, panned.Target.Y, precision: 3); // dragging down moves the target up
+
+        // Idempotent at the wall: more of the same drag changes nothing, so there is no jitter.
+        var again = panned.Pan(new Vector2(-50f, 50f), 200);
+        Assert.Equal(panned.Target, again.Target);
+        Assert.Equal(panned.Distance, again.Distance, precision: 5);
+    }
+
+    [Fact]
+    public void Panning_along_the_floor_never_makes_the_eye_distance_jitter()
+    {
+        var framed = Camera.FramedOn(SlabMin, SlabMax);
+        var camera = new Camera(framed.Target, framed.Distance, 0f, 0f, SlabMin, SlabMax).Zoom(1e-6f);
+        float floor = camera.Distance;
+        for (int i = 0; i < 100; i++)
+        {
+            camera = camera.Pan(new Vector2(7f, -3f), 400);
+            Assert.Equal(floor, camera.Distance, precision: 3); // head-on exit distance does not depend on where on the face you are
+            Assert.True(Inside(camera.Target, SlabMin, SlabMax));
+        }
+    }
+
+    [Fact]
+    public void Zoom_anchored_holds_the_pointer_when_the_target_is_away_from_the_box_edge()
+    {
+        // Oblique view of a big slab at working distance, target mid-box (far from every clamp wall):
+        // the clamp must not disturb step 6's within-a-pixel anchoring guarantee.
+        var framed = Camera.FramedOn(SlabMin, SlabMax);
+        var camera = new Camera(framed.Target, 60f, 0.6f, 0.3f, SlabMin, SlabMax);
+        int width = 400, height = 300;
+        var pointer = new Vector2(260f, 130f);
+
+        var anchorWorld = Unproject(pointer, camera.ViewProjection(width, height), camera);
+        var zoomed = camera.ZoomAnchored(0.7f, pointer, width, height);
+        var screenAfter = Project(anchorWorld, zoomed.ViewProjection(width, height), width, height);
+
+        Assert.True(zoomed.Distance < camera.Distance);
+        Assert.InRange(MathF.Abs(screenAfter.X - pointer.X), 0f, 1f);
+        Assert.InRange(MathF.Abs(screenAfter.Y - pointer.Y), 0f, 1f);
+        Assert.True(Inside(zoomed.Target, SlabMin, SlabMax));
+    }
+
+    [Fact]
+    public void With_subject_keeps_the_view_and_follows_the_new_box()
+    {
+        var camera = new Camera(new Vector3(1, 1, 0), 12f, 0.4f, 0.3f, new Vector3(-2), new Vector3(2));
+        var moved = camera.WithSubject(new Vector3(-50, -50, -2), new Vector3(50, 50, 2));
+
+        Assert.Equal(camera.Target, moved.Target);
+        Assert.Equal(camera.Yaw, moved.Yaw);
+        Assert.Equal(camera.Pitch, moved.Pitch);
+        Assert.Equal(Vector3.Distance(new(-50, -50, -2), new(50, 50, 2)) / 2f, moved.Radius, precision: 3);
+        Assert.True(moved.Distance >= moved.MinDistance);
+
+        // A target the new box does not contain is pulled in.
+        var shifted = camera.WithSubject(new Vector3(10, 10, 10), new Vector3(20, 20, 20));
+        Assert.Equal(new Vector3(10, 10, 10), shifted.Target);
     }
 
     private static Vector2 Project(Vector3 world, Matrix4x4 vp, int width, int height)

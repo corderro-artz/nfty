@@ -109,16 +109,38 @@ public class ModelPreviewViewModelTests
     }
 
     [Fact]
-    public void Set_subject_keeps_the_camera_exactly_where_it_was()
+    public void Set_subject_keeps_the_view_and_adopts_the_new_radius()
     {
         var vm = New();
-        vm.Orbit(new Vector2(120f, 40f));
+        vm.OrbitStep(new Vector2(1, 0));
         vm.ZoomStep(1f);
         var before = vm.CameraState;
-
         vm.SetSubject(new Vector3(-50, -50, -2), new Vector3(50, 50, 2));
+        var after = vm.CameraState;
+        Assert.Equal(before.Target, after.Target);
+        Assert.Equal(before.Yaw, after.Yaw);
+        Assert.Equal(before.Pitch, after.Pitch);
+        Assert.Equal(Vector3.Distance(new(-50, -50, -2), new(50, 50, 2)) / 2f, after.Radius, precision: 3);
+        Assert.True(after.Distance >= after.MinDistance);
+    }
 
+    [Fact]
+    public void Set_subject_with_the_same_extent_changes_nothing()
+    {
+        var vm = New();
+        var before = vm.CameraState;
+        vm.SetSubject(new Vector3(-1, -1, -1), new Vector3(1, 1, 1));   // New() frames ±1
         Assert.Same(before, vm.CameraState);
+    }
+
+    [Fact]
+    public void Set_subject_with_the_same_radius_but_a_different_box_still_reaches_the_camera()
+    {
+        // A box shifted sideways has the same radius; the target confinement must still follow it.
+        var vm = New();
+        vm.SetSubject(new Vector3(9, -1, -1), new Vector3(11, 1, 1));
+        Assert.Equal(new Vector3(9, -1, -1), vm.CameraState.BoundsMin);
+        Assert.Equal(9f, vm.CameraState.Target.X); // old target (origin) is clamped into the new box
     }
 
     [Fact]

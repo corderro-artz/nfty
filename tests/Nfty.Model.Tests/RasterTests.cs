@@ -10,8 +10,13 @@ public class RasterTests
 {
     private static readonly Rgba32 Clear = new(0, 0, 0, 0);
 
-    private static Camera Cam(float distance, float yaw = 0f, float pitch = 0f, float radius = 2f) =>
-        new(Vector3.Zero, distance, yaw, pitch, radius);
+    // A cube around the origin whose half-diagonal is `radius`: the same Radius (so the same clip
+    // planes) these tests were written against.
+    private static Camera Cam(float distance, float yaw = 0f, float pitch = 0f, float radius = 2f)
+    {
+        float h = radius / MathF.Sqrt(3f);
+        return new(Vector3.Zero, distance, yaw, pitch, new Vector3(-h), new Vector3(h));
+    }
 
     private static RenderTarget Target(int size) => Target(size, size);
 
@@ -316,6 +321,70 @@ public class RasterTests
         Assert.True(coveredSomewhere > 0, "the sweep never drew anything");
     }
 
+    [Theory]
+    [InlineData(0f, 0f)]
+    [InlineData(30f, 20f)]
+    [InlineData(-60f, 45f)]
+    public void Fully_zoomed_in_the_frame_is_never_blank(float yawDeg, float pitchDeg)
+    {
+        using var art = Art.FromAscii(Enumerable.Range(0, 16).Select(y =>
+            new string(Enumerable.Range(0, 16).Select(x => (x - 7.5) * (x - 7.5) + (y - 7.5) * (y - 7.5) <= 49 ? '#' : '.').ToArray())).ToArray());
+        var mesh = Riser.TryBuild(art, null, new RiseOptions())!;
+        var framed = Camera.FramedOn(mesh.Min, mesh.Max);
+        var camera = new Camera(framed.Target, framed.Distance, yawDeg * MathF.PI / 180f,
+            pitchDeg * MathF.PI / 180f, mesh.Min, mesh.Max).Zoom(1e-6f);
+        var target = new RenderTarget(64, 64);
+        target.Clear(new Rgba32(0, 0, 0, 0));
+        Raster.Render(mesh, art, camera, target);
+        Assert.True(target.Color.Count(c => c.A == 255) > 0, "the eye is inside the sprite: blank frame");
+    }
+
+    [Fact]
+    public void Fully_zoomed_in_the_frame_is_never_blank_at_any_orbit_angle()
+    {
+        using var art = Art.FromAscii(Enumerable.Range(0, 16).Select(_ => new string('#', 16)).ToArray());
+        var mesh = Riser.TryBuild(art, null, new RiseOptions())!;
+        var framed = Camera.FramedOn(mesh.Min, mesh.Max);
+        var target = new RenderTarget(64, 64);
+
+        for (int yaw = -180; yaw < 180; yaw += 15)
+        for (int pitch = -89; pitch <= 89; pitch += 22)
+        {
+            var camera = new Camera(framed.Target, framed.Distance, yaw * MathF.PI / 180f,
+                pitch * MathF.PI / 180f, mesh.Min, mesh.Max).Zoom(1e-6f);
+            target.Clear(new Rgba32(0, 0, 0, 0));
+            Raster.Render(mesh, art, camera, target);
+            Assert.True(target.Color.Any(c => c.A == 255), $"blank at yaw {yaw}, pitch {pitch}");
+        }
+    }
+
+    [Fact]
+    public void Fully_zoomed_in_on_a_512px_sprite_a_single_pixel_spans_many_screen_pixels()
+    {
+        var min = new Vector3(-256f, 0f, -1.5f);
+        var max = new Vector3(256f, 512f, 1.5f);
+        var framed = Camera.FramedOn(min, max);
+        var camera = new Camera(framed.Target, framed.Distance, 0f, 0f, min, max).Zoom(1e-6f);
+
+        // Head-on: the front face is camera.Distance - 1.5 in front of the eye. One voxel (one world
+        // unit) spans height / (2 * depth * tan(fov / 2)) screen pixels.
+        float depth = camera.Distance - 1.5f;
+        float pixelsPerVoxel = 512f / (2f * depth * MathF.Tan(Camera.FovDegrees * MathF.PI / 360f));
+        Assert.True(pixelsPerVoxel >= 8f, $"one voxel spans only {pixelsPerVoxel:0.0} px at the floor");
+
+        // And the claim is real, not just arithmetic: project two points one voxel apart on the face.
+        var vp = camera.ViewProjection(512, 512);
+        static float Sx(Vector3 p, Matrix4x4 vp)
+        {
+            var c = Vector4.Transform(new Vector4(p, 1f), vp);
+            return ((c.X / c.W) * 0.5f + 0.5f) * 512f;
+        }
+        float span = Sx(new Vector3(framed.Target.X + 1f, framed.Target.Y, 1.5f), vp)
+                   - Sx(new Vector3(framed.Target.X, framed.Target.Y, 1.5f), vp);
+        Assert.True(span >= 8f, $"projected span {span:0.0} px");
+        Assert.Equal(pixelsPerVoxel, span, precision: 1);
+    }
+
     // ---- M10: top-left fill rule ----
 
     [Fact]
@@ -345,8 +414,10 @@ public class RasterTests
     {
         var texels = new[] { new Rgba32(255, 0, 0, 255), new Rgba32(0, 0, 255, 255) };
         var target = Target(4);
-        Raster.FillTriangle(Vtx(0, 0, 0.75f), Vtx(4, 0, 0.75f), Vtx(4, 4, 0.75f), 1f, texels, 2, 1, target); // B first
-        Raster.FillTriangle(Vtx(0, 0, 0.25f), Vtx(4, 4, 0.25f), Vtx(0, 4, 0.25f), 1f, texels, 2, 1, target); // A
+        // A is drawn second AND strictly nearer (smaller view depth), so the depth test would hand it
+        // the diagonal unless the top-left rule withholds it: only the rule can decide those pixels.
+        Raster.FillTriangle(Vtx(0, 0, 0.75f), Vtx(4, 0, 0.75f), Vtx(4, 4, 0.75f), 1f, texels, 2, 1, target); // B first, depth 1
+        Raster.FillTriangle(Vtx(0, 0, 0.25f, 0.5f), Vtx(4, 4, 0.25f, 0.5f), Vtx(0, 4, 0.25f, 0.5f), 1f, texels, 2, 1, target); // A, nearer
 
         for (int i = 0; i < 4; i++)
             Assert.Equal(255, target.Color[(i * 4) + i].B);
@@ -355,7 +426,7 @@ public class RasterTests
 
     // ---- fixtures ----
 
-    private static Raster.ScreenVertex Vtx(float x, float y, float u) => new(x, y, 1f, u, 0.5f);
+    private static Raster.ScreenVertex Vtx(float x, float y, float u, float w = 1f) => new(x, y, w, u, 0.5f);
 
     /// <summary>A 2x2x2 cube centered at the origin. The +X/+Y/+Z faces sample <c>TwoColorTexture</c>'s
     /// "front" texel; -X/-Y/-Z sample its "back" texel.</summary>

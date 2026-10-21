@@ -23,7 +23,7 @@ public sealed class Camera
     /// <summary>The vertical field of view every projection this camera builds uses.</summary>
     public const float FovDegrees = 40f;
 
-    private const float MinDistanceFactor = 0.05f;
+    private const float EyeMarginFactor = 0.02f;
     private const float MaxDistanceFactor = 20f;
     private const float NearFactor = 0.01f;
     private const float FarFactor = 50f;
@@ -38,12 +38,23 @@ public sealed class Camera
     /// <see cref="MinDistance"/>..<see cref="MaxDistance"/>.</summary>
     public float Distance { get; }
 
-    /// <summary>The subject's bounding-sphere radius, in world units (at least 1e-3). Every distance
-    /// limit and clip plane scales with it, so a 16px sprite and a 1000px one behave alike.</summary>
+    /// <summary>Minimum corner of the subject's bounding box. <see cref="Target"/> never leaves the box.</summary>
+    public Vector3 BoundsMin { get; }
+
+    /// <summary>Maximum corner of the subject's bounding box.</summary>
+    public Vector3 BoundsMax { get; }
+
+    /// <summary>Half the box diagonal, in world units (at least 1e-3). The far limit and every clip
+    /// plane scale with it, so a 16px sprite and a 1000px one behave alike.</summary>
     public float Radius { get; }
 
-    /// <summary>Closest the eye may orbit to its target: <c>0.05 × <see cref="Radius"/></c>.</summary>
-    public float MinDistance => MinDistanceFactor * Radius;
+    /// <summary>Closest the eye may orbit to its target for the CURRENT orientation: the distance from
+    /// <see cref="Target"/> along the eye direction to where that ray exits the subject's box, plus
+    /// <c>0.02 × <see cref="Radius"/></c>. With the target inside the box this keeps the eye outside
+    /// it from every angle, yet lets a flat sprite viewed head-on be inspected from just in front of
+    /// its face. Depends on the orientation, so orbiting at the floor pushes the eye out as the exit
+    /// distance grows.</summary>
+    public float MinDistance => ExitDistance(Target, EyeDirection(Yaw, Pitch), BoundsMin, BoundsMax) + EyeMarginFactor * Radius;
 
     /// <summary>Farthest the eye may orbit from its target: <c>20 × <see cref="Radius"/></c>.</summary>
     public float MaxDistance => MaxDistanceFactor * Radius;
@@ -54,16 +65,51 @@ public sealed class Camera
     /// <summary>Orbit angle above/below level, radians, clamped to ±<see cref="PitchLimitDegrees"/>.</summary>
     public float Pitch { get; }
 
-    /// <summary>Builds a camera, clamping <paramref name="distance"/> and <paramref name="pitch"/>
-    /// so every instance that exists is already valid. <paramref name="radius"/> is the subject's
-    /// bounding-sphere radius and sets the distance limits and clip planes.</summary>
-    public Camera(Vector3 target, float distance, float yaw, float pitch, float radius)
+    /// <summary>Builds a camera, clamping <paramref name="target"/> into the box, and
+    /// <paramref name="distance"/> and <paramref name="pitch"/> into range, so every instance that
+    /// exists is already valid. The box sets the distance limits and clip planes.</summary>
+    /// <param name="target">The point orbited and looked at; clamped into the box.</param>
+    /// <param name="distance">Eye-to-target distance; clamped to <see cref="MinDistance"/>..<see cref="MaxDistance"/>.</param>
+    /// <param name="yaw">Orbit angle around the vertical axis, radians.</param>
+    /// <param name="pitch">Orbit angle above level, radians; clamped.</param>
+    /// <param name="boundsMin">Minimum corner of the subject's box.</param>
+    /// <param name="boundsMax">Maximum corner of the subject's box.</param>
+    public Camera(Vector3 target, float distance, float yaw, float pitch, Vector3 boundsMin, Vector3 boundsMax)
     {
-        Target = target;
-        Radius = MathF.Max(float.IsFinite(radius) ? radius : MinRadius, MinRadius);
-        Distance = Math.Clamp(distance, MinDistance, MaxDistance);
+        BoundsMin = Vector3.Min(boundsMin, boundsMax);
+        BoundsMax = Vector3.Max(boundsMin, boundsMax);
+        Radius = RadiusOf(BoundsMin, BoundsMax);
+        Target = Vector3.Clamp(target, BoundsMin, BoundsMax);
         Yaw = yaw;
         Pitch = Math.Clamp(pitch, -PitchLimitRadians, PitchLimitRadians);
+        Distance = Math.Clamp(distance, MinDistance, MaxDistance);
+    }
+
+    private static float RadiusOf(Vector3 min, Vector3 max)
+    {
+        float r = Vector3.Distance(min, max) / 2f;
+        return MathF.Max(float.IsFinite(r) ? r : MinRadius, MinRadius);
+    }
+
+    private static Vector3 EyeDirection(float yaw, float pitch)
+    {
+        float p = Math.Clamp(pitch, -PitchLimitRadians, PitchLimitRadians);
+        float cosPitch = MathF.Cos(p);
+        return new Vector3(cosPitch * MathF.Sin(yaw), MathF.Sin(p), cosPitch * MathF.Cos(yaw));
+    }
+
+    // Slab method: how far from `origin` (inside the box) along unit `direction` until the ray leaves it.
+    private static float ExitDistance(Vector3 origin, Vector3 direction, Vector3 min, Vector3 max)
+    {
+        float exit = float.PositiveInfinity;
+        for (int axis = 0; axis < 3; axis++)
+        {
+            float d = direction[axis];
+            if (MathF.Abs(d) < 1e-6f) continue;
+            float t = ((d > 0f ? max[axis] : min[axis]) - origin[axis]) / d;
+            exit = MathF.Min(exit, MathF.Max(t, 0f));
+        }
+        return float.IsFinite(exit) ? exit : 0f;
     }
 
     /// <summary>World position of the eye, computed fresh on every access — cheap trigonometry, not
@@ -72,11 +118,7 @@ public sealed class Camera
     {
         get
         {
-            float cosPitch = MathF.Cos(Pitch);
-            return Target + Distance * new Vector3(
-                cosPitch * MathF.Sin(Yaw),
-                MathF.Sin(Pitch),
-                cosPitch * MathF.Cos(Yaw));
+            return Target + Distance * EyeDirection(Yaw, Pitch);
         }
     }
 
@@ -95,11 +137,11 @@ public sealed class Camera
 
     /// <summary>A new camera orbited by the given deltas; yaw is free, pitch clamps.</summary>
     public Camera Orbit(float deltaYawRadians, float deltaPitchRadians) =>
-        new(Target, Distance, Yaw + deltaYawRadians, Pitch + deltaPitchRadians, Radius);
+        new(Target, Distance, Yaw + deltaYawRadians, Pitch + deltaPitchRadians, BoundsMin, BoundsMax);
 
     /// <summary>A new camera at <see cref="Distance"/> scaled by <paramref name="factor"/>, clamped.
     /// <paramref name="factor"/> below 1 moves the eye closer.</summary>
-    public Camera Zoom(float factor) => new(Target, Distance * factor, Yaw, Pitch, Radius);
+    public Camera Zoom(float factor) => new(Target, Distance * factor, Yaw, Pitch, BoundsMin, BoundsMax);
 
     /// <summary>A new camera panned so a <paramref name="screenDeltaPixels"/> drag moves content
     /// under the pointer by the same number of pixels, at the current <see cref="Distance"/> and
@@ -109,7 +151,7 @@ public sealed class Camera
         float worldPerPixel = WorldPerPixel(Distance, viewportHeight);
         var (right, up) = Basis();
         var delta = -right * screenDeltaPixels.X * worldPerPixel + up * screenDeltaPixels.Y * worldPerPixel;
-        return new Camera(Target + delta, Distance, Yaw, Pitch, Radius);
+        return new Camera(Target + delta, Distance, Yaw, Pitch, BoundsMin, BoundsMax);
     }
 
     /// <summary>A new camera zoomed by <paramref name="factor"/> such that the world point under
@@ -152,7 +194,7 @@ public sealed class Camera
         // Same sign convention as Pan: a positive screen-space error along X moves the camera along
         // -right (so the anchor's projection shifts by +error.X), and along +up for Y.
         var delta = -right * error.X * worldPerPixel + up * error.Y * worldPerPixel;
-        return new Camera(Target + delta, Distance, Yaw, Pitch, Radius);
+        return new Camera(Target + delta, Distance, Yaw, Pitch, BoundsMin, BoundsMax);
     }
 
     /// <summary>The one function that owns view and projection together. The near and far planes
@@ -173,13 +215,20 @@ public sealed class Camera
     public static Camera FramedOn(Vector3 min, Vector3 max, float aspect = 1f)
     {
         var center = (min + max) / 2f;
-        float radius = MathF.Max(Vector3.Distance(min, max) / 2f, MinRadius);
+        float radius = RadiusOf(min, max);
         float safeAspect = aspect > 0f && float.IsFinite(aspect) ? aspect : 1f;
         float horizontalFov = 2f * MathF.Atan(MathF.Tan(FovRadians / 2f) * safeAspect);
         float fittedFov = MathF.Min(FovRadians, horizontalFov);
         float distance = radius / MathF.Sin(fittedFov / 2f) * 1.15f;
-        return new Camera(center, distance, yaw: 30f * MathF.PI / 180f, pitch: 20f * MathF.PI / 180f, radius);
+        return new Camera(center, distance, yaw: 30f * MathF.PI / 180f, pitch: 20f * MathF.PI / 180f, min, max);
     }
+
+    /// <summary>The same view (target, distance, orientation) over a new subject box: the radius, the
+    /// distance limits and the target's confinement follow the box, the camera does not jump (the
+    /// target is only moved if it would fall outside, the distance only if it would break the floor).</summary>
+    /// <param name="min">Minimum corner of the new box.</param>
+    /// <param name="max">Maximum corner of the new box.</param>
+    public Camera WithSubject(Vector3 min, Vector3 max) => new(Target, Distance, Yaw, Pitch, min, max);
 
     /// <summary>Reframes on new bounds, discarding the current orientation — what "reset" means when
     /// the subject itself has bounds, as opposed to re-centering the existing view.</summary>

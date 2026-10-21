@@ -5,6 +5,7 @@ using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Nfty.App.ViewModels;
@@ -460,6 +461,124 @@ public class ModelPreviewViewTests
             Assert.Equal(original.Distance, vm.CameraState.Distance, 3);
         }
         finally { window.Close(); }
+    }
+
+    // ---- step 7: interaction budget, device pixels ----------------------------------------------
+
+    [AvaloniaFact]
+    public void While_the_host_is_interacting_repaints_wait_for_the_budget_and_the_end_is_exact()
+    {
+        var (window, view, vm) = RenderViewFirst();
+        try
+        {
+            long now = 1_000_000;
+            view.Clock = () => now;                  // frozen: inside the budget forever
+            view.RepaintNow();
+            int before = view.RepaintCount;
+            view.HostInteracting = true;
+            vm.Orbit(new Vector2(5, 0)); Dispatcher.UIThread.RunJobs();
+            vm.Orbit(new Vector2(5, 0)); Dispatcher.UIThread.RunJobs();
+            Assert.Equal(before, view.RepaintCount);
+            Assert.True(view.RepaintPending);
+            view.HostInteracting = false;
+            Assert.Equal(before + 1, view.RepaintCount);
+            Assert.False(view.RepaintPending);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public void A_held_repaint_lands_once_the_budget_has_passed()
+    {
+        var (window, view, vm) = RenderViewFirst();
+        try
+        {
+            view.RepaintNow();
+            int before = view.RepaintCount;
+            view.HostInteracting = true;
+            vm.Orbit(new Vector2(5, 0));
+            // Headless RunJobs never fires a DispatcherTimer (probed: a 20 ms RunOnce stays at 0 however
+            // long it is pumped), so run the real loop until the held frame lands, capped at 2 s.
+            using var cts = new CancellationTokenSource();
+            var watch = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(5) };
+            watch.Tick += (_, _) => { if (view.RepaintCount != before) cts.Cancel(); };
+            watch.Start();
+            DispatcherTimer.RunOnce(cts.Cancel, TimeSpan.FromSeconds(2));
+            Dispatcher.UIThread.MainLoop(cts.Token);
+            watch.Stop();
+            Assert.Equal(before + 1, view.RepaintCount);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public void Idle_changes_are_never_held_by_the_budget()
+    {
+        var (window, view, vm) = RenderViewFirst();
+        try
+        {
+            view.Clock = () => 1_000_000; // frozen: a held repaint would never land
+            view.RepaintNow();
+            int before = view.RepaintCount;
+            vm.Orbit(new Vector2(5, 0));
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(before + 1, view.RepaintCount);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public void A_pointer_drag_on_the_view_is_budgeted_and_its_release_is_exact()
+    {
+        var (window, view, vm) = RenderViewFirst();
+        try
+        {
+            long now = 1_000_000;
+            view.Clock = () => now;
+            view.RepaintNow();
+            int before = view.RepaintCount;
+
+            window.MouseDown(new Point(200, 200), MouseButton.Left);
+            window.MouseMove(new Point(230, 200));
+            window.MouseMove(new Point(260, 200));
+            Assert.Equal(before, view.RepaintCount); // frozen clock: both moves are inside the budget
+            Assert.True(view.RepaintPending);
+
+            window.MouseUp(new Point(260, 200), MouseButton.Left);
+            Assert.Equal(before + 1, view.RepaintCount);
+            Assert.False(view.RepaintPending);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public void Under_a_layout_scale_the_bitmap_has_one_pixel_per_device_pixel()
+    {
+        var vm = new ModelPreviewViewModel(new Vector3(-1, -1, 0), new Vector3(1, 1, 0));
+        var view = new ModelPreviewView
+        {
+            Width = 100, Height = 100, DataContext = vm,
+            Mesh = ModelPreviewGestureTests.TinyQuad(), Texture = ModelPreviewGestureTests.TinyTexture(),
+        };
+        var host = new LayoutTransformControl { LayoutTransform = new ScaleTransform(1.2, 1.2), Child = view };
+        var window = new Window { Content = host, Width = 400, Height = 400 };
+        window.Show(); Dispatcher.UIThread.RunJobs();
+        try
+        {
+            view.RepaintNow();
+            var bitmap = (WriteableBitmap)view.Surface.Source!;
+            Assert.Equal(new PixelSize(120, 120), bitmap.PixelSize);
+            // And it still lays out at the control's logical size: DPI carries the scale.
+            Assert.Equal(96 * 1.2, bitmap.Dpi.X, precision: 3);
+            Assert.Equal(100, bitmap.Size.Width, precision: 3);
+        }
+        finally { window.Close(); }
+    }
+
+    private static (Window Window, ModelPreviewView View, ModelPreviewViewModel Vm) RenderViewFirst()
+    {
+        var (window, vm, view) = Render();
+        return (window, view, vm);
     }
 
     // ---- M6 ------------------------------------------------------------------------------------

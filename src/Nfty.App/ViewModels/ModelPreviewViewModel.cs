@@ -60,8 +60,8 @@ public sealed partial class ModelPreviewViewModel : ObservableObject
     public void ZoomStep(float sign) =>
         CameraState = CameraState.Zoom(sign > 0 ? ZoomStepFactor : 1f / ZoomStepFactor);
 
-    /// <summary>Replaces the bounds Home/double-click frame, WITHOUT moving the camera: orientation,
-    /// target and distance are kept. The view calls this whenever its mesh changes, so there is one
+    /// <summary>Replaces the bounds Home/double-click frame and the camera's own box, WITHOUT moving the
+    /// camera: orientation, target and distance are kept (only clamped if the new box demands it). The view calls this whenever its mesh changes, so there is one
     /// source of truth for the subject's extent (the mesh) and a depth edit cannot leave Reset framing
     /// stale bounds.</summary>
     /// <param name="boundsMin">Minimum corner of the subject's bounding box.</param>
@@ -70,6 +70,12 @@ public sealed partial class ModelPreviewViewModel : ObservableObject
     {
         _boundsMin = boundsMin;
         _boundsMax = boundsMax;
+        // The camera's distance limits, clip planes and target confinement all follow the subject's
+        // box, so a depth edit that changes the extent must reach it. Orientation, target and distance
+        // are kept; an unchanged box leaves the very same instance (no spurious repaint).
+        if (CameraState.BoundsMin != Vector3.Min(boundsMin, boundsMax)
+            || CameraState.BoundsMax != Vector3.Max(boundsMin, boundsMax))
+            CameraState = CameraState.WithSubject(boundsMin, boundsMax);
     }
 
     /// <summary>Home or double-click: back to the framed camera on the current subject bounds,
