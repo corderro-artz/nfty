@@ -1,4 +1,5 @@
 using Nfty.Core.Diagnostics;
+using Nfty.Core.Formats;
 using Nfty.Core.Imaging;
 using Nfty.Core.Model;
 using SixLabors.ImageSharp;
@@ -83,6 +84,43 @@ public static class StackDepth
             art.Dispose();
             throw;
         }
+    }
+
+    /// <summary>The depth map of one rolled selection of a recipe, by the stack rule.</summary>
+    /// <param name="recipe">The recipe the selection was rolled from.</param>
+    /// <param name="presentBottomFirst">The present layers' ingredient id and chosen variant id, in
+    /// paint order. An absent layer is simply not listed.</param>
+    /// <param name="source">How to name the selection in a refusal.</param>
+    /// <returns>The combined depth map.</returns>
+    /// <exception cref="KeyNotFoundException">A named layer or variant is not in the recipe.</exception>
+    /// <exception cref="PartialAlphaException">Some layer has a partly transparent pixel.</exception>
+    /// <remarks>
+    /// Only alpha decides the stack rule and <see cref="Colorizer"/> keeps alpha, so the stored
+    /// (uncolorized) images are used. An all-absent roll has no layers — callers treat it as paper and
+    /// do not call this.
+    /// </remarks>
+    public static DepthMap ForSelection(LoadedRecipe recipe,
+        IReadOnlyList<(string IngredientId, string VariantId)> presentBottomFirst, string source = "the selection")
+    {
+        ArgumentNullException.ThrowIfNull(recipe);
+        ArgumentNullException.ThrowIfNull(presentBottomFirst);
+
+        var byId = new Dictionary<string, LoadedIngredient>(StringComparer.Ordinal);
+        foreach (var ing in recipe.Ingredients) byId[ing.Manifest.Id] = ing;   // last wins, as StackRoll
+
+        var pairs = new List<(Image<Rgba32>, DepthMap?)>(presentBottomFirst.Count);
+        foreach (var (ingId, varId) in presentBottomFirst)
+        {
+            if (!byId.TryGetValue(ingId, out var ing))
+                throw new KeyNotFoundException($"{source}: recipe '{recipe.Manifest.Id}' has no layer '{ingId}'.");
+            if (!ing.VariantImages.TryGetValue(varId, out var image))
+                throw new KeyNotFoundException($"{source}: layer '{ingId}' has no variant '{varId}'.");
+            pairs.Add((image, ing.Depths.GetValueOrDefault(varId)));
+        }
+
+        var (art, depth) = Combine(pairs, source);
+        art.Dispose();
+        return depth;
     }
 
     /// <summary>Scans one layer for a partly transparent pixel and throws naming it, matching

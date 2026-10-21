@@ -1,3 +1,4 @@
+using Nfty.Core.Formats;
 using Nfty.Core.Imaging;
 using Nfty.Core.Model;
 using SixLabors.ImageSharp;
@@ -130,4 +131,51 @@ public class StackDepthTests
         using var two = Row(Red, Red);
         Assert.Throws<ArgumentException>(() => StackDepth.Combine([(two, Map(1, 1))]));
     }
+
+    [Fact]
+    public void A_selection_takes_depth_from_the_topmost_solid_layer_and_ignores_color()
+    {
+        // body: 4x1 solid, front 1 everywhere. lock: only x=2 solid, front 3. Value-maps, Dynamic-style.
+        using var body = Art.FromAscii("####");
+        using var lockArt = Art.FromAscii("..#.");
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("chest", "Chest", new[] { "body", "lock" }, Array.Empty<IncompatibilityRule>()),
+            Ingredients = new[]
+            {
+                Layer("body", "oak", body, Art.Depth(body, (_, _) => (1, 0))),
+                Layer("lock", "gold", lockArt, Art.Depth(lockArt, (_, _) => (3, 0))),
+            },
+        };
+
+        var depth = StackDepth.ForSelection(recipe, new[] { ("body", "oak"), ("lock", "gold") });
+
+        Assert.Equal(new byte[] { 1, 0, 1, 0, 3, 0, 1, 0 }, depth.ToBytes());
+        // Colorizing changes no alpha, so the stack rule over colorized layers gives the same bytes.
+        using var tinted = Colorizer.Apply(lockArt, 200, 0.5, ColorModel.Hsv);
+        var (art, viaCombine) = StackDepth.Combine(new[] {
+            (body, (DepthMap?)Art.Depth(body, (_, _) => (1, 0))), (tinted, (DepthMap?)Art.Depth(lockArt, (_, _) => (3, 0))) });
+        art.Dispose();
+        Assert.Equal(viaCombine.ToBytes(), depth.ToBytes());
+    }
+
+    [Fact]
+    public void A_selection_naming_a_missing_variant_is_refused_by_name()
+    {
+        using var body = Art.FromAscii("#");
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("chest", "Chest", new[] { "body" }, Array.Empty<IncompatibilityRule>()),
+            Ingredients = new[] { Layer("body", "oak", body, null) },
+        };
+        var ex = Assert.Throws<KeyNotFoundException>(() => StackDepth.ForSelection(recipe, new[] { ("body", "walnut") }));
+        Assert.Contains("walnut", ex.Message);
+    }
+
+    private static LoadedIngredient Layer(string id, string variant, Image<Rgba32> img, DepthMap? depth) => new()
+    {
+        Manifest = new IngredientManifest(id, id, LayerKind.Custom, null, new[] { new Variant(variant, variant, 1) }),
+        VariantImages = new Dictionary<string, Image<Rgba32>> { [variant] = img },
+        Depths = depth is null ? DepthMaps.None : new Dictionary<string, DepthMap> { [variant] = depth },
+    };
 }
