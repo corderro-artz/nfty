@@ -111,8 +111,9 @@ the other way changes only the task named.
 16. **OpenSea `animation_url` pointing at the model.** *Recommend:* out of scope; marketplace metadata
     is untouched. One BACKLOG entry (Task 16).
 17. **Variant rises its STORED pixels** (step-7 ruling 2: a Dynamic/Static variant rises gray). Stands.
-    A "rise as colorized sample" option is not added. The author should hear this again now that the
-    pane button makes it visible.
+    A "rise as colorized sample" option is not added. **Author confirmed 2026-10-21:** "Gray with export
+    so it works the same as a loose 2d asset" — the variant rises and exports as its stored value-map,
+    exactly as a loose picture of those pixels would.
 
 ---
 
