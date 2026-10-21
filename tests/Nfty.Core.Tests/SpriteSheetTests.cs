@@ -5,6 +5,7 @@ using Nfty.Core.Model;
 using Nfty.Core.Output;
 using Nfty.Core.Publish;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
 using Xunit;
 
@@ -64,6 +65,21 @@ public class SpriteSheetTests
             SpriteSheet.Write(set.Items, layout, png);
 
             Assert.Equal(new SheetGrid(layout.Columns, layout.Rows, 4, 4, 3), SheetGrid.Read(png));
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void A_sheet_of_no_assets_carries_no_grid()
+    {
+        string dir = Cook(1);
+        try
+        {
+            string png = Path.Combine(dir, "empty.png");
+            SpriteSheet.Write(Array.Empty<SetItem>(), new SpriteSheetLayout(1, 1, 4, 4), png);
+            // Read() would say null for a "count=0" chunk too (Parse refuses it), so look at the raw entries.
+            Assert.DoesNotContain(Image.Identify(png).Metadata.GetPngMetadata().TextData,
+                t => t.Keyword == SheetGrid.ChunkKeyword);
         }
         finally { Directory.Delete(dir, recursive: true); }
     }

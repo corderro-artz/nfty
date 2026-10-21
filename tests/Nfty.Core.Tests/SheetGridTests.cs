@@ -186,7 +186,7 @@ public class SheetGridTests
     [Fact]
     public void A_failed_rewrite_leaves_the_file_untouched_and_no_temp_behind()
     {
-        if (!OperatingSystem.IsWindows()) return; // a read-only attribute blocks overwrite-by-rename only there
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "a read-only attribute blocks overwrite-by-rename only on Windows");
         string dir = Temp();
         string path = Path.Combine(dir, "s.png");
         try
