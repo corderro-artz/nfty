@@ -485,39 +485,9 @@ public partial class IngredientEditorView : UserControl
         if (light is null || dark is null) return;
         _backdropFrom = next;
 
-        double tile = cell * 2;
-        var group = new DrawingGroup();
-        group.Children.Add(new GeometryDrawing
-        {
-            Brush = light,
-            Geometry = new RectangleGeometry(new Rect(0, 0, tile, tile)),
-        });
-        group.Children.Add(new GeometryDrawing
-        {
-            Brush = dark,
-            Geometry = new RectangleGeometry(new Rect(0, 0, cell, cell)),
-        });
-        group.Children.Add(new GeometryDrawing
-        {
-            Brush = dark,
-            Geometry = new RectangleGeometry(new Rect(cell, cell, cell, cell)),
-        });
-
         // THE PHASE IS THE FIX, not the size. The lattice is anchored on the ART's corner rather
-        // than on this panel's, so a square boundary falls exactly on a pixel boundary; a brush of
-        // the right size tiled from the wrong origin is the same bug with better arithmetic. The
-        // modulo keeps the start on the panel (a negative DestinationRect is not honoured) while
-        // leaving the corner on a tile boundary, which is all "in phase" means.
-        double startX = Mod(art.X, tile);
-        double startY = Mod(art.Y, tile);
-
-        _backdrop.Background = new DrawingBrush(group)
-        {
-            TileMode = TileMode.Tile,
-            SourceRect = new RelativeRect(0, 0, tile, tile, RelativeUnit.Absolute),
-            DestinationRect = new RelativeRect(startX, startY, tile, tile, RelativeUnit.Absolute),
-            Stretch = Stretch.None,
-        };
+        // than on this panel's (the arithmetic is PixelLattice's, shared with the Rise page).
+        _backdrop.Background = PixelLattice.Build(cell, art.X, art.Y, light, dark);
     }
 
     /// <summary>The flat ground: the app's own page color, which is what the lattice averages to
@@ -530,14 +500,6 @@ public partial class IngredientEditorView : UserControl
         if (ReferenceEquals(_backdrop.Background, flat)) return;
         _backdropFrom = (0, 0, 0, step, false);
         _backdrop.Background = flat;
-    }
-
-    /// <summary>A modulo that returns a non-negative remainder — C#'s <c>%</c> keeps the dividend's
-    /// sign, and the art can sit at a negative offset in a pane narrower than the tile.</summary>
-    private static double Mod(double value, double by)
-    {
-        double r = value % by;
-        return r < 0 ? r + by : r;
     }
 
     private void OnVmChanged(object? sender, PropertyChangedEventArgs e)
@@ -631,7 +593,8 @@ public partial class IngredientEditorView : UserControl
     /// <c>Stretch="Uniform"</c> image leaves inside its box, times the zoom, plus the pan.
     /// </summary>
     /// <remarks>
-    /// <b>THIS IS THE ONLY PLACE THE ZOOM EXISTS.</b> The pointer mapping, the marquee overlay and
+    /// <b>THIS IS THE ONLY PLACE IN THE VIEW THE ZOOM EXISTS</b> - the arithmetic is
+    /// <see cref="CanvasMapping"/>'s, shared with the Rise page. The pointer mapping, the marquee overlay and
     /// the backdrop lattice are all mapped through this one function, so putting the magnification
     /// here means the pixel a click lands on, the pixel the marquee is drawn around and the square
     /// the lattice paints all move together by construction. The drawn art follows because
@@ -647,13 +610,10 @@ public partial class IngredientEditorView : UserControl
     {
         scale = offX = offY = 0;
         if (_img.Source is not Bitmap bmp) return false;
-        double imgW = bmp.PixelSize.Width, imgH = bmp.PixelSize.Height;
-        double cw = _surface.Bounds.Width, ch = _surface.Bounds.Height;
-        if (imgW <= 0 || imgH <= 0 || cw <= 0 || ch <= 0) return false;
-        double zoom = _vm?.Zoom ?? 1;
-        scale = Math.Min(cw / imgW, ch / imgH) * zoom;
-        offX = (cw - imgW * scale) / 2 + (_vm?.PanX ?? 0);
-        offY = (ch - imgH * scale) / 2 + (_vm?.PanY ?? 0);
+        if (!CanvasMapping.TryFrame(bmp.PixelSize.Width, bmp.PixelSize.Height,
+                _surface.Bounds.Width, _surface.Bounds.Height,
+                _vm?.Zoom ?? 1, _vm?.PanX ?? 0, _vm?.PanY ?? 0, out var frame)) return false;
+        (scale, offX, offY) = (frame.Scale, frame.OffX, frame.OffY);
         return true;
     }
 
@@ -702,18 +662,13 @@ public partial class IngredientEditorView : UserControl
     private void ClampPan()
     {
         if (_vm is null || _img.Source is not Bitmap bmp) return;
-        double fit = Math.Min(_surface.Bounds.Width / bmp.PixelSize.Width,
-                              _surface.Bounds.Height / bmp.PixelSize.Height);
-        if (!double.IsFinite(fit) || fit <= 0) return;
-
-        double scale = fit * _vm.Zoom;
-        double roomX = Math.Abs(_surface.Bounds.Width - bmp.PixelSize.Width * scale) / 2;
-        double roomY = Math.Abs(_surface.Bounds.Height - bmp.PixelSize.Height * scale) / 2;
+        var (x, y) = CanvasMapping.ClampPan(bmp.PixelSize.Width, bmp.PixelSize.Height,
+            _surface.Bounds.Width, _surface.Bounds.Height, _vm.Zoom, _vm.PanX, _vm.PanY);
 
         // Assigned unconditionally: the generated setter drops an equal value, so this settles in
         // one hop rather than re-entering through the notification it would otherwise raise.
-        _vm.PanX = Math.Clamp(_vm.PanX, -roomX, roomX);
-        _vm.PanY = Math.Clamp(_vm.PanY, -roomY, roomY);
+        _vm.PanX = x;
+        _vm.PanY = y;
     }
 
     /// <summary>
@@ -738,12 +693,11 @@ public partial class IngredientEditorView : UserControl
         double after = _vm.Zoom;
         if (after == before) return;                  // already at a limit
 
-        double newScale = scale * (after / before);
-        double imgW = bmp.PixelSize.Width, imgH = bmp.PixelSize.Height;
-        double cx = (at.X - offX) / scale, cy = (at.Y - offY) / scale;
-
-        _vm.PanX = at.X - cx * newScale - (_surface.Bounds.Width - imgW * newScale) / 2;
-        _vm.PanY = at.Y - cy * newScale - (_surface.Bounds.Height - imgH * newScale) / 2;
+        var (panX, panY) = CanvasMapping.PanKeeping(bmp.PixelSize.Width, bmp.PixelSize.Height,
+            _surface.Bounds.Width, _surface.Bounds.Height,
+            new CanvasFrame(scale, offX, offY), before, after, at.X, at.Y);
+        _vm.PanX = panX;
+        _vm.PanY = panY;
         ClampPan();
     }
 
@@ -752,9 +706,8 @@ public partial class IngredientEditorView : UserControl
     {
         if (_img.Source is not Bitmap bmp || !Geometry(out var scale, out var offX, out var offY)) return;
         var p = e.GetPosition(_surface);
-        int px = Math.Clamp((int)((p.X - offX) / scale), 0, bmp.PixelSize.Width - 1);
-        int py = Math.Clamp((int)((p.Y - offY) / scale), 0, bmp.PixelSize.Height - 1);
-        var pt = (px, py);
+        var pt = CanvasMapping.PixelAt(new CanvasFrame(scale, offX, offY), p.X, p.Y,
+            bmp.PixelSize.Width, bmp.PixelSize.Height);
         if (_points.Count == 0 || _points[^1] != pt) _points.Add(pt);
     }
 

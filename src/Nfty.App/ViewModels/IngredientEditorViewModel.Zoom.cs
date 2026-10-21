@@ -1,4 +1,5 @@
 using System.Globalization;
+using Nfty.App.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -13,7 +14,7 @@ namespace Nfty.App.ViewModels;
 /// editor dirty.</para>
 ///
 /// <para><b>Zoom and pan are a modification of ONE function.</b> The view maps between canvas pixels
-/// and control coordinates in a single place (<c>Geometry</c>), and the pointer, the marquee overlay
+/// and control coordinates in a single place (<c>Geometry</c>, over <c>CanvasMapping</c>, shared with the Rise page), and the pointer, the marquee overlay
 /// and the backdrop lattice are all mapped through it. Putting the zoom there means the thing you
 /// click is the thing you painted and the lattice stays in phase, at every magnification, without a
 /// second copy of the arithmetic anywhere.</para>
@@ -22,18 +23,18 @@ public partial class IngredientEditorViewModel
 {
     /// <summary>The zoom that fits the whole canvas in the tile. There is nothing below it: zooming
     /// out past the art would be empty tile, which answers no question.</summary>
-    public const double ZoomMin = 1;
+    public const double ZoomMin = CanvasMapping.ZoomMin;
 
     /// <summary>The ceiling. Sixteen times the fitted size is a pixel the size of a fingertip on a
     /// small sprite and about five device pixels per art pixel on a 1000px canvas — past that the
     /// tile shows less of the drawing than a reader can navigate by.</summary>
-    public const double ZoomMax = 16;
+    public const double ZoomMax = CanvasMapping.ZoomMax;
 
     /// <summary>One notch of the wheel, or one press of the zoom keys.</summary>
-    public const double ZoomStep = 1.25;
+    public const double ZoomStep = CanvasMapping.ZoomStep;
 
     /// <summary>How far one arrow-key press pans, in control pixels.</summary>
-    public const double PanStep = 24;
+    public const double PanStep = CanvasMapping.PanStep;
 
     /// <summary>
     /// How much bigger than fitted the canvas is drawn. One is the whole art in the tile.

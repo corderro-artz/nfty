@@ -704,6 +704,46 @@ public class VisualCapture
         }
     }
 
+    /// <summary>The editor's canvas mapping in the states <see cref="Capture_editor_paint"/> does not
+    /// reach: a coarser lattice step under zoom and pan with a marquee drawn through the same
+    /// geometry, the grid off, and the grid at a non-square art size. They exist so a refactor of the
+    /// mapping arithmetic can be proved pixel-identical.</summary>
+    [AvaloniaFact]
+    public void Capture_editor_mapping()
+    {
+        if (Dir is null) return;   // inert unless explicitly capturing
+
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            var key = variant.Key.ToString()!.ToLowerInvariant();
+            var (book, recipe, ing) = DynamicIngredient();
+            var vm = new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(), new FakeNav(),
+                new CookBookSession(), new FakeDialogs(), new FilePickerService());
+            vm.ActiveTool = EditorTool.Brush;
+            vm.BrushSize = 1;
+            vm.BrushValue = 40;
+            foreach (var (x, y) in new[] { (1, 1), (2, 1), (1, 2), (4, 3), (5, 4), (6, 5), (2, 6) })
+                vm.ApplyToolStroke(new[] { (x, y) });
+
+            vm.GridSize = 2;
+            vm.Zoom = 3;
+            vm.PanBy(-70, 25);
+            vm.ActiveTool = EditorTool.Select;
+            vm.ApplyToolStroke(new[] { (1, 1), (4, 3) });
+            Capture(new Views.IngredientEditorView { DataContext = vm }, variant, $"editor-mapping-step-{key}.png");
+
+            vm.ShowPixelGrid = false;
+            Capture(new Views.IngredientEditorView { DataContext = vm }, variant, $"editor-mapping-flat-{key}.png");
+
+            vm.ShowPixelGrid = true;
+            vm.GridSize = 1;
+            vm.Zoom = 1;
+            Capture(new Views.IngredientEditorView { DataContext = vm }, variant, $"editor-mapping-fit-{key}.png");
+            vm.Dispose();
+            book.Dispose();
+        }
+    }
+
     /// <summary>
     /// The reference-layer panel in the Ingredient Editor's colorize rail, in the four states that
     /// matter and both themes.
