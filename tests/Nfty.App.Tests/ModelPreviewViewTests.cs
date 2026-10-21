@@ -498,12 +498,13 @@ public class ModelPreviewViewTests
             view.HostInteracting = true;
             vm.Orbit(new Vector2(5, 0));
             // Headless RunJobs never fires a DispatcherTimer (probed: a 20 ms RunOnce stays at 0 however
-            // long it is pumped), so run the real loop until the held frame lands, capped at 2 s.
+            // long it is pumped), so run the real loop until the held frame lands, capped at 2 s. The cap
+            // is the token's own wall-clock timer, not a DispatcherTimer that could outlive this test.
             using var cts = new CancellationTokenSource();
+            cts.CancelAfter(TimeSpan.FromSeconds(2));
             var watch = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(5) };
             watch.Tick += (_, _) => { if (view.RepaintCount != before) cts.Cancel(); };
             watch.Start();
-            DispatcherTimer.RunOnce(cts.Cancel, TimeSpan.FromSeconds(2));
             Dispatcher.UIThread.MainLoop(cts.Token);
             watch.Stop();
             Assert.Equal(before + 1, view.RepaintCount);

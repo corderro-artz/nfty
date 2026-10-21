@@ -166,7 +166,10 @@ public sealed class Camera
     /// depth along that axis (the shift has zero component along forward by construction), the
     /// anchor's own forward-axis depth is constant through the correction, so converting the
     /// screen-space error to world units at THAT depth — instead of at <see cref="Distance"/> — makes
-    /// the correction exact in one pass rather than an approximation that needs iterating.</summary>
+    /// the correction exact in one pass rather than an approximation that needs iterating.
+    /// Exact while the corrected target stays inside the subject box; over empty space far beside the
+    /// model the target clamp wins and the anchor drifts — orbiting about empty air is what the clamp
+    /// exists to prevent.</summary>
     public Camera ZoomAnchored(float factor, Vector2 pointerScreen, int width, int height)
     {
         var anchor = Unproject(pointerScreen, width, height);
