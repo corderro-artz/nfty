@@ -63,7 +63,7 @@
                       IsVisible="{Binding BookIsTwoDOnly}"
                       ToolTip.Tip="This book has art with partial alpha, which cannot rise: a voxel is solid or empty.">
                 <StackPanel Orientation="Horizontal" Spacing="5">
-                  <Path Classes="ico xs" Data="{StaticResource IconRect}" />
+                  <Path Classes="ico xs" Data="{StaticResource Icon2dOnly}" />
                   <TextBlock Classes="ck" Text="2D only" />
                 </StackPanel>
               </Border>
@@ -370,8 +370,7 @@
                 <Border VerticalAlignment="Bottom" Height="26" Background="{DynamicResource ScrimBrush}">
                   <Grid ColumnDefinitions="*,Auto,Auto" Margin="6,0">
                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                      <!-- Placeholder glyph: the page's own mark replaces it with the Rise icons. -->
-                      <Path Classes="ico xs" Data="{StaticResource IconLock}" />
+                      <Path Classes="ico xs" Data="{StaticResource IconRise}" />
                       <TextBlock Text="{Binding TileCaption}" Classes="plabel tilecap" />
                     </StackPanel>
                     <Button Grid.Column="1" Classes="icon" Padding="2" Classes.unlocked="{Binding PreviewEnlarged}"
@@ -477,7 +476,7 @@
                      it to be shoved when it appears. -->
                 <StackPanel Spacing="8" IsVisible="{Binding HasPartialAlphaRows}">
                   <Grid Classes="ctlh" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
-                    <Path Grid.Column="0" Classes="ico xs" Data="{StaticResource IconRect}" VerticalAlignment="Center" />
+                    <Path Grid.Column="0" Classes="ico xs" Data="{StaticResource Icon2dOnly}" VerticalAlignment="Center" />
                     <TextBlock Grid.Column="1" Text="2D ONLY" Classes="plabel" VerticalAlignment="Center" />
                     <TextBlock Grid.Column="2" Classes="cv twodcount" Text="{Binding PartialAlphaCountText}" />
                   </Grid>

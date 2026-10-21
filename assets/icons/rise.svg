@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <title>IconRise</title>
+  <desc>A flat picture pushed out into a solid: an oblique block, front face square-on with its top and side faces showing depth. Must not read as Kitchen (a wide lidded archive box) or as a lock, eye or the rect tool.</desc>
+  <path d="M3 10h12v11H3zM3 10l5-6h12l-5 6M20 4v11l-5 6"/>
+</svg>

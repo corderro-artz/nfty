@@ -16,6 +16,9 @@
     is scaled by one factor rather than by its own bounds.
   -->
 
+  <!-- A single flat sheet seen at an angle, no depth face: the picture that cannot rise. Must not read as Rise (a block), the rect tool, a lock or an eye. -->
+  <StreamGeometry x:Key="Icon2dOnly">M2.5 17.5 7 8h14.5L17 17.5z</StreamGeometry>
+
   <!-- landing.html: the arrow trailing the "cooking metaphor" link (explorer.html reuses it as cook_go) -->
   <StreamGeometry x:Key="IconArrowRight">M5 12h13M12 6l6 6-6 6</StreamGeometry>
 
@@ -120,6 +123,9 @@
 
   <!-- ingredient-editor.html: "Reroll sampled color" — also the recipe portrait's reroll -->
   <StreamGeometry x:Key="IconReroll">M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6</StreamGeometry>
+
+  <!-- A flat picture pushed out into a solid: an oblique block, front face square-on with its top and side faces showing depth. Must not read as Kitchen (a wide lidded archive box) or as a lock, eye or the rect tool. -->
+  <StreamGeometry x:Key="IconRise">M3 10h12v11H3zM3 10l5-6h12l-5 6M20 4v11l-5 6</StreamGeometry>
 
   <!-- explorer.html: magnifier (mockup uses <circle cx=11 cy=11 r=7> + the handle path) -->
   <StreamGeometry x:Key="IconSearch">M18 11a7 7 0 1 1-14 0 7 7 0 0 1 14 0zm3 10-4-4</StreamGeometry>

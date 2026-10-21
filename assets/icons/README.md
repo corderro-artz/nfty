@@ -1,6 +1,6 @@
 # Icon sources
 
-The 45 glyphs the app draws, as SVG. **These are the drawings.**
+The 54 glyphs the app draws, as SVG. **These are the drawings.**
 `src/Nfty.App/Themes/Icons.axaml` is generated from them:
 
 ```bash

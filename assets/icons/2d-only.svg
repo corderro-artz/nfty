@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <title>Icon2dOnly</title>
+  <desc>A single flat sheet seen at an angle, no depth face: the picture that cannot rise. Must not read as Rise (a block), the rect tool, a lock or an eye.</desc>
+  <path d="M2.5 17.5 7 8h14.5L17 17.5z"/>
+</svg>

@@ -1276,6 +1276,59 @@ public class VisualCapture
     }
 
     /// <summary>
+    /// The whole icon set at the three sizes the app draws it (12, 14, 18 px), both themes. A glyph
+    /// has to differ from its NEIGHBOUR, which only shows beside it at size: Rise sits next to Kitchen,
+    /// 2D-only next to Rise, and the rest follow in key order.
+    /// </summary>
+    [AvaloniaFact]
+    public void Capture_icon_set()
+    {
+        if (Dir is null) return;   // inert unless explicitly capturing
+
+        var all = new SortedDictionary<string, Geometry>(StringComparer.Ordinal);
+        // Keys come from the generated dictionary's source; geometries resolve through the live app,
+        // so a key that does not resolve there fails the capture instead of being skipped.
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "src", "Nfty.App", "Themes", "Icons.axaml"))) dir = dir.Parent;
+        Assert.NotNull(dir);
+        var text = File.ReadAllText(Path.Combine(dir!.FullName, "src", "Nfty.App", "Themes", "Icons.axaml"));
+        foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(text, "x:Key=\"(Icon[A-Za-z0-9]+)\""))
+        {
+            Assert.True(Application.Current!.TryFindResource(m.Groups[1].Value, out var res) && res is Geometry, m.Groups[1].Value);
+            all[m.Groups[1].Value] = (Geometry)res!;
+        }
+        var order = new List<string> { "IconKitchen", "IconRise", "Icon2dOnly", "IconLock", "IconRect", "IconImport", "IconDownload", "IconTypeSet" };
+        order.AddRange(all.Keys.Where(k => !order.Contains(k)));
+        Assert.Contains("IconRise", all.Keys);
+        Assert.Contains("Icon2dOnly", all.Keys);
+
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            string theme = variant.Key.ToString()!.ToLowerInvariant();
+            foreach (var (cls, px) in new[] { ("xs", 12), ("", 14), ("ti", 18) })
+            {
+                var panel = new WrapPanel { Margin = new Thickness(12) };
+                foreach (var key in order)
+                {
+                    var path = new Avalonia.Controls.Shapes.Path { Data = all[key] };
+                    path.Classes.Add("ico");
+                    if (cls.Length > 0) path.Classes.Add(cls);
+                    var cell = new StackPanel { Width = 84, Margin = new Thickness(0, 0, 0, 10), Spacing = 4 };
+                    cell.Children.Add(new Border { Width = 24, Height = 24, HorizontalAlignment = HorizontalAlignment.Left, Child = path });
+                    cell.Children.Add(new TextBlock { Text = key.Substring(4), FontSize = 9 });
+                    panel.Children.Add(cell);
+                }
+                var window = new Window { RequestedThemeVariant = variant, Width = 900, Height = 360, Content = panel };
+                window.Show();
+                Dispatcher.UIThread.RunJobs();
+                using var frame = window.CaptureRenderedFrame()!;
+                frame.Save(Path.Combine(Dir!, $"icons-{px}-{theme}.png"), PngBitmapEncoderOptions.Default);
+                window.Close();
+            }
+        }
+    }
+
+    /// <summary>
     /// The Rise page, in every state its layout has to survive, in both themes, at the mockups' 1180x720
     /// AND at the area the smallest window really gives a page (<c>-min</c>).
     /// </summary>
