@@ -212,7 +212,12 @@ public sealed class SetRiseSource : RiseSource
             entries.Add(RiseExportSnapshot.Lazy(() =>
             {
                 var art = LoadArt(path);
-                return (art, Resolve(book, setItem, art).Map);
+                try { return (art, Resolve(book, setItem, art).Map); }
+                catch
+                {
+                    art.Dispose();      // nobody else holds it yet: a failed resolve must not leak it
+                    throw;
+                }
             }));
         }
         return new RiseExportSnapshot(entries);
@@ -329,20 +334,28 @@ public sealed class SetRiseSource : RiseSource
     private void Arrive(LoadedCookBook? book, string? name)
     {
         if (_disposed) { book?.Dispose(); return; }   // a late result is dropped, not published
-        _searchDone = true;
-        _book = book;
-        BookName = name;
-        if (book is not null)
+        try
         {
-            foreach (var item in _items)
+            _searchDone = true;
+            _book = book;
+            BookName = name;
+            if (book is not null)
             {
-                if (item.Subject is not { } s) { item.ForgetChip(); continue; }
-                s.Reseed(DepthFor(_setItems[item.Id], s.Art));
-                item.RefreshDepth();
+                foreach (var item in _items)
+                {
+                    if (item.Subject is not { } s) { item.ForgetChip(); continue; }
+                    s.Reseed(DepthFor(_setItems[item.Id], s.Art));
+                    item.RefreshDepth();
+                }
             }
+            RaiseChanged();
         }
-        RaiseChanged();
-        _arrived.TrySetResult();
+        finally
+        {
+            // Whatever a listener or a reseed throws, the search is over: an export waits for this
+            // behind a card only its job can close, so it must never be left pending.
+            _arrived.TrySetResult();
+        }
     }
 
     /// <inheritdoc />

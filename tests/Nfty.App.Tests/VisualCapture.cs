@@ -918,6 +918,16 @@ public class VisualCapture
             Capture(new Views.BusyView { DataContext = busy }, variant,
                 $"busy-{key}.png", width: 1180, height: 400);
 
+            // The Rise batch export's card: counted and stoppable, the one busy card with a Cancel.
+            using var exportCts = new System.Threading.CancellationTokenSource();
+            var exporting = new BusyViewModel("Exporting models", "Rising 7 of 20 models…", exportCts)
+            {
+                IsIndeterminate = false,
+                Progress = 0.35,
+            };
+            Capture(new Views.BusyView { DataContext = exporting }, variant,
+                $"busy-rise-export-{key}.png", width: 1180, height: 400);
+
             using var import = ImportImageForm(new FakeDialogs());
             Capture(new Views.ImportImageView { DataContext = import }, variant,
                 $"import-image-{key}.png", width: 1180, height: 780);

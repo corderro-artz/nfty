@@ -56,6 +56,20 @@ public class SetRiseSourceTests
     }
 
     [AvaloniaFact]
+    public async Task Export_readiness_is_published_even_when_publishing_the_book_throws()
+    {
+        // An export waits for ExportReady behind a busy card nothing but the job can close: if the
+        // arrival threw before saying so, every later export would wait forever.
+        var setDir = CookedBesideBook(out _);
+        using var set = SetReader.Read(setDir);
+        using var src = new SetRiseSource(set, set.Items[0].Number, () => Array.Empty<string>(), new ImageBridge());
+        src.Changed += () => throw new InvalidOperationException("a listener failed");
+        await src.BookSearch;
+        Assert.ThrowsAny<Exception>(() => Dispatcher.UIThread.RunJobs());
+        Assert.True(src.ExportReady.IsCompleted);
+    }
+
+    [AvaloniaFact]
     public async Task A_found_book_gives_each_asset_its_combined_depth()
     {
         var setDir = CookedBesideBook(out _);

@@ -509,6 +509,7 @@ public sealed partial class RiseViewModel
         string where = packed ? destination : Path.Combine(destination, stem);
         var target = packed ? ModelDestination.Zip(destination) : ModelDestination.Folder(where);
         int n = items.Count;
+        int finished = 0;
         ModelExportResult result;
         try
         {
@@ -519,17 +520,21 @@ public sealed partial class RiseViewModel
                     if (!Source.ExportReady.IsCompleted)
                     {
                         busy.PhaseText = "Looking for the CookBook that cooked this Set…";
-                        await Source.ExportReady;
+                        // Cancel is honored while waiting too: the card says "Stopping…", so it must stop.
+                        await Source.ExportReady.WaitAsync(token);
                     }
                     // Taken on the UI thread, after the depth is final; read off it from here on.
                     using var snapshot = Source.SnapshotExport(items);
                     busy.IsIndeterminate = false;
                     busy.PhaseText = RisingText(0, n);
-                    var progress = new Progress<int>(done =>
+                    var shown = new Progress<int>(done =>
                     {
                         busy.Progress = (double)done / n;
                         if (!token.IsCancellationRequested) busy.PhaseText = RisingText(done, n);
                     });
+                    // Counted on the worker as well as shown: the cancel message must know whether
+                    // anything was written, and Progress<T> reports only by posting.
+                    var progress = new Relay(done => { Volatile.Write(ref finished, done); ((IProgress<int>)shown).Report(done); });
                     return await Task.Run(() => ModelBatch.Export(bases, i => snapshot.Open(i, bases[i]),
                         RiseExportSnapshot.Release, options, target, progress, token));
                 }, cancellable: true);
@@ -540,7 +545,9 @@ public sealed partial class RiseViewModel
             // models finished before the stop, each whole.
             _status.Say(packed
                 ? "Export canceled. No zip was written."
-                : $"Export canceled. The models finished before the stop are in {where}.");
+                : Volatile.Read(ref finished) == 0
+                    ? "Export canceled. No models were written."
+                    : $"Export canceled. The models finished before the stop are in {where}.");
             return;
         }
 
@@ -558,6 +565,12 @@ public sealed partial class RiseViewModel
             $" Replaced {result.Replaced.Count} existing {(result.Replaced.Count == 1 ? "file" : "files")}.");
         _status.Say(string.Create(CultureInfo.InvariantCulture,
             $"Exported {models} {(models == 1 ? "model" : "models")} ({result.FileNames.Count} files) to {where}.") + replaced + tail);
+    }
+
+    /// <summary>Reports on the reporting thread (the worker), unlike <see cref="Progress{T}"/>.</summary>
+    private sealed class Relay(Action<int> report) : IProgress<int>
+    {
+        public void Report(int value) => report(value);
     }
 
     private static string RisingText(int done, int total) =>

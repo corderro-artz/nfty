@@ -144,6 +144,19 @@ public class ModelBatchExportTests
     }
 
     [Fact]
+    public void A_zip_that_cannot_be_put_in_place_fails_with_its_own_error_and_leaves_no_temp()
+    {
+        var root = Temp("nfty-stream-blocked-");
+        var blocked = Path.Combine(root, "m.zip");
+        Directory.CreateDirectory(blocked);              // a folder where the zip should go
+        var pics = new Pictures("#");
+        var ex = Record.Exception(() => ModelBatch.Export(new[] { "a" }, pics.Open, pics.Release, new RiseOptions(),
+            ModelDestination.Zip(blocked)));
+        Assert.True(ex is IOException or UnauthorizedAccessException, ex?.GetType().Name);
+        Assert.Equal(new[] { "m.zip" }, Directory.GetFileSystemEntries(root).Select(Path.GetFileName));
+    }
+
+    [Fact]
     public void A_release_runs_even_when_the_build_throws()
     {
         var pics = new Pictures("#");

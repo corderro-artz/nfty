@@ -266,6 +266,49 @@ public class RiseExportSafetyTests
         Assert.False(vm.IsExporting);
     }
 
+    [AvaloniaFact]
+    public async Task Cancel_stops_a_batch_still_waiting_for_the_book()
+    {
+        var setDir = CookedBesideBook();
+        using var set = SetReader.Read(setDir);
+        using var gate = new ManualResetEventSlim(false);
+        var src = new SetRiseSource(set, set.Items[0].Number, () => Array.Empty<string>(), new ImageBridge(),
+            readBook: p => { gate.Wait(TimeSpan.FromSeconds(30)); return CookBookArchive.Read(p); });
+        var status = new StatusService();
+        var root = Temp();
+        using var vm = Vm(src, new Picker(save: Path.Combine(root, "m.zip")), new Dialogs(cancelBusy: true), status);
+        vm.ToggleCheckAllCommand.Execute(null);
+        try
+        {
+            var exporting = vm.ExportCommand.ExecuteAsync(null);
+            var first = await Task.WhenAny(exporting, Task.Delay(TimeSpan.FromSeconds(10)));
+            Assert.Same(exporting, first);          // stopped at once, not when the search ended
+            Assert.Equal("Export canceled. No zip was written.", status.Last);
+            Assert.Empty(Directory.GetFiles(root));
+        }
+        finally { gate.Set(); }
+    }
+
+    [AvaloniaFact]
+    public async Task A_folder_batch_canceled_before_any_model_says_none_was_written()
+    {
+        var setDir = CookedBesideBook();
+        using var set = SetReader.Read(setDir);
+        var src = new SetRiseSource(set, set.Items[0].Number, () => Array.Empty<string>(), new ImageBridge());
+        await src.BookSearch;
+        Dispatcher.UIThread.RunJobs();
+        var status = new StatusService();
+        var root = Temp();
+        using var vm = Vm(src, new Picker(folder: root), new Dialogs(cancelBusy: true), status);
+        vm.Packed = false;
+        vm.ToggleCheckAllCommand.Execute(null);
+
+        await vm.ExportCommand.ExecuteAsync(null);
+
+        Assert.Equal("Export canceled. No models were written.", status.Last);
+        Assert.Empty(Directory.GetFileSystemEntries(root));
+    }
+
     // ------------------------------------------------------------------ a Set lets go of what it left
 
     [AvaloniaFact]

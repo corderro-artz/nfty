@@ -366,7 +366,13 @@ public abstract class ModelDestination
                 _temp = $"{_path}.{Guid.NewGuid():N}.tmp";
                 _replaced = replaced;
                 _stream = new FileStream(_temp, FileMode.CreateNew, FileAccess.Write);
-                _zip = new ZipArchive(_stream, ZipArchiveMode.Create);
+                try { _zip = new ZipArchive(_stream, ZipArchiveMode.Create); }
+                catch
+                {
+                    _stream.Dispose();
+                    DeleteTemp();
+                    throw;
+                }
             }
 
             public override void Add(ModelFile file)
@@ -388,8 +394,19 @@ public abstract class ModelDestination
 
             public override void Dispose()
             {
-                _zip.Dispose();
-                _stream.Dispose();
+                // Runs on the failure path too, possibly after a Complete that threw part-way: it must
+                // never throw over the exception that brought it here.
+                try { _zip.Dispose(); }
+                catch (IOException) { /* the zip is being thrown away */ }
+                catch (InvalidDataException) { /* the zip is being thrown away */ }
+                catch (ObjectDisposedException) { /* already closed */ }
+                try { _stream.Dispose(); }
+                catch (IOException) { /* the zip is being thrown away */ }
+                DeleteTemp();
+            }
+
+            private void DeleteTemp()
+            {
                 try { if (File.Exists(_temp)) File.Delete(_temp); }
                 catch (IOException) { /* best effort */ }
                 catch (UnauthorizedAccessException) { /* best effort */ }
