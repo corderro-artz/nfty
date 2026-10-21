@@ -50,7 +50,20 @@ public sealed partial class RiseViewModel
     /// <summary>Writes the painted depth where it came from. Any gesture still down is dropped first,
     /// or its preview would be saved as if it had been committed.</summary>
     [RelayCommand(CanExecute = nameof(CanSave))]
-    private async Task Save()
+    private Task Save()
+    {
+        // The WHOLE save, error card included, is what Back waits for: the dialog layer holds one
+        // card, so a leave card asked while the error card is up would replace it unread and orphan
+        // the save, leaving IsSaving stuck and Save dead for the rest of the page's life.
+        if (_saveRun is { IsCompleted: false } running) return running;
+        var run = SaveRunAsync();
+        _saveRun = run;
+        return run;
+    }
+
+    private Task? _saveRun;
+
+    private async Task SaveRunAsync()
     {
         CancelDepthPreview();
         // A disabled button is a label: the generated command does not consult CanExecute, so the gate
@@ -59,9 +72,7 @@ public sealed partial class RiseViewModel
         IsSaving = true;
         try
         {
-            var running = Source.SaveAsync();
-            _saveInFlight = running;
-            await running;
+            await Source.SaveAsync();
         }
         catch (Exception ex)
         {
@@ -69,13 +80,10 @@ public sealed partial class RiseViewModel
         }
         finally
         {
-            _saveInFlight = null;
             IsSaving = false;
             OnDepthEdited();
         }
     }
-
-    private Task? _saveInFlight;
 
     /// <summary>Leaves the page, asking first when there is depth that leaving would lose.</summary>
     [RelayCommand(CanExecute = nameof(CanLeave))]
@@ -84,13 +92,14 @@ public sealed partial class RiseViewModel
         // A disabled button is a label: the generated command does not consult CanExecute.
         if (!CanLeave()) return;
         CancelDepthPreview();
-        // A save that is writing decides what is unsaved. Asking now would offer to discard depth that
+        // A save that is running decides what is unsaved. Asking now would offer to discard depth that
         // is about to land anyway, and leaving now would hand the Explorer a book a moment before the
-        // save replaces it, so the Explorer's next whole-book write would start from the old one.
-        if (_saveInFlight is { } saving)
+        // save replaces it, so the Explorer's next whole-book write would start from the old one. It is
+        // the whole save that is awaited, its error card too (see Save), never only the write.
+        if (_saveRun is { IsCompleted: false } saving)
         {
             try { await saving; }
-            catch (Exception) { /* Save itself says why; the page then asks as usual */ }
+            catch (Exception) { /* Save reports its own failure; the page then asks as usual */ }
         }
         int n = DirtyCount;
         if (!Source.IsEditable || n == 0)

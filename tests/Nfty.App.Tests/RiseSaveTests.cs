@@ -80,6 +80,41 @@ public class RiseSaveTests
     }
 
     [AvaloniaFact]
+    public async Task Back_during_a_save_that_fails_shows_the_error_first_and_leaves_save_working()
+    {
+        // The real single-slot dialog layer: a second ShowAsync replaces the first card and orphans
+        // its task, so Back must not ask anything until Save has finished INCLUDING its error card.
+        var (s, _) = RiseFixtures.OnDisk(RiseFixtures.ChestBook());
+        bool fail = true;
+        s.Changed += () => { if (fail) throw new IOException("disk said no"); };   // faults after the write went pending
+        var dialogs = new DialogService();
+        var nav = new FakeNav();
+        using var vm = Vm(RiseFixtures.Variant(s), nav, dialogs);
+        vm.ApplyDepthStroke(new[] { (2, 1) }, DepthSide.Front, false);
+
+        var saving = vm.SaveCommand.ExecuteAsync(null);
+        var leaving = vm.BackCommand.ExecuteAsync(null);
+        for (int i = 0; i < 200 && dialogs.Active is null; i++) await Task.Delay(10);
+
+        var err = Assert.IsType<ErrorDialogViewModel>(dialogs.Active);
+        Assert.Contains("disk said no", err.Message);
+        Assert.False(leaving.IsCompleted);
+        dialogs.Close(null);                                   // the user reads it and closes it
+        await saving;
+
+        for (int i = 0; i < 200 && dialogs.Active is null; i++) await Task.Delay(10);
+        Assert.IsType<LeaveDialogViewModel>(dialogs.Active);   // only now: the depth is still unsaved
+        Assert.False(vm.IsSaving);
+        dialogs.Close(LeaveChoice.Stay);
+        await leaving;
+
+        Assert.Equal(0, nav.BackCount);
+        Assert.False(vm.IsSaving);
+        fail = false;
+        Assert.True(vm.SaveCommand.CanExecute(null));          // Save is not dead for the page's life
+    }
+
+    [AvaloniaFact]
     public async Task Back_with_unsaved_depth_asks_and_Stay_keeps_the_page()
     {
         var (s, _) = RiseFixtures.OnDisk(RiseFixtures.ChestBook());
