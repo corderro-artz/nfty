@@ -22,8 +22,8 @@ public sealed partial class RiseItem : ObservableObject, IDisposable
     {
         Id = id;
         Name = name;
-        Caption = caption;
-        ExportBaseName = exportBaseName;
+        _caption = caption;
+        _exportBaseName = exportBaseName;
         _thumbnail = thumbnail;
         _ownsThumbnail = ownsThumbnail;
     }
@@ -34,11 +34,24 @@ public sealed partial class RiseItem : ObservableObject, IDisposable
     /// <summary>Display name.</summary>
     public string Name { get; }
 
+    private string _caption;
+    private string _exportBaseName;
+
     /// <summary>The line under the name.</summary>
-    public string Caption { get; }
+    public string Caption => _caption;
 
     /// <summary>File name stem when exported.</summary>
-    public string ExportBaseName { get; }
+    public string ExportBaseName => _exportBaseName;
+
+    /// <summary>Changes the caption and export stem of a row whose subject was replaced in place (a
+    /// rerolled recipe keeps its row, so the page's selection survives).</summary>
+    internal void Relabel(string caption, string exportBaseName)
+    {
+        _caption = caption;
+        _exportBaseName = exportBaseName;
+        OnPropertyChanged(nameof(Caption));
+        OnPropertyChanged(nameof(ExportBaseName));
+    }
 
     /// <summary>Row picture.</summary>
     [ObservableProperty] private Bitmap? _thumbnail;
@@ -54,7 +67,9 @@ public sealed partial class RiseItem : ObservableObject, IDisposable
 
     internal void Attach(RiseSubject subject)
     {
+        var old = Subject;
         Subject = subject;
+        if (old is not null && !ReferenceEquals(old, subject)) old.Dispose();
         RefreshDepth();
         OnPropertyChanged(nameof(IsChipShown));
         OnPropertyChanged(nameof(IsRisableOrUnknown));
@@ -65,17 +80,25 @@ public sealed partial class RiseItem : ObservableObject, IDisposable
     {
         get
         {
-            if (Subject is not { } s) return "";
-            if (s.Depth.PartialCount > 0) return "2D only";
-            var sum = s.Depth.Summary();
-            return sum.Look switch
-            {
-                DepthLook.Empty => "empty",
-                DepthLook.Paper => "paper",
-                DepthLook.Uniform => $"{sum.Front} · {sum.Back}",
-                _ => "varied",
-            };
+            return Subject is { } s ? ChipFor(s.Depth) : "";
         }
+    }
+
+    /// <summary>The chip wording for a surface: "2D only", "empty", "paper", "f · b" or "varied".</summary>
+    /// <param name="depth">The surface to describe.</param>
+    /// <returns>The chip text.</returns>
+    public static string ChipFor(DepthSurface depth)
+    {
+        ArgumentNullException.ThrowIfNull(depth);
+        if (depth.PartialCount > 0) return "2D only";
+        var sum = depth.Summary();
+        return sum.Look switch
+        {
+            DepthLook.Empty => "empty",
+            DepthLook.Paper => "paper",
+            DepthLook.Uniform => $"{sum.Front} · {sum.Back}",
+            _ => "varied",
+        };
     }
 
     /// <summary>Whether the chip warns: the picture has partial alpha and cannot rise.</summary>

@@ -1,0 +1,210 @@
+using System.Globalization;
+using Nfty.App.Services;
+using Nfty.Core.Editing;
+using Nfty.Core.Formats;
+using Nfty.Core.Generation;
+using Nfty.Core.Imaging;
+using Nfty.Core.Model;
+using Nfty.Model;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+
+namespace Nfty.App.Rise;
+
+/// <summary>
+/// One recipe, rolled: the asset the Recipe pane's hero shows for the same seed, risen with the
+/// recipe's COMBINED depth (each pixel takes the depth of the topmost solid layer). Read-only — the
+/// depth belongs to the layers' own variants, so changing it means opening one.
+/// </summary>
+/// <remarks>
+/// The roll is <see cref="Generator.GenerateStreaming"/> with one asset and no uniqueness
+/// enforcement (the hero's own call), so the art here and the hero are one roll, not two that agree.
+/// </remarks>
+public sealed class RecipeRiseSource : RiseSource
+{
+    private readonly LoadedCookBook _book;
+    private readonly LoadedRecipe _recipe;
+    private readonly IImageBridge _bridge;
+    private readonly RiseItem _item;
+    private readonly RiseItem[] _items;
+    private List<RiseLayerRow> _layers = new();
+
+    /// <summary>Rolls the recipe once.</summary>
+    /// <param name="book">The book the recipe belongs to; borrowed.</param>
+    /// <param name="recipe">The recipe to roll; borrowed.</param>
+    /// <param name="seed">The seed of the roll.</param>
+    /// <param name="bridge">Makes the thumbnails.</param>
+    public RecipeRiseSource(LoadedCookBook book, LoadedRecipe recipe, int seed, IImageBridge bridge)
+    {
+        ArgumentNullException.ThrowIfNull(book);
+        ArgumentNullException.ThrowIfNull(recipe);
+        ArgumentNullException.ThrowIfNull(bridge);
+        _book = book;
+        _recipe = recipe;
+        _bridge = bridge;
+        Seed = seed;
+
+        var rolled = Roll();
+        Problem = rolled.Problem;
+        _layers = rolled.Rows;
+        _item = new RiseItem("roll", recipe.Manifest.Name, CaptionFor(seed), BaseNameFor(seed),
+            bridge.ToBitmap(rolled.Art), ownsThumbnail: true);
+        _item.Attach(new RiseSubject(rolled.Art, rolled.Depth, ownsArt: true));
+        _item.IsSelected = true;
+        _items = new[] { _item };
+    }
+
+    /// <summary>The seed of the current roll.</summary>
+    public int Seed { get; private set; }
+
+    /// <summary>Why the book cannot cook (the generator's own message), or null when it can.</summary>
+    public string? Problem { get; private set; }
+
+    /// <summary>One row per layer of the recipe, bottom first.</summary>
+    public IReadOnlyList<RiseLayerRow> Layers => _layers;
+
+    /// <inheritdoc />
+    public override RiseSourceKind Kind => RiseSourceKind.Recipe;
+
+    /// <inheritdoc />
+    public override string Kicker => $"{_recipe.Manifest.Name.ToUpperInvariant()} · LAYERS";
+
+    /// <inheritdoc />
+    public override string Title => _recipe.Manifest.Name;
+
+    /// <inheritdoc />
+    public override IReadOnlyList<RiseItem> Items => _items;
+
+    /// <inheritdoc />
+    public override RiseItem InitialItem => _item;
+
+    /// <inheritdoc />
+    public override IReadOnlyList<string> Facts
+    {
+        get
+        {
+            var c = _book.Manifest.Canvas;
+            return new[]
+            {
+                string.Create(CultureInfo.InvariantCulture, $"seed {Seed}"),
+                string.Create(CultureInfo.InvariantCulture, $"canvas {c.Width} × {c.Height}"),
+                "1 → paints first, furthest back",
+            };
+        }
+    }
+
+    /// <inheritdoc />
+    public override string BatchStem => $"{_recipe.Manifest.Name}-models";
+
+    /// <inheritdoc />
+    public override string? ReadOnlyPill => "combined depth · read-only";
+
+    /// <inheritdoc />
+    public override string RailFootNote => "Layers are read-only here until write-through.";
+
+    /// <inheritdoc />
+    public override string DepthNote => Problem is { } p
+        ? $"This book cannot cook, so there is no roll to rise: {p}"
+        : "A recipe shows its stack's combined depth: each pixel takes the depth of the topmost solid layer. "
+          + "Change a layer's depth on its own variant.";
+
+    /// <inheritdoc />
+    public override string OpeningLine => Problem is null
+        ? $"Rising a roll of “{_recipe.Manifest.Name}” — seed {Seed}. Reroll for another."
+        : $"“{_recipe.Manifest.Name}” cannot be rolled: {Problem}";
+
+    /// <inheritdoc />
+    public override RiseSubject Open(RiseItem item) =>
+        item.Subject ?? throw new InvalidOperationException("The roll was not loaded.");
+
+    /// <summary>Moves to the next seed and rolls again, replacing the item's subject and the layer rows.</summary>
+    public void Reroll()
+    {
+        Seed++;
+        var rolled = Roll();
+        Problem = rolled.Problem;
+
+        var oldRows = _layers;
+        var oldThumb = _item.Thumbnail;
+        _layers = rolled.Rows;
+        _item.Thumbnail = _bridge.ToBitmap(rolled.Art);
+        _item.Relabel(CaptionFor(Seed), BaseNameFor(Seed));
+        _item.Attach(new RiseSubject(rolled.Art, rolled.Depth, ownsArt: true));   // disposes the old subject
+        oldThumb?.Dispose();
+        foreach (var r in oldRows) r.Dispose();
+        RaiseChanged();
+    }
+
+    private string CaptionFor(int seed) => string.Create(CultureInfo.InvariantCulture, $"seed {seed}");
+
+    private string BaseNameFor(int seed) => string.Create(CultureInfo.InvariantCulture, $"{_recipe.Manifest.Name}-{seed}");
+
+    private sealed record Rolled(Image<Rgba32> Art, DepthMap? Depth, string? Problem, List<RiseLayerRow> Rows);
+
+    private Rolled Roll()
+    {
+        GeneratedAsset? asset = null;
+        try
+        {
+            asset = Generator.GenerateStreaming(_book, new GenerateOptions(1,
+                Seed.ToString(CultureInfo.InvariantCulture), _recipe.Manifest.Id, EnforceUniqueDna: false)).First();
+            var art = asset.Image.Clone();
+            var present = asset.Traits.Select(t => (t.IngredientId, t.VariantId)).ToList();
+            DepthMap? depth = null;
+            if (present.Count > 0)
+            {
+                try { depth = StackDepth.ForSelection(_recipe, present, $"the {_recipe.Manifest.Name} recipe"); }
+                catch (PartialAlphaException) { /* the subject's own partial count marks the item 2D only */ }
+            }
+            return new Rolled(art, depth, null, RowsFor(asset));
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            // An invalid book (or no roll at all) is a state to show, not a crash: a clear canvas, the reason.
+            var c = _book.Manifest.Canvas;
+            return new Rolled(new Image<Rgba32>(c.Width, c.Height), null, ex.Message, new List<RiseLayerRow>());
+        }
+        finally
+        {
+            asset?.Dispose();
+        }
+    }
+
+    private List<RiseLayerRow> RowsFor(GeneratedAsset asset)
+    {
+        var rows = new List<RiseLayerRow>();
+        var byId = new Dictionary<string, LoadedIngredient>(StringComparer.Ordinal);
+        foreach (var ing in _recipe.Ingredients) byId[ing.Manifest.Id] = ing;
+        var picked = asset.Traits.ToDictionary(t => t.IngredientId, t => t, StringComparer.Ordinal);
+
+        int depth = 0;
+        foreach (var id in _recipe.Manifest.LayerOrder)
+        {
+            depth++;
+            var ing = byId[id];
+            if (!picked.TryGetValue(id, out var trait))
+            {
+                rows.Add(new RiseLayerRow(depth, ing.Manifest.Name, "left out of this roll", ing.Manifest.Kind,
+                    "", isAbsent: true, thumbnail: null));
+                continue;
+            }
+
+            var roll = asset.ColorRolls.FirstOrDefault(r => r.LayerId == id);
+            using var rendered = roll is { H: { } h, S: { } s }
+                ? VariantPreview.Render(ing, trait.VariantId, new RolledColor(h, s))
+                : ing.VariantImages[trait.VariantId].Clone();   // Custom, or a roll that recorded no color
+            var own = new DepthSurface(ing.VariantImages[trait.VariantId], ing.Depths.GetValueOrDefault(trait.VariantId));
+            rows.Add(new RiseLayerRow(depth, ing.Manifest.Name, trait.VariantName, ing.Manifest.Kind,
+                RiseItem.ChipFor(own), isAbsent: false, thumbnail: _bridge.ToBitmap(rendered)));
+        }
+        return rows;
+    }
+
+    /// <inheritdoc />
+    public override void Dispose()
+    {
+        base.Dispose();
+        foreach (var r in _layers) r.Dispose();
+        _layers = new List<RiseLayerRow>();
+    }
+}

@@ -44,7 +44,8 @@ internal static class RiseFixtures
 
     /// <summary>The book in memory: recipe "chest" = layers ["body", "lock"]; body variants oak (weight 3),
     /// ghost (1); lock variant gold.</summary>
-    internal static LoadedCookBook ChestBook(DepthMap? oakDepth = null, DepthMap? ghostDepth = null)
+    internal static LoadedCookBook ChestBook(DepthMap? oakDepth = null, DepthMap? ghostDepth = null,
+        DepthMap? goldDepth = null)
     {
         var bodyDepths = new Dictionary<string, DepthMap>();
         if (oakDepth is not null) bodyDepths["oak"] = oakDepth;
@@ -65,6 +66,7 @@ internal static class RiseFixtures
             Manifest = new IngredientManifest("lock", "Lock", LayerKind.Custom, null,
                 new[] { new Variant("gold", "Gold", 1) }),
             VariantImages = new Dictionary<string, Image<Rgba32>> { ["gold"] = Picture(Gold) },
+            Depths = goldDepth is null ? new Dictionary<string, DepthMap>() : new Dictionary<string, DepthMap> { ["gold"] = goldDepth },
         };
         var recipe = new LoadedRecipe
         {
