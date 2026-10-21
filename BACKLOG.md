@@ -253,3 +253,12 @@ rebuilds at roughly half the UI thread, and canvas input during a 512px drag is 
 chunks (delayed, never dropped). The exact model lands on release. The levers are the already-noted
 cross-quad vertex dedup, an incremental rebuild of only the columns a stroke touched, and moving the
 rebuild off the UI thread (it is a pure function of art + depth). Re-measure in Release first.
+
+**Also on the EXPORT tab:** while EXPORT shows with one model ticked, every committed stroke, undo,
+fill, format/pivot/voxel change and item change rebuilds that whole model a SECOND time and
+PNG-encodes its texture (`RiseViewModel.RecomputeSize`, ruling 8's exact size figure), synchronously
+on the UI thread, on top of the preview rebuild above, and clones the art for the snapshot it builds
+from. Not during a drag (previews never ask), only on commit. Cheap at the sizes this branch ships;
+at 512px it doubles the commit cost. The fix is a debounce (recount ~250 ms after the last change,
+the figure blank or marked stale meanwhile) or counting off the UI thread from the export snapshot;
+either keeps "exact, never estimated". Measure first.
