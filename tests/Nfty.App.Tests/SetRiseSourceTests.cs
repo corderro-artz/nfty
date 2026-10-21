@@ -341,7 +341,7 @@ public class SetRiseSourceTests
         using var onDisk = Image.Load<Rgba32>(set.Items[0].ImagePath);
         Assert.Equal(onDisk[0, 0], art[0, 0]);
         // Refused by the source itself, not only where a button is enabled.
-        Assert.Throws<InvalidOperationException>(() => src.ExportInputs(src.Items, src.Items.Select(i => i.ExportBaseName).ToList()));
+        Assert.Throws<InvalidOperationException>(() => src.SnapshotExport(src.Items));
     }
 
     [AvaloniaFact]
@@ -355,10 +355,15 @@ public class SetRiseSourceTests
         var picked = new[] { src.Items[1], src.Items[2] };
 
         var seen = new List<string>();
-        foreach (var input in src.ExportInputs(picked, new[] { "one", "two" }))
+        using (var snapshot = src.SnapshotExport(picked))
         {
-            seen.Add(input.BaseName);
-            Assert.Equal(8, input.Art.Width);   // alive while it is being consumed
+            for (int i = 0; i < snapshot.Count; i++)
+            {
+                var input = snapshot.Open(i, i == 0 ? "one" : "two");
+                seen.Add(input.BaseName);
+                Assert.Equal(8, input.Art.Width);   // alive while it is being consumed
+                RiseExportSnapshot.Release(input);
+            }
         }
 
         Assert.Equal(new[] { "one", "two" }, seen);

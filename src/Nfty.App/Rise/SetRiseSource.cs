@@ -36,6 +36,7 @@ public sealed class SetRiseSource : RiseSource
     private bool _disposed;
     private readonly Dictionary<int, string> _refusals = new();
     private readonly Func<string, LoadedCookBook> _readBook;
+    private readonly TaskCompletionSource _arrived = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     /// <summary>Opens the source and starts looking for the book.</summary>
     /// <param name="set">The Set; borrowed.</param>
@@ -188,29 +189,48 @@ public sealed class SetRiseSource : RiseSource
 
     /// <inheritdoc />
     /// <exception cref="InvalidOperationException">The Set is sealed.</exception>
-    public override IEnumerable<ModelInput> ExportInputs(IReadOnlyList<RiseItem> items, IReadOnlyList<string> baseNames)
+    /// <remarks>An asset the page has not loaded is decoded only when the export reaches it, off the UI
+    /// thread, against the book captured HERE: its depth is worked out by <see cref="Resolve"/>, which
+    /// writes nothing back, so the depth note's bookkeeping stays the UI thread's alone. The caller
+    /// waits for <see cref="ExportReady"/> first, so that book is the one the page shows.</remarks>
+    public override RiseExportSnapshot SnapshotExport(IReadOnlyList<RiseItem> items)
     {
+        ArgumentNullException.ThrowIfNull(items);
         // Refused here as well as where the button is enabled: a disabled button is a label.
         if (ExportRefusal is { } refusal) throw new InvalidOperationException(refusal);
-        return Inputs(items, baseNames);
-    }
-
-    private IEnumerable<ModelInput> Inputs(IReadOnlyList<RiseItem> items, IReadOnlyList<string> baseNames)
-    {
-        for (int i = 0; i < items.Count; i++)
+        var book = _book;
+        var entries = new List<RiseExportSnapshot.Entry>(items.Count);
+        foreach (var item in items)
         {
-            var item = items[i];
             if (item.Subject is { } s)
             {
-                yield return new ModelInput(baseNames[i], s.Art, s.Depth.ToDepthMap());
+                entries.Add(RiseExportSnapshot.Frozen(s.Art, s.Depth.ToDepthMap()));
                 continue;
             }
-
-            // Not loaded: decode for the yield and give it back afterwards. Never attached, so the
-            // page never holds a subject it did not ask for.
-            using var art = LoadArt(_rows[item.Id].ImagePath);
-            yield return new ModelInput(baseNames[i], art, DepthFor(_setItems[item.Id], art));
+            string path = _rows[item.Id].ImagePath;
+            var setItem = _setItems[item.Id];
+            entries.Add(RiseExportSnapshot.Lazy(() =>
+            {
+                var art = LoadArt(path);
+                return (art, Resolve(book, setItem, art).Map);
+            }));
         }
+        return new RiseExportSnapshot(entries);
+    }
+
+    /// <inheritdoc />
+    public override Task ExportReady => _arrived.Task;
+
+    /// <inheritdoc />
+    /// <remarks>A cooked Set is read-only and its assets reload from disk, so a subject the page has
+    /// left is dropped at once: browsing two hundred 1000px assets would otherwise keep two hundred
+    /// decoded pictures, depth copies and surfaces (about 11 MB each). What is known about it - that
+    /// it cannot rise, its chip - stays on the row.</remarks>
+    public override void Release(RiseItem item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        if (item.IsSelected) return;
+        item.Forget()?.Dispose();
     }
 
     /// <summary>The asset's PNG, or a 1×1 clear picture when it is missing or unreadable: the item is
@@ -225,33 +245,42 @@ public sealed class SetRiseSource : RiseSource
         }
     }
 
-    /// <summary>The asset's combined depth by the stack rule, or null (paper) when no book is loaded,
-    /// the asset cannot be matched to it by name, or its layers have partial alpha.</summary>
+    /// <summary>The asset's combined depth, recording for the depth note why it is paper. UI thread only:
+    /// it writes the note's bookkeeping.</summary>
     private DepthMap? DepthFor(SetItem item, Image<Rgba32> art)
     {
-        if (_book is not { } book) return null;
+        if (_book is null) return null;
+        var (map, unmapped, refusal) = Resolve(_book, item, art);
+        if (unmapped) _unmapped.Add(item.Number); else _unmapped.Remove(item.Number);
+        if (refusal is not null) _refusals[item.Number] = refusal; else _refusals.Remove(item.Number);
+        return map;
+    }
+
+    /// <summary>The asset's combined depth by the stack rule, or null (paper) when there is no book,
+    /// the asset cannot be matched to it by name, or its layers have partial alpha. Writes nothing:
+    /// an export calls it off the UI thread.</summary>
+    /// <returns>The map, whether the asset could not be matched to the book by name, and the reason a
+    /// layer keeps it 2D, if one does.</returns>
+    private static (DepthMap? Map, bool Unmapped, string? Refusal) Resolve(LoadedCookBook? book, SetItem item,
+        Image<Rgba32> art)
+    {
+        if (book is null) return (null, false, null);
         var recipe = book.Recipes.FirstOrDefault(r => r.Manifest.Id == item.Recipe);
         var present = recipe is null ? null : SetItemSelection.Resolve(recipe, item);
         if (recipe is null || present is null)
-        {
-            _unmapped.Add(item.Number);   // name ambiguity (or another book): paper, and said so
-            return null;
-        }
-        _unmapped.Remove(item.Number);
-        _refusals.Remove(item.Number);
+            return (null, true, null);      // name ambiguity (or another book): paper, and said so
 
         // An all-absent roll has no layers: it rises as nothing, and is never handed to the stack rule.
-        if (present.Count == 0) return null;
+        if (present.Count == 0) return (null, false, null);
         try
         {
             var map = StackDepth.ForSelection(recipe, present, $"asset #{item.Number:D4}");
             // A picture of another size than the book's canvas cannot take the book's depth.
-            return map.Width == art.Width && map.Height == art.Height ? map : null;
+            return (map.Width == art.Width && map.Height == art.Height ? map : null, false, null);
         }
         catch (PartialAlphaException ex)
         {
-            _refusals[item.Number] = ex.Message;   // which layer keeps this asset 2D, said in the note
-            return null;
+            return (null, false, ex.Message);   // which layer keeps this asset 2D, said in the note
         }
     }
 
@@ -260,6 +289,7 @@ public sealed class SetRiseSource : RiseSource
         if (_set.Manifest.CookbookSha256 is not { Length: > 0 } hash)
         {
             _searchDone = true;   // the Set cannot say which book, so there is nothing to look for
+            _arrived.TrySetResult();
             return Task.CompletedTask;
         }
 
@@ -306,12 +336,13 @@ public sealed class SetRiseSource : RiseSource
         {
             foreach (var item in _items)
             {
-                if (item.Subject is not { } s) continue;
+                if (item.Subject is not { } s) { item.ForgetChip(); continue; }
                 s.Reseed(DepthFor(_setItems[item.Id], s.Art));
                 item.RefreshDepth();
             }
         }
         RaiseChanged();
+        _arrived.TrySetResult();
     }
 
     /// <inheritdoc />
@@ -324,5 +355,6 @@ public sealed class SetRiseSource : RiseSource
         foreach (var r in _rows.Values) r.Dispose();
         _book?.Dispose();
         _book = null;
+        _arrived.TrySetResult();      // nobody waits for a book that will never be published
     }
 }

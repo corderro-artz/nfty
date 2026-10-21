@@ -59,9 +59,13 @@ public sealed class RiseSubject : IDisposable
         _saved = Depth.ToDepthMap();
     }
 
+    /// <summary>Whether <see cref="Dispose"/> has run; for tests that count what was let go.</summary>
+    internal bool IsDisposed { get; private set; }
+
     /// <inheritdoc />
     public void Dispose()
     {
+        IsDisposed = true;
         if (_ownsArt) Art.Dispose();
     }
 }

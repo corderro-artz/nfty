@@ -29,7 +29,7 @@ public sealed partial class RiseViewModel
 
     // Everything Save needs except "no save is running": a second press during a save joins the first
     // (the source hands back the running task) rather than being refused.
-    private bool SaveGate => Source.IsEditable && !Source.IsLocked && HasUnsavedDepth;
+    private bool SaveGate => Source.IsEditable && !Source.IsLocked && HasUnsavedDepth && !IsExporting;
 
     /// <summary>The line in the footer: what Save would do, or why it will not.</summary>
     public string FooterText
@@ -78,9 +78,11 @@ public sealed partial class RiseViewModel
     private Task? _saveInFlight;
 
     /// <summary>Leaves the page, asking first when there is depth that leaving would lose.</summary>
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanLeave))]
     private async Task Back()
     {
+        // A disabled button is a label: the generated command does not consult CanExecute.
+        if (!CanLeave()) return;
         CancelDepthPreview();
         // A save that is writing decides what is unsaved. Asking now would offer to discard depth that
         // is about to land anyway, and leaving now would hand the Explorer a book a moment before the

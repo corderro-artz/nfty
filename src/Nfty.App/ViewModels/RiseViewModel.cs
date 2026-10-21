@@ -98,12 +98,15 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
 
     /// <summary>Puts a row on the canvas.</summary>
     /// <param name="item">One of <see cref="Items"/>.</param>
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanSelectItem))]
     private void SelectItem(RiseItem item)
     {
-        if (item is null) return;
+        if (item is null || !CanSelectItem(item)) return;
         SelectedItem = item;
     }
+
+    // An export is reading the page's items; the canvas stays where it was until it ends.
+    private bool CanSelectItem(RiseItem? item) => !IsExporting;
 
     /// <summary>The picture on the canvas, read from the item every time (see the class remarks).</summary>
     public RiseSubject Subject => SelectedItem.Subject ?? Source.Open(SelectedItem);
@@ -125,7 +128,7 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
 
     /// <summary>Whether strokes change anything: an editable source and a picture that can rise. A
     /// locked variant still paints, as a scratch surface.</summary>
-    public bool IsPaintable => Source.IsEditable && Subject.IsRisable;
+    public bool IsPaintable => Source.IsEditable && Subject.IsRisable && !IsExporting;
 
     /// <summary>The rail lists variants of one layer.</summary>
     public bool IsVariantRail => Source.Kind == RiseSourceKind.Variant;
@@ -490,13 +493,17 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
     /// <summary>Whether the source can reroll.</summary>
     public bool HasDie => Source is RecipeRiseSource;
 
+    private bool CanReroll() => HasDie && !IsExporting;
+
     /// <summary>Rolls the recipe again. The die never lands on the face it is showing: the face is the
     /// button's only confirmation. Random.Shared, never the engine's RNG: decoration must not touch
     /// the stream that decides assets.</summary>
-    [RelayCommand(CanExecute = nameof(HasDie))]
+    [RelayCommand(CanExecute = nameof(CanReroll))]
     private void Reroll()
     {
-        if (Source is not RecipeRiseSource recipe) return;
+        // Checked here as well: a disabled button is a label, and a reroll during an export would
+        // replace the picture on the page while its snapshot is written.
+        if (!CanReroll() || Source is not RecipeRiseSource recipe) return;
         CancelDepthPreview();
         int pick = Random.Shared.Next(1, DieFaceConverter.Faces);
         DieFace = pick >= DieFace ? pick + 1 : pick;
@@ -533,6 +540,8 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
         }
         finally { _switching = false; }
         NotifySubjectBound();
+        // Only now, with every binding moved to the new item, may the source let the old one go.
+        if (oldValue is not null && !ReferenceEquals(oldValue, newValue)) Source.Release(oldValue);
     }
 
     /// <summary>Rebuilds everything that is made from the subject, and tells the view to re-frame.</summary>
@@ -608,6 +617,9 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
         DisposeExport();
         if (Source is VariantRiseSource variant) variant.Saved -= OnVariantSaved;
         Canvas.Dispose();
-        Source.Dispose();
+        // An export still writing reads books and pictures the source owns: it disposes the source
+        // when it ends, so nothing is freed under it.
+        if (IsExporting) _disposeSourceAfterExport = true;
+        else Source.Dispose();
     }
 }

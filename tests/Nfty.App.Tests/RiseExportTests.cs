@@ -286,8 +286,10 @@ public class RiseExportTests
         Assert.Matches(@"^\d+(\.\d)? (B|KB)$", glb);
 
         // The size is the bytes the writer produces, not an estimate.
-        var inputs = vm.Source.ExportInputs(new[] { vm.SelectedItem }, new[] { "x" });
-        long actual = ModelBatch.Build(inputs, vm.ExportOptions).Files.Sum(f => (long)f.Bytes.Length);
+        using var snapshot = vm.Source.SnapshotExport(new[] { vm.SelectedItem });
+        var input = snapshot.Open(0, "x");
+        long actual = ModelBatch.Build(new[] { input }, vm.ExportOptions).Files.Sum(f => (long)f.Bytes.Length);
+        RiseExportSnapshot.Release(input);
         Assert.Equal(actual < 1024 ? $"{actual} B" : $"{actual / 1024.0:0.#} KB", glb);
 
         vm.Format = ModelFormat.GltfEmbedded;

@@ -41,6 +41,8 @@ public sealed partial class RiseViewModel
 
     private bool _bulkChecking;
     private string _manifestSize = "";
+    private RiseItem? _sizedItem;
+    private bool _disposeSourceAfterExport;
 
     /// <summary>How many times the exact size was computed; a test proves it is not computed while the
     /// DEPTH tab is showing.</summary>
@@ -327,10 +329,24 @@ public sealed partial class RiseViewModel
         ? string.Create(CultureInfo.InvariantCulture, $"Export {ExportCount} models…")
         : "Export model…";
 
-    /// <summary>An export is running.</summary>
+    /// <summary>An export is running. The page is inert until it ends: nothing that changes depth,
+    /// moves the canvas to another item, rerolls, saves or leaves. The export works from a snapshot
+    /// taken before it started, so this is not what keeps its files right; it keeps the page from
+    /// disagreeing with the files being written, and the source from being freed under them.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsPaintable))]
+    [NotifyPropertyChangedFor(nameof(CanSave))]
     [NotifyCanExecuteChangedFor(nameof(ExportCommand))]
+    [NotifyCanExecuteChangedFor(nameof(BackCommand))]
+    [NotifyCanExecuteChangedFor(nameof(UndoCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RedoCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RerollCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    [NotifyCanExecuteChangedFor(nameof(FillAllCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SelectItemCommand))]
     private bool _isExporting;
+
+    private bool CanLeave() => !IsExporting;
 
     private bool CanExport() => Source.ExportRefusal is null && ExportCount > 0 && !IsExporting;
 
@@ -344,8 +360,12 @@ public sealed partial class RiseViewModel
     private void RefreshExport(bool size)
     {
         if (_disposed) return;
-        if (size) RecomputeSize();
-        else if (ExportCount != 1) _manifestSize = "";
+        // A check change that leaves exactly one model (2 -> 1, or unticked and ticked again) names a
+        // model whose size was never counted, or was counted for another item: count it.
+        var items = ExportItems;
+        bool otherSingle = items.Count == 1 && !ReferenceEquals(items[0], _sizedItem);
+        if (size || otherSingle) RecomputeSize();
+        else if (items.Count != 1) { _manifestSize = ""; _sizedItem = null; }
         OnPropertyChanged(nameof(ExportItems));
         OnPropertyChanged(nameof(ExportCount));
         OnPropertyChanged(nameof(ExportBadge));
@@ -364,13 +384,19 @@ public sealed partial class RiseViewModel
     private void RecomputeSize()
     {
         _manifestSize = "";
+        _sizedItem = null;
         if (!IsExportTab || Source.ExportRefusal is not null) return;
         var items = ExportItems;
         if (items.Count != 1) return;
+        _sizedItem = items[0];
         try
         {
             SizeBuilds++;
-            var result = ModelBatch.Build(Source.ExportInputs(items, BaseNames(items)), ExportOptions);
+            using var snapshot = Source.SnapshotExport(items);
+            var input = snapshot.Open(0, BaseNames(items)[0]);
+            ModelBatchResult result;
+            try { result = ModelBatch.Build(new[] { input }, ExportOptions); }
+            finally { RiseExportSnapshot.Release(input); }
             if (result.Files.Count == 0) return;
             // The .gltf names its .bin, so its bytes depend on the stem the user has not picked yet:
             // that format's figure is said to be approximate; the other two carry no name at all.
@@ -401,6 +427,11 @@ public sealed partial class RiseViewModel
         if (!CanExport()) return;
         CancelDepthPreview();
         IsExporting = true;
+        await ExportCoreAsync();
+    }
+
+    private async Task ExportCoreAsync()
+    {
         try
         {
             var items = ExportItems;
@@ -409,12 +440,25 @@ public sealed partial class RiseViewModel
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, "Could not export", ex.Message));
+            if (!_disposed)
+                await _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, "Could not export", ex.Message));
         }
         finally
         {
             IsExporting = false;
+            // The page was closed while the export ran: the source it read from goes only now.
+            if (_disposeSourceAfterExport) Source.Dispose();
         }
+    }
+
+    /// <summary>Waits until every item's depth is final, behind a card when that takes a moment (a Set
+    /// still looking for its book), so the export is the depth the page goes on showing.</summary>
+    private async Task WaitForFinalDepthAsync()
+    {
+        var ready = Source.ExportReady;
+        if (ready.IsCompleted) return;
+        await BusyViewModel.RunAsync(_dialogs, "Exporting models", "Looking for the CookBook that cooked this Set…",
+            async (_, _) => { await ready; return 0; });
     }
 
     private async Task ExportOneAsync(RiseItem item)
@@ -430,26 +474,23 @@ public sealed partial class RiseViewModel
         string dir = Path.GetDirectoryName(full)!;
         string stem = Path.GetFileNameWithoutExtension(full);
 
-        // The first input is taken HERE, on the UI thread: it snapshots the depth, so a stroke painted
-        // while the model is written cannot be half in it, and it keeps the enumerator (which may own
-        // a decoded picture) alive until the build is done.
-        using var inputs = Source.ExportInputs(new[] { item }, new[] { stem }).GetEnumerator();
-        if (!inputs.MoveNext()) return;
-        var input = inputs.Current;
-        var result = await Task.Run(() =>
-        {
-            var built = ModelBatch.Build(new[] { input }, options);
-            if (built.Files.Count > 0) ModelBatch.WriteFolder(dir, built.Files);
-            return built;
-        });
+        await WaitForFinalDepthAsync();
+        // Taken HERE, on the UI thread: the picture is cloned and the depth copied, so nothing the page
+        // does while the model is written can reach it, and nothing it frees can be under the build.
+        using var snapshot = Source.SnapshotExport(new[] { item });
+        var result = await Task.Run(() => ModelBatch.Export(new[] { stem }, i => snapshot.Open(i, stem),
+            RiseExportSnapshot.Release, options, ModelDestination.Folder(dir)));
 
         MarkSkippedItems(result.Skipped, new[] { item }, new[] { stem });
-        if (result.Files.Count == 0)
+        if (result.FileNames.Count == 0)
         {
             _status.Say("Nothing exported: " + SkippedText(result.Skipped) + ".");
             return;
         }
-        _status.Say($"Exported {string.Join(", ", result.Files.Select(f => f.FileName))} to {dir}.");
+        // The picker asked about the file it named; a .bin beside a .gltf it never mentioned is said here.
+        var unasked = result.Replaced.Where(n => !string.Equals(n, Path.GetFileName(full), StringComparison.OrdinalIgnoreCase)).ToList();
+        _status.Say($"Exported {string.Join(", ", result.FileNames)} to {dir}."
+            + (unasked.Count == 0 ? "" : $" Replaced {string.Join(", ", unasked)}."));
     }
 
     private async Task ExportManyAsync(IReadOnlyList<RiseItem> items)
@@ -465,34 +506,62 @@ public sealed partial class RiseViewModel
         var bases = BaseNames(items);
         // Ticked rows already known to be 2D are not in the batch; they are still named in the status.
         var knownFlat = Items.Where(i => i.IsChecked && !i.IsRisableOrUnknown).Select(i => i.Name + " (2D only)").ToList();
-        string where = destination;
-        var result = await BusyViewModel.RunAsync(_dialogs, "Exporting models",
-            string.Create(CultureInfo.InvariantCulture, $"Rising {items.Count} models…"),
-            (_, _) => Task.Run(() =>
-            {
-                var built = ModelBatch.Build(Source.ExportInputs(items, bases), options);
-                if (built.Files.Count == 0) return built;
-                if (packed) ModelBatch.WriteZip(destination, built.Files);
-                else
+        string where = packed ? destination : Path.Combine(destination, stem);
+        var target = packed ? ModelDestination.Zip(destination) : ModelDestination.Folder(where);
+        int n = items.Count;
+        ModelExportResult result;
+        try
+        {
+            result = await BusyViewModel.RunAsync(_dialogs, "Exporting models",
+                string.Create(CultureInfo.InvariantCulture, $"Rising {n} models…"),
+                async (busy, token) =>
                 {
-                    where = Path.Combine(destination, stem);
-                    ModelBatch.WriteFolder(where, built.Files);
-                }
-                return built;
-            }));
+                    if (!Source.ExportReady.IsCompleted)
+                    {
+                        busy.PhaseText = "Looking for the CookBook that cooked this Set…";
+                        await Source.ExportReady;
+                    }
+                    // Taken on the UI thread, after the depth is final; read off it from here on.
+                    using var snapshot = Source.SnapshotExport(items);
+                    busy.IsIndeterminate = false;
+                    busy.PhaseText = RisingText(0, n);
+                    var progress = new Progress<int>(done =>
+                    {
+                        busy.Progress = (double)done / n;
+                        if (!token.IsCancellationRequested) busy.PhaseText = RisingText(done, n);
+                    });
+                    return await Task.Run(() => ModelBatch.Export(bases, i => snapshot.Open(i, bases[i]),
+                        RiseExportSnapshot.Release, options, target, progress, token));
+                }, cancellable: true);
+        }
+        catch (OperationCanceledException)
+        {
+            // A zip is moved into place only when complete, so a stop leaves none; a folder keeps the
+            // models finished before the stop, each whole.
+            _status.Say(packed
+                ? "Export canceled. No zip was written."
+                : $"Export canceled. The models finished before the stop are in {where}.");
+            return;
+        }
 
         MarkSkippedItems(result.Skipped, items, bases);
         var skipped = result.Skipped.Select(SkippedName).Concat(knownFlat).ToList();
         string tail = skipped.Count == 0 ? "" : " Skipped " + string.Join(", ", skipped) + ".";
-        if (result.Files.Count == 0)
+        if (result.FileNames.Count == 0)
         {
             _status.Say("Nothing exported." + tail);
             return;
         }
         int models = items.Count - result.Skipped.Count;
+        // The picker asked about the zip; files replaced inside a picked folder are said here.
+        string replaced = packed || result.Replaced.Count == 0 ? "" : string.Create(CultureInfo.InvariantCulture,
+            $" Replaced {result.Replaced.Count} existing {(result.Replaced.Count == 1 ? "file" : "files")}.");
         _status.Say(string.Create(CultureInfo.InvariantCulture,
-            $"Exported {models} {(models == 1 ? "model" : "models")} ({result.Files.Count} files) to {where}.") + tail);
+            $"Exported {models} {(models == 1 ? "model" : "models")} ({result.FileNames.Count} files) to {where}.") + replaced + tail);
     }
+
+    private static string RisingText(int done, int total) =>
+        string.Create(CultureInfo.InvariantCulture, $"Rising {done} of {total} models…");
 
     /// <summary>Items the writer refused become known to be 2D, so the manifest, badge and label stop
     /// promising them and a second export does not repeat the loss.</summary>

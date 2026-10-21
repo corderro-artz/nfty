@@ -112,7 +112,7 @@ public sealed partial class RiseItem : ObservableObject, IDisposable
         get
         {
             if (Subject is { } s) return ChipFor(s.Depth);
-            return _skipped switch { SkipReason.PartialAlpha => "2D only", SkipReason.NothingSolid => "empty", _ => "" };
+            return _skipped switch { SkipReason.PartialAlpha => "2D only", SkipReason.NothingSolid => "empty", _ => _forgottenChip ?? "" };
         }
     }
 
@@ -137,7 +137,7 @@ public sealed partial class RiseItem : ObservableObject, IDisposable
     public bool IsChipWarning => Subject is { } s ? s.Depth.PartialCount > 0 : _skipped == SkipReason.PartialAlpha;
 
     /// <summary>Whether there is a chip to show: the subject is loaded.</summary>
-    public bool IsChipShown => Subject is not null || _skipped is not null;
+    public bool IsChipShown => Subject is not null || _skipped is not null || _forgottenChip is not null;
 
     /// <summary>Whether the picture can rise, or is not yet loaded and so not known to be unable.</summary>
     public bool IsRisableOrUnknown => _skipped is null && (Subject?.IsRisable ?? true);
@@ -155,6 +155,40 @@ public sealed partial class RiseItem : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsChipShown));
         OnPropertyChanged(nameof(IsChipWarning));
         OnPropertyChanged(nameof(DepthChip));
+    }
+
+    private int _forgottenPartial;
+    private string? _forgottenChip;
+
+    /// <summary>Drops the chip remembered from a let-go subject: the depth it described is no longer
+    /// what the item would load with (a Set found its book).</summary>
+    internal void ForgetChip()
+    {
+        if (_forgottenChip is null) return;
+        _forgottenChip = null;
+        RefreshDepth();
+        OnPropertyChanged(nameof(IsChipShown));
+    }
+
+    /// <summary>Partially transparent pixels: the loaded subject's, or what it had when it was let go.</summary>
+    public int PartialCount => Subject?.Depth.PartialCount ?? _forgottenPartial;
+
+    /// <summary>Takes the subject off the row and hands it back UNDISPOSED; what is known about it
+    /// (that it cannot rise, and why) stays on the row, so its chip, the 2D ONLY list and the export
+    /// manifest say the same as while it was loaded.</summary>
+    /// <returns>The subject, or null when none was loaded.</returns>
+    internal RiseSubject? Forget()
+    {
+        if (Subject is not { } old) return null;
+        _forgottenPartial = old.Depth.PartialCount;
+        _forgottenChip = ChipFor(old.Depth);
+        if (_forgottenPartial > 0) _skipped = SkipReason.PartialAlpha;
+        else if (old.Depth.SolidCount == 0) _skipped = SkipReason.NothingSolid;
+        Subject = null;
+        RefreshDepth();
+        OnPropertyChanged(nameof(IsChipShown));
+        OnPropertyChanged(nameof(IsRisableOrUnknown));
+        return old;
     }
 
     /// <summary>Whether the loaded subject has unsaved depth.</summary>

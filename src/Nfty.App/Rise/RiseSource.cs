@@ -84,11 +84,11 @@ public abstract class RiseSource : IDisposable
     /// <summary>A note at the foot of the rail.</summary>
     public virtual string RailFootNote => "";
 
-    /// <summary>Loaded items that cannot rise, with how many pixels are partial.</summary>
+    /// <summary>Items known to have partial alpha (loaded now, or loaded once and let go), with how many pixels are partial.</summary>
     public virtual IReadOnlyList<PartialAlphaRow> PartialAlphaRows =>
-        Items.Where(i => i.Subject is { } s && s.Depth.PartialCount > 0)
+        Items.Where(i => i.PartialCount > 0)
             .Select(i => new PartialAlphaRow(i.Name,
-                string.Create(CultureInfo.InvariantCulture, $"{i.Subject!.Depth.PartialCount:N0} px")))
+                string.Create(CultureInfo.InvariantCulture, $"{i.PartialCount:N0} px")))
             .ToList();
 
     /// <summary>Loads an item's subject if it is not loaded yet.</summary>
@@ -96,20 +96,31 @@ public abstract class RiseSource : IDisposable
     /// <returns>The item's subject.</returns>
     public abstract RiseSubject Open(RiseItem item);
 
-    /// <summary>What an export of these items should rise.</summary>
+    /// <summary>Takes everything an export of these items reads. Called on the UI thread; what it
+    /// returns is then safe to read from any thread, and nothing the page does afterwards reaches it.</summary>
     /// <param name="items">The items to export.</param>
-    /// <param name="baseNames">One file name stem per item.</param>
-    /// <returns>One input per item; art and depth are borrowed from the subjects.</returns>
-    /// <remarks>A batch export enumerates this on a pool thread, so an override must not <c>Attach</c> a
-    /// subject to an item: that raises the item's change events off the UI thread.</remarks>
-    public virtual IEnumerable<ModelInput> ExportInputs(IReadOnlyList<RiseItem> items, IReadOnlyList<string> baseNames)
+    /// <returns>One entry per item, in order.</returns>
+    /// <exception cref="InvalidOperationException">Nothing may leave this source (<see cref="ExportRefusal"/>).</exception>
+    public virtual RiseExportSnapshot SnapshotExport(IReadOnlyList<RiseItem> items)
     {
-        for (int i = 0; i < items.Count; i++)
+        ArgumentNullException.ThrowIfNull(items);
+        // Refused here as well as where the button is enabled: a disabled button is a label.
+        if (ExportRefusal is { } refusal) throw new InvalidOperationException(refusal);
+        return new RiseExportSnapshot(items.Select(i =>
         {
-            var s = Open(items[i]);
-            yield return new ModelInput(baseNames[i], s.Art, s.Depth.ToDepthMap());
-        }
+            var s = Open(i);
+            return RiseExportSnapshot.Frozen(s.Art, s.Depth.ToDepthMap());
+        }).ToList());
     }
+
+    /// <summary>Completes when every item's depth is final, so an export taken after it is the one the
+    /// page will go on showing (a Set is still looking for the book that cooked it). Never faults.</summary>
+    public virtual Task ExportReady => Task.CompletedTask;
+
+    /// <summary>The page has moved off an item; a source that can cheaply reload it may let its subject
+    /// go. Called after the page has adopted the next item, so nothing still reads the old picture.</summary>
+    /// <param name="item">The item the page left.</param>
+    public virtual void Release(RiseItem item) { }
 
     /// <summary>Writes the painted depth to where it came from.</summary>
     /// <returns>A task that completes when it is written. A save already running is not started twice:
