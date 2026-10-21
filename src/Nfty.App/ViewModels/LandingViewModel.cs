@@ -485,9 +485,15 @@ public partial class LandingViewModel : ViewModelBase
         LoadedSet set;
         try
         {
+            // Cancellable: Escape never closes a busy card (the job owns it), so a read that stalls
+            // - a Set on a network share - is stopped from the card, and its unpacked copy goes too.
             set = await BusyViewModel.RunAsync(_dialogs, "Opening Set",
                 Directory.Exists(path) ? "Reading the collection…" : "Unpacking…",
-                (_, ct) => SetReader.ReadAsync(path, ct));
+                (_, ct) => SetReader.ReadAsync(path, ct), cancellable: true);
+        }
+        catch (OperationCanceledException)
+        {
+            return;     // the user stopped it: nothing opened, nothing to report
         }
         catch (Exception ex)
         {

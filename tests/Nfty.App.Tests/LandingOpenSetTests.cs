@@ -70,6 +70,47 @@ public class LandingOpenSetTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>Presses Cancel on the busy card the moment it appears, and records what was shown.</summary>
+    private sealed class CancelingDialogs : IDialogService
+    {
+        public List<ViewModelBase> Shown { get; } = new();
+        public ViewModelBase? Active { get; private set; }
+        public event Action? Changed;
+        public Task<TResult?> ShowAsync<TResult>(ViewModelBase dialog)
+        {
+            Shown.Add(dialog);
+            Active = dialog;
+            Changed?.Invoke();
+            if (dialog is BusyViewModel busy) busy.CancelCommand.Execute(null);
+            return Task.FromResult<TResult?>(default);
+        }
+        public void Close(object? result) { Active = null; Changed?.Invoke(); }
+    }
+
+    [AvaloniaFact]
+    public async Task Opening_a_set_can_be_canceled_and_then_goes_nowhere_and_reports_nothing()
+    {
+        // Escape no longer closes a busy card (the job owns it), so a read that stalls - a Set on a
+        // network share - must be stoppable from the card itself.
+        var archive = CookPackedSet();
+        try
+        {
+            var nav = new FakeNav();
+            var dialogs = new CancelingDialogs();
+            var vm = new LandingViewModel(nav, dialogs, new StubPicker(archive),
+                new RecentsService(Directory.CreateTempSubdirectory().FullName), new CookBookSession(),
+                _ => null!, s => new SetBrowserViewModel(s), (_, _, _) => null!);
+            await vm.OpenSetCommand.ExecuteAsync(null);
+            await vm.PendingOpen!;
+
+            var busy = Assert.IsType<BusyViewModel>(dialogs.Shown.Single());
+            Assert.True(busy.CanCancel);
+            Assert.Null(nav.Current);
+            Assert.Null(dialogs.Active);
+        }
+        finally { Directory.Delete(Path.GetDirectoryName(archive)!, recursive: true); }
+    }
+
     [AvaloniaFact]
     public async Task Canceled_picker_does_nothing()
     {

@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Nfty.Core.Formats;
 using Nfty.Core.Generation;
 using Nfty.Core.Model;
@@ -42,6 +44,36 @@ public class SetReaderTests
         using var set = Generator.Generate(TinyBook(), new GenerateOptions(Count: 2, Seed: "seed1"));
         SetWriter.Write(set, dir, pack);
         return dir;
+    }
+
+    [Fact]
+    public async Task A_canceled_read_of_a_packed_set_throws_and_opens_nothing()
+    {
+        var dir = CookTo(pack: true);
+        var archive = Directory.GetFiles(dir, "*.set").Single();
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => SetReader.ReadAsync(archive, cts.Token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => SetReader.ReadAsync(dir, cts.Token));
+    }
+
+    [Fact]
+    public void A_read_canceled_between_assets_stops_and_deletes_the_unpacked_copy()
+    {
+        // The parse half, handed a temp copy it owns: cancellation is honored per asset, and the copy
+        // goes with the failure rather than lingering in TEMP.
+        var dir = CookTo(pack: false);
+        var temp = Directory.CreateTempSubdirectory("nfty-set-test-").FullName;
+        foreach (var f in Directory.GetFiles(dir, "*", SearchOption.AllDirectories))
+        {
+            var to = Path.Combine(temp, Path.GetRelativePath(dir, f));
+            Directory.CreateDirectory(Path.GetDirectoryName(to)!);
+            File.Copy(f, to);
+        }
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+        Assert.ThrowsAny<OperationCanceledException>(() => SetReader.Load(temp, temp, dir, cts.Token));
+        Assert.False(Directory.Exists(temp));
     }
 
     [Fact]

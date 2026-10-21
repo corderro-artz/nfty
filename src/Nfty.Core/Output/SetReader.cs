@@ -93,15 +93,22 @@ public static class SetReader
     /// <exception cref="CorruptSetException">The Set is missing or malformed.</exception>
     public static LoadedSet Read(string path)
     {
-        string dir = path;
-        string? temp = null;
-        if (File.Exists(path))   // a .set archive (or any file) → extract to a temp dir
-        {
-            temp = Directory.CreateTempSubdirectory("nfty-set-").FullName;
-            ZipFile.ExtractToDirectory(path, temp);
-            dir = temp;
-        }
+        if (!File.Exists(path)) return Load(path, null, path, CancellationToken.None);
+        // A .set archive (or any file) → extract to a temp dir, which goes again if anything fails.
+        string temp = Directory.CreateTempSubdirectory("nfty-set-").FullName;
+        try { ZipFile.ExtractToDirectory(path, temp); }
+        catch { DeleteQuietly(temp); throw; }
+        return Load(temp, temp, path, CancellationToken.None);
+    }
 
+    /// <summary>Parses an unpacked Set. Owns <paramref name="temp"/> on failure: deletes it before
+    /// rethrowing, so a canceled or broken read leaves nothing in TEMP.</summary>
+    /// <param name="dir">The folder holding <c>set.json</c>.</param>
+    /// <param name="temp">The temp copy to delete on failure (and to hand to the result), or null.</param>
+    /// <param name="path">What the caller asked for, for messages.</param>
+    /// <param name="ct">Checked before each asset.</param>
+    internal static LoadedSet Load(string dir, string? temp, string path, CancellationToken ct)
+    {
         try
         {
             string setJson = SetLayout.ManifestPath(dir);
@@ -129,8 +136,11 @@ public static class SetReader
                 // width would leave one Set holding two paddings. Sorting by the number nfty
                 // actually has is correct at every size and changes no byte on disk.
                 foreach (var m in Directory.EnumerateFiles(nftyDir, "*.json")
-                             .Select(f => JsonSerializer.Deserialize<NftyMetadata>(
-                                 File.ReadAllText(f), Json.Options))
+                             .Select(f =>
+                             {
+                                 ct.ThrowIfCancellationRequested();
+                                 return JsonSerializer.Deserialize<NftyMetadata>(File.ReadAllText(f), Json.Options);
+                             })
                              .Where(m => m is not null)
                              .OrderBy(m => m!.SetNumber))
                 {
@@ -150,17 +160,36 @@ public static class SetReader
         }
         catch
         {
-            if (temp is not null) try { Directory.Delete(temp, recursive: true); } catch { }
+            if (temp is not null) DeleteQuietly(temp);
             throw;
         }
     }
 
-    /// <summary>Reads a Set off the calling thread. Extracting and parsing is I/O-bound but the
-    /// underlying API is synchronous, so this is a <see cref="Task.Run(Action)"/> over
-    /// <see cref="Read"/> rather than genuine async — it exists to keep a UI thread free.</summary>
+    private static void DeleteQuietly(string dir)
+    {
+        try { Directory.Delete(dir, recursive: true); } catch { /* best effort: TEMP is cleaned eventually */ }
+    }
+
+    /// <summary>Reads a Set off the calling thread, honoring <paramref name="ct"/> throughout: during
+    /// the unpack (the archive extracts asynchronously) and between assets while parsing. A canceled
+    /// or failed read deletes its unpacked copy.</summary>
     /// <param name="path">A Set folder, or a <c>.set</c> archive.</param>
     /// <param name="ct">Cancels the read.</param>
     /// <returns>The manifest and items; the caller owns it and must dispose it.</returns>
-    public static Task<LoadedSet> ReadAsync(string path, CancellationToken ct = default) =>
-        Task.Run(() => Read(path), ct);
+    public static async Task<LoadedSet> ReadAsync(string path, CancellationToken ct = default)
+    {
+        if (!File.Exists(path)) return await Task.Run(() => Load(path, null, path, ct), ct);
+        string temp = Directory.CreateTempSubdirectory("nfty-set-").FullName;
+        try
+        {
+            await ZipFile.ExtractToDirectoryAsync(path, temp, ct);
+            // Load owns the copy once it runs; if the token stops it from starting, the catch does.
+            return await Task.Run(() => Load(temp, temp, path, ct), ct);
+        }
+        catch
+        {
+            DeleteQuietly(temp);
+            throw;
+        }
+    }
 }
