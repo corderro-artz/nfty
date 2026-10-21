@@ -14,6 +14,13 @@
              x:DataType="vm:RiseViewModel"
              RenderOptions.BitmapInterpolationMode="None"
              Focusable="True" IsTabStop="False">
+  <!-- Only a key routed through this control reaches these, hence the focus-on-attach in code-behind. -->
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Escape" Command="{Binding ClearSelectionCommand}" />
+    <KeyBinding Gesture="Ctrl+Z" Command="{Binding UndoCommand}" />
+    <KeyBinding Gesture="Ctrl+Y" Command="{Binding RedoCommand}" />
+    <KeyBinding Gesture="Ctrl+Shift+Z" Command="{Binding RedoCommand}" />
+  </UserControl.KeyBindings>
   <!-- The Rise page: a source rail, the depth canvas with its 3D tile, and a depth / export rail,
        full-bleed and divided by 1px rules like the Ingredient editor's three panes. Every pane opens
        with the same 41px header, and the footer is the editor's.

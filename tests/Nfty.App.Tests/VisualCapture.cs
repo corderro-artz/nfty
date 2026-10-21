@@ -1302,6 +1302,22 @@ public class VisualCapture
             // A picture with partial alpha: listed under 2D ONLY, flagged on its row, inked on the tile.
             ("variant-ghost", () => (RisePages.VariantVm(), null),
                 p => p.Vm.SelectItemCommand.Execute(p.Vm.Items.First(i => i.Name == "Ghost"))),
+            // A right-drag in progress, never released: the canvas shows the back raised along row 3,
+            // the 3D tile is being repainted on its budget, and the hover readout is blanked by the drag.
+            ("mid-stroke", () => (RisePages.VariantVm(oakDepth: RisePages.PaintedOak()), null),
+                p =>
+                {
+                    var art = p.View.GetVisualDescendants().OfType<Avalonia.Controls.Image>().First(i => i.Name == "CanvasImage");
+                    var origin = art.TranslatePoint(default, p.Window)!.Value;
+                    var bmp = (Avalonia.Media.Imaging.Bitmap)art.Source!;
+                    double scale = Math.Min(art.Bounds.Width / bmp.PixelSize.Width, art.Bounds.Height / bmp.PixelSize.Height);
+                    double ox = (art.Bounds.Width - bmp.PixelSize.Width * scale) / 2;
+                    double oy = (art.Bounds.Height - bmp.PixelSize.Height * scale) / 2;
+                    Avalonia.Point At(int x, int y) => new(origin.X + ox + (x + 0.5) * scale, origin.Y + oy + (y + 0.5) * scale);
+                    p.Window.MouseDown(At(1, 3), Avalonia.Input.MouseButton.Right);
+                    p.Window.MouseMove(At(6, 3));
+                    Dispatcher.UIThread.RunJobs();
+                }),
             ("recipe", () => (RisePages.RecipeVm(), null), _ => { }),
             ("set-batch-export", () => { var (v, o) = RisePages.SetVm(); return (v, o); },
                 p =>
@@ -1364,6 +1380,10 @@ public class VisualCapture
                 Need(vm.Surface.Get(3, 1).Front > 0, "no depth was painted");
                 Need(labels.LastLabelCount > 0, "the cell labels did not draw");
                 Need(model.RepaintCount > 0, "the 3D tile never painted");
+                break;
+            case "mid-stroke":
+                Need(vm.Surface.Get(3, 3).Back == 1 && vm.Surface.Get(3, 3).Front == 1, "the right-drag did not raise the back along row 3");
+                Need(model.HostInteracting, "the stroke is not in progress");
                 break;
             case "variant-locked":
                 Need(vm.Source.IsLocked && vm.HasUnsavedDepth, "the book is not locked with unsaved depth");

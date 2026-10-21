@@ -6,13 +6,17 @@ using Avalonia;
 using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.VisualTree;
 using Nfty.App.Controls;
 using Nfty.App.Services;
 using Nfty.App.ViewModels;
 // Both Avalonia and the engine have a PixelRect; the overlay speaks the engine's.
+using DepthSide = Nfty.Core.Editing.DepthSide;
 using PixelRect = Nfty.Core.Editing.PixelRect;
 
 namespace Nfty.App.Views;
@@ -26,7 +30,12 @@ namespace Nfty.App.Views;
 /// <para><b>Never two <see cref="ModelPreviewView"/>s.</b> The tile and the big slot trade places by
 /// moving the single instance between <c>TileHost</c> and <c>BigHost</c>; two instances would be two
 /// bitmaps, two camera subscriptions and two answers to "what is the model looking at".</para>
-/// <para>The pointer gestures are a later step: this file maps, draws and hosts.</para>
+/// <para><b>The pointer.</b> The left button raises the FRONT by one, the right button raises the BACK
+/// by one, Shift (held at the press) lowers instead, Ctrl constrains and Alt draws from the center. Shift
+/// is the editor's constrain key, so here it cannot be: <see cref="KeyHints.RiseConstrain"/> is Ctrl
+/// alone, and every tooltip says so from that one place. Side and sign are fixed at the PRESS, like the
+/// editor's right-button eraser; only Ctrl and Alt act live. The preview and the commit both read the
+/// path through <c>Gesture()</c>, so what was shown is what is committed.</para>
 /// </remarks>
 public partial class RiseView : UserControl
 {
@@ -45,6 +54,17 @@ public partial class RiseView : UserControl
     private Grid _railGrid = null!;
     private StackPanel _railBody = null!;
     private RiseViewModel? _vm;
+
+    // The gesture in progress. Everything about it is decided at the press (side, sign, whether a Select
+    // press is inside the mark) except the two live modifiers.
+    private readonly List<(int x, int y)> _points = new();
+    private bool _drawing;
+    private bool _panning;
+    private Point _panFrom;
+    private KeyModifiers _mods;
+    private DepthSide _side;
+    private bool _lower;
+    private bool _applyingSelection;
 
     // The geometry the backdrop was last built from; rebuilt only when one of these actually moves
     // (Bounds fires on every layout pass, and a DrawingBrush per pass is the churn to keep out).
@@ -73,6 +93,9 @@ public partial class RiseView : UserControl
         // The page takes focus on arrival: its keys are KeyBindings, which only see a key that routes
         // through this control. The 3D view takes focus only on ITS first attach (the page wins here).
         AttachedToVisualTree += (_, _) => Focus();
+
+        WirePointer();
+        WireKeys();
 
         DataContextChanged += (_, _) => Rebind();
         _surface.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ => Reframe()));
@@ -405,6 +428,263 @@ public partial class RiseView : UserControl
 
     private IBrush? Brush(string key) =>
         this.TryFindResource(key, ActualThemeVariant, out var v) ? v as IBrush : null;
+
+    // ---------------------------------------------------------------- the pointer
+
+    private void WirePointer()
+    {
+        _surface.PointerPressed += (_, e) =>
+        {
+            // The surface is still there when the 3D view has the pane; a stroke would land unseen.
+            if (_vm?.ShowPaintCanvas != true) return;
+            e.Pointer.Capture(_surface);
+            _mods = e.KeyModifiers;
+
+            var props = e.GetCurrentPoint(_surface).Properties;
+            // PointerUpdateKind AND the flag: platforms differ about which one a press populates.
+            if (props.PointerUpdateKind == PointerUpdateKind.MiddleButtonPressed || props.IsMiddleButtonPressed)
+            {
+                _panning = true;
+                _panFrom = e.GetPosition(_surface);
+                e.Handled = true;
+                return;
+            }
+
+            _side = props.IsRightButtonPressed || props.PointerUpdateKind == PointerUpdateKind.RightButtonPressed
+                ? DepthSide.Back : DepthSide.Front;
+            _lower = _mods.HasFlag(KeyModifiers.Shift);
+            _drawing = true;
+            _points.Clear();
+            AddPoint(e);
+            _applyingSelection = _vm.ActiveTool == EditorTool.Select && _points.Count > 0
+                && _vm.SelectionContains(_points[0].x, _points[0].y);
+            // Budgeted 3D repaints for the length of the stroke; GestureEnded lifts it.
+            _model.HostInteracting = true;
+            _vm.PreviewDepthStroke(Gesture(), _side, _lower);
+            DrawBand();
+        };
+
+        _surface.PointerMoved += (_, e) =>
+        {
+            if (_panning)
+            {
+                var now = e.GetPosition(_surface);
+                _vm?.PanBy(now.X - _panFrom.X, now.Y - _panFrom.Y);
+                // The anchor follows the pointer even where the clamp refused the move.
+                _panFrom = now;
+                return;
+            }
+            if (_drawing && _vm is not null)
+            {
+                _mods = e.KeyModifiers;
+                AddPoint(e);
+                _vm.PreviewDepthStroke(Gesture(), _side, _lower);
+                DrawBand();
+                return;
+            }
+            Hover(e);
+        };
+
+        _surface.PointerReleased += (_, e) =>
+        {
+            if (_panning) { _panning = false; e.Pointer.Capture(null); return; }
+            if (!_drawing) return;
+            _mods = e.KeyModifiers;
+            // Cleared BEFORE the capture is released: releasing raises PointerCaptureLost, which would
+            // otherwise read a finished gesture as an abandoned one.
+            _drawing = false;
+            AddPoint(e);
+            if (_vm is not null && _points.Count > 0) _vm.ApplyDepthStroke(Gesture(), _side, _lower);
+            _points.Clear();
+            _applyingSelection = false;
+            e.Pointer.Capture(null);
+            // A stroke the model refused raises nothing; the budget still has to end.
+            _model.HostInteracting = false;
+            DrawBand();
+        };
+
+        // Capture can be taken away - the window deactivates, another control grabs it - and no
+        // release is coming; a preview left standing is indistinguishable from a committed stroke.
+        _surface.PointerCaptureLost += (_, _) =>
+        {
+            _panning = false;
+            if (_drawing) AbortGesture();
+        };
+
+        _surface.PointerExited += (_, _) =>
+        {
+            if (!_drawing && _vm is not null) _vm.HoverPixel = null;
+        };
+
+        _surface.PointerWheelChanged += (_, e) =>
+        {
+            if (_vm is null || !_vm.ShowPaintCanvas || e.Delta.Y == 0) return;
+            ZoomAt(e.Delta.Y > 0 ? RiseViewModel.ZoomStep : 1 / RiseViewModel.ZoomStep, e.GetPosition(_surface));
+            e.Handled = true;
+        };
+    }
+
+    private void Hover(PointerEventArgs e)
+    {
+        if (_vm is null) return;
+        if (!_vm.ShowPaintCanvas || _img.Source is not Bitmap bmp
+            || !Geometry(out var scale, out var offX, out var offY))
+        {
+            _vm.HoverPixel = null;
+            return;
+        }
+        var p = e.GetPosition(_surface);
+        _vm.HoverPixel = CanvasMapping.PixelUnder(new CanvasFrame(scale, offX, offY), p.X, p.Y,
+            bmp.PixelSize.Width, bmp.PixelSize.Height);
+    }
+
+    /// <summary>Maps the pointer (control space) to a canvas pixel and extends the path.</summary>
+    private void AddPoint(PointerEventArgs e)
+    {
+        if (_img.Source is not Bitmap bmp || !Geometry(out var scale, out var offX, out var offY)) return;
+        var p = e.GetPosition(_surface);
+        var pt = CanvasMapping.PixelAt(new CanvasFrame(scale, offX, offY), p.X, p.Y,
+            bmp.PixelSize.Width, bmp.PixelSize.Height);
+        if (_points.Count == 0 || _points[^1] != pt) _points.Add(pt);
+    }
+
+    /// <summary>The path the tools should act on. One helper, called by the preview and by the commit,
+    /// so the two cannot disagree about what was drawn. Ctrl constrains (Shift lowers here).</summary>
+    private IReadOnlyList<(int x, int y)> Gesture()
+    {
+        if (_vm is null || _img.Source is not Bitmap bmp) return _points;
+        return StrokeConstraint.Apply(_vm.ActiveTool,
+            _mods.HasFlag(KeyModifiers.Control),
+            _mods.HasFlag(KeyModifiers.Alt),
+            _applyingSelection, _points, bmp.PixelSize.Width, bmp.PixelSize.Height);
+    }
+
+    /// <summary>Drops the gesture in progress and everything it was showing, committing nothing.</summary>
+    private void AbortGesture()
+    {
+        _drawing = false;
+        _points.Clear();
+        _applyingSelection = false;
+        _vm?.CancelDepthPreview();     // raises GestureEnded, which lifts the 3D budget
+        DrawBand();
+    }
+
+    /// <summary>A modifier went down or came up mid-drag: re-show the gesture under the new rule.</summary>
+    private void OnModifiers(KeyModifiers mods)
+    {
+        if (mods == _mods) return;
+        _mods = mods;
+        _vm?.PreviewDepthStroke(Gesture(), _side, _lower);
+        DrawBand();
+    }
+
+    /// <summary>Zooms by a factor, holding the pixel under <paramref name="at"/> still.</summary>
+    private void ZoomAt(double factor, Point at)
+    {
+        if (_vm is null || _img.Source is not Bitmap bmp) return;
+        if (!Geometry(out double scale, out double offX, out double offY)) return;
+
+        double before = _vm.Zoom;
+        _vm.Zoom *= factor;
+        double after = _vm.Zoom;
+        if (after == before) return;
+
+        var (panX, panY) = CanvasMapping.PanKeeping(bmp.PixelSize.Width, bmp.PixelSize.Height,
+            _surface.Bounds.Width, _surface.Bounds.Height,
+            new CanvasFrame(scale, offX, offY), before, after, at.X, at.Y);
+        _vm.PanX = panX;
+        _vm.PanY = panY;
+        ClampPan();
+    }
+
+    // ---------------------------------------------------------------- the keys
+
+    private void WireKeys()
+    {
+        // TUNNEL + handledEventsToo, for the editor's measured reason: the key arrives already handled.
+        // Narrow, because while no drag is running only the focus-guarded shortcuts act.
+        AddHandler(KeyDownEvent, (object? _, KeyEventArgs e) =>
+        {
+            if (!_drawing) { OnShortcut(e); return; }
+            if (e.Key == Key.Escape)
+            {
+                AbortGesture();
+                e.Handled = true;
+                return;
+            }
+            OnModifiers(e.KeyModifiers);
+        }, RoutingStrategies.Tunnel, handledEventsToo: true);
+        AddHandler(KeyUpEvent, (object? _, KeyEventArgs e) =>
+        {
+            if (_drawing) OnModifiers(e.KeyModifiers);
+        }, RoutingStrategies.Tunnel, handledEventsToo: true);
+    }
+
+    /// <summary>The canvas shortcuts: a letter per tool, brackets for brush size, Ctrl+A, zoom and pan.
+    /// A bare letter is only a shortcut while no text field has focus (<see cref="FocusIsOurs"/>).</summary>
+    private void OnShortcut(KeyEventArgs e)
+    {
+        if (_vm is null || !FocusIsOurs()) return;
+
+        if (e.KeyModifiers == KeyModifiers.Control)
+        {
+            if (e.Key != Key.A) return;
+            _vm.SelectAllCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+        if (e.KeyModifiers is KeyModifiers.None or KeyModifiers.Shift)
+        {
+            switch (e.Key)
+            {
+                case Key.OemPlus or Key.Add: _vm.ZoomInCommand.Execute(null); e.Handled = true; return;
+                case Key.OemMinus or Key.Subtract: _vm.ZoomOutCommand.Execute(null); e.Handled = true; return;
+                case Key.D0 or Key.NumPad0: _vm.ZoomToFitCommand.Execute(null); e.Handled = true; return;
+            }
+        }
+        if (e.KeyModifiers != KeyModifiers.None) return;
+
+        // An arrow moves the VIEW, so the art travels the other way; only while there is something
+        // off screen.
+        if (_vm.IsZoomed)
+        {
+            const double step = RiseViewModel.PanStep;
+            (double dx, double dy)? pan = e.Key switch
+            {
+                Key.Left => (step, 0),
+                Key.Right => (-step, 0),
+                Key.Up => (0, step),
+                Key.Down => (0, -step),
+                _ => null,
+            };
+            if (pan is { } p) { _vm.PanBy(p.dx, p.dy); e.Handled = true; return; }
+        }
+
+        EditorTool? tool = e.Key switch
+        {
+            Key.B => EditorTool.Brush,
+            Key.L => EditorTool.Line,
+            Key.R => EditorTool.Rectangle,
+            Key.G => EditorTool.Fill,
+            Key.M => EditorTool.Select,
+            _ => null,
+        };
+        if (tool is { } t) { _vm.SelectToolCommand.Execute(t); e.Handled = true; return; }
+
+        switch (e.Key)
+        {
+            case Key.OemOpenBrackets: _vm.ShrinkBrushCommand.Execute(null); e.Handled = true; break;
+            case Key.OemCloseBrackets: _vm.GrowBrushCommand.Execute(null); e.Handled = true; break;
+        }
+    }
+
+    /// <summary>Whether the keyboard is this page's: focus is inside this view and not in a text field.</summary>
+    private bool FocusIsOurs()
+    {
+        if (TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() is not Visual v) return false;
+        if (v.FindAncestorOfType<RiseView>(includeSelf: true) != this) return false;
+        return v.FindAncestorOfType<TextBox>(includeSelf: true) is null;
+    }
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
 
