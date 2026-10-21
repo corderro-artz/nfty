@@ -45,8 +45,8 @@ public abstract class RiseSource : IDisposable
     /// <summary>Chips under the header.</summary>
     public abstract IReadOnlyList<string> Facts { get; }
 
-    /// <summary>Whether the whole book is flat 2D art that cannot rise.</summary>
-    public virtual bool BookIsTwoDOnly => false;
+    /// <summary>Whether nothing in this source can rise: all of it is flat 2D art.</summary>
+    public virtual bool IsTwoDOnly => false;
 
     /// <summary>Whether depth may be painted and saved.</summary>
     public virtual bool IsEditable => false;
@@ -59,6 +59,15 @@ public abstract class RiseSource : IDisposable
 
     /// <summary>Why nothing may be exported, or null.</summary>
     public virtual string? ExportRefusal => null;
+
+    /// <summary>Whether any item has depth that is not saved yet.</summary>
+    public virtual bool IsDirty => Items.Any(i => i.IsDirty);
+
+    /// <summary>Whether <see cref="SaveAsync"/> would write something: editable and not locked.</summary>
+    public virtual bool CanSave => IsEditable && !IsLocked;
+
+    /// <summary>What a save writes into, for button labels and the leave card ("CookBook", a file name).</summary>
+    public virtual string SaveTargetName => "";
 
     /// <summary>Stem of a batch export's folder or zip.</summary>
     public abstract string BatchStem { get; }
@@ -101,7 +110,10 @@ public abstract class RiseSource : IDisposable
     }
 
     /// <summary>Writes the painted depth to where it came from.</summary>
-    /// <returns>A task that completes when it is written.</returns>
+    /// <returns>A task that completes when it is written. A save already running is not started twice:
+    /// the caller gets that save's task, so it waits for, and sees the failure of, the real write. A
+    /// source that refuses (locked) returns a completed task, which is why callers check
+    /// <see cref="CanSave"/> and say so rather than treating completion as proof of a write.</returns>
     public virtual Task SaveAsync() => throw new NotSupportedException("This source is read-only.");
 
     /// <summary>Raised when something the page shows has changed.</summary>

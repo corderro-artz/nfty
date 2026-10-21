@@ -51,6 +51,8 @@ public static class KeyHints
     /// same thing and is deliberately not printed — the product teaches the convention, and the
     /// second key is there so reaching for the wrong one still works.</summary>
     public static string Constrain { get; } = OperatingSystem.IsMacOS() ? "⇧" : "Shift";
+    /// <summary>Hold with a click on the Rise depth canvas to lower the depth instead of raising it.</summary>
+    public static string LowerDepth { get; } = OperatingSystem.IsMacOS() ? "⇧" : "Shift";
     /// <summary>Hold while drawing a shape: the press point is its center.</summary>
     public static string FromCenter { get; } = Alt;
 

@@ -24,11 +24,11 @@ public sealed class VariantRiseSource : RiseSource
     private readonly ICookBookSession _session;
     private readonly Func<bool>? _isEditing;
     private readonly string? _looseSavePath;
-    private readonly bool _bookIsTwoDOnly;
+    private readonly bool _isTwoDOnly;
     private readonly List<RiseItem> _items = new();
     private readonly RiseItem _initial;
     private LoadedIngredient _looseLive;
-    private bool _saving;
+    private Task? _inFlight;
 
     /// <summary>Builds the source for one layer of a recipe.</summary>
     /// <param name="recipe">The recipe that holds the layer.</param>
@@ -57,7 +57,7 @@ public sealed class VariantRiseSource : RiseSource
         _layerFact = looseSavePath is not null
             ? "loose ingredient"
             : $"layer {LayerDepth.DepthOf(recipe.Manifest, _ingredientId)} of {LayerDepth.Count(recipe.Manifest)} in {_recipeName}";
-        _bookIsTwoDOnly = looseSavePath is not null
+        _isTwoDOnly = looseSavePath is not null
             ? Opacity.HasPartialAlpha(ingredient)
             : session.Current is { } book && Opacity.HasPartialAlpha(book);
 
@@ -101,7 +101,10 @@ public sealed class VariantRiseSource : RiseSource
     public override IReadOnlyList<string> Facts => new[] { _kindWord, _layerFact };
 
     /// <inheritdoc />
-    public override bool BookIsTwoDOnly => _bookIsTwoDOnly;
+    public override bool IsTwoDOnly => _isTwoDOnly;
+
+    /// <inheritdoc />
+    public override string SaveTargetName => _looseSavePath is { } p ? Path.GetFileName(p) : "CookBook";
 
     /// <inheritdoc />
     public override bool IsEditable => true;
@@ -123,71 +126,92 @@ public sealed class VariantRiseSource : RiseSource
     /// <inheritdoc />
     public override string OpeningLine => IsLocked
         ? $"“{_ingredientName}” is read-only — try depth freely, but unlock the CookBook to save it."
-        : $"Rising “{Title}” — left raises the front, right the back, Shift lowers. Save depth writes it into the CookBook.";
+        : $"Rising “{Title}” — left raises the front, right the back, {KeyHints.LowerDepth} lowers. Save depth writes it into the CookBook.";
 
     /// <inheritdoc />
     public override RiseSubject Open(RiseItem item) =>
         item.Subject ?? throw new InvalidOperationException($"Variant '{item.Id}' was not loaded.");
 
     /// <summary>Writes every changed variant's depth, and only those, into the layer's own archive.</summary>
-    /// <returns>A task that completes when the archive is written and the subjects are marked saved.</returns>
+    /// <returns>A task that completes when the archive is written and the subjects are marked saved. A
+    /// second call while one is running returns that same task.</returns>
     /// <exception cref="InvalidOperationException">The layer no longer validates, or the book is gone.</exception>
-    public override async Task SaveAsync()
+    public override Task SaveAsync()
     {
         // THE LOCK IS CHECKED HERE, NOT ONLY WHERE THE BUTTON IS ENABLED: a disabled button is a label.
-        if (IsLocked) return;
-        if (_saving) return;   // two writers to one destination collide; the caller's second press waits for the first
-        _saving = true;
-        try
+        if (IsLocked) return Task.CompletedTask;
+        // One writer per destination. A second caller must not be told "saved" while the first is still
+        // writing, or about to fail, so it gets the first's task and its outcome.
+        if (_inFlight is { } running) return running;
+        // Published BEFORE the work starts: a save that runs partly synchronously (or re-enters from a
+        // handler) must already be visible as in flight.
+        var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _inFlight = done.Task;
+        _ = RunSaveAsync(done);
+        return done.Task;
+    }
+
+    private async Task RunSaveAsync(TaskCompletionSource done)
+    {
+        Exception? failure = null;
+        try { await SaveCoreAsync(); }
+        catch (Exception ex) { failure = ex; }
+        _inFlight = null;
+        if (failure is null) done.SetResult(); else done.SetException(failure);
+    }
+
+    private async Task SaveCoreAsync()
+    {
+        bool loose = _looseSavePath is not null;
+        var live = loose ? _looseLive : LiveIngredient();
+
+        // Start from the live ingredient's depths so every variant we did not change keeps exactly
+        // the bytes it had; replace only the maps of variants whose painting differs from stored.
+        var depths = new Dictionary<string, DepthMap>(live.Depths, StringComparer.Ordinal);
+        var ids = live.Manifest.Variants.Select(v => v.Id).ToHashSet(StringComparer.Ordinal);
+        foreach (var item in _items)
         {
-            bool loose = _looseSavePath is not null;
-            var live = loose ? _looseLive : LiveIngredient();
-
-            // Start from the live ingredient's depths so every variant we did not change keeps exactly
-            // the bytes it had; replace only the maps of variants whose painting differs from stored.
-            var depths = new Dictionary<string, DepthMap>(live.Depths, StringComparer.Ordinal);
-            var ids = live.Manifest.Variants.Select(v => v.Id).ToHashSet(StringComparer.Ordinal);
-            foreach (var item in _items)
-            {
-                if (item.Subject is not { IsDirty: true } s || !ids.Contains(item.Id)) continue;
-                if (s.Depth.ToDepthMap() is { } map) depths[item.Id] = map;
-                else depths.Remove(item.Id);
-            }
-
-            var next = new LoadedIngredient { Manifest = live.Manifest, VariantImages = live.VariantImages, Depths = depths };
-            var problems = Validator.ValidateIngredient(next);
-            if (problems.Count > 0) throw new InvalidOperationException(string.Join(Environment.NewLine, problems));
-
-            if (loose)
-            {
-                var path = _looseSavePath!;
-                var tmp = $"{path}.{Guid.NewGuid():N}.tmp";
-                try
-                {
-                    await IngredientArchive.WriteAsync(tmp, next.Manifest, next.VariantImages, depths);
-                    File.Move(tmp, path, overwrite: true);
-                }
-                finally
-                {
-                    if (File.Exists(tmp)) { try { File.Delete(tmp); } catch { /* best effort */ } }
-                }
-                _looseLive = next;   // images shared with the previous object; nothing disposed
-            }
-            else
-            {
-                var book2 = CookBookEdits.UpsertIngredient(_session.Current!, _recipeId, next);
-                var book3 = await CookBookPersistence.PersistAsync(_session, book2);
-                Saved?.Invoke(book3);
-            }
-
-            foreach (var item in _items)
-            {
-                item.Subject?.MarkSaved();
-                item.RefreshDepth();
-            }
-            RaiseChanged();
+            if (item.Subject is not { IsDirty: true } s || !ids.Contains(item.Id)) continue;
+            if (s.Depth.ToDepthMap() is { } map) depths[item.Id] = map;
+            else depths.Remove(item.Id);
         }
-        finally { _saving = false; }
+
+        LoadedCookBook? persisted = null;
+        var next = new LoadedIngredient { Manifest = live.Manifest, VariantImages = live.VariantImages, Depths = depths };
+        var problems = Validator.ValidateIngredient(next);
+        if (problems.Count > 0) throw new InvalidOperationException(string.Join(Environment.NewLine, problems));
+
+        if (loose)
+        {
+            var path = _looseSavePath!;
+            var tmp = $"{path}.{Guid.NewGuid():N}.tmp";
+            try
+            {
+                await IngredientArchive.WriteAsync(tmp, next.Manifest, next.VariantImages, depths);
+                File.Move(tmp, path, overwrite: true);
+            }
+            finally
+            {
+                if (File.Exists(tmp)) { try { File.Delete(tmp); } catch { /* best effort */ } }
+            }
+            _looseLive = next;   // images shared with the previous object; nothing disposed
+        }
+        else
+        {
+            var book2 = CookBookEdits.UpsertIngredient(_session.Current!, _recipeId, next);
+            var book3 = await CookBookPersistence.PersistAsync(_session, book2);
+            persisted = book3;
+        }
+
+        // Marked BEFORE anyone is told: the write is done, so a handler that throws must not leave
+        // the subjects looking unsaved after a good write.
+        foreach (var item in _items)
+        {
+            item.Subject?.MarkSaved();
+            item.RefreshDepth();
+        }
+        if (persisted is not null) Saved?.Invoke(persisted);
+        RaiseChanged();
     }
 
     private LoadedIngredient LiveIngredient()

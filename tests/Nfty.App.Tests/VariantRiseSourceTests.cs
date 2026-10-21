@@ -33,7 +33,7 @@ public class VariantRiseSourceTests
         Assert.Single(src.PartialAlphaRows);
         Assert.Equal("1 px", src.PartialAlphaRows[0].CountText);
         Assert.Equal(new[] { "custom", "layer 1 of 2 in Chest" }, src.Facts);
-        Assert.True(src.BookIsTwoDOnly);
+        Assert.True(src.IsTwoDOnly);
         s.Dispose();
     }
 
