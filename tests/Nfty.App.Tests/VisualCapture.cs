@@ -1240,7 +1240,7 @@ public class VisualCapture
                     Ingredients = new[] { flat },
                 };
                 CookBookArchive.Write(Path.Combine(dir, "Aa-flat.cbk"),
-                    new CookBookManifest("cb", "Flat Collection", new Dimensions(512, 512),
+                    new CookBookManifest("cb", "A Flat Collection Name Far Too Long For One Card", new Dimensions(512, 512),
                         new Collection("Flat Collection", "", "F"),
                         new Dictionary<string, double> { ["cat"] = 100 }), new[] { rcp });
                 var kitchen = new KitchenSession();

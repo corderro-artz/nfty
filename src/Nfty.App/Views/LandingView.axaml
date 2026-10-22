@@ -285,15 +285,20 @@
                   </Panel>
                 </Border>
                 <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="1">
-                  <TextBlock Text="{Binding Name}" Classes="rname" TextTrimming="CharacterEllipsis" />
+                  <!-- Right margin = the 2D-only mark (12) + gap (3), on EVERY card whether or not the
+                       mark is inked, so a long name's ellipsis stops short of the mark and a card
+                       gaining or losing partial alpha re-trims nothing. The meta line below keeps the
+                       full width. -->
+                  <TextBlock Text="{Binding Name}" Classes="rname" TextTrimming="CharacterEllipsis"
+                             Margin="0,0,15,0" />
                   <TextBlock Text="{Binding Meta}" Classes="rmeta" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
-                <!-- 2D-only mark: an overlay in the card's top-right corner, over the padding, not a
-                     column. A 20px column made every card's meta line ellipsize ("512×…") at 1180, so
-                     the slot costs no layout at all and only the ink comes and goes. -->
+                <!-- 2D-only mark: an overlay at the top-right of the title row, not a column. A 20px
+                     column made every card's meta line ellipsize ("512×…") at 1180; the title's own
+                     right margin (above) is the reserved room, and only the ink comes and goes. -->
                 <Path Grid.Column="0" Grid.ColumnSpan="3" Classes="ico xs twod" Classes.on="{Binding TwoDOnly}"
                       Data="{StaticResource Icon2dOnly}" Stroke="{DynamicResource WarningBrush}"
-                      HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,3,-7,0"
+                      HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,3,0,0"
                       ToolTip.Tip="2D only — has partly transparent pixels" />
               </Grid>
             </Button>

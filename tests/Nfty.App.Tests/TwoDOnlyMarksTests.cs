@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Media;
 using Shape = Avalonia.Controls.Shapes.Path;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
@@ -11,6 +14,7 @@ using Avalonia.VisualTree;
 using Nfty.App.Models;
 using Nfty.App.Services;
 using Nfty.App.ViewModels;
+using Nfty.Core.Editing;
 using Nfty.Core.Formats;
 using Nfty.Core.Model;
 using SixLabors.ImageSharp;
@@ -206,5 +210,161 @@ public class TwoDOnlyMarksTests
             Assert.False(off.Mark.IsHitTestVisible);
         }
         finally { wa.Close(); wb.Close(); }
+    }
+
+    // ---- round 1 fixes ---------------------------------------------------------------------------
+
+    /// <summary>Answers every confirm with a fixed answer and keeps the last dialog it was shown.</summary>
+    private sealed class AnsweringDialogs(bool answer) : IDialogService
+    {
+        public ViewModelBase? Last { get; private set; }
+        public ViewModelBase? Active => null;
+        public event Action? Changed { add { } remove { } }
+        public Task<TResult?> ShowAsync<TResult>(ViewModelBase d)
+        {
+            Last = d;
+            return Task.FromResult((TResult?)(object?)answer);
+        }
+        public void Close(object? result) { }
+    }
+
+    private static IngredientEditorViewModel LooseEditor(AnsweringDialogs dialogs)
+    {
+        var ing = Ing("body", partial: false);
+        var wrapper = LooseWorkspace.WrapIngredient(ing);
+        return new IngredientEditorViewModel(ing, wrapper.Recipes[0], wrapper, new ImageBridge(), new FakeNav(),
+            new CookBookSession(), dialogs, new FilePickerService(),
+            looseSavePath: Path.Combine(Directory.CreateTempSubdirectory().FullName, "Body.igt"),
+            isEditing: () => true);
+    }
+
+    [AvaloniaFact]
+    public async Task A_loose_ingredient_warning_says_this_Ingredient()
+    {
+        var dialogs = new AnsweringDialogs(false);
+        using var vm = LooseEditor(dialogs);
+
+        await vm.ToggleOpacityLockCommand.ExecuteAsync(null);
+
+        var ask = Assert.IsType<ConfirmDialogViewModel>(dialogs.Last);
+        Assert.Contains("this Ingredient becomes 2D only", ask.Message);
+        Assert.DoesNotContain("this CookBook", ask.Message);
+    }
+
+    [AvaloniaFact]
+    public async Task Accepting_the_warning_unlocks_and_declining_does_not()
+    {
+        var yes = new AnsweringDialogs(true);
+        using (var vm = LooseEditor(yes))
+        {
+            Assert.True(vm.IsOpacityLocked);
+            await vm.ToggleOpacityLockCommand.ExecuteAsync(null);
+            Assert.Equal(OpacityLock.Unlocked, vm.OpacityMode);
+        }
+
+        var no = new AnsweringDialogs(false);
+        using (var vm = LooseEditor(no))
+        {
+            await vm.ToggleOpacityLockCommand.ExecuteAsync(null);
+            Assert.Equal(OpacityLock.Locked, vm.OpacityMode);
+        }
+    }
+
+    [AvaloniaFact]
+    public void A_loose_ingredient_tree_carries_the_mark()
+    {
+        var ing = Ing("body", partial: true);
+        using var wrapper = LooseWorkspace.WrapIngredient(ing);
+        using var vm = Explorer(wrapper);
+
+        Assert.True(vm.Root.IsTwoDOnly);
+        Assert.True(Layer(vm, "body").IsTwoDOnly);
+    }
+
+    /// <summary>The real Saved path: Make voxel-ready on a Rise page writes the book and raises Saved,
+    /// which the Explorer is wired to exactly as OpenRise wires it.</summary>
+    [AvaloniaFact]
+    public async Task Make_voxel_ready_clears_the_tree_mark_through_the_saved_path()
+    {
+        var (session, _) = RiseVoxelReadyTests.Disk();
+        var nav = new FakeNav();
+        var dialogs = new RiseVoxelReadyTests.ScriptedDialogs { Answer = true };
+        using var explorer = new ExplorerViewModel(session.Current!, nav, dialogs, new ImageBridge(),
+            ExplorerViewModelTests.EditorFactory(nav, session, dialogs),
+            ExplorerViewModelTests.CookFactory(dialogs), session, new FilePickerService(),
+            ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs), new StatusService());
+        Assert.True(explorer.Root.IsTwoDOnly);
+        Assert.True(explorer.Root.Children[0].Children.Single(n => n.Id == "body").IsTwoDOnly);
+
+        using var rise = new RiseViewModel(RiseFixtures.Variant(session, "ghost"), new ImageBridge(), nav,
+            dialogs, new FilePickerService(), new StatusService());
+        rise.Saved += explorer.OnEditorSaved;           // what ExplorerViewModel.OpenRise does
+        await rise.MakeVoxelReadyCommand.ExecuteAsync(null);
+
+        Assert.False(explorer.Root.IsTwoDOnly);
+        Assert.False(explorer.Root.Children[0].Children.Single(n => n.Id == "body").IsTwoDOnly);
+        session.Dispose();
+    }
+
+    private static double Ink(TextBlock tb) => new FormattedText(tb.Text!, CultureInfo.InvariantCulture,
+        FlowDirection.LeftToRight, new Typeface(tb.FontFamily, tb.FontStyle, tb.FontWeight, tb.FontStretch),
+        tb.FontSize, Brushes.Black).Width;
+
+    private static LandingViewModel ShelfOver(string dir, string longName)
+    {
+        for (int i = 1; i <= 6; i++)
+        {
+            using var b = Book(i == 1 ? "hat" : null);   // card 1 is 2D only, the rest are not
+            var m = new CookBookManifest("cb", i == 1 ? longName : $"Collection {i}", new Dimensions(512, 512),
+                new Collection("C", "", "C"), new Dictionary<string, double> { ["cat"] = 1 });
+            CookBookArchive.Write(Path.Combine(dir, $"Book{i}.cbk"), m, b.Recipes);
+        }
+        var ktn = Path.Combine(dir, "Studio.ktn");
+        Kitchen.Create(ktn, new KitchenManifest("studio", "Studio"));
+        var kitchen = new KitchenSession();
+        kitchen.Open(ktn);
+        return new LandingViewModel(new FakeNav(), new FakeDialogs(), new FilePickerService(),
+            new RecentsService(Directory.CreateTempSubdirectory().FullName), new CookBookSession(),
+            _ => null!, _ => null!, (_, _, _) => null!, kitchen, rise: _ => null!);
+    }
+
+    /// <summary>A long name ellipsizes, and its "..." must stop short of the mark; the meta line must
+    /// not lose a character to the mark at 1180 or at the smallest window.</summary>
+    [AvaloniaTheory]
+    [InlineData(1180.0)]
+    [InlineData(-1.0)]   // the smallest window's page width
+    public void A_long_name_stops_short_of_the_mark_and_the_meta_line_keeps_its_width(double width)
+    {
+        if (width < 0) width = ShellViewModel.MinWindowWidth / ShellViewModel.BaseScale;
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            var landing = ShelfOver(dir, "A Collection Name Far Too Long To Fit On One Card");
+            var view = new Views.LandingView { DataContext = landing };
+            var window = new Window { Content = view, Width = width, Height = 720 };
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            try
+            {
+                var cards = view.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("kcard"))
+                    .Where(b => b.DataContext is KitchenCard).ToList();
+                var card = cards.Single(c => ((KitchenCard)c.DataContext!).TwoDOnly);
+                var mark = card.GetVisualDescendants().OfType<Shape>().Single(p => p.Classes.Contains("twod"));
+                var title = card.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Classes.Contains("rname"));
+
+                var markLeft = mark.TranslatePoint(default, window)!.Value.X;
+                var titleRight = title.TranslatePoint(new Avalonia.Point(title.Bounds.Width, 0), window)!.Value.X;
+                Assert.True(Ink(title) > title.Bounds.Width, "fixture: the name must actually be ellipsized");
+                Assert.True(titleRight <= markLeft, $"title ends at {titleRight}, mark starts at {markLeft}");
+
+                foreach (var c in cards)
+                {
+                    var meta = c.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Classes.Contains("rmeta"));
+                    Assert.True(Ink(meta) <= meta.Bounds.Width + 0.5, $"meta '{meta.Text}' is truncated at {width}");
+                }
+            }
+            finally { window.Close(); }
+        }
+        finally { Directory.Delete(dir, true); }
     }
 }

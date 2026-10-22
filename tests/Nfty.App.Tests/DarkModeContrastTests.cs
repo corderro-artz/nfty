@@ -202,6 +202,22 @@ public class DarkModeContrastTests
             if (ratio < offender.Required) yield return offender;
         }
 
+        // The 2D-only mark is a stroked glyph, not text, so the loop above never met it: it could be
+        // recolored to anything and the sweep stayed green. Scored here by its stroke against the
+        // surface behind it, at the normal floor (a thin 1.3px stroke earns no receded allowance).
+        foreach (var mark in view.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Path>()
+                     .Where(p => p.Classes.Contains("twod") && p.Classes.Contains("on")))
+        {
+            if (!mark.IsEffectivelyVisible) continue;
+            var opacity = CumulativeOpacity(mark);
+            if (opacity <= 0.01 || SolidOf(mark.Stroke) is not { } strokeRaw) continue;
+            var bg = EffectiveBackground(mark.GetVisualParent()!, pageBase);
+            var fg = Over(strokeRaw, bg, opacity);
+            var ratio = Contrast(fg, bg);
+            var offender = new Offender(viewName, "[2D-only mark]", ratio, false, fg, bg);
+            if (ratio < offender.Required) yield return offender;
+        }
+
         window.Close();
     }
 
@@ -274,6 +290,34 @@ public class DarkModeContrastTests
             ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs), new StatusService());
         explorer.SelectNodeCommand.Execute(explorer.Root);
         yield return ("explorer", new Views.ExplorerView { DataContext = explorer }, explorer.Dispose);
+
+        // The 2D-only mark, in the tree (marked book + layer) and on a Kitchen shelf card. The mark is
+        // drawn only when the state is there, so a fixture without it can never find it unreadable.
+        var flatBook2D = ExplorerViewModelTests.TwoRecipeBook();
+        flatBook2D.Recipes[0].Ingredients[0].VariantImages.Values.First()[0, 0] =
+            new SixLabors.ImageSharp.PixelFormats.Rgba32(200, 20, 20, 120);
+        var flatExplorer = new ExplorerViewModel(flatBook2D, nav, dialogs, new ImageBridge(),
+            ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs),
+            new CookBookSession(), new FilePickerService(),
+            ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs), new StatusService());
+        flatExplorer.Root.Children[0].IsExpanded = true;
+        yield return ("explorer-2d-only", new Views.ExplorerView { DataContext = flatExplorer }, flatExplorer.Dispose);
+
+        var shelfDir = Directory.CreateTempSubdirectory().FullName;
+        using (var flatCard = ExplorerViewModelTests.TwoRecipeBook())
+        {
+            flatCard.Recipes[0].Ingredients[0].VariantImages.Values.First()[0, 0] =
+                new SixLabors.ImageSharp.PixelFormats.Rgba32(200, 20, 20, 120);
+            Nfty.Core.Formats.CookBookArchive.Write(Path.Combine(shelfDir, "Flat.cbk"), flatCard.Manifest, flatCard.Recipes);
+        }
+        var ktn = Path.Combine(shelfDir, "Studio.ktn");
+        Nfty.Core.Formats.Kitchen.Create(ktn, new Nfty.Core.Model.KitchenManifest("studio", "Studio"));
+        var shelfKitchen = new KitchenSession();
+        shelfKitchen.Open(ktn);
+        var shelfLanding = new LandingViewModel(nav, dialogs, new FilePickerService(),
+            new RecentsService(Directory.CreateTempSubdirectory().FullName), new CookBookSession(),
+            _ => null!, set => new SetBrowserViewModel(set), (_, _, _) => null!, shelfKitchen, rise: _ => null!);
+        yield return ("landing-shelf-2d-only", new Views.LandingView { DataContext = shelfLanding }, null);
 
         var shellNav = new FakeNav();
         var shellExplorer = new ExplorerViewModel(ExplorerViewModelTests.TwoRecipeBook(), shellNav, dialogs,
