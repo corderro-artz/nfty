@@ -25,6 +25,9 @@ public sealed partial class RiseViewModel
             _voxelBusy = value;
             OnPropertyChanged();
             NotifyVoxelReady();
+            OnPropertyChanged(nameof(CanSave));
+            OnPropertyChanged(nameof(HasUnsavedWork));
+            OnPropertyChanged(nameof(FooterText));
             SaveCommand.NotifyCanExecuteChanged();
             ExportCommand.NotifyCanExecuteChanged();
             BackCommand.NotifyCanExecuteChanged();

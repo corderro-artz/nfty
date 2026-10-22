@@ -29,7 +29,11 @@ public sealed partial class RiseViewModel
 
     // Everything Save needs except "no save is running": a second press during a save joins the first
     // (the source hands back the running task) rather than being refused.
-    private bool SaveGate => Source.CanSave && HasUnsavedDepth && !IsExporting && !IsVoxelBusy;
+    private bool SaveGate => Source.CanSave && HasUnsavedWork && !IsExporting && !IsVoxelBusy;
+
+    /// <summary>Unsaved depth, or a voxel-ready snap that lives only in this session (a picture's). Both
+    /// enable Save and make leaving ask.</summary>
+    public bool HasUnsavedWork => HasUnsavedDepth || Source.HasUnsavedSnap;
 
     // What the unsaved things are called: the cells of a picture or sheet, the variants of a layer.
     private string DirtyNoun(int n) => Source is PictureRiseSource
@@ -44,7 +48,9 @@ public sealed partial class RiseViewModel
             if (!Source.IsEditable) return "read-only source — nothing to save";
             if (!Source.CanSave && !Source.IsLocked && Source.UnsavableNote is { } why) return why;
             int n = DirtyCount;
-            if (n == 0) return "no unsaved depth";
+            if (n == 0) return Source.HasUnsavedSnap
+                ? "unsaved voxel-ready snap — Save as .igt keeps it"
+                : "no unsaved depth";
             var text = string.Create(CultureInfo.InvariantCulture,
                 $"unsaved depth on {n} {DirtyNoun(n)}");
             return Source.IsLocked
@@ -80,7 +86,7 @@ public sealed partial class RiseViewModel
         {
             await Source.SaveAsync();
             // Said only when the write happened: a canceled dialog leaves depth unsaved and the note old.
-            if (!HasUnsavedDepth && Source.SaveResultNote is { } note) _status.Say(note);
+            if (!HasUnsavedWork && Source.SaveResultNote is { } note) _status.Say(note);
         }
         catch (Exception ex)
         {
@@ -110,13 +116,17 @@ public sealed partial class RiseViewModel
             catch (Exception) { /* Save reports its own failure; the page then asks as usual */ }
         }
         int n = DirtyCount;
-        if (!Source.IsEditable || n == 0)
+        bool snap = Source.HasUnsavedSnap;
+        if (!Source.IsEditable || (n == 0 && !snap))
         {
             _nav.Back();
             return;
         }
-        var message = string.Create(CultureInfo.InvariantCulture,
-            $"{Source.Title} has unsaved depth on {n} {DirtyNoun(n)}. Leaving discards it.");
+        string unsaved = n == 0
+            ? "an unsaved voxel-ready snap"
+            : string.Create(CultureInfo.InvariantCulture, $"unsaved depth on {n} {DirtyNoun(n)}")
+                + (snap ? " and an unsaved voxel-ready snap" : "");
+        var message = $"{Source.Title} has {unsaved}. Leaving discards {(n == 0 || !snap ? "it" : "them")}.";
         var card = new LeaveDialogViewModel(_dialogs, "Leave Rise?", message, canSave: !Source.IsLocked);
         var choice = await _dialogs.ShowAsync<LeaveChoice>(card);
         switch (choice)
@@ -126,7 +136,7 @@ public sealed partial class RiseViewModel
                 break;
             case LeaveChoice.SaveAndLeave:
                 await Save();
-                if (!HasUnsavedDepth) _nav.Back();
+                if (!HasUnsavedWork) _nav.Back();
                 break;
             default:
                 break;      // Stay, and a card dismissed without an answer

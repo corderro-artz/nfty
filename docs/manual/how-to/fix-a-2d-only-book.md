@@ -9,7 +9,7 @@ for you, read [Depth: paper, front and back](../understand/depth.md#why-2d-only-
 
 ## See where it is
 
-- In the Explorer tree, a small flat-sheet mark trails the name of any book, Recipe or Ingredient
+- In the Explorer tree, a small flat-sheet mark trails the name of the book and of any Ingredient
   that is 2D only. Hover it for the reason.
 - On the Kitchen shelf, the same mark sits in the corner of a card.
 - On the Rise page, the **2D ONLY** list on the DEPTH tab names each affected variant and counts its
@@ -29,7 +29,7 @@ becomes fully clear. Depth is untouched, and a pixel that turns solid rises at p
 
 The snap is written into the book (or the loose Ingredient) the way a depth save is. A picture opened
 with **Rise a picture...** is snapped for the session only; it has no file to write until you
-**Save as .igt...**
+**Save as .igt...** Leaving the page before that asks first, because the snap would be lost.
 
 ### When the button is dim
 

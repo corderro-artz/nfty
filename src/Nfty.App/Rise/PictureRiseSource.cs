@@ -265,6 +265,12 @@ public sealed class PictureRiseSource : RiseSource
     /// <inheritdoc />
     public override bool CanUndoVoxelReady => _preSnap is not null;
 
+    // The snap lives only in memory until Save as .igt writes it: leaving would lose it.
+    private bool _snapUnsaved;
+
+    /// <inheritdoc />
+    public override bool HasUnsavedSnap => _snapUnsaved;
+
     /// <inheritdoc />
     public override string? VoxelReadyNote => _preSnap is null ? null
         : string.Create(CultureInfo.InvariantCulture,
@@ -313,6 +319,7 @@ public sealed class PictureRiseSource : RiseSource
         if (!ReferenceEquals(_preSnap, _image)) _image.Dispose();
         _image = snapped;
         _snappedCount = plan.Count;
+        _snapUnsaved = true;
         Reseed();
         return Task.FromResult<VoxelReadyOutcome?>(new VoxelReadyOutcome(plan.Count, VoxelReadyNote!));
     }
@@ -324,6 +331,7 @@ public sealed class PictureRiseSource : RiseSource
         _image.Dispose();
         _image = original;
         _preSnap = null;
+        _snapUnsaved = false;
         Reseed();
         return Task.CompletedTask;
     }
@@ -520,6 +528,7 @@ public sealed class PictureRiseSource : RiseSource
 
         // Marked before anyone is told: the write is done.
         foreach (var (subject, map) in written) subject.MarkSaved(map);
+        _snapUnsaved = false;
         foreach (var item in _items) item.RefreshDepth();
         _saveResultNote = string.Create(CultureInfo.InvariantCulture,
             $"Saved {variants.Count} {(variants.Count == 1 ? "variant" : "variants")} and their depth to {System.IO.Path.GetFileName(path)}.");

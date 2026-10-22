@@ -165,6 +165,11 @@ public abstract class RiseSource : IDisposable
     /// <summary>Whether a voxel-ready made through this source can still be undone.</summary>
     public virtual bool CanUndoVoxelReady => false;
 
+    /// <summary>Whether a voxel-ready snap exists only in this session, so leaving would lose it. False
+    /// for a source that writes its snap where the art lives. It counts as unsaved work beside unsaved
+    /// depth: it enables Save and the leave card asks about it.</summary>
+    public virtual bool HasUnsavedSnap => false;
+
     /// <summary>What the last voxel-ready did ("Voxel-ready: 9 variants snapped"), or null.</summary>
     public virtual string? VoxelReadyNote => null;
 
