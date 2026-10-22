@@ -291,6 +291,16 @@
     <Setter Property="RenderTransform" Value="scale(0.6667)" />   <!-- 16/24 -->
     <Setter Property="StrokeThickness" Value="1.3" />             <!-- the mockup's own .ti stroke -->
   </Style>
+  <!-- The 2D-only mark in a tree row / shelf card. Its slot is laid out in every state; only the ink
+       and the hit-test come and go (Opacity, never IsVisible — nothing around it may move). -->
+  <Style Selector="Path.ico.twod">
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+  </Style>
+  <Style Selector="Path.ico.twod.on">
+    <Setter Property="Opacity" Value="1" />
+    <Setter Property="IsHitTestVisible" Value="True" />
+  </Style>
   <Style Selector="Path.ico.sm">
     <Setter Property="Width" Value="13" /><Setter Property="Height" Value="13" />
     <Setter Property="RenderTransform" Value="scale(0.5417)" />   <!-- 13/24 -->

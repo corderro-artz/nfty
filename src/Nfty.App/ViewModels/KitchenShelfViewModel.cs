@@ -35,7 +35,10 @@ public enum KitchenItemKind
 /// <param name="Meta">The subtitle line, or a short reason when the peek failed.</param>
 /// <param name="Kind">Which of the three kinds this is.</param>
 /// <param name="Readable">False when the peek failed; the card still opens, and the open reports properly.</param>
-public sealed record KitchenCard(string Path, string Name, string Meta, KitchenItemKind Kind, bool Readable = true)
+/// <param name="TwoDOnly">Whether the archive's stored listing cache says some variant carries partial
+/// alpha, so it cannot be cooked into 3D models. Read from the peek — the cache exists for exactly this.</param>
+public sealed record KitchenCard(string Path, string Name, string Meta, KitchenItemKind Kind, bool Readable = true,
+    bool TwoDOnly = false)
 {
     /// <summary>The file name, for the tooltip — the shelf shows names, but a workspace can hold two
     /// archives whose manifests agree on a name.</summary>
@@ -280,15 +283,15 @@ public partial class KitchenShelfViewModel : ObservableObject
     private static KitchenCard FromBook(string path, CookBookManifest m) =>
         new(path, m.Name,
             $"{Count(m.RecipeWeights.Count, "recipe")} · {m.Canvas.Width}×{m.Canvas.Height}",
-            KitchenItemKind.CookBook);
+            KitchenItemKind.CookBook, TwoDOnly: m.PartialAlpha);
 
     private static KitchenCard FromRecipe(string path, RecipeManifest m) =>
-        new(path, m.Name, Count(m.LayerOrder.Count, "layer"), KitchenItemKind.Recipe);
+        new(path, m.Name, Count(m.LayerOrder.Count, "layer"), KitchenItemKind.Recipe, TwoDOnly: m.PartialAlpha);
 
     private static KitchenCard FromIngredient(string path, IngredientManifest m) =>
         new(path, m.Name,
             $"{m.Kind.ToString().ToLowerInvariant()} · {Count(m.Variants.Count, "variant")}",
-            KitchenItemKind.Ingredient);
+            KitchenItemKind.Ingredient, TwoDOnly: m.PartialAlpha);
 
     private static string Count(int n, string noun) => $"{n} {noun}{(n == 1 ? "" : "s")}";
 }

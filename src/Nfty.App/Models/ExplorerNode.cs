@@ -19,8 +19,13 @@ public enum ExplorerNodeKind
 /// (LoadedCookBook / LoadedRecipe / LoadedIngredient). <see cref="LayerKind"/> is the ingredient's
 /// kind on Ingredient nodes (null otherwise), used to color the tree kind mark.</summary>
 public record ExplorerNode(string Id, string Name, ExplorerNodeKind Kind,
-    IReadOnlyList<ExplorerNode> Children, object? Domain, LayerKind? LayerKind = null)
+    IReadOnlyList<ExplorerNode> Children, object? Domain, LayerKind? LayerKind = null,
+    bool IsTwoDOnly = false)
 {
+    // IsTwoDOnly: true on the book and on each ingredient whose DECODED pixels carry partial alpha —
+    // recomputed on every tree rebuild, never read from the stored manifest flag. The tree draws it
+    // as a mark in a reserved slot.
+
     /// <summary>
     /// Whether this branch is open in the tree. Mutable and NOT part of the node's identity: a
     /// rebuild (a save, a reorder) constructs an entirely new tree, so the Explorer carries the open

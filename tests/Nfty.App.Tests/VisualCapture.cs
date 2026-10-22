@@ -1199,6 +1199,72 @@ public class VisualCapture
         }
     }
 
+    /// <summary>The 2D-only marks (Explorer tree, Kitchen shelf) and the opacity-lock warning.</summary>
+    [AvaloniaFact]
+    public void Capture_two_d_only_marks()
+    {
+        if (Dir is null) return;   // inert unless explicitly capturing
+
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            var key = variant.Key.ToString()!.ToLowerInvariant();
+            var nav = new FakeNav();
+            var dialogs = new FakeDialogs();
+
+            // Explorer: a book whose first layer carries one half-transparent pixel.
+            var book = ExplorerViewModelTests.TwoRecipeBook();
+            var layer = book.Recipes[0].Ingredients[0];
+            var img = layer.VariantImages.Values.First();
+            img[0, 0] = new Rgba32(200, 20, 20, 120);
+            var vm = new ExplorerViewModel(book, nav, dialogs, new ImageBridge(),
+                ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs),
+                new CookBookSession(), new FilePickerService(),
+                ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs), new StatusService());
+            vm.Root.Children[0].IsExpanded = true;
+            Capture(new Views.ExplorerView { DataContext = vm }, variant, $"t15-explorer-{key}.png");
+
+            // Kitchen shelf: the demo workspace plus one 2D-only book.
+            var (dir, ktn) = ShelfWorkspace();
+            try
+            {
+                using var flat = new LoadedIngredient
+                {
+                    Manifest = new IngredientManifest("aura", "Aura", LayerKind.Custom, null,
+                        new[] { new Variant("v1", "V1", 1) }),
+                    VariantImages = new Dictionary<string, Image<Rgba32>>
+                    { ["v1"] = new(8, 8, new Rgba32(1, 2, 3, 100)) },
+                };
+                var rcp = new LoadedRecipe
+                {
+                    Manifest = new RecipeManifest("cat", "Cat", new[] { "aura" }, Array.Empty<IncompatibilityRule>()),
+                    Ingredients = new[] { flat },
+                };
+                CookBookArchive.Write(Path.Combine(dir, "Aa-flat.cbk"),
+                    new CookBookManifest("cb", "Flat Collection", new Dimensions(512, 512),
+                        new Collection("Flat Collection", "", "F"),
+                        new Dictionary<string, double> { ["cat"] = 100 }), new[] { rcp });
+                var kitchen = new KitchenSession();
+                kitchen.Open(ktn);
+                var landing = new LandingViewModel(nav, dialogs, new FilePickerService(),
+                    new RecentsService(Directory.CreateTempSubdirectory().FullName), new CookBookSession(),
+                    b => null!, s => null!, (_, _, _) => null!, kitchen, rise: _ => null!);
+                Capture(new Views.LandingView { DataContext = landing }, variant, $"t15-shelf-{key}.png");
+            }
+            finally { Directory.Delete(dir, true); }
+
+            // The warning, as the editor shows it.
+            Capture(new Views.ConfirmDialogView
+            {
+                DataContext = new ConfirmDialogViewModel(dialogs, "Allow partial transparency?",
+                    "A pixel that is only partly there cannot become a voxel. Save one, and this CookBook "
+                    + "becomes 2D only: it can no longer be cooked into 3D models until every such pixel is "
+                    + "made fully opaque or fully clear (Make voxel-ready on the Rise page does this).\n\n"
+                    + "This applies to what you paint from here on; nothing already on the canvas changes.",
+                    "Allow partial alpha"),
+            }, variant, $"t15-warning-{key}.png");
+        }
+    }
+
     private static void Capture(Control view, ThemeVariant variant, string fileName,
         double width = 1180, double height = 720)
     {

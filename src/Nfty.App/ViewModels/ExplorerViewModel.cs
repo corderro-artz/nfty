@@ -8,6 +8,7 @@ using Nfty.App.Models;
 using Nfty.App.Services;
 using Nfty.Core.Editing;
 using Nfty.Core.Formats;
+using Nfty.Core.Imaging;
 using Nfty.Core.Model;
 using Nfty.Core.Output;
 
@@ -290,18 +291,27 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
 
     private static ExplorerNode BuildTree(LoadedCookBook book)
     {
+        // One pixel scan per ingredient per rebuild; the book's flag is the OR of those results, so
+        // the book is never scanned a second time.
+        var anyPartial = false;
         var recipeNodes = book.Recipes.Select(r =>
         {
             var ingById = r.Ingredients.ToDictionary(i => i.Manifest.Id, StringComparer.Ordinal);
             var ingNodes = r.Manifest.LayerOrder
                 .Where(ingById.ContainsKey)
-                .Select(id => new ExplorerNode(id, ingById[id].Manifest.Name,
-                    ExplorerNodeKind.Ingredient, Array.Empty<ExplorerNode>(), (r, ingById[id]),
-                    ingById[id].Manifest.Kind))
+                .Select(id =>
+                {
+                    var partial = Opacity.HasPartialAlpha(ingById[id]);
+                    anyPartial |= partial;
+                    return new ExplorerNode(id, ingById[id].Manifest.Name,
+                        ExplorerNodeKind.Ingredient, Array.Empty<ExplorerNode>(), (r, ingById[id]),
+                        ingById[id].Manifest.Kind, partial);
+                })
                 .ToList();
             return new ExplorerNode(r.Manifest.Id, r.Manifest.Name, ExplorerNodeKind.Recipe, ingNodes, r);
         }).ToList();
-        return new ExplorerNode(book.Manifest.Id, book.Manifest.Name, ExplorerNodeKind.CookBook, recipeNodes, book);
+        return new ExplorerNode(book.Manifest.Id, book.Manifest.Name, ExplorerNodeKind.CookBook, recipeNodes, book,
+            IsTwoDOnly: anyPartial);
     }
 
     partial void OnSelectedNodeChanged(ExplorerNode? oldValue, ExplorerNode? newValue)

@@ -367,9 +367,10 @@ public partial class IngredientEditorViewModel
         {
             var ok = await _dialogs.ShowAsync<bool>(new ConfirmDialogViewModel(_dialogs,
                 "Allow partial transparency?",
-                "Semi-transparent pixels do not voxelise cleanly: a model built from this art has no way "
-                + "to resolve a voxel that is only partly there, so a downstream converter will either "
-                + "drop it or make it solid. Fully painted and fully erased pixels are unaffected.\n\n"
+                "A pixel that is only partly there cannot become a voxel. Save one, and "
+                + (IsLooseEditor ? "this Ingredient" : "this CookBook")
+                + " becomes 2D only: it can no longer be cooked into 3D models until every such pixel is "
+                + "made fully opaque or fully clear (Make voxel-ready on the Rise page does this).\n\n"
                 + "This applies to what you paint from here on; nothing already on the canvas changes.",
                 "Allow partial alpha"));
             if (!ok) return;

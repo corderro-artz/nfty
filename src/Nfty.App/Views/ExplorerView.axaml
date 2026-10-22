@@ -130,6 +130,12 @@
                                IsVisible="{Binding LayerKind, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
                     <TextBlock Text="{Binding Name}" Classes.root="{Binding IsRoot}" VerticalAlignment="Center"
                                TextTrimming="CharacterEllipsis" />
+                    <!-- 2D-only mark: slot always laid out, ink toggled (Path.twod). Trails the name so
+                         no row's name moves when a layer gains or loses partial alpha. -->
+                    <Path Classes="ico ti twod" Classes.on="{Binding IsTwoDOnly}"
+                          Data="{StaticResource Icon2dOnly}" Stroke="{DynamicResource WarningBrush}"
+                          VerticalAlignment="Center"
+                          ToolTip.Tip="2D only — has partly transparent pixels" />
                   </StackPanel>
                   </Border>
                 </Grid>
