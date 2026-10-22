@@ -37,8 +37,22 @@ public class RiseFromSetBrowserTests
                 nav: Nav, bridge: new ImageBridge());
         }
 
+        // Both off-thread searches (the browser's and the page's) post their result to the UI thread
+        // when they finish. Torn down before that, the post lands on disposed objects in whatever
+        // test pumps next, from a thread that does not own them - so settle first, as the Set
+        // browser's own tests do, then tear down.
         public void Dispose()
         {
+            var searches = new System.Collections.Generic.List<System.Threading.Tasks.Task> { Browser.BookSearch };
+            if (Nav.Current is RiseViewModel { Source: SetRiseSource src }) searches.Add(src.BookSearch);
+            var all = System.Threading.Tasks.Task.WhenAll(searches);
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            while (!all.IsCompleted && sw.ElapsedMilliseconds < 5000)
+            {
+                Dispatcher.UIThread.RunJobs();
+                System.Threading.Thread.Sleep(1);
+            }
+            Dispatcher.UIThread.RunJobs();
             (Nav.Current as IDisposable)?.Dispose();
             Browser.Dispose();
         }
@@ -169,5 +183,39 @@ public class RiseFromSetBrowserTests
         Assert.True(label.Bounds.Width <= rise.Bounds.Width);
         Assert.True(export.TranslatePoint(new Point(export.Bounds.Width, 0), view)!.Value.X <= view.Bounds.Width);
         window.Close();
+    }
+
+    private static SetBrowserViewModel Offered(LoadedSet set, FakeNav? nav, IImageBridge? bridge, bool rise = true) =>
+        new(set, rise: rise ? (_ => throw new NotSupportedException()) : null, nav: nav, bridge: bridge);
+
+    [AvaloniaFact]
+    public void Rise_needs_each_of_the_factory_the_navigation_and_the_bridge()
+    {
+        var (vm, owner) = RisePages.SetVm();
+        vm.Dispose();
+        var set = (LoadedSet)owner;
+        var all = Offered(set, new FakeNav(), new ImageBridge());
+        Assert.True(all.RiseCommand.CanExecute(null));
+        Assert.False(Offered(set, null, new ImageBridge()).RiseCommand.CanExecute(null));
+        Assert.False(Offered(set, new FakeNav(), null).RiseCommand.CanExecute(null));
+        Assert.False(Offered(set, new FakeNav(), new ImageBridge(), rise: false).RiseCommand.CanExecute(null));
+        all.Dispose();
+    }
+
+    [AvaloniaFact]
+    public void Hovering_and_selecting_tell_the_button_to_look_again()
+    {
+        using var rig = Ordinary();
+        int raised = 0;
+        rig.Browser.RiseCommand.CanExecuteChanged += (_, _) => raised++;
+
+        rig.Browser.Hover(rig.Browser.Items[1]);
+        Assert.True(raised > 0);
+        raised = 0;
+        rig.Browser.Hover(null);
+        Assert.True(raised > 0);
+        raised = 0;
+        rig.Browser.SelectCommand.Execute(rig.Browser.Items[2]);
+        Assert.True(raised > 0);
     }
 }

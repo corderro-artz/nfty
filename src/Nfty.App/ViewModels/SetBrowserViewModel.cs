@@ -421,7 +421,7 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
         var named = (_bookCandidates?.Invoke() ?? Array.Empty<string>()).ToList();
         string directory = _set.SourceDirectory;
 
-        _ = Task.Run(() =>
+        BookSearch = Task.Run(() =>
         {
             string? path = CookBookLocator.Find(hash, named.Concat(CookBookLocator.Nearby(directory)));
             if (path is null) return;
@@ -446,6 +446,11 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
             });
         });
     }
+
+    /// <summary>The off-thread book search, so a test can await it before tearing down instead of
+    /// leaving a posted continuation to land on a disposed browser. Completed when there is nothing
+    /// to look for. Its result is posted to the UI thread AFTER this completes, so pump once more.</summary>
+    internal Task BookSearch { get; private set; } = Task.CompletedTask;
 
     /// <summary>The exact chance of this asset, or null when there is no book to compute one from
     /// or the asset cannot be mapped onto it.</summary>
