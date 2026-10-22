@@ -34,6 +34,18 @@ namespace Nfty.Core.Stats;
 public static class SetReport
 {
     /// <summary>
+    /// How a Set's 3D models were made, in the one wording <c>generate</c>, <c>extend</c> and
+    /// <c>inspect</c> share: <c>glb · bottom-center · voxel 1</c>. Invariant culture, like the rest.
+    /// </summary>
+    /// <param name="models">The block recorded in <c>set.json</c>.</param>
+    /// <returns>Format, pivot and voxel size.</returns>
+    public static string ModelsSummary(SetModels models)
+    {
+        ArgumentNullException.ThrowIfNull(models);
+        return string.Create(CultureInfo.InvariantCulture, $"{models.Format} · {models.Pivot} · voxel {models.VoxelSize}");
+    }
+
+    /// <summary>
     /// Renders the report. Every number is formatted with
     /// <see cref="CultureInfo.InvariantCulture"/>, like every other report here: this text is
     /// copied, pasted into an issue and diffed against a colleague's run, so a decimal comma on one
@@ -68,6 +80,14 @@ public static class SetReport
         // hash" and "a hash you cannot see" are different things to a reader checking provenance.
         sb.AppendLine($"  CookBook SHA-256: {m.CookbookSha256 ?? "not recorded"}");
         sb.AppendLine($"  Generator: {m.GeneratorVersion}");
+
+        // Only a Set cooked with models says anything: absent means none were asked for, and a
+        // line claiming "none" would be news about a feature the reader never used.
+        if (m.Models is { } models)
+        {
+            int skipped = models.Skipped?.Count ?? 0;
+            sb.AppendLine("  Models: " + ModelsSummary(models) + (skipped > 0 ? $" · {skipped} skipped" : string.Empty));
+        }
 
         if (m.Distribution.Count > 0)
         {

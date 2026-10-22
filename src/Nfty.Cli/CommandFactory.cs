@@ -9,6 +9,7 @@ using Nfty.Core.Model;
 using Nfty.Core.Output;
 using Nfty.Core.Publish;
 using Nfty.Core.Stats;
+using Nfty.Model;
 using Nfty.Ticket;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
@@ -790,7 +791,31 @@ public static partial class CommandFactory
                 + "machines. Incompatibility rules are still enforced.",
         };
         var maxRerolls = MaxRerollsOption();
-        var cmd = new Command("generate", "Generate a new Set of assets from a CookBook.") { path, count, seed, outDir, pack, recipe, unlimited, maxRerolls };
+        var models = new Option<bool>("--models")
+        {
+            Description = "Also write a 3D model of every asset into models/: each fully opaque pixel "
+                + "becomes a column of voxels, colored with the asset's own pixels. Refused when any "
+                + "variant has a partly transparent pixel (nothing is written). An asset with nothing "
+                + "fully opaque gets no model and is listed.",
+        };
+        var modelFormat = ModelFormatOption("--model-format");
+        var pivot = ModelPivotOption();
+        var voxelSize = ModelVoxelSizeOption();
+        var cmd = new Command("generate", "Generate a new Set of assets from a CookBook.")
+            { path, count, seed, outDir, pack, recipe, unlimited, maxRerolls, models, modelFormat, pivot, voxelSize };
+
+        // Options of the other mode are REJECTED, never ignored: without --models nothing is modeled,
+        // so a --pivot typed anyway would silently do nothing.
+        cmd.Validators.Add(result =>
+        {
+            bool Given(Option option) => result.GetResult(option) is { Implicit: false };
+            if (!result.GetValue(models))
+                foreach (var (option, name) in new (Option, string)[]
+                    { (modelFormat, "--model-format"), (pivot, "--pivot"), (voxelSize, "--voxel-size") })
+                    if (Given(option))
+                        result.AddError($"{name} applies only with --models; without it no model is made.");
+            CheckVoxelSize(result, voxelSize);
+        });
         cmd.SetAction(parse =>
         {
             using var book = CookBookArchive.Read(parse.GetValue(path)!);
@@ -801,9 +826,22 @@ public static partial class CommandFactory
                 RecipeId: parse.GetValue(recipe),
                 MaxRerollsPerAsset: parse.GetValue(maxRerolls),
                 EnforceUniqueDna: !parse.GetValue(unlimited));
+
+            // Built BEFORE generating: a book with partial alpha is refused here, with nothing
+            // rolled and nothing written.
+            SetModeler? modeler = parse.GetValue(models)
+                ? new SetModeler(book, new RiseOptions
+                {
+                    VoxelSize = parse.GetValue(voxelSize),
+                    Pivot = ModelTokens.PivotOf(parse.GetValue(pivot)!),
+                    Format = ModelTokens.FormatOf(parse.GetValue(modelFormat)!),
+                })
+                : null;
+
             using var set = Generator.Generate(book, opts);
-            SetWriter.Write(set, dir, parse.GetValue(pack));
+            SetWriter.Write(set, dir, parse.GetValue(pack), modeler);
             Console.WriteLine($"Generated {set.Assets.Count} → {dir}");
+            if (modeler is not null && SetWriter.ReadExisting(dir).Models is { } made) PrintModelsMade(made, 1);
             return 0;
         });
         return cmd;
@@ -863,13 +901,20 @@ public static partial class CommandFactory
             if (SetProvenance.Warning(existing.CookbookSha256, book.SourceSha256) is { } warning)
                 Console.Error.WriteLine(warning);
 
+            // The Set's models are decided once, at its first cook: extend reuses the recorded
+            // options and has no model flags. A 2D-only book over a modeled Set is refused here.
+            SetModeler? modeler = existing.Models is { } recorded
+                ? new SetModeler(book, ModelTokens.OptionsOf(recorded))
+                : null;
+
             using var more = Generator.Generate(book,
                 new GenerateOptions(need, parse.GetValue(seed)!,
                     MaxRerollsPerAsset: parse.GetValue(maxRerolls),
                     EnforceUniqueDna: !parse.GetValue(unlimited)),
                 existing.Dnas, existing.NextNumber);
-            SetWriter.Write(more, setDir, parse.GetValue(pack));
+            SetWriter.Write(more, setDir, parse.GetValue(pack), modeler);
             Console.WriteLine($"Extended by {need} → {target} total.");
+            if (modeler is not null && SetWriter.ReadExisting(setDir).Models is { } made) PrintModelsMade(made, existing.NextNumber);
             return 0;
         });
         return cmd;

@@ -35,7 +35,7 @@ public class InspectSetTests
 
     /// <summary>Cooks a real Set with the CLI's own commands, so this exercises the path a user
     /// takes rather than a fixture built beside it.</summary>
-    private static string CookTo(string dir, bool pack)
+    private static string CookTo(string dir, bool pack, bool models = false)
     {
         var root = Directory.CreateTempSubdirectory().FullName;
         var cbk = Path.Combine(root, "Book.cbk");
@@ -60,6 +60,7 @@ public class InspectSetTests
         var outDir = Path.Combine(root, dir);
         var args = new List<string> { "generate", cbk, "--count", "2", "--seed", "s", "--out", outDir };
         if (pack) args.Add("--pack");
+        if (models) args.Add("--models");
         Assert.Equal(0, Run(args.ToArray()));
         return outDir;
     }
@@ -103,6 +104,28 @@ public class InspectSetTests
             () => CommandFactory.Build().Parse(["inspect", outDir, "--voxel"]).Invoke(NonThrowing));
 
         Assert.Contains("CookBook", ex.Message);
+    }
+
+    [Fact]
+    public void Inspect_reports_the_models_line()
+    {
+        // The fixture's art is fully clear, so nothing is fully opaque and both assets are skipped:
+        // the line says how the models were made AND that two assets have none.
+        var outDir = CookTo("cooked", pack: false, models: true);
+
+        var output = Capture(() => Assert.Equal(0, Run("inspect", outDir)));
+
+        Assert.Contains("Models: glb · bottom-center · voxel 1 · 2 skipped", output);
+    }
+
+    [Fact]
+    public void A_set_cooked_without_models_says_nothing_about_them()
+    {
+        var outDir = CookTo("cooked", pack: false);
+
+        var output = Capture(() => Assert.Equal(0, Run("inspect", outDir)));
+
+        Assert.DoesNotContain("Models:", output);
     }
 
     [Fact]

@@ -51,25 +51,9 @@ public static partial class CommandFactory
             Description = "Fill-all: every fully opaque pixel's back depth, 0..255 voxels away from "
                 + "the viewer. Given with --front, never alone.",
         };
-        var format = new Option<string>("--format")
-        {
-            Description = "glb (one binary file), gltf (text JSON plus a .bin beside it) or "
-                + "gltf-embedded (text JSON with the buffer inline).",
-            DefaultValueFactory = _ => "glb",
-        };
-        format.AcceptOnlyFromAmong(ModelTokens.FormatNames.ToArray());
-        var pivot = new Option<string>("--pivot")
-        {
-            Description = "Which point of the model's bounding box sits at the origin: bottom-center "
-                + "(standing on the floor), center, or min-corner.",
-            DefaultValueFactory = _ => "bottom-center",
-        };
-        pivot.AcceptOnlyFromAmong(ModelTokens.PivotNames.ToArray());
-        var voxelSize = new Option<float>("--voxel-size")
-        {
-            Description = "World units per pixel, and per voxel of depth. Must be positive.",
-            DefaultValueFactory = _ => 1f,
-        };
+        var format = ModelFormatOption("--format");
+        var pivot = ModelPivotOption();
+        var voxelSize = ModelVoxelSizeOption();
 
         var cmd = new Command("model",
             "Rise a picture into a 3D model: every fully opaque pixel becomes a column of voxels — one "
@@ -112,17 +96,7 @@ public static partial class CommandFactory
                     result.AddError($"{name} must be 0..255 (one byte per side); got {value}.");
             }
 
-            // Only checked when GIVEN: an unset option has not run its DefaultValueFactory yet at
-            // this point in the parse (it always reads back as 1f's own type default, 0, otherwise)
-            // — the same reason front/back's own range check is gated on Given rather than trusting
-            // whatever GetValue answers for an option nobody typed.
-            if (Given(voxelSize))
-            {
-                float size = result.GetValue(voxelSize);
-                if (!float.IsFinite(size) || size <= 0f)
-                    result.AddError("--voxel-size must be a positive number of world units per pixel; got "
-                        + size.ToString(CultureInfo.InvariantCulture) + ".");
-            }
+            CheckVoxelSize(result, voxelSize);
 
             string? outPath = result.GetValue(outp);
             if (outPath is not null && string.IsNullOrWhiteSpace(Path.GetFileNameWithoutExtension(outPath)))
@@ -172,6 +146,75 @@ public static partial class CommandFactory
             };
         });
         return cmd;
+    }
+
+    /// <summary>The model format option, spelled <paramref name="name"/> — <c>--format</c> on
+    /// <c>model</c>, <c>--model-format</c> on <c>generate</c>, which already writes images.</summary>
+    private static Option<string> ModelFormatOption(string name)
+    {
+        var format = new Option<string>(name)
+        {
+            Description = "glb (one binary file), gltf (text JSON plus a .bin beside it) or "
+                + "gltf-embedded (text JSON with the buffer inline).",
+            DefaultValueFactory = _ => "glb",
+        };
+        format.AcceptOnlyFromAmong(ModelTokens.FormatNames.ToArray());
+        return format;
+    }
+
+    private static Option<string> ModelPivotOption()
+    {
+        var pivot = new Option<string>("--pivot")
+        {
+            Description = "Which point of the model's bounding box sits at the origin: bottom-center "
+                + "(standing on the floor), center, or min-corner.",
+            DefaultValueFactory = _ => "bottom-center",
+        };
+        pivot.AcceptOnlyFromAmong(ModelTokens.PivotNames.ToArray());
+        return pivot;
+    }
+
+    /// <summary>
+    /// <c>--voxel-size</c>, parsed with the INVARIANT culture: the built-in converter reads the
+    /// current one, so under de-DE <c>0.5</c> came out as <c>5</c> (see BACKLOG, "fractional CLI
+    /// options parse culture-sensitively"). Shared by <c>model</c> and <c>generate</c> so the two
+    /// cannot disagree.
+    /// </summary>
+    private static Option<float> ModelVoxelSizeOption() => new("--voxel-size")
+    {
+        Description = "World units per pixel, and per voxel of depth. Must be positive.",
+        DefaultValueFactory = _ => 1f,
+        CustomParser = result =>
+        {
+            string token = result.Tokens.Count == 1 ? result.Tokens[0].Value : string.Empty;
+            if (float.TryParse(token, NumberStyles.Float, CultureInfo.InvariantCulture, out float value))
+                return value;
+            result.AddError($"--voxel-size must be a number; got '{token}'.");
+            return 0f;
+        },
+    };
+
+    /// <summary>Refuses a given, non-positive or non-finite voxel size. Only checked when GIVEN: an
+    /// unset option has not run its default factory yet at validation time.</summary>
+    private static void CheckVoxelSize(System.CommandLine.Parsing.CommandResult result, Option<float> voxelSize)
+    {
+        if (result.GetResult(voxelSize) is not { Implicit: false } given || given.Errors.Any()) return;
+        float size = result.GetValue(voxelSize);
+        if (!float.IsFinite(size) || size <= 0f)
+            result.AddError("--voxel-size must be a positive number of world units per pixel; got "
+                + size.ToString(CultureInfo.InvariantCulture) + ".");
+    }
+
+    /// <summary>The line <c>generate</c> and <c>extend</c> print after writing models, plus the skipped
+    /// line when some assets had nothing fully opaque. Only numbers from <paramref name="firstNumber"/>
+    /// on are listed: <c>extend</c> reports its own assets, not the Set's whole history.</summary>
+    private static void PrintModelsMade(Nfty.Core.Output.SetModels models, int firstNumber)
+    {
+        Console.WriteLine("models: " + Nfty.Core.Stats.SetReport.ModelsSummary(models));
+        var skipped = (models.Skipped ?? []).Where(n => n >= firstNumber).ToList();
+        if (skipped.Count > 0)
+            Console.WriteLine("skipped (nothing fully opaque): "
+                + string.Join(", ", skipped.Select(n => "#" + n.ToString("D4", CultureInfo.InvariantCulture))));
     }
 
     /// <summary>

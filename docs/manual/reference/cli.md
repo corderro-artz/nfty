@@ -94,6 +94,13 @@ nfty extend   mybook.cbk ./collection --to 750
 | `--recipe <id>` | Restrict to one Recipe id instead of rolling by weight. |
 | `--unlimited` | Skip the uniqueness requirement. Assets may repeat; identity is the token number. Rules are still enforced. |
 | `--max-rerolls` | Per-asset reroll budget before giving up. |
+| `--models` | Also write a 3D model of every asset into `models/`, named like its image (`0001.glb`). See [Making a 3D model](#making-a-3d-model). Refused, with nothing written, when any variant of the book has a partly transparent pixel. An asset with nothing fully opaque gets no model and is listed (`skipped (nothing fully opaque): #0007`). |
+| `--model-format` | With `--models`: `glb` (the default), `gltf` or `gltf-embedded`. |
+| `--pivot`, `--voxel-size` | With `--models`: as for `nfty model`. |
+
+The three model options are **rejected** without `--models`, not ignored. `inspect` on the finished Set prints a `Models:` line (format, pivot, voxel size, and how many assets were skipped).
+
+`extend` takes no model options: a Set is modeled whole or not at all, so it reuses the options recorded in `set.json` and makes models for the new assets in the same format. Extending a modeled Set with a book that has partial alpha is refused.
 
 ## Publishing
 
