@@ -32,6 +32,10 @@ public sealed class VariantRiseSource : RiseSource
     private LoadedIngredient _looseLive;
     private Task? _inFlight;
     private Task<VoxelReadyOutcome?>? _voxelInFlight;
+    // ONE write at a time on this layer's destination, whichever kind (depth save, voxel-ready apply,
+    // undo): a second is refused, never queued, as every reorder shares one flag. The page gates its
+    // buttons the same way, but a disabled button is a label, so the source holds the line itself.
+    private bool _writeBusy;
     private VoxelReadyResult? _voxelResult;
     private readonly IImageBridge _bridge;
 
@@ -153,9 +157,12 @@ public sealed class VariantRiseSource : RiseSource
         // One writer per destination. A second caller must not be told "saved" while the first is still
         // writing, or about to fail, so it gets the first's task and its outcome.
         if (_inFlight is { } running) return running;
+        // A voxel-ready write is running on the same destination: refused, not queued.
+        if (_writeBusy) return Task.CompletedTask;
         // Published BEFORE the work starts: a save that runs partly synchronously (or re-enters from a
         // handler) must already be visible as in flight.
         var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _writeBusy = true;
         _inFlight = done.Task;
         _ = RunSaveAsync(done);
         return done.Task;
@@ -167,6 +174,7 @@ public sealed class VariantRiseSource : RiseSource
         try { await SaveCoreAsync(); }
         catch (Exception ex) { failure = ex; }
         _inFlight = null;
+        _writeBusy = false;
         if (failure is null) done.SetResult(); else done.SetException(failure);
     }
 
@@ -298,8 +306,11 @@ public sealed class VariantRiseSource : RiseSource
         // Unsaved depth is refused too: reseeding the items would throw it away unasked.
         if (IsLocked || IsDirty) return Task.FromResult<VoxelReadyOutcome?>(null);
         if (_voxelInFlight is { } running) return running;
+        if (_writeBusy) return Task.FromResult<VoxelReadyOutcome?>(null);   // a write is running: refused
+        _writeBusy = true;
         var run = ApplyVoxelReadyAsync();
-        _voxelInFlight = run;
+        // A run that finished without ever awaiting has already cleared its flags; keeping it would stick.
+        if (!run.IsCompleted) _voxelInFlight = run;
         return run;
     }
 
@@ -328,21 +339,26 @@ public sealed class VariantRiseSource : RiseSource
             AfterVoxelWrite(result.Changes, ours, persisted);
             return new VoxelReadyOutcome(result.Changes.Count, VoxelReadyNote!);
         }
-        finally { _voxelInFlight = null; }
+        finally { _voxelInFlight = null; _writeBusy = false; }
     }
 
     /// <inheritdoc />
     public override async Task UndoVoxelReadyAsync()
     {
-        if (IsLocked || IsDirty || _voxelResult is not { } applied) return;
-        var book = ScopeBook() ?? throw new InvalidOperationException("The CookBook is no longer open.");
-        // Refuses (InvalidOperationException naming the variants) when any snapped variant was edited since.
-        var restored = VoxelReady.Undo(book, applied);
-        LoadedCookBook? persisted = null;
-        var ours = await WriteGraphAsync(restored, v => persisted = v);
-        _voxelResult = null;
-        AfterVoxelWrite(applied.Changes, ours, persisted);
-        applied.Dispose();
+        if (IsLocked || IsDirty || _writeBusy || _voxelResult is not { } applied) return;
+        _writeBusy = true;
+        try
+        {
+            var book = ScopeBook() ?? throw new InvalidOperationException("The CookBook is no longer open.");
+            // Refuses (InvalidOperationException naming the variants) when any snapped variant was edited since.
+            var restored = VoxelReady.Undo(book, applied);
+            LoadedCookBook? persisted = null;
+            var ours = await WriteGraphAsync(restored, v => persisted = v);
+            _voxelResult = null;
+            AfterVoxelWrite(applied.Changes, ours, persisted);
+            applied.Dispose();
+        }
+        finally { _writeBusy = false; }
     }
 
     // Writes the graph where this layer lives and returns this layer's ingredient as written.

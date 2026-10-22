@@ -95,7 +95,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     // which the editor covers.
     private readonly Func<bool>? _isEditing;
     private LoadedIngredient _ing;
-    private readonly IngredientDraft _draft;
+    private IngredientDraft _draft;
 
     // One undo stack per variant per surface. The two are separate on purpose: undoing a color
     // stroke must not reach back into value-map edits made before the mode was switched, and they
@@ -475,17 +475,9 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         // A Custom ingredient's pixels ARE its color raster; a value-map layer gets one only if the
         // author switches into color mode. The grayscale map is built either way, so the two save
         // paths (leave the original alone / convert it) both have something to write.
-        _draft = new IngredientDraft(ing.Manifest.Id, ing.Manifest.Name, ing.Manifest.Kind, ing.Manifest.Colorization,
-            book.Manifest.Canvas,
-            ing.Manifest.Variants.Select(v => new VariantDraft(v.Id, v.Name, v.Weight,
-                ValueMap.FromImage(ing.VariantImages[v.Id]),
-                ing.Manifest.Kind == LayerKind.Custom ? ColorMap.FromImage(ing.VariantImages[v.Id]) : null)));
-        _depths = new Dictionary<string, DepthMap>(ing.Depths, StringComparer.Ordinal);
-        foreach (var v in _draft.Variants)
-        {
-            _history[v.Id] = new EditHistory<GrayPixel>();
-            _colorHistory[v.Id] = new EditHistory<Rgba32>();
-        }
+        _draft = BuildDraft(ing, book.Manifest.Canvas);
+        _depths = new Dictionary<string, DepthMap>(StringComparer.Ordinal);
+        LoadDraftState(ing);
 
         // The rail must show THIS layer's color configuration, not the field defaults. Without this
         // the editor opened a 170-200 degree layer showing 0-360, rendered its preview from the wrong
@@ -534,6 +526,59 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         // file — the rule every other service here already follows.
         ApplyViewState(viewState ?? new EditorViewStateService(StateStore.InMemory()));
     }
+
+    private static IngredientDraft BuildDraft(LoadedIngredient ing, Dimensions canvas) =>
+        new(ing.Manifest.Id, ing.Manifest.Name, ing.Manifest.Kind, ing.Manifest.Colorization, canvas,
+            ing.Manifest.Variants.Select(v => new VariantDraft(v.Id, v.Name, v.Weight,
+                ValueMap.FromImage(ing.VariantImages[v.Id]),
+                ing.Manifest.Kind == LayerKind.Custom ? ColorMap.FromImage(ing.VariantImages[v.Id]) : null)));
+
+    // The depth maps and undo stacks that belong with a freshly built draft: the stored depth, and one
+    // empty history per variant and surface.
+    private void LoadDraftState(LoadedIngredient ing)
+    {
+        _depths.Clear();
+        foreach (var kv in ing.Depths) _depths[kv.Key] = kv.Value;
+        _history.Clear();
+        _colorHistory.Clear();
+        foreach (var v in _draft.Variants)
+        {
+            _history[v.Id] = new EditHistory<GrayPixel>();
+            _colorHistory[v.Id] = new EditHistory<Rgba32>();
+        }
+    }
+
+    /// <summary>Reloads everything the editor holds of the layer's PIXELS and depth from an ingredient that
+    /// was just written to disk by another page (Rise). Draft, depth, undo stacks, thumbnails and surfaces
+    /// all follow, and nothing is left dirty: a later Save writes what the file holds, not what this editor
+    /// opened with.</summary>
+    /// <remarks>Rise opens only on a clean editor, so there is no work here to lose. If the editor is dirty
+    /// anyway the reload is refused and Save says so, since writing its draft would overwrite the other
+    /// page's pixels with the old ones.</remarks>
+    private void LoadDraft(LoadedIngredient saved)
+    {
+        _ing = saved;
+        if (IsDirty)
+        {
+            _staleReason = "Rise changed this layer on disk while the editor had unsaved edits. Saving would write the old pixels back; reopen the layer.";
+            return;
+        }
+        _draft = BuildDraft(saved, _draft.Canvas);
+        LoadDraftState(saved);
+        foreach (var ev in Variants)
+        {
+            if (!saved.VariantImages.ContainsKey(ev.Id)) continue;
+            var old = ev.Thumbnail;
+            ev.Thumbnail = VariantImagery.Render(_bridge, saved, ev.Id);
+            old?.Dispose();
+        }
+        RebuildSurfaces();
+        UndoCommand?.NotifyCanExecuteChanged();
+        RedoCommand?.NotifyCanExecuteChanged();
+        IsDirty = false;
+    }
+
+    private string? _staleReason;
 
     private VariantDraft? ActiveDraft =>
         SelectedVariant is null ? null : _draft.Variants.FirstOrDefault(d => d.Id == SelectedVariant.Id);
@@ -1508,6 +1553,13 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         // Executing_save_on_a_locked_book_writes_nothing fails with the archive's bytes changed.
         if (IsReadOnly) return;
 
+        // A Rise save changed this layer's pixels while edits were unsaved here: refuse, say why.
+        if (_staleReason is { } stale)
+        {
+            await ShowErrorAsync("Cannot save this layer", stale);
+            return;
+        }
+
         // Ask BEFORE anything is written: the answer decides whether this becomes a new ingredient
         // beside the original or replaces it, and the replacement is not recoverable.
         if (IsColorMode && !IsCustom && !await ConvertToCustomAsync()) return;
@@ -1628,12 +1680,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
 
     private void OnLooseRiseSaved(LoadedIngredient saved) => AdoptSavedDepth(saved);
 
-    private void AdoptSavedDepth(LoadedIngredient saved)
-    {
-        _ing = saved;
-        _depths.Clear();
-        foreach (var kv in saved.Depths) _depths[kv.Key] = kv.Value;
-    }
+    private void AdoptSavedDepth(LoadedIngredient saved) => LoadDraft(saved);
 
     [RelayCommand]
     private async Task Back()

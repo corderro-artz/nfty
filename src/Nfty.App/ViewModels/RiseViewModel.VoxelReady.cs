@@ -65,12 +65,12 @@ public sealed partial class RiseViewModel
     public bool ShowVoxelReadyHint => !Source.CanMakeVoxelReady && !Source.CanUndoVoxelReady && HasPartialAlphaRows;
 
     /// <summary>The line that closes the 2D ONLY section. It explains why the pictures above cannot rise, except
-    /// on a read-only book, where it says why the button beside the heading is dim instead: a clean page says
-    /// so nowhere else (the footer only speaks of locks when there is unsaved depth), and the section already
-    /// has this one line, so the reason costs the rail no height. The partial-alpha explanation is not lost:
+    /// while the button beside the heading is dim, when it says why instead (read-only book, unsaved depth, a
+    /// job running): a clean page says so nowhere else, and the section already has this one line, so the
+    /// reason costs the rail no height. The partial-alpha explanation is not lost:
     /// the depth note and the tile say it too.</summary>
-    public string TwoDOnlyFootnote => Source.CanMakeVoxelReady && !Source.CanUndoVoxelReady && Source.IsLocked
-        ? "The CookBook is read-only — unlock it in the Explorer."
+    public string TwoDOnlyFootnote => Source.CanMakeVoxelReady && !Source.CanUndoVoxelReady && !CanMakeVoxelReady
+        ? VoxelReadyTip
         : "A voxel is solid or empty, so partial alpha cannot rise.";
 
     /// <summary>Whether the foot of the rail has anything to say: the undo line or the sentence. The button
@@ -115,7 +115,8 @@ public sealed partial class RiseViewModel
         {
             var plan = Source.PlanVoxelReady();
             if (plan.Count == 0) return;
-            using var card = new VoxelReadyDialogViewModel(_dialogs, plan, change =>
+            // Not disposed here: its view frees the row pictures when it leaves the screen.
+            var card = new VoxelReadyDialogViewModel(_dialogs, plan, change =>
             {
                 var (before, after) = Source.PreviewVoxelReady(change);
                 using (before) using (after)

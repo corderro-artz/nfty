@@ -12,9 +12,9 @@
        of the design, so the card hugs a short list, grows with a long one, caps, and scrolls only
        the part that can be unbounded. The rows are virtualized: a book can have hundreds, and each
        row makes its two pictures the first time it is shown. -->
-  <Border Classes="modal voxready">
+  <Border x:Name="Card" Classes="modal voxready">
     <Grid RowDefinitions="Auto,*,Auto">
-      <Border Grid.Row="0" Classes="modal-body tight">
+      <Border x:Name="Head" Grid.Row="0" Classes="modal-body tight">
         <StackPanel Spacing="9">
           <StackPanel Classes="plabel-row">
             <Ellipse Classes="kdot" />
@@ -25,9 +25,12 @@
         </StackPanel>
       </Border>
 
-      <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled"
+      <!-- Whole rows only: the code-behind sets this scroller's MaxHeight to a whole number of row
+           pitches from what the card has left, so the fold never slices a row. The right margin on the
+           list is the scrollbar's gutter, so the bar never lies over a row's text. -->
+      <ScrollViewer x:Name="RowsScroll" Grid.Row="1" HorizontalScrollBarVisibility="Disabled"
                     VerticalScrollBarVisibility="Auto" Margin="24,0,24,12">
-        <ItemsControl ItemsSource="{Binding Rows}">
+        <ItemsControl ItemsSource="{Binding Rows}" Margin="0,0,14,0">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
@@ -54,7 +57,7 @@
         </ItemsControl>
       </ScrollViewer>
 
-      <Border Grid.Row="2" Classes="modal-foot">
+      <Border x:Name="Foot" Grid.Row="2" Classes="modal-foot">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
           <TextBlock Grid.Column="0" Classes="keyhint" VerticalAlignment="Center"
                      Text="{Binding Summary}" TextWrapping="Wrap" />

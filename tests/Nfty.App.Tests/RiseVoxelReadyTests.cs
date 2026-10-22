@@ -363,6 +363,165 @@ public class RiseVoxelReadyTests
         Assert.False(vm.ShowVoxelReadyButton);
     }
 
+    // ---------------------------------------------------------------- undo is lock-gated too
+
+    [AvaloniaFact]
+    public async Task A_locked_book_refuses_undo_even_when_forced()
+    {
+        var (s, path) = Disk();
+        bool editing = true;
+        using var src = RiseFixtures.Variant(s, "ghost", () => editing);
+        using var vm = Vm(src, new ScriptedDialogs { Answer = true });
+        await vm.MakeVoxelReadyCommand.ExecuteAsync(null);
+        Assert.Equal(255, Ghost(path, 3, 3).A);
+        var snapped = File.ReadAllBytes(path);
+
+        editing = false;                                     // the lock closes after the snap
+        await src.UndoVoxelReadyAsync();                     // straight at the source
+        await vm.UndoVoxelReadyCommand.ExecuteAsync(null);   // and forced through the page
+
+        Assert.Equal(snapped, File.ReadAllBytes(path));
+        Assert.True(src.CanUndoVoxelReady);
+    }
+
+    // ---------------------------------------------------------------- one write at a time
+
+    /// <summary>A session that runs a callback when a write swaps the book in: the moment the archive is
+    /// provably written and the write provably still in flight.</summary>
+    private sealed class HookedSession : ICookBookSession
+    {
+        private readonly CookBookSession _inner;
+        public Action? OnReplace;
+        public int Replaces;
+        public HookedSession(CookBookSession inner) => _inner = inner;
+        public LoadedCookBook? Current => _inner.Current;
+        public string? SourcePath => _inner.SourcePath;
+        public event Action? Changed { add => _inner.Changed += value; remove => _inner.Changed -= value; }
+        public void Open(LoadedCookBook book, string? sourcePath = null) => _inner.Open(book, sourcePath);
+        public void Replace(LoadedCookBook book) { Replaces++; _inner.Replace(book); OnReplace?.Invoke(); }
+        public void Close() => _inner.Close();
+        public void Dispose() => _inner.Dispose();
+    }
+
+    [AvaloniaFact]
+    public async Task A_depth_save_re_entered_while_a_voxel_ready_persists_is_refused_not_queued()
+    {
+        var (inner, _) = Disk();
+        var hooked = new HookedSession(inner);
+        var recipe = hooked.Current!.Recipes[0];
+        using var src = new VariantRiseSource(recipe, recipe.Ingredients.Single(i => i.Manifest.Id == "body"), "ghost",
+            new ImageBridge(), hooked, () => true);
+        Task? second = null;
+        bool? secondDone = null;
+        hooked.OnReplace = () =>
+        {
+            hooked.OnReplace = null;
+            second = src.SaveAsync();
+            secondDone = second.IsCompleted;
+        };
+
+        var outcome = await src.MakeVoxelReadyAsync();
+
+        Assert.NotNull(outcome);
+        Assert.True(secondDone, "the second write answered at once instead of waiting its turn");
+        Assert.Equal(1, hooked.Replaces);                   // and it never persisted
+    }
+
+    [AvaloniaFact]
+    public async Task A_voxel_ready_and_an_undo_re_entered_while_a_depth_save_persists_are_refused()
+    {
+        var (inner, _) = Disk();
+        var hooked = new HookedSession(inner);
+        var recipe = hooked.Current!.Recipes[0];
+        using var src = new VariantRiseSource(recipe, recipe.Ingredients.Single(i => i.Manifest.Id == "body"), "oak",
+            new ImageBridge(), hooked, () => true);
+        var subject = src.Open(src.Items[0]);
+        subject.History.Do(new Nfty.Core.Editing.DepthStep(new[] { (2, 1) }, Nfty.Core.Editing.DepthSide.Front, +1), subject.Depth);
+        Task<VoxelReadyOutcome?>? make = null;
+        Task? undo = null;
+        hooked.OnReplace = () =>
+        {
+            hooked.OnReplace = null;
+            make = src.MakeVoxelReadyAsync();
+            undo = src.UndoVoxelReadyAsync();
+        };
+
+        await src.SaveAsync();
+
+        Assert.NotNull(make);
+        Assert.Null(await make!);
+        Assert.True(undo!.IsCompleted);
+        Assert.Equal(1, hooked.Replaces);
+    }
+
+    // ---------------------------------------------------------------- the preview card at the smallest page
+
+    [AvaloniaFact]
+    public void The_preview_list_shows_whole_rows_and_the_scrollbar_has_a_gutter()
+    {
+        using var card = PreviewCard(new FakeDialogs(), 60);
+        var view = new Views.VoxelReadyDialogView { DataContext = card };
+        var window = new Window { Content = view, Width = RisePages.MinArea.Width, Height = RisePages.MinArea.Height };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        Dispatcher.UIThread.RunJobs();
+        try
+        {
+            var scroll = view.FindControl<ScrollViewer>("RowsScroll")!;
+            Assert.Equal(0, scroll.Bounds.Height % 60, 0.5);
+            Assert.True(scroll.Bounds.Height >= 120, "at least two rows are visible");
+            var items = scroll.GetVisualDescendants().OfType<ItemsControl>().First();
+            // The rows end a gutter before the scroller's edge, where the bar is drawn.
+            Assert.True(scroll.Bounds.Width - items.Bounds.Width >= 14 - 0.5,
+                $"gutter {scroll.Bounds.Width - items.Bounds.Width:0}");
+            // Scrolled to the end, the last row is whole as well.
+            scroll.ScrollToEnd();
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(0, scroll.Offset.Y % 60, 0.5);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public void Closing_the_card_frees_its_pictures_only_after_it_has_left_the_screen()
+    {
+        using var card = PreviewCard(new FakeDialogs(), 3);
+        var view = new Views.VoxelReadyDialogView { DataContext = card };
+        var window = new Window { Content = view, Width = RisePages.MinArea.Width, Height = RisePages.MinArea.Height };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        Assert.NotNull(card.Rows[0].Before);                 // on screen: alive
+
+        window.Content = null;                               // the dialog layer drops it
+        Dispatcher.UIThread.RunJobs();
+        window.Show();
+        Dispatcher.UIThread.RunJobs();                       // and the layout that follows reads nothing disposed
+
+        Assert.Null(card.Rows[0].Before);                    // freed on detach
+        window.Close();
+    }
+
+    // ---------------------------------------------------------------- the busy reason is on screen
+
+    [AvaloniaFact]
+    public void While_a_job_runs_the_reason_is_on_the_closing_line_not_only_on_the_tooltip()
+    {
+        var (s, _) = Disk();
+        using var src = RiseFixtures.Variant(s, "oak");
+        string? whileBusy = null;
+        RiseViewModel? page = null;
+        var dialogs = new ScriptedDialogs { Answer = false, WhileCardIsUp = () => whileBusy = page!.TwoDOnlyFootnote };
+        using var vm = Vm(src, dialogs);
+        page = vm;
+        Assert.Equal("A voxel is solid or empty, so partial alpha cannot rise.", vm.TwoDOnlyFootnote);
+
+        _ = vm.MakeVoxelReadyCommand.ExecuteAsync(null);     // the card is up: the page is busy
+        Assert.Equal("Wait for the running job to finish.", whileBusy);
+
+        vm.ApplyDepthStroke(new[] { (2, 1) }, DepthSide.Front, false);
+        Assert.Equal("Save or discard depth first.", vm.TwoDOnlyFootnote);
+    }
+
     // ---------------------------------------------------------------- the preview card at the smallest page
 
     [AvaloniaTheory]
