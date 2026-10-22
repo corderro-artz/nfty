@@ -81,7 +81,7 @@
                   <!-- ALWAYS LAID OUT, disabled with its reason when the Set has no models/: a row
                        that came and went with the Set would move everything under it. -->
                   <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                    <CheckBox Grid.Column="0" Content="3D models" IsChecked="{Binding Models}"
+                    <CheckBox Grid.Column="0" Content="3D models" IsChecked="{Binding ModelsShown, Mode=OneWay}"
                               IsEnabled="{Binding SetHasModels}"
                               ToolTip.Tip="{Binding ModelsTip}" />
                     <!-- The reason, in ink beside the dim box: a disabled row that only says why on

@@ -134,4 +134,26 @@ public class ExportDialogModelsTests
 
         Assert.All(heights, h => Assert.Equal(heights[0], h, 1));
     }
+
+    [AvaloniaFact]
+    public void A_set_without_models_draws_the_box_unticked_and_presets_still_match()
+    {
+        var vm = Vm(withModels: false);
+        var (window, view) = Show(vm);
+        try
+        {
+            var box = view.GetVisualDescendants().OfType<CheckBox>()
+                .Single(c => (c.Content as string) == "3D models");
+            foreach (var preset in new[] { ExportPreset.Marketplace, ExportPreset.AssetPack,
+                         ExportPreset.FullProject })
+            {
+                vm.ApplyPresetCommand.Execute(vm.Presets.Single(t => t.Preset == preset));
+                Dispatcher.UIThread.RunJobs();
+                Assert.False(box.IsChecked, $"{preset} left the models box ticked on a Set with none");
+                Assert.True(vm.Presets.Single(t => t.Preset == preset).IsSelected,
+                    $"{preset} no longer lights on a Set without models");
+            }
+        }
+        finally { window.Close(); }
+    }
 }

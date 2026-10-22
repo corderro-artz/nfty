@@ -127,7 +127,15 @@ public partial class ExportDialogViewModel : ViewModelBase
     [ObservableProperty] private bool _nftyMetadata = true;
 
     /// <summary>Include <c>models/</c>. Carried so a preset round-trips; the box itself arrives with the 3D controls.</summary>
-    [ObservableProperty] private bool _models = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ModelsShown))]
+    private bool _models = true;
+
+    /// <summary>What the models box DRAWS: ticked only when models would really ship. On a Set
+    /// without models a disabled ticked box reads as "models will be exported", so it draws
+    /// unticked while <see cref="Models"/> stays true internally - which keeps the presets
+    /// matching on unmodeled Sets, since every preset but Marketplace says models on.</summary>
+    public bool ModelsShown => Models && SetHasModels;
     [ObservableProperty] private bool _includeCookBook;
     [ObservableProperty] private bool _packed = true;
 
