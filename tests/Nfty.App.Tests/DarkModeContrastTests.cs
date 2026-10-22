@@ -416,18 +416,19 @@ public class DarkModeContrastTests
         // unreadable text hides.
         var detailBook = ExplorerViewModelTests.TwoRecipeBook();
         var cat = detailBook.Recipes.First(r => r.Manifest.Id == "cat");
-        var recipeVm = new RecipeDetailViewModel(cat, detailBook, new ImageBridge(), _ => { });
+        var recipeVm = new RecipeDetailViewModel(cat, detailBook, new ImageBridge(), _ => { },
+            rise: _ => { });
         yield return ("recipe-detail", new Views.RecipeDetailView { DataContext = recipeVm }, recipeVm.Dispose);
 
         // The same pane with editing UNLOCKED. Its own state, not a variation on a theme: the reorder
         // grips are ghosted to nothing while locked, so a scan of the locked pane is a scan of a
         // control that is not being drawn - the exact blind spot the rest of this file exists for.
         var reorderVm = new RecipeDetailViewModel(cat, detailBook, new ImageBridge(), _ => { },
-            (_, _) => Task.FromResult<Nfty.Core.Formats.LoadedCookBook?>(null), canReorder: true);
+            (_, _) => Task.FromResult<Nfty.Core.Formats.LoadedCookBook?>(null), canReorder: true, rise: _ => { });
         yield return ("recipe-detail-unlocked",
             new Views.RecipeDetailView { DataContext = reorderVm }, reorderVm.Dispose);
 
-        var ingVm = new IngredientDetailViewModel(cat.Ingredients[0], cat, detailBook, new ImageBridge(), () => { }, () => false, null, null, new FilePickerService(), dialogs);
+        var ingVm = new IngredientDetailViewModel(cat.Ingredients[0], cat, detailBook, new ImageBridge(), () => { }, () => false, null, null, new FilePickerService(), dialogs, null, _ => { });
         yield return ("ingredient-detail", new Views.IngredientDetailView { DataContext = ingVm }, ingVm.Dispose);
 
         var editorBook = ExplorerViewModelTests.TwoRecipeBook();
