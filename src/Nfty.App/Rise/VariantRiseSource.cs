@@ -190,6 +190,15 @@ public sealed class VariantRiseSource : RiseSource
         // STALE-ART GUARD. Depth is painted on the picture Rise opened; if the layer's pixels have since
         // changed (another route rewrote the variant), the depth no longer describes them. Writing it
         // would pair old-picture depth with new-picture art, so the WHOLE save is refused, nothing written.
+        // A variant deleted since Rise opened it, with depth still painted, is refused too: dropping its
+        // depth silently would report a save that lost work.
+        var gone = _items
+            .Where(i => i.Subject is { IsDirty: true } && !ids.Contains(i.Id))
+            .Select(i => i.Name)
+            .ToList();
+        if (gone.Count > 0)
+            throw new InvalidOperationException(
+                $"{string.Join(", ", gone)} no longer exists in the layer; its painted depth was not saved. Reopen Rise on the current layer.");
         var stale = _items
             .Where(i => i.Subject is { IsDirty: true } && ids.Contains(i.Id))
             .Where(i => !live.VariantImages.TryGetValue(i.Id, out var current) || !SamePixels(i.Subject!.Art, current))

@@ -138,6 +138,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     [NotifyCanExecuteChangedFor(nameof(RiseCommand))]
     [NotifyPropertyChangedFor(nameof(CanRise))]
     [NotifyPropertyChangedFor(nameof(RiseTip))]
+    [NotifyPropertyChangedFor(nameof(SaveNoteText))]
     private bool _isDirty;
 
     [ObservableProperty]
@@ -228,12 +229,15 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// </remarks>
     public string? SaveNoteText => IsReadOnly
             ? "This CookBook is read-only. Paint freely — nothing here can be saved until the lock is opened in the Explorer."
-        : IsCustom ? null
+        : IsCustom ? RiseNote
         : IsColorMode
             ? "Color art saves as a Custom ingredient — Save will ask whether to add a new layer or convert this one."
             : HasColorArt
                 ? "This layer has color strokes. Save writes the value-map, which does not carry them — switch to Color to save them as a Custom ingredient."
-                : null;
+        : RiseNote;
+
+    // The dim Rise button's reason, on the visible line too: a tooltip alone never reaches keyboard or touch.
+    private string? RiseNote => _rise is not null && IsDirty ? RiseTip : null;
 
     /// <summary>The edit lock flipped. <see cref="IsReadOnly"/> reads the lock's owner on demand and
     /// nothing else pushes it, so the owner (the Explorer) calls this when it flips: Save and its note
@@ -1556,7 +1560,11 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
                     if (File.Exists(tmp)) { try { File.Delete(tmp); } catch { /* best effort */ } }
                     foreach (var i in images.Values) i.Dispose();   // our copies — ours to free
                 }
+                var replacedLoose = _ing;
                 _ing = new LoadedIngredient { Manifest = manifest, VariantImages = kept, Depths = depths };
+                // The ingredient this save replaced: its images are orphaned now (Dispose is idempotent,
+                // so the wrapper book freeing them again later is harmless).
+                foreach (var img in replacedLoose.VariantImages.Values) img.Dispose();
                 IsDirty = false;
                 return;   // loose has no cookbook/session/Explorer to refresh
             }

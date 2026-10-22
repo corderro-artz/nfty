@@ -48,6 +48,61 @@ public class VariantRiseSourceTests
         s.Dispose();
     }
 
+    private static async Task<(CookBookSession S, string Path, VariantRiseSource Src)> PaintedOakAndPine()
+    {
+        var (s, path) = RiseFixtures.OnDisk(RiseFixtures.ChestBook(withPine: true));
+        var src = RiseFixtures.Variant(s);
+        foreach (var item in src.Items.Where(i => i.Id is "oak" or "pine"))
+        {
+            var subject = src.Open(item);
+            subject.History.Do(new DepthStep(new[] { (2, 1) }, DepthSide.Front, +1), subject.Depth);
+        }
+        await Task.CompletedTask;
+        return (s, path, src);
+    }
+
+    [AvaloniaFact]
+    public async Task Save_refuses_depth_painted_on_a_variant_that_was_deleted_meanwhile()
+    {
+        var (s, path, src) = await PaintedOakAndPine();
+        using var _ = src;
+        var live = Body(s.Current!);
+        var images = live.VariantImages.Where(kv => kv.Key != "pine")
+            .ToDictionary(kv => kv.Key, kv => kv.Value.Clone());
+        var manifest = live.Manifest with { Variants = live.Manifest.Variants.Where(v => v.Id != "pine").ToList() };
+        var changed = new LoadedIngredient { Manifest = manifest, VariantImages = images, Depths = live.Depths };
+        await CookBookPersistence.PersistAsync(s, CookBookEdits.UpsertIngredient(s.Current!, "chest", changed));
+        var before = File.ReadAllBytes(path);
+
+        var ex = await Assert.ThrowsAsync<System.InvalidOperationException>(() => src.SaveAsync());
+
+        Assert.Contains("Pine", ex.Message);
+        Assert.Equal(before, File.ReadAllBytes(path));
+        Assert.True(src.IsDirty);
+        s.Dispose();
+    }
+
+    [AvaloniaFact]
+    public async Task Save_refuses_depth_painted_on_a_picture_that_has_since_been_resized()
+    {
+        var (s, path, src) = await PaintedOakAndPine();
+        using var _ = src;
+        var live = Body(s.Current!);
+        var images = live.VariantImages.ToDictionary(kv => kv.Key, kv => kv.Value.Clone());
+        images["oak"].Dispose();
+        images["oak"] = new Image<Rgba32>(4, 4);
+        var changed = new LoadedIngredient { Manifest = live.Manifest, VariantImages = images, Depths = live.Depths };
+        // Written straight to the session's book so the archive's canvas rule does not get in the way.
+        s.Replace(CookBookEdits.UpsertIngredient(s.Current!, "chest", changed));
+        var before = File.ReadAllBytes(path);
+
+        var ex = await Assert.ThrowsAsync<System.InvalidOperationException>(() => src.SaveAsync());
+
+        Assert.Contains("Oak", ex.Message);
+        Assert.Equal(before, File.ReadAllBytes(path));
+        s.Dispose();
+    }
+
     [AvaloniaFact]
     public void Items_are_the_variants_with_stored_pixels_weights_and_chips()
     {

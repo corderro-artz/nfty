@@ -76,6 +76,7 @@ public class RiseFromEditorTests
 
         Assert.False(rig.Editor.RiseCommand.CanExecute(null));
         Assert.Equal("Save the layer first — Rise reads the saved picture.", rig.Editor.RiseTip);
+        Assert.Equal(rig.Editor.RiseTip, rig.Editor.SaveNoteText);   // visible line, not only the tooltip
         rig.Editor.RiseCommand.Execute(null);        // the generated command does not consult CanExecute
 
         Assert.Null(rig.Nav.Current);
