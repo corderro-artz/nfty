@@ -111,12 +111,12 @@ public static class ServiceRegistration
         // The Rise page, built over a source. The factory the "Rise" buttons call; the page owns the
         // source it is handed and disposes it.
         services.AddSingleton<Func<Nfty.App.Rise.RiseSource, RiseViewModel>>(sp =>
-            source => new RiseViewModel(source,
+            source => RememberOnRiseSave(sp, new RiseViewModel(source,
                 sp.GetRequiredService<IImageBridge>(),
                 sp.GetRequiredService<INavigationService>(),
                 sp.GetRequiredService<IDialogService>(),
                 sp.GetRequiredService<IFilePickerService>(),
-                sp.GetRequiredService<IStatusService>()));
+                sp.GetRequiredService<IStatusService>())));
 
         services.AddSingleton<Func<LoadedCookBook, CookDialogViewModel>>(sp =>
             book => new CookDialogViewModel(book,
@@ -140,7 +140,8 @@ public static class ServiceRegistration
                 // So a finished cook can hand you the Set it just wrote. Export lives on the
                 // browser and nowhere else, and without this the only route to it from the book you
                 // cooked was back to Landing and open the folder by hand.
-                sp.GetRequiredService<Func<LoadedSet, SetBrowserViewModel>>()));
+                sp.GetRequiredService<Func<LoadedSet, SetBrowserViewModel>>(),
+                sp.GetRequiredService<Func<Nfty.App.Rise.RiseSource, RiseViewModel>>()));
 
         services.AddSingleton<Func<LoadedSet, SetBrowserViewModel>>(sp => set => new SetBrowserViewModel(
             set, sp.GetRequiredService<IFilePickerService>(), sp.GetRequiredService<IDialogService>(),
@@ -177,6 +178,18 @@ public static class ServiceRegistration
     /// own open here: one rule in one place beats N callers each remembering, and it keeps
     /// <c>IRecentsService</c> out of the Explorer's constructor.</para>
     /// </remarks>
+    internal static RiseViewModel RememberOnRiseSave(IServiceProvider sp, RiseViewModel rise)
+    {
+        var session = sp.GetRequiredService<ICookBookSession>();
+        var recents = sp.GetRequiredService<IRecentsService>();
+        rise.Saved += book =>
+        {
+            if (session.SourcePath is { } path)
+                recents.Add(new RecentItem(book.Manifest.Name, LandingViewModel.RecentMeta(book), path, false));
+        };
+        return rise;
+    }
+
     private static IngredientEditorViewModel RememberOnSave(IServiceProvider sp, IngredientEditorViewModel editor)
     {
         var session = sp.GetRequiredService<ICookBookSession>();

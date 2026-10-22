@@ -79,6 +79,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
 {
     private readonly Action _editIngredient;
     private readonly Func<string, Task>? _deleteVariant;
+    private readonly Action<string>? _rise;
     private readonly Action? _jumpToRecipe;
     private readonly IStatusService? _status;
     private readonly IFilePickerService? _picker;
@@ -265,6 +266,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SelectedThumb))]
     [NotifyCanExecuteChangedFor(nameof(DeleteVariantCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RiseCommand))]
     private VariantRow? _selected;
 
     /// <summary>Why Delete variant is unavailable, or empty when it is available.</summary>
@@ -332,14 +334,18 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     /// <param name="picker">Chooses where to export a preview.</param>
     /// <param name="dialogs">The dialog layer, for the delete confirmation and for reporting an
     /// export failure.</param>
+    /// <param name="rise">Opens the Rise page on the selected variant (given its id). Null where Rise
+    /// is not offered, which disables the button rather than hiding it.</param>
     /// <param name="deleteVariant">Removes one variant from this layer and saves the book. Null
     /// where there is nothing to save back to, which disables the button rather than hiding it.</param>
     public IngredientDetailViewModel(LoadedIngredient ing, LoadedRecipe recipe, LoadedCookBook book,
         IImageBridge bridge, Action editIngredient, Func<bool> isEditing,
         Action? jumpToRecipe = null, IStatusService? status = null,
         IFilePickerService? picker = null, IDialogService? dialogs = null,
-        Func<string, Task>? deleteVariant = null)
+        Func<string, Task>? deleteVariant = null,
+        Action<string>? rise = null)
     {
+        _rise = rise;
         Sort = new TableSort("Variant", () => OnPropertyChanged(nameof(Variants)));
         _ing = ing; _bridge = bridge;
         _editIngredient = editIngredient; _isEditing = isEditing;
@@ -617,6 +623,24 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     /// something to jump to.</summary>
     [RelayCommand] private void JumpToRules() => _jumpToRecipe?.Invoke();
     [RelayCommand] private void EditIngredient() => _editIngredient();
+
+    /// <summary>Opens the Rise page on the selected variant. Rise is read-and-paint: the page itself
+    /// gates Save on the edit lock, so this is available on a locked book too, as the pencil is.
+    /// A Dynamic or Static variant rises as its stored gray value-map, exactly as a loose picture of
+    /// those pixels would; color comes from cooking.</summary>
+    [RelayCommand(CanExecute = nameof(CanRise))]
+    private void Rise()
+    {
+        if (!CanRise() || Selected is not { } row) return;
+        _rise!(row.Id);
+    }
+
+    private bool CanRise() => _rise is not null && Selected is not null;
+
+    /// <summary>The Rise button's tooltip.</summary>
+    public string RiseTip => IsCustom
+        ? "Paint depth on this variant and turn it into a 3D model"
+        : "Paint depth on this variant and turn it into a 3D model. It rises as its gray value-map; color comes from cooking.";
 
     /// <summary>The CLI's <c>preview</c>: writes the selected variant as generation would render it.
     ///

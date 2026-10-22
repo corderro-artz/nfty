@@ -37,6 +37,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     private readonly IKitchenSession? _kitchen;
     private readonly IClipboardService? _clipboard;
     private readonly Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> _looseEditorFactory;
+    private readonly Func<Nfty.App.Rise.RiseSource, RiseViewModel>? _riseFactory;
 
     [ObservableProperty] private ExplorerNode? _selectedNode;
     [ObservableProperty] private ViewModelBase? _currentDetail;
@@ -53,6 +54,11 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     partial void OnIsEditingChanged(bool value)
     {
         if (CurrentDetail is RecipeDetailViewModel recipe) recipe.CanReorder = value;
+        // The lock's owner pushes it into whatever page is open on top of this one. Both read it on
+        // demand and nothing else tells them it moved: the editor's Save and note, and the Rise page's
+        // Save, footer and depth note, would otherwise stay as they were until the next edit.
+        _openRise?.Source.NotifyLockChanged();
+        _openEditor?.NotifyLockChanged();
         // The tree's own drag affordance follows the same lock, and the tree stays put while it
         // flips - so this is a notification rather than a rebuild, exactly as the line above is.
         OnPropertyChanged(nameof(CanReorderTree));
@@ -238,6 +244,8 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     /// <param name="status">The status bar's guidance channel.</param>
     /// <param name="kitchen">The open workspace, if any.</param>
     /// <param name="clipboard">Where the report dialog's Copy writes.</param>
+    /// <param name="riseFactory">Builds the Rise page over a source. Null where Rise is not offered,
+    /// which disables the buttons rather than hiding them.</param>
     /// <param name="setBrowserFactory">Opens a cooked Set, so a finished cook can hand you the
     /// browser the export dialog lives on.</param>
     public ExplorerViewModel(LoadedCookBook book, INavigationService nav, IDialogService dialogs,
@@ -249,8 +257,10 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         IStatusService status,
         IKitchenSession? kitchen = null,
         IClipboardService? clipboard = null,
-        Func<LoadedSet, SetBrowserViewModel>? setBrowserFactory = null)
+        Func<LoadedSet, SetBrowserViewModel>? setBrowserFactory = null,
+        Func<Nfty.App.Rise.RiseSource, RiseViewModel>? riseFactory = null)
     {
+        _riseFactory = riseFactory;
         _book = book; _nav = nav; _dialogs = dialogs; _bridge = bridge;
         _editorFactory = editorFactory;
         _cookFactory = cookFactory;
@@ -343,7 +353,8 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
                 // Same contract as the move callback above, and the id is hoisted out for the same
                 // reason: closing over the node would pin the pre-edit graph for the pane's life.
                 RuleEditCallback((LoadedRecipe)newValue.Domain!),
-                _dialogs),
+                _dialogs,
+                _riseFactory is null ? null : RiseRecipeCallback(((LoadedRecipe)newValue.Domain!).Manifest.Id)),
             ExplorerNodeKind.Ingredient => newValue!.Domain is (LoadedRecipe r, LoadedIngredient i)
                 ? new IngredientDetailViewModel(i, r, _book, _bridge,
                     () => OpenEditor(i, r), () => IsEditing,
@@ -353,7 +364,11 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
                     _status, _picker, _dialogs,
                     // Deleting a variant is structure, so it goes through the same two seams every
                     // other structural edit here does. The pane asks; this writes.
-                    variantId => DeleteVariantAsync(r, i, variantId))
+                    variantId => DeleteVariantAsync(r, i, variantId),
+                    // Rise reads the LIVE graph at call time, by id: the node's captured (r, i) is the
+                    // graph as it was when the pane was built, and a save since then (a Rise save, an
+                    // editor save) swaps in new objects. Closing over them would rise a stale variant.
+                    _riseFactory is null ? null : RiseVariantCallback(r.Manifest.Id, i.Manifest.Id))
                 : null,
             _ => null,
         };
@@ -387,6 +402,40 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
             ? $"Editing “{i.Manifest.Name}” - Save writes it back into the CookBook."
             : $"“{i.Manifest.Name}” is read-only - paint freely, but unlock the CookBook to save.");
     }
+
+    // The Rise page currently on top of this page, so the lock can be pushed into it. Cleared when the
+    // page goes away, for the same reason _openEditor is.
+    private RiseViewModel? _openRise;
+
+    /// <summary>Opens the Rise page over a source. Saves from it take the one path an editor save takes
+    /// (<see cref="OnEditorSaved"/>), so the tree and the Recents line refresh the same way.</summary>
+    private void OpenRise(Nfty.App.Rise.RiseSource source)
+    {
+        if (_riseFactory is null) { source.Dispose(); return; }
+        var rise = _riseFactory(source);
+        rise.Saved += OnEditorSaved;
+        rise.Closed += () => { if (ReferenceEquals(_openRise, rise)) _openRise = null; };
+        _openRise = rise;
+        // Nothing said here: the shell says the opening line after navigation.
+        _nav.To(rise);
+    }
+
+    /// <summary>Rise a variant of a layer, both found in the live book by id when the button is pressed.</summary>
+    private Action<string> RiseVariantCallback(string recipeId, string ingredientId) => variantId =>
+    {
+        var r = _book.Recipes.FirstOrDefault(x => x.Manifest.Id == recipeId);
+        var i = r?.Ingredients.FirstOrDefault(x => x.Manifest.Id == ingredientId);
+        if (r is null || i is null) return;
+        OpenRise(new Nfty.App.Rise.VariantRiseSource(r, i, variantId, _bridge, _session, () => IsEditing));
+    };
+
+    /// <summary>Rise the roll the Recipe pane's hero shows, with the recipe read from the live book.</summary>
+    private Action<int> RiseRecipeCallback(string recipeId) => seed =>
+    {
+        var r = _book.Recipes.FirstOrDefault(x => x.Manifest.Id == recipeId);
+        if (r is null) return;
+        OpenRise(new Nfty.App.Rise.RecipeRiseSource(_book, r, seed, _bridge));
+    };
 
     /// <summary>The editor persisted an ingredient; the session now holds the spliced graph. Rebuild
     /// the tree from it and reselect the same ingredient so its detail/thumbnails refresh in place.</summary>

@@ -224,6 +224,15 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
                 ? "This layer has color strokes. Save writes the value-map, which does not carry them — switch to Color to save them as a Custom ingredient."
                 : null;
 
+    /// <summary>The edit lock flipped. <see cref="IsReadOnly"/> reads the lock's owner on demand and
+    /// nothing else pushes it, so the owner (the Explorer) calls this when it flips: Save and its note
+    /// then follow at once instead of at the next edit.</summary>
+    internal void NotifyLockChanged()
+    {
+        NotifySaveAvailability();
+        OnPropertyChanged(nameof(IsReadOnly));
+    }
+
     /// <summary>Re-evaluate Save's availability and its note after anything that changes either.</summary>
     private void NotifySaveAvailability()
     {

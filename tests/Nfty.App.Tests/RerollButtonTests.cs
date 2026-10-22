@@ -84,17 +84,22 @@ public class RerollButtonTests
     /// from the image canvas above it".
     /// </summary>
     [AvaloniaFact]
-    public void The_reroll_is_centred_under_the_portrait()
+    public void The_reroll_and_rise_pair_is_centred_under_the_portrait()
     {
         var (window, view, vm) = Show();
         try
         {
-            var button = Reroll(view);
-            // The portrait: the 92px tile the sample is drawn into, above this button.
+            // The pair under the portrait is the die and Rise: it is the PAIR that is centred.
+            var chips = view.GetVisualDescendants().OfType<Button>()
+                .Where(x => x.Classes.Contains("sampleroll")).ToList();
+            Assert.Equal(2, chips.Count);
+            double left = chips.Min(c => c.TranslatePoint(new Point(0, 0), view)!.Value.X);
+            double right = chips.Max(c => c.TranslatePoint(new Point(c.Bounds.Width, 0), view)!.Value.X);
+            // The portrait: the 92px tile the sample is drawn into, above the pair.
             var portrait = view.GetVisualDescendants().OfType<Border>()
                 .First(b => Math.Abs(b.Bounds.Width - 92) < 0.5 && Math.Abs(b.Bounds.Height - 92) < 0.5);
 
-            Assert.Equal(CentreX(portrait, view), CentreX(button, view), precision: 0);
+            Assert.Equal(CentreX(portrait, view), (left + right) / 2, precision: 0);
         }
         finally { vm.Dispose(); window.Close(); }
     }

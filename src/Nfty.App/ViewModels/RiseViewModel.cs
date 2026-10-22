@@ -607,10 +607,18 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
         NotifySubjectBound();
     }
 
+    /// <summary>Raised first thing in <see cref="Dispose"/>, so whoever holds this page (the Explorer,
+    /// which pushes the edit lock into it) can let go of it before it is torn down.</summary>
+    public event Action? Closed;
+
     /// <summary>Frees the bitmap and the source. Safe to call twice.</summary>
     public void Dispose()
     {
         if (_disposed) return;
+        // First thing, so the page's owner drops its reference BEFORE anything is torn down (the
+        // editor's Dispose does the same).
+        Closed?.Invoke();
+        Closed = null;
         UndoStanding();
         _disposed = true;
         Source.Changed -= OnSourceChanged;

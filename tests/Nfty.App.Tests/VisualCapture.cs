@@ -351,9 +351,13 @@ public class VisualCapture
             demoDir.Delete(recursive: true);
 
             var (ruleBook, ruleRecipe) = RecipeWithRules();
-            using (var vm = new RecipeDetailViewModel(ruleRecipe, ruleBook, new ImageBridge(), _ => { }))
+            // Rise supplied so the action row captures as the app shows it: die and Rise, both live.
+            using (var vm = new RecipeDetailViewModel(ruleRecipe, ruleBook, new ImageBridge(), _ => { },
+                null, false, null, null, _ => { }))
             {
                 Capture(new Views.RecipeDetailView { DataContext = vm }, variant, $"recipe-detail-{key}.png");
+                Capture(new Views.RecipeDetailView { DataContext = vm }, variant, $"recipe-detail-min-{key}.png",
+                    RisePages.MinArea.Width, RisePages.MinArea.Height);
             }
 
             var ingredientBook = ExplorerViewModelTests.TwoRecipeBook();
@@ -362,15 +366,17 @@ public class VisualCapture
             // picker + dialogs supplied so Export preview captures ENABLED.
             using (var vm = new IngredientDetailViewModel(firstIngredient, catRecipe, ingredientBook, new ImageBridge(),
                 () => { }, () => false, null, null,
-                new FilePickerService(), new FakeDialogs()))
+                new FilePickerService(), new FakeDialogs(), null, _ => { }))
             {
                 Capture(new Views.IngredientDetailView { DataContext = vm }, variant, $"ingredient-detail-{key}.png");
+                Capture(new Views.IngredientDetailView { DataContext = vm }, variant, $"ingredient-detail-min-{key}.png",
+                    RisePages.MinArea.Width, RisePages.MinArea.Height);
             }
 
             var (dynBook, dynRecipe, dynIng) = DynamicIngredient();
             using (var vm = new IngredientDetailViewModel(dynIng, dynRecipe, dynBook, new ImageBridge(),
                 () => { }, () => false, null, null,
-                new FilePickerService(), new FakeDialogs()))
+                new FilePickerService(), new FakeDialogs(), null, _ => { }))
             {
                 Capture(new Views.IngredientDetailView { DataContext = vm }, variant, $"ingredient-detail-dynamic-{key}.png");
             }

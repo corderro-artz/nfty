@@ -344,12 +344,16 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
     /// exactly as a null <paramref name="moveLayer"/> disables reordering.</param>
     /// <param name="dialogs">The dialog layer the add/edit form is shown through. Null alongside
     /// <paramref name="editRules"/>: a form that cannot save is not worth opening.</param>
+    /// <param name="rise">Opens the Rise page on the roll the hero shows (given its seed). Null where
+    /// Rise is not offered, which disables the button rather than hiding it.</param>
     public RecipeDetailViewModel(LoadedRecipe recipe, LoadedCookBook book, IImageBridge bridge,
         Action<string> openIngredient,
         Func<string, int, Task<LoadedCookBook?>>? moveLayer = null, bool canReorder = false,
         Func<Func<RecipeManifest, RecipeManifest>, string, Task<LoadedCookBook?>>? editRules = null,
-        IDialogService? dialogs = null)
+        IDialogService? dialogs = null,
+        Action<int>? rise = null)
     {
+        _rise = rise;
         _recipe = recipe; _book = book; _bridge = bridge; _openIngredient = openIngredient;
         _moveLayer = moveLayer;
         _canReorder = canReorder;
@@ -798,6 +802,21 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand] private void OpenIngredient(string id) => _openIngredient(id);
+
+    private readonly Action<int>? _rise;
+
+    /// <summary>Whether the Rise button can act: the Explorer offered a way to open the page.</summary>
+    public bool CanRise => _rise is not null && !_disposed;
+
+    /// <summary>Opens the Rise page on the roll the hero is showing (the same seed, so the picture
+    /// that rises is the picture on screen). Read from <see cref="RollSeed"/> at the moment of the
+    /// press, so a reroll is followed.</summary>
+    [RelayCommand(CanExecute = nameof(CanRise))]
+    private void Rise()
+    {
+        if (!CanRise) return;
+        _rise!(RollSeed);
+    }
 
     /// <summary>Frees the sample-roll bitmap. Idempotent, and it latches: a reorder's save can land
     /// after the Explorer has navigated away and disposed this pane, and the reply must not

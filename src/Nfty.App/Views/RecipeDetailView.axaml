@@ -62,6 +62,11 @@
                  button that did nothing. The tumble is a transition rather than a one-shot animation,
                  so a second press during the first cannot strand it; see Button.sampleroll and
                  Panel.dieroll in Styles.axaml. -->
+            <!-- THE ACTION ROW: the die and Rise, a centred pair under the picture they both act on.
+                 Both are the same quiet chip (Button.sampleroll), fixed widths - 28 and 58 - so
+                 nothing in the pair moves when a face changes or a button dims. Rise opens the page
+                 on the roll the hero is showing. -->
+            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
             <Button Classes="sampleroll" Command="{Binding RerollCommand}"
                     HorizontalAlignment="Center"
                     ToolTip.Tip="{Binding RollSeed, StringFormat='Roll another sample (now showing #{0}). The picture is ONE roll of this recipe, not a stored asset — the seed is not part of the recipe.'}">
@@ -78,6 +83,14 @@
                       Data="{Binding DieFace, Converter={x:Static conv:DieFaceConverter.AccentPip}}" />
               </Panel>
             </Button>
+            <Button Classes="sampleroll" Width="58" Command="{Binding RiseCommand}"
+                    ToolTip.Tip="Paint depth on the roll shown above and turn it into a 3D model">
+              <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">
+                <Path Classes="ico sm" Data="{StaticResource IconRise}" />
+                <TextBlock Text="Rise" FontSize="11.5" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+            </StackPanel>
           </StackPanel>
 
           <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Top">

@@ -271,6 +271,14 @@
             <TextBlock Text="Export preview…" />
           </StackPanel>
         </Button>
+        <!-- Opens the Rise page on the selected variant. Available on a locked book as the pencil is:
+             the page gates its own Save. -->
+        <Button Command="{Binding RiseCommand}" Classes="tbtn" ToolTip.Tip="{Binding RiseTip}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <Path Classes="ico sm" Data="{StaticResource IconRise}" />
+            <TextBlock Text="Rise" />
+          </StackPanel>
+        </Button>
       </StackPanel>
     </Grid>
 
