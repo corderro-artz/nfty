@@ -670,4 +670,22 @@ public class SetExporterTests
         Assert.Equal(8, plan.Entries.Count(e => e.Name.StartsWith("models/", StringComparison.Ordinal)));
         Assert.Contains("3D models (4)", plan.Parts());
     }
+
+    [Fact]
+    public void A_users_unpadded_or_overpadded_model_names_are_not_the_sets()
+    {
+        var dir = ModeledSet();
+        var models = Path.Combine(dir, "models");
+        File.WriteAllText(Path.Combine(models, "1.glb"), "user");
+        File.WriteAllText(Path.Combine(models, "00002.glb"), "user");
+
+        var plan = SetExporter.Plan(dir, ExportOptions.For(ExportPreset.AssetPack));
+        var result = SetExporter.Export(dir, OutDir(), ExportOptions.For(ExportPreset.AssetPack));
+
+        Assert.Equal(["0001.glb", "0002.glb"], SetLayout.ModelFilesIn(dir).Select(Path.GetFileName));
+        Assert.Equal(2, SetLayout.ModelCountIn(dir));
+        Assert.Contains("3D models (2)", plan.Parts());
+        Assert.DoesNotContain(plan.Entries, e => e.Name is "models/1.glb" or "models/00002.glb");
+        Assert.DoesNotContain(EntriesOf(result.Path), n => n is "models/1.glb" or "models/00002.glb");
+    }
 }

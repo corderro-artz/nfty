@@ -77,6 +77,9 @@ public static class SetLayout
             if (!int.TryParse(Path.GetFileNameWithoutExtension(file), System.Globalization.NumberStyles.None,
                     System.Globalization.CultureInfo.InvariantCulture, out int number)) continue;
             if (number < 1 || number > recorded.Count || skipped.Contains(number)) continue;
+            // Exactly the name the writer gives it (SetWriter pads with D4, growing past 9999): a
+            // user's own 1.glb or 00002.glb is not a Set file.
+            if (Path.GetFileNameWithoutExtension(file) != number.ToString("D4", System.Globalization.CultureInfo.InvariantCulture)) continue;
             files.Add(file);
         }
         files.Sort(StringComparer.Ordinal);

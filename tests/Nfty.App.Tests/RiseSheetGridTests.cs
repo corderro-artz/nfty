@@ -331,4 +331,31 @@ public class RiseSheetGridTests
         Assert.Equal(2, vm.Items.Count);
         Assert.Equal(new SheetGrid(2, 1, 8, 8, 2), SheetGrid.Read(path));
     }
+
+    [AvaloniaFact]
+    public async Task While_the_grid_is_written_painting_is_refused_and_every_guarded_write_refuses_the_others()
+    {
+        var path = Solid(16, 8);
+        using var vm = Page(path, new FakeDialogs());
+        var src = Assert.IsType<PictureRiseSource>(vm.Source);
+        Assert.True(vm.IsPaintable);
+        vm.GridMode = GridMode.ColumnsRows;
+        vm.GridA = 2;
+        vm.GridB = 1;
+
+        var running = vm.ApplyGridCommand.ExecuteAsync(null);
+
+        Assert.False(vm.IsPaintable, "depth painted now would be dropped by the re-cut");
+        vm.ApplyDepthStroke(new[] { (1, 1) }, DepthSide.Front, false);
+        Assert.False(vm.HasUnsavedDepth);
+        Assert.Throws<InvalidOperationException>(() => src.ApplyGrid(SheetGrid.FromColumnsRows(4, 1, 8, 4)));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => src.SaveAsync());
+        Assert.Null(await src.MakeVoxelReadyAsync());
+
+        await running;
+
+        Assert.True(vm.IsPaintable);
+        vm.ApplyDepthStroke(new[] { (1, 1) }, DepthSide.Front, false);
+        Assert.True(vm.HasUnsavedDepth);
+    }
 }

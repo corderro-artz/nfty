@@ -129,7 +129,7 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
 
     /// <summary>Whether strokes change anything: an editable source and a picture that can rise. A
     /// locked variant still paints, as a scratch surface.</summary>
-    public bool IsPaintable => Source.IsEditable && Subject.IsRisable && !IsExporting;
+    public bool IsPaintable => Source.IsEditable && Subject.IsRisable && !IsExporting && !IsVoxelBusy;
 
     /// <summary>The rail lists variants of one layer.</summary>
     public bool IsVariantRail => Source.Kind == RiseSourceKind.Variant;

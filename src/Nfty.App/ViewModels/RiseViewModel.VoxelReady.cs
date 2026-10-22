@@ -26,6 +26,11 @@ public sealed partial class RiseViewModel
             OnPropertyChanged();
             NotifyVoxelReady();
             OnPropertyChanged(nameof(CanSave));
+            // Depth painted while a write rebuilds the items would be dropped silently, so the canvas
+            // is gated like every other action.
+            OnPropertyChanged(nameof(IsPaintable));
+            UndoCommand.NotifyCanExecuteChanged();
+            RedoCommand.NotifyCanExecuteChanged();
             OnPropertyChanged(nameof(HasUnsavedWork));
             OnPropertyChanged(nameof(FooterText));
             SaveCommand.NotifyCanExecuteChanged();

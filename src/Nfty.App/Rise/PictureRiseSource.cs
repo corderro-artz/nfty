@@ -150,6 +150,8 @@ public sealed class PictureRiseSource : RiseSource
     /// grid again is a no-op, so nothing is rewritten and no depth is lost.</remarks>
     public void ApplyGrid(SheetGrid? grid)
     {
+        if (_inFlight is not null || _gridInFlight is not null)
+            throw new InvalidOperationException("A save or grid write is running. Try again when it has finished.");
         if (!PrepareGrid(ref grid, out bool remove)) return;
         if (grid is not null) WriteGrid(grid); else if (remove) RemoveGrid();
         CommitGrid(grid);
@@ -166,7 +168,7 @@ public sealed class PictureRiseSource : RiseSource
     public Task ApplyGridAsync(SheetGrid? grid)
     {
         if (_inFlight is not null || _gridInFlight is not null)
-            throw new InvalidOperationException("A save is running. Apply the grid when it has finished.");
+            throw new InvalidOperationException("A save or grid write is running. Try again when it has finished.");
         if (!PrepareGrid(ref grid, out bool remove)) return Task.CompletedTask;
         var task = ApplyGridCoreAsync(grid, remove);
         _gridInFlight = task;
@@ -355,7 +357,8 @@ public sealed class PictureRiseSource : RiseSource
     /// <returns>What it did, or null when depth is unsaved or nothing is partial.</returns>
     public override Task<VoxelReadyOutcome?> MakeVoxelReadyAsync()
     {
-        if (IsDirty) return Task.FromResult<VoxelReadyOutcome?>(null);   // reseeding would drop painted depth
+        if (IsDirty || _gridInFlight is not null || _inFlight is not null)
+            return Task.FromResult<VoxelReadyOutcome?>(null);   // reseeding would drop painted depth; a write is running
         var plan = PlanVoxelReady();
         if (plan.Count == 0) return Task.FromResult<VoxelReadyOutcome?>(null);
         var snapped = VoxelReady.Snap(_image);
@@ -371,7 +374,8 @@ public sealed class PictureRiseSource : RiseSource
     /// <inheritdoc />
     public override Task UndoVoxelReadyAsync()
     {
-        if (IsDirty || _preSnap is not { } original) return Task.CompletedTask;
+        if (IsDirty || _gridInFlight is not null || _inFlight is not null || _preSnap is not { } original)
+            return Task.CompletedTask;
         _image.Dispose();
         _image = original;
         _preSnap = null;
@@ -510,6 +514,8 @@ public sealed class PictureRiseSource : RiseSource
     {
         if (_pickPath is null) return Task.CompletedTask;
         if (_inFlight is { } running) return running;
+        if (_gridInFlight is not null)
+            throw new InvalidOperationException("The grid is being written. Save when it has finished.");
         var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _inFlight = done.Task;
         _ = RunSaveAsync(done);
