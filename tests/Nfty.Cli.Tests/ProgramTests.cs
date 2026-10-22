@@ -32,7 +32,7 @@ public class ProgramTests
         return exe;
     }
 
-    private static (int Code, string Out, string Err) Run(params string[] args)
+    internal static (int Code, string Out, string Err) Run(params string[] args)
     {
         var psi = new ProcessStartInfo(Exe())
         {

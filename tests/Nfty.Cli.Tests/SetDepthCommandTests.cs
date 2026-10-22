@@ -199,4 +199,61 @@ public class SetDepthCommandTests
         using var second = IngredientArchive.Read(igt);
         Assert.Equal(firstBytes, second.Depths["v"].ToBytes());
     }
+
+    [Fact]
+    public void A_missing_map_names_the_path()
+    {
+        string dir = Directory.CreateTempSubdirectory().FullName;
+        string igt = MakeIgt(dir);
+        string missing = Path.Combine(dir, "nope.png");
+
+        var ex = Assert.Throws<FileNotFoundException>(() =>
+            Run("set", "depth", igt, "--variant", "v", "--map", missing));
+
+        Assert.Contains(missing, ex.Message, StringComparison.Ordinal);
+        Assert.Contains("does not exist", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_map_that_is_not_a_picture_names_the_path_and_the_reason()
+    {
+        string dir = Directory.CreateTempSubdirectory().FullName;
+        string igt = MakeIgt(dir);
+        string text = Path.Combine(dir, "notes.png");
+        File.WriteAllText(text, "this is not a png");
+        var before = File.ReadAllBytes(igt);
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            Run("set", "depth", igt, "--variant", "v", "--map", text));
+
+        Assert.Contains(text, ex.Message, StringComparison.Ordinal);
+        Assert.Contains("not an image", ex.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("ImageSharp", ex.Message, StringComparison.Ordinal);
+        Assert.Equal(before, File.ReadAllBytes(igt));
+    }
+
+    [Fact]
+    public void The_real_command_reports_a_wrong_size_map_through_ErrorReport_and_exits_1()
+    {
+        string dir = Directory.CreateTempSubdirectory().FullName;
+        string igt = MakeIgt(dir);
+        string map = MakeMap(dir, 3, "big.png");
+
+        var (code, _, err) = ProgramTests.Run("set", "depth", igt, "--variant", "v", "--map", map);
+
+        Assert.Equal(1, code);
+        Assert.Contains("error:", err, StringComparison.Ordinal);
+        Assert.Contains("--map is 3x3; variant 'v' is 2x2", err, StringComparison.Ordinal);
+        Assert.DoesNotContain("Unhandled exception", err, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_help_states_that_only_solid_pixels_are_counted()
+    {
+        var set = CommandFactory.Build().Subcommands.Single(c => c.Name == "set");
+        var depth = set.Subcommands.Single(c => c.Name == "depth");
+
+        Assert.Contains("SOLID pixels only",
+            depth.Options.Single(o => o.Name == "--map").Description, StringComparison.Ordinal);
+    }
 }

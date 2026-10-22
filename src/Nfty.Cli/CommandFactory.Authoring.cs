@@ -239,6 +239,32 @@ public static partial class CommandFactory
         return group;
     }
 
+    /// <summary>Loads the `--map` picture, turning every way that can fail into a sentence that names
+    /// the path and the reason rather than an ImageSharp exception message.</summary>
+    private static Image<Rgba32> LoadDepthPicture(string mapPath)
+    {
+        if (!File.Exists(mapPath))
+            throw new FileNotFoundException($"--map '{mapPath}' does not exist.", mapPath);
+        try
+        {
+            return Image.Load<Rgba32>(mapPath);
+        }
+        catch (UnknownImageFormatException)
+        {
+            throw new InvalidOperationException(
+                $"--map '{mapPath}' is not an image nfty can read; expected a PNG.");
+        }
+        catch (InvalidImageContentException)
+        {
+            throw new InvalidOperationException(
+                $"--map '{mapPath}' is a damaged image and could not be decoded.");
+        }
+        catch (IOException ex)
+        {
+            throw new InvalidOperationException($"--map '{mapPath}' could not be read: {ex.Message}");
+        }
+    }
+
     /// <summary>
     /// `set depth`. Stores one variant's depth map, read from a picture: red is the front depth,
     /// green the back depth, blue and alpha ignored. Written through the same
@@ -258,7 +284,8 @@ public static partial class CommandFactory
         {
             Description = "PNG the same size as the variant. Red is the front depth, green the back "
                 + "depth (0..255 each); blue and alpha are ignored. An all-zero map clears the "
-                + "variant's depth.",
+                + "variant's depth. The summary line counts SOLID pixels only: a partially "
+                + "transparent pixel can carry depth but is not counted.",
             Required = true,
         };
         var cmd = new Command("depth", "Set one variant's depth map from a picture.")
@@ -276,14 +303,14 @@ public static partial class CommandFactory
                     + "variants are: "
                     + string.Join(", ", existing.Manifest.Variants.Select(v => $"'{v.Id}'")) + ".");
 
-            using var picture = Image.Load<Rgba32>(mapPath);
+            using var picture = LoadDepthPicture(mapPath);
             if (picture.Width != art.Width || picture.Height != art.Height)
                 throw new InvalidOperationException(
                     $"--map is {picture.Width}x{picture.Height}; variant '{vid}' is "
                     + $"{art.Width}x{art.Height}. nfty resamples nothing, so the map must be the "
                     + "same size.");
 
-            var depths = new Dictionary<string, DepthMap>(existing.Depths)
+            var depths = new Dictionary<string, DepthMap>(existing.Depths, StringComparer.Ordinal)
             {
                 [vid] = DepthPicture.ToMap(picture),
             };
