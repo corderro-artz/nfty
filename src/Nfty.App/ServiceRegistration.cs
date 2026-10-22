@@ -167,17 +167,9 @@ public static class ServiceRegistration
     }
 
     /// <summary>
-    /// Re-records a CookBook's Recent entry whenever an editor saves into it.
+    /// Re-records a CookBook's Recent entry whenever the Rise page saves depth into it — the same
+    /// rule as <see cref="RememberOnSave"/>, for the other page that writes a book.
     /// </summary>
-    /// <remarks>
-    /// The Landing screen's subtitle ("2 recipes · 512x512") is recorded once, when the book is
-    /// opened. A save can change it — a color save adds a layer, and a book opened with none showed
-    /// "0 recipes" forever after — so the line has to be re-recorded against what is now on disk.
-    ///
-    /// <para>Here, at the composition root, for the same reason the loose-editor factory records its
-    /// own open here: one rule in one place beats N callers each remembering, and it keeps
-    /// <c>IRecentsService</c> out of the Explorer's constructor.</para>
-    /// </remarks>
     internal static RiseViewModel RememberOnRiseSave(IServiceProvider sp, RiseViewModel rise)
     {
         var session = sp.GetRequiredService<ICookBookSession>();
@@ -190,6 +182,18 @@ public static class ServiceRegistration
         return rise;
     }
 
+    /// <summary>
+    /// Re-records a CookBook's Recent entry whenever an editor saves into it.
+    /// </summary>
+    /// <remarks>
+    /// The Landing screen's subtitle ("2 recipes · 512x512") is recorded once, when the book is
+    /// opened. A save can change it — a color save adds a layer, and a book opened with none showed
+    /// "0 recipes" forever after — so the line has to be re-recorded against what is now on disk.
+    ///
+    /// <para>Here, at the composition root, for the same reason the loose-editor factory records its
+    /// own open here: one rule in one place beats N callers each remembering, and it keeps
+    /// <c>IRecentsService</c> out of the Explorer's constructor.</para>
+    /// </remarks>
     private static IngredientEditorViewModel RememberOnSave(IServiceProvider sp, IngredientEditorViewModel editor)
     {
         var session = sp.GetRequiredService<ICookBookSession>();
