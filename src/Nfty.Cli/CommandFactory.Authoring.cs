@@ -2,6 +2,7 @@ using System.CommandLine;
 using System.Globalization;
 using Nfty.Core.Editing;
 using Nfty.Core.Formats;
+using Nfty.Core.Imaging;
 using Nfty.Core.Model;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -234,7 +235,94 @@ public static partial class CommandFactory
     {
         var group = new Command("set", "Change a property of an existing archive.");
         group.Subcommands.Add(SetChance());
+        group.Subcommands.Add(SetDepth());
         return group;
+    }
+
+    /// <summary>
+    /// `set depth`. Stores one variant's depth map, read from a picture: red is the front depth,
+    /// green the back depth, blue and alpha ignored. Written through the same
+    /// <see cref="IngredientArchive"/> writer the Rise page saves with, so the archive carries
+    /// exactly what the app would have stored, and every other variant's art and depth is
+    /// carried across untouched. nfty resamples nothing: a picture of another size is refused.
+    /// </summary>
+    private static Command SetDepth()
+    {
+        var igtPath = new Argument<string>("igt") { Description = "Path to the .igt to modify in place." };
+        var variant = new Option<string>("--variant")
+        {
+            Description = "Id of the variant to give depth — an id, not its display name.",
+            Required = true,
+        };
+        var map = new Option<string>("--map")
+        {
+            Description = "PNG the same size as the variant. Red is the front depth, green the back "
+                + "depth (0..255 each); blue and alpha are ignored. An all-zero map clears the "
+                + "variant's depth.",
+            Required = true,
+        };
+        var cmd = new Command("depth", "Set one variant's depth map from a picture.")
+            { igtPath, variant, map };
+        cmd.SetAction(parse =>
+        {
+            string path = parse.GetValue(igtPath)!;
+            string vid = parse.GetValue(variant)!;
+            string mapPath = parse.GetValue(map)!;
+            using var existing = IngredientArchive.Read(path);
+
+            if (!existing.VariantImages.TryGetValue(vid, out var art))
+                throw new InvalidOperationException(
+                    $"--variant '{vid}' is not a variant of ingredient '{existing.Manifest.Id}'. Its "
+                    + "variants are: "
+                    + string.Join(", ", existing.Manifest.Variants.Select(v => $"'{v.Id}'")) + ".");
+
+            using var picture = Image.Load<Rgba32>(mapPath);
+            if (picture.Width != art.Width || picture.Height != art.Height)
+                throw new InvalidOperationException(
+                    $"--map is {picture.Width}x{picture.Height}; variant '{vid}' is "
+                    + $"{art.Width}x{art.Height}. nfty resamples nothing, so the map must be the "
+                    + "same size.");
+
+            var depths = new Dictionary<string, DepthMap>(existing.Depths)
+            {
+                [vid] = DepthPicture.ToMap(picture),
+            };
+
+            var merged = new LoadedIngredient
+            {
+                Manifest = existing.Manifest,
+                VariantImages = existing.VariantImages,
+                Depths = depths,
+            };
+            var problems = Validator.ValidateIngredient(merged);
+            if (problems.Count > 0) { Report(problems); return 1; }
+
+            // The writer zeroes depth under clear pixels and drops a flat map, so what was stored
+            // is read back rather than assumed: the line below states the file, not the request.
+            WriteReplacing(path, p => IngredientArchive.Write(p, existing.Manifest, existing.VariantImages, depths));
+            using var stored = IngredientArchive.Read(path);
+            if (!stored.Depths.TryGetValue(vid, out var kept))
+            {
+                Console.WriteLine($"Depth of variant '{vid}' cleared in {path}");
+                return 0;
+            }
+
+            int solid = 0, front = 0, back = 0;
+            var storedArt = stored.VariantImages[vid];
+            for (int y = 0; y < kept.Height; y++)
+                for (int x = 0; x < kept.Width; x++)
+                {
+                    if (!Opacity.IsSolid(storedArt[x, y])) continue;
+                    solid++;
+                    front = Math.Max(front, kept.Front(x, y));
+                    back = Math.Max(back, kept.Back(x, y));
+                }
+            Console.WriteLine(
+                $"Variant '{vid}' of {path} now carries depth: {solid} solid pixels, "
+                + $"front up to {front}, back up to {back}");
+            return 0;
+        });
+        return cmd;
     }
 
     /// <summary>
