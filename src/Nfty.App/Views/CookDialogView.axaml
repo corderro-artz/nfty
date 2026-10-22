@@ -11,6 +11,11 @@
       <Setter Property="IsHitTestVisible" Value="False" />
       <Setter Property="IsTabStop" Value="False" />
     </Style>
+    <!-- Open state: the same hairline hover draws, held while the options are showing. -->
+    <Style Selector="Button.tbtn.on /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    </Style>
   </UserControl.Styles>
   <UserControl.KeyBindings>
     <KeyBinding Gesture="Escape" Command="{Binding CloseCommand}" />
@@ -63,8 +68,21 @@
               <Grid ColumnDefinitions="*,Auto">
                 <CheckBox Grid.Column="0" Content="Include 3D models" IsChecked="{Binding IncludeModels}"
                           IsEnabled="{Binding !BookIsTwoDOnly}" />
-                <Button Grid.Column="1" Classes="tbtn" Content="Model options" Command="{Binding ToggleModelOptionsCommand}"
-                        Classes.absent="{Binding !ShowModelOptionsToggle}" />
+                <Button Grid.Column="1" Classes="tbtn" Command="{Binding ToggleModelOptionsCommand}"
+                        Classes.absent="{Binding !ShowModelOptionsToggle}"
+                        Classes.on="{Binding ShowModelOptions}">
+                  <!-- Down and up chevrons share one slot, swapped by IsVisible inside a fixed-size
+                       Panel, so the label and the button never change width. -->
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="Model options" VerticalAlignment="Center" />
+                    <Panel Width="14" Height="14" VerticalAlignment="Center">
+                      <Path Classes="ico xs" Data="{StaticResource IconChevronDown}"
+                            IsVisible="{Binding !ShowModelOptions}" />
+                      <Path Classes="ico xs" Data="{StaticResource IconChevronUp}"
+                            IsVisible="{Binding ShowModelOptions}" />
+                    </Panel>
+                  </StackPanel>
+                </Button>
               </Grid>
               <TextBlock Text="{Binding ModelsNote}" Classes="m-sub" TextWrapping="Wrap"
                          Margin="24,0,0,0" />

@@ -252,4 +252,29 @@ public class CookDialogModelsTests
         }
         finally { window.Close(); }
     }
+
+    [AvaloniaFact]
+    public void The_options_button_shows_whether_it_is_open_without_changing_width()
+    {
+        using var book = Book();
+        var vm = Cook(book, "unused");
+        vm.IncludeModels = true;
+        var (window, view) = Show(vm);
+        try
+        {
+            var button = view.GetVisualDescendants().OfType<Button>().Single(b => b.Command == vm.ToggleModelOptionsCommand);
+            var chevrons = button.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Path>().ToArray();
+            Assert.Equal(2, chevrons.Length);
+            Assert.DoesNotContain("on", button.Classes);
+            Assert.True(chevrons[0].IsVisible); Assert.False(chevrons[1].IsVisible);   // down while closed
+            double closedWidth = button.Bounds.Width;
+
+            vm.ToggleModelOptionsCommand.Execute(null);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Contains("on", button.Classes);
+            Assert.False(chevrons[0].IsVisible); Assert.True(chevrons[1].IsVisible);   // up while open
+            Assert.Equal(closedWidth, button.Bounds.Width, 0.5);
+        }
+        finally { window.Close(); }
+    }
 }

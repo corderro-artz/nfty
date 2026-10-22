@@ -1110,6 +1110,8 @@ public class VisualCapture
                 new(b, new FilePickerService(), new NoopFolderRevealer(), dialogs) { Count = 500, Seed = "vapor" };
 
             Capture(new Views.CookDialogView { DataContext = Vm(clean) }, variant, $"cook-models-collapsed-{key}.png");
+            var ticked = Vm(clean); ticked.IncludeModels = true;
+            Capture(new Views.CookDialogView { DataContext = ticked }, variant, $"cook-models-ticked-closed-{key}.png");
             var open = Vm(clean);
             open.IncludeModels = true; open.ShowModelOptions = true;
             Capture(new Views.CookDialogView { DataContext = open }, variant, $"cook-models-expanded-{key}.png");
