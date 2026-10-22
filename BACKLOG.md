@@ -229,15 +229,16 @@ directly, before that multiplies the copy count by collection size.
 **Status:** pre-existing precedent, not introduced by this branch; deferred as one family, not a
 piecemeal per-option fix.
 
-`--voxel-size` parses via System.CommandLine's built-in `float` converter, which reads the current
-culture — under `de-DE`, `--voxel-size 0.5` parses as `5` (the culture's decimal separator is a
-comma, so `.` is read as a thousands separator instead). The same is true of every other fractional
-CLI option nfty has (`--weight`, `--absent`) and any future one, since none of them supplies an
-invariant-culture parser to override the default. This is not new to `model` — it is the same trap
-`ColorSpec`'s explicit-prefix rule exists to avoid for color input, just not yet closed for numeric
-options — and worth fixing once, for the whole family (a shared invariant-culture argument parser
-each option opts into), rather than patching `--voxel-size` alone and leaving the next fractional
-option to rediscover it.
+`--weight`, `--absent` and any future fractional CLI option parse via System.CommandLine's built-in
+`float`/`double` converter, which reads the current culture — under `de-DE`, `--weight 0.5` parses as
+`5` (the culture's decimal separator is a comma, so `.` is read as a thousands separator instead).
+This is the same trap `ColorSpec`'s explicit-prefix rule exists to avoid for color input, just not yet
+closed for numeric options.
+
+**Closed for `--voxel-size`** (`model` and `generate --models`): both take it from one shared option
+builder, `ModelVoxelSizeOption`, whose `CustomParser` reads the invariant culture; pinned by
+`Voxel_size_parses_the_same_under_a_comma_decimal_culture`. The rest still want fixing once, for the
+whole family (a shared invariant-culture parser each option opts into), rather than one at a time.
 
 ---
 

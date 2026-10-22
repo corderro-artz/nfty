@@ -186,6 +186,46 @@ public class GenerateModelsCommandTests
     }
 
     [Fact]
+    public void Voxel_size_parses_the_same_under_a_comma_decimal_culture()
+    {
+        // The built-in float converter reads the CURRENT culture: under de-DE "0.5" is 5. Both
+        // commands share one invariant parser, so both must read 0.5 here.
+        var original = System.Globalization.CultureInfo.CurrentCulture;
+        System.Globalization.CultureInfo.CurrentCulture = new System.Globalization.CultureInfo("de-DE");
+        try
+        {
+            var model = Parse("model sprite.png --out sprite.glb --voxel-size 0.5");
+            var generate = Parse("generate book.cbk --count 3 --out o --models --voxel-size 0.5");
+
+            Assert.Empty(model.Errors);
+            Assert.Empty(generate.Errors);
+            Assert.Equal(0.5f, model.GetValue<float>("--voxel-size"));
+            Assert.Equal(0.5f, generate.GetValue<float>("--voxel-size"));
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentCulture = original;
+        }
+    }
+
+    [Fact]
+    public void Extend_lists_only_the_new_assets_skips()
+    {
+        // Fully clear art: every asset is skipped. The first cook skips #0001; extending to two
+        // skips #0002, and only that one belongs to this run's report.
+        string root = NewRoot();
+        string cbk = WriteBook(root, new Rgba32(0, 0, 0, 0));
+        string outDir = Path.Combine(root, "set");
+        Assert.Equal(0, Run("generate", cbk, "--count", "1", "--out", outDir, "--models", "--unlimited"));
+
+        var (code, text, _) = RunCaptured("extend", cbk, outDir, "--to", "2", "--unlimited");
+
+        Assert.Equal(0, code);
+        Assert.Contains("#0002", text);
+        Assert.DoesNotContain("#0001", text);
+    }
+
+    [Fact]
     public void Generate_prints_skipped_assets()
     {
         string root = NewRoot();
