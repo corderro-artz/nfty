@@ -400,7 +400,7 @@ public class SetExporterTests
         public SetModels Options { get; } = new("fake", "center", 0.5f);
         public IReadOnlyList<string> FileNames(string baseName) => [$"{baseName}.fake"];
         public IReadOnlyList<SetFile>? Model(GeneratedAsset asset, string baseName) =>
-            [new SetFile($"{baseName}.fake", [(byte)asset.SetNumber])];
+            [new SetFile($"{baseName}.fake", [.."glTF-model-payload"u8.ToArray(), (byte)asset.SetNumber])];
     }
 
     /// <summary>A cooked Set that carries <c>models/</c>.</summary>
@@ -471,6 +471,67 @@ public class SetExporterTests
         using var opened = SealedSetReader.Open(result.Path, Pass);
         var dir = opened.SourceDirectory;
         Assert.True(File.Exists(Path.Combine(dir, "models", "0001.fake")));
+    }
+
+    private static bool Contains(byte[] haystack, string needle) =>
+        haystack.AsSpan().IndexOf(System.Text.Encoding.ASCII.GetBytes(needle)) >= 0;
+
+    [Fact]
+    public void A_sealed_file_shows_neither_model_bytes_nor_model_names()
+    {
+        var set = ModeledSet();
+        var options = ExportOptions.For(ExportPreset.SealedCritique);
+
+        // Control: the same content unsealed DOES show both, so the check below can fail.
+        var open = File.ReadAllBytes(SetExporter.Export(set, OutDir(),
+            options with { Sealed = false }).Path);
+        Assert.True(Contains(open, "models/"));
+
+        var raw = File.ReadAllBytes(SetExporter.Export(set, OutDir(), options, passphrase: Pass).Path);
+        Assert.False(Contains(raw, "glTF"));
+        Assert.False(Contains(raw, "models/"));
+        Assert.False(Contains(raw, "0001.fake"));
+    }
+
+    [Fact]
+    public void Leaving_models_out_keeps_the_recorded_block_and_the_copy_still_reads()
+    {
+        var src = ModeledSet();
+        var outDir = OutDir();
+        var result = SetExporter.Export(src, outDir,
+            new ExportOptions { Models = false, Shape = ExportShape.Folder });
+
+        // set.json is copied unchanged, like every other axis.
+        Assert.Equal(File.ReadAllBytes(Path.Combine(src, "set.json")),
+            File.ReadAllBytes(Path.Combine(result.Path, "set.json")));
+        Assert.False(Directory.Exists(Path.Combine(result.Path, "models")));
+
+        using var loaded = SetReader.Read(result.Path);
+        Assert.Equal(2, loaded.Items.Count);
+        Assert.NotNull(loaded.Manifest.Models);
+
+        var text = Nfty.Core.Stats.SetReport.Render(loaded);
+        Assert.Contains("Models: fake", text);
+        Assert.Contains("recorded, not included in this copy", text);
+
+        // Extending from the export tolerates the missing folder and keeps the recorded block.
+        var existing = SetWriter.ReadExisting(result.Path);
+        Assert.NotNull(existing.Models);
+        using var book = Book();
+        using var more = Generator.Generate(book,
+            new GenerateOptions(1, "more", EnforceUniqueDna: false), existing.Dnas, existing.NextNumber);
+        SetWriter.Write(more, result.Path, false, new FakeModeler());
+        Assert.True(File.Exists(Path.Combine(result.Path, "models", "0003.fake")));
+        Assert.False(File.Exists(Path.Combine(result.Path, "models", "0001.fake")));
+    }
+
+    [Fact]
+    public void A_copy_that_kept_its_models_does_not_say_they_were_left_out()
+    {
+        using var loaded = SetReader.Read(ModeledSet());
+        var text = Nfty.Core.Stats.SetReport.Render(loaded);
+        Assert.Contains("Models: fake", text);
+        Assert.DoesNotContain("not included", text);
     }
 
     [Fact]

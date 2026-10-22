@@ -86,7 +86,15 @@ public static class SetReport
         if (m.Models is { } models)
         {
             int skipped = models.Skipped?.Count ?? 0;
-            sb.AppendLine("  Models: " + ModelsSummary(models) + (skipped > 0 ? $" · {skipped} skipped" : string.Empty));
+            // An export can leave models/ out while set.json keeps the block (it is copied as is,
+            // like every axis), so "recorded" and "present" are different facts. Said, not hidden:
+            // claiming models a reader cannot find would be worse than the omission.
+            bool present = set.SourceDirectory.Length > 0
+                && Directory.Exists(Path.Combine(set.SourceDirectory, SetLayout.ModelsDir))
+                && Directory.EnumerateFileSystemEntries(Path.Combine(set.SourceDirectory, SetLayout.ModelsDir)).Any();
+            sb.AppendLine("  Models: " + ModelsSummary(models)
+                + (skipped > 0 ? $" · {skipped} skipped" : string.Empty)
+                + (present ? string.Empty : " · recorded, not included in this copy"));
         }
 
         if (m.Distribution.Count > 0)
