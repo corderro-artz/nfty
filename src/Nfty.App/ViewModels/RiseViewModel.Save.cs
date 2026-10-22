@@ -29,7 +29,7 @@ public sealed partial class RiseViewModel
 
     // Everything Save needs except "no save is running": a second press during a save joins the first
     // (the source hands back the running task) rather than being refused.
-    private bool SaveGate => Source.IsEditable && !Source.IsLocked && HasUnsavedDepth && !IsExporting;
+    private bool SaveGate => Source.CanSave && HasUnsavedDepth && !IsExporting;
 
     /// <summary>The line in the footer: what Save would do, or why it will not.</summary>
     public string FooterText
@@ -37,6 +37,7 @@ public sealed partial class RiseViewModel
         get
         {
             if (!Source.IsEditable) return "read-only source — nothing to save";
+            if (!Source.CanSave && !Source.IsLocked && Source.UnsavableNote is { } why) return why;
             int n = DirtyCount;
             if (n == 0) return "no unsaved depth";
             var text = string.Create(CultureInfo.InvariantCulture,

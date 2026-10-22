@@ -104,7 +104,7 @@ public class MinimumWindowFitTests
         {
             DataContext = new LandingViewModel(new FakeNav(), new FakeDialogs(),
                 new FilePickerService(), new RecentsService(Directory.CreateTempSubdirectory().FullName),
-                new CookBookSession(), _ => null!, _ => null!, (_, _, _) => null!, null),
+                new CookBookSession(), _ => null!, _ => null!, (_, _, _) => null!, null, rise: _ => null!),
         };
         var window = new Window { Content = view, Width = area.Width, Height = area.Height };
         window.Show();
@@ -166,7 +166,7 @@ public class MinimumWindowFitTests
         yield return ("landing", new Views.LandingView
         {
             DataContext = new LandingViewModel(nav, dialogs, new FilePickerService(), recents,
-                session, _ => null!, _ => null!, (_, _, _) => null!, null),
+                session, _ => null!, _ => null!, (_, _, _) => null!, null, rise: _ => null!),
         }, null);
 
         foreach (string which in new[] { "cookbook", "recipe", "ingredient" })

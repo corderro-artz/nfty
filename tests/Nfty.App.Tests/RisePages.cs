@@ -101,6 +101,39 @@ internal static class RisePages
         return (Vm(src), set);
     }
 
+    /// <summary>A loose 16 x 16 picture (a small gem) on disk, opened as a Picture source.</summary>
+    internal static RiseViewModel PictureVm()
+    {
+        var path = Path.Combine(Directory.CreateTempSubdirectory("nfty-rise-pic-").FullName, "gem.png");
+        using (var img = new Image<Rgba32>(16, 16))
+        {
+            for (int y = 2; y < 14; y++)
+                for (int x = 2; x < 14; x++)
+                    img[x, y] = (x + y) % 5 == 0 ? new Rgba32(250, 220, 120, 255) : new Rgba32(210, (byte)(60 + y * 8), 90, 255);
+            img.Save(path);
+        }
+        return Vm(PictureRiseSource.Open(path, new ImageBridge()));
+    }
+
+    /// <summary>A loose 3 x 2 sheet of 16 px cells with five filled, on disk, with no grid recorded, so
+    /// opening it detects the grid and writes it in.</summary>
+    internal static RiseViewModel SheetVm()
+    {
+        var path = Path.Combine(Directory.CreateTempSubdirectory("nfty-rise-sheet-").FullName, "heroes.png");
+        using (var img = new Image<Rgba32>(48, 32))
+        {
+            for (int n = 0; n < 5; n++)
+            {
+                int ox = n % 3 * 16, oy = n / 3 * 16;
+                for (int y = 3; y < 13; y++)
+                    for (int x = 3; x < 13; x++)
+                        img[ox + x, oy + y] = new Rgba32((byte)(60 + n * 40), (byte)(210 - n * 30), (byte)(80 + y * 6), 255);
+            }
+            img.Save(path);
+        }
+        return Vm(PictureRiseSource.Open(path, new ImageBridge()));
+    }
+
     /// <summary>A sealed Set: viewable, and refusing every export.</summary>
     internal static (RiseViewModel Vm, IDisposable Owner) SealedSetVm()
     {

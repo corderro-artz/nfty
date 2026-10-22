@@ -55,7 +55,10 @@ public static class ServiceRegistration
             sp.GetRequiredService<Func<LoadedSet, SetBrowserViewModel>>(),
             sp.GetRequiredService<Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel>>(),
             sp.GetRequiredService<IKitchenSession>(),
-            sp.GetRequiredService<IStateStore>()));
+            sp.GetRequiredService<IStateStore>(),
+            sp.GetRequiredService<Func<Nfty.App.Rise.RiseSource, RiseViewModel>>(),
+            sp.GetRequiredService<IStatusService>(),
+            sp.GetRequiredService<IImageBridge>()));
 
         services.AddSingleton<Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, Func<bool>, IngredientEditorViewModel>>(sp =>
             (ing, recipe, book, isEditing) => RememberOnSave(sp, new IngredientEditorViewModel(ing, recipe, book,

@@ -528,8 +528,17 @@ public class VisualCapture
                 // showing a DISABLED New Kitchen button at 0.38 opacity — a state the app cannot
                 // actually be in, which is worse than not capturing the screen at all: it made a
                 // working action look unavailable and matched the bug that was being investigated.
-                new KitchenSession());
+                new KitchenSession(), rise: _ => null!);
             Capture(new Views.LandingView { DataContext = vm }, variant, $"landing-{key}.png");
+            if (!empty)
+            {
+                // The OPEN column of six, at the area the smallest window gives a page and at 1366.
+                Capture(new Views.LandingView { DataContext = vm }, variant, $"landing-rise-min-{key}.png",
+                    (ShellViewModel.MinWindowWidth - 24) / ShellViewModel.BaseScale,
+                    (ShellViewModel.MinWindowHeight - ShellViewModel.ChromeReserve) / ShellViewModel.BaseScale);
+                Capture(new Views.LandingView { DataContext = vm }, variant, $"landing-rise-1366-{key}.png",
+                    (1366 - 24) / ShellViewModel.BaseScale, 640);
+            }
 
             // The Kitchen shelf's THIRD state. The two frames above both show it with no workspace
             // open, which is the state that needs the least looking at; the one that carries the
@@ -543,7 +552,7 @@ public class VisualCapture
                     kitchen.Open(ktn);
                     var full = new LandingViewModel(nav, dialogs, new FilePickerService(),
                         recents, new CookBookSession(),
-                        book => null!, set => null!, (_, _, _) => null!, kitchen);
+                        book => null!, set => null!, (_, _, _) => null!, kitchen, rise: _ => null!);
                     Capture(new Views.LandingView { DataContext = full }, variant, $"landing-kitchen-{key}.png");
                 }
                 finally { Directory.Delete(dir, true); }
@@ -1483,6 +1492,8 @@ public class VisualCapture
                     Dispatcher.UIThread.RunJobs();
                 }),
             ("recipe", () => (RisePages.RecipeVm(), null), _ => { }),
+            ("picture", () => (RisePages.PictureVm(), null), _ => { }),
+            ("sheet", () => (RisePages.SheetVm(), null), _ => { }),
             ("set-batch-export", () => { var (v, o) = RisePages.SetVm(); return (v, o); },
                 p =>
                 {
@@ -1562,6 +1573,13 @@ public class VisualCapture
                 Need(vm.IsRecipeRail && vm.LayerRows.Count == 2, "the layer rail is not showing the roll");
                 Need(Shown(t => t.Text == "combined depth · read-only"), "the read-only pill is not on screen");
                 Need(view.GetVisualDescendants().OfType<Button>().Any(b => b.Classes.Contains("sampleroll") && b.IsEffectivelyVisible), "the die is missing");
+                break;
+            case "picture":
+                Need(vm.Source.Kind == Nfty.App.Rise.RiseSourceKind.Picture && vm.Items.Count == 1, "the source is not one loose picture");
+                break;
+            case "sheet":
+                Need(vm.Source.Kind == Nfty.App.Rise.RiseSourceKind.Sheet && vm.IsTileRail && vm.Items.Count == 5, "the source is not a five-cell sheet on the tile rail");
+                Need(Shown(t => t.Text == "#5"), "the last cell's tile is not on screen");
                 break;
             case "set-batch-export":
                 Need(vm.IsExportTab && vm.IsBatch, "the EXPORT tab is not showing a batch");

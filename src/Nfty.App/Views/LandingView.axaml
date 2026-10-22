@@ -52,10 +52,16 @@
          than its neighbours - three columns, three different tops. The mark moves to the foot of the
          column instead, where it sits above the "New to nfty?" link and fills the void that opened
          up under CREATE when the two action groups went side by side. -->
-    <Grid Grid.Column="0" RowDefinitions="Auto,*,Auto">
+    <!-- ONE GRID FOR CREATE, OPEN AND THE FOOT. The wordmark block used to be a third row under both
+         action stacks, so the page was as tall as the taller stack PLUS the block. OPEN gained a
+         sixth entry (Rise a picture…) and the page then wanted 433px of a 420px row at the smallest
+         window - a scrollbar over thirteen pixels. CREATE is the short stack and leaves a void under
+         it, so the block now sits in that void, at the foot of the left column as before, and the
+         page is only as tall as OPEN. -->
+    <Grid Grid.Column="0" ColumnDefinitions="262,26,262">
 
-      <Grid Grid.Row="0" ColumnDefinitions="262,26,262">
-      <StackPanel Grid.Column="0" Spacing="7">
+      <Grid Grid.Column="0" RowDefinitions="Auto,*,Auto">
+      <StackPanel Grid.Row="0" Spacing="7">
       <TextBlock Text="CREATE" Classes="slbl" Margin="0,0,0,4" />
       <Button Classes="landing accent" Command="{Binding NewCookBookCommand}">
         <Grid ColumnDefinitions="*,Auto">
@@ -88,6 +94,29 @@
       </Grid>
 
       </StackPanel>
+
+      <!-- The foot of the column. Row 1 is the star that pushes it down, so the mark sits on the
+           bottom edge at every window height rather than floating a fixed distance under the
+           buttons. -->
+      <StackPanel Grid.Row="2" Spacing="7">
+
+      <!-- The "Kitchen: Studio  close" row that used to sit here is GONE, and its one piece of
+           unique content moved to the shelf. It named the open Kitchen a second time - the shelf at
+           the foot of the screen already says KITCHEN · Studio · CookBooks - and it said it three
+           hundred pixels away from the thing it was describing, floating between the action columns
+           and the wordmark with nothing around it. Two controls for one fact is worse than one, and
+           the shelf is where the fact lives. -->
+      <TextBlock Classes="lwordmark"><Run Text="nft" /><Run Text="y" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
+      <TextBlock Text="Asset Generator" Classes="tagline" Margin="0,-2,0,0" />
+
+      <Button Classes="learn" Command="{Binding ShowHelpCommand}">
+        <StackPanel Orientation="Horizontal" Spacing="7">
+          <TextBlock><Run Text="New to nfty? " /><Run Text="The cooking metaphor" Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold" /></TextBlock>
+          <Path Classes="ico sm" Data="{StaticResource IconArrowRight}" />
+        </StackPanel>
+      </Button>
+      </StackPanel>
+      </Grid>
 
       <StackPanel Grid.Column="2" Spacing="7">
       <TextBlock Text="OPEN" Classes="slbl" Margin="0,0,0,4" />
@@ -132,30 +161,13 @@
       <Button Classes="landing tbtn" Command="{Binding OpenKitchenCommand}">
         <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconKitchen}" /><TextBlock Classes="lbl" Text="Open Kitchen…" /></StackPanel></Grid>
       </Button>
-      </StackPanel>
-      </Grid>
 
-      <!-- The foot of the column. Row 1 is the star that pushes it down, so the mark sits on the
-           bottom edge at every window height rather than floating a fixed distance under the
-           buttons. -->
-      <StackPanel Grid.Row="2" Spacing="7">
-
-      <!-- The "Kitchen: Studio  close" row that used to sit here is GONE, and its one piece of
-           unique content moved to the shelf. It named the open Kitchen a second time - the shelf at
-           the foot of the screen already says KITCHEN · Studio · CookBooks - and it said it three
-           hundred pixels away from the thing it was describing, floating between the action columns
-           and the wordmark with nothing around it. Two controls for one fact is worse than one, and
-           the shelf is where the fact lives. -->
-      <TextBlock Classes="lwordmark"><Run Text="nft" /><Run Text="y" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
-      <TextBlock Text="Asset Generator" Classes="tagline" Margin="0,-2,0,0" />
-
-      <Button Classes="learn" Command="{Binding ShowHelpCommand}">
-        <StackPanel Orientation="Horizontal" Spacing="7">
-          <TextBlock><Run Text="New to nfty? " /><Run Text="The cooking metaphor" Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold" /></TextBlock>
-          <Path Classes="ico sm" Data="{StaticResource IconArrowRight}" />
-        </StackPanel>
+      <!-- Rise: pixel art to 3D. A picture or a spritesheet is not an archive, so it has no other way in. -->
+      <Button Classes="landing tbtn" Command="{Binding RisePictureCommand}">
+        <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconRise}" /><TextBlock Classes="lbl" Text="Rise a picture…" /></StackPanel></Grid>
       </Button>
       </StackPanel>
+
     </Grid>
 
     <StackPanel Grid.Column="2" Spacing="2">

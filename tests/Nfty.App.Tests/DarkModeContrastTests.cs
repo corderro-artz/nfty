@@ -292,7 +292,7 @@ public class DarkModeContrastTests
                 ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs),
                 new CookBookSession(), new FilePickerService(),
                 ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs), new StatusService()),
-            set => new SetBrowserViewModel(set), (_, _, _) => null!);
+            set => new SetBrowserViewModel(set), (_, _, _) => null!, rise: _ => null!);
         yield return ("landing", new Views.LandingView { DataContext = landing }, null);
 
         yield return ("help", new Views.HelpView { DataContext = new HelpViewModel(dialogs) }, null);

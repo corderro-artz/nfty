@@ -28,6 +28,9 @@ public partial class LandingViewModel : ViewModelBase
     private readonly Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> _looseEditorFactory;
     private readonly IKitchenSession? _kitchen;
     private readonly IStateStore? _store;
+    private readonly Func<Nfty.App.Rise.RiseSource, RiseViewModel>? _rise;
+    private readonly IStatusService? _status;
+    private readonly IImageBridge _bridge;
 
     /// <summary>A snapshot, not the service's live list: bindings short-circuit when a property
     /// returns the same instance, so returning the live list would make OnPropertyChanged inert and
@@ -52,13 +55,20 @@ public partial class LandingViewModel : ViewModelBase
     /// <param name="store">The <c>.nfty</c> store, used only to find a folder the demo CookBook can
     /// be unpacked into. Null falls back to a temp folder, which is what keeps a test that opens the
     /// demo off the developer's own build output.</param>
+    /// <param name="rise">Builds the Rise page over a source. Null where Rise is not offered, which
+    /// disables <c>Rise a picture…</c> rather than hiding it.</param>
+    /// <param name="status">Where the page's opening line and the grid note are said.</param>
+    /// <param name="bridge">Makes the Rise rail's thumbnails; the shipped bridge when null.</param>
     public LandingViewModel(INavigationService nav, IDialogService dialogs,
         IFilePickerService picker, IRecentsService recents, ICookBookSession session,
         Func<LoadedCookBook, ExplorerViewModel> explorerFactory,
         Func<LoadedSet, SetBrowserViewModel> setBrowserFactory,
         Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> looseEditorFactory,
-        IKitchenSession? kitchen = null, IStateStore? store = null)
+        IKitchenSession? kitchen = null, IStateStore? store = null,
+        Func<Nfty.App.Rise.RiseSource, RiseViewModel>? rise = null, IStatusService? status = null,
+        IImageBridge? bridge = null)
     {
+        _rise = rise; _status = status; _bridge = bridge ?? new ImageBridge();
         _nav = nav; _dialogs = dialogs; _picker = picker; _recents = recents;
         _session = session; _explorerFactory = explorerFactory; _setBrowserFactory = setBrowserFactory;
         _looseEditorFactory = looseEditorFactory;
@@ -519,6 +529,46 @@ public partial class LandingViewModel : ViewModelBase
     internal Task? PendingOpen { get; private set; }
 
     private void OpenSetPath(string path) => PendingOpen = OpenSetPathAsync(path);
+
+    private bool CanRisePicture() => _rise is not null;
+
+    /// <summary>Picks a <c>.png</c> and opens the Rise page on it: one picture, or a sheet cut into cells.</summary>
+    /// <remarks>Reading the picture, finding its grid and writing that grid back into the file are all
+    /// file work, so they run behind the busy card. Fire-and-forget like opening a Set, with the same
+    /// observable handle, <see cref="PendingOpen"/>.</remarks>
+    [RelayCommand(CanExecute = nameof(CanRisePicture))]
+    private async Task RisePicture()
+    {
+        if (!CanRisePicture()) return;   // a disabled button is a label
+        string? path;
+        try { path = await _picker.OpenFileAsync("Rise a picture", ".png"); }
+        catch (Exception ex) { ShowError("Could not open", ex.Message); return; }
+        if (path is null) return;        // canceled
+        PendingOpen = RisePicturePathAsync(path);
+    }
+
+    private async Task RisePicturePathAsync(string path)
+    {
+        Nfty.App.Rise.PictureRiseSource source;
+        try
+        {
+            source = await BusyViewModel.RunAsync(_dialogs, "Opening picture", "Reading the picture…",
+                (_, _) => Task.Run(() => Nfty.App.Rise.PictureRiseSource.Open(path, _bridge)));
+        }
+        catch (Exception ex)
+        {
+            ShowError("Could not open the picture", ex.Message);
+            return;
+        }
+
+        RiseViewModel page;
+        try { page = _rise!(source); }
+        catch { source.Dispose(); throw; }
+        _nav.To(page);
+        // Said AFTER navigation (the page says its own opening line on arrival), and as one sentence:
+        // the status bar holds the last message only.
+        if (source.GridWriteNote is { } note) _status?.Say($"{source.OpeningLine} {note}");
+    }
 
     /// <summary>
     /// Opens a sealed export: shows what it is, asks for the passphrase, then browses what is inside.

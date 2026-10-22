@@ -14,6 +14,12 @@ public enum RiseSourceKind
 
     /// <summary>The assets of a cooked Set.</summary>
     Set,
+
+    /// <summary>One loose picture.</summary>
+    Picture,
+
+    /// <summary>A loose spritesheet: its cells, in reading order.</summary>
+    Sheet,
 }
 
 /// <summary>A picture that cannot rise, and how many of its pixels are partially transparent.</summary>
@@ -65,6 +71,9 @@ public abstract class RiseSource : IDisposable
 
     /// <summary>Whether <see cref="SaveAsync"/> would write something: editable and not locked.</summary>
     public virtual bool CanSave => IsEditable && !IsLocked;
+
+    /// <summary>Why an editable, unlocked source still cannot save (its footer says so), or null.</summary>
+    public virtual string? UnsavableNote => null;
 
     /// <summary>What a save writes into, for button labels and the leave card ("CookBook", a file name).</summary>
     public virtual string SaveTargetName => "";
