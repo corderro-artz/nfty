@@ -89,7 +89,10 @@ public static class SetReport
             // An export can leave models/ out while set.json keeps the block (it is copied as is,
             // like every axis), so "recorded" and "present" are different facts. Said, not hidden:
             // claiming models a reader cannot find would be worse than the omission.
-            bool present = set.SourceDirectory.Length > 0
+            // Only when models were EXPECTED (assets minus recorded skips): a Set where every asset
+            // was skipped has an empty folder legitimately and must not claim a loss.
+            bool expected = m.Count - skipped > 0;
+            bool present = !expected || set.SourceDirectory.Length > 0
                 && Directory.Exists(Path.Combine(set.SourceDirectory, SetLayout.ModelsDir))
                 && Directory.EnumerateFileSystemEntries(Path.Combine(set.SourceDirectory, SetLayout.ModelsDir)).Any();
             sb.AppendLine("  Models: " + ModelsSummary(models)

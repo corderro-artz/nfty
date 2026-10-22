@@ -397,10 +397,11 @@ public class SetExporterTests
 
     private sealed class FakeModeler : IAssetModeler
     {
+        public bool SkipAll { get; init; }
         public SetModels Options { get; } = new("fake", "center", 0.5f);
         public IReadOnlyList<string> FileNames(string baseName) => [$"{baseName}.fake"];
         public IReadOnlyList<SetFile>? Model(GeneratedAsset asset, string baseName) =>
-            [new SetFile($"{baseName}.fake", [.."glTF-model-payload"u8.ToArray(), (byte)asset.SetNumber])];
+            SkipAll ? null : [new SetFile($"{baseName}.fake", [.."glTF-model-payload"u8.ToArray(), (byte)asset.SetNumber])];
     }
 
     /// <summary>A cooked Set that carries <c>models/</c>.</summary>
@@ -523,6 +524,20 @@ public class SetExporterTests
         SetWriter.Write(more, result.Path, false, new FakeModeler());
         Assert.True(File.Exists(Path.Combine(result.Path, "models", "0003.fake")));
         Assert.False(File.Exists(Path.Combine(result.Path, "models", "0001.fake")));
+    }
+
+    [Fact]
+    public void A_set_where_every_model_was_skipped_does_not_claim_a_loss()
+    {
+        var dir = Path.Combine(Directory.CreateTempSubdirectory("nfty-src-").FullName, "ChestDemo");
+        using (var book = Book())
+        using (var cooked = Generator.Generate(book, new GenerateOptions(2, "launch")))
+            SetWriter.Write(cooked, dir, false, new FakeModeler { SkipAll = true });
+
+        using var loaded = SetReader.Read(dir);
+        var text = Nfty.Core.Stats.SetReport.Render(loaded);
+        Assert.Contains("2 skipped", text);
+        Assert.DoesNotContain("not included", text);
     }
 
     [Fact]
