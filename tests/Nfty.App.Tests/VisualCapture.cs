@@ -613,9 +613,38 @@ public class VisualCapture
                 using var generated = Generator.Generate(CoreTestBook.Tiny(), new GenerateOptions(6, "seed1"));
                 SetWriter.Write(generated, dir, pack: false);
                 var loaded = SetReader.Read(dir);
-                var vm = new SetBrowserViewModel(loaded);
+                var vm = new SetBrowserViewModel(loaded, rise: _ => throw new NotSupportedException(),
+                    nav: new FakeNav(), bridge: new ImageBridge());
                 vm.SelectedItem = vm.Items[0];
                 Capture(new Views.SetBrowserView { DataContext = vm }, variant, $"set-browser-{key}.png");
+                vm.Dispose();
+            }
+            finally { Directory.Delete(dir, recursive: true); }
+        }
+    }
+
+    /// <summary>The Set browser with Rise in its header, at the smallest page and at 1366, both themes.</summary>
+    [AvaloniaFact]
+    public void Capture_set_browser_rise()
+    {
+        if (Dir is null) return;   // inert unless explicitly capturing
+
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            var key = variant.Key.ToString()!.ToLowerInvariant();
+            var dir = Directory.CreateTempSubdirectory().FullName;
+            try
+            {
+                using var generated = Generator.Generate(CoreTestBook.Tiny(), new GenerateOptions(6, "seed1"));
+                SetWriter.Write(generated, dir, pack: false);
+                var vm = new SetBrowserViewModel(SetReader.Read(dir), rise: _ => throw new NotSupportedException(),
+                    nav: new FakeNav(), bridge: new ImageBridge());
+                vm.SelectedItem = vm.Items[0];
+                Capture(new Views.SetBrowserView { DataContext = vm }, variant, $"set-rise-min-{key}.png",
+                    (ShellViewModel.MinWindowWidth - 24) / ShellViewModel.BaseScale,
+                    (ShellViewModel.MinWindowHeight - ShellViewModel.ChromeReserve) / ShellViewModel.BaseScale);
+                Capture(new Views.SetBrowserView { DataContext = vm }, variant, $"set-rise-1366-{key}.png",
+                    (1366 - 24) / ShellViewModel.BaseScale, 640);
                 vm.Dispose();
             }
             finally { Directory.Delete(dir, recursive: true); }

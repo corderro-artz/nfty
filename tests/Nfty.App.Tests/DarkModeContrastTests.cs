@@ -373,7 +373,9 @@ public class DarkModeContrastTests
         // bar, and the inspector its DNA block, which are the runs here most likely to fall under
         // the floor. Selected, so the rail draws at all.
         var browserSet = RarityRailSnapTests.CookedSetFor(out string browserDir);
-        var browserVm = new SetBrowserViewModel(browserSet);
+        // Rise lit, as the app always builds it: a fixture without the callback scores a dimmed button.
+        var browserVm = new SetBrowserViewModel(browserSet, rise: _ => throw new NotSupportedException(),
+            nav: new FakeNav(), bridge: new ImageBridge());
         browserVm.SelectedItem = browserVm.Items[0];
         yield return ("set-browser", new Views.SetBrowserView { DataContext = browserVm },
             () => { browserVm.Dispose(); try { Directory.Delete(browserDir, true); } catch { } });

@@ -88,6 +88,15 @@
         </StackPanel>
       </Border>
 
+      <Button Classes="tbtn" Command="{Binding RiseCommand}"
+              VerticalAlignment="Center"
+              ToolTip.Tip="Turn the asset in the rail into a 3D model. The other assets of this Set wait in the page's left rail; a sealed Set can be risen and looked at, but nothing leaves it.">
+        <StackPanel Orientation="Horizontal" Spacing="7">
+          <Path Classes="ico xs" Data="{StaticResource IconRise}" />
+          <TextBlock Text="Rise" />
+        </StackPanel>
+      </Button>
+
       <Button Classes="tbtn" Command="{Binding ExportCommand}"
               VerticalAlignment="Center"
               ToolTip.Tip="Choose what leaves this machine: the art, either metadata set, the source CookBook - and whether to seal it.">

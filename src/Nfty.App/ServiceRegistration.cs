@@ -160,7 +160,11 @@ public static class ServiceRegistration
                 if (session.SourcePath is { Length: > 0 } open) paths.Add(open);
                 paths.AddRange(recents.Items.Select(i => i.Path));
                 return paths;
-            }));
+            },
+            // Rise this Set's assets: Back returns here, to the same browser and selection.
+            rise: sp.GetRequiredService<Func<Nfty.App.Rise.RiseSource, RiseViewModel>>(),
+            nav: sp.GetRequiredService<INavigationService>(),
+            bridge: sp.GetRequiredService<IImageBridge>()));
 
         // Further VM registrations are added incrementally by the task that creates each
         // ViewModel (see Tasks 12-13).

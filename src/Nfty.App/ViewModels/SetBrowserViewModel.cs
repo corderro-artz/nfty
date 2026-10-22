@@ -238,6 +238,10 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     /// not when the browser does: the open book can change in between.</summary>
     private readonly Func<IEnumerable<string>>? _bookCandidates;
 
+    private readonly Func<Nfty.App.Rise.RiseSource, RiseViewModel>? _rise;
+    private readonly INavigationService? _nav;
+    private readonly IImageBridge? _bridge;
+
     /// <summary>
     /// The book this Set was cooked from, resolved into what pricing an asset needs — or null,
     /// which is the ordinary case for a Set somebody was handed without its source.
@@ -368,10 +372,17 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     /// <param name="bookCandidates">CookBook paths the app can name - the open book, recent ones -
     /// for the export dialog to check against the hash this Set recorded. Read when Export opens
     /// rather than when the browser does, since the open book can change in between.</param>
+    /// <param name="rise">Builds the Rise page over a source. Null where Rise is not offered, which
+    /// disables the button rather than hiding it.</param>
+    /// <param name="nav">Where the Rise page is pushed.</param>
+    /// <param name="bridge">The bitmap bridge the Rise source is built with.</param>
     public SetBrowserViewModel(LoadedSet set, IFilePickerService? picker = null,
         IDialogService? dialogs = null, IStatusService? status = null,
-        IFolderRevealer? revealer = null, Func<IEnumerable<string>>? bookCandidates = null)
+        IFolderRevealer? revealer = null, Func<IEnumerable<string>>? bookCandidates = null,
+        Func<Nfty.App.Rise.RiseSource, RiseViewModel>? rise = null, INavigationService? nav = null,
+        IImageBridge? bridge = null)
     {
+        _rise = rise; _nav = nav; _bridge = bridge;
         _bookCandidates = bookCandidates;
         RaritySort = new TableSort("Trait", () => OnPropertyChanged(nameof(ShownRarity)));
         _set = set;
@@ -458,6 +469,7 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     {
         if (oldValue is not null) oldValue.IsSelected = false;
         if (newValue is not null) newValue.IsSelected = true;
+        RiseCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>The number of the asset the rail is describing, formatted.</summary>
@@ -705,6 +717,24 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
             _status.Say($"Could not save {ShownNumber}: {ex.Message}");
         }
     }
+
+    /// <summary>Whether Rise can open: an asset is shown and the app offered a way to open the page.
+    /// A sealed Set is included — Rise only looks; the source refuses the export.</summary>
+    public bool CanRise => Shown is not null && _rise is not null && _nav is not null && _bridge is not null;
+
+    /// <summary>Opens the Rise page on the asset the rail is showing (hovered, else kept), with every
+    /// other asset of the Set in the page's left rail.</summary>
+    /// <remarks>The Set is BORROWED by the source: Back disposes the Rise page and its source, never
+    /// this browser's Set, so the browser and its selection are where they were left.</remarks>
+    [RelayCommand(CanExecute = nameof(CanRise))]
+    private void Rise()
+    {
+        if (!CanRise) return;
+        var source = new Nfty.App.Rise.SetRiseSource(_set, Shown!.Number, _bookCandidates, _bridge!);
+        _nav!.To(_rise!(source));
+    }
+
+    partial void OnHoveredItemChanged(SetItemRow? value) => RiseCommand.NotifyCanExecuteChanged();
 
     /// <summary>Opens the export dialog for this Set.</summary>
     /// <remarks>

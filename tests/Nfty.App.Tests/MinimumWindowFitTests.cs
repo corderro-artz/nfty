@@ -201,7 +201,8 @@ public class MinimumWindowFitTests
         // page nothing measures is a page that can start clipping unnoticed. Selected, so the rarity
         // rail and the pinned Save band are both laid out.
         var set = RarityRailSnapTests.CookedSetFor(out string setDir);
-        var browser = new SetBrowserViewModel(set) ;
+        var browser = new SetBrowserViewModel(set, rise: _ => throw new NotSupportedException(),
+            nav: new FakeNav(), bridge: new ImageBridge());
         browser.SelectedItem = browser.Items[0];
         yield return ("set-browser", new Views.SetBrowserView { DataContext = browser },
             () => { browser.Dispose(); try { Directory.Delete(setDir, true); } catch { } });
