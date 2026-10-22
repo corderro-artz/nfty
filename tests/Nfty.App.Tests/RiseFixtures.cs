@@ -100,4 +100,14 @@ internal static class RiseFixtures
         var body = recipe.Ingredients.Single(i => i.Manifest.Id == "body");
         return new VariantRiseSource(recipe, body, variant, new ImageBridge(), s, isEditing);
     }
+
+    /// <summary>A variant of any layer of any recipe: the shipped demo needs more than the Chest book's
+    /// one hard-coded <c>chest</c>/<c>body</c> pair.</summary>
+    internal static VariantRiseSource DemoVariant(CookBookSession s, string recipeId, string ingredientId,
+        string variantId, System.Func<bool> isEditing)
+    {
+        var recipe = s.Current!.Recipes.Single(r => r.Manifest.Id == recipeId);
+        var layer = recipe.Ingredients.Single(i => i.Manifest.Id == ingredientId);
+        return new VariantRiseSource(recipe, layer, variantId, new ImageBridge(), s, isEditing);
+    }
 }

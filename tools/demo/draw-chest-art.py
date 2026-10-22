@@ -529,7 +529,7 @@ for _y in (14, 15, 28):
     LOWER_ROWS[_y] = (2, 29)
 OVERHANG_ROWS = (12, 13, 14, 15, 28)     # the lid course and the plinth stand a voxel prouder
 FACE, SHELL = 2, 3                       # front of the face, front of the overhanging courses
-BODY_BACK = 6                            # every solid body pixel is the same depth behind the paper
+BODY_BACK = 9                            # every solid body pixel is the same depth behind the paper
 CHEST_DOME = {7: 1, 8: 1, 9: 2, 10: 2, 11: 3}   # a barrel lid curves away going up
 BOX_SLAB = 3
 

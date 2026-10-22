@@ -85,9 +85,9 @@ public class DemoModelsTests
             int acc = json["meshes"]![0]!["primitives"]![0]!["attributes"]!["POSITION"]!.GetValue<int>();
             var a = json["accessors"]![acc]!;
             float extent = a["max"]![2]!.GetValue<float>() - a["min"]![2]!.GetValue<float>();
-            Assert.True(extent >= 9f - 1e-4f, $"asset {asset.SetNumber}: Z extent {extent} < 9");
-            // Body-only: paper 1 + back 6 + highest body front 3 = 10. Past that, an overlay rose.
-            if (extent > 10f + 1e-4f) anyDeeperThanBody = true;
+            Assert.True(extent >= 12f - 1e-4f, $"asset {asset.SetNumber}: Z extent {extent} < 12");
+            // Body-only: paper 1 + back 9 + highest body front 3 = 13. Past that, an overlay rose.
+            if (extent > 13f + 1e-4f) anyDeeperThanBody = true;
         }
         Assert.True(anyDeeperThanBody, "no cooked asset had an overlay proud of its body");
     }

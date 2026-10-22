@@ -1566,6 +1566,25 @@ public class VisualCapture
                     Dispatcher.UIThread.RunJobs();
                 }),
             ("recipe", () => (RisePages.RecipeVm(), null), _ => { }),
+            // The shipped Chest Demo, with the depth it was authored with: a body variant, a rolled
+            // recipe and a cooked Set, so the frames judge the demo and not a test fixture.
+            ("demo-variant", () => (RisePages.DemoVariantVm(), null), _ => { }),
+            ("demo-recipe", () => (RisePages.DemoRecipeVm(), null), _ => { }),
+            ("demo-set", () => { var (v, o) = RisePages.DemoSetVm(); return (v, o); }, _ => { }),
+            // The 3D view fills the pane (swapped with the canvas), from the default camera, from a
+            // three-quarter angle and from the side: the side view is where a flat sprite shows.
+            ("demo-recipe-3d", () => (RisePages.DemoRecipeVm(), null), p => p.Vm.SwapPreviewCommand.Execute(null)),
+            ("demo-recipe-3d-angle", () => (RisePages.DemoRecipeVm(), null), p =>
+            {
+                p.Vm.SwapPreviewCommand.Execute(null);
+                p.Vm.Preview.OrbitStep(new System.Numerics.Vector2(2, 0));
+                p.Vm.Preview.OrbitStep(new System.Numerics.Vector2(0, -1));
+            }),
+            ("demo-recipe-3d-side", () => (RisePages.DemoRecipeVm(), null), p =>
+            {
+                p.Vm.SwapPreviewCommand.Execute(null);
+                p.Vm.Preview.OrbitStep(new System.Numerics.Vector2(6, 0));
+            }),
             ("picture", () => (RisePages.PictureVm(), null), _ => { }),
             ("sheet", () => (RisePages.SheetVm(), null), _ => { }),
             ("sheet-grid-cells", () => (RisePages.SheetVm(), null), p => p.Vm.SetGridModeCommand.Execute(GridMode.CellSize)),
@@ -1628,6 +1647,17 @@ public class VisualCapture
         }
     }
 
+    private static bool DemoSolidHasDepth(RiseViewModel vm)
+    {
+        for (int y = 0; y < vm.Surface.Height; y++)
+            for (int x = 0; x < vm.Surface.Width; x++)
+            {
+                var d = vm.Surface.Get(x, y);
+                if (d.Front > 0 || d.Back > 0) return true;
+            }
+        return false;
+    }
+
     /// <summary>Fails the capture if the page is not showing what the file is named for.</summary>
     private static void VerifyRiseState(string state, RisePage page, string file)
     {
@@ -1673,6 +1703,22 @@ public class VisualCapture
             case "voxel-undo":
                 Need(vm.ShowVoxelReadyUndo && Shown(t => t.Text == "Voxel-ready: 2 variants snapped"), "the undo line is not on screen");
                 Need(view.GetVisualDescendants().OfType<Button>().Any(b => b.IsEffectivelyVisible && b.Content as string == "Undo"), "the Undo button is missing");
+                break;
+            case "demo-variant":
+                // No label check: at 32 px a cell is too small for numbers, by the page's own rule.
+                Need(DemoSolidHasDepth(vm), "the demo variant shows no depth on a solid pixel");
+                Need(model.RepaintCount > 0, "the 3D tile never painted");
+                break;
+            case "demo-recipe":
+                Need(vm.IsRecipeRail && vm.LayerRows.Count >= 2, "the layer rail is not listing the rolled layers");
+                Need(model.RepaintCount > 0, "the 3D tile never painted");
+                break;
+            case "demo-recipe-3d" or "demo-recipe-3d-angle" or "demo-recipe-3d-side":
+                Need(vm.PreviewSwapped && model.RepaintCount > 0, "the 3D view is not the big pane");
+                break;
+            case "demo-set":
+                Need(vm.Source.Kind == Nfty.App.Rise.RiseSourceKind.Set, "the source is not the cooked Set");
+                Need(model.RepaintCount > 0, "the 3D tile never painted");
                 break;
             case "recipe":
                 Need(vm.IsRecipeRail && vm.LayerRows.Count == 2, "the layer rail is not showing the roll");

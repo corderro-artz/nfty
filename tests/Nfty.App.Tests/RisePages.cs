@@ -10,6 +10,7 @@ using Nfty.App.Rise;
 using Nfty.App.Services;
 using Nfty.App.ViewModels;
 using Nfty.App.Views;
+using Nfty.Core.Demo;
 using Nfty.Core.Formats;
 using Nfty.Core.Generation;
 using Nfty.Core.Model;
@@ -94,6 +95,45 @@ internal static class RisePages
         var (s, path) = RiseFixtures.OnDisk(RiseFixtures.ChestBook(PaintedOak()));
         var setDir = Path.Combine(Path.GetDirectoryName(path)!, "Chest Set");
         using (var cooked = Generator.Generate(s.Current!, new GenerateOptions(60, "launch", EnforceUniqueDna: false)))
+            SetWriter.Write(cooked, setDir, pack: false);
+        s.Dispose();
+        var set = SetReader.Read(setDir);
+        var src = new SetRiseSource(set, set.Items[0].Number, () => Array.Empty<string>(), new ImageBridge());
+        return (Vm(src), set);
+    }
+
+    /// <summary>The shipped Chest Demo, written to a temp folder, read back and opened in a session -
+    /// the way the app itself opens it. Returns the folder so a Set can be cooked beside the book.</summary>
+    private static (CookBookSession Session, string Dir) DemoSession()
+    {
+        var dir = Directory.CreateTempSubdirectory("nfty-rise-demo-").FullName;
+        var path = DemoCookBook.WriteTo(dir);
+        var session = new CookBookSession();
+        session.Open(CookBookArchive.Read(path), path);
+        return (session, dir);
+    }
+
+    /// <summary>The demo's Chest recipe, body ingredient <c>chestbody</c>, variant <c>planked</c>.</summary>
+    internal static RiseViewModel DemoVariantVm(string ingredient = "chestbody", string variant = "planked")
+    {
+        var (s, _) = DemoSession();
+        return Vm(RiseFixtures.DemoVariant(s, "chest", ingredient, variant, () => true));
+    }
+
+    /// <summary>The demo's Chest recipe rolled (roll number given), read-only combined depth.</summary>
+    internal static RiseViewModel DemoRecipeVm(int roll = 1)
+    {
+        var (s, _) = DemoSession();
+        var book = s.Current!;
+        return Vm(new RecipeRiseSource(book, book.Recipes.Single(r => r.Manifest.Id == "chest"), roll, new ImageBridge()));
+    }
+
+    /// <summary>Sixty demo assets cooked beside their book, opened as a Set source.</summary>
+    internal static (RiseViewModel Vm, IDisposable Owner) DemoSetVm()
+    {
+        var (s, dir) = DemoSession();
+        var setDir = Path.Combine(dir, "Chest Demo Set");
+        using (var cooked = Generator.Generate(s.Current!, new GenerateOptions(60, "explore")))
             SetWriter.Write(cooked, setDir, pack: false);
         s.Dispose();
         var set = SetReader.Read(setDir);
