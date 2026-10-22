@@ -224,6 +224,83 @@ public class SetModelerTests
             Directory.EnumerateFiles(Path.Combine(dir, "models")).Count());
     }
 
+    /// <summary>Dynamic body (front 2, gray value-map) under a Static eye layer (front 4, gray).</summary>
+    private static LoadedCookBook ColorizedBook()
+    {
+        Image<Rgba32> Gray(Func<int, int, bool> solid)
+        {
+            var img = new Image<Rgba32>(Size, Size);
+            for (int y = 0; y < Size; y++)
+                for (int x = 0; x < Size; x++)
+                    if (solid(x, y)) { byte v = (byte)(60 + (x * 30) + (y * 10)); img[x, y] = new Rgba32(v, v, v, 255); }
+            return img;
+        }
+
+        LoadedIngredient Layer(string id, LayerKind kind, Colorization col, Image<Rgba32> img, int front) => new()
+        {
+            Manifest = new IngredientManifest(id, id, kind, col, [new Variant("v", "V", 1)]),
+            VariantImages = new Dictionary<string, Image<Rgba32>> { ["v"] = img },
+            Depths = new Dictionary<string, DepthMap> { ["v"] = Art.Depth(img, (_, _) => (front, 0)) },
+        };
+
+        var dynamic = new Colorization(ColorModel.Hsv, 30, 20,
+            [new ColorEntry(100, new ColorRange(0, 360, 60, 90), null)]);
+        var fixedCol = new Colorization(ColorModel.Hsl, 30, 20, [new ColorEntry(100, null, "hex:d6249f")]);
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("r", "R", ["body", "eyes"], []),
+            Ingredients =
+            [
+                Layer("body", LayerKind.Dynamic, dynamic, Gray((_, _) => true), 2),
+                Layer("eyes", LayerKind.Static, fixedCol, Gray((x, y) => y == 0 && x == 1), 4),
+            ],
+        };
+        return new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("c", "C", new Dimensions(Size, Size),
+                new Collection("C", "d", "C"), new Dictionary<string, double> { ["r"] = 100 }),
+            Recipes = [recipe],
+        };
+    }
+
+    [Fact]
+    public void A_model_is_textured_with_the_cooked_colors_and_raised_by_the_stored_depth()
+    {
+        using var book = ColorizedBook();
+        using var set = Cook(book, 3);
+        var options = new RiseOptions { Format = ModelFormat.Glb };
+        var modeler = new SetModeler(book, options);
+
+        foreach (var asset in set.Assets)
+        {
+            // The art really is colorized: not a gray value-map.
+            Assert.Contains(Enumerable.Range(0, Size).SelectMany(x => Enumerable.Range(0, Size).Select(y => asset.Image[x, y])),
+                p => p.R != p.G || p.G != p.B);
+
+            var glb = Assert.Single(modeler.Model(asset, "0001")!).Bytes;
+            var (json, bin) = GltfValidator.ReadGlb(glb);
+            using var texture = Image.Load<Rgba32>(GltfValidator.ReadImage(json, bin));
+            Assert.Equal(asset.Image.Width, texture.Width);
+            for (int y = 0; y < Size; y++)
+                for (int x = 0; x < Size; x++)
+                    Assert.Equal(asset.Image[x, y], texture[x, y]);
+
+            // Depth comes from the stored maps: eye column 1 front 4, the rest of the body front 2.
+            var depth = StackDepth.ForAsset(book.Recipes[0], asset)!;
+            Assert.Equal((4, 2), (depth.Front(1, 0), depth.Front(0, 0)));
+            var (lo, hi) = ZExtent(glb);
+            Assert.Equal(1 + 4, hi - lo);
+        }
+    }
+
+    [Fact]
+    public void The_refusal_names_the_layer_and_variant_even_when_the_variant_is_never_rolled()
+    {
+        using var book = Book(partialHat: true);
+        var ex = Assert.Throws<PartialAlphaBookException>(() => new SetModeler(book, new RiseOptions()));
+        Assert.Contains("Hat / Ghost", ex.Message);
+    }
+
     [Fact]
     public void File_names_are_known_without_building_a_model()
     {
