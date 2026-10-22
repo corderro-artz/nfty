@@ -5,6 +5,8 @@ Turn finished pixel art into a model you can use in an engine or a viewer. You d
 it. For what "thick" means and why a model is made this way, see
 [Depth: paper, front and back](../understand/depth.md).
 
+The [demo CookBook](../get-started/the-demo.md) already carries depth, so open it to try this on real relief.
+
 Everything below also works with no depth painted at all. A picture you never touch exports as flat
 paper: every opaque pixel is one voxel thick.
 

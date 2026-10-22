@@ -39,6 +39,8 @@ zero. An all-zero map is therefore never written; a `depth/` entry, when present
 least one non-zero byte. An entry whose length disagrees with its variant's (or cell's) width and
 height is refused on read, naming the variant or cell, rather than silently misread.
 
+From the command line, `nfty set depth` writes a variant's map from a picture (red front, green back); the built-in demo's relief is authored that way.
+
 ## A spritesheet's grid
 
 A spritesheet that nfty writes, or that you set the grid of on the Rise page, carries its grid **inside

@@ -186,7 +186,11 @@ nfty add ingredient cat.rcp  --igt aura.igt --index 3
 nfty add recipe     book.cbk --rcp cat.rcp --weight 60
 
 nfty move ingredient cat.rcp --id aura --to 2
+
+nfty set depth aura.igt --variant glow --map glow-depth.png
 ```
+
+`nfty set depth` gives one variant its [depth map](file-formats.md#depth-maps) from a picture. In the PNG, **red is the front depth and green the back depth**, each 0-255 voxels; blue and alpha are ignored. The picture must be exactly the variant's size, since nfty resamples nothing. Depth over a clear pixel is dropped, and a map that is all zero clears the variant's depth back to flat paper. Every other variant in the `.igt` is carried across untouched.
 
 Files resolve by convention: a layer id `aura` looks for `aura.igt`, a variant id `glow` looks for
 `glow.png`.

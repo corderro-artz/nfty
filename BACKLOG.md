@@ -29,9 +29,11 @@ which is worse than one consistently old one. The tutorial prose has to move wit
 
 **The Rise pages have no figures yet, on purpose.** `how-to/make-a-3d-model.md`, `cook-with-models.md`,
 `fix-a-2d-only-book.md`, `rise-a-spritesheet.md`, `understand/depth.md` and `reference/rise.md` (step 8) were
-written without screenshots: they need a demo that carries depth (step 9's), and shooting them against
-anything else would add a third collection to the document. Add the Rise page (both tabs), the Cook
-dialog's model options, the voxel-ready card and the grid row in this same pass.
+written without screenshots, because shooting them against anything but a demo that carries depth would add a
+third collection to the document. That prerequisite is **met** (step 9: the Chest Demo carries depth), but the
+reshoot **stays deferred and stays one pass**. Figures to add in that pass: the Rise page (both tabs), the Cook
+dialog's model options, the voxel-ready card and the grid row. `.superpowers/frames-step9` held step-9 frames of
+the demo for reference only (gitignored, not a source).
 
 **Note the capture size changed.** Page frames were captured at 1416x950 against the old 1128x924
 window minimum. The minimum is 1280x720 now (see `ShellViewModel`), so that standard is stale.
