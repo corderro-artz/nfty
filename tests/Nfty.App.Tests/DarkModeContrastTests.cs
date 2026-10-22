@@ -390,6 +390,21 @@ public class DarkModeContrastTests
         yield return ("rise-sealed-export", new Views.RiseView { DataContext = riseSealed },
             () => { riseSealed.Dispose(); riseSealedOwner.Dispose(); });
 
+        // The Cook card on a 2D-only book: the box is disabled (dimmed to 0.38) and the sentence that
+        // says why sits outside it. The riskiest ink on the card, so it is the state swept. A second
+        // screen holds the expanded options of a clean book.
+        var flatBook = CookDialogModelsTests.Book(variants: 3, alpha: 128);
+        yield return ("cook-2d-only", new Views.CookDialogView
+        {
+            DataContext = new CookDialogViewModel(flatBook, new FilePickerService(), new NoopFolderRevealer(), dialogs),
+        }, flatBook.Dispose);
+        var solidBook = CookDialogModelsTests.Book();
+        yield return ("cook-models-open", new Views.CookDialogView
+        {
+            DataContext = new CookDialogViewModel(solidBook, new FilePickerService(), new NoopFolderRevealer(), dialogs)
+            { IncludeModels = true, ShowModelOptions = true },
+        }, solidBook.Dispose);
+
         yield return ("cookbook-detail-invalid",
             new Views.CookBookDetailView { DataContext = brokenVm }, null);
 

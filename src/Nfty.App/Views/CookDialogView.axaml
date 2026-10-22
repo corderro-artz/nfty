@@ -3,6 +3,15 @@
              xmlns:vm="using:Nfty.App.ViewModels"
              x:Class="Nfty.App.Views.CookDialogView"
              x:DataType="vm:CookDialogViewModel">
+  <UserControl.Styles>
+    <!-- Reserve space, toggle ink: the disclosure button is laid out in the box row whether or not
+         the box is ticked, so ticking it cannot grow the row and shove everything below. -->
+    <Style Selector="Button.absent">
+      <Setter Property="Opacity" Value="0" />
+      <Setter Property="IsHitTestVisible" Value="False" />
+      <Setter Property="IsTabStop" Value="False" />
+    </Style>
+  </UserControl.Styles>
   <UserControl.KeyBindings>
     <KeyBinding Gesture="Escape" Command="{Binding CloseCommand}" />
   </UserControl.KeyBindings>
@@ -43,6 +52,53 @@
               <TextBlock Text="{Binding UniqueHint}" Classes="m-sub" TextWrapping="Wrap"
                          Margin="24,0,0,0" />
             </StackPanel>
+
+            <!-- The box row is always laid out. For a 2D-only book it is disabled, and the reason sits
+                 OUTSIDE the box in its own text: a disabled control is dimmed to 0.38, and a reason
+                 inside that dimming would fail the contrast floor exactly when it is the only thing
+                 explaining why the box is off. -->
+            <StackPanel Spacing="4">
+              <!-- The disclosure button shares the box row (an Auto column), so opening the options
+                   adds only the options themselves: the card has to fit the real modal area EXPANDED. -->
+              <Grid ColumnDefinitions="*,Auto">
+                <CheckBox Grid.Column="0" Content="Include 3D models" IsChecked="{Binding IncludeModels}"
+                          IsEnabled="{Binding !BookIsTwoDOnly}" />
+                <Button Grid.Column="1" Classes="tbtn" Content="Model options" Command="{Binding ToggleModelOptionsCommand}"
+                        Classes.absent="{Binding !ShowModelOptionsToggle}" />
+              </Grid>
+              <TextBlock Text="{Binding ModelsNote}" Classes="m-sub" TextWrapping="Wrap"
+                         Margin="24,0,0,0" />
+            </StackPanel>
+
+            <!-- A REVEAL, last in the form so only the footer moves when it opens (CLAUDE.md, the
+                 second exception to reserve-space). One row of three captioned fields, not three
+                 labeled rows: the expanded card has to fit the modal area. Session-only choices. -->
+            <Grid ColumnDefinitions="*,*,76" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="4"
+                  IsVisible="{Binding ShowModelOptionsSection}">
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="Format" Classes="m-sub" />
+              <ComboBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding FormatChoices}"
+                        SelectedValueBinding="{Binding Value}" SelectedValue="{Binding ModelFormat}"
+                        HorizontalAlignment="Stretch">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ModelFormatChoice">
+                    <TextBlock Text="{Binding Label}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+              <TextBlock Grid.Row="0" Grid.Column="1" Text="Pivot" Classes="m-sub" />
+              <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding PivotChoices}"
+                        SelectedValueBinding="{Binding Value}" SelectedValue="{Binding ModelPivot}"
+                        HorizontalAlignment="Stretch">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ModelPivotChoice">
+                    <TextBlock Text="{Binding Label}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+              <TextBlock Grid.Row="0" Grid.Column="2" Text="Voxel size" Classes="m-sub" />
+              <NumericUpDown Grid.Row="1" Grid.Column="2" Value="{Binding VoxelSize}" Minimum="0.001"
+                             FormatString="0.###" Increment="0.1" MinWidth="0" Width="76" />
+            </Grid>
           </StackPanel>
 
           <StackPanel Spacing="9" IsVisible="{Binding IsRunning}">

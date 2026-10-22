@@ -1092,6 +1092,31 @@ public class VisualCapture
     /// wizards were measured at a raw 1180x720 and all five overflowed in the app. A frame of a card
     /// nothing hosts is not evidence.
     /// </remarks>
+    /// <summary>The Cook dialog's <em>Include 3D models</em> row in its three states: the box unticked
+    /// (collapsed), ticked with the options open (the tallest the card gets), and a 2D-only book.</summary>
+    [AvaloniaFact]
+    public void Capture_cook_dialog_models()
+    {
+        if (Dir is null) return;   // inert unless explicitly capturing
+
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            var key = variant.Key.ToString()!.ToLowerInvariant();
+            var dialogs = new FakeDialogs();
+            using var clean = CookDialogModelsTests.Book();
+            using var flat = CookDialogModelsTests.Book(variants: 3, alpha: 128);
+
+            CookDialogViewModel Vm(Nfty.Core.Formats.LoadedCookBook b) =>
+                new(b, new FilePickerService(), new NoopFolderRevealer(), dialogs) { Count = 500, Seed = "vapor" };
+
+            Capture(new Views.CookDialogView { DataContext = Vm(clean) }, variant, $"cook-models-collapsed-{key}.png");
+            var open = Vm(clean);
+            open.IncludeModels = true; open.ShowModelOptions = true;
+            Capture(new Views.CookDialogView { DataContext = open }, variant, $"cook-models-expanded-{key}.png");
+            Capture(new Views.CookDialogView { DataContext = Vm(flat) }, variant, $"cook-models-2d-only-{key}.png");
+        }
+    }
+
     private static void Capture(Control view, ThemeVariant variant, string fileName,
         double width = 1180, double height = 720)
     {

@@ -4,6 +4,8 @@ using Nfty.App.Services;
 using Nfty.Core.Formats;
 using Nfty.Core.Generation;
 using Nfty.Core.Output;
+using Nfty.Core.Stats;
+using Nfty.Model;
 
 namespace Nfty.App.ViewModels;
 
@@ -84,13 +86,71 @@ public partial class CookDialogViewModel : ViewModelBase
     /// picks - which is also why the dialog cannot say so up front.</summary>
     [ObservableProperty] private bool _isExtending;
 
+    /// <summary>Also write a 3D model of every asset into <c>models/</c>.</summary>
+    /// <remarks>Disabled for a 2D-only book, but a disabled box is a label: <see cref="Cook"/>
+    /// checks <see cref="BookIsTwoDOnly"/> again before it builds a modeler.</remarks>
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(ShowModelOptionsSection))] [NotifyPropertyChangedFor(nameof(ShowModelOptionsToggle))] private bool _includeModels;
+
+    /// <summary>Whether the three model choices are showing. Starts closed: the defaults are what
+    /// nearly everyone wants, and the choices are session-only (not persisted).</summary>
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(ShowModelOptionsSection))] private bool _showModelOptions;
+
+    /// <summary>Opens or closes the model choices.</summary>
+    [RelayCommand] private void ToggleModelOptions() => ShowModelOptions = !ShowModelOptions;
+
+    /// <summary>The file format for the models.</summary>
+    [ObservableProperty] private ModelFormat _modelFormat = ModelFormat.Glb;
+
+    /// <summary>Which point of each model sits at its origin.</summary>
+    [ObservableProperty] private Pivot _modelPivot = Pivot.BottomCenter;
+
+    /// <summary>World units per voxel.</summary>
+    [ObservableProperty] private double _voxelSize = 1;
+
+    /// <summary>Every format, with the words the picker shows.</summary>
+    public IReadOnlyList<ModelFormatChoice> FormatChoices { get; } =
+    [
+        new ModelFormatChoice(ModelFormat.Glb, "GLB"),
+        new ModelFormatChoice(ModelFormat.GltfWithBin, "glTF + bin"),
+        new ModelFormatChoice(ModelFormat.GltfEmbedded, "glTF embedded"),
+    ];
+
+    /// <summary>Every pivot, with the words the picker shows.</summary>
+    public IReadOnlyList<ModelPivotChoice> PivotChoices { get; } =
+    [
+        new ModelPivotChoice(Pivot.BottomCenter, "Bottom center"),
+        new ModelPivotChoice(Pivot.Center, "Center"),
+        new ModelPivotChoice(Pivot.MinCorner, "Min corner"),
+    ];
+
+    /// <summary>True when some variant has a partly transparent pixel, so no model can be made.
+    /// Computed once: the book is borrowed and not edited while this card is open.</summary>
+    public bool BookIsTwoDOnly { get; }
+
+    /// <summary>Why the box is off, or what it does.</summary>
+    public string ModelsNote { get; }
+
+    /// <summary>Whether the model choices are on show: a reveal, last in the form.</summary>
+    public bool ShowModelOptionsSection => IncludeModels && ShowModelOptions;
+
+    /// <summary>Whether the disclosure toggle is on show.</summary>
+    public bool ShowModelOptionsToggle => IncludeModels;
+
     /// <summary>Creates the cook dialog.</summary>
     /// <param name="book">The book to generate from.</param>
     /// <param name="picker">Chooses the output folder.</param>
     /// <param name="revealer">Opens the output folder when the run finishes.</param>
     /// <param name="dialogs">The dialog layer to close through.</param>
     public CookDialogViewModel(LoadedCookBook book, IFilePickerService picker, IFolderRevealer revealer, IDialogService dialogs)
-    { _book = book; _picker = picker; _revealer = revealer; _dialogs = dialogs; }
+    {
+        _book = book; _picker = picker; _revealer = revealer; _dialogs = dialogs;
+        var partial = VoxelReport.Scan(book).Count(v => !v.IsClean);
+        BookIsTwoDOnly = partial > 0;
+        ModelsNote = BookIsTwoDOnly
+            ? $"This book is 2D only — {partial} {(partial == 1 ? "variant has" : "variants have")} partly transparent pixels. "
+              + "Open a layer in Rise and use Make voxel-ready."
+            : "Writes a model of every asset into models/.";
+    }
 
     /// <summary>Whether the options form is showing rather than the progress view.</summary>
     public bool ShowForm => !IsRunning && !IsDone;
@@ -127,15 +187,29 @@ public partial class CookDialogViewModel : ViewModelBase
             var existing = await SetWriter.ReadExistingAsync(dir, _cts.Token);
             IsExtending = existing.Dnas.Count > 0;
 
+            // A Set cooked with models keeps making them, whatever the box says: models are decided
+            // once, at its first cook, as `extend` does. Built BEFORE rolling so a 2D-only book is
+            // refused with nothing generated. The box is a label; the gate is checked here too.
+            SetModeler? modeler = existing.Models is { } recorded
+                ? new SetModeler(_book, ModelTokens.OptionsOf(recorded))
+                : IncludeModels && !BookIsTwoDOnly
+                    ? new SetModeler(_book, new RiseOptions
+                    {
+                        VoxelSize = (float)VoxelSize,
+                        Pivot = ModelPivot,
+                        Format = ModelFormat,
+                    })
+                    : null;
+
             var opts = new GenerateOptions(Count, Seed, EnforceUniqueDna: !Unlimited);
             PhaseText = IsExtending ? $"Extending {existing.Dnas.Count} assets…" : "Generating…";
             var genProgress = new Progress<GenerationProgress>(p => Progress = p.Fraction);
             set = await Generator.GenerateAsync(_book, opts, existing.Dnas, existing.NextNumber,
                 genProgress, _cts.Token);
 
-            PhaseText = "Writing…"; Progress = 0;
+            PhaseText = modeler is null ? "Writing…" : "Writing models…"; Progress = 0;
             var writeProgress = new Progress<WriteProgress>(p => Progress = p.Fraction);
-            await SetWriter.WriteAsync(set, dir, Pack, writeProgress, _cts.Token);
+            await SetWriter.WriteAsync(set, dir, Pack, writeProgress, _cts.Token, models: modeler);
 
             _outDir = dir;
             OutputPath = dir;
@@ -144,6 +218,12 @@ public partial class CookDialogViewModel : ViewModelBase
             ResultText = IsExtending
                 ? $"Added +{made} {noun} — {existing.Dnas.Count + made} total in the collection."
                 : $"Cooked {made} {noun}.";
+            if (modeler is not null)
+            {
+                var written = (await SetWriter.ReadExistingAsync(dir, _cts.Token)).Models;
+                int skipped = (written?.Skipped ?? []).Count(n => n >= existing.NextNumber);
+                ResultText += $" · {made - skipped} models" + (skipped > 0 ? $" · {skipped} skipped" : "");
+            }
             IsDone = true;
         }
         catch (OperationCanceledException) { PhaseText = "Canceled"; }
@@ -183,3 +263,13 @@ public partial class CookDialogViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanClose))] private void Close() => _dialogs.Close(null);
     private bool CanClose() => !IsRunning;
 }
+
+/// <summary>One entry of the model format picker.</summary>
+/// <param name="Value">What the choice sets.</param>
+/// <param name="Label">What the picker shows.</param>
+public sealed record ModelFormatChoice(ModelFormat Value, string Label);
+
+/// <summary>One entry of the model pivot picker.</summary>
+/// <param name="Value">What the choice sets.</param>
+/// <param name="Label">What the picker shows.</param>
+public sealed record ModelPivotChoice(Pivot Value, string Label);

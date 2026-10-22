@@ -64,6 +64,22 @@ public class ModalFitTests
         return SetReader.Read(dir);
     }
 
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void The_cook_card_fits_the_smallest_window_with_the_model_options_open(bool twoDOnly)
+    {
+        // The EXPANDED card is the tallest it gets; the 2D-only note is the longest sentence on it.
+        using var book = twoDOnly ? CookDialogModelsTests.Book(3, 128) : CookDialogModelsTests.Book();
+        var vm = new CookDialogViewModel(book, new FilePickerService(), new NoopFolderRevealer(), new FakeDialogs())
+        { IncludeModels = !twoDOnly, ShowModelOptions = true };
+        var size = Measure(new Views.CookDialogView { DataContext = vm });
+
+        Fits("The cook card with model options open",
+            size.Width * ShellViewModel.BaseScale + 24,
+            size.Height * ShellViewModel.BaseScale + Chrome);
+    }
+
     [AvaloniaFact]
     public void The_quick_reference_sheet_fits_the_smallest_window()
     {
