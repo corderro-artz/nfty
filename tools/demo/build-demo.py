@@ -2,13 +2,22 @@
 
     python tools/demo/build-demo.py                 # -> src/Nfty.Core/Demo/ChestDemo.cbk
     python tools/demo/build-demo.py --workspace M:/nfty-demo   # ...and a folder to screenshot
+    python tools/demo/build-demo.py --check         # rebuild, compare with the embedded copy, write nothing
 
 It draws the art, writes the manifests, and drives the CLI's own authoring commands to assemble the
 archives - the same commands a user has - so the shipped demo cannot be built by a path no one else
 can take. The result is committed as a binary, the way `Icons.axaml` is committed next to the SVGs
 it is generated from: Nfty.Core embeds it, so the demo is present in a single-file .exe copied to a
 machine with nothing else on it. `DemoCookBookTests` reads, validates and cooks the committed bytes,
-which is what keeps the file and this script from drifting apart.
+which is what keeps the file and this script from drifting apart. `--check` is the cheap form of
+that guard for a human: it builds into the scratch folder and compares the result with the embedded
+archive entry by entry (recursively - a .cbk nests .rcp nests .igt - ignoring zip timestamps, which
+change on every write), so a generator edit never needs a re-embed just to find out it matters.
+
+THE BOOK CARRIES DEPTH. Every variant but Glow's has a hand-designed depth map (drawn by
+draw-chest-art.py next to the art) so the Chest Demo rises into a convincing 3D object. This script
+stores each map by running `nfty set depth` - the command a user has - and never writes a `.dep`
+itself. Glow stays flat on purpose.
 
 WHY THIS BOOK LOOKS THE WAY IT DOES. It is the first CookBook most people will open, so it has to
 show what nfty is for in one screen and stay small enough to read:
@@ -27,11 +36,13 @@ is what tools/docs-capture screenshots. That used to be a second demo (a pet col
 separately from anything that shipped, so the manual showed a book no user ever had.
 """
 import argparse
+import io
 import json
 import os
 import shutil
 import subprocess
 import sys
+import zipfile
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 EMBEDDED = os.path.join(ROOT, "src", "Nfty.Core", "Demo", "ChestDemo.cbk")
@@ -157,8 +168,14 @@ def build(work):
             json.dump({"id": iid, "name": name, "kind": kind, "colorization": col,
                        "variants": [{"id": v, "name": n, "weight": w} for v, n, w in variants],
                        "schemaVersion": 2}, f, indent=2)
-        run(["new", "ingredient", os.path.join(igt, iid + ".igt"),
-             "--manifest", p, "--images", os.path.join(art, iid)])
+        igt_path = os.path.join(igt, iid + ".igt")
+        run(["new", "ingredient", igt_path, "--manifest", p, "--images", os.path.join(art, iid)])
+        depth_dir = os.path.join(art, "depth", iid)
+        if os.path.isdir(depth_dir):
+            for f in sorted(os.listdir(depth_dir)):
+                if f.endswith(".png"):
+                    run(["set", "depth", igt_path, "--variant", f[:-4], "--map",
+                         os.path.join(depth_dir, f)])
 
     for rid, name, order, rules, absent in RECIPES:
         p = os.path.join(man, rid + ".rcp.json")
@@ -175,6 +192,41 @@ def build(work):
         os.remove(cbk)          # `new cookbook` refuses to overwrite, and this script is re-run
     run(["new", "cookbook", cbk, "--manifest", p, "--recipes", rcp])
     return cbk, igt, rcp
+
+
+def entries(data, prefix=""):
+    """Every entry of a zip as {path: bytes}, descending into nested archives so a difference deep in
+    an .igt is named by its full path. Zip timestamps are not part of the content."""
+    found = {}
+    with zipfile.ZipFile(io.BytesIO(data)) as z:
+        for info in sorted(z.infolist(), key=lambda i: i.filename):
+            body = z.read(info)
+            name = prefix + info.filename
+            if info.filename.lower().endswith((".rcp", ".igt")):
+                found.update(entries(body, name + "!/"))
+            else:
+                found[name] = body
+    return found
+
+
+def check(cbk):
+    """Compare a fresh build with the embedded copy. Returns the process exit code."""
+    with open(cbk, "rb") as f:
+        fresh = entries(f.read())
+    with open(EMBEDDED, "rb") as f:
+        shipped = entries(f.read())
+    for name in sorted(set(fresh) | set(shipped)):
+        if name not in shipped:
+            print("differs: %s is not in the embedded demo" % name)
+            return 1
+        if name not in fresh:
+            print("differs: %s is only in the embedded demo" % name)
+            return 1
+        if fresh[name] != shipped[name]:
+            print("differs: %s (%d bytes built, %d embedded)" % (name, len(fresh[name]), len(shipped[name])))
+            return 1
+    print("demo is up to date")
+    return 0
 
 
 def workspace(out, cbk, igt, rcp):
@@ -194,11 +246,17 @@ def main():
     ap.add_argument("--work", default=os.path.join(ROOT, ".demo"), help="scratch build folder")
     ap.add_argument("--workspace", help="also lay out a Kitchen + cooked Set here, for docs capture")
     ap.add_argument("--no-embed", action="store_true", help="build but do not update the shipped copy")
+    ap.add_argument("--check", action="store_true",
+                    help="build, compare with the embedded copy, write nothing (exit 1 if they differ)")
     a = ap.parse_args()
+    if a.check and (a.workspace or a.no_embed):
+        ap.error("--check only compares; it cannot be combined with --workspace or --no-embed")
 
     os.makedirs(a.work, exist_ok=True)
     cbk, igt, rcp = build(a.work)
 
+    if a.check:
+        sys.exit(check(cbk))
     if not a.no_embed:
         os.makedirs(os.path.dirname(EMBEDDED), exist_ok=True)
         shutil.copy(cbk, EMBEDDED)

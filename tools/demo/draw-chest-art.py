@@ -25,6 +25,15 @@ THE OVERLAY CONTRACT. Bands, Lock and Trim have to sit correctly on BOTH bodies,
 are different shapes. Everything from y=12 down is identical in both silhouettes, so every overlay
 is authored at y>=12 and the two lids differ only above it. Break that and a strap floats in the air
 on one recipe and not the other - which no ViewModel test could see.
+
+DEPTH. The same sprites also get a depth map each (`<out>/depth/<layer>/<variant>.png`, red = front,
+green = back, in voxels; `nfty set depth` stores them). Paper is 0/0, one voxel thick. The topmost
+solid layer wins per pixel, so an overlay cannot say "two voxels above my body": it states ABSOLUTE
+depth, `body_front(x, y) + k`. That is only safe because of the DEPTH OVERLAY CONTRACT, the twin of
+the art contract above: from y=12 down every body variant on both recipes shares ONE front profile
+(`lower_front`), so an overlay stands proud of every body by construction. Variants differ in depth
+only above row 12. Solid pixels are read off the just-drawn sprite, so depth can never land on a
+transparent pixel, and main() asserts the contract before it saves a byte.
 """
 import os
 import random
@@ -512,13 +521,129 @@ SPEC = {
     "feet": {"blocks": feet_blocks, "skids": feet_skids},
 }
 
+# ---------------------------------------------------------------------------- depth (voxels)
+# Rows 12..28, the part both lids share. Mirrors the silhouette above; kept as its own table so the
+# depth contract does not depend on which lid a sprite was drawn with.
+LOWER_ROWS = {y: (3, 28) for y in range(12, 28)}
+for _y in (14, 15, 28):
+    LOWER_ROWS[_y] = (2, 29)
+OVERHANG_ROWS = (12, 13, 14, 15, 28)     # the lid course and the plinth stand a voxel prouder
+FACE, SHELL = 2, 3                       # front of the face, front of the overhanging courses
+BODY_BACK = 6                            # every solid body pixel is the same depth behind the paper
+CHEST_DOME = {7: 1, 8: 1, 9: 2, 10: 2, 11: 3}   # a barrel lid curves away going up
+BOX_SLAB = 3
+
+
+def lower_front(x, y):
+    """THE shared front profile at y>=12. A one-voxel bevel on the outermost column each side."""
+    row = LOWER_ROWS.get(y)
+    if row is None or not row[0] <= x <= row[1]:
+        return 0
+    base = SHELL if y in OVERHANG_ROWS else FACE
+    return base - 1 if x in row else base
+
+
+def body_front(x, y, lid):
+    if y >= 12:
+        return lower_front(x, y)
+    rows = CHEST_LID if lid == "chest" else BOX_LID
+    row = rows.get(y)
+    if row is None or not row[0] <= x <= row[1]:
+        return 0
+    if lid == "chest":
+        # Falls to 0 within three pixels of either end: rounded ends on the barrel.
+        return min(CHEST_DOME[y], x - row[0], row[1] - x)
+    return BOX_SLAB - 1 if x in row else BOX_SLAB
+
+
+def depth_picture(sprite, fn):
+    """(W,H) RGB picture: R front, G back. `fn(x, y, rgba) -> (front, back)` is asked ONLY for solid
+    pixels, so no depth can land on a transparent one."""
+    im = Image.new("RGB", (W, H), (0, 0, 0))
+    out = im.load()
+    for y in range(H):
+        for x in range(W):
+            rgba = sprite.px[x, y]
+            if rgba[3] == 0:
+                continue
+            f, b = fn(x, y, rgba)
+            assert 0 <= f <= 255 and 0 <= b <= 255, (x, y, f, b)
+            out[x, y] = (f, b, 0)
+    return im
+
+
+def body_depth(lid):
+    return lambda sp: depth_picture(sp, lambda x, y, c: (body_front(x, y, lid), BODY_BACK))
+
+
+def over(k, back=0):
+    """An overlay `k` voxels proud of the body beneath it (absolute: body_front + k)."""
+    return lambda sp: depth_picture(sp, lambda x, y, c: (lower_front(x, y) + k, back))
+
+
+def lock_padlock_depth(sp):
+    # The shackle (its arc above the plate, y < 16) is the most proud thing on the chest.
+    return depth_picture(sp, lambda x, y, c: (lower_front(x, y) + (3 if y < 16 else 2), 0))
+
+
+def gems_depth(sp):
+    # Set stones stand a voxel above the gold that holds them.
+    return depth_picture(sp, lambda x, y, c: (lower_front(x, y) + (1 if c[:3] in GOLD else 2), 0))
+
+
+def feet_blocks_depth(sp):
+    return depth_picture(sp, lambda x, y, c: (1, 1))
+
+
+def feet_skids_depth(sp):
+    # A runner that runs back under the chest.
+    return depth_picture(sp, lambda x, y, c: (0, 5))
+
+
+# Glow has no entry on purpose: it stays flat paper, and a test pins that.
+DEPTH = {
+    "chestbody": {v: body_depth("chest") for v in SPEC["chestbody"]},
+    "boxbody": {v: body_depth("box") for v in SPEC["boxbody"]},
+    "bands": {"straps": over(1), "corners": over(1), "hoops": over(1)},
+    "lock": {"keyhole": over(2), "latch": over(2), "padlock": lock_padlock_depth, "keypad": over(2)},
+    "trim": {"gilt": over(1), "gems": gems_depth},
+    "feet": {"blocks": feet_blocks_depth, "skids": feet_skids_depth},
+}
+
+
+def check_contract(pictures):
+    """The python twin of the C# proud test: fail at generation, not after a rebuild."""
+    for layer in ("chestbody", "boxbody"):
+        for vid, (sp, pic) in pictures[layer].items():
+            for y in range(12, H):
+                for x in range(W):
+                    if sp.px[x, y][3]:
+                        assert pic.getpixel((x, y))[0] == lower_front(x, y),                             "body %s/%s breaks the shared profile at (%d,%d)" % (layer, vid, x, y)
+    for layer in ("bands", "lock", "trim"):
+        for vid, (sp, pic) in pictures[layer].items():
+            for y in range(H):
+                for x in range(W):
+                    if sp.px[x, y][3]:
+                        for lid in ("chest", "box"):
+                            assert pic.getpixel((x, y))[0] > body_front(x, y, lid),                                 "%s/%s is not proud of the %s body at (%d,%d)" % (layer, vid, lid, x, y)
+
 
 def main():
     n = 0
+    pictures = {}
     for layer, variants in SPEC.items():
         for vid, fn in variants.items():
-            fn().save(os.path.join(OUT, layer, vid + ".png"))
+            sprite = fn()
+            sprite.save(os.path.join(OUT, layer, vid + ".png"))
             n += 1
+            if layer in DEPTH:
+                pictures.setdefault(layer, {})[vid] = (sprite, DEPTH[layer][vid](sprite))
+    check_contract(pictures)
+    for layer, variants in pictures.items():
+        for vid, (_, pic) in variants.items():
+            path = os.path.join(OUT, "depth", layer, vid + ".png")
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            pic.save(path)
     print("drew %d variants at %dx%d into %s" % (n, W, H, OUT))
 
 
