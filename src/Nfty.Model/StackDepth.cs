@@ -123,6 +123,21 @@ public static class StackDepth
         return depth;
     }
 
+    /// <summary>The combined depth of one generated asset, by the stack rule.</summary>
+    /// <param name="recipe">The recipe the asset was rolled from.</param>
+    /// <param name="asset">The asset; its traits are its present layers, in paint order.</param>
+    /// <param name="source">How to name the asset in a refusal.</param>
+    /// <returns>The depth map, or <c>null</c> for an all-absent roll (nothing painted: paper).</returns>
+    /// <exception cref="KeyNotFoundException">A trait names a layer or variant the recipe lacks.</exception>
+    /// <exception cref="PartialAlphaException">Some layer has a partly transparent pixel.</exception>
+    public static DepthMap? ForAsset(LoadedRecipe recipe, Nfty.Core.Generation.GeneratedAsset asset, string source = "the asset")
+    {
+        ArgumentNullException.ThrowIfNull(recipe);
+        ArgumentNullException.ThrowIfNull(asset);
+        if (asset.Traits.Count == 0) return null;
+        return ForSelection(recipe, asset.Traits.Select(t => (t.IngredientId, t.VariantId)).ToList(), source);
+    }
+
     /// <summary>Scans one layer for a partly transparent pixel and throws naming it, matching
     /// <see cref="Riser"/>'s own scan-and-count shape.</summary>
     private static void ScanForPartialAlpha(Image<Rgba32> layer, int index, string source)

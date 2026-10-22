@@ -161,14 +161,10 @@ public sealed class RecipeRiseSource : RiseSource
             asset = Generator.GenerateStreaming(_book, new GenerateOptions(1,
                 Seed.ToString(CultureInfo.InvariantCulture), _recipe.Manifest.Id, EnforceUniqueDna: false)).First();
             art = asset.Image.Clone();
-            var present = asset.Traits.Select(t => (t.IngredientId, t.VariantId)).ToList();
             DepthMap? depth = null;
             string? refusal = null;
-            if (present.Count > 0)
-            {
-                try { depth = StackDepth.ForSelection(_recipe, present, $"the {_recipe.Manifest.Name} recipe"); }
-                catch (PartialAlphaException ex) { refusal = ex.Message; }   // which layer keeps the stack 2D
-            }
+            try { depth = StackDepth.ForAsset(_recipe, asset, $"the {_recipe.Manifest.Name} recipe"); }
+            catch (PartialAlphaException ex) { refusal = ex.Message; }   // which layer keeps the stack 2D
             FillRows(asset, rows);
             return new Rolled(art, depth, null, rows, refusal);
         }

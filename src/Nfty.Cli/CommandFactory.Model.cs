@@ -20,9 +20,6 @@ public static partial class CommandFactory
         Ingredient,
     }
 
-    private static readonly string[] ModelFormatNames = ["glb", "gltf", "gltf-embedded"];
-    private static readonly string[] PivotNames = ["bottom-center", "center", "min-corner"];
-
     private static Command ModelCommand()
     {
         var input = new Argument<string>("input")
@@ -60,14 +57,14 @@ public static partial class CommandFactory
                 + "gltf-embedded (text JSON with the buffer inline).",
             DefaultValueFactory = _ => "glb",
         };
-        format.AcceptOnlyFromAmong(ModelFormatNames);
+        format.AcceptOnlyFromAmong(ModelTokens.FormatNames.ToArray());
         var pivot = new Option<string>("--pivot")
         {
             Description = "Which point of the model's bounding box sits at the origin: bottom-center "
                 + "(standing on the floor), center, or min-corner.",
             DefaultValueFactory = _ => "bottom-center",
         };
-        pivot.AcceptOnlyFromAmong(PivotNames);
+        pivot.AcceptOnlyFromAmong(ModelTokens.PivotNames.ToArray());
         var voxelSize = new Option<float>("--voxel-size")
         {
             Description = "World units per pixel, and per voxel of depth. Must be positive.",
@@ -141,7 +138,7 @@ public static partial class CommandFactory
             // this is the one place that value is needed for something AcceptOnlyFromAmong does not
             // already say, so it must not re-trip the same failure into an unhandled exception.
             string fmt = Given(format) ? result.GetResult(format)!.Tokens[0].Value : "glb";
-            if (outPath is not null && ModelFormatNames.Contains(fmt, StringComparer.Ordinal))
+            if (outPath is not null && ModelTokens.FormatNames.Contains(fmt, StringComparer.Ordinal))
             {
                 string expected = fmt == "glb" ? ".glb" : ".gltf";
                 if (!string.Equals(Path.GetExtension(outPath), expected, StringComparison.OrdinalIgnoreCase))
@@ -157,8 +154,8 @@ public static partial class CommandFactory
             var options = new RiseOptions
             {
                 VoxelSize = parse.GetValue(voxelSize),
-                Pivot = PivotOf(parse.GetValue(pivot)!),
-                Format = ModelFormatOf(parse.GetValue(format)!),
+                Pivot = ModelTokens.PivotOf(parse.GetValue(pivot)!),
+                Format = ModelTokens.FormatOf(parse.GetValue(format)!),
             };
             (byte Front, byte Back)? fill = parse.GetResult(front) is { Implicit: false }
                 ? ((byte)parse.GetValue(front), (byte)parse.GetValue(back))
@@ -238,20 +235,4 @@ public static partial class CommandFactory
             + mesh.TriangleCount.ToString("N0", CultureInfo.InvariantCulture) + " triangles)");
         return 0;
     }
-
-    private static Pivot PivotOf(string name) => name switch
-    {
-        "bottom-center" => Pivot.BottomCenter,
-        "center" => Pivot.Center,
-        "min-corner" => Pivot.MinCorner,
-        _ => throw new ArgumentOutOfRangeException(nameof(name), name, "Unknown pivot."),
-    };
-
-    private static ModelFormat ModelFormatOf(string name) => name switch
-    {
-        "glb" => ModelFormat.Glb,
-        "gltf" => ModelFormat.GltfWithBin,
-        "gltf-embedded" => ModelFormat.GltfEmbedded,
-        _ => throw new ArgumentOutOfRangeException(nameof(name), name, "Unknown model format."),
-    };
 }
