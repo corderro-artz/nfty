@@ -1,5 +1,8 @@
 using System.Globalization;
 using Nfty.App.Services;
+using Nfty.App.ViewModels;
+using Nfty.Core.Formats;
+using Nfty.Core.Model;
 using Nfty.Core.Publish;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -33,19 +36,26 @@ public enum GridOrigin
 /// and a grid found — or typed — is written into the PNG so the next opening needs no search. A file
 /// with no grid is a picture and is never touched. A file that cannot be written keeps the grid for
 /// this session, and <see cref="GridWriteNote"/> says which happened.</para>
-/// <para>Depth painted here has nowhere to go yet: <see cref="CanSave"/> is false and the footer says so.</para>
+/// <para><b>Depth leaves as a Custom ingredient.</b> A picture's depth has no book to go into, so Save
+/// asks for a path and writes an <c>.igt</c>: every cell a variant (a lone picture one variant named for
+/// the file), the art as it is and each cell's depth beside it. With no way to ask for a path
+/// (<c>pickPath</c> null) nothing can be saved and the footer says so.</para>
 /// </remarks>
 public sealed class PictureRiseSource : RiseSource
 {
     private readonly IImageBridge _bridge;
     private readonly string _stem;
     private readonly Image<Rgba32> _image;
+    private readonly Func<Task<string?>>? _pickPath;
     private readonly List<RiseItem> _retired = new();
+    private Task? _inFlight;
+    private string? _saveResultNote;
     private List<RiseItem> _items = new();
     private RiseItem _initial = null!;
 
-    private PictureRiseSource(string path, Image<Rgba32> image, IImageBridge bridge)
+    private PictureRiseSource(string path, Image<Rgba32> image, IImageBridge bridge, Func<Task<string?>>? pickPath)
     {
+        _pickPath = pickPath;
         Path = path;
         _image = image;
         _bridge = bridge;
@@ -56,9 +66,11 @@ public sealed class PictureRiseSource : RiseSource
     /// and — for a foreign sheet — writes the grid into the file.</summary>
     /// <param name="path">The <c>.png</c>.</param>
     /// <param name="bridge">Makes the row thumbnails.</param>
+    /// <param name="pickPath">Asks the person where to save the depth as an <c>.igt</c>; a null result
+    /// is a canceled dialog. Null means this source cannot save.</param>
     /// <returns>The source; the caller disposes it.</returns>
     /// <exception cref="InvalidOperationException">The file is not a picture that can be read.</exception>
-    public static PictureRiseSource Open(string path, IImageBridge bridge)
+    public static PictureRiseSource Open(string path, IImageBridge bridge, Func<Task<string?>>? pickPath = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         ArgumentNullException.ThrowIfNull(bridge);
@@ -70,7 +82,7 @@ public sealed class PictureRiseSource : RiseSource
             throw new InvalidOperationException($"{System.IO.Path.GetFileName(path)} could not be read as a picture — {ex.Message}", ex);
         }
 
-        var source = new PictureRiseSource(path, image, bridge);
+        var source = new PictureRiseSource(path, image, bridge, pickPath);
         try
         {
             // A chunk is trusted only if it tiles THIS picture: a sheet edited after it was stamped, or a
@@ -107,6 +119,16 @@ public sealed class PictureRiseSource : RiseSource
 
     /// <summary>The cutting, or null when the file is one picture.</summary>
     public SheetGrid? Grid { get; private set; }
+
+    /// <summary>The picture's width in pixels.</summary>
+    public int ImageWidth => _image.Width;
+
+    /// <summary>The picture's height in pixels.</summary>
+    public int ImageHeight => _image.Height;
+
+    /// <summary>Looks for the grid by the transparent gutters between cells, without changing anything.</summary>
+    /// <returns>The grid found, or null when the picture shows none.</returns>
+    public SheetGrid? DetectGrid() => SheetGrid.Detect(_image);
 
     /// <summary>Where <see cref="Grid"/> came from.</summary>
     public GridOrigin GridOrigin { get; private set; }
@@ -275,10 +297,19 @@ public sealed class PictureRiseSource : RiseSource
     public override bool CanBatch => Grid is not null;
 
     /// <inheritdoc />
-    public override bool CanSave => false;
+    public override bool CanSave => _pickPath is not null;
 
     /// <inheritdoc />
     public override string? UnsavableNote => "depth on loose art is kept for this session";
+
+    /// <inheritdoc />
+    public override string SaveTargetName => ".igt file";
+
+    /// <inheritdoc />
+    public override string SaveLabel => "Save as .igt…";
+
+    /// <inheritdoc />
+    public override string? SaveResultNote => _saveResultNote;
 
     /// <inheritdoc />
     public override string RailFootNote => "A single picture — no grid.";
@@ -292,7 +323,7 @@ public sealed class PictureRiseSource : RiseSource
     /// <inheritdoc />
     public override string DepthNote =>
         "Thickness is in voxels: 1 + front + back. A flat sprite is paper, one voxel thick. "
-        + "Depth on loose art is kept for this session.";
+        + (CanSave ? "Save as .igt keeps the depth beside the art." : "Depth on loose art is kept for this session.");
 
     /// <inheritdoc />
     public override string OpeningLine => Grid is { } g
@@ -303,6 +334,83 @@ public sealed class PictureRiseSource : RiseSource
     /// <inheritdoc />
     public override RiseSubject Open(RiseItem item) =>
         item.Subject ?? throw new InvalidOperationException($"Item '{item.Id}' was not loaded.");
+
+    /// <summary>Writes the art and every cell's depth into a Custom <c>.igt</c> the person names.</summary>
+    /// <returns>A task that completes when the file is written and every cell is marked saved, or at
+    /// once when the dialog was canceled (nothing written, the depth still unsaved). A second call
+    /// while one runs returns that same task.</returns>
+    /// <exception cref="InvalidOperationException">The ingredient does not validate.</exception>
+    public override Task SaveAsync()
+    {
+        if (_pickPath is null) return Task.CompletedTask;
+        if (_inFlight is { } running) return running;
+        var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _inFlight = done.Task;
+        _ = RunSaveAsync(done);
+        return done.Task;
+    }
+
+    private async Task RunSaveAsync(TaskCompletionSource done)
+    {
+        Exception? failure = null;
+        try { await SaveCoreAsync(); }
+        catch (Exception ex) { failure = ex; }
+        _inFlight = null;
+        if (failure is null) done.SetResult(); else done.SetException(failure);
+    }
+
+    private async Task SaveCoreAsync()
+    {
+        string? chosen = await _pickPath!();
+        if (string.IsNullOrWhiteSpace(chosen)) return;    // canceled: nothing written, depth stays dirty
+        string path = string.Equals(System.IO.Path.GetExtension(chosen), ".igt", StringComparison.OrdinalIgnoreCase)
+            ? chosen : chosen + ".igt";
+
+        string id = WizardViewModelBase.DeriveId(_stem);
+        if (id.Length == 0) id = "picture";
+        var variants = new List<Variant>();
+        var images = new Dictionary<string, Image<Rgba32>>(StringComparer.Ordinal);
+        var depths = new Dictionary<string, DepthMap>(StringComparer.Ordinal);
+        // What is written is what is marked saved afterwards: a stroke painted while the disk is busy
+        // stays dirty.
+        var written = new List<(RiseSubject Subject, DepthMap? Map)>();
+        foreach (var item in _items)
+        {
+            var subject = item.Subject ?? throw new InvalidOperationException($"Item '{item.Id}' was not loaded.");
+            string variantId = Grid is null ? id : item.Id;
+            string variantName = Grid is null
+                ? _stem
+                : string.Create(CultureInfo.InvariantCulture, $"Cell {item.Id["cell-".Length..]}");
+            variants.Add(new Variant(variantId, variantName, 1));
+            images[variantId] = subject.Art;
+            var map = subject.Depth.ToDepthMap();
+            if (map is not null) depths[variantId] = map;
+            written.Add((subject, map));
+        }
+
+        var manifest = new IngredientManifest(id, _stem, LayerKind.Custom, null, variants);
+        var problems = Validator.ValidateIngredient(
+            new LoadedIngredient { Manifest = manifest, VariantImages = images, Depths = depths });
+        if (problems.Count > 0) throw new InvalidOperationException(string.Join(Environment.NewLine, problems));
+
+        var tmp = $"{path}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            await IngredientArchive.WriteAsync(tmp, manifest, images, depths);
+            File.Move(tmp, path, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(tmp)) { try { File.Delete(tmp); } catch { /* best effort */ } }
+        }
+
+        // Marked before anyone is told: the write is done.
+        foreach (var (subject, map) in written) subject.MarkSaved(map);
+        foreach (var item in _items) item.RefreshDepth();
+        _saveResultNote = string.Create(CultureInfo.InvariantCulture,
+            $"Saved {variants.Count} {(variants.Count == 1 ? "variant" : "variants")} and their depth to {System.IO.Path.GetFileName(path)}.");
+        RaiseChanged();
+    }
 
     /// <inheritdoc />
     public override void Dispose()

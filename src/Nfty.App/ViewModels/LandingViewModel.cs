@@ -553,7 +553,8 @@ public partial class LandingViewModel : ViewModelBase
         try
         {
             source = await BusyViewModel.RunAsync(_dialogs, "Opening picture", "Reading the picture…",
-                (_, _) => Task.Run(() => Nfty.App.Rise.PictureRiseSource.Open(path, _bridge)));
+                (_, _) => Task.Run(() => Nfty.App.Rise.PictureRiseSource.Open(path, _bridge,
+                    () => _picker.SaveFileAsync("Save as Ingredient", ".igt"))));
         }
         catch (Exception ex)
         {

@@ -35,7 +35,7 @@
 
       <!-- ============ SOURCE rail ============ -->
       <Border Grid.Column="0" Classes="pane">
-        <Grid RowDefinitions="Auto,Auto,*,Auto">
+        <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
           <Border Grid.Row="0" Classes="pane-hrow">
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Grid.Column="0" Text="{Binding Source.Kicker}" Classes="pane-h"
@@ -70,13 +70,53 @@
             </StackPanel>
           </Border>
 
+          <!-- THE GRID ROW: how a picture is cut into cells, for the two sources that are a loose PNG.
+               Detection can be wrong on a sheet somebody else drew, so the cut can be typed: by
+               finding it again, by columns and rows, or by a cell's size. The row is laid out for the
+               life of the page or not at all (a picture becomes a sheet by being given a grid), and
+               the problem line under it has its two lines reserved, so a typo never moves the list. -->
+          <Border Grid.Row="2" Padding="12,2,12,0" IsVisible="{Binding HasGridRow}">
+            <StackPanel Spacing="6">
+              <Border Classes="seg mini" HorizontalAlignment="Left">
+                <Grid ColumnDefinitions="Auto,2,Auto,2,Auto">
+                  <Button Grid.Column="0" Classes="seg-b mini" Content="Auto"
+                          Classes.on="{Binding GridIsAuto}"
+                          Command="{Binding SetGridModeCommand}" CommandParameter="{x:Static vm:GridMode.Auto}"
+                          ToolTip.Tip="Find the cells by the transparent gutters between them" />
+                  <Button Grid.Column="2" Classes="seg-b mini" Content="Columns × rows"
+                          Classes.on="{Binding GridIsColumnsRows}"
+                          Command="{Binding SetGridModeCommand}" CommandParameter="{x:Static vm:GridMode.ColumnsRows}"
+                          ToolTip.Tip="Say how many columns and rows the sheet has" />
+                  <Button Grid.Column="4" Classes="seg-b mini" Content="Cell size"
+                          Classes.on="{Binding GridIsCellSize}"
+                          Command="{Binding SetGridModeCommand}" CommandParameter="{x:Static vm:GridMode.CellSize}"
+                          ToolTip.Tip="Say how many pixels one cell is across and down" />
+                </Grid>
+              </Border>
+              <Grid ColumnDefinitions="62,Auto,62,*,Auto" ColumnSpacing="6" Height="26">
+                <NumericUpDown Grid.Column="0" Classes="nin" Width="62" Minimum="1" Maximum="16384"
+                               FormatString="0" Value="{Binding GridA}" IsEnabled="{Binding GridNumbersEnabled}"
+                               ToolTip.Tip="Columns, or one cell's width in pixels" />
+                <TextBlock Grid.Column="1" Classes="seglbl" Text="×" />
+                <NumericUpDown Grid.Column="2" Classes="nin" Width="62" Minimum="1" Maximum="16384"
+                               FormatString="0" Value="{Binding GridB}" IsEnabled="{Binding GridNumbersEnabled}"
+                               ToolTip.Tip="Rows, or one cell's height in pixels" />
+                <Button Grid.Column="4" Classes="tbtn" Padding="9,0" Content="Apply"
+                        Command="{Binding ApplyGridCommand}"
+                        ToolTip.Tip="Cut the picture this way and record the grid in the file" />
+              </Grid>
+              <TextBlock Classes="caveat" Height="28" FontSize="10.5" MaxLines="2" TextTrimming="CharacterEllipsis"
+                         Text="{Binding GridProblem}" />
+            </StackPanel>
+          </Border>
+
           <!-- THE LIST. Three templates, exactly one visible, and the variant and tile rails are
                virtualizing ListBoxes: a Set can hold ten thousand assets and a row's thumbnail is
                decoded the first time a view reads it, so a row that is never realized never decodes.
                ListBox.tiles neutralizes every state Fluent paints on a ListBoxItem - the unit here
                is a ROW, which nobody selects, and the app's own marks sit on top of whatever Fluent
                would add. -->
-          <Panel Grid.Row="2">
+          <Panel Grid.Row="3">
             <!-- VARIANTS: one card per variant; the card selects, the box ticks. -->
             <ListBox Classes="tiles" Background="Transparent" Padding="12,12,12,5"
                      ItemsSource="{Binding Items}" IsVisible="{Binding IsVariantRail}"
@@ -202,7 +242,7 @@
           <!-- THE RAIL FOOT: exactly 47 in every source (the editor footer's own band), so the list
                above it is one height whatever the page is showing. A source that exports shows what
                is ticked and the way to tick it all; one that does not says why. -->
-          <Border Grid.Row="3" Classes="modal-foot" Height="47" CornerRadius="0" Padding="12,8">
+          <Border Grid.Row="4" Classes="modal-foot" Height="47" CornerRadius="0" Padding="12,8">
             <Panel>
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" IsVisible="{Binding Source.CanBatch}">
                 <TextBlock Grid.Column="0" Classes="smallmono" TextTrimming="CharacterEllipsis"
@@ -617,7 +657,7 @@
             <Button Command="{Binding SaveCommand}" Classes="accent">
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <Path Classes="ico sm" Data="{StaticResource IconCheck}" />
-                <TextBlock Text="Save depth" />
+                <TextBlock Text="{Binding Source.SaveLabel}" />
               </StackPanel>
             </Button>
           </Panel>

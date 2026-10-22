@@ -500,7 +500,7 @@ public class RiseViewLayoutTests
         var (setVm, owner) = RisePages.SetVm();
         using var set = RisePages.Show(setVm, Min.Width, Min.Height, owner: owner);
         Assert.False(Brush(set).IsEffectivelyEnabled);
-        var size = set.View.GetVisualDescendants().OfType<NumericUpDown>().First(n => n.Classes.Contains("nin"));
+        var size = set.View.GetVisualDescendants().OfType<NumericUpDown>().First(n => n.Classes.Contains("nin") && n.IsEffectivelyVisible);
         Assert.False(size.IsEffectivelyEnabled);
     }
 

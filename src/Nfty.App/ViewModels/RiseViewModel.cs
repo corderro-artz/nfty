@@ -76,6 +76,7 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
         source.Changed += OnSourceChanged;
         if (source is VariantRiseSource variant) variant.Saved += OnVariantSaved;
         InitExport();
+        InitGrid();
     }
 
     /// <summary>What the page is showing.</summary>

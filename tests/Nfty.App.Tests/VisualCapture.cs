@@ -1494,6 +1494,9 @@ public class VisualCapture
             ("recipe", () => (RisePages.RecipeVm(), null), _ => { }),
             ("picture", () => (RisePages.PictureVm(), null), _ => { }),
             ("sheet", () => (RisePages.SheetVm(), null), _ => { }),
+            ("sheet-grid-cells", () => (RisePages.SheetVm(), null), p => p.Vm.SetGridModeCommand.Execute(GridMode.CellSize)),
+            ("sheet-grid-auto", () => (RisePages.SheetVm(), null), p => p.Vm.SetGridModeCommand.Execute(GridMode.Auto)),
+            ("sheet-grid-problem", () => (RisePages.SheetVm(), null), p => p.Vm.GridA = 5),
             ("set-batch-export", () => { var (v, o) = RisePages.SetVm(); return (v, o); },
                 p =>
                 {
@@ -1580,6 +1583,16 @@ public class VisualCapture
             case "sheet":
                 Need(vm.Source.Kind == Nfty.App.Rise.RiseSourceKind.Sheet && vm.IsTileRail && vm.Items.Count == 5, "the source is not a five-cell sheet on the tile rail");
                 Need(Shown(t => t.Text == "#5"), "the last cell's tile is not on screen");
+                break;
+            case "sheet-grid-cells":
+                Need(vm.GridMode == GridMode.CellSize && vm.GridA == 16 && vm.GridB == 16, "the row is not in cell-size mode on the 16 px cut");
+                break;
+            case "sheet-grid-auto":
+                Need(vm.GridMode == GridMode.Auto && !vm.GridNumbersEnabled, "the row is not in auto mode");
+                break;
+            case "sheet-grid-problem":
+                Need(vm.GridProblem.Contains("does not divide", StringComparison.Ordinal)
+                    && Shown(t => t.Text is { } s && s.Contains("does not divide", StringComparison.Ordinal)), "the problem line is not on screen");
                 break;
             case "set-batch-export":
                 Need(vm.IsExportTab && vm.IsBatch, "the EXPORT tab is not showing a batch");

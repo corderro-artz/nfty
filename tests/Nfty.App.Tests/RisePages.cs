@@ -112,7 +112,7 @@ internal static class RisePages
                     img[x, y] = (x + y) % 5 == 0 ? new Rgba32(250, 220, 120, 255) : new Rgba32(210, (byte)(60 + y * 8), 90, 255);
             img.Save(path);
         }
-        return Vm(PictureRiseSource.Open(path, new ImageBridge()));
+        return Vm(PictureRiseSource.Open(path, new ImageBridge(), () => System.Threading.Tasks.Task.FromResult<string?>(null)));
     }
 
     /// <summary>A loose 3 x 2 sheet of 16 px cells with five filled, on disk, with no grid recorded, so
@@ -131,7 +131,7 @@ internal static class RisePages
             }
             img.Save(path);
         }
-        return Vm(PictureRiseSource.Open(path, new ImageBridge()));
+        return Vm(PictureRiseSource.Open(path, new ImageBridge(), () => System.Threading.Tasks.Task.FromResult<string?>(null)));
     }
 
     /// <summary>A sealed Set: viewable, and refusing every export.</summary>

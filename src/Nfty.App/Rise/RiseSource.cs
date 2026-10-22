@@ -78,6 +78,12 @@ public abstract class RiseSource : IDisposable
     /// <summary>What a save writes into, for button labels and the leave card ("CookBook", a file name).</summary>
     public virtual string SaveTargetName => "";
 
+    /// <summary>The Save button's words ("Save depth", "Save as .igt…").</summary>
+    public virtual string SaveLabel => "Save depth";
+
+    /// <summary>What the last successful save said it did (the status bar repeats it), or null.</summary>
+    public virtual string? SaveResultNote => null;
+
     /// <summary>Stem of a batch export's folder or zip.</summary>
     public abstract string BatchStem { get; }
 

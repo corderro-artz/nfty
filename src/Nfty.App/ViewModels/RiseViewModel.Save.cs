@@ -74,6 +74,8 @@ public sealed partial class RiseViewModel
         try
         {
             await Source.SaveAsync();
+            // Said only when the write happened: a canceled dialog leaves depth unsaved and the note old.
+            if (!HasUnsavedDepth && Source.SaveResultNote is { } note) _status.Say(note);
         }
         catch (Exception ex)
         {
