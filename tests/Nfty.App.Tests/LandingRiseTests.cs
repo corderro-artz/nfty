@@ -11,8 +11,25 @@ using Xunit;
 
 namespace Nfty.App.Tests;
 
-public class LandingRiseTests
+public sealed class LandingRiseTests : IDisposable
 {
+    private readonly System.Collections.Generic.List<string> _dirs = new();
+
+    private string NewDir()
+    {
+        var dir = Directory.CreateTempSubdirectory("nfty-landing-rise-").FullName;
+        _dirs.Add(dir);
+        return dir;
+    }
+
+    public void Dispose()
+    {
+        foreach (var d in _dirs)
+        {
+            try { Directory.Delete(d, true); } catch (IOException) { /* best effort */ }
+        }
+    }
+
     private sealed class StubPicker(string? path) : IFilePickerService
     {
         public Task<string?> OpenFileAsync(string title, params string[] extensions) => Task.FromResult(path);
@@ -28,9 +45,9 @@ public class LandingRiseTests
                 : null,
             status, new ImageBridge());
 
-    private static string TempSheet()
+    private string TempSheet()
     {
-        var path = Path.Combine(Directory.CreateTempSubdirectory("nfty-landing-rise-").FullName, "hero.png");
+        var path = Path.Combine(NewDir(), "hero.png");
         using var img = new Image<Rgba32>(32, 16);
         for (int c = 0; c < 2; c++)
             for (int y = 4; y < 12; y++)
@@ -75,7 +92,7 @@ public class LandingRiseTests
     [AvaloniaFact]
     public async Task A_file_that_is_not_a_picture_is_reported_and_opens_nothing()
     {
-        var path = Path.Combine(Directory.CreateTempSubdirectory("nfty-landing-rise-").FullName, "bad.png");
+        var path = Path.Combine(NewDir(), "bad.png");
         File.WriteAllText(path, "nope");
         var nav = new FakeNav();
         var dialogs = new FakeDialogs();

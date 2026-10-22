@@ -175,7 +175,10 @@
                                          Classes.accent="{Binding IsSelected}" Text="{Binding Name}" />
                             </StackPanel>
                           </Button>
-                          <ToggleButton Classes="cbxtog" HorizontalAlignment="Left" VerticalAlignment="Top"
+                          <!-- A source that cannot batch (one loose picture) has nothing to tick: the box
+                               keeps its place and loses its ink, so the tile does not change shape. -->
+                          <ToggleButton Classes="cbxtog inkslot" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                        Classes.on="{Binding $parent[ListBox].((vm:RiseViewModel)DataContext).Source.CanBatch}"
                                         Margin="5,5,0,0" IsChecked="{Binding IsChecked}"
                                         ToolTip.Tip="Include in the batch export">
                             <Border Classes="cbx" Classes.on="{Binding IsChecked}">
@@ -209,7 +212,7 @@
               </Grid>
               <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center"
                           IsVisible="{Binding !Source.CanBatch}">
-                <Path Classes="ico xs" Data="{StaticResource IconLock}" />
+                <Path Classes="ico xs inkslot" Classes.on="{Binding Source.RailFootIsLock}" Data="{StaticResource IconLock}" />
                 <TextBlock Classes="vlock" Text="{Binding Source.RailFootNote}" TextTrimming="CharacterEllipsis" />
               </StackPanel>
             </Panel>

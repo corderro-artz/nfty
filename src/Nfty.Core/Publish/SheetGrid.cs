@@ -240,8 +240,25 @@ public sealed record SheetGrid(int Columns, int Rows, int CellWidth, int CellHei
     /// </remarks>
     public static long WriteInto(string pngPath, SheetGrid grid)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(pngPath);
         ArgumentNullException.ThrowIfNull(grid);
+        return Rewrite(pngPath, grid);
+    }
+
+    /// <summary>Takes the grid out of a PNG, keeping every pixel exactly: the file becomes one
+    /// picture again.</summary>
+    /// <param name="pngPath">The sheet to rewrite.</param>
+    /// <returns>How many bytes the file changed by (negative when it shrank); 0, with nothing
+    /// written, when the file carries no grid.</returns>
+    /// <remarks>Same temp-beside-then-replace write as <see cref="WriteInto"/>.</remarks>
+    public static long RemoveFrom(string pngPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(pngPath);
+        return Read(pngPath) is null ? 0 : Rewrite(pngPath, null);
+    }
+
+    private static long Rewrite(string pngPath, SheetGrid? grid)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(pngPath);
 
         long before = new FileInfo(pngPath).Length;
         string tmp = $"{pngPath}.{Guid.NewGuid():N}.tmp";
@@ -252,7 +269,7 @@ public sealed record SheetGrid(int Columns, int Rows, int CellWidth, int CellHei
                 var text = image.Metadata.GetPngMetadata().TextData;
                 for (int i = text.Count - 1; i >= 0; i--)
                     if (text[i].Keyword == ChunkKeyword) text.RemoveAt(i);
-                text.Add(new PngTextData(ChunkKeyword, grid.ToChunkText(), "", ""));
+                if (grid is not null) text.Add(new PngTextData(ChunkKeyword, grid.ToChunkText(), "", ""));
                 image.Save(tmp, new PngEncoder());
             }
 

@@ -21,6 +21,28 @@ namespace Nfty.App.Tests;
 /// </summary>
 public class RiseFromSetBrowserTests
 {
+    // Every off-thread job a browser starts (its book search, each realized row's thumbnail decode)
+    // posts its result to the UI thread when it finishes. Torn down before that, the post lands on
+    // disposed objects in whatever test pumps next - so settle them all, pump, then tear down.
+    private static void Settle(System.Collections.Generic.IEnumerable<System.Threading.Tasks.Task> extra,
+        params SetBrowserViewModel[] browsers)
+    {
+        var jobs = new System.Collections.Generic.List<System.Threading.Tasks.Task>(extra);
+        foreach (var b in browsers)
+        {
+            jobs.Add(b.BookSearch);
+            foreach (var r in b.Items) jobs.Add(r.PendingDecode);
+        }
+        var all = System.Threading.Tasks.Task.WhenAll(jobs);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        while (!all.IsCompleted && sw.ElapsedMilliseconds < 5000)
+        {
+            Dispatcher.UIThread.RunJobs();
+            System.Threading.Thread.Sleep(1);
+        }
+        Dispatcher.UIThread.RunJobs();
+    }
+
     private sealed class Rig : IDisposable
     {
         public readonly FakeNav Nav = new();
@@ -43,16 +65,10 @@ public class RiseFromSetBrowserTests
         // browser's own tests do, then tear down.
         public void Dispose()
         {
-            var searches = new System.Collections.Generic.List<System.Threading.Tasks.Task> { Browser.BookSearch };
-            if (Nav.Current is RiseViewModel { Source: SetRiseSource src }) searches.Add(src.BookSearch);
-            var all = System.Threading.Tasks.Task.WhenAll(searches);
-            var sw = System.Diagnostics.Stopwatch.StartNew();
-            while (!all.IsCompleted && sw.ElapsedMilliseconds < 5000)
-            {
-                Dispatcher.UIThread.RunJobs();
-                System.Threading.Thread.Sleep(1);
-            }
-            Dispatcher.UIThread.RunJobs();
+            var extra = Nav.Current is RiseViewModel { Source: SetRiseSource src }
+                ? new System.Collections.Generic.List<System.Threading.Tasks.Task> { src.BookSearch }
+                : new System.Collections.Generic.List<System.Threading.Tasks.Task>();
+            Settle(extra, Browser);
             (Nav.Current as IDisposable)?.Dispose();
             Browser.Dispose();
         }
@@ -90,6 +106,7 @@ public class RiseFromSetBrowserTests
         vm.Dispose();
         var bare = new SetBrowserViewModel((LoadedSet)owner);
         Assert.False(bare.RiseCommand.CanExecute(null));
+        Settle(System.Array.Empty<System.Threading.Tasks.Task>(), bare);
         bare.Dispose();
     }
 
@@ -195,10 +212,16 @@ public class RiseFromSetBrowserTests
         vm.Dispose();
         var set = (LoadedSet)owner;
         var all = Offered(set, new FakeNav(), new ImageBridge());
+        var noNav = Offered(set, null, new ImageBridge());
+        var noBridge = Offered(set, new FakeNav(), null);
+        var noRise = Offered(set, new FakeNav(), new ImageBridge(), rise: false);
         Assert.True(all.RiseCommand.CanExecute(null));
-        Assert.False(Offered(set, null, new ImageBridge()).RiseCommand.CanExecute(null));
-        Assert.False(Offered(set, new FakeNav(), null).RiseCommand.CanExecute(null));
-        Assert.False(Offered(set, new FakeNav(), new ImageBridge(), rise: false).RiseCommand.CanExecute(null));
+        Assert.False(noNav.RiseCommand.CanExecute(null));
+        Assert.False(noBridge.RiseCommand.CanExecute(null));
+        Assert.False(noRise.RiseCommand.CanExecute(null));
+        // Four browsers over one Set, each with its own book search in flight: settle all, then free
+        // the Set once (through the first - Dispose of a browser frees the Set it was handed).
+        Settle(System.Array.Empty<System.Threading.Tasks.Task>(), all, noNav, noBridge, noRise);
         all.Dispose();
     }
 

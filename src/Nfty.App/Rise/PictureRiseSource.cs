@@ -116,8 +116,8 @@ public sealed class PictureRiseSource : RiseSource
     /// when the file was not written (a chunk already there, a plain picture).</summary>
     public string? GridWriteNote { get; private set; }
 
-    /// <summary>Changes how the picture is cut, re-slices it and — for a grid other than one cell —
-    /// writes it into the file.</summary>
+    /// <summary>Changes how the picture is cut, re-slices it and writes the result into the file: the
+    /// grid for a sheet, and for a picture nothing, with any old grid taken out.</summary>
     /// <param name="grid">The new cutting; null (or one cell) makes the file one picture.</param>
     /// <exception cref="ArgumentException">The grid does not tile the picture; the message says how.</exception>
     /// <remarks>Every cell's depth is discarded when the grid changes — the caller asks first. The same
@@ -140,11 +140,34 @@ public sealed class PictureRiseSource : RiseSource
         GridOrigin = grid is null ? GridOrigin.None : GridOrigin.Manual;
         GridWriteNote = null;
         if (grid is not null) WriteGrid(grid);
+        else RemoveGrid();
         Rebuild();
         RaiseChanged();
     }
 
     private static bool IsGrid(SheetGrid g) => (long)g.Columns * g.Rows > 1;
+
+    // Back to one picture means the FILE says so too: a chunk left behind would bring the sheet back
+    // the next time the file is opened.
+    private void RemoveGrid()
+    {
+        string name = System.IO.Path.GetFileName(Path);
+        try
+        {
+            long delta = SheetGrid.RemoveFrom(Path);
+            if (delta == 0) return;     // the file carried no grid (a detected one that could not be written)
+            GridWriteNote = string.Create(CultureInfo.InvariantCulture,
+                $"Removed the grid from {name} ({(delta < 0 ? "-" : "+")}{Math.Abs(delta):N0} bytes).");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            GridWriteNote = $"{name} is read-only — it keeps its grid, and this session treats it as one picture.";
+        }
+        catch (Exception ex) when (ex is IOException or ImageFormatException)
+        {
+            GridWriteNote = $"{name} could not be written ({ex.Message}) — it keeps its grid, and this session treats it as one picture.";
+        }
+    }
 
     private void WriteGrid(SheetGrid grid)
     {
@@ -259,6 +282,9 @@ public sealed class PictureRiseSource : RiseSource
 
     /// <inheritdoc />
     public override string RailFootNote => "A single picture — no grid.";
+
+    /// <inheritdoc />
+    public override bool RailFootIsLock => false;
 
     /// <inheritdoc />
     public override string BatchStem => $"{_stem}-models";

@@ -93,6 +93,10 @@ public abstract class RiseSource : IDisposable
     /// <summary>A note at the foot of the rail.</summary>
     public virtual string RailFootNote => "";
 
+    /// <summary>Whether the rail foot's note is a read-only notice, drawn with the lock beside it. The
+    /// icon keeps its place either way; only its ink changes.</summary>
+    public virtual bool RailFootIsLock => true;
+
     /// <summary>Items known to have partial alpha (loaded now, or loaded once and let go), with how many pixels are partial.</summary>
     public virtual IReadOnlyList<PartialAlphaRow> PartialAlphaRows =>
         Items.Where(i => i.PartialCount > 0)

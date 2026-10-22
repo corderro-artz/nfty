@@ -82,6 +82,11 @@ public partial class SetItemRow : ObservableObject, IDisposable
     /// </remarks>
     public bool ImageMissing => _imageMissing;
 
+    /// <summary>The off-thread decode this row started, so a test can settle it before tearing down
+    /// instead of leaving its posted continuation to land in whichever test pumps next. Completed
+    /// when none was started; the result is posted AFTER this completes, so pump once more.</summary>
+    internal Task PendingDecode { get; private set; } = Task.CompletedTask;
+
     /// <summary>Whether this row has actually paid for its image yet. Read by the performance tests
     /// to prove the decode is still falling under the ListBox's virtualization rather than on top
     /// of it.</summary>
@@ -101,7 +106,7 @@ public partial class SetItemRow : ObservableObject, IDisposable
         _decodeStarted = true;
 
         var path = ImagePath;
-        _ = Task.Run(() =>
+        PendingDecode = Task.Run(() =>
         {
             var (bitmap, missing) = Decode(path);
             // Back to the UI thread through the dispatcher rather than a captured
@@ -439,6 +444,7 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
             string name = System.IO.Path.GetFileName(path);
             Dispatcher.UIThread.Post(() =>
             {
+                if (_disposed) return;   // the browser was torn down while the search ran
                 _sourceOdds = odds;
                 _sourceBookName = name;
                 OnPropertyChanged(nameof(CombinedText));
@@ -451,6 +457,8 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     /// leaving a posted continuation to land on a disposed browser. Completed when there is nothing
     /// to look for. Its result is posted to the UI thread AFTER this completes, so pump once more.</summary>
     internal Task BookSearch { get; private set; } = Task.CompletedTask;
+
+    private bool _disposed;
 
     /// <summary>The exact chance of this asset, or null when there is no book to compute one from
     /// or the asset cannot be mapped onto it.</summary>
@@ -762,6 +770,8 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     /// it would have decoded the whole collection at teardown.</summary>
     public void Dispose()
     {
+        if (_disposed) return;
+        _disposed = true;
         foreach (var r in Items) r.Dispose();
         _set.Dispose();
     }

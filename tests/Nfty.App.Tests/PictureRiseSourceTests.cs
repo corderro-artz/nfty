@@ -128,7 +128,7 @@ public class PictureRiseSourceTests
     public void A_read_only_foreign_sheet_keeps_the_grid_for_the_session()
     {
         // Moving a temp file over a read-only one fails only where the attribute is enforced on replace.
-        if (!OperatingSystem.IsWindows()) return;
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "replacing a read-only file only fails where the attribute is enforced on replace");
 
         var dir = Temp();
         var path = Save(Sheet(2, 1, 2), dir, "locked.png");
@@ -212,11 +212,18 @@ public class PictureRiseSourceTests
         Assert.Equal(bytes, File.ReadAllBytes(path));
         Assert.Equal(1, changed);
 
-        // Back to one picture: the chunk stays (a file is never stripped), the session reads it as one.
+        // Back to one picture: the FILE stops claiming a grid too, so reopening it is one picture.
+        var pixels = Pixels(path);
         src.ApplyGrid(null);
         Assert.Equal(RiseSourceKind.Picture, src.Kind);
         Assert.Single(src.Items);
-        Assert.Null(src.GridWriteNote);
+        Assert.StartsWith("Removed the grid from sprite.png", src.GridWriteNote);
+        Assert.Null(SheetGrid.Read(path));
+        Assert.Equal(pixels, Pixels(path));
+        Assert.Empty(Directory.GetFiles(dir, "*.tmp"));
+        using var reopened = PictureRiseSource.Open(path, new ImageBridge());
+        Assert.Equal(RiseSourceKind.Picture, reopened.Kind);
+        Assert.Null(reopened.GridWriteNote);
     }
 
     [AvaloniaFact]
@@ -257,6 +264,30 @@ public class PictureRiseSourceTests
         Assert.True(vm.HasUnsavedDepth);
         Assert.False(vm.CanSave);
         Assert.Equal("depth on loose art is kept for this session", vm.FooterText);
+    }
+
+    [AvaloniaFact]
+    public void A_single_picture_keeps_the_checkbox_and_lock_in_place_without_their_ink()
+    {
+        var dir = Temp();
+        var single = Save(new Image<Rgba32>(8, 8, new Rgba32(9, 9, 9, 255)), dir, "one.png");
+        var sheet = Save(Sheet(2, 1, 2), dir, "two.png");
+
+        double Ink(string path, Func<Avalonia.Controls.Control, bool> pick)
+        {
+            using var page = RisePages.Show(RisePages.Vm(PictureRiseSource.Open(path, new ImageBridge())), 1180, 720);
+            var c = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(page.View)
+                .OfType<Avalonia.Controls.Control>().First(pick);
+            Assert.True(c.Bounds.Width > 0 || c.Bounds.Height > 0 || path == single);   // laid out, not removed
+            return c.Opacity;
+        }
+
+        bool Box(Avalonia.Controls.Control c) => c is Avalonia.Controls.Primitives.ToggleButton t && t.Classes.Contains("cbxtog");
+        bool Lock(Avalonia.Controls.Control c) => c is Avalonia.Controls.Shapes.Path p && p.Classes.Contains("inkslot");
+
+        Assert.Equal(0, Ink(single, Box));
+        Assert.Equal(1, Ink(sheet, Box));
+        Assert.Equal(0, Ink(single, Lock));
     }
 
     private sealed class FolderPicker(string folder) : IFilePickerService
