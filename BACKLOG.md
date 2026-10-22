@@ -27,6 +27,12 @@ clobbering an `-H` parameter; a blind `Ctrl+T` that yields the same theme twice)
 **Do it as one pass, not piecemeal.** Half-reshot pages would show two collections in one document,
 which is worse than one consistently old one. The tutorial prose has to move with the pictures.
 
+**The Rise pages have no figures yet, on purpose.** `how-to/make-a-3d-model.md`, `cook-with-models.md`,
+`fix-a-2d-only-book.md`, `rise-a-spritesheet.md`, `understand/depth.md` and `reference/rise.md` (step 8) were
+written without screenshots: they need a demo that carries depth (step 9's), and shooting them against
+anything else would add a third collection to the document. Add the Rise page (both tabs), the Cook
+dialog's model options, the voxel-ready card and the grid row in this same pass.
+
 **Note the capture size changed.** Page frames were captured at 1416x950 against the old 1128x924
 window minimum. The minimum is 1280x720 now (see `ShellViewModel`), so that standard is stale.
 
@@ -211,16 +217,47 @@ byte-identical either way), and close this entry.
 
 ## M5 deferred: `Mesh`/`MeshBuilder` copies vertex data three times
 
-**Status:** deferred; harmless at today's scale, worth revisiting before step 8.
+**Status:** deferred. Step 8 now builds a model for every asset of a whole Set (`SetModeler.Model`, in
+parallel under `generate --models`), so the copies are measured instead of guessed at; nothing is
+optimized unless the measurement says to.
 
 `MeshBuilder` accumulates vertex data in `List<float>` fields as it walks a picture's faces and
 walls. `MeshBuilder.ToMesh` calls `ToArray()` on each of them — copy one — and `Mesh`'s own
 constructor clones its array parameters again — copy two — so building one mesh moves the same bytes
-three times before anything is written to disk. Harmless at the sizes this branch ships (a 512px
-disc's GLB is 1.9 MB; the copies are microseconds against `EmitWalls`' own cost, see the vertex-dedup
-entry above), but step 8 builds a model for every asset of a whole Set, in parallel — worth an
-internal no-copy constructor, or an ownership-transfer overload that takes `MeshBuilder`'s arrays
-directly, before that multiplies the copy count by collection size.
+three times before anything is written to disk. Harmless at the sizes the earlier steps shipped (a
+512px disc's GLB is 1.9 MB; the copies are microseconds against `EmitWalls`' own cost, see the
+vertex-dedup entry above). A fix would be an internal no-copy constructor, or an ownership-transfer
+overload that takes `MeshBuilder`'s arrays directly.
+
+**Rule recorded for deciding:** optimize only if the copy is more than 10% of `SetModeler.Model`'s
+time at the sizes people cook; otherwise leave it.
+
+**Measured numbers:** *to be filled in — measured in step 8 Task 17* (`SetModelsPerfTests`, 50 assets
+at 64px and 512px, `Perf` scopes `SetModeler.Model`, `Riser.TryBuild`, `ModelWriter.Write` and the
+mesh-copy share; run with `-l "console;verbosity=detailed"`). Until Task 17 lands this entry
+carries no figures on purpose; do not copy any in from elsewhere.
+
+---
+
+## OpenSea `animation_url` does not point at the model
+
+**Status:** deferred by decision (step 8, Q16); marketplace metadata is untouched.
+
+A Set cooked with `--models` has `models/NNNN.glb`, and OpenSea's metadata standard has an
+`animation_url` field that marketplaces use to show a 3D model. `metadata/NNNN.json` does not set it.
+Reasons, so nobody has to re-derive them:
+
+- `metadata/` is deliberately standards-pure and records an asset's image path relative to the Set.
+  `animation_url` has to be an address where the model is *hosted*, which nfty cannot know at cook
+  time; a relative `models/0001.glb` would be a broken link on every marketplace.
+- The Marketplace export preset leaves `models/` out, because a marketplace mints the art and its
+  standard fields. A field pointing at a file that preset does not ship would dangle by construction.
+- Adding it changes every published `metadata/NNNN.json`, and `extend` would need to rewrite it.
+
+To pick it up: add an optional base URL to the export (and to `generate`), have `SetWriter.BuildOpenSea`
+emit `animation_url` only when a model exists for that asset and a base was given, and decide what the
+Marketplace preset does about its `models/` (ship them, or leave the field off). Needs the author's
+call on the hosting story first.
 
 ---
 

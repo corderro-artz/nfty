@@ -14,6 +14,11 @@ Partly-transparent pixels have no correct answer when art is converted into a 3D
 converter has to either drop the pixel or make it solid, and neither is what you drew. The lock is
 there so you opt into that knowingly rather than discovering it later.
 
+The consequence is concrete. Save a partly transparent pixel and the book becomes **2D only**: it
+still cooks images, but it cannot rise and **Include 3D models** is off in the Cook dialog. The
+warning you get on unlocking says so. To undo it, see [Fix a 2D-only book](fix-a-2d-only-book.md).
+Why nfty refuses rather than rounds is in [Depth: paper, front and back](../understand/depth.md).
+
 Partial alpha is **legal** -- nfty will cook it, ship it and never complain. It is a decision, not an
 error.
 

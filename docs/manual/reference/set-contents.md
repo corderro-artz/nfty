@@ -9,11 +9,13 @@ collection/
   images/       0001.png, 0002.png, ...
   metadata/     0001.json, 0002.json, ...     the standard format
   nfty/         0001.json, 0002.json, ...     the rich format
+  models/       0001.glb, 0002.glb, ...       3D models, only when cooked with them
   set.json                                     the collection as a whole
   collection.set                               with Pack ticked: all of the above, zipped
 ```
 
-**The archive holds those four things and nothing else.** Not whatever else is in the folder: cook
+**The archive holds those directories and `set.json`, and nothing else.** Not whatever else is in the
+folder: cook
 into a Kitchen, or into a folder where you keep your `.cbk`, and the archive still carries only the
 Set. It never contains itself, or a `.set` from an earlier cook, so cooking again -- or extending --
 replaces it rather than nesting the old one inside the new.
@@ -100,6 +102,16 @@ The Set browser reads the same file when you select an asset:
 The `layers` block is what lets you reproduce a single asset's coloring exactly, without re-cooking
 the collection.
 
+## `models/`
+
+Present only when the Set was cooked with models ([Cook with 3D models](../how-to/cook-with-models.md)).
+One model per asset, named like its image: `0001.glb`, or `0001.gltf` plus `0001.bin`, or a single
+`0001.gltf` with its buffer inside, as the format chose. An asset with no fully opaque pixel has no
+model and no gap-filler; its number is listed in the `models` block of `set.json` below.
+
+Each model's texture is the asset's picture as cooked. Export copies `models/` as it is and never
+re-renders it, so the debug number mark, which stamps exported images only, cannot reach one.
+
 ## `set.json`
 
 ```json
@@ -113,6 +125,22 @@ the collection.
   "rarity":       [ { "trait_type": "Aura", "value": "Glow", "rarityPct": 73.4 } ]
 }
 ```
+
+A Set cooked with models adds a `models` block; a Set without them has no such key:
+
+```json
+"models": { "format": "glb", "pivot": "bottom-center", "voxelSize": 1, "skipped": [7, 31] }
+```
+
+| Field | Is |
+|---|---|
+| `format` | `glb`, `gltf` or `gltf-embedded`: the tokens the command line uses. |
+| `pivot` | `bottom-center`, `center` or `min-corner`. |
+| `voxelSize` | World units per pixel. |
+| `skipped` | Set numbers that have no model because nothing in them is fully opaque. Omitted when none. |
+
+[Extend](../how-to/more-assets.md) reads this block and makes the new assets' models the same way, so
+a Set is modeled whole or not at all.
 
 `cookbookSha256` ties the Set back to the exact CookBook that produced it. It is what
 [extend](../how-to/more-assets.md) checks before warning you that the book has moved on.

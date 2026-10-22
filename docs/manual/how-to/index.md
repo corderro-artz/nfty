@@ -27,6 +27,18 @@ around; if you do not, start with [Get started](../get-started/index.md).
 
     [Use soft edges](soft-edges.md)
 
+-   **3D models**
+
+    ---
+
+    [Make a 3D model](make-a-3d-model.md)
+
+    [Cook with 3D models](cook-with-models.md)
+
+    [Fix a 2D-only book](fix-a-2d-only-book.md)
+
+    [Rise a spritesheet](rise-a-spritesheet.md)
+
 -   **Structure**
 
     ---

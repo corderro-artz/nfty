@@ -23,6 +23,7 @@ What nfty shows before anything is open.
 | **Open a cooked .set...** | A packed `.set` archive in the Set browser. |
 | **Open the demo CookBook** | The sample collection built into nfty. See [The demo CookBook](../get-started/the-demo.md). |
 | **Open Kitchen...** | An existing `.ktn`. |
+| **Rise a picture...** | A `.png` on the Rise page, as one picture or, when it has a grid, a sheet of cells. See [Rise a spritesheet](../how-to/rise-a-spritesheet.md). |
 
 ## Recent
 
@@ -38,7 +39,8 @@ open, none is, or the open one is empty -- so opening a Kitchen never reflows th
 ![The Kitchen shelf](../images/kitchen-shelf-dark.png#only-dark)
 
 With one open it lists the folder's contents: CookBooks first, then loose Recipes and Ingredients.
-The chevrons at the right page through by kind.
+The chevrons at the right page through by kind. A small flat-sheet mark in a card's corner means that book,
+Recipe or Ingredient is [2D only](../how-to/fix-a-2d-only-book.md).
 
 The shelf carries no buttons of its own -- **Open Kitchen...** and **New Kitchen...** are already in
 the column to its left.

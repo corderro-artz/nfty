@@ -15,6 +15,8 @@ in [Get started](../get-started/index.md) and [How nfty works](../understand/ind
 
     [The Ingredient Editor](editor.md)
 
+    [The Rise page](rise.md)
+
 -   **Input**
 
     ---

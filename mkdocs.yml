@@ -151,6 +151,10 @@ nav:
       - how-to/import-art.md
       - how-to/paint-in-color.md
       - how-to/soft-edges.md
+      - how-to/make-a-3d-model.md
+      - how-to/cook-with-models.md
+      - how-to/fix-a-2d-only-book.md
+      - how-to/rise-a-spritesheet.md
       - how-to/inspect-an-asset.md
       - how-to/more-assets.md
       - how-to/share-a-collection.md
@@ -164,12 +168,14 @@ nav:
       - understand/uniqueness.md
       - understand/seeds.md
       - understand/sealing.md
+      - understand/depth.md
       - understand/no-resizing.md
   - Reference:
       - reference/index.md
       - reference/opening-screen.md
       - reference/explorer.md
       - reference/editor.md
+      - reference/rise.md
       - reference/shortcuts.md
       - reference/cli.md
       - reference/file-formats.md

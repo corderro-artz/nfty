@@ -62,7 +62,10 @@ nfty model hat.igt --variant red --out hat.gltf --format gltf
 Every fully opaque pixel becomes a column of voxels: one for the paper, plus its **front** depth
 toward you and its **back** depth away from you. The column's sides take the pixel's own color. A
 `.png` has no stored depth, so it is flat paper unless you fill it; an `.igt` variant uses the depth
-stored with it.
+stored with it. A Dynamic or Static variant rises as its stored **gray value-map**, as a loose
+picture of the same pixels would; there is no color option, because color is decided when an asset is
+cooked. The Rise page does the same thing with a picture, a layer, a roll or a cooked asset: see
+[Make a 3D model](../how-to/make-a-3d-model.md).
 
 | Option | Does |
 |---|---|
@@ -124,6 +127,10 @@ NFTY_KEY=... nfty export ./collection --out ./dist --preset sealedcritique --key
 | `--seal` | Encrypt it and mark it view-only. Writes a `.tin`. |
 | `--note "<text>"` | A line for the recipient. On a sealed export it travels in the clear. |
 | `--key <source>` | Where the passphrase comes from — see below. Omit it and nfty asks at the terminal. |
+
+A Set cooked with `--models` ships its `models/` in every preset except `marketplace`, which leaves
+them out. There is no flag for it: the export card in the app has a **3D models** box, and the command
+line follows the preset. The export prints a `3D models (N)` line when it carries them.
 
 `set.json` always ships -- it is what makes the result a Set rather than a folder of pictures, and it
 carries the collection-wide rarity table, so even the leanest export still answers "what is this and

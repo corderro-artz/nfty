@@ -41,6 +41,12 @@ away from the work, rather than in the middle of it.
 
     The encryption is real. The view-only mark is a lock on a door, not a wall.
 
+-   [**Depth: paper, front and back**](depth.md)
+
+    ---
+
+    How a flat picture becomes a solid, and why a soft edge cannot.
+
 -   [**Why nfty never resizes your art**](no-resizing.md)
 
     ---

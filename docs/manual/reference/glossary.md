@@ -1,5 +1,9 @@
 # Glossary
 
+**2D only**
+:   Marks a book, Recipe or Ingredient with at least one partly transparent pixel. It cooks images
+    normally but cannot rise. Fixed with **Make voxel-ready**.
+
 **Art combinations**
 :   How many distinct *variant* combinations a Recipe can produce, with its rules applied. Colors are
     not counted here -- that is the DNA space.
@@ -47,6 +51,9 @@
 **Opacity lock**
 :   The editor padlock that keeps every painted pixel fully opaque or fully erased.
 
+**Paper**
+:   The one voxel every solid pixel always has. A picture with no depth painted is paper everywhere.
+
 **Quantize**
 :   How finely a layer's color range is divided into colors nfty treats as different. Finer steps
     mean a larger DNA space.
@@ -63,6 +70,10 @@
 
 **Rule**
 :   An exclusion: when this variant is picked, that one cannot be.
+
+**Rise**
+:   The page, and the act, of turning finished pixel art into a 3D model by giving each pixel a
+    thickness. See [Depth: paper, front and back](../understand/depth.md).
 
 **Seed**
 :   The word that drives generation. Same book plus same seed produces identical output.

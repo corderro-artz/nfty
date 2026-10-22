@@ -9,7 +9,7 @@ nothing is hidden.
 | `.cbk` | CookBook | `manifest.json` + `recipes/*.rcp` |
 | `.rcp` | Recipe | `manifest.json` + `ingredients/*.igt` |
 | `.igt` | Ingredient | `manifest.json` + one PNG per variant + an optional `depth/{variantId}.dep` per variant |
-| `.set` | A cooked Set | `set.json` + `images/`, `metadata/`, `nfty/` |
+| `.set` | A cooked Set | `set.json` + `images/`, `metadata/`, `nfty/`, and `models/` when cooked with them |
 | `.ktn` | Kitchen | `manifest.json` only -- an identity, nothing else |
 | `.mnu` | Menu | `manifest.json` + art (one atlas PNG, or one PNG per cell) + an optional `depth/{cellKey}.dep` per cell |
 | `.tin` | A sealed export | `seal.json` in the clear + an encrypted `.set` |
@@ -38,6 +38,22 @@ A variant with no `depth/` entry at all is flat paper -- the same as every pixel
 zero. An all-zero map is therefore never written; a `depth/` entry, when present, always carries at
 least one non-zero byte. An entry whose length disagrees with its variant's (or cell's) width and
 height is refused on read, naming the variant or cell, rather than silently misread.
+
+## A spritesheet's grid
+
+A spritesheet that nfty writes, or that you set the grid of on the Rise page, carries its grid **inside
+the PNG**, as a `tEXt` chunk with the keyword `nfty-grid`. The text is semicolon-separated `key=value`
+pairs in a fixed order:
+
+```
+cols=8;rows=4;cell=64x64;count=29
+```
+
+`count` is how many cells, in reading order, hold a picture; the rest are empty. Numbers are positive
+integers, written invariant. A reader ignores keys it does not know, but a missing or malformed number,
+or a count past `cols * rows`, makes the whole record count as absent. Other programs skip an
+ancillary chunk they do not know, so the sheet is an ordinary picture to them. See
+[Rise a spritesheet](../how-to/rise-a-spritesheet.md).
 
 ## Looking inside one
 
