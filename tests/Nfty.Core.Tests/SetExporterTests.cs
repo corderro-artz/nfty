@@ -393,6 +393,86 @@ public class SetExporterTests
         Assert.Empty(Directory.EnumerateFileSystemEntries(outDir));
     }
 
+    // ------------------------------------------------------------------ models
+
+    private sealed class FakeModeler : IAssetModeler
+    {
+        public SetModels Options { get; } = new("fake", "center", 0.5f);
+        public IReadOnlyList<string> FileNames(string baseName) => [$"{baseName}.fake"];
+        public IReadOnlyList<SetFile>? Model(GeneratedAsset asset, string baseName) =>
+            [new SetFile($"{baseName}.fake", [(byte)asset.SetNumber])];
+    }
+
+    /// <summary>A cooked Set that carries <c>models/</c>.</summary>
+    private static string ModeledSet(int count = 2)
+    {
+        var dir = Path.Combine(Directory.CreateTempSubdirectory("nfty-src-").FullName, "ChestDemo");
+        using var book = Book();
+        using var set = Generator.Generate(book, new GenerateOptions(count, "launch"));
+        SetWriter.Write(set, dir, false, new FakeModeler());
+        return dir;
+    }
+
+    [Fact]
+    public void Models_are_exported_when_asked_and_the_set_has_them()
+    {
+        var set = ModeledSet();
+        var options = new ExportOptions { Models = true };
+        var plan = SetExporter.Plan(set, options);
+
+        Assert.Contains("models/0001.fake", plan.Entries.Select(e => e.Name));
+        Assert.Contains("3D models (2)", plan.Parts());
+        var result = SetExporter.Export(set, OutDir(), options);
+        Assert.Contains("models/0001.fake", EntriesOf(result.Path));
+        Assert.Contains("models/0002.fake", EntriesOf(result.Path));
+    }
+
+    [Fact]
+    public void Models_are_left_out_when_the_box_is_off()
+    {
+        var set = ModeledSet();
+        var options = new ExportOptions { Models = false };
+
+        Assert.DoesNotContain(SetExporter.Plan(set, options).Entries, e => e.Name.StartsWith("models/"));
+        var result = SetExporter.Export(set, OutDir(), options);
+        Assert.DoesNotContain(EntriesOf(result.Path), n => n.StartsWith("models/"));
+        Assert.Contains("set.json", EntriesOf(result.Path));
+    }
+
+    [Fact]
+    public void The_marketplace_preset_leaves_models_out()
+    {
+        var options = ExportOptions.For(ExportPreset.Marketplace);
+        Assert.False(options.Models);
+        Assert.DoesNotContain(SetExporter.Plan(ModeledSet(), options).Entries,
+            e => e.Name.StartsWith("models/"));
+
+        // The new axis takes part in preset matching like every other.
+        Assert.Null((options with { Models = true }).MatchingPreset());
+        Assert.Equal(ExportPreset.AssetPack, ExportOptions.For(ExportPreset.AssetPack).MatchingPreset());
+        Assert.True(ExportOptions.For(ExportPreset.AssetPack).Models);
+    }
+
+    [Fact]
+    public void A_set_without_models_never_lists_the_part()
+    {
+        var plan = SetExporter.Plan(CookedSet(), new ExportOptions { Models = true });
+
+        Assert.DoesNotContain(plan.Entries, e => e.Name.StartsWith("models/"));
+        Assert.DoesNotContain(plan.Parts(), p => p.Contains("models", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void A_sealed_export_carries_the_models()
+    {
+        var result = SetExporter.Export(ModeledSet(), OutDir(),
+            ExportOptions.For(ExportPreset.SealedCritique), passphrase: Pass);
+
+        using var opened = SealedSetReader.Open(result.Path, Pass);
+        var dir = opened.SourceDirectory;
+        Assert.True(File.Exists(Path.Combine(dir, "models", "0001.fake")));
+    }
+
     [Fact]
     public void Options_report_which_preset_they_are_and_stop_when_they_stop_being_it()
     {

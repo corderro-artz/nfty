@@ -69,7 +69,11 @@ public record ExportPlan(
         var parts = Entries
             .GroupBy(e => e.Name.Contains('/') ? e.Name[..e.Name.IndexOf('/')] + "/" : e.Name)
             .OrderBy(g => g.Key, StringComparer.Ordinal)
-            .Select(g => g.Count() == 1
+            .Select(g => g.Key == SetLayout.ModelsDir + "/"
+                // Named for what a reader knows it as; the count is of files, one per asset.
+                ? string.Create(System.Globalization.CultureInfo.InvariantCulture,
+                    $"3D models ({g.Count()})")
+                : g.Count() == 1
                 ? g.Key
                 : string.Create(System.Globalization.CultureInfo.InvariantCulture,
                     $"{g.Key}  {g.Count()} files"))
@@ -490,6 +494,7 @@ public static class SetExporter
         if (options.Images) wanted.Add(SetLayout.ImagesDir);
         if (options.OpenSeaMetadata) wanted.Add(SetLayout.MetadataDir);
         if (options.NftyMetadata) wanted.Add(SetLayout.NftyDir);
+        if (options.Models) wanted.Add(SetLayout.ModelsDir);
 
         var entries = new List<ExportEntry>();
 

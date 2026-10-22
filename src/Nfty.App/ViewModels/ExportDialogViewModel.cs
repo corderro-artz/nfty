@@ -125,6 +125,9 @@ public partial class ExportDialogViewModel : ViewModelBase
     [ObservableProperty] private bool _images = true;
     [ObservableProperty] private bool _openSeaMetadata = true;
     [ObservableProperty] private bool _nftyMetadata = true;
+
+    /// <summary>Include <c>models/</c>. Carried so a preset round-trips; the box itself arrives with the 3D controls.</summary>
+    [ObservableProperty] private bool _models = true;
     [ObservableProperty] private bool _includeCookBook;
     [ObservableProperty] private bool _packed = true;
 
@@ -341,6 +344,7 @@ public partial class ExportDialogViewModel : ViewModelBase
         Images = Images,
         OpenSeaMetadata = OpenSeaMetadata,
         NftyMetadata = NftyMetadata,
+        Models = Models,
         IncludeCookBook = IncludeCookBook,
         Shape = Packed ? ExportShape.Archive : ExportShape.Folder,
         Sealed = IsSealed,
@@ -363,6 +367,7 @@ public partial class ExportDialogViewModel : ViewModelBase
         Images = o.Images;
         OpenSeaMetadata = o.OpenSeaMetadata;
         NftyMetadata = o.NftyMetadata;
+        Models = o.Models;
         IncludeCookBook = o.IncludeCookBook;
         IsSealed = o.Sealed;
         Packed = o.Shape == ExportShape.Archive;
@@ -538,7 +543,7 @@ public partial class ExportDialogViewModel : ViewModelBase
     /// </remarks>
     internal static readonly IReadOnlySet<string> PlanInputs = new HashSet<string>(StringComparer.Ordinal)
     {
-        nameof(Images), nameof(OpenSeaMetadata), nameof(NftyMetadata), nameof(IncludeCookBook),
+        nameof(Images), nameof(OpenSeaMetadata), nameof(NftyMetadata), nameof(Models), nameof(IncludeCookBook),
         nameof(Packed), nameof(IsSealed), nameof(Passphrase), nameof(PassphraseConfirm),
         nameof(Note), nameof(CookBookPath), nameof(MakeSpriteSheet), nameof(SheetColumns),
         nameof(SheetRows), nameof(NumberWatermark), nameof(WatermarkCorner),

@@ -72,6 +72,21 @@ public record ExportOptions
     public bool NftyMetadata { get; init; } = true;
 
     /// <summary>
+    /// Include <c>models/</c> — the 3D model written for each asset at cook time.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>On by default, off for <see cref="ExportPreset.Marketplace"/></b> — a marketplace
+    /// mints the art and its standard fields and has no use for the models. A Set cooked without
+    /// models has no <c>models/</c>, so the flag then changes nothing and the plan never mentions
+    /// the part.</para>
+    ///
+    /// <para><b>The models are copied as cooked and never re-rendered</b>, so the debug mark
+    /// (<see cref="NumberWatermark"/>), which stamps only the art on the way out, cannot reach one:
+    /// a model's texture is the unstamped asset.</para>
+    /// </remarks>
+    public bool Models { get; init; } = true;
+
+    /// <summary>
     /// Ship the source <c>.cbk</c> alongside the Set.
     /// </summary>
     /// <remarks>
@@ -146,7 +161,7 @@ public record ExportOptions
     /// <returns>Ordinary options; change any of them afterward.</returns>
     public static ExportOptions For(ExportPreset preset) => preset switch
     {
-        ExportPreset.Marketplace => new ExportOptions { NftyMetadata = false },
+        ExportPreset.Marketplace => new ExportOptions { NftyMetadata = false, Models = false },
         ExportPreset.AssetPack => new ExportOptions(),
         ExportPreset.FullProject =>
             new ExportOptions { IncludeCookBook = true, Shape = ExportShape.Folder },
