@@ -125,7 +125,7 @@ public sealed partial class RiseViewModel
     private void SetGridMode(GridMode mode) => GridMode = mode;
 
     private bool CanApplyGrid() =>
-        Source is PictureRiseSource && !IsExporting && !IsSaving && GridProblem.Length == 0;
+        Source is PictureRiseSource && !IsExporting && !IsSaving && !IsVoxelBusy && GridProblem.Length == 0;
 
     /// <summary>Re-cuts the picture by the grid as entered, and writes it into the file.</summary>
     /// <remarks>Asks first when any cell carries unsaved depth, because re-cutting discards it all; the
@@ -134,7 +134,13 @@ public sealed partial class RiseViewModel
     private async Task ApplyGrid()
     {
         // A disabled button is a label: the generated command does not consult CanExecute.
-        if (Source is not PictureRiseSource pic || !CanApplyGrid()) return;
+        if (Source is not PictureRiseSource pic) return;
+        if (!CanApplyGrid())
+        {
+            // Said, not swallowed: a press that reaches here past a dimmed button is a job still running.
+            if (GridProblem.Length == 0) _status.Say("Wait for the running job to finish, then apply the grid.");
+            return;
+        }
         if (ProblemFor(pic, out var grid) is not null) return;
         // One cell is no sheet; the source reads it as "one picture".
         bool same = Equals(grid, pic.Grid) || (grid is { Count: 1 } && pic.Grid is null);
@@ -156,7 +162,19 @@ public sealed partial class RiseViewModel
         CancelDepthPreview();
         var old = Items.ToList();
         foreach (var item in old) item.PropertyChanged -= OnItemExportChanged;
-        pic.ApplyGrid(grid);
+        // The rewrite of the PNG runs off the UI thread under the same busy flag voxel-ready holds, so
+        // Save, Export and a second Apply are refused for as long as it runs.
+        IsVoxelBusy = true;
+        try { await pic.ApplyGridAsync(grid); }
+        catch (Exception ex)
+        {
+            foreach (var item in old) item.PropertyChanged += OnItemExportChanged;
+            if (!_disposed)
+                await _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, "Could not change the grid", ex.Message));
+            return;
+        }
+        finally { IsVoxelBusy = false; }
+        if (_disposed) return;
         foreach (var item in Items) item.PropertyChanged += OnItemExportChanged;
         if (Source.CanBatch && Source.InitialItem.IsRisableOrUnknown) Source.InitialItem.IsChecked = true;
 

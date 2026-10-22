@@ -150,6 +150,46 @@ public sealed class PictureRiseSource : RiseSource
     /// grid again is a no-op, so nothing is rewritten and no depth is lost.</remarks>
     public void ApplyGrid(SheetGrid? grid)
     {
+        if (!PrepareGrid(ref grid, out bool remove)) return;
+        if (grid is not null) WriteGrid(grid); else if (remove) RemoveGrid();
+        CommitGrid(grid);
+    }
+
+    /// <summary>As <see cref="ApplyGrid"/>, but the file is rewritten off the calling thread: a large
+    /// sheet's decode and encode must not freeze the window. The source is re-cut when the write is
+    /// done, back on the caller's context.</summary>
+    /// <param name="grid">The new cutting; null (or one cell) makes the file one picture.</param>
+    /// <returns>A task that completes when the file is written and the picture re-cut.</returns>
+    /// <exception cref="ArgumentException">The grid does not tile the picture; the message says how.</exception>
+    /// <exception cref="InvalidOperationException">A save or another grid write is running; refused, never
+    /// queued, because the caller decided against a source that is about to change.</exception>
+    public Task ApplyGridAsync(SheetGrid? grid)
+    {
+        if (_inFlight is not null || _gridInFlight is not null)
+            throw new InvalidOperationException("A save is running. Apply the grid when it has finished.");
+        if (!PrepareGrid(ref grid, out bool remove)) return Task.CompletedTask;
+        var task = ApplyGridCoreAsync(grid, remove);
+        _gridInFlight = task;
+        return task;
+    }
+
+    private Task? _gridInFlight;
+
+    private async Task ApplyGridCoreAsync(SheetGrid? grid, bool remove)
+    {
+        try
+        {
+            if (grid is not null) await Task.Run(() => WriteGrid(grid));
+            else if (remove) await Task.Run(RemoveGrid);
+            CommitGrid(grid);
+        }
+        finally { _gridInFlight = null; }
+    }
+
+    // Validates and clears the old note. False when there is nothing to do (the same grid again).
+    private bool PrepareGrid(ref SheetGrid? grid, out bool remove)
+    {
+        remove = false;
         if (grid is not null && !IsGrid(grid)) grid = null;
         if (grid is not null)
         {
@@ -159,14 +199,18 @@ public sealed class PictureRiseSource : RiseSource
             if (problem is not null) throw new ArgumentException(problem, nameof(grid));
         }
 
-        if (Equals(grid, Grid) && GridOrigin != GridOrigin.None) return;
-        if (grid is null && Grid is null) return;
+        if (Equals(grid, Grid) && GridOrigin != GridOrigin.None) return false;
+        if (grid is null && Grid is null) return false;
 
+        GridWriteNote = null;
+        remove = grid is null;
+        return true;
+    }
+
+    private void CommitGrid(SheetGrid? grid)
+    {
         Grid = grid;
         GridOrigin = grid is null ? GridOrigin.None : GridOrigin.Manual;
-        GridWriteNote = null;
-        if (grid is not null) WriteGrid(grid);
-        else RemoveGrid();
         Rebuild();
         RaiseChanged();
     }

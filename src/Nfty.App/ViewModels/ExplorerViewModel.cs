@@ -301,7 +301,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
                 .Where(ingById.ContainsKey)
                 .Select(id =>
                 {
-                    var partial = Opacity.HasPartialAlpha(ingById[id]);
+                    var partial = PartialAlphaCache.HasPartialAlpha(ingById[id]);
                     anyPartial |= partial;
                     return new ExplorerNode(id, ingById[id].Manifest.Name,
                         ExplorerNodeKind.Ingredient, Array.Empty<ExplorerNode>(), (r, ingById[id]),

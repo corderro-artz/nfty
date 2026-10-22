@@ -305,4 +305,30 @@ public class RiseSheetGridTests
         // and the line itself is the one thing that changed
         Assert.NotEqual(Region(clean, 0, (int)origin.Y, railWidth, top), Region(problem, 0, (int)origin.Y, railWidth, top));
     }
+
+    [AvaloniaFact]
+    public async Task The_rewrite_runs_off_the_ui_thread_under_the_busy_flag_and_refuses_a_second_write()
+    {
+        var path = Solid(16, 8);
+        using var vm = Page(path, new FakeDialogs());
+        var src = Assert.IsType<PictureRiseSource>(vm.Source);
+        vm.GridMode = GridMode.ColumnsRows;
+        vm.GridA = 2;
+        vm.GridB = 1;
+
+        var running = vm.ApplyGridCommand.ExecuteAsync(null);
+
+        // Not finished on return: the PNG rewrite is awaited, so the window is free to repaint.
+        Assert.False(running.IsCompleted);
+        Assert.True(vm.IsVoxelBusy);
+        Assert.False(vm.ApplyGridCommand.CanExecute(null));
+        Assert.False(vm.SaveCommand.CanExecute(null));
+        Assert.Throws<InvalidOperationException>(() => { _ = src.ApplyGridAsync(SheetGrid.FromColumnsRows(4, 1, 8, 4)); });
+
+        await running;
+
+        Assert.False(vm.IsVoxelBusy);
+        Assert.Equal(2, vm.Items.Count);
+        Assert.Equal(new SheetGrid(2, 1, 8, 8, 2), SheetGrid.Read(path));
+    }
 }
