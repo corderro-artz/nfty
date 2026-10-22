@@ -36,8 +36,8 @@
                the sample chip, beside the seed it changes, where it is a control among controls
                instead of a smudge on the art. -->
           <!-- The picture and the control that changes it, as one column.
-               TOP-aligned, not centred: the card's text starts at the recipe's name, and a
-               vertically-centred 92px square floated the art half a line above it, so neither the
+               TOP-aligned, not centered: the card's text starts at the recipe's name, and a
+               vertically-centered 92px square floated the art half a line above it, so neither the
                top nor the bottom of the two columns lined up with anything. Flush with the title is
                the one alignment a reader can actually see.
                And the sample chip lives HERE now rather than out at the end of the stats row, where
@@ -62,7 +62,7 @@
                  button that did nothing. The tumble is a transition rather than a one-shot animation,
                  so a second press during the first cannot strand it; see Button.sampleroll and
                  Panel.dieroll in Styles.axaml. -->
-            <!-- THE ACTION ROW: the die and Rise, a centred pair under the picture they both act on.
+            <!-- THE ACTION ROW: the die and Rise, a centered pair under the picture they both act on.
                  Both are the same quiet chip (Button.sampleroll), fixed widths - 28 and 58 - so
                  nothing in the pair moves when a face changes or a button dims. Rise opens the page
                  on the roll the hero is showing. -->

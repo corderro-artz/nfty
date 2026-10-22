@@ -110,4 +110,26 @@ public class RiseVoxelEditorJourneyTests
         Assert.Contains("Rise changed this layer", dialogs.ErrorText);
         Assert.Equal(snapped, File.ReadAllBytes(path));
     }
+
+    [AvaloniaFact]
+    public async Task A_loose_editor_frees_the_pictures_a_rise_reload_replaces()
+    {
+        var book = RiseFixtures.ChestBook();
+        var ing = book.Recipes[0].Ingredients.Single(i => i.Manifest.Id == "body");
+        ing.VariantImages["ghost"][4, 3] = new Rgba32(200, 40, 40, 127);
+        var path = Path.Combine(Directory.CreateTempSubdirectory("nfty-rise-").FullName, "Body.igt");
+        await IngredientArchive.WriteAsync(path, ing.Manifest, ing.VariantImages, ing.Depths);
+        var nav = new FakeNav();
+        var dialogs = new RiseVoxelReadyTests.ScriptedDialogs { Answer = true };
+        using var session = new CookBookSession();
+        var wrapper = Nfty.App.Services.LooseWorkspace.WrapIngredient(ing);
+        var before = ing.VariantImages["ghost"];
+        using var editor = EditorOver(session, dialogs, nav, path, ing, wrapper);
+
+        await SnapFromEditor(editor, nav);
+
+        // The snapped ghost replaced it: the pre-snap picture is nobody's any more, so it is freed.
+        Assert.Throws<ObjectDisposedException>(() => _ = before[0, 0]);
+        Assert.False(editor.IsDirty);
+    }
 }

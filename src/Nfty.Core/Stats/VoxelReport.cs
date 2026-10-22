@@ -16,7 +16,7 @@ namespace Nfty.Core.Stats;
 public readonly record struct VoxelVariant(
     string IngredientName, string VariantName, string VariantId, int Pixels, int Partial)
 {
-    /// <summary>Whether this variant voxelises cleanly — every pixel wholly there or wholly absent.</summary>
+    /// <summary>Whether this variant voxelizes cleanly — every pixel wholly there or wholly absent.</summary>
     public bool IsClean => Partial == 0;
 
     /// <summary>The share of the image that is only partly there, 0-100.</summary>
@@ -136,7 +136,7 @@ public static class VoxelReport
         sb.AppendLine();
         sb.AppendLine(dirty == 0
             ? string.Format(CultureInfo.InvariantCulture,
-                "All {0:N0} variants voxelise cleanly.", rows.Count)
+                "All {0:N0} variants voxelize cleanly.", rows.Count)
             : string.Format(CultureInfo.InvariantCulture,
                 "{0:N0} of {1:N0} variants {2} partial alpha.", dirty, rows.Count,
                 dirty == 1 ? "carries" : "carry"));

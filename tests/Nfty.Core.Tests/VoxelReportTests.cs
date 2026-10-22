@@ -32,7 +32,7 @@ public class VoxelReportTests
     }
 
     [Fact]
-    public void Fully_opaque_and_fully_erased_both_voxelise_cleanly()
+    public void Fully_opaque_and_fully_erased_both_voxelize_cleanly()
     {
         using var ing = Ing("Solid", ("a", "Opaque", 255), ("b", "Erased", 0));
 
@@ -110,7 +110,7 @@ public class VoxelReportTests
         var text = VoxelReport.Render("Book", VoxelReport.Scan(ing));
 
         Assert.Contains("Voxel readiness: Book", text, StringComparison.Ordinal);
-        Assert.Contains("All 1 variants voxelise cleanly.", text, StringComparison.Ordinal);
+        Assert.Contains("All 1 variants voxelize cleanly.", text, StringComparison.Ordinal);
         Assert.DoesNotContain("opacity lock", text, StringComparison.Ordinal);
     }
 

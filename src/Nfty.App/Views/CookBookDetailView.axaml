@@ -239,7 +239,7 @@
                      the strip into the arrow column. The gaps alternated 0 and 4, which is what made
                      the row read as unevenly spaced: the separator hugged the badge on its left
                      instead of sitting between the two it separates. At 39 the slack is 4, so every
-                     gap in the strip is 4 and an x sits centred between its neighbours.
+                     gap in the strip is 4 and an x sits centered between its neighbours.
                      A GRID OF FIXED SLOTS, not a run. Laid out as a run, a five-layer recipe put its
                      first badge where a six-layer one put its second and nothing lined up down the
                      table. One slot per column means badge n sits at the same x on every row, and a

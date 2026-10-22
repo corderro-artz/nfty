@@ -17,6 +17,11 @@ this order, and the rail header says which it used:
 
 A picture with no grid opens as a single picture, and the rail says so.
 
+**Opening a sheet can rewrite the file.** When nfty detects a grid (the `detected` row), it records it in the PNG
+straight away, without asking, so the next open reads `from the file`. Work on a copy if the original must
+stay byte-for-byte. If the file is read-only, it is left alone and the grid holds for that session only: the
+next open detects it again.
+
 ## Correct the grid
 
 When a loose picture is open, the **grid row** sits at the head of the rail:

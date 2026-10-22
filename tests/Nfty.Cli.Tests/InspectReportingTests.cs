@@ -145,7 +145,7 @@ public class InspectReportingTests
         {
             var (_, text, _) = Capture("inspect", WriteBook(dir, null, 0), "--voxel");
 
-            Assert.Contains("All 2 variants voxelise cleanly.", text, StringComparison.Ordinal);
+            Assert.Contains("All 2 variants voxelize cleanly.", text, StringComparison.Ordinal);
         }
         finally { Directory.Delete(dir, true); }
     }

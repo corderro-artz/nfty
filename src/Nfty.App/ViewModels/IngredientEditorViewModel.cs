@@ -557,7 +557,14 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// page's pixels with the old ones.</remarks>
     private void LoadDraft(LoadedIngredient saved)
     {
+        var replaced = _ing;
         _ing = saved;
+        // A loose layer has no book that owns its pictures: the ones a Rise reload replaces (the
+        // pre-snap images) belong to nothing once _ing moves on. In a book the session owns them.
+        if (_looseSavePath is not null && !ReferenceEquals(replaced, saved))
+            foreach (var (id, img) in replaced.VariantImages)
+                if (!saved.VariantImages.TryGetValue(id, out var kept) || !ReferenceEquals(kept, img))
+                    img.Dispose();
         if (IsDirty)
         {
             _staleReason = "Rise changed this layer on disk while the editor had unsaved edits. Saving would write the old pixels back; reopen the layer.";

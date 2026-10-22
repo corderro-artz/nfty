@@ -25,11 +25,11 @@ using Path = Avalonia.Controls.Shapes.Path;
 namespace Nfty.App.Tests;
 
 /// <summary>
-/// The recipe portrait's reroll: a centred glyph, at the size its icon class says.
+/// The recipe portrait's reroll: a centered glyph, at the size its icon class says.
 /// </summary>
 /// <remarks>
 /// <para>It used to read "sample 1" beside the die — a label printing the reroll COUNT, which is not
-/// a fact about the recipe and invites being read as a stored sample id. Icon only now, centred
+/// a fact about the recipe and invites being read as a stored sample id. Icon only now, centered
 /// under the picture it rolls.</para>
 ///
 /// <para>The first cut of that rotated the <c>Path</c> itself for its click animation, which
@@ -84,12 +84,12 @@ public class RerollButtonTests
     /// from the image canvas above it".
     /// </summary>
     [AvaloniaFact]
-    public void The_reroll_and_rise_pair_is_centred_under_the_portrait()
+    public void The_reroll_and_rise_pair_is_centered_under_the_portrait()
     {
         var (window, view, vm) = Show();
         try
         {
-            // The pair under the portrait is the die and Rise: it is the PAIR that is centred.
+            // The pair under the portrait is the die and Rise: it is the PAIR that is centered.
             var chips = view.GetVisualDescendants().OfType<Button>()
                 .Where(x => x.Classes.Contains("sampleroll")).ToList();
             Assert.Equal(2, chips.Count);

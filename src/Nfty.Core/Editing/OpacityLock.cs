@@ -19,6 +19,6 @@ public enum OpacityLock
     Locked,
 
     /// <summary>Partial alpha is written through as the command computed it. Semi-transparent pixels
-    /// do not voxelise cleanly, which is why this is never the default.</summary>
+    /// do not voxelize cleanly, which is why this is never the default.</summary>
     Unlocked,
 }
