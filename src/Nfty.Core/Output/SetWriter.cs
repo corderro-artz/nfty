@@ -93,7 +93,7 @@ public static class SetWriter
             // Built, written and dropped one at a time: memory is one model per worker, never the set.
             var files = ModelFor(models, asset);
             if (skipped is not null && files is null) skipped[slots[asset.SetNumber]] = true;
-            ClearStaleModels(layout, asset, files, models is not null);
+            ClearStaleModels(layout, asset, files, models);
             if (files is not null)
                 foreach (var file in files) File.WriteAllBytes(Path.Combine(layout.ModelsDir, file.FileName), file.Bytes);
         });
@@ -150,7 +150,7 @@ public static class SetWriter
             // The modeler is synchronous CPU work; it is not faked async. One model at a time per worker.
             var files = ModelFor(models, asset);
             if (skipped is not null && files is null) skipped[slots[asset.SetNumber]] = true;
-            ClearStaleModels(layout, asset, files, models is not null);
+            ClearStaleModels(layout, asset, files, models);
             if (files is not null)
                 foreach (var file in files)
                     await File.WriteAllBytesAsync(Path.Combine(layout.ModelsDir, file.FileName), file.Bytes, ct);
@@ -511,12 +511,16 @@ public static class SetWriter
     /// An asset re-made as a skip (extend over a number that used to have a model) must not leave
     /// its old model behind: set.json would say "no model" beside a file that claims otherwise.
     /// </summary>
-    private static void ClearStaleModels(Layout layout, GeneratedAsset asset, IReadOnlyList<SetFile>? files, bool modeled)
+    private static void ClearStaleModels(Layout layout, GeneratedAsset asset, IReadOnlyList<SetFile>? files, IAssetModeler? models)
     {
-        if (!modeled || files is not null || !Directory.Exists(layout.ModelsDir)) return;
-        string stem = asset.SetNumber.ToString("D4") + ".";
-        foreach (var f in Directory.EnumerateFiles(layout.ModelsDir, stem + "*"))
-            File.Delete(f);
+        if (models is null || files is not null || !Directory.Exists(layout.ModelsDir)) return;
+        // Only the files this modeler would have written for the number - never a wildcard, since
+        // the folder may hold a user's own 0007.blend.
+        foreach (string name in models.FileNames(asset.SetNumber.ToString("D4")))
+        {
+            string path = Path.Combine(layout.ModelsDir, name);
+            if (File.Exists(path)) File.Delete(path);
+        }
     }
 
     /// <summary>

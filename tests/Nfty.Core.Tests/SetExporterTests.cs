@@ -398,10 +398,10 @@ public class SetExporterTests
     private sealed class FakeModeler : IAssetModeler
     {
         public bool SkipAll { get; init; }
-        public SetModels Options { get; } = new("fake", "center", 0.5f);
-        public IReadOnlyList<string> FileNames(string baseName) => [$"{baseName}.fake"];
+        public SetModels Options { get; } = new("glb", "center", 0.5f);
+        public IReadOnlyList<string> FileNames(string baseName) => [$"{baseName}.glb"];
         public IReadOnlyList<SetFile>? Model(GeneratedAsset asset, string baseName) =>
-            SkipAll ? null : [new SetFile($"{baseName}.fake", [.."glTF-model-payload"u8.ToArray(), (byte)asset.SetNumber])];
+            SkipAll ? null : [new SetFile($"{baseName}.glb", [.."glTF-model-payload"u8.ToArray(), (byte)asset.SetNumber])];
     }
 
     /// <summary>A cooked Set that carries <c>models/</c>.</summary>
@@ -421,11 +421,11 @@ public class SetExporterTests
         var options = new ExportOptions { Models = true };
         var plan = SetExporter.Plan(set, options);
 
-        Assert.Contains("models/0001.fake", plan.Entries.Select(e => e.Name));
+        Assert.Contains("models/0001.glb", plan.Entries.Select(e => e.Name));
         Assert.Contains("3D models (2)", plan.Parts());
         var result = SetExporter.Export(set, OutDir(), options);
-        Assert.Contains("models/0001.fake", EntriesOf(result.Path));
-        Assert.Contains("models/0002.fake", EntriesOf(result.Path));
+        Assert.Contains("models/0001.glb", EntriesOf(result.Path));
+        Assert.Contains("models/0002.glb", EntriesOf(result.Path));
     }
 
     [Fact]
@@ -471,7 +471,7 @@ public class SetExporterTests
 
         using var opened = SealedSetReader.Open(result.Path, Pass);
         var dir = opened.SourceDirectory;
-        Assert.True(File.Exists(Path.Combine(dir, "models", "0001.fake")));
+        Assert.True(File.Exists(Path.Combine(dir, "models", "0001.glb")));
     }
 
     private static bool Contains(byte[] haystack, string needle) =>
@@ -491,7 +491,7 @@ public class SetExporterTests
         var raw = File.ReadAllBytes(SetExporter.Export(set, OutDir(), options, passphrase: Pass).Path);
         Assert.False(Contains(raw, "glTF"));
         Assert.False(Contains(raw, "models/"));
-        Assert.False(Contains(raw, "0001.fake"));
+        Assert.False(Contains(raw, "0001.glb"));
     }
 
     [Fact]
@@ -512,7 +512,7 @@ public class SetExporterTests
         Assert.NotNull(loaded.Manifest.Models);
 
         var text = Nfty.Core.Stats.SetReport.Render(loaded);
-        Assert.Contains("Models: fake", text);
+        Assert.Contains("Models: glb", text);
         Assert.Contains("recorded, not included in this copy", text);
 
         // Extending from the export tolerates the missing folder and keeps the recorded block.
@@ -522,8 +522,8 @@ public class SetExporterTests
         using var more = Generator.Generate(book,
             new GenerateOptions(1, "more", EnforceUniqueDna: false), existing.Dnas, existing.NextNumber);
         SetWriter.Write(more, result.Path, false, new FakeModeler());
-        Assert.True(File.Exists(Path.Combine(result.Path, "models", "0003.fake")));
-        Assert.False(File.Exists(Path.Combine(result.Path, "models", "0001.fake")));
+        Assert.True(File.Exists(Path.Combine(result.Path, "models", "0003.glb")));
+        Assert.False(File.Exists(Path.Combine(result.Path, "models", "0001.glb")));
     }
 
     [Fact]
@@ -545,7 +545,7 @@ public class SetExporterTests
     {
         using var loaded = SetReader.Read(ModeledSet());
         var text = Nfty.Core.Stats.SetReport.Render(loaded);
-        Assert.Contains("Models: fake", text);
+        Assert.Contains("Models: glb", text);
         Assert.DoesNotContain("not included", text);
     }
 
@@ -584,5 +584,90 @@ public class SetExporterTests
             SetExporter.Plan(OutDir(), ExportOptions.For(ExportPreset.AssetPack)));
 
         Assert.Contains(SetLayout.ManifestFile, ex.Message);
+    }
+
+    // ------------------------------------------------------------------ the user's own models/
+
+    private static void PlantUserModels(string dir)
+    {
+        var models = Directory.CreateDirectory(Path.Combine(dir, "models")).FullName;
+        File.WriteAllText(Path.Combine(models, "secret-source.blend"), "the author's source");
+        File.WriteAllText(Path.Combine(models, "0001.glb"), "a stray file of the user's own");
+        Directory.CreateDirectory(Path.Combine(models, "wip"));
+        File.WriteAllText(Path.Combine(models, "wip", "0002.glb"), "more");
+    }
+
+    [Fact]
+    public void A_users_own_models_folder_beside_an_unmodeled_set_is_neither_packed_nor_planned()
+    {
+        // The 0.5.1 leak, back: cooking into a folder that already holds models/ must not take it.
+        var dir = Path.Combine(Directory.CreateTempSubdirectory("nfty-src-").FullName, "ChestDemo");
+        PlantUserModels(dir);
+        using (var book = Book())
+        using (var cooked = Generator.Generate(book, new GenerateOptions(2, "launch")))
+            SetWriter.Write(cooked, dir, pack: true);
+
+        Assert.DoesNotContain(EntriesOf(Directory.EnumerateFiles(dir, "*.set").Single()),
+            n => n.StartsWith("models/", StringComparison.Ordinal));
+        Assert.Empty(SetLayout.ModelFilesIn(dir));
+
+        var plan = SetExporter.Plan(dir, ExportOptions.For(ExportPreset.AssetPack));
+        Assert.DoesNotContain(plan.Entries, e => e.Name.StartsWith("models/", StringComparison.Ordinal));
+        Assert.DoesNotContain(plan.Parts(), p => p.Contains("models", StringComparison.OrdinalIgnoreCase));
+        var result = SetExporter.Export(dir, OutDir(), ExportOptions.For(ExportPreset.AssetPack));
+        Assert.DoesNotContain(EntriesOf(result.Path), n => n.StartsWith("models/", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A_modeled_set_takes_exactly_the_files_it_names_and_not_the_users_clutter()
+    {
+        var dir = ModeledSet();
+        var models = Path.Combine(dir, "models");
+        File.WriteAllText(Path.Combine(models, "secret-source.blend"), "source");
+        File.WriteAllText(Path.Combine(models, "0001.blend"), "wrong extension for the recorded format");
+        File.WriteAllText(Path.Combine(models, "0099.glb"), "number the Set does not have");
+        Directory.CreateDirectory(Path.Combine(models, "wip"));
+        File.WriteAllText(Path.Combine(models, "wip", "0002.glb"), "nested");
+
+        var plan = SetExporter.Plan(dir, ExportOptions.For(ExportPreset.AssetPack));
+
+        Assert.Equal(["models/0001.glb", "models/0002.glb"],
+            plan.Entries.Select(e => e.Name).Where(n => n.StartsWith("models/", StringComparison.Ordinal)).Order(StringComparer.Ordinal));
+        Assert.Equal(["0001.glb", "0002.glb"],
+            SetLayout.ModelFilesIn(dir).Select(Path.GetFileName).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public void A_file_for_an_asset_recorded_as_skipped_is_not_the_sets()
+    {
+        var dir = ModeledSet();
+        var manifest = System.Text.Json.JsonSerializer.Deserialize<SetManifest>(
+            File.ReadAllText(Path.Combine(dir, "set.json")), Nfty.Core.Formats.Json.Options)!;
+        File.WriteAllText(Path.Combine(dir, "set.json"), System.Text.Json.JsonSerializer.Serialize(
+            manifest with { Models = manifest.Models! with { Skipped = [2] } }, Nfty.Core.Formats.Json.Options));
+
+        Assert.Equal(["0001.glb"], SetLayout.ModelFilesIn(dir).Select(Path.GetFileName));
+    }
+
+    private sealed class GltfModeler : IAssetModeler
+    {
+        public SetModels Options { get; } = new("gltf", "center", 0.5f);
+        public IReadOnlyList<string> FileNames(string baseName) => [$"{baseName}.gltf", $"{baseName}.bin"];
+        public IReadOnlyList<SetFile>? Model(GeneratedAsset asset, string baseName) =>
+            [new SetFile($"{baseName}.gltf", [1]), new SetFile($"{baseName}.bin", [2])];
+    }
+
+    [Fact]
+    public void The_plan_counts_models_not_files_so_gltf_and_bin_are_one()
+    {
+        var dir = Path.Combine(Directory.CreateTempSubdirectory("nfty-src-").FullName, "ChestDemo");
+        using (var book = Book())
+        using (var cooked = Generator.Generate(book, new GenerateOptions(4, "launch")))
+            SetWriter.Write(cooked, dir, false, new GltfModeler());
+
+        var plan = SetExporter.Plan(dir, ExportOptions.For(ExportPreset.AssetPack));
+
+        Assert.Equal(8, plan.Entries.Count(e => e.Name.StartsWith("models/", StringComparison.Ordinal)));
+        Assert.Contains("3D models (4)", plan.Parts());
     }
 }

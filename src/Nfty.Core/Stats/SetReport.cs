@@ -93,8 +93,7 @@ public static class SetReport
             // was skipped has an empty folder legitimately and must not claim a loss.
             bool expected = m.Count - skipped > 0;
             bool present = !expected || set.SourceDirectory.Length > 0
-                && Directory.Exists(Path.Combine(set.SourceDirectory, SetLayout.ModelsDir))
-                && Directory.EnumerateFileSystemEntries(Path.Combine(set.SourceDirectory, SetLayout.ModelsDir)).Any();
+                && SetLayout.ModelFilesIn(set.SourceDirectory).Count > 0;
             sb.AppendLine("  Models: " + ModelsSummary(models)
                 + (skipped > 0 ? $" · {skipped} skipped" : string.Empty)
                 + (present ? string.Empty : " · recorded, not included in this copy"));

@@ -25,6 +25,12 @@ public class ExportDialogModelsTests
             var models = Path.Combine(dir, SetLayout.ModelsDir);
             Directory.CreateDirectory(models);
             File.WriteAllBytes(Path.Combine(models, "0001.glb"), new byte[] { 1, 2, 3, 4 });
+            // A models/ folder is the Set's only as far as set.json says so.
+            var json = Path.Combine(dir, SetLayout.ManifestFile);
+            var manifest = System.Text.Json.JsonSerializer.Deserialize<SetManifest>(
+                File.ReadAllText(json), Nfty.Core.Formats.Json.Options)!;
+            File.WriteAllText(json, System.Text.Json.JsonSerializer.Serialize(
+                manifest with { Models = new SetModels("glb", "bottom-center", 1f) }, Nfty.Core.Formats.Json.Options));
         }
         return dir;
     }
@@ -155,5 +161,20 @@ public class ExportDialogModelsTests
             }
         }
         finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public void A_users_own_models_folder_beside_an_unmodeled_set_does_not_light_the_box()
+    {
+        var dir = SetDir(withModels: false);
+        var models = Path.Combine(dir, SetLayout.ModelsDir);
+        Directory.CreateDirectory(models);
+        File.WriteAllText(Path.Combine(models, "secret-source.blend"), "source");
+        File.WriteAllText(Path.Combine(models, "0001.glb"), "stray");
+
+        var vm = new ExportDialogViewModel(dir, new FilePickerService(), new NoopFolderRevealer(), new FakeDialogs());
+
+        Assert.False(vm.SetHasModels);
+        Assert.DoesNotContain(vm.Parts, p => p.Contains("models", StringComparison.OrdinalIgnoreCase));
     }
 }

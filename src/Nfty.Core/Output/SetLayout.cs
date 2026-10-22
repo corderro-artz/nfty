@@ -39,12 +39,73 @@ public static class SetLayout
     public const string NftyDir = "nfty";
 
     /// <summary>The 3D models a modeled cook writes, one per fully-opaque asset. Absent from a Set
-    /// cooked without models. Taken whole like the other directories: it is nfty's namespace.</summary>
+    /// cooked without models. NOT taken whole: see <see cref="ModelFilesIn"/>.</summary>
     public const string ModelsDir = "models";
 
-    /// <summary>The subdirectories, in the order a listing reads best.</summary>
+    /// <summary>The subdirectories taken whole, in the order a listing reads best. <c>models/</c> is
+    /// deliberately NOT here: it belongs to a Set only as far as <c>set.json</c> says
+    /// (<see cref="ModelFilesIn"/>), because a folder named <c>models</c> is a name an art workspace
+    /// plausibly already uses.</summary>
     public static IReadOnlyList<string> Directories { get; } =
-        [ImagesDir, MetadataDir, NftyDir, ModelsDir];
+        [ImagesDir, MetadataDir, NftyDir];
+
+    /// <summary>
+    /// The model files <c>set.json</c> in <paramref name="setDir"/> accounts for: for a Set that
+    /// recorded a <c>models</c> block, <c>NNNN.glb</c> (or <c>.gltf</c> and <c>.bin</c> per the
+    /// recorded format) for each numbered asset that was not recorded as skipped. Nothing else in
+    /// <c>models/</c>, and nothing at all for a Set without the block.
+    /// </summary>
+    /// <param name="setDir">The Set folder.</param>
+    /// <returns>Absolute paths, in <see cref="StringComparer.Ordinal"/> order.</returns>
+    /// <remarks>This is the one rule for "which of the folder's <c>models/</c> is the Set's": the
+    /// listing, <c>Pack</c>, the exporter and the export dialog all ask here, so a user's own
+    /// <c>models/secret-source.blend</c> - or a stray <c>0001.glb</c> beside a Set cooked without
+    /// models - cannot ride along into a buyer's archive.</remarks>
+    public static IReadOnlyList<string> ModelFilesIn(string setDir)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(setDir);
+        string dir = Path.Combine(setDir, ModelsDir);
+        var recorded = ReadManifest(setDir);
+        if (recorded?.Models is not { } models || !Directory.Exists(dir)) return [];
+
+        var extensions = ExtensionsFor(models.Format);
+        var skipped = models.Skipped is null ? new HashSet<int>() : new HashSet<int>(models.Skipped);
+        var files = new List<string>();
+        foreach (string file in Directory.EnumerateFiles(dir, "*", SearchOption.TopDirectoryOnly))
+        {
+            if (!extensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase)) continue;
+            if (!int.TryParse(Path.GetFileNameWithoutExtension(file), System.Globalization.NumberStyles.None,
+                    System.Globalization.CultureInfo.InvariantCulture, out int number)) continue;
+            if (number < 1 || number > recorded.Count || skipped.Contains(number)) continue;
+            files.Add(file);
+        }
+        files.Sort(StringComparer.Ordinal);
+        return files;
+    }
+
+    /// <summary>How many assets have a model in <paramref name="setDir"/> - a <c>.gltf</c> with its
+    /// <c>.bin</c> is one model, not two.</summary>
+    /// <param name="setDir">The Set folder.</param>
+    /// <returns>The count of distinct numbered assets among <see cref="ModelFilesIn"/>.</returns>
+    public static int ModelCountIn(string setDir) =>
+        ModelFilesIn(setDir).Select(f => Path.GetFileNameWithoutExtension(f)).Distinct(StringComparer.Ordinal).Count();
+
+    private static string[] ExtensionsFor(string format) => format switch
+    {
+        "glb" => [".glb"],
+        "gltf" => [".gltf", ".bin"],
+        "gltf-embedded" => [".gltf"],
+        // A token this build does not know: stay inside nfty's own shapes rather than guess wider.
+        _ => [".glb", ".gltf", ".bin"],
+    };
+
+    private static SetManifest? ReadManifest(string setDir)
+    {
+        string path = ManifestPath(setDir);
+        if (!File.Exists(path)) return null;
+        try { return System.Text.Json.JsonSerializer.Deserialize<SetManifest>(File.ReadAllText(path), Formats.Json.Options); }
+        catch (System.Text.Json.JsonException) { return null; }
+    }
 
     /// <summary>Where a Set folder keeps its manifest.</summary>
     /// <param name="setDir">The Set folder.</param>
@@ -76,6 +137,8 @@ public static class SetLayout
             if (Directory.Exists(sub))
                 files.AddRange(Directory.EnumerateFiles(sub, "*", SearchOption.AllDirectories));
         }
+
+        files.AddRange(ModelFilesIn(setDir));
 
         files.Sort(StringComparer.Ordinal);
         return files;

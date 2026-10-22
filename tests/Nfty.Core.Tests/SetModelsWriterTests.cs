@@ -16,13 +16,13 @@ public class SetModelsWriterTests
         public string? NameOverride { get; init; }
         public SetModels Options { get; } = options;
         public Action? OnModel { get; init; }
-        public IReadOnlyList<string> FileNames(string baseName) => [NameOverride ?? $"{baseName}.fake"];
+        public IReadOnlyList<string> FileNames(string baseName) => [NameOverride ?? $"{baseName}.glb"];
 
         public IReadOnlyList<SetFile>? Model(GeneratedAsset asset, string baseName)
         {
             OnModel?.Invoke();
             if (Array.IndexOf(nullFor, asset.SetNumber) >= 0) return null;
-            return [new SetFile(NameOverride ?? $"{baseName}.fake", [(byte)asset.SetNumber])];
+            return [new SetFile(NameOverride ?? $"{baseName}.glb", [(byte)asset.SetNumber])];
         }
     }
 
@@ -30,12 +30,12 @@ public class SetModelsWriterTests
     {
         public SetModels Options { get; } = options;
         public IReadOnlyList<string> FileNames(string baseName) =>
-            [baseName == badNumber.ToString("D4") ? "../x" : $"{baseName}.fake"];
+            [baseName == badNumber.ToString("D4") ? "../x" : $"{baseName}.glb"];
         public IReadOnlyList<SetFile>? Model(GeneratedAsset asset, string baseName) =>
             [new SetFile(FileNames(baseName)[0], [1])];
     }
 
-    private static readonly SetModels Fake = new("fake", "center", 0.5f);
+    private static readonly SetModels Fake = new("glb", "center", 0.5f);
 
     private static GeneratedSet SetOf(params int[] numbers) => new(
         "Col", "desc", "COL", "seed",
@@ -66,7 +66,7 @@ public class SetModelsWriterTests
         using (var set = SetOf(1, 2, 3)) SetWriter.Write(set, dir, false, new FakeModeler(Fake));
 
         for (int n = 1; n <= 3; n++)
-            Assert.Equal(new[] { (byte)n }, File.ReadAllBytes(Path.Combine(dir, "models", $"{n:D4}.fake")));
+            Assert.Equal(new[] { (byte)n }, File.ReadAllBytes(Path.Combine(dir, "models", $"{n:D4}.glb")));
     }
 
     [Fact]
@@ -75,7 +75,7 @@ public class SetModelsWriterTests
         string dir = Tmp();
         using (var set = SetOf(1, 2)) SetWriter.Write(set, dir, false, new FakeModeler(Fake));
 
-        Assert.Equal(new SetModels("fake", "center", 0.5f, null), ManifestAt(dir).Models);
+        Assert.Equal(new SetModels("glb", "center", 0.5f, null), ManifestAt(dir).Models);
     }
 
     [Fact]
@@ -94,8 +94,8 @@ public class SetModelsWriterTests
         string dir = Tmp();
         using (var set = SetOf(1, 2, 3)) SetWriter.Write(set, dir, false, new FakeModeler(Fake, 2));
 
-        Assert.False(File.Exists(Path.Combine(dir, "models", "0002.fake")));
-        Assert.True(File.Exists(Path.Combine(dir, "models", "0003.fake")));
+        Assert.False(File.Exists(Path.Combine(dir, "models", "0002.glb")));
+        Assert.True(File.Exists(Path.Combine(dir, "models", "0003.glb")));
         Assert.Equal([2], ManifestAt(dir).Models!.Skipped);
     }
 
@@ -106,7 +106,7 @@ public class SetModelsWriterTests
         using (var set = SetOf(1)) SetWriter.Write(set, dir, true, new FakeModeler(Fake));
 
         using var zip = ZipFile.OpenRead(Directory.EnumerateFiles(dir, "*.set").Single());
-        Assert.Contains(zip.Entries, e => e.FullName == "models/0001.fake");
+        Assert.Contains(zip.Entries, e => e.FullName == "models/0001.glb");
     }
 
     [Fact]
@@ -114,12 +114,12 @@ public class SetModelsWriterTests
     {
         string dir = Tmp();
         using (var set = SetOf(1, 2)) SetWriter.Write(set, dir, false, new FakeModeler(Fake, 2));
-        File.WriteAllBytes(Path.Combine(dir, "models", "0001.fake"), [99]);   // would be overwritten if re-modeled
+        File.WriteAllBytes(Path.Combine(dir, "models", "0001.glb"), [99]);   // would be overwritten if re-modeled
 
         using (var more = SetOf(3, 4, 5)) SetWriter.Write(more, dir, false, new FakeModeler(Fake, 5, 4));
 
-        Assert.Equal(new byte[] { 99 }, File.ReadAllBytes(Path.Combine(dir, "models", "0001.fake")));
-        Assert.True(File.Exists(Path.Combine(dir, "models", "0003.fake")));
+        Assert.Equal(new byte[] { 99 }, File.ReadAllBytes(Path.Combine(dir, "models", "0001.glb")));
+        Assert.True(File.Exists(Path.Combine(dir, "models", "0003.glb")));
         Assert.Equal([2, 4, 5], ManifestAt(dir).Models!.Skipped);
     }
 
@@ -133,7 +133,7 @@ public class SetModelsWriterTests
         using var more = SetOf(2);
         var ex = Assert.Throws<InvalidOperationException>(() => SetWriter.Write(more, dir, false));
 
-        Assert.Contains("fake", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("glb", ex.Message, StringComparison.Ordinal);
         Assert.Contains("center", ex.Message, StringComparison.Ordinal);
         Assert.Contains(dir, ex.Message, StringComparison.Ordinal);
         var after = Snapshot(dir);
@@ -158,9 +158,9 @@ public class SetModelsWriterTests
     }
 
     [Theory]
-    [InlineData("glb", "center", 0.5f)]    // format only
-    [InlineData("fake", "bottom-center", 0.5f)]   // pivot only
-    [InlineData("fake", "center", 2f)]     // voxel size only
+    [InlineData("gltf", "center", 0.5f)]    // format only
+    [InlineData("glb", "bottom-center", 0.5f)]   // pivot only
+    [InlineData("glb", "center", 2f)]     // voxel size only
     public void Extending_with_different_options_is_refused_naming_both(string format, string pivot, float voxel)
     {
         string dir = Tmp();
@@ -170,7 +170,7 @@ public class SetModelsWriterTests
         var ex = Assert.Throws<InvalidOperationException>(() => SetWriter.Write(
             more, dir, false, new FakeModeler(new SetModels(format, pivot, voxel))));
 
-        Assert.Contains("fake, center, voxel 0.5", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("glb, center, voxel 0.5", ex.Message, StringComparison.Ordinal);
         Assert.Contains($"{format}, {pivot}, voxel", ex.Message, StringComparison.Ordinal);
         Assert.False(File.Exists(Path.Combine(dir, "images", "0002.png")));
     }
@@ -216,12 +216,12 @@ public class SetModelsWriterTests
     {
         string dir = Tmp();
         using (var set = SetOf(1, 2)) SetWriter.Write(set, dir, false, new FakeModeler(Fake));
-        Assert.True(File.Exists(Path.Combine(dir, "models", "0002.fake")));
+        Assert.True(File.Exists(Path.Combine(dir, "models", "0002.glb")));
 
         using (var again = SetOf(2)) SetWriter.Write(again, dir, false, new FakeModeler(Fake, 2));
 
-        Assert.False(File.Exists(Path.Combine(dir, "models", "0002.fake")));
-        Assert.True(File.Exists(Path.Combine(dir, "models", "0001.fake")));
+        Assert.False(File.Exists(Path.Combine(dir, "models", "0002.glb")));
+        Assert.True(File.Exists(Path.Combine(dir, "models", "0001.glb")));
         Assert.Equal([2], ManifestAt(dir).Models!.Skipped);
     }
 
@@ -255,7 +255,7 @@ public class SetModelsWriterTests
         string dir = Tmp();
         using (var set = SetOf(1, 2)) SetWriter.Write(set, dir, false, new FakeModeler(Fake, 2));
 
-        Assert.Equal(new SetModels("fake", "center", 0.5f, [2]), SetWriter.ReadExisting(dir).Models, ModelsComparer.Instance);
+        Assert.Equal(new SetModels("glb", "center", 0.5f, [2]), SetWriter.ReadExisting(dir).Models, ModelsComparer.Instance);
     }
 
     [Fact]
@@ -284,5 +284,31 @@ public class SetModelsWriterTests
             && x.VoxelSize == y.VoxelSize
             && (x.Skipped ?? []).SequenceEqual(y.Skipped ?? []);
         public int GetHashCode(SetModels? o) => 0;
+    }
+
+    [Fact]
+    public void Pack_with_models_takes_only_the_files_the_set_names()
+    {
+        string dir = Tmp();
+        Directory.CreateDirectory(Path.Combine(dir, "models"));
+        File.WriteAllText(Path.Combine(dir, "models", "secret-source.blend"), "source");
+        using (var set = SetOf(1)) SetWriter.Write(set, dir, true, new FakeModeler(Fake));
+
+        using var zip = ZipFile.OpenRead(Directory.EnumerateFiles(dir, "*.set").Single());
+        Assert.Equal(["models/0001.glb"],
+            zip.Entries.Select(e => e.FullName).Where(n => n.StartsWith("models/", StringComparison.Ordinal)));
+    }
+
+    [Fact]
+    public void Re_skipping_an_asset_removes_only_its_own_model_not_a_users_file_of_the_same_number()
+    {
+        string dir = Tmp();
+        using (var set = SetOf(1, 2)) SetWriter.Write(set, dir, false, new FakeModeler(Fake));
+        File.WriteAllText(Path.Combine(dir, "models", "0002.blend"), "the user's own");
+
+        using (var again = SetOf(2)) SetWriter.Write(again, dir, false, new FakeModeler(Fake, 2));
+
+        Assert.False(File.Exists(Path.Combine(dir, "models", "0002.glb")));
+        Assert.True(File.Exists(Path.Combine(dir, "models", "0002.blend")));
     }
 }

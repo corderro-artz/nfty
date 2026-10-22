@@ -70,9 +70,10 @@ public record ExportPlan(
             .GroupBy(e => e.Name.Contains('/') ? e.Name[..e.Name.IndexOf('/')] + "/" : e.Name)
             .OrderBy(g => g.Key, StringComparer.Ordinal)
             .Select(g => g.Key == SetLayout.ModelsDir + "/"
-                // Named for what a reader knows it as; the count is of files, one per asset.
+                // Named for what a reader knows it as; the count is of MODELS, so a .gltf and its .bin
+                // are one, not two.
                 ? string.Create(System.Globalization.CultureInfo.InvariantCulture,
-                    $"3D models ({g.Count()})")
+                    $"3D models ({g.Select(e => Path.GetFileNameWithoutExtension(e.Name)).Distinct(StringComparer.Ordinal).Count()})")
                 : g.Count() == 1
                 ? g.Key
                 : string.Create(System.Globalization.CultureInfo.InvariantCulture,
@@ -494,7 +495,8 @@ public static class SetExporter
         if (options.Images) wanted.Add(SetLayout.ImagesDir);
         if (options.OpenSeaMetadata) wanted.Add(SetLayout.MetadataDir);
         if (options.NftyMetadata) wanted.Add(SetLayout.NftyDir);
-        if (options.Models) wanted.Add(SetLayout.ModelsDir);
+        // models/ is not a taken-whole directory: FilesIn already lists only what set.json accounts
+        // for, so the option just gates those.
 
         var entries = new List<ExportEntry>();
 
@@ -508,6 +510,11 @@ public static class SetExporter
         {
             string rel = Path.GetRelativePath(setDir, file).Replace(Path.DirectorySeparatorChar, '/');
             if (rel == SetLayout.ManifestFile) continue;
+            if (rel.StartsWith(SetLayout.ModelsDir + "/", StringComparison.Ordinal))
+            {
+                if (options.Models) entries.Add(Entry(file, rel));
+                continue;
+            }
             if (wanted.Any(d => rel.StartsWith(d + "/", StringComparison.Ordinal)))
                 entries.Add(Entry(file, rel));
         }

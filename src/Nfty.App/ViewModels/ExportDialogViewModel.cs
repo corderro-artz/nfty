@@ -126,7 +126,7 @@ public partial class ExportDialogViewModel : ViewModelBase
     [ObservableProperty] private bool _openSeaMetadata = true;
     [ObservableProperty] private bool _nftyMetadata = true;
 
-    /// <summary>Include <c>models/</c>. Carried so a preset round-trips; the box itself arrives with the 3D controls.</summary>
+    /// <summary>Include <c>models/</c>. Carried so a preset round-trips; the models box is bound to it and drawn by <see cref="ModelsShown"/>.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ModelsShown))]
     private bool _models = true;
@@ -262,9 +262,7 @@ public partial class ExportDialogViewModel : ViewModelBase
 
         // READ ONCE. The row is always laid out and only its ink changes, so this is a fact about
         // the Set that does not move while the dialog is open.
-        var modelsDir = Path.Combine(setDirectory, SetLayout.ModelsDir);
-        SetHasModels = Directory.Exists(modelsDir)
-            && Directory.EnumerateFiles(modelsDir, "*", SearchOption.AllDirectories).Any();
+        SetHasModels = SetLayout.ModelFilesIn(setDirectory).Count > 0;
 
         // FOUND, NOT ASKED FOR. "Include the source CookBook" used to mean "and now go find the
         // file", which is a question the app can usually answer itself: the Set records its book's
