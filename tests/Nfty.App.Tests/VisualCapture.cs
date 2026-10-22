@@ -622,6 +622,30 @@ public class VisualCapture
         }
     }
 
+    /// <summary>The editor's footer with a Rise factory wired: Rise lit on a clean editor, dim (with its
+    /// reason on the tooltip) once the editor has unsaved edits.</summary>
+    [AvaloniaFact]
+    public void Capture_editor_rise()
+    {
+        if (Dir is null) return;   // inert unless explicitly capturing
+
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            var key = variant.Key.ToString()!.ToLowerInvariant();
+            var book = ExplorerViewModelTests.TwoRecipeBook();
+            var cat = book.Recipes.First(r => r.Manifest.Id == "cat");
+            var nav = new FakeNav();
+            var dialogs = new FakeDialogs();
+            var vm = new IngredientEditorViewModel(cat.Ingredients[0], cat, book, new ImageBridge(), nav,
+                new CookBookSession(), dialogs, new FilePickerService(), isEditing: () => true,
+                rise: src => new RiseViewModel(src, new ImageBridge(), nav, dialogs, new FilePickerService(), new StatusService()));
+            Capture(new Views.IngredientEditorView { DataContext = vm }, variant, $"editor-rise-clean-{key}.png");
+            vm.ApplyToolStroke(new[] { (0, 0) });
+            Capture(new Views.IngredientEditorView { DataContext = vm }, variant, $"editor-rise-dirty-{key}.png");
+            vm.Dispose();
+        }
+    }
+
     /// <summary>Renders the real <see cref="Views.IngredientEditorView"/> bound to an
     /// <see cref="IngredientEditorViewModel"/> after a Fill stroke, so visual parity of the editor
     /// (filmstrip + tools + painted canvas + colorize rail + preview) can be checked from an actual

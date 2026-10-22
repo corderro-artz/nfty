@@ -908,6 +908,15 @@
                    IsVisible="{Binding SaveNoteText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
           <Button Content="Back" Command="{Binding BackCommand}" Classes="tbtn ghost" />
+          <!-- Rise reads the SAVED picture, so it dims while the editor has unsaved edits; the tip
+               says why (ShowOnDisabled, or a dim button gives no reason). -->
+          <Button Command="{Binding RiseCommand}" Classes="tbtn"
+                  ToolTip.Tip="{Binding RiseTip}" ToolTip.ShowOnDisabled="True">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Path Classes="ico sm" Data="{StaticResource IconRise}" />
+              <TextBlock Text="Rise" />
+            </StackPanel>
+          </Button>
           <Button Command="{Binding SaveCommand}" Classes="accent">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <Path Classes="ico sm" Data="{StaticResource IconCheck}" />

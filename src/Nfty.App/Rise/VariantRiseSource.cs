@@ -4,6 +4,8 @@ using Nfty.Core.Editing;
 using Nfty.Core.Formats;
 using Nfty.Core.Imaging;
 using Nfty.Core.Model;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Nfty.App.Rise;
 
@@ -81,6 +83,10 @@ public sealed class VariantRiseSource : RiseSource
 
     /// <summary>Raised after a book save, with the book the session now holds.</summary>
     public event Action<LoadedCookBook>? Saved;
+
+    /// <summary>Raised after a loose <c>.igt</c> save, with the ingredient now on disk. A loose save has no
+    /// book to hand out, so this is how the editor that launched the page learns the new depth.</summary>
+    public event Action<LoadedIngredient>? LooseSaved;
 
     /// <inheritdoc />
     public override RiseSourceKind Kind => RiseSourceKind.Variant;
@@ -181,7 +187,20 @@ public sealed class VariantRiseSource : RiseSource
             written.Add((s, map));
         }
 
+        // STALE-ART GUARD. Depth is painted on the picture Rise opened; if the layer's pixels have since
+        // changed (another route rewrote the variant), the depth no longer describes them. Writing it
+        // would pair old-picture depth with new-picture art, so the WHOLE save is refused, nothing written.
+        var stale = _items
+            .Where(i => i.Subject is { IsDirty: true } && ids.Contains(i.Id))
+            .Where(i => !live.VariantImages.TryGetValue(i.Id, out var current) || !SamePixels(i.Subject!.Art, current))
+            .Select(i => i.Name)
+            .ToList();
+        if (stale.Count > 0)
+            throw new InvalidOperationException(
+                $"The picture of {string.Join(", ", stale)} changed after Rise opened it; its depth was painted on the old picture and was not saved. Reopen Rise on the new picture.");
+
         LoadedCookBook? persisted = null;
+        LoadedIngredient? looseNext = null;
         var next = new LoadedIngredient { Manifest = live.Manifest, VariantImages = live.VariantImages, Depths = depths };
         var problems = Validator.ValidateIngredient(next);
         if (problems.Count > 0) throw new InvalidOperationException(string.Join(Environment.NewLine, problems));
@@ -200,6 +219,7 @@ public sealed class VariantRiseSource : RiseSource
                 if (File.Exists(tmp)) { try { File.Delete(tmp); } catch { /* best effort */ } }
             }
             _looseLive = next;   // images shared with the previous object; nothing disposed
+            looseNext = next;
         }
         else
         {
@@ -213,7 +233,20 @@ public sealed class VariantRiseSource : RiseSource
         foreach (var (subject, map) in written) subject.MarkSaved(map);
         foreach (var item in _items) item.RefreshDepth();
         if (persisted is not null) Saved?.Invoke(persisted);
+        if (looseNext is not null) LooseSaved?.Invoke(looseNext);
         RaiseChanged();
+    }
+
+    private static bool SamePixels(Image<Rgba32> a, Image<Rgba32> b)
+    {
+        if (a.Width != b.Width || a.Height != b.Height) return false;
+        bool same = true;
+        a.ProcessPixelRows(b, (ra, rb) =>
+        {
+            for (int y = 0; y < ra.Height && same; y++)
+                if (!ra.GetRowSpan(y).SequenceEqual(rb.GetRowSpan(y))) same = false;
+        });
+        return same;
     }
 
     private LoadedIngredient LiveIngredient()

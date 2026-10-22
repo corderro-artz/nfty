@@ -118,7 +118,10 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private double _hueMin, _hueMax = 360, _satMin = 40, _satMax = 100;
     [ObservableProperty] private int _hueQuantize = 12, _satQuantize = 4;
     [ObservableProperty] private string _fixedColor = "hex:d6249f";
-    [ObservableProperty] private EditorVariant? _selectedVariant;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RiseCommand))]
+    [NotifyPropertyChangedFor(nameof(CanRise))]
+    private EditorVariant? _selectedVariant;
     [ObservableProperty] private Bitmap _canvas = default!;
     [ObservableProperty] private Bitmap _preview = default!;
     private int _previewSalt;
@@ -132,12 +135,20 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RiseCommand))]
+    [NotifyPropertyChangedFor(nameof(CanRise))]
+    [NotifyPropertyChangedFor(nameof(RiseTip))]
     private bool _isDirty;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
     [NotifyCanExecuteChangedFor(nameof(ImportImageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RiseCommand))]
+    [NotifyPropertyChangedFor(nameof(CanRise))]
     private bool _isSaving;
+
+    // Builds the Rise page; null on an editor built without one (the Rise button then stays dim).
+    private readonly Func<Nfty.App.Rise.RiseSource, RiseViewModel>? _rise;
 
     /// <summary>Raised after a successful Save with the newly-spliced graph, so a listener
     /// (Explorer) can rebuild its tree in place instead of reloading the whole archive.</summary>
@@ -438,12 +449,15 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     /// no lock to consult — a loose <c>.igt</c> belongs to no book — and the editor saves freely.</param>
     /// <param name="viewState">The view preferences to open in and write back to. Null falls back to
     /// a store held in memory, for the same reason <paramref name="palette"/> does.</param>
+    /// <param name="rise">Builds the Rise page over a source. Null leaves the editor without a Rise button.</param>
     public IngredientEditorViewModel(LoadedIngredient ing, LoadedRecipe recipe, LoadedCookBook book,
         IImageBridge bridge, INavigationService nav, ICookBookSession session,
         IDialogService dialogs, IFilePickerService picker, string? looseSavePath = null,
         IKitchenSession? kitchen = null, IPaletteService? palette = null,
-        Func<bool>? isEditing = null, IEditorViewState? viewState = null)
+        Func<bool>? isEditing = null, IEditorViewState? viewState = null,
+        Func<Nfty.App.Rise.RiseSource, RiseViewModel>? rise = null)
     {
+        _rise = rise;
         _ing = ing; _bridge = bridge; _nav = nav;
         _recipe = recipe; _session = session; _dialogs = dialogs; _picker = picker;
         _looseSavePath = looseSavePath;
@@ -1530,6 +1544,8 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
             if (_looseSavePath is string loosePath)
             {
                 var tmp = loosePath + ".tmp";
+                // What is on disk after this save, kept so Rise (which reads the saved layer) sees it.
+                var kept = images.ToDictionary(kv => kv.Key, kv => kv.Value.Clone(), StringComparer.Ordinal);
                 try
                 {
                     await IngredientArchive.WriteAsync(tmp, manifest, images, depths);
@@ -1540,6 +1556,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
                     if (File.Exists(tmp)) { try { File.Delete(tmp); } catch { /* best effort */ } }
                     foreach (var i in images.Values) i.Dispose();   // our copies — ours to free
                 }
+                _ing = new LoadedIngredient { Manifest = manifest, VariantImages = kept, Depths = depths };
                 IsDirty = false;
                 return;   // loose has no cookbook/session/Explorer to refresh
             }
@@ -1566,6 +1583,48 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
             await _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, "Could not save", ex.Message));
         }
         finally { IsSaving = false; }
+    }
+
+    /// <summary>Whether Rise may open: it reads the SAVED picture, so the editor must have no unsaved
+    /// edits (otherwise the depth painted there would belong to a picture the file does not hold).</summary>
+    public bool CanRise => _rise is not null && !IsDirty && !IsSaving && SelectedVariant is not null;
+
+    /// <summary>Tooltip for the Rise button: why it is dim, or what it does.</summary>
+    public string RiseTip => IsDirty
+        ? "Save the layer first — Rise reads the saved picture."
+        : "Rise this variant into a model.";
+
+    /// <summary>Opens the Rise page on the selected variant. Depth saved there flows back into this editor.</summary>
+    [RelayCommand(CanExecute = nameof(CanRise))]
+    private void Rise()
+    {
+        // A disabled button is a label: the generated command does not consult CanExecute.
+        if (!CanRise || SelectedVariant is not { } variant) return;
+        var source = new Nfty.App.Rise.VariantRiseSource(_recipe, _ing, variant.Id, _bridge, _session, _isEditing, _looseSavePath);
+        source.LooseSaved += OnLooseRiseSaved;
+        var page = _rise!(source);
+        page.Saved += OnRiseSaved;
+        _nav.To(page);
+    }
+
+    // A Rise save into the book: take the saved ingredient's depth so this editor's next Save does not
+    // write the old maps back over it, rebuild the surroundings, and tell the Explorer as for any save.
+    private void OnRiseSaved(LoadedCookBook book)
+    {
+        var fresh = book.Recipes.FirstOrDefault(r => r.Manifest.Id == _recipe.Manifest.Id)?
+            .Ingredients.FirstOrDefault(i => i.Manifest.Id == _ing.Manifest.Id);
+        if (fresh is not null) AdoptSavedDepth(fresh);
+        RefreshFromBook(book);
+        Saved?.Invoke(book);
+    }
+
+    private void OnLooseRiseSaved(LoadedIngredient saved) => AdoptSavedDepth(saved);
+
+    private void AdoptSavedDepth(LoadedIngredient saved)
+    {
+        _ing = saved;
+        _depths.Clear();
+        foreach (var kv in saved.Depths) _depths[kv.Key] = kv.Value;
     }
 
     [RelayCommand]

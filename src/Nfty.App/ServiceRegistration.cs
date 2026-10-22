@@ -82,7 +82,8 @@ public static class ServiceRegistration
                 // size, which half of the rail. Omitted, the editor keeps them for the session only,
                 // which is right for a test and wrong for an author who picks the same lattice step
                 // on every layer they open.
-                viewState: sp.GetRequiredService<IEditorViewState>())));
+                viewState: sp.GetRequiredService<IEditorViewState>(),
+                rise: sp.GetRequiredService<Func<Nfty.App.Rise.RiseSource, RiseViewModel>>())));
 
         // Loose (.igt) editor: same editor, but with a save-straight-to-.igt path and the synthetic
         // wrapper book it owns. Built directly (not via the cookbook editor factory) so it can pass
@@ -105,7 +106,8 @@ public static class ServiceRegistration
                     looseSavePath: path,
                     kitchen: sp.GetRequiredService<IKitchenSession>(),
                     palette: sp.GetRequiredService<IPaletteService>(),
-                    viewState: sp.GetRequiredService<IEditorViewState>());
+                    viewState: sp.GetRequiredService<IEditorViewState>(),
+                    rise: sp.GetRequiredService<Func<Nfty.App.Rise.RiseSource, RiseViewModel>>());
             });
 
         // The Rise page, built over a source. The factory the "Rise" buttons call; the page owns the

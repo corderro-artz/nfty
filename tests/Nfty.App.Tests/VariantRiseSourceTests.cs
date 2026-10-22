@@ -19,6 +19,36 @@ public class VariantRiseSourceTests
         b.Recipes[0].Ingredients.Single(i => i.Manifest.Id == "body");
 
     [AvaloniaFact]
+    public async Task Save_refuses_depth_painted_on_a_picture_that_has_since_changed()
+    {
+        var (s, path) = RiseFixtures.OnDisk(RiseFixtures.ChestBook(withPine: true));
+        using var src = RiseFixtures.Variant(s);
+        foreach (var item in src.Items.Where(i => i.Id is "oak" or "pine"))
+        {
+            var subject = src.Open(item);
+            subject.History.Do(new DepthStep(new[] { (2, 1) }, DepthSide.Front, +1), subject.Depth);
+        }
+        // The pixels of oak and pine change on disk through the real persistence path, after Rise opened them.
+        var live = Body(s.Current!);
+        var images = live.VariantImages.ToDictionary(kv => kv.Key, kv => kv.Value.Clone());
+        foreach (var id in new[] { "oak", "pine" })
+        {
+            images[id].Dispose();
+            images[id] = RiseFixtures.Picture(RiseFixtures.Gold);
+        }
+        var changed = new LoadedIngredient { Manifest = live.Manifest, VariantImages = images, Depths = live.Depths };
+        await CookBookPersistence.PersistAsync(s, CookBookEdits.UpsertIngredient(s.Current!, "chest", changed));
+        var before = File.ReadAllBytes(path);
+
+        var ex = await Assert.ThrowsAsync<System.InvalidOperationException>(() => src.SaveAsync());
+
+        Assert.Contains("Oak, Pine", ex.Message);
+        Assert.Equal(before, File.ReadAllBytes(path));
+        Assert.True(src.IsDirty);                 // nothing was marked saved
+        s.Dispose();
+    }
+
+    [AvaloniaFact]
     public void Items_are_the_variants_with_stored_pixels_weights_and_chips()
     {
         var (s, _) = RiseFixtures.OnDisk(RiseFixtures.ChestBook());
