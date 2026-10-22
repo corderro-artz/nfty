@@ -134,7 +134,7 @@
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Padding" Value="0" />
     <Setter Property="MinWidth" Value="0" />
-    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="MinHeight" Value="262" />
     <Setter Property="Cursor" Value="Hand" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
@@ -687,7 +687,7 @@
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Padding" Value="0" />
-    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="MinHeight" Value="262" />
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="12.5" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
@@ -852,13 +852,16 @@
 
   <!-- ONE HEIGHT FOR ALL THREE PAGES, so switching tabs moves nothing below them - the manifest and
        the footer are the two controls on this card a reader must never have to go looking for. It is
-       the TALLEST page's height, measured: CONTENTS 246, IMAGES 251, SEAL 213. It said 262 and
+       the TALLEST page's height, measured: CONTENTS 262, IMAGES 251, SEAL 213 (CONTENTS gained the 3D models row, 32px, and paid for
+       it by dropping the 4px gap between its checkboxes - Fluent stacks them gapless - so the floor
+       moved 251 -> 262 rather than 283, and the card is 507 with 19px of slack at the 720 minimum).
+       It once said 262 and
        credited that to CONTENTS, and both halves were wrong - the number came off a capture rendered
        780px tall, 254 more than the 526 a modal is ever given, so the card photographed tidy while
        the running app scrolled every tab. The shorter pages spend the difference on air above the
        manifest instead of on moving it. -->
   <Style Selector="Border.modal.export StackPanel.exportpages">
-    <Setter Property="MinHeight" Value="251" />
+    <Setter Property="MinHeight" Value="262" />
   </Style>
 
   <!-- The export card's head: the title and the tabs on one row, over one hairline. It is NOT a
@@ -1976,7 +1979,7 @@
     <Setter Property="Padding" Value="7,1" />
     <Setter Property="FontSize" Value="10.5" />
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="MinHeight" Value="262" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
   </Style>
 
@@ -2177,7 +2180,7 @@
     <Setter Property="Width" Value="19" />
     <Setter Property="Height" Value="19" />
     <Setter Property="MinWidth" Value="0" />
-    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="MinHeight" Value="262" />
     <Setter Property="Padding" Value="0" />
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
@@ -2253,7 +2256,7 @@
          cell is wide enough that the padding is a margin rather than a budget. Before the
          ButtonSpinner template was hand-authored, "30" rendered here as "3" plus a sliver. -->
     <Setter Property="Padding" Value="4,0" />
-    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="MinHeight" Value="262" />
     <Setter Property="Height" Value="{DynamicResource FieldHeightSm}" />
   </Style>
 
@@ -2427,7 +2430,7 @@
          has to line up with, so the whole control is shifted up by exactly that: the margins cancel,
          leaving the height untouched and the handle on the band. SliderAlignmentTests keeps it. -->
     <Setter Property="Margin" Value="0,-5,0,5" />
-    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="MinHeight" Value="262" />
     <!-- Do NOT pin a Height here, and do not pin one on the Panel this sits in. Fluent lays a
          horizontal Slider out at roughly 40px against the mockup's ~20px range row, and both levers
          were tried: an explicit Height on the Slider and a fixed Height on the containing Panel each
@@ -2719,7 +2722,7 @@
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Padding" Value="0" />
-    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="MinHeight" Value="262" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="Cursor" Value="Hand" />
@@ -2789,7 +2792,7 @@
     <Setter Property="FontSize" Value="9.5" />
     <Setter Property="LetterSpacing" Value="0.3" />
     <Setter Property="Padding" Value="7,3" />
-    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="MinHeight" Value="262" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
@@ -3555,7 +3558,7 @@
   <Style Selector="Slider.ins-z">
     <Setter Property="Background" Value="{DynamicResource LineStrongBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
-    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="MinHeight" Value="262" />
     <Setter Property="Margin" Value="0,-5,0,5" />
   </Style>
 
@@ -4132,7 +4135,7 @@
     <Setter Property="Width" Value="24" />
     <Setter Property="Height" Value="24" />
     <Setter Property="MinWidth" Value="0" />
-    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="MinHeight" Value="262" />
     <Setter Property="Padding" Value="0" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Background" Value="Transparent" />
@@ -4250,7 +4253,7 @@
   <Style Selector="RadioButton.rchoice">
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="MinHeight" Value="262" />
     <Setter Property="Padding" Value="8,2,0,2" />
   </Style>
   <Style Selector="TextBlock.rhint">

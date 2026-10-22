@@ -171,7 +171,9 @@ public partial class ExportDialogViewModel : ViewModelBase
     [ObservableProperty] private string _sheetSizeText = "";
 
     /// <summary>Stamp each asset's set number into a corner of its art.</summary>
-    [ObservableProperty] private bool _numberWatermark;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ModelsMarkNoteOpacity))]
+    private bool _numberWatermark;
 
     /// <summary>Which corner the stamp sits in.</summary>
     [ObservableProperty] private StampCorner _watermarkCorner = StampCorner.BottomRight;
@@ -250,6 +252,12 @@ public partial class ExportDialogViewModel : ViewModelBase
         _dialogs = dialogs;
         _recordedSha = cookBookSha256;
 
+        // READ ONCE. The row is always laid out and only its ink changes, so this is a fact about
+        // the Set that does not move while the dialog is open.
+        var modelsDir = Path.Combine(setDirectory, SetLayout.ModelsDir);
+        SetHasModels = Directory.Exists(modelsDir)
+            && Directory.EnumerateFiles(modelsDir, "*", SearchOption.AllDirectories).Any();
+
         // FOUND, NOT ASKED FOR. "Include the source CookBook" used to mean "and now go find the
         // file", which is a question the app can usually answer itself: the Set records its book's
         // hash, so a candidate can be CHECKED rather than guessed at. Nothing is accepted that is
@@ -266,6 +274,23 @@ public partial class ExportDialogViewModel : ViewModelBase
     /// Whether the options form is showing rather than the result.
     /// </summary>
     public bool ShowForm => !IsRunning && !IsDone;
+
+    /// <summary>Whether the Set carries a <c>models/</c> directory with at least one file in it.
+    /// Read once, when the dialog opens.</summary>
+    public bool SetHasModels { get; }
+
+    /// <summary>Ink of the IMAGES-tab line saying the mark never reaches <c>models/</c>: 1 only when
+    /// the Set has models and the mark is armed, else 0. Opacity rather than visibility, so the
+    /// line holds its place and arming the mark moves nothing.</summary>
+    public double ModelsMarkNoteOpacity => SetHasModels && NumberWatermark ? 1 : 0;
+
+    /// <summary>The reason beside the models row when it is off; empty when the Set has models.</summary>
+    public string ModelsNote => SetHasModels ? "" : "none in this Set";
+
+    /// <summary>What the models row says on hover: what ticking it ships, or why it is off.</summary>
+    public string ModelsTip => SetHasModels
+        ? "3D models of every asset, as cooked"
+        : "This Set was cooked without 3D models.";
 
     /// <summary>
     /// Whether this machine can seal at all.

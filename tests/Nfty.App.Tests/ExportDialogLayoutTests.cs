@@ -173,7 +173,7 @@ public class ExportDialogLayoutTests
         // 30px to spare and stops scrolling at all above a ~700 window. So 780 stopped being short
         // and this assertion stopped meaning anything - which the check below is here to say out
         // loud rather than let it rot into a green test of nothing. 680 is measured: the card
-        // clamps to 481 there and the body wants 251 in 236. The scroll path is still worth
+        // clamps to 481 there and the body wants 262 in 236. The scroll path is still worth
         // guarding, because a longer caveat or one more sealed field brings it straight back.
         var (window, view) = Open(sealing: false, windowHeight: 680);
         try

@@ -70,7 +70,7 @@
               </ItemsControl>
 
               <Grid ColumnDefinitions="*,150" ColumnSpacing="20">
-                <StackPanel Grid.Column="0" Spacing="4">
+                <StackPanel Grid.Column="0" Spacing="0">
                   <TextBlock Text="CONTENTS" Classes="slbl" />
                   <CheckBox Content="Generated art" IsChecked="{Binding Images}"
                             ToolTip.Tip="images/ — the finished PNGs." />
@@ -78,6 +78,17 @@
                             ToolTip.Tip="metadata/ — name, description and traits: the standard ERC-721 fields." />
                   <CheckBox Content="nfty metadata" IsChecked="{Binding NftyMetadata}"
                             ToolTip.Tip="nfty/ — per-asset DNA, the seed, and the color rolled on every layer. What a buyer wants and a public listing has no use for." />
+                  <!-- ALWAYS LAID OUT, disabled with its reason when the Set has no models/: a row
+                       that came and went with the Set would move everything under it. -->
+                  <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                    <CheckBox Grid.Column="0" Content="3D models" IsChecked="{Binding Models}"
+                              IsEnabled="{Binding SetHasModels}"
+                              ToolTip.Tip="{Binding ModelsTip}" />
+                    <!-- The reason, in ink beside the dim box: a disabled row that only says why on
+                         hover is a row the reader has to guess at. Empty when the Set has models. -->
+                    <TextBlock Grid.Column="1" Classes="m-sub" VerticalAlignment="Center"
+                               Text="{Binding ModelsNote}" />
+                  </Grid>
                   <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
                     <CheckBox Grid.Column="0" Content="Source CookBook"
                               IsChecked="{Binding IncludeCookBook}"
@@ -161,9 +172,15 @@
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
-                  <TextBlock Grid.Column="1" Classes="m-sub" VerticalAlignment="Center"
-                             TextWrapping="Wrap"
-                             Text="The number is painted into the exported copy. Your Set is untouched." />
+                  <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                    <TextBlock Classes="m-sub" TextWrapping="Wrap"
+                               Text="The number is painted into the exported copy. Your Set is untouched." />
+                    <!-- Inked only when the Set has models AND the mark is armed; always laid out,
+                         so arming the mark moves nothing. -->
+                    <TextBlock x:Name="ModelsMarkNote" Classes="m-sub" TextWrapping="Wrap"
+                               Opacity="{Binding ModelsMarkNoteOpacity}"
+                               Text="The mark is drawn on exported images only — models/ is never stamped." />
+                  </StackPanel>
                 </Grid>
               </StackPanel>
             </StackPanel>

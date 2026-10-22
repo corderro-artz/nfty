@@ -879,15 +879,21 @@ public class VisualCapture
         {
             var key = variant.Key.ToString()!.ToLowerInvariant();
 
-            var plain = new ExportDialogViewModel(ExportCaptureSet(), new FilePickerService(),
+            var plain = new ExportDialogViewModel(ExportCaptureSet(withModels: true), new FilePickerService(),
                 new NoopFolderRevealer(), new FakeDialogs());
             Capture(new Views.ExportDialogView { DataContext = plain }, variant,
                 $"export-{key}.png", width: 1180, height: 780);
 
+            // A Set cooked without models: the row stays laid out, disabled, with its reason.
+            var bare = new ExportDialogViewModel(ExportCaptureSet(), new FilePickerService(),
+                new NoopFolderRevealer(), new FakeDialogs());
+            Capture(new Views.ExportDialogView { DataContext = bare }, variant,
+                $"export-nomodels-{key}.png", width: 1180, height: 780);
+
             // THE IMAGES PAGE, WITH BOTH GROUPS ARMED. A capture of a tab nothing switched to is a
             // picture of the tab beside it - the same way four `editor-refs` frames were four
             // pictures of the colorize rail. Each of these states its Tab explicitly.
-            var images = new ExportDialogViewModel(ExportCaptureSet(), new FilePickerService(),
+            var images = new ExportDialogViewModel(ExportCaptureSet(withModels: true), new FilePickerService(),
                 new NoopFolderRevealer(), new FakeDialogs())
             {
                 Tab = ExportTab.Images,
@@ -897,7 +903,7 @@ public class VisualCapture
             Capture(new Views.ExportDialogView { DataContext = images }, variant,
                 $"export-images-{key}.png", width: 1180, height: 780);
 
-            var sealing = new ExportDialogViewModel(ExportCaptureSet(), new FilePickerService(),
+            var sealing = new ExportDialogViewModel(ExportCaptureSet(withModels: true), new FilePickerService(),
                 new NoopFolderRevealer(), new FakeDialogs())
             {
                 Tab = ExportTab.Seal,
@@ -969,7 +975,7 @@ public class VisualCapture
 
     /// <summary>A real cooked Set on disk, so the manifest lines are real counts and real sizes
     /// rather than a fixture's idea of them.</summary>
-    internal static string ExportCaptureSet()
+    internal static string ExportCaptureSet(bool withModels = false)
     {
         var dir = Path.Combine(Directory.CreateTempSubdirectory("nfty-cap-").FullName, "Chest Demo");
         var ids = new[] { "a", "b", "c", "d" };
@@ -997,6 +1003,12 @@ public class VisualCapture
         };
         using var set = Generator.Generate(book, new GenerateOptions(4, "launch"));
         SetWriter.Write(set, dir, pack: false);
+        if (withModels)
+        {
+            var models = Path.Combine(dir, SetLayout.ModelsDir);
+            Directory.CreateDirectory(models);
+            File.WriteAllBytes(Path.Combine(models, "0001.glb"), new byte[] { 1, 2, 3, 4 });
+        }
         return dir;
     }
 
