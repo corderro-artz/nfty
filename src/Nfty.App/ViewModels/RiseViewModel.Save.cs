@@ -31,6 +31,11 @@ public sealed partial class RiseViewModel
     // (the source hands back the running task) rather than being refused.
     private bool SaveGate => Source.CanSave && HasUnsavedDepth && !IsExporting;
 
+    // What the unsaved things are called: the cells of a picture or sheet, the variants of a layer.
+    private string DirtyNoun(int n) => Source is PictureRiseSource
+        ? (n == 1 ? "cell" : "cells")
+        : (n == 1 ? "variant" : "variants");
+
     /// <summary>The line in the footer: what Save would do, or why it will not.</summary>
     public string FooterText
     {
@@ -41,7 +46,7 @@ public sealed partial class RiseViewModel
             int n = DirtyCount;
             if (n == 0) return "no unsaved depth";
             var text = string.Create(CultureInfo.InvariantCulture,
-                $"unsaved depth on {n} {(n == 1 ? "variant" : "variants")}");
+                $"unsaved depth on {n} {DirtyNoun(n)}");
             return Source.IsLocked
                 ? text + " · the CookBook is read-only — unlock it in the Explorer to save"
                 : text;
@@ -111,7 +116,7 @@ public sealed partial class RiseViewModel
             return;
         }
         var message = string.Create(CultureInfo.InvariantCulture,
-            $"{Source.Title} has unsaved depth on {n} {(n == 1 ? "variant" : "variants")}. Leaving discards it.");
+            $"{Source.Title} has unsaved depth on {n} {DirtyNoun(n)}. Leaving discards it.");
         var card = new LeaveDialogViewModel(_dialogs, "Leave Rise?", message, canSave: !Source.IsLocked);
         var choice = await _dialogs.ShowAsync<LeaveChoice>(card);
         switch (choice)

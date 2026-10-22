@@ -48,7 +48,7 @@ public class RiseSheetGridTests
     }
 
     private static RiseViewModel Page(string path, IDialogService dialogs, IStatusService? status = null) =>
-        new(PictureRiseSource.Open(path, new ImageBridge()), new ImageBridge(), new FakeNav(), dialogs,
+        new(PictureRiseSource.Open(path, new ImageBridge(), () => Task.FromResult<string?>(null)), new ImageBridge(), new FakeNav(), dialogs,
             new FilePickerService(), status ?? new StatusService());
 
     private static void Paint(RiseViewModel vm, int item)
@@ -142,6 +142,54 @@ public class RiseSheetGridTests
         vm.GridA = 4;
         Assert.Equal("", vm.GridProblem);
         Assert.True(vm.ApplyGridCommand.CanExecute(null));
+    }
+
+    [AvaloniaFact]
+    public void The_cell_size_problem_names_the_cell_that_was_typed_and_the_picture_it_misses()
+    {
+        using var vm = Page(Solid(48, 32), new FakeDialogs());
+        vm.GridMode = GridMode.CellSize;
+
+        vm.GridA = 5; vm.GridB = 8;
+        Assert.Equal("48 px does not divide into cells 5 px wide", vm.GridProblem);
+
+        vm.GridA = 8; vm.GridB = 5;
+        Assert.Equal("32 px does not divide into cells 5 px tall", vm.GridProblem);
+    }
+
+    [AvaloniaFact]
+    public async Task The_leave_card_counts_cells_for_a_sheet_and_variants_for_a_layer()
+    {
+        var dialogs = new FakeDialogs();
+        using var sheet = Page(Solid(16, 8), dialogs);
+        sheet.GridA = 2; sheet.GridB = 1;
+        await sheet.ApplyGridCommand.ExecuteAsync(null);
+        Paint(sheet, 0);
+        Paint(sheet, 1);
+
+        await sheet.BackCommand.ExecuteAsync(null);
+        var card = Assert.IsType<LeaveDialogViewModel>(dialogs.Active);
+        Assert.Contains("unsaved depth on 2 cells.", card.Message);
+        Assert.Contains("unsaved depth on 2 cells", sheet.FooterText);
+
+        using var variant = RisePages.VariantVm(oakDepth: RisePages.PaintedOak());
+        var subject = variant.Source.Open(variant.Items[0]);
+        subject.History.Do(new DepthStep(new[] { (3, 3) }, DepthSide.Front, +1), subject.Depth);
+        variant.Items[0].RefreshDepth();
+        Assert.Contains("unsaved depth on 1 variant", variant.FooterText);
+    }
+
+    [AvaloniaFact]
+    public void Apply_is_as_tall_as_the_number_cells_beside_it()
+    {
+        using var vm = Page(Solid(48, 32), new FakeDialogs());
+        using var page = RisePages.Show(vm, 1180, 720);
+        double small = (double)Application.Current!.FindResource("FieldHeightSm")!;
+        var apply = page.View.GetVisualDescendants().OfType<Button>().First(b => b.Content as string == "Apply");
+        var cell = page.View.GetVisualDescendants().OfType<NumericUpDown>().First(n => n.Classes.Contains("nin") && n.IsEffectivelyVisible);
+
+        Assert.Equal(small, apply.Bounds.Height);
+        Assert.Equal(cell.Bounds.Height, apply.Bounds.Height);
     }
 
     [AvaloniaFact]

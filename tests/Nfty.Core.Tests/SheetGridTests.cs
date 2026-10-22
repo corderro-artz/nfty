@@ -100,6 +100,30 @@ public class SheetGridTests
         Assert.Equal(new SheetGrid(4, 2, 16, 32, 8), SheetGrid.FromCellSize(16, 32, 64, 64));
     }
 
+    [Fact]
+    public void The_non_throwing_variants_report_what_the_throwing_ones_throw()
+    {
+        Assert.Null(SheetGrid.TryFromColumnsRows(4, 2, 64, 64, out var a));
+        Assert.Equal(new SheetGrid(4, 2, 16, 32, 8), a);
+        Assert.Null(SheetGrid.TryFromCellSize(16, 32, 64, 64, out var b));
+        Assert.Equal(new SheetGrid(4, 2, 16, 32, 8), b);
+
+        // Each names what was typed and the size it fails to divide, and is the exact message thrown.
+        var cols = SheetGrid.TryFromColumnsRows(3, 1, 64, 64, out var none1);
+        Assert.Null(none1);
+        Assert.Equal("64 px does not divide into 3 columns", cols);
+        Assert.Equal(cols, Assert.Throws<ArgumentException>(() => SheetGrid.FromColumnsRows(3, 1, 64, 64)).Message);
+
+        var cell = SheetGrid.TryFromCellSize(5, 8, 48, 32, out var none2);
+        Assert.Null(none2);
+        Assert.Equal("48 px does not divide into cells 5 px wide", cell);
+        Assert.Equal(cell, Assert.Throws<ArgumentException>(() => SheetGrid.FromCellSize(5, 8, 48, 32)).Message);
+        Assert.Equal("32 px does not divide into cells 5 px tall", SheetGrid.TryFromCellSize(8, 5, 48, 32, out _));
+
+        Assert.NotNull(SheetGrid.TryFromColumnsRows(0, 1, 64, 64, out _));
+        Assert.NotNull(SheetGrid.TryFromCellSize(0, 8, 64, 64, out _));
+    }
+
     private static Image<Rgba32> Foreign()
     {
         var img = new Image<Rgba32>(16, 8);

@@ -74,6 +74,17 @@
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
   </Style>
 
+  <!-- .cellbtn: a toolbar button that shares a line with compact numeric cells (a number box, a
+       stepper) and so is that cell's height, FieldHeightSm, not its own. Declared after .tbtn, which
+       sets the padding it overrides. -->
+  <Style Selector="Button.tbtn.cellbtn">
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Height" Value="{DynamicResource FieldHeightSm}" />
+    <Setter Property="Padding" Value="9,0" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+
   <!-- Disabled: the mockup disables by OPACITY only, keeping the panel surface underneath
        (explorer.html `.tbtn:disabled{opacity:.38}`) — but Fluent's own ":disabled" template style
        repaints PART_ContentPresenter's Background/BorderBrush/Foreground from its own

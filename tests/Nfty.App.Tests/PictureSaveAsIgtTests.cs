@@ -151,6 +151,40 @@ public class PictureSaveAsIgtTests
     }
 
     [AvaloniaFact]
+    public async Task The_saved_ingredient_rises_to_the_same_model_as_the_picture()
+    {
+        var dir = Temp();
+        var png = SheetOnDisk(dir, "crew.png", 2);
+        var target = Path.Combine(dir, "crew.igt");
+        using var src = PictureRiseSource.Open(png, new ImageBridge(), Picks(target));
+        Paint(src, 1, 5, 5);
+        Paint(src, 1, 6, 5);
+        Paint(src, 1, 6, 5);
+        var cell = src.Open(src.Items[1]);
+        var options = new Nfty.Model.RiseOptions();
+
+        // The page's own rise: Riser over the finished art and its painted depth, written as the
+        // export writes it.
+        var fromPicture = Nfty.Model.ModelWriter.Write(
+            Nfty.Model.Riser.TryBuild(cell.Art, cell.Depth.ToDepthMap(), options, "crew")!,
+            cell.Art, options, "crew");
+
+        await src.SaveAsync();
+        using var read = await IngredientArchive.ReadAsync(target);
+        var art = read.VariantImages["cell-2"];
+        read.Depths.TryGetValue("cell-2", out var depth);
+        var fromIgt = Nfty.Model.ModelWriter.Write(
+            Nfty.Model.Riser.TryBuild(art, depth, options, "crew")!, art, options, "crew");
+
+        Assert.Equal(fromPicture.Count, fromIgt.Count);
+        for (int i = 0; i < fromPicture.Count; i++)
+        {
+            Assert.Equal(fromPicture[i].FileName, fromIgt[i].FileName);
+            Assert.Equal(fromPicture[i].Bytes, fromIgt[i].Bytes);
+        }
+    }
+
+    [AvaloniaFact]
     public async Task A_name_without_the_extension_gets_it()
     {
         var dir = Temp();

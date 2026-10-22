@@ -198,15 +198,30 @@ public sealed record SheetGrid(int Columns, int Rows, int CellWidth, int CellHei
     /// <param name="height">The picture's height.</param>
     /// <returns>The grid, with <c>Count</c> = columns x rows.</returns>
     /// <exception cref="ArgumentException">The grid does not divide the picture; the message says how.</exception>
-    public static SheetGrid FromColumnsRows(int columns, int rows, int width, int height)
+    public static SheetGrid FromColumnsRows(int columns, int rows, int width, int height) =>
+        TryFromColumnsRows(columns, rows, width, height, out var grid) is { } problem
+            ? throw new ArgumentException(problem)
+            : grid!;
+
+    /// <summary>The same as <see cref="FromColumnsRows"/>, reporting a problem instead of throwing.</summary>
+    /// <param name="columns">Cells across.</param>
+    /// <param name="rows">Cells down.</param>
+    /// <param name="width">The picture's width.</param>
+    /// <param name="height">The picture's height.</param>
+    /// <param name="grid">The grid, or null when there is a problem.</param>
+    /// <returns>A sentence naming the numbers typed and the size they fail to divide, or null.</returns>
+    /// <remarks>For a screen bound while someone is still typing; <see cref="FromColumnsRows"/> is this
+    /// rule, thrown.</remarks>
+    public static string? TryFromColumnsRows(int columns, int rows, int width, int height, out SheetGrid? grid)
     {
-        if (columns <= 0 || rows <= 0)
-            throw new ArgumentException("A grid needs at least one column and one row.");
+        grid = null;
+        if (columns <= 0 || rows <= 0) return "A grid needs at least one column and one row.";
         if (width % columns != 0)
-            throw new ArgumentException(string.Create(CultureInfo.InvariantCulture, $"{width} px does not divide into {columns} columns"));
+            return string.Create(CultureInfo.InvariantCulture, $"{width} px does not divide into {columns} columns");
         if (height % rows != 0)
-            throw new ArgumentException(string.Create(CultureInfo.InvariantCulture, $"{height} px does not divide into {rows} rows"));
-        return new SheetGrid(columns, rows, width / columns, height / rows, columns * rows);
+            return string.Create(CultureInfo.InvariantCulture, $"{height} px does not divide into {rows} rows");
+        grid = new SheetGrid(columns, rows, width / columns, height / rows, columns * rows);
+        return null;
     }
 
     /// <summary>A grid from a cell size, every cell filled.</summary>
@@ -216,16 +231,29 @@ public sealed record SheetGrid(int Columns, int Rows, int CellWidth, int CellHei
     /// <param name="height">The picture's height.</param>
     /// <returns>The grid, with <c>Count</c> = columns x rows.</returns>
     /// <exception cref="ArgumentException">The cell size does not divide the picture; the message says how.</exception>
-    public static SheetGrid FromCellSize(int cellWidth, int cellHeight, int width, int height)
+    public static SheetGrid FromCellSize(int cellWidth, int cellHeight, int width, int height) =>
+        TryFromCellSize(cellWidth, cellHeight, width, height, out var grid) is { } problem
+            ? throw new ArgumentException(problem)
+            : grid!;
+
+    /// <summary>The same as <see cref="FromCellSize"/>, reporting a problem instead of throwing.</summary>
+    /// <param name="cellWidth">One cell's width.</param>
+    /// <param name="cellHeight">One cell's height.</param>
+    /// <param name="width">The picture's width.</param>
+    /// <param name="height">The picture's height.</param>
+    /// <param name="grid">The grid, or null when there is a problem.</param>
+    /// <returns>A sentence naming the cell size typed and the picture size it fails to divide, or null.</returns>
+    public static string? TryFromCellSize(int cellWidth, int cellHeight, int width, int height, out SheetGrid? grid)
     {
-        if (cellWidth <= 0 || cellHeight <= 0)
-            throw new ArgumentException("A cell needs a width and a height.");
+        grid = null;
+        if (cellWidth <= 0 || cellHeight <= 0) return "A cell needs a width and a height.";
         if (width % cellWidth != 0)
-            throw new ArgumentException(string.Create(CultureInfo.InvariantCulture, $"{width} px does not divide into cells {cellWidth} px wide"));
+            return string.Create(CultureInfo.InvariantCulture, $"{width} px does not divide into cells {cellWidth} px wide");
         if (height % cellHeight != 0)
-            throw new ArgumentException(string.Create(CultureInfo.InvariantCulture, $"{height} px does not divide into cells {cellHeight} px tall"));
+            return string.Create(CultureInfo.InvariantCulture, $"{height} px does not divide into cells {cellHeight} px tall");
         int cols = width / cellWidth, rows = height / cellHeight;
-        return new SheetGrid(cols, rows, cellWidth, cellHeight, cols * rows);
+        grid = new SheetGrid(cols, rows, cellWidth, cellHeight, cols * rows);
+        return null;
     }
 
     /// <summary>Writes a grid into an existing PNG, keeping every pixel exactly.</summary>

@@ -80,9 +80,9 @@ public sealed partial class RiseViewModel
         }
     }
 
-    // The grid the entry makes, and what is wrong with it. A grid is built from whatever was typed and
-    // then judged by the engine's own check (SheetGrid.ProblemWith), so this screen has no second idea
-    // of "tiles the picture".
+    // The grid the entry makes, and what is wrong with it, from the engine's own rule
+    // (SheetGrid.TryFrom...), so this screen has no second idea of "tiles the picture" and the words
+    // name what was typed: columns for columns, a cell's width for a cell size.
     private string? ProblemFor(PictureRiseSource pic, out SheetGrid? grid)
     {
         int w = pic.ImageWidth, h = pic.ImageHeight;
@@ -95,18 +95,9 @@ public sealed partial class RiseViewModel
                 grid = _detected;
                 return grid is null ? "No grid found: the cells have no transparent gutters to tell them apart." : null;
             case GridMode.ColumnsRows:
-            {
-                int cols = GridA, rows = GridB;
-                grid = new SheetGrid(cols, rows, cols > 0 ? w / cols : 0, rows > 0 ? h / rows : 0, Math.Max(0, cols * rows));
-                return SheetGrid.ProblemWith(grid, w, h);
-            }
+                return SheetGrid.TryFromColumnsRows(GridA, GridB, w, h, out grid);
             default:
-            {
-                int cw = GridA, ch = GridB;
-                int cols = cw > 0 ? w / cw : 0, rows = ch > 0 ? h / ch : 0;
-                grid = new SheetGrid(cols, rows, cw, ch, cols * rows);
-                return SheetGrid.ProblemWith(grid, w, h);
-            }
+                return SheetGrid.TryFromCellSize(GridA, GridB, w, h, out grid);
         }
     }
 
