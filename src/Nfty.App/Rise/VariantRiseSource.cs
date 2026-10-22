@@ -26,11 +26,14 @@ public sealed class VariantRiseSource : RiseSource
     private readonly ICookBookSession _session;
     private readonly Func<bool>? _isEditing;
     private readonly string? _looseSavePath;
-    private readonly bool _isTwoDOnly;
+    private bool _isTwoDOnly;
     private readonly List<RiseItem> _items = new();
     private readonly RiseItem _initial;
     private LoadedIngredient _looseLive;
     private Task? _inFlight;
+    private Task<VoxelReadyOutcome?>? _voxelInFlight;
+    private VoxelReadyResult? _voxelResult;
+    private readonly IImageBridge _bridge;
 
     /// <summary>Builds the source for one layer of a recipe.</summary>
     /// <param name="recipe">The recipe that holds the layer.</param>
@@ -52,6 +55,7 @@ public sealed class VariantRiseSource : RiseSource
         _ingredientId = ingredient.Manifest.Id;
         _ingredientName = ingredient.Manifest.Name;
         _session = session;
+        _bridge = bridge;
         _isEditing = isEditing;
         _looseSavePath = looseSavePath;
         _looseLive = ingredient;
@@ -216,17 +220,7 @@ public sealed class VariantRiseSource : RiseSource
 
         if (loose)
         {
-            var path = _looseSavePath!;
-            var tmp = $"{path}.{Guid.NewGuid():N}.tmp";
-            try
-            {
-                await IngredientArchive.WriteAsync(tmp, next.Manifest, next.VariantImages, depths);
-                File.Move(tmp, path, overwrite: true);
-            }
-            finally
-            {
-                if (File.Exists(tmp)) { try { File.Delete(tmp); } catch { /* best effort */ } }
-            }
+            await WriteLooseAsync(next);
             _looseLive = next;   // images shared with the previous object; nothing disposed
             looseNext = next;
         }
@@ -244,6 +238,166 @@ public sealed class VariantRiseSource : RiseSource
         if (persisted is not null) Saved?.Invoke(persisted);
         if (looseNext is not null) LooseSaved?.Invoke(looseNext);
         RaiseChanged();
+    }
+
+    private async Task WriteLooseAsync(LoadedIngredient next)
+    {
+        var path = _looseSavePath!;
+        var tmp = $"{path}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            await IngredientArchive.WriteAsync(tmp, next.Manifest, next.VariantImages, next.Depths);
+            File.Move(tmp, path, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(tmp)) { try { File.Delete(tmp); } catch { /* best effort */ } }
+        }
+    }
+
+    // ---------------------------------------------------------------- voxel-ready
+
+    // The graph voxel-ready works over: the open book, or for a loose layer the one-recipe wrapper the
+    // editor itself uses, so Core's book-level command serves both.
+    private LoadedCookBook? ScopeBook() =>
+        _looseSavePath is not null ? LooseWorkspace.WrapIngredient(_looseLive) : _session.Current;
+
+    private bool Ours(VoxelReadyChange c) =>
+        c.IngredientId == _ingredientId && (_looseSavePath is not null || c.RecipeId == _recipeId);
+
+    /// <inheritdoc />
+    public override bool CanMakeVoxelReady => _isTwoDOnly;
+
+    /// <inheritdoc />
+    public override bool CanUndoVoxelReady => _voxelResult is not null;
+
+    /// <inheritdoc />
+    public override string? VoxelReadyNote => _voxelResult is { } r
+        ? string.Create(CultureInfo.InvariantCulture,
+            $"Voxel-ready: {r.Changes.Count} {(r.Changes.Count == 1 ? "variant" : "variants")} snapped")
+        : null;
+
+    /// <inheritdoc />
+    public override IReadOnlyList<VoxelReadyChange> PlanVoxelReady() =>
+        ScopeBook() is { } book ? VoxelReady.Plan(book) : Array.Empty<VoxelReadyChange>();
+
+    /// <inheritdoc />
+    public override (Image<Rgba32> Before, Image<Rgba32> After) PreviewVoxelReady(VoxelReadyChange change)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        var book = ScopeBook() ?? throw new InvalidOperationException("The CookBook is no longer open.");
+        var image = book.Recipes.First(r => r.Manifest.Id == change.RecipeId)
+            .Ingredients.First(i => i.Manifest.Id == change.IngredientId).VariantImages[change.VariantId];
+        return (image.Clone(), VoxelReady.Snap(image));
+    }
+
+    /// <inheritdoc />
+    public override Task<VoxelReadyOutcome?> MakeVoxelReadyAsync()
+    {
+        // THE LOCK IS CHECKED HERE, NOT ONLY WHERE THE BUTTON IS ENABLED: a disabled button is a label.
+        // Unsaved depth is refused too: reseeding the items would throw it away unasked.
+        if (IsLocked || IsDirty) return Task.FromResult<VoxelReadyOutcome?>(null);
+        if (_voxelInFlight is { } running) return running;
+        var run = ApplyVoxelReadyAsync();
+        _voxelInFlight = run;
+        return run;
+    }
+
+    private async Task<VoxelReadyOutcome?> ApplyVoxelReadyAsync()
+    {
+        try
+        {
+            var book = ScopeBook() ?? throw new InvalidOperationException("The CookBook is no longer open.");
+            var result = VoxelReady.Apply(book);
+            if (result.Changes.Count == 0) { result.Dispose(); return null; }
+
+            LoadedCookBook? persisted = null;
+            LoadedIngredient ours;
+            try
+            {
+                ours = await WriteGraphAsync(result.Book, v => persisted = v);
+            }
+            catch
+            {
+                result.Dispose();
+                throw;
+            }
+
+            _voxelResult?.Dispose();
+            _voxelResult = result;
+            AfterVoxelWrite(result.Changes, ours, persisted);
+            return new VoxelReadyOutcome(result.Changes.Count, VoxelReadyNote!);
+        }
+        finally { _voxelInFlight = null; }
+    }
+
+    /// <inheritdoc />
+    public override async Task UndoVoxelReadyAsync()
+    {
+        if (IsLocked || IsDirty || _voxelResult is not { } applied) return;
+        var book = ScopeBook() ?? throw new InvalidOperationException("The CookBook is no longer open.");
+        // Refuses (InvalidOperationException naming the variants) when any snapped variant was edited since.
+        var restored = VoxelReady.Undo(book, applied);
+        LoadedCookBook? persisted = null;
+        var ours = await WriteGraphAsync(restored, v => persisted = v);
+        _voxelResult = null;
+        AfterVoxelWrite(applied.Changes, ours, persisted);
+        applied.Dispose();
+    }
+
+    // Writes the graph where this layer lives and returns this layer's ingredient as written.
+    private async Task<LoadedIngredient> WriteGraphAsync(LoadedCookBook graph, Action<LoadedCookBook> persistedBook)
+    {
+        if (_looseSavePath is not null)
+        {
+            var next = graph.Recipes[0].Ingredients[0];
+            var problems = Validator.ValidateIngredient(next);
+            if (problems.Count > 0) throw new InvalidOperationException(string.Join(Environment.NewLine, problems));
+            await WriteLooseAsync(next);
+            _looseLive = next;
+            return next;
+        }
+        var persisted = await CookBookPersistence.PersistAsync(_session, graph);
+        persistedBook(persisted);
+        return persisted.Recipes.First(r => r.Manifest.Id == _recipeId)
+            .Ingredients.First(i => i.Manifest.Id == _ingredientId);
+    }
+
+    private void AfterVoxelWrite(IReadOnlyList<VoxelReadyChange> changes, LoadedIngredient ours,
+        LoadedCookBook? persisted)
+    {
+        _isTwoDOnly = _looseSavePath is not null
+            ? Opacity.HasPartialAlpha(ours)
+            : persisted is not null && Opacity.HasPartialAlpha(persisted);
+
+        // Every affected row of this layer takes the written pixels and its stored depth. The old
+        // pictures and thumbnails go only AFTER the page has been told, as a reroll does: until then its
+        // bindings still read them.
+        var oldSubjects = new List<RiseSubject>();
+        var oldThumbs = new List<Avalonia.Media.Imaging.Bitmap>();
+        foreach (var c in changes.Where(Ours))
+        {
+            var item = _items.FirstOrDefault(i => i.Id == c.VariantId);
+            if (item is null || !ours.VariantImages.TryGetValue(c.VariantId, out var written)) continue;
+            var art = written.Clone();
+            if (item.Thumbnail is { } oldThumb) oldThumbs.Add(oldThumb);
+            item.Thumbnail = _bridge.ToBitmap(art);
+            var old = item.Replace(new RiseSubject(art, ours.Depths.GetValueOrDefault(c.VariantId), ownsArt: true));
+            if (old is not null) oldSubjects.Add(old);
+        }
+        RaiseChanged();
+        if (persisted is not null) Saved?.Invoke(persisted);
+        if (_looseSavePath is not null) LooseSaved?.Invoke(ours);
+        foreach (var s in oldSubjects) s.Dispose();
+        foreach (var t in oldThumbs) t.Dispose();
+    }
+
+    /// <inheritdoc />
+    public override void Dispose()
+    {
+        base.Dispose();
+        _voxelResult?.Dispose();
+        _voxelResult = null;
     }
 
     private static bool SamePixels(Image<Rgba32> a, Image<Rgba32> b)

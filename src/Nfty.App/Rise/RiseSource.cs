@@ -1,5 +1,8 @@
 using System.Globalization;
+using Nfty.Core.Editing;
 using Nfty.Model;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Nfty.App.Rise;
 
@@ -26,6 +29,11 @@ public enum RiseSourceKind
 /// <param name="Name">The item's name.</param>
 /// <param name="CountText">Pixel count as text, e.g. "1 px".</param>
 public sealed record PartialAlphaRow(string Name, string CountText);
+
+/// <summary>What making a source voxel-ready did.</summary>
+/// <param name="Snapped">How many variants (or cells) had partial pixels snapped.</param>
+/// <param name="Note">The line the slot shows afterwards, e.g. "Voxel-ready: 9 variants snapped".</param>
+public sealed record VoxelReadyOutcome(int Snapped, string Note);
 
 /// <summary>
 /// Where the Rise page's items come from. The page talks to this and nothing else, so a new kind of
@@ -147,6 +155,36 @@ public abstract class RiseSource : IDisposable
     /// source that refuses (locked) returns a completed task, which is why callers check
     /// <see cref="CanSave"/> and say so rather than treating completion as proof of a write.</returns>
     public virtual Task SaveAsync() => throw new NotSupportedException("This source is read-only.");
+
+    // ---------------------------------------------------------------- voxel-ready
+
+    /// <summary>Whether this source has art that <see cref="MakeVoxelReadyAsync"/> would snap: it is a
+    /// layer or a picture, and some pixel is partially transparent.</summary>
+    public virtual bool CanMakeVoxelReady => false;
+
+    /// <summary>Whether a voxel-ready made through this source can still be undone.</summary>
+    public virtual bool CanUndoVoxelReady => false;
+
+    /// <summary>What the last voxel-ready did ("Voxel-ready: 9 variants snapped"), or null.</summary>
+    public virtual string? VoxelReadyNote => null;
+
+    /// <summary>Lists what <see cref="MakeVoxelReadyAsync"/> would change. Writes nothing.</summary>
+    /// <returns>One row per variant (or cell) with partial pixels.</returns>
+    public virtual IReadOnlyList<VoxelReadyChange> PlanVoxelReady() => Array.Empty<VoxelReadyChange>();
+
+    /// <summary>The pictures of one planned change, for the preview thumbnails.</summary>
+    /// <param name="change">One of <see cref="PlanVoxelReady"/>.</param>
+    /// <returns>Before and after, both owned by the caller.</returns>
+    public virtual (Image<Rgba32> Before, Image<Rgba32> After) PreviewVoxelReady(VoxelReadyChange change) =>
+        throw new NotSupportedException("This source cannot be made voxel-ready.");
+
+    /// <summary>Snaps every partial pixel to solid or clear and writes it where the art lives.</summary>
+    /// <returns>What it did, or null when it refused (locked, unsaved depth, nothing to snap, already running).</returns>
+    public virtual Task<VoxelReadyOutcome?> MakeVoxelReadyAsync() => Task.FromResult<VoxelReadyOutcome?>(null);
+
+    /// <summary>Puts back the pixels the last <see cref="MakeVoxelReadyAsync"/> replaced.</summary>
+    /// <returns>A task that completes when it is written; it faults with the reason when an undo is no longer safe.</returns>
+    public virtual Task UndoVoxelReadyAsync() => Task.CompletedTask;
 
     /// <summary>Raised when something the page shows has changed.</summary>
     public event Action? Changed;

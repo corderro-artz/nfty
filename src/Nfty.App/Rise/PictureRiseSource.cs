@@ -1,7 +1,9 @@
 using System.Globalization;
 using Nfty.App.Services;
 using Nfty.App.ViewModels;
+using Nfty.Core.Editing;
 using Nfty.Core.Formats;
+using Nfty.Core.Imaging;
 using Nfty.Core.Model;
 using Nfty.Core.Publish;
 using SixLabors.ImageSharp;
@@ -45,7 +47,9 @@ public sealed class PictureRiseSource : RiseSource
 {
     private readonly IImageBridge _bridge;
     private readonly string _stem;
-    private readonly Image<Rgba32> _image;
+    private Image<Rgba32> _image;
+    private Image<Rgba32>? _preSnap;
+    private int _snappedCount;
     private readonly Func<Task<string?>>? _pickPath;
     private readonly List<RiseItem> _retired = new();
     private Task? _inFlight;
@@ -224,9 +228,7 @@ public sealed class PictureRiseSource : RiseSource
             for (int n = 1; n <= g.Count; n++)
             {
                 int index = n - 1;
-                var rect = new Rectangle(index % g.Columns * g.CellWidth, index / g.Columns * g.CellHeight,
-                    g.CellWidth, g.CellHeight);
-                var cell = _image.Clone(ctx => ctx.Crop(rect));
+                var cell = CutCell(g, index);
                 var item = new RiseItem(string.Create(inv, $"cell-{n}"), string.Create(inv, $"#{n}"),
                     string.Create(inv, $"cell {n} of {g.Count}"), string.Create(inv, $"{_stem}-{n}"),
                     _bridge.ToBitmap(cell), ownsThumbnail: true);
@@ -246,6 +248,118 @@ public sealed class PictureRiseSource : RiseSource
         _items = items;
         _initial = items[0];
         _initial.IsSelected = true;
+    }
+
+    private Image<Rgba32> CutCell(SheetGrid g, int index)
+    {
+        var rect = new Rectangle(index % g.Columns * g.CellWidth, index / g.Columns * g.CellHeight,
+            g.CellWidth, g.CellHeight);
+        return _image.Clone(ctx => ctx.Crop(rect));
+    }
+
+    // ---------------------------------------------------------------- voxel-ready
+
+    /// <inheritdoc />
+    public override bool CanMakeVoxelReady => IsTwoDOnly;
+
+    /// <inheritdoc />
+    public override bool CanUndoVoxelReady => _preSnap is not null;
+
+    /// <inheritdoc />
+    public override string? VoxelReadyNote => _preSnap is null ? null
+        : string.Create(CultureInfo.InvariantCulture,
+            $"Voxel-ready: {_snappedCount} {(_snappedCount == 1 ? "cell" : "cells")} snapped");
+
+    /// <inheritdoc />
+    public override IReadOnlyList<VoxelReadyChange> PlanVoxelReady()
+    {
+        var rows = new List<VoxelReadyChange>();
+        foreach (var item in _items)
+        {
+            if (item.Subject is not { } s) continue;
+            int solid = 0, clear = 0;
+            for (int y = 0; y < s.Art.Height; y++)
+                for (int x = 0; x < s.Art.Width; x++)
+                {
+                    var p = s.Art[x, y];
+                    if (!Opacity.IsPartial(p)) continue;
+                    if (p.A >= VoxelReady.Threshold) solid++; else clear++;
+                }
+            if (solid + clear > 0)
+                rows.Add(new VoxelReadyChange("", "", _stem, item.Id, item.Name, solid, clear));
+        }
+        return rows;
+    }
+
+    /// <inheritdoc />
+    public override (Image<Rgba32> Before, Image<Rgba32> After) PreviewVoxelReady(VoxelReadyChange change)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        var item = _items.First(i => i.Id == change.VariantId);
+        var art = item.Subject!.Art;
+        return (art.Clone(), VoxelReady.Snap(art));
+    }
+
+    /// <summary>Snaps the session's art. Nothing is written: the file keeps its pixels, and Save as .igt
+    /// carries the snapped ones.</summary>
+    /// <returns>What it did, or null when depth is unsaved or nothing is partial.</returns>
+    public override Task<VoxelReadyOutcome?> MakeVoxelReadyAsync()
+    {
+        if (IsDirty) return Task.FromResult<VoxelReadyOutcome?>(null);   // reseeding would drop painted depth
+        var plan = PlanVoxelReady();
+        if (plan.Count == 0) return Task.FromResult<VoxelReadyOutcome?>(null);
+        var snapped = VoxelReady.Snap(_image);
+        _preSnap ??= _image;
+        if (!ReferenceEquals(_preSnap, _image)) _image.Dispose();
+        _image = snapped;
+        _snappedCount = plan.Count;
+        Reseed();
+        return Task.FromResult<VoxelReadyOutcome?>(new VoxelReadyOutcome(plan.Count, VoxelReadyNote!));
+    }
+
+    /// <inheritdoc />
+    public override Task UndoVoxelReadyAsync()
+    {
+        if (IsDirty || _preSnap is not { } original) return Task.CompletedTask;
+        _image.Dispose();
+        _image = original;
+        _preSnap = null;
+        Reseed();
+        return Task.CompletedTask;
+    }
+
+    // Every row whose cut of the picture now differs takes the new pixels and keeps its depth. The old
+    // pictures and thumbnails go only after the page has been told.
+    private void Reseed()
+    {
+        var oldSubjects = new List<RiseSubject>();
+        var oldThumbs = new List<Avalonia.Media.Imaging.Bitmap>();
+        for (int index = 0; index < _items.Count; index++)
+        {
+            var item = _items[index];
+            if (item.Subject is not { } current) continue;
+            var art = Grid is { } g ? CutCell(g, index) : _image.Clone();
+            if (SamePixels(art, current.Art)) { art.Dispose(); continue; }
+            if (item.Thumbnail is { } oldThumb) oldThumbs.Add(oldThumb);
+            item.Thumbnail = _bridge.ToBitmap(art);
+            var old = item.Replace(new RiseSubject(art, current.Depth.ToDepthMap(), ownsArt: true));
+            if (old is not null) oldSubjects.Add(old);
+        }
+        RaiseChanged();
+        foreach (var s in oldSubjects) s.Dispose();
+        foreach (var t in oldThumbs) t.Dispose();
+    }
+
+    private static bool SamePixels(Image<Rgba32> a, Image<Rgba32> b)
+    {
+        if (a.Width != b.Width || a.Height != b.Height) return false;
+        bool same = true;
+        a.ProcessPixelRows(b, (ra, rb) =>
+        {
+            for (int y = 0; y < ra.Height && same; y++)
+                if (!ra.GetRowSpan(y).SequenceEqual(rb.GetRowSpan(y))) same = false;
+        });
+        return same;
     }
 
     private string OriginWord => GridOrigin switch
@@ -419,5 +533,7 @@ public sealed class PictureRiseSource : RiseSource
         foreach (var item in _retired) item.Dispose();
         _retired.Clear();
         _image.Dispose();
+        if (_preSnap is not null && !ReferenceEquals(_preSnap, _image)) _preSnap.Dispose();
+        _preSnap = null;
     }
 }

@@ -1,0 +1,69 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             x:Class="Nfty.App.Views.VoxelReadyDialogView"
+             x:DataType="vm:VoxelReadyDialogViewModel"
+             RenderOptions.BitmapInterpolationMode="None">
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Escape" Command="{Binding CancelCommand}" />
+  </UserControl.KeyBindings>
+  <!-- THE LIST SCROLLS AND THE HEADING AND FOOTER DO NOT, as on the validation card and for its
+       reason: how many variants a book has with partial alpha is the book's business, not a property
+       of the design, so the card hugs a short list, grows with a long one, caps, and scrolls only
+       the part that can be unbounded. The rows are virtualized: a book can have hundreds, and each
+       row makes its two pictures the first time it is shown. -->
+  <Border Classes="modal voxready">
+    <Grid RowDefinitions="Auto,*,Auto">
+      <Border Grid.Row="0" Classes="modal-body tight">
+        <StackPanel Spacing="9">
+          <StackPanel Classes="plabel-row">
+            <Ellipse Classes="kdot" />
+            <TextBlock Text="VOXEL-READY" Classes="slbl" />
+          </StackPanel>
+          <TextBlock Text="Snap partial transparency?" Classes="m-h" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding Rule}" Classes="m-sub" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Auto" Margin="24,0,24,12">
+        <ItemsControl ItemsSource="{Binding Rows}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:VoxelReadyRow">
+              <Border Classes="vrrow" Margin="0,0,0,4">
+                <Grid ColumnDefinitions="40,16,40,*" ColumnSpacing="0">
+                  <Border Grid.Column="0" Classes="vrthumb">
+                    <Image Source="{Binding Before}" Stretch="Uniform" />
+                  </Border>
+                  <Path Grid.Column="1" Classes="ico xs" Data="{StaticResource IconArrowRight}"
+                        HorizontalAlignment="Center" VerticalAlignment="Center" />
+                  <Border Grid.Column="2" Classes="vrthumb">
+                    <Image Source="{Binding After}" Stretch="Uniform" />
+                  </Border>
+                  <StackPanel Grid.Column="3" Margin="12,0,0,0" VerticalAlignment="Center" Spacing="2">
+                    <TextBlock Classes="vname" Text="{Binding Name}" />
+                    <TextBlock Classes="rhint" Text="{Binding Counts}" />
+                  </StackPanel>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+
+      <Border Grid.Row="2" Classes="modal-foot">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+          <TextBlock Grid.Column="0" Classes="keyhint" VerticalAlignment="Center"
+                     Text="{Binding Summary}" TextWrapping="Wrap" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+            <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="tbtn" />
+            <Button Content="Make voxel-ready" Command="{Binding ApplyCommand}" Classes="accent" />
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
+  </Border>
+</UserControl>

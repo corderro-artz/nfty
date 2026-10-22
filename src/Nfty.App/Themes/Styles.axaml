@@ -2410,6 +2410,30 @@
     <Setter Property="MaxHeight" Value="620" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
+  <!-- Make voxel-ready preview card. Capped under the page area at the smallest window (~526) and
+       centered, so the arranged card clamps to its host; the list between heading and footer scrolls. -->
+  <Style Selector="Border.modal.voxready">
+    <Setter Property="Width" Value="620" />
+    <Setter Property="MaxHeight" Value="480" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- One row: before, arrow, after, then the name and what moves. Height stated, so the virtualized
+       list measures one row and every row is the same. -->
+  <Style Selector="Border.vrrow">
+    <Setter Property="Height" Value="56" />
+    <Setter Property="Padding" Value="8,7" />
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+  </Style>
+  <Style Selector="Border.vrthumb">
+    <Setter Property="Width" Value="40" />
+    <Setter Property="Height" Value="40" />
+    <Setter Property="Background" Value="{DynamicResource TileBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+  </Style>
+
   <Style Selector="Border.cdot.warn">
     <Setter Property="Background" Value="{DynamicResource WarningBrush}" />
   </Style>

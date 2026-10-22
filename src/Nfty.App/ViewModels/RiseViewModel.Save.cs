@@ -29,7 +29,7 @@ public sealed partial class RiseViewModel
 
     // Everything Save needs except "no save is running": a second press during a save joins the first
     // (the source hands back the running task) rather than being refused.
-    private bool SaveGate => Source.CanSave && HasUnsavedDepth && !IsExporting;
+    private bool SaveGate => Source.CanSave && HasUnsavedDepth && !IsExporting && !IsVoxelBusy;
 
     // What the unsaved things are called: the cells of a picture or sheet, the variants of a layer.
     private string DirtyNoun(int n) => Source is PictureRiseSource

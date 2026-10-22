@@ -387,6 +387,12 @@ public class DarkModeContrastTests
         var riseGhost = RisePages.VariantVm();
         riseGhost.SelectItemCommand.Execute(riseGhost.Items.First(i => i.Name == "Ghost"));
         yield return ("rise-2d-only", new Views.RiseView { DataContext = riseGhost }, riseGhost.Dispose);
+        // Make voxel-ready: the dim button beside the lock sentence, and the preview card with its
+        // longest list (long names, five-digit counts on every row, the scroller engaged).
+        var riseLocked = RisePages.VariantVm("ghost", isEditing: () => false);
+        yield return ("rise-voxel-locked", new Views.RiseView { DataContext = riseLocked }, riseLocked.Dispose);
+        var voxelCard = RiseVoxelReadyTests.PreviewCard(dialogs, 14);
+        yield return ("dialog-voxel-ready", new Views.VoxelReadyDialogView { DataContext = voxelCard }, voxelCard.Dispose);
         var (riseSealed, riseSealedOwner) = RisePages.SealedSetVm();
         riseSealed.ShowExportTabCommand.Execute(null);
         yield return ("rise-sealed-export", new Views.RiseView { DataContext = riseSealed },

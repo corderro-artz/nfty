@@ -522,10 +522,21 @@
                 <!-- 2D ONLY: LAST in the rail, the recorded positional exception - nothing sits below
                      it to be shoved when it appears. -->
                 <StackPanel Spacing="8" IsVisible="{Binding HasPartialAlphaRows}">
-                  <Grid Classes="ctlh" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                  <Grid Classes="ctlh" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="6">
                     <Path Grid.Column="0" Classes="ico xs" Data="{StaticResource Icon2dOnly}" VerticalAlignment="Center" />
                     <TextBlock Grid.Column="1" Text="2D ONLY" Classes="plabel" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="2" Classes="cv twodcount" Text="{Binding PartialAlphaCountText}" />
+                    <!-- MAKE VOXEL-READY. Always laid out, inked when the source can snap its own art (a
+                         layer or a picture); a recipe or a Set keeps the box and says where the fix lives
+                         at the foot of the rail. Disabled, its reason is already on the page (the footer
+                         says unsaved depth, the depth note says read-only) and its tooltip says it again. -->
+                    <!-- The ink slot is the panel round it, not the button: a disabled button dims
+                         itself, and an ink class on the button would hold it at full strength. -->
+                    <Panel Grid.Column="2" Classes="inkslot" Classes.on="{Binding ShowVoxelReadyButton}">
+                      <Button Classes="tbtn cellbtn" Content="Make voxel-ready…"
+                              Command="{Binding MakeVoxelReadyCommand}"
+                              ToolTip.Tip="{Binding VoxelReadyTip}" ToolTip.ShowOnDisabled="True" />
+                    </Panel>
+                    <TextBlock Grid.Column="3" Classes="cv twodcount" Text="{Binding PartialAlphaCountText}" />
                   </Grid>
                   <ItemsControl ItemsSource="{Binding PartialAlphaRows}">
                     <ItemsControl.ItemTemplate>
@@ -539,8 +550,27 @@
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
-                  <TextBlock Classes="vlock" Text="A voxel is solid or empty, so partial alpha cannot rise." />
+                  <TextBlock Classes="vlock" Text="{Binding TwoDOnlyFootnote}" />
                 </StackPanel>
+
+                <!-- MAKE VOXEL-READY, second half: what is left once the button has been used (the undo
+                     line) or never could be (a recipe or a Set only list the problem, and say where the
+                     fix lives). LAST in the rail, the recorded positional exception, so its arrival
+                     shoves nothing; it appears where the 2D ONLY rows have just gone, so the rail only
+                     ever gets shorter. The button itself sits in the 2D ONLY header (above), where it
+                     costs no height: the rail is within a few pixels of the smallest window's height
+                     with a painted layer and two listed pictures, and a row of its own did not fit. -->
+                <Panel x:Name="VoxelSlot" IsVisible="{Binding HasVoxelReadySlot}">
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" IsVisible="{Binding ShowVoxelReadyUndo}">
+                    <TextBlock Grid.Column="0" Classes="vlock" VerticalAlignment="Center"
+                               Text="{Binding VoxelReadyNote}" />
+                    <Button Grid.Column="1" Classes="tbtn cellbtn" Content="Undo"
+                            Command="{Binding UndoVoxelReadyCommand}" ToolTip.Tip="{Binding VoxelReadyTip}"
+                            ToolTip.ShowOnDisabled="True" />
+                  </Grid>
+                  <TextBlock Classes="vlock" IsVisible="{Binding ShowVoxelReadyHint}"
+                             Text="{Binding VoxelReadyHint}" />
+                </Panel>
               </StackPanel>
 
               <!-- ==================== EXPORT ==================== -->

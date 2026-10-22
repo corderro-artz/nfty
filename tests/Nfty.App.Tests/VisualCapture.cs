@@ -1258,6 +1258,14 @@ public class VisualCapture
             },
                 variant, $"zz-dialog-leave-{key}.png");
 
+            // Make voxel-ready's preview, hugging a short list and capped (scrolling inside) on a long one.
+            foreach (var (n, tag) in new[] { (3, "short"), (14, "long") })
+            {
+                using var card = RiseVoxelReadyTests.PreviewCard(dialogs, n);
+                Capture(new Views.VoxelReadyDialogView { DataContext = card }, variant,
+                    $"zz-dialog-voxelready-{tag}-{key}.png");
+            }
+
             // The colorize save prompt, in its riskiest state: the overwrite box TICKED, which is
             // the one path that discards a colorization nothing on disk can rebuild. It had never
             // been captured at all, which is how it stayed a flat slab with a literal radius long
@@ -1505,6 +1513,22 @@ public class VisualCapture
                 }),
             ("set-sealed-export", () => { var (v, o) = RisePages.SealedSetVm(); return (v, o); },
                 p => p.Vm.ShowExportTabCommand.Execute(null)),
+            // Make voxel-ready: the button dim on a locked book beside the sentence that says why,
+            // and the undo line after a snap (a real snap, written to a temp book, through the page).
+            ("voxel-locked", () => (RisePages.VariantVm("ghost", isEditing: () => false), null), _ => { }),
+            ("voxel-undo", () =>
+            {
+                var (s, _) = RiseVoxelReadyTests.Disk(secondGhost: true);
+                var vm = new RiseViewModel(RiseFixtures.Variant(s, "ghost"), new ImageBridge(), new FakeNav(),
+                    new RiseVoxelReadyTests.ScriptedDialogs { Answer = true }, new FilePickerService(), new StatusService());
+                return (vm, null);
+            }, p =>
+            {
+                var run = p.Vm.MakeVoxelReadyCommand.ExecuteAsync(null);
+                while (!run.IsCompleted) { Dispatcher.UIThread.RunJobs(); System.Threading.Thread.Sleep(1); }
+                run.GetAwaiter().GetResult();
+                Dispatcher.UIThread.RunJobs();
+            }),
             ("swapped", () => (RisePages.VariantVm(oakDepth: RisePages.PaintedOak()), null),
                 p => p.Vm.SwapPreviewCommand.Execute(null)),
             ("enlarged", () => (RisePages.VariantVm(oakDepth: RisePages.PaintedOak()), null),
@@ -1571,6 +1595,18 @@ public class VisualCapture
                 Need(vm.SelectedItem.Name == "Ghost" && vm.ShowTwoDOnly, "the ghost is not on the canvas");
                 Need(Shown(t => t.Text == "2D ONLY"), "the 2D ONLY section is not on screen");
                 Need(Shown(t => t.Text == "partial alpha cannot rise"), "the tile ink is not showing");
+                Need(vm.ShowVoxelReadyButton && vm.CanMakeVoxelReady && view.GetVisualDescendants().OfType<Button>().Any(b =>
+                    b.IsEffectivelyVisible && b.IsEnabled && b.Content as string == "Make voxel-ready…"), "the Make voxel-ready button is not live");
+                break;
+            case "voxel-locked":
+                Need(vm.Source.IsLocked && !vm.CanMakeVoxelReady, "the book is not locked");
+                Need(view.GetVisualDescendants().OfType<Button>().Any(b => b.IsEffectivelyVisible && !b.IsEffectivelyEnabled
+                    && b.Content as string == "Make voxel-ready…"), "the button is not on screen dim");
+                Need(Shown(t => t.Text == "The CookBook is read-only — unlock it in the Explorer."), "the reason line is not on screen");
+                break;
+            case "voxel-undo":
+                Need(vm.ShowVoxelReadyUndo && Shown(t => t.Text == "Voxel-ready: 2 variants snapped"), "the undo line is not on screen");
+                Need(view.GetVisualDescendants().OfType<Button>().Any(b => b.IsEffectivelyVisible && b.Content as string == "Undo"), "the Undo button is missing");
                 break;
             case "recipe":
                 Need(vm.IsRecipeRail && vm.LayerRows.Count == 2, "the layer rail is not showing the roll");

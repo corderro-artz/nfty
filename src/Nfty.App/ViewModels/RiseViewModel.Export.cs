@@ -346,9 +346,9 @@ public sealed partial class RiseViewModel
     [NotifyCanExecuteChangedFor(nameof(SelectItemCommand))]
     private bool _isExporting;
 
-    private bool CanLeave() => !IsExporting;
+    private bool CanLeave() => !IsExporting && !IsVoxelBusy;
 
-    private bool CanExport() => Source.ExportRefusal is null && ExportCount > 0 && !IsExporting;
+    private bool CanExport() => Source.ExportRefusal is null && ExportCount > 0 && !IsExporting && !IsVoxelBusy;
 
     partial void OnIsDepthTabChanged(bool value)
     {
