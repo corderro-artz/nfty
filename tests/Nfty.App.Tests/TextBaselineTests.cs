@@ -146,6 +146,21 @@ public class TextBaselineTests
         riseExport.Dispose();
         riseOwner.Dispose();
 
+        // The grid row on a sheet, the Models row on the export card, the recipe pane's action row
+        // with Rise lit: the three rows step 8 added whose text shares a line.
+        var riseSheet = RisePages.SheetVm();
+        riseSheet.GridA = 5;
+        Sweep("rise-sheet-grid", new Views.RiseView { DataContext = riseSheet });
+        riseSheet.Dispose();
+        Sweep("export-models-row", new Views.ExportDialogView
+        {
+            DataContext = new ExportDialogViewModel(VisualCapture.ExportCaptureSet(withModels: true),
+                new FilePickerService(), new NoopFolderRevealer(), dialogs),
+        });
+        var (actBook, actRecipe) = VisualCapture.RecipeWithRules();
+        using (var vm = new RecipeDetailViewModel(actRecipe, actBook, new ImageBridge(), _ => { }, rise: _ => { }))
+            Sweep("recipe-actions", new Views.RecipeDetailView { DataContext = vm });
+
         var dir = Directory.CreateTempSubdirectory().FullName;
         try
         {

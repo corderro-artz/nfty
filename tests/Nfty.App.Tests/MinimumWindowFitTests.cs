@@ -97,13 +97,25 @@ public class MinimumWindowFitTests
     /// net for a window smaller than the app allows; it is asserted here that it is only that.
     /// </remarks>
     [AvaloniaFact]
-    public void Landing_needs_no_scrollbar_at_the_smallest_window()
+    public void Landing_needs_no_scrollbar_at_the_smallest_window() => LandingNeedsNoScrollbar(0);
+
+    /// <summary>
+    /// The same claim with the OPEN column full: six recent entries are the most the list holds, and
+    /// the empty-list case above is the one state in which that column is shortest.
+    /// </summary>
+    [AvaloniaFact]
+    public void Landing_with_six_open_entries_needs_no_scrollbar_at_the_smallest_window() => LandingNeedsNoScrollbar(6);
+
+    private static void LandingNeedsNoScrollbar(int recentCount)
     {
         var area = PageArea;
+        var recents = new RecentsService(Directory.CreateTempSubdirectory().FullName);
+        for (int i = 1; i <= recentCount; i++)
+            recents.Add(new Models.RecentItem($"Book {i}", "cookbook - 2 recipes", $@"D:\art\Book{i}.cbk", false));
         var view = new Views.LandingView
         {
             DataContext = new LandingViewModel(new FakeNav(), new FakeDialogs(),
-                new FilePickerService(), new RecentsService(Directory.CreateTempSubdirectory().FullName),
+                new FilePickerService(), recents,
                 new CookBookSession(), _ => null!, _ => null!, (_, _, _) => null!, null, rise: _ => null!),
         };
         var window = new Window { Content = view, Width = area.Width, Height = area.Height };
@@ -214,6 +226,11 @@ public class MinimumWindowFitTests
         yield return ("rise/variant", new Views.RiseView { DataContext = variantRise }, variantRise.Dispose);
         var recipeRise = RisePages.RecipeVm();
         yield return ("rise/recipe", new Views.RiseView { DataContext = recipeRise }, recipeRise.Dispose);
+        // A sheet: the grid row (mode tray, two fields, Apply, the problem line) is the tallest fixed
+        // part the other sources lack.
+        var sheetRise = RisePages.SheetVm();
+        sheetRise.GridA = 5;
+        yield return ("rise/sheet-grid-problem", new Views.RiseView { DataContext = sheetRise }, sheetRise.Dispose);
         var (setRise, setOwner) = RisePages.SetVm();
         yield return ("rise/set", new Views.RiseView { DataContext = setRise },
             () => { setRise.Dispose(); setOwner.Dispose(); });

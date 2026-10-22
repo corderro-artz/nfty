@@ -1,3 +1,4 @@
+using Nfty.Core.Diagnostics;
 using Nfty.Core.Formats;
 using Nfty.Core.Generation;
 using Nfty.Core.Imaging;
@@ -56,6 +57,7 @@ public sealed class SetModeler : IAssetModeler
     public IReadOnlyList<SetFile>? Model(GeneratedAsset asset, string baseName)
     {
         ArgumentNullException.ThrowIfNull(asset);
+        using var perf = Perf.Measure("SetModeler.Model");
         if (!_recipes.TryGetValue(asset.RecipeId, out var recipe))
             throw new KeyNotFoundException(
                 $"asset #{asset.SetNumber:D4}: CookBook '{_bookName}' has no recipe '{asset.RecipeId}'.");

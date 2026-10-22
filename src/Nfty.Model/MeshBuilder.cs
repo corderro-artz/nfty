@@ -1,4 +1,5 @@
 using System.Numerics;
+using Nfty.Core.Diagnostics;
 
 namespace Nfty.Model;
 
@@ -115,6 +116,9 @@ internal sealed class MeshBuilder
             positions[i + 2] = (_positions[i + 2] - pivot.Z) * s;
         }
 
+        // The copies BACKLOG M5 asks about, and only them: the three ToArray calls and the clones Mesh's
+        // constructor makes. Its own scope so a Perf report can say what share of the build they are.
+        using var copies = Perf.Measure("MeshBuilder.ToMesh.copies");
         return new Mesh(positions, _normals.ToArray(), _texCoords.ToArray(), _indices.ToArray(), _width, _height);
     }
 

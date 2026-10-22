@@ -384,6 +384,21 @@ public class DarkModeContrastTests
             },
         }, null);
 
+        // The same dialog on CONTENTS for a Set with no models: the Models row is disabled (dimmed to
+        // 0.38) with its reason beside it, which is the state the sealed screen above does not show.
+        yield return ("dialog-export-unmodeled", new Views.ExportDialogView
+        {
+            DataContext = new ExportDialogViewModel(VisualCapture.ExportCaptureSet(),
+                new FilePickerService(), new NoopFolderRevealer(), dialogs),
+        }, null);
+
+        // Rise over a loose sheet whose typed grid does not divide it: the problem line is the only
+        // warning-ink run on the grid row, and the clean sheet paints none.
+        var riseGridProblem = RisePages.SheetVm();
+        riseGridProblem.GridA = 5;
+        yield return ("rise-sheet-grid-problem", new Views.RiseView { DataContext = riseGridProblem },
+            riseGridProblem.Dispose);
+
         // Import-an-image, on a COLOR picture with the Dynamic kind chosen and a name that clashes:
         // that is the only state carrying both of its WarningBrush runs - the "your colors will be
         // gone" caveat and the refusal under the form - and the clean state paints neither.

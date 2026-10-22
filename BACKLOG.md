@@ -232,10 +232,25 @@ overload that takes `MeshBuilder`'s arrays directly.
 **Rule recorded for deciding:** optimize only if the copy is more than 10% of `SetModeler.Model`'s
 time at the sizes people cook; otherwise leave it.
 
-**Measured numbers:** *to be filled in — measured in step 8 Task 17* (`SetModelsPerfTests`, 50 assets
-at 64px and 512px, `Perf` scopes `SetModeler.Model`, `Riser.TryBuild`, `ModelWriter.Write` and the
-mesh-copy share; run with `-l "console;verbosity=detailed"`). Until Task 17 lands this entry
-carries no figures on purpose; do not copy any in from elsewhere.
+**Measured numbers (step 8 Task 17, `SetModelsPerfTests`):** 50 assets per run, each a dome-shaped disc
+body (three colors) under an optional hat, `SetModeler.Model` timed one asset at a time after one
+unmeasured warm-up; three runs, so the range is shown. `MeshBuilder.ToMesh.copies` is the final statement
+of `ToMesh` only: the three `ToArray` calls plus the clones `Mesh`'s constructor makes.
+
+| Canvas | `SetModeler.Model` per asset | `Riser.TryBuild` | `StackDepth.Combine` | `ModelWriter.Write` | `ToMesh.copies` | Copy share of `Model` |
+|--------|------------------------------|------------------|----------------------|---------------------|-----------------|-----------------------|
+| 64 px  | 2.6 - 3.1 ms | 1.5 - 1.9 ms | 0.24 ms | 1.0 - 1.3 ms | 0.29 - 0.36 ms (20 MB / 50) | **11 - 14%** |
+| 512 px | 62 - 68 ms | 32 - 36 ms | 21 - 23 ms | 14 - 15 ms | 2.3 - 2.5 ms (163 MB / 50) | **3.6 - 4%** |
+
+(`Riser.TryBuild` includes `ToMesh`, so the scopes nest and do not sum; the 512 px run wrote 99.6 MB of
+GLB for the 50 assets, the 64 px run 12.4 MB.)
+
+**Reading against the rule above:** at 512 px the copies are under 4% of a model and stay. At 64 px, a
+size people really cook, the share is over the 10% line, but the absolute cost is about 0.3 ms per asset
+(15 ms for 50; 3 s for 10,000 assets on one thread, and `generate --models` models in parallel). Nothing
+was optimized. The rule as written would say optimize; the numbers say it would save well under a
+second on any realistic cook. The author's call, with the three-copies design (no-copy constructor or
+ownership-transfer overload) still the fix to reach for if it ever matters.
 
 ---
 
