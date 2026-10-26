@@ -50,11 +50,58 @@ This is the part that differs most from `mixel`, and **mixel is not the referenc
   natural encoding of "nothing raised yet", not a compatibility default.
 - **The finished image is what is voxelized, always as ONE solid.** Layers are never extruded as
   separate slabs — stacked slabs z-fight wherever two layers cover the same pixel.
-- **Combining a stack.** The solid mask is the composited image's alpha (`A == 255`). Each solid
-  pixel takes its depth from the **topmost layer whose own pixel is solid there** (walking
-  `layerOrder` top-down). A book with no partial alpha anywhere (see "2D only") has every layer
-  pixel at 0 or 255, so the composite is solid exactly where some layer is — the two rules cannot
-  disagree.
+- **Combining a stack.** The solid mask is the composited image's alpha (`A == 255`). A book with
+  no partial alpha anywhere (see "2D only") has every layer pixel at 0 or 255, so the composite is
+  solid exactly where some layer is. ~~Each solid pixel takes its depth from the **topmost layer whose
+  own pixel is solid there** (walking `layerOrder` top-down).~~ **Amended 2026-10-26: union rule,
+  per-face owner color — author ruling.** The topmost-wins depth rule is replaced by the union rule
+  in "The stack rule" below.
+
+### The stack rule — union of solids (amended 2026-10-26: union rule, per-face owner color — author ruling)
+
+The step 9 final review (I1) found the rule above carving the demo chest: a strap authored with back
+0 took BOTH depths from the topmost layer, so every overlay pixel cut a groove nine voxels deep into
+the chest's back. The author ruled a new rule:
+
+- **Each layer keeps its own map, unchanged.** Per variant, `depth/{variantId}.dep`, painted on the
+  Rise page (left +1 front, right +1 back, Shift −1). Nothing about storage or painting changes.
+- **Geometry is the union of every solid layer's column.** Every column contains the paper, so the
+  union of intervals is itself one interval: per pixel, **front = max over the layers solid there,
+  back = max over the layers solid there**. Where layers overlap, the upper layer owns the voxels.
+  Nothing subtracts; no layer can carve another.
+- **Front face color = the topmost layer among those reaching the max front. Back face color = the
+  topmost layer among those reaching the max back.** Ties go to the upper layer, so an all-paper stack
+  shows exactly its 2D art from the front, as before. Usually the front owner IS the topmost solid
+  layer and the front view equals the art; when a lower layer protrudes further, **its** color shows
+  from the front, and the artist must consider that. Engraving is done on a layer's own map.
+- **Where the owner is the topmost solid layer, its color is the composite's own pixel** — exact by
+  construction, whatever path recovered the layer colors.
+- **Layer colors are the colors the asset rolled.** A cooked asset recolorizes each present layer
+  with its own rolled `(H,S)` (`GeneratedAsset.ColorRolls`), exactly as generation did; an asset read
+  back from a Set uses its recorded `LayerColor` (rounded to 0.1° / 0.001 — only non-topmost owners
+  can show the difference). A selection with no colors (a recipe's stored layers, a test) uses the
+  stored pixels, the Rise page's existing rule for a Dynamic/Static variant.
+- **Walls** take one of the two owner colors per z-range: each pixel carries a **seam** — the part of
+  the column the back owner owns by the upper-owns rule (if the front owner sits above the back owner,
+  everything behind the front owner's own back; else the back owner's whole interval). Wall voxels
+  below the seam take the back color, above it the front color. A wall segment crossing the seam is
+  split in two quads. A third, middle layer never gets its own wall color: its voxels take whichever
+  of the two owners covers them. That is the cost of a two-color texture, stated, not hidden.
+- **Texture = one atlas, front and back side by side.** `[front W][gutter 1][back W]`, height H; the
+  gutter repeats the front half's last column so `NEAREST` sampling exactly on the front half's right
+  edge cannot land in the back half. Every model uses the atlas, a single picture included (its back
+  half repeats the art), so there is ONE UV rule and ONE texture shape for the writers and the
+  preview. Encoded exactly as before (8-bit RGBA, `SkipMetadata`, no interlace), `NEAREST` /
+  `CLAMP_TO_EDGE`: same pixels, same bytes.
+- **Partial alpha is unchanged:** every layer is scanned before combining and the refusal names the
+  layer.
+- **Who uses it:** `StackDepth.ForAsset` and `SetModeler` (Set `models/`), the Rise page's recipe and
+  asset sources (the combined read-only view and its THICKNESS rail, which now counts union
+  thickness), and the Rise page's export of them. The CLI `model` command rises one picture or one
+  variant, never a stack, so it changes only by the atlas.
+- **Cooked Sets already on disk keep their old models** (topmost-wins geometry, single-image
+  texture). Acceptable: nothing is shipped and the branch is not merged. No `set.json` field records
+  which rule built a model.
 - **A cooked Set** carries no depth. Rise recovers it by locating the source book by hash
   (`CookBookLocator`, the same search the export dialog and the combined-chance figure use). Not
   found ⇒ every asset is paper, and the page says so in one sentence.
@@ -221,6 +268,11 @@ IReadOnlyList<ModelFile> ModelWriter.Write(Mesh mesh, Image<Rgba32> texture, Ris
 
 // The stack rule, in one place: composite + topmost-solid-layer depth.
 (Image<Rgba32> Art, DepthMap Depth) StackDepth.Combine(IReadOnlyList<(Image<Rgba32> Layer, DepthMap? Depth)> bottomFirst);
+
+// Amended 2026-10-26: union rule, per-face owner color — author ruling. Combine now returns a
+// StackRise (Art, union Depth, StackFaces: front-owner colors, back-owner colors, per-pixel seam);
+// Riser.TryBuild takes the faces as an optional argument and ModelWriter.Write writes the
+// FaceAtlas built from (art, faces). See the plan 2026-10-26-rise-step9b-union-depth.md for names.
 ```
 
 Refusing partial alpha is `Riser`'s first check, with a message naming the source.
@@ -236,6 +288,9 @@ A column's extent along Z, in voxel units with the paper centered on `z = 0`:
   interval **minus** the neighbour's interval — which, with two-sided depth, can be **two** segments
   (one toward the viewer, one away). mixel's single-segment overhang logic is generalized to that.
 - Walls sample their pixel's color (all four UVs at the pixel center); faces sample the art directly.
+  *Amended 2026-10-26: union rule, per-face owner color — author ruling.* Front faces sample the
+  atlas's front half, back faces its back half; a wall samples the front or back owner's pixel center
+  by the seam, split where it crosses it ("The stack rule" above).
 - **The mesh is a closed manifold** — every edge shared by exactly two triangles — for any depth map.
   That one assertion catches whole classes of wall bug and is the anchor test.
 
@@ -369,6 +424,8 @@ Painting depth on a combined view (a recipe or an open book's rolled stack) writ
 variant that owns the pixel:
 
 - Clicking a pixel **selects its owning layer** (the topmost solid one, the combining rule).
+  *Amended 2026-10-26: union rule, per-face owner color — author ruling:* the owner of a front
+  stroke is the pixel's front owner, of a back stroke its back owner.
 - Strokes then edit **only that variant's** depth; the other layers draw **dimmed and not clickable**.
 - The 3D tile keeps showing the **whole character**, live.
 - A reserved header names the target and its reach: `editing Lock / Gold · in 212 of 1,200 assets`.
@@ -410,6 +467,10 @@ every fix shown red first and mutation-probed.
   checkerboard) × depth patterns (paper, front only, back only, both, neighbors differing on both
   sides so walls split in two); triangle counts; bounding boxes; pivot placement.
 - **Stack combine:** topmost solid layer wins; a transparent top pixel defers to the layer below.
+  *Amended 2026-10-26: union rule, per-face owner color — author ruling:* front and back are each the
+  max over solid layers; an overlay with back 0 over a body with back 9 makes back 9; the back face
+  samples the back owner's color; a lower protruding layer owns the front; volume is
+  `Σ(1 + maxFront + maxBack)`; the GLB is byte-stable.
 - **Writers:** all three formats from one object model; `GlbStructureTests`-style validation for each
   (the `.gltf` variants parse the JSON and check the same accessor/bufferView invariants); the
   embedded form's data URI decodes to exactly the `.bin` bytes; byte-identical output twice.
