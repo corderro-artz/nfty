@@ -65,7 +65,8 @@ public class SetRiseSourceTests
         using var src = new SetRiseSource(set, set.Items[0].Number, () => Array.Empty<string>(), new ImageBridge());
         src.Changed += () => throw new InvalidOperationException("a listener failed");
         await src.BookSearch;
-        Assert.ThrowsAny<Exception>(() => Dispatcher.UIThread.RunJobs());
+        // The arrival is posted, and its listener throws on the UI thread: pump until it has run.
+        Assert.ThrowsAny<Exception>(() => PumpUntilDecoded(() => false, 5000));
         Assert.True(src.ExportReady.IsCompleted);
     }
 
@@ -78,6 +79,7 @@ public class SetRiseSourceTests
 
         Assert.StartsWith("Looking for", src.DepthNote);
         await src.BookSearch;
+        await src.ExportReady;   // the observable handle for the posted arrival; RunJobs is not a wait
         Dispatcher.UIThread.RunJobs();
 
         Assert.Equal("Chest.cbk", src.BookName);
@@ -100,6 +102,7 @@ public class SetRiseSourceTests
         src.Changed += () => raised++;
 
         await src.BookSearch;
+        await src.ExportReady;   // the observable handle for the posted arrival; RunJobs is not a wait
         Dispatcher.UIThread.RunJobs();
 
         Assert.Same(subject, oak.Subject);
@@ -121,6 +124,7 @@ public class SetRiseSourceTests
         using var src = new SetRiseSource(set, set.Items[0].Number, () => Array.Empty<string>(), new ImageBridge());
 
         await src.BookSearch;
+        await src.ExportReady;   // the observable handle for the posted arrival; RunJobs is not a wait
         Dispatcher.UIThread.RunJobs();
 
         Assert.Null(src.BookName);
@@ -141,7 +145,14 @@ public class SetRiseSourceTests
 
         src.Dispose();
         await src.BookSearch;
-        Dispatcher.UIThread.RunJobs();
+        // Dispose already completed ExportReady, so it cannot say when the late arrival has been dropped;
+        // the book being handed back is the observable effect, so pump until that has happened.
+        PumpUntilDecoded(() =>
+        {
+            if (read is null) return false;
+            try { _ = read.Recipes[0].Ingredients[0].VariantImages.Values.First()[0, 0]; return false; }
+            catch (ObjectDisposedException) { return true; }
+        });
 
         Assert.Null(src.BookName);
         Assert.Equal(0, raised);
@@ -160,6 +171,7 @@ public class SetRiseSourceTests
             _ => throw new System.Text.Json.JsonException("bad manifest"));
 
         await src.BookSearch;     // would throw here if the search faulted
+        await src.ExportReady;   // the observable handle for the posted arrival; RunJobs is not a wait
         Dispatcher.UIThread.RunJobs();
 
         Assert.Null(src.BookName);
@@ -230,6 +242,7 @@ public class SetRiseSourceTests
         };
         using var src = new SetRiseSource(set, odd.Number, () => Array.Empty<string>(), new ImageBridge());
         await src.BookSearch;
+        await src.ExportReady;   // the observable handle for the posted arrival; RunJobs is not a wait
         Dispatcher.UIThread.RunJobs();
         src.Open(src.Items[0]);
         Assert.Contains("could not be matched", src.DepthNote);
@@ -251,6 +264,7 @@ public class SetRiseSourceTests
         var ghost = set.Items.First(i => i.Rarity.Any(r => r.Trait_type == "Body" && r.Value == "Ghost"));
         using var src = new SetRiseSource(set, ghost.Number, () => Array.Empty<string>(), new ImageBridge());
         await src.BookSearch;
+        await src.ExportReady;   // the observable handle for the posted arrival; RunJobs is not a wait
         Dispatcher.UIThread.RunJobs();
 
         src.Open(src.InitialItem);
@@ -278,6 +292,7 @@ public class SetRiseSourceTests
         };
         using var src = new SetRiseSource(set, bare.Number, () => Array.Empty<string>(), new ImageBridge());
         await src.BookSearch;
+        await src.ExportReady;   // the observable handle for the posted arrival; RunJobs is not a wait
         Dispatcher.UIThread.RunJobs();
 
         var subject = src.Open(src.InitialItem);
@@ -303,6 +318,7 @@ public class SetRiseSourceTests
         };
         using var src = new SetRiseSource(set, odd.Number, () => Array.Empty<string>(), new ImageBridge());
         await src.BookSearch;
+        await src.ExportReady;   // the observable handle for the posted arrival; RunJobs is not a wait
         Dispatcher.UIThread.RunJobs();
 
         var subject = src.Open(src.InitialItem);
@@ -365,6 +381,7 @@ public class SetRiseSourceTests
         using var set = SetReader.Read(setDir);
         using var src = new SetRiseSource(set, set.Items[0].Number, () => Array.Empty<string>(), new ImageBridge());
         await src.BookSearch;
+        await src.ExportReady;   // the observable handle for the posted arrival; RunJobs is not a wait
         Dispatcher.UIThread.RunJobs();
         var picked = new[] { src.Items[1], src.Items[2] };
 
