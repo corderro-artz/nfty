@@ -16,8 +16,8 @@ metadata written beside every image.
 
 None of it is approximate. The same book and the same seed produce byte-identical output on any
 machine, in any locale, on any CPU architecture, and the program counts the exact number of distinct
-assets a book admits *before* you ask it for any. The demo built into the binary admits **615,600**
-of them, out of eighteen 32×32 sprites.
+assets a book admits *before* you ask it for any. The demo built into the binary admits **7,155,000**
+of them, out of twenty-nine 32×32 sprites.
 
 **Access**  
 [![Manual](https://img.shields.io/website?url=https%3A%2F%2Fwww.vaporsoft.dev%2Fnfty%2F&label=User%20Manual&logo=readthedocs&logoColor=white)](https://www.vaporsoft.dev/nfty/)
@@ -164,8 +164,8 @@ Its Landing screen carries **Open the demo CookBook**, which unpacks that same b
 and opens it. The demo is yours to break, and reopening it keeps whatever you did to it.
 
 The demo is a small collection of layered chests: two Recipes, seven Ingredients covering all three
-layer kinds, two optional layers, one incompatibility rule, and **615,600** distinct assets out of
-eighteen 32×32 sprites — which is the argument for value-map colorization, made in a file you can
+layer kinds, two optional layers, one incompatibility rule, and **7,155,000** distinct assets out of
+twenty-nine 32×32 sprites — which is the argument for value-map colorization, made in a file you can
 open.
 
 ## Concepts

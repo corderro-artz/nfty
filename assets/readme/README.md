@@ -33,7 +33,7 @@ carries that trap and two others.
 
 ## What the frame has to show
 
-It is the README's thesis in one picture: **31 variants, 615,600 unique DNA**. Reshoot it when the
+It is the README's thesis in one picture: **49 variants, 7,155,000 unique DNA**. Reshoot it when the
 CookBook card changes shape, and keep the demo book as the subject — it is the book a reader can
 open on their own machine one click after installing.
 

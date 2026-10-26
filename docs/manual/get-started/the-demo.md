@@ -23,13 +23,13 @@ A collection of layered treasure chests, drawn at 32×32.
 | Layer | Kind | What it does |
 |---|---|---|
 | **Glow** | Dynamic | Sparks or runes floating around the chest. Usually absent. |
-| **Body** | Dynamic | The chest itself — planked, plated or stone. |
-| **Bands** | Dynamic | Hoops, corner brackets or straps. |
-| **Trim** | Custom | Gilt edging or set gems. Usually absent. |
-| **Feet** | Custom | Corner blocks or a runner rail, in aged pewter. |
-| **Lock** | Static | A keyhole, latch, padlock or keypad. |
+| **Body** | Dynamic | The chest itself — planked, plated, slatted, paneled or stone. |
+| **Bands** | Dynamic | Hoops, straps, corner brackets, side edging or studs. |
+| **Trim** | Custom | Gilt edging, set gems, a string of pearls or gold filigree. Usually absent. |
+| **Feet** | Custom | Pewter blocks, a pewter runner rail, or gilt ball feet. |
+| **Lock** | Static | A keyhole, latch, padlock, dial, crest or keypad. |
 
-Two Recipes share those layers: **Chest**, with a domed lid, and **Strongbox**, with a flat one.
+Two Recipes share those layers: **Chest**, with a barrel lid, and **Strongbox**, with a flat slab.
 
 That is deliberately one of everything the manual talks about:
 
@@ -42,9 +42,9 @@ That is deliberately one of everything the manual talks about:
 - **Weighted color bands.** A body rolls warm timber about 60% of the time and cold metal the rest,
   rather than any color at all.
 
-The art also carries **depth**, so the demo rises into 3D: the chest has a domed lid, the bands and lock stand proud of the face, and the body reaches nine voxels behind its face. Glow stays flat on purpose. Open the Rise page on any of it to see the model; depth never changes which assets are unique.
+The art also carries **depth**, so the demo rises into 3D: the chest's barrel lid curves the same way front and back, the lid's lip overhangs the body, the bands, trim and lock stand proud of the face, and the body is twelve voxels deep. Glow stays flat on purpose. Open the Rise page on any of it to see the model; depth never changes which assets are unique.
 
-Eighteen small drawings, and **615,600** distinct assets. That is
+Twenty-nine small drawings, and **7,155,000** distinct assets. That is
 [why the art is gray](../understand/why-gray.md), stated as a file you can open.
 
 That figure is exact, not an estimate, and it is exact on purpose: nfty counts the space rather than

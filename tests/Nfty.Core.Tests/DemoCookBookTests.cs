@@ -126,7 +126,7 @@ public class DemoCookBookTests
         // print it, and a number in prose has nothing keeping it true. Changing the demo is allowed
         // and this is meant to fail when you do - it fails with the new number, so updating the two
         // documents is a copy rather than a recount.
-        Assert.Equal(615_600, space.Total);
+        Assert.Equal(7_155_000, space.Total);
     }
 
     [Fact]

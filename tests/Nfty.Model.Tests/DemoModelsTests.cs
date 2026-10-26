@@ -89,8 +89,8 @@ public class DemoModelsTests
             var a = json["accessors"]![acc]!;
             float extent = a["max"]![2]!.GetValue<float>() - a["min"]![2]!.GetValue<float>();
             Assert.True(extent >= 12f - 1e-4f, $"asset {asset.SetNumber}: Z extent {extent} < 12");
-            // Body-only: paper 1 + deepest body back 10 (an overhang row) + front 3 = 14. Past that, an overlay rose.
-            if (extent > 14f + 1e-4f) anyDeeperThanBody = true;
+            // Body-only: paper 1 + deepest body back 8 + front 7 (both on the lip) = 16. Past that, an overlay rose.
+            if (extent > 16f + 1e-4f) anyDeeperThanBody = true;
         }
         Assert.True(anyDeeperThanBody, "no cooked asset had an overlay proud of its body");
     }
@@ -150,6 +150,55 @@ public class DemoModelsTests
                 Assert.True(rise.Depth.Back(solid[^1], y) < center, $"{v.Id}: row {y} right end is not rounded");
             }
             Assert.True(seen.Count >= 3, $"{v.Id}: the lid back has {seen.Count} distinct depths");
+        }
+    }
+
+    [Fact]
+    public void The_chest_lid_is_one_dome_front_and_back()
+    {
+        // A barrel lid closes in toward the top on BOTH faces, by the same amount: every row of the
+        // dome sits centred on the same plane as the body below it (back = front + 1), so the curve
+        // seen from behind is the curve seen from the front.
+        using var book = Read();
+        var recipe = book.Recipes.First(r => BodyId(r) == "chestbody");
+        var ing = Layer(recipe, "chestbody");
+        foreach (var v in ing.Manifest.Variants)
+        {
+            using var rise = StackDepth.ForSelection(recipe, [("chestbody", v.Id)]);
+            var art = ing.VariantImages[v.Id];
+            int previous = -1;
+            for (int y = 7; y <= 15; y++)
+            {
+                var solid = Enumerable.Range(0, art.Width).Where(x => Opacity.IsSolid(art[x, y])).ToList();
+                int mid = (solid[0] + solid[^1]) / 2;
+                int front = rise.Depth.Front(mid, y);
+                Assert.Equal(front + 1, rise.Depth.Back(mid, y));
+                Assert.True(front >= previous, $"{v.Id}: the dome front falls going down at row {y}");
+                previous = front;
+            }
+            // The lip overhangs the lid course, and the lid course the body.
+            Assert.True(rise.Depth.Front(16, 14) > rise.Depth.Front(16, 13), $"{v.Id}: no lip");
+            Assert.True(rise.Depth.Front(16, 13) > rise.Depth.Front(16, 20), $"{v.Id}: the lid does not overhang the body");
+            Assert.True(rise.Depth.Front(16, 7) < rise.Depth.Front(16, 11), $"{v.Id}: the dome is flat");
+        }
+    }
+
+    [Fact]
+    public void The_strongbox_lid_is_a_slab_with_a_rim()
+    {
+        // Flat front across the slab, a chamfered top row, and the lip standing a voxel prouder.
+        using var book = Read();
+        var recipe = book.Recipes.First(r => BodyId(r) == "boxbody");
+        var ing = Layer(recipe, "boxbody");
+        foreach (var v in ing.Manifest.Variants)
+        {
+            using var rise = StackDepth.ForSelection(recipe, [("boxbody", v.Id)]);
+            var d = rise.Depth;
+            var slab = Enumerable.Range(9, 5).Select(y => d.Front(16, y)).Distinct().ToList();
+            Assert.Single(slab);
+            Assert.True(d.Front(16, 8) < slab[0], $"{v.Id}: the slab's top edge is not chamfered");
+            Assert.True(d.Front(16, 14) > slab[0], $"{v.Id}: no rim");
+            Assert.True(d.Back(16, 14) > d.Back(16, 10), $"{v.Id}: the rim is not on the back too");
         }
     }
 

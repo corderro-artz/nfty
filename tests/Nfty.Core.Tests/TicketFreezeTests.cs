@@ -17,6 +17,9 @@ namespace Nfty.Core.Tests;
 /// DO NOT REGENERATE THIS FIXTURE TO MAKE A FAILURE GO AWAY. A deliberate change to roll order
 /// means a NEW baseline beside this one and a note saying why, exactly as FixtureFreezeTests says
 /// about the archives it guards.
+///
+/// Recaptured once, 2026-10-26, because the demo BOOK changed (more variants per layer), not the
+/// roll: a baseline of a book that no longer ships guards nothing. See FixtureFreezeTests.
 /// </summary>
 public class TicketFreezeTests
 {

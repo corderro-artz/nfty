@@ -10,6 +10,11 @@ old 64x64 pet art got away with them, but at 32x32 a single stray anti-aliased p
 whole sprite and reads as dirt. Nothing here calls ImageDraw: shapes are sets of coordinates and
 every pixel is a `putpixel`, so the file cannot contain a value that is not in the ramp below.
 
+NO NOISE. An earlier cut scattered random "grain" pixels over the wood and stone; at 32px a lone
+pixel one step off its neighbours reads as grit, not texture, and the rolled colors made it worse.
+Every mark here is a deliberate cluster - a seam with its lit edge, a two-pixel rivet, a three-pixel
+grain dash - placed by coordinate. There is no random number generator in this file.
+
 THE RAMP IS THE WHOLE STYLE. Dynamic and Static layers are grayscale VALUE-MAPS - the byte is the
 V of HSV and nfty injects the hue and saturation at generation time (see Imaging/Colorizer.cs) - so
 the only thing this art controls is form. Six values, shared by every sprite in the set, is what
@@ -18,8 +23,11 @@ same six steps whatever colors they roll. Shading is authored as an INDEX into t
 lighting bias adds and subtracts indices, so a highlight is always exactly one step and the set can
 never drift into a seventh value.
 
-Light is from the top-left in every sprite, and the silhouette outline is DERIVED (any filled pixel
-with an empty 4-neighbour) rather than drawn, so texture can never punch a hole through an edge.
+Light is from the top-left in every sprite. The silhouette outline is DERIVED (any filled pixel with
+an empty 4-neighbour) rather than drawn, so texture can never punch a hole through an edge. The TOP
+edge of a body is outlined in the mid value rather than black (selective outlining): it is the edge
+the light falls on, and when the art rises into a model the whole top face of the lid is that row's
+color - a black top row made every risen chest look burnt on top.
 
 THE OVERLAY CONTRACT. Bands, Lock and Trim have to sit correctly on BOTH bodies, and the two lids
 are different shapes. Everything from y=12 down is identical in both silhouettes, so every overlay
@@ -36,7 +44,6 @@ only above row 12. Solid pixels are read off the just-drawn sprite, so depth can
 transparent pixel, and main() asserts the contract before it saves a byte.
 """
 import os
-import random
 import sys
 
 from PIL import Image
@@ -51,44 +58,32 @@ OUTLINE, D2, D1, MID, LT, HI = range(6)
 
 # ---------------------------------------------------------------------------- silhouettes
 # y -> (x0, x1) inclusive. Rows 12..28 are shared by both lids on purpose; see the module docstring.
-BODY_ROWS = {y: (3, 28) for y in range(16, 28)}
-BODY_ROWS[28] = (2, 29)                       # the plinth, one pixel prouder than the body
+#
+# 12-13 the lid's lower course     14-15 the lid's LIP, a pixel prouder than the lid and the body
+# 16-26 the body                   27-28 the plinth, answering the lip at the foot
+LOWER_ROWS = {12: (3, 28), 13: (3, 28), 14: (2, 29), 15: (2, 29), 27: (2, 29), 28: (2, 29)}
+for _y in range(16, 27):
+    LOWER_ROWS[_y] = (3, 28)
 
-# The lid OVERHANGS by a pixel at rows 14-15 and the plinth answers it at row 28. That overhang is
-# most of what makes the silhouette read as a chest rather than a box: without it the lid and the
-# body are one flat slab with a line drawn across it, which is exactly how the first cut looked.
-CHEST_LID = {7: (9, 22), 8: (7, 24), 9: (6, 25), 10: (5, 26), 11: (4, 27),
-             12: (3, 28), 13: (3, 28), 14: (2, 29), 15: (2, 29)}
+# A barrel lid: the arc closes in fast at the top and runs straight for its last rows, which is the
+# side view of a half-cylinder seen from the front.
+CHEST_LID = {7: (9, 22), 8: (6, 25), 9: (5, 26), 10: (4, 27), 11: (3, 28)}
+# A slab: square shoulders, one chamfered pixel at the top corners and nothing else.
+BOX_LID = {8: (4, 27), 9: (3, 28), 10: (3, 28), 11: (3, 28)}
 
-BOX_LID = {8: (5, 26), 9: (4, 27), 10: (3, 28), 11: (3, 28),
-           12: (3, 28), 13: (3, 28), 14: (2, 29), 15: (2, 29)}
+LIP = (14, 15)
+BODY_TOP, BODY_BOTTOM = 16, 26
+PLINTH = (27, 28)
 
-SEAM_Y = 15          # the lid's bottom row: where lid meets body, in both silhouettes
+
+def rows_of(lid):
+    rows = dict(lid)
+    rows.update(LOWER_ROWS)
+    return rows
 
 
 def mask(rows):
     return {(x, y) for y, (a, b) in rows.items() for x in range(a, b + 1)}
-
-
-# ---------------------------------------------------------------------------- authored shading
-# Per-row ramp index. The lid is a form catching light near its upper third; the body's top row sits
-# in the lid's own shadow, which is what stops the two reading as one flat slab.
-LID_V = {7: LT, 8: HI, 9: HI, 10: LT, 11: LT, 12: MID, 13: MID, 14: MID, 15: D1}
-BODY_V = {16: D2, 17: LT, 18: LT, 19: LT, 20: MID, 21: MID,
-          22: MID, 23: MID, 24: D1, 25: D1, 26: D1, 27: D2, 28: D2}
-
-
-def bias(x, row):
-    """Left-lit: the two columns nearest the left edge gain a step, the three nearest the right
-    lose one. Applied to the INDEX, so it is exactly one ramp step either way."""
-    a, b = row
-    if x <= a + 2:
-        return 1
-    if x >= b - 1:
-        return -2
-    if x >= b - 4:
-        return -1
-    return 0
 
 
 def clamp(i):
@@ -104,192 +99,314 @@ class Sprite:
         self.im = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         self.px = self.im.load()
 
-    def ink(self, x, y, i, alpha=255):
+    def ink(self, x, y, i):
         if 0 <= x < W and 0 <= y < H:
             v = RAMP[clamp(i)] if i else RAMP[0]
-            self.px[x, y] = (v, v, v, alpha)
+            self.px[x, y] = (v, v, v, 255)
 
     def rgb(self, x, y, c):
         if 0 <= x < W and 0 <= y < H:
-            self.px[x, y] = c if len(c) == 4 else c + (255,)
-
-    def clear(self, x, y):
-        if 0 <= x < W and 0 <= y < H:
-            self.px[x, y] = (0, 0, 0, 0)
+            self.px[x, y] = c + (255,)
 
     def filled(self, x, y):
         return 0 <= x < W and 0 <= y < H and self.px[x, y][3] != 0
 
-    def outline(self, shape):
+    def outline(self, shape, top=OUTLINE):
         """Derived, not drawn: any filled pixel with an empty 4-neighbour becomes the outline. Run
-        LAST, so no texture can eat an edge."""
-        edge = [(x, y) for (x, y) in shape
-                if not all((x + dx, y + dy) in shape for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))]
-        for x, y in edge:
-            self.ink(x, y, OUTLINE)
+        LAST, so no texture can eat an edge. A pixel whose ONLY open side is above takes `top`."""
+        for (x, y) in shape:
+            open_sides = [(dx, dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
+                          if (x + dx, y + dy) not in shape]
+            if not open_sides:
+                continue
+            self.ink(x, y, top if open_sides == [(0, -1)] else OUTLINE)
 
     def save(self, path):
         os.makedirs(os.path.dirname(path), exist_ok=True)
         self.im.save(path)
 
 
-def body_base(lid_rows):
-    """The lit, untextured chest: lid plus body plus the seam. Returns the sprite and its shape."""
-    s = Sprite()
-    rows = dict(lid_rows)
-    rows.update(BODY_ROWS)
-    shape = mask(rows)
-    for y, row in rows.items():
-        v = LID_V.get(y, BODY_V.get(y, MID))
-        for x in range(row[0], row[1] + 1):
-            s.ink(x, y, clamp(v + bias(x, row)))
-    return s, shape, rows
+# ---------------------------------------------------------------------------- bodies (dynamic)
+# The base value of each row, before texture: the lid turns away from the light as it comes down,
+# the lip catches it on top, the body sits in the lip's shadow at the top and lightens to a lit
+# plinth. One index per row, so a texture's seam is always "this row, two steps darker".
+CHEST_LID_V = {7: LT, 8: HI, 9: HI, 10: LT, 11: LT, 12: MID, 13: MID}
+BOX_LID_V = {8: HI, 9: HI, 10: LT, 11: LT, 12: MID, 13: MID}
+LOWER_V = {14: LT, 15: MID, 16: D2, 27: LT, 28: MID}
+for _y in range(17, 27):
+    LOWER_V[_y] = MID if _y < 24 else D1
 
 
-# ---------------------------------------------------------------------------- body textures
-# A texture's job at 32px is to say what the surface IS in about a dozen pixels. The first cut put a
-# seam on five rows out of nine and the chest read as a shutter, so each of these gets two seams and
-# a handful of marks - the form does the rest.
-def v_at(y):
-    return LID_V.get(y, BODY_V.get(y, MID))
+class Body:
+    """One body being drawn: its rows, its per-row base value, and helpers that only ever step the
+    base value up or down. Every helper stays INSIDE the outline (one pixel in from each end)."""
+
+    def __init__(self, lid, lid_v):
+        self.s = Sprite()
+        self.rows = rows_of(lid)
+        self.v = dict(lid_v)
+        self.v.update(LOWER_V)
+        self.shape = mask(self.rows)
+        for y, (a, b) in self.rows.items():
+            for x in range(a, b + 1):
+                self.s.ink(x, y, clamp(self.v[y] + self.bias(x, y)))
+
+    def bias(self, x, y):
+        """Left-lit: the first column in from the left edge one step up, the last one in from the
+        right one step down. One step, never two - two read as a stripe painted down the side."""
+        a, b = self.rows[y]
+        if x == a + 1:
+            return 1
+        if x == b - 1:
+            return -1
+        return 0
+
+    def inside(self, x, y):
+        return y in self.rows and self.rows[y][0] < x < self.rows[y][1]
+
+    def at(self, x, y, step):
+        """Step the pixel's BASE (row value + lighting) by `step`, if it is inside the outline."""
+        if self.inside(x, y):
+            self.s.ink(x, y, clamp(self.v[y] + self.bias(x, y) + step))
+
+    def hseam(self, y, x0=None, x1=None, lit_below=True):
+        """A horizontal joint: two steps dark, and the row under it one step lit - the top edge of
+        the next board catching the light. That pair is what makes a line read as a JOINT."""
+        a, b = self.rows[y]
+        for x in range(x0 if x0 is not None else a + 1, (x1 if x1 is not None else b - 1) + 1):
+            self.at(x, y, -2)
+            if lit_below and y + 1 in self.rows and y + 1 not in LIP:
+                self.at(x, y + 1, +1)
+
+    def vseam(self, x, y0, y1):
+        """A vertical joint: dark, with the column to its right lit."""
+        for y in range(y0, y1 + 1):
+            self.at(x, y, -2)
+            self.at(x + 1, y, +1)
+
+    def dash(self, x0, x1, y, step=-1):
+        for x in range(x0, x1 + 1):
+            self.at(x, y, step)
+
+    def rivet(self, x, y):
+        """Two pixels: a lit head and its shadow below. One pixel reads as dirt."""
+        self.at(x, y, +2)
+        self.at(x, y + 1, -2)
+
+    def finish(self):
+        # The lid/body seam under the lip is always the darkest course, then the outline.
+        for x in range(self.rows[15][0] + 1, self.rows[15][1]):
+            self.at(x, 15, -1)
+        self.s.outline(self.shape, top=MID)
+        return self.s
 
 
-def seam(s, rows, y, step=2):
-    """One dark course across a row, stopping short of the outline at both ends."""
-    if y not in rows:
-        return
-    a, b = rows[y]
-    for x in range(a + 1, b):
-        s.ink(x, y, clamp(v_at(y) - step))
+def lid_rows(b):
+    return [y for y in sorted(b.rows) if y < 14]
 
 
-def tex_planked(s, rows):
-    """Boards: two courses, butt joints between them, and a light scatter of grain. The joints are
-    what stop the courses reading as a stripe - a plank has ends."""
-    rng = random.Random(0x0A11)
-    for y in (11, 20, 24):
-        seam(s, rows, y)
-    for x, span in ((13, range(16, 20)), (20, range(21, 24)), (9, range(25, 27))):
-        for y in span:
-            if y in rows and rows[y][0] < x < rows[y][1]:
-                s.ink(x, y, clamp(v_at(y) - 2))
-    for _ in range(14):
-        y = rng.choice([8, 9, 12, 13, 17, 18, 21, 22, 25, 26])
-        if y not in rows:
-            continue
-        a, b = rows[y]
-        s.ink(rng.randint(a + 2, b - 3), y, clamp(v_at(y) - 1))
+def tex_planked(b):
+    """Horizontal boards: three courses on the body, two on the lid, butt joints staggered between
+    courses (a plank has ends), and one short grain dash per board - placed, not scattered."""
+    top = lid_rows(b)[0]
+    b.hseam(top + 3)                       # the lid's own board joint
+    b.hseam(12)                            # lid course
+    b.hseam(20)
+    b.hseam(23)
+    b.vseam(11, 17, 19)
+    b.vseam(20, 21, 22)
+    b.vseam(8, 24, 26)
+    b.vseam(23, 24, 26)
+    for x0, y in ((5, 18), (22, 18), (14, 22), (24, 22), (14, 25)):
+        b.dash(x0, x0 + 2, y)
+    b.vseam(17, top + 1, top + 2)
+    b.dash(8, 10, top + 4)
+    b.dash(20, 22, top + 4)
 
 
-def tex_plated(s, rows):
-    """Riveted sheet: two panel joints down the body and three rivet courses. A rivet is two pixels -
-    a highlight with a shadow at its lower right - because one reads as dirt and three as a bolt."""
-    for y in (13, 18, 25):
-        if y not in rows:
-            continue
-        a, b = rows[y]
-        for x in range(a + 3, b - 2, 5):
-            s.ink(x, y, HI)
-            s.ink(x + 1, y + 1, D2)
-    for x in (10, 21):
-        for y in range(16, 27):
-            if y in rows and rows[y][0] < x < rows[y][1]:
-                s.ink(x, y, clamp(v_at(y) - 2))
-                s.ink(x + 1, y, clamp(v_at(y) + 1))
+def tex_slatted(b):
+    """Vertical boards running over the lid and down the body - the same five seams top to bottom,
+    so the slats read as bent over the barrel rather than painted on it."""
+    for x in (7, 12, 18, 23):
+        b.vseam(x, lid_rows(b)[0] + 1, 13)
+        b.vseam(x, 17, 26)
+    b.hseam(12)
+    for x, y0 in ((5, 19), (15, 21), (21, 18), (26, 22), (10, 23)):
+        for y in (y0, y0 + 1):
+            b.at(x, y, -1)
 
 
-def tex_stone(s, rows):
-    """Offset courses. The joints alternate per course, which is the one thing that keeps a brick
-    pattern from reading as a grid."""
-    rng = random.Random(0x5709)
-    for y, off in ((12, 0), (19, 3), (24, 0)):
-        seam(s, rows, y)
-        if y not in rows:
-            continue
-        a, b = rows[y]
-        for x in range(a + 3 + off, b - 1, 6):
-            for dy in (1, 2, 3):
-                if y + dy in rows and rows[y + dy][0] < x < rows[y + dy][1] and y + dy != SEAM_Y:
-                    s.ink(x, y + dy, clamp(v_at(y + dy) - 2))
-    for _ in range(16):
-        y = rng.choice([9, 10, 13, 17, 21, 22, 26])
-        if y not in rows:
-            continue
-        a, b = rows[y]
-        s.ink(rng.randint(a + 2, b - 3), y, clamp(v_at(y) + rng.choice((-1, 1))))
+def tex_plated(b):
+    """Riveted sheet: two panel joints down the body, rivets along the top and bottom of each
+    plate, a riveted course on the lid. Rivets sit on a regular pitch - a riveter does not guess."""
+    b.vseam(10, 17, 26)
+    b.vseam(20, 17, 26)
+    for x in (5, 8, 13, 17, 23, 26):
+        b.rivet(x, 17)
+        b.rivet(x, 24)
+    b.hseam(12)
+    for x in range(5, 28, 4):
+        b.rivet(x, 10)
+    b.vseam(15, lid_rows(b)[0] + 1, 9)
 
 
-def make_body(lid_rows, texture):
-    s, shape, rows = body_base(lid_rows)
-    texture(s, rows)
-    for x in range(rows[SEAM_Y][0] + 1, rows[SEAM_Y][1]):   # the lid/body seam, always darkest
-        s.ink(x, SEAM_Y, D2)
-    s.outline(shape)
-    return s
+def tex_stone(b):
+    """Ashlar: three courses with the joints offset course to course, which is the one thing that
+    keeps a block pattern from reading as a grid. Each block is lit along its top by the seam."""
+    b.hseam(20)
+    b.hseam(23)
+    for x in (9, 16, 23):
+        b.vseam(x, 17, 19)
+    for x in (6, 13, 19, 25):
+        b.vseam(x, 21, 22)
+    for x in (9, 16, 23):
+        b.vseam(x, 24, 26)
+    b.hseam(12)
+    top = lid_rows(b)[0]
+    b.hseam(top + 2)
+    for x in (8, 15, 22):
+        b.vseam(x, top + 3, 11)
+    b.vseam(12, top + 1, top + 1)
+    b.vseam(19, top + 1, top + 1)
+
+
+def tex_paneled(b):
+    """Frame and panel: two recessed panels in the body and one in the lid. A recess is lit on the
+    edges facing away from the light and dark on the edges facing it - the inverse of a raised
+    plate, which is how the eye tells in from out."""
+    def recess(x0, y0, x1, y1):
+        for x in range(x0, x1 + 1):
+            for y in range(y0, y1 + 1):
+                edge_hi = y == y1 or x == x1
+                edge_lo = y == y0 or x == x0
+                b.at(x, y, -2 if edge_lo else (+1 if edge_hi else -1))
+    recess(5, 18, 14, 25)
+    recess(17, 18, 26, 25)
+    top = lid_rows(b)[0]
+    recess(8, top + 2, 23, 11)
+    b.hseam(12, lit_below=False)
+
+
+def make_body(lid, lid_v, texture):
+    b = Body(lid, lid_v)
+    texture(b)
+    return b.finish()
 
 
 # ---------------------------------------------------------------------------- bands (dynamic)
-# Every overlay below lives inside x=3..28, y>=12, which is filled in BOTH silhouettes.
-def raised(s, x, y, i):
-    """One pixel of a raised fitting: same six values as everything else, so a band tinted close to
-    its body still separates by form."""
-    s.ink(x, y, i)
+# Every overlay below lives inside x=2..29, y>=12, which is filled in BOTH silhouettes.
+def strap_v(s, x0, y0, y1, lit=LT):
+    """A vertical strap five pixels wide - outline, lit, mid, shadow, outline - because a strap with
+    no edge of its own is a stripe of paint."""
+    for y in range(y0, y1 + 1):
+        s.ink(x0, y, OUTLINE)
+        s.ink(x0 + 1, y, lit)
+        s.ink(x0 + 2, y, MID)
+        s.ink(x0 + 3, y, D1)
+        s.ink(x0 + 4, y, OUTLINE)
+
+
+def strap_h(s, y0, x0, x1):
+    """A horizontal hoop four pixels tall: outline, lit, shadow, outline."""
+    for x in range(x0, x1 + 1):
+        s.ink(x, y0, OUTLINE)
+        s.ink(x, y0 + 1, LT)
+        s.ink(x, y0 + 2, D1)
+        s.ink(x, y0 + 3, OUTLINE)
 
 
 def band_straps():
-    """Two straps with buckle plates. Five pixels wide - outline, highlight, mid, shadow, outline -
-    because a strap with no edge of its own is a stripe of paint on the lid."""
+    """Two straps over the lid and down the body, each with a buckle."""
     s = Sprite()
-    for x0 in (6, 20):
-        for y in range(12, 28):
-            s.ink(x0, y, OUTLINE)
-            s.ink(x0 + 1, y, LT if y < 16 else MID)
-            s.ink(x0 + 2, y, MID if y < 16 else D1)
-            s.ink(x0 + 3, y, D1)
-            s.ink(x0 + 4, y, OUTLINE)
-        for y in range(18, 22):                       # buckle plate, straddling the strap
+    for x0 in (6, 21):
+        strap_v(s, x0, 12, 28)
+        for y in range(19, 23):                       # buckle frame, straddling the strap
             for x in range(x0 - 1, x0 + 6):
-                inner = x0 <= x <= x0 + 4 and 18 < y < 21
-                s.ink(x, y, LT if inner else OUTLINE)
-        s.ink(x0 + 1, 19, HI)
-        s.ink(x0 + 2, 20, D2)
-        s.ink(x0 + 3, 20, D2)
+                frame = y in (19, 22) or x in (x0 - 1, x0 + 5)
+                if frame:
+                    s.ink(x, y, OUTLINE)
+                elif x == x0 + 2:
+                    s.ink(x, y, HI)                   # the prong
+        s.ink(x0 - 1, 19, MID)
+        s.ink(x0 + 5, 22, MID)
     return s
 
 
 def band_corners():
-    """Corner brackets on the body, caps on the lid. Two pixels thick with one lit arm each, so a
-    bracket that rolls close to its body still has a light edge and a dark one."""
+    """Corner brackets on the body, caps on the lid course. Two pixels thick with one lit arm each,
+    so a bracket that rolls close to its body still has a light edge and a dark one."""
     s = Sprite()
-    for cx, cy, sx, sy in ((3, 16, 1, 1), (28, 16, -1, 1), (3, 27, 1, -1), (28, 27, -1, -1)):
-        for i in range(7):
-            s.ink(cx + sx * i, cy, MID)
+    for cx, cy, sx, sy in ((3, 16, 1, 1), (28, 16, -1, 1), (3, 26, 1, -1), (28, 26, -1, -1)):
+        for i in range(6):
+            s.ink(cx + sx * i, cy, LT)
             s.ink(cx + sx * i, cy + sy, D1)
-            s.ink(cx, cy + sy * i, MID)
+            s.ink(cx, cy + sy * i, LT)
             s.ink(cx + sx, cy + sy * i, D1)
         s.ink(cx, cy, HI)
+        s.ink(cx + sx * 6, cy, OUTLINE)
         s.ink(cx + sx * 6, cy + sy, OUTLINE)
+        s.ink(cx, cy + sy * 6, OUTLINE)
         s.ink(cx + sx, cy + sy * 6, OUTLINE)
-    for cx, sx in ((3, 1), (28, -1)):                 # lid caps
-        for i in range(6):
-            s.ink(cx + sx * i, 12, MID)
+        s.ink(cx + sx * 3, cy, HI)                  # a rivet on each arm
+        s.ink(cx, cy + sy * 3, HI)
+    for cx, sx in ((3, 1), (28, -1)):               # lid caps
+        for i in range(5):
+            s.ink(cx + sx * i, 12, LT)
             s.ink(cx + sx * i, 13, D1)
         s.ink(cx, 12, HI)
+        s.ink(cx + sx * 5, 12, OUTLINE)
+        s.ink(cx + sx * 5, 13, OUTLINE)
     return s
 
 
 def band_hoops():
-    """Two hoops with rivets: one across the lid, one low on the body."""
+    """Two hoops with rivets: one around the lid course, one low on the body."""
     s = Sprite()
-    for y0 in (12, 22):
-        for x in range(3, 29):
-            s.ink(x, y0, OUTLINE)
-            s.ink(x, y0 + 1, LT)
-            s.ink(x, y0 + 2, MID)
-            s.ink(x, y0 + 3, OUTLINE)
-        for x in range(5, 28, 6):
+    for y0 in (12, 21):
+        strap_h(s, y0, 3, 28)
+        for x in range(5, 28, 5):
             s.ink(x, y0 + 1, HI)
-            s.ink(x, y0 + 2, D2)
+            s.ink(x, y0 + 2, MID)
+    return s
+
+
+def band_frame():
+    """Iron edging down both sides of the chest and along the plinth - the band a chest that gets
+    dragged wears. Riveted where a smith would put them: top, middle, foot."""
+    s = Sprite()
+    for x0, lit, mid in ((3, LT, MID), (25, MID, D1)):
+        for y in range(12, 28):
+            s.ink(x0, y, OUTLINE)
+            s.ink(x0 + 1, y, lit)
+            s.ink(x0 + 2, y, mid)
+            s.ink(x0 + 3, y, OUTLINE)
+        for y in (13, 19, 24):
+            s.ink(x0 + 1, y, HI)
+            s.ink(x0 + 2, y + 1, D2)
+    for x in range(7, 25):                            # along the plinth
+        s.ink(x, 26, OUTLINE)
+        s.ink(x, 27, LT)
+    return s
+
+
+def band_studs():
+    """Rows of domed studs: across the lid course and twice around the body, clear of the middle,
+    where the lock goes. A stud is a 2x2 - lit, mid, mid, shadow - with an outline under it."""
+    s = Sprite()
+
+    def stud(x, y):
+        s.ink(x, y, HI)
+        s.ink(x + 1, y, MID)
+        s.ink(x, y + 1, MID)
+        s.ink(x + 1, y + 1, D1)
+        s.ink(x, y + 2, OUTLINE)
+        s.ink(x + 1, y + 2, OUTLINE)
+    for x in (4, 8, 22, 26):
+        stud(x, 12)
+        stud(x, 17)
+        stud(x, 23)
+    for x in (12, 18):
+        stud(x, 12)
     return s
 
 
@@ -298,98 +415,148 @@ def band_hoops():
 # chest that is the same metal - and it has to stay legible over a body that rolled any hue at all.
 # That is what the full outline is for.
 def plate(s, x0, y0, x1, y1, chamfer=True):
+    """A raised plate: outlined, lit on its top half, a highlight in its top-left corner."""
     for y in range(y0, y1 + 1):
         for x in range(x0, x1 + 1):
             if chamfer and x in (x0, x1) and y in (y0, y1):
                 continue                              # clipped corners: a plate, not a domino
             edge = x in (x0, x1) or y in (y0, y1)
-            s.ink(x, y, OUTLINE if edge else (LT if y - y0 < (y1 - y0) / 2 else MID))
+            if edge:
+                s.ink(x, y, OUTLINE)
+            elif x == x1 - 1 or y == y1 - 1:
+                s.ink(x, y, D1)                       # the plate's own shadow edge
+            else:
+                s.ink(x, y, LT if y - y0 <= (y1 - y0) // 2 else MID)
     s.ink(x0 + 1, y0 + 1, HI)
 
 
+def keyhole(s, cx, y):
+    """A keyhole: a 2x2 hole over a 2x2 slot, one pixel narrower at the waist."""
+    for x, yy in ((cx, y), (cx + 1, y), (cx, y + 1), (cx + 1, y + 1), (cx, y + 2), (cx + 1, y + 2), (cx, y + 3), (cx + 1, y + 3)):
+        s.ink(x, yy, OUTLINE)
+
+
 def lock_keyhole():
-    """An escutcheon: the plainest of the four, and the commonest."""
+    """An escutcheon: the plainest of the six, and the commonest."""
     s = Sprite()
     plate(s, 12, 14, 19, 22)
-    for x, y in ((15, 16), (16, 16), (15, 17), (16, 17)):
-        s.ink(x, y, OUTLINE)
-    for y in (18, 19):
-        s.ink(15, y, OUTLINE)
-        s.ink(16, y, OUTLINE)
+    keyhole(s, 15, 16)
     return s
 
 
 def lock_padlock():
-    """A shackle over the seam and a small body under it - narrower than the plates, so it reads as
-    a thing HANGING on the chest rather than a thing set into it."""
+    """A shackle over the lip and a body under it - narrower than the plates, so it reads as a thing
+    HANGING on the chest rather than a thing set into it."""
     s = Sprite()
-    for y in range(12, 17):
-        s.ink(14, y, MID)
-        s.ink(17, y, MID)
     for x in range(14, 18):
-        s.ink(x, 12, LT)
-    s.ink(14, 13, HI)
-    plate(s, 13, 16, 18, 23)
-    for x, y in ((15, 18), (16, 18), (15, 19), (16, 19), (15, 20), (16, 20)):
-        s.ink(x, y, OUTLINE)
+        s.ink(x, 12, OUTLINE)
+    for y in (13, 14, 15):
+        s.ink(13, y, OUTLINE)
+        s.ink(14, y, HI if y == 13 else LT)
+        s.ink(17, y, MID)
+        s.ink(18, y, OUTLINE)
+    s.ink(15, 13, LT)
+    s.ink(16, 13, LT)
+    s.ink(15, 14, OUTLINE)
+    s.ink(16, 14, OUTLINE)
+    plate(s, 12, 16, 19, 24)
+    keyhole(s, 15, 18)
     return s
 
 
 def lock_keypad():
-    """Six buttons in a 3x2. The alternating lit/unlit pixels are what make it read as a KEYPAD at
-    this size - six identical dots read as rivets, which the bands already own."""
+    """Four buttons in a 2x2 over a card slot. The alternating lit/unlit buttons are what make it
+    read as a KEYPAD at this size - identical dots read as rivets, which the bands already own."""
     s = Sprite()
     plate(s, 12, 14, 19, 22)
-    for row, y in enumerate((16, 19)):
+    for row, y in enumerate((16, 18)):
         for col, x in enumerate((14, 16)):
             s.ink(x, y, HI if (row + col) % 2 == 0 else D2)
-            s.ink(x + 1, y, HI if (row + col) % 2 == 0 else D2)
             s.ink(x, y + 1, D2)
-            s.ink(x + 1, y + 1, D2)
-    for y in (16, 19):
-        s.ink(18, y, HI)
-        s.ink(18, y + 1, D2)
+    for x in range(14, 18):
+        s.ink(x, 20, OUTLINE)
     return s
 
 
 def lock_latch():
-    """A clasp: a small plate on the lid and a hook dropping onto the body, with daylight either
-    side of the hook. The smallest of the four on purpose - four identically sized plates would make
-    the Lock layer read as one variant wearing four faces."""
+    """A clasp: a small plate on the lid course and a hook dropping onto the body. The smallest of
+    the six on purpose - six identically sized plates would make the Lock layer read as one variant
+    wearing six faces."""
     s = Sprite()
     plate(s, 13, 12, 18, 16, chamfer=False)
     s.ink(15, 14, D2)
     s.ink(16, 14, D2)
-    for y in range(16, 21):
-        s.ink(15, y, OUTLINE)
-        s.ink(16, y, LT if y < 19 else MID)
+    for y in range(17, 21):
+        s.ink(14, y, OUTLINE)
+        s.ink(15, y, LT)
+        s.ink(16, y, MID)
         s.ink(17, y, OUTLINE)
-    for x in range(14, 19):
+    for x in range(14, 18):
         s.ink(x, 21, OUTLINE)
+    s.ink(15, 20, D1)
     s.ink(16, 20, D2)
+    return s
+
+
+def lock_dial():
+    """A combination dial: a round face, a ring of ticks and a lit knob. Round, which none of the
+    others are - the one silhouette the Lock layer did not have."""
+    s = Sprite()
+    rows = {14: (14, 17), 15: (13, 18), 16: (12, 19), 17: (12, 19), 18: (12, 19), 19: (12, 19),
+            20: (13, 18), 21: (14, 17)}
+    shape = {(x, y) for y, (a, b) in rows.items() for x in range(a, b + 1)}
+    for x, y in shape:
+        s.ink(x, y, LT if (x + y) < 33 else MID)
+    for x, y in ((15, 15), (16, 15), (13, 17), (18, 18), (15, 20), (16, 20)):
+        s.ink(x, y, D2)                                # the ticks
+    for x, y in ((15, 17), (16, 17), (15, 18), (16, 18)):
+        s.ink(x, y, MID)                               # the knob
+    s.ink(15, 17, HI)
+    s.ink(16, 18, D1)
+    s.outline(shape)
+    s.ink(14, 22, OUTLINE)                             # a short stem under the dial
+    s.ink(15, 22, D1)
+    s.ink(16, 22, D1)
+    s.ink(17, 22, OUTLINE)
+    return s
+
+
+def lock_crest():
+    """A shield-shaped hasp with a keyhole: square at the shoulders, pointed at the foot."""
+    s = Sprite()
+    rows = {14: (12, 19), 15: (12, 19), 16: (12, 19), 17: (12, 19), 18: (12, 19), 19: (12, 19),
+            20: (13, 18), 21: (13, 18), 22: (14, 17), 23: (15, 16)}
+    shape = {(x, y) for y, (a, b) in rows.items() for x in range(a, b + 1)}
+    for x, y in shape:
+        s.ink(x, y, LT if x < 16 else MID)            # the shield's two halves, lit and shaded
+    for y in range(15, 23):
+        s.ink(15, y, HI if y < 19 else LT)            # the ridge down the middle
+    keyhole(s, 15, 16)
+    s.outline(shape)
     return s
 
 
 # ---------------------------------------------------------------------------- trim (custom)
 # Full color, composited exactly as drawn - a Custom layer is never colorized, which is why these
-# are the only sprites in the set that state a color at all. Both keep clear of x=11..20, where the
-# lock plate lands: trim half-covered by a lock reads as a bug rather than as a lock over trim.
+# are the only sprites in the set that state a color at all. Shades are three steps each, dark to
+# light, and every highlight run is shorter than the run beneath it, so the metal reads as metal.
 GOLD = ((150, 108, 36), (214, 168, 68), (246, 214, 120))
+PEARL = ((150, 140, 128), (214, 206, 194), (250, 248, 240))
 GEMS = (((150, 32, 52), (206, 54, 72), (244, 128, 140)),
         ((34, 74, 150), (72, 132, 214), (146, 196, 248)))
 
 
 def trim_gems():
-    """A cut stone on each shoulder of the lid, plus gold studs along the overhang. Three pixels
-    across is the smallest a gem can be and still show a facet."""
+    """A cut stone on each shoulder of the lid course in a gold setting. Three pixels across is the
+    smallest a gem can be and still show a facet."""
     s = Sprite()
-    for x0, (dark, base, light) in zip((5, 22), GEMS):
-        for dx in range(3):
-            s.rgb(x0 + dx, 12, GOLD[0])
+    for x0, (dark, base, light) in zip((5, 24), GEMS):
+        for dx in range(-1, 4):
+            s.rgb(x0 + dx, 12, GOLD[1] if 0 <= dx < 3 else GOLD[0])
             s.rgb(x0 + dx, 16, GOLD[0])
-        for dy in range(3):
-            s.rgb(x0 - 1, 13 + dy, GOLD[0])
-            s.rgb(x0 + 3, 13 + dy, GOLD[0])
+        for dy in range(1, 4):
+            s.rgb(x0 - 1, 12 + dy, GOLD[1])
+            s.rgb(x0 + 3, 12 + dy, GOLD[0])
         s.rgb(x0, 13, light)
         s.rgb(x0 + 1, 13, base)
         s.rgb(x0 + 2, 13, base)
@@ -399,26 +566,54 @@ def trim_gems():
         s.rgb(x0, 15, base)
         s.rgb(x0 + 1, 15, dark)
         s.rgb(x0 + 2, 15, dark)
-    for x in range(4, 28, 3):
-        s.rgb(x, 26, GOLD[1])
-        s.rgb(x, 27, GOLD[0])
     return s
 
 
 def trim_gilt():
-    """Gold along the lid's overhang and the plinth, with corner pips. It reads as applied metal
-    rather than paint because the highlight run is shorter than the base run at both ends."""
+    """Gold along the lip and the plinth, with corner pips on the lid course."""
     s = Sprite()
     for x in range(2, 30):
-        s.rgb(x, 14, GOLD[0])
-        s.rgb(x, 15, GOLD[1])
-    for x in range(4, 28):
-        s.rgb(x, 15, GOLD[2] if x % 2 == 0 else GOLD[1])
-    for x in range(2, 30):
-        s.rgb(x, 27, GOLD[0])
-        s.rgb(x, 28, GOLD[1])
+        s.rgb(x, 14, GOLD[2] if 4 <= x <= 27 else GOLD[1])
+        s.rgb(x, 15, GOLD[0])
+        s.rgb(x, 27, GOLD[1] if 4 <= x <= 27 else GOLD[0])
+        s.rgb(x, 28, GOLD[0])
     for x, y in ((3, 12), (4, 12), (27, 12), (28, 12), (3, 13), (28, 13)):
         s.rgb(x, y, GOLD[1])
+    return s
+
+
+def trim_pearls():
+    """A string of pearls beaded along the lip, with a drop at each end. A pearl is two by two - lit,
+    body, body, shade - and the string between pearls is one dark pixel, so the row reads as beads
+    on a thread rather than as a dashed line."""
+    s = Sprite()
+    for x0 in range(3, 28, 3):
+        s.rgb(x0, 14, PEARL[2])
+        s.rgb(x0 + 1, 14, PEARL[1])
+        s.rgb(x0, 15, PEARL[1])
+        s.rgb(x0 + 1, 15, PEARL[0])
+        if x0 + 2 <= 28:
+            s.rgb(x0 + 2, 14, PEARL[0])
+    for x in (4, 26):                                 # the drops
+        s.rgb(x, 16, PEARL[0])
+        s.rgb(x, 17, PEARL[2])
+        s.rgb(x + 1, 17, PEARL[1])
+        s.rgb(x, 18, PEARL[1])
+        s.rgb(x + 1, 18, PEARL[0])
+    return s
+
+
+def trim_filigree():
+    """Gold scrollwork in the four body corners: an L with a curl at each end. Kept clear of the
+    middle, where the lock lands - trim half-covered by a lock reads as a bug."""
+    s = Sprite()
+    curl = [(0, 0), (1, 0), (2, 0), (3, 0), (0, 1), (0, 2), (0, 3), (3, 1), (2, 2), (1, 3)]
+    for cx, cy, sx, sy in ((5, 18, 1, 1), (26, 18, -1, 1), (5, 25, 1, -1), (26, 25, -1, -1)):
+        for dx, dy in curl:
+            lit = (dx == 0 and sx > 0) or (dy == 0 and sy > 0)
+            s.rgb(cx + sx * dx, cy + sy * dy, GOLD[2] if lit else GOLD[1])
+        s.rgb(cx + sx * 2, cy + sy * 1, GOLD[0])
+        s.rgb(cx + sx * 1, cy + sy * 2, GOLD[0])
     return s
 
 
@@ -438,9 +633,11 @@ def star(s, x, y, arm=2):
 
 def glow_sparks():
     s = Sprite()
-    for x, y in ((5, 4), (26, 4), (2, 20), (29, 22), (16, 1)):
+    for x, y in ((5, 4), (26, 4), (16, 2)):
         star(s, x, y)
-    for x, y in ((10, 2), (22, 6), (1, 12), (30, 12), (12, 30), (20, 30), (6, 29), (25, 29)):
+    for x, y in ((1, 19), (30, 21)):
+        star(s, x, y, arm=1)
+    for x, y in ((10, 3), (22, 5), (1, 11), (30, 12)):
         s.ink(x, y, LT)
     return s
 
@@ -449,17 +646,17 @@ def glow_runes():
     """Four marks, one per corner, each a small glyph rather than a blob - at this size a soft glow
     is just a smudge, and a rune is something the eye can name."""
     s = Sprite()
-    for cx, cy in ((4, 4), (27, 4), (4, 27), (27, 27)):
+    for cx, cy in ((4, 4), (27, 4)):
         for d in range(-1, 2):
             s.ink(cx + d, cy, MID)
             s.ink(cx, cy + d, MID)
         s.ink(cx, cy, HI)
         s.ink(cx - 2, cy - 2, D1)
         s.ink(cx + 2, cy + 2, D1)
-    for x, y in ((16, 1), (1, 16), (30, 16), (16, 30)):
+    for x, y in ((16, 2), (1, 16), (30, 16)):
         s.ink(x, y, LT)
-        s.ink(x - 1, y, D1)
-        s.ink(x + 1, y, D1)
+        s.ink(x, y - 1, D1)
+        s.ink(x, y + 1, D1)
     return s
 
 
@@ -467,32 +664,29 @@ def glow_runes():
 # Rows 29-30, BELOW the plinth at 28, so these clear the y >= 12 overlay contract by a mile and can
 # never collide with either lid - the two silhouettes differ only above row 12.
 #
-# CUSTOM, not dynamic, and the reason is arithmetic rather than taste. A dynamic layer multiplies the
-# book's DNA space by its variants AND its colour buckets, and this book has to keep counting
-# EXACTLY rather than saturating UniqueSpace's million cap - a demo whose headline figure reads
-# "more than 1000000" teaches that nfty cannot count its own space. Two variants and no colour is
-# what fits, and it gives the demo a second Custom example beside the trim.
-# Aged pewter, deliberately NEUTRAL-WARM rather than blue-grey. The first cut was (72,78,86) - a
-# cold iron that sat fine under the stone bodies and read as a separate object under the wooden
-# ones, which are most of the collection. A hair of brown in the ramp lets one pair of feet belong
-# to both. Seen at 12x, not in the palette.
+# CUSTOM, not dynamic, and the reason is arithmetic rather than taste: a dynamic layer multiplies
+# the book's DNA space by its variants AND its color buckets, so a dynamic Feet layer would have been
+# the most expensive way to add the least visible variety. Custom multiplies by variants alone, and
+# it gives the demo a second Custom example beside the trim.
+# Aged pewter, deliberately NEUTRAL-WARM rather than blue-gray: a hair of brown lets one pair of feet
+# belong under both timber and metal bodies.
 IRONW = ((76, 71, 66), (121, 114, 105), (168, 159, 147))
 
 
-def _foot(s, x0, x1):
+def _foot(s, x0, x1, ramp=IRONW):
     """One foot: a lit top row under the plinth and a darker row it stands on."""
     for x in range(x0, x1 + 1):
-        s.rgb(x, 29, IRONW[1])
-        s.rgb(x, 30, IRONW[0])
-    s.rgb(x0, 29, IRONW[0])     # a shaded inside edge, so two feet do not read as one bar
-    s.rgb(x1, 29, IRONW[2])
+        s.rgb(x, 29, ramp[1])
+        s.rgb(x, 30, ramp[0])
+    s.rgb(x0, 29, ramp[2])
+    s.rgb(x1, 29, ramp[0])
 
 
 def feet_blocks():
     """Two square blocks under the corners - the plain answer, and the one that reads at 32px."""
     s = Sprite()
-    _foot(s, 5, 9)
-    _foot(s, 22, 26)
+    _foot(s, 4, 8)
+    _foot(s, 23, 27)
     return s
 
 
@@ -501,85 +695,92 @@ def feet_skids():
     blocks with more pixels, which is the whole test for a second variant at this size."""
     s = Sprite()
     _foot(s, 4, 27)
-    for x in (4, 5, 26, 27):
-        s.rgb(x, 30, IRONW[0])   # the rail turns down at both ends
+    return s
+
+
+def feet_claws():
+    """Gilt ball feet, a pair of round pads under each end: the parlor chest to the blocks' cellar."""
+    s = Sprite()
+    for x0 in (4, 24):
+        s.rgb(x0, 29, GOLD[2])
+        s.rgb(x0 + 1, 29, GOLD[1])
+        s.rgb(x0 + 2, 29, GOLD[1])
+        s.rgb(x0 + 3, 29, GOLD[0])
+        s.rgb(x0 + 1, 30, GOLD[0])
+        s.rgb(x0 + 2, 30, GOLD[0])
     return s
 
 
 # ---------------------------------------------------------------------------- the set
+TEXTURES = {"planked": tex_planked, "plated": tex_plated, "slatted": tex_slatted,
+            "paneled": tex_paneled, "stone": tex_stone}
+
 SPEC = {
-    "chestbody": {"planked": lambda: make_body(CHEST_LID, tex_planked),
-                  "plated": lambda: make_body(CHEST_LID, tex_plated),
-                  "stone": lambda: make_body(CHEST_LID, tex_stone)},
-    "boxbody": {"planked": lambda: make_body(BOX_LID, tex_planked),
-                "plated": lambda: make_body(BOX_LID, tex_plated)},
-    "bands": {"straps": band_straps, "corners": band_corners, "hoops": band_hoops},
-    "lock": {"keyhole": lock_keyhole, "padlock": lock_padlock,
-             "keypad": lock_keypad, "latch": lock_latch},
-    "trim": {"gems": trim_gems, "gilt": trim_gilt},
+    "chestbody": {v: (lambda t=t: make_body(CHEST_LID, CHEST_LID_V, t))
+                  for v, t in TEXTURES.items()},
+    "boxbody": {v: (lambda t=t: make_body(BOX_LID, BOX_LID_V, t))
+                for v, t in TEXTURES.items() if v != "stone"},
+    "bands": {"straps": band_straps, "corners": band_corners, "hoops": band_hoops,
+              "frame": band_frame, "studs": band_studs},
+    "lock": {"keyhole": lock_keyhole, "padlock": lock_padlock, "keypad": lock_keypad,
+             "latch": lock_latch, "dial": lock_dial, "crest": lock_crest},
+    "trim": {"gems": trim_gems, "gilt": trim_gilt, "pearls": trim_pearls,
+             "filigree": trim_filigree},
     "glow": {"sparks": glow_sparks, "runes": glow_runes},
-    "feet": {"blocks": feet_blocks, "skids": feet_skids},
+    "feet": {"blocks": feet_blocks, "skids": feet_skids, "claws": feet_claws},
 }
 
 # ---------------------------------------------------------------------------- depth (voxels)
-# Rows 12..28, the part both lids share. Mirrors the silhouette above; kept as its own table so the
-# depth contract does not depend on which lid a sprite was drawn with.
-LOWER_ROWS = {y: (3, 28) for y in range(12, 28)}
-for _y in (14, 15, 28):
-    LOWER_ROWS[_y] = (2, 29)
-OVERHANG_ROWS = (12, 13, 14, 15, 28)     # the lid course and the plinth stand a voxel prouder
-FACE, SHELL = 2, 3                       # front of the face, front of the overhanging courses
-BACK_FACE = 9                            # the lower body's back: it mirrors the front, as a real box does
-BACK_STEP = 1                            # overhang rows stand a voxel deeper, the outer column a voxel shy
-CHEST_BACK = {7: 5, 8: 6, 9: 7, 10: 8, 11: 9}   # the lid's back is a dome too, deepening toward the body
-BOX_BACK = 9                             # the box lid is a slab, bevelled at the ends
-CHEST_DOME = {7: 1, 8: 1, 9: 2, 10: 2, 11: 3}   # a barrel lid curves away going up
-BOX_SLAB = 3
+# One voxel of paper sits at z in [-0.5, 0.5]; a front of F reaches 0.5+F toward the viewer and a
+# back of B reaches 0.5+B away. Every body is built from (front, back) pairs with back = front + 1,
+# so each row is CENTERED on one plane and the body reads as a box, not a facade with a deep back.
+#
+#   lid course 12-13     6 / 7    (the lid is a voxel fuller than the body all round)
+#   lip 14-15            7 / 8    (and the lip a voxel fuller than the lid: the overhang)
+#   body 16-26           5 / 6    (12 voxels deep - a chest, not a slab)
+#   plinth 27-28         6 / 7    (answers the lip at the foot)
+#
+# The outermost column of every row is a voxel shy front AND back - a bevel on every corner edge.
+LOWER_DEPTH = {12: (6, 7), 13: (6, 7), 14: (7, 8), 15: (7, 8), 27: (6, 7), 28: (6, 7)}
+for _y in range(16, 27):
+    LOWER_DEPTH[_y] = (5, 6)
+
+# The barrel: a half-cylinder of radius ~7 seen from the side, read per row. It closes in front AND
+# back alike, so the dome is the same curve from either side; the straight rows at 11-13 are where
+# the arc meets the lid course.
+CHEST_DEPTH = {7: (2, 3), 8: (4, 5), 9: (5, 6), 10: (5, 6), 11: (6, 7)}
+# The slab: flat front and back at the lid course's depth, with the top row chamfered a voxel in.
+BOX_DEPTH = {8: (5, 6), 9: (6, 7), 10: (6, 7), 11: (6, 7)}
+
+
+def bevelled(table, rows, x, y):
+    row = rows.get(y)
+    if row is None or not row[0] <= x <= row[1]:
+        return (0, 0)
+    f, b = table[y]
+    return (f - 1, b - 1) if x in row else (f, b)
 
 
 def lower_front(x, y):
-    """THE shared front profile at y>=12. A one-voxel bevel on the outermost column each side."""
-    row = LOWER_ROWS.get(y)
-    if row is None or not row[0] <= x <= row[1]:
-        return 0
-    base = SHELL if y in OVERHANG_ROWS else FACE
-    return base - 1 if x in row else base
+    """THE shared front profile at y>=12."""
+    return bevelled(LOWER_DEPTH, LOWER_ROWS, x, y)[0]
 
 
 def lower_back(x, y):
-    """THE shared back profile at y>=12, the front's mirror: overhang rows a voxel deeper, the
-    outermost column a voxel shallower than its neighbour."""
-    row = LOWER_ROWS.get(y)
-    if row is None or not row[0] <= x <= row[1]:
-        return 0
-    base = BACK_FACE + (BACK_STEP if y in OVERHANG_ROWS else 0)
-    return base - 1 if x in row else base
+    """THE shared back profile at y>=12."""
+    return bevelled(LOWER_DEPTH, LOWER_ROWS, x, y)[1]
 
 
-def body_back(x, y, lid):
+def body_depth_at(x, y, lid):
     if y >= 12:
-        return lower_back(x, y)
-    rows = CHEST_LID if lid == "chest" else BOX_LID
-    row = rows.get(y)
-    if row is None or not row[0] <= x <= row[1]:
-        return 0
+        return bevelled(LOWER_DEPTH, LOWER_ROWS, x, y)
     if lid == "chest":
-        # Rounded ends: the dome falls away two voxels per pixel from either end.
-        return min(CHEST_BACK[y], 1 + 2 * (x - row[0]), 1 + 2 * (row[1] - x))
-    return BOX_BACK - 1 if x in row else BOX_BACK
+        return bevelled(CHEST_DEPTH, CHEST_LID, x, y)
+    return bevelled(BOX_DEPTH, BOX_LID, x, y)
 
 
 def body_front(x, y, lid):
-    if y >= 12:
-        return lower_front(x, y)
-    rows = CHEST_LID if lid == "chest" else BOX_LID
-    row = rows.get(y)
-    if row is None or not row[0] <= x <= row[1]:
-        return 0
-    if lid == "chest":
-        # Falls to 0 within three pixels of either end: rounded ends on the barrel.
-        return min(CHEST_DOME[y], x - row[0], row[1] - x)
-    return BOX_SLAB - 1 if x in row else BOX_SLAB
+    return body_depth_at(x, y, lid)[0]
 
 
 def depth_picture(sprite, fn):
@@ -599,7 +800,7 @@ def depth_picture(sprite, fn):
 
 
 def body_depth(lid):
-    return lambda sp: depth_picture(sp, lambda x, y, c: (body_front(x, y, lid), body_back(x, y, lid)))
+    return lambda sp: depth_picture(sp, lambda x, y, c: body_depth_at(x, y, lid))
 
 
 def over(k):
@@ -609,8 +810,13 @@ def over(k):
 
 
 def lock_padlock_depth(sp):
-    # The shackle (its arc above the plate, y < 16) is the most proud thing on the chest.
+    # The shackle (above the plate, y < 16) is the most proud thing on the chest.
     return depth_picture(sp, lambda x, y, c: (lower_front(x, y) + (3 if y < 16 else 2), 0))
+
+
+def lock_dial_depth(sp):
+    # The knob stands a voxel off the dial's face.
+    return depth_picture(sp, lambda x, y, c: (lower_front(x, y) + (3 if 15 <= x <= 16 and 17 <= y <= 18 else 2), 0))
 
 
 def gems_depth(sp):
@@ -618,23 +824,20 @@ def gems_depth(sp):
     return depth_picture(sp, lambda x, y, c: (lower_front(x, y) + (1 if c[:3] in GOLD else 2), 0))
 
 
-def feet_blocks_depth(sp):
-    return depth_picture(sp, lambda x, y, c: (1, 1))
-
-
-def feet_skids_depth(sp):
-    # A runner that runs back under the chest.
-    return depth_picture(sp, lambda x, y, c: (0, 5))
+def feet_depth(front, back):
+    return lambda sp: depth_picture(sp, lambda x, y, c: (front, back))
 
 
 # Glow has no entry on purpose: it stays flat paper, and a test pins that.
 DEPTH = {
     "chestbody": {v: body_depth("chest") for v in SPEC["chestbody"]},
     "boxbody": {v: body_depth("box") for v in SPEC["boxbody"]},
-    "bands": {"straps": over(1), "corners": over(1), "hoops": over(1)},
-    "lock": {"keyhole": over(2), "latch": over(2), "padlock": lock_padlock_depth, "keypad": over(2)},
-    "trim": {"gilt": over(1), "gems": gems_depth},
-    "feet": {"blocks": feet_blocks_depth, "skids": feet_skids_depth},
+    "bands": {v: over(1) for v in SPEC["bands"]},
+    "lock": {"keyhole": over(2), "latch": over(2), "padlock": lock_padlock_depth,
+             "keypad": over(2), "dial": lock_dial_depth, "crest": over(2)},
+    "trim": {"gilt": over(1), "gems": gems_depth, "pearls": over(1), "filigree": over(1)},
+    # Feet stand under the plinth a voxel in from it all round; the skids run its full depth.
+    "feet": {"blocks": feet_depth(4, 5), "skids": feet_depth(5, 6), "claws": feet_depth(3, 4)},
 }
 
 
@@ -645,16 +848,21 @@ def check_contract(pictures):
             for y in range(12, H):
                 for x in range(W):
                     if sp.px[x, y][3]:
-                        assert pic.getpixel((x, y))[1] == lower_back(x, y), "body %s/%s breaks the shared back at (%d,%d)" % (layer, vid, x, y)
-                        assert pic.getpixel((x, y))[0] == lower_front(x, y),                             "body %s/%s breaks the shared profile at (%d,%d)" % (layer, vid, x, y)
+                        assert pic.getpixel((x, y))[1] == lower_back(x, y), \
+                            "body %s/%s breaks the shared back at (%d,%d)" % (layer, vid, x, y)
+                        assert pic.getpixel((x, y))[0] == lower_front(x, y), \
+                            "body %s/%s breaks the shared profile at (%d,%d)" % (layer, vid, x, y)
     for layer in ("bands", "lock", "trim"):
         for vid, (sp, pic) in pictures[layer].items():
             for y in range(H):
                 for x in range(W):
                     if sp.px[x, y][3]:
+                        assert y >= 12, "%s/%s is drawn above row 12 at (%d,%d)" % (layer, vid, x, y)
+                        assert lower_front(x, y) > 0, "%s/%s hangs off the body at (%d,%d)" % (layer, vid, x, y)
                         assert pic.getpixel((x, y))[1] == 0, "%s/%s has a back at (%d,%d)" % (layer, vid, x, y)
                         for lid in ("chest", "box"):
-                            assert pic.getpixel((x, y))[0] > body_front(x, y, lid),                                 "%s/%s is not proud of the %s body at (%d,%d)" % (layer, vid, lid, x, y)
+                            assert pic.getpixel((x, y))[0] > body_front(x, y, lid), \
+                                "%s/%s is not proud of the %s body at (%d,%d)" % (layer, vid, lid, x, y)
 
 
 def main():

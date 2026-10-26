@@ -39,7 +39,12 @@ public class FixtureFreezeTests
     // FixtureArchiveTests reads for format compatibility. It belongs in this set for the same
     // reason: nothing but convention would otherwise stop a failing roll-comparison test from being
     // "fixed" by regenerating the very thing it is meant to catch a change in. It did NOT move on
-    // 2026-09-25 — the demo's content is identical at schema 2, only its schema moved.
+    // 2026-09-25 — the demo's content is identical at schema 2, only its schema moved. It DID move
+    // on 2026-10-26, and only because the BOOK it rolls changed, never the roll: the demo was
+    // redrawn with more variants per layer (the author's request, so cooked chests vary visibly),
+    // which is a different collection by definition. The roll algorithm it guards is untouched;
+    // the baseline was recaptured from the new demo by the test's own first-run path, and the
+    // archive fixtures above did not move.
     private static readonly IReadOnlyDictionary<string, string> ExpectedHashes =
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
@@ -48,7 +53,7 @@ public class FixtureFreezeTests
             ["aura.igt"] = "3e4561142f7250e0206303d9b470b9d9d2ebe049bee9c85abe7664b9c76f870e",
             ["README.md"] = "d95bb2bc48d7eb4f12413185c9b8f2df288ed64919172de8792798bc99df3c76",
             ["roll-baseline-chest-demo.txt"] =
-                "f3dc8dba3b1d5bcdf529ba1db3f77d5e01c9487c8977e9eb9b772e16072f32e2",
+                "1041e63fdfad4e2379ca927f2b2198b84a7a47acfa264a20411564aa8619e334",
         };
 
     private static string FixturesDir => Path.Combine(AppContext.BaseDirectory, "fixtures");

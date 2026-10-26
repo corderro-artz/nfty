@@ -336,7 +336,7 @@ public class VisualCapture
             var cookBookVm = new CookBookDetailViewModel(cookBook, () => { }, () => { }, () => { });
             Capture(new Views.CookBookDetailView { DataContext = cookBookVm }, variant, $"cookbook-detail-{key}.png");
 
-            // The SAME card over the built-in demo, whose DNA space is 615,600. Every other fixture
+            // The SAME card over the built-in demo, whose DNA space is 7,155,000. Every other fixture
             // in this file is a two-variant toy, so the UNIQUE DNA tile had only ever been captured
             // holding a single digit — no frame in the set was evidence that it can hold a real
             // figure, which is the one number on this card that has no upper bound.
@@ -1666,6 +1666,46 @@ public class VisualCapture
                     frame.Save(Path.Combine(Dir!, file), PngBitmapEncoderOptions.Default);
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// The Rise page over chosen assets of a Set the real CLI cooked, front and back, for an author's
+    /// review. Inert unless <c>NFTY_REVIEW_SET</c> names the Set folder; <c>NFTY_REVIEW_BOOK</c> names
+    /// the book that cooked it (so faces take owner colors) and <c>NFTY_REVIEW_ASSETS</c> the asset
+    /// numbers, comma-separated. Writes <c>chest{i}-front.png</c> and <c>chest{i}-back.png</c>.
+    /// </summary>
+    [AvaloniaFact]
+    public void Capture_demo_review()
+    {
+        string? setDir = Environment.GetEnvironmentVariable("NFTY_REVIEW_SET");
+        if (Dir is null || setDir is null) return;
+        string? book = Environment.GetEnvironmentVariable("NFTY_REVIEW_BOOK");
+        var numbers = (Environment.GetEnvironmentVariable("NFTY_REVIEW_ASSETS") ?? "1")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(s => int.Parse(s, System.Globalization.CultureInfo.InvariantCulture)).ToList();
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            string theme = variant.Key.ToString()!.ToLowerInvariant();
+            for (int i = 0; i < numbers.Count; i++)
+                foreach (var (side, steps) in new[] { ("front", 0), ("back", 12) })
+                {
+                    var set = SetReader.Read(setDir);
+                    var src = new Nfty.App.Rise.SetRiseSource(set, numbers[i], () => book is null ? Array.Empty<string>() : new[] { book }, new ImageBridge());
+                    using var page = RisePages.Show(RisePages.Vm(src), 1180, 720, variant, set);
+                    while (!page.Vm.Source.ExportReady.IsCompleted) { Dispatcher.UIThread.RunJobs(); System.Threading.Thread.Sleep(1); }
+                    Dispatcher.UIThread.RunJobs();
+                    page.Vm.SwapPreviewCommand.Execute(null);
+                    if (steps > 0) page.Vm.Preview.OrbitStep(new System.Numerics.Vector2(steps, 0));
+                    var model = page.View.FindControl<Views.ModelPreviewView>("ModelView")!;
+                    model.RepaintNow();
+                    Dispatcher.UIThread.RunJobs();
+                    var file = $"chest{i + 1}-{side}{(variant == ThemeVariant.Light ? "" : "-dark")}.png";
+                    if (!(page.Vm.PreviewSwapped && page.Vm.Subject.Faces is not null))
+                        throw new InvalidOperationException($"{file}: the 3D view is not the big pane, or the book was not found.");
+                    using var frame = page.Window.CaptureRenderedFrame()!;
+                    frame.Save(Path.Combine(Dir!, file), PngBitmapEncoderOptions.Default);
+                }
         }
     }
 

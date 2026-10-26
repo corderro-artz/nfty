@@ -28,8 +28,8 @@ show what nfty is for in one screen and stay small enough to read:
   * two optional layers, so the absent-percent feature is visible without being hunted for;
   * one incompatibility rule, stated in a sentence a reader can check against the art;
   * two Recipes at uneven weights, which is the thing a CookBook is FOR;
-  * a DNA space in the hundreds of thousands from sixteen small sprites, which is the whole
-    argument for value-map colorization.
+  * a DNA space in the millions from twenty-nine small sprites, which is the whole argument for
+    value-map colorization.
 
 --workspace additionally lays out a Kitchen with loose parts and a cooked Set beside the book, which
 is what tools/docs-capture screenshots. That used to be a second demo (a pet collection) maintained
@@ -59,9 +59,10 @@ IRON = {"hueMin": 200, "hueMax": 230, "satMin": 4, "satMax": 18}
 ARCANE = {"hueMin": 0, "hueMax": 360, "satMin": 60, "satMax": 100}
 
 
-# The quantize steps are chosen so the WHOLE book counts EXACTLY rather than saturating
-# UniqueSpace's million-bucket cap: a demo whose headline figure is "more than 1000000" teaches the
-# reader that nfty cannot count its own space. Buckets are absolute indices from zero, not a range
+# The quantize steps are chosen so the WHOLE book counts EXACTLY: totals are BigInteger and nothing
+# caps the arithmetic, but the ruled Chest recipe is WALKED selection by selection and every color
+# set is enumerated, both under UniqueSpace's budget - a demo whose headline figure is a floor
+# ("more than N") teaches the reader that nfty cannot count its own space. Buckets are absolute indices from zero, not a range
 # divided by a step, so a band of 30 degrees at a step of 15 spans three buckets when it straddles a
 # boundary and two when it does not - count it with `nfty stats`, do not derive it.
 def rolled(hq, sq, *entries):
@@ -77,31 +78,38 @@ def fixed(spec):
 # ---------------------------------------------------------------------------- the book
 INGREDIENTS = [
     # id, display name, kind, colorization, [(variantId, name, weight)]
+    # Five bodies under the barrel lid, four under the slab (stone is a chest-only material - see
+    # the rule below for why it matters which). Weights fall off so a plain plank chest is common
+    # and a stone one is the find.
     ("chestbody", "Body", "dynamic", rolled(15, 20, (TIMBER, 60), (COLD, 40)),
-     [("planked", "Planked", 45), ("plated", "Plated", 35), ("stone", "Stone", 20)]),
+     [("planked", "Planked", 30), ("plated", "Plated", 22), ("slatted", "Slatted", 20),
+      ("paneled", "Paneled", 16), ("stone", "Stone", 12)]),
     ("boxbody", "Body", "dynamic", rolled(15, 20, (TIMBER, 60), (COLD, 40)),
-     [("planked", "Planked", 55), ("plated", "Plated", 45)]),
-    # 30/40 rather than 15/20: adding the Feet layer doubles the space, and this is where the room
-    # comes from. Coarser steps mean fewer, more distinct band colors - which at 32px is no loss.
+     [("plated", "Plated", 35), ("planked", "Planked", 30), ("paneled", "Paneled", 20),
+      ("slatted", "Slatted", 15)]),
+    # 30/40 rather than 15/20: coarser steps mean fewer, more distinct band colors - which at 32px
+    # is no loss, and it keeps the space a number a reader can still take in.
     ("bands", "Bands", "dynamic", rolled(30, 40, (LEATHER, 50), (IRON, 50)),
-     [("hoops", "Hoops", 45), ("corners", "Corners", 35), ("straps", "Straps", 20)]),
+     [("hoops", "Hoops", 30), ("straps", "Straps", 25), ("corners", "Corners", 20),
+      ("frame", "Frame", 15), ("studs", "Studs", 10)]),
     # Static: ONE color for the whole collection, so every chest wears the same brass. Only the H and
     # S of the spec are used - the value comes from the art, which is why the lock still has form.
     ("lock", "Lock", "static", fixed("hex:c9a227"),
-     [("keyhole", "Keyhole", 40), ("latch", "Latch", 30),
-      ("padlock", "Padlock", 20), ("keypad", "Keypad", 10)]),
+     [("keyhole", "Keyhole", 30), ("latch", "Latch", 22), ("padlock", "Padlock", 18),
+      ("dial", "Dial", 14), ("crest", "Crest", 10), ("keypad", "Keypad", 6)]),
     # Custom: composited exactly as drawn, never colorized, so `colorization` MUST be null.
     ("trim", "Trim", "custom", None,
-     [("gilt", "Gilt", 60), ("gems", "Gems", 40)]),
+     [("gilt", "Gilt", 40), ("gems", "Gems", 25), ("pearls", "Pearls", 20),
+      ("filigree", "Filigree", 15)]),
     ("glow", "Glow", "dynamic", rolled(60, 40, (ARCANE, 100)),
      [("sparks", "Sparks", 65), ("runes", "Runes", 35)]),
     # Feet sit below the plinth, so they are the one layer that cannot interact with either lid.
     # CUSTOM for an arithmetic reason, not a stylistic one: a dynamic layer multiplies the space by
-    # its variants AND its color buckets, and this book must keep counting EXACTLY rather than
-    # saturating UniqueSpace's million cap. Two variants and no color is what fits - and it gives
-    # the demo a second Custom example beside the trim.
+    # its variants AND its color buckets, which makes it the dearest way to buy the least visible
+    # variety. Custom multiplies by variants alone - and it gives the demo a second Custom example
+    # beside the trim.
     ("feet", "Feet", "custom", None,
-     [("blocks", "Blocks", 60), ("skids", "Skids", 40)]),
+     [("blocks", "Blocks", 50), ("skids", "Skids", 30), ("claws", "Claws", 20)]),
 ]
 
 # Bottom to top. Glow sits behind the chest, trim over the bands (a gilded hoop, not a hoop over
