@@ -13,24 +13,28 @@ public class SetModelerTests
     private const int Size = 4;
 
     /// <summary>A body that covers everything (front 1) and an optional hat on the top row (front 3).</summary>
-    private static LoadedCookBook Book(bool partialHat = false)
+    private static LoadedCookBook Book(bool partialHat = false, bool distinctOwners = false)
     {
         var body = Art.FromAscii("####", "####", "####", "####");
         var hat = Art.FromAscii(".##.", "....", "....", "....");
         if (partialHat) hat[0, 3] = new Rgba32(200, 40, 40, 128);
+        // The hat owns the front and the body the back, in different colors: the atlas halves differ.
+        if (distinctOwners)
+            for (int x = 0; x < Size; x++)
+                if (hat[x, 0].A == 255) hat[x, 0] = new Rgba32(250, 10, 10, 255);
 
-        LoadedIngredient Layer(string id, string name, Image<Rgba32> img, int front) => new()
+        LoadedIngredient Layer(string id, string name, Image<Rgba32> img, int front, int back = 0) => new()
         {
             Manifest = new IngredientManifest(id, name, LayerKind.Custom, null, [new Variant("v", "Ghost", 1)]),
             VariantImages = new Dictionary<string, Image<Rgba32>> { ["v"] = img },
-            Depths = new Dictionary<string, DepthMap> { ["v"] = Art.Depth(img, (_, _) => (front, 0)) },
+            Depths = new Dictionary<string, DepthMap> { ["v"] = Art.Depth(img, (_, _) => (front, back)) },
         };
 
         var recipe = new LoadedRecipe
         {
             Manifest = new RecipeManifest("r", "R", ["body", "hat"], [],
                 AbsentPercent: new Dictionary<string, double> { ["hat"] = 50 }),
-            Ingredients = [Layer("body", "Body", body, 1), Layer("hat", "Hat", hat, 3)],
+            Ingredients = [Layer("body", "Body", body, 1, distinctOwners ? 4 : 0), Layer("hat", "Hat", hat, 3)],
         };
         return new LoadedCookBook
         {
@@ -171,7 +175,7 @@ public class SetModelerTests
     [Fact]
     public void Models_are_byte_identical_at_any_thread_count()
     {
-        using var book = Book();
+        using var book = Book(distinctOwners: true);
         using var set = Cook(book);
         var modeler = new SetModeler(book, new RiseOptions());
 
@@ -188,6 +192,11 @@ public class SetModelerTests
 
         var baseline = WriteAt(1);
         Assert.Equal(set.Assets.Count, baseline.Count);
+        // The halves really differ for an asset with a hat, so a front/back mixup would change bytes.
+        var hatted = set.Assets.First(HasHat);
+        var (json, bin) = GltfValidator.ReadGlb(modeler.Model(hatted, "x")![0].Bytes);
+        using (var atlas = Image.Load<Rgba32>(GltfValidator.ReadImage(json, bin)))
+            Assert.NotEqual(atlas[1, 0], atlas[Size + 1 + 1, 0]);
         foreach (int threads in new[] { 2, 8 })
         {
             var run = WriteAt(threads);

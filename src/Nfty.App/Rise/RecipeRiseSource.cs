@@ -51,7 +51,7 @@ public sealed class RecipeRiseSource : RiseSource
         _layers = rolled.Rows;
         _item = new RiseItem("roll", recipe.Manifest.Name, CaptionFor(seed), BaseNameFor(seed),
             bridge.ToBitmap(rolled.Art), ownsThumbnail: true);
-        _item.Attach(new RiseSubject(rolled.Art, rolled.Depth, ownsArt: true));
+        _item.Attach(new RiseSubject(rolled.Art, rolled.Depth, ownsArt: true, rolled.Faces));
         _item.IsSelected = true;
         _items = new[] { _item };
     }
@@ -133,7 +133,7 @@ public sealed class RecipeRiseSource : RiseSource
         _layers = rolled.Rows;
         _item.Thumbnail = _bridge.ToBitmap(rolled.Art);
         _item.Relabel(CaptionFor(Seed), BaseNameFor(Seed));
-        var oldSubject = _item.Replace(new RiseSubject(rolled.Art, rolled.Depth, ownsArt: true));
+        var oldSubject = _item.Replace(new RiseSubject(rolled.Art, rolled.Depth, ownsArt: true, rolled.Faces));
         RaiseChanged();
 
         // The old picture, thumbnails and layer rows go only AFTER the page has been told: until it
@@ -149,12 +149,13 @@ public sealed class RecipeRiseSource : RiseSource
     private string BaseNameFor(int seed) => string.Create(CultureInfo.InvariantCulture, $"{_recipe.Manifest.Name}-{seed}");
 
     private sealed record Rolled(Image<Rgba32> Art, DepthMap? Depth, string? Problem, List<RiseLayerRow> Rows,
-        string? Refusal = null);
+        string? Refusal = null, StackFaces? Faces = null);
 
     private Rolled Roll()
     {
         GeneratedAsset? asset = null;
         Image<Rgba32>? art = null;
+        StackFaces? faces = null;
         var rows = new List<RiseLayerRow>();
         try
         {
@@ -167,16 +168,18 @@ public sealed class RecipeRiseSource : RiseSource
             {
                 using var rise = StackDepth.ForAsset(_recipe, asset, $"the {_recipe.Manifest.Name} recipe");
                 depth = rise?.Depth;
+                faces = rise?.Faces.Clone();    // the rise is let go below; the subject keeps its own copy
             }
             catch (PartialAlphaException ex) { refusal = ex.Message; }   // which layer keeps the stack 2D
             FillRows(asset, rows);
-            return new Rolled(art, depth, null, rows, refusal);
+            return new Rolled(art, depth, null, rows, refusal, faces);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             // An invalid book (or no roll at all) is a state to show, not a crash: a clear canvas, the
             // reason. Whatever was built before the failure is given back, not leaked.
             art?.Dispose();
+            faces?.Dispose();
             foreach (var r in rows) r.Dispose();
             var c = _book.Manifest.Canvas;
             return new Rolled(new Image<Rgba32>(c.Width, c.Height), null, ex.Message, new List<RiseLayerRow>());

@@ -3,10 +3,12 @@ using System.Linq;
 using Avalonia.Headless.XUnit;
 using Nfty.App.Rise;
 using Nfty.App.Services;
+using Nfty.App.ViewModels;
 using Nfty.Core.Editing;
 using Nfty.Core.Formats;
 using Nfty.Core.Generation;
 using Nfty.Core.Model;
+using SixLabors.ImageSharp.PixelFormats;
 using Xunit;
 
 namespace Nfty.App.Tests;
@@ -188,5 +190,38 @@ public class RecipeRiseSourceTests
         Assert.Equal(0, s.Depth.SolidCount);
         Assert.Equal(8, s.Art.Width);
         Assert.Contains(src.Problem!, src.DepthNote);
+    }
+    private static RiseViewModel Vm(RiseSource src) =>
+        new(src, new ImageBridge(), new FakeNav(), new FakeDialogs(), new FilePickerService(), new StatusService());
+
+    [AvaloniaFact]
+    public void A_recipe_source_thickness_rail_counts_union_thickness()
+    {
+        // Body (2,9) with a strap (4,0) on top: the strap's column is the UNION, 1 + 4 + 9 = 14 voxels,
+        // not the topmost layer alone (1 + 4 + 0 = 5).
+        using var book = RiseFixtures.StrapOverBody();
+        var recipe = book.Recipes.Single();
+        using var vm = Vm(new RecipeRiseSource(book, recipe, RiseFixtures.OakSeed(book, recipe), new ImageBridge()));
+
+        var strap = Assert.Single(vm.Thickness, r => r.Label == "14 voxels");
+        Assert.Equal(4, strap.Count);
+        Assert.DoesNotContain(vm.Thickness, r => r.Label == "5 voxels");
+        Assert.Equal(28, vm.Thickness.Single(r => r.Label == "12 voxels").Count);   // the rest of the body: 1 + 2 + 9
+    }
+
+    [AvaloniaFact]
+    public void A_recipe_source_preview_texture_carries_the_back_owner_color()
+    {
+        using var book = RiseFixtures.StrapOverBody();
+        var recipe = book.Recipes.Single();
+        using var vm = Vm(new RecipeRiseSource(book, recipe, RiseFixtures.OakSeed(book, recipe), new ImageBridge()));
+
+        var tex = vm.Texture;
+        var gold = new Rgba32(240, 204, 98, 255);
+        var oak = new Rgba32(178, 122, 70, 255);
+        const int back = 8 + 1;   // front half, gutter column, then the back half
+        Assert.Equal(2 * 8 + 1, tex.Width);
+        Assert.Equal(gold, tex[3, 3]);          // the strap owns the front here
+        Assert.Equal(oak, tex[back + 3, 3]);    // the body owns the back under it
     }
 }

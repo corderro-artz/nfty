@@ -136,7 +136,7 @@ public abstract class RiseSource : IDisposable
         return new RiseExportSnapshot(items.Select(i =>
         {
             var s = Open(i);
-            return RiseExportSnapshot.Frozen(s.Art, s.Depth.ToDepthMap());
+            return RiseExportSnapshot.Frozen(s.Art, s.Depth.ToDepthMap(), s.Faces);
         }).ToList());
     }
 

@@ -453,4 +453,73 @@ public class RiseExportTests
         Assert.Contains("stays 2D", vm.ExportProblem);
         Assert.Equal("Nothing to export", vm.ManifestTitle);
     }
+    private static readonly Rgba32 GoldColor = new(240, 204, 98, 255);
+    private static readonly Rgba32 OakColor = new(178, 122, 70, 255);
+
+    /// <summary>The embedded PNG texture of a GLB, decoded.</summary>
+    private static Image<Rgba32> GlbTexture(byte[] glb)
+    {
+        int jsonLen = BitConverter.ToInt32(glb, 12);
+        using var json = System.Text.Json.JsonDocument.Parse(new ReadOnlyMemory<byte>(glb, 20, jsonLen));
+        int binStart = 20 + jsonLen + 8;
+        int view = json.RootElement.GetProperty("images")[0].GetProperty("bufferView").GetInt32();
+        var v = json.RootElement.GetProperty("bufferViews")[view];
+        int offset = v.TryGetProperty("byteOffset", out var o) ? o.GetInt32() : 0;
+        return Image.Load<Rgba32>(new ReadOnlySpan<byte>(glb, binStart + offset, v.GetProperty("byteLength").GetInt32()));
+    }
+
+    [AvaloniaFact]
+    public async Task A_recipe_export_writes_the_back_owner_color()
+    {
+        using var book = RiseFixtures.StrapOverBody();
+        var recipe = book.Recipes.Single();
+        var dir = Temp();
+        using var vm = Vm(new RecipeRiseSource(book, recipe, RiseFixtures.OakSeed(book, recipe), new ImageBridge()),
+            new ScriptedPicker(save: Path.Combine(dir, "roll.glb")));
+
+        await vm.ExportCommand.ExecuteAsync(null);
+
+        using var tex = GlbTexture(File.ReadAllBytes(Path.Combine(dir, "roll.glb")));
+        Assert.Equal(GoldColor, tex[3, 3]);
+        Assert.Equal(OakColor, tex[8 + 1 + 3, 3]);      // right half of the atlas: the body under the strap
+    }
+
+    [AvaloniaFact]
+    public async Task The_page_export_is_the_cooked_sets_model_byte_for_byte()
+    {
+        // One definition of the model: what the page exports for a roll is what a cook writes to models/.
+        using var book = RiseFixtures.StrapOverBody(withGhost: false);
+        var recipe = book.Recipes.Single();
+        const int seed = 7;
+        var dir = Temp();
+        using var vm = Vm(new RecipeRiseSource(book, recipe, seed, new ImageBridge()),
+            new ScriptedPicker(save: Path.Combine(dir, "roll.glb")));
+        await vm.ExportCommand.ExecuteAsync(null);
+
+        using var asset = Generator.GenerateStreaming(book,
+            new GenerateOptions(1, seed.ToString(), "chest", EnforceUniqueDna: false)).First();
+        var file = Assert.Single(new SetModeler(book, new RiseOptions()).Model(asset, "roll")!);
+
+        Assert.Equal("roll.glb", file.FileName);
+        Assert.Equal(file.Bytes, File.ReadAllBytes(Path.Combine(dir, "roll.glb")));
+    }
+
+    [AvaloniaFact]
+    public void An_export_snapshot_owns_its_faces()
+    {
+        using var book = RiseFixtures.StrapOverBody();
+        var recipe = book.Recipes.Single();
+        var src = new RecipeRiseSource(book, recipe, RiseFixtures.OakSeed(book, recipe), new ImageBridge());
+        using var vm = Vm(src, new ScriptedPicker());
+        var live = src.Items[0].Subject!.Faces!;
+
+        using var snapshot = src.SnapshotExport(src.Items);
+        src.Reroll();                                       // disposes the old subject and the faces it held
+        Assert.Throws<ObjectDisposedException>(() => _ = live.Back[3, 3]);
+
+        var input = snapshot.Open(0, "x");
+        Assert.Equal(OakColor, input.Faces!.Back[3, 3]);    // the snapshot kept its own copy
+        RiseExportSnapshot.Release(input);
+        Assert.Throws<ObjectDisposedException>(() => _ = input.Faces.Back[3, 3]);   // and gave it back
+    }
 }

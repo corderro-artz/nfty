@@ -364,7 +364,7 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
         using var _ = Perf.Measure("Rise.MeshRebuild");
         var subject = Subject;
         return subject.IsRisable
-            ? Riser.TryBuild(subject.Art, subject.Depth.ToDepthMap(), new RiseOptions(), Source.Title)
+            ? Riser.TryBuild(subject.Art, subject.Depth.ToDepthMap(), new RiseOptions(), Source.Title, subject.Faces)
             : null;
     }
 

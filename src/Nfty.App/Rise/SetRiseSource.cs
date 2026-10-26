@@ -182,7 +182,8 @@ public sealed class SetRiseSource : RiseSource
         if (item.Subject is { } loaded) return loaded;
 
         var art = LoadArt(_rows[item.Id].ImagePath);
-        var subject = new RiseSubject(art, DepthFor(_setItems[item.Id], art), ownsArt: true);
+        var (map, faces) = DepthFor(_setItems[item.Id], art);
+        var subject = new RiseSubject(art, map, ownsArt: true, faces);
         item.Attach(subject);
         return subject;
     }
@@ -204,7 +205,7 @@ public sealed class SetRiseSource : RiseSource
         {
             if (item.Subject is { } s)
             {
-                entries.Add(RiseExportSnapshot.Frozen(s.Art, s.Depth.ToDepthMap()));
+                entries.Add(RiseExportSnapshot.Frozen(s.Art, s.Depth.ToDepthMap(), s.Faces));
                 continue;
             }
             string path = _rows[item.Id].ImagePath;
@@ -212,7 +213,11 @@ public sealed class SetRiseSource : RiseSource
             entries.Add(RiseExportSnapshot.Lazy(() =>
             {
                 var art = LoadArt(path);
-                try { return (art, Resolve(book, setItem, art).Map); }
+                try
+                {
+                    var resolved = Resolve(book, setItem, art);
+                    return (art, resolved.Map, resolved.Faces);
+                }
                 catch
                 {
                     art.Dispose();      // nobody else holds it yet: a failed resolve must not leak it
@@ -252,42 +257,55 @@ public sealed class SetRiseSource : RiseSource
 
     /// <summary>The asset's combined depth, recording for the depth note why it is paper. UI thread only:
     /// it writes the note's bookkeeping.</summary>
-    private DepthMap? DepthFor(SetItem item, Image<Rgba32> art)
+    private (DepthMap? Map, StackFaces? Faces) DepthFor(SetItem item, Image<Rgba32> art)
     {
-        if (_book is null) return null;
-        var (map, unmapped, refusal) = Resolve(_book, item, art);
+        if (_book is null) return (null, null);
+        var (map, faces, unmapped, refusal) = Resolve(_book, item, art);
         if (unmapped) _unmapped.Add(item.Number); else _unmapped.Remove(item.Number);
         if (refusal is not null) _refusals[item.Number] = refusal; else _refusals.Remove(item.Number);
-        return map;
+        return (map, faces);
     }
 
     /// <summary>The asset's combined depth by the stack rule, or null (paper) when there is no book,
     /// the asset cannot be matched to it by name, or its layers have partial alpha. Writes nothing:
     /// an export calls it off the UI thread.</summary>
-    /// <returns>The map, whether the asset could not be matched to the book by name, and the reason a
-    /// layer keeps it 2D, if one does.</returns>
-    private static (DepthMap? Map, bool Unmapped, string? Refusal) Resolve(LoadedCookBook? book, SetItem item,
+    /// <returns>The map, the face owners that go with it (the caller owns them), whether the asset could
+    /// not be matched to the book by name, and the reason a layer keeps it 2D, if one does.</returns>
+    private static (DepthMap? Map, StackFaces? Faces, bool Unmapped, string? Refusal) Resolve(LoadedCookBook? book, SetItem item,
         Image<Rgba32> art)
     {
-        if (book is null) return (null, false, null);
+        if (book is null) return (null, null, false, null);
         var recipe = book.Recipes.FirstOrDefault(r => r.Manifest.Id == item.Recipe);
         var present = recipe is null ? null : SetItemSelection.Resolve(recipe, item);
         if (recipe is null || present is null)
-            return (null, true, null);      // name ambiguity (or another book): paper, and said so
+            return (null, null, true, null);      // name ambiguity (or another book): paper, and said so
 
         // An all-absent roll has no layers: it rises as nothing, and is never handed to the stack rule.
-        if (present.Count == 0) return (null, false, null);
+        if (present.Count == 0) return (null, null, false, null);
         try
         {
-            using var rise = StackDepth.ForSelection(recipe,
-                present.Select(p => (StackPick)p).ToList(), $"asset #{item.Number:D4}");
+            // The Set's recorded colors recolorize the layers exactly as the cook did; the Set's own PNG
+            // is the finished picture.
+            var picks = StackPick.WithColors(present, item.Layers);
+            string source = $"asset #{item.Number:D4}";
+            StackRise rise;
+            try { rise = StackDepth.ForSelection(recipe, picks, source, art); }
+            catch (ArgumentException)
+            {
+                // The PNG is not what these layers composite to (another size, or a damaged pixel): the
+                // stack is risen from its layers alone, and the export's own checks name what is wrong
+                // with the picture.
+                rise = StackDepth.ForSelection(recipe, picks, source);
+            }
+            using var _ = rise;
             var map = rise.Depth;
             // A picture of another size than the book's canvas cannot take the book's depth.
-            return (map.Width == art.Width && map.Height == art.Height ? map : null, false, null);
+            bool fits = map.Width == art.Width && map.Height == art.Height;
+            return (fits ? map : null, fits ? rise.Faces.Clone() : null, false, null);
         }
         catch (PartialAlphaException ex)
         {
-            return (null, false, ex.Message);   // which layer keeps this asset 2D, said in the note
+            return (null, null, false, ex.Message);   // which layer keeps this asset 2D, said in the note
         }
     }
 
@@ -336,6 +354,8 @@ public sealed class SetRiseSource : RiseSource
     private void Arrive(LoadedCookBook? book, string? name)
     {
         if (_disposed) { book?.Dispose(); return; }   // a late result is dropped, not published
+        // The old textures and faces go only AFTER the page has been told, as a reroll's picture does.
+        var retired = new List<IDisposable>();
         try
         {
             _searchDone = true;
@@ -346,7 +366,8 @@ public sealed class SetRiseSource : RiseSource
                 foreach (var item in _items)
                 {
                     if (item.Subject is not { } s) { item.ForgetChip(); continue; }
-                    s.Reseed(DepthFor(_setItems[item.Id], s.Art));
+                    var (map, faces) = DepthFor(_setItems[item.Id], s.Art);
+                    retired.Add(s.Reseed(map, faces));
                     item.RefreshDepth();
                 }
             }
@@ -357,6 +378,7 @@ public sealed class SetRiseSource : RiseSource
             // Whatever a listener or a reseed throws, the search is over: an export waits for this
             // behind a card only its job can close, so it must never be left pending.
             _arrived.TrySetResult();
+            foreach (var r in retired) r.Dispose();
         }
     }
 

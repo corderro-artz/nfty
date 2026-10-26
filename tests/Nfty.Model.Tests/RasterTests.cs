@@ -451,6 +451,30 @@ public class RasterTests
         Assert.All(covered, c => Assert.True(c.R > 0 && c.B == 0, $"a back-half texel reached the front view: {c}"));
     }
 
+    [Fact]
+    public void A_back_view_render_samples_the_back_half()
+    {
+        // The mirror of the front-view test: seen from behind (yaw half a turn) every covered pixel
+        // must be the back owner's color, which the front half and the gutter do not contain.
+        var frontColor = new Rgba32(200, 0, 0, 255);
+        var backColor = new Rgba32(0, 0, 200, 255);
+        using var front = new Image<Rgba32>(4, 4, frontColor);
+        using var back = new Image<Rgba32>(4, 4, backColor);
+        using var art = front.Clone();
+        using var faces = new StackFaces(front.Clone(), back.Clone(), Enumerable.Repeat(1, 16).ToArray());   // the walls take the back color too
+        var mesh = Riser.TryBuild(art, null, new RiseOptions(), "slab", faces)!;
+        using var atlas = FaceAtlas.Build(art, faces);
+        var camera = Camera.FramedOn(mesh.Min, mesh.Max).Orbit(MathF.PI, 0f);
+        var target = new RenderTarget(64, 64);
+        target.Clear(Clear);
+
+        Raster.Render(mesh, atlas, camera, target);
+
+        var covered = target.Color.Where(c => c.A > 0).ToList();
+        Assert.NotEmpty(covered);
+        Assert.All(covered, c => Assert.True(c.B > 0 && c.R == 0, $"a front-half texel reached the back view: {c}"));
+    }
+
     // ---- fixtures ----
 
     private static Raster.ScreenVertex Vtx(float x, float y, float u, float w = 1f) => new(x, y, w, u, 0.5f);

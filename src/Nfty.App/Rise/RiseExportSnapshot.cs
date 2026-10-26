@@ -38,8 +38,8 @@ public sealed class RiseExportSnapshot : IDisposable
     /// <returns>An input whose picture the caller now owns.</returns>
     public ModelInput Open(int index, string baseName)
     {
-        var (art, depth) = _entries[index].Take();
-        return new ModelInput(baseName, art, depth);
+        var (art, depth, faces) = _entries[index].Take();
+        return new ModelInput(baseName, art, depth, faces);
     }
 
     /// <summary>Gives back a picture <see cref="Open"/> handed out.</summary>
@@ -48,6 +48,7 @@ public sealed class RiseExportSnapshot : IDisposable
     {
         ArgumentNullException.ThrowIfNull(input);
         input.Art.Dispose();
+        input.Faces?.Dispose();
     }
 
     /// <summary>Frees every picture no one opened.</summary>
@@ -56,40 +57,47 @@ public sealed class RiseExportSnapshot : IDisposable
         foreach (var e in _entries) e.Dispose();
     }
 
-    /// <summary>A loaded item: a clone of its picture and a copy of its depth, taken now.</summary>
+    /// <summary>A loaded item: a clone of its picture and face owners and a copy of its depth, taken now.</summary>
     /// <param name="art">The picture to clone.</param>
     /// <param name="depth">The depth, already copied out of the surface.</param>
+    /// <param name="faces">The face owners to clone, or null for a single picture.</param>
     /// <returns>The entry.</returns>
-    internal static Entry Frozen(Image<Rgba32> art, DepthMap? depth) => new FrozenEntry(art.Clone(), depth);
+    internal static Entry Frozen(Image<Rgba32> art, DepthMap? depth, StackFaces? faces = null) =>
+        new FrozenEntry(art.Clone(), depth, faces?.Clone());
 
     /// <summary>An item not loaded: decoded on demand, by a function that must read only what it captured.</summary>
     /// <param name="load">Decodes the picture and works out its depth.</param>
     /// <returns>The entry.</returns>
-    internal static Entry Lazy(Func<(Image<Rgba32> Art, DepthMap? Depth)> load) => new LazyEntry(load);
+    internal static Entry Lazy(Func<(Image<Rgba32> Art, DepthMap? Depth, StackFaces? Faces)> load) => new LazyEntry(load);
 
     /// <summary>One item's way of producing its picture.</summary>
     internal abstract class Entry : IDisposable
     {
-        public abstract (Image<Rgba32> Art, DepthMap? Depth) Take();
+        public abstract (Image<Rgba32> Art, DepthMap? Depth, StackFaces? Faces) Take();
         public virtual void Dispose() { }
     }
 
-    private sealed class FrozenEntry(Image<Rgba32> art, DepthMap? depth) : Entry
+    private sealed class FrozenEntry(Image<Rgba32> art, DepthMap? depth, StackFaces? faces) : Entry
     {
         private Image<Rgba32>? _art = art;
+        private StackFaces? _faces = faces;
 
-        public override (Image<Rgba32> Art, DepthMap? Depth) Take()
+        public override (Image<Rgba32> Art, DepthMap? Depth, StackFaces? Faces) Take()
         {
             var taken = Interlocked.Exchange(ref _art, null)
                 ?? throw new InvalidOperationException("This item has already been exported from this snapshot.");
-            return (taken, depth);
+            return (taken, depth, Interlocked.Exchange(ref _faces, null));
         }
 
-        public override void Dispose() => Interlocked.Exchange(ref _art, null)?.Dispose();
+        public override void Dispose()
+        {
+            Interlocked.Exchange(ref _art, null)?.Dispose();
+            Interlocked.Exchange(ref _faces, null)?.Dispose();
+        }
     }
 
-    private sealed class LazyEntry(Func<(Image<Rgba32> Art, DepthMap? Depth)> load) : Entry
+    private sealed class LazyEntry(Func<(Image<Rgba32> Art, DepthMap? Depth, StackFaces? Faces)> load) : Entry
     {
-        public override (Image<Rgba32> Art, DepthMap? Depth) Take() => load();
+        public override (Image<Rgba32> Art, DepthMap? Depth, StackFaces? Faces) Take() => load();
     }
 }

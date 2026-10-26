@@ -1585,6 +1585,28 @@ public class VisualCapture
                 p.Vm.SwapPreviewCommand.Execute(null);
                 p.Vm.Preview.OrbitStep(new System.Numerics.Vector2(6, 0));
             }),
+            // From behind, where the back owners' colors show (the union rule: the body under a strap).
+            ("demo-recipe-3d-back", () => (RisePages.DemoRecipeVm(), null), p =>
+            {
+                p.Vm.SwapPreviewCommand.Execute(null);
+                p.Vm.Preview.OrbitStep(new System.Numerics.Vector2(12, 0));
+            }),
+            // An asset of a cooked Set, once the book that cooked it has been found, seen from the side
+            // and from behind: the page and the Set's models/ agree on its colors.
+            ("demo-set-3d-side", () => { var (v, o) = RisePages.DemoSetVm(); return (v, o); }, p =>
+            {
+                while (!p.Vm.Source.ExportReady.IsCompleted) { Dispatcher.UIThread.RunJobs(); System.Threading.Thread.Sleep(1); }
+                Dispatcher.UIThread.RunJobs();
+                p.Vm.SwapPreviewCommand.Execute(null);
+                p.Vm.Preview.OrbitStep(new System.Numerics.Vector2(6, 0));
+            }),
+            ("demo-set-3d-back", () => { var (v, o) = RisePages.DemoSetVm(); return (v, o); }, p =>
+            {
+                while (!p.Vm.Source.ExportReady.IsCompleted) { Dispatcher.UIThread.RunJobs(); System.Threading.Thread.Sleep(1); }
+                Dispatcher.UIThread.RunJobs();
+                p.Vm.SwapPreviewCommand.Execute(null);
+                p.Vm.Preview.OrbitStep(new System.Numerics.Vector2(12, 0));
+            }),
             ("picture", () => (RisePages.PictureVm(), null), _ => { }),
             ("sheet", () => (RisePages.SheetVm(), null), _ => { }),
             ("sheet-grid-cells", () => (RisePages.SheetVm(), null), p => p.Vm.SetGridModeCommand.Execute(GridMode.CellSize)),
@@ -1713,8 +1735,13 @@ public class VisualCapture
                 Need(vm.IsRecipeRail && vm.LayerRows.Count >= 2, "the layer rail is not listing the rolled layers");
                 Need(model.RepaintCount > 0, "the 3D tile never painted");
                 break;
-            case "demo-recipe-3d" or "demo-recipe-3d-angle" or "demo-recipe-3d-side":
+            case "demo-recipe-3d" or "demo-recipe-3d-angle" or "demo-recipe-3d-side" or "demo-recipe-3d-back":
                 Need(vm.PreviewSwapped && model.RepaintCount > 0, "the 3D view is not the big pane");
+                Need(vm.Subject.Faces is not null && vm.Texture.Width == (2 * vm.Subject.Art.Width) + 1, "the preview is not the owner-colored atlas");
+                break;
+            case "demo-set-3d-side" or "demo-set-3d-back":
+                Need(vm.PreviewSwapped && model.RepaintCount > 0, "the 3D view is not the big pane");
+                Need(vm.Subject.Faces is not null && vm.Texture.Width == (2 * vm.Subject.Art.Width) + 1, "the book was not found, so there are no owner colors");
                 break;
             case "demo-set":
                 Need(vm.Source.Kind == Nfty.App.Rise.RiseSourceKind.Set, "the source is not the cooked Set");

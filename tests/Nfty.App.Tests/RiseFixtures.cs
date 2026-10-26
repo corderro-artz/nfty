@@ -45,13 +45,14 @@ internal static class RiseFixtures
     /// <summary>The book in memory: recipe "chest" = layers ["body", "lock"]; body variants oak (weight 3),
     /// ghost (1); lock variant gold.</summary>
     internal static LoadedCookBook ChestBook(DepthMap? oakDepth = null, DepthMap? ghostDepth = null,
-        DepthMap? goldDepth = null, bool withPine = false, bool withSecondGhost = false)
+        DepthMap? goldDepth = null, bool withPine = false, bool withSecondGhost = false, bool withGhost = true)
     {
         var bodyDepths = new Dictionary<string, DepthMap>();
         if (oakDepth is not null) bodyDepths["oak"] = oakDepth;
         if (ghostDepth is not null) bodyDepths["ghost"] = ghostDepth;
-        var variants = new List<Variant> { new("oak", "Oak", 3), new("ghost", "Ghost", 1) };
-        var images = new Dictionary<string, Image<Rgba32>> { ["oak"] = Picture(Oak), ["ghost"] = Picture(Ghost) };
+        var variants = new List<Variant> { new("oak", "Oak", 3) };
+        var images = new Dictionary<string, Image<Rgba32>> { ["oak"] = Picture(Oak) };
+        if (withGhost) { variants.Add(new Variant("ghost", "Ghost", 1)); images["ghost"] = Picture(Ghost); }
         if (withPine) { variants.Add(new Variant("pine", "Pine", 1)); images["pine"] = Picture(Oak); }
         if (withSecondGhost) { variants.Add(new Variant("ghost2", "Ghost Two", 1)); images["ghost2"] = Picture(Ghost); }
         var body = new LoadedIngredient
@@ -78,6 +79,27 @@ internal static class RiseFixtures
                 new Collection("Chest", "", "CH"), new Dictionary<string, double> { ["chest"] = 100 }),
             Recipes = new[] { recipe },
         };
+    }
+
+    /// <summary>An 8x8 depth map with the same front and back everywhere.</summary>
+    internal static DepthMap Flat(byte front, byte back = 0) =>
+        DepthMap.FromBytes(8, 8, Enumerable.Range(0, 64).SelectMany(_ => new[] { front, back }).ToArray());
+
+    /// <summary>The Chest book where the two layers own DIFFERENT faces: the body (oak) is deepest at the
+    /// back (2 front, 9 back), the strap (gold) deepest at the front (4 front, 0 back). At a gold pixel the
+    /// front shows gold and the back shows oak.</summary>
+    internal static LoadedCookBook StrapOverBody(bool withGhost = true) =>
+        ChestBook(oakDepth: Flat(2, 9), goldDepth: Flat(4, 0), withGhost: withGhost);
+
+    /// <summary>The first seed in 1..50 whose roll picks the oak body (weight 3 vs ghost 1).</summary>
+    internal static int OakSeed(LoadedCookBook book, LoadedRecipe recipe)
+    {
+        for (int seed = 1; seed <= 50; seed++)
+        {
+            using var src = new RecipeRiseSource(book, recipe, seed, new ImageBridge());
+            if (src.Layers[0].VariantName == "Oak") return seed;
+        }
+        throw new System.InvalidOperationException("No seed in 1..50 rolled oak.");
     }
 
     /// <summary>Writes the book to a temp .cbk, reads it back (so SourceSha256 is set) and opens it in a session.</summary>

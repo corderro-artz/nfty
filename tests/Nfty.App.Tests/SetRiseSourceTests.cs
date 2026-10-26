@@ -27,9 +27,9 @@ public class SetRiseSourceTests
         DepthMap.FromBytes(8, 8, Enumerable.Range(0, 64).SelectMany(_ => new[] { front, (byte)0 }).ToArray());
 
     /// <summary>A Chest book on disk with oak at depth 2, six assets cooked into a folder beside it.</summary>
-    private static string CookedBesideBook(out string bookPath)
+    private static string CookedBesideBook(out string bookPath, LoadedCookBook? book = null)
     {
-        var (s, path) = RiseFixtures.OnDisk(RiseFixtures.ChestBook(FlatDepth(2)));
+        var (s, path) = RiseFixtures.OnDisk(book ?? RiseFixtures.ChestBook(FlatDepth(2)));
         bookPath = path;
         var setDir = Path.Combine(Path.GetDirectoryName(path)!, "Chest Set");
         using (var cooked = Generator.Generate(s.Current!, new GenerateOptions(20, "launch", EnforceUniqueDna: false)))
@@ -417,5 +417,66 @@ public class SetRiseSourceTests
         Assert.False(src.CanSave);
         Assert.False(src.IsDirty);
         Assert.Null(src.ExportRefusal);
+    }
+    [AvaloniaFact]
+    public async Task A_set_asset_front_owner_colors_are_the_sets_own_pixels()
+    {
+        var setDir = CookedBesideBook(out _, RiseFixtures.StrapOverBody());
+        using var set = SetReader.Read(setDir);
+        using var src = new SetRiseSource(set, set.Items[0].Number, () => Array.Empty<string>(), new ImageBridge());
+        await src.BookSearch;
+        await src.ExportReady;
+        Dispatcher.UIThread.RunJobs();
+
+        var subject = src.Open(WithBody(src, set, "Oak"));
+        var faces = Assert.IsType<Nfty.Model.StackFaces>(subject.Faces);
+        var oak = new Rgba32(178, 122, 70, 255);
+        for (int y = 0; y < 8; y++)
+            for (int x = 0; x < 8; x++)
+                if (subject.Art[x, y].A == 255) Assert.Equal(subject.Art[x, y], faces.Front[x, y]);   // front = what the PNG shows
+        Assert.Equal(oak, faces.Back[3, 3]);                                                         // back = the body under the strap
+        Assert.Equal(new Rgba32(240, 204, 98, 255), subject.Texture[3, 3]);
+        Assert.Equal(oak, subject.Texture[8 + 1 + 3, 3]);
+    }
+
+    [AvaloniaFact]
+    public async Task An_unloaded_set_asset_exports_its_owner_colored_faces()
+    {
+        var setDir = CookedBesideBook(out _, RiseFixtures.StrapOverBody());
+        using var set = SetReader.Read(setDir);
+        using var src = new SetRiseSource(set, set.Items[0].Number, () => Array.Empty<string>(), new ImageBridge());
+        await src.BookSearch;
+        await src.ExportReady;
+        Dispatcher.UIThread.RunJobs();
+        var item = WithBody(src, set, "Oak");
+        Assert.Null(item.Subject);                  // never opened: the entry decodes and resolves on demand
+
+        using var snapshot = src.SnapshotExport(new[] { item });
+        var input = snapshot.Open(0, "x");
+        try
+        {
+            var faces = Assert.IsType<Nfty.Model.StackFaces>(input.Faces);
+            Assert.Equal(new Rgba32(178, 122, 70, 255), faces.Back[3, 3]);
+        }
+        finally { RiseExportSnapshot.Release(input); }
+    }
+    [AvaloniaFact]
+    public async Task A_book_arriving_gives_the_open_page_the_owner_colored_texture_and_mesh()
+    {
+        var setDir = CookedBesideBook(out _, RiseFixtures.StrapOverBody());
+        using var set = SetReader.Read(setDir);
+        using var src = new SetRiseSource(set, set.Items[0].Number, () => Array.Empty<string>(), new ImageBridge());
+        using var vm = new Nfty.App.ViewModels.RiseViewModel(src, new ImageBridge(), new FakeNav(), new FakeDialogs(),
+            new FilePickerService(), new StatusService());
+        var chosen = WithBody(src, set, "Oak");
+        vm.SelectedItem = chosen;
+
+        await src.BookSearch;
+        await src.ExportReady;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.NotNull(vm.Mesh);
+        Assert.Equal(new Rgba32(178, 122, 70, 255), vm.Texture[8 + 1 + 3, 3]);   // the page now reads the owner-colored atlas
+        Assert.Equal(vm.Texture.Width, vm.Mesh!.TextureWidth);   // and the mesh it rasterizes was risen against that atlas
     }
 }
