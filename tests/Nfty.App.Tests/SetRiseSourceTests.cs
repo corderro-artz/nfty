@@ -479,4 +479,28 @@ public class SetRiseSourceTests
         Assert.Equal(new Rgba32(178, 122, 70, 255), vm.Texture[8 + 1 + 3, 3]);   // the page now reads the owner-colored atlas
         Assert.Equal(vm.Texture.Width, vm.Mesh!.TextureWidth);   // and the mesh it rasterizes was risen against that atlas
     }
+    [AvaloniaFact]
+    public async Task A_picture_that_does_not_match_its_layers_is_paper_with_no_faces_and_says_so()
+    {
+        var setDir = CookedBesideBook(out _, RiseFixtures.StrapOverBody());
+        using var set = SetReader.Read(setDir);
+        using var src = new SetRiseSource(set, set.Items[0].Number, () => Array.Empty<string>(), new ImageBridge());
+        var item = WithBody(src, set, "Oak");
+        // Clear a pixel the layers make solid: the book did not cook this picture.
+        using (var damaged = Image.Load<Rgba32>(src.RowOf(item).ImagePath))
+        {
+            damaged[3, 3] = new Rgba32(0, 0, 0, 0);
+            damaged.SaveAsPng(src.RowOf(item).ImagePath);
+        }
+        await src.BookSearch;
+        await src.ExportReady;
+        Dispatcher.UIThread.RunJobs();
+
+        var subject = src.Open(item);
+        Assert.Null(subject.Faces);
+        Assert.True(subject.Depth.SameDepthAs(null));
+        src.InitialItem.IsSelected = false;
+        item.IsSelected = true;
+        Assert.Contains("does not match the layers", src.DepthNote);
+    }
 }

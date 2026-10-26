@@ -27,8 +27,8 @@ is authored at y>=12 and the two lids differ only above it. Break that and a str
 on one recipe and not the other - which no ViewModel test could see.
 
 DEPTH. The same sprites also get a depth map each (`<out>/depth/<layer>/<variant>.png`, red = front,
-green = back, in voxels; `nfty set depth` stores them). Paper is 0/0, one voxel thick. The topmost
-solid layer wins per pixel, so an overlay cannot say "two voxels above my body": it states ABSOLUTE
+green = back, in voxels; `nfty set depth` stores them). Paper is 0/0, one voxel thick. The deepest
+layer wins per pixel (union), so an overlay cannot say "two voxels above my body": it states ABSOLUTE
 depth, `body_front(x, y) + k`. That is only safe because of the DEPTH OVERLAY CONTRACT, the twin of
 the art contract above: from y=12 down every body variant on both recipes shares ONE front profile
 (`lower_front`), so an overlay stands proud of every body by construction. Variants differ in depth

@@ -13,7 +13,7 @@ namespace Nfty.App.Rise;
 
 /// <summary>
 /// One recipe, rolled: the asset the Recipe pane's hero shows for the same seed, risen with the
-/// recipe's COMBINED depth (each pixel takes the depth of the topmost solid layer). Read-only — the
+/// recipe's COMBINED depth (each pixel reaches as far to the front as any solid layer there, and as far to the back). Read-only — the
 /// depth belongs to the layers' own variants, so changing it means opening one.
 /// </summary>
 /// <remarks>
@@ -51,7 +51,7 @@ public sealed class RecipeRiseSource : RiseSource
         _layers = rolled.Rows;
         _item = new RiseItem("roll", recipe.Manifest.Name, CaptionFor(seed), BaseNameFor(seed),
             bridge.ToBitmap(rolled.Art), ownsThumbnail: true);
-        _item.Attach(new RiseSubject(rolled.Art, rolled.Depth, ownsArt: true, rolled.Faces));
+        _item.Attach(Subject(rolled));
         _item.IsSelected = true;
         _items = new[] { _item };
     }
@@ -107,7 +107,8 @@ public sealed class RecipeRiseSource : RiseSource
     /// <inheritdoc />
     public override string DepthNote => Problem is { } p
         ? $"This book cannot cook, so there is no roll to rise: {p}"
-        : "A recipe shows its stack's combined depth: each pixel takes the depth of the topmost solid layer. "
+        : "A recipe shows its stack's combined depth: the front reaches as far as any layer, the back as far as any layer, "
+          + "and each face takes the color of the layer that owns it. "
           + "Change a layer's depth on its own variant."
           + (_refusal is { } why ? $" {why} The stack has no combined depth, so it is paper." : "");
 
@@ -133,7 +134,7 @@ public sealed class RecipeRiseSource : RiseSource
         _layers = rolled.Rows;
         _item.Thumbnail = _bridge.ToBitmap(rolled.Art);
         _item.Relabel(CaptionFor(Seed), BaseNameFor(Seed));
-        var oldSubject = _item.Replace(new RiseSubject(rolled.Art, rolled.Depth, ownsArt: true, rolled.Faces));
+        var oldSubject = _item.Replace(Subject(rolled));
         RaiseChanged();
 
         // The old picture, thumbnails and layer rows go only AFTER the page has been told: until it
@@ -142,6 +143,18 @@ public sealed class RecipeRiseSource : RiseSource
         oldSubject?.Dispose();
         oldThumb?.Dispose();
         foreach (var r in oldRows) r.Dispose();
+    }
+
+    /// <summary>The subject of a roll; if building its atlas throws, the roll's art and faces are given back.</summary>
+    private static RiseSubject Subject(Rolled rolled)
+    {
+        try { return new RiseSubject(rolled.Art, rolled.Depth, ownsArt: true, rolled.Faces); }
+        catch
+        {
+            rolled.Art.Dispose();
+            rolled.Faces?.Dispose();
+            throw;
+        }
     }
 
     private string CaptionFor(int seed) => string.Create(CultureInfo.InvariantCulture, $"seed {seed}");

@@ -25,7 +25,8 @@ The Explorer's **depth** is a layer's position in the stack: depth 1 paints firs
 back. That is paint order, and it decides which layer hides which. The Rise page's depth is
 **thickness**, how far a pixel stands out of or sinks behind its own plane. The two meet only when
 a Recipe is risen: the stack is flattened to one picture by paint order, and each visible pixel takes
-the thickness of the **topmost solid layer** at that pixel.
+the thickness of the whole stack there: the front reaches as far as any solid layer's front, the back as far as any
+layer's back, and each face takes the color of the layer that owns it.
 
 ## One solid, from finished art
 

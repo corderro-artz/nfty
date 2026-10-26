@@ -183,7 +183,14 @@ public sealed class SetRiseSource : RiseSource
 
         var art = LoadArt(_rows[item.Id].ImagePath);
         var (map, faces) = DepthFor(_setItems[item.Id], art);
-        var subject = new RiseSubject(art, map, ownsArt: true, faces);
+        RiseSubject subject;
+        try { subject = new RiseSubject(art, map, ownsArt: true, faces); }
+        catch
+        {
+            art.Dispose();
+            faces?.Dispose();
+            throw;
+        }
         item.Attach(subject);
         return subject;
     }
@@ -292,10 +299,10 @@ public sealed class SetRiseSource : RiseSource
             try { rise = StackDepth.ForSelection(recipe, picks, source, art); }
             catch (ArgumentException)
             {
-                // The PNG is not what these layers composite to (another size, or a damaged pixel): the
-                // stack is risen from its layers alone, and the export's own checks name what is wrong
-                // with the picture.
-                rise = StackDepth.ForSelection(recipe, picks, source);
+                // The PNG is not what these layers composite to (another size, or a changed pixel): the
+                // book did not cook this picture, so it is paper, never a hybrid of the two. The
+                // export's own checks still name a partly transparent pixel in the picture itself.
+                return (null, null, false, "This asset's picture does not match the layers of that book.");
             }
             using var _ = rise;
             var map = rise.Depth;

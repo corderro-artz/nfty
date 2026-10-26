@@ -522,4 +522,30 @@ public class RiseExportTests
         RiseExportSnapshot.Release(input);
         Assert.Throws<ObjectDisposedException>(() => _ = input.Faces.Back[3, 3]);   // and gave it back
     }
+    [AvaloniaFact]
+    public async Task A_set_pages_export_is_the_cooked_sets_model_byte_for_byte()
+    {
+        var (session, bookPath) = RiseFixtures.OnDisk(RiseFixtures.StrapOverBody(withGhost: false));
+        var setDir = Path.Combine(Path.GetDirectoryName(bookPath)!, "Chest Set");
+        byte[] expected;
+        using (var cooked = Generator.Generate(session.Current!, new GenerateOptions(3, "launch", EnforceUniqueDna: false)))
+        {
+            SetWriter.Write(cooked, setDir, pack: false);
+            var asset = cooked.Assets[1];
+            expected = Assert.Single(new SetModeler(session.Current!, new RiseOptions()).Model(asset, "m")!).Bytes;
+        }
+        session.Dispose();
+
+        using var set = SetReader.Read(setDir);
+        var dir = Temp();
+        using var vm = Vm(new SetRiseSource(set, set.Items[1].Number, () => Array.Empty<string>(), new ImageBridge()),
+            new ScriptedPicker(save: Path.Combine(dir, "m.glb")));
+        await ((SetRiseSource)vm.Source).BookSearch;
+        await vm.Source.ExportReady;
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+
+        await vm.ExportCommand.ExecuteAsync(null);
+
+        Assert.Equal(expected, File.ReadAllBytes(Path.Combine(dir, "m.glb")));
+    }
 }

@@ -59,7 +59,7 @@ public class RecipeRiseSourceTests
     }
 
     [AvaloniaFact]
-    public void Combined_depth_takes_the_topmost_solid_layer()
+    public void Combined_depth_is_the_union_of_the_solid_layers()
     {
         using var book = RiseFixtures.ChestBook(oakDepth: Flat(1), goldDepth: Flat(4));
         var recipe = book.Recipes.Single();
