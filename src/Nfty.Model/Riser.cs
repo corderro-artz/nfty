@@ -40,12 +40,15 @@ public static class Riser
     /// that is not solid is ignored.</param>
     /// <param name="options">Voxel size and pivot. <see cref="RiseOptions.Format"/> is not used here.</param>
     /// <param name="source">How to name the picture in a refusal, e.g. <c>variant 'red' of hat.igt</c>.</param>
-    /// <returns>The mesh, or <c>null</c> when no pixel is fully opaque.</returns>
+    /// <param name="faces">The stack's face owners and wall seams, or <c>null</c> for a single picture
+    /// (every wall takes the front color). The seam is clamped to the column.</param>
+    /// <returns>The mesh, or <c>null</c> when no pixel is fully opaque. Its UVs address
+    /// <see cref="FaceAtlas"/>.</returns>
     /// <exception cref="PartialAlphaException">Some pixel is partly transparent.</exception>
-    /// <exception cref="ArgumentException">The depth map is another size.</exception>
+    /// <exception cref="ArgumentException">The depth map or the faces are another size.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The voxel size is not positive and finite, or the
     /// pivot is not one of <see cref="Pivot"/>'s values.</exception>
-    public static Mesh? TryBuild(Image<Rgba32> art, DepthMap? depth, RiseOptions options, string source = "the art")
+    public static Mesh? TryBuild(Image<Rgba32> art, DepthMap? depth, RiseOptions options, string source = "the art", StackFaces? faces = null)
     {
         ArgumentNullException.ThrowIfNull(art);
         ArgumentNullException.ThrowIfNull(options);
@@ -59,6 +62,11 @@ public static class Riser
             throw new ArgumentException(
                 $"The depth map is {depth.Width}x{depth.Height}, but {source} is {art.Width}x{art.Height}.",
                 nameof(depth));
+
+        if (faces is not null && (faces.Width != art.Width || faces.Height != art.Height))
+            throw new ArgumentException(
+                $"The faces are {faces.Width}x{faces.Height}, but {source} is {art.Width}x{art.Height}.",
+                nameof(faces));
 
         using var _ = Perf.Measure("Riser.TryBuild");
 
@@ -75,7 +83,7 @@ public static class Riser
         var builder = new MeshBuilder(w, h);
         foreach (var r in GreedyRects.Merge(w, h, front)) builder.FrontFace(r);
         foreach (var r in GreedyRects.Merge(w, h, back)) builder.BackFace(r);
-        EmitWalls(builder, w, h, front, back);
+        EmitWalls(builder, w, h, front, back, faces);
         return builder.ToMesh(options);
     }
 
@@ -119,8 +127,9 @@ public static class Riser
     }
 
     /// <summary>Each column's exposed side: its interval minus its neighbor's, up to two segments
-    /// per side — the back one first, then the front one.</summary>
-    private static void EmitWalls(MeshBuilder builder, int w, int h, int[] front, int[] back)
+    /// per side — the back one first, then the front one. Each segment is then split at the pixel's
+    /// seam: below it the wall takes the back owner's color, above it the front owner's.</summary>
+    private static void EmitWalls(MeshBuilder builder, int w, int h, int[] front, int[] back, StackFaces? faces)
     {
         for (int y = 0; y < h; y++)
         {
@@ -129,6 +138,7 @@ public static class Riser
                 int i = (y * w) + x;
                 if (front[i] == GreedyRects.Unset) continue;
                 float lo = -(0.5f + back[i]), hi = 0.5f + front[i];
+                float seam = lo + (faces is null ? 0 : Math.Clamp(faces.BackColored(x, y), 0, 1 + front[i] + back[i]));
 
                 foreach (var (face, dx, dy) in Sides)
                 {
@@ -136,15 +146,26 @@ public static class Riser
                     bool neighbor = nx >= 0 && ny >= 0 && nx < w && ny < h && front[(ny * w) + nx] != GreedyRects.Unset;
                     if (!neighbor)
                     {
-                        builder.Wall(face, x, y, lo, hi);
+                        Split(builder, face, x, y, lo, hi, seam);
                         continue;
                     }
                     int n = (ny * w) + nx;
                     float nlo = -(0.5f + back[n]), nhi = 0.5f + front[n];
-                    if (lo < nlo) builder.Wall(face, x, y, lo, nlo);
-                    if (nhi < hi) builder.Wall(face, x, y, nhi, hi);
+                    if (lo < nlo) Split(builder, face, x, y, lo, nlo, seam);
+                    if (nhi < hi) Split(builder, face, x, y, nhi, hi, seam);
                 }
             }
         }
+    }
+
+    /// <summary>One wall segment, cut at the seam: the part below it in the back color, the part
+    /// above it in the front color; an empty part is skipped, so a segment on one side of the seam
+    /// stays one quad.</summary>
+    private static void Split(MeshBuilder builder, WallFace face, int x, int y, float z0, float z1, float seam)
+    {
+        float backTop = Math.Min(z1, seam);
+        if (z0 < backTop) builder.Wall(face, x, y, z0, backTop, backColor: true);
+        float frontBottom = Math.Max(z0, seam);
+        if (frontBottom < z1) builder.Wall(face, x, y, frontBottom, z1, backColor: false);
     }
 }

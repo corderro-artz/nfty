@@ -5,6 +5,7 @@ using Nfty.Core.Output;
 using Nfty.Core.Publish;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace Nfty.Model.Tests;
 
@@ -66,7 +67,10 @@ public class ExportStampIsolationTests
         using var unstamped = Image.Load<Rgba32>(Path.Combine(setDir, "images", "0001.png"));
         using var stamped = Image.Load<Rgba32>(Path.Combine(exported, "images", "0001.png"));
 
-        Assert.True(PixelsEqual(texture, unstamped));
+        // The atlas is [front][gutter][back]; its front half is the unstamped asset.
+        Assert.Equal(FaceAtlas.WidthFor(unstamped.Width), texture.Width);
+        using var frontHalf = texture.Clone(c => c.Crop(new Rectangle(0, 0, unstamped.Width, unstamped.Height)));
+        Assert.True(PixelsEqual(frontHalf, unstamped));
         Assert.False(PixelsEqual(stamped, unstamped)); // the stamp really ran
     }
 }

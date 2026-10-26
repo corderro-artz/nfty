@@ -50,7 +50,7 @@ internal sealed class MeshBuilder
         float x0 = r.X, x1 = r.X + r.Width, ylo = _height - (r.Y + r.Height), yhi = _height - r.Y;
         float z = 0.5f + r.Key;
         Quad(new(x0, ylo, z), new(x1, ylo, z), new(x1, yhi, z), new(x0, yhi, z), PlusZ,
-            Uv(x0, ylo), Uv(x1, ylo), Uv(x1, yhi), Uv(x0, yhi));
+            FrontUv(x0, ylo), FrontUv(x1, ylo), FrontUv(x1, yhi), FrontUv(x0, yhi));
     }
 
     /// <summary>A back face over a merged rectangle, at z = −(0.5 + its key).</summary>
@@ -59,15 +59,17 @@ internal sealed class MeshBuilder
         float x0 = r.X, x1 = r.X + r.Width, ylo = _height - (r.Y + r.Height), yhi = _height - r.Y;
         float z = -(0.5f + r.Key);
         Quad(new(x0, ylo, z), new(x0, yhi, z), new(x1, yhi, z), new(x1, ylo, z), MinusZ,
-            Uv(x0, ylo), Uv(x0, yhi), Uv(x1, yhi), Uv(x1, ylo));
+            BackUv(x0, ylo), BackUv(x0, yhi), BackUv(x1, yhi), BackUv(x1, ylo));
     }
 
     /// <summary>One exposed wall segment of pixel (x, y), spanning z0 &lt; z1. Every corner samples
-    /// the pixel's center, so a wall takes exactly that pixel's color.</summary>
-    public void Wall(WallFace face, int x, int y, float z0, float z1)
+    /// the pixel's center in the front half of the atlas, or in the back half when
+    /// <paramref name="backColor"/>, so a wall takes exactly one owner's color for that pixel.</summary>
+    public void Wall(WallFace face, int x, int y, float z0, float z1, bool backColor)
     {
         float x0 = x, x1 = x + 1, y0 = _height - 1 - y, y1 = _height - y;
-        var uv = new Vector2((x + 0.5f) / _width, (y + 0.5f) / _height);
+        float u = (backColor ? _width + 1 + x + 0.5f : x + 0.5f) / Atlas;
+        var uv = new Vector2(u, (y + 0.5f) / _height);
         switch (face)
         {
             case WallFace.Left:
@@ -119,10 +121,16 @@ internal sealed class MeshBuilder
         // The copies BACKLOG M5 asks about, and only them: the three ToArray calls and the clones Mesh's
         // constructor makes. Its own scope so a Perf report can say what share of the build they are.
         using var copies = Perf.Measure("MeshBuilder.ToMesh.copies");
-        return new Mesh(positions, _normals.ToArray(), _texCoords.ToArray(), _indices.ToArray(), _width, _height);
+        return new Mesh(positions, _normals.ToArray(), _texCoords.ToArray(), _indices.ToArray(), FaceAtlas.WidthFor(_width), _height);
     }
 
-    private Vector2 Uv(float worldX, float worldY) => new(worldX / _width, (_height - worldY) / _height);
+    // THE UV RULE (A = FaceAtlas.WidthFor(W)): front faces u = x / A, back faces u = (W + 1 + x) / A,
+    // v = row / H. Wall pixel centers add the half pixel. Nothing else in the library maps texels.
+    private float Atlas => FaceAtlas.WidthFor(_width);
+
+    private Vector2 FrontUv(float worldX, float worldY) => new(worldX / Atlas, (_height - worldY) / _height);
+
+    private Vector2 BackUv(float worldX, float worldY) => new((_width + 1 + worldX) / Atlas, (_height - worldY) / _height);
 
     private void Quad(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 normal,
         Vector2 ta, Vector2 tb, Vector2 tc, Vector2 td)

@@ -136,23 +136,62 @@ public class RiserTests
     {
         // ".##." : one merged rectangle over columns 1..2 of a 4-wide, 1-tall image.
         var mesh = Rise([".##."]);
-        var expected = new[] { new Vector2(0.25f, 1f), new Vector2(0.75f, 1f), new Vector2(0.75f, 0f), new Vector2(0.25f, 0f) };
+        // The atlas is 2*4+1 = 9 wide: the front half is columns 0..3, the back half columns 5..8.
+        var expectedFront = new[] { new Vector2(1f / 9, 1f), new Vector2(3f / 9, 1f), new Vector2(3f / 9, 0f), new Vector2(1f / 9, 0f) };
+        var expectedBack = new[] { new Vector2(6f / 9, 1f), new Vector2(8f / 9, 1f), new Vector2(8f / 9, 0f), new Vector2(6f / 9, 0f) };
 
         var front = Assert.Single(MeshChecks.Quads(mesh), q => q.Normal == Vector3.UnitZ);
-        Assert.Equal(expected, front.Uvs);
+        Assert.Equal(expectedFront, front.Uvs);
 
         var back = Assert.Single(MeshChecks.Quads(mesh), q => q.Normal == -Vector3.UnitZ);
-        Assert.Equal(expected.ToHashSet(), back.Uvs.ToHashSet());
+        Assert.Equal(expectedBack.ToHashSet(), back.Uvs.ToHashSet());
     }
 
     [Theory]
-    [InlineData(".#", 0.75f)]
-    [InlineData("#.", 0.25f)]
+    [InlineData(".#", 1.5f / 5)]
+    [InlineData("#.", 0.5f / 5)]
     public void Walls_take_their_pixels_center_color(string row, float u)
     {
         var walls = MeshChecks.Quads(Rise([row])).Where(q => q.Normal.Z == 0f).ToList();
         Assert.Equal(4, walls.Count);
         Assert.All(walls, w => Assert.All(w.Uvs, uv => Assert.Equal(new Vector2(u, 0.5f), uv)));
+    }
+
+    [Fact]
+    public void Front_faces_sample_the_front_half_and_back_faces_the_back_half()
+    {
+        using var rise = StackFixtures.BodyAndStrapOverPlus();
+        var mesh = Riser.TryBuild(rise.Art, rise.Depth, LatticeOptions, "stack", rise.Faces)!;
+        float w = rise.Faces.Width, atlas = FaceAtlas.WidthFor(rise.Faces.Width);
+
+        var quads = MeshChecks.Quads(mesh);
+        var fronts = quads.Where(q => q.Normal == Vector3.UnitZ).ToList();
+        var backs = quads.Where(q => q.Normal == -Vector3.UnitZ).ToList();
+        Assert.NotEmpty(fronts);
+        Assert.NotEmpty(backs);
+        Assert.All(fronts, q => Assert.All(q.Uvs, uv => Assert.True(uv.X <= w / atlas, $"front u {uv.X}")));
+        Assert.All(backs, q => Assert.All(q.Uvs, uv => Assert.True(uv.X >= (w + 1) / atlas, $"back u {uv.X}")));
+    }
+
+    [Fact]
+    public void A_wall_takes_the_back_color_below_the_seam_and_the_front_color_above_it()
+    {
+        // Body (2, 9) under a strap (4, 0) on ONE pixel: the strap owns the front, the body the back,
+        // and the seam sits at z = -0.5, which MinCorner moves to 9. W = 1, so the atlas is 3 wide:
+        // the front texel is at u = 0.5/3, the back texel at u = 2.5/3.
+        using var rise = StackFixtures.BodyAndStrap("#");
+        var mesh = Riser.TryBuild(rise.Art, rise.Depth, LatticeOptions, "stack", rise.Faces)!;
+        const float seam = 9f;
+
+        var walls = MeshChecks.Quads(mesh).Where(q => q.Normal.Z == 0f).ToList();
+        Assert.Equal(8, walls.Count);   // four sides, each cut once
+        foreach (var wall in walls)
+        {
+            float z0 = wall.Corners.Min(c => c.Z), z1 = wall.Corners.Max(c => c.Z);
+            Assert.True(z1 <= seam || z0 >= seam, "a wall quad straddles the seam");
+            float expected = z1 <= seam ? 2.5f / 3 : 0.5f / 3;
+            Assert.All(wall.Uvs, uv => Assert.Equal(expected, uv.X));
+        }
     }
 
     [Fact]

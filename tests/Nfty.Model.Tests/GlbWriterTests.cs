@@ -117,17 +117,65 @@ public class GlbWriterTests
     }
 
     [Fact]
-    public void The_texture_is_the_art_unaltered()
+    public void The_texture_is_the_art_unaltered_in_both_halves_of_the_atlas_of_a_single_picture()
     {
-        // nfty resamples, blurs and recolors nothing; the texture is the whole picture, pixel for pixel.
+        // nfty resamples, blurs and recolors nothing; a single picture's atlas holds the whole
+        // picture, pixel for pixel, as its front half AND as its back half.
         using var art = Art.FromAscii(".#.", "###");
         var (json, bin) = GltfValidator.ReadGlb(Models.Glb([".#.", "###"]));
         using var texture = Image.Load<Rgba32>(GltfValidator.ReadImage(json, bin));
 
-        Assert.Equal((art.Width, art.Height), (texture.Width, texture.Height));
+        Assert.Equal((FaceAtlas.WidthFor(art.Width), art.Height), (texture.Width, texture.Height));
         for (int y = 0; y < art.Height; y++)
             for (int x = 0; x < art.Width; x++)
+            {
                 Assert.Equal(art[x, y], texture[x, y]);
+                Assert.Equal(art[x, y], texture[art.Width + 1 + x, y]);
+            }
+    }
+
+    [Fact]
+    public void The_texture_is_the_face_atlas()
+    {
+        using var rise = StackFixtures.BodyAndStrapOverPlus();
+        var mesh = Riser.TryBuild(rise.Art, rise.Depth, new RiseOptions(), "stack", rise.Faces)!;
+        byte[] glb = Assert.Single(ModelWriter.Write(mesh, rise.Art, new RiseOptions { Format = ModelFormat.Glb }, "p", rise.Faces)).Bytes;
+        var (json, bin) = GltfValidator.ReadGlb(glb);
+        using var atlas = Image.Load<Rgba32>(GltfValidator.ReadImage(json, bin));
+
+        int w = rise.Faces.Width;
+        Assert.Equal((FaceAtlas.WidthFor(w), rise.Faces.Height), (atlas.Width, atlas.Height));
+        for (int y = 0; y < atlas.Height; y++)
+            for (int x = 0; x < w; x++)
+            {
+                Assert.Equal(rise.Faces.Front[x, y], atlas[x, y]);
+                Assert.Equal(rise.Faces.Back[x, y], atlas[w + 1 + x, y]);
+            }
+        // The strap really is the front owner and the body the back owner, or the halves prove nothing.
+        Assert.NotEqual(atlas[1, 1], atlas[w + 1 + 1, 1]);
+    }
+
+    [Fact]
+    public void The_gutter_repeats_the_front_halfs_last_column()
+    {
+        using var rise = StackFixtures.BodyAndStrapOverPlus();
+        using var atlas = FaceAtlas.Build(rise.Art, rise.Faces);
+        int w = rise.Faces.Width;
+        for (int y = 0; y < atlas.Height; y++)
+            Assert.Equal(atlas[w - 1, y], atlas[w, y]);
+    }
+
+    [Fact]
+    public void The_glb_is_byte_stable()
+    {
+        byte[] Write()
+        {
+            using var rise = StackFixtures.BodyAndStrapOverPlus();
+            var options = new RiseOptions { Format = ModelFormat.Glb };
+            var mesh = Riser.TryBuild(rise.Art, rise.Depth, options, "stack", rise.Faces)!;
+            return Assert.Single(ModelWriter.Write(mesh, rise.Art, options, "p", rise.Faces)).Bytes;
+        }
+        Assert.Equal(Write(), Write());
     }
 
     [Fact]
@@ -227,6 +275,7 @@ public class GlbWriterTests
     [InlineData("double-sided")]
     [InlineData("short-indices")]
     [InlineData("misaligned")]
+    [InlineData("uv-out-of-range")]
     public void The_validator_is_not_vacuous(string defect)
     {
         byte[] good = Models.Glb(Plus);
@@ -235,6 +284,7 @@ public class GlbWriterTests
 
         byte[] bad = GltfValidator.Reframe(good, json =>
         {
+            if (defect == "uv-out-of-range") return;   // planted in the BIN chunk, below
             switch (defect)
             {
                 case "min-missing": json["accessors"]![0]!.AsObject().Remove("min"); break;
@@ -248,9 +298,39 @@ public class GlbWriterTests
                     break;
                 default: Assert.Fail($"unknown defect {defect}"); break;
             }
+        }, (json, bin) =>
+        {
+            if (defect != "uv-out-of-range") return;
+            int uv = json["meshes"]![0]!["primitives"]![0]!["attributes"]!["TEXCOORD_0"]!.GetValue<int>();
+            var accessor = json["accessors"]![uv]!;
+            var view = json["bufferViews"]![accessor["bufferView"]!.GetValue<int>()]!;
+            int start = (view["byteOffset"]?.GetValue<int>() ?? 0) + (accessor["byteOffset"]?.GetValue<int>() ?? 0);
+            System.Buffers.Binary.BinaryPrimitives.WriteSingleLittleEndian(bin.AsSpan(start), 1.5f);
         });
 
         var (json, bin) = GltfValidator.ReadGlb(bad);
         Assert.ThrowsAny<Xunit.Sdk.XunitException>(() => GltfValidator.AssertValid(json, bin));
+    }
+
+    [Fact]
+    public void The_atlas_check_refuses_a_broken_gutter_and_an_even_width()
+    {
+        static byte[] Png(Image<Rgba32> img)
+        {
+            using var ms = new MemoryStream();
+            img.SaveAsPng(ms);
+            return ms.ToArray();
+        }
+
+        using var rise = StackFixtures.BodyAndStrapOverPlus();
+        using var good = FaceAtlas.Build(rise.Art, rise.Faces);
+        GltfValidator.AssertAtlas(Png(good));
+
+        using var brokenGutter = good.Clone();
+        brokenGutter[rise.Faces.Width, 1] = new Rgba32(1, 2, 3, 255);
+        Assert.ThrowsAny<Xunit.Sdk.XunitException>(() => GltfValidator.AssertAtlas(Png(brokenGutter)));
+
+        using var even = new Image<Rgba32>(good.Width + 1, good.Height);
+        Assert.ThrowsAny<Xunit.Sdk.XunitException>(() => GltfValidator.AssertAtlas(Png(even)));
     }
 }

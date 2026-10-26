@@ -1,5 +1,6 @@
 using Nfty.Core.Editing;
 using Nfty.Core.Model;
+using Nfty.Model;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
@@ -22,6 +23,7 @@ public sealed class RiseSubject : IDisposable
     {
         ArgumentNullException.ThrowIfNull(art);
         Art = art;
+        Texture = FaceAtlas.Build(art);
         _ownsArt = ownsArt;
         Depth = new DepthSurface(art, stored);
         History = new EditHistory<DepthPixel>();
@@ -30,6 +32,10 @@ public sealed class RiseSubject : IDisposable
 
     /// <summary>The finished picture.</summary>
     public Image<Rgba32> Art { get; }
+
+    /// <summary>The model texture: the <see cref="FaceAtlas"/> of <see cref="Art"/>, built once and
+    /// owned here. The preview rasterizes it against a mesh risen from the same art.</summary>
+    public Image<Rgba32> Texture { get; }
 
     /// <summary>The depth being painted.</summary>
     public DepthSurface Depth { get; private set; }
@@ -66,6 +72,7 @@ public sealed class RiseSubject : IDisposable
     public void Dispose()
     {
         IsDisposed = true;
+        Texture.Dispose();
         if (_ownsArt) Art.Dispose();
     }
 }

@@ -64,9 +64,9 @@ public sealed class SetModeler : IAssetModeler
 
         string source = $"asset #{asset.SetNumber:D4}";
         using var rise = StackDepth.ForAsset(recipe, asset, source);
-        var mesh = Riser.TryBuild(asset.Image, rise?.Depth, _options, source);
+        var mesh = Riser.TryBuild(asset.Image, rise?.Depth, _options, source, rise?.Faces);
         if (mesh is null) return null;
-        return ModelWriter.Write(mesh, asset.Image, _options, baseName)
+        return ModelWriter.Write(mesh, asset.Image, _options, baseName, rise?.Faces)
             .Select(f => new SetFile(f.FileName, f.Bytes)).ToList();
     }
 }

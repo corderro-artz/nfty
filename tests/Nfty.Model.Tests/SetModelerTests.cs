@@ -284,7 +284,7 @@ public class SetModelerTests
             var glb = Assert.Single(modeler.Model(asset, "0001")!).Bytes;
             var (json, bin) = GltfValidator.ReadGlb(glb);
             using var texture = Image.Load<Rgba32>(GltfValidator.ReadImage(json, bin));
-            Assert.Equal(asset.Image.Width, texture.Width);
+            Assert.Equal(FaceAtlas.WidthFor(asset.Image.Width), texture.Width);
             for (int y = 0; y < Size; y++)
                 for (int x = 0; x < Size; x++)
                     Assert.Equal(asset.Image[x, y], texture[x, y]);

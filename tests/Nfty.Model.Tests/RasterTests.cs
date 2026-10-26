@@ -300,6 +300,7 @@ public class RasterTests
             "########",
             "########");
         var mesh = Riser.TryBuild(art, Art.Depth(art, (_, _) => (2, 1)), new RiseOptions(), "8px slab")!;
+        using var atlas = FaceAtlas.Build(art);
         var camera = Camera.FramedOn(mesh.Min, mesh.Max);
         int coveredSomewhere = 0;
 
@@ -307,7 +308,7 @@ public class RasterTests
         {
             camera = camera.Zoom(0.9f);
             var target = Target(96);
-            Raster.Render(mesh, art, camera, target);
+            Raster.Render(mesh, atlas, camera, target);
 
             for (int i = 0; i < target.Color.Length; i++)
             {
@@ -330,12 +331,13 @@ public class RasterTests
         using var art = Art.FromAscii(Enumerable.Range(0, 16).Select(y =>
             new string(Enumerable.Range(0, 16).Select(x => (x - 7.5) * (x - 7.5) + (y - 7.5) * (y - 7.5) <= 49 ? '#' : '.').ToArray())).ToArray());
         var mesh = Riser.TryBuild(art, null, new RiseOptions())!;
+        using var atlas = FaceAtlas.Build(art);
         var framed = Camera.FramedOn(mesh.Min, mesh.Max);
         var camera = new Camera(framed.Target, framed.Distance, yawDeg * MathF.PI / 180f,
             pitchDeg * MathF.PI / 180f, mesh.Min, mesh.Max).Zoom(1e-6f);
         var target = new RenderTarget(64, 64);
         target.Clear(new Rgba32(0, 0, 0, 0));
-        Raster.Render(mesh, art, camera, target);
+        Raster.Render(mesh, atlas, camera, target);
         Assert.True(target.Color.Count(c => c.A == 255) > 0, "the eye is inside the sprite: blank frame");
     }
 
@@ -344,6 +346,7 @@ public class RasterTests
     {
         using var art = Art.FromAscii(Enumerable.Range(0, 16).Select(_ => new string('#', 16)).ToArray());
         var mesh = Riser.TryBuild(art, null, new RiseOptions())!;
+        using var atlas = FaceAtlas.Build(art);
         var framed = Camera.FramedOn(mesh.Min, mesh.Max);
         var target = new RenderTarget(64, 64);
 
@@ -353,7 +356,7 @@ public class RasterTests
             var camera = new Camera(framed.Target, framed.Distance, yaw * MathF.PI / 180f,
                 pitch * MathF.PI / 180f, mesh.Min, mesh.Max).Zoom(1e-6f);
             target.Clear(new Rgba32(0, 0, 0, 0));
-            Raster.Render(mesh, art, camera, target);
+            Raster.Render(mesh, atlas, camera, target);
             Assert.True(target.Color.Any(c => c.A == 255), $"blank at yaw {yaw}, pitch {pitch}");
         }
     }
@@ -422,6 +425,30 @@ public class RasterTests
         for (int i = 0; i < 4; i++)
             Assert.Equal(255, target.Color[(i * 4) + i].B);
         Assert.Equal(16, target.Color.Count(c => c.A == 255));
+    }
+
+    [Fact]
+    public void A_front_view_render_never_samples_the_back_half()
+    {
+        // A one-pixel cube whose back owner is a color the front half does not contain. Seen from
+        // the front (yaw 0, pitch 0) every covered pixel must come from the front half or the gutter.
+        var frontColor = new Rgba32(200, 0, 0, 255);
+        var backColor = new Rgba32(0, 0, 200, 255);
+        using var front = new Image<Rgba32>(4, 4, frontColor);
+        using var back = new Image<Rgba32>(4, 4, backColor);
+        using var art = front.Clone();
+        using var faces = new StackFaces(front.Clone(), back.Clone(), new int[16]);
+        var mesh = Riser.TryBuild(art, null, new RiseOptions(), "slab", faces)!;
+        using var atlas = FaceAtlas.Build(art, faces);
+        var camera = Camera.FramedOn(mesh.Min, mesh.Max);
+        var target = new RenderTarget(64, 64);
+        target.Clear(Clear);
+
+        Raster.Render(mesh, atlas, camera, target);
+
+        var covered = target.Color.Where(c => c.A > 0).ToList();
+        Assert.NotEmpty(covered);
+        Assert.All(covered, c => Assert.True(c.R > 0 && c.B == 0, $"a back-half texel reached the front view: {c}"));
     }
 
     // ---- fixtures ----

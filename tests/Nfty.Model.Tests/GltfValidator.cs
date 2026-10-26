@@ -1,6 +1,8 @@
 using System.Buffers.Binary;
 using System.Text;
 using System.Text.Json.Nodes;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Nfty.Model.Tests;
 
@@ -128,6 +130,9 @@ internal static class GltfValidator
         foreach (int attribute in new[] { position, normal, uv })
             Assert.Equal(34962, views[accessors[attribute]!["bufferView"]!.GetValue<int>()]!["target"]!.GetValue<int>());
 
+        // Every texture coordinate addresses the atlas: nothing outside [0, 1].
+        Assert.All(ReadFloats(root, bin, uv), t => Assert.InRange(t, 0f, 1f));
+
         // POSITION MUST carry min and max, and they must be the real extents: a viewer culls by them.
         var min = accessors[position]!["min"]?.AsArray();
         var max = accessors[position]!["max"]?.AsArray();
@@ -171,6 +176,18 @@ internal static class GltfValidator
         Assert.Null(imageView["target"]);
         int imageOffset = imageView["byteOffset"]?.GetValue<int>() ?? 0;
         Assert.Equal(PngSignature, bin.AsSpan(imageOffset, 8).ToArray());
+        AssertAtlas(bin.AsSpan(imageOffset, imageView["byteLength"]!.GetValue<int>()).ToArray());
+    }
+
+    /// <summary>The embedded PNG is a face atlas: <c>[front k][gutter 1][back k]</c>, so an odd width
+    /// 2k+1 whose column k repeats column k−1.</summary>
+    public static void AssertAtlas(byte[] png)
+    {
+        using var atlas = Image.Load<Rgba32>(png);
+        Assert.True(atlas.Width % 2 == 1, $"the atlas is {atlas.Width} wide, not 2k+1");
+        int k = atlas.Width / 2;
+        for (int y = 0; y < atlas.Height; y++)
+            Assert.True(atlas[k, y] == atlas[k - 1, y], $"the gutter differs from the front half's last column at row {y}");
     }
 
     public static float[] ReadFloats(JsonNode root, byte[] bin, int accessor)
@@ -205,9 +222,10 @@ internal static class GltfValidator
     }
 
     /// <summary>Re-frames a GLB after editing its JSON — how the validator's own tests plant a defect.</summary>
-    public static byte[] Reframe(byte[] glb, Action<JsonNode> edit)
+    public static byte[] Reframe(byte[] glb, Action<JsonNode> edit, Action<JsonNode, byte[]>? editBin = null)
     {
         var (json, bin) = ReadGlb(glb);
+        editBin?.Invoke(json, bin);
         edit(json);
         byte[] text = Encoding.UTF8.GetBytes(json.ToJsonString());
         int jsonLength = (text.Length + 3) & ~3;

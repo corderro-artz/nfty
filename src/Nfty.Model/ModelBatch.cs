@@ -9,8 +9,9 @@ namespace Nfty.Model;
 /// <summary>One picture to rise in a batch.</summary>
 /// <param name="BaseName">The file name without extension; <see cref="ModelBatch.Build"/> sanitizes and de-duplicates it itself, so any text is safe here.</param>
 /// <param name="Art">The finished picture. Borrowed: the batch does not dispose it.</param>
+/// <param name="Faces">The stack's face owners and wall seams (the atlas halves), or <c>null</c> for a single picture. Borrowed.</param>
 /// <param name="Depth">Its depth map, or <c>null</c> for paper.</param>
-public sealed record ModelInput(string BaseName, Image<Rgba32> Art, DepthMap? Depth);
+public sealed record ModelInput(string BaseName, Image<Rgba32> Art, DepthMap? Depth, StackFaces? Faces = null);
 
 /// <summary>What a batch made.</summary>
 /// <param name="Files">Every file written for the pictures that could rise.</param>
@@ -140,11 +141,11 @@ public static class ModelBatch
             string name = Claim(taken, input.BaseName);
             try
             {
-                var mesh = Riser.TryBuild(input.Art, input.Depth, options, $"'{name}'");
+                var mesh = Riser.TryBuild(input.Art, input.Depth, options, $"'{name}'", input.Faces);
                 if (mesh is null)
                     skipped.Add(new SkippedModel(name, SkipReason.NothingSolid, "nothing in it is fully opaque, so there is nothing to rise"));
                 else
-                    files.AddRange(ModelWriter.Write(mesh, input.Art, options, name));
+                    files.AddRange(ModelWriter.Write(mesh, input.Art, options, name, input.Faces));
             }
             catch (PartialAlphaException ex)
             {
@@ -203,12 +204,12 @@ public static class ModelBatch
             var input = open(i);
             try
             {
-                var mesh = Riser.TryBuild(input.Art, input.Depth, options, $"'{name}'");
+                var mesh = Riser.TryBuild(input.Art, input.Depth, options, $"'{name}'", input.Faces);
                 if (mesh is null)
                     skipped.Add(new SkippedModel(name, SkipReason.NothingSolid, "nothing in it is fully opaque, so there is nothing to rise"));
                 else
                 {
-                    foreach (var f in ModelWriter.Write(mesh, input.Art, options, name))
+                    foreach (var f in ModelWriter.Write(mesh, input.Art, options, name, input.Faces))
                     {
                         sink.Add(f);
                         onWritten?.Invoke(f.FileName);

@@ -122,7 +122,7 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private Mesh? _mesh;
 
     /// <summary>The art, which is also the model's texture.</summary>
-    public Image<Rgba32> Texture => Subject.Art;
+    public Image<Rgba32> Texture => Subject.Texture;
 
     /// <summary>The camera of the 3D tile.</summary>
     public ModelPreviewViewModel Preview => _preview!;

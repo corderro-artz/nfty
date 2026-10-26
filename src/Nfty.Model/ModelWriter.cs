@@ -30,33 +30,38 @@ public static class ModelWriter
 
     /// <summary>Writes one model.</summary>
     /// <param name="mesh">The mesh, from <see cref="Riser.TryBuild"/>.</param>
-    /// <param name="texture">The picture the mesh was risen from — the same size. Not modified.</param>
+    /// <param name="art">The picture the mesh was risen from — the same size. Not modified. The
+    /// texture is the <see cref="FaceAtlas"/> built from it.</param>
     /// <param name="options">Which format to write.</param>
     /// <param name="baseName">The file name without extension, and without any folder.</param>
+    /// <param name="faces">The stack's face owners (the atlas halves), or <c>null</c> for a single
+    /// picture. Borrowed, not disposed.</param>
     /// <returns>The files: one for <see cref="ModelFormat.Glb"/> and <see cref="ModelFormat.GltfEmbedded"/>,
     /// two (<c>.gltf</c> then <c>.bin</c>) for <see cref="ModelFormat.GltfWithBin"/>.</returns>
-    /// <exception cref="ArgumentException">The texture is another size than the mesh was risen from,
+    /// <exception cref="ArgumentException">The art or faces are another size than the mesh was risen from,
     /// or the base name is not a plain file name.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="options"/>'s
     /// <see cref="RiseOptions.Format"/> is not one of <see cref="ModelFormat"/>'s named values.</exception>
-    public static IReadOnlyList<ModelFile> Write(Mesh mesh, Image<Rgba32> texture, RiseOptions options, string baseName)
+    public static IReadOnlyList<ModelFile> Write(Mesh mesh, Image<Rgba32> art, RiseOptions options, string baseName,
+        StackFaces? faces = null)
     {
         ArgumentNullException.ThrowIfNull(mesh);
-        ArgumentNullException.ThrowIfNull(texture);
+        ArgumentNullException.ThrowIfNull(art);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentException.ThrowIfNullOrWhiteSpace(baseName);
         if (baseName.AsSpan().IndexOfAny('/', '\\') >= 0)
             throw new ArgumentException(
                 $"'{baseName}' is not a plain file name; the writer names files, the caller chooses the folder.",
                 nameof(baseName));
-        if (texture.Width != mesh.TextureWidth || texture.Height != mesh.TextureHeight)
+        if (FaceAtlas.WidthFor(art.Width) != mesh.TextureWidth || art.Height != mesh.TextureHeight)
             throw new ArgumentException(
-                $"The mesh was risen from {mesh.TextureWidth}x{mesh.TextureHeight} art; this texture is "
-                + $"{texture.Width}x{texture.Height}.", nameof(texture));
+                $"The mesh was risen from {(mesh.TextureWidth - 1) / 2}x{mesh.TextureHeight} art; this art is "
+                + $"{art.Width}x{art.Height}.", nameof(art));
 
         using var _ = Perf.Measure("ModelWriter.Write");
 
-        var (root, bin) = GltfBuilder.Build(mesh, EncodeTexture(texture));
+        using var atlas = FaceAtlas.Build(art, faces);
+        var (root, bin) = GltfBuilder.Build(mesh, EncodeTexture(atlas));
         return options.Format switch
         {
             ModelFormat.Glb => new[]

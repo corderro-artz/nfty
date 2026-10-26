@@ -22,6 +22,7 @@ public class RasterPerfTests(ITestOutputHelper output)
         using var art = Disc(textureSize);
         var depth = Dome(art);
         var mesh = Riser.TryBuild(art, depth, new RiseOptions(), $"{textureSize}px disc")!;
+        using var atlas = FaceAtlas.Build(art);
         var camera = Camera.FramedOn(mesh.Min, mesh.Max);
         var target = new RenderTarget(512, 512);
 
@@ -31,12 +32,12 @@ public class RasterPerfTests(ITestOutputHelper output)
             // One unmeasured warm-up call (JIT, pool fill), then five measured: the mean is what a
             // drag pays per frame, the cold call is what the first frame pays.
             target.Clear(new Rgba32(0, 0, 0, 0));
-            Raster.Render(mesh, art, camera, target);
+            Raster.Render(mesh, atlas, camera, target);
             Perf.Reset();
             for (int i = 0; i < 5; i++)
             {
                 target.Clear(new Rgba32(0, 0, 0, 0));
-                Raster.Render(mesh, art, camera, target);
+                Raster.Render(mesh, atlas, camera, target);
             }
 
             Assert.Contains("Raster.Render", Perf.Snapshot().Select(e => e.Name));
