@@ -163,10 +163,13 @@ public static class StackDepth
                         throw new KeyNotFoundException($"{source}: recipe '{recipe.Manifest.Id}' has no layer '{pick.IngredientId}'.");
                     if (!ing.VariantImages.TryGetValue(pick.VariantId, out var image))
                         throw new KeyNotFoundException($"{source}: layer '{pick.IngredientId}' has no variant '{pick.VariantId}'.");
-                    var layer = pick.Color is { } color && VariantPreview.NeedsColor(ing)
-                        ? VariantPreview.Render(ing, pick.VariantId, color)
-                        : image.Clone();
-                    owned.Add(layer);
+                    // Combine takes nothing, so an uncolored layer is borrowed; only a recolored one is ours.
+                    var layer = image;
+                    if (pick.Color is { } color && VariantPreview.NeedsColor(ing))
+                    {
+                        layer = VariantPreview.Render(ing, pick.VariantId, color);
+                        owned.Add(layer);
+                    }
                     pairs.Add((layer, ing.Depths.GetValueOrDefault(pick.VariantId)));
                 }
             }

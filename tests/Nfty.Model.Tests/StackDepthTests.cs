@@ -125,6 +125,20 @@ public class StackDepthTests
     }
 
     [Fact]
+    public void When_one_layer_owns_both_faces_of_non_paper_art_the_seam_is_behind_its_own_back()
+    {
+        // The strap reaches both the max front and the max back: front owner == back owner, so the
+        // front-owner-above rule applies (>=) and the seam is maxB - its own back = 0, not the
+        // back-owner's-interval branch (maxB + 1 + front = 5).
+        using var body = Row(Red);
+        using var strap = Row(Blue);
+        using var rise = Rise((body, Map(1, 2)), (strap, Map(4, 6)));
+        Assert.Equal(Blue, rise.Faces.Front[0, 0]);
+        Assert.Equal(Blue, rise.Faces.Back[0, 0]);
+        Assert.Equal(0, rise.Faces.BackColored(0, 0));
+    }
+
+    [Fact]
     public void A_middle_layer_never_owns_a_face()
     {
         using var body = Row(Red);

@@ -35,9 +35,11 @@ public class DemoModelsTests
                     var overlay = Layer(recipe, overlayId);
                     foreach (var variant in overlay.Manifest.Variants)
                     {
-                        var without = StackDepth.ForSelection(recipe, [("feet", feet), (bodyId, body.Id)]).Depth;
-                        var with = StackDepth.ForSelection(recipe,
-                            [("feet", feet), (bodyId, body.Id), (overlayId, variant.Id)]).Depth;
+                        using var withoutRise = StackDepth.ForSelection(recipe, [("feet", feet), (bodyId, body.Id)]);
+                        using var withRise = StackDepth.ForSelection(recipe,
+                            [("feet", feet), (bodyId, body.Id), (overlayId, variant.Id)]);
+                        var without = withoutRise.Depth;
+                        var with = withRise.Depth;
                         var art = overlay.VariantImages[variant.Id];
                         for (int y = 0; y < art.Height; y++)
                             for (int x = 0; x < art.Width; x++)
@@ -64,7 +66,8 @@ public class DemoModelsTests
             var ing = Layer(recipe, bodyId);
             foreach (var v in ing.Manifest.Variants)
             {
-                var depth = StackDepth.ForSelection(recipe, [(bodyId, v.Id)]).Depth;
+                using var rise = StackDepth.ForSelection(recipe, [(bodyId, v.Id)]);
+                var depth = rise.Depth;
                 Assert.NotNull(Riser.TryBuild(ing.VariantImages[v.Id], depth, new RiseOptions(), "x"));
             }
         }
