@@ -529,7 +529,10 @@ for _y in (14, 15, 28):
     LOWER_ROWS[_y] = (2, 29)
 OVERHANG_ROWS = (12, 13, 14, 15, 28)     # the lid course and the plinth stand a voxel prouder
 FACE, SHELL = 2, 3                       # front of the face, front of the overhanging courses
-BODY_BACK = 9                            # every solid body pixel is the same depth behind the paper
+BACK_FACE = 9                            # the lower body's back: it mirrors the front, as a real box does
+BACK_STEP = 1                            # overhang rows stand a voxel deeper, the outer column a voxel shy
+CHEST_BACK = {7: 5, 8: 6, 9: 7, 10: 8, 11: 9}   # the lid's back is a dome too, deepening toward the body
+BOX_BACK = 9                             # the box lid is a slab, bevelled at the ends
 CHEST_DOME = {7: 1, 8: 1, 9: 2, 10: 2, 11: 3}   # a barrel lid curves away going up
 BOX_SLAB = 3
 
@@ -541,6 +544,29 @@ def lower_front(x, y):
         return 0
     base = SHELL if y in OVERHANG_ROWS else FACE
     return base - 1 if x in row else base
+
+
+def lower_back(x, y):
+    """THE shared back profile at y>=12, the front's mirror: overhang rows a voxel deeper, the
+    outermost column a voxel shallower than its neighbour."""
+    row = LOWER_ROWS.get(y)
+    if row is None or not row[0] <= x <= row[1]:
+        return 0
+    base = BACK_FACE + (BACK_STEP if y in OVERHANG_ROWS else 0)
+    return base - 1 if x in row else base
+
+
+def body_back(x, y, lid):
+    if y >= 12:
+        return lower_back(x, y)
+    rows = CHEST_LID if lid == "chest" else BOX_LID
+    row = rows.get(y)
+    if row is None or not row[0] <= x <= row[1]:
+        return 0
+    if lid == "chest":
+        # Rounded ends: the dome falls away two voxels per pixel from either end.
+        return min(CHEST_BACK[y], 1 + 2 * (x - row[0]), 1 + 2 * (row[1] - x))
+    return BOX_BACK - 1 if x in row else BOX_BACK
 
 
 def body_front(x, y, lid):
@@ -573,12 +599,13 @@ def depth_picture(sprite, fn):
 
 
 def body_depth(lid):
-    return lambda sp: depth_picture(sp, lambda x, y, c: (body_front(x, y, lid), BODY_BACK))
+    return lambda sp: depth_picture(sp, lambda x, y, c: (body_front(x, y, lid), body_back(x, y, lid)))
 
 
-def over(k, back=0):
-    """An overlay `k` voxels proud of the body beneath it (absolute: body_front + k)."""
-    return lambda sp: depth_picture(sp, lambda x, y, c: (lower_front(x, y) + k, back))
+def over(k):
+    """An overlay `k` voxels proud of the body beneath it (absolute: body_front + k). Its back is 0:
+    the union rule keeps the body's back behind it."""
+    return lambda sp: depth_picture(sp, lambda x, y, c: (lower_front(x, y) + k, 0))
 
 
 def lock_padlock_depth(sp):
@@ -618,12 +645,14 @@ def check_contract(pictures):
             for y in range(12, H):
                 for x in range(W):
                     if sp.px[x, y][3]:
+                        assert pic.getpixel((x, y))[1] == lower_back(x, y), "body %s/%s breaks the shared back at (%d,%d)" % (layer, vid, x, y)
                         assert pic.getpixel((x, y))[0] == lower_front(x, y),                             "body %s/%s breaks the shared profile at (%d,%d)" % (layer, vid, x, y)
     for layer in ("bands", "lock", "trim"):
         for vid, (sp, pic) in pictures[layer].items():
             for y in range(H):
                 for x in range(W):
                     if sp.px[x, y][3]:
+                        assert pic.getpixel((x, y))[1] == 0, "%s/%s has a back at (%d,%d)" % (layer, vid, x, y)
                         for lid in ("chest", "box"):
                             assert pic.getpixel((x, y))[0] > body_front(x, y, lid),                                 "%s/%s is not proud of the %s body at (%d,%d)" % (layer, vid, lid, x, y)
 
