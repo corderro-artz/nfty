@@ -60,7 +60,7 @@ nfty model hat.igt --variant red --out hat.gltf --format gltf
 ```
 
 Every fully opaque pixel becomes a column of voxels: one for the paper, plus its **front** depth
-toward you and its **back** depth away from you. The column's sides take the pixel's own color. A
+toward you and its **back** depth away from you. The column's sides take the art's edge pixel color, however dark it is. A
 `.png` has no stored depth, so it is flat paper unless you fill it; an `.igt` variant uses the depth
 stored with it. A Dynamic or Static variant rises as its stored **gray value-map**, as a loose
 picture of the same pixels would; there is no color option, because color is decided when an asset is

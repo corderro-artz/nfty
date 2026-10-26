@@ -42,7 +42,7 @@ That is deliberately one of everything the manual talks about:
 - **Weighted color bands.** A body rolls warm timber about 60% of the time and cold metal the rest,
   rather than any color at all.
 
-The art also carries **depth**, so the demo rises into 3D: the chest's barrel lid curves the same way front and back, the lid's lip overhangs the body, the bands, trim and lock stand proud of the face, and the body is twelve voxels deep. Glow stays flat on purpose. Open the Rise page on any of it to see the model; depth never changes which assets are unique.
+The art also carries **depth**, so the demo rises into 3D: the chest's barrel lid curves the same way front and back, so it reads as one object from any side, the lid's lip overhangs the body, the bands, trim and lock stand proud of the face, and the body is twelve voxels deep. Glow stays flat on purpose. Open the Rise page on any of it to see the model; depth never changes which assets are unique.
 
 Twenty-nine small drawings, and **7,155,000** distinct assets. That is
 [why the art is gray](../understand/why-gray.md), stated as a file you can open.

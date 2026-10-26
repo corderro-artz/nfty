@@ -322,3 +322,5 @@ either keeps "exact, never estimated". Measure first.
 `finally`, so an export is never left waiting, but an exception from a listener or a reseed mid-loop leaves
 some loaded subjects reseeded with the book's depth and some not, and the next export snapshots that mixed
 state. Reachable only after an exception has already escaped the dispatcher; noted, not fixed.
+
+**README hero image and alt text show the old demo:** `README.md` (around line 41) embeds a screenshot of the Explorer with the built-in demo open, and its alt text quotes "2 recipes, 12 layers, 31 variants and 615,600 unique DNA". The demo was redrawn (29 drawings, more variants per layer, clean art) and now counts 7,155,000 exactly, so both the picture and the alt text are stale. To pick it up: regenerate figures with `tools/docs-capture/` (its README has the PowerShell traps), take the Explorer frame for the demo CookBook in both themes, replace the hero image(s) the README references, and rewrite the alt text from the new card (read the real counts off the rendered frame; do not retype them from here). The manual's own figures are a separate reshoot already noted above.

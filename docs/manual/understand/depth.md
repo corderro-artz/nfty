@@ -16,8 +16,15 @@ So a pixel with front 2 and back 1 is 1 + 2 + 1 = 4 voxels thick. Front and back
 (0 to 255) per pixel, which is why the stored depth map is exactly two bytes per pixel; see
 [File formats](../reference/file-formats.md#depth-maps).
 
-The model is the art, extruded. Its texture is the whole picture, and the sides of every column take
-the color of the pixel they belong to. Nothing is colored a second time.
+The model is the art, extruded. Its texture is one image with the **front** picture on the left and the
+**back** picture on the right, a one-pixel gutter between them so smoothing never bleeds one into the
+other. The sides of every column take the color of the art's **edge pixel** there, so a column whose
+edge pixel is near black gets a near-black side. That is how it is drawn, not a bug; give the edge a
+lighter outline if you want lighter sides. Where two layers own a column's front and back, its side
+changes from the back owner's color to the front owner's at the seam. Nothing is colored a second time.
+
+Sets cooked before this stacking rule keep the models they were cooked with; cook again to get the
+new ones.
 
 ## "Depth" means two things here
 
@@ -26,7 +33,7 @@ back. That is paint order, and it decides which layer hides which. The Rise page
 **thickness**, how far a pixel stands out of or sinks behind its own plane. The two meet only when
 a Recipe is risen: the stack is flattened to one picture by paint order, and each visible pixel takes
 the thickness of the whole stack there: the front reaches as far as any solid layer's front, the back as far as any
-layer's back, and each face takes the color of the layer that owns it.
+layer's back, and each face takes the color of the layer that owns it. A layer on top can add relief but never cut away what a layer under it built.
 
 ## One solid, from finished art
 
