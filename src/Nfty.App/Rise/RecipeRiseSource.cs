@@ -163,7 +163,11 @@ public sealed class RecipeRiseSource : RiseSource
             art = asset.Image.Clone();
             DepthMap? depth = null;
             string? refusal = null;
-            try { depth = StackDepth.ForAsset(_recipe, asset, $"the {_recipe.Manifest.Name} recipe"); }
+            try
+            {
+                using var rise = StackDepth.ForAsset(_recipe, asset, $"the {_recipe.Manifest.Name} recipe");
+                depth = rise?.Depth;
+            }
             catch (PartialAlphaException ex) { refusal = ex.Message; }   // which layer keeps the stack 2D
             FillRows(asset, rows);
             return new Rolled(art, depth, null, rows, refusal);

@@ -63,8 +63,8 @@ public sealed class SetModeler : IAssetModeler
                 $"asset #{asset.SetNumber:D4}: CookBook '{_bookName}' has no recipe '{asset.RecipeId}'.");
 
         string source = $"asset #{asset.SetNumber:D4}";
-        var depth = StackDepth.ForAsset(recipe, asset, source);
-        var mesh = Riser.TryBuild(asset.Image, depth, _options, source);
+        using var rise = StackDepth.ForAsset(recipe, asset, source);
+        var mesh = Riser.TryBuild(asset.Image, rise?.Depth, _options, source);
         if (mesh is null) return null;
         return ModelWriter.Write(mesh, asset.Image, _options, baseName)
             .Select(f => new SetFile(f.FileName, f.Bytes)).ToList();

@@ -30,7 +30,7 @@ public class RisePerfTests(ITestOutputHelper output)
             var options = new RiseOptions();
             var mesh = Riser.TryBuild(art, depth, options, $"{size}px disc")!;
             var files = ModelWriter.Write(mesh, art, options, "disc");
-            var (combined, _) = StackDepth.Combine([(art, depth), (art, null)]);
+            var combined = StackDepth.Combine([(art, depth), (art, null)]);
             combined.Dispose();
 
             var names = Perf.Snapshot().Select(e => e.Name).ToList();

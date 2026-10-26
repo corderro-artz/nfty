@@ -86,7 +86,7 @@ public class SetRiseSourceTests
         Assert.StartsWith("Depth comes from Chest.cbk", src.DepthNote);
         var depth = src.Open(WithBody(src, set, "Oak")).Depth;
         Assert.Equal(new DepthPixel(2, 0), depth.Get(1, 2));    // oak's own depth
-        Assert.Equal(new DepthPixel(0, 0), depth.Get(3, 3));    // gold paints over it and carries none
+        Assert.Equal(new DepthPixel(2, 0), depth.Get(3, 3));    // gold paints over it, carries none: the union keeps oak's 2
     }
 
     [AvaloniaFact]
@@ -108,7 +108,7 @@ public class SetRiseSourceTests
         Assert.Same(subject, oak.Subject);
         Assert.Equal(new DepthPixel(2, 0), subject.Depth.Get(1, 2));
         Assert.False(subject.IsDirty);
-        Assert.Equal("varied", oak.DepthChip);
+        Assert.Equal("2 · 0", oak.DepthChip);
         Assert.Equal(1, raised);
     }
 

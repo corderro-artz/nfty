@@ -279,7 +279,9 @@ public sealed class SetRiseSource : RiseSource
         if (present.Count == 0) return (null, false, null);
         try
         {
-            var map = StackDepth.ForSelection(recipe, present, $"asset #{item.Number:D4}");
+            using var rise = StackDepth.ForSelection(recipe,
+                present.Select(p => (StackPick)p).ToList(), $"asset #{item.Number:D4}");
+            var map = rise.Depth;
             // A picture of another size than the book's canvas cannot take the book's depth.
             return (map.Width == art.Width && map.Height == art.Height ? map : null, false, null);
         }

@@ -55,8 +55,8 @@ public class SetModelerTests
         foreach (var asset in set.Assets)
         {
             var viaSelection = StackDepth.ForSelection(recipe,
-                asset.Traits.Select(t => (t.IngredientId, t.VariantId)).ToList());
-            Assert.Equal(viaSelection.ToBytes(), StackDepth.ForAsset(recipe, asset)!.ToBytes());
+                asset.Traits.Select(t => (StackPick)(t.IngredientId, t.VariantId)).ToList()).Depth;
+            Assert.Equal(viaSelection.ToBytes(), StackDepth.ForAsset(recipe, asset)!.Depth.ToBytes());
         }
     }
 
@@ -68,7 +68,7 @@ public class SetModelerTests
         using var book = Book();
         using var set = Cook(book);
         var asset = set.Assets.First(HasHat);
-        var depth = StackDepth.ForAsset(book.Recipes[0], asset)!;
+        var depth = StackDepth.ForAsset(book.Recipes[0], asset)!.Depth;
         Assert.Equal(3, depth.Front(1, 0));
         Assert.Equal(1, depth.Front(0, 0));
     }
@@ -119,7 +119,7 @@ public class SetModelerTests
 
         var viaSeam = Assert.Single(modeler.Model(asset, "0007")!);
 
-        var depth = StackDepth.ForAsset(book.Recipes[0], asset);
+        var depth = StackDepth.ForAsset(book.Recipes[0], asset)?.Depth;
         var mesh = Riser.TryBuild(asset.Image, depth, options, "x")!;
         var direct = Assert.Single(ModelWriter.Write(mesh, asset.Image, options, "0007"));
         Assert.Equal(direct.FileName, viaSeam.FileName);
@@ -286,7 +286,7 @@ public class SetModelerTests
                     Assert.Equal(asset.Image[x, y], texture[x, y]);
 
             // Depth comes from the stored maps: eye column 1 front 4, the rest of the body front 2.
-            var depth = StackDepth.ForAsset(book.Recipes[0], asset)!;
+            var depth = StackDepth.ForAsset(book.Recipes[0], asset)!.Depth;
             Assert.Equal((4, 2), (depth.Front(1, 0), depth.Front(0, 0)));
             var (lo, hi) = ZExtent(glb);
             Assert.Equal(1 + 4, hi - lo);
