@@ -565,16 +565,7 @@ public sealed class PictureRiseSource : RiseSource
             new LoadedIngredient { Manifest = manifest, VariantImages = images, Depths = depths });
         if (problems.Count > 0) throw new InvalidOperationException(string.Join(Environment.NewLine, problems));
 
-        var tmp = $"{path}.{Guid.NewGuid():N}.tmp";
-        try
-        {
-            await IngredientArchive.WriteAsync(tmp, manifest, images, depths);
-            File.Move(tmp, path, overwrite: true);
-        }
-        finally
-        {
-            if (File.Exists(tmp)) { try { File.Delete(tmp); } catch { /* best effort */ } }
-        }
+        await AtomicFile.ReplaceAsync(path, tmp => IngredientArchive.WriteAsync(tmp, manifest, images, depths));
 
         // Marked before anyone is told: the write is done.
         foreach (var (subject, map) in written) subject.MarkSaved(map);

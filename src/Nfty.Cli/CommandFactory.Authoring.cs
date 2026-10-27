@@ -881,21 +881,7 @@ public static partial class CommandFactory
     /// (which refuses an existing file), so a plain in-place overwrite would otherwise have to
     /// delete first and lose the original on any mid-write failure. Reused by every `add` command.
     /// </summary>
-    private static void WriteReplacing(string path, Action<string> write)
-    {
-        string tmp = path + ".tmp";
-        if (File.Exists(tmp)) File.Delete(tmp);
-        try
-        {
-            write(tmp);
-            File.Move(tmp, path, overwrite: true);
-        }
-        catch
-        {
-            if (File.Exists(tmp)) File.Delete(tmp);
-            throw;
-        }
-    }
+    private static void WriteReplacing(string path, Action<string> write) => AtomicFile.Replace(path, write);
 
     /// <summary>Loads one PNG per distinct variant id, by the {id}.png convention.</summary>
     private static Dictionary<string, Image<Rgba32>> LoadVariantImages(IngredientManifest m, string imagesDir)

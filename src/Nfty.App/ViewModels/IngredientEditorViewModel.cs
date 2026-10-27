@@ -1625,17 +1625,15 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
             // Loose (.igt) save: write the ingredient straight back to its own archive.
             if (_looseSavePath is string loosePath)
             {
-                var tmp = loosePath + ".tmp";
                 // What is on disk after this save, kept so Rise (which reads the saved layer) sees it.
                 var kept = images.ToDictionary(kv => kv.Key, kv => kv.Value.Clone(), StringComparer.Ordinal);
                 try
                 {
-                    await IngredientArchive.WriteAsync(tmp, manifest, images, depths);
-                    File.Move(tmp, loosePath, overwrite: true);
+                    await AtomicFile.ReplaceAsync(loosePath,
+                        tmp => IngredientArchive.WriteAsync(tmp, manifest, images, depths));
                 }
                 finally
                 {
-                    if (File.Exists(tmp)) { try { File.Delete(tmp); } catch { /* best effort */ } }
                     foreach (var i in images.Values) i.Dispose();   // our copies — ours to free
                 }
                 var replacedLoose = _ing;

@@ -51,16 +51,7 @@ public static class LooseWorkspace
         var problems = Validator.ValidateIngredient(ing);
         if (problems.Count > 0) return problems;
 
-        var tmp = path + ".tmp";
-        try
-        {
-            IngredientArchive.Write(tmp, ing.Manifest, ing.VariantImages, ing.Depths);
-            File.Move(tmp, path, overwrite: true);
-        }
-        finally
-        {
-            if (File.Exists(tmp)) { try { File.Delete(tmp); } catch { /* best effort */ } }
-        }
+        AtomicFile.Replace(path, tmp => IngredientArchive.Write(tmp, ing.Manifest, ing.VariantImages, ing.Depths));
         return Array.Empty<string>();
     }
 
@@ -78,16 +69,7 @@ public static class LooseWorkspace
             : Validator.ValidateRecipe(recipe);
         if (problems.Count > 0) return problems;
 
-        var tmp = path + ".tmp";
-        try
-        {
-            RecipeArchive.Write(tmp, recipe.Manifest, recipe.Ingredients);
-            File.Move(tmp, path, overwrite: true);
-        }
-        finally
-        {
-            if (File.Exists(tmp)) { try { File.Delete(tmp); } catch { /* best effort */ } }
-        }
+        AtomicFile.Replace(path, tmp => RecipeArchive.Write(tmp, recipe.Manifest, recipe.Ingredients));
         return Array.Empty<string>();
     }
 

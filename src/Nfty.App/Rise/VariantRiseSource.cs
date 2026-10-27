@@ -248,16 +248,8 @@ public sealed class VariantRiseSource : RiseSource
     private async Task WriteLooseAsync(LoadedIngredient next)
     {
         var path = _looseSavePath!;
-        var tmp = $"{path}.{Guid.NewGuid():N}.tmp";
-        try
-        {
-            await IngredientArchive.WriteAsync(tmp, next.Manifest, next.VariantImages, next.Depths);
-            File.Move(tmp, path, overwrite: true);
-        }
-        finally
-        {
-            if (File.Exists(tmp)) { try { File.Delete(tmp); } catch { /* best effort */ } }
-        }
+        await AtomicFile.ReplaceAsync(path,
+            tmp => IngredientArchive.WriteAsync(tmp, next.Manifest, next.VariantImages, next.Depths));
     }
 
     // ---------------------------------------------------------------- voxel-ready
