@@ -49,7 +49,7 @@
 
                 <StackPanel Spacing="6">
                   <TextBlock Text="NAME" Classes="plabel" />
-                  <TextBox Text="{Binding Name}" PlaceholderText="Aura" />
+                  <TextBox x:Name="NameField" Text="{Binding Name}" PlaceholderText="Aura" />
                   <!-- THE DERIVED ID SITS UNDER THE NAME IT IS DERIVED FROM.
                        It used to be a full-width strip above the footer, under a dashed rule - the
                        flourish a full-window mockup could afford. In a dialog card it cost every
@@ -178,7 +178,10 @@
       <!-- OUTSIDE THE SCROLLER. A refusal that can be scrolled away from is a disabled button with
            no reason given, which is the thing the Problem line exists to prevent. The body scrolls;
            this and the footer do not - the same split the export dialog's pinned manifest keeps. -->
-      <TextBlock Grid.Row="1" Classes="m-sub" Margin="20,0,20,10"
+      <!-- 24, not 20: the left edge of the NAME column, which is the body's own 24px padding. The line
+           said 20 and sat four pixels left of the field it is about, so it read as body text rather
+           than as that field's refusal. -->
+      <TextBlock x:Name="ProblemLine" Grid.Row="1" Classes="m-sub" Margin="24,0,24,10"
                  Foreground="{DynamicResource WarningBrush}" TextWrapping="Wrap" Text="{Binding Problem}"
                  IsVisible="{Binding Problem, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 

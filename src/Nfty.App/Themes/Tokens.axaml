@@ -79,7 +79,7 @@
            CookBook painted "1 problem" as black text and a black dot, which in dark mode is black on
            #12141c: 1.14:1, unreadable. It survived every audit because every test fixture and every
            captured frame used a VALID book, and the valid branch resolves SuccessBrush, which exists. -->
-      <SolidColorBrush x:Key="WarningBrush" Color="#6a4a25" />
+      <SolidColorBrush x:Key="WarningBrush" Color="#8f4a00" />
       <!-- Fluent's own placeholder key, aliased to our muted token rather than left at its default.
            Nothing set it, so Fluent painted the search and the description box at 2.09:1 in light and
            2.62:1 in dark - unreadable, and not what the design asked for either: explorer.html's
