@@ -23,7 +23,17 @@ public record OpenSeaMetadata(
     IReadOnlyList<MetadataAttribute> Attributes);
 
 /// <summary>One layer's resolved color for the rich nfty metadata (all kinds represented).</summary>
-public record LayerColor(string Layer, string Kind, string? Model, double? H, double? S);
+/// <param name="Layer">The ingredient id.</param>
+/// <param name="Kind">The layer kind, lowercase.</param>
+/// <param name="Model">The color model, when the layer is colorized.</param>
+/// <param name="H">Hue, ROUNDED to 0.1 degree for reading.</param>
+/// <param name="S">Saturation, ROUNDED to 0.001 for reading.</param>
+/// <param name="ExactH">The unrounded rolled hue. Additive and optional (absent in Sets cooked before it
+/// existed, so no schema bump); what a 3D model of the Set recolors from, so it matches the cook's own.</param>
+/// <param name="ExactS">The unrounded rolled saturation; see <paramref name="ExactH"/>.</param>
+public record LayerColor(string Layer, string Kind, string? Model, double? H, double? S,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] double? ExactH = null,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] double? ExactS = null);
 
 /// <summary>
 /// Rich nfty-specific per-item metadata. Written to <c>nfty/NNNN.json</c> alongside the

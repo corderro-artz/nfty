@@ -91,6 +91,38 @@ internal static class RiseFixtures
     internal static LoadedCookBook StrapOverBody(bool withGhost = true) =>
         ChestBook(oakDepth: Flat(2, 9), goldDepth: Flat(4, 0), withGhost: withGhost);
 
+    /// <summary>The StrapOverBody book with a DYNAMIC body: a gray value-map colorized by a rolled hue and
+    /// saturation, deepest at the back, under a Custom strap deepest at the front. At a strap pixel the
+    /// front shows gold and the back shows the body's ROLLED color - owned by a layer that is not the top one.</summary>
+    internal static LoadedCookBook DynamicBodyUnderStrap()
+    {
+        var plain = StrapOverBody(withGhost: false);
+        var recipe0 = plain.Recipes[0];
+        var gray = Picture(Oak);
+        for (int y = 0; y < gray.Height; y++)
+            for (int x = 0; x < gray.Width; x++)
+                if (gray[x, y].A == 255)
+                {
+                    byte v = (byte)(40 + 13 * x + 5 * y);   // many distinct grays, so a rounded hue/saturation shows in some pixel
+                    gray[x, y] = new Rgba32(v, v, v, 255);
+                }
+        var body = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("body", "Body", LayerKind.Dynamic,
+                new Colorization(ColorModel.Hsv, 1, 1,
+                    new[] { new ColorEntry(1, new ColorRange(0, 360, 20, 90), null) }),
+                new[] { new Variant("oak", "Oak", 1) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>> { ["oak"] = gray },
+            Depths = new Dictionary<string, DepthMap> { ["oak"] = Flat(2, 9) },
+        };
+        var recipe = new LoadedRecipe
+        {
+            Manifest = recipe0.Manifest,
+            Ingredients = new[] { body, recipe0.Ingredients[1] },
+        };
+        return new LoadedCookBook { Manifest = plain.Manifest, Recipes = new[] { recipe } };
+    }
+
     /// <summary>The first seed in 1..50 whose roll picks the oak body (weight 3 vs ghost 1).</summary>
     internal static int OakSeed(LoadedCookBook book, LoadedRecipe recipe)
     {

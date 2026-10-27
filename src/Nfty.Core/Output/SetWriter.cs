@@ -681,7 +681,9 @@ public static class SetWriter
         Kind: c.Kind.ToString().ToLowerInvariant(),
         Model: c.Model?.ToString().ToLowerInvariant(),
         H: c.H is double h ? Math.Round(h, 1) : null,
-        S: c.S is double s ? Math.Round(s, 3) : null);
+        S: c.S is double s ? Math.Round(s, 3) : null,
+        ExactH: c.H,
+        ExactS: c.S);
 
     /// <summary>
     /// Observed trait frequencies across the whole collection — the items already on disk plus

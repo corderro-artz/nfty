@@ -11,13 +11,13 @@ namespace Nfty.Core.Tests;
 
 public class SetWriterTests
 {
-    private static GeneratedSet MakeSet() => new(
+    private static GeneratedSet MakeSet(int number = 1, string dna = "abc", double hue = 187, double sat = 0.72) => new(
         "VaporPets", "desc", "VP", "seed-1",
         new[]
         {
             new GeneratedAsset
             {
-                SetNumber = 1, Dna = "abc", RecipeId = "cat", RecipeName = "Cat",
+                SetNumber = number, Dna = dna, RecipeId = "cat", RecipeName = "Cat",
                 Image = new Image<Rgba32>(2, 2, new Rgba32(1, 2, 3, 255)),
                 Traits = new[]
                 {
@@ -27,7 +27,7 @@ public class SetWriterTests
                 ColorRolls = new[]
                 {
                     new ColorRoll("bg", LayerKind.Custom, null, null, null),
-                    new ColorRoll("aura", LayerKind.Dynamic, ColorModel.Hsv, 187, 0.72),
+                    new ColorRoll("aura", LayerKind.Dynamic, ColorModel.Hsv, hue, sat),
                 },
             },
         });
@@ -362,6 +362,31 @@ public class SetWriterTests
             e.FullName == SetLayout.ManifestFile
             || SetLayout.Directories.Any(d => e.FullName.StartsWith(d + "/", StringComparison.Ordinal)),
             $"'{e.FullName}' is in the archive but is not part of a Set."));
+    }
+
+    [Fact]
+    public void The_rich_file_records_the_unrounded_roll_beside_the_rounded_and_extend_keeps_it()
+    {
+        var dir = Path.Combine(Directory.CreateTempSubdirectory().FullName, "out");
+        SetWriter.Write(MakeSet(hue: 187.123456789, sat: 0.7234567891), dir, pack: false);
+        SetWriter.Write(MakeSet(2, "def", 10.0123456, 0.5551234), dir, pack: false);
+
+        foreach (var n in new[] { "0001", "0002" })
+        {
+            var aura = JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, "nfty", n + ".json")))
+                .RootElement.GetProperty("layers").EnumerateArray().Single(l => l.GetProperty("layer").GetString() == "aura");
+            bool first = n == "0001";
+            Assert.Equal(first ? 187.1 : 10.0, aura.GetProperty("h").GetDouble());
+            Assert.Equal(first ? 0.723 : 0.555, aura.GetProperty("s").GetDouble());
+            Assert.Equal(first ? 187.123456789 : 10.0123456, aura.GetProperty("exactH").GetDouble());
+            Assert.Equal(first ? 0.7234567891 : 0.5551234, aura.GetProperty("exactS").GetDouble());
+        }
+        // The Custom layer rolled nothing: no exact fields, so no nulls clutter the file.
+        var bg = JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, "nfty", "0001.json")))
+            .RootElement.GetProperty("layers").EnumerateArray().Single(l => l.GetProperty("layer").GetString() == "bg");
+        Assert.False(bg.TryGetProperty("exactH", out _));
+        // The standards-pure file never sees them.
+        Assert.DoesNotContain("exact", File.ReadAllText(Path.Combine(dir, "metadata", "0001.json")), StringComparison.Ordinal);
     }
 
     [Fact]

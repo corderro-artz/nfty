@@ -522,19 +522,23 @@ public class RiseExportTests
         RiseExportSnapshot.Release(input);
         Assert.Throws<ObjectDisposedException>(() => _ = input.Faces.Back[3, 3]);   // and gave it back
     }
-    [AvaloniaFact]
-    public async Task A_set_pages_export_is_the_cooked_sets_model_byte_for_byte()
+    private static async Task<(byte[] Expected, byte[] Page)> SetPageVsCooked(
+        LoadedCookBook source, bool stripExactColors = false, string seed = "launch")
     {
-        var (session, bookPath) = RiseFixtures.OnDisk(RiseFixtures.StrapOverBody(withGhost: false));
+        var (session, bookPath) = RiseFixtures.OnDisk(source);
         var setDir = Path.Combine(Path.GetDirectoryName(bookPath)!, "Chest Set");
         byte[] expected;
-        using (var cooked = Generator.Generate(session.Current!, new GenerateOptions(3, "launch", EnforceUniqueDna: false)))
+        using (var cooked = Generator.Generate(session.Current!, new GenerateOptions(3, seed, EnforceUniqueDna: false)))
         {
             SetWriter.Write(cooked, setDir, pack: false);
             var asset = cooked.Assets[1];
             expected = Assert.Single(new SetModeler(session.Current!, new RiseOptions()).Model(asset, "m")!).Bytes;
         }
         session.Dispose();
+        if (stripExactColors)
+            foreach (var f in Directory.GetFiles(Path.Combine(setDir, "nfty"), "*.json"))
+                File.WriteAllText(f, System.Text.RegularExpressions.Regex.Replace(
+                    File.ReadAllText(f), @",\s*""exact[HS]"":\s*[-0-9.eE+]+", ""));
 
         using var set = SetReader.Read(setDir);
         var dir = Temp();
@@ -545,7 +549,31 @@ public class RiseExportTests
         Avalonia.Threading.Dispatcher.UIThread.RunJobs();
 
         await vm.ExportCommand.ExecuteAsync(null);
+        return (expected, File.ReadAllBytes(Path.Combine(dir, "m.glb")));
+    }
 
-        Assert.Equal(expected, File.ReadAllBytes(Path.Combine(dir, "m.glb")));
+    [AvaloniaFact]
+    public async Task A_set_pages_export_is_the_cooked_sets_model_byte_for_byte()
+    {
+        var (expected, page) = await SetPageVsCooked(RiseFixtures.StrapOverBody(withGhost: false));
+        Assert.Equal(expected, page);
+    }
+
+    [AvaloniaFact]
+    public async Task A_set_pages_export_matches_with_a_colorized_back_owner_byte_for_byte()
+    {
+        // Rounding a rolled color moves an 8-bit channel in only SOME assets, so one asset can't pin it.
+        foreach (var seed in new[] { "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", "s10" })
+        {
+            var (expected, page) = await SetPageVsCooked(RiseFixtures.DynamicBodyUnderStrap(), seed: seed);
+            Assert.True(expected.AsSpan().SequenceEqual(page), $"seed {seed}: the page's model is not the cook's");
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task A_set_cooked_before_exact_colors_still_exports_from_the_rounded_ones()
+    {
+        var (expected, page) = await SetPageVsCooked(RiseFixtures.DynamicBodyUnderStrap(), stripExactColors: true);
+        Assert.Equal(expected.Length, page.Length);   // same model, colors within 1 LSB: not byte-identical by contract
     }
 }
