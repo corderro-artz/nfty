@@ -232,9 +232,10 @@ public class RiseExportTests
     {
         using var vm = BodyVm(new ScriptedPicker());
         Assert.Equal(1f, vm.ExportOptions.VoxelSize);
-        vm.VoxelSize = 0; Assert.Equal(0.01, vm.VoxelSize);
+        vm.VoxelSize = 0; Assert.Equal(Nfty.Core.Publish.ModelVoxelSize.Min, vm.VoxelSize);
+        vm.VoxelSize = 0.0005; Assert.Equal(0.001, vm.VoxelSize);
         vm.VoxelSize = double.NaN; Assert.Equal(1, vm.VoxelSize);
-        vm.VoxelSize = 1.234; Assert.Equal(1.23, vm.VoxelSize);
+        vm.VoxelSize = 1.2344; Assert.Equal(1.234, vm.VoxelSize);
         vm.VoxelSize = 5000; Assert.Equal(1000, vm.VoxelSize);
         vm.VoxelSize = double.PositiveInfinity; Assert.Equal(1, vm.VoxelSize);
         vm.VoxelSize = 2.5;

@@ -155,7 +155,7 @@
                 </ComboBox.ItemTemplate>
               </ComboBox>
               <TextBlock Grid.Row="0" Grid.Column="2" Text="Voxel size" Classes="m-sub" />
-              <NumericUpDown Grid.Row="1" Grid.Column="2" Value="{Binding VoxelSize}" Minimum="0.001"
+              <NumericUpDown Grid.Row="1" Grid.Column="2" Value="{Binding VoxelSize}" Minimum="{Binding VoxelSizeMin, Mode=OneTime}" Maximum="{Binding VoxelSizeMax, Mode=OneTime}"
                              FormatString="0.###" Increment="0.1" MinWidth="0" Width="76" />
             </Grid>
           </StackPanel>

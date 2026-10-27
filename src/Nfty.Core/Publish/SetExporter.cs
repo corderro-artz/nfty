@@ -44,6 +44,12 @@ public record ExportPlan(
     /// </remarks>
     public SpriteSheetLayout? SpriteSheet { get; init; }
 
+    /// <summary>Whether the Set being exported carries <c>models/</c> at all, whatever this export keeps.</summary>
+    public bool SetHasModels { get; init; }
+
+    /// <summary>The source CookBook hash <c>set.json</c> records, or null when it records none.</summary>
+    public string? RecordedCookBookSha256 { get; init; }
+
     /// <summary>The total size of everything being shipped.</summary>
     /// <remarks>
     /// A planned <see cref="SpriteSheet"/> contributes nothing, because nothing has encoded it yet
@@ -568,6 +574,9 @@ public static class SetExporter
         return new ExportPlan(entries, manifest.Name, manifest.Count, name)
         {
             SpriteSheet = options.SpriteSheet ? SheetLayoutFor(setDir, manifest.Count, options) : null,
+            SetHasModels = SetLayout.FilesIn(setDir).Any(f => Path.GetRelativePath(setDir, f)
+                .Replace(Path.DirectorySeparatorChar, '/').StartsWith(SetLayout.ModelsDir + "/", StringComparison.Ordinal)),
+            RecordedCookBookSha256 = manifest.CookbookSha256,
         };
     }
 

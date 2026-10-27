@@ -199,8 +199,8 @@ public class GenerateModelsCommandTests
 
             Assert.Empty(model.Errors);
             Assert.Empty(generate.Errors);
-            Assert.Equal(0.5f, model.GetValue<float>("--voxel-size"));
-            Assert.Equal(0.5f, generate.GetValue<float>("--voxel-size"));
+            Assert.Equal(0.5, model.GetValue<double>("--voxel-size"));
+            Assert.Equal(0.5, generate.GetValue<double>("--voxel-size"));
         }
         finally
         {

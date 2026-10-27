@@ -1,6 +1,8 @@
 using System.CommandLine;
 using System.Globalization;
 using Nfty.Core.Formats;
+using Nfty.Core.Imaging;
+using Nfty.Core.Output;
 using Nfty.Core.Publish;
 using Nfty.Core.Stats;
 
@@ -49,6 +51,35 @@ public static partial class CommandFactory
             Description = "Leave the nfty metadata out. This is the file that records HOW each asset "
                 + "came out the way it did.",
         };
+        var models = new Option<bool>("--models")
+        {
+            Description = "Include the 3D models. Refused on a Set that was cooked without --models.",
+        };
+        var noModels = new Option<bool>("--no-models") { Description = "Leave the 3D models out." };
+        var sheet = new Option<bool>("--sheet")
+        {
+            Description = "Also stitch every asset into one spritesheet.png, in the Set's own numbering, "
+                + "carrying its grid inside the file.",
+        };
+        var sheetCols = new Option<int>("--sheet-cols")
+        {
+            Description = "Columns of the spritesheet. Needs --sheet. Rows follow unless --sheet-rows says.",
+        };
+        var sheetRows = new Option<int>("--sheet-rows")
+        {
+            Description = "Rows of the spritesheet. Needs --sheet.",
+        };
+        var watermark = new Option<bool>("--watermark")
+        {
+            Description = "Stamp each exported image with its set number (a debug mark). The cooked "
+                + "Set is never touched, and models never carry it.",
+        };
+        var watermarkCorner = new Option<string?>("--watermark-corner")
+        {
+            Description = "Which corner the number goes in: top-left, top-right, bottom-left or "
+                + "bottom-right (the default). Needs --watermark.",
+        };
+        watermarkCorner.AcceptOnlyFromAmong("top-left", "top-right", "bottom-left", "bottom-right");
         var book = new Option<string?>("--book")
         {
             Description = "Ship this .cbk alongside the Set. Whoever opens the export can then "
@@ -75,7 +106,25 @@ public static partial class CommandFactory
             + "working copy and holds everything; an export is addressed to somebody — a "
             + "marketplace, a buyer, a collaborator, a reviewer — and each of those wants a "
             + "different subset.")
-        { path, outDir, preset, images, noImages, openSea, noOpenSea, nfty, noNfty, book, folder, pack, seal, note, key };
+        { path, outDir, preset, images, noImages, openSea, noOpenSea, nfty, noNfty, models, noModels,
+          sheet, sheetCols, sheetRows, watermark, watermarkCorner, book, folder, pack, seal, note, key };
+
+        // Dependent options are REJECTED without what they depend on, never ignored: a --sheet-cols
+        // typed without --sheet would silently make no sheet. Counts below one cannot name a grid.
+        cmd.Validators.Add(result =>
+        {
+            bool Given(Option option) => result.GetResult(option) is { Implicit: false };
+            if (!result.GetValue(sheet))
+                foreach (var (option, name) in new (Option, string)[] { (sheetCols, "--sheet-cols"), (sheetRows, "--sheet-rows") })
+                    if (Given(option)) result.AddError($"{name} sizes the spritesheet; it needs --sheet.");
+            foreach (var (option, name) in new (Option<int>, string)[] { (sheetCols, "--sheet-cols"), (sheetRows, "--sheet-rows") })
+                if (Given(option) && result.GetValue(option) < 1)
+                    result.AddError($"{name} must be at least 1.");
+            if (!result.GetValue(watermark) && Given(watermarkCorner))
+                result.AddError("--watermark-corner places the number; it needs --watermark.");
+            if (result.GetValue(models) && result.GetValue(noModels))
+                result.AddError("--models and --no-models ask for different things.");
+        });
 
         cmd.SetAction(parse =>
         {
@@ -96,6 +145,21 @@ public static partial class CommandFactory
             if (parse.GetValue(noOpenSea)) options = options with { OpenSeaMetadata = false };
             if (parse.GetValue(nfty)) options = options with { NftyMetadata = true };
             if (parse.GetValue(noNfty)) options = options with { NftyMetadata = false };
+            if (parse.GetValue(models)) options = options with { Models = true };
+            if (parse.GetValue(noModels)) options = options with { Models = false };
+            if (parse.GetValue(sheet))
+                options = options with
+                {
+                    SpriteSheet = true,
+                    SpriteSheetColumns = parse.GetResult(sheetCols) is { Implicit: false } ? parse.GetValue(sheetCols) : null,
+                    SpriteSheetRows = parse.GetResult(sheetRows) is { Implicit: false } ? parse.GetValue(sheetRows) : null,
+                };
+            if (parse.GetValue(watermark))
+                options = options with
+                {
+                    NumberWatermark = true,
+                    WatermarkCorner = parse.GetValue(watermarkCorner) is { } corner ? CornerOf(corner) : StampCorner.BottomRight,
+                };
             if (parse.GetValue(folder)) options = options with { Shape = ExportShape.Folder };
             if (parse.GetValue(pack)) options = options with { Shape = ExportShape.Archive };
             if (parse.GetValue(seal)) options = options with { Sealed = true };
@@ -104,6 +168,20 @@ public static partial class CommandFactory
             string? bookPath = parse.GetValue(book);
             if (bookPath is { Length: > 0 }) options = options with { IncludeCookBook = true };
             else if (options.IncludeCookBook) bookPath = null;   // Core reports what is missing
+
+            // What the Set itself says, asked once: whether it has models to include, and which book
+            // made it. Planned with the default options, so nothing here depends on the flags.
+            if (parse.GetValue(models) || bookPath is { Length: > 0 })
+            {
+                var probe = SetExporter.Plan(parse.GetValue(path)!, new ExportOptions());
+                if (parse.GetValue(models) && !probe.SetHasModels)
+                    throw new InvalidOperationException("This Set has no 3D models; it was cooked without --models.");
+
+                // A warning, never a refusal - the rule `extend` keeps about the same comparison.
+                if (bookPath is { Length: > 0 }
+                    && SetProvenance.Warning(probe.RecordedCookBookSha256, CookBookArchive.HashOf(bookPath)) is { } warning)
+                    Console.Error.WriteLine(warning);
+            }
 
             string? passphrase = options.Sealed
                 ? Passphrase.Read(parse.GetValue(key), "Passphrase to seal with", confirm: true)
@@ -130,6 +208,15 @@ public static partial class CommandFactory
             + "--passphrase: an argument is visible to every process on the machine, lands in your "
             + "shell history, and is captured verbatim by CI logs. Omit it and nfty asks at the "
             + "terminal, echoing nothing.",
+    };
+
+    private static StampCorner CornerOf(string slug) => slug switch
+    {
+        "top-left" => StampCorner.TopLeft,
+        "top-right" => StampCorner.TopRight,
+        "bottom-left" => StampCorner.BottomLeft,
+        "bottom-right" => StampCorner.BottomRight,
+        _ => throw new ArgumentOutOfRangeException(nameof(slug), slug, "Unknown corner."),
     };
 
     private static string Slug(ExportPreset preset) => preset.ToString().ToLowerInvariant();

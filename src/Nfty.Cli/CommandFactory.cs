@@ -120,6 +120,7 @@ public static partial class CommandFactory
         root.Subcommands.Add(Menu());
         root.Subcommands.Add(Serve());
         root.Subcommands.Add(Export());
+        root.Subcommands.Add(SheetGroup());
         root.Subcommands.Add(NewGroup());
         root.Subcommands.Add(AddGroup());
         root.Subcommands.Add(MoveGroup());
@@ -903,7 +904,7 @@ public static partial class CommandFactory
             SetModeler? modeler = parse.GetValue(models)
                 ? new SetModeler(book, new RiseOptions
                 {
-                    VoxelSize = parse.GetValue(voxelSize),
+                    VoxelSize = (float)parse.GetValue(voxelSize),
                     Pivot = ModelTokens.PivotOf(parse.GetValue(pivot)!),
                     Format = ModelTokens.FormatOf(parse.GetValue(modelFormat)!),
                 })

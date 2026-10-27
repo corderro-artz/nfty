@@ -139,6 +139,12 @@ public partial class CookDialogViewModel : ViewModelBase
     /// <summary>World units per voxel.</summary>
     [ObservableProperty] private double _voxelSize = 1;
 
+    /// <summary>The smallest voxel size: <see cref="Nfty.Core.Publish.ModelVoxelSize.Min"/>, as the spinner takes it.</summary>
+    public decimal VoxelSizeMin => (decimal)Nfty.Core.Publish.ModelVoxelSize.Min;
+
+    /// <summary>The largest voxel size: <see cref="Nfty.Core.Publish.ModelVoxelSize.Max"/>, as the spinner takes it.</summary>
+    public decimal VoxelSizeMax => (decimal)Nfty.Core.Publish.ModelVoxelSize.Max;
+
     /// <summary>Every format, with the words the picker shows.</summary>
     public IReadOnlyList<ModelFormatChoice> FormatChoices { get; } =
     [

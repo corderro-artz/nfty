@@ -3,6 +3,7 @@ using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Rise;
+using Nfty.Core.Publish;
 using Nfty.Model;
 
 namespace Nfty.App.ViewModels;
@@ -36,8 +37,8 @@ public sealed partial class FormatCard : ObservableObject
 
 public sealed partial class RiseViewModel
 {
-    private const double VoxelSizeMin = 0.01;
-    private const double VoxelSizeMax = 1000;
+    private const double VoxelSizeMin = ModelVoxelSize.Min;
+    private const double VoxelSizeMax = ModelVoxelSize.Max;
 
     private bool _bulkChecking;
     private string _manifestSize = "";
@@ -137,7 +138,7 @@ public sealed partial class RiseViewModel
     partial void OnVoxelSizeChanged(double value)
     {
         double clean = double.IsFinite(value)
-            ? Math.Round(Math.Clamp(value, VoxelSizeMin, VoxelSizeMax), 2, MidpointRounding.AwayFromZero)
+            ? Math.Round(Math.Clamp(value, VoxelSizeMin, VoxelSizeMax), ModelVoxelSize.Decimals, MidpointRounding.AwayFromZero)
             : 1;
         if (clean != value) { VoxelSize = clean; return; }
         OnPropertyChanged(nameof(ModelDimensionsText));
