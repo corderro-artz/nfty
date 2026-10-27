@@ -162,7 +162,7 @@ public partial class ShellViewModel : ViewModelBase
     /// <returns>True when nothing is lost by closing, or the author chose to lose it.</returns>
     public async Task<bool> ConfirmCloseAsync()
     {
-        var holders = _nav.Pages.OfType<IUnsavedWork>().Where(p => p.HasUnsavedWork).ToList();
+        var holders = _nav.Pages.OfType<IUnsavedWork>().Where(p => p.HasUnsavedWork || p.IsBusy).ToList();
         if (holders.Count == 0) return true;
 
         // One slot for modals: a second card would replace the open one and orphan its answer.

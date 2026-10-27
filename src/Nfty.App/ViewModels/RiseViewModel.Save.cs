@@ -112,6 +112,9 @@ public sealed partial class RiseViewModel
     }
 
     /// <inheritdoc />
+    public bool IsBusy => IsSaving || IsExporting || IsVoxelBusy;
+
+    /// <inheritdoc />
     public async Task<bool> ConfirmLeaveAsync()
     {
         if (!CanLeave())

@@ -241,6 +241,130 @@ public class CloseGuardTests
         finally { vm.Dispose(); Cleanup(path, session); }
     }
 
+    /// <summary>An editor over a hooked session, dirty, with its save about to run.</summary>
+    private static (IngredientEditorViewModel Vm, HookedSession Hooked, string Path, CookBookSession Session)
+        DirtyEditorOnHook(FakeNav nav, IDialogService dialogs)
+    {
+        var (path, session, recipe, ing) = IngredientEditorSaveTests.OnDisk();
+        var hooked = new HookedSession(session);
+        var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
+            nav, hooked, dialogs, new FilePickerService());
+        vm.ActiveTool = EditorTool.Fill;
+        vm.BrushValue = 10;
+        vm.ApplyToolStroke(new[] { (0, 0) });
+        return (vm, hooked, path, session);
+    }
+
+    [AvaloniaFact]
+    public async Task Closing_during_an_editor_save_waits_for_it_before_asking()
+    {
+        var nav = new FakeNav();
+        var dialogs = new Scripted(LeaveChoice.Stay);      // a card shown here would fail the close
+        var (vm, hooked, path, session) = DirtyEditorOnHook(nav, dialogs);
+        try
+        {
+            nav.To(vm);
+            var shell = Shell(nav, dialogs);
+            var saving = vm.SaveCommand.ExecuteAsync(null);
+            Assert.False(saving.IsCompleted);
+
+            Task<bool>? closing = null;
+            int cards = -1; bool closingDone = true;
+            hooked.OnReplace = () => { cards = dialogs.Shown.Count; closingDone = closing!.IsCompleted; };
+            closing = shell.ConfirmCloseAsync();
+            Assert.Empty(dialogs.Shown);
+
+            await saving;
+            Assert.True(await closing);
+            Assert.Equal(0, cards);
+            Assert.False(closingDone);
+            Assert.Empty(dialogs.Shown);
+        }
+        finally { vm.Dispose(); Cleanup(path, session); }
+    }
+
+    [AvaloniaFact]
+    public async Task Discard_never_closes_the_window_in_the_middle_of_a_write()
+    {
+        var nav = new FakeNav();
+        var dialogs = new Scripted(LeaveChoice.Discard);
+        var (vm, hooked, path, session) = DirtyEditorOnHook(nav, dialogs);
+        try
+        {
+            nav.To(vm);
+            var shell = Shell(nav, dialogs);
+            var saving = vm.SaveCommand.ExecuteAsync(null);
+            Task<bool>? closing = null;
+            bool closedMidWrite = true;
+            hooked.OnReplace = () => closedMidWrite = closing!.IsCompleted;
+            closing = shell.ConfirmCloseAsync();
+
+            await saving;
+            await closing;
+            Assert.False(closedMidWrite);
+        }
+        finally { vm.Dispose(); Cleanup(path, session); }
+    }
+
+    [AvaloniaFact]
+    public async Task A_second_save_while_one_runs_joins_it_and_writes_once()
+    {
+        var nav = new FakeNav();
+        var (vm, hooked, path, session) = DirtyEditorOnHook(nav, new Scripted(LeaveChoice.Stay));
+        try
+        {
+            int writes = 0;
+            Task? second = null;
+            hooked.OnReplace = () =>
+            {
+                writes++;
+                // The save is provably mid-flight here: asking again must join it, not start another.
+                second = vm.SaveCommand.ExecuteAsync(null);
+            };
+            var first = vm.SaveCommand.ExecuteAsync(null);
+            Assert.False(first.IsCompleted);
+            var joined = vm.SaveCommand.ExecuteAsync(null);     // pressed again before the write lands
+
+            await Task.WhenAll(first, joined);
+            await second!;
+            Assert.Equal(1, writes);
+        }
+        finally { vm.Dispose(); Cleanup(path, session); }
+    }
+
+    [AvaloniaFact]
+    public async Task A_rise_export_in_progress_refuses_the_close_even_with_nothing_unsaved()
+    {
+        var nav = new FakeNav();
+        var status = new StatusService();
+        var dialogs = new Scripted(LeaveChoice.Discard);
+        var (s, path) = RiseFixtures.OnDisk(RiseFixtures.ChestBook());
+        var shell = Shell(nav, dialogs, status);
+        Task<bool>? attempt = null;
+        var picker = new ClosingPicker(() => attempt = shell.ConfirmCloseAsync());
+        using var rise = new RiseViewModel(RiseFixtures.Variant(s), new ImageBridge(), nav, dialogs, picker, status);
+        nav.To(rise);
+        try
+        {
+            Assert.False(rise.HasUnsavedWork);
+            await rise.ExportCommand.ExecuteAsync(null);
+
+            Assert.True(attempt!.IsCompleted);
+            Assert.False(await attempt);
+            Assert.Equal("Wait for the export to finish.", status.Last);
+            Assert.Empty(dialogs.Shown);
+        }
+        finally { s.Dispose(); try { Directory.Delete(Path.GetDirectoryName(path)!, true); } catch { } }
+    }
+
+    /// <summary>Runs a callback while the export's save dialog is open, which is while it is running.</summary>
+    private sealed class ClosingPicker(Action whileOpen) : IFilePickerService
+    {
+        public Task<string?> OpenFileAsync(string title, params string[] extensions) => throw new InvalidOperationException();
+        public Task<string?> SaveFileAsync(string title, string defaultExtension) { whileOpen(); return Task.FromResult<string?>(null); }
+        public Task<string?> PickFolderAsync(string title) { whileOpen(); return Task.FromResult<string?>(null); }
+    }
+
     [AvaloniaFact]
     public async Task BeginClose_remembers_the_check_it_started()
     {

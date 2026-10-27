@@ -1555,8 +1555,20 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
         for (int n = 2; ; n++) { var candidate = $"{basis} {n}"; if (!taken.Contains(candidate)) return candidate; }
     }
 
+    /// <summary>The save in flight, if any: what a second Save joins and what leaving waits for.</summary>
+    private Task? _saveRun;
+
+    /// <summary>Saves the layer. A save already running is joined, not duplicated: the generated
+    /// command's ExecuteAsync does not consult CanExecute, so two presses (or a close card's
+    /// "Save and leave" during a save) would otherwise write the same archive twice at once.</summary>
     [RelayCommand(CanExecute = nameof(CanSave))]
-    private async Task Save()
+    private Task Save()
+    {
+        if (_saveRun is { IsCompleted: false } running) return running;
+        return _saveRun = SaveCore();
+    }
+
+    private async Task SaveCore()
     {
         // Guarded by CanSave; belt-and-suspenders against a bypassed CanExecute (need a save target).
         if (_looseSavePath is null && _session.SourcePath is null) return;
@@ -1736,8 +1748,18 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
     public bool HasUnsavedWork => IsDirty;
 
     /// <inheritdoc />
+    public bool IsBusy => IsSaving;
+
+    /// <inheritdoc />
     public async Task<bool> ConfirmLeaveAsync()
     {
+        // A save that is running decides what is unsaved: asking now would offer to discard what is
+        // being written, and Discard would let the window close mid-write.
+        if (_saveRun is { IsCompleted: false } saving)
+        {
+            try { await saving; }
+            catch (Exception) { /* Save reports its own failure; the page then asks as usual */ }
+        }
         if (!IsDirty) return true;
         var choice = await _dialogs.ShowAsync<LeaveChoice>(new LeaveDialogViewModel(_dialogs,
             "Leave the editor?",
