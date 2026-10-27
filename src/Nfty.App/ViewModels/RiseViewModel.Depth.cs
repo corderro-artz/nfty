@@ -53,16 +53,20 @@ public sealed partial class RiseViewModel
     }
 
     /// <summary>Gives every solid pixel the fill depth, as one undo step.</summary>
-    [RelayCommand(CanExecute = nameof(IsPaintable))]
+    [RelayCommand(CanExecute = nameof(CanFillAll))]
     private void FillAll()
     {
-        if (!IsPaintable) return;      // RelayCommand.Execute does not consult CanExecute
+        if (!CanFillAll()) return;      // RelayCommand.Execute does not consult CanExecute
         CancelDepthPreview();
-        bool changed = Subject.History.Do(new DepthFillAll((byte)FillFront, (byte)FillBack), Surface);
+        // On a recipe this fills only the targeted variant's own map: the editor's surface IS that map.
+        bool changed = Editor.Do(new DepthFillAll((byte)FillFront, (byte)FillBack));
         if (!changed) return;
         RebuildMesh();
         AfterDepthEdit();
     }
+
+    // A recipe fills one layer: with none chosen there is nothing to fill yet.
+    private bool CanFillAll() => IsPaintable && !IsPicking;
 
     /// <summary>The fill button's label.</summary>
     public string FillAllLabel

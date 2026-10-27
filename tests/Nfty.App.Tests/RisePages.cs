@@ -128,6 +128,41 @@ internal static class RisePages
         return Vm(new RecipeRiseSource(book, book.Recipes.Single(r => r.Manifest.Id == "chest"), roll, new ImageBridge()));
     }
 
+    /// <summary>The demo's Chest recipe rolled on a page that WRITES THROUGH: the book's session and an open lock, so a
+    /// layer can be picked, painted and saved.</summary>
+    internal static RiseViewModel DemoWriteThroughVm(int roll = 1)
+    {
+        var (s, _) = DemoSession();
+        var book = s.Current!;
+        return Vm(new RecipeRiseSource(book, book.Recipes.Single(r => r.Manifest.Id == "chest"), roll,
+            new ImageBridge(), s, () => true));
+    }
+
+    /// <summary>Makes the nth (0-based, clamped) layer the roll holds the one being painted, the way a row click does.</summary>
+    internal static void TargetLayer(RiseViewModel vm, int nth)
+    {
+        var rows = vm.LayerRows.Where(r => r.IsPickable).ToList();
+        vm.TargetLayerCommand.Execute(rows[Math.Min(nth, rows.Count - 1)]);
+    }
+
+    /// <summary>Paints a fat brush stroke on the first pixel the targeted layer is solid at (centermost first).</summary>
+    internal static void PaintSolidPixel(RiseViewModel vm)
+    {
+        var s = vm.Surface;
+        (int x, int y)? best = null;
+        double bestD = double.MaxValue;
+        for (int y = 0; y < s.Height; y++)
+            for (int x = 0; x < s.Width; x++)
+            {
+                if (!vm.IsHittable(x, y)) continue;
+                double d = Math.Abs(x - s.Width / 2.0) + Math.Abs(y - s.Height / 2.0);
+                if (d < bestD) { bestD = d; best = (x, y); }
+            }
+        if (best is not { } p) throw new InvalidOperationException("The targeted layer has no solid pixel to paint.");
+        vm.BrushSize = 5;
+        vm.ApplyDepthStroke(new[] { p }, Nfty.Core.Editing.DepthSide.Front, lower: false);
+    }
+
     /// <summary>Sixty demo assets cooked beside their book, opened as a Set source.</summary>
     internal static (RiseViewModel Vm, IDisposable Owner) DemoSetVm()
     {

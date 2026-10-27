@@ -2023,6 +2023,11 @@
     <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
     <Setter Property="BoxShadow" Value="{DynamicResource AccentBarShadow}" />
   </Style>
+  <!-- The layers around the one the Rise page is painting: the same pictures, receded. Opacity is the
+       whole rule - they keep their pixels, so the eye can still line the edited layer up against them. -->
+  <Style Selector="Image.dimlayer">
+    <Setter Property="Opacity" Value="0.3" />
+  </Style>
   <!-- .vlock: the dashed "value comes from the grayscale map" notice -->
   <Style Selector="TextBlock.vlock">
     <Setter Property="FontSize" Value="10.5" />

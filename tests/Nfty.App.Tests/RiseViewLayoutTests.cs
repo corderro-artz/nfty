@@ -434,7 +434,7 @@ public class RiseViewLayoutTests
         Assert.Contains("seed 2", page.Vm.Facts);
         // And it is what the screen shows, not only what the view model says.
         Assert.Contains(page.View.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "seed 2");
-        Assert.Equal(2, page.View.GetVisualDescendants().OfType<Border>().Count(b => b.Classes.Contains("rrow")));
+        Assert.Equal(2, page.View.GetVisualDescendants().OfType<Button>().Count(b => b.DataContext is Nfty.App.Rise.RiseLayerRow));
     }
 
     // ------------------------------------------------------------------ fix round 1

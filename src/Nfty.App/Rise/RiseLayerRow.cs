@@ -60,7 +60,9 @@ public sealed partial class RiseLayerRow : ObservableObject, IDisposable
     public string KindMark { get; }
 
     /// <summary>The variant's own depth, worded like the item chip ("paper", "1 · 0", "varied").</summary>
-    public string DepthText { get; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Caption))]
+    private string _depthText = "";
 
     /// <summary>The layer's kind.</summary>
     public LayerKind Kind { get; }

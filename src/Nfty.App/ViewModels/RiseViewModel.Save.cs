@@ -8,7 +8,9 @@ namespace Nfty.App.ViewModels;
 
 public sealed partial class RiseViewModel
 {
-    private int DirtyCount => Items.Count(i => i.IsDirty);
+    /// <summary>How many variants (or pictures) have unsaved depth: the source's own count, since a recipe's
+    /// painting lives on its layers' variants and not on the item the canvas shows.</summary>
+    public int DirtyCount => Source.DirtyCount;
 
     /// <summary>Whether any variant's depth differs from what was last saved. Undoing back to the saved
     /// depth is clean: dirty is a comparison, not "history is not empty".</summary>
@@ -146,7 +148,7 @@ public sealed partial class RiseViewModel
     /// <summary>Raised with the book the session holds after a save, for the Explorer to refresh from.</summary>
     public event Action<LoadedCookBook>? Saved;
 
-    private void OnVariantSaved(LoadedCookBook book) => Saved?.Invoke(book);
+    private void OnSourceSaved(LoadedCookBook book) => Saved?.Invoke(book);
 
     /// <summary>Says the page's opening line. The shell calls this AFTER navigation, because it clears
     /// the status line on every page change.</summary>

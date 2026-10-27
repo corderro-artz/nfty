@@ -444,7 +444,9 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     {
         var r = _book.Recipes.FirstOrDefault(x => x.Manifest.Id == recipeId);
         if (r is null) return;
-        OpenRise(new Nfty.App.Rise.RecipeRiseSource(_book, r, seed, _bridge));
+        // The session and the lock make the page writable: depth is painted on the layers' own variants and saved
+        // into this book, behind the same edit lock a variant's Rise page answers to.
+        OpenRise(new Nfty.App.Rise.RecipeRiseSource(_book, r, seed, _bridge, _session, () => IsEditing));
     };
 
     /// <summary>The editor persisted an ingredient; the session now holds the spliced graph. Rebuild

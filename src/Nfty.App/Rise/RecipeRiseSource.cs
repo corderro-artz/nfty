@@ -56,6 +56,13 @@ public sealed class RecipeRiseSource : RiseSource
     private IDisposable? _retired;
     private Task? _inFlight;
     // ONE write at a time on this book: a second save joins, a reroll or retarget is refused, never queued.
+    //
+    // This flag is deliberately NOT shared with the Explorer's reorder flag. The Rise page is pushed over the
+    // Explorer (INavigationService.To), so while it is on screen no tree drag, Alt+Up chord or Add/Delete can be
+    // raised: the only other writers of the book are the ones already in flight when Rise opened, and those are
+    // met by the guards in SaveCoreAsync (the live book is re-read at save time and every touched variant's
+    // picture and depth must still be what the edit began from). Sharing a flag would also make a reorder that
+    // is still persisting refuse a save with no sentence to say why.
     private bool _writeBusy;
 
     /// <summary>Rolls the recipe once.</summary>
@@ -499,7 +506,10 @@ public sealed class RecipeRiseSource : RiseSource
                 continue;
             }
 
-            var own = new DepthSurface(ing.VariantImages[trait.VariantId], ing.Depths.GetValueOrDefault(trait.VariantId));
+            // A variant painted in an earlier roll keeps its edit: the chip shows what the layer holds NOW.
+            var own = _edits.TryGetValue((id, trait.VariantId), out var painted)
+                ? painted.Surface
+                : new DepthSurface(ing.VariantImages[trait.VariantId], ing.Depths.GetValueOrDefault(trait.VariantId));
             var thumb = layers.TryGetValue(id, out var pick) ? _bridge.ToBitmap(pick.Layer) : null;
             rows.Add(new RiseLayerRow(depth, ing.Manifest.Name, trait.VariantName, ing.Manifest.Kind,
                 RiseItem.ChipFor(own), isAbsent: false, thumbnail: thumb,
@@ -508,6 +518,18 @@ public sealed class RecipeRiseSource : RiseSource
     }
 
     // ---------------------------------------------------------------- recombine
+
+    /// <summary>Rewrites every present row's depth chip from the variant's CURRENT map (the painted surface when
+    /// there is one, else what the book stores). Rows are records of the roll; only this text moves.</summary>
+    private void RefreshRowDepth()
+    {
+        foreach (var row in _layers)
+        {
+            if (row.VariantId is not { } variantId) continue;
+            if (_edits.TryGetValue((row.IngredientId, variantId), out var edit))
+                row.DepthText = RiseItem.ChipFor(edit.Surface);
+        }
+    }
 
     /// <summary>Recombines the stack from every present layer's current map into the subject, in place.</summary>
     private void Recombine()
@@ -573,6 +595,11 @@ public sealed class RecipeRiseSource : RiseSource
 
     private DepthSurface SurfaceOf((string Ing, string Variant) key) => EditFor(key.Ing, key.Variant).Surface;
 
+    // Painting, undo and redo stay live WHILE A SAVE RUNS, on purpose: SaveCoreAsync takes each variant's map
+    // as a snapshot and marks THAT snapshot saved afterwards (edit.Baseline = what was written), so a stroke
+    // painted during the write is simply still dirty when the write ends. Only changing WHICH layers are
+    // present (reroll) or which variant is the target is refused, because those would swap the edits a
+    // running save is iterating.
     private sealed class RecipeDepthEditor(RecipeRiseSource source) : IDepthEditor
     {
         public DepthSurface Surface => source._target?.Surface
@@ -585,6 +612,7 @@ public sealed class RecipeRiseSource : RiseSource
             if (!source._history.Do((t.IngredientId, t.VariantId), cmd, t.Surface)) return false;
             source.LastUndoNote = null;
             source.Recombine();
+            source.RefreshRowDepth();
             return true;
         }
 
@@ -620,10 +648,13 @@ public sealed class RecipeRiseSource : RiseSource
             note = $"Changed {edit.IngredientName} / {edit.VariantName}, which this roll does not include. Reroll to see it.";
         }
         bool changedTarget = pick is not null && (_target is not { } t || t.IngredientId != key.Ing || t.VariantId != key.Variant);
-        if (changedTarget) SetTargetTo(pick!);   // raises Changed itself
+        // The note is assigned BEFORE anything is raised: a retarget raises Changed itself, and a handler
+        // reading LastUndoNote then would see the PREVIOUS undo's sentence under the new layer.
         bool changedNote = !string.Equals(note, LastUndoNote, StringComparison.Ordinal);
         LastUndoNote = note;
-        if (changedNote && !changedTarget) RaiseChanged();
+        RefreshRowDepth();
+        if (changedTarget) SetTargetTo(pick!);   // raises Changed, once
+        else if (changedNote) RaiseChanged();
     }
 
     // ---------------------------------------------------------------- save
@@ -668,12 +699,18 @@ public sealed class RecipeRiseSource : RiseSource
         // half-edited and the page unable to say which half.
         var gone = new List<string>();
         var stale = new List<string>();
+        var restamped = new List<string>();
         foreach (var ((ingId, variantId), edit) in dirty)
         {
             var live = recipe.Ingredients.FirstOrDefault(i => i.Manifest.Id == ingId);
             if (live is null || !live.Manifest.Variants.Any(v => v.Id == variantId)) gone.Add(edit.VariantName);
             else if (!live.VariantImages.TryGetValue(variantId, out var current) || !SamePixels(edit.Art, current))
                 stale.Add(edit.VariantName);
+            // The picture is the same, so the live map reads through the same surface rule the baseline did
+            // (depth under clear pixels dropped); a map that differs from the baseline was written by someone
+            // else since this edit began, and saving would overwrite it with a result of the OLD map.
+            else if (!new DepthSurface(current, live.Depths.GetValueOrDefault(variantId)).SameDepthAs(edit.Baseline))
+                restamped.Add(edit.VariantName);
         }
         if (gone.Count > 0)
             throw new InvalidOperationException(
@@ -681,6 +718,10 @@ public sealed class RecipeRiseSource : RiseSource
         if (stale.Count > 0)
             throw new InvalidOperationException(
                 $"The picture of {string.Join(", ", stale)} changed after Rise opened it; its depth was painted on the old picture and was not saved. Reopen Rise on the new picture.");
+
+        if (restamped.Count > 0)
+            throw new InvalidOperationException(
+                $"The depth of {string.Join(", ", restamped)} changed in the CookBook after Rise began painting it; saving would overwrite that change, so nothing was saved. Reopen Rise on the current depth.");
 
         // The snapshot is kept per variant: what is WRITTEN is what gets marked saved afterwards, so a stroke
         // painted while the write awaits the disk stays dirty.
@@ -710,6 +751,7 @@ public sealed class RecipeRiseSource : RiseSource
         foreach (var (edit, map) in written) edit.Baseline = map;
         _book = book3;
         _recipe = book3.Recipes.First(r => r.Manifest.Id == _recipe.Manifest.Id);
+        RefreshRowDepth();
         RaiseSaved(book3);
         RaiseChanged();
     }

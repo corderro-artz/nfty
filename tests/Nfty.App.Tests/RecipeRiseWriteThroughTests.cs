@@ -7,6 +7,8 @@ using Nfty.App.Rise;
 using Nfty.App.Services;
 using Nfty.Core.Editing;
 using Nfty.Core.Formats;
+using Nfty.Core.Generation;
+using Nfty.Core.Imaging;
 using Nfty.Core.Model;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -52,11 +54,11 @@ public class RecipeRiseWriteThroughTests
     }
 
     /// <summary>Oak (1 front, 9 back) everywhere under a gold strap (2 front, 0 back).</summary>
-    private static Rig Open(bool ghost = false, bool deep = true, bool session = true)
+    private static Rig Open(bool ghost = false, bool deep = true, bool session = true, bool pine = false)
     {
         var book = RiseFixtures.ChestBook(
             oakDepth: deep ? RiseFixtures.Flat(1, 9) : null, goldDepth: deep ? RiseFixtures.Flat(2, 0) : null,
-            withGhost: ghost);
+            withGhost: ghost, withPine: pine);
         var seed = RiseFixtures.OakSeed(book, book.Recipes[0]);
         var (inner, path) = RiseFixtures.OnDisk(book);
         var hooked = new HookedSession(inner);
@@ -399,5 +401,108 @@ public class RecipeRiseWriteThroughTests
         Assert.True(rig.Src.SetTarget(null));
         Assert.Null(rig.Src.Target);
         Assert.Null(rig.Src.AboveArt);
+    }
+
+    [AvaloniaFact]
+    public void An_undo_that_retargets_never_raises_with_the_previous_undos_note()
+    {
+        using var rig = Open(pine: true);
+        rig.Src.TryPick(3, 3, DepthSide.Front);
+        rig.Editor.Do(Step(DepthSide.Front, +1, (3, 3)));                          // gold (on every roll)
+        rig.Src.TryPick(2, 2, DepthSide.Back);
+        rig.Editor.Do(Step(DepthSide.Back, +1, (2, 2)));                           // oak
+        for (int i = 0; i < 60 && rig.Src.Layers[0].VariantName != "Pine"; i++) rig.Src.Reroll();
+        Assert.Equal("Pine", rig.Src.Layers[0].VariantName);
+        Assert.Null(rig.Src.Target);
+        var seen = new System.Collections.Generic.List<string?>();
+        rig.Src.Changed += () => seen.Add(rig.Src.LastUndoNote);
+
+        rig.Editor.Undo();                                                          // the oak: not in this roll
+        Assert.NotNull(rig.Src.LastUndoNote);
+        seen.Clear();
+
+        rig.Editor.Undo();                                                          // the gold: in this roll, a different target
+
+        Assert.Equal("Lock / Gold", rig.Src.Target!.Name);
+        Assert.Null(rig.Src.LastUndoNote);
+        Assert.Equal(new string?[] { null }, seen);                                 // one raise, and it never showed the old sentence
+    }
+
+    [AvaloniaFact]
+    public async Task A_save_refuses_when_a_painted_variants_depth_changed_in_the_book()
+    {
+        using var rig = Open();
+        rig.Src.TryPick(3, 3, DepthSide.Front);
+        rig.Editor.Do(Step(DepthSide.Front, +1, (3, 3)));
+        // Another route stamped a different depth on the same variant after this edit began from the old one.
+        var book = rig.Session.Current!;
+        var gold = Ing(book, "lock");
+        var restamped = new LoadedIngredient
+        {
+            Manifest = gold.Manifest,
+            VariantImages = gold.VariantImages,
+            Depths = new System.Collections.Generic.Dictionary<string, DepthMap> { ["gold"] = RiseFixtures.Flat(7, 7) },
+        };
+        rig.Session.Replace(CookBookEdits.UpsertIngredient(book, "chest", restamped));
+        var bytes = File.ReadAllBytes(rig.Path);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Src.SaveAsync());
+
+        Assert.Contains("Gold", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("depth", ex.Message, StringComparison.Ordinal);
+        Assert.Equal(bytes, File.ReadAllBytes(rig.Path));
+        Assert.Equal(0, rig.Saved);
+        Assert.Equal(1, rig.Src.DirtyCount);
+    }
+
+    private static void SamePixelsOrFail(Image<Rgba32> expected, Image<Rgba32>? actual, string what)
+    {
+        Assert.NotNull(actual);
+        Assert.Equal((expected.Width, expected.Height), (actual!.Width, actual.Height));
+        for (int y = 0; y < expected.Height; y++)
+            for (int x = 0; x < expected.Width; x++)
+                Assert.True(expected[x, y] == actual[x, y], $"{what}: pixel ({x},{y}) is {actual[x, y]}, a PreviewLayer render makes {expected[x, y]}");
+    }
+
+    [AvaloniaFact]
+    public void The_dim_art_is_the_picture_a_preview_layer_render_makes_of_the_same_layers()
+    {
+        // A DYNAMIC body under a Custom strap: the colorized layer is where a second rule would show.
+        var book = RiseFixtures.DynamicBodyUnderStrap();
+        var (inner, _) = RiseFixtures.OnDisk(book);
+        using var owner = inner;
+        var live = inner.Current!;
+        var recipe = live.Recipes[0];
+        const int seed = 5;
+        using var src = new RecipeRiseSource(live, recipe, seed, new ImageBridge(), inner, () => true);
+
+        using var asset = Generator.GenerateStreaming(live,
+            new GenerateOptions(1, seed.ToString(System.Globalization.CultureInfo.InvariantCulture), "chest",
+                EnforceUniqueDna: false)).First();
+        var roll = asset.ColorRolls.Single(r => r.LayerId == "body");
+        var body = new PreviewLayer(recipe.Ingredients.Single(i => i.Manifest.Id == "body"), "oak", null,
+            new RolledColor(roll.H!.Value, roll.S!.Value));
+        var strap = new PreviewLayer(recipe.Ingredients.Single(i => i.Manifest.Id == "lock"), "gold", null);
+        var canvas = live.Manifest.Canvas;
+
+        src.SetTarget("lock");
+        using (var below = StackPreview.Render(canvas, new[] { body }))
+        using (var target = StackPreview.Render(canvas, new[] { strap }))
+        using (var above = StackPreview.Render(canvas, Array.Empty<PreviewLayer>()))
+        {
+            SamePixelsOrFail(below, src.BelowArt, "below the strap");
+            SamePixelsOrFail(target, src.TargetArt, "the strap");
+            SamePixelsOrFail(above, src.AboveArt, "above the strap");
+        }
+
+        src.SetTarget("body");
+        using (var below = StackPreview.Render(canvas, Array.Empty<PreviewLayer>()))
+        using (var target = StackPreview.Render(canvas, new[] { body }))
+        using (var above = StackPreview.Render(canvas, new[] { strap }))
+        {
+            SamePixelsOrFail(below, src.BelowArt, "below the body");
+            SamePixelsOrFail(target, src.TargetArt, "the body");
+            SamePixelsOrFail(above, src.AboveArt, "above the body");
+        }
     }
 }

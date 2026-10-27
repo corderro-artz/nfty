@@ -16,7 +16,13 @@
              Focusable="True" IsTabStop="False">
   <!-- Only a key routed through this control reaches these, hence the focus-on-attach in code-behind. -->
   <UserControl.KeyBindings>
-    <KeyBinding Gesture="Escape" Command="{Binding ClearSelectionCommand}" />
+    <KeyBinding Gesture="Escape" Command="{Binding EscapeCommand}" />
+    <KeyBinding Gesture="PageUp" Command="{Binding StepTargetCommand}">
+      <KeyBinding.CommandParameter><x:Int32>1</x:Int32></KeyBinding.CommandParameter>
+    </KeyBinding>
+    <KeyBinding Gesture="PageDown" Command="{Binding StepTargetCommand}">
+      <KeyBinding.CommandParameter><x:Int32>-1</x:Int32></KeyBinding.CommandParameter>
+    </KeyBinding>
     <KeyBinding Gesture="Ctrl+Z" Command="{Binding UndoCommand}" />
     <KeyBinding Gesture="Ctrl+Y" Command="{Binding RedoCommand}" />
     <KeyBinding Gesture="Ctrl+Shift+Z" Command="{Binding RedoCommand}" />
@@ -154,15 +160,19 @@
               </ListBox.ItemTemplate>
             </ListBox>
 
-            <!-- RECIPE: the layers of one roll, bottom first. Inert - they are read from the roll,
-                 and the one thing on the page is the combined picture. -->
+            <!-- RECIPE: the layers of one roll, bottom first. On a page that writes through, a row is
+                 the way to choose the layer being painted (click, or Enter on it); the chosen row wears
+                 the variant card's selected mark. A row that cannot be chosen (left out of this roll, or
+                 a read-only page) takes no pointer and no focus, rather than being disabled: a dimmed
+                 row would be a second reason to read it as broken. -->
             <ScrollViewer IsVisible="{Binding IsRecipeRail}" HorizontalScrollBarVisibility="Disabled">
               <ItemsControl Margin="12,12,12,5" ItemsSource="{Binding LayerRows}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="rise:RiseLayerRow">
-                    <Border Classes="rrow" Margin="0,0,0,7" Padding="8,7"
-                            Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource LineBrush}"
-                            BorderThickness="1" CornerRadius="{DynamicResource RadiusMd}">
+                    <Button Classes="vcard" Classes.sel="{Binding IsTarget}" Margin="0,0,0,7" Padding="8,7"
+                            IsHitTestVisible="{Binding IsPickable}" Focusable="{Binding IsPickable}"
+                            Command="{Binding $parent[ItemsControl].((vm:RiseViewModel)DataContext).TargetLayerCommand}"
+                            CommandParameter="{Binding}">
                       <Grid ColumnDefinitions="18,32,*,13" ColumnSpacing="8">
                         <TextBlock Grid.Column="0" Classes="dpt" Width="18" Text="{Binding Depth}" />
                         <Border Grid.Column="1" Classes="rthumb" Width="32" Height="32">
@@ -176,7 +186,7 @@
                                    Classes.kdyn="{Binding IsDynamic}" Classes.kstat="{Binding IsStatic}"
                                    Classes.kcust="{Binding IsCustom}" />
                       </Grid>
-                    </Border>
+                    </Button>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
@@ -326,7 +336,13 @@
               <!-- The pointer talks to this untransformed panel, never to the image (which carries the
                    zoom as a render transform). Background="Transparent" so it hit-tests at all. -->
               <Panel x:Name="CanvasSurface" Background="Transparent">
+                <!-- The layers around the one being painted, dimmed: under it, then it, then over it.
+                     All three carry the same zoom and pan (RiseView.axaml.cs). Absent without a target. -->
+                <Image x:Name="BelowImage" Classes="dimlayer" Source="{Binding BelowCanvas}" Stretch="Uniform"
+                       IsVisible="{Binding ShowPaintCanvas}" />
                 <Image x:Name="CanvasImage" Source="{Binding Canvas}" Stretch="Uniform"
+                       IsVisible="{Binding ShowPaintCanvas}" />
+                <Image x:Name="AboveImage" Classes="dimlayer" Source="{Binding AboveCanvas}" Stretch="Uniform"
                        IsVisible="{Binding ShowPaintCanvas}" />
                 <!-- The thickness of each solid pixel, once a cell is big enough to hold a number. -->
                 <ctl:DepthLabelLayer x:Name="DepthLabels" IsHitTestVisible="False"
@@ -361,6 +377,14 @@
                 <Path Classes="ico xs" Data="{StaticResource IconLock}" />
                 <TextBlock Classes="ck" Text="{Binding ReadOnlyPill}" />
               </StackPanel>
+            </Border>
+
+            <!-- WHICH LAYER, AND HOW FAR IT REACHES. Where the read-only pill sits: a page is one or the
+                 other (the pill is for pages that cannot be painted), so they never meet. Text trims
+                 rather than the chip growing past a narrow pane. -->
+            <Border x:Name="TargetChip" Classes="idchip" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="12,12,12,0"
+                    IsVisible="{Binding ShowTargetHeader}" ToolTip.Tip="{Binding TargetHeaderTip}">
+              <TextBlock Classes="ck" Text="{Binding TargetHeader}" TextTrimming="CharacterEllipsis" />
             </Border>
 
             <!-- The editor's own grid chip, verbatim. -->

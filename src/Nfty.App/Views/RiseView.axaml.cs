@@ -40,6 +40,8 @@ namespace Nfty.App.Views;
 public partial class RiseView : UserControl
 {
     private Image _img = null!;
+    private Image _below = null!;
+    private Image _above = null!;
     private Panel _surface = null!;
     private Canvas _overlay = null!;
     private Panel _backdrop = null!;
@@ -50,6 +52,7 @@ public partial class RiseView : UserControl
     private Border _host = null!;
     private Border _tile = null!;
     private Border _gridChip = null!;
+    private Border _targetChip = null!;
     private ScrollViewer _railScroll = null!;
     private Grid _railGrid = null!;
     private StackPanel _railBody = null!;
@@ -76,6 +79,8 @@ public partial class RiseView : UserControl
         InitializeComponent();
 
         _img = this.FindControl<Image>("CanvasImage")!;
+        _below = this.FindControl<Image>("BelowImage")!;
+        _above = this.FindControl<Image>("AboveImage")!;
         _surface = this.FindControl<Panel>("CanvasSurface")!;
         _overlay = this.FindControl<Canvas>("CanvasOverlay")!;
         _backdrop = this.FindControl<Panel>("CanvasBackdrop")!;
@@ -86,6 +91,7 @@ public partial class RiseView : UserControl
         _host = this.FindControl<Border>("CanvasHost")!;
         _tile = this.FindControl<Border>("ModelTile")!;
         _gridChip = this.FindControl<Border>("GridChip")!;
+        _targetChip = this.FindControl<Border>("TargetChip")!;
         _railScroll = this.FindControl<ScrollViewer>("RailScroll")!;
         _railGrid = this.FindControl<Grid>("RailGrid")!;
         _railBody = this.FindControl<StackPanel>("RailBody")!;
@@ -105,6 +111,7 @@ public partial class RiseView : UserControl
         // The things the canvas must keep clear of: the tile (which changes size) and the grid chip.
         _tile.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ => FitHost()));
         _gridChip.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ => FitHost()));
+        _targetChip.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ => FitHost()));
         LayoutUpdated += (_, _) => SnapRailFold();
         // The bitmap is what the geometry is mapped against: a new picture is a new frame. Watched on
         // the Image itself, so the frame is never read against a bitmap the binding has not delivered.
@@ -233,18 +240,22 @@ public partial class RiseView : UserControl
         double zoom = _vm?.Zoom ?? 1;
         double px = _vm?.PanX ?? 0, py = _vm?.PanY ?? 0;
 
-        if (_img.RenderTransform is TransformGroup { Children: [ScaleTransform s, TranslateTransform t] })
+        // The dimmed layers around the target move with it: one transform, three images.
+        foreach (var image in new[] { _below, _img, _above })
         {
-            s.ScaleX = s.ScaleY = zoom;
-            t.X = px; t.Y = py;
-            return;
-        }
+            if (image.RenderTransform is TransformGroup { Children: [ScaleTransform s, TranslateTransform t] })
+            {
+                s.ScaleX = s.ScaleY = zoom;
+                t.X = px; t.Y = py;
+                continue;
+            }
 
-        _img.RenderTransformOrigin = RelativePoint.Center;
-        _img.RenderTransform = new TransformGroup
-        {
-            Children = { new ScaleTransform(zoom, zoom), new TranslateTransform(px, py) },
-        };
+            image.RenderTransformOrigin = RelativePoint.Center;
+            image.RenderTransform = new TransformGroup
+            {
+                Children = { new ScaleTransform(zoom, zoom), new TranslateTransform(px, py) },
+            };
+        }
     }
 
     /// <summary>Keeps the art overlapping the tile it is drawn in.</summary>
@@ -331,12 +342,19 @@ public partial class RiseView : UserControl
         var avoid = new List<Rect>();
         if (_tile.Bounds.Width > 0) avoid.Add(_tile.Bounds.Inflate(HostGap));
         if (_gridChip.Bounds.Width > 0) avoid.Add(_gridChip.Bounds.Inflate(HostGap));
+        // The layer header sits over the top of the pane on a write-through page; the art starts below it.
+        double top = 8;
+        if (_targetChip.IsVisible && _targetChip.Bounds.Width > 0)
+        {
+            avoid.Add(_targetChip.Bounds.Inflate(HostGap));
+            top = _targetChip.Bounds.Bottom + HostGap;
+        }
 
         const double edge = 8;
         for (double side = HostSide; side >= HostMinSide; side -= 8)
         {
             double cx = (w - side) / 2, cy = (h - side) / 2;
-            foreach (var (x, y) in new[] { (cx, cy), (cx, edge), (edge, edge), (edge, cy) })
+            foreach (var (x, y) in new[] { (cx, cy), (cx, top), (edge, top), (edge, cy) })
             {
                 if (x < 0 || y < 0 || x + side > w || y + side > h) continue;
                 var r = new Rect(x, y, side, side);

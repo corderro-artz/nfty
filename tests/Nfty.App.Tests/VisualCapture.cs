@@ -1584,6 +1584,15 @@ public class VisualCapture
                     Dispatcher.UIThread.RunJobs();
                 }),
             ("recipe", () => (RisePages.RecipeVm(), null), _ => { }),
+            // The recipe page that writes through (step 10): before a layer is chosen, with one chosen, and
+            // with a stroke painted on it (unsaved, the row's chip moved, the footer saying so).
+            ("wt-picking", () => (RisePages.DemoWriteThroughVm(), null), _ => { }),
+            ("wt-targeted", () => (RisePages.DemoWriteThroughVm(), null), p => RisePages.TargetLayer(p.Vm, 2)),
+            ("wt-painted", () => (RisePages.DemoWriteThroughVm(), null), p =>
+            {
+                RisePages.TargetLayer(p.Vm, 2);
+                RisePages.PaintSolidPixel(p.Vm);
+            }),
             // The shipped Chest Demo, with the depth it was authored with: a body variant, a rolled
             // recipe and a cooked Set, so the frames judge the demo and not a test fixture.
             ("demo-variant", () => (RisePages.DemoVariantVm(), null), _ => { }),
@@ -1665,6 +1674,9 @@ public class VisualCapture
             string theme = variant.Key.ToString()!.ToLowerInvariant();
             foreach (var (name, build, arrange) in states)
             {
+                // NFTY_CAPTURE_ONLY=wt- re-shoots one family of states instead of the whole page's gallery.
+                if (Environment.GetEnvironmentVariable("NFTY_CAPTURE_ONLY") is { Length: > 0 } only
+                    && !name.StartsWith(only, StringComparison.Ordinal)) continue;
                 foreach (var (suffix, w, h) in new[]
                 {
                     ("", 1180d, 720d),
@@ -1809,6 +1821,25 @@ public class VisualCapture
                 Need(vm.IsRecipeRail && vm.LayerRows.Count == 2, "the layer rail is not showing the roll");
                 Need(Shown(t => t.Text == "combined depth · read-only"), "the read-only pill is not on screen");
                 Need(view.GetVisualDescendants().OfType<Button>().Any(b => b.Classes.Contains("sampleroll") && b.IsEffectivelyVisible), "the die is missing");
+                break;
+            case "wt-picking":
+                Need(vm.IsPicking && Shown(t => t.Text == "click a pixel to choose its layer"), "the header does not ask for a pick");
+                Need(vm.BelowCanvas is null && vm.AboveCanvas is null, "layers are dimmed before one was chosen");
+                break;
+            case "wt-targeted" or "wt-painted":
+                Need(!vm.IsPicking && Shown(t => t.Text is { } s && s.StartsWith("editing ", StringComparison.Ordinal)
+                    && s.Contains(" · in ", StringComparison.Ordinal)), "the header does not name the target and its reach");
+                Need(vm.BelowCanvas is not null && vm.AboveCanvas is not null, "the layers around the target are not there to dim");
+                Need(view.GetVisualDescendants().OfType<Avalonia.Controls.Image>().Count(i => i.Classes.Contains("dimlayer") && i.IsEffectivelyVisible && i.Source is not null) == 2,
+                    "the dimmed layers are not both on the canvas");
+                Need(vm.LayerRows.Count(r => r.IsTarget) == 1, "no single row wears the target mark");
+                Need(model.RepaintCount > 0 && vm.Mesh is not null, "the 3D tile never painted the character");
+                if (state == "wt-painted")
+                {
+                    Need(vm.HasUnsavedDepth && Shown(t => t.Text is { } s && s.StartsWith("unsaved depth on 1 variant", StringComparison.Ordinal)),
+                        "the footer does not say there is unsaved depth");
+                    Need(vm.LayerRows.Any(r => r.IsTarget && r.DepthText == "varied"), "the target's row chip did not follow the stroke");
+                }
                 break;
             case "picture":
                 Need(vm.Source.Kind == Nfty.App.Rise.RiseSourceKind.Picture && vm.Items.Count == 1, "the source is not one loose picture");

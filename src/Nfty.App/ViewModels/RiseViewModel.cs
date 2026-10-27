@@ -74,7 +74,7 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
             : new ModelPreviewViewModel(-Vector3.One, Vector3.One);
         _brushSize = 1;
         source.Changed += OnSourceChanged;
-        if (source is VariantRiseSource variant) variant.Saved += OnVariantSaved;
+        source.Saved += OnSourceSaved;
         InitExport();
         InitGrid();
     }
@@ -112,11 +112,52 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
     /// <summary>The picture on the canvas, read from the item every time (see the class remarks).</summary>
     public RiseSubject Subject => SelectedItem.Subject ?? Source.Open(SelectedItem);
 
-    /// <summary>The depth being painted; what the label overlay reads.</summary>
-    public DepthSurface Surface => Subject.Depth;
+    /// <summary>What every stroke, undo and redo goes through. For a picture it is the subject's own surface and
+    /// history; for a recipe it is the one layer being targeted. Read from the source each time: it is the same
+    /// instance until the subject changes.</summary>
+    public IDepthEditor Editor => Source.EditorFor(Subject);
 
-    /// <summary>The art as a bitmap; rebuilt when the picture changes, never per stroke.</summary>
+    /// <summary>The depth being painted; what the label overlay reads. A recipe with a target shows that
+    /// layer's own map, not the stack's union.</summary>
+    public DepthSurface Surface => Editor.Surface;
+
+    /// <summary>The art as a bitmap; rebuilt when the picture changes, never per stroke. While a recipe layer is
+    /// targeted it is that layer's own picture, with the layers around it in <see cref="BelowCanvas"/> and
+    /// <see cref="AboveCanvas"/>; otherwise it is the whole composite.</summary>
     [ObservableProperty] private Bitmap _canvas;
+
+    /// <summary>What paints under the targeted layer, drawn dimmed behind <see cref="Canvas"/>; null without a target.</summary>
+    [ObservableProperty] private Bitmap? _belowCanvas;
+
+    /// <summary>What paints over the targeted layer, drawn dimmed in front of <see cref="Canvas"/>; null without a target.</summary>
+    [ObservableProperty] private Bitmap? _aboveCanvas;
+
+    // The target picture the three bitmaps were made from (null: the composite). A new instance means the
+    // target, or the roll, changed and the bitmaps are rebuilt.
+    private Image<Rgba32>? _artFrom;
+
+    private void RebuildArt()
+    {
+        var oldCanvas = Canvas;
+        var oldBelow = BelowCanvas;
+        var oldAbove = AboveCanvas;
+        if (Source is RecipeRiseSource { TargetArt: { } target } recipe)
+        {
+            Canvas = _bridge.ToBitmap(target);
+            BelowCanvas = recipe.BelowArt is { } b ? _bridge.ToBitmap(b) : null;
+            AboveCanvas = recipe.AboveArt is { } a ? _bridge.ToBitmap(a) : null;
+            _artFrom = target;
+        }
+        else
+        {
+            Canvas = _bridge.ToBitmap(Subject.Art);
+            BelowCanvas = AboveCanvas = null;
+            _artFrom = null;
+        }
+        oldCanvas.Dispose();
+        oldBelow?.Dispose();
+        oldAbove?.Dispose();
+    }
 
     /// <summary>The model the art makes with its depth; null when it cannot rise.</summary>
     [ObservableProperty] private Mesh? _mesh;
@@ -213,8 +254,6 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
     /// <summary>Whether a region is marked.</summary>
     public bool HasSelection => Selection is not null;
 
-    /// <summary>Drops the marquee.</summary>
-    [RelayCommand] private void ClearSelection() => Selection = null;
 
     /// <summary>Marks the whole picture, arming Select first (leaving Select drops the mark).</summary>
     [RelayCommand]
@@ -242,6 +281,8 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
         if (points.Count == 0 || !IsPaintable) return;
         if (ActiveTool == EditorTool.Fill) return;                       // commit-only, as the editor's
         if (ActiveTool == EditorTool.Select && !SelectionContains(points[0].x, points[0].y)) return;   // marking
+        // A press on a dimmed pixel (or, while picking, anywhere) starts nothing: it is the pick's, not a stroke's.
+        if (IsPicking || !IsHittable(points[0].x, points[0].y)) return;
         UndoStanding();
         var step = new DepthStep(RegionOf(points), side, lower ? -1 : 1);
         if (step.Apply(Surface)) _standing = (step, Surface);
@@ -282,16 +323,26 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
             // Marking changes no depth, so it works on a page that cannot paint.
             var start = points[0]; var end = points[^1];
             Selection = start == end ? null : ClampToArt(BoundsOf(points));
+            // A bare click while no layer is chosen also picks: Select would otherwise be the one tool that cannot.
+            if (start == end && IsPicking) PickAt(start.x, start.y, side);
             return;
         }
         if (!IsPaintable) return;
+        if (IsPicking)
+        {
+            // THE PICKING CLICK PAINTS NOTHING (ruling Q1): it only chooses the layer the next stroke is for.
+            PickAt(points[0].x, points[0].y, side);
+            return;
+        }
+        // The press decides: a stroke that began on a dimmed pixel may wander over solid ones, but it never began.
+        if (!IsHittable(points[0].x, points[0].y)) return;
 
         bool hadStanding = _standing is not null;
         UndoStanding();
         var step = new DepthStep(RegionOf(points), side, lower ? -1 : 1);
         bool changed;
         using (Perf.Measure("Rise.DepthClick"))
-            changed = Subject.History.Do(step, Surface);
+            changed = Editor.Do(step);
         // A click that changed nothing (floored at 0, capped, on a clear pixel) pushed no history, so
         // the model and the labels are as they were: nothing to rebuild unless a preview was undone.
         if (changed || hadStanding)
@@ -370,6 +421,11 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
 
     private void RebuildMesh()
     {
+        // A recipe's union is derived from its layers' maps: bring it up to date from whatever the surface holds
+        // now (a standing preview included) BEFORE the mesh is built from it. The recombine replaces the
+        // texture, so the 3D view is told about that too, ahead of the mesh it goes with.
+        Editor.Sync();
+        OnPropertyChanged(nameof(Texture));
         Mesh = BuildMesh();
         if (Mesh is { } m) _preview?.SetSubject(m.Min, m.Max);
         MeshRebuilt?.Invoke();
@@ -388,8 +444,8 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
         OnDepthEdited();
     }
 
-    private bool CanUndo() => IsPaintable && Subject.History.CanUndo;
-    private bool CanRedo() => IsPaintable && Subject.History.CanRedo;
+    private bool CanUndo() => IsPaintable && Editor.CanUndo;
+    private bool CanRedo() => IsPaintable && Editor.CanRedo;
 
     /// <summary>Takes back the last stroke.</summary>
     [RelayCommand(CanExecute = nameof(CanUndo))]
@@ -397,8 +453,8 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
     {
         if (!CanUndo()) return;     // RelayCommand.Execute does not consult CanExecute
         UndoStanding();
-        var s = Subject;
-        s.History.Undo(s.Depth);
+        Editor.Undo();
+        SayUndoNote();
         RebuildMesh();
         AfterDepthEdit();
         GestureEnded?.Invoke();
@@ -410,8 +466,8 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
     {
         if (!CanRedo()) return;
         UndoStanding();
-        var s = Subject;
-        s.History.Redo(s.Depth);
+        Editor.Redo();
+        SayUndoNote();
         RebuildMesh();
         AfterDepthEdit();
         GestureEnded?.Invoke();
@@ -550,9 +606,7 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
     {
         var subject = Subject;
         _builtSurface = subject.Depth;
-        var old = Canvas;
-        Canvas = _bridge.ToBitmap(subject.Art);
-        old.Dispose();
+        RebuildArt();
         RebuildMesh();
         _preview?.Reset(1f);
         ClampToSubject();
@@ -604,8 +658,27 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
             Selection = null;
             AdoptSubject();
         }
+        // A new target (or a roll that kept one) has new pictures to draw; the camera stays where it is.
+        else if (!ReferenceEquals((Source as RecipeRiseSource)?.TargetArt, _artFrom)) RebuildArt();
         foreach (var item in Items) item.NotifyThumbnail();
         NotifySubjectBound();
+        NotifyTargetBound();
+        NotifyCommandsBound();
+    }
+
+    // What a target change moves besides the pictures: who may be pressed, undone, filled.
+    private void NotifyCommandsBound()
+    {
+        OnPropertyChanged(nameof(IsPaintable));
+        UndoCommand.NotifyCanExecuteChanged();
+        RedoCommand.NotifyCanExecuteChanged();
+        FillAllCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>Says the sentence for an undo or redo that touched a layer this roll does not contain, if there is one.</summary>
+    private void SayUndoNote()
+    {
+        if (Source is RecipeRiseSource { LastUndoNote: { } note }) _status.Say(note);
     }
 
     /// <summary>Raised first thing in <see cref="Dispose"/>, so whoever holds this page (the Explorer,
@@ -624,8 +697,10 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
         _disposed = true;
         Source.Changed -= OnSourceChanged;
         DisposeExport();
-        if (Source is VariantRiseSource variant) variant.Saved -= OnVariantSaved;
+        Source.Saved -= OnSourceSaved;
         Canvas.Dispose();
+        BelowCanvas?.Dispose();
+        AboveCanvas?.Dispose();
         // An export still writing reads books and pictures the source owns: it disposes the source
         // when it ends, so nothing is freed under it.
         if (IsExporting) _disposeSourceAfterExport = true;
