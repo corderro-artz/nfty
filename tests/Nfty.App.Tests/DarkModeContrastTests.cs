@@ -481,6 +481,20 @@ public class DarkModeContrastTests
         yield return ("rise-sealed-export", new Views.RiseView { DataContext = riseSealed },
             () => { riseSealed.Dispose(); riseSealedOwner.Dispose(); });
 
+        // V-5: a corner tile's caption row over the two worst pictures it can sit on. The art is an
+        // Image the sweep cannot score, so the ground is stood in by a flat white and a flat black
+        // surface: the row's backing has to carry the caption over either.
+        foreach (var (tag, art) in new[] { ("white-art", Colors.White), ("black-art", Colors.Black) })
+            yield return ($"tile-caption-{tag}", new Border
+            {
+                Width = 160, Height = 160, Background = new SolidColorBrush(art),
+                Child = new Border
+                {
+                    Classes = { "tilecap" },
+                    Child = new TextBlock { Text = "CANVAS", Classes = { "plabel", "tilecap" } },
+                },
+            }, null);
+
         // The Cook card on a 2D-only book: the box is disabled (dimmed to 0.38) and the sentence that
         // says why sits outside it. The riskiest ink on the card, so it is the state swept. A second
         // screen holds the expanded options of a clean book.

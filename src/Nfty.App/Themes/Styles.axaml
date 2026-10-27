@@ -4414,6 +4414,25 @@
        One class so the two cannot drift. 7.5px because the editor's own word, PREVIEW, has to fit the
        bar beside three 18px buttons (at a larger size it clipped to "PREVIEV"); declared AFTER
        .plabel, which sets a bottom margin that would otherwise lift the word off the bar's middle. -->
+  <!-- The BACKING of that bar. A corner tile sits on the art it previews, and the old translucent scrim
+       let a magenta or white picture through the caption and the three icons. TileCaptionBrush is the
+       panel ground at ~0.85, so the row reads whatever is under it; one class so the editor tile and the
+       Rise tile cannot drift. The icon buttons on it reserve a 1px transparent edge and ink it with the
+       app's own focus color on keyboard focus - Fluent's stock focus visual is a different color and
+       the reserved edge means gaining focus moves nothing. -->
+  <Style Selector="Border.tilecap">
+    <Setter Property="Height" Value="26" />
+    <Setter Property="VerticalAlignment" Value="Bottom" />
+    <Setter Property="Background" Value="{DynamicResource TileCaptionBrush}" />
+  </Style>
+  <Style Selector="Border.tilecap Button.icon /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="Border.tilecap Button.icon:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+  </Style>
+
   <Style Selector="TextBlock.tilecap">
     <Setter Property="FontSize" Value="7.5" />
     <Setter Property="Margin" Value="0" />

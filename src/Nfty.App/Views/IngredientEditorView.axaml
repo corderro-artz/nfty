@@ -457,7 +457,7 @@
                        IsVisible="{Binding ShowPaintCanvas}" />
                 <Image Source="{Binding Canvas}" Stretch="UniformToFill"
                        IsVisible="{Binding PreviewFillsPane}" />
-                <Border VerticalAlignment="Bottom" Height="26" Background="{DynamicResource ScrimBrush}">
+                <Border Classes="tilecap">
                   <!-- Three buttons, in the mockup's order: reroll, enlarge, fill-pane
                        (ingredient-editor.html's .ov). Enlarge was missing - the ViewModel had the
                        command and its design spec shipped, but nothing bound it, so half the

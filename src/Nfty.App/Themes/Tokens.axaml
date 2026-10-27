@@ -15,6 +15,9 @@
       <!-- Modal scrim: a 52% veil of the page background (mockup `.scrim`), so a light-theme dialog
            sits on a lightened wash rather than a heavy black veil. Avalonia is #AARRGGBB. -->
       <SolidColorBrush x:Key="ScrimBrush" Color="#85f4efe8" />
+      <!-- Panel ground at ~0.85: the backing of a corner tile's caption row, opaque enough that the
+           caption reads over white or black art alike (Scrim is for dimming, not for ink). -->
+      <SolidColorBrush x:Key="TileCaptionBrush" Color="#d9f8f3ed" />
       <SolidColorBrush x:Key="TileBrush" Color="#ece5db" />
       <SolidColorBrush x:Key="FgBrush" Color="#121318" />
       <!--
@@ -139,6 +142,7 @@
       <SolidColorBrush x:Key="BgAlt2Brush" Color="#0f1118" />
       <SolidColorBrush x:Key="PanelBrush" Color="#0b0c10" />
       <SolidColorBrush x:Key="ScrimBrush" Color="#8507080b" />
+      <SolidColorBrush x:Key="TileCaptionBrush" Color="#d90b0c10" />
       <SolidColorBrush x:Key="TileBrush" Color="#12141c" />
       <SolidColorBrush x:Key="FgBrush" Color="#f2ede6" />
       <!-- See the Light dictionary's note above: 8-digit hex here is the mockup's #RRGGBBAA

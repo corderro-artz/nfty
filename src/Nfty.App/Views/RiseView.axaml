@@ -444,7 +444,7 @@
                   <TextBlock Classes="twodink" Text="2D only" />
                   <TextBlock Classes="twodnote" Text="partial alpha cannot rise" />
                 </StackPanel>
-                <Border VerticalAlignment="Bottom" Height="26" Background="{DynamicResource ScrimBrush}">
+                <Border Classes="tilecap">
                   <Grid ColumnDefinitions="*,Auto,Auto" Margin="6,0">
                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                       <Path Classes="ico xs" Data="{StaticResource IconRise}" />
