@@ -368,4 +368,36 @@ public class ModalFitTests
         public bool IsDark { get; private set; }
         public void Toggle() => IsDark = !IsDark;
     }
+
+    /// <summary>
+    /// V-1: the New Recipe card with a book of twelve recipes. The mix legend has a row per recipe,
+    /// so it was the one list in a wizard that grew with the book, and at the smallest window it
+    /// pushed DESTINATION behind a scrollbar. No scroller may hide anything, and the card must sit
+    /// inside the page.
+    /// </summary>
+    [AvaloniaFact]
+    public void New_recipe_fits_the_smallest_window_with_a_many_recipe_book()
+    {
+        var siblings = Enumerable.Range(1, 12).Select(i => ($"Recipe number {i}", 100.0)).ToList();
+        var vm = new NewRecipeViewModel(new FakeDialogs(), siblings) { Name = "Cat" };
+        Assert.True(vm.ShowShare, "the fixture no longer reaches the mix legend");
+        var view = new Views.NewRecipeView { DataContext = vm };
+        var pageW = ShellViewModel.MinWindowWidth / ShellViewModel.BaseScale;
+        var pageH = (ShellViewModel.MinWindowHeight - Chrome) / ShellViewModel.BaseScale;
+        var window = new Window { Content = view, Width = pageW, Height = pageH };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        try
+        {
+            Assert.DoesNotContain(view.GetVisualDescendants().OfType<ScrollViewer>(),
+                sv => sv.Extent.Height - sv.Viewport.Height > 0.5);
+            var card = view.GetVisualDescendants().OfType<Border>().First(b => b.Classes.Contains("modal"));
+            Assert.True(card.Bounds.Height <= view.Bounds.Height - 12,
+                $"the card is {card.Bounds.Height:0} of {view.Bounds.Height:0} — no room to spare");
+            var dest = view.GetVisualDescendants().OfType<RadioButton>().First();
+            var bottom = dest.TranslatePoint(new Point(0, dest.Bounds.Height), card)!.Value.Y;
+            Assert.True(bottom <= card.Bounds.Height, "DESTINATION runs past the card");
+        }
+        finally { window.Close(); }
+    }
 }

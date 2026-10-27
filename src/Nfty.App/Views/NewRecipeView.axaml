@@ -9,11 +9,15 @@
     <KeyBinding Gesture="Escape" Command="{Binding CancelCommand}" />
     <KeyBinding Gesture="Enter" Command="{Binding CreateCommand}" />
   </UserControl.KeyBindings>
-  <Border Classes="modal monoform">
+  <!-- .split: the mix list grows with the book (one row per recipe), and as the second half of one
+       432px column it pushed DESTINATION off the bottom of a 12-recipe book at the smallest
+       window. Two columns - what the recipe IS on the left, what it does to the BOOK on the
+       right - and the list itself is bounded (ShownShareRows), so no count of recipes can grow
+       the card. -->
+  <Border Classes="modal monoform split">
     <Grid RowDefinitions="*,Auto">
       <Border Grid.Row="0" Classes="modal-body">
-        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-        <StackPanel MaxWidth="432">
+        <StackPanel>
           <StackPanel Orientation="Horizontal" Spacing="7">
             <Ellipse Classes="kdot" />
             <TextBlock Text="CREATE" Classes="slbl" />
@@ -21,7 +25,9 @@
           <TextBlock Text="New Recipe" Classes="m-h" />
           <TextBlock Classes="m-sub"><Run Text="A Recipe is a complete template for one " /><Run Text="type" Foreground="{DynamicResource FgBrush}" /><Run Text=" of image — its own ordered layer stack." /></TextBlock>
 
-          <StackPanel Spacing="14" Margin="0,19,0,0">
+          <Grid Classes="wizcols" ColumnDefinitions="*,25,1,25,*">
+            <Rectangle Grid.Column="2" Classes="wizrule" />
+            <StackPanel Grid.Column="0" Spacing="14">
             <StackPanel Spacing="6">
               <TextBlock Text="NAME" Classes="plabel" />
               <TextBox Text="{Binding Name}" PlaceholderText="Cat" />
@@ -49,6 +55,8 @@
               </StackPanel>
               <NumericUpDown Value="{Binding Weight}" Minimum="0" IsEnabled="{Binding WeightEnabled}" />
             </StackPanel>
+            </StackPanel>
+            <StackPanel Grid.Column="4" Spacing="14">
             <!-- .share: what the weight actually buys. A weight is relative to its siblings and the
                  book normalizes the set, so the bare ProgressBar this replaces - bound
                  Value=Weight Maximum=100 - drew a weight of 100 as a full bar and read as "100% of
@@ -73,7 +81,7 @@
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
                 </Border>
-                <ItemsControl ItemsSource="{Binding ShareRows}" Margin="0,1,0,0">
+                <ItemsControl ItemsSource="{Binding ShownShareRows}" Margin="0,1,0,0">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:ShareRow">
                       <Grid ColumnDefinitions="6,*,Auto" ColumnSpacing="6" Margin="0,0,0,3">
@@ -86,6 +94,7 @@
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
+                <TextBlock Text="{Binding MoreSharesText}" Classes="lgn" />
               </StackPanel>
             </Border>
 
@@ -114,10 +123,10 @@
                 </RadioButton>
               </Grid>
             </StackPanel>
-          </StackPanel>
+            </StackPanel>
+          </Grid>
 
         </StackPanel>
-        </ScrollViewer>
       </Border>
 
       <Border Grid.Row="1" Classes="modal-foot">

@@ -83,10 +83,43 @@ public partial class NewRecipeViewModel : WizardViewModelBase
         }
     }
 
+    /// <summary>How many rows of the mix legend are listed. The bar above it always carries every
+    /// recipe; the list is what grows the card, so it is bounded and says how many it left out.</summary>
+    public const int ShownShareRowCount = 5;
+
+    /// <summary>The legend rows actually listed: the new recipe first, then the heaviest siblings.</summary>
+    public IReadOnlyList<ShareRow> ShownShareRows
+    {
+        get
+        {
+            var all = ShareRows;
+            if (all.Count <= ShownShareRowCount) return all;
+            return all.Take(1).Concat(all.Skip(1).OrderByDescending(r => r.Percent)
+                .Take(ShownShareRowCount - 1)).ToList();
+        }
+    }
+
+    /// <summary>"+7 more recipes" under a capped legend; one line is always laid out, so the card is the same height with or without it.</summary>
+    public string MoreSharesText
+    {
+        get
+        {
+            var more = ShareRows.Count - ShownShareRows.Count;
+            return more > 0 ? $"+{more} more recipe{(more == 1 ? "" : "s")}" : "";
+        }
+    }
+
     /// <summary>Hidden for a loose Recipe: there is no collection for it to be a share OF.</summary>
     public bool ShowShare => WeightEnabled && _siblings.Count > 0;
 
-    partial void OnWeightChanged(double value) => OnPropertyChanged(nameof(ShareRows));
+    partial void OnWeightChanged(double value) => NotifyShare();
+
+    private void NotifyShare()
+    {
+        OnPropertyChanged(nameof(ShareRows));
+        OnPropertyChanged(nameof(ShownShareRows));
+        OnPropertyChanged(nameof(MoreSharesText));
+    }
 
     partial void OnDestinationChanged(RecipeDestination value)
     {
@@ -100,7 +133,7 @@ public partial class NewRecipeViewModel : WizardViewModelBase
     {
         OnPropertyChanged(nameof(DerivedId));
         OnPropertyChanged(nameof(DerivedIdText));
-        OnPropertyChanged(nameof(ShareRows));   // the current row is labeled with the name
+        NotifyShare();   // the current row is labeled with the name
         CreateCommand.NotifyCanExecuteChanged();
     }
 
