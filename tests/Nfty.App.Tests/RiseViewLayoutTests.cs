@@ -567,7 +567,7 @@ public class RiseViewLayoutTests
         var pivot = stack.Children.OfType<StackPanel>()
             .First(c => c.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text == "PIVOT"));
         var y = pivot.TranslatePoint(default, scroll)!.Value.Y;
-        Assert.True(y + pivot.Bounds.Height <= scroll.Bounds.Height + 0.5, "PIVOT is not fully visible at the smallest window");
+        Assert.True(y + pivot.Bounds.Height <= scroll.Bounds.Height + 0.5, $"PIVOT bottom {y + pivot.Bounds.Height:F1} vs rail {scroll.Bounds.Height:F1} room {page.View.FindControl<Grid>("RailGrid")!.RowDefinitions[1].ActualHeight:F1}");
     }
 
     [AvaloniaFact]

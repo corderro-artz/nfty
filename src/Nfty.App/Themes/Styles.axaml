@@ -4469,7 +4469,7 @@
        sentence on the tooltip; three cards of three wrapped lines pushed PIVOT, VOXEL SIZE and SHAPE
        out of the rail at the smallest window. -->
   <Style Selector="Button.preset.tight">
-    <Setter Property="Padding" Value="10,3" />
+    <Setter Property="Padding" Value="10,2" />
   </Style>
   <!-- TWO lines, reserved. The description used to be one line with an ellipsis, which cut "what
        engines and view..." mid-sentence at the rail's real width. It wraps to at most two lines now,
@@ -4478,8 +4478,8 @@
   <Style Selector="Button.preset.tight TextBlock.pd">
     <Setter Property="TextWrapping" Value="Wrap" />
     <Setter Property="MaxLines" Value="2" />
-    <Setter Property="LineHeight" Value="13" />
-    <Setter Property="MinHeight" Value="26" />
+    <Setter Property="LineHeight" Value="12" />
+    <Setter Property="MinHeight" Value="24" />
     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
   </Style>
 

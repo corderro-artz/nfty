@@ -604,17 +604,17 @@
               </StackPanel>
 
               <!-- ==================== EXPORT ==================== -->
-              <StackPanel x:Name="ExportStack" Spacing="15" IsVisible="{Binding IsExportTab}">
-                <StackPanel Spacing="7">
+              <StackPanel x:Name="ExportStack" Spacing="12" IsVisible="{Binding IsExportTab}">
+                <StackPanel Spacing="5">
                   <TextBlock Text="FORMAT" Classes="plabel" Margin="0" />
                   <ItemsControl ItemsSource="{Binding FormatCards}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:FormatCard">
-                        <Button Classes="preset tight" Classes.sel="{Binding IsSelected}" Margin="0,0,0,3"
+                        <Button Classes="preset tight" Classes.sel="{Binding IsSelected}" Margin="0,0,0,2"
                                 ToolTip.Tip="{Binding Summary}"
                                 Command="{Binding $parent[ItemsControl].((vm:RiseViewModel)DataContext).PickFormatCommand}"
                                 CommandParameter="{Binding}">
-                          <StackPanel Spacing="1">
+                          <StackPanel Spacing="0">
                             <TextBlock Classes="pn" Text="{Binding Title}" />
                             <TextBlock Classes="pd" Text="{Binding Summary}" />
                           </StackPanel>
