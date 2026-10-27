@@ -1,5 +1,6 @@
 using System.CommandLine;
 using Nfty.Core;
+using Nfty.Core.Output;
 using System.Globalization;
 using Nfty.Core.Formats;
 using Nfty.Core.Imaging;
@@ -238,7 +239,7 @@ public static partial class CommandFactory
         var skipped = (models.Skipped ?? []).Where(n => n >= firstNumber).ToList();
         if (skipped.Count > 0)
             Console.WriteLine("skipped (nothing fully opaque): "
-                + string.Join(", ", skipped.Select(n => "#" + n.ToString("D4", CultureInfo.InvariantCulture))));
+                + string.Join(", ", skipped.Select(n => "#" + SetLayout.Stem(n))));
     }
 
     /// <summary>

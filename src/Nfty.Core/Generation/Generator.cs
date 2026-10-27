@@ -54,7 +54,7 @@ public static class Generator
         CancellationToken cancellationToken = default)
     {
         var (recipeById, menu) = Prepare(book, opts);
-        var rolls = RollAll(book, opts, menu, existingDnas, startNumber, cancellationToken);
+        var rolls = Rolls(book, opts, menu, existingDnas, startNumber, cancellationToken).ToList();
 
         var canvas = book.Manifest.Canvas;
         var ingByRecipe = IngredientsByRecipe(recipeById);
@@ -128,11 +128,6 @@ public static class Generator
         IProgress<GenerationProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        // Count is a per-run parameter, not a property of the book, so it is checked here rather
-        // than in Validator — but it must still be checked before any rolling/decoding/output
-        // work, and before the cookbook is even validated. Non-positive is rejected outright:
-        // unlike extend's --to (an absolute target that can legally already be met), Count is a
-        // direct request with no benign zero/negative reading, so both fail the same way.
         var (recipeById, menu) = Prepare(book, opts);
         return Stream(book, opts, recipeById, menu, existingDnas, startNumber, progress, cancellationToken);
     }
@@ -160,7 +155,7 @@ public static class Generator
         if (problems.Count > 0)
             throw new InvalidOperationException("Invalid cookbook:\n" + string.Join("\n", problems));
 
-        var recipeById = book.Recipes.ToDictionary(r => r.Manifest.Id, StringComparer.Ordinal);
+        var recipeById = Lookup.ById(book.Recipes, r => r.Manifest.Id);
         if (opts.RecipeId is not null && !recipeById.ContainsKey(opts.RecipeId))
             throw new InvalidOperationException($"Recipe '{opts.RecipeId}' not found in cookbook.");
 
@@ -185,11 +180,13 @@ public static class Generator
         recipeById.ToDictionary(
             kv => kv.Key,
             kv => (IReadOnlyDictionary<string, LoadedIngredient>)
-                kv.Value.Ingredients.ToDictionary(i => i.Manifest.Id, StringComparer.Ordinal),
+                RecipeLayers.ById(kv.Value),
             StringComparer.Ordinal);
 
     /// <summary>
-    /// The roll phase for the whole run, in order, on one thread.
+    /// The roll phase, lazily, in order, on one thread: the one definition of how a run decides its
+    /// assets, shared by <see cref="Generate"/> (which drains it, then renders in parallel) and the
+    /// streaming path (which renders each roll as it arrives).
     /// </summary>
     /// <remarks>
     /// This is the half that can never be parallel, and the reason is not performance: it consumes
@@ -197,7 +194,7 @@ public static class Generator
     /// decisions depend on every decision before it. Splitting it would change the collection.
     /// It touches no pixels, which is why doing it all up front is cheap.
     /// </remarks>
-    private static List<(AssetTicket Ticket, int Number)> RollAll(
+    private static IEnumerable<(AssetTicket Ticket, int Number)> Rolls(
         LoadedCookBook book,
         GenerateOptions opts,
         PreparedMenu menu,
@@ -207,8 +204,6 @@ public static class Generator
     {
         var rng = new SplitMix64Rng(SeedHash.ToUlong(opts.Seed));
         var seen = new HashSet<string>(existingDnas ?? Array.Empty<string>());
-
-        var rolls = new List<(AssetTicket, int)>(opts.Count);
         int number = startNumber;
 
         for (int i = 0; i < opts.Count; i++)
@@ -218,10 +213,22 @@ public static class Generator
             AssetTicket? rolled = null;
             for (int attempt = 0; attempt < opts.MaxRerollsPerAsset; attempt++)
             {
+                // Checked per ATTEMPT, not just per asset: one asset can burn the whole reroll
+                // budget, so a per-asset check alone lets a cancel sit unobserved for minutes and
+                // lose the race to the budget - surfacing as UniqueSpaceExhaustedException instead
+                // of OperationCanceledException.
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var ticket = Ticketer.TryRoll(menu, rng);
-                if (ticket is null) continue;                          // rule violation → reroll
+                if (ticket is null) continue;                // rule violation -> reroll
+
+                // Dedup BEFORE rendering. The DNA is a function of the selection and the rolled
+                // colors, all of which the roll already has, so a collision can be detected without
+                // touching a pixel. Minting near the top of the unique space is the normal case,
+                // where coupon-collector says most attempts collide.
+                //
+                // With uniqueness off, a repeated DNA is accepted: identity comes from the token id,
+                // not the DNA, so there is nothing to dedup and nothing to exhaust.
                 if (opts.EnforceUniqueDna && !seen.Add(ticket.Dna)) continue;
 
                 rolled = ticket;
@@ -230,11 +237,9 @@ public static class Generator
 
             if (rolled is null) throw DescribeFailure(book, opts, produced: i);
 
-            rolls.Add((rolled, number));
+            yield return (rolled, number);
             number++;
         }
-
-        return rolls;
     }
 
     private static IEnumerable<GeneratedAsset> Stream(
@@ -247,50 +252,16 @@ public static class Generator
         IProgress<GenerationProgress>? progress,
         CancellationToken cancellationToken)
     {
-        var rng = new SplitMix64Rng(SeedHash.ToUlong(opts.Seed));
-        var seen = new HashSet<string>(existingDnas ?? Array.Empty<string>());
-        int number = startNumber;
         var canvas = book.Manifest.Canvas;
         var ingByRecipe = IngredientsByRecipe(recipeById);
+        int done = 0;
 
-        for (int i = 0; i < opts.Count; i++)
+        foreach (var (ticket, number) in Rolls(book, opts, menu, existingDnas, startNumber, cancellationToken))
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            GeneratedAsset? asset = null;
-            for (int attempt = 0; attempt < opts.MaxRerollsPerAsset; attempt++)
-            {
-                // Checked per ATTEMPT, not just per asset: one asset can burn the whole reroll
-                // budget on roll+colorize+composite cycles, so a per-asset check alone lets a
-                // cancel sit unobserved for minutes and lose the race to the budget — surfacing
-                // as UniqueSpaceExhaustedException instead of OperationCanceledException.
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var ticket = Ticketer.TryRoll(menu, rng);
-                if (ticket is null) continue;                // rule violation → reroll
-
-                // Dedup BEFORE rendering. The DNA is a function of the selection and the rolled
-                // colors, all of which the roll phase already has, so a collision can be detected
-                // without touching a pixel. Rendering first meant every duplicate threw away a
-                // fully colorized and composited canvas — and minting near the top of the unique
-                // space is the normal case, where coupon-collector says most attempts collide. The
-                // file already applied exactly this reasoning to the rules check one phase earlier.
-                //
-                // With uniqueness off, a repeated DNA is accepted: identity comes from the token id,
-                // not the DNA, so there is nothing to dedup and nothing to exhaust.
-                if (opts.EnforceUniqueDna && !seen.Add(ticket.Dna)) continue;
-
-                asset = Render(
-                    canvas, recipeById[ticket.RecipeId], ingByRecipe[ticket.RecipeId], ticket, number,
-                    Parallelism.Sequential.ImageConfiguration(insideParallelBody: false));
-                break;
-            }
-
-            if (asset is null)
-                throw DescribeFailure(book, opts, produced: i);
-
-            number++;
-            progress?.Report(new GenerationProgress(i + 1, opts.Count));
+            var asset = Render(
+                canvas, recipeById[ticket.RecipeId], ingByRecipe[ticket.RecipeId], ticket, number,
+                Parallelism.Sequential.ImageConfiguration(insideParallelBody: false));
+            progress?.Report(new GenerationProgress(++done, opts.Count));
             yield return asset;
         }
     }
@@ -303,6 +274,7 @@ public static class Generator
         LoadedCookBook book, GenerateOptions opts, int produced)
     {
         var space = UniqueSpace.Count(book);
+        string scope = opts.RecipeId is null ? "this cookbook" : $"recipe '{opts.RecipeId}'";
 
         // Only the recipes THIS run can roll, which is not every recipe in the book: a recipe
         // weighted zero is shelved, never rolled, and counting its space would report a maximum
@@ -331,9 +303,8 @@ public static class Generator
         // constraint and must not be blamed. (An empty space was already caught as a rule conflict.)
         if (!opts.EnforceUniqueDna)
         {
-            string ruleScope = opts.RecipeId is null ? "this cookbook" : $"recipe '{opts.RecipeId}'";
             return new InvalidOperationException(
-                $"Could not produce a legal asset for {ruleScope} after {opts.MaxRerollsPerAsset} "
+                $"Could not produce a legal asset for {scope} after {opts.MaxRerollsPerAsset} "
                 + $"attempts ({produced} of {opts.Count} generated): the incompatibility rules "
                 + "rejected every roll. Loosen the rules or raise the reroll budget.");
         }
@@ -343,7 +314,6 @@ public static class Generator
         // inflates a maximum the run could not have reached.
         var pool = space.Over(inPlay);
         BigInteger available = pool.Total;
-        string scope = opts.RecipeId is null ? "this cookbook" : $"recipe '{opts.RecipeId}'";
         string ran = $"after {opts.MaxRerollsPerAsset} attempts ({produced} of {opts.Count} generated)";
 
         // FOUR sentences, because there are four things that can be true, and the middle two are

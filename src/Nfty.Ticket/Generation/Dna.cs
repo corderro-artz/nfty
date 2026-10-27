@@ -41,6 +41,6 @@ public static class Dna
             sb.Append('|');
         }
         byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(sb.ToString()));
-        return Convert.ToHexString(hash).ToLowerInvariant();
+        return Convert.ToHexStringLower(hash);
     }
 }

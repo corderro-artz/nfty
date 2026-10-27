@@ -24,5 +24,5 @@ public static class ModelVoxelSize
         double.IsFinite(value) && value >= Min && value <= Max
             ? null
             : string.Create(CultureInfo.InvariantCulture,
-                $"Voxel size must be between 0.001 and 1000, but {value} was given.");
+                $"Voxel size must be between {Min} and {Max}, but {value} was given.");
 }

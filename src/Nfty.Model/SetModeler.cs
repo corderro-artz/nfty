@@ -60,9 +60,9 @@ public sealed class SetModeler : IAssetModeler
         using var perf = Perf.Measure("SetModeler.Model");
         if (!_recipes.TryGetValue(asset.RecipeId, out var recipe))
             throw new KeyNotFoundException(
-                $"asset #{asset.SetNumber:D4}: CookBook '{_bookName}' has no recipe '{asset.RecipeId}'.");
+                $"asset #{SetLayout.Stem(asset.SetNumber)}: CookBook '{_bookName}' has no recipe '{asset.RecipeId}'.");
 
-        string source = $"asset #{asset.SetNumber:D4}";
+        string source = $"asset #{SetLayout.Stem(asset.SetNumber)}";
         using var rise = StackDepth.ForAsset(recipe, asset, source);
         var mesh = Riser.TryBuild(asset.Image, rise?.Depth, _options, source, rise?.Faces);
         if (mesh is null) return null;

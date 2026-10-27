@@ -155,7 +155,7 @@ public static class SetReader
 
                 foreach (var m in parsed.OrderBy(m => m.SetNumber))
                 {
-                    string stem = m.SetNumber.ToString("D4", CultureInfo.InvariantCulture);
+                    string stem = SetLayout.Stem(m.SetNumber);
                     items.Add(new SetItem(m.SetNumber, Path.Combine(imagesDir, $"{stem}.png"),
                         m.Dna, m.Recipe, m.Rarity, m.Layers, m.AbsentLayers));
                 }

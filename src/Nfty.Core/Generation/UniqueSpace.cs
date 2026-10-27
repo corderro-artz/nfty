@@ -309,7 +309,7 @@ public static class UniqueSpace
     private static (BigInteger Total, BigInteger Combos, SpaceCertainty Certainty) RecipeShapes(
         LoadedRecipe recipe, long budget)
     {
-        if (!TryResolveLayers(recipe, out var resolved))
+        if (!RecipeLayers.TryResolve(recipe, out var resolved))
             return (0, 0, SpaceCertainty.Unknown);
 
         var layers = new List<LayerShapes>(resolved.Count);
@@ -428,44 +428,13 @@ public static class UniqueSpace
     /// lands on (<see cref="Dna"/> records the variant id, not which entry produced it), so
     /// counting both separately would promise more DNA than the id space actually holds.
     /// Validator rejects a duplicate variant id outright, so this only guards the same class of
-    /// latent bug <see cref="TryResolveLayers"/> guards for ingredient ids.
+    /// latent bug <see cref="RecipeLayers.TryResolve"/> guards for ingredient ids.
     /// </summary>
     private static ReachableLayer Reachable(LoadedIngredient ing) =>
         new(ing.Manifest.Id, ing.Manifest.Variants
             .Where(v => v.Weight > 0)
             .DistinctBy(v => v.Id, StringComparer.Ordinal)
             .ToList());
-
-    /// <summary>
-    /// Resolves a recipe's layerOrder to its ingredients, in order. <see cref="Count"/> is a
-    /// public API the planned GUI calls live while a CookBook is mid-edit — a transiently invalid
-    /// book (a duplicate ingredient id, or a layerOrder entry naming a removed ingredient) is a
-    /// normal state to see there, not a crash. So this never throws: ingredient ids are resolved
-    /// duplicate-tolerantly (last one wins, same as <c>Validator.CheckRecipe</c>'s own ingById),
-    /// and a layerOrder entry with no matching ingredient fails the whole recipe back to the
-    /// caller as "unresolved" rather than indexing a missing key. Deciding what makes a book
-    /// legal is Validator's job, not this one's — this only has to avoid throwing on an illegal
-    /// one.
-    /// </summary>
-    private static bool TryResolveLayers(LoadedRecipe recipe, out List<LoadedIngredient> layers)
-    {
-        var ingById = new Dictionary<string, LoadedIngredient>();
-        foreach (var i in recipe.Ingredients) ingById[i.Manifest.Id] = i;
-
-        var resolved = new List<LoadedIngredient>(recipe.Manifest.LayerOrder.Count);
-        foreach (var id in recipe.Manifest.LayerOrder)
-        {
-            if (!ingById.TryGetValue(id, out var ing))
-            {
-                layers = new List<LoadedIngredient>();
-                return false;
-            }
-            resolved.Add(ing);
-        }
-
-        layers = resolved;
-        return true;
-    }
 
     /// <summary>
     /// The distinct quantized buckets a colorization can roll.
@@ -494,7 +463,7 @@ public static class UniqueSpace
             if (entry.Fixed is not null)
             {
                 // An unparseable spec is Validator's problem to report, not this method's to throw
-                // on — see the contract on TryResolveLayers.
+                // on — see the contract on RecipeLayers.TryResolve.
                 RolledColor c;
                 try { c = ColorRoller.FromFixed(entry.Fixed, col.Model); }
                 catch (FormatException) { return (0, false); }

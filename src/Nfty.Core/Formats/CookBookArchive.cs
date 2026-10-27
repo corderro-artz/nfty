@@ -74,6 +74,13 @@ public static class CookBookArchive
     /// <returns>The hash, lowercase hex.</returns>
     public static string HashOf(string path) => ArchiveIo.HashFile(path);
 
+    /// <summary>The awaiting twin of <see cref="HashOf"/>.</summary>
+    /// <param name="path">Archive path.</param>
+    /// <param name="ct">Cancels the hash.</param>
+    /// <returns>The hash, lowercase hex.</returns>
+    public static Task<string> HashOfAsync(string path, CancellationToken ct = default) =>
+        ArchiveIo.HashFileAsync(path, ct);
+
     /// <summary>Reads a CookBook, eagerly decoding every variant image inside it.</summary>
     /// <param name="path">Archive path.</param>
     /// <param name="parallelism">How wide decoding may run; null means <see cref="Parallelism.Default"/>.</param>

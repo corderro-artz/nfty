@@ -47,6 +47,23 @@ public class LoadedRecipe : IDisposable
         Ingredients = Array.Empty<LoadedIngredient>(),
     };
 
+    /// <summary>One of this recipe's ingredients by id.</summary>
+    /// <param name="id">The ingredient id.</param>
+    /// <returns>The ingredient.</returns>
+    /// <exception cref="KeyNotFoundException">No ingredient has that id; the message names it.</exception>
+    public LoadedIngredient Ingredient(string id) =>
+        TryIngredient(id, out var ing) ? ing : throw new KeyNotFoundException($"Recipe '{Manifest.Id}' has no ingredient '{id}'.");
+
+    /// <summary>One of this recipe's ingredients by id, if it has one.</summary>
+    /// <param name="id">The ingredient id.</param>
+    /// <param name="ingredient">The ingredient, or null.</param>
+    /// <returns>Whether found.</returns>
+    public bool TryIngredient(string id, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out LoadedIngredient? ingredient)
+    {
+        ingredient = Ingredients.FirstOrDefault(i => string.Equals(i.Manifest.Id, id, StringComparison.Ordinal));
+        return ingredient is not null;
+    }
+
     /// <summary>Frees every image this object owns. Reading an archive eagerly decodes them all,
     /// so this is how a caller gives them back.</summary>
     public void Dispose()
@@ -74,6 +91,23 @@ public class LoadedCookBook : IDisposable
     /// never came from a file (built in memory, or still unsaved in an editor).
     /// </summary>
     public string? SourceSha256 { get; init; }
+
+    /// <summary>One of this book's recipes by id.</summary>
+    /// <param name="id">The recipe id.</param>
+    /// <returns>The recipe.</returns>
+    /// <exception cref="KeyNotFoundException">No recipe has that id; the message names it.</exception>
+    public LoadedRecipe Recipe(string id) =>
+        TryRecipe(id, out var recipe) ? recipe : throw new KeyNotFoundException($"CookBook has no recipe '{id}'.");
+
+    /// <summary>One of this book's recipes by id, if it has one.</summary>
+    /// <param name="id">The recipe id.</param>
+    /// <param name="recipe">The recipe, or null.</param>
+    /// <returns>Whether found.</returns>
+    public bool TryRecipe(string id, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out LoadedRecipe? recipe)
+    {
+        recipe = Recipes.FirstOrDefault(r => string.Equals(r.Manifest.Id, id, StringComparison.Ordinal));
+        return recipe is not null;
+    }
 
     /// <summary>Frees every image this object owns. Reading an archive eagerly decodes them all,
     /// so this is how a caller gives them back.</summary>

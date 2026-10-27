@@ -91,8 +91,7 @@ public static class VoxelReport
     {
         // Resolve tolerantly and walk in layerOrder, matching what inspect prints: a report run on a
         // broken archive is exactly when someone reaches for it.
-        var byId = new Dictionary<string, LoadedIngredient>(StringComparer.Ordinal);
-        foreach (var i in recipe.Ingredients) byId[i.Manifest.Id] = i;
+        var byId = RecipeLayers.ById(recipe);
 
         foreach (var id in recipe.Manifest.LayerOrder)
             if (byId.TryGetValue(id, out var ing))

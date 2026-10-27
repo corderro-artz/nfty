@@ -26,6 +26,12 @@ namespace Nfty.Core.Output;
 /// </remarks>
 public static class SetLayout
 {
+    /// <summary>The name an asset's files share, without extension: its set number padded to four
+    /// digits (growing past 9,999), invariant so no culture's digits or sign ever reach a file name.</summary>
+    /// <param name="number">The asset's number within the Set.</param>
+    /// <returns>For example <c>0042</c>.</returns>
+    public static string Stem(int number) => number.ToString("D4", System.Globalization.CultureInfo.InvariantCulture);
+
     /// <summary>The Set manifest, which is also what identifies a folder as a Set at all.</summary>
     public const string ManifestFile = "set.json";
 
@@ -79,7 +85,7 @@ public static class SetLayout
             if (number < 1 || number > recorded.Count || skipped.Contains(number)) continue;
             // Exactly the name the writer gives it (SetWriter pads with D4, growing past 9999): a
             // user's own 1.glb or 00002.glb is not a Set file.
-            if (Path.GetFileNameWithoutExtension(file) != number.ToString("D4", System.Globalization.CultureInfo.InvariantCulture)) continue;
+            if (Path.GetFileNameWithoutExtension(file) != Stem(number)) continue;
             files.Add(file);
         }
         files.Sort(StringComparer.Ordinal);
