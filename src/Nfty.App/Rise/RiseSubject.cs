@@ -25,10 +25,10 @@ public sealed class RiseSubject : IDisposable
     {
         ArgumentNullException.ThrowIfNull(art);
         // Everything that can throw is built first; nothing is assigned (so nothing can leak) until it all exists.
-        var depth = new DepthSurface(art, stored);
+        DepthSurface depth;
         Image<Rgba32> texture;
-        try { texture = FaceAtlas.Build(art, faces); }
-        catch { faces?.Dispose(); throw; }
+        try { depth = new DepthSurface(art, stored); texture = FaceAtlas.Build(art, faces); }
+        catch { faces?.Dispose(); throw; }   // the faces are taken whatever happens
         Art = art;
         Faces = faces;
         Texture = texture;
@@ -75,10 +75,10 @@ public sealed class RiseSubject : IDisposable
     /// still reads them, i.e. after the page has been told.</returns>
     public IDisposable Reseed(DepthMap? stored, StackFaces? faces = null)
     {
-        var depth = new DepthSurface(Art, stored);
+        DepthSurface depth;
         Image<Rgba32> texture;
-        try { texture = FaceAtlas.Build(Art, faces); }
-        catch { faces?.Dispose(); throw; }
+        try { depth = new DepthSurface(Art, stored); texture = FaceAtlas.Build(Art, faces); }
+        catch { faces?.Dispose(); throw; }   // the faces are taken whatever happens
         var retired = new Retired(Texture, Faces);
         Faces = faces;
         Texture = texture;

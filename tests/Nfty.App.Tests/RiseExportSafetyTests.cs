@@ -187,6 +187,22 @@ public class RiseExportSafetyTests
         Assert.True(File.Exists(Path.Combine(dir, "oak.glb")));
     }
 
+    [Fact]
+    public void A_reseed_with_a_wrong_sized_map_gives_the_faces_back_and_changes_nothing()
+    {
+        using var art = new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(
+            4, 4, new SixLabors.ImageSharp.PixelFormats.Rgba32(9, 9, 9, 255));
+        using var subject = new RiseSubject(art.Clone(), null);
+        var texture = subject.Texture;
+        var faces = Nfty.Model.StackFaces.Uniform(art);
+
+        Assert.Throws<ArgumentException>(() => subject.Reseed(DepthMap.Flat(3, 3), faces));
+
+        Assert.Throws<ObjectDisposedException>(() => _ = faces.Front[0, 0]);   // taken, so given back
+        Assert.Same(texture, subject.Texture);                                // the subject is as it was
+        Assert.Null(subject.Faces);
+    }
+
     // ------------------------------------------------------------------ a Set: the book, the stream
 
     [AvaloniaFact]
