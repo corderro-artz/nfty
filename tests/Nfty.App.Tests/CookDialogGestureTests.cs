@@ -60,9 +60,11 @@ public class CookDialogGestureTests
             // reading a value nothing under test writes.
             var dead = view.GetVisualDescendants().OfType<Button>()
                 // "Shows" excludes the form's own controls: the card keeps the three states in one cell
-                // and inks only the current one, so the others are laid out at opacity 0.
+                // and inks only the current one: the others sit under the `hide` class, at opacity 0.
+                // Only that class is exempt, so a control accidentally at opacity 0 is still caught.
                 .Where(b => b.IsEffectivelyVisible && !b.IsEffectivelyEnabled
-                    && !b.GetSelfAndVisualAncestors().OfType<Avalonia.Visual>().Any(v => v.Opacity == 0))
+                    && !b.GetSelfAndVisualAncestors().OfType<Avalonia.StyledElement>()
+                        .Any(v => v.Classes.Contains("hide")))
                 .Select(b => b.Content as string ?? b.Name ?? "<unnamed>")
                 .ToArray();
 

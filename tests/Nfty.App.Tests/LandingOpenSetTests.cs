@@ -112,6 +112,26 @@ public class LandingOpenSetTests
     }
 
     [AvaloniaFact]
+    public async Task A_corrupt_item_shows_the_message_naming_the_file()
+    {
+        var dir = CookTinySet();
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, "nfty", "0002.json"), "null");
+            var nav = new FakeNav();
+            var dialogs = new FakeDialogs();
+            var vm = MakeLanding(nav, dialogs, new StubPicker(dir));
+            await vm.OpenSetCommand.ExecuteAsync(null);
+            await vm.PendingOpen!;
+
+            var error = Assert.IsType<ErrorDialogViewModel>(dialogs.Active);
+            Assert.Contains("0002.json", error.Message);
+            Assert.Null(nav.Current);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [AvaloniaFact]
     public async Task Canceled_picker_does_nothing()
     {
         var nav = new FakeNav();

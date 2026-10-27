@@ -189,6 +189,90 @@ public class CookRecipeAndTotalTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    [AvaloniaFact]
+    public async Task Choosing_a_recipe_then_extending_says_the_choice_was_set_aside()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            await SeedSet(dir);
+            using var book = Book();
+            var vm = Vm(book, dir);
+            var phases = new List<string>();
+            vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(vm.PhaseText)) phases.Add(vm.PhaseText); };
+            vm.Count = 3; vm.Seed = "more"; vm.Unlimited = true;
+            vm.SelectedRecipe = vm.RecipeChoices.Single(c => c.Id == "dog");
+            await vm.CookCommand.ExecuteAsync(null);
+
+            Assert.Contains(phases, p => p.StartsWith("Extending 5 assets") && p.EndsWith(CookDialogViewModel.RecipeSetAsideText));
+            Assert.Equal("Extending — the Set's own recipe mix is used; your recipe choice was set aside.",
+                CookDialogViewModel.RecipeSetAsideText);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [AvaloniaFact]
+    public async Task Extending_with_no_recipe_chosen_has_nothing_to_set_aside()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            await SeedSet(dir);
+            using var book = Book();
+            var vm = Vm(book, dir);
+            var phases = new List<string>();
+            vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(vm.PhaseText)) phases.Add(vm.PhaseText); };
+            vm.Count = 3; vm.Seed = "more"; vm.Unlimited = true;
+            await vm.CookCommand.ExecuteAsync(null);
+
+            Assert.Contains(phases, p => p.StartsWith("Extending 5 assets"));
+            Assert.DoesNotContain(phases, p => p.Contains("set aside"));
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [AvaloniaFact]
+    public async Task The_existing_count_is_the_items_the_set_holds_not_its_highest_number()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            await SeedSet(dir);                                          // items 1..5
+            File.Delete(Path.Combine(dir, "nfty", "0003.json"));          // one gone: four items, top number 5
+            using var book = Book();
+            var vm = Vm(book, dir);
+            vm.Count = 7; vm.Seed = "more"; vm.Unlimited = true;
+            await vm.CookCommand.ExecuteAsync(null);
+
+            Assert.Equal(4, vm.ExistingCount);
+            Assert.Equal("→ 11 total", vm.ResultingTotalText);
+            Assert.Contains("11 total", vm.ResultText);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [AvaloniaFact]
+    public async Task The_existing_count_counts_repeated_items_each()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            await SeedSet(dir);                                          // one-variant recipes: repeats
+            var dnas = Directory.GetFiles(Path.Combine(dir, "nfty"), "*.json")
+                .Select(f => JsonDocument.Parse(File.ReadAllText(f)).RootElement.GetProperty("dna").GetString()).ToArray();
+            Assert.True(dnas.Distinct().Count() < dnas.Length, "fixture must hold repeated DNA");
+
+            using var book = Book();
+            var vm = Vm(book, dir);
+            vm.Count = 2; vm.Seed = "more"; vm.Unlimited = true;
+            await vm.CookCommand.ExecuteAsync(null);
+
+            Assert.Equal(5, vm.ExistingCount);
+            Assert.Equal("→ 7 total", vm.ResultingTotalText);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
     private static (Window w, Control view) Show(CookDialogViewModel vm)
     {
         var view = new Views.CookDialogView { DataContext = vm };

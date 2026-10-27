@@ -106,6 +106,10 @@ public partial class CookDialogViewModel : ViewModelBase
     /// <summary>The chosen recipe; the first entry (any recipe, by weight) unless the person picks.</summary>
     [ObservableProperty] private RecipeChoice _selectedRecipe;
 
+    /// <summary>Said in the running line when a recipe was chosen and the folder turned out to hold a
+    /// Set: the choice is picked before the folder, so this is where the person learns it was not used.</summary>
+    internal const string RecipeSetAsideText = "Extending — the Set's own recipe mix is used; your recipe choice was set aside.";
+
     /// <summary>Whether the recipe choice can be changed. Off while extending: restricting would
     /// silently change a Set's mix part-way through the collection.</summary>
     public bool RecipeChoiceEnabled => !IsExtending;
@@ -234,7 +238,9 @@ public partial class CookDialogViewModel : ViewModelBase
             PhaseText = "Reading existing…";
             var existing = await SetWriter.ReadExistingAsync(dir, _cts.Token);
             IsExtending = existing.Dnas.Count > 0;
-            ExistingCount = IsExtending ? existing.NextNumber - 1 : 0;
+            // The items the reader actually loaded, not the highest number: a Set with a deleted item
+            // holds fewer than its top number says, and the total is a count of what it holds.
+            ExistingCount = IsExtending ? existing.Dnas.Count : 0;
 
             // A Set cooked with models keeps making them, whatever the box says: models are decided
             // once, at its first cook, as `extend` does. Built BEFORE rolling so a 2D-only book is
@@ -254,7 +260,8 @@ public partial class CookDialogViewModel : ViewModelBase
             // disabled, but a disabled box is a label, and the gate is checked here too.
             var opts = new GenerateOptions(Count, Seed, RecipeId: IsExtending ? null : SelectedRecipe.Id,
                 EnforceUniqueDna: !Unlimited);
-            PhaseText = IsExtending ? $"Extending {ExistingCount} assets {ResultingTotalText}…" : "Generating…";
+            PhaseText = !IsExtending ? "Generating…"
+                : $"Extending {ExistingCount} assets {ResultingTotalText}…" + (SelectedRecipe.Id is null ? "" : " " + RecipeSetAsideText);
             var genProgress = new Progress<GenerationProgress>(p => Progress = p.Fraction);
             set = await Generator.GenerateAsync(_book, opts, existing.Dnas, existing.NextNumber,
                 genProgress, _cts.Token);

@@ -91,4 +91,17 @@ public class SetItemFileTests
 
         Assert.EndsWith("0007.json", ex.Path);
     }
+
+    [Theory]
+    [InlineData("{\"name\":null,\"description\":\"d\",\"image\":\"i.png\",\"attributes\":[]}")]   // no name
+    [InlineData("{\"name\":\"n\",\"description\":\"d\",\"image\":null,\"attributes\":[]}")]        // no image
+    public void An_opensea_file_without_name_or_image_is_reported_as_corrupt_on_extend(string json)
+    {
+        var dir = SetWithDamagedItem(json, "metadata");
+
+        var ex = Assert.Throws<CorruptSetException>(
+            () => SetWriter.Write(MakeSet(8, "d8"), dir, pack: false));
+
+        Assert.EndsWith("0007.json", ex.Path);
+    }
 }

@@ -111,4 +111,35 @@ public class ProgramTests
 
         Assert.Contains("flibbertigibbet", err);
     }
+
+    /// <summary>A damaged item in a Set must reach the person as nfty's own message naming the file,
+    /// with exit 1, not as a framework trace.</summary>
+    [Fact]
+    public void Inspect_on_a_corrupt_set_names_the_file_and_exits_1()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            using var set = new Nfty.Core.Generation.GeneratedSet("Pets", "d", "P", "seed", new[]
+            {
+                new Nfty.Core.Generation.GeneratedAsset
+                {
+                    SetNumber = 1, Dna = "d1", RecipeId = "cat", RecipeName = "Cat",
+                    Image = new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(2, 2),
+                    Traits = new[] { new Nfty.Core.Generation.TraitSelection("bg", "Background", "s", "Sunset") },
+                    ColorRolls = new[] { new Nfty.Core.Generation.ColorRoll("bg", Nfty.Core.Model.LayerKind.Custom, null, null, null) },
+                },
+            });
+            Nfty.Core.Output.SetWriter.Write(set, dir, pack: false);
+            File.WriteAllText(Path.Combine(dir, "nfty", "0001.json"), "null");
+
+            var (code, _, err) = Run("inspect", dir);
+
+            Assert.Equal(1, code);
+            Assert.Contains("error:", err);
+            Assert.Contains("0001.json", err);
+            Assert.DoesNotContain("Unhandled exception", err);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
 }

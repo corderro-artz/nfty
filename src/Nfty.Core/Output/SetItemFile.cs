@@ -34,8 +34,9 @@ internal static class SetItemFile
     internal static OpenSeaMetadata ReadOpenSea(string path, string json)
     {
         var m = Parse<OpenSeaMetadata>(path, json);
-        if (m.Attributes is null)
-            throw new CorruptSetException(path, $"Set item '{path}' is missing its 'attributes'.");
+        if (m.Name is null || m.Image is null || m.Attributes is null)
+            throw new CorruptSetException(path,
+                $"Set item '{path}' is missing required fields (name, image or attributes).");
         return m;
     }
 
