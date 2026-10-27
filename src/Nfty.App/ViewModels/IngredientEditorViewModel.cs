@@ -641,7 +641,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         return IsColorMode || _ing.Manifest.Colorization is null
             ? _bridge.ToBitmap(img)
             : VariantImagery.RenderWith(_bridge, img, Mode == LayerKind.Dynamic,
-                HueMin, HueMax, SatMin, SatMax, FixedColor, _previewSalt);
+                HueMin, HueMax, SatMin, SatMax, FixedColor, ColorModel, _previewSalt);
     }
 
     private void RebuildSurfaces()
@@ -819,6 +819,13 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
+    /// The color model the layer is stored in. The rail edits hue and saturation, not the model, so
+    /// save and preview both carry the layer's own: an HSL layer stays HSL. A Custom layer turned
+    /// Dynamic or Static has no model yet and starts at HSV.
+    /// </summary>
+    public ColorModel ColorModel => _ing.Manifest.Colorization?.Model ?? ColorModel.Hsv;
+
+    /// <summary>
     /// The colorization the rail currently describes, as a layer would store it.
     /// </summary>
     /// <remarks>
@@ -834,7 +841,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         // cookbook, written without complaint, because nothing on the save path validated. That is
         // the other half of why switching to Static asks first.
         if (Mode != LayerKind.Dynamic)
-            return new Colorization(ColorModel.Hsv, HueQuantize, SatQuantize,
+            return new Colorization(ColorModel, HueQuantize, SatQuantize,
                 new[] { new ColorEntry(1, null, FixedColor) });
 
         var edited = new ColorEntry(1, new ColorRange(HueMin, HueMax, SatMin, SatMax), null);
@@ -845,7 +852,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         // keeping it made the layer roll fifty-fifty between the new range and the old color, which
         // is not what "make this dynamic" asks for.
         if (_ing.Manifest.Kind != LayerKind.Dynamic)
-            return new Colorization(ColorModel.Hsv, HueQuantize, SatQuantize, new[] { edited });
+            return new Colorization(ColorModel, HueQuantize, SatQuantize, new[] { edited });
 
         var previous = _ing.Manifest.Colorization?.Entries ?? Array.Empty<ColorEntry>();
         int shown = IndexOf(previous, e => e.Range is not null);
@@ -853,7 +860,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         if (shown >= 0) entries[shown] = edited with { Weight = previous[shown].Weight };
         else entries.Insert(0, edited);
 
-        return new Colorization(ColorModel.Hsv, HueQuantize, SatQuantize, entries);
+        return new Colorization(ColorModel, HueQuantize, SatQuantize, entries);
     }
 
     private static int IndexOf(IReadOnlyList<ColorEntry> entries, Func<ColorEntry, bool> match)
@@ -1415,7 +1422,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
         return IsColorMode || _ing.Manifest.Colorization is null
             ? _bridge.ToBitmap(img)
             : VariantImagery.RenderWith(_bridge, img, Mode == LayerKind.Dynamic,
-                HueMin, HueMax, SatMin, SatMax, FixedColor, _previewSalt);
+                HueMin, HueMax, SatMin, SatMax, FixedColor, ColorModel, _previewSalt);
     }
 
     /// <summary>Re-renders every filmstrip thumbnail — used when the mode changes, which changes what

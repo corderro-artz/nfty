@@ -66,7 +66,7 @@ public class VariantImageryTests
     {
         using var map = new Image<Rgba32>(4, 4);
         var bmp = VariantImagery.RenderWith(new ImageBridge(), map, dynamic: false,
-            0, 360, 40, 100, fixedColor: "not-a-color");
+            0, 360, 40, 100, fixedColor: "not-a-color", Nfty.Core.Model.ColorModel.Hsv);
         Assert.Equal(4, bmp.PixelSize.Width);   // fell back to the raw map, no exception
         bmp.Dispose();
     }

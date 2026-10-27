@@ -67,10 +67,11 @@ public static class VariantImagery
     /// <param name="satMin">Lowest saturation, 0-100.</param>
     /// <param name="satMax">Highest saturation, 0-100.</param>
     /// <param name="fixedColor">A fixed color spec to use instead of sampling the range, or null.</param>
+    /// <param name="model">The layer's color model, used to resolve a fixed color and to colorize.</param>
     /// <param name="salt">Varies the sample within that seed.</param>
     /// <returns>The bitmap; the caller owns it.</returns>
     public static Bitmap RenderWith(IImageBridge bridge, Image<Rgba32> valueMap, bool dynamic,
-        double hueMin, double hueMax, double satMin, double satMax, string fixedColor, int salt = 0)
+        double hueMin, double hueMax, double satMin, double satMax, string fixedColor, ColorModel model, int salt = 0)
     {
         try
         {
@@ -84,9 +85,9 @@ public static class VariantImagery
             }
             else
             {
-                c = ColorRoller.FromFixed(fixedColor, ColorModel.Hsv);
+                c = ColorRoller.FromFixed(fixedColor, model);
             }
-            using var colored = Colorizer.Apply(valueMap, c.H, c.S, ColorModel.Hsv);
+            using var colored = Colorizer.Apply(valueMap, c.H, c.S, model);
             return bridge.ToBitmap(colored);
         }
         catch (FormatException) { return bridge.ToBitmap(valueMap); }        // bad color spec — show raw
