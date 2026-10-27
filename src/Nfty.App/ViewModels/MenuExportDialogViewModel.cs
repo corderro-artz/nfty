@@ -80,10 +80,12 @@ public partial class MenuExportDialogViewModel : ViewModelBase
     /// <param name="picker">Chooses a different destination.</param>
     /// <param name="dialogs">The dialog layer to close through.</param>
     /// <param name="status">Where the success sentence goes.</param>
+    /// <param name="threads">The thread count, read when a write starts; null = the machine default.</param>
     public MenuExportDialogViewModel(LoadedCookBook book, string? bookPath, IFilePickerService picker,
-        IDialogService dialogs, IStatusService status)
+        IDialogService dialogs, IStatusService status, IParallelismSetting? threads = null)
     {
-        _book = book; _picker = picker; _dialogs = dialogs; _status = status;
+        _book = book; _picker = picker; _dialogs = dialogs; _status = status; _threads = threads;
+        Writer = (b, p, o, pr, ct) => MenuWriter.WriteAsync(b, p, o, pr, ct, _threads?.Current);
         _path = string.IsNullOrEmpty(bookPath) ? "" : System.IO.Path.ChangeExtension(bookPath, Archives.MenuExtension);
 
         var problems = Validator.Validate(book);
@@ -97,7 +99,9 @@ public partial class MenuExportDialogViewModel : ViewModelBase
     /// run open (a real write of a small book is over before a test can press Cancel) and so prove
     /// that a canceled or failed run leaves the file that was already there.</summary>
     internal Func<LoadedCookBook, string, MenuWriteOptions, IProgress<MenuWriteProgress>, CancellationToken, Task> Writer
-    { get; set; } = (book, path, options, progress, ct) => MenuWriter.WriteAsync(book, path, options, progress, ct);
+    { get; set; }
+
+    private readonly IParallelismSetting? _threads;
 
     /// <summary>The art mode the tray has chosen.</summary>
     public MenuArtMode Mode => IsAtlas ? MenuArtMode.Atlas : MenuArtMode.Loose;

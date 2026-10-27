@@ -364,7 +364,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
                 // Reads the book and writes a .mnu beside it; allowed on a locked book because it
                 // edits nothing.
                 () => _ = _dialogs.ShowAsync<object>(new MenuExportDialogViewModel(
-                    _book, _session.SourcePath, _picker, _dialogs, _status))),
+                    _book, _session.SourcePath, _picker, _dialogs, _status, _threads))),
             ExplorerNodeKind.Recipe => new RecipeDetailViewModel((LoadedRecipe)newValue!.Domain!, _book, _bridge,
                 id => OpenIngredientCommand.Execute(id),
                 // The pane asks; the Explorer owns the graph, the gate and the file. It reads _book at
