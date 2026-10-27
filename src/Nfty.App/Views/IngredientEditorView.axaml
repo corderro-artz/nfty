@@ -916,8 +916,12 @@
 
     <!-- Footer actions -->
     <Border Grid.Row="1" Classes="modal-foot">
-      <Grid ColumnDefinitions="*,Auto">
+      <!-- The note takes the STAR column and wraps; the buttons take an Auto column; ColumnSpacing is
+           the gap between them. The note was right-aligned straight up against Back with no gap at
+           all, so "...reads the saved picture." ran flush into the button. -->
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
         <TextBlock Grid.Column="0" Classes="cshare" VerticalAlignment="Center"
+                   TextWrapping="Wrap" TextTrimming="None"
                    Text="{Binding SaveNoteText}"
                    IsVisible="{Binding SaveNoteText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">

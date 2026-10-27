@@ -155,9 +155,9 @@ public class VisualCapture
                     Orientation = Orientation.Horizontal,
                     Children =
                     {
-                        KindChip("kdyn", "dynamic"),
-                        KindChip("kstat", "static"),
-                        KindChip("kcust", "custom"),
+                        KindChip("kdyn", "dyn"),
+                        KindChip("kstat", "sta"),
+                        KindChip("kcust", "cus"),
                     },
                 },
                 new StackPanel
@@ -603,6 +603,39 @@ public class VisualCapture
         return (dir, ktn);
     }
 
+    /// <summary>
+    /// Cooks the shipped Chest demo into <paramref name="dir"/> as a Set of <paramref name="count"/>
+    /// assets. The Set frames used to cook <c>CoreTestBook.Tiny()</c>, whose art is transparent
+    /// placeholders: the grid tiles and the inspector canvas were empty, so the frames proved nothing
+    /// about thumbnails or nearest-neighbor scaling and could not be shown to anyone.
+    /// </summary>
+    internal static void CookDemoSet(string dir, int count)
+    {
+        var bookDir = Directory.CreateTempSubdirectory("nfty-capture-demo-").FullName;
+        try
+        {
+            using var book = CookBookArchive.Read(DemoCookBook.WriteTo(bookDir));
+            using var generated = Generator.Generate(book, new GenerateOptions(count, "capture"));
+            SetWriter.Write(generated, dir, pack: false);
+        }
+        finally { Directory.Delete(bookDir, recursive: true); }
+    }
+
+    /// <summary>
+    /// A capture helper that arranges a state should verify it (see <c>CaptureReferences</c>): this one
+    /// refuses to save a Set frame whose first asset carries no visible pixel, which is how four frames
+    /// came to picture an empty grid.
+    /// </summary>
+    private static void AssertFirstTileHasArt(SetBrowserViewModel vm)
+    {
+        using var img = SixLabors.ImageSharp.Image.Load<Rgba32>(vm.Items[0].ImagePath);
+        bool any = false;
+        for (int y = 0; y < img.Height && !any; y++)
+            for (int x = 0; x < img.Width && !any; x++)
+                any = img[x, y].A > 0;
+        Assert.True(any, $"the first tile's art ({vm.Items[0].ImagePath}) is fully transparent - the frame would show an empty grid");
+    }
+
     /// <summary>Renders the real <see cref="Views.SetBrowserView"/> bound to a
     /// <see cref="SetBrowserViewModel"/> over a cooked Set (an item selected) so visual parity with
     /// the Set-browser design intent can be checked from an actual rendered frame — not imagined
@@ -619,12 +652,12 @@ public class VisualCapture
             var dir = Directory.CreateTempSubdirectory().FullName;
             try
             {
-                using var generated = Generator.Generate(CoreTestBook.Tiny(), new GenerateOptions(6, "seed1"));
-                SetWriter.Write(generated, dir, pack: false);
+                CookDemoSet(dir, 12);
                 var loaded = SetReader.Read(dir);
                 var vm = new SetBrowserViewModel(loaded, rise: _ => throw new NotSupportedException(),
                     nav: new FakeNav(), bridge: new ImageBridge());
                 vm.SelectedItem = vm.Items[0];
+                AssertFirstTileHasArt(vm);
                 Capture(new Views.SetBrowserView { DataContext = vm }, variant, $"set-browser-{key}.png");
                 vm.Dispose();
             }
@@ -644,11 +677,11 @@ public class VisualCapture
             var dir = Directory.CreateTempSubdirectory().FullName;
             try
             {
-                using var generated = Generator.Generate(CoreTestBook.Tiny(), new GenerateOptions(6, "seed1"));
-                SetWriter.Write(generated, dir, pack: false);
+                CookDemoSet(dir, 12);
                 var vm = new SetBrowserViewModel(SetReader.Read(dir), rise: _ => throw new NotSupportedException(),
                     nav: new FakeNav(), bridge: new ImageBridge());
                 vm.SelectedItem = vm.Items[0];
+                AssertFirstTileHasArt(vm);
                 Capture(new Views.SetBrowserView { DataContext = vm }, variant, $"set-rise-min-{key}.png",
                     (ShellViewModel.MinWindowWidth - 24) / ShellViewModel.BaseScale,
                     (ShellViewModel.MinWindowHeight - ShellViewModel.ChromeReserve) / ShellViewModel.BaseScale);
@@ -1120,10 +1153,10 @@ public class VisualCapture
         if (Dir is null) return;
 
         var dir = Directory.CreateTempSubdirectory().FullName;
-        using (var gen = Generator.Generate(CoreTestBook.Tiny(), new GenerateOptions(3, "seed1")))
-            SetWriter.Write(gen, dir, pack: false);
+        CookDemoSet(dir, 3);
         using var loaded = SetReader.Read(dir);
         using var browser = new SetBrowserViewModel(loaded);
+        AssertFirstTileHasArt(browser);
 
         foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
         {
