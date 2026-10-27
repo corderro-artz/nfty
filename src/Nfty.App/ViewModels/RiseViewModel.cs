@@ -323,8 +323,6 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
             // Marking changes no depth, so it works on a page that cannot paint.
             var start = points[0]; var end = points[^1];
             Selection = start == end ? null : ClampToArt(BoundsOf(points));
-            // A bare click while no layer is chosen also picks: Select would otherwise be the one tool that cannot.
-            if (start == end && IsPicking) PickAt(start.x, start.y, side);
             return;
         }
         if (!IsPaintable) return;

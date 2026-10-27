@@ -660,6 +660,19 @@ public partial class RiseView : UserControl
         }
         if (e.KeyModifiers != KeyModifiers.None) return;
 
+        // The target keys. Escape yields to an open dialog (the window closes it from there), then drops
+        // the marquee, then the target: EscapeCommand does the last two in that order.
+        switch (e.Key)
+        {
+            case Key.PageUp: _vm.StepTargetCommand.Execute(1); e.Handled = true; return;
+            case Key.PageDown: _vm.StepTargetCommand.Execute(-1); e.Handled = true; return;
+            case Key.Escape:
+                if (TopLevel.GetTopLevel(this) is Window { DataContext: ShellViewModel { HasDialog: true } }) return;
+                _vm.EscapeCommand.Execute(null);
+                e.Handled = true;
+                return;
+        }
+
         // An arrow moves the VIEW, so the art travels the other way; only while there is something
         // off screen.
         if (_vm.IsZoomed)

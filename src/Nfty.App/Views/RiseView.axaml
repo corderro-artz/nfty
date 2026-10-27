@@ -16,13 +16,10 @@
              Focusable="True" IsTabStop="False">
   <!-- Only a key routed through this control reaches these, hence the focus-on-attach in code-behind. -->
   <UserControl.KeyBindings>
-    <KeyBinding Gesture="Escape" Command="{Binding EscapeCommand}" />
-    <KeyBinding Gesture="PageUp" Command="{Binding StepTargetCommand}">
-      <KeyBinding.CommandParameter><x:Int32>1</x:Int32></KeyBinding.CommandParameter>
-    </KeyBinding>
-    <KeyBinding Gesture="PageDown" Command="{Binding StepTargetCommand}">
-      <KeyBinding.CommandParameter><x:Int32>-1</x:Int32></KeyBinding.CommandParameter>
-    </KeyBinding>
+    <!-- Escape, PageUp and PageDown are NOT here: a KeyBinding on the view fires while a number field
+         has focus (a TextBox does not handle them), so typing in Front, Back or the brush box would
+         drop or move the target. They live in OnShortcut, behind the focus guard. -->
+
     <KeyBinding Gesture="Ctrl+Z" Command="{Binding UndoCommand}" />
     <KeyBinding Gesture="Ctrl+Y" Command="{Binding RedoCommand}" />
     <KeyBinding Gesture="Ctrl+Shift+Z" Command="{Binding RedoCommand}" />
