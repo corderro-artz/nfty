@@ -96,6 +96,51 @@ public class AuthoringParityTests
         });
     }
 
+    private static LoadedRecipe RecipeWithHatChanceAndRule(string id)
+    {
+        var r = Recipe(id);
+        return new LoadedRecipe
+        {
+            Manifest = r.Manifest with
+            {
+                AbsentPercent = new Dictionary<string, double> { ["hat"] = 40 },
+                Rules = new[]
+                {
+                    new IncompatibilityRule(RuleType.Exclude, new RuleTarget("hat", "crown"),
+                        new[] { new RuleTarget("bg", "night") }),
+                },
+            },
+            Ingredients = r.Ingredients,
+        };
+    }
+
+    [Fact]
+    public void Remove_ingredient_takes_its_absent_chance_and_rules_with_it_so_the_book_stays_valid()
+    {
+        WithTemp(dir =>
+        {
+            string cbk = Path.Combine(dir, "book.cbk");
+            var cat = RecipeWithHatChanceAndRule("cat");
+            CookBookArchive.Write(cbk, new CookBookManifest("book", "Book", new Dimensions(4, 4),
+                new Collection("Pets", "desc", "PET"), new Dictionary<string, double> { ["cat"] = 1 }),
+                new[] { cat });
+            Assert.Equal(0, Run("remove", "ingredient", cbk, "--recipe", "cat", "--id", "hat"));
+            using (var book = CookBookArchive.Read(cbk))
+            {
+                Assert.Empty(Validator.Validate(book));
+                Assert.Empty(book.Recipes[0].Manifest.Rules);
+                Assert.Equal(0, book.Recipes[0].Manifest.AbsentPercentOf("hat"));
+            }
+
+            string rcp = Path.Combine(dir, "cat.rcp");
+            RecipeArchive.Write(rcp, cat.Manifest, cat.Ingredients);
+            Assert.Equal(0, Run("remove", "ingredient", rcp, "--id", "hat"));
+            using var loose = RecipeArchive.Read(rcp);
+            Assert.Empty(Validator.ValidateRecipe(loose));
+            Assert.Empty(loose.Manifest.Rules);
+        });
+    }
+
     [Fact]
     public void Remove_variant_refuses_the_last_one()
     {

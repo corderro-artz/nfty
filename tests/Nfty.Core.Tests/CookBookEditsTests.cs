@@ -97,6 +97,38 @@ public class CookBookEditsTests
     }
 
     [Fact]
+    public void RemoveIngredient_also_drops_its_absent_chance_and_the_rules_naming_it()
+    {
+        var book = TwoRecipeBook();
+        var cat = book.Recipes.Single(r => r.Manifest.Id == "cat");
+        var rule = new IncompatibilityRule(RuleType.Exclude,
+            new RuleTarget("aura", "aura-v"), new[] { new RuleTarget("bg", "bg-v") });
+        var other = new IncompatibilityRule(RuleType.Exclude,
+            new RuleTarget("bg", "bg-v"), new[] { new RuleTarget("bg", "bg-v") });
+        var edited = new LoadedRecipe
+        {
+            Manifest = cat.Manifest with
+            {
+                Rules = new[] { rule, other },
+                AbsentPercent = new Dictionary<string, double> { ["aura"] = 30, ["bg"] = 10 },
+            },
+            Ingredients = cat.Ingredients,
+        };
+        var seeded = new LoadedCookBook
+        {
+            Manifest = book.Manifest,
+            Recipes = book.Recipes.Select(r => r.Manifest.Id == "cat" ? edited : r).ToList(),
+        };
+
+        var after = CookBookEdits.RemoveIngredient(seeded, "cat", "aura").Recipes.Single(r => r.Manifest.Id == "cat");
+
+        Assert.DoesNotContain("aura", after.Manifest.AbsentPercent!.Keys);
+        Assert.Equal(10, after.Manifest.AbsentPercentOf("bg"));
+        Assert.Single(after.Manifest.Rules);
+        Assert.Same(other, after.Manifest.Rules[0]);
+    }
+
+    [Fact]
     public void RemoveRecipe_drops_the_recipe_and_its_weight()
     {
         var b = CookBookEdits.RemoveRecipe(TwoRecipeBook(), "dog");

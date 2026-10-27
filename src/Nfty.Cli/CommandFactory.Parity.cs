@@ -96,10 +96,7 @@ public static partial class CommandFactory
             using var rcp = RecipeArchive.Read(path);
             if (rcp.Ingredients.All(i => i.Manifest.Id != ingredientId))
                 throw new KeyNotFoundException($"No ingredient '{ingredientId}' in recipe '{rcp.Manifest.Id}'.");
-            var manifest = rcp.Manifest with
-            {
-                LayerOrder = rcp.Manifest.LayerOrder.Where(l => l != ingredientId).ToList(),
-            };
+            var manifest = CookBookEdits.WithoutLayer(rcp.Manifest, ingredientId);
             var kept = rcp.Ingredients.Where(i => i.Manifest.Id != ingredientId).ToList();
             var problems = Validator.ValidateRecipe(new LoadedRecipe { Manifest = manifest, Ingredients = kept });
             if (problems.Count > 0) { Report(problems); return 1; }
