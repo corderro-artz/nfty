@@ -25,7 +25,7 @@ public partial class SetItemRow : ObservableObject, IDisposable
     private volatile Bitmap? _thumbnail;
     private volatile bool _imageMissing;
     private bool _decodeStarted;
-    private bool _disposed;
+    private volatile bool _disposed;
 
     /// <summary>The asset's PNG on disk. The grid shows a 128px thumbnail of it; the inspector and
     /// Save both need the file itself.</summary>
@@ -106,9 +106,26 @@ public partial class SetItemRow : ObservableObject, IDisposable
         _decodeStarted = true;
 
         var path = ImagePath;
-        PendingDecode = Task.Run(() =>
+        PendingDecode = Task.Run(async () =>
         {
-            var (bitmap, missing) = Decode(path);
+            // One gate for the whole browser, so a screenful of tiles cannot start a screenful of
+            // decodes. The disposed check comes AFTER the wait: a row scrolled away and torn down
+            // while it queued must not spend a decode on an image nobody will see.
+            await _gate.WaitAsync().ConfigureAwait(false);
+            Bitmap bitmap;
+            bool missing;
+            try
+            {
+                if (_disposed) return;
+                _gate.Enter();
+                try
+                {
+                    Interlocked.Increment(ref _decodesRun);
+                    (bitmap, missing) = Decode(path);
+                }
+                finally { _gate.Exit(); }
+            }
+            finally { _gate.Release(); }
             // Back to the UI thread through the dispatcher rather than a captured
             // SynchronizationContext: a binding may read Thumbnail from a measure pass that has no
             // context to capture, and FromCurrentSynchronizationContext throws outright when there
@@ -160,12 +177,21 @@ public partial class SetItemRow : ObservableObject, IDisposable
     /// <param name="number">The asset's set number.</param>
     /// <param name="imagePath">Path to its PNG; not opened until <see cref="Thumbnail"/> is read.</param>
     /// <param name="item">The item's metadata.</param>
-    public SetItemRow(int number, string imagePath, SetItem item)
+    /// <param name="gate">The browser's one decode limit; a row built alone gets a default-sized one.</param>
+    public SetItemRow(int number, string imagePath, SetItem item, ThumbnailGate? gate = null)
     {
         Number = number;
         ImagePath = imagePath;
         Item = item;
+        _gate = gate ?? DefaultGate;
     }
+
+    private static readonly ThumbnailGate DefaultGate = ThumbnailGate.For(Nfty.Core.Parallelism.Default);
+    private readonly ThumbnailGate _gate;
+
+    /// <summary>How many times this row has actually decoded its image. For tests.</summary>
+    internal int DecodesRun => Volatile.Read(ref _decodesRun);
+    private int _decodesRun;
 
     /// <summary>Decodes a thumbnail, and says whether it had to fall back.</summary>
     /// <param name="path">The asset's PNG.</param>
@@ -246,6 +272,7 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     private readonly Func<Nfty.App.Rise.RiseSource, RiseViewModel>? _rise;
     private readonly INavigationService? _nav;
     private readonly IImageBridge? _bridge;
+    private readonly IParallelismSetting? _threads;
 
     /// <summary>
     /// The book this Set was cooked from, resolved into what pricing an asset needs — or null,
@@ -381,11 +408,12 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     /// disables the button rather than hiding it.</param>
     /// <param name="nav">Where the Rise page is pushed.</param>
     /// <param name="bridge">The bitmap bridge the Rise source is built with.</param>
+    /// <param name="threads">The worker-thread setting: sizes the thumbnail decode limit and the export.</param>
     public SetBrowserViewModel(LoadedSet set, IFilePickerService? picker = null,
         IDialogService? dialogs = null, IStatusService? status = null,
         IFolderRevealer? revealer = null, Func<IEnumerable<string>>? bookCandidates = null,
         Func<Nfty.App.Rise.RiseSource, RiseViewModel>? rise = null, INavigationService? nav = null,
-        IImageBridge? bridge = null)
+        IImageBridge? bridge = null, IParallelismSetting? threads = null)
     {
         _rise = rise; _nav = nav; _bridge = bridge;
         _bookCandidates = bookCandidates;
@@ -400,7 +428,9 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
         Seed = set.Manifest.Seed;
         // Rows only: no image is opened here. Decoding is deferred to SetItemRow.Thumbnail so the
         // cost falls under the ListBox's virtualization instead of on top of it.
-        Items = set.Items.Select(i => new SetItemRow(i.Number, i.ImagePath, i)).ToList();
+        var gate = ThumbnailGate.For(threads?.Current ?? Nfty.Core.Parallelism.Default);
+        _threads = threads;
+        Items = set.Items.Select(i => new SetItemRow(i.Number, i.ImagePath, i, gate)).ToList();
         SelectedItem = Items.Count > 0 ? Items[0] : null;
         BeginSourceBookSearch();
     }
@@ -763,7 +793,7 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
                 // A Set records its book's HASH and never the book, so the dialog cannot follow a
                 // path - but it can CHECK one. These are the books this app can already name; the
                 // dialog also looks beside the Set, and accepts only the one that hashes right.
-                _set.Manifest.CookbookSha256, _bookCandidates?.Invoke() ?? Array.Empty<string>()));
+                _set.Manifest.CookbookSha256, _bookCandidates?.Invoke() ?? Array.Empty<string>(), _threads));
 
     /// <summary>Frees every decoded thumbnail and the underlying Set. Rows that were never realized
     /// decoded nothing, and disposing them is a no-op — reading <c>r.Thumbnail</c> here to dispose

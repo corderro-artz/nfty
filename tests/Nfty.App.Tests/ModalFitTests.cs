@@ -73,6 +73,7 @@ public class ModalFitTests
         using var book = twoDOnly ? CookDialogModelsTests.Book(3, 128) : CookDialogModelsTests.Book();
         var vm = new CookDialogViewModel(book, new FilePickerService(), new NoopFolderRevealer(), new FakeDialogs())
         { IncludeModels = !twoDOnly, ShowModelOptions = true };
+        vm.Landed();
         var size = Measure(new Views.CookDialogView { DataContext = vm });
 
         Fits("The cook card with model options open",

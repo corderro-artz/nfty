@@ -134,10 +134,11 @@ public class CookDialogModelsTests
     }
 
     [AvaloniaFact]
-    public void A_two_d_only_book_disables_the_box_and_says_why()
+    public async Task A_two_d_only_book_disables_the_box_and_says_why()
     {
         using var book = Book(variants: 3, alpha: 128);
         var vm = Cook(book, "unused");
+        await vm.ScanTask;
         Assert.True(vm.BookIsTwoDOnly);
         Assert.Equal("This book is 2D only — 3 variants have partly transparent pixels. "
             + "Open a layer in Rise and use Make voxel-ready.", vm.ModelsNote);
@@ -155,9 +156,13 @@ public class CookDialogModelsTests
         finally { window.Close(); }
 
         using var oneBad = Book(variants: 1, alpha: 128);
-        Assert.Contains("1 variant has partly", Cook(oneBad, "unused").ModelsNote);
+        var one = Cook(oneBad, "unused");
+        await one.ScanTask;
+        Assert.Contains("1 variant has partly", one.ModelsNote);
         using var clean = Book();
-        Assert.False(Cook(clean, "unused").BookIsTwoDOnly);
+        var cleanVm = Cook(clean, "unused");
+        await cleanVm.ScanTask;
+        Assert.False(cleanVm.BookIsTwoDOnly);
     }
 
     [AvaloniaFact]
@@ -230,10 +235,11 @@ public class CookDialogModelsTests
     }
 
     [AvaloniaFact]
-    public void Ticking_the_box_moves_nothing_above_the_reveal()
+    public async Task Ticking_the_box_moves_nothing_above_the_reveal()
     {
         using var book = Book();
         var vm = Cook(book, "unused");
+        await vm.ScanTask;
         var (window, view) = Show(vm);
         try
         {
@@ -254,10 +260,11 @@ public class CookDialogModelsTests
     }
 
     [AvaloniaFact]
-    public void The_options_button_shows_whether_it_is_open_without_changing_width()
+    public async Task The_options_button_shows_whether_it_is_open_without_changing_width()
     {
         using var book = Book();
         var vm = Cook(book, "unused");
+        await vm.ScanTask;
         vm.IncludeModels = true;
         var (window, view) = Show(vm);
         try

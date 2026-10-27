@@ -2,6 +2,7 @@ using System.IO;
 using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Models;
 using Nfty.App.Services;
+using Nfty.Core;
 using Nfty.Core.Demo;
 using Nfty.Core.Formats;
 using Nfty.Core.Model;
@@ -32,6 +33,10 @@ public partial class LandingViewModel : ViewModelBase
     private readonly Func<Nfty.App.Rise.RiseSource, RiseViewModel>? _rise;
     private readonly IStatusService? _status;
     private readonly IImageBridge _bridge;
+    private readonly IParallelismSetting? _threads;
+
+    /// <summary>Read at the START of each operation, so a change on the Settings card applies to the next open.</summary>
+    private Parallelism Threads => _threads?.Current ?? Parallelism.Default;
 
     /// <summary>A snapshot, not the service's live list: bindings short-circuit when a property
     /// returns the same instance, so returning the live list would make OnPropertyChanged inert and
@@ -60,6 +65,7 @@ public partial class LandingViewModel : ViewModelBase
     /// disables <c>Rise a picture…</c> rather than hiding it.</param>
     /// <param name="status">Where the page's opening line and the grid note are said.</param>
     /// <param name="bridge">Makes the Rise rail's thumbnails; the shipped bridge when null.</param>
+    /// <param name="threads">The worker-thread setting, read at the start of each open; null runs at the default.</param>
     public LandingViewModel(INavigationService nav, IDialogService dialogs,
         IFilePickerService picker, IRecentsService recents, ICookBookSession session,
         Func<LoadedCookBook, ExplorerViewModel> explorerFactory,
@@ -67,8 +73,9 @@ public partial class LandingViewModel : ViewModelBase
         Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> looseEditorFactory,
         IKitchenSession? kitchen = null, IStateStore? store = null,
         Func<Nfty.App.Rise.RiseSource, RiseViewModel>? rise = null, IStatusService? status = null,
-        IImageBridge? bridge = null)
+        IImageBridge? bridge = null, IParallelismSetting? threads = null)
     {
+        _threads = threads;
         _rise = rise; _status = status; _bridge = bridge ?? new ImageBridge();
         _nav = nav; _dialogs = dialogs; _picker = picker; _recents = recents;
         _session = session; _explorerFactory = explorerFactory; _setBrowserFactory = setBrowserFactory;
@@ -392,10 +399,26 @@ public partial class LandingViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasNoRecents));
     }
 
-    private void OpenPath(string path)
+    /// <summary>
+    /// Opens a CookBook, off the UI thread and behind a busy card.
+    /// </summary>
+    /// <remarks>
+    /// Reading a book decodes every variant PNG, so a real one froze the window for as long as it
+    /// takes - the defect <see cref="OpenSetPathAsync"/> fixed for Sets, with the same fix and the
+    /// same observable handle, <see cref="PendingOpen"/>.
+    /// </remarks>
+    private void OpenPath(string path) => PendingOpen = OpenPathAsync(path);
+
+    private async Task OpenPathAsync(string path)
     {
         LoadedCookBook book;
-        try { book = CookBookArchive.Read(path); }
+        var par = Threads;
+        try
+        {
+            book = await BusyViewModel.RunAsync(_dialogs, "Opening CookBook", "Reading the book…",
+                (_, ct) => CookBookArchive.ReadAsync(path, ct, par), cancellable: true);
+        }
+        catch (OperationCanceledException) { return; }   // the user stopped it: nothing opened
         catch (Exception ex) { ShowError("Could not open", ex.Message); return; }
         _session.Open(book, path);
         _nav.To(_explorerFactory(book));
@@ -455,13 +478,14 @@ public partial class LandingViewModel : ViewModelBase
     private async Task OpenSetPathAsync(string path)
     {
         LoadedSet set;
+        var par = Threads;
         try
         {
             // Cancellable: Escape never closes a busy card (the job owns it), so a read that stalls
             // - a Set on a network share - is stopped from the card, and its unpacked copy goes too.
             set = await BusyViewModel.RunAsync(_dialogs, "Opening Set",
                 Directory.Exists(path) ? "Reading the collection…" : "Unpacking…",
-                (_, ct) => SetReader.ReadAsync(path, ct), cancellable: true);
+                (_, ct) => SetReader.ReadAsync(path, ct, par), cancellable: true);
         }
         catch (OperationCanceledException)
         {
@@ -598,6 +622,31 @@ public partial class LandingViewModel : ViewModelBase
             ShowError("Missing file", $"“{item.Path}” is no longer there, so it was removed from Recents.");
             return;
         }
+        OpenKnownPath(item.Path);
+    }
+
+    /// <summary>
+    /// Opens a path given on the command line (<c>nfty book.cbk</c>, or a file dropped on the
+    /// executable), through the SAME routing a Recent row uses, so the two cannot disagree about
+    /// what a <c>.set</c> folder or a <c>.tin</c> is.
+    /// </summary>
+    /// <param name="path">The path the process was started with.</param>
+    /// <returns>Completes when the open has finished (or failed onto the ordinary error card).
+    /// A path that is not there, or of a kind the app does not open, is reported, never thrown.</returns>
+    public async Task OpenFromCommandLineAsync(string path)
+    {
+        if (!File.Exists(path) && !Directory.Exists(path))
+        {
+            ShowError("Missing file", $"“{path}” is not there, so there is nothing to open.");
+            return;
+        }
+        OpenKnownPath(path);
+        if (PendingOpen is { } open) await open;
+    }
+
+    /// <summary>The routing every route into "open this path" shares: Recent rows and the command line.</summary>
+    private void OpenKnownPath(string path)
+    {
         // BEFORE KindOf, because a Set is the one kind that is also a FOLDER and KindOf resolves an
         // EXTENSION. `generate --out ./collection` writes a folder, `--pack` is optional, and an
         // export can be folder-shaped too - so a recent entry can legitimately name a directory.
@@ -605,21 +654,24 @@ public partial class LandingViewModel : ViewModelBase
         // true. Without it the next statement threw "has no extension", which describes the
         // mechanism rather than the situation, and the entry could never be reopened.
         // `CommandFactory.Inspect` has done it in this order since the CLI learned to read a Set.
-        if (SetReader.IsSetFolder(item.Path)) { OpenSetPath(item.Path); return; }
+        if (SetReader.IsSetFolder(path)) { OpenSetPath(path); return; }
 
         ArchiveKind kind;
-        try { kind = Archives.KindOf(item.Path); }
+        try { kind = Archives.KindOf(path); }
         catch (Exception ex) { ShowError("Can't open", ex.Message); return; }
         switch (kind)
         {
-            case ArchiveKind.CookBook: OpenPath(item.Path); return;
-            case ArchiveKind.Ingredient: OpenLooseIngredient(item.Path); return;
-            case ArchiveKind.Recipe: OpenLooseRecipe(item.Path); return;
+            case ArchiveKind.CookBook: OpenPath(path); return;
+            case ArchiveKind.Ingredient: OpenLooseIngredient(path); return;
+            case ArchiveKind.Recipe: OpenLooseRecipe(path); return;
             // This used to be an extension compare ABOVE the dispatch, because .set was not one of
             // the kinds Archives.KindOf knew. That is the second copy of the mapping the TryKindOf
             // note warns about, and it is gone now that the enum names every archive this app opens.
-            case ArchiveKind.Set: OpenSetPath(item.Path); return;
-            case ArchiveKind.Sealed: _ = OpenSealedAsync(item.Path); return;
+            case ArchiveKind.Set: OpenSetPath(path); return;
+            case ArchiveKind.Sealed: _ = OpenSealedAsync(path); return;
+            default:
+                ShowError("Can't open", $"nfty does not open a {kind} from here: “{path}”.");
+                return;
         }
     }
 

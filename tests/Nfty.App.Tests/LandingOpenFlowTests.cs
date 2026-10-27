@@ -36,7 +36,7 @@ public class LandingOpenFlowTests
     }
 
     [Fact]
-    public void Open_reads_the_cbk_opens_the_session_and_navigates_to_explorer()
+    public async Task Open_reads_the_cbk_opens_the_session_and_navigates_to_explorer()
     {
         var tmp = Directory.CreateTempSubdirectory();
         try
@@ -44,7 +44,8 @@ public class LandingOpenFlowTests
             string path = Path.Combine(tmp.FullName, "VaporPets.cbk");
             WriteTinyCookBook(path);   // helper below
             var vm = Make(path, out var nav, out _, out var session);
-            vm.OpenCookBookCommand.Execute(null);
+            await vm.OpenCookBookCommand.ExecuteAsync(null);
+            await (vm.PendingOpen ?? Task.CompletedTask);
             Assert.NotNull(session.Current);
             Assert.IsType<ExplorerViewModel>(nav.Current);
         }
@@ -52,19 +53,21 @@ public class LandingOpenFlowTests
     }
 
     [Fact]
-    public void Canceled_picker_does_nothing()
+    public async Task Canceled_picker_does_nothing()
     {
         var vm = Make(null, out var nav, out _, out var session);
-        vm.OpenCookBookCommand.Execute(null);
+        await vm.OpenCookBookCommand.ExecuteAsync(null);
+        await (vm.PendingOpen ?? Task.CompletedTask);
         Assert.Null(session.Current);
         Assert.Null(nav.Current);
     }
 
     [Fact]
-    public void A_bad_path_shows_the_error_dialog_and_does_not_navigate()
+    public async Task A_bad_path_shows_the_error_dialog_and_does_not_navigate()
     {
         var vm = Make("does-not-exist.cbk", out var nav, out var dialogs, out var session);
-        vm.OpenCookBookCommand.Execute(null);
+        await vm.OpenCookBookCommand.ExecuteAsync(null);
+        await (vm.PendingOpen ?? Task.CompletedTask);
         Assert.IsType<ErrorDialogViewModel>(dialogs.Active);
         Assert.Null(nav.Current);
         Assert.Null(session.Current);
@@ -91,7 +94,7 @@ public class LandingOpenFlowTests
     /// can't silently drift from tests/fixtures/VaporPets.cbk.
     /// </summary>
     [Fact]
-    public void Opening_the_real_VaporPets_fixture_renders_its_actual_tree_in_Explorer()
+    public async Task Opening_the_real_VaporPets_fixture_renders_its_actual_tree_in_Explorer()
     {
         string path = FixturePath("VaporPets.cbk");
         using var reference = CookBookArchive.Read(path);
@@ -106,7 +109,8 @@ public class LandingOpenFlowTests
         }).ToList();
 
         var vm = Make(path, out var nav, out _, out var session);
-        vm.OpenCookBookCommand.Execute(null);
+        await vm.OpenCookBookCommand.ExecuteAsync(null);
+        await (vm.PendingOpen ?? Task.CompletedTask);
 
         Assert.NotNull(session.Current);
         var explorer = Assert.IsType<ExplorerViewModel>(nav.Current);

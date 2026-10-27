@@ -147,6 +147,7 @@ public class RiseEntryJourneyTests
             using (var before = CookBookArchive.Read(path))
             {
                 var refused = CookOver(before, outDir, count: 2);
+                await refused.ScanTask;
                 Assert.True(refused.BookIsTwoDOnly);
                 Assert.Contains("Make voxel-ready", refused.ModelsNote);
                 refused.IncludeModels = true;
@@ -167,6 +168,7 @@ public class RiseEntryJourneyTests
             // The same file, reopened: no longer 2D only, and the Cook dialog now makes models.
             using var after = CookBookArchive.Read(path);
             var cook = CookOver(after, outDir, count: 2);
+            await cook.ScanTask;
             Assert.False(cook.BookIsTwoDOnly);
             cook.IncludeModels = true;
             await cook.CookCommand.ExecuteAsync(null);

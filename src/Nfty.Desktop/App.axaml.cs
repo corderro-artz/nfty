@@ -30,10 +30,20 @@ public partial class App : Application
             .AddSingleton<IClipboardService, DesktopClipboard>()
             .BuildServiceProvider();
         var shell = services.GetRequiredService<ShellViewModel>();
-        services.GetRequiredService<INavigationService>().To(services.GetRequiredService<LandingViewModel>());
+        var landing = services.GetRequiredService<LandingViewModel>();
+        services.GetRequiredService<INavigationService>().To(landing);
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.MainWindow = new MainWindow { DataContext = shell };
+            var window = new MainWindow { DataContext = shell };
+            desktop.MainWindow = window;
+            // A path given at launch opens once the shell is ON SCREEN, through the routing a Recent
+            // row uses. A missing or unknown path lands on the ordinary error card; nothing here throws.
+            if (Program.StartupPath is { } startup)
+                window.Opened += async (_, _) =>
+                {
+                    try { await landing.OpenFromCommandLineAsync(startup); }
+                    catch (Exception) { /* the open reports its own failures; never crash the launch */ }
+                };
             // The container owns the singleton ICookBookSession, which owns the open
             // cookbook's decoded images; dispose it on exit so that cleanup runs.
             desktop.Exit += (_, _) => services.Dispose();

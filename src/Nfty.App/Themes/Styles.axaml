@@ -1374,6 +1374,13 @@
     <Setter Property="TextWrapping" Value="Wrap" />
     <Setter Property="Margin" Value="0,4,0,0" />
   </Style>
+  <!-- A warning sentence in the card body: WarningBrush ink, the m-sub size and line box together. -->
+  <Style Selector="TextBlock.warnline">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="Margin" Value="0" />
+  </Style>
   <!-- .derived: dashed rule above, then "Identifier <code>" -->
   <Style Selector="TextBlock.derived">
     <Setter Property="FontSize" Value="10.5" />

@@ -64,6 +64,7 @@ public class LandingNewCookBookTests
         try
         {
             await vm.NewCookBookCommand.ExecuteAsync(null);
+            await (vm.PendingOpen ?? Task.CompletedTask);
             Assert.True(File.Exists(path));
             using (var reread = CookBookArchive.Read(path))
             {
@@ -97,6 +98,7 @@ public class LandingNewCookBookTests
         try
         {
             await vm.NewCookBookCommand.ExecuteAsync(null);
+            await (vm.PendingOpen ?? Task.CompletedTask);
             var explorer = Assert.IsType<ExplorerViewModel>(nav.Current);
             Assert.Empty(explorer.Root.Children);                       // zero recipes
             explorer.SelectNodeCommand.Execute(explorer.Root);          // eager unique-space computation
@@ -115,6 +117,7 @@ public class LandingNewCookBookTests
         try
         {
             await vm.NewCookBookCommand.ExecuteAsync(null);
+            await (vm.PendingOpen ?? Task.CompletedTask);
             Assert.Null(nav.Current);
             Assert.Null(session.Current);
         }
@@ -131,6 +134,7 @@ public class LandingNewCookBookTests
         try
         {
             await vm.NewCookBookCommand.ExecuteAsync(null);
+            await (vm.PendingOpen ?? Task.CompletedTask);
             Assert.NotNull(dialogs.ErrorTitle);
             Assert.False(File.Exists(path));
             Assert.Null(nav.Current);

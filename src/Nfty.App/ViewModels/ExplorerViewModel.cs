@@ -32,6 +32,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     private readonly Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, Func<bool>, IngredientEditorViewModel> _editorFactory;
     private readonly Func<LoadedCookBook, CookDialogViewModel> _cookFactory;
     private readonly Func<LoadedSet, SetBrowserViewModel>? _setBrowserFactory;
+    private readonly IParallelismSetting? _threads;
     private readonly ICookBookSession _session;
     private readonly IFilePickerService _picker;
     private readonly LooseCreation _loose;
@@ -255,6 +256,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     /// <param name="looseRecipeFactory">Opens a new loose recipe in its own page. Null leaves a saved
     /// loose recipe unopened (a status line says where it went).</param>
     /// <param name="recents">Where an opened loose recipe is remembered.</param>
+    /// <param name="threads">The worker-thread setting, read when a Set is opened.</param>
     public ExplorerViewModel(LoadedCookBook book, INavigationService nav, IDialogService dialogs,
         IImageBridge bridge,
         Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, Func<bool>, IngredientEditorViewModel> editorFactory,
@@ -267,9 +269,9 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         Func<LoadedSet, SetBrowserViewModel>? setBrowserFactory = null,
         Func<Nfty.App.Rise.RiseSource, RiseViewModel>? riseFactory = null,
         Func<LoadedCookBook, ExplorerViewModel>? looseRecipeFactory = null,
-        IRecentsService? recents = null)
+        IRecentsService? recents = null, IParallelismSetting? threads = null)
     {
-        _looseRecipeFactory = looseRecipeFactory; _recents = recents;
+        _looseRecipeFactory = looseRecipeFactory; _recents = recents; _threads = threads;
         _loose = new LooseCreation(dialogs, picker, kitchen);
         _riseFactory = riseFactory;
         _book = book; _nav = nav; _dialogs = dialogs; _bridge = bridge;
@@ -1446,8 +1448,16 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         if (await _dialogs.ShowAsync<object>(_cookFactory(_book)) is not string dir) return;
         if (_setBrowserFactory is null || dir.Length == 0) return;
 
+        // Behind the busy card, like opening a Set from Landing: reading one unpacks it and parses a
+        // JSON file per asset, which froze the window for as long as it took when it ran right here.
         LoadedSet set;
-        try { set = SetReader.Read(dir); }
+        var par = _threads?.Current ?? Nfty.Core.Parallelism.Default;
+        try
+        {
+            set = await BusyViewModel.RunAsync(_dialogs, "Opening Set", "Reading the collection…",
+                (_, ct) => SetReader.ReadAsync(dir, ct, par), cancellable: true);
+        }
+        catch (OperationCanceledException) { return; }   // the user stopped it: nothing opened
         catch (Exception ex)
         {
             await _dialogs.ShowAsync<object>(
