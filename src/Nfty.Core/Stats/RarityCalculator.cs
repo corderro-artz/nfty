@@ -59,8 +59,7 @@ public static class RarityCalculator
             // Driven by LayerOrder, exactly as Generator rolls: an ingredient present in the
             // archive but absent from layerOrder is never rolled, so reporting odds for it
             // would invent traits that cannot occur. (Validator reports such an orphan.)
-            var ingById = new Dictionary<string, LoadedIngredient>();
-            foreach (var i in r.Ingredients) ingById[i.Manifest.Id] = i;
+            var ingById = RecipeLayers.ById(r);
 
             foreach (var layerId in r.Manifest.LayerOrder)
             {

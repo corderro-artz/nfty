@@ -176,7 +176,7 @@ internal static class ArchiveIo
     public static string HashFile(string path)
     {
         using var stream = File.OpenRead(path);
-        return Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
+        return Convert.ToHexStringLower(SHA256.HashData(stream));
     }
 
     public static async Task<string> HashFileAsync(string path, CancellationToken ct)
@@ -184,7 +184,7 @@ internal static class ArchiveIo
         var stream = File.OpenRead(path);
         await using var streamScope = stream.ConfigureAwait(false);
         byte[] hash = await SHA256.HashDataAsync(stream, ct).ConfigureAwait(false);
-        return Convert.ToHexString(hash).ToLowerInvariant();
+        return Convert.ToHexStringLower(hash);
     }
 
     // ---- async twins -------------------------------------------------------------------

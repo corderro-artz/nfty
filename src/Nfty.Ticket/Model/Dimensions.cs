@@ -5,4 +5,9 @@ namespace Nfty.Core.Model;
 /// two assets of different sizes.</summary>
 /// <param name="Width">Width in pixels.</param>
 /// <param name="Height">Height in pixels.</param>
-public record Dimensions(int Width, int Height);
+public record Dimensions(int Width, int Height)
+{
+    /// <summary>The most pixels a canvas may have, so allocating a raster for one cannot overflow an
+    /// <c>int</c> or exhaust memory.</summary>
+    public const long MaxPixels = 100_000_000;
+}

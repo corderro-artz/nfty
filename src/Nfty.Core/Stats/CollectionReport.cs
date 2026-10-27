@@ -75,8 +75,7 @@ public static class CollectionReport
         var rows = new List<(string Recipe, string Layer, double Percent)>();
         foreach (var r in book.Recipes)
         {
-            var ingById = new Dictionary<string, LoadedIngredient>(StringComparer.Ordinal);
-            foreach (var i in r.Ingredients) ingById[i.Manifest.Id] = i;
+            var ingById = RecipeLayers.ById(r);
 
             // In layerOrder, like every other per-layer listing in this product, so the same layers
             // are not shuffled between two reports one command apart.

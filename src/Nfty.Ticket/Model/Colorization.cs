@@ -41,4 +41,38 @@ public record Colorization(
     ColorModel Model,
     int HueQuantize,
     int SatQuantize,
-    IReadOnlyList<ColorEntry> Entries);
+    IReadOnlyList<ColorEntry> Entries)
+{
+    /// <summary>The colorization a new layer of <paramref name="kind"/> starts with: one ranged entry
+    /// for Dynamic, one fixed entry for Static, none for Custom (composited as-is).</summary>
+    /// <param name="kind">The layer's kind.</param>
+    /// <param name="model">The color space.</param>
+    /// <param name="range">The band a Dynamic layer rolls within.</param>
+    /// <param name="fixedSpec">The prefixed color a Static layer applies.</param>
+    /// <returns>The colorization, or null for a Custom layer.</returns>
+    public static Colorization? Starter(LayerKind kind, ColorModel model, ColorRange range, string fixedSpec) => kind switch
+    {
+        LayerKind.Dynamic => new Colorization(model, ColorDefaults.HueQuantize, ColorDefaults.SatQuantize,
+            new[] { new ColorEntry(1, range, null) }),
+        LayerKind.Static => new Colorization(model, ColorDefaults.HueQuantize, ColorDefaults.SatQuantize,
+            new[] { new ColorEntry(1, null, fixedSpec) }),
+        _ => null,
+    };
+}
+
+/// <summary>What a new colorized layer starts with, stated once so the two ways of creating a layer
+/// cannot produce two different layers. The editor is where these are tuned.</summary>
+public static class ColorDefaults
+{
+    /// <summary>Hue bucket width in degrees.</summary>
+    public const int HueQuantize = 12;
+
+    /// <summary>Saturation bucket width in percentage points.</summary>
+    public const int SatQuantize = 4;
+
+    /// <summary>The band a new Dynamic layer rolls within.</summary>
+    public static readonly ColorRange Range = new(0, 360, 40, 100);
+
+    /// <summary>The color a new Static layer applies.</summary>
+    public const string FixedSpec = "hex:d6249f";
+}

@@ -89,9 +89,7 @@ public sealed class MenuArchive : IDisposable
         _layersByRecipeId = new Dictionary<string, Dictionary<string, MenuLayer>>(StringComparer.Ordinal);
         foreach (var recipe in book.Recipes)
         {
-            var byId = new Dictionary<string, MenuLayer>(StringComparer.Ordinal);
-            foreach (var layer in recipe.Layers) byId[layer.Id] = layer;
-            _layersByRecipeId[recipe.Id] = byId;
+            _layersByRecipeId[recipe.Id] = Lookup.ById(recipe.Layers, l => l.Id);
         }
     }
 

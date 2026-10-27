@@ -144,7 +144,7 @@ public static class MenuWriter
         var groups = new Dictionary<string, List<string>>(StringComparer.Ordinal);
         foreach (var (key, bytes) in encoded)
         {
-            string hash = Convert.ToHexString(SHA256.HashData(bytes));
+            string hash = Convert.ToHexStringLower(SHA256.HashData(bytes));
             if (!groups.TryGetValue(hash, out var keys))
                 groups[hash] = keys = new List<string>();
             keys.Add(key);

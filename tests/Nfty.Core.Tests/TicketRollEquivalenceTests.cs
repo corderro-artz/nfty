@@ -1,6 +1,7 @@
 using Nfty.Core.Demo;
 using Nfty.Core.Formats;
 using Nfty.Core.Generation;
+using Nfty.Core.Model;
 using Nfty.Ticket;
 
 namespace Nfty.Core.Tests;
@@ -42,6 +43,61 @@ public class TicketRollEquivalenceTests
             Assert.Equal(set.Assets.Select(a => a.Dna), dnas);
         }
         finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    /// <summary>
+    /// Duplicates are the case that matters: asking for the whole of a six-asset space makes most
+    /// late rolls collide, so any draw spent differently on a collision moves every later asset. The
+    /// demo is far too large for this to ever happen there.
+    /// </summary>
+    [Fact]
+    public void A_run_that_asks_for_the_whole_space_spends_one_draw_per_attempt()
+    {
+        var variants = Enumerable.Range(0, 6).Select(i => new Variant($"v{i}", $"V{i}", 1 + i)).ToList();
+        var images = variants.ToDictionary(v => v.Id,
+            v => new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(1, 1),
+            StringComparer.Ordinal);
+        var layer = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("hat", "Hat", LayerKind.Custom, null, variants),
+            VariantImages = images,
+        };
+        using var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("b", "B", new Dimensions(1, 1), new Collection("B", "d", "B"),
+                new Dictionary<string, double> { ["r"] = 1 }),
+            Recipes =
+            [
+                new LoadedRecipe
+                {
+                    Manifest = new RecipeManifest("r", "R", ["hat"], Array.Empty<IncompatibilityRule>()),
+                    Ingredients = [layer],
+                },
+            ],
+        };
+        var opts = new GenerateOptions(Count: 6, Seed: "tight");
+
+        var menu = Ticketer.Prepare(MenuProjection.From(book));
+        var rng = new SplitMix64Rng(SeedHash.ToUlong("tight"));
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var expected = new List<string>();
+        while (expected.Count < 6)
+        {
+            var ticket = Ticketer.TryRoll(menu, rng);
+            if (ticket is null || !seen.Add(ticket.Dna)) continue;
+            expected.Add(ticket.Dna);
+        }
+
+        using (var set = Generator.Generate(book, opts))
+            Assert.Equal(expected, set.Assets.Select(a => a.Dna));
+
+        var streamed = new List<string>();
+        foreach (var asset in Generator.GenerateStreaming(book, opts))
+        {
+            streamed.Add(asset.Dna);
+            asset.Dispose();
+        }
+        Assert.Equal(expected, streamed);
     }
 
     [Fact]

@@ -139,8 +139,7 @@ public static class Validator
 
         // Built duplicate-tolerantly (last wins) so a duplicate is reported above rather than
         // thrown here; the rest of the checks still run and report what they find.
-        var ingById = new Dictionary<string, LoadedIngredient>();
-        foreach (var i in r.Ingredients) ingById[i.Manifest.Id] = i;
+        var ingById = RecipeLayers.ById(r);
 
         CheckLayerOrder(problems, r, ingById);
 

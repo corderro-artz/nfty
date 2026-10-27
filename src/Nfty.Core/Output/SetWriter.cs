@@ -72,9 +72,10 @@ public static class SetWriter
         Parallelism? parallelism = null)
     {
         parallelism ??= Parallelism.Default;
-        // Read BEFORE anything can overwrite set.json — see RecordedShaAt.
-        string? recorded = RecordedShaAt(outDir);
-        var recordedModels = CheckModels(outDir, models);
+        // Read BEFORE anything can overwrite set.json — see RecordedAt.
+        var onDisk = RecordedAt(outDir);
+        string? recorded = onDisk.Sha;
+        var recordedModels = CheckModels(outDir, models, onDisk.Models);
         // Every file NAME is validated for every asset before the first file is written, so a bad
         // name on asset 300 refuses the run as cleanly as a mismatched option does. Names are asked
         // of the modeler without building any model, so this costs no memory.
@@ -110,7 +111,7 @@ public static class SetWriter
             File.WriteAllText(item.NftyPath, Serialize(Regraded(item, rarity))));
 
         File.WriteAllText(SetJsonPath(outDir),
-            Serialize(BuildSetManifest(set, existing, rarity, recorded, RecordedUniqueAt(outDir),
+            Serialize(BuildSetManifest(set, existing, rarity, recorded, onDisk.Unique,
                 MergedModels(models, recordedModels, set, skipped))));
 
         if (pack) Pack(outDir);
@@ -137,9 +138,10 @@ public static class SetWriter
         Parallelism? parallelism = null)
     {
         parallelism ??= Parallelism.Default;
-        // Read BEFORE anything can overwrite set.json — see RecordedShaAt.
-        string? recorded = RecordedShaAt(outDir);
-        var recordedModels = CheckModels(outDir, models);
+        // Read BEFORE anything can overwrite set.json — see RecordedAt.
+        var onDisk = RecordedAt(outDir);
+        string? recorded = onDisk.Sha;
+        var recordedModels = CheckModels(outDir, models, onDisk.Models);
         // As in Write: every name validated before anything is written.
         ValidateModelNames(models, set);
         var skipped = models is null ? null : new bool[set.Assets.Count];
@@ -176,7 +178,7 @@ public static class SetWriter
             await File.WriteAllTextAsync(item.NftyPath, Serialize(Regraded(item, rarity)), ct).ConfigureAwait(false)).ConfigureAwait(false);
 
         await File.WriteAllTextAsync(SetJsonPath(outDir),
-            Serialize(BuildSetManifest(set, existing, rarity, recorded, RecordedUniqueAt(outDir),
+            Serialize(BuildSetManifest(set, existing, rarity, recorded, onDisk.Unique,
                 MergedModels(models, recordedModels, set, skipped))),
             cancellationToken).ConfigureAwait(false);
 
@@ -191,8 +193,9 @@ public static class SetWriter
     /// <exception cref="CorruptSetException">An item file is unreadable or missing its fields.</exception>
     public static ExistingSet ReadExisting(string outDir, Parallelism? parallelism = null)
     {
-        string? sha = RecordedShaAt(outDir);
-        var recordedModels = RecordedModelsAt(outDir);
+        var onDisk = RecordedAt(outDir);
+        string? sha = onDisk.Sha;
+        var recordedModels = onDisk.Models;
 
         var nftyDir = Path.Combine(outDir, SetLayout.NftyDir);
         if (!Directory.Exists(nftyDir)) return new ExistingSet(Array.Empty<string>(), 1, sha, recordedModels);
@@ -216,16 +219,9 @@ public static class SetWriter
     public static async Task<ExistingSet> ReadExistingAsync(
         string outDir, CancellationToken cancellationToken = default, Parallelism? parallelism = null)
     {
-        string setJson = SetJsonPath(outDir);
-        string? sha = null;
-        SetModels? recordedModels = null;
-        if (File.Exists(setJson))
-        {
-            // the awaiting twin of RecordedShaAt; same rule, same best-effort parse
-            string json = await File.ReadAllTextAsync(setJson, cancellationToken).ConfigureAwait(false);
-            sha = ParseRecordedCookbookSha(json);
-            recordedModels = ParseRecordedModels(json);
-        }
+        var onDisk = await RecordedAtAsync(outDir, cancellationToken).ConfigureAwait(false);
+        string? sha = onDisk.Sha;
+        var recordedModels = onDisk.Models;
 
         var nftyDir = Path.Combine(outDir, SetLayout.NftyDir);
         if (!Directory.Exists(nftyDir)) return new ExistingSet(Array.Empty<string>(), 1, sha, recordedModels);
@@ -282,46 +278,54 @@ public static class SetWriter
     /// <summary>Where a Set folder keeps its manifest.</summary>
     private static string SetJsonPath(string outDir) => SetLayout.ManifestPath(outDir);
 
+    /// <summary>What <c>set.json</c> in a folder already records, read once.</summary>
+    /// <param name="Sha">The source archive's hash, or null when it did not record one.</param>
+    /// <param name="Models">The recorded 3D-models block, or null.</param>
+    /// <param name="Unique">What it recorded about its own uniqueness, or null when it never said.</param>
+    private sealed record Recorded(string? Sha, SetModels? Models, bool? Unique);
+
+    private static readonly Recorded NothingRecorded = new(null, null, null);
+
     /// <summary>
-    /// The source-archive hash a Set recorded when it was cooked, or null when it did not record one.
+    /// What <c>set.json</c> in this folder already records, or nothing when there is no readable
+    /// one. One read and one parse for every field.
     ///
-    /// <para><b>Best effort, on purpose.</b> This field exists so extend can <i>warn</i> that the book
-    /// it was handed is not the one that cooked the Set — see <see cref="SetProvenance"/> — and a
-    /// warning must never be able to fail the operation it decorates. Extend's real inputs are the
-    /// per-item files, which are read strictly and do raise <see cref="CorruptSetException"/>; a
+    /// <para><b>Best effort, on purpose.</b> These fields exist so extend can <i>warn</i> that the
+    /// book it was handed is not the one that cooked the Set - see <see cref="SetProvenance"/> - and
+    /// a warning must never be able to fail the operation it decorates. Extend's real inputs are
+    /// the per-item files, which are read strictly and do raise <see cref="CorruptSetException"/>; a
     /// missing or malformed <c>set.json</c> only costs the warning, so it reads as "cannot tell"
     /// rather than as an error.</para>
+    ///
+    /// <para>Read at the very top of a write, because the write itself overwrites the file it reads.
+    /// That ordering is the whole point: without it an extend erased the record it was about to be
+    /// judged against.</para>
     /// </summary>
-    /// <param name="json">The contents of <c>set.json</c>.</param>
-    /// <returns>The recorded hash, or null when it is absent or unreadable.</returns>
-    private static string? ParseRecordedCookbookSha(string json)
-    {
-        try
-        {
-            return JsonSerializer.Deserialize<SetManifest>(json, Json.Options)?.CookbookSha256;
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
-    }
-
-    /// <summary>What an existing Set recorded about its own uniqueness, or null when it never said.
-    /// Best-effort in the same way and for the same reason as the hash above.</summary>
-    /// <param name="outDir">The Set folder.</param>
-    /// <returns>The recorded claim, or null when absent or unreadable.</returns>
-    private static bool? RecordedUniqueAt(string outDir)
+    private static Recorded RecordedAt(string outDir)
     {
         string setJson = SetJsonPath(outDir);
-        if (!File.Exists(setJson)) return null;
+        return File.Exists(setJson) ? ParseRecorded(File.ReadAllText(setJson)) : NothingRecorded;
+    }
+
+    /// <summary>The awaiting twin of <see cref="RecordedAt"/>; same rule, same best-effort parse.</summary>
+    private static async Task<Recorded> RecordedAtAsync(string outDir, CancellationToken ct)
+    {
+        string setJson = SetJsonPath(outDir);
+        return File.Exists(setJson)
+            ? ParseRecorded(await File.ReadAllTextAsync(setJson, ct).ConfigureAwait(false))
+            : NothingRecorded;
+    }
+
+    private static Recorded ParseRecorded(string json)
+    {
         try
         {
-            return JsonSerializer.Deserialize<SetManifest>(
-                File.ReadAllText(setJson), Json.Options)?.UniqueDna;
+            var m = JsonSerializer.Deserialize<SetManifest>(json, Json.Options);
+            return m is null ? NothingRecorded : new Recorded(m.CookbookSha256, m.Models, m.UniqueDna);
         }
         catch (JsonException)
         {
-            return null;
+            return NothingRecorded;
         }
     }
 
@@ -342,7 +346,7 @@ public static class SetWriter
 
     private static (string Image, string Meta, string Nfty) PathsFor(Layout layout, int setNumber)
     {
-        string stem = setNumber.ToString("D4");
+        string stem = SetLayout.Stem(setNumber);
         return (Path.Combine(layout.ImagesDir, $"{stem}.png"),
                 Path.Combine(layout.MetaDir, $"{stem}.json"),
                 Path.Combine(layout.NftyDir, $"{stem}.json"));
@@ -431,7 +435,7 @@ public static class SetWriter
         return new OpenSeaMetadata(
             Name: $"{set.CollectionName} #{asset.SetNumber}",
             Description: set.Description,
-            Image: $"images/{asset.SetNumber:D4}.png",
+            Image: $"images/{SetLayout.Stem(asset.SetNumber)}.png",
             Attributes: attributes);
     }
 
@@ -463,20 +467,6 @@ public static class SetWriter
     private static NftyMetadata Regraded(ExistingItem item, Rarity rarity) =>
         item.Nfty with { Rarity = item.Attributes.Select(a => rarity.For(a.Trait_type, a.Value)).ToList() };
 
-    /// <summary>
-    /// What <c>set.json</c> in this folder already records as its source archive, or null when there
-    /// is no readable one — the same best-effort parse <c>ReadExisting</c> does.
-    ///
-    /// <para>Read at the very top of a write, because the write itself overwrites the file it reads.
-    /// That ordering is the whole point: without it an extend erased the record it was about to be
-    /// judged against.</para>
-    /// </summary>
-    private static string? RecordedShaAt(string outDir)
-    {
-        string setJson = SetJsonPath(outDir);
-        return File.Exists(setJson) ? ParseRecordedCookbookSha(File.ReadAllText(setJson)) : null;
-    }
-
     /// <summary>Set number to its slot in the per-asset <c>skipped</c> array; read-only once built.</summary>
     private static Dictionary<int, int> SlotsOf(GeneratedSet set)
     {
@@ -493,7 +483,7 @@ public static class SetWriter
     {
         if (models is null) return;
         foreach (var asset in set.Assets)
-            foreach (string name in models.FileNames(asset.SetNumber.ToString("D4")))
+            foreach (string name in models.FileNames(SetLayout.Stem(asset.SetNumber)))
                 CheckModelFileName(name);
     }
 
@@ -513,7 +503,7 @@ public static class SetWriter
     private static IReadOnlyList<SetFile>? ModelFor(IAssetModeler? models, GeneratedAsset asset)
     {
         if (models is null) return null;
-        string baseName = asset.SetNumber.ToString("D4");
+        string baseName = SetLayout.Stem(asset.SetNumber);
         var files = models.Model(asset, baseName);
         if (files is null) return null;
 
@@ -537,7 +527,7 @@ public static class SetWriter
         if (models is null || files is not null || !Directory.Exists(layout.ModelsDir)) return;
         // Only the files this modeler would have written for the number - never a wildcard, since
         // the folder may hold a user's own 0007.blend.
-        foreach (string name in models.FileNames(asset.SetNumber.ToString("D4")))
+        foreach (string name in models.FileNames(SetLayout.Stem(asset.SetNumber)))
         {
             string path = Path.Combine(layout.ModelsDir, name);
             if (File.Exists(path)) File.Delete(path);
@@ -550,9 +540,8 @@ public static class SetWriter
     /// make that sentence false for some of them.
     /// </summary>
     /// <returns>What the Set on disk recorded, or null.</returns>
-    private static SetModels? CheckModels(string outDir, IAssetModeler? models)
+    private static SetModels? CheckModels(string outDir, IAssetModeler? models, SetModels? recorded)
     {
-        var recorded = RecordedModelsAt(outDir);
         if (recorded is not null && models is null)
             throw new InvalidOperationException(
                 $"'{outDir}' was cooked with 3D models ({Describe(recorded)}); extending it needs the same options.");
@@ -581,19 +570,6 @@ public static class SetWriter
         return Directory.Exists(nfty) && Directory.EnumerateFiles(nfty, "*.json").Any();
     }
 
-    private static SetModels? RecordedModelsAt(string outDir)
-    {
-        string setJson = SetJsonPath(outDir);
-        return File.Exists(setJson) ? ParseRecordedModels(File.ReadAllText(setJson)) : null;
-    }
-
-    /// <summary>Best effort like the hash beside it: unreadable reads as "no models recorded".</summary>
-    private static SetModels? ParseRecordedModels(string json)
-    {
-        try { return JsonSerializer.Deserialize<SetManifest>(json, Json.Options)?.Models; }
-        catch (JsonException) { return null; }
-    }
-
     /// <summary>The block for <c>set.json</c>: this run's options, skipped = recorded (minus any
     /// number this run re-made) union this run's, ascending, null when empty.</summary>
     private static SetModels? MergedModels(
@@ -608,14 +584,14 @@ public static class SetWriter
     }
 
     /// <summary>The <c>set.json</c> for the enlarged collection. <paramref name="recordedSha256"/> is
-    /// what this Set already recorded as its origin, from <see cref="RecordedShaAt"/>.</summary>
+    /// what this Set already recorded as its origin, from <see cref="RecordedAt"/>.</summary>
     private static SetManifest BuildSetManifest(
         GeneratedSet set, IReadOnlyList<ExistingItem> existing, Rarity rarity, string? recordedSha256,
         bool? recordedUnique = null, SetModels? models = null)
     {
         var distribution = existing.Select(e => e.Recipe)
             .Concat(set.Assets.Select(a => a.RecipeId))
-            .GroupBy(id => id)
+            .GroupBy(id => id, StringComparer.Ordinal)
             .Select(g => new RecipeCount(g.Key, g.Count(), rarity.Percent(g.Count())))
             // Ordinal: the default comparer sorts by CURRENT CULTURE, so the same book and seed
             // would emit different set.json bytes on an en-US box than a sv-SE one (spec 5.5

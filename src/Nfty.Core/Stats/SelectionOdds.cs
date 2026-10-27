@@ -355,8 +355,7 @@ public sealed class BookOdds
     private static bool TryLayers(PeekedRecipe recipe, out List<LayerOdds> layers)
     {
         layers = new List<LayerOdds>(recipe.Manifest.LayerOrder.Count);
-        var byId = new Dictionary<string, IngredientManifest>(StringComparer.Ordinal);
-        foreach (var i in recipe.Ingredients) byId[i.Id] = i;
+        var byId = Nfty.Ticket.Lookup.ById(recipe.Ingredients, i => i.Id);
 
         foreach (string id in recipe.Manifest.LayerOrder)
         {
