@@ -11,6 +11,13 @@
       <Setter Property="IsHitTestVisible" Value="False" />
       <Setter Property="IsTabStop" Value="False" />
     </Style>
+    <Style Selector="StackPanel.hide">
+      <Setter Property="Opacity" Value="0" />
+      <Setter Property="IsHitTestVisible" Value="False" />
+    </Style>
+    <Style Selector="TextBlock.absent">
+      <Setter Property="Opacity" Value="0" />
+    </Style>
     <!-- Open state: the same hairline hover draws, held while the options are showing. -->
     <Style Selector="Button.tbtn.on /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
@@ -30,32 +37,64 @@
           </StackPanel>
           <TextBlock Text="Cook a Set" Classes="m-h" />
 
-          <StackPanel Spacing="11" IsVisible="{Binding ShowForm}" IsEnabled="{Binding ShowForm}">
+          <!-- The three states of the card (form, running, done) share ONE cell, and only the current
+               one is inked: the card is the height of the tallest, so it is one height in every state
+               and the footer never jumps when Cook is pressed. The others are disabled as well as
+               transparent, so they are neither hit-testable nor reachable by Tab. -->
+          <Panel>
+          <StackPanel Spacing="11" Classes.hide="{Binding !ShowForm}" IsEnabled="{Binding ShowForm}">
             <!-- Both fields carry a real label. The seed used to be labeled by PlaceholderText alone,
                  and the ViewModel pre-fills a random seed - so the one thing that named the field was
                  showing exactly when the field was empty, which it never is. The user met an unexplained
                  box of hex. A Grid rather than two StackPanels so the two labels share one column and
                  stay aligned by construction. -->
-            <Grid ColumnDefinitions="60,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="10">
+            <Grid ColumnDefinitions="60,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="10">
               <TextBlock Grid.Row="0" Grid.Column="0" Text="Count" VerticalAlignment="Center" Classes="muted" />
-              <NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding Count}" Minimum="1"
-                             Width="140" HorizontalAlignment="Left" />
+              <!-- "How many more", with the total an extend reaches beside it. The total's slot is
+                   always laid out and only its ink comes and goes, so finding out the folder holds a
+                   Set moves nothing. -->
+              <Grid Grid.Row="0" Grid.Column="1" ColumnDefinitions="190,*" ColumnSpacing="10">
+                <NumericUpDown Grid.Column="0" Value="{Binding Count}" Minimum="1"
+                               Width="140" HorizontalAlignment="Left" />
+                <TextBlock Grid.Column="1" x:Name="TotalText" Classes="m-sub" VerticalAlignment="Center" Margin="0"
+                           Text="{Binding ResultingTotalText}" />
+              </Grid>
               <TextBlock Grid.Row="1" Grid.Column="0" Text="Seed" VerticalAlignment="Center" Classes="muted" />
               <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Seed}"
                        ToolTip.Tip="Any word. The same book and the same seed always cook the same collection." />
+              <TextBlock Grid.Row="2" Grid.Column="0" Text="Recipe" VerticalAlignment="Center" Classes="muted" />
+              <!-- The reason sits OUTSIDE the combo (a disabled control is dimmed to 0.38) and shares its
+                   row, so it costs no height; the slot is always laid out and only the ink toggles. -->
+              <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="190,*" ColumnSpacing="10">
+                <ComboBox Grid.Column="0" x:Name="RecipeCombo" ItemsSource="{Binding RecipeChoices}"
+                          SelectedItem="{Binding SelectedRecipe}" IsEnabled="{Binding RecipeChoiceEnabled}"
+                          HorizontalAlignment="Stretch">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:RecipeChoice">
+                      <TextBlock Text="{Binding Label}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBlock Grid.Column="1" x:Name="RecipeReason" Classes="m-sub" VerticalAlignment="Center"
+                           Margin="0" Classes.absent="{Binding RecipeChoiceEnabled}"
+                           Text="{x:Static vm:CookDialogViewModel.RecipeLockedReason}" />
+              </Grid>
             </Grid>
-            <CheckBox Content="Pack into a single .set" IsChecked="{Binding Pack}" />
-
-            <!-- The engine and the CLI have always had this; the dialog took the default and never
-                 offered it, so a person using only the app could not mint past the unique space.
+            <!-- The engine and the CLI have always had "Allow repeats"; the dialog took the default and
+                 never offered it, so a person using only the app could not mint past the unique space.
                  They met "allows exactly 33 unique DNA, but 500 were requested" with no way past it
                  but asking for fewer. The hint below changes with the box because the consequence
-                 is the whole point of the choice, and it is not guessable from the label. -->
+                 is the whole point of the choice, and it is not guessable from the label. The two
+                 boxes share a row: the recipe choice needed a row of its own, and the card has to
+                 fit the real modal area with the model options open. -->
             <StackPanel Spacing="4">
-              <CheckBox Content="Allow repeats" IsChecked="{Binding Unlimited}"
-                        ToolTip.Tip="With repeats allowed, identity is the token number, as ERC-721 defines it. Weights still decide how common each variant is, so a rare variant stays rare and a layer with a low appearance chance is rarer still." />
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <CheckBox Grid.Column="0" Content="Pack into a single .set" IsChecked="{Binding Pack}" />
+                <CheckBox Grid.Column="1" Content="Allow repeats" IsChecked="{Binding Unlimited}"
+                          ToolTip.Tip="With repeats allowed, identity is the token number, as ERC-721 defines it. Weights still decide how common each variant is, so a rare variant stays rare and a layer with a low appearance chance is rarer still." />
+              </Grid>
               <TextBlock Text="{Binding UniqueHint}" Classes="m-sub" TextWrapping="Wrap"
-                         Margin="24,0,0,0" />
+                         Margin="0" />
             </StackPanel>
 
             <!-- The box row is always laid out. For a 2D-only book it is disabled, and the reason sits
@@ -119,12 +158,12 @@
             </Grid>
           </StackPanel>
 
-          <StackPanel Spacing="9" IsVisible="{Binding IsRunning}">
+          <StackPanel Spacing="9" VerticalAlignment="Top" Classes.hide="{Binding !IsRunning}" IsEnabled="{Binding IsRunning}">
             <ProgressBar Minimum="0" Maximum="1" Value="{Binding Progress}" />
             <TextBlock Text="{Binding PhaseText}" Classes="m-sub" />
           </StackPanel>
 
-          <StackPanel Spacing="10" IsVisible="{Binding IsDone}">
+          <StackPanel Spacing="10" VerticalAlignment="Top" Classes.hide="{Binding !IsDone}" IsEnabled="{Binding IsDone}">
             <TextBlock Text="{Binding ResultText}" TextWrapping="Wrap" Classes="m-sub" />
             <!-- The whole strip is the button. One control for one action: a path beside a separate
                  "Reveal" button is two things to press for the same intent, and the path was the
@@ -141,6 +180,7 @@
               </Grid>
             </Button>
           </StackPanel>
+          </Panel>
         </StackPanel>
       </Border>
 

@@ -479,6 +479,15 @@ public class DarkModeContrastTests
             { IncludeModels = true, ShowModelOptions = true },
         }, solidBook.Dispose);
 
+        // The Cook card extending: the recipe combo is disabled (dimmed to 0.38) with its reason
+        // beside it, and the total carries ink. The riskiest ink the recipe choice adds.
+        var extendBook = CookRecipeAndTotalTests.Book();
+        yield return ("cook-extending", new Views.CookDialogView
+        {
+            DataContext = new CookDialogViewModel(extendBook, new FilePickerService(), new NoopFolderRevealer(), dialogs)
+            { IsExtending = true, ExistingCount = 4200 },
+        }, extendBook.Dispose);
+
         yield return ("cookbook-detail-invalid",
             new Views.CookBookDetailView { DataContext = brokenVm }, null);
 
