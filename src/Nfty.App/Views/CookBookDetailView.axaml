@@ -36,9 +36,15 @@
                alignment, so an 18px title and a 10.5px suffix aligned differently sat 2.5px apart
                and TextBaselineTests said so. Bottom flushes the two boxes and leaves only the
                descent difference. -->
-          <TextBlock Grid.Column="1" Classes="idname" Text="{Binding Name}"
-                     VerticalAlignment="Bottom"
-                     MaxWidth="330" TextTrimming="CharacterEllipsis" />
+          <!-- THE TITLE IS A BUTTON, and only its behavior changed: Button.titlelink strips every
+               piece of chrome Fluent adds (padding, border, min size, hover wash), so the text sits
+               exactly where the bare TextBlock did. It opens the book settings card, the one place
+               either name can be edited. -->
+          <Button Grid.Column="1" Classes="titlelink" Command="{Binding EditSettingsCommand}"
+                  VerticalAlignment="Bottom" MaxWidth="330"
+                  ToolTip.Tip="Book settings: names, supply, recipe weights and palette">
+            <TextBlock Classes="idname" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+          </Button>
           <TextBlock Grid.Column="2" Classes="mintname" Text="{Binding MintName}"
                      VerticalAlignment="Bottom" TextTrimming="CharacterEllipsis"
                      ToolTip.Tip="The collection name every cooked asset is published under. It is a separate field from the book's own name — the CLI and a hand-edited manifest can set them differently." />

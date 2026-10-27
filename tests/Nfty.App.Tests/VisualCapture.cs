@@ -1410,6 +1410,20 @@ public class VisualCapture
                     variant, $"zz-dialog-validity-many-{key}.png");
             }
 
+            // The book settings card: a weight edited (the caveat lit), then the same card refusing.
+            foreach (var (tag, locked, refusal) in new (string, bool, string?)[]
+            {
+                ("edited", false, null),
+                ("refused", false, "CookBook has zero total recipe weight."),
+                ("locked", true, null),
+            })
+            {
+                var card = BookSettingsCard(dialogs, out var settingsBook, locked, refusal);
+                Capture(new Views.BookSettingsDialogView { DataContext = card }, variant,
+                    $"zz-dialog-book-settings-{tag}-{key}.png");
+                settingsBook.Dispose();
+            }
+
             // Make voxel-ready's preview, hugging a short list and capped (scrolling inside) on a long one.
             foreach (var (n, tag) in new[] { (3, "short"), (14, "long") })
             {
@@ -1985,6 +1999,32 @@ public class VisualCapture
 
     /// <summary>A book with a layerOrder entry naming no ingredient — reported by Validator, so the
     /// detail card takes its invalid branch.</summary>
+    /// <summary>The book settings card over the two-recipe fixture with a palette, a weight edited
+    /// (so the reserved caveat is lit) and, for the riskiest ink, a refusal printed.</summary>
+    /// <param name="dialogs">The dialog layer.</param>
+    /// <param name="book">Disposed by the caller; the card only reads it.</param>
+    /// <param name="locked">Whether the book is locked, so Save is dimmed with its reason.</param>
+    /// <param name="refusal">A refusal to print in the footer, or null.</param>
+    internal static BookSettingsDialogViewModel BookSettingsCard(IDialogService dialogs,
+        out Nfty.Core.Formats.LoadedCookBook book, bool locked, string? refusal)
+    {
+        var plain = ExplorerViewModelTests.TwoRecipeBook();
+        book = new Nfty.Core.Formats.LoadedCookBook
+        {
+            Manifest = plain.Manifest with
+            {
+                TargetSupply = 1200,
+                Palette = ["hex:d6249f", "hex:3d7f8f", "hex:2b2b2b", "hex:e8c547", "hex:7fb0c4"],
+            },
+            Recipes = plain.Recipes,
+        };
+        var vm = new BookSettingsDialogViewModel(dialogs, book, null, () => !locked,
+            _ => System.Threading.Tasks.Task.FromResult(new BookSettingsOutcome(true, [])));
+        vm.Weights[0].Weight = vm.Weights[0].SavedWeight + 15;
+        if (refusal is not null) vm.StatusLine = refusal;
+        return vm;
+    }
+
     private static Nfty.Core.Formats.LoadedCookBook InvalidBook()
     {
         var ing = new Nfty.Core.Formats.LoadedIngredient

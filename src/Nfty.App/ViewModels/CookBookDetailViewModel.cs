@@ -115,6 +115,7 @@ public partial class CookBookDetailViewModel : ViewModelBase
     private readonly Action? _showReports;
     private readonly Action? _showValidity;
     private readonly Action? _exportMenu;
+    private readonly Action? _editSettings;
 
     /// <summary>The BOOK's name — what the titlebar, the tree and the recents list all show.</summary>
     /// <remarks>
@@ -140,6 +141,12 @@ public partial class CookBookDetailViewModel : ViewModelBase
     /// disagrees is a card you cannot trust when it stays quiet.</para>
     /// </remarks>
     public string MintName { get; }
+    /// <summary>The "mints as" line for a collection name - one definition, shared by the card and
+    /// the book settings dialog's live preview so the two cannot word it differently.</summary>
+    /// <param name="collectionName">The collection name.</param>
+    /// <returns>E.g. <c>mints as Chest Demo #1</c>.</returns>
+    public static string MintNameFor(string collectionName) => $"mints as {collectionName} #1";
+
     /// <summary>Its ticker-style symbol.</summary>
     public string Symbol { get; }
     /// <summary>Its description.</summary>
@@ -268,9 +275,13 @@ public partial class CookBookDetailViewModel : ViewModelBase
     /// <param name="showValidity">Opens the full validation report; null leaves the status chip inert,
     /// which is what a fixture with no dialog layer gets.</param>
     /// <param name="exportMenu">Opens the Export a Menu card; null leaves that button unavailable.</param>
+    /// <param name="editSettings">Opens the book settings card from the title; null makes the title
+    /// do nothing, which is what a fixture with no dialog layer gets.</param>
     public CookBookDetailViewModel(LoadedCookBook book, Action cook,
-        Action? showReports = null, Action? showValidity = null, Action? exportMenu = null)
+        Action? showReports = null, Action? showValidity = null, Action? exportMenu = null,
+        Action? editSettings = null)
     {
+        _editSettings = editSettings;
         _exportMenu = exportMenu;
         _cook = cook;
         _showReports = showReports;
@@ -278,7 +289,7 @@ public partial class CookBookDetailViewModel : ViewModelBase
         Name = book.Manifest.Name;
         // "#1" and not "#0001": the number is the SHAPE of the published name, and the padding is
         // SetWriter's own business (it writes the file as NNNN and the name as "#{SetNumber}").
-        MintName = $"mints as {book.Manifest.Collection.Name} #1";
+        MintName = MintNameFor(book.Manifest.Collection.Name);
         Symbol = book.Manifest.Collection.Symbol;
         Description = book.Manifest.Collection.Description;
         // "1000 × 1000" with a real multiplication sign and spaces, as the mockup renders it.
@@ -516,6 +527,10 @@ public partial class CookBookDetailViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanShowValidity))]
     private void ShowValidity() => _showValidity?.Invoke();
     private bool CanShowValidity() => _showValidity is not null;
+
+    /// <summary>Opens the book settings card - what the title is a button for.</summary>
+    [RelayCommand]
+    private void EditSettings() => _editSettings?.Invoke();
 
     /// <summary>Shows the next page.</summary>
     [RelayCommand(CanExecute = nameof(CanGoNext))]

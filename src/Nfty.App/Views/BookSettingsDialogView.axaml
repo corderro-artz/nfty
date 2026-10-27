@@ -1,0 +1,202 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             xmlns:conv="using:Nfty.App.Converters"
+             x:Class="Nfty.App.Views.BookSettingsDialogView"
+             x:DataType="vm:BookSettingsDialogViewModel"
+             Focusable="True">
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Escape" Command="{Binding CancelCommand}" />
+  </UserControl.KeyBindings>
+  <!-- .split, like New CookBook: the halves are what the book IS (its names, symbol, description and
+       supply) and what it is MADE OF (how often each recipe is rolled, and the colors it carries).
+       It never scrolls - the weight table pages by a stated PageSize, so the card's height is a
+       pure function of that number rather than of how many recipes the book has. -->
+  <Border Classes="modal monoform split">
+    <Grid RowDefinitions="*,Auto">
+      <Border Grid.Row="0" Classes="modal-body">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+          <StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <Ellipse Classes="kdot" />
+              <TextBlock Text="COOKBOOK" Classes="slbl" />
+            </StackPanel>
+            <TextBlock Text="Book settings" Classes="m-h" />
+            <TextBlock Classes="m-sub"
+                       Text="Saved into the .cbk. Names, symbol, description and supply never change what a seed produces; recipe weights do." />
+
+            <Grid Classes="wizcols" ColumnDefinitions="*,25,1,25,*">
+              <Rectangle Grid.Column="2" Classes="wizrule" />
+
+              <!-- WHAT THE BOOK IS. -->
+              <StackPanel Grid.Column="0" Spacing="12">
+                <StackPanel Spacing="6">
+                  <TextBlock Text="BOOK NAME" Classes="plabel" Margin="0" />
+                  <TextBox x:Name="BookNameBox" Text="{Binding Name}" />
+                </StackPanel>
+
+                <StackPanel Spacing="6">
+                  <StackPanel Classes="plabel-row">
+                    <TextBlock Text="COLLECTION NAME" Classes="plabel" Margin="0" />
+                    <Border Classes="qmark"
+                            ToolTip.Tip="What every cooked asset is published under, as the name in each metadata file, and what an export is named after. It is a separate field from the book's own name.">
+                      <TextBlock />
+                    </Border>
+                  </StackPanel>
+                  <TextBox Text="{Binding CollectionName}" />
+                  <!-- Live, from the same formatter the CookBook card prints. -->
+                  <TextBlock Classes="mintname" Text="{Binding MintName}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+
+                <Grid ColumnDefinitions="110,*" ColumnSpacing="14">
+                  <StackPanel Grid.Column="0" Spacing="6">
+                    <TextBlock Text="SYMBOL" Classes="plabel" Margin="0" />
+                    <TextBox Text="{Binding Symbol}" MaxLength="255" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" Spacing="6">
+                    <StackPanel Classes="plabel-row">
+                      <TextBlock Text="TARGET SUPPLY" Classes="plabel" Margin="0" />
+                      <Border Classes="qmark"
+                              ToolTip.Tip="How many assets you intend to mint. Declarative: it never limits a cook. None is a choice of its own - a target of zero is a number nothing can mint.">
+                        <TextBlock />
+                      </Border>
+                    </StackPanel>
+                    <Grid ColumnDefinitions="140,Auto" ColumnSpacing="12">
+                      <NumericUpDown Grid.Column="0" Value="{Binding TargetSupply}" Minimum="1" Increment="100"
+                                     FormatString="0" IsEnabled="{Binding !NoTarget}" />
+                      <CheckBox Grid.Column="1" Content="None" IsChecked="{Binding NoTarget}"
+                                VerticalAlignment="Center" />
+                    </Grid>
+                  </StackPanel>
+                </Grid>
+
+                <StackPanel Spacing="6">
+                  <TextBlock Text="DESCRIPTION" Classes="plabel" Margin="0" />
+                  <TextBox Text="{Binding Description}" AcceptsReturn="True" Height="56"
+                           TextWrapping="Wrap" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                           VerticalContentAlignment="Top" Padding="11,7" />
+                </StackPanel>
+              </StackPanel>
+
+              <!-- WHAT IT IS MADE OF. -->
+              <StackPanel Grid.Column="4" Spacing="12">
+                <StackPanel Spacing="6">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Text="RECIPE WEIGHTS" Classes="plabel" Margin="0"
+                               VerticalAlignment="Center" />
+                    <!-- Present at one page as well as ten: disabled, never absent. -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                      <TextBlock Classes="pglabel" Text="{Binding PageLabel}" VerticalAlignment="Center" />
+                      <Button Classes="pgbtn" Command="{Binding PreviousPageCommand}" Content="‹"
+                              ToolTip.Tip="Previous page" />
+                      <Button Classes="pgbtn" Command="{Binding NextPageCommand}" Content="›"
+                              ToolTip.Tip="Next page" />
+                    </StackPanel>
+                  </Grid>
+
+                  <!-- The header and every row state the same pixel columns. -->
+                  <Border Classes="thead">
+                    <Grid ColumnDefinitions="*,92,64,54" ColumnSpacing="10">
+                      <TextBlock Grid.Column="0" Classes="th" Text="RECIPE" />
+                      <TextBlock Grid.Column="1" Classes="th" Text="WEIGHT" />
+                      <TextBlock Grid.Column="2" Grid.ColumnSpan="2" Classes="th" Text="SHARE" />
+                    </Grid>
+                  </Border>
+
+                  <ItemsControl ItemsSource="{Binding VisibleWeights}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:RecipeWeightRow">
+                        <Grid Classes="wrow" ColumnDefinitions="*,92,64,54" ColumnSpacing="10" Height="36">
+                          <TextBlock Grid.Column="0" Classes="cname" Text="{Binding Name}"
+                                     TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                          <NumericUpDown Grid.Column="1" Value="{Binding Weight}" Minimum="0" Increment="1"
+                                         FormatString="0.##" VerticalAlignment="Center" />
+                          <Border Grid.Column="2" Classes="cbar" VerticalAlignment="Center">
+                            <Border HorizontalAlignment="Left" CornerRadius="999" Classes="meterfill">
+                              <Border.Width>
+                                <MultiBinding Converter="{x:Static conv:ShareWidthConverter.Instance}">
+                                  <Binding Path="SharePercent" />
+                                  <Binding Path="$parent[Border].Bounds.Width" />
+                                </MultiBinding>
+                              </Border.Width>
+                            </Border>
+                          </Border>
+                          <TextBlock Grid.Column="3" Classes="cshare" Text="{Binding ShareText}"
+                                     VerticalAlignment="Center" />
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+
+                <StackPanel Spacing="6">
+                  <TextBlock Text="PALETTE" Classes="plabel" Margin="0" />
+                  <!-- ONE STATED HEIGHT, whether the book carries fourteen swatches or none, so adding
+                       the first one moves nothing below it. -->
+                  <Grid Height="26">
+                    <TextBlock Classes="keyhint" HorizontalAlignment="Left"
+                               Text="This book carries no swatches." IsVisible="{Binding NoSwatches}" />
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <ItemsControl ItemsSource="{Binding VisibleSwatches}">
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="4" /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:BookSwatch">
+                            <Grid Width="24" Height="26">
+                              <Border Classes="swfill" Width="20" Height="20" HorizontalAlignment="Left"
+                                      VerticalAlignment="Bottom" CornerRadius="{DynamicResource RadiusXs}"
+                                      BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1"
+                                      ToolTip.Tip="{Binding Spec}">
+                                <Border.Background><SolidColorBrush Color="{Binding Color}" /></Border.Background>
+                              </Border>
+                              <Button Classes="swx" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                      Command="{Binding RemoveCommand}" ToolTip.Tip="Remove this swatch">
+                                <Path Classes="ico xs" Data="{StaticResource IconClose}" />
+                              </Button>
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                      <TextBlock Classes="keyhint" Text="{Binding SwatchMoreText}" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </Grid>
+                  <Button Classes="tbtn" HorizontalAlignment="Left" Command="{Binding AddEditorPaletteCommand}"
+                          ToolTip.Tip="Copies the swatches you saved in the editor's palette into this book, so they travel with it">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <Path Classes="ico sm" Data="{StaticResource IconPlus}" />
+                      <TextBlock Text="Add the editor's saved palette" />
+                    </StackPanel>
+                  </Button>
+                </StackPanel>
+              </StackPanel>
+            </Grid>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+
+      <Border Grid.Row="1" Classes="modal-foot">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+          <!-- TWO RESERVED LINES. The weight caveat is lit whenever a weight differs from the saved one
+               (ink toggled, space kept); the line under it carries a refusal or the lock. -->
+          <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
+            <TextBlock Classes="keyhint wnote" Height="16" Text="{Binding WeightNote}"
+                       Classes.lit="{Binding HasWeightChange}" />
+            <TextBlock Classes="keyhint" Height="16" Text="{Binding FooterNote}"
+                       Classes.problem="{Binding HasStatus}" TextTrimming="CharacterEllipsis"
+                       ToolTip.Tip="{Binding FooterNote}" />
+          </StackPanel>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="tbtn ghost" />
+            <Button Command="{Binding SaveCommand}" Classes="accent">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Path Classes="ico sm" Data="{StaticResource IconCheck}" />
+                <TextBlock Text="Save settings" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
+  </Border>
+</UserControl>

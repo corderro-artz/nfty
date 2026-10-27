@@ -2560,6 +2560,72 @@
     <Setter Property="LineHeight" Value="19" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
+  <!-- The identity card's title as a BUTTON. It must be indistinguishable from the bare TextBlock it
+       replaced at rest: every piece of chrome Fluent gives a Button is set to nothing here, and the
+       presenter's wash is TRANSPARENT at rest and on hover/press (Fluent paints it there, not on the
+       button). Hover only turns the title's ink to the accent, which moves no pixel. -->
+  <Style Selector="Button.titlelink">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="Button.titlelink /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="Button.titlelink:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.titlelink:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.titlelink:pointerover TextBlock.idname">
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+
+  <!-- Book settings card: the weight caveat line is reserved and lit only while a weight differs from
+       the saved one (ink toggled, space kept); a refusal under it takes the warning ink. -->
+  <Style Selector="TextBlock.wnote">
+    <Setter Property="Opacity" Value="0" />
+  </Style>
+  <Style Selector="TextBlock.wnote.lit">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector="TextBlock.keyhint.problem">
+    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+  </Style>
+  <!-- A palette swatch's remove badge: a small panel-colored disc over the swatch's corner, so the x
+       reads on any color the book carries. Transparent presenter at rest, like every restyled Button. -->
+  <Style Selector="Button.swx">
+    <Setter Property="Width" Value="14" />
+    <Setter Property="Height" Value="14" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.swx /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="CornerRadius" Value="7" />
+  </Style>
+  <Style Selector="Button.swx:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+  </Style>
+  <Style Selector="Button.swx Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource FgBrush}" />
+  </Style>
+
   <Style Selector="TextBlock.iddesc">
     <Setter Property="FontSize" Value="12.5" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />

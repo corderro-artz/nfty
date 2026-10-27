@@ -156,7 +156,8 @@ public static class ServiceRegistration
                 // the factory runs, so the singleton is not asked for while it is being built.
                 sp.GetRequiredService<Func<LoadedCookBook, ExplorerViewModel>>(),
                 sp.GetRequiredService<IRecentsService>(),
-                sp.GetRequiredService<IParallelismSetting>()));
+                sp.GetRequiredService<IParallelismSetting>(),
+                sp.GetRequiredService<IPaletteService>()));
 
         services.AddSingleton<Func<LoadedSet, SetBrowserViewModel>>(sp => set => new SetBrowserViewModel(
             set, sp.GetRequiredService<IFilePickerService>(), sp.GetRequiredService<IDialogService>(),

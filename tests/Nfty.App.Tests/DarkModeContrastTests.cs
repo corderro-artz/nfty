@@ -377,6 +377,16 @@ public class DarkModeContrastTests
             DataContext = RuleForm(dialogs),
         }, null);
 
+        // The book settings card in its riskiest ink: a refusal in WarningBrush, the lit weight caveat,
+        // and a DISABLED accent Save (a locked book). Unlocked and refusing would leave Save enabled.
+        var settings = VisualCapture.BookSettingsCard(dialogs, out var settingsBook, locked: true,
+            refusal: "CookBook has zero total recipe weight.");
+        yield return ("dialog-book-settings", new Views.BookSettingsDialogView { DataContext = settings },
+            settingsBook.Dispose);
+        var lockedCard = VisualCapture.BookSettingsCard(dialogs, out var lockedBook, locked: true, refusal: null);
+        yield return ("dialog-book-settings-locked", new Views.BookSettingsDialogView { DataContext = lockedCard },
+            lockedBook.Dispose);
+
         // The EXPORT dialog, armed for sealing. That is its riskiest ink by a distance: the seal
         // panel's caveat and the pinned manifest's consequence lines are both WarningBrush on a
         // tinted ground, which is the pairing this sweep exists to catch, and the clean state paints

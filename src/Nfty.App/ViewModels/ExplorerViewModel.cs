@@ -41,6 +41,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     private readonly IStatusService _status;
     private readonly IKitchenSession? _kitchen;
     private readonly IClipboardService? _clipboard;
+    private readonly IPaletteService? _palette;
     private readonly Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> _looseEditorFactory;
     private readonly Func<Nfty.App.Rise.RiseSource, RiseViewModel>? _riseFactory;
 
@@ -147,6 +148,57 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private Task ShowValidity() =>
         _dialogs.ShowAsync<object>(new ValidityDialogViewModel(_dialogs, _book, _problems));
+
+    /// <summary>
+    /// Opens the book settings card. It opens on a LOCKED book too, because reading the settings is
+    /// not an edit; the card dims Save and says why, and the commit re-checks the lock itself.
+    /// </summary>
+    /// <returns>A task that completes when the card closes.</returns>
+    internal Task ShowBookSettingsAsync() =>
+        _dialogs.ShowAsync<object>(new BookSettingsDialogViewModel(
+            _dialogs, _book, _palette, () => IsEditing, CommitBookSettingsAsync));
+
+    /// <summary>
+    /// Applies the settings card's edit to the LIVE book, validates it, writes it and swaps it in -
+    /// the same seam every structural edit uses, so the edit lock, the in-flight flag and
+    /// <see cref="CookBookPersistence"/> govern it exactly as they govern a reorder.
+    /// </summary>
+    /// <param name="edit">The card's edit, applied to the book as it is NOW.</param>
+    /// <returns>Whether it was written, and what the card should print when it was not.</returns>
+    /// <remarks>
+    /// Validation refuses only problems the edit INTRODUCED. A half-built book is already "invalid"
+    /// (zero total recipe weight on a new one), and refusing every save on it would make the card
+    /// unusable exactly when an author is setting a new book up.
+    /// </remarks>
+    internal async Task<BookSettingsOutcome> CommitBookSettingsAsync(Func<LoadedCookBook, LoadedCookBook> edit)
+    {
+        if (!IsEditing)
+            return new BookSettingsOutcome(false, ["Editing is locked. Unlock the book to save changes."]);
+        if (_session.SourcePath is null)
+            return new BookSettingsOutcome(false,
+                ["This view isn't backed by a .cbk file on disk, so there is nowhere to save to."]);
+        if (_reordering)
+            return new BookSettingsOutcome(false, ["Still saving the last change - try again in a moment."]);
+
+        _reordering = true;
+        try
+        {
+            var edited = edit(_book);
+            var known = _problems.ToHashSet(StringComparer.Ordinal);
+            var after = await Task.Run(() => Validator.Validate(edited));
+            var introduced = after.Where(p => !known.Contains(p)).ToList();
+            if (introduced.Count > 0) return new BookSettingsOutcome(false, introduced);
+
+            var saved = await CookBookPersistence.PersistAsync(_session, edited);
+            ApplyBook(saved, SelectedNode?.Id, revalidate: true);
+            return new BookSettingsOutcome(true, Array.Empty<string>());
+        }
+        catch (Exception ex)
+        {
+            return new BookSettingsOutcome(false, [ex.Message]);
+        }
+        finally { _reordering = false; }
+    }
 
     private void RefreshValidity()
     {
@@ -257,6 +309,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     /// loose recipe unopened (a status line says where it went).</param>
     /// <param name="recents">Where an opened loose recipe is remembered.</param>
     /// <param name="threads">The worker-thread setting, read when a Set is opened.</param>
+    /// <param name="palette">The editor's saved palette, offered by the book settings card.</param>
     public ExplorerViewModel(LoadedCookBook book, INavigationService nav, IDialogService dialogs,
         IImageBridge bridge,
         Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, Func<bool>, IngredientEditorViewModel> editorFactory,
@@ -269,8 +322,10 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         Func<LoadedSet, SetBrowserViewModel>? setBrowserFactory = null,
         Func<Nfty.App.Rise.RiseSource, RiseViewModel>? riseFactory = null,
         Func<LoadedCookBook, ExplorerViewModel>? looseRecipeFactory = null,
-        IRecentsService? recents = null, IParallelismSetting? threads = null)
+        IRecentsService? recents = null, IParallelismSetting? threads = null,
+        IPaletteService? palette = null)
     {
+        _palette = palette;
         _looseRecipeFactory = looseRecipeFactory; _recents = recents; _threads = threads;
         _loose = new LooseCreation(dialogs, picker, kitchen);
         _riseFactory = riseFactory;
@@ -364,7 +419,9 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
                 // Reads the book and writes a .mnu beside it; allowed on a locked book because it
                 // edits nothing.
                 () => _ = _dialogs.ShowAsync<object>(new MenuExportDialogViewModel(
-                    _book, _session.SourcePath, _picker, _dialogs, _status, _threads))),
+                    _book, _session.SourcePath, _picker, _dialogs, _status, _threads)),
+                // The title is a button: names, supply, recipe weights and swatches, in one card.
+                () => _ = ShowBookSettingsAsync()),
             ExplorerNodeKind.Recipe => new RecipeDetailViewModel((LoadedRecipe)newValue!.Domain!, _book, _bridge,
                 id => OpenIngredientCommand.Execute(id),
                 // The pane asks; the Explorer owns the graph, the gate and the file. It reads _book at
