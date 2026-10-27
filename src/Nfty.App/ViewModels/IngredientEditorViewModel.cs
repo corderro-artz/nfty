@@ -75,7 +75,7 @@ public partial class EditorVariant : ObservableObject
 /// detail pane. Wired to the real opened ingredient — the filmstrip is its actual variants with
 /// rendered thumbnails. Painting, undo/redo, and variant list mutation remain stubs; canvas/live
 /// preview bitmaps arrive in Task 7.</summary>
-public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUnsavedWork
+public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUnsavedWork, IZoomPan
 {
     private readonly INavigationService _nav;
     private readonly IImageBridge _bridge;

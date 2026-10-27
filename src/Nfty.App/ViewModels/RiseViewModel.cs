@@ -27,7 +27,7 @@ namespace Nfty.App.ViewModels;
 /// replaces its item's subject and disposes the old one, so <see cref="Subject"/> is read from the
 /// item each time, and the surface a standing preview was applied to is remembered with it.</para>
 /// </remarks>
-public sealed partial class RiseViewModel : ViewModelBase, IDisposable, IUnsavedWork
+public sealed partial class RiseViewModel : ViewModelBase, IDisposable, IUnsavedWork, IZoomPan
 {
     /// <summary>Roughly 30 repaints a second of the model while a stroke is being dragged.</summary>
     internal const int MeshBudgetMs = 33;

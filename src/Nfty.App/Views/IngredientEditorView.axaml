@@ -373,7 +373,7 @@
           </Border>
 
           <!-- .canvas-wrap: the pixel-grid backdrop, the 320px art tile, the blip over its corner.
-               THE BACKDROP IS BUILT IN CODE-BEHIND (BuildBackdrop), because its square size and its
+               THE BACKDROP IS BUILT IN CODE-BEHIND (PixelCanvasHost.RebuildBackdrop), because its square size and its
                PHASE both come from the art's laid-out geometry - how many device pixels one canvas
                pixel occupies, and where the art's top-left corner landed. It was a fixed 18px
                checker tiled from this Panel's own corner, so its squares stood in no relation to the

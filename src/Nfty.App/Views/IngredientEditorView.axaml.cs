@@ -64,10 +64,8 @@ public partial class IngredientEditorView : UserControl
     private Panel _backdrop = null!;
     private IngredientEditorViewModel? _vm;
 
-    // The geometry the backdrop was last built from. A brush is rebuilt only when one of these
-    // actually moves: BuildBackdrop runs off Bounds changes, which fire on every layout pass, and
-    // allocating a DrawingBrush per pass is the churn the perf work exists to prevent.
-    private (double Scale, double OffX, double OffY, int Step, bool Grid) _backdropFrom = (-1, -1, -1, -1, false);
+    // The zoom, the transform, the pan clamp and the lattice: shared with the Rise page.
+    private PixelCanvasHost _canvas = null!;
 
     /// <summary>Loads the view.</summary>
     public IngredientEditorView()
@@ -78,6 +76,7 @@ public partial class IngredientEditorView : UserControl
         _surface = this.FindControl<Panel>("CanvasSurface")!;
         _overlay = this.FindControl<Canvas>("CanvasOverlay")!;
         _backdrop = this.FindControl<Panel>("CanvasBackdrop")!;
+        _canvas = new PixelCanvasHost(_img, _surface, _backdrop, () => _vm, Brush);
 
         _surface.PointerPressed += (_, e) =>
         {
@@ -175,9 +174,8 @@ public partial class IngredientEditorView : UserControl
         _surface.PointerWheelChanged += (_, e) =>
         {
             if (_vm is null || !_vm.ShowPaintCanvas || e.Delta.Y == 0) return;
-            ZoomAt(e.Delta.Y > 0 ? IngredientEditorViewModel.ZoomStep
-                                 : 1 / IngredientEditorViewModel.ZoomStep,
-                   e.GetPosition(_surface));
+            _canvas.ZoomAt(e.GetPosition(_surface),
+                e.Delta.Y > 0 ? IngredientEditorViewModel.ZoomStep : 1 / IngredientEditorViewModel.ZoomStep);
             e.Handled = true;
         };
 
@@ -221,14 +219,14 @@ public partial class IngredientEditorView : UserControl
         _surface.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ =>
         {
             DrawBand();
-            BuildBackdrop();
+            _canvas.RebuildBackdrop();
         }));
         // AND the panel's own bounds. The art sits in a fixed 320px host centered in this panel, so
         // the IMAGE's bounds stop changing once the host is measured while the host's POSITION keeps
         // moving as the pane resizes - and the lattice is anchored on that position. Keyed on the
         // image alone, the backdrop was built once from wherever the host happened to be mid-layout
         // and then never corrected.
-        _backdrop.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ => BuildBackdrop()));
+        _backdrop.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ => _canvas.RebuildBackdrop()));
         Rebind();
     }
 
@@ -414,9 +412,9 @@ public partial class IngredientEditorView : UserControl
         // The transform is applied HERE as well as on the event: nothing has changed yet when a view
         // is first bound, so an editor that only ever answered the change notification would open
         // with no transform at all and the first zoom would be the one that installed it.
-        ApplyCanvasTransform();
+        _canvas.ApplyCanvasTransform();
         DrawBand();
-        BuildBackdrop();
+        _canvas.RebuildBackdrop();
     }
 
     /// <summary>The canvas has been re-laid-out: re-apply the transform, rebuild the lattice under
@@ -424,82 +422,10 @@ public partial class IngredientEditorView : UserControl
     /// wanted apart, which is why one event says so.</summary>
     private void OnBackdropChanged()
     {
-        ApplyCanvasTransform();
-        ClampPan();
-        BuildBackdrop();
+        _canvas.ApplyCanvasTransform();
+        _canvas.ClampPan();
+        _canvas.RebuildBackdrop();
         DrawBand();
-    }
-
-    /// <summary>
-    /// Paints the canvas backdrop as a lattice of the ART'S OWN PIXELS, or as a flat ground.
-    /// </summary>
-    /// <remarks>
-    /// <para><b>Both the square size and the PHASE come from the laid-out art.</b> A square is
-    /// <c>GridSize</c> canvas pixels wide times the scale the image was arranged at, and the tile
-    /// starts at the art's top-left corner rather than the panel's — which is the whole fix. The
-    /// backdrop was a fixed 18px checker tiled from the panel's corner, so its squares stood in no
-    /// relation to the pixels drawn on top of them: a pixel covered part of one square and part of
-    /// the next, and the amount changed with the canvas size. It is the same
-    /// <see cref="Geometry"/> the pointer and the marquee are mapped through, so the lattice and the
-    /// pixel a click lands on cannot disagree.</para>
-    ///
-    /// <para><b>Under two device pixels a square is not a square.</b> Half a lattice that fine
-    /// averages to a flat tone and the other half aliases into a moire that crawls as the window
-    /// moves - so below that floor the flat ground is drawn instead, which is what the lattice would
-    /// have looked like anyway. The grid step is the control for it, and its tooltip says so.</para>
-    ///
-    /// <para>Rebuilt only when something it depends on MOVES. It is driven off <c>Bounds</c>, which
-    /// changes on every layout pass, and a new <c>DrawingBrush</c> per pass is exactly the per-frame
-    /// churn <c>SetBrowserPerfTests</c> exists to keep out of this app.</para>
-    /// </remarks>
-    private void BuildBackdrop()
-    {
-        if (_backdrop is null) return;
-
-        int step = _vm?.GridSize ?? 1;
-        bool grid = _vm?.ShowPixelGrid ?? false;
-
-        if (!grid || !Geometry(out var scale, out var offX, out var offY)) { Flatten(step); return; }
-
-        double cell = step * scale;
-
-        // UNDER TWO DEVICE PIXELS A SQUARE IS NOT A SQUARE. Half a lattice that fine averages to a
-        // flat tone and the other half aliases into a moire that crawls as the window moves - and
-        // what it averages TO is the flat ground, so drawing that is the honest version of the same
-        // picture. The step control is what brings the lattice back on a large canvas.
-        if (cell < 2) { Flatten(step); return; }
-
-        // The art's corner in the BACKDROP's coordinates. Translated from the SURFACE rather than
-        // from the image: the image carries the zoom as a render transform, and TranslatePoint
-        // applies one — so going through it would multiply the zoom in twice and put the lattice
-        // somewhere neither the art nor the pointer is.
-        if (_surface.TranslatePoint(new Point(offX, offY), _backdrop) is not { } art) return;
-
-        var next = (scale, art.X, art.Y, step, true);
-        if (_backdropFrom == next && _backdrop.Background is DrawingBrush) return;
-
-        var light = Brush("BgAltBrush");
-        var dark = Brush("BgAlt2Brush");
-        // Before the control is attached there is no theme to read a brush out of, and caching that
-        // failure would leave the backdrop unpainted for the life of the editor.
-        if (light is null || dark is null) return;
-        _backdropFrom = next;
-
-        // THE PHASE IS THE FIX, not the size. The lattice is anchored on the ART's corner rather
-        // than on this panel's (the arithmetic is PixelLattice's, shared with the Rise page).
-        _backdrop.Background = PixelLattice.Build(cell, art.X, art.Y, light, dark);
-    }
-
-    /// <summary>The flat ground: the app's own page color, which is what the lattice averages to
-    /// anyway at the sizes it is refused at.</summary>
-    /// <param name="step">The step in force, so a later pass can tell the state apart.</param>
-    private void Flatten(int step)
-    {
-        var flat = Brush("BgAltBrush");
-        if (flat is null) return;                       // no theme yet; try again after attach
-        if (ReferenceEquals(_backdrop.Background, flat)) return;
-        _backdropFrom = (0, 0, 0, step, false);
-        _backdrop.Background = flat;
     }
 
     private void OnVmChanged(object? sender, PropertyChangedEventArgs e)
@@ -518,7 +444,7 @@ public partial class IngredientEditorView : UserControl
     private void DrawBand()
     {
         _overlay.Children.Clear();
-        if (_vm is null || !Geometry(out var scale, out var offX, out var offY)) return;
+        if (_vm is null || !_canvas.TryGeometry(out var scale, out var offX, out var offY)) return;
 
         Point ToControl(int px, int py) => new(offX + px * scale, offY + py * scale);
 
@@ -588,123 +514,10 @@ public partial class IngredientEditorView : UserControl
     private IBrush? Brush(string key) =>
         this.TryFindResource(key, ActualThemeVariant, out var v) ? v as IBrush : null;
 
-    /// <summary>
-    /// The mapping between canvas pixels and control coordinates: the letterbox a
-    /// <c>Stretch="Uniform"</c> image leaves inside its box, times the zoom, plus the pan.
-    /// </summary>
-    /// <remarks>
-    /// <b>THIS IS THE ONLY PLACE IN THE VIEW THE ZOOM EXISTS</b> - the arithmetic is
-    /// <see cref="CanvasMapping"/>'s, shared with the Rise page. The pointer mapping, the marquee overlay and
-    /// the backdrop lattice are all mapped through this one function, so putting the magnification
-    /// here means the pixel a click lands on, the pixel the marquee is drawn around and the square
-    /// the lattice paints all move together by construction. The drawn art follows because
-    /// <see cref="ApplyCanvasTransform"/> is derived from exactly these two lines: scaling about the
-    /// CENTER is what makes a centered letterbox stay centered, so the render transform is a plain
-    /// scale-and-translate and needs no second copy of the arithmetic.
-    /// </remarks>
-    /// <param name="scale">Control pixels per canvas pixel.</param>
-    /// <param name="offX">Where the art's left edge sits, in the image control's own coordinates.</param>
-    /// <param name="offY">Where its top edge sits.</param>
-    /// <returns>False while the image has no size to map against.</returns>
-    private bool Geometry(out double scale, out double offX, out double offY)
-    {
-        scale = offX = offY = 0;
-        if (_img.Source is not Bitmap bmp) return false;
-        if (!CanvasMapping.TryFrame(bmp.PixelSize.Width, bmp.PixelSize.Height,
-                _surface.Bounds.Width, _surface.Bounds.Height,
-                _vm?.Zoom ?? 1, _vm?.PanX ?? 0, _vm?.PanY ?? 0, out var frame)) return false;
-        (scale, offX, offY) = (frame.Scale, frame.OffX, frame.OffY);
-        return true;
-    }
-
-    /// <summary>
-    /// Draws the art at the zoom and pan <see cref="Geometry"/> reports.
-    /// </summary>
-    /// <remarks>
-    /// <para>Origin CENTER, which is what makes this one transform rather than two. Scaling a
-    /// centered letterbox about its own center leaves it centered, so the drawn art lands exactly
-    /// where the letterbox arithmetic above puts it and the pan is a plain translate on top.</para>
-    ///
-    /// <para>The overlay is deliberately NOT transformed. It draws the marquee in control
-    /// coordinates through <see cref="Geometry"/>, so it already follows; scaling it as well would
-    /// multiply the dashed stroke's own width by the zoom and turn a hairline into a ribbon.</para>
-    /// </remarks>
-    private void ApplyCanvasTransform()
-    {
-        double zoom = _vm?.Zoom ?? 1;
-        double px = _vm?.PanX ?? 0, py = _vm?.PanY ?? 0;
-
-        if (_img.RenderTransform is TransformGroup { Children: [ScaleTransform s, TranslateTransform t] })
-        {
-            s.ScaleX = s.ScaleY = zoom;
-            t.X = px; t.Y = py;
-            return;
-        }
-
-        _img.RenderTransformOrigin = RelativePoint.Center;
-        _img.RenderTransform = new TransformGroup
-        {
-            Children = { new ScaleTransform(zoom, zoom), new TranslateTransform(px, py) },
-        };
-    }
-
-    /// <summary>
-    /// Keeps the art overlapping the tile it is drawn in.
-    /// </summary>
-    /// <remarks>
-    /// One rule covers both directions and falls out of the centered letterbox: the pan is measured
-    /// from CENTERED, so the art stays in contact with the tile exactly while the pan is no further
-    /// than half the difference between the tile and the art. Zoomed in that reads as "the window
-    /// stays inside the art"; fitted it collapses to zero, which is the same rule said about art
-    /// that has nowhere to go. It lives in the view because only the view knows how big the art was
-    /// drawn, the same division of labour the backdrop already keeps.
-    /// </remarks>
-    private void ClampPan()
-    {
-        if (_vm is null || _img.Source is not Bitmap bmp) return;
-        var (x, y) = CanvasMapping.ClampPan(bmp.PixelSize.Width, bmp.PixelSize.Height,
-            _surface.Bounds.Width, _surface.Bounds.Height, _vm.Zoom, _vm.PanX, _vm.PanY);
-
-        // Assigned unconditionally: the generated setter drops an equal value, so this settles in
-        // one hop rather than re-entering through the notification it would otherwise raise.
-        _vm.PanX = x;
-        _vm.PanY = y;
-    }
-
-    /// <summary>
-    /// Zooms by a factor, keeping whatever is under the given point under it.
-    /// </summary>
-    /// <remarks>
-    /// An anchored zoom is the whole difference between a magnifier and a control you fight: the
-    /// pixel being pointed at is the one the reader wants more of. Derived from
-    /// <see cref="Geometry"/> rather than written alongside it — the canvas pixel under the pointer
-    /// is the inverse of that mapping, and the new pan is whatever puts the same pixel back under
-    /// the same point at the new scale.
-    /// </remarks>
-    /// <param name="factor">How much bigger to draw it.</param>
-    /// <param name="at">The point to hold still, in the image control's coordinates.</param>
-    private void ZoomAt(double factor, Point at)
-    {
-        if (_vm is null || _img.Source is not Bitmap bmp) return;
-        if (!Geometry(out double scale, out double offX, out double offY)) return;
-
-        double before = _vm.Zoom;
-        _vm.Zoom *= factor;
-        double after = _vm.Zoom;
-        if (after == before) return;                  // already at a limit
-
-        var (panX, panY) = CanvasMapping.PanKeeping(bmp.PixelSize.Width, bmp.PixelSize.Height,
-            _surface.Bounds.Width, _surface.Bounds.Height,
-            new CanvasFrame(scale, offX, offY), before, after, at.X, at.Y);
-        _vm.PanX = panX;
-        _vm.PanY = panY;
-        ClampPan();
-    }
-
     // Map the pointer position (control space) to canvas pixel coords.
     private void AddPoint(PointerEventArgs e)
     {
-        if (_img.Source is not Bitmap bmp || !Geometry(out var scale, out var offX, out var offY)) return;
+        if (_img.Source is not Bitmap bmp || !_canvas.TryGeometry(out var scale, out var offX, out var offY)) return;
         var p = e.GetPosition(_surface);
         var pt = CanvasMapping.PixelAt(new CanvasFrame(scale, offX, offY), p.X, p.Y,
             bmp.PixelSize.Width, bmp.PixelSize.Height);
