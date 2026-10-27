@@ -149,7 +149,11 @@ public static class ServiceRegistration
                 // browser and nowhere else, and without this the only route to it from the book you
                 // cooked was back to Landing and open the folder by hand.
                 sp.GetRequiredService<Func<LoadedSet, SetBrowserViewModel>>(),
-                sp.GetRequiredService<Func<Nfty.App.Rise.RiseSource, RiseViewModel>>()));
+                sp.GetRequiredService<Func<Nfty.App.Rise.RiseSource, RiseViewModel>>(),
+                // A new loose recipe opens on its own page, as it does from Landing. Resolved when
+                // the factory runs, so the singleton is not asked for while it is being built.
+                sp.GetRequiredService<Func<LoadedCookBook, ExplorerViewModel>>(),
+                sp.GetRequiredService<IRecentsService>()));
 
         services.AddSingleton<Func<LoadedSet, SetBrowserViewModel>>(sp => set => new SetBrowserViewModel(
             set, sp.GetRequiredService<IFilePickerService>(), sp.GetRequiredService<IDialogService>(),
