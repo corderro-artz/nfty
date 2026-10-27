@@ -395,8 +395,17 @@ public static class Generator
         var images = new List<Image<Rgba32>>(ticket.Layers.Count);
         var traits = new List<TraitSelection>(ticket.Layers.Count);
         var colorRolls = new List<ColorRoll>(ticket.Layers.Count);
+        Image<Rgba32>? composed = null;
         try
         {
+            // Resolved BEFORE anything is composited: a lookup that can throw must not run while
+            // a composed canvas exists with no owner.
+            var present = new HashSet<string>(ticket.Layers.Select(l => l.IngredientId), StringComparer.Ordinal);
+            var absentLayers = recipe.Manifest.LayerOrder
+                .Where(id => !present.Contains(id))
+                .Select(id => new AbsentLayer(id, ingById[id].Manifest.Name))
+                .ToList();
+
             foreach (var layer in ticket.Layers)
             {
                 var ing = ingById[layer.IngredientId];
@@ -421,18 +430,13 @@ public static class Generator
                 colorRolls.Add(new ColorRoll(layer.IngredientId, layer.Kind, layer.Model, layer.Hue, layer.Sat));
             }
 
-            var composed = Compositor.Composite(canvas, images);
+            composed = Compositor.Composite(canvas, images);
             foreach (var img in images) img.Dispose();
+            images.Clear();
 
-            // AbsentLayers is the ticket's present layers subtracted from the recipe's whole
+            // AbsentLayers (above) is the ticket's present layers subtracted from the recipe's whole
             // layerOrder — an omission in the ticket rather than a marker, exactly as the roll
             // itself treats it (see Ticketer.TryRoll).
-            var present = new HashSet<string>(ticket.Layers.Select(l => l.IngredientId), StringComparer.Ordinal);
-            var absentLayers = recipe.Manifest.LayerOrder
-                .Where(id => !present.Contains(id))
-                .Select(id => new AbsentLayer(id, ingById[id].Manifest.Name))
-                .ToList();
-
             return new GeneratedAsset
             {
                 SetNumber = number,
@@ -451,6 +455,7 @@ public static class Generator
             // already cloned/colorized into `images` has no other owner yet, so it must be
             // disposed here before the original exception propagates.
             foreach (var img in images) img.Dispose();
+            composed?.Dispose();
             throw;
         }
     }

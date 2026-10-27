@@ -242,32 +242,8 @@ public static class SetWriter
     /// <param name="path">The file it came from, for the message.</param>
     /// <returns>The DNA and set number recorded for that asset.</returns>
     /// <exception cref="CorruptSetException">The file is not readable as an nfty metadata record.</exception>
-    private static (string Dna, int SetNumber) ReadDnaAndNumber(string json, string path)
-    {
-        JsonDocument doc;
-        try { doc = JsonDocument.Parse(json); }
-        catch (JsonException ex)
-        {
-            throw new CorruptSetException(path,
-                $"Set item '{path}' is not valid JSON, so extend cannot tell which assets already "
-                + $"exist: {ex.Message}");
-        }
-
-        using (doc)
-        {
-            if (!doc.RootElement.TryGetProperty("dna", out var dna) || dna.GetString() is not { } dnaText)
-                throw new CorruptSetException(path,
-                    $"Set item '{path}' has no 'dna' field, so extend cannot tell which assets "
-                    + "already exist.");
-            if (!doc.RootElement.TryGetProperty("setNumber", out var number)
-                || !number.TryGetInt32(out int setNumber))
-                throw new CorruptSetException(path,
-                    $"Set item '{path}' has no usable 'setNumber' field, so extend cannot tell "
-                    + "where to continue numbering.");
-
-            return (dnaText, setNumber);
-        }
-    }
+    private static (string Dna, int SetNumber) ReadDnaAndNumber(string json, string path) =>
+        SetItemFile.ReadIdentity(path, json);
 
     /// <summary>Where a Set folder keeps its manifest.</summary>
     private static string SetJsonPath(string outDir) => SetLayout.ManifestPath(outDir);
@@ -349,10 +325,10 @@ public static class SetWriter
 
         foreach (var nftyFile in Directory.EnumerateFiles(layout.NftyDir, "*.json"))
         {
-            var nfty = Deserialize<NftyMetadata>(File.ReadAllText(nftyFile));
+            var nfty = SetItemFile.ReadNfty(nftyFile, File.ReadAllText(nftyFile));
             if (newNumbers.Contains(nfty.SetNumber)) continue;
 
-            var open = Deserialize<OpenSeaMetadata>(File.ReadAllText(SiblingOf(layout, nftyFile)));
+            var open = ReadSibling(layout, nftyFile);
             existing.Add(ToExistingItem(nftyFile, nfty, open));
         }
         return existing;
@@ -366,11 +342,10 @@ public static class SetWriter
 
         foreach (var nftyFile in Directory.EnumerateFiles(layout.NftyDir, "*.json"))
         {
-            var nfty = Deserialize<NftyMetadata>(await File.ReadAllTextAsync(nftyFile, ct));
+            var nfty = SetItemFile.ReadNfty(nftyFile, await File.ReadAllTextAsync(nftyFile, ct));
             if (newNumbers.Contains(nfty.SetNumber)) continue;
 
-            var open = Deserialize<OpenSeaMetadata>(
-                await File.ReadAllTextAsync(SiblingOf(layout, nftyFile), ct));
+            var open = await ReadSiblingAsync(layout, nftyFile, ct);
             existing.Add(ToExistingItem(nftyFile, nfty, open));
         }
         return existing;
@@ -381,6 +356,18 @@ public static class SetWriter
 
     private static ExistingItem ToExistingItem(string nftyFile, NftyMetadata nfty, OpenSeaMetadata open) =>
         new(nftyFile, nfty.SetNumber, nfty.Recipe, open.Attributes, nfty);
+
+    private static OpenSeaMetadata ReadSibling(Layout layout, string nftyFile)
+    {
+        string path = SiblingOf(layout, nftyFile);
+        return SetItemFile.ReadOpenSea(path, File.ReadAllText(path));
+    }
+
+    private static async Task<OpenSeaMetadata> ReadSiblingAsync(Layout layout, string nftyFile, CancellationToken ct)
+    {
+        string path = SiblingOf(layout, nftyFile);
+        return SetItemFile.ReadOpenSea(path, await File.ReadAllTextAsync(path, ct));
+    }
 
     /// <summary>
     /// The standards-pure metadata/NNNN.json paired with a rich nfty/NNNN.json. A missing sibling
@@ -673,8 +660,6 @@ public static class SetWriter
     }
 
     private static string Serialize<T>(T value) => JsonSerializer.Serialize(value, Json.Options);
-
-    private static T Deserialize<T>(string json) => JsonSerializer.Deserialize<T>(json, Json.Options)!;
 
     private static LayerColor ToLayerColor(ColorRoll c) => new(
         Layer: c.LayerId,

@@ -144,12 +144,11 @@ public static class SetReader
                              .Select(f =>
                              {
                                  ct.ThrowIfCancellationRequested();
-                                 return JsonSerializer.Deserialize<NftyMetadata>(File.ReadAllText(f), Json.Options);
+                                 return SetItemFile.ReadNfty(f, File.ReadAllText(f));
                              })
-                             .Where(m => m is not null)
-                             .OrderBy(m => m!.SetNumber))
+                             .OrderBy(m => m.SetNumber))
                 {
-                    string stem = m!.SetNumber.ToString("D4", CultureInfo.InvariantCulture);
+                    string stem = m.SetNumber.ToString("D4", CultureInfo.InvariantCulture);
                     items.Add(new SetItem(m.SetNumber, Path.Combine(imagesDir, $"{stem}.png"),
                         m.Dna, m.Recipe, m.Rarity, m.Layers, m.AbsentLayers));
                 }

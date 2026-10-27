@@ -99,4 +99,31 @@ public class GeneratorRenderDisposalTests
             () => Render(new Dimensions(2, 2), recipe, ingById, ticket, 1));
         Assert.Equal(before, MemoryDiagnostics.TotalUndisposedAllocationCount);
     }
+
+    [Fact]
+    public void Render_disposes_every_image_when_a_late_step_throws()
+    {
+        var bg = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("bg", "bg", LayerKind.Custom, null,
+                new[] { new Variant("v", "V", 1) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>>
+                { ["v"] = new Image<Rgba32>(2, 2, new Rgba32(1, 2, 3, 255)) },
+        };
+        // layerOrder names "ghost": absent from the ticket AND from ingById, so resolving the
+        // absent layers' names throws. That used to happen AFTER compositing, leaking the canvas.
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("r", "R", new[] { "bg", "ghost" }, Array.Empty<IncompatibilityRule>()),
+            Ingredients = new[] { bg },
+        };
+        var ingById = new Dictionary<string, LoadedIngredient> { ["bg"] = bg };
+        var layers = new[] { new TicketLayer("bg", "v", null, null, null, LayerKind.Custom, 0, 0) };
+        var ticket = new AssetTicket(AssetTicket.ComputeDna("r", layers), "r", layers);
+
+        int before = MemoryDiagnostics.TotalUndisposedAllocationCount;
+        Assert.Throws<KeyNotFoundException>(
+            () => Render(new Dimensions(2, 2), recipe, ingById, ticket, 1));
+        Assert.Equal(before, MemoryDiagnostics.TotalUndisposedAllocationCount);
+    }
 }

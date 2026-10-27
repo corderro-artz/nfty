@@ -1,3 +1,4 @@
+using Nfty.Core.Formats;
 using System.Reflection;
 
 namespace Nfty.Core.Demo;
@@ -79,11 +80,12 @@ public static class DemoCookBook
         // Written through a temporary name and moved into place: a half-written .cbk left by a
         // failure here would be found by the File.Exists above on the next launch and opened as a
         // corrupt archive forever after.
-        var staging = path + ".tmp";
-        using (var source = Open())
-        using (var target = File.Create(staging))
+        AtomicFile.Replace(path, staging =>
+        {
+            using var source = Open();
+            using var target = File.Create(staging);
             source.CopyTo(target);
-        File.Move(staging, path, overwrite: true);
+        });
         return path;
     }
 }

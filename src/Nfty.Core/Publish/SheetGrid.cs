@@ -1,3 +1,4 @@
+using Nfty.Core.Formats;
 using System.Globalization;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
@@ -289,24 +290,15 @@ public sealed record SheetGrid(int Columns, int Rows, int CellWidth, int CellHei
         ArgumentException.ThrowIfNullOrWhiteSpace(pngPath);
 
         long before = new FileInfo(pngPath).Length;
-        string tmp = $"{pngPath}.{Guid.NewGuid():N}.tmp";
-        try
+        AtomicFile.Replace(pngPath, tmp =>
         {
-            using (var image = Image.Load(pngPath))
-            {
-                var text = image.Metadata.GetPngMetadata().TextData;
-                for (int i = text.Count - 1; i >= 0; i--)
-                    if (text[i].Keyword == ChunkKeyword) text.RemoveAt(i);
-                if (grid is not null) text.Add(new PngTextData(ChunkKeyword, grid.ToChunkText(), "", ""));
-                image.Save(tmp, new PngEncoder());
-            }
-
-            File.Move(tmp, pngPath, overwrite: true);
-            return new FileInfo(pngPath).Length - before;
-        }
-        finally
-        {
-            if (File.Exists(tmp)) File.Delete(tmp);
-        }
+            using var image = Image.Load(pngPath);
+            var text = image.Metadata.GetPngMetadata().TextData;
+            for (int i = text.Count - 1; i >= 0; i--)
+                if (text[i].Keyword == ChunkKeyword) text.RemoveAt(i);
+            if (grid is not null) text.Add(new PngTextData(ChunkKeyword, grid.ToChunkText(), "", ""));
+            image.Save(tmp, new PngEncoder());
+        });
+        return new FileInfo(pngPath).Length - before;
     }
 }
