@@ -127,7 +127,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
 
     /// <summary>The problems themselves, on the status pill's tooltip - "3 problems" is only useful
     /// if you can find out what they are without running the CLI's validate command.</summary>
-    public string? ValidityTip => IsValid ? null : string.Join(Environment.NewLine, _problems);
+    public string? ValidityTip => IsValid ? null : Problems.Join(_problems);
 
     /// <summary>What the status bar's validity button promises. It says the same thing in both
     /// states, because the point of the button is that the answer is worth opening either way.</summary>
@@ -541,6 +541,18 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         _openEditor?.RefreshFromBook(book);
     }
 
+    /// <summary>Writes <paramref name="next"/> through the one persist, then shows the saved graph with
+    /// <paramref name="selectId"/> selected. The two steps every plain structural edit ends with.</summary>
+    /// <param name="next">The edited graph.</param>
+    /// <param name="selectId">The node to select afterwards, or null to keep the selection.</param>
+    /// <returns>The saved graph.</returns>
+    private async Task<LoadedCookBook> CommitAsync(LoadedCookBook next, string? selectId)
+    {
+        var saved = await CookBookPersistence.PersistAsync(_session, next);
+        ApplyBook(saved, selectId);
+        return saved;
+    }
+
     /// <summary>Rebuild the tree from a swapped-in book and select the node with <paramref name="selectId"/>
     /// (root, a recipe, or an ingredient), falling back to the cookbook root.</summary>
     /// <param name="book">The swapped-in graph.</param>
@@ -714,7 +726,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            await ShowError("Could not save the rule", ex.Message);
+            await _dialogs.ShowErrorAsync("Could not save the rule", ex.Message);
             return null;
         }
     }
@@ -761,7 +773,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            await ShowError("Could not reorder layers", ex.Message);
+            await _dialogs.ShowErrorAsync("Could not reorder layers", ex.Message);
             return null;
         }
         finally { _reordering = false; }
@@ -940,7 +952,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         if (result is null) return;   // canceled
         if (string.IsNullOrWhiteSpace(result.DerivedId))
         {
-            await ShowError("Invalid recipe", "The recipe needs a name.");
+            await _dialogs.ShowErrorAsync("Invalid recipe", "The recipe needs a name.");
             return;
         }
         // The wizard offers "The Kitchen" as a destination and this branch used to be missing
@@ -953,7 +965,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         }
         if (_book.Recipes.Any(r => r.Manifest.Id == result.DerivedId))
         {
-            await ShowError("Duplicate recipe", $"A recipe “{result.DerivedId}” already exists.");
+            await _dialogs.ShowErrorAsync("Duplicate recipe", $"A recipe “{result.DerivedId}” already exists.");
             return;
         }
         try
@@ -964,12 +976,11 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
             var recipe = LoadedRecipe.Empty(result.DerivedId, result.Name);
 
             var book2 = CookBookEdits.UpsertRecipe(_book, recipe, result.Weight);
-            var book3 = await CookBookPersistence.PersistAsync(_session, book2);
-            ApplyBook(book3, recipe.Manifest.Id);   // select the new (empty) recipe
+            await CommitAsync(book2, recipe.Manifest.Id);   // select the new (empty) recipe
         }
         catch (Exception ex)
         {
-            await ShowError("Could not add recipe", ex.Message);
+            await _dialogs.ShowErrorAsync("Could not add recipe", ex.Message);
         }
     }
 
@@ -981,7 +992,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
 
         if (string.IsNullOrWhiteSpace(result.DerivedId))   // authoritative: never persist an empty id
         {
-            await ShowError("Invalid ingredient", "The ingredient needs a name.");
+            await _dialogs.ShowErrorAsync("Invalid ingredient", "The ingredient needs a name.");
             return;
         }
 
@@ -997,14 +1008,14 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         {
             if (recipe.Ingredients.Any(i => i.Manifest.Id == newIng.Manifest.Id))
             {
-                await ShowError("Duplicate ingredient",
+                await _dialogs.ShowErrorAsync("Duplicate ingredient",
                     $"An ingredient “{newIng.Manifest.Id}” already exists in “{recipe.Manifest.Name}”.");
                 return;
             }
             var problems = Validator.ValidateIngredient(newIng);
             if (problems.Count > 0)
             {
-                await ShowError("Invalid ingredient", string.Join("\n", problems));
+                await _dialogs.ShowErrorAsync("Invalid ingredient", Problems.Join(problems));
                 return;
             }
 
@@ -1013,13 +1024,13 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
             adopted = true;   // book3 now owns newIng's image — don't dispose it below
             ApplyBook(book3, newIng.Manifest.Id);
 
-            var recipe3 = book3.Recipes.First(r => r.Manifest.Id == recipe.Manifest.Id);
+            var recipe3 = book3.Recipe(recipe.Manifest.Id);
             var ing3 = recipe3.Ingredients.First(i => i.Manifest.Id == newIng.Manifest.Id);
             OpenEditor(ing3, recipe3);   // paint the blank variant; the editor's Save persists
         }
         catch (Exception ex)
         {
-            await ShowError("Could not add ingredient", ex.Message);
+            await _dialogs.ShowErrorAsync("Could not add ingredient", ex.Message);
         }
         finally
         {
@@ -1045,7 +1056,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         }
         LoadedRecipe recipe;
         try { recipe = RecipeArchive.Read(path); }
-        catch (Exception ex) { await ShowError("Could not open", ex.Message); return; }
+        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not open", ex.Message); return; }
         var book = LooseWorkspace.WrapRecipe(recipe);
 
         // Leave the way Close does, not by swapping the session under a live page: Open() disposes
@@ -1074,6 +1085,8 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
             + "Everything saved to the book stays saved.", "Open"));
     }
 
+    /// <summary>The "Loose (Kitchen)" destination for an ingredient: the shared <see cref="LooseCreation"/>
+    /// writes a standalone .igt (never touching the open cookbook), then it opens in a loose editor.</summary>
     private async Task CreateLooseIngredient(NewIngredientViewModel result)
     {
         var path = await _loose.NewIngredientAsync(result);
@@ -1091,12 +1104,10 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         catch (Exception ex)
         {
             ing?.Dispose();   // never reached the editor - free it
-            await ShowError("Could not open", ex.Message);
+            await _dialogs.ShowErrorAsync("Could not open", ex.Message);
         }
     }
 
-    private Task ShowError(string title, string message) =>
-        _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, title, message));
     /// <summary>
     /// Brings a loose <c>.rcp</c> or <c>.igt</c> into the open CookBook.
     /// </summary>
@@ -1138,7 +1149,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            await ShowError("Could not import", ex.Message);
+            await _dialogs.ShowErrorAsync("Could not import", ex.Message);
         }
     }
 
@@ -1159,8 +1170,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
 
             var next = CookBookEdits.UpsertRecipe(_book, recipe, weight);
             recipe = null;   // the new graph owns it
-            var saved = await CookBookPersistence.PersistAsync(_session, next);
-            ApplyBook(saved, selectId: null, revalidate: true);
+            await CommitAsync(next, selectId: null);
             _status.Say($"Imported recipe “{Path.GetFileNameWithoutExtension(path)}”.");
         }
         finally { recipe?.Dispose(); }
@@ -1188,8 +1198,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         {
             var next = CookBookEdits.UpsertIngredient(_book, target.Manifest.Id, ing);
             ing = null;   // the new graph owns it
-            var saved = await CookBookPersistence.PersistAsync(_session, next);
-            ApplyBook(saved, selectId: null, revalidate: true);
+            await CommitAsync(next, selectId: null);
             _status.Say($"Imported “{Path.GetFileNameWithoutExtension(path)}” into {target.Manifest.Name}.");
         }
         finally { ing?.Dispose(); }
@@ -1228,7 +1237,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         // a form for nothing.
         if (form.TryLoad() is { } refusal)
         {
-            await ShowError("Cannot import that image", refusal);
+            await _dialogs.ShowErrorAsync("Cannot import that image", refusal);
             return;
         }
 
@@ -1242,7 +1251,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
             var problems = Validator.ValidateIngredient(newIng);
             if (problems.Count > 0)
             {
-                await ShowError("Invalid ingredient", string.Join(Environment.NewLine, problems));
+                await _dialogs.ShowErrorAsync("Invalid ingredient", Problems.Join(problems));
                 return;
             }
 
@@ -1252,7 +1261,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
             ApplyBook(book3, newIng.Manifest.Id);
             _status.Say($"Imported \u201c{result.SourceLeaf}\u201d as {newIng.Manifest.Name}.");
 
-            var recipe3 = book3.Recipes.First(r => r.Manifest.Id == target.Manifest.Id);
+            var recipe3 = book3.Recipe(target.Manifest.Id);
             var ing3 = recipe3.Ingredients.First(i => i.Manifest.Id == newIng.Manifest.Id);
             OpenEditor(ing3, recipe3);
         }
@@ -1308,7 +1317,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, "Could not delete", ex.Message));
+            await _dialogs.ShowErrorAsync("Could not delete", ex.Message);
         }
     }
 
@@ -1434,14 +1443,13 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
                     return false;
             }
 
-            var saved = await CookBookPersistence.PersistAsync(_session, edited);
-            ApplyBook(saved, node.Id);
+            await CommitAsync(edited, node.Id);
             _status.Say(said);
             return true;
         }
         catch (Exception ex)
         {
-            await ShowError("Could not reorder", ex.Message);
+            await _dialogs.ShowErrorAsync("Could not reorder", ex.Message);
             return false;
         }
         finally { _reordering = false; }
@@ -1472,12 +1480,12 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
             var book2 = CookBookEdits.RemoveVariant(_book, recipe.Manifest.Id,
                 ingredient.Manifest.Id, variantId);
 
-            var trimmed = book2.Recipes.First(r => r.Manifest.Id == recipe.Manifest.Id)
+            var trimmed = book2.Recipe(recipe.Manifest.Id)
                 .Ingredients.First(i => i.Manifest.Id == ingredient.Manifest.Id);
             var problems = Validator.ValidateIngredient(trimmed);
             if (problems.Count > 0)
             {
-                await ShowError("Cannot delete that variant", string.Join(Environment.NewLine, problems));
+                await _dialogs.ShowErrorAsync("Cannot delete that variant", Problems.Join(problems));
                 return;
             }
 
@@ -1488,7 +1496,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            await ShowError("Could not delete", ex.Message);
+            await _dialogs.ShowErrorAsync("Could not delete", ex.Message);
         }
     }
 
@@ -1517,8 +1525,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         catch (OperationCanceledException) { return; }   // the user stopped it: nothing opened
         catch (Exception ex)
         {
-            await _dialogs.ShowAsync<object>(
-                new ErrorDialogViewModel(_dialogs, "Could not open the set", ex.Message));
+            await _dialogs.ShowErrorAsync("Could not open the set", ex.Message);
             return;
         }
         _nav.To(_setBrowserFactory(set));

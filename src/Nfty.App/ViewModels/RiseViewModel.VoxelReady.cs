@@ -1,3 +1,4 @@
+using Nfty.App.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Rise;
@@ -139,7 +140,7 @@ public sealed partial class RiseViewModel
         catch (Exception ex)
         {
             if (!_disposed)
-                await _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, "Could not make voxel-ready", ex.Message));
+                await _dialogs.ShowErrorAsync("Could not make voxel-ready", ex.Message);
         }
         finally
         {
@@ -163,7 +164,7 @@ public sealed partial class RiseViewModel
         catch (Exception ex)
         {
             if (!_disposed)
-                await _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, "Could not undo", ex.Message));
+                await _dialogs.ShowErrorAsync("Could not undo", ex.Message);
         }
         finally
         {

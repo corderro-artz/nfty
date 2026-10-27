@@ -273,6 +273,22 @@ public class RiseExportTests
     }
 
     [AvaloniaFact]
+    public void Rise_and_export_word_sizes_the_same_way()
+    {
+        using var vm = BodyVm(new ScriptedPicker());
+        Item(vm, "Oak").IsChecked = true;
+        vm.ShowExportTabCommand.Execute(null);
+
+        using var snapshot = vm.Source.SnapshotExport(new[] { vm.SelectedItem });
+        var input = snapshot.Open(0, "x");
+        long actual = ModelBatch.Build(new[] { input }, vm.ExportOptions).Files.Sum(f => (long)f.Bytes.Length);
+        RiseExportSnapshot.Release(input);
+
+        // The Set export card words a size with SizeText.Of; this card must not have its own wording.
+        Assert.Equal(SizeText.Of(actual), vm.ManifestSize);
+    }
+
+    [AvaloniaFact]
     public void The_exact_size_is_built_only_on_the_export_tab_and_follows_options_and_depth()
     {
         using var vm = BodyVm(new ScriptedPicker());
@@ -284,14 +300,14 @@ public class RiseExportTests
         vm.ShowExportTabCommand.Execute(null);
         Assert.Equal(1, vm.SizeBuilds);
         var glb = vm.ManifestSize;
-        Assert.Matches(@"^\d+(\.\d)? (B|KB)$", glb);
+        Assert.Matches(@"^\d+(\.\d)? (bytes|KB|MB)$|^\d+ (bytes|KB)$", glb);
 
         // The size is the bytes the writer produces, not an estimate.
         using var snapshot = vm.Source.SnapshotExport(new[] { vm.SelectedItem });
         var input = snapshot.Open(0, "x");
         long actual = ModelBatch.Build(new[] { input }, vm.ExportOptions).Files.Sum(f => (long)f.Bytes.Length);
         RiseExportSnapshot.Release(input);
-        Assert.Equal(actual < 1024 ? $"{actual} B" : $"{actual / 1024.0:0.#} KB", glb);
+        Assert.Equal(SizeText.Of(actual), glb);
 
         vm.Format = ModelFormat.GltfEmbedded;
         Assert.Equal(2, vm.SizeBuilds);

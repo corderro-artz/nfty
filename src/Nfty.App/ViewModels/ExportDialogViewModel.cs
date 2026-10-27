@@ -638,8 +638,7 @@ public partial class ExportDialogViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowAsync<object>(
-                new ErrorDialogViewModel(_dialogs, "Export failed", ex.Message));
+            await _dialogs.ShowErrorAsync("Export failed", ex.Message);
         }
         finally
         {

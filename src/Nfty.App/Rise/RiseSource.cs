@@ -42,6 +42,39 @@ public sealed record VoxelReadyOutcome(int Snapped, string Note);
 /// </summary>
 public abstract class RiseSource : IDisposable
 {
+    private Task? _saveInFlight;
+
+    /// <summary>The write running now, or null. A second save asks for it rather than starting its own.</summary>
+    protected Task? SaveInFlight => _saveInFlight;
+
+    /// <summary>
+    /// Runs <paramref name="work"/> as THE write: one writer per destination. A second caller must not be
+    /// told "saved" while the first is still writing, or about to fail, so it gets the first's task and
+    /// its outcome. The write is published as in flight BEFORE <paramref name="work"/> starts, so a save
+    /// that runs partly synchronously (or re-enters from a handler) is already visible as running.
+    /// </summary>
+    /// <param name="work">The write.</param>
+    /// <param name="after">Runs when the write ends, success or failure, before its task completes.</param>
+    /// <returns>The write's task, which faults with the write's own exception.</returns>
+    protected Task SingleFlight(Func<Task> work, Action? after = null)
+    {
+        if (_saveInFlight is { } running) return running;
+        var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _saveInFlight = done.Task;
+        _ = RunAsync(work, after, done);
+        return done.Task;
+    }
+
+    private async Task RunAsync(Func<Task> work, Action? after, TaskCompletionSource done)
+    {
+        Exception? failure = null;
+        try { await work(); }
+        catch (Exception ex) { failure = ex; }
+        _saveInFlight = null;
+        after?.Invoke();
+        if (failure is null) done.SetResult(); else done.SetException(failure);
+    }
+
     /// <summary>Which kind of source this is.</summary>
     public abstract RiseSourceKind Kind { get; }
 

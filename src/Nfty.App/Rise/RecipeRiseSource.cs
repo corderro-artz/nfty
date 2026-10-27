@@ -52,7 +52,6 @@ public sealed class RecipeRiseSource : RiseSource
     private string? _refusal;
     private RiseLayerTarget? _target;
     private Image<Rgba32>? _below, _targetArt, _above;
-    private Task? _inFlight;
     // ONE write at a time on this book: a second save joins, a reroll or retarget is refused, never queued.
     //
     // This flag is deliberately NOT shared with the Explorer's reorder flag. The Rise page is pushed over the
@@ -691,23 +690,8 @@ public sealed class RecipeRiseSource : RiseSource
         if (IsLocked) return Task.CompletedTask;
         // One writer per destination. A second caller must not be told "saved" while the first is still
         // writing, or about to fail, so it gets the first's task and its outcome.
-        if (_inFlight is { } running) return running;
-        if (_writeBusy) return Task.CompletedTask;
-        var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        _writeBusy = true;
-        _inFlight = done.Task;
-        _ = RunSaveAsync(done);
-        return done.Task;
-    }
-
-    private async Task RunSaveAsync(TaskCompletionSource done)
-    {
-        Exception? failure = null;
-        try { await SaveCoreAsync(); }
-        catch (Exception ex) { failure = ex; }
-        _inFlight = null;
-        _writeBusy = false;
-        if (failure is null) done.SetResult(); else done.SetException(failure);
+        if (_writeBusy && SaveInFlight is null) return Task.CompletedTask;
+        return SingleFlight(() => { _writeBusy = true; return SaveCoreAsync(); }, after: () => _writeBusy = false);
     }
 
     private async Task SaveCoreAsync()
@@ -728,7 +712,7 @@ public sealed class RecipeRiseSource : RiseSource
         {
             var live = recipe.Ingredients.FirstOrDefault(i => i.Manifest.Id == ingId);
             if (live is null || !live.Manifest.Variants.Any(v => v.Id == variantId)) gone.Add(edit.VariantName);
-            else if (!live.VariantImages.TryGetValue(variantId, out var current) || !SamePixels(edit.Art, current))
+            else if (!live.VariantImages.TryGetValue(variantId, out var current) || !PixelCompare.Same(edit.Art, current))
                 stale.Add(edit.VariantName);
             // The picture is the same, so the live map reads through the same surface rule the baseline did
             // (depth under clear pixels dropped); a map that differs from the baseline was written by someone
@@ -764,7 +748,7 @@ public sealed class RecipeRiseSource : RiseSource
             }
             var next = new LoadedIngredient { Manifest = live.Manifest, VariantImages = live.VariantImages, Depths = depths };
             var problems = Validator.ValidateIngredient(next);
-            if (problems.Count > 0) throw new InvalidOperationException(string.Join(Environment.NewLine, problems));
+            if (problems.Count > 0) throw new InvalidOperationException(Problems.Join(problems));
             book2 = CookBookEdits.UpsertIngredient(book2, _recipe.Manifest.Id, next);
         }
 
@@ -774,23 +758,12 @@ public sealed class RecipeRiseSource : RiseSource
         // variants looking unsaved after a good write. From here the source reads the book that was written.
         foreach (var (edit, map) in written) edit.Baseline = map;
         _book = book3;
-        _recipe = book3.Recipes.First(r => r.Manifest.Id == _recipe.Manifest.Id);
+        _recipe = book3.Recipe(_recipe.Manifest.Id);
         RefreshRowDepth();
         RaiseSaved(book3);
         RaiseChanged();
     }
 
-    private static bool SamePixels(Image<Rgba32> a, Image<Rgba32> b)
-    {
-        if (a.Width != b.Width || a.Height != b.Height) return false;
-        bool same = true;
-        a.ProcessPixelRows(b, (ra, rb) =>
-        {
-            for (int y = 0; y < ra.Height && same; y++)
-                if (!ra.GetRowSpan(y).SequenceEqual(rb.GetRowSpan(y))) same = false;
-        });
-        return same;
-    }
 
     /// <inheritdoc />
     public override void Dispose()

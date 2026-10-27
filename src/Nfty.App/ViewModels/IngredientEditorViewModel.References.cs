@@ -545,7 +545,7 @@ public partial class IngredientEditorViewModel
         {
             LoadedIngredient opened;
             try { opened = IngredientArchive.Read(row.Key); }
-            catch (Exception ex) { await ShowErrorAsync("Could not open", ex.Message); return; }
+            catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not open", ex.Message); return; }
 
             try
             {
@@ -560,7 +560,7 @@ public partial class IngredientEditorViewModel
                                          or FormatException)
             {
                 opened.Dispose();
-                await ShowErrorAsync("Cannot use this layer", ex.Message);
+                await _dialogs.ShowErrorAsync("Cannot use this layer", ex.Message);
                 return;
             }
 

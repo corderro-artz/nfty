@@ -175,14 +175,8 @@ public partial class NewIngredientViewModel : WizardViewModelBase
     }
 
     /// <summary>Build the colorization config from the wizard fields (quantize defaults 12/4).</summary>
-    public Colorization? BuildColorization() => Kind switch
-    {
-        LayerKind.Dynamic => new Colorization(ColorModel, 12, 4,
-            new[] { new ColorEntry(1, new ColorRange(HueMin, HueMax, SatMin, SatMax), null) }),
-        LayerKind.Static => new Colorization(ColorModel, 12, 4,
-            new[] { new ColorEntry(1, null, FixedColor) }),
-        _ => null,   // Custom — composited as-is
-    };
+    public Colorization? BuildColorization() => Colorization.Starter(Kind, ColorModel,
+        new ColorRange(HueMin, HueMax, SatMin, SatMax), FixedColor);
 
     /// <summary>Turn the wizard into a loaded ingredient with one blank starter variant at the given
     /// canvas size. The caller owns the returned image until the book adopts it.</summary>

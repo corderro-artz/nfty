@@ -30,7 +30,6 @@ public sealed class VariantRiseSource : RiseSource
     private readonly List<RiseItem> _items = new();
     private readonly RiseItem _initial;
     private LoadedIngredient _looseLive;
-    private Task? _inFlight;
     private Task<VoxelReadyOutcome?>? _voxelInFlight;
     // ONE write at a time on this layer's destination, whichever kind (depth save, voxel-ready apply,
     // undo): a second is refused, never queued, as every reorder shares one flag. The page gates its
@@ -153,26 +152,9 @@ public sealed class VariantRiseSource : RiseSource
         if (IsLocked) return Task.CompletedTask;
         // One writer per destination. A second caller must not be told "saved" while the first is still
         // writing, or about to fail, so it gets the first's task and its outcome.
-        if (_inFlight is { } running) return running;
         // A voxel-ready write is running on the same destination: refused, not queued.
-        if (_writeBusy) return Task.CompletedTask;
-        // Published BEFORE the work starts: a save that runs partly synchronously (or re-enters from a
-        // handler) must already be visible as in flight.
-        var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        _writeBusy = true;
-        _inFlight = done.Task;
-        _ = RunSaveAsync(done);
-        return done.Task;
-    }
-
-    private async Task RunSaveAsync(TaskCompletionSource done)
-    {
-        Exception? failure = null;
-        try { await SaveCoreAsync(); }
-        catch (Exception ex) { failure = ex; }
-        _inFlight = null;
-        _writeBusy = false;
-        if (failure is null) done.SetResult(); else done.SetException(failure);
+        if (_writeBusy && SaveInFlight is null) return Task.CompletedTask;
+        return SingleFlight(() => { _writeBusy = true; return SaveCoreAsync(); }, after: () => _writeBusy = false);
     }
 
     private async Task SaveCoreAsync()
@@ -210,7 +192,7 @@ public sealed class VariantRiseSource : RiseSource
                 $"{string.Join(", ", gone)} no longer exists in the layer; its painted depth was not saved. Reopen Rise on the current layer.");
         var stale = _items
             .Where(i => i.Subject is { IsDirty: true } && ids.Contains(i.Id))
-            .Where(i => !live.VariantImages.TryGetValue(i.Id, out var current) || !SamePixels(i.Subject!.Art, current))
+            .Where(i => !live.VariantImages.TryGetValue(i.Id, out var current) || !PixelCompare.Same(i.Subject!.Art, current))
             .Select(i => i.Name)
             .ToList();
         if (stale.Count > 0)
@@ -221,7 +203,7 @@ public sealed class VariantRiseSource : RiseSource
         LoadedIngredient? looseNext = null;
         var next = new LoadedIngredient { Manifest = live.Manifest, VariantImages = live.VariantImages, Depths = depths };
         var problems = Validator.ValidateIngredient(next);
-        if (problems.Count > 0) throw new InvalidOperationException(string.Join(Environment.NewLine, problems));
+        if (problems.Count > 0) throw new InvalidOperationException(Problems.Join(problems));
 
         if (loose)
         {
@@ -283,7 +265,7 @@ public sealed class VariantRiseSource : RiseSource
     {
         ArgumentNullException.ThrowIfNull(change);
         var book = ScopeBook() ?? throw new InvalidOperationException("The CookBook is no longer open.");
-        var image = book.Recipes.First(r => r.Manifest.Id == change.RecipeId)
+        var image = book.Recipe(change.RecipeId)
             .Ingredients.First(i => i.Manifest.Id == change.IngredientId).VariantImages[change.VariantId];
         return (image.Clone(), VoxelReady.Snap(image));
     }
@@ -357,14 +339,14 @@ public sealed class VariantRiseSource : RiseSource
         {
             var next = graph.Recipes[0].Ingredients[0];
             var problems = Validator.ValidateIngredient(next);
-            if (problems.Count > 0) throw new InvalidOperationException(string.Join(Environment.NewLine, problems));
+            if (problems.Count > 0) throw new InvalidOperationException(Problems.Join(problems));
             await WriteLooseAsync(next);
             _looseLive = next;
             return next;
         }
         var persisted = await CookBookPersistence.PersistAsync(_session, graph);
         persistedBook(persisted);
-        return persisted.Recipes.First(r => r.Manifest.Id == _recipeId)
+        return persisted.Recipe(_recipeId)
             .Ingredients.First(i => i.Manifest.Id == _ingredientId);
     }
 
@@ -405,17 +387,6 @@ public sealed class VariantRiseSource : RiseSource
         _voxelResult = null;
     }
 
-    private static bool SamePixels(Image<Rgba32> a, Image<Rgba32> b)
-    {
-        if (a.Width != b.Width || a.Height != b.Height) return false;
-        bool same = true;
-        a.ProcessPixelRows(b, (ra, rb) =>
-        {
-            for (int y = 0; y < ra.Height && same; y++)
-                if (!ra.GetRowSpan(y).SequenceEqual(rb.GetRowSpan(y))) same = false;
-        });
-        return same;
-    }
 
     private LoadedIngredient LiveIngredient()
     {

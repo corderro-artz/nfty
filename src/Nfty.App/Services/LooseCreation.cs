@@ -45,7 +45,7 @@ public sealed class LooseCreation
     {
         if (string.IsNullOrWhiteSpace(result.DerivedId))
         {
-            await ShowError("Invalid recipe", "The recipe needs a name.");
+            await _dialogs.ShowErrorAsync("Invalid recipe", "The recipe needs a name.");
             return null;
         }
         var path = await ChoosePathAsync(result.DerivedId + Archives.RecipeExtension,
@@ -58,11 +58,11 @@ public sealed class LooseCreation
             var problems = LooseWorkspace.WriteRecipe(path, recipe);
             if (problems.Count > 0)
             {
-                await ShowError("Invalid recipe", string.Join("\n", problems));
+                await _dialogs.ShowErrorAsync("Invalid recipe", Problems.Join(problems));
                 return null;
             }
         }
-        catch (Exception ex) { await ShowError("Could not save", ex.Message); return null; }
+        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not save", ex.Message); return null; }
         return path;
     }
 
@@ -73,12 +73,12 @@ public sealed class LooseCreation
     {
         if (string.IsNullOrWhiteSpace(result.DerivedId))
         {
-            await ShowError("Invalid ingredient", "The ingredient needs a name.");
+            await _dialogs.ShowErrorAsync("Invalid ingredient", "The ingredient needs a name.");
             return null;
         }
         if (!result.TryGetCanvas(out var canvas))
         {
-            await ShowError("Invalid canvas", "Enter a canvas size like 512x512.");
+            await _dialogs.ShowErrorAsync("Invalid canvas", "Enter a canvas size like 512x512.");
             return null;
         }
         var path = await ChoosePathAsync(result.DerivedId + Archives.IngredientExtension,
@@ -87,18 +87,18 @@ public sealed class LooseCreation
 
         LoadedIngredient built;
         try { built = result.Build(canvas); }   // Build allocates the raster - guard it (OOM on a huge canvas)
-        catch (Exception ex) { await ShowError("Could not save", ex.Message); return null; }
+        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not save", ex.Message); return null; }
 
         try
         {
             var problems = LooseWorkspace.WriteIngredient(path, built);
             if (problems.Count > 0)
             {
-                await ShowError("Invalid ingredient", string.Join("\n", problems));
+                await _dialogs.ShowErrorAsync("Invalid ingredient", Problems.Join(problems));
                 return null;
             }
         }
-        catch (Exception ex) { await ShowError("Could not save", ex.Message); return null; }
+        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not save", ex.Message); return null; }
         finally { built.Dispose(); }
         return path;
     }
@@ -115,9 +115,6 @@ public sealed class LooseCreation
             if (!File.Exists(candidate)) return candidate;
         }
         try { return await _picker.SaveFileAsync(title, extension); }
-        catch (Exception ex) { await ShowError("Could not save", ex.Message); return null; }
+        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not save", ex.Message); return null; }
     }
-
-    private Task ShowError(string title, string message) =>
-        _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, title, message));
 }

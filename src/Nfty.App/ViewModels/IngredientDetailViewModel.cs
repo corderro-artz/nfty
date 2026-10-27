@@ -459,7 +459,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
             double hue = range.HueMin + (range.HueMax - range.HueMin) * t;
             double sat = (range.SatMin + range.SatMax) / 2.0 / 100.0;
             var rgb = ColorConvert.HsvToRgb(hue, sat, 0.72);
-            stops.Add(Color.FromRgb(rgb.R, rgb.G, rgb.B));
+            stops.Add(rgb.ToAvalonia());
         }
         return stops;
     }
@@ -502,7 +502,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
                 double hue = hues[Pick(hues.Count, cols, c)];
                 double sat = sats[Pick(sats.Count, rows, r)];
                 var rgb = ColorConvert.HsvToRgb(hue, sat / 100.0, 0.72);
-                swatches.Add(Color.FromRgb(rgb.R, rgb.G, rgb.B));
+                swatches.Add(rgb.ToAvalonia());
             }
         return swatches;
     }
@@ -692,7 +692,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     private Task ShowPreviewError(string message) =>
         _dialogs is null
             ? Task.CompletedTask
-            : _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, "Could not export preview", message));
+            : _dialogs.ShowErrorAsync("Could not export preview", message);
     // There is deliberately no CanEdit here any more. One existed, referenced by nothing — a
     // predicate written to gate the pencil and never attached to it — which read as though the
     // pencil were lock-gated while EditIngredientCommand carries no CanExecute at all. The pencil

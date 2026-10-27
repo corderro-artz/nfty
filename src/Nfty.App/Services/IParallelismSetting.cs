@@ -49,14 +49,6 @@ public sealed class ParallelismSettingService : IParallelismSetting
     /// <summary>The environment variable that overrides the saved count for one session.</summary>
     public const string EnvironmentVariable = "NFTY_THREADS";
 
-    // Same options as EditorViewStateService: camelCase out, case-insensitive in.
-    private static readonly JsonSerializerOptions Json = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true,
-    };
-
     private sealed record SettingsFile(int? Threads);
 
     private readonly IStateStore _store;
@@ -101,19 +93,14 @@ public sealed class ParallelismSettingService : IParallelismSetting
         int? next = degree is { } d ? Math.Clamp(d, 1, Math.Max(1, Parallelism.LogicalProcessors)) : null;
         if (next == Saved) return;
         Saved = next;
-        try { _store.Write(FileName, JsonSerializer.Serialize(new SettingsFile(next), Json)); }
+        try { _store.Write(FileName, StateJson.Write(new SettingsFile(next))); }
         catch (NotSupportedException) { /* convenience state: never surface */ }
         Changed?.Invoke();
     }
 
     private static int? Load(string? json)
     {
-        if (string.IsNullOrWhiteSpace(json)) return null;
-        try
-        {
-            var read = JsonSerializer.Deserialize<SettingsFile>(json, Json);
-            return read?.Threads is >= 1 and var n ? n : null;
-        }
-        catch (JsonException) { return null; }
+        var read = StateJson.TryRead<SettingsFile>(json);
+        return read?.Threads is >= 1 and var n ? n : null;
     }
 }

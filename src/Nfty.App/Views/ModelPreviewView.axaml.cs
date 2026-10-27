@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.Reactive;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
@@ -133,15 +134,15 @@ public sealed partial class ModelPreviewView : UserControl
         AddHandler(InputElement.DoubleTappedEvent, (Delegate)new EventHandler<RoutedEventArgs>(OnDoubleTapped));
         KeyDown += OnKeyDown;
 
-        this.GetObservable(MeshProperty).Subscribe(new Sub<Mesh?>(mesh =>
+        this.GetObservable(MeshProperty).Subscribe(new AnonymousObserver<Mesh?>(mesh =>
         {
             // The mesh is the one source of truth for the subject's extent: the VM learns it here,
             // keeping the camera where it is (only Reset/Home/double-click reframe).
             if (mesh is not null) (DataContext as ModelPreviewViewModel)?.SetSubject(mesh.Min, mesh.Max);
             MarkDirty();
         }));
-        this.GetObservable(TextureProperty).Subscribe(new Sub<Image<Rgba32>?>(_ => MarkDirty()));
-        this.GetObservable(DataContextProperty).Subscribe(new Sub<object?>(dc =>
+        this.GetObservable(TextureProperty).Subscribe(new AnonymousObserver<Image<Rgba32>?>(_ => MarkDirty()));
+        this.GetObservable(DataContextProperty).Subscribe(new AnonymousObserver<object?>(dc =>
         {
             // Either may arrive first; a VM set after the mesh must still learn the mesh's extent.
             if (dc is ModelPreviewViewModel vm && Mesh is { } mesh) vm.SetSubject(mesh.Min, mesh.Max);
@@ -153,7 +154,7 @@ public sealed partial class ModelPreviewView : UserControl
         // still (0,0,0,0), and nothing repaints once layout gives the control its real size unless
         // Bounds itself is watched too. A live 3D viewport must also repaint on every ordinary resize,
         // which this buys for free.
-        this.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ => MarkDirty()));
+        this.GetObservable(BoundsProperty).Subscribe(new AnonymousObserver<Rect>(_ => MarkDirty()));
     }
 
     private void InitializeComponent()
@@ -432,12 +433,4 @@ public sealed partial class ModelPreviewView : UserControl
         return double.IsFinite(scale) && scale > 0 ? scale : 1;
     }
 
-    /// <summary>Minimal <see cref="IObserver{T}"/> for an Avalonia property subscription — the
-    /// framework hands out <c>IObservable</c> and the BCL has no lambda overload for it.</summary>
-    private sealed class Sub<T>(Action<T> onNext) : IObserver<T>
-    {
-        public void OnCompleted() { }
-        public void OnError(Exception error) { }
-        public void OnNext(T value) => onNext(value);
-    }
 }
