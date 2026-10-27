@@ -44,7 +44,7 @@ public class GeneratorRenderDisposalTests
         try
         {
             return (GeneratedAsset?)RenderMethod.Invoke(
-                null, new object?[] { canvas, recipe, ingById, ticket, number });
+                null, new object?[] { canvas, recipe, ingById, ticket, number, Parallelism.Sequential.ImageConfiguration(false) });
         }
         catch (TargetInvocationException ex) when (ex.InnerException is not null)
         {

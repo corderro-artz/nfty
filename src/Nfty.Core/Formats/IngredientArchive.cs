@@ -320,7 +320,7 @@ public static class IngredientArchive
         var decoded = new Image<Rgba32>[variants.Count];
         try
         {
-            ParallelWork.For(variants.Count, CancellationToken.None,
+            ParallelWork.For(variants.Count, Parallelism.Default, CancellationToken.None,
                 i => decoded[i] = ArchiveIo.DecodeImage(encoded[i]));
         }
         catch
@@ -353,7 +353,7 @@ public static class IngredientArchive
         var decoded = new Image<Rgba32>[variants.Count];
         try
         {
-            ParallelWork.For(variants.Count, ct, i => decoded[i] = ArchiveIo.DecodeImage(encoded[i]));
+            ParallelWork.For(variants.Count, Parallelism.Default, ct, i => decoded[i] = ArchiveIo.DecodeImage(encoded[i]));
         }
         catch
         {

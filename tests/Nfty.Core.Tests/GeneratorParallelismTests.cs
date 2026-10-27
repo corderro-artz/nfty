@@ -118,38 +118,79 @@ public class GeneratorParallelismTests
     }
 
     /// <summary>
-    /// The same seed produces the same collection however many threads happen to run it.
+    /// The same seed produces the same collection however many threads render it, compared with
+    /// the sequential <see cref="Generator.GenerateStreaming"/> oracle.
     /// </summary>
     /// <remarks>
-    /// Forcing the degree of parallelism from 1 upward is the closest a single machine can get to
-    /// running on a different one: if any result depended on scheduling or core count, this is where
-    /// it would show.
+    /// The degree is passed through <see cref="GenerateOptions.Parallelism"/>, which really caps the
+    /// loop (<c>ParallelismTests</c> proves the cap). <c>SetMinThreads</c> is kept only as a second
+    /// lever, so that 8 workers can actually exist at once instead of being trickled out by the
+    /// pool's slow injection; it is not what limits the run. 0 means every logical processor.
     /// </remarks>
     [Theory]
     [InlineData(1)]
     [InlineData(2)]
     [InlineData(3)]
     [InlineData(8)]
+    [InlineData(0)]
     public void The_collection_does_not_depend_on_how_many_threads_render_it(int threads)
     {
         var opts = new GenerateOptions(24, "threads", EnforceUniqueDna: false);
 
-        using var baselineBook = Book();
-        using var baseline = Generator.Generate(baselineBook, opts);
-        var expected = baseline.Assets.Select(a => (a.Dna, Pixels: Hash(a.Image))).ToList();
+        using var oracleBook = Book();
+        var oracle = new List<(string Dna, string Pixels)>();
+        foreach (var a in Generator.GenerateStreaming(oracleBook, opts))
+        {
+            using (a) oracle.Add((a.Dna, Hash(a.Image)));
+        }
 
-        // ThreadPool minimum threads is the lever Parallel.For actually respects here without
-        // changing the production call site.
         ThreadPool.GetMinThreads(out var w, out var io);
-        ThreadPool.SetMinThreads(threads, io);
+        ThreadPool.SetMinThreads(Math.Max(Math.Max(threads, 2), w), io);
         try
         {
             using var book = Book();
-            using var run = Generator.Generate(book, opts);
+            using var run = Generator.Generate(book, opts with { Parallelism = new Parallelism(threads) });
             var actual = run.Assets.Select(a => (a.Dna, Pixels: Hash(a.Image))).ToList();
-            Assert.Equal(expected, actual);
+            Assert.Equal(oracle, actual);
         }
         finally { ThreadPool.SetMinThreads(w, io); }
+    }
+
+    /// <summary>
+    /// Many threads rendering the very same shared source variant at once agree with each other
+    /// (the shared images are only ever read).
+    /// </summary>
+    [Fact]
+    public void The_same_variant_renders_identically_on_many_threads_at_once()
+    {
+        // One recipe, one layer, one variant: every asset reads the same source image.
+        var img = new Image<Rgba32>(16, 16);
+        for (var y = 0; y < 16; y++)
+            for (var x = 0; x < 16; x++) img[x, y] = new Rgba32((byte)(x * 16), (byte)(y * 16), 7, 255);
+        var ing = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("only", "Only", LayerKind.Custom, null,
+                new[] { new Variant("v", "V", 1) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>> { ["v"] = img },
+        };
+        var recipe = new LoadedRecipe
+        {
+            Manifest = new RecipeManifest("r", "R", new[] { "only" }, System.Array.Empty<IncompatibilityRule>()),
+            Ingredients = new[] { ing },
+        };
+        using var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("b", "B", new Dimensions(16, 16),
+                new Collection("B", "d", "B"), new Dictionary<string, double> { ["r"] = 100 }),
+            Recipes = new[] { recipe },
+        };
+
+        using var run = Generator.Generate(book,
+            new GenerateOptions(64, "shared", EnforceUniqueDna: false, Parallelism: Parallelism.All));
+        var first = Hash(run.Assets[0].Image);
+        Assert.All(run.Assets, a => Assert.Equal(first, Hash(a.Image)));
+        // And the source itself is untouched.
+        Assert.Equal(new Rgba32(32, 48, 7, 255), img[2, 3]);
     }
 
     /// <summary>Two runs of the same seed produce the identical collection.</summary>

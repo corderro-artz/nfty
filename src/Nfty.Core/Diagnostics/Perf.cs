@@ -110,6 +110,9 @@ public static class Perf
 
         var w = Math.Max(4, rows.Max(r => r.Name.Length));
         var sb = new System.Text.StringBuilder();
+        // Scopes that run inside parallel bodies overlap, so their times add up to more than the
+        // wall clock elapsed.
+        sb.Append("ms (summed across threads)\n");
         sb.Append("SCOPE".PadRight(w))
           .Append("   CALLS      TOTAL ms       MEAN ms        MAX ms      ALLOC KB\n");
         foreach (var r in rows)

@@ -59,15 +59,18 @@ public static class Generator
         var canvas = book.Manifest.Canvas;
         var ingByRecipe = IngredientsByRecipe(recipeById);
         var assets = new GeneratedAsset[rolls.Count];
+        var parallelism = opts.Parallelism ?? Parallelism.Default;
+        var imageConfig = parallelism.ImageConfiguration(insideParallelBody: !parallelism.IsSequential);
         var progressGate = new Lock();
         int done = 0;
         try
         {
-            ParallelWork.For(rolls.Count, cancellationToken, i =>
+            ParallelWork.For(rolls.Count, parallelism, cancellationToken, i =>
             {
                 var (ticket, number) = rolls[i];
                 assets[i] = Render(
-                    canvas, recipeById[ticket.RecipeId], ingByRecipe[ticket.RecipeId], ticket, number);
+                    canvas, recipeById[ticket.RecipeId], ingByRecipe[ticket.RecipeId], ticket, number,
+                    imageConfig);
 
                 // A caller's IProgress handler is still invoked ONE AT A TIME, in increasing order,
                 // exactly as it was when this loop was sequential. That is a contract, not a
@@ -278,7 +281,8 @@ public static class Generator
                 if (opts.EnforceUniqueDna && !seen.Add(ticket.Dna)) continue;
 
                 asset = Render(
-                    canvas, recipeById[ticket.RecipeId], ingByRecipe[ticket.RecipeId], ticket, number);
+                    canvas, recipeById[ticket.RecipeId], ingByRecipe[ticket.RecipeId], ticket, number,
+                    Parallelism.Sequential.ImageConfiguration(insideParallelBody: false));
                 break;
             }
 
@@ -385,12 +389,19 @@ public static class Generator
     /// <param name="ingById">That recipe's ingredients by id.</param>
     /// <param name="ticket">The roll to render.</param>
     /// <param name="number">The asset's number within the Set.</param>
+    /// <param name="imageConfiguration">The capped ImageSharp configuration to composite under.</param>
+    /// <remarks>
+    /// Runs concurrently on many threads, and every body reads the SAME decoded
+    /// <c>VariantImages</c>. That is safe only because they are read-only here: <c>Clone</c> and
+    /// <c>Colorizer.Apply</c> read pixels and write to new images. Never <c>Mutate</c> a source image.
+    /// </remarks>
     private static GeneratedAsset Render(
         Dimensions canvas,
         LoadedRecipe recipe,
         IReadOnlyDictionary<string, LoadedIngredient> ingById,
         AssetTicket ticket,
-        int number)
+        int number,
+        SixLabors.ImageSharp.Configuration imageConfiguration)
     {
         var images = new List<Image<Rgba32>>(ticket.Layers.Count);
         var traits = new List<TraitSelection>(ticket.Layers.Count);
@@ -412,8 +423,7 @@ public static class Generator
                 var variant = ing.Manifest.Variants.First(v => v.Id == layer.VariantId);
                 traits.Add(new TraitSelection(layer.IngredientId, ing.Manifest.Name, layer.VariantId, variant.Name));
 
-                var source = ing.VariantImages[layer.VariantId];
-                // Reading Kind/Model off the TICKET here is the one place in the product that does
+                var source = ing.VariantImages[layer.VariantId];                // Reading Kind/Model off the TICKET here is the one place in the product that does
                 // - everywhere else (Plating.Plate, chiefly) they come from the Menu/book, never
                 // from the ticket, because a wire ticket's kind and model are not covered by
                 // Dna.Compute and a tampered ticket could otherwise keep its provable identity while
@@ -430,7 +440,7 @@ public static class Generator
                 colorRolls.Add(new ColorRoll(layer.IngredientId, layer.Kind, layer.Model, layer.Hue, layer.Sat));
             }
 
-            composed = Compositor.Composite(canvas, images);
+            composed = Compositor.Composite(canvas, images, imageConfiguration);
             foreach (var img in images) img.Dispose();
             images.Clear();
 

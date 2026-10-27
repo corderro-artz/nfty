@@ -106,10 +106,13 @@ public readonly record struct GenerationProgress(int Completed, int Total)
 /// the dedup bookkeeping and the space-counting, which is the expensive part of a large run on a
 /// slow machine. Incompatibility rules are still enforced either way.
 /// </param>
+/// <param name="Parallelism">How wide the render step may run; null means
+/// <see cref="Nfty.Core.Parallelism.Default"/>. Never changes a result, and is not recorded anywhere.</param>
 public record GenerateOptions(
     int Count, string Seed, string? RecipeId = null,
     int MaxRerollsPerAsset = GenerateOptions.DefaultMaxRerolls,
-    bool EnforceUniqueDna = true)
+    bool EnforceUniqueDna = true,
+    Parallelism? Parallelism = null)
 {
     /// <summary>The reroll budget when a caller does not set one. Shared with the CLI's
     /// <c>--max-rerolls</c> default so the two cannot drift apart.</summary>

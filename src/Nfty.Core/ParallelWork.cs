@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Runtime.ExceptionServices;
 
 namespace Nfty.Core;
@@ -17,63 +18,124 @@ namespace Nfty.Core;
 /// <para>Results are written to a caller-owned slot per item, never collected from the loop, so the
 /// output order is the input order on any machine.</para>
 ///
-/// <para>And exceptions come out as themselves. <see cref="Parallel"/> wraps everything in an
-/// <see cref="AggregateException"/>; this engine's callers — and <c>ErrorReport</c> — expect the
-/// engine's own exception types and their messages, so the first inner exception is rethrown with
-/// its stack intact.</para>
+/// <para>Exceptions come out as themselves, and deterministically: <see cref="Parallel"/> wraps
+/// everything in an <see cref="AggregateException"/>, but this engine's callers — and
+/// <c>ErrorReport</c> — expect the engine's own types and messages. When several items fail, the
+/// one with the LOWEST index is rethrown with its stack intact, so the message never varies with
+/// thread count. Cancellation still wins when the token fired.</para>
+///
+/// <para>A sequential <see cref="Parallelism"/> (or a single item) is a plain <c>for</c> loop with no
+/// scheduler involved, which makes it the oracle the parallel path is tested against.</para>
 /// </remarks>
 internal static class ParallelWork
 {
     /// <summary>Runs <paramref name="body"/> for each index, in parallel.</summary>
     /// <param name="count">How many indices, from zero.</param>
+    /// <param name="p">The degree of parallelism.</param>
     /// <param name="cancellationToken">Cancels the loop.</param>
     /// <param name="body">The work for one index. Must not touch shared mutable state.</param>
-    public static void For(int count, CancellationToken cancellationToken, Action<int> body)
+    public static void For(int count, Parallelism p, CancellationToken cancellationToken, Action<int> body)
     {
         if (count <= 0) return;
-        // One item is the common case for a smoke test and a cold start; the loop's setup costs
-        // more than the work.
-        if (count == 1) { body(0); return; }
+        if (count == 1 || p.IsSequential)
+        {
+            for (var i = 0; i < count; i++) { cancellationToken.ThrowIfCancellationRequested(); body(i); }
+            return;
+        }
 
+        var failures = new ConcurrentBag<(int Index, Exception Error)>();
         try
         {
-            Parallel.For(0, count, new ParallelOptions { CancellationToken = cancellationToken }, body);
+            Parallel.For(0, count,
+                new ParallelOptions { MaxDegreeOfParallelism = p.Effective, CancellationToken = cancellationToken },
+                i =>
+                {
+                    try { body(i); }
+                    catch (Exception ex) when (ex is not OperationCanceledException) { failures.Add((i, ex)); throw; }
+                });
         }
-        catch (AggregateException ex) when (ex.InnerExceptions.Count > 0)
+        catch (Exception) when (!cancellationToken.IsCancellationRequested && !failures.IsEmpty)
         {
-            ExceptionDispatchInfo.Capture(ex.InnerExceptions[0]).Throw();
-            throw;   // unreachable; satisfies the compiler
+            RethrowLowest(failures);
         }
     }
 
     /// <summary>Runs <paramref name="body"/> for each item, in parallel.</summary>
     /// <typeparam name="T">The item type.</typeparam>
     /// <param name="items">The items.</param>
+    /// <param name="p">The degree of parallelism.</param>
     /// <param name="cancellationToken">Cancels the loop.</param>
     /// <param name="body">The work for one item. Must not touch shared mutable state.</param>
-    public static void ForEach<T>(IReadOnlyList<T> items, CancellationToken cancellationToken,
+    public static void ForEach<T>(IReadOnlyList<T> items, Parallelism p, CancellationToken cancellationToken,
         Action<T> body) =>
-        For(items.Count, cancellationToken, i => body(items[i]));
+        For(items.Count, p, cancellationToken, i => body(items[i]));
+
+    /// <summary>
+    /// Like <see cref="ForEach{T}"/>, and calls <paramref name="reportDone"/> after each item with the
+    /// number finished so far: one call at a time, strictly increasing.
+    /// </summary>
+    /// <typeparam name="T">The item type.</typeparam>
+    /// <param name="items">The items.</param>
+    /// <param name="p">The degree of parallelism.</param>
+    /// <param name="cancellationToken">Cancels the loop.</param>
+    /// <param name="body">The work for one item.</param>
+    /// <param name="reportDone">Receives the finished count; null reports nothing.</param>
+    public static void ForEachReporting<T>(IReadOnlyList<T> items, Parallelism p,
+        CancellationToken cancellationToken, Action<T> body, Action<int>? reportDone)
+    {
+        var gate = new Lock();
+        var done = 0;
+        For(items.Count, p, cancellationToken, i =>
+        {
+            body(items[i]);
+            if (reportDone is null) return;
+            // Counting and reporting together: two threads must not take 1 and 2 and report them
+            // in the other order.
+            lock (gate) reportDone(++done);
+        });
+    }
 
     /// <summary>Runs an asynchronous <paramref name="body"/> for each item, in parallel.</summary>
     /// <typeparam name="T">The item type.</typeparam>
     /// <param name="items">The items.</param>
+    /// <param name="p">The degree of parallelism.</param>
     /// <param name="cancellationToken">Cancels the loop.</param>
     /// <param name="body">The work for one item. Must not touch shared mutable state.</param>
     /// <returns>A task that completes when every item has been processed.</returns>
-    public static async Task ForEachAsync<T>(IReadOnlyList<T> items,
+    public static async Task ForEachAsync<T>(IReadOnlyList<T> items, Parallelism p,
         CancellationToken cancellationToken, Func<T, CancellationToken, ValueTask> body)
     {
         if (items.Count == 0) return;
-        if (items.Count == 1) { await body(items[0], cancellationToken); return; }
+        if (items.Count == 1 || p.IsSequential)
+        {
+            foreach (var item in items)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await body(item, cancellationToken);
+            }
+            return;
+        }
 
+        var failures = new ConcurrentBag<(int Index, Exception Error)>();
         try
         {
-            await Parallel.ForEachAsync(items, cancellationToken, body);
+            await Parallel.ForEachAsync(Enumerable.Range(0, items.Count),
+                new ParallelOptions { MaxDegreeOfParallelism = p.Effective, CancellationToken = cancellationToken },
+                async (i, ct) =>
+                {
+                    try { await body(items[i], ct); }
+                    catch (Exception ex) when (ex is not OperationCanceledException) { failures.Add((i, ex)); throw; }
+                });
         }
-        catch (AggregateException ex) when (ex.InnerExceptions.Count > 0)
+        catch (Exception) when (!cancellationToken.IsCancellationRequested && !failures.IsEmpty)
         {
-            ExceptionDispatchInfo.Capture(ex.InnerExceptions[0]).Throw();
+            RethrowLowest(failures);
         }
+    }
+
+    private static void RethrowLowest(ConcurrentBag<(int Index, Exception Error)> failures)
+    {
+        var lowest = failures.OrderBy(f => f.Index).First();
+        ExceptionDispatchInfo.Capture(lowest.Error).Throw();
     }
 }

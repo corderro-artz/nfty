@@ -61,10 +61,17 @@ public static class SetWriter
     /// <param name="pack">Also zip the folder into a <c>.set</c> archive inside it, beside the images.</param>
     /// <param name="models">Turns each asset into 3D model files under <c>models/</c>; null writes none.
     /// A Set is modeled whole or not at all, so extending one needs the same options.</param>
+    /// <param name="progress">Receives one report per asset, one at a time, in increasing order.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <param name="parallelism">How wide to write; null means <see cref="Parallelism.Default"/>. The files are
+    /// byte-identical at any degree.</param>
     /// <exception cref="InvalidOperationException">The Set already on disk was modeled differently, or a
     /// modeler named a file outside <c>models/</c>.</exception>
-    public static void Write(GeneratedSet set, string outDir, bool pack, IAssetModeler? models = null)
+    public static void Write(GeneratedSet set, string outDir, bool pack, IAssetModeler? models = null,
+        IProgress<WriteProgress>? progress = null, CancellationToken cancellationToken = default,
+        Parallelism? parallelism = null)
     {
+        parallelism ??= Parallelism.Default;
         // Read BEFORE anything can overwrite set.json — see RecordedShaAt.
         string? recorded = RecordedShaAt(outDir);
         var recordedModels = CheckModels(outDir, models);
@@ -83,7 +90,7 @@ public static class SetWriter
         // the order changes, and no reader can see it. PNG encoding is the cost here, and it is
         // CPU-bound, so this is where the time goes.
         var slots = SlotsOf(set);
-        ParallelWork.ForEach(set.Assets, CancellationToken.None, asset =>
+        ParallelWork.ForEachReporting(set.Assets, parallelism, cancellationToken, asset =>
         {
             var (imagePath, metaPath, nftyPath) = PathsFor(layout, asset.SetNumber);
             asset.Image.Save(imagePath, new PngEncoder());
@@ -96,10 +103,10 @@ public static class SetWriter
             ClearStaleModels(layout, asset, files, models);
             if (files is not null)
                 foreach (var file in files) File.WriteAllBytes(Path.Combine(layout.ModelsDir, file.FileName), file.Bytes);
-        });
+        }, progress is null ? null : done => progress.Report(new WriteProgress(done, set.Assets.Count)));
 
         // Extend's regrade: same shape, same independence — one file per existing item.
-        ParallelWork.ForEach(existing, CancellationToken.None, item =>
+        ParallelWork.ForEach(existing, parallelism, cancellationToken, item =>
             File.WriteAllText(item.NftyPath, Serialize(Regraded(item, rarity))));
 
         File.WriteAllText(SetJsonPath(outDir),
@@ -119,14 +126,17 @@ public static class SetWriter
     /// <param name="progress">Receives one report per asset, one at a time, in increasing order.</param>
     /// <param name="cancellationToken">Cancels the write.</param>
     /// <param name="models">As for <see cref="Write"/>; last so every existing call site is unchanged.</param>
+    /// <param name="parallelism">As for <see cref="Write"/>.</param>
     public static async Task WriteAsync(
         GeneratedSet set,
         string outDir,
         bool pack,
         IProgress<WriteProgress>? progress = null,
         CancellationToken cancellationToken = default,
-        IAssetModeler? models = null)
+        IAssetModeler? models = null,
+        Parallelism? parallelism = null)
     {
+        parallelism ??= Parallelism.Default;
         // Read BEFORE anything can overwrite set.json — see RecordedShaAt.
         string? recorded = RecordedShaAt(outDir);
         var recordedModels = CheckModels(outDir, models);
@@ -140,7 +150,7 @@ public static class SetWriter
         var slots = SlotsOf(set);
         var progressGate = new Lock();
         int done = 0;
-        await ParallelWork.ForEachAsync(set.Assets, cancellationToken, async (asset, ct) =>
+        await ParallelWork.ForEachAsync(set.Assets, parallelism, cancellationToken, async (asset, ct) =>
         {
             var (imagePath, metaPath, nftyPath) = PathsFor(layout, asset.SetNumber);
             await asset.Image.SaveAsync(imagePath, new PngEncoder(), ct);
@@ -162,7 +172,7 @@ public static class SetWriter
                     progress.Report(new WriteProgress(++done, set.Assets.Count));
         });
 
-        await ParallelWork.ForEachAsync(existing, cancellationToken, async (item, ct) =>
+        await ParallelWork.ForEachAsync(existing, parallelism, cancellationToken, async (item, ct) =>
             await File.WriteAllTextAsync(item.NftyPath, Serialize(Regraded(item, rarity)), ct));
 
         await File.WriteAllTextAsync(SetJsonPath(outDir),
