@@ -772,6 +772,35 @@ public class VisualCapture
         }
     }
 
+    /// <summary>The HSV / HSL tray: the editor's colorize rail with HSL chosen, and the New Ingredient
+    /// wizard's color column with HSL chosen.</summary>
+    [AvaloniaFact]
+    public void Capture_color_model_toggle()
+    {
+        if (Dir is null) return;   // inert unless explicitly capturing
+
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            var key = variant.Key.ToString()!.ToLowerInvariant();
+            var (book, recipe, ing) = DynamicIngredient();
+            var vm = new IngredientEditorViewModel(ing, recipe, book, new ImageBridge(), new FakeNav(),
+                new CookBookSession(), new FakeDialogs(), new FilePickerService());
+            vm.SetModelHslCommand.Execute(null);
+            Capture(new Views.IngredientEditorView { DataContext = vm }, variant, $"editor-color-hsl-{key}.png");
+            vm.Dispose();
+            book.Dispose();
+
+            var wiz = new NewIngredientViewModel(new FakeDialogs()) { Name = "Aura" };
+            wiz.SetModelHslCommand.Execute(null);
+            Capture(new Views.NewIngredientView { DataContext = wiz }, variant, $"wizard-ingredient-hsl-{key}.png");
+
+            using var import = ImportImageForm(new FakeDialogs());
+            import.SetModelHslCommand.Execute(null);
+            Capture(new Views.ImportImageView { DataContext = import }, variant,
+                $"import-image-hsl-{key}.png", width: 1180, height: 780);
+        }
+    }
+
     /// <summary>The editor's canvas mapping in the states <see cref="Capture_editor_paint"/> does not
     /// reach: a coarser lattice step under zoom and pan with a marquee drawn through the same
     /// geometry, the grid off, and the grid at a non-square art size. They exist so a refactor of the

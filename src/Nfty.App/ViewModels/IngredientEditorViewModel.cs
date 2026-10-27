@@ -482,6 +482,8 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
         // The rail must show THIS layer's color configuration, not the field defaults. Without this
         // the editor opened a 170-200 degree layer showing 0-360, rendered its preview from the wrong
         // range, and — since the rail now writes back — would have saved the wrong range too.
+        // The model first: loading the rail re-renders, and a render before it reads the default.
+        _colorModel = ing.Manifest.Colorization?.Model ?? ColorModel.Hsv;
         LoadColorization(ing.Manifest.Colorization);
 
         // Before the first RebuildSurfaces() below: the reference rows and the pinned depth are what
@@ -819,11 +821,39 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
     }
 
     /// <summary>
-    /// The color model the layer is stored in. The rail edits hue and saturation, not the model, so
-    /// save and preview both carry the layer's own: an HSL layer stays HSL. A Custom layer turned
-    /// Dynamic or Static has no model yet and starts at HSV.
+    /// The color model the layer's hue and saturation are read in. The HSV / HSL tray on the rail
+    /// sets it; save and preview both carry it. A Custom layer turned Dynamic or Static has no model
+    /// yet and starts at HSV.
     /// </summary>
-    public ColorModel ColorModel => _ing.Manifest.Colorization?.Model ?? ColorModel.Hsv;
+    /// <remarks>
+    /// Changing it loses nothing: the range is the same numbers read in another model, so there is
+    /// no confirmation. It is an edit, so it routes through <see cref="ColorsChanged"/> and Save
+    /// lights, and it re-renders every picture the rail colors.
+    /// </remarks>
+    [ObservableProperty] private ColorModel _colorModel;
+
+    /// <summary>Backs the HSV segment's lit state.</summary>
+    public bool IsModelHsv => CanChooseModel && ColorModel == ColorModel.Hsv;
+
+    /// <summary>Backs the HSL segment's lit state.</summary>
+    public bool IsModelHsl => CanChooseModel && ColorModel == ColorModel.Hsl;
+
+    /// <summary>Whether the HSV / HSL tray accepts a choice: a Custom layer is never colorized.</summary>
+    public bool CanChooseModel => !IsCustom;
+
+    [RelayCommand] private void SetModelHsv() { if (CanChooseModel) ColorModel = ColorModel.Hsv; }
+
+    [RelayCommand] private void SetModelHsl() { if (CanChooseModel) ColorModel = ColorModel.Hsl; }
+
+    partial void OnColorModelChanged(ColorModel value)
+    {
+        OnPropertyChanged(nameof(IsModelHsv));
+        OnPropertyChanged(nameof(IsModelHsl));
+        if (Canvas is null) return;   // still constructing
+        RebuildSurfaces();
+        RefreshThumbnails();
+        ColorsChanged();
+    }
 
     /// <summary>
     /// The colorization the rail currently describes, as a layer would store it.

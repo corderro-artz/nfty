@@ -23,6 +23,29 @@ public partial class NewIngredientViewModel : WizardViewModelBase
     [ObservableProperty] private string _fixedColor = "hex:d6249f";
     [ObservableProperty] private string _canvasSize = "512x512";
 
+    /// <summary>The color model the hue and saturation are read in. Changing it loses nothing: the
+    /// numbers are the same, read in another model.</summary>
+    [ObservableProperty] private ColorModel _colorModel = ColorModel.Hsv;
+
+    /// <summary>Backs the HSV segment's lit state.</summary>
+    public bool IsModelHsv => CanChooseModel && ColorModel == ColorModel.Hsv;
+
+    /// <summary>Backs the HSL segment's lit state.</summary>
+    public bool IsModelHsl => CanChooseModel && ColorModel == ColorModel.Hsl;
+
+    /// <summary>Whether the HSV / HSL tray accepts a choice: Custom art is never colorized.</summary>
+    public bool CanChooseModel => Kind != LayerKind.Custom;
+
+    [RelayCommand] private void SetModelHsv() => ColorModel = ColorModel.Hsv;
+
+    [RelayCommand] private void SetModelHsl() => ColorModel = ColorModel.Hsl;
+
+    partial void OnColorModelChanged(ColorModel value)
+    {
+        OnPropertyChanged(nameof(IsModelHsv));
+        OnPropertyChanged(nameof(IsModelHsl));
+    }
+
     /// <summary>Dynamic layers roll a color per asset from a hue/sat range.</summary>
     public bool ShowColorRange => Kind == LayerKind.Dynamic;
 
@@ -79,6 +102,9 @@ public partial class NewIngredientViewModel : WizardViewModelBase
         OnPropertyChanged(nameof(IsKindDynamic));
         OnPropertyChanged(nameof(IsKindStatic));
         OnPropertyChanged(nameof(IsKindCustom));
+        OnPropertyChanged(nameof(CanChooseModel));
+        OnPropertyChanged(nameof(IsModelHsv));
+        OnPropertyChanged(nameof(IsModelHsl));
     }
 
     partial void OnDestinationChanged(RecipeDestination value)
@@ -151,9 +177,9 @@ public partial class NewIngredientViewModel : WizardViewModelBase
     /// <summary>Build the colorization config from the wizard fields (quantize defaults 12/4).</summary>
     public Colorization? BuildColorization() => Kind switch
     {
-        LayerKind.Dynamic => new Colorization(ColorModel.Hsv, 12, 4,
+        LayerKind.Dynamic => new Colorization(ColorModel, 12, 4,
             new[] { new ColorEntry(1, new ColorRange(HueMin, HueMax, SatMin, SatMax), null) }),
-        LayerKind.Static => new Colorization(ColorModel.Hsv, 12, 4,
+        LayerKind.Static => new Colorization(ColorModel, 12, 4,
             new[] { new ColorEntry(1, null, FixedColor) }),
         _ => null,   // Custom — composited as-is
     };

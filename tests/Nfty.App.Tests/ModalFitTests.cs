@@ -8,6 +8,7 @@ using Avalonia.VisualTree;
 using Nfty.App.Services;
 using Nfty.App.ViewModels;
 using Nfty.Core.Generation;
+using Nfty.Core.Model;
 using Nfty.Core.Output;
 using Xunit;
 
@@ -62,6 +63,24 @@ public class ModalFitTests
         using var set = Generator.Generate(CoreTestBook.Tiny(), new GenerateOptions(2, "seed1"));
         SetWriter.Write(set, dir, pack: false);
         return SetReader.Read(dir);
+    }
+
+    [AvaloniaTheory]
+    [InlineData(LayerKind.Dynamic)]
+    [InlineData(LayerKind.Static)]
+    [InlineData(LayerKind.Custom)]
+    public void Both_wizards_still_fit_the_smallest_window_with_the_model_row(LayerKind kind)
+    {
+        var fresh = new NewIngredientViewModel(new FakeDialogs()) { Name = "Aura", Kind = kind };
+        var a = Measure(new Views.NewIngredientView { DataContext = fresh });
+        using var import = VisualCapture.ImportImageForm(new FakeDialogs());
+        import.Kind = kind;
+        var b = Measure(new Views.ImportImageView { DataContext = import });
+
+        Fits($"New Ingredient ({kind}) with the model row",
+            a.Width * ShellViewModel.BaseScale + 24, a.Height * ShellViewModel.BaseScale + Chrome);
+        Fits($"Import Image ({kind}) with the model row",
+            b.Width * ShellViewModel.BaseScale + 24, b.Height * ShellViewModel.BaseScale + Chrome);
     }
 
     [AvaloniaTheory]

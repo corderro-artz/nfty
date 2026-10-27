@@ -111,6 +111,17 @@
                            TextWrapping="Wrap" IsVisible="{Binding LosesColor}"
                            Text="A value-map keeps lightness only — this picture's own colors will be gone. Its color is chosen at generation time." />
 
+                <!-- The color model, always laid out: on Custom it only dims. -->
+                <Border Classes="seg" IsHitTestVisible="{Binding CanChooseModel}"
+                        ToolTip.Tip="The color model the hue and saturation are read in. Lightness or value always comes from the grayscale art. Switching loses nothing: the same numbers are read in the other model.">
+                  <Grid ColumnDefinitions="*,3,*">
+                    <Button Grid.Column="0" Classes="seg-b" Classes.on="{Binding IsModelHsv}"
+                            Content="HSV" Command="{Binding SetModelHsvCommand}" />
+                    <Button Grid.Column="2" Classes="seg-b" Classes.on="{Binding IsModelHsl}"
+                            Content="HSL" Command="{Binding SetModelHslCommand}" />
+                  </Grid>
+                </Border>
+
                 <StackPanel Spacing="8" IsVisible="{Binding ShowColorRange}">
                 <!-- THE TWO BANDS SIT SIDE BY SIDE. Stacked, they cost 132px of a card with a hard
                      ceiling - and the height was buying nothing: a range is dragged to a rough band
