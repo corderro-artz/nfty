@@ -1324,6 +1324,24 @@ public class VisualCapture
             },
                 variant, $"zz-dialog-leave-{key}.png");
 
+            // The validity report: the status chip opens it, so each of its three branches is a state a
+            // reader meets — a clean book, a broken one, and a list long enough to cap + scroll.
+            using (var okBook = ExplorerViewModelTests.TwoRecipeBook())
+                Capture(new Views.ValidityDialogView
+                { DataContext = new ValidityDialogViewModel(dialogs, okBook, Array.Empty<string>()) },
+                    variant, $"zz-dialog-validity-valid-{key}.png");
+            using (var badBook = InvalidBook())
+            {
+                Capture(new Views.ValidityDialogView
+                { DataContext = new ValidityDialogViewModel(dialogs, badBook, Nfty.Core.Formats.Validator.Validate(badBook)) },
+                    variant, $"zz-dialog-validity-broken-{key}.png");
+                var many = Enumerable.Range(1, 14)
+                    .Select(n => $"Recipe 'cat' layerOrder references unknown ingredient 'missing-layer-{n}'.").ToList();
+                Capture(new Views.ValidityDialogView
+                { DataContext = new ValidityDialogViewModel(dialogs, badBook, many) },
+                    variant, $"zz-dialog-validity-many-{key}.png");
+            }
+
             // Make voxel-ready's preview, hugging a short list and capped (scrolling inside) on a long one.
             foreach (var (n, tag) in new[] { (3, "short"), (14, "long") })
             {
