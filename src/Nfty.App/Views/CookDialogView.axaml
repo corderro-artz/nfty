@@ -123,8 +123,10 @@
                   </StackPanel>
                 </Button>
               </Grid>
-              <TextBlock Text="{Binding ModelsNote}" Classes="m-sub" TextWrapping="Wrap"
-                         Margin="24,0,0,0" />
+              <!-- Laid out before the partial-alpha scan has answered and inked once it has: the answer
+                   arrives after the card is on screen, and it must move nothing. -->
+              <TextBlock x:Name="ModelsNoteText" Text="{Binding ModelsNote}" Classes="m-sub" TextWrapping="Wrap"
+                         Classes.absent="{Binding !ModelsNoteShown}" Margin="24,0,0,0" MinHeight="30" />
             </StackPanel>
 
             <!-- A REVEAL, last in the form so only the footer moves when it opens (CLAUDE.md, the
@@ -179,6 +181,12 @@
                 </StackPanel>
               </Grid>
             </Button>
+            <!-- Said in the CLI's own words (SetProvenance.Warning), after the folder it is about.
+                 Last in the stack so nothing above moves when it has something to say; a warning,
+                 never a refusal - the Set was extended. -->
+            <TextBlock x:Name="ProvenanceText" Classes="warnline" Text="{Binding ProvenanceHeadline}"
+                       ToolTip.Tip="{Binding ProvenanceWarning}"
+                       Classes.absent="{Binding !ProvenanceShown}" />
           </StackPanel>
           </Panel>
         </StackPanel>

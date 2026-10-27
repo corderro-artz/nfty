@@ -113,7 +113,11 @@ public class CookToExportJourneyTests
             card.CookCommand.Execute(null);
             // The command is fire-and-forget, as the one it replaced was; the fake answers
             // synchronously, so one turn of the loop is enough to let the continuation land.
-            await Task.Yield();
+            for (var i = 0; i < 500 && nav.Current is not SetBrowserViewModel; i++)
+            {
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                await Task.Delay(10);
+            }
 
             var browser = Assert.IsType<SetBrowserViewModel>(nav.Current);
             Assert.True(browser.CanExport,

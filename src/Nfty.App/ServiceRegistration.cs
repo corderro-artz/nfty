@@ -61,7 +61,8 @@ public static class ServiceRegistration
             sp.GetRequiredService<IStateStore>(),
             sp.GetRequiredService<Func<Nfty.App.Rise.RiseSource, RiseViewModel>>(),
             sp.GetRequiredService<IStatusService>(),
-            sp.GetRequiredService<IImageBridge>()));
+            sp.GetRequiredService<IImageBridge>(),
+            sp.GetRequiredService<IParallelismSetting>()));
 
         services.AddSingleton<Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, Func<bool>, IngredientEditorViewModel>>(sp =>
             (ing, recipe, book, isEditing) => RememberOnSave(sp, new IngredientEditorViewModel(ing, recipe, book,
@@ -130,7 +131,8 @@ public static class ServiceRegistration
             book => new CookDialogViewModel(book,
                 sp.GetRequiredService<IFilePickerService>(),
                 sp.GetRequiredService<IFolderRevealer>(),
-                sp.GetRequiredService<IDialogService>()));
+                sp.GetRequiredService<IDialogService>(),
+                sp.GetRequiredService<IParallelismSetting>()));
 
         services.AddSingleton<Func<LoadedCookBook, ExplorerViewModel>>(sp =>
             book => new ExplorerViewModel(book,
@@ -153,7 +155,8 @@ public static class ServiceRegistration
                 // A new loose recipe opens on its own page, as it does from Landing. Resolved when
                 // the factory runs, so the singleton is not asked for while it is being built.
                 sp.GetRequiredService<Func<LoadedCookBook, ExplorerViewModel>>(),
-                sp.GetRequiredService<IRecentsService>()));
+                sp.GetRequiredService<IRecentsService>(),
+                sp.GetRequiredService<IParallelismSetting>()));
 
         services.AddSingleton<Func<LoadedSet, SetBrowserViewModel>>(sp => set => new SetBrowserViewModel(
             set, sp.GetRequiredService<IFilePickerService>(), sp.GetRequiredService<IDialogService>(),
@@ -174,7 +177,8 @@ public static class ServiceRegistration
             // Rise this Set's assets: Back returns here, to the same browser and selection.
             rise: sp.GetRequiredService<Func<Nfty.App.Rise.RiseSource, RiseViewModel>>(),
             nav: sp.GetRequiredService<INavigationService>(),
-            bridge: sp.GetRequiredService<IImageBridge>()));
+            bridge: sp.GetRequiredService<IImageBridge>(),
+            threads: sp.GetRequiredService<IParallelismSetting>()));
 
         // Further VM registrations are added incrementally by the task that creates each
         // ViewModel (see Tasks 12-13).

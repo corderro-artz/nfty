@@ -477,14 +477,27 @@ public class DarkModeContrastTests
         var flatBook = CookDialogModelsTests.Book(variants: 3, alpha: 128);
         yield return ("cook-2d-only", new Views.CookDialogView
         {
-            DataContext = new CookDialogViewModel(flatBook, new FilePickerService(), new NoopFolderRevealer(), dialogs),
+            DataContext = new CookDialogViewModel(flatBook, new FilePickerService(), new NoopFolderRevealer(), dialogs).Landed(),
         }, flatBook.Dispose);
         var solidBook = CookDialogModelsTests.Book();
         yield return ("cook-models-open", new Views.CookDialogView
         {
             DataContext = new CookDialogViewModel(solidBook, new FilePickerService(), new NoopFolderRevealer(), dialogs)
-            { IncludeModels = true, ShowModelOptions = true },
+            { IncludeModels = true, ShowModelOptions = true }.Landed(),
         }, solidBook.Dispose);
+
+        // The Cook card done after extending over a changed book: the CLI's warning in WarningBrush,
+        // the riskiest ink the done state carries.
+        var warnedBook = CookDialogModelsTests.Book();
+        yield return ("cook-done-warned", new Views.CookDialogView
+        {
+            DataContext = new CookDialogViewModel(warnedBook, new FilePickerService(), new NoopFolderRevealer(), dialogs)
+            {
+                IsDone = true, IsExtending = true, ResultText = "Added +2 assets - 4 total in the collection.",
+                OutputPath = @"C:\Users\someone\nfty\set",
+                ProvenanceWarning = Nfty.Core.Output.SetProvenance.Warning(new string('a', 64), new string('b', 64))!,
+            }.Landed(),
+        }, warnedBook.Dispose);
 
         // The Menu export card in its riskiest state: the atlas refusal in warning ink on the reserved
         // line, over a path strip and a tray whose second half is the way out.
@@ -498,7 +511,7 @@ public class DarkModeContrastTests
         yield return ("cook-extending", new Views.CookDialogView
         {
             DataContext = new CookDialogViewModel(extendBook, new FilePickerService(), new NoopFolderRevealer(), dialogs)
-            { IsExtending = true, ExistingCount = 4200 },
+            { IsExtending = true, ExistingCount = 4200 }.Landed(),
         }, extendBook.Dispose);
 
         yield return ("cookbook-detail-invalid",

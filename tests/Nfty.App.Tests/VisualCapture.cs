@@ -1445,12 +1445,20 @@ public class VisualCapture
                 Capture(new Views.CookDialogView { DataContext = cookVm }, variant,
                     $"zz-dialog-cook-done-{key}.png");
 
+                // The same done state after extending over a changed book: the CLI's warning, in
+                // warning ink, below the path. The riskiest ink and the tallest content the done
+                // state carries, so it is the frame that shows the card does not grow.
+                cookVm.ProvenanceWarning = Nfty.Core.Output.SetProvenance.Warning(
+                    new string('a', 64), new string('b', 64))!;
+                Capture(new Views.CookDialogView { DataContext = cookVm }, variant,
+                    $"zz-dialog-cook-done-warned-{key}.png");
+
                 // And the FORM state, which is where the repeats switch lives. The engine and the
                 // CLI always had that switch; this dialog never offered it, so a person using only
                 // the app could not mint past the unique space - and no capture rendered the form,
                 // which is how the omission survived.
                 var cookForm = new CookDialogViewModel(cookBook, new FilePickerService(),
-                    new NoopFolderRevealer(), dialogs) { Count = 500, Seed = "vapor", Unlimited = true };
+                    new NoopFolderRevealer(), dialogs) { Count = 500, Seed = "vapor", Unlimited = true }.Landed();
                 Capture(new Views.CookDialogView { DataContext = cookForm }, variant,
                     $"zz-dialog-cook-form-{key}.png");
             }

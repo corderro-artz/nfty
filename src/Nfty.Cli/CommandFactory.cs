@@ -1,5 +1,6 @@
 using System.CommandLine;
 using System.Globalization;
+using Nfty.Core;
 using Nfty.Core.Demo;
 using Nfty.Core.Editing;
 using Nfty.Core.Formats;
@@ -35,12 +36,79 @@ public static partial class CommandFactory
         Recursive = true,
     };
 
+    /// <summary>
+    /// How wide the heavy work may run. Recursive like <c>--verbose</c>, so one declaration covers
+    /// <c>generate</c>, <c>extend</c>, <c>menu</c>, <c>export</c>, <c>model</c> and <c>inspect --voxel</c>.
+    /// Never recorded: the count changes how fast a run goes and nothing it writes.
+    /// </summary>
+    public static Option<string?> ThreadsOption { get; } = BuildThreadsOption();
+
+    /// <summary>Worded when the command tree is built, so the default it names is this machine's.</summary>
+    private static string ThreadsDescription() =>
+        "Worker threads for heavy work: a whole number, or 'max' (0 also means all). "
+        + $"The count never changes what is written. (default: {Parallelism.DefaultDegree} of "
+        + $"{Parallelism.LogicalProcessors} logical processors; "
+        + $"{Parallelism.EnvironmentVariable} sets it when this is not given)";
+
+    private static Option<string?> BuildThreadsOption()
+    {
+        var option = new Option<string?>("--threads")
+        {
+            Description = ThreadsDescription(),
+            Recursive = true,
+        };
+        option.Validators.Add(result =>
+        {
+            var text = result.GetValueOrDefault<string?>();
+            if (text is not null && !Parallelism.TryParse(text, out _))
+                result.AddError($"--threads takes a whole number or 'max', not '{text}'.");
+        });
+        return option;
+    }
+
+    /// <summary>
+    /// The thread count a command runs with: <c>--threads</c>, else <c>NFTY_THREADS</c>, else the
+    /// default (two thirds of the logical processors). A count above the machine's runs at the
+    /// machine's and says so on stderr. An invalid <c>NFTY_THREADS</c> is an error naming the variable.
+    /// </summary>
+    /// <param name="parse">The parsed command line.</param>
+    /// <returns>The count to hand to Core.</returns>
+    /// <exception cref="ArgumentException"><c>NFTY_THREADS</c> is set to something that is not a count.</exception>
+    public static Parallelism ResolveThreads(ParseResult parse)
+    {
+        ArgumentNullException.ThrowIfNull(parse);
+        var given = parse.GetValue(ThreadsOption);
+        string label;
+        string text;
+        if (given is not null) { label = "--threads"; text = given; }
+        else if (Environment.GetEnvironmentVariable(Parallelism.EnvironmentVariable) is { } env
+                 && !string.IsNullOrWhiteSpace(env))
+        {
+            label = Parallelism.EnvironmentVariable;
+            text = env.Trim();
+        }
+        else return Parallelism.Default;
+
+        if (!Parallelism.TryParse(text, out var p))
+            throw new ArgumentException(
+                $"{label} must be a whole number or 'max', not '{text}'.");
+
+        var lp = Math.Max(1, Parallelism.LogicalProcessors);
+        if (p.Requested > lp)
+            Console.Error.WriteLine(label == "--threads"
+                ? $"--threads {p.Requested} exceeds {lp} logical processors; using {lp}."
+                : $"{label}={p.Requested} exceeds {lp} logical processors; using {lp}.");
+        return p;
+    }
+
     /// <summary>Builds the root command with every subcommand attached.</summary>
     /// <returns>A parser-ready root command.</returns>
     public static RootCommand Build()
     {
         var root = new RootCommand("nfty — layered NFT asset generator");
         root.Options.Add(VerboseOption);
+        ThreadsOption.Description = ThreadsDescription();
+        root.Options.Add(ThreadsOption);
         root.Subcommands.Add(Demo());
         root.Subcommands.Add(Inspect());
         root.Subcommands.Add(Validate());
@@ -119,36 +187,37 @@ public static partial class CommandFactory
         {
             string file = parse.GetValue(path)!;
             bool wantVoxel = parse.GetValue(voxel);
+            var threads = ResolveThreads(parse);
             string? keySpec = parse.GetValue(key);
 
             // Before KindOf, because a Set is the one kind that is also a FOLDER and KindOf resolves
             // an extension. `generate --out ./collection` writes a folder and `--pack` is optional,
             // so `inspect ./collection` is the very next thing a person types — and it used to fail
             // with "has no extension", which describes the mechanism rather than the situation.
-            if (SetReader.IsSetFolder(file)) { PrintSet(file, wantVoxel); return 0; }
+            if (SetReader.IsSetFolder(file)) { PrintSet(file, wantVoxel, threads); return 0; }
 
             var kind = Archives.KindOf(file);
             switch (kind)
             {
                 case ArchiveKind.CookBook:
                 {
-                    using var cb = CookBookArchive.Read(file);
+                    using var cb = CookBookArchive.Read(file, threads);
                     PrintCookBook(cb);
-                    if (wantVoxel) PrintVoxel(cb.Manifest.Name, VoxelReport.Scan(cb));
+                    if (wantVoxel) PrintVoxel(cb.Manifest.Name, VoxelReport.Scan(cb, threads));
                     break;
                 }
                 case ArchiveKind.Recipe:
                 {
-                    using var recipe = RecipeArchive.Read(file);
+                    using var recipe = RecipeArchive.Read(file, threads);
                     PrintRecipe(recipe, weight: null, indent: "");
-                    if (wantVoxel) PrintVoxel(recipe.Manifest.Name, VoxelReport.Scan(recipe));
+                    if (wantVoxel) PrintVoxel(recipe.Manifest.Name, VoxelReport.Scan(recipe, threads));
                     break;
                 }
                 case ArchiveKind.Ingredient:
                 {
-                    using var ing = IngredientArchive.Read(file);
+                    using var ing = IngredientArchive.Read(file, threads);
                     PrintIngredient(ing, indent: "");
-                    if (wantVoxel) PrintVoxel(ing.Manifest.Name, VoxelReport.Scan(ing));
+                    if (wantVoxel) PrintVoxel(ing.Manifest.Name, VoxelReport.Scan(ing, threads));
                     break;
                 }
                 case ArchiveKind.Kitchen:
@@ -167,7 +236,7 @@ public static partial class CommandFactory
                 // The only kind here that is read but never authored, and the one most likely to
                 // have been handed to you by somebody else — which is exactly why it needs a way to
                 // be looked at. See the Set arm's note in ArchiveKind.
-                case ArchiveKind.Set: PrintSet(file, wantVoxel); break;
+                case ArchiveKind.Set: PrintSet(file, wantVoxel, threads); break;
                 // The header prints with no passphrase at all, which is the whole reason it is
                 // outside the encryption: a recipient who has not found the key yet is still told
                 // what they are holding, rather than meeting a parse failure.
@@ -224,7 +293,7 @@ public static partial class CommandFactory
 
     /// <summary>Prints a cooked Set's report, from a packed <c>.set</c> or from the folder one was
     /// generated into. One method for both, because they are one question.</summary>
-    private static void PrintSet(string path, bool wantVoxel)
+    private static void PrintSet(string path, bool wantVoxel, Parallelism threads)
     {
         // Refused rather than quietly ignored, exactly as it is for a Kitchen, and for a reason
         // stronger than "there is nothing to scan": a Set's images are OUTPUT. Partial alpha in one
@@ -236,7 +305,7 @@ public static partial class CommandFactory
                 + "rather than the source. Run it on the CookBook that produced this Set, where a "
                 + "partial-alpha variant is something you can still change.");
 
-        using var set = SetReader.Read(path);
+        using var set = SetReader.Read(path, threads);
         Console.Write(SetReport.Render(set));
     }
 
@@ -818,14 +887,16 @@ public static partial class CommandFactory
         });
         cmd.SetAction(parse =>
         {
-            using var book = CookBookArchive.Read(parse.GetValue(path)!);
+            var threads = ResolveThreads(parse);
+            using var book = CookBookArchive.Read(parse.GetValue(path)!, threads);
             string dir = parse.GetValue(outDir)!;
             var opts = new GenerateOptions(
                 Count: parse.GetValue(count),
                 Seed: parse.GetValue(seed)!,
                 RecipeId: parse.GetValue(recipe),
                 MaxRerollsPerAsset: parse.GetValue(maxRerolls),
-                EnforceUniqueDna: !parse.GetValue(unlimited));
+                EnforceUniqueDna: !parse.GetValue(unlimited),
+                Parallelism: threads);
 
             // Built BEFORE generating: a book with partial alpha is refused here, with nothing
             // rolled and nothing written.
@@ -839,9 +910,9 @@ public static partial class CommandFactory
                 : null;
 
             using var set = Generator.Generate(book, opts);
-            SetWriter.Write(set, dir, parse.GetValue(pack), modeler);
+            SetWriter.Write(set, dir, parse.GetValue(pack), modeler, parallelism: threads);
             Console.WriteLine($"Generated {set.Assets.Count} → {dir}");
-            if (modeler is not null && SetWriter.ReadExisting(dir).Models is { } made) PrintModelsMade(made, 1);
+            if (modeler is not null && SetWriter.ReadExisting(dir, threads).Models is { } made) PrintModelsMade(made, 1);
             return 0;
         });
         return cmd;
@@ -881,11 +952,12 @@ public static partial class CommandFactory
         var cmd = new Command("extend", "Grow an existing Set to a new total asset count, using the same CookBook.") { path, dir, to, seed, unlimited, pack, maxRerolls };
         cmd.SetAction(parse =>
         {
-            using var book = CookBookArchive.Read(parse.GetValue(path)!);
+            var threads = ResolveThreads(parse);
+            using var book = CookBookArchive.Read(parse.GetValue(path)!, threads);
             string setDir = parse.GetValue(dir)!;
             int target = parse.GetValue(to);
 
-            var existing = SetWriter.ReadExisting(setDir);
+            var existing = SetWriter.ReadExisting(setDir, threads);
 
             int have = existing.NextNumber - 1;
             int need = target - have;
@@ -910,11 +982,12 @@ public static partial class CommandFactory
             using var more = Generator.Generate(book,
                 new GenerateOptions(need, parse.GetValue(seed)!,
                     MaxRerollsPerAsset: parse.GetValue(maxRerolls),
-                    EnforceUniqueDna: !parse.GetValue(unlimited)),
+                    EnforceUniqueDna: !parse.GetValue(unlimited),
+                    Parallelism: threads),
                 existing.Dnas, existing.NextNumber);
-            SetWriter.Write(more, setDir, parse.GetValue(pack), modeler);
+            SetWriter.Write(more, setDir, parse.GetValue(pack), modeler, parallelism: threads);
             Console.WriteLine($"Extended by {need} → {target} total.");
-            if (modeler is not null && SetWriter.ReadExisting(setDir).Models is { } made) PrintModelsMade(made, existing.NextNumber);
+            if (modeler is not null && SetWriter.ReadExisting(setDir, threads).Models is { } made) PrintModelsMade(made, existing.NextNumber);
             return 0;
         });
         return cmd;
@@ -944,11 +1017,12 @@ public static partial class CommandFactory
         { path, outp, art };
         cmd.SetAction(parse =>
         {
-            using var book = CookBookArchive.Read(parse.GetValue(path)!);
+            var threads = ResolveThreads(parse);
+            using var book = CookBookArchive.Read(parse.GetValue(path)!, threads);
             string outPath = parse.GetValue(outp)!;
             var mode = parse.GetValue(art) == "loose" ? MenuArtMode.Loose : MenuArtMode.Atlas;
 
-            MenuWriter.Write(book, outPath, new MenuWriteOptions { Art = mode });
+            MenuWriter.Write(book, outPath, new MenuWriteOptions { Art = mode }, parallelism: threads);
 
             // Re-opened rather than kept from the book that was just read: what gets printed here
             // is what a reader of the FILE would see, and MenuWriter is the only thing that knows

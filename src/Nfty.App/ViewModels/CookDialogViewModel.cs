@@ -2,6 +2,7 @@ using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Services;
+using Nfty.Core;
 using Nfty.Core.Formats;
 using Nfty.Core.Generation;
 using Nfty.Core.Output;
@@ -52,7 +53,7 @@ public partial class CookDialogViewModel : ViewModelBase
     // Open Set was laid out, styled, correct in its predicate and PERMANENTLY DISABLED in the running
     // app, while a test calling OpenSetCommand.CanExecute(null) evaluated the predicate directly and
     // passed. Driving is what found it; see CookDialogGestureTests, which asks the BUTTON.
-    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(RevealCommand))] [NotifyCanExecuteChangedFor(nameof(OpenSetCommand))] [NotifyPropertyChangedFor(nameof(ShowForm))] [NotifyPropertyChangedFor(nameof(FootHint))] private bool _isDone;
+    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(RevealCommand))] [NotifyCanExecuteChangedFor(nameof(OpenSetCommand))] [NotifyPropertyChangedFor(nameof(ShowForm))] [NotifyPropertyChangedFor(nameof(FootHint))] [NotifyPropertyChangedFor(nameof(ProvenanceShown))] private bool _isDone;
 
     /// <summary>What the run produced, as a sentence — the counts alone.</summary>
     /// <remarks>
@@ -155,11 +156,38 @@ public partial class CookDialogViewModel : ViewModelBase
     ];
 
     /// <summary>True when some variant has a partly transparent pixel, so no model can be made.
-    /// Computed once: the book is borrowed and not edited while this card is open.</summary>
-    public bool BookIsTwoDOnly { get; }
+    /// False until the scan lands (<see cref="ScanLanded"/>): the scan reads every pixel of every
+    /// variant, which is not work for the thread that is building the card. Computed once: the book
+    /// is borrowed and not edited while this card is open.</summary>
+    [ObservableProperty] private bool _bookIsTwoDOnly;
 
-    /// <summary>Why the box is off, or what it does.</summary>
-    public string ModelsNote { get; }
+    /// <summary>Why the box is off, or what it does. Reserved before the scan lands and not inked
+    /// (<see cref="ModelsNoteShown"/>), so the row never moves when the answer arrives.</summary>
+    [ObservableProperty] private string _modelsNote = "Writes a model of every asset into models/.";
+
+    /// <summary>True once the partial-alpha scan has answered. Cook stays disabled until then,
+    /// because whether a model can be made depends on it.</summary>
+    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(CookCommand))] [NotifyPropertyChangedFor(nameof(ModelsNoteShown))] private bool _scanLanded;
+
+    /// <summary>Whether the models note is inked: it fades in when the scan lands.</summary>
+    public bool ModelsNoteShown => ScanLanded;
+
+    /// <summary>The scan, from construction to its answer being applied. Never faults: a scan that
+    /// throws lands as "no partial alpha" and the modeler refuses a bad book itself, with a message.</summary>
+    internal Task ScanTask { get; }
+
+    /// <summary>Set when a run extends a Set cooked from a different book than this one, in the
+    /// words <see cref="SetProvenance.Warning"/> gives the CLI. A warning, never a refusal.</summary>
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(ProvenanceShown))] [NotifyPropertyChangedFor(nameof(ProvenanceHeadline))] private string _provenanceWarning = "";
+
+    /// <summary>The first line of the warning, verbatim: what the card has room for. The whole text,
+    /// hashes and advice, is the tooltip and the CLI's stderr; a card that printed all nine lines grew
+    /// past the form it shares a cell with.</summary>
+    public string ProvenanceHeadline => ProvenanceWarning.Split((char)10)[0].TrimEnd();
+
+    /// <summary>Whether the provenance line is inked: only in the done state, and only when there
+    /// is something to say. The line is reserved either way.</summary>
+    public bool ProvenanceShown => IsDone && ProvenanceWarning.Length > 0;
 
     /// <summary>Whether the model choices are on show: a reveal, last in the form.</summary>
     public bool ShowModelOptionsSection => IncludeModels && ShowModelOptions;
@@ -172,17 +200,56 @@ public partial class CookDialogViewModel : ViewModelBase
     /// <param name="picker">Chooses the output folder.</param>
     /// <param name="revealer">Opens the output folder when the run finishes.</param>
     /// <param name="dialogs">The dialog layer to close through.</param>
-    public CookDialogViewModel(LoadedCookBook book, IFilePickerService picker, IFolderRevealer revealer, IDialogService dialogs)
+    /// <param name="threads">The thread count to run with, read at the start of each operation;
+    /// null runs at the default.</param>
+    /// <param name="scan">Counts the book's partial-alpha variants; null scans with <see cref="VoxelReport"/>.
+    /// A seam so a test can prove the constructor does not run it.</param>
+    public CookDialogViewModel(LoadedCookBook book, IFilePickerService picker, IFolderRevealer revealer, IDialogService dialogs,
+        IParallelismSetting? threads = null, Func<LoadedCookBook, Parallelism, int>? scan = null)
     {
-        _book = book; _picker = picker; _revealer = revealer; _dialogs = dialogs;
+        _book = book; _picker = picker; _revealer = revealer; _dialogs = dialogs; _threads = threads;
+        _scan = scan;
         RecipeChoices = BuildRecipeChoices(book);
         _selectedRecipe = RecipeChoices[0];
-        var partial = VoxelReport.Scan(book).Count(v => !v.IsClean);
+        ScanTask = ScanAsync();
+    }
+
+    private readonly IParallelismSetting? _threads;
+    private readonly Func<LoadedCookBook, Parallelism, int>? _scan;
+
+    private Parallelism Threads => _threads?.Current ?? Parallelism.Default;
+
+    /// <summary>
+    /// Counts the partial-alpha variants OFF the calling thread and applies the answer back on it.
+    /// The cache answers first when the Explorer has already looked at these very images, and then
+    /// nothing is scanned at all.
+    /// </summary>
+    private async Task ScanAsync()
+    {
+        int partial = 0;
+        try
+        {
+            var par = Threads;
+            var book = _book;
+            var scan = _scan;
+            // Not awaited with ConfigureAwait(false): the answer is applied on the context that
+            // built the card, which is the one the bindings read on.
+            partial = await Task.Run(() =>
+                scan is not null ? scan(book, par)
+                : PartialAlphaCache.TryCountPartialVariants(book, out var known) ? known
+                : VoxelReport.Scan(book, par).Count(v => !v.IsClean));
+        }
+        catch (Exception)
+        {
+            // Lands as clean; SetModeler refuses a book with partial alpha by name when Cook builds one.
+            partial = 0;
+        }
         BookIsTwoDOnly = partial > 0;
         ModelsNote = BookIsTwoDOnly
             ? $"This book is 2D only — {partial} {(partial == 1 ? "variant has" : "variants have")} partly transparent pixels. "
               + "Open a layer in Rise and use Make voxel-ready."
             : "Writes a model of every asset into models/.";
+        ScanLanded = true;
     }
 
     private static List<RecipeChoice> BuildRecipeChoices(LoadedCookBook book)
@@ -213,14 +280,22 @@ public partial class CookDialogViewModel : ViewModelBase
         ? "Cancel stops after the current asset"
         : IsDone ? "Open Set to browse and export it" : "Same book, same seed, same collection";
 
-    private bool CanCook() => !IsRunning && Count > 0;
+    private bool CanCook() => ScanLanded && !IsRunning && Count > 0;
 
     [RelayCommand(CanExecute = nameof(CanCook))]
     private async Task Cook()
     {
+        // The button is disabled until the scan lands, but a disabled button is a label (a generated
+        // command's ExecuteAsync does not consult CanExecute): the answer the modeler gate below
+        // reads must be in before anything is decided.
+        await ScanTask;
+
         var dir = await _picker.PickFolderAsync("Cook to folder");
         if (dir is null) return;
 
+        // Read ONCE, here: a change on the Settings card applies to the next cook, never this one.
+        var par = Threads;
+        ProvenanceWarning = "";
         _cts = new CancellationTokenSource();
         IsRunning = true; IsDone = false; Progress = 0;
         GeneratedSet? set = null;
@@ -236,8 +311,12 @@ public partial class CookDialogViewModel : ViewModelBase
             // writer was already extend-aware (it loads the existing items and regrades rarity
             // across the whole collection); only the generator was being told nothing.
             PhaseText = "Reading existing…";
-            var existing = await SetWriter.ReadExistingAsync(dir, _cts.Token);
+            var existing = await SetWriter.ReadExistingAsync(dir, _cts.Token, par);
             IsExtending = existing.Dnas.Count > 0;
+            // The CLI's rule and the CLI's words: a warning, never a refusal. Re-cooking a
+            // deliberately edited book is legitimate, and the author is the one who knows.
+            if (IsExtending && SetProvenance.Warning(existing.CookbookSha256, _book.SourceSha256) is { } warning)
+                ProvenanceWarning = warning;
             // The items the reader actually loaded, not the highest number: a Set with a deleted item
             // holds fewer than its top number says, and the total is a count of what it holds.
             ExistingCount = IsExtending ? existing.Dnas.Count : 0;
@@ -259,7 +338,7 @@ public partial class CookDialogViewModel : ViewModelBase
             // An extend continues the Set's own mix, so the recipe choice is ignored then: the combo is
             // disabled, but a disabled box is a label, and the gate is checked here too.
             var opts = new GenerateOptions(Count, Seed, RecipeId: IsExtending ? null : SelectedRecipe.Id,
-                EnforceUniqueDna: !Unlimited);
+                EnforceUniqueDna: !Unlimited, Parallelism: par);
             PhaseText = !IsExtending ? "Generating…"
                 : $"Extending {ExistingCount} assets {ResultingTotalText}…" + (SelectedRecipe.Id is null ? "" : " " + RecipeSetAsideText);
             var genProgress = new Progress<GenerationProgress>(p => Progress = p.Fraction);
@@ -268,7 +347,7 @@ public partial class CookDialogViewModel : ViewModelBase
 
             PhaseText = modeler is null ? "Writing…" : "Writing models…"; Progress = 0;
             var writeProgress = new Progress<WriteProgress>(p => Progress = p.Fraction);
-            await SetWriter.WriteAsync(set, dir, Pack, writeProgress, _cts.Token, models: modeler);
+            await SetWriter.WriteAsync(set, dir, Pack, writeProgress, _cts.Token, models: modeler, parallelism: par);
 
             _outDir = dir;
             OutputPath = dir;
@@ -279,7 +358,7 @@ public partial class CookDialogViewModel : ViewModelBase
                 : $"Cooked {made} {noun}.";
             if (modeler is not null)
             {
-                var written = (await SetWriter.ReadExistingAsync(dir, _cts.Token)).Models;
+                var written = (await SetWriter.ReadExistingAsync(dir, _cts.Token, par)).Models;
                 int skipped = (written?.Skipped ?? []).Count(n => n >= existing.NextNumber);
                 ResultText += $" · {made - skipped} models" + (skipped > 0 ? $" · {skipped} skipped" : "");
             }

@@ -103,6 +103,12 @@ public class ServiceRegistrationTests
             var explorer = provider.GetRequiredService<Func<LoadedCookBook, ExplorerViewModel>>()(book);
             var card = Assert.IsType<CookBookDetailViewModel>(explorer.CurrentDetail);
             card.CookCommand.Execute(null);
+            var pumped = System.Diagnostics.Stopwatch.StartNew();
+            while (provider.GetRequiredService<INavigationService>().Current is not SetBrowserViewModel && pumped.ElapsedMilliseconds < 10000)
+            {
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                System.Threading.Thread.Sleep(5);
+            }
 
             var nav = provider.GetRequiredService<INavigationService>();
             var browser = Assert.IsType<SetBrowserViewModel>(nav.Current);

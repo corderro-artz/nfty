@@ -15,6 +15,9 @@
        on the suite to re-prove one constant. The constant itself gets its own test. -->
   <ItemGroup>
     <InternalsVisibleTo Include="Nfty.Core.Tests" />
+    <!-- The thread-count tests pin the logical processor count through Parallelism.ProcessorOverride. -->
+    <InternalsVisibleTo Include="Nfty.Cli.Tests" />
+    <InternalsVisibleTo Include="Nfty.App.Tests" />
     <!-- Nfty.Model fans a Rise batch out through the same ParallelWork rules as everything else, rather than restating them. -->
     <InternalsVisibleTo Include="Nfty.Model" />
   </ItemGroup>

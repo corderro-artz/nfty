@@ -1,4 +1,5 @@
 using System.CommandLine;
+using Nfty.Core;
 using System.Globalization;
 using Nfty.Core.Formats;
 using Nfty.Core.Model;
@@ -138,7 +139,7 @@ public static partial class CommandFactory
             return ModelInputOf(file) switch
             {
                 ModelInput.Picture => ModelFromPicture(file, outPath, options, fill),
-                ModelInput.Ingredient => ModelFromIngredient(file, parse.GetValue(variant)!, outPath, options, fill),
+                ModelInput.Ingredient => ModelFromIngredient(file, parse.GetValue(variant)!, outPath, options, fill, ResolveThreads(parse)),
                 // A backstop, not a reachable path: the validator has already refused anything that
                 // is neither form, with a better-worded message.
                 _ => throw new NotSupportedException(
@@ -236,9 +237,9 @@ public static partial class CommandFactory
     }
 
     private static int ModelFromIngredient(string file, string variantId, string outPath, RiseOptions options,
-        (byte Front, byte Back)? fill)
+        (byte Front, byte Back)? fill, Parallelism threads)
     {
-        using var ing = IngredientArchive.Read(file);
+        using var ing = IngredientArchive.Read(file, threads);
         if (!ing.VariantImages.TryGetValue(variantId, out var art))
             throw new ArgumentException(
                 $"Ingredient '{ing.Manifest.Id}' has no variant '{variantId}'; its variants are "

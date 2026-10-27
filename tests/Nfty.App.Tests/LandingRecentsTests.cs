@@ -63,6 +63,7 @@ public class LandingRecentsTests
             var (vm, _, _, _) = Landing(new StubPicker(path), storageDir);
 
             await vm.ImportCommand.ExecuteAsync(null);
+            await (vm.PendingOpen ?? Task.CompletedTask);
 
             var recent = Assert.Single(vm.Recents);
             Assert.Equal(Path.GetFullPath(path), recent.Path);
@@ -133,6 +134,7 @@ public class LandingRecentsTests
             recents.Add(new RecentItem("VaporPets", "0 recipes · 8x8", path, false));
 
             vm.OpenRecentCommand.Execute(vm.Recents[0]);
+            await vm.PendingOpen!;
 
             Assert.IsType<ExplorerViewModel>(nav.Current);
         }

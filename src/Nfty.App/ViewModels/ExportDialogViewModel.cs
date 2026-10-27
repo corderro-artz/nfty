@@ -114,6 +114,7 @@ public partial class ExportDialogViewModel : ViewModelBase
 {
     private readonly string _setDirectory;
     private readonly IFilePickerService _picker;
+    private readonly IParallelismSetting? _threads;
     private readonly IFolderRevealer _revealer;
     private readonly IDialogService _dialogs;
     private readonly string? _recordedSha;
@@ -250,15 +251,18 @@ public partial class ExportDialogViewModel : ViewModelBase
     /// a book that never came from a file.</param>
     /// <param name="cookBookCandidates">Paths the app can already name that might be that book: the
     /// open one, recent ones. Books beside the Set are looked at as well, without being asked for.</param>
+    /// <param name="threads">The worker-thread setting, read when an export starts.</param>
     public ExportDialogViewModel(string setDirectory, IFilePickerService picker,
         IFolderRevealer revealer, IDialogService dialogs,
-        string? cookBookSha256 = null, IEnumerable<string>? cookBookCandidates = null)
+        string? cookBookSha256 = null, IEnumerable<string>? cookBookCandidates = null,
+        IParallelismSetting? threads = null)
     {
         _setDirectory = setDirectory;
         _picker = picker;
         _revealer = revealer;
         _dialogs = dialogs;
         _recordedSha = cookBookSha256;
+        _threads = threads;
 
         // READ ONCE. The row is always laid out and only its ink changes, so this is a fact about
         // the Set that does not move while the dialog is open.
@@ -604,6 +608,7 @@ public partial class ExportDialogViewModel : ViewModelBase
         try
         {
             var options = Options;
+            var par = _threads?.Current;   // read once, here: a change applies to the next export
             string? passphrase = IsSealed ? Passphrase : null;
 
             // A REAL BAR, NOT AN INDETERMINATE ONE. This used to spin whatever the run was doing,
@@ -617,7 +622,7 @@ public partial class ExportDialogViewModel : ViewModelBase
             });
 
             var result = await SetExporter.ExportAsync(_setDirectory, dir, options, CookBookPath,
-                passphrase, reporter, _cts.Token);
+                passphrase, reporter, _cts.Token, par);
 
             _written = result.Path;
             OutputPath = result.Path;

@@ -36,6 +36,36 @@ internal static class PartialAlphaCache
         return false;
     }
 
+    /// <summary>
+    /// The count <c>VoxelReport.Scan(book).Count(v =&gt; !v.IsClean)</c> would give, if and only if every
+    /// image in the book has been looked at already. Scans nothing: when any image is unknown it says
+    /// so and the caller scans (off the UI thread) instead.
+    /// </summary>
+    /// <param name="book">The book.</param>
+    /// <param name="count">The number of variants carrying partial alpha, when this returns true.</param>
+    /// <returns>True when the cache answered for every image.</returns>
+    internal static bool TryCountPartialVariants(LoadedCookBook book, out int count)
+    {
+        count = 0;
+        foreach (var recipe in book.Recipes)
+        {
+            var byId = new Dictionary<string, LoadedIngredient>(StringComparer.Ordinal);
+            foreach (var i in recipe.Ingredients) byId[i.Manifest.Id] = i;
+            // Walked in the same order and with the same tolerance as VoxelReport, so the two agree.
+            foreach (var id in recipe.Manifest.LayerOrder)
+            {
+                if (!byId.TryGetValue(id, out var ing)) continue;
+                foreach (var v in ing.Manifest.Variants)
+                {
+                    if (!ing.VariantImages.TryGetValue(v.Id, out var image)) continue;
+                    if (!Known.TryGetValue(image, out var known)) { count = 0; return false; }
+                    if (ReferenceEquals(known, Yes)) count++;
+                }
+            }
+        }
+        return true;
+    }
+
     private static bool HasPartialAlpha(Image<Rgba32> image)
     {
         if (Known.TryGetValue(image, out var known)) return ReferenceEquals(known, Yes);

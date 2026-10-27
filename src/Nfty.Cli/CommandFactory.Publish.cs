@@ -110,7 +110,7 @@ public static partial class CommandFactory
                 : null;
 
             var result = SetExporter.Export(parse.GetValue(path)!, parse.GetValue(outDir)!,
-                options, bookPath, passphrase);
+                options, bookPath, passphrase, parallelism: ResolveThreads(parse));
 
             PrintExport(result, options);
             return 0;

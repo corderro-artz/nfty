@@ -46,12 +46,13 @@ public class LandingDemoTests
     }
 
     [Fact]
-    public void Opening_the_demo_unpacks_it_beside_the_app_and_navigates_to_the_explorer()
+    public async Task Opening_the_demo_unpacks_it_beside_the_app_and_navigates_to_the_explorer()
     {
         var root = Directory.CreateTempSubdirectory().FullName;
         var vm = Make(root, out var nav, out var session);
 
         vm.OpenDemoCommand.Execute(null);
+        await vm.PendingOpen!;
 
         var expected = Path.Combine(root, "demo", DemoCookBook.FileName);
         Assert.True(File.Exists(expected), $"the demo was not unpacked to {expected}");
@@ -64,12 +65,13 @@ public class LandingDemoTests
     }
 
     [Fact]
-    public void The_demo_joins_the_recent_list_like_any_other_cookbook()
+    public async Task The_demo_joins_the_recent_list_like_any_other_cookbook()
     {
         var root = Directory.CreateTempSubdirectory().FullName;
         var vm = Make(root, out _, out _);
 
         vm.OpenDemoCommand.Execute(null);
+        await vm.PendingOpen!;
 
         var recent = Assert.Single(vm.Recents);
         Assert.Equal(DemoCookBook.DisplayName, recent.Name);
@@ -78,25 +80,27 @@ public class LandingDemoTests
     }
 
     [Fact]
-    public void Opening_it_a_second_time_keeps_the_edits_made_to_it()
+    public async Task Opening_it_a_second_time_keeps_the_edits_made_to_it()
     {
         // Driven through the command rather than DemoCookBook.WriteTo, because the promise being
         // kept here is the BUTTON's: the user clicks the same thing twice and finds their work.
         var root = Directory.CreateTempSubdirectory().FullName;
         var vm = Make(root, out _, out _);
         vm.OpenDemoCommand.Execute(null);
+        await vm.PendingOpen!;
 
         var path = Path.Combine(root, "demo", DemoCookBook.FileName);
         var stamp = File.GetLastWriteTimeUtc(path).AddDays(-1);
         File.SetLastWriteTimeUtc(path, stamp);
 
         vm.OpenDemoCommand.Execute(null);
+        await vm.PendingOpen!;
 
         Assert.Equal(stamp, File.GetLastWriteTimeUtc(path));
     }
 
     [Fact]
-    public void With_no_store_it_still_opens_from_a_temp_folder()
+    public async Task With_no_store_it_still_opens_from_a_temp_folder()
     {
         // The in-memory store is a real state - nowhere on the machine was writable - and the demo
         // is worth having anyway. A null store takes the same branch, which is what a ViewModel
@@ -114,6 +118,7 @@ public class LandingDemoTests
             (_, _, _) => null!);
 
         vm.OpenDemoCommand.Execute(null);
+        await vm.PendingOpen!;
 
         Assert.IsType<ExplorerViewModel>(n.Current);
         Assert.Equal(Path.Combine(Path.GetTempPath(), "nfty-demo", DemoCookBook.FileName), s.SourcePath);
