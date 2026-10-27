@@ -249,6 +249,39 @@ public class DarkModeContrastTests
         Assert.Fail(report.ToString());
     }
 
+    /// <summary>
+    /// V-13: a REFUSED export is the neutral button, not a dimmed accent one. The sweep above scores a
+    /// run's ink against the surface behind it at full strength, so it cannot see that the app dims a
+    /// disabled control to 0.38 AS A GROUP: 0.38 of a saturated accent over the dark ground is a
+    /// near-invisible slab with a near-invisible label. It stayed green with the defect present
+    /// (probed by deleting the fix), so the state it lives in is asserted here directly - the sealed
+    /// Set's disabled Export button must not paint the accent fill.
+    /// </summary>
+    [AvaloniaTheory]
+    [InlineData("Dark")]
+    [InlineData("Light")]
+    public void A_refused_export_button_is_not_dimmed_accent(string theme)
+    {
+        var variant = theme == "Dark" ? ThemeVariant.Dark : ThemeVariant.Light;
+        var (vm, owner) = RisePages.SealedSetVm();
+        vm.ShowExportTabCommand.Execute(null);
+        var view = new Views.RiseView { DataContext = vm };
+        var window = new Window { RequestedThemeVariant = variant, Content = view, Width = 1180, Height = 720 };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        try
+        {
+            var button = view.GetVisualDescendants().OfType<Button>()
+                .First(b => ReferenceEquals(b.Command, vm.ExportCommand));
+            Assert.False(button.IsEffectivelyEnabled, "the fixture no longer refuses the export");
+            var presenter = button.GetVisualDescendants().OfType<ContentPresenter>()
+                .First(c => c.Name == "PART_ContentPresenter");
+            var accent = ((ISolidColorBrush)Application.Current!.FindResource(variant, "AccentBrush")!).Color;
+            Assert.NotEqual(accent, ((ISolidColorBrush)presenter.Background!).Color);
+        }
+        finally { window.Close(); vm.Dispose(); owner.Dispose(); }
+    }
+
     /// <summary>A brand-new, still-empty CookBook — no recipes, so the Validator reports a problem and
     /// the identity card paints its "N problems" chip and zeroed tiles. This is what a user sees
     /// immediately after the New CookBook wizard, and no other fixture in this file is invalid.</summary>

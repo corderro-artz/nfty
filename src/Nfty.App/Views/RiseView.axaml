@@ -692,7 +692,7 @@
                 <TextBlock Classes="caveat" Text="{Binding ExportProblem}" />
               </StackPanel>
             </Border>
-            <Button Classes="accent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+            <Button Classes="accent quiet" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                     Command="{Binding ExportCommand}">
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <Path Classes="ico sm" Data="{StaticResource IconDownload}" />

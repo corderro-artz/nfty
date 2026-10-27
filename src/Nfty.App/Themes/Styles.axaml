@@ -4459,8 +4459,28 @@
   <Style Selector="Button.preset.tight">
     <Setter Property="Padding" Value="10,3" />
   </Style>
+  <!-- TWO lines, reserved. The description used to be one line with an ellipsis, which cut "what
+       engines and view..." mid-sentence at the rail's real width. It wraps to at most two lines now,
+       and its box is two lines tall whether the sentence needs them or not, so the three cards are
+       one height and picking a format moves nothing. The whole sentence is on the tooltip as well. -->
   <Style Selector="Button.preset.tight TextBlock.pd">
-    <Setter Property="TextWrapping" Value="NoWrap" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="MaxLines" Value="2" />
+    <Setter Property="LineHeight" Value="13" />
+    <Setter Property="MinHeight" Value="26" />
     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+
+  <!-- A disabled accent button that stands for a refusal reads as the NEUTRAL button, not a dimmed red
+       one: the app dims a disabled control to 0.38, and 0.38 of a saturated accent over the dark panel
+       is a near-invisible slab, while 0.38 of the neutral outline button is still legibly a button.
+       Declared after the generic Button.accent:disabled above, which it must win over. -->
+  <Style Selector="Button.accent.quiet:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+  </Style>
+  <Style Selector="Button.accent.quiet:disabled Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource FgBrush}" />
   </Style>
 </Styles>
