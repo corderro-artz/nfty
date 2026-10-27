@@ -27,6 +27,7 @@ public partial class LandingViewModel : ViewModelBase
     private readonly Func<LoadedSet, SetBrowserViewModel> _setBrowserFactory;
     private readonly Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> _looseEditorFactory;
     private readonly IKitchenSession? _kitchen;
+    private readonly LooseCreation _loose;
     private readonly IStateStore? _store;
     private readonly Func<Nfty.App.Rise.RiseSource, RiseViewModel>? _rise;
     private readonly IStatusService? _status;
@@ -73,6 +74,7 @@ public partial class LandingViewModel : ViewModelBase
         _session = session; _explorerFactory = explorerFactory; _setBrowserFactory = setBrowserFactory;
         _looseEditorFactory = looseEditorFactory;
         _kitchen = kitchen;
+        _loose = new LooseCreation(dialogs, picker, kitchen);
         _store = store;
         // Before the Changed subscription below, which loads it.
         KitchenShelf = new KitchenShelfViewModel(OpenKitchenCard);
@@ -249,26 +251,8 @@ public partial class LandingViewModel : ViewModelBase
             return;
         }
 
-        var path = await _picker.SaveFileAsync("Save new recipe", ".rcp");
-        if (path is null) return;   // canceled the picker
-
-        var recipe = new LoadedRecipe
-        {
-            Manifest = new RecipeManifest(result.DerivedId, result.Name,
-                Array.Empty<string>(), Array.Empty<IncompatibilityRule>()),
-            Ingredients = Array.Empty<LoadedIngredient>(),
-        };
-
-        try
-        {
-            var problems = LooseWorkspace.WriteRecipe(path, recipe);
-            if (problems.Count > 0)
-            {
-                ShowError("Invalid recipe", string.Join(Environment.NewLine, problems));
-                return;
-            }
-        }
-        catch (Exception ex) { ShowError("Could not save", ex.Message); return; }
+        var path = await _loose.NewRecipeAsync(result);
+        if (path is null) return;   // canceled, or refused with an error card
 
         OpenLooseRecipe(path);
     }
@@ -284,30 +268,8 @@ public partial class LandingViewModel : ViewModelBase
             ShowError("No cookbook open", "Open or create a cookbook, then add ingredients from the Explorer.");
             return;
         }
-        if (!result.TryGetCanvas(out var canvas))
-        {
-            ShowError("Invalid canvas", "Enter a canvas size like 512x512.");
-            return;
-        }
-        var path = await _picker.SaveFileAsync("Save new ingredient", ".igt");
-        if (path is null) return;   // canceled the picker
-
-        LoadedIngredient built;
-        try { built = result.Build(canvas); }   // Build allocates the raster — guard it (OOM on a huge canvas)
-        catch (Exception ex) { ShowError("Could not save", ex.Message); return; }
-
-        try
-        {
-            // Validate + atomically write (replaces an existing file rather than throwing).
-            var problems = LooseWorkspace.WriteIngredient(path, built);
-            if (problems.Count > 0)
-            {
-                ShowError("Invalid ingredient", string.Join("\n", problems));
-                return;
-            }
-        }
-        catch (Exception ex) { ShowError("Could not save", ex.Message); return; }
-        finally { built.Dispose(); }
+        var path = await _loose.NewIngredientAsync(result);
+        if (path is null) return;   // canceled, or refused with an error card
 
         OpenLooseIngredient(path);   // B1: reads it back + opens the editor with a loose-save path
     }

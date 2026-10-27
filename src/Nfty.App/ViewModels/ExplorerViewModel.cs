@@ -34,6 +34,9 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     private readonly Func<LoadedSet, SetBrowserViewModel>? _setBrowserFactory;
     private readonly ICookBookSession _session;
     private readonly IFilePickerService _picker;
+    private readonly LooseCreation _loose;
+    private readonly Func<LoadedCookBook, ExplorerViewModel>? _looseRecipeFactory;
+    private readonly IRecentsService? _recents;
     private readonly IStatusService _status;
     private readonly IKitchenSession? _kitchen;
     private readonly IClipboardService? _clipboard;
@@ -249,6 +252,9 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     /// which disables the buttons rather than hiding them.</param>
     /// <param name="setBrowserFactory">Opens a cooked Set, so a finished cook can hand you the
     /// browser the export dialog lives on.</param>
+    /// <param name="looseRecipeFactory">Opens a new loose recipe in its own page. Null leaves a saved
+    /// loose recipe unopened (a status line says where it went).</param>
+    /// <param name="recents">Where an opened loose recipe is remembered.</param>
     public ExplorerViewModel(LoadedCookBook book, INavigationService nav, IDialogService dialogs,
         IImageBridge bridge,
         Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, Func<bool>, IngredientEditorViewModel> editorFactory,
@@ -259,8 +265,12 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         IKitchenSession? kitchen = null,
         IClipboardService? clipboard = null,
         Func<LoadedSet, SetBrowserViewModel>? setBrowserFactory = null,
-        Func<Nfty.App.Rise.RiseSource, RiseViewModel>? riseFactory = null)
+        Func<Nfty.App.Rise.RiseSource, RiseViewModel>? riseFactory = null,
+        Func<LoadedCookBook, ExplorerViewModel>? looseRecipeFactory = null,
+        IRecentsService? recents = null)
     {
+        _looseRecipeFactory = looseRecipeFactory; _recents = recents;
+        _loose = new LooseCreation(dialogs, picker, kitchen);
         _riseFactory = riseFactory;
         _book = book; _nav = nav; _dialogs = dialogs; _bridge = bridge;
         _editorFactory = editorFactory;
@@ -888,12 +898,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
             // A fresh recipe is intentionally empty; it is not yet generatable (ValidateRecipe would
             // flag the empty layerOrder), so it is NOT validated here — the user fills it via
             // "Add ingredient" next, and the cook path validates the whole book at generation time.
-            var recipe = new LoadedRecipe
-            {
-                Manifest = new RecipeManifest(result.DerivedId, result.Name,
-                    Array.Empty<string>(), Array.Empty<IncompatibilityRule>()),
-                Ingredients = Array.Empty<LoadedIngredient>(),
-            };
+            var recipe = LoadedRecipe.Empty(result.DerivedId, result.Name);
 
             var book2 = CookBookEdits.UpsertRecipe(_book, recipe, result.Weight);
             var book3 = await CookBookPersistence.PersistAsync(_session, book2);
@@ -959,87 +964,31 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         }
     }
 
-    /// <summary>The "Loose (Kitchen)" destination: write a standalone .igt (never touching the open
-    /// cookbook) and open it in a loose editor — mirrors LandingViewModel.NewIngredient's B3a steps.</summary>
-    /// <summary>Saves a new Recipe as a loose .rcp rather than adding it to the open CookBook.
-    /// Mirrors <see cref="CreateLooseIngredient"/>: pick a path, write atomically, report problems
-    /// rather than throwing. The recipe is empty by design - it is filled by opening it and adding
-    /// ingredients - so it is not added to the recents list as something already useful.</summary>
+    /// <summary>The "Loose (Kitchen)" destination for a recipe: the shared <see cref="LooseCreation"/>
+    /// writes a standalone .rcp (never touching the open cookbook), then it is opened, as Landing does.</summary>
     private async Task CreateLooseRecipe(NewRecipeViewModel result)
     {
-        // The Kitchen IS the loose-items folder - the creation-flows spec settled that they are one
-        // concept, not two - so when one is open the save defaults into it rather than asking again.
-        var path = DefaultLoosePath(result.DerivedId + Archives.RecipeExtension);
-        if (path is null)
+        var path = await _loose.NewRecipeAsync(result);
+        if (path is null) return;   // canceled, or refused with an error card
+        if (_looseRecipeFactory is null)
         {
-            try { path = await _picker.SaveFileAsync("Save new recipe", ".rcp"); }
-            catch (Exception ex) { await ShowError("Could not save", ex.Message); return; }
-            if (path is null) return;   // canceled
-        }
-
-        var recipe = new LoadedRecipe
-        {
-            Manifest = new RecipeManifest(result.DerivedId, result.Name,
-                Array.Empty<string>(), Array.Empty<IncompatibilityRule>()),
-            Ingredients = Array.Empty<LoadedIngredient>(),
-        };
-
-        try
-        {
-            var problems = LooseWorkspace.WriteRecipe(path, recipe);
-            if (problems.Count > 0)
-            {
-                await ShowError("Invalid recipe", string.Join("\n", problems));
-                return;
-            }
             _status.Say($"Saved “{result.Name}” to {path}. Open it to add ingredients.");
+            return;
         }
-        catch (Exception ex) { await ShowError("Could not save", ex.Message); }
-    }
-
-    /// <summary>Where a loose item goes when a Kitchen is open: into it, under the given file name.
-    /// Null when no Kitchen is open (the caller falls back to asking), or when a file of that name is
-    /// already there — silently replacing something in the workspace is not a save, it is a
-    /// deletion, so that case goes to the picker where the user can see and confirm it.</summary>
-    private string? DefaultLoosePath(string fileName)
-    {
-        var dir = _kitchen?.Current?.Directory;
-        if (dir is null) return null;
-        var candidate = Path.Combine(dir, fileName);
-        return File.Exists(candidate) ? null : candidate;
+        LoadedRecipe recipe;
+        try { recipe = RecipeArchive.Read(path); }
+        catch (Exception ex) { await ShowError("Could not open", ex.Message); return; }
+        var book = LooseWorkspace.WrapRecipe(recipe);
+        _session.Open(book, null);   // no source .cbk -> read-only; the session owns `book`
+        _nav.To(_looseRecipeFactory(book));
+        _recents?.Add(new RecentItem(recipe.Manifest.Name,
+            $"loose recipe · {recipe.Ingredients.Count} ingredients", path, true));
     }
 
     private async Task CreateLooseIngredient(NewIngredientViewModel result)
     {
-        if (!result.TryGetCanvas(out var canvas))
-        {
-            await ShowError("Invalid canvas", "Enter a canvas size like 512x512.");
-            return;
-        }
-        var path = DefaultLoosePath(result.DerivedId + Archives.IngredientExtension);
-        if (path is null)
-        {
-            try { path = await _picker.SaveFileAsync("Save new ingredient", ".igt"); }
-            catch (Exception ex) { await ShowError("Could not save", ex.Message); return; }
-            if (path is null) return;   // canceled
-        }
-
-        LoadedIngredient built;
-        try { built = result.Build(canvas); }   // Build allocates the raster — guard it (OOM on a huge canvas)
-        catch (Exception ex) { await ShowError("Could not save", ex.Message); return; }
-
-        try
-        {
-            // Validate + atomically write (replaces an existing file rather than throwing).
-            var problems = LooseWorkspace.WriteIngredient(path, built);
-            if (problems.Count > 0)
-            {
-                await ShowError("Invalid ingredient", string.Join("\n", problems));
-                return;
-            }
-        }
-        catch (Exception ex) { await ShowError("Could not save", ex.Message); return; }
-        finally { built.Dispose(); }
+        var path = await _loose.NewIngredientAsync(result);
+        if (path is null) return;   // canceled, or refused with an error card
 
         // Open the new .igt in a loose editor (a fresh copy; the editor owns the wrapper book).
         LoadedIngredient? ing = null;
@@ -1052,7 +1001,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            ing?.Dispose();   // never reached the editor — free it
+            ing?.Dispose();   // never reached the editor - free it
             await ShowError("Could not open", ex.Message);
         }
     }

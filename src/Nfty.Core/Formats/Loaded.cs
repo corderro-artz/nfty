@@ -36,6 +36,17 @@ public class LoadedRecipe : IDisposable
     /// <summary>Its ingredients, each owning its own images.</summary>
     public required IReadOnlyList<LoadedIngredient> Ingredients { get; init; }
 
+    /// <summary>A fresh recipe with no layers, no rules and no ingredients - what a wizard creates
+    /// before the author fills it. Not yet generatable (its layer order is empty).</summary>
+    /// <param name="id">The recipe id.</param>
+    /// <param name="name">The recipe's display name.</param>
+    /// <returns>The empty recipe.</returns>
+    public static LoadedRecipe Empty(string id, string name) => new()
+    {
+        Manifest = new RecipeManifest(id, name, Array.Empty<string>(), Array.Empty<IncompatibilityRule>()),
+        Ingredients = Array.Empty<LoadedIngredient>(),
+    };
+
     /// <summary>Frees every image this object owns. Reading an archive eagerly decodes them all,
     /// so this is how a caller gives them back.</summary>
     public void Dispose()
