@@ -23,10 +23,10 @@ See [The demo CookBook](../get-started/the-demo.md) for what is in it.
 
 | Command | Does |
 |---|---|
-| `nfty inspect <file>` | Prints what is inside any `.cbk`, `.rcp`, `.igt`, `.set`, `.ktn` or `.tin`, plus a book's own palette. A cooked Set also works as a **folder** -- which is what `generate --out` writes when you do not pass `--pack`. |
+| `nfty inspect <file>` | Prints what is inside any `.cbk`, `.rcp`, `.igt`, `.set`, `.ktn` or `.tin`, plus a book's own palette. A `.cbk` also prints its collection name and symbol, target supply and recipe order. A cooked Set also works as a **folder** -- which is what `generate --out` writes when you do not pass `--pack`. |
 | `nfty inspect <tin>` | A sealed export prints its header with **no passphrase**: the collection, the asset count, the sender's note and what you are permitted to do. Add `--key <source>` and it prints the full report of what is inside. |
 | `nfty inspect <file> --voxel` | Also lists every variant carrying partial transparency. Costs a full scan of every image. Refused on a `.ktn` and on a cooked Set: both list paths without opening them, and a Set is the output rather than the source -- run it on the CookBook that produced it. |
-| `nfty validate <file>` | Reports every problem it finds, rather than stopping at the first. |
+| `nfty validate <file>` | Reports every problem it finds, rather than stopping at the first. Takes a `.cbk`, or a loose `.rcp` or `.igt` (checked for everything that needs no canvas). |
 | `nfty stats <cbk>` | The odds the weights imply, trait by trait, plus the unique DNA space. |
 
 `inspect` on a cooked Set reports what a run **actually produced** -- its seed, the CookBook hash it
@@ -191,6 +191,19 @@ nfty set depth chestbody.igt --variant stone --map stone-depth.png
 ```
 
 `nfty set depth` gives one variant its [depth map](file-formats.md#depth-maps) from a picture. In the PNG, **red is the front depth and green the back depth**, each 0-255 voxels; blue and alpha are ignored. The picture must be exactly the variant's size, since nfty resamples nothing. Depth over a clear pixel is dropped, and a map that is all zero clears the variant's depth back to flat paper. Every other variant in the `.igt` is carried across untouched.
+
+Changing and removing, on a `.cbk` or on the loose part it holds. Each checks the result with the same validator as `nfty validate` before it writes, and replaces the file atomically.
+
+| Command | Does |
+|---|---|
+| `nfty remove ingredient <cbk\|rcp> --id I [--recipe R]` | Drops a layer and its place in the stack. `--recipe` is required on a `.cbk` and refused on a `.rcp`. |
+| `nfty remove variant <cbk\|igt> --id V [--recipe R --ingredient I]` | Drops one variant. The last variant of a layer is refused. |
+| `nfty remove recipe <cbk> --id R` | Drops a recipe and its roll weight. |
+| `nfty move recipe <cbk> --id R --to N` | Moves a recipe within the listing; `N` is 1-based, as in `remove rule --at`. Presentation only: the same seed cooks the same Set. |
+| `nfty set variant <igt\|cbk> --id V --weight W [--recipe R --ingredient I]` | Changes one variant's weight. `W` must be above zero. |
+| `nfty set recipe <cbk> --id R --weight W` | Changes a recipe's roll weight. `0` shelves it. |
+| `nfty set cookbook <cbk> [--name] [--collection-name] [--symbol] [--description] [--target-supply N\|none]` | Changes the book's name or collection metadata. At least one option is required. |
+| `nfty set voxel-ready <cbk> [--dry-run]` | Snaps every partially transparent pixel to solid or clear at 50% alpha, listing each variant it changes. `--dry-run` lists and writes nothing. |
 
 Files resolve by convention: a layer id `aura` looks for `aura.igt`, a variant id `glow` looks for
 `glow.png`.

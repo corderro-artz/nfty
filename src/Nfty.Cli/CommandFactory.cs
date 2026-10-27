@@ -279,6 +279,16 @@ public static partial class CommandFactory
     {
         Console.WriteLine($"CookBook: {cb.Manifest.Name} ({cb.Manifest.Canvas.Width}x{cb.Manifest.Canvas.Height})");
 
+        // What the book PUBLISHES under, and the figures an author set on it: the collection name is
+        // the "<name> #n" every asset carries, which the line above (the book's own name) is not.
+        var info = cb.Manifest.Collection;
+        Console.WriteLine($"  Collection: {info.Name} ({info.Symbol})");
+        if (info.Description.Length > 0) Console.WriteLine($"  Description: {info.Description}");
+        Console.WriteLine("  Target supply: " + (cb.Manifest.TargetSupply is int supply
+            ? supply.ToString("N0", CultureInfo.InvariantCulture) : "(none)"));
+        if (cb.Manifest.RecipeOrder is { Count: > 0 } order)
+            Console.WriteLine("  Recipe order: " + string.Join(", ", order));
+
         // A book's palette travels inside the archive, so a collection handed to someone else brings
         // its colors with it — and nothing else in the CLI would have shown they were there.
         // Printed as the specs it is stored as: the same form an author types.
@@ -426,18 +436,34 @@ public static partial class CommandFactory
 
     private static Command Validate()
     {
-        var path = new Argument<string>("cookbook") { Description = "Path to a .cbk file." };
+        var path = new Argument<string>("file") { Description = "Path to a .cbk, .rcp or .igt file." };
         var cmd = new Command("validate",
-            "Check a CookBook for problems and report every one found (id collisions, rule "
-                + "conflicts, canvas mismatches, etc.) instead of stopping at the first. "
-                + "generate runs this same check itself and refuses to run over a broken "
+            "Check a CookBook, Recipe or Ingredient for problems and report every one found (id "
+                + "collisions, rule conflicts, canvas mismatches, etc.) instead of stopping at the "
+                + "first. A loose .rcp or .igt is checked for everything that needs no canvas. "
+                + "generate runs the CookBook check itself and refuses to run over a broken "
                 + "CookBook, so this command exists for humans who want to see what's wrong "
                 + "before generating.")
         { path };
         cmd.SetAction(parse =>
         {
-            using var cb = CookBookArchive.Read(parse.GetValue(path)!);
-            var problems = Validator.Validate(cb);
+            string file = parse.GetValue(path)!;
+            IReadOnlyList<string> problems;
+            switch (Archives.KindOf(file))
+            {
+                case ArchiveKind.CookBook:
+                    using (var cb = CookBookArchive.Read(file)) problems = Validator.Validate(cb);
+                    break;
+                case ArchiveKind.Recipe:
+                    using (var rcp = RecipeArchive.Read(file)) problems = Validator.ValidateRecipe(rcp);
+                    break;
+                case ArchiveKind.Ingredient:
+                    using (var igt = IngredientArchive.Read(file)) problems = Validator.ValidateIngredient(igt);
+                    break;
+                default:
+                    throw new InvalidOperationException(
+                        $"validate checks a .cbk, .rcp or .igt; '{file}' is none of those.");
+            }
             if (problems.Count == 0) { Console.WriteLine("OK — no problems."); return 0; }
             foreach (var p in problems) Console.Error.WriteLine(p);
             return 1;
