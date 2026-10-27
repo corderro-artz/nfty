@@ -134,6 +134,37 @@ public class ParallelismTests
         }
     }
 
+    // Two workers split 0..63 into ranges; the second meets 33 at once while the first is still
+    // sleeping its way toward 30. Stopping the loop at the first failure reports "thirty-three";
+    // the sequential loop reports "thirty". The answer must not depend on the thread count.
+    private static void LateLowFailure(int i)
+    {
+        if (i == 33) throw new InvalidOperationException("thirty-three");
+        Thread.Sleep(5);
+        if (i == 30) throw new InvalidOperationException("thirty");
+    }
+
+    [Fact]
+    public void A_lower_failure_no_worker_has_reached_yet_is_still_the_one_reported()
+    {
+        var items = Enumerable.Range(0, 64).ToList();
+        Assert.Equal("thirty", Assert.Throws<InvalidOperationException>(() =>
+            ParallelWork.ForEach(items, Parallelism.Sequential, CancellationToken.None, LateLowFailure)).Message);
+        for (var run = 0; run < 5; run++)
+            Assert.Equal("thirty", Assert.Throws<InvalidOperationException>(() =>
+                ParallelWork.ForEach(items, new Parallelism(2), CancellationToken.None, LateLowFailure)).Message);
+    }
+
+    [Fact]
+    public async Task A_lower_failure_no_worker_has_reached_yet_is_still_the_one_reported_async()
+    {
+        var items = Enumerable.Range(0, 64).ToList();
+        for (var run = 0; run < 5; run++)
+            Assert.Equal("thirty", (await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                ParallelWork.ForEachAsync(items, new Parallelism(2), CancellationToken.None,
+                    (i, _) => { LateLowFailure(i); return ValueTask.CompletedTask; }))).Message);
+    }
+
     [Fact]
     public void Cancellation_surfaces_as_cancellation()
     {
