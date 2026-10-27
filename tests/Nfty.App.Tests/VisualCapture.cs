@@ -1720,10 +1720,7 @@ public class VisualCapture
                 return (vm, null);
             }, p =>
             {
-                var run = p.Vm.MakeVoxelReadyCommand.ExecuteAsync(null);
-                while (!run.IsCompleted) { Dispatcher.UIThread.RunJobs(); System.Threading.Thread.Sleep(1); }
-                run.GetAwaiter().GetResult();
-                Dispatcher.UIThread.RunJobs();
+                UiThreadWait.For(p.Vm.MakeVoxelReadyCommand.ExecuteAsync(null));
             }),
             ("swapped", () => (RisePages.VariantVm(oakDepth: RisePages.PaintedOak()), null),
                 p => p.Vm.SwapPreviewCommand.Execute(null)),

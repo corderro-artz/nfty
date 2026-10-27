@@ -107,7 +107,7 @@ public class MenuExportDialogTests
     internal static MenuExportDialogViewModel RefusedVm(LoadedCookBook wideBook)
     {
         var vm = Vm(wideBook, Path.Combine(Path.GetTempPath(), "Wide.mnu"));
-        vm.ExportCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+        UiThreadWait.For(vm.ExportCommand.ExecuteAsync(null));
         return vm;
     }
 
