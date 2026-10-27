@@ -979,14 +979,40 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
             _status.Say($"Saved “{result.Name}” to {path}. Open it to add ingredients.");
             return;
         }
+        if (!await MayLeaveBookAsync(result.Name))
+        {
+            _status.Say($"Saved “{result.Name}” to {path}. Open it from Landing to add ingredients.");
+            return;
+        }
         LoadedRecipe recipe;
         try { recipe = RecipeArchive.Read(path); }
         catch (Exception ex) { await ShowError("Could not open", ex.Message); return; }
         var book = LooseWorkspace.WrapRecipe(recipe);
-        _session.Open(book, null);   // no source .cbk -> read-only; the session owns `book`
-        _nav.To(_looseRecipeFactory(book));
-        _recents?.Add(new RecentItem(recipe.Manifest.Name,
+
+        // Leave the way Close does, not by swapping the session under a live page: Open() disposes
+        // the book this page (and every page above Landing) still shows. Pop first - that releases
+        // the images - then the session may replace the book. Captured before popping, because
+        // popping disposes this view model.
+        var nav = _nav; var session = _session; var factory = _looseRecipeFactory; var recents = _recents;
+        for (int n = nav.Pages.Count; n > 1; n--) nav.Back();
+        session.Open(book, null);   // no source .cbk -> read-only; the session owns `book`
+        nav.To(factory(book));
+        recents?.Add(new RecentItem(recipe.Manifest.Name,
             $"loose recipe · {recipe.Ingredients.Count} ingredients", path, true));
+    }
+
+    /// <summary>Whether this book may be closed to open the new recipe: no write to it in flight, every
+    /// page holding unsaved work agrees (the same walk the window's close makes), and the author says
+    /// yes - opening the recipe closes the book, which is not what a button called Add suggests.</summary>
+    private async Task<bool> MayLeaveBookAsync(string recipeName)
+    {
+        if (_reordering) return false;
+        foreach (var page in _nav.Pages.OfType<IUnsavedWork>().Where(p => p.HasUnsavedWork || p.IsBusy).ToList())
+            if (!await page.ConfirmLeaveAsync()) return false;
+        return await _dialogs.ShowAsync<bool>(new ConfirmDialogViewModel(_dialogs,
+            "Open the new recipe?",
+            $"“{recipeName}” opens on its own page, and “{_book.Manifest.Name}” closes. "
+            + "Everything saved to the book stays saved.", "Open"));
     }
 
     private async Task CreateLooseIngredient(NewIngredientViewModel result)

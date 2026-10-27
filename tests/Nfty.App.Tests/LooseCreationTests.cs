@@ -49,6 +49,8 @@ public class LooseCreationTests
     {
         private readonly string _name;
         public string? ErrorTitle { get; private set; }
+        public bool Confirm { get; set; } = true;
+        public int Confirms { get; private set; }
         public Dialogs(string name) => _name = name;
         public ViewModelBase? Active => null;
         public event Action? Changed { add { } remove { } }
@@ -63,6 +65,9 @@ public class LooseCreationTests
                     i.Name = _name; i.Kind = LayerKind.Dynamic; i.CanvasSize = "8x8";
                     i.Destination = RecipeDestination.LooseKitchen;
                     return Task.FromResult((TResult?)(object?)i);
+                case ConfirmDialogViewModel:
+                    Confirms++;
+                    return Task.FromResult((TResult?)(object?)Confirm);
                 case ErrorDialogViewModel e:
                     ErrorTitle = e.Title; break;
             }
@@ -223,5 +228,106 @@ public class LooseCreationTests
             }
         }
         finally { Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
+    }
+
+    // ---- Leaving the open book to open the new recipe -------------------------------------------
+    // The Explorer's page stays on the stack under whatever it pushes, and the session holds ONE
+    // book that Open() disposes. Swapping the session under a live Explorer leaves that page on
+    // disposed images, with a session that no longer names its file.
+
+    private sealed class Blank : ViewModelBase { }
+
+    private sealed class Holder(bool allow) : ViewModelBase, IUnsavedWork
+    {
+        public int Asked { get; private set; }
+        public bool HasUnsavedWork => true;
+        public bool IsBusy => false;
+        public Task<bool> ConfirmLeaveAsync() { Asked++; return Task.FromResult(allow); }
+    }
+
+    private sealed class LeaveRig : IDisposable
+    {
+        public NavigationService Nav = new();
+        public Dialogs Dlg = new("Hat");
+        public CookBookSession Session = default!;
+        public ExplorerViewModel Vm = default!;
+        public LoadedCookBook Original = default!;
+        public StatusService Status = new();
+        public string Target = Path.Combine(Directory.CreateTempSubdirectory().FullName, "hat.rcp");
+        public string BookDir = default!;
+        public void Dispose()
+        {
+            Nav.Dispose(); Session.Dispose();
+            Directory.Delete(Path.GetDirectoryName(Target)!, recursive: true);
+            Directory.Delete(BookDir, recursive: true);
+        }
+    }
+
+    private static LeaveRig LeaveBuild(ViewModelBase? below = null)
+    {
+        var rig = new LeaveRig();
+        (var cbk, var session, _, _) = IngredientEditorSaveTests.OnDisk();
+        rig.Session = session; rig.BookDir = Path.GetDirectoryName(cbk)!; rig.Original = session.Current!;
+        var nav = rig.Nav; var dialogs = rig.Dlg;
+        Func<LoadedCookBook, ExplorerViewModel> opener = null!;
+        ExplorerViewModel Make(LoadedCookBook b) => new(b, nav, dialogs, new ImageBridge(),
+            ExplorerViewModelTests.EditorFactory(nav, session, dialogs),
+            ExplorerViewModelTests.CookFactory(dialogs), session, new Picker(rig.Target),
+            ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs), rig.Status,
+            null, null, null, null, opener, new RecentsService(Directory.CreateTempSubdirectory().FullName));
+        opener = b => Make(b);
+        nav.To(new Blank());                        // Landing, the root
+        if (below is not null) nav.To(below);
+        rig.Vm = Make(session.Current!);
+        nav.To(rig.Vm);
+        rig.Vm.ToggleLockCommand.Execute(null);
+        rig.Vm.SelectNodeCommand.Execute(rig.Vm.Root);
+        return rig;
+    }
+
+    [AvaloniaFact]
+    public async Task Opening_a_loose_recipe_from_a_book_closes_that_book_instead_of_stranding_its_page()
+    {
+        using var rig = LeaveBuild();
+
+        await rig.Vm.AddCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, rig.Dlg.Confirms);                       // it asked
+        var explorers = rig.Nav.Pages.OfType<ExplorerViewModel>().ToList();
+        var only = Assert.Single(explorers);                      // the old book's page is gone, not buried
+        Assert.Same(rig.Nav.Current, only);
+        Assert.NotSame(rig.Original, rig.Session.Current);
+        Assert.Same(rig.Session.Current, only.BookForTest);       // the page and the session agree
+        Assert.Null(rig.Session.SourcePath);                      // a loose recipe: read-only, no .cbk
+    }
+
+    [AvaloniaFact]
+    public async Task Declining_leaves_the_book_open_and_the_recipe_saved()
+    {
+        using var rig = LeaveBuild();
+        rig.Dlg.Confirm = false;
+
+        await rig.Vm.AddCommand.ExecuteAsync(null);
+
+        Assert.True(File.Exists(rig.Target));                     // saved
+        Assert.Same(rig.Vm, rig.Nav.Current);                     // nothing navigated
+        Assert.Same(rig.Original, rig.Session.Current);           // and the book is still the session's
+        Assert.NotNull(rig.Session.SourcePath);
+        Assert.Contains("Saved", rig.Status.Last);
+    }
+
+    [AvaloniaFact]
+    public async Task A_page_holding_unsaved_work_is_asked_first_and_can_keep_the_book()
+    {
+        var holder = new Holder(allow: false);
+        using var rig = LeaveBuild(below: holder);
+
+        await rig.Vm.AddCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, holder.Asked);
+        Assert.Equal(0, rig.Dlg.Confirms);                        // refused before any card
+        Assert.Same(rig.Vm, rig.Nav.Current);
+        Assert.Same(rig.Original, rig.Session.Current);
+        Assert.True(File.Exists(rig.Target));
     }
 }
