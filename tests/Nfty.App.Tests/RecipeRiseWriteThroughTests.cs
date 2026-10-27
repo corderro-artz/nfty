@@ -354,18 +354,18 @@ public class RecipeRiseWriteThroughTests
     }
 
     [AvaloniaFact]
-    public void A_recombine_keeps_the_previous_texture_alive_until_the_next()
+    public void A_recombine_updates_the_texture_and_faces_in_place_so_nothing_is_retired()
     {
         using var rig = Open();
-        var first = rig.Subject.Texture;
+        var texture = rig.Subject.Texture;
+        var faces = rig.Subject.Faces;
         rig.Src.TryPick(3, 3, DepthSide.Front);
 
         rig.Editor.Do(Step(DepthSide.Front, +1, (3, 3)));
-        Assert.NotSame(first, rig.Subject.Texture);
-        _ = first[0, 0];                                                          // the page may still be reading it
-
         rig.Editor.Do(Step(DepthSide.Front, +1, (3, 3)));
-        Assert.Throws<ObjectDisposedException>(() => first[0, 0]);
+        Assert.Same(texture, rig.Subject.Texture);   // the page keeps reading one image, rewritten under the stroke
+        Assert.Same(faces, rig.Subject.Faces);
+        _ = texture[0, 0];
     }
 
     [AvaloniaFact]

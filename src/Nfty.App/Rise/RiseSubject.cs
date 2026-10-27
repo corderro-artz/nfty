@@ -109,6 +109,24 @@ public sealed class RiseSubject : IDisposable
         return retired;
     }
 
+    /// <summary>Takes a rectangle of an updated stack in place: the same <see cref="Depth"/>, the same
+    /// <see cref="Texture"/> image and the same <see cref="Faces"/> instance, only the pixels inside the
+    /// rectangle rewritten. The result is what <see cref="ReplaceCombined"/> would give for the whole stack.</summary>
+    /// <param name="rise">The stack, already updated inside <paramref name="area"/>.</param>
+    /// <param name="area">The pixels that changed.</param>
+    public void UpdateCombined(StackRise rise, SixLabors.ImageSharp.Rectangle area)
+    {
+        ArgumentNullException.ThrowIfNull(rise);
+        var r = SixLabors.ImageSharp.Rectangle.Intersect(area, new SixLabors.ImageSharp.Rectangle(0, 0, Art.Width, Art.Height));
+        if (r.IsEmpty) return;
+        for (int y = r.Top; y < r.Bottom; y++)
+            for (int x = r.Left; x < r.Right; x++)
+                Depth.Set(x, y, rise.DepthAt(x, y));
+        Faces?.CopyRegionFrom(rise.Faces, r);
+        FaceAtlas.UpdateRegion(Texture, Art, Faces, r);
+        _saved = Depth.ToDepthMap();
+    }
+
     private sealed class Retired(Image<Rgba32> texture, StackFaces? faces) : IDisposable
     {
         public void Dispose()

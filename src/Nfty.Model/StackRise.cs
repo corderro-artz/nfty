@@ -1,3 +1,4 @@
+using Nfty.Core.Editing;
 using Nfty.Core.Model;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -12,11 +13,12 @@ public sealed class StackRise : IDisposable
 {
     private readonly int[] _frontOwner;
     private readonly int[] _backOwner;
+    private readonly byte[] _union;
 
-    internal StackRise(Image<Rgba32> art, DepthMap depth, StackFaces faces, int[] frontOwner, int[] backOwner)
+    internal StackRise(Image<Rgba32> art, byte[] union, StackFaces faces, int[] frontOwner, int[] backOwner)
     {
         Art = art;
-        Depth = depth;
+        _union = union;
         Faces = faces;
         _frontOwner = frontOwner;
         _backOwner = backOwner;
@@ -47,8 +49,25 @@ public sealed class StackRise : IDisposable
     /// finished picture it was given).</summary>
     public Image<Rgba32> Art { get; }
 
-    /// <summary>Per pixel, the union of the solid layers' columns.</summary>
-    public DepthMap Depth { get; }
+    /// <summary>Per pixel, the union of the solid layers' columns, as a map of its own (a copy of the
+    /// current state: <see cref="StackDepth.CombineInto"/> updates a rise in place).</summary>
+    public DepthMap Depth => DepthMap.FromBytes(Art.Width, Art.Height, _union);
+
+    /// <summary>The union depth at a pixel, without building a map.</summary>
+    /// <param name="x">Column.</param>
+    /// <param name="y">Row.</param>
+    /// <returns>The pair; 0/0 on a pixel no layer covers.</returns>
+    public DepthPixel DepthAt(int x, int y)
+    {
+        int i = Index(x, y) * 2;
+        return new DepthPixel(_union[i], _union[i + 1]);
+    }
+
+    internal byte[] UnionBytes => _union;
+
+    internal int[] FrontOwners => _frontOwner;
+
+    internal int[] BackOwners => _backOwner;
 
     /// <summary>The front and back owners' pictures and the wall seams.</summary>
     public StackFaces Faces { get; }

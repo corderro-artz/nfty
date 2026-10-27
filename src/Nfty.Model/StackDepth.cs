@@ -1,4 +1,5 @@
 using Nfty.Core.Diagnostics;
+using Nfty.Core.Editing;
 using Nfty.Core.Formats;
 using Nfty.Core.Generation;
 using Nfty.Core.Imaging;
@@ -88,41 +89,12 @@ public static class StackDepth
             var backOwners = new int[w * h];
             Array.Fill(frontOwners, -1);
             Array.Fill(backOwners, -1);
+            var reads = ReadsOf(bottomFirst);
             for (int y = 0; y < h; y++)
-            {
                 for (int x = 0; x < w; x++)
-                {
-                    if (!Opacity.IsSolid(art[x, y])) continue;
-
-                    int top = -1, maxF = -1, maxB = -1, ownF = -1, ownB = -1;
-                    for (int i = bottomFirst.Count - 1; i >= 0; i--)
-                    {
-                        var (layer, map) = bottomFirst[i];
-                        if (!Opacity.IsSolid(layer[x, y])) continue;
-                        if (top < 0) top = i;
-                        int f = map?.Front(x, y) ?? 0, b = map?.Back(x, y) ?? 0;
-                        if (f > maxF) { maxF = f; ownF = i; }   // strict: the upper layer keeps a tie
-                        if (b > maxB) { maxB = b; ownB = i; }
-                    }
-
-                    frontOwners[(y * w) + x] = ownF;
-                    backOwners[(y * w) + x] = ownB;
-                    int k = ((y * w) + x) * 2;
-                    bytes[k] = (byte)maxF;
-                    bytes[k + 1] = (byte)maxB;
-
-                    front[x, y] = ownF == top ? art[x, y] : bottomFirst[ownF].Layer[x, y];
-                    back[x, y] = ownB == top ? art[x, y] : bottomFirst[ownB].Layer[x, y];
-
-                    // The back owner owns what the upper-owns rule leaves it: behind the front owner's
-                    // own back when the front owner is above; else its whole interval.
-                    seams[(y * w) + x] = ownF >= ownB
-                        ? maxB - (bottomFirst[ownF].Depth?.Back(x, y) ?? 0)
-                        : maxB + 1 + (bottomFirst[ownB].Depth?.Front(x, y) ?? 0);
-                }
-            }
+                    CombinePixel(reads, art, front, back, bytes, seams, frontOwners, backOwners, x, y);
             var faces = new StackFaces(front, back, seams);
-            var rise = new StackRise(art, DepthMap.FromBytes(w, h, bytes), faces, frontOwners, backOwners);
+            var rise = new StackRise(art, bytes, faces, frontOwners, backOwners);
             art = front = back = null;   // owned by the rise now
             return rise;
         }
@@ -132,6 +104,79 @@ public static class StackDepth
             front?.Dispose();
             back?.Dispose();
         }
+    }
+
+    private static IReadOnlyList<(Image<Rgba32> Layer, Func<int, int, DepthPixel>? Depth)> ReadsOf(
+        IReadOnlyList<(Image<Rgba32> Layer, DepthMap? Depth)> layers) =>
+        layers.Select(l => (l.Layer, l.Depth is { } map
+            ? (Func<int, int, DepthPixel>)((x, y) => new DepthPixel(map.Front(x, y), map.Back(x, y)))
+            : null)).ToList();
+
+    /// <summary>THE per-pixel stack rule, shared by the whole-picture combine and the rectangle one: nothing
+    /// else decides which layer owns a face, how deep the union stands or where a wall changes color.</summary>
+    private static void CombinePixel(
+        IReadOnlyList<(Image<Rgba32> Layer, Func<int, int, DepthPixel>? Depth)> layers, Image<Rgba32> art,
+        Image<Rgba32> front, Image<Rgba32> back, byte[] union, int[] seams, int[] frontOwners, int[] backOwners,
+        int x, int y)
+    {
+        int w = art.Width;
+        if (!Opacity.IsSolid(art[x, y])) return;
+
+        int top = -1, maxF = -1, maxB = -1, ownF = -1, ownB = -1;
+        for (int i = layers.Count - 1; i >= 0; i--)
+        {
+            var (layer, depth) = layers[i];
+            if (!Opacity.IsSolid(layer[x, y])) continue;
+            if (top < 0) top = i;
+            var d = depth?.Invoke(x, y) ?? default;
+            int f = d.Front, b = d.Back;
+            if (f > maxF) { maxF = f; ownF = i; }   // strict: the upper layer keeps a tie
+            if (b > maxB) { maxB = b; ownB = i; }
+        }
+
+        frontOwners[(y * w) + x] = ownF;
+        backOwners[(y * w) + x] = ownB;
+        int k = ((y * w) + x) * 2;
+        union[k] = (byte)maxF;
+        union[k + 1] = (byte)maxB;
+
+        front[x, y] = ownF == top ? art[x, y] : layers[ownF].Layer[x, y];
+        back[x, y] = ownB == top ? art[x, y] : layers[ownB].Layer[x, y];
+
+        // The back owner owns what the upper-owns rule leaves it: behind the front owner's
+        // own back when the front owner is above; else its whole interval.
+        seams[(y * w) + x] = ownF >= ownB
+            ? maxB - (layers[ownF].Depth?.Invoke(x, y).Back ?? 0)
+            : maxB + 1 + (layers[ownB].Depth?.Invoke(x, y).Front ?? 0);
+    }
+
+    /// <summary>Recombines only a rectangle of an existing rise, in place, after the layers' DEPTH changed
+    /// there. It runs the same per-pixel rule <see cref="Combine"/> runs, so the result is byte-equal to a
+    /// whole combine of the same layers.</summary>
+    /// <param name="rise">The rise to update: its depth, owners and faces change inside the rectangle.
+    /// Single-threaded: nothing may read it while this runs.</param>
+    /// <param name="bottomFirst">The layers in paint order, the same ones (same pictures) the rise was
+    /// combined from, each with a reader of its CURRENT depth or <c>null</c> for paper.</param>
+    /// <param name="dirty">The pixels whose depth changed in any layer; clipped to the picture.</param>
+    /// <exception cref="ArgumentException">A layer is another size than the rise.</exception>
+    /// <remarks>Only depth may have changed: the layers' pixels are what the rise's art and faces were
+    /// built from, and are not rescanned.</remarks>
+    public static void CombineInto(StackRise rise,
+        IReadOnlyList<(Image<Rgba32> Layer, Func<int, int, DepthPixel>? Depth)> bottomFirst, Rectangle dirty)
+    {
+        ArgumentNullException.ThrowIfNull(rise);
+        ArgumentNullException.ThrowIfNull(bottomFirst);
+        int w = rise.Art.Width, h = rise.Art.Height;
+        foreach (var (layer, _) in bottomFirst)
+            if (layer.Width != w || layer.Height != h)
+                throw new ArgumentException($"A layer is {layer.Width}x{layer.Height}; the rise is {w}x{h}.", nameof(bottomFirst));
+        var r = Rectangle.Intersect(dirty, new Rectangle(0, 0, w, h));
+        if (r.IsEmpty) return;
+        using var _ = Perf.Measure("StackDepth.CombineInto");
+        for (int y = r.Top; y < r.Bottom; y++)
+            for (int x = r.Left; x < r.Right; x++)
+                CombinePixel(bottomFirst, rise.Art, rise.Faces.Front, rise.Faces.Back, rise.UnionBytes,
+                    rise.Faces.SeamsArray, rise.FrontOwners, rise.BackOwners, x, y);
     }
 
     /// <summary>The union rise of one rolled selection of a recipe.</summary>

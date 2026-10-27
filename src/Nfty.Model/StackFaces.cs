@@ -42,6 +42,30 @@ public sealed class StackFaces : IDisposable
     /// <returns>The voxel count.</returns>
     public int BackColored(int x, int y) => _backColored[(y * Width) + x];
 
+    internal int[] SeamsArray => _backColored;
+
+    /// <summary>Copies a rectangle of another set of faces over this one, in place (the same size).</summary>
+    /// <param name="source">The faces to read.</param>
+    /// <param name="area">The pixels to copy; clipped to the picture.</param>
+    /// <exception cref="ArgumentException">The faces are another size.</exception>
+    public void CopyRegionFrom(StackFaces source, Rectangle area)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        if (source.Width != Width || source.Height != Height)
+            throw new ArgumentException("The faces are another size.", nameof(source));
+        var r = Rectangle.Intersect(area, new Rectangle(0, 0, Width, Height));
+        if (r.IsEmpty) return;
+        for (int y = r.Top; y < r.Bottom; y++)
+        {
+            for (int x = r.Left; x < r.Right; x++)
+            {
+                Front[x, y] = source.Front[x, y];
+                Back[x, y] = source.Back[x, y];
+            }
+            Array.Copy(source._backColored, (y * Width) + r.Left, _backColored, (y * Width) + r.Left, r.Width);
+        }
+    }
+
     /// <summary>An independent copy; the caller owns it.</summary>
     /// <returns>The copy.</returns>
     public StackFaces Clone() => new(Front.Clone(), Back.Clone(), (int[])_backColored.Clone());

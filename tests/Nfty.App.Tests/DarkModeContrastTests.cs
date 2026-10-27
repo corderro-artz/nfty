@@ -450,9 +450,9 @@ public class DarkModeContrastTests
         // longest list (long names, five-digit counts on every row, the scroller engaged).
         var riseLocked = RisePages.VariantVm("ghost", isEditing: () => false);
         yield return ("rise-voxel-locked", new Views.RiseView { DataContext = riseLocked }, riseLocked.Dispose);
-        // The recipe page that writes through, with a layer chosen and painted: the header chip, the
+        // The recipe page that writes through, with a layer chosen and painted on a locked book: the read-only sentence, the header chip, the
         // target row's selected mark, and the footer's unsaved sentence over the live Save button.
-        var riseWrite = RisePages.DemoWriteThroughVm();
+        var riseWrite = RisePages.DemoWriteThroughVm(locked: true);
         RisePages.TargetLayer(riseWrite, 2);
         RisePages.PaintSolidPixel(riseWrite);
         yield return ("rise-write-through", new Views.RiseView { DataContext = riseWrite }, riseWrite.Dispose);

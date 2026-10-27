@@ -5,6 +5,7 @@ using System.Numerics;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using Nfty.App.Rise;
+using Nfty.App.Services;
 using Nfty.App.ViewModels;
 using Nfty.Core.Diagnostics;
 using Nfty.Core.Editing;
@@ -109,6 +110,57 @@ public class RisePagePerfTests
             foreach (var scope in new[] { "Rise.DepthClick", "Rise.MeshRebuild", "Riser.TryBuild", "ModelPreviewView.Repaint" })
                 Assert.Contains(scope, seen);
             _out.WriteLine($"=== Rise page, {size}px art ===");
+            _out.WriteLine(Perf.Report());
+        }
+        finally { Perf.Disable(); }
+    }
+
+    private static LoadedIngredient Layer(string id, Image<Rgba32> art) => new()
+    {
+        Manifest = new IngredientManifest(id, id, LayerKind.Custom, null, new[] { new Variant(id + "v", id, 1) }),
+        VariantImages = new Dictionary<string, Image<Rgba32>> { [id + "v"] = art },
+        Depths = new Dictionary<string, DepthMap>(),
+    };
+
+    /// <summary>The write-through page's own cost: strokes on the targeted layer of a two-layer stack, whose
+    /// stack is recombined from every present layer's map. Reported, never asserted as wall-clock.</summary>
+    /// <param name="size">The art's side in pixels.</param>
+    [AvaloniaTheory]
+    [InlineData(64)]
+    [InlineData(512)]
+    public void Where_the_time_goes_recombining_a_two_layer_stack(int size)
+    {
+        var strap = new Image<Rgba32>(size, size);
+        for (int y = size / 3; y < size * 2 / 3; y++)
+            for (int x = 0; x < size; x++) strap[x, y] = new Rgba32(200, 160, 40, 255);
+        var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "Disc", new Dimensions(size, size),
+                new Collection("Disc", "", "D"), new Dictionary<string, double> { ["chest"] = 100 }),
+            Recipes = new[]
+            {
+                new LoadedRecipe
+                {
+                    Manifest = new RecipeManifest("chest", "Chest", new[] { "body", "strap" }, Array.Empty<IncompatibilityRule>()),
+                    Ingredients = new[] { Layer("body", Disc(size)), Layer("strap", strap) },
+                },
+            },
+        };
+        var (s, _) = RiseFixtures.OnDisk(book);
+        var cur = s.Current!;
+        var vm = RisePages.Vm(new RecipeRiseSource(cur, cur.Recipes.Single(), 1, new ImageBridge(), s, () => true));
+        using var page = RisePages.Show(vm, 1180, 720);
+        RisePages.TargetLayer(vm, 1);
+        Perf.Enable();
+        try
+        {
+            Perf.Reset();
+            int mid = size / 2;
+            for (int i = 0; i < 20; i++)
+                vm.ApplyDepthStroke(new[] { (mid - 10 + i, mid) }, DepthSide.Front, lower: false);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Contains("Rise.Recombine", Perf.Snapshot().Select(e => e.Name).ToHashSet());
+            _out.WriteLine($"=== Rise write-through, {size}px two-layer stack ===");
             _out.WriteLine(Perf.Report());
         }
         finally { Perf.Disable(); }

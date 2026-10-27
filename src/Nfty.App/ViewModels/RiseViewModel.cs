@@ -420,8 +420,8 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
     private void RebuildMesh()
     {
         // A recipe's union is derived from its layers' maps: bring it up to date from whatever the surface holds
-        // now (a standing preview included) BEFORE the mesh is built from it. The recombine replaces the
-        // texture, so the 3D view is told about that too, ahead of the mesh it goes with.
+        // now (a standing preview included) BEFORE the mesh is built from it. The recombine rewrites only the
+        // rectangle that changed, in place; the 3D view is told about the texture anyway, ahead of the mesh.
         Editor.Sync();
         OnPropertyChanged(nameof(Texture));
         Mesh = BuildMesh();

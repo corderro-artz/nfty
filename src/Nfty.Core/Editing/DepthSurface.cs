@@ -63,6 +63,7 @@ public sealed class DepthSurface : IEditSurface<DepthPixel>
     private readonly bool[] _solid;
     private readonly byte[] _depth;
     private readonly ColorMap _art;
+    private int _dirtyX0 = int.MaxValue, _dirtyY0 = int.MaxValue, _dirtyX1 = -1, _dirtyY1 = -1;
 
     /// <summary>Width in pixels.</summary>
     public int Width { get; }
@@ -145,8 +146,26 @@ public sealed class DepthSurface : IEditSurface<DepthPixel>
     {
         if (!IsSolid(x, y)) return;
         int i = (y * Width + x) * 2;
+        if (_depth[i] == pixel.Front && _depth[i + 1] == pixel.Back) return;
         _depth[i] = pixel.Front;
         _depth[i + 1] = pixel.Back;
+        _dirtyX0 = Math.Min(_dirtyX0, x);
+        _dirtyY0 = Math.Min(_dirtyY0, y);
+        _dirtyX1 = Math.Max(_dirtyX1, x);
+        _dirtyY1 = Math.Max(_dirtyY1, y);
+    }
+
+    /// <summary>The bounding rectangle of every pixel whose depth CHANGED since the last call (a write of the
+    /// value a pixel already held changes nothing), and forgets it. A derived view of this surface (the
+    /// combined stack of a recipe) recomputes just that rectangle.</summary>
+    /// <returns>The rectangle, or null when nothing changed.</returns>
+    public PixelRect? TakeDirty()
+    {
+        if (_dirtyX1 < 0) return null;
+        var r = new PixelRect(_dirtyX0, _dirtyY0, _dirtyX1 - _dirtyX0 + 1, _dirtyY1 - _dirtyY0 + 1);
+        _dirtyX0 = _dirtyY0 = int.MaxValue;
+        _dirtyX1 = _dirtyY1 = -1;
+        return r;
     }
 
     /// <inheritdoc />
@@ -179,6 +198,9 @@ public sealed class DepthSurface : IEditSurface<DepthPixel>
                 _depth[i * 2] = take ? map!.Front(x, y) : (byte)0;
                 _depth[i * 2 + 1] = take ? map!.Back(x, y) : (byte)0;
             }
+        _dirtyX0 = _dirtyY0 = 0;
+        _dirtyX1 = Width - 1;
+        _dirtyY1 = Height - 1;
     }
 
     /// <summary>The depth as a map to store.</summary>

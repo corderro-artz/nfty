@@ -34,25 +34,47 @@ public static class FaceAtlas
             throw new ArgumentException(
                 $"The faces are {faces.Width}x{faces.Height}, but the art is {art.Width}x{art.Height}.", nameof(faces));
 
+        var atlas = new Image<Rgba32>(WidthFor(art.Width), art.Height);
+        UpdateRegion(atlas, art, faces, new Rectangle(0, 0, art.Width, art.Height));
+        return atlas;
+    }
+
+    /// <summary>Rewrites a rectangle of an atlas from the art and faces it was built from, in place. The
+    /// atlas layout lives here and only here: <see cref="Build"/> is this over the whole picture.</summary>
+    /// <param name="atlas">An atlas made by <see cref="Build"/> for this art's size; changed in place.</param>
+    /// <param name="art">The finished picture; used for both halves when <paramref name="faces"/> is null.</param>
+    /// <param name="faces">The front and back owners' pictures, or null for a single picture.</param>
+    /// <param name="area">The art pixels to copy; clipped to the picture.</param>
+    /// <exception cref="ArgumentException">The atlas or faces are another size than the art.</exception>
+    public static void UpdateRegion(Image<Rgba32> atlas, Image<Rgba32> art, StackFaces? faces, Rectangle area)
+    {
+        ArgumentNullException.ThrowIfNull(atlas);
+        ArgumentNullException.ThrowIfNull(art);
         int w = art.Width, h = art.Height;
+        if (atlas.Width != WidthFor(w) || atlas.Height != h)
+            throw new ArgumentException($"The atlas is {atlas.Width}x{atlas.Height}; art {w}x{h} needs {WidthFor(w)}x{h}.", nameof(atlas));
+        if (faces is not null && (faces.Width != w || faces.Height != h))
+            throw new ArgumentException(
+                $"The faces are {faces.Width}x{faces.Height}, but the art is {w}x{h}.", nameof(faces));
+        var r = Rectangle.Intersect(area, new Rectangle(0, 0, w, h));
+        if (r.IsEmpty) return;
+
         var front = faces?.Front ?? art;
         var back = faces?.Back ?? art;
-        var atlas = new Image<Rgba32>(WidthFor(w), h);
         atlas.ProcessPixelRows(front, (dst, src) =>
         {
-            for (int y = 0; y < h; y++)
+            for (int y = r.Top; y < r.Bottom; y++)
             {
                 var s = src.GetRowSpan(y);
                 var d = dst.GetRowSpan(y);
-                s.CopyTo(d);
-                d[w] = s[w - 1];
+                s.Slice(r.Left, r.Width).CopyTo(d[r.Left..]);
+                if (r.Right == w) d[w] = s[w - 1];
             }
         });
         atlas.ProcessPixelRows(back, (dst, src) =>
         {
-            for (int y = 0; y < h; y++)
-                src.GetRowSpan(y).CopyTo(dst.GetRowSpan(y)[(w + 1)..]);
+            for (int y = r.Top; y < r.Bottom; y++)
+                src.GetRowSpan(y).Slice(r.Left, r.Width).CopyTo(dst.GetRowSpan(y)[(w + 1 + r.Left)..]);
         });
-        return atlas;
     }
 }

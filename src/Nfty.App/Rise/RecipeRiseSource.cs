@@ -1,5 +1,6 @@
 using System.Globalization;
 using Nfty.App.Services;
+using Nfty.Core.Diagnostics;
 using Nfty.Core.Editing;
 using Nfty.Core.Formats;
 using Nfty.Core.Generation;
@@ -46,14 +47,11 @@ public sealed class RecipeRiseSource : RiseSource
     private readonly RecipeDepthEditor _editor;
     private List<RiseLayerRow> _layers = new();
     private List<RollPick> _picks = new();
-    private int[] _frontOwner = Array.Empty<int>();
-    private int[] _backOwner = Array.Empty<int>();
+    // The combined stack of the roll, kept between strokes: a stroke recombines only the rectangle it touched.
+    private StackRise? _rise;
     private string? _refusal;
     private RiseLayerTarget? _target;
     private Image<Rgba32>? _below, _targetArt, _above;
-    // The retired texture of the last recombine: the page re-reads Subject.Texture after the rebuild, so the
-    // old one outlives the notification and goes at the NEXT recombine (or on dispose).
-    private IDisposable? _retired;
     private Task? _inFlight;
     // ONE write at a time on this book: a second save joins, a reroll or retarget is refused, never queued.
     //
@@ -241,7 +239,7 @@ public sealed class RecipeRiseSource : RiseSource
         if (!IsEditable || _writeBusy) return false;
         int w = _book.Manifest.Canvas.Width;
         if (x < 0 || y < 0 || x >= w || y >= _book.Manifest.Canvas.Height) return false;
-        int owner = (side == DepthSide.Front ? _frontOwner : _backOwner)[(y * w) + x];
+        int owner = _rise is null ? -1 : side == DepthSide.Front ? _rise.FrontOwner(x, y) : _rise.BackOwner(x, y);
         if (owner < 0 || owner >= _picks.Count) return false;
         SetTargetTo(_picks[owner]);
         return true;
@@ -317,8 +315,7 @@ public sealed class RecipeRiseSource : RiseSource
         var oldRows = _layers;
         var oldThumb = _item.Thumbnail;
         var oldPicks = _picks;
-        var oldRetired = _retired;
-        _retired = null;
+        var oldRise = _rise;
         _layers = rolled.Rows;
         TakePicks(rolled);
         _item.Thumbnail = _bridge.ToBitmap(rolled.Art);
@@ -340,7 +337,7 @@ public sealed class RecipeRiseSource : RiseSource
         // has, its bindings (the 3D view's texture, the layer rail) still read them, and anything
         // that paints synchronously inside the change would be reading disposed images.
         oldSubject?.Dispose();
-        oldRetired?.Dispose();
+        oldRise?.Dispose();
         oldThumb?.Dispose();
         foreach (var r in oldRows) r.Dispose();
         foreach (var p in oldPicks) p.Dispose();
@@ -375,14 +372,14 @@ public sealed class RecipeRiseSource : RiseSource
     }
 
     private sealed record Rolled(Image<Rgba32> Art, DepthMap? Depth, string? Problem, List<RiseLayerRow> Rows,
-        string? Refusal = null, StackFaces? Faces = null, List<RollPick>? Picks = null,
-        int[]? FrontOwner = null, int[]? BackOwner = null);
+        string? Refusal = null, StackFaces? Faces = null, List<RollPick>? Picks = null, StackRise? Rise = null);
 
     private void TakePicks(Rolled rolled)
     {
         _picks = rolled.Picks ?? new List<RollPick>();
-        _frontOwner = rolled.FrontOwner ?? Array.Empty<int>();
-        _backOwner = rolled.BackOwner ?? Array.Empty<int>();
+        _rise = rolled.Rise;
+        // The roll was combined from the edits as they stand, so whatever they changed before it is already in.
+        foreach (var edit in _edits.Values) edit.Surface.TakeDirty();
     }
 
     private Rolled Roll()
@@ -400,15 +397,14 @@ public sealed class RecipeRiseSource : RiseSource
             picks = BuildPicks(asset);
             DepthMap? depth = null;
             string? refusal = null;
-            int[]? frontOwner = null, backOwner = null;
+            StackRise? kept = null;
             if (picks.Count > 0)
             {
                 try
                 {
-                    using var rise = StackDepth.Combine(PairsOf(picks), $"the {_recipe.Manifest.Name} recipe", asset.Image);
-                    depth = rise.Depth;
-                    faces = rise.Faces.Clone();    // the rise is let go below; the subject keeps its own copy
-                    (frontOwner, backOwner) = OwnersOf(rise);
+                    kept = StackDepth.Combine(PairsOf(picks), $"the {_recipe.Manifest.Name} recipe", asset.Image);
+                    depth = kept.Depth;
+                    faces = kept.Faces.Clone();    // the page keeps the rise for its strokes; the subject has its own copy
                 }
                 catch (PartialAlphaException ex)   // which layer keeps the stack 2D
                 {
@@ -418,7 +414,7 @@ public sealed class RecipeRiseSource : RiseSource
                 }
             }
             FillRows(asset, picks, rows, pickable: _session is not null && refusal is null);
-            return new Rolled(art, depth, null, rows, refusal, faces, picks, frontOwner, backOwner);
+            return new Rolled(art, depth, null, rows, refusal, faces, picks, kept);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
@@ -473,19 +469,16 @@ public sealed class RecipeRiseSource : RiseSource
             .Depths.GetValueOrDefault(p.VariantId);
     }
 
-    private static (int[] Front, int[] Back) OwnersOf(StackRise rise)
-    {
-        int w = rise.Art.Width, h = rise.Art.Height;
-        var front = new int[w * h];
-        var back = new int[w * h];
-        for (int y = 0; y < h; y++)
-            for (int x = 0; x < w; x++)
-            {
-                front[(y * w) + x] = rise.FrontOwner(x, y);
-                back[(y * w) + x] = rise.BackOwner(x, y);
-            }
-        return (front, back);
-    }
+    // Each layer paired with a reader of its CURRENT depth: the dirty variant's surface, else what the book stores.
+    private List<(Image<Rgba32> Layer, Func<int, int, DepthPixel>? Depth)> ReadersOf(IReadOnlyList<RollPick> picks) =>
+        picks.Select(p =>
+        {
+            if (_edits.TryGetValue((p.IngredientId, p.VariantId), out var edit))
+                return (p.Layer, (Func<int, int, DepthPixel>?)edit.Surface.Get);
+            var map = _recipe.Ingredients.FirstOrDefault(i => i.Manifest.Id == p.IngredientId)?
+                .Depths.GetValueOrDefault(p.VariantId);
+            return (p.Layer, map is null ? null : (x, y) => new DepthPixel(map.Front(x, y), map.Back(x, y)));
+        }).ToList();
 
     private void FillRows(GeneratedAsset asset, IReadOnlyList<RollPick> picks, List<RiseLayerRow> rows, bool pickable)
     {
@@ -531,15 +524,36 @@ public sealed class RecipeRiseSource : RiseSource
         }
     }
 
-    /// <summary>Recombines the stack from every present layer's current map into the subject, in place.</summary>
+    /// <summary>How many times a changed rectangle has been recombined since the page opened: one per stroke,
+    /// undo or standing preview that changed a pixel, never two for the same change.</summary>
+    public int RecombineCount { get; private set; }
+
+    /// <summary>Brings the combined stack up to date with the layers' maps: only the rectangle the present
+    /// layers' surfaces report changed (the brush footprint of a stroke, an undo, a standing preview), through
+    /// the one stack rule, into the subject's depth, faces and texture in place. Nothing changed, nothing done.</summary>
     private void Recombine()
     {
-        if (_item.Subject is not { } subject || _picks.Count == 0) return;
-        _retired?.Dispose();
-        _retired = null;
-        using var rise = StackDepth.Combine(PairsOf(_picks), $"the {_recipe.Manifest.Name} recipe", subject.Art);
-        (_frontOwner, _backOwner) = OwnersOf(rise);
-        _retired = subject.ReplaceCombined(rise.Depth, rise.Faces.Clone());
+        if (_item.Subject is not { } subject || _picks.Count == 0 || _rise is not { } rise) return;
+        PixelRect? dirty = null;
+        foreach (var p in _picks)
+        {
+            if (!_edits.TryGetValue((p.IngredientId, p.VariantId), out var edit)) continue;
+            if (edit.Surface.TakeDirty() is not { } r) continue;
+            dirty = dirty is not { } d ? r : Union(d, r);
+        }
+        if (dirty is not { } area) return;
+        using var _ = Perf.Measure("Rise.Recombine");
+        RecombineCount++;
+        var rect = new Rectangle(area.X, area.Y, area.Width, area.Height);
+        StackDepth.CombineInto(rise, ReadersOf(_picks), rect);
+        subject.UpdateCombined(rise, rect);
+    }
+
+    private static PixelRect Union(PixelRect a, PixelRect b)
+    {
+        int x0 = Math.Min(a.X, b.X), y0 = Math.Min(a.Y, b.Y);
+        int x1 = Math.Max(a.X + a.Width, b.X + b.Width), y1 = Math.Max(a.Y + a.Height, b.Y + b.Height);
+        return new PixelRect(x0, y0, x1 - x0, y1 - y0);
     }
 
     private List<Image<Rgba32>> RebuildDimArt()
@@ -780,8 +794,8 @@ public sealed class RecipeRiseSource : RiseSource
         _targetArt?.Dispose();
         _above?.Dispose();
         _below = _targetArt = _above = null;
-        _retired?.Dispose();
-        _retired = null;
+        _rise?.Dispose();
+        _rise = null;
         foreach (var e in _edits.Values) e.Dispose();
         _edits.Clear();
     }

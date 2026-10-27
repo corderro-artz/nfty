@@ -1588,6 +1588,16 @@ public class VisualCapture
             // with a stroke painted on it (unsaved, the row's chip moved, the footer saying so).
             ("wt-picking", () => (RisePages.DemoWriteThroughVm(), null), _ => { }),
             ("wt-targeted", () => (RisePages.DemoWriteThroughVm(), null), p => RisePages.TargetLayer(p.Vm, 2)),
+            ("wt-targeted-3d", () => (RisePages.DemoWriteThroughVm(), null), p =>
+            {
+                RisePages.TargetLayer(p.Vm, 2);
+                p.Vm.SwapPreviewCommand.Execute(null);
+            }),
+            ("wt-locked", () => (RisePages.DemoWriteThroughVm(locked: true), null), p =>
+            {
+                RisePages.TargetLayer(p.Vm, 2);
+                RisePages.PaintSolidPixel(p.Vm);
+            }),
             ("wt-painted", () => (RisePages.DemoWriteThroughVm(), null), p =>
             {
                 RisePages.TargetLayer(p.Vm, 2);
@@ -1840,6 +1850,14 @@ public class VisualCapture
                         "the footer does not say there is unsaved depth");
                     Need(vm.LayerRows.Any(r => r.IsTarget && r.DepthText == "varied"), "the target's row chip did not follow the stroke");
                 }
+                break;
+            case "wt-targeted-3d":
+                Need(vm.PreviewSwapped && vm.IsWriteThrough && !vm.IsPicking && vm.Mesh is not null, "the 3D view is not the big one over a chosen layer");
+                Need(model.RepaintCount > 0, "the 3D view never painted the whole character");
+                break;
+            case "wt-locked":
+                Need(vm.Source.IsLocked && vm.HasUnsavedDepth, "the book is not locked with unsaved depth");
+                Need(Shown(t => t.Text is { } s && s.Contains("read-only", StringComparison.Ordinal)), "the footer does not say read-only");
                 break;
             case "picture":
                 Need(vm.Source.Kind == Nfty.App.Rise.RiseSourceKind.Picture && vm.Items.Count == 1, "the source is not one loose picture");

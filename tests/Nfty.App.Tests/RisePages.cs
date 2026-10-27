@@ -130,12 +130,12 @@ internal static class RisePages
 
     /// <summary>The demo's Chest recipe rolled on a page that WRITES THROUGH: the book's session and an open lock, so a
     /// layer can be picked, painted and saved.</summary>
-    internal static RiseViewModel DemoWriteThroughVm(int roll = 1)
+    internal static RiseViewModel DemoWriteThroughVm(int roll = 1, bool locked = false)
     {
         var (s, _) = DemoSession();
         var book = s.Current!;
         return Vm(new RecipeRiseSource(book, book.Recipes.Single(r => r.Manifest.Id == "chest"), roll,
-            new ImageBridge(), s, () => true));
+            new ImageBridge(), s, () => !locked));
     }
 
     /// <summary>Makes the nth (0-based, clamped) layer the roll holds the one being painted, the way a row click does.</summary>
