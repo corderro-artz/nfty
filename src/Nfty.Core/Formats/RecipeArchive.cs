@@ -78,10 +78,10 @@ public static class RecipeArchive
     public static async Task WriteAsync(ZipArchive zip, RecipeManifest manifest,
         IReadOnlyList<LoadedIngredient> ingredients, CancellationToken ct = default)
     {
-        await ArchiveIo.WriteManifestAsync(zip, Stamped(manifest, ingredients), ct);
+        await ArchiveIo.WriteManifestAsync(zip, Stamped(manifest, ingredients), ct).ConfigureAwait(false);
         foreach (var ing in ingredients)
             await ArchiveIo.WriteNestedAsync(zip, $"ingredients/{ing.Manifest.Id}.igt",
-                inner => IngredientArchive.WriteAsync(inner, ing.Manifest, ing.VariantImages, ing.Depths, ct), ct);
+                inner => IngredientArchive.WriteAsync(inner, ing.Manifest, ing.VariantImages, ing.Depths, ct), ct).ConfigureAwait(false);
     }
 
     /// <summary>Reads a Recipe from an already-open archive.</summary>
@@ -91,12 +91,12 @@ public static class RecipeArchive
     /// recomputed from its loaded ingredients rather than trusting the stored value.</returns>
     public static async Task<LoadedRecipe> ReadAsync(ZipArchive zip, CancellationToken ct = default)
     {
-        var manifest = await ArchiveIo.ReadManifestAsync<RecipeManifest>(zip, ct);
+        var manifest = await ArchiveIo.ReadManifestAsync<RecipeManifest>(zip, ct).ConfigureAwait(false);
         var ingredients = new List<LoadedIngredient>();
         try
         {
             foreach (var name in ArchiveIo.EntryNamesUnder(zip, "ingredients/").OrderBy(n => n, StringComparer.Ordinal))
-                ingredients.Add(await ArchiveIo.ReadNestedAsync(zip, name, IngredientArchive.ReadAsync, ct));
+                ingredients.Add(await ArchiveIo.ReadNestedAsync(zip, name, IngredientArchive.ReadAsync, ct).ConfigureAwait(false));
         }
         catch
         {
@@ -116,7 +116,7 @@ public static class RecipeArchive
         IReadOnlyList<LoadedIngredient> ingredients, CancellationToken ct = default)
     {
         using var zip = ZipFile.Open(path, ZipArchiveMode.Create);
-        await WriteAsync(zip, manifest, ingredients, ct);
+        await WriteAsync(zip, manifest, ingredients, ct).ConfigureAwait(false);
     }
 
     /// <summary>Reads a Recipe from a file.</summary>
@@ -126,6 +126,6 @@ public static class RecipeArchive
     public static async Task<LoadedRecipe> ReadAsync(string path, CancellationToken ct = default)
     {
         using var zip = ZipFile.OpenRead(path);
-        return await ReadAsync(zip, ct);
+        return await ReadAsync(zip, ct).ConfigureAwait(false);
     }
 }

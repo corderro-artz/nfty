@@ -214,6 +214,9 @@ public static class SetExporter
         ExportOptions options, string? cookBookPath = null, string? passphrase = null,
         IProgress<ExportProgress>? progress = null, CancellationToken cancellationToken = default)
     {
+        // Leave the caller's thread first: with no watermark and no sheet there is no await before the
+        // sync tail (extract, zip, PBKDF2), which would otherwise run on whoever called - the UI thread.
+        await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
         ArgumentException.ThrowIfNullOrWhiteSpace(setPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(outDir);
         ArgumentNullException.ThrowIfNull(options);

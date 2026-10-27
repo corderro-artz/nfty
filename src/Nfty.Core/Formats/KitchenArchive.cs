@@ -49,10 +49,11 @@ public static class KitchenArchive
     public static async Task WriteAsync(string path, KitchenManifest manifest,
         CancellationToken cancellationToken = default)
     {
-        await using var file = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None,
+        var file = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None,
             bufferSize: 4096, useAsync: true);
+        await using var fileScope = file.ConfigureAwait(false);
         using var zip = new ZipArchive(file, ZipArchiveMode.Create);
-        await ArchiveIo.WriteManifestAsync(zip, manifest, cancellationToken);
+        await ArchiveIo.WriteManifestAsync(zip, manifest, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Reads a <c>.ktn</c>.</summary>
@@ -62,9 +63,10 @@ public static class KitchenArchive
     public static async Task<KitchenManifest> ReadAsync(string path,
         CancellationToken cancellationToken = default)
     {
-        await using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read,
+        var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read,
             bufferSize: 4096, useAsync: true);
+        await using var fileScope = file.ConfigureAwait(false);
         using var zip = new ZipArchive(file, ZipArchiveMode.Read);
-        return await ArchiveIo.ReadManifestAsync<KitchenManifest>(zip, cancellationToken);
+        return await ArchiveIo.ReadManifestAsync<KitchenManifest>(zip, cancellationToken).ConfigureAwait(false);
     }
 }

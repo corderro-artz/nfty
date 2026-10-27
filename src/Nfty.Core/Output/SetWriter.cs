@@ -144,7 +144,7 @@ public static class SetWriter
         ValidateModelNames(models, set);
         var skipped = models is null ? null : new bool[set.Assets.Count];
         var layout = Prepare(outDir, models is not null);
-        var existing = await LoadExistingAsync(layout, set, cancellationToken);
+        var existing = await LoadExistingAsync(layout, set, cancellationToken).ConfigureAwait(false);
         var rarity = new Rarity(existing, set);
 
         var slots = SlotsOf(set);
@@ -153,9 +153,9 @@ public static class SetWriter
         await ParallelWork.ForEachAsync(set.Assets, parallelism, cancellationToken, async (asset, ct) =>
         {
             var (imagePath, metaPath, nftyPath) = PathsFor(layout, asset.SetNumber);
-            await asset.Image.SaveAsync(imagePath, new PngEncoder(), ct);
-            await File.WriteAllTextAsync(metaPath, Serialize(BuildOpenSea(set, asset)), ct);
-            await File.WriteAllTextAsync(nftyPath, Serialize(BuildNfty(set, asset, rarity)), ct);
+            await asset.Image.SaveAsync(imagePath, new PngEncoder(), ct).ConfigureAwait(false);
+            await File.WriteAllTextAsync(metaPath, Serialize(BuildOpenSea(set, asset)), ct).ConfigureAwait(false);
+            await File.WriteAllTextAsync(nftyPath, Serialize(BuildNfty(set, asset, rarity)), ct).ConfigureAwait(false);
 
             // The modeler is synchronous CPU work; it is not faked async. One model at a time per worker.
             var files = ModelFor(models, asset);
@@ -163,25 +163,25 @@ public static class SetWriter
             ClearStaleModels(layout, asset, files, models);
             if (files is not null)
                 foreach (var file in files)
-                    await File.WriteAllBytesAsync(Path.Combine(layout.ModelsDir, file.FileName), file.Bytes, ct);
+                    await File.WriteAllBytesAsync(Path.Combine(layout.ModelsDir, file.FileName), file.Bytes, ct).ConfigureAwait(false);
 
             // Serialized for the same reason as the generator's: a caller's handler is written
             // assuming one call at a time, in order.
             if (progress is not null)
                 lock (progressGate)
                     progress.Report(new WriteProgress(++done, set.Assets.Count));
-        });
+        }).ConfigureAwait(false);
 
         await ParallelWork.ForEachAsync(existing, parallelism, cancellationToken, async (item, ct) =>
-            await File.WriteAllTextAsync(item.NftyPath, Serialize(Regraded(item, rarity)), ct));
+            await File.WriteAllTextAsync(item.NftyPath, Serialize(Regraded(item, rarity)), ct).ConfigureAwait(false)).ConfigureAwait(false);
 
         await File.WriteAllTextAsync(SetJsonPath(outDir),
             Serialize(BuildSetManifest(set, existing, rarity, recorded, RecordedUniqueAt(outDir),
                 MergedModels(models, recordedModels, set, skipped))),
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         // ZipFile has no async API; keep the UI thread free rather than pretend.
-        if (pack) await Task.Run(() => Pack(outDir), cancellationToken);
+        if (pack) await Task.Run(() => Pack(outDir), cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Reads what an existing Set already holds, for extend.</summary>
@@ -221,7 +221,7 @@ public static class SetWriter
         if (File.Exists(setJson))
         {
             // the awaiting twin of RecordedShaAt; same rule, same best-effort parse
-            string json = await File.ReadAllTextAsync(setJson, cancellationToken);
+            string json = await File.ReadAllTextAsync(setJson, cancellationToken).ConfigureAwait(false);
             sha = ParseRecordedCookbookSha(json);
             recordedModels = ParseRecordedModels(json);
         }
@@ -233,7 +233,7 @@ public static class SetWriter
         int maxNumber = 0;
         foreach (var file in Directory.EnumerateFiles(nftyDir, "*.json"))
         {
-            var (dna, number) = ReadDnaAndNumber(await File.ReadAllTextAsync(file, cancellationToken), file);
+            var (dna, number) = ReadDnaAndNumber(await File.ReadAllTextAsync(file, cancellationToken).ConfigureAwait(false), file);
             dnas.Add(dna);
             maxNumber = Math.Max(maxNumber, number);
         }
@@ -352,10 +352,10 @@ public static class SetWriter
 
         foreach (var nftyFile in Directory.EnumerateFiles(layout.NftyDir, "*.json"))
         {
-            var nfty = SetItemFile.ReadNfty(nftyFile, await File.ReadAllTextAsync(nftyFile, ct));
+            var nfty = SetItemFile.ReadNfty(nftyFile, await File.ReadAllTextAsync(nftyFile, ct).ConfigureAwait(false));
             if (newNumbers.Contains(nfty.SetNumber)) continue;
 
-            var open = await ReadSiblingAsync(layout, nftyFile, ct);
+            var open = await ReadSiblingAsync(layout, nftyFile, ct).ConfigureAwait(false);
             existing.Add(ToExistingItem(nftyFile, nfty, open));
         }
         return existing;
@@ -376,7 +376,7 @@ public static class SetWriter
     private static async Task<OpenSeaMetadata> ReadSiblingAsync(Layout layout, string nftyFile, CancellationToken ct)
     {
         string path = SiblingOf(layout, nftyFile);
-        return SetItemFile.ReadOpenSea(path, await File.ReadAllTextAsync(path, ct));
+        return SetItemFile.ReadOpenSea(path, await File.ReadAllTextAsync(path, ct).ConfigureAwait(false));
     }
 
     /// <summary>

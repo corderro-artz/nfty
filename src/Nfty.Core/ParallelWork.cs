@@ -125,7 +125,7 @@ internal static class ParallelWork
             foreach (var item in items)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                await body(item, cancellationToken);
+                await body(item, cancellationToken).ConfigureAwait(false);
             }
             return;
         }
@@ -140,7 +140,7 @@ internal static class ParallelWork
                 {
                     // As in For: a failure skips only higher indices, so the lowest one still runs.
                     if (i > Volatile.Read(ref lowest)) return;
-                    try { await body(items[i], ct); }
+                    try { await body(items[i], ct).ConfigureAwait(false); }
                     catch (Exception ex) when (ex is not OperationCanceledException)
                     {
                         failures.Add((i, ex));
@@ -148,7 +148,7 @@ internal static class ParallelWork
                         while (i < (seen = Volatile.Read(ref lowest)) &&
                                Interlocked.CompareExchange(ref lowest, i, seen) != seen) { }
                     }
-                });
+                }).ConfigureAwait(false);
         }
         catch (Exception) when (!cancellationToken.IsCancellationRequested && !failures.IsEmpty)
         {

@@ -185,13 +185,13 @@ public static class SetReader
     /// <summary><see cref="ReadAsync(string, CancellationToken)"/> with the temp directory supplied.</summary>
     internal static async Task<LoadedSet> ReadAsync(string path, CancellationToken ct, Func<string> newTemp)
     {
-        if (!File.Exists(path)) return await Task.Run(() => Load(path, null, path, ct), ct);
+        if (!File.Exists(path)) return await Task.Run(() => Load(path, null, path, ct), ct).ConfigureAwait(false);
         string temp = newTemp();
         try
         {
-            await ZipFile.ExtractToDirectoryAsync(path, temp, ct);
+            await ZipFile.ExtractToDirectoryAsync(path, temp, ct).ConfigureAwait(false);
             // Load owns the copy once it runs; if the token stops it from starting, the catch does.
-            return await Task.Run(() => Load(temp, temp, path, ct), ct);
+            return await Task.Run(() => Load(temp, temp, path, ct), ct).ConfigureAwait(false);
         }
         catch
         {

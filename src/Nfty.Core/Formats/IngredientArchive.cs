@@ -142,7 +142,7 @@ public static class IngredientArchive
             var image = images[v.Id];
             int expected = image.Width * image.Height * 2;
             var bytes = await ArchiveIo.TryReadBytesAsync(zip, $"depth/{v.Id}.dep", ct, expected,
-                len => WrongLength(manifest.Id, v.Id, len, image));
+                len => WrongLength(manifest.Id, v.Id, len, image)).ConfigureAwait(false);
             if (bytes is null) continue;
             if (bytes.Length != expected)
                 throw WrongLength(manifest.Id, v.Id, bytes.Length, image);
@@ -224,16 +224,16 @@ public static class IngredientArchive
         IReadOnlyDictionary<string, Image<Rgba32>> variantImages,
         IReadOnlyDictionary<string, DepthMap> depths, CancellationToken ct = default)
     {
-        await ArchiveIo.WriteManifestAsync(zip, Stamped(manifest, variantImages), ct);
+        await ArchiveIo.WriteManifestAsync(zip, Stamped(manifest, variantImages), ct).ConfigureAwait(false);
         foreach (var v in manifest.Variants)
         {
             var image = variantImages[v.Id];
-            await ArchiveIo.WriteImageAsync(zip, $"variants/{v.Id}.png", image, ct);
+            await ArchiveIo.WriteImageAsync(zip, $"variants/{v.Id}.png", image, ct).ConfigureAwait(false);
             if (depths.TryGetValue(v.Id, out var map))
             {
                 var bytes = DepthBytesToWrite(manifest.Id, v.Id, image, map);
                 if (bytes is not null)
-                    await ArchiveIo.WriteBytesAsync(zip, $"depth/{v.Id}.dep", bytes, ct);
+                    await ArchiveIo.WriteBytesAsync(zip, $"depth/{v.Id}.dep", bytes, ct).ConfigureAwait(false);
             }
         }
     }
@@ -247,13 +247,13 @@ public static class IngredientArchive
     /// variant image's dimensions.</exception>
     public static async Task<LoadedIngredient> ReadAsync(ZipArchive zip, CancellationToken ct = default)
     {
-        var manifest = await ArchiveIo.ReadManifestAsync<IngredientManifest>(zip, ct);
+        var manifest = await ArchiveIo.ReadManifestAsync<IngredientManifest>(zip, ct).ConfigureAwait(false);
         EnsureUniqueVariantIds(manifest);
-        var images = await DecodeVariantsAsync(zip, manifest, ct);
+        var images = await DecodeVariantsAsync(zip, manifest, ct).ConfigureAwait(false);
         Dictionary<string, DepthMap> depths;
         try
         {
-            depths = await ReadDepthsAsync(zip, manifest, images, ct);
+            depths = await ReadDepthsAsync(zip, manifest, images, ct).ConfigureAwait(false);
         }
         catch
         {
@@ -280,7 +280,7 @@ public static class IngredientArchive
         IReadOnlyDictionary<string, DepthMap> depths, CancellationToken ct = default)
     {
         using var zip = ZipFile.Open(path, ZipArchiveMode.Create);
-        await WriteAsync(zip, manifest, variantImages, depths, ct);
+        await WriteAsync(zip, manifest, variantImages, depths, ct).ConfigureAwait(false);
     }
 
     /// <summary>Reads an Ingredient from a file.</summary>
@@ -290,7 +290,7 @@ public static class IngredientArchive
     public static async Task<LoadedIngredient> ReadAsync(string path, CancellationToken ct = default)
     {
         using var zip = ZipFile.OpenRead(path);
-        return await ReadAsync(zip, ct);
+        return await ReadAsync(zip, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -348,7 +348,7 @@ public static class IngredientArchive
         var variants = manifest.Variants;
         var encoded = new byte[variants.Count][];
         for (var i = 0; i < variants.Count; i++)
-            encoded[i] = await ArchiveIo.ReadImageBytesAsync(zip, $"variants/{variants[i].Id}.png", ct);
+            encoded[i] = await ArchiveIo.ReadImageBytesAsync(zip, $"variants/{variants[i].Id}.png", ct).ConfigureAwait(false);
 
         var decoded = new Image<Rgba32>[variants.Count];
         try

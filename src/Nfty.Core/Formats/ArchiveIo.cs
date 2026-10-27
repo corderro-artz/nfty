@@ -170,8 +170,9 @@ internal static class ArchiveIo
 
     public static async Task<string> HashFileAsync(string path, CancellationToken ct)
     {
-        await using var stream = File.OpenRead(path);
-        byte[] hash = await SHA256.HashDataAsync(stream, ct);
+        var stream = File.OpenRead(path);
+        await using var streamScope = stream.ConfigureAwait(false);
+        byte[] hash = await SHA256.HashDataAsync(stream, ct).ConfigureAwait(false);
         return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
@@ -182,8 +183,9 @@ internal static class ArchiveIo
     public static async Task WriteManifestAsync<T>(ZipArchive zip, T manifest, CancellationToken ct)
     {
         var entry = zip.CreateEntry("manifest.json");
-        await using var s = entry.Open();
-        await JsonSerializer.SerializeAsync(s, manifest, Json.Options, ct);
+        var s = entry.Open();
+        await using var sScope = s.ConfigureAwait(false);
+        await JsonSerializer.SerializeAsync(s, manifest, Json.Options, ct).ConfigureAwait(false);
     }
 
     public static async Task<T> ReadManifestAsync<T>(ZipArchive zip, CancellationToken ct)
@@ -191,11 +193,12 @@ internal static class ArchiveIo
     {
         var entry = zip.GetEntry("manifest.json")
             ?? throw new InvalidDataException("Archive is missing manifest.json.");
-        await using var s = entry.Open();
+        var s = entry.Open();
+        await using var sScope = s.ConfigureAwait(false);
         T? manifest;
         try
         {
-            manifest = await JsonSerializer.DeserializeAsync<T>(s, Json.Options, ct);
+            manifest = await JsonSerializer.DeserializeAsync<T>(s, Json.Options, ct).ConfigureAwait(false);
         }
         catch (JsonException ex)
         {
@@ -207,8 +210,9 @@ internal static class ArchiveIo
     public static async Task WriteImageAsync(ZipArchive zip, string name, Image<Rgba32> img, CancellationToken ct)
     {
         var entry = zip.CreateEntry(name);
-        await using var s = entry.Open();
-        await img.SaveAsync(s, new PngEncoder(), ct);
+        var s = entry.Open();
+        await using var sScope = s.ConfigureAwait(false);
+        await img.SaveAsync(s, new PngEncoder(), ct).ConfigureAwait(false);
     }
 
     /// <summary>Extracts one entry's bytes without decoding them.</summary>
@@ -220,9 +224,10 @@ internal static class ArchiveIo
     public static async Task<byte[]> ReadImageBytesAsync(ZipArchive zip, string name, CancellationToken ct)
     {
         var entry = zip.GetEntry(name) ?? throw new InvalidDataException($"Archive is missing {name}.");
-        await using var s = entry.Open();
+        var s = entry.Open();
+        await using var sScope = s.ConfigureAwait(false);
         using var ms = new MemoryStream();
-        await s.CopyToAsync(ms, ct);
+        await s.CopyToAsync(ms, ct).ConfigureAwait(false);
         return ms.ToArray();
     }
 
@@ -234,8 +239,9 @@ internal static class ArchiveIo
     public static async Task WriteBytesAsync(ZipArchive zip, string name, byte[] bytes, CancellationToken ct)
     {
         var entry = zip.CreateEntry(name);
-        await using var s = entry.Open();
-        await s.WriteAsync(bytes, ct);
+        var s = entry.Open();
+        await using var sScope = s.ConfigureAwait(false);
+        await s.WriteAsync(bytes, ct).ConfigureAwait(false);
     }
 
     /// <summary>Reads one entry's raw bytes, unencoded, when the entry exists.</summary>
@@ -256,9 +262,10 @@ internal static class ArchiveIo
             throw wrongLength?.Invoke(entry.Length)
                 ?? new InvalidDataException(
                     $"Entry '{name}' is {entry.Length} bytes; expected {expected}.");
-        await using var s = entry.Open();
+        var s = entry.Open();
+        await using var sScope = s.ConfigureAwait(false);
         using var ms = new MemoryStream();
-        await s.CopyToAsync(ms, ct);
+        await s.CopyToAsync(ms, ct).ConfigureAwait(false);
         return ms.ToArray();
     }
 
@@ -267,11 +274,12 @@ internal static class ArchiveIo
     {
         using var ms = new MemoryStream();
         using (var inner = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
-            await build(inner);
+            await build(inner).ConfigureAwait(false);
         ms.Position = 0;
         var entry = zip.CreateEntry(entryName);
-        await using var s = entry.Open();
-        await ms.CopyToAsync(s, ct);
+        var s = entry.Open();
+        await using var sScope = s.ConfigureAwait(false);
+        await ms.CopyToAsync(s, ct).ConfigureAwait(false);
     }
 
     public static async Task<T> ReadNestedAsync<T>(
@@ -279,13 +287,14 @@ internal static class ArchiveIo
     {
         var entry = zip.GetEntry(entryName)
             ?? throw new InvalidDataException($"Archive is missing {entryName}.");
-        await using var s = entry.Open();
+        var s = entry.Open();
+        await using var sScope = s.ConfigureAwait(false);
         using var ms = new MemoryStream();
-        await s.CopyToAsync(ms, ct);
+        await s.CopyToAsync(ms, ct).ConfigureAwait(false);
         ms.Position = 0;
         // Same reframing as the sync twin; see ReadInner for why "Central Directory corrupt" is the
         // wrong thing to tell someone who dropped a README into the archive.
-        return await ReadInner(ms, entryName, inner => read(inner, ct));
+        return await ReadInner(ms, entryName, inner => read(inner, ct)).ConfigureAwait(false);
     }
 
     public static IEnumerable<string> EntryNamesUnder(ZipArchive zip, string prefix) =>

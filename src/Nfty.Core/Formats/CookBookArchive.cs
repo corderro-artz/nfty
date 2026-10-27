@@ -120,10 +120,10 @@ public static class CookBookArchive
         IReadOnlyList<LoadedRecipe> recipes, CancellationToken ct = default)
     {
         using var zip = ZipFile.Open(path, ZipArchiveMode.Create);
-        await ArchiveIo.WriteManifestAsync(zip, Stamped(manifest, recipes), ct);
+        await ArchiveIo.WriteManifestAsync(zip, Stamped(manifest, recipes), ct).ConfigureAwait(false);
         foreach (var r in recipes)
             await ArchiveIo.WriteNestedAsync(zip, $"recipes/{r.Manifest.Id}.rcp",
-                inner => RecipeArchive.WriteAsync(inner, r.Manifest, r.Ingredients, ct), ct);
+                inner => RecipeArchive.WriteAsync(inner, r.Manifest, r.Ingredients, ct), ct).ConfigureAwait(false);
     }
 
     /// <summary>Reads a CookBook, eagerly decoding every variant image inside it.</summary>
@@ -140,9 +140,9 @@ public static class CookBookArchive
             CookBookManifest manifest;
             using (var zip = ZipFile.OpenRead(path))
             {
-                manifest = await ArchiveIo.ReadManifestAsync<CookBookManifest>(zip, ct);
+                manifest = await ArchiveIo.ReadManifestAsync<CookBookManifest>(zip, ct).ConfigureAwait(false);
                 foreach (var name in InOrder(ArchiveIo.EntryNamesUnder(zip, "recipes/"), manifest))
-                    recipes.Add(await ArchiveIo.ReadNestedAsync(zip, name, RecipeArchive.ReadAsync, ct));
+                    recipes.Add(await ArchiveIo.ReadNestedAsync(zip, name, RecipeArchive.ReadAsync, ct).ConfigureAwait(false));
             }
 
             // The hash is inside the try because cancellation genuinely lands here: this method
@@ -153,7 +153,7 @@ public static class CookBookArchive
             {
                 Manifest = Stamped(manifest, recipes),
                 Recipes = recipes,
-                SourceSha256 = await ArchiveIo.HashFileAsync(path, ct),
+                SourceSha256 = await ArchiveIo.HashFileAsync(path, ct).ConfigureAwait(false),
             };
         }
         catch

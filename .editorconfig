@@ -33,3 +33,9 @@ insert_final_newline = false
 [docs/design/mockups/**]
 trim_trailing_whitespace = false
 insert_final_newline = false
+
+# Library projects never capture the caller's synchronization context: a UI caller would otherwise
+# get PNG codec work resumed on its thread, and a third party blocking on a sync twin would deadlock.
+# The App and the tests legitimately resume on the UI thread, so they are out of scope.
+[src/{Nfty.Core,Nfty.Ticket,Nfty.Model}/**.cs]
+dotnet_diagnostic.CA2007.severity = warning

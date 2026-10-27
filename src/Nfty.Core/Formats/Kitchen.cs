@@ -87,7 +87,7 @@ public static class Kitchen
     public static async Task<KitchenContents> OpenAsync(string path,
         CancellationToken cancellationToken = default)
     {
-        var manifest = await KitchenArchive.ReadAsync(path, cancellationToken);
+        var manifest = await KitchenArchive.ReadAsync(path, cancellationToken).ConfigureAwait(false);
         var dir = Path.GetDirectoryName(Path.GetFullPath(path))
             ?? throw new InvalidDataException($"Kitchen '{path}' has no containing folder.");
 

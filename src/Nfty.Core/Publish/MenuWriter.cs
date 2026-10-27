@@ -166,7 +166,8 @@ public static class MenuWriter
         string? dir = Path.GetDirectoryName(Path.GetFullPath(path));
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
-        await using (var fileStream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None))
+        var fileStream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
+        await using var fileScope = fileStream.ConfigureAwait(false);
         using (var zip = new ZipArchive(fileStream, ZipArchiveMode.Create))
         {
             await ArchiveIo.WriteManifestAsync(zip, finished, ct).ConfigureAwait(false);
@@ -183,7 +184,8 @@ public static class MenuWriter
             if (options.Art == MenuArtMode.Atlas)
             {
                 var entry = zip.CreateEntry(AtlasEntryName);
-                await using var s = entry.Open();
+                var s = entry.Open();
+                await using var sScope = s.ConfigureAwait(false);
                 await s.WriteAsync(atlasBytes!, ct).ConfigureAwait(false);
                 progress?.Report(new MenuWriteProgress(total, total, "Writing…"));
             }
@@ -197,7 +199,8 @@ public static class MenuWriter
                     {
                         ct.ThrowIfCancellationRequested();
                         var entry = zip.CreateEntry("art/" + key + ".png");
-                        await using var s = entry.Open();
+                        var s = entry.Open();
+                        await using var sScope = s.ConfigureAwait(false);
                         await s.WriteAsync(bytes, ct).ConfigureAwait(false);
                         placed++;
                         progress?.Report(new MenuWriteProgress(placed, total, "Writing…"));
