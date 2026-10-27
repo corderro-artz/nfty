@@ -46,7 +46,33 @@ public static class CookBookEdits
         };
     }
 
-    /// <summary>Removes an ingredient from a recipe (dropping it from the layer order too). Reuses every
+    /// <summary>
+    /// A recipe manifest with one layer gone: out of <c>layerOrder</c>, its absent chance dropped, and
+    /// every rule that names it (as trigger or target) dropped with it. Leaving either behind writes a
+    /// book <c>Validator</c> refuses - a chance for a layer the recipe does not stack, a rule naming
+    /// an unknown ingredient - so removal is one operation here rather than three for each caller.
+    /// </summary>
+    /// <param name="manifest">The recipe manifest to edit.</param>
+    /// <param name="ingredientId">The layer to take out.</param>
+    /// <returns>The edited manifest; the input is unchanged.</returns>
+    public static RecipeManifest WithoutLayer(RecipeManifest manifest, string ingredientId)
+    {
+        var absent = manifest.AbsentPercent?
+            .Where(kv => kv.Key != ingredientId)
+            .ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal);
+        return manifest with
+        {
+            LayerOrder = manifest.LayerOrder.Where(id => id != ingredientId).ToList(),
+            Rules = manifest.Rules
+                .Where(rule => rule.When.IngredientId != ingredientId
+                    && rule.Targets.All(t => t.IngredientId != ingredientId))
+                .ToList(),
+            AbsentPercent = absent is { Count: > 0 } ? absent : null,
+        };
+    }
+
+    /// <summary>Removes an ingredient from a recipe (dropping it from the layer order, its absent
+    /// chance and the rules that name it too). Reuses every
     /// surviving image; the caller owns the removed ingredient's images.</summary>
     public static LoadedCookBook RemoveIngredient(LoadedCookBook book, string recipeId, string ingredientId)
     {
@@ -59,8 +85,7 @@ public static class CookBookEdits
         {
             if (r.Manifest.Id != recipeId) return r;
             var ings = r.Ingredients.Where(i => i.Manifest.Id != ingredientId).ToList();
-            var order = r.Manifest.LayerOrder.Where(id => id != ingredientId).ToList();
-            return new LoadedRecipe { Manifest = r.Manifest with { LayerOrder = order }, Ingredients = ings };
+            return new LoadedRecipe { Manifest = WithoutLayer(r.Manifest, ingredientId), Ingredients = ings };
         }).ToList();
 
         return new LoadedCookBook { Manifest = book.Manifest, Recipes = recipes, SourceSha256 = book.SourceSha256 };
