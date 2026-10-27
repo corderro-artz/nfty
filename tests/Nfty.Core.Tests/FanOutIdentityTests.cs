@@ -292,7 +292,8 @@ public class FanOutIdentityTests
 
         // The writer only borrows the images: every one is still alive (a double dispose or an early
         // one would throw here), and the ingredient disposes them exactly once at the end of the test.
-        foreach (var img in ing.VariantImages.Values) Assert.Equal(4, img.Width);
+        // Width is plain metadata that survives Dispose; a pixel read is what a disposed image refuses.
+        foreach (var img in ing.VariantImages.Values) _ = img[0, 0];
     }
 
     // ---------------------------------------------------------------- G6: voxel report

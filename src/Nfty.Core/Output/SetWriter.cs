@@ -197,10 +197,10 @@ public static class SetWriter
         var nftyDir = Path.Combine(outDir, SetLayout.NftyDir);
         if (!Directory.Exists(nftyDir)) return new ExistingSet(Array.Empty<string>(), 1, sha, recordedModels);
 
-        // Parsed in parallel into slots; the DNA list keeps enumeration order, and the maximum is
-        // order-free. The listing is not sorted: DNA order is observable to nothing, and a damaged
-        // file is named by lowest index in enumeration order either way.
-        var files = Directory.EnumerateFiles(nftyDir, "*.json").ToList();
+        // Parsed in parallel into slots; the maximum is order-free. The listing is sorted ordinally,
+        // as SetReader's is, so when several files are damaged the one named is the same on every
+        // file system - enumeration order is the file system's, not nfty's.
+        var files = ListItemFiles(nftyDir);
         var parsed = new (string Dna, int Number)[files.Count];
         ParallelWork.For(files.Count, parallelism ?? Parallelism.Default, CancellationToken.None,
             i => parsed[i] = ReadDnaAndNumber(File.ReadAllText(files[i]), files[i]));
@@ -230,7 +230,7 @@ public static class SetWriter
         var nftyDir = Path.Combine(outDir, SetLayout.NftyDir);
         if (!Directory.Exists(nftyDir)) return new ExistingSet(Array.Empty<string>(), 1, sha, recordedModels);
 
-        var files = Directory.EnumerateFiles(nftyDir, "*.json").ToList();
+        var files = ListItemFiles(nftyDir);
         var parsed = new (string Dna, int Number)[files.Count];
         await ParallelWork.ForEachAsync(Enumerable.Range(0, files.Count).ToList(),
             parallelism ?? Parallelism.Default, cancellationToken,
@@ -240,6 +240,14 @@ public static class SetWriter
                 parsed[i] = ReadDnaAndNumber(text, files[i]);
             }).ConfigureAwait(false);
         return Assemble(parsed, sha, recordedModels);
+    }
+
+    /// <summary>Every <c>nfty/*.json</c>, in ordinal order of path.</summary>
+    private static List<string> ListItemFiles(string nftyDir)
+    {
+        var files = Directory.EnumerateFiles(nftyDir, "*.json").ToList();
+        files.Sort(StringComparer.Ordinal);
+        return files;
     }
 
     /// <summary>Folds the per-file slots into an <see cref="ExistingSet"/>: DNAs in slot order, the

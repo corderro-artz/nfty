@@ -176,6 +176,8 @@ public static class SetExporter
     /// <returns>Where it landed, and what went into it.</returns>
     /// <exception cref="ArgumentException">The options ask for something that cannot be built.</exception>
     /// <exception cref="SealedSetException">The source is itself sealed, or sealing failed.</exception>
+    /// <exception cref="CorruptSetException">A number watermark was asked for and an asset image
+    /// could not be read; when several cannot, the lowest-positioned one is named.</exception>
     public static ExportResult Export(string setPath, string outDir, ExportOptions options,
         string? cookBookPath = null, string? passphrase = null, Parallelism? parallelism = null) =>
         ExportAsync(setPath, outDir, options, cookBookPath, passphrase, parallelism: parallelism)
@@ -196,6 +198,8 @@ public static class SetExporter
     /// <returns>Where it landed, and what went into it.</returns>
     /// <exception cref="ArgumentException">The options ask for something that cannot be built.</exception>
     /// <exception cref="SealedSetException">The source is itself sealed, or sealing failed.</exception>
+    /// <exception cref="CorruptSetException">A number watermark was asked for and an asset image
+    /// could not be read; when several cannot, the lowest-positioned one is named.</exception>
     /// <remarks>
     /// <para><b>The async one is the real implementation and the sync twin blocks on it</b>, rather
     /// than the other way round: an export is stream work end to end - unpacking a <c>.set</c>,
@@ -342,16 +346,24 @@ public static class SetExporter
                         return;
 
                     string target = Path.Combine(temp, Path.GetFileName(entry.Source));
+                    // Only READING the Set's own art is the Set's fault. Writing the stamped copy into
+                    // TEMP can fail too (a full disk, a permission), and calling that a corrupt Set
+                    // would send the author looking for damage that is not there - so it propagates
+                    // as itself.
+                    Image<Rgba32> image;
                     try
                     {
-                        using var image = Image.Load<Rgba32>(entry.Source);
-                        NumberStamp.Draw(image, number, options.WatermarkCorner);
-                        image.Save(target, new PngEncoder());
+                        image = Image.Load<Rgba32>(entry.Source);
                     }
-                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    catch (Exception ex) when (ex is ImageFormatException or IOException)
                     {
                         throw new CorruptSetException(entry.Source,
                             $"Asset {Path.GetFileName(entry.Source)} could not be numbered: {ex.Message}");
+                    }
+                    using (image)
+                    {
+                        NumberStamp.Draw(image, number, options.WatermarkCorner);
+                        image.Save(target, new PngEncoder());
                     }
 
                     stamped[i] = Entry(target, entry.Name);
