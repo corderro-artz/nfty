@@ -19,8 +19,9 @@ namespace Nfty.App.ViewModels;
 ///
 /// <para><b>The book is validated up front, here, and that is not a second rule.</b> It is the same
 /// <see cref="Validator"/> the writer runs, asked early so the card can say WHY Export is off instead
-/// of letting the press fail. It is also what makes any <see cref="InvalidOperationException"/> that
-/// still comes out of the writer an atlas refusal and nothing else.</para>
+/// of letting the press fail. What the writer still refuses after that is the atlas ceiling, which it
+/// throws as <see cref="AtlasTooLargeException"/>: the card shows its <c>Problem</c> and says "Choose
+/// Loose" in its own words, never the command-line flag that the exception's full message carries.</para>
 ///
 /// <para><b>The file is replaced atomically</b> (<see cref="AtomicFile"/>): a failed or canceled export
 /// leaves the Menu that was there, not half of a new one. This card reads the book and never edits
@@ -92,6 +93,12 @@ public partial class MenuExportDialogViewModel : ViewModelBase
               + "written yet. Open the validation report from the status chip. First: " + problems[0];
     }
 
+    /// <summary>The write itself: <see cref="MenuWriter.WriteAsync"/>. A seam only so a test can hold a
+    /// run open (a real write of a small book is over before a test can press Cancel) and so prove
+    /// that a canceled or failed run leaves the file that was already there.</summary>
+    internal Func<LoadedCookBook, string, MenuWriteOptions, IProgress<MenuWriteProgress>, CancellationToken, Task> Writer
+    { get; set; } = MenuWriter.WriteAsync;
+
     /// <summary>The art mode the tray has chosen.</summary>
     public MenuArtMode Mode => IsAtlas ? MenuArtMode.Atlas : MenuArtMode.Loose;
 
@@ -149,25 +156,18 @@ public partial class MenuExportDialogViewModel : ViewModelBase
         string path = Path;
         try
         {
-            var progress = new Progress<MenuWriteProgress>(p =>
-            {
-                // Progress<T> posts, so a report can land after the run has ended and put a full bar
-                // back beside a refusal.
-                if (!IsRunning) return;
-                Phase = p.Phase;
-                Progress = p.Total <= 0 ? 0 : (double)p.Written / p.Total;
-            });
+            var progress = new Progress<MenuWriteProgress>(OnProgress);
             var options = new MenuWriteOptions { Art = Mode };
             await AtomicFile.ReplaceAsync(path,
-                tmp => MenuWriter.WriteAsync(_book, tmp, options, progress, _cts.Token));
+                tmp => Writer(_book, tmp, options, progress, _cts.Token));
             Progress = 1;
             _status.Say($"Wrote {System.IO.Path.GetFileName(path)} ({SizeText.Of(new FileInfo(path).Length)}).");
             _dialogs.Close(path);
         }
         catch (OperationCanceledException) { Phase = "Canceled"; }
-        // Validation was cleared up front, so what the writer still refuses is the atlas ceiling —
-        // its message already says what to do, and the tray is right there.
-        catch (InvalidOperationException ex) { Failure = IsAtlas ? ex.Message + " Choose Loose above." : ex.Message; }
+        // The writer's own typed refusal: its Problem is what is wrong, without the command-line flag
+        // that does not exist on this screen; the tray is right there, so the instruction is ours.
+        catch (AtlasTooLargeException ex) { Failure = ex.Problem + ". Choose Loose above."; }
         catch (Exception ex)
         {
             await _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, "Menu export failed", ex.Message));
@@ -179,6 +179,17 @@ public partial class MenuExportDialogViewModel : ViewModelBase
             // nothing legitimate is left on screen to protect.
             if (Failure.Length > 0 || Phase == "Canceled") Progress = 0;
         }
+    }
+
+    /// <summary>Takes one report from the writer. <see cref="Progress{T}"/> posts, so a report can land
+    /// after the run has ended and put a full bar back beside a refusal; a report that arrives when
+    /// nothing is running is dropped.</summary>
+    /// <param name="p">What the writer reported.</param>
+    internal void OnProgress(MenuWriteProgress p)
+    {
+        if (!IsRunning) return;
+        Phase = p.Phase;
+        Progress = p.Total <= 0 ? 0 : (double)p.Written / p.Total;
     }
 
     /// <summary>Stops the write between cells.</summary>

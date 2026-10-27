@@ -155,7 +155,10 @@ public class MenuExportDialogTests
         Assert.Empty(Directory.GetFiles(dir));
         Assert.True(vm.MessageIsProblem);
         Assert.Contains("pixel limit on a side", vm.Message);
-        Assert.Contains("Loose", vm.Message);
+        // The problem, then this screen's own way out - never the command-line flag.
+        Assert.EndsWith("refused rather than built. Choose Loose above.", vm.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("--art", vm.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("write with", vm.Message, StringComparison.Ordinal);
         Assert.False(vm.IsRunning);
         Assert.Equal(0, vm.Progress);
 
@@ -164,6 +167,121 @@ public class MenuExportDialogTests
         Assert.Equal("", vm.Message);
         await vm.ExportCommand.ExecuteAsync(null);
         Assert.True(File.Exists(mnu));
+    }
+
+    private static byte[] Plant(string path)
+    {
+        var old = System.Text.Encoding.UTF8.GetBytes("the Menu that was already here");
+        File.WriteAllBytes(path, old);
+        return old;
+    }
+
+    [AvaloniaFact]
+    public async Task A_refused_export_leaves_an_existing_menu_byte_identical()
+    {
+        string dir = Directory.CreateTempSubdirectory().FullName;
+        using var book = WideBook();
+        string mnu = Path.Combine(dir, "Wide.mnu");
+        var old = Plant(mnu);
+
+        await Vm(book, mnu).ExportCommand.ExecuteAsync(null);
+
+        Assert.Equal(old, File.ReadAllBytes(mnu));
+        Assert.Equal(new[] { mnu }, Directory.GetFiles(dir));   // and no temp left beside it
+    }
+
+    [AvaloniaFact]
+    public async Task A_canceled_export_leaves_an_existing_menu_byte_identical()
+    {
+        string dir = Directory.CreateTempSubdirectory().FullName;
+        using var book = CookDialogModelsTests.Book(variants: 4);
+        string mnu = Path.Combine(dir, "Blocks.mnu");
+        var old = Plant(mnu);
+        var status = new StatusService();
+        var vm = Vm(book, mnu, status: status);
+        var started = new TaskCompletionSource();
+        // A writer held mid-run with half a file already on disk beside the destination, as a real
+        // write is; it ends only when canceled. (A real write of a small book is over before a test
+        // can press Cancel.)
+        vm.Writer = async (_, tmp, _, _, ct) =>
+        {
+            await File.WriteAllBytesAsync(tmp, new byte[] { 1, 2, 3 }, ct);
+            started.SetResult();
+            await Task.Delay(Timeout.Infinite, ct);
+        };
+
+        var run = vm.ExportCommand.ExecuteAsync(null);
+        await started.Task;
+        Assert.True(vm.IsRunning);
+        Assert.True(vm.CancelCommand.CanExecute(null));
+        vm.CancelCommand.Execute(null);
+        await run;
+
+        Assert.Equal(old, File.ReadAllBytes(mnu));
+        Assert.Equal(new[] { mnu }, Directory.GetFiles(dir));
+        Assert.False(vm.IsRunning);
+        Assert.Equal("Canceled", vm.Phase);
+        Assert.Equal("", vm.Failure);                    // a cancel is not a failure
+        Assert.Equal(0, vm.Progress);
+        Assert.NotEqual("Wrote", status.Last?.Split(' ')[0]);   // and nothing claims success
+        Assert.True(vm.CloseCommand.CanExecute(null));   // the way out is back
+    }
+
+    [AvaloniaFact]
+    public async Task The_real_writer_stops_for_a_canceled_token_and_the_old_menu_survives()
+    {
+        // The test above holds the run open with a stand-in; this is the real MenuWriter seeing a
+        // canceled token, so "Cancel works" is not only a property of the stand-in.
+        string dir = Directory.CreateTempSubdirectory().FullName;
+        using var book = CookDialogModelsTests.Book(variants: 4);
+        string mnu = Path.Combine(dir, "Blocks.mnu");
+        var old = Plant(mnu);
+        var vm = Vm(book, mnu);
+        vm.Writer = (b, tmp, o, p, _) => MenuWriter.WriteAsync(b, tmp, o, p, new CancellationToken(true));
+
+        await vm.ExportCommand.ExecuteAsync(null);
+
+        Assert.Equal("Canceled", vm.Phase);
+        Assert.Equal(old, File.ReadAllBytes(mnu));
+        Assert.Equal(new[] { mnu }, Directory.GetFiles(dir));
+    }
+
+    [AvaloniaFact]
+    public async Task A_progress_report_after_the_refusal_does_not_refill_the_bar()
+    {
+        string dir = Directory.CreateTempSubdirectory().FullName;
+        using var book = WideBook();
+        var vm = Vm(book, Path.Combine(dir, "Wide.mnu"));
+        await vm.ExportCommand.ExecuteAsync(null);
+        Assert.True(vm.MessageIsProblem);
+        Assert.Equal(0, vm.Progress);
+
+        // Progress<T> posts, so this is what a report still in flight does when it lands.
+        vm.OnProgress(new MenuWriteProgress(Written: 9, Total: 9, Phase: "Writing…"));
+
+        Assert.Equal(0, vm.Progress);
+        Assert.NotEqual("Writing…", vm.Phase);
+    }
+
+    [AvaloniaFact]
+    public async Task A_progress_report_during_the_run_does_move_the_bar()
+    {
+        // The guard above must not be a bar that never moves.
+        string dir = Directory.CreateTempSubdirectory().FullName;
+        using var book = CookDialogModelsTests.Book(variants: 4);
+        var vm = Vm(book, Path.Combine(dir, "Blocks.mnu"));
+        var started = new TaskCompletionSource();
+        vm.Writer = async (_, _, _, _, ct) => { started.SetResult(); await Task.Delay(Timeout.Infinite, ct); };
+        var run = vm.ExportCommand.ExecuteAsync(null);
+        await started.Task;
+        Assert.True(vm.IsRunning);
+
+        vm.OnProgress(new MenuWriteProgress(Written: 1, Total: 4, Phase: "Packing…"));
+
+        Assert.Equal(0.25, vm.Progress, 3);
+        Assert.Equal("Packing…", vm.Phase);
+        vm.CancelCommand.Execute(null);
+        await run;
     }
 
     private static ExplorerViewModel Explorer(LoadedCookBook book, FakeDialogs dialogs, bool unlock)
