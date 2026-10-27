@@ -28,6 +28,8 @@ public class RiseUnsavedAcrossRerollTests
         public required string PaintedIngredient { get; init; }
         public required string PaintedVariant { get; init; }
         public required byte[] DepthBefore { get; init; }
+        public required System.Func<bool> Unlocked { get; init; }
+        public required System.Action<bool> SetUnlocked { get; init; }
     }
 
     private static Rig PaintedLock()
@@ -35,7 +37,8 @@ public class RiseUnsavedAcrossRerollTests
         var (s, _) = RisePages.DemoSession();
         var book = s.Current!;
         var recipe = book.Recipes.Single(r => r.Manifest.Id == "chest");
-        var src = new RecipeRiseSource(book, recipe, 1, new ImageBridge(), s, () => true);
+        bool unlocked = true;
+        var src = new RecipeRiseSource(book, recipe, 1, new ImageBridge(), s, () => unlocked);
         var nav = new FakeNav();
         var dialogs = new FakeDialogs();
         var vm = new RiseViewModel(src, new ImageBridge(), nav, dialogs, new FilePickerService(), new StatusService());
@@ -50,6 +53,7 @@ public class RiseUnsavedAcrossRerollTests
             Body = recipe.Ingredients.Single(i => i.Manifest.Id == "chestbody"),
             PaintedIngredient = t.IngredientId, PaintedVariant = t.VariantId,
             DepthBefore = map?.ToBytes() ?? System.Array.Empty<byte>(),
+            Unlocked = () => unlocked, SetUnlocked = v => unlocked = v,
         };
     }
 
@@ -112,14 +116,20 @@ public class RiseUnsavedAcrossRerollTests
     }
 
     [AvaloniaFact]
-    public void A_locked_book_still_refuses_that_save()
+    public async Task A_locked_book_still_refuses_that_save()
     {
+        // The SAME painted page, locked after the reroll: dirty work is there, so only the lock can refuse.
         var r = PaintedLock();
         MakeEveryBodyPartial(r);
         r.Vm.RerollCommand.Execute(null);
-        var locked = new RecipeRiseSource(r.Session.Current!, r.Session.Current!.Recipes.Single(x => x.Manifest.Id == "chest"),
-            1, new ImageBridge(), r.Session, () => false);
-        Assert.False(locked.CanSave);
-        locked.Dispose();
+        var before = r.Session.Current;
+        r.SetUnlocked(false);
+
+        Assert.Equal(1, r.Vm.DirtyCount);
+        Assert.False(r.Src.CanSave);
+        await r.Src.SaveAsync();                              // a disabled button is a label: the source refuses too
+
+        Assert.Same(before, r.Session.Current);
+        Assert.Equal(1, r.Vm.DirtyCount);
     }
 }
