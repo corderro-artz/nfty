@@ -33,6 +33,8 @@ around; if you do not, start with [Get started](../get-started/index.md).
 
     [Make a 3D model](make-a-3d-model.md)
 
+    [Shape one layer on the whole character](shape-one-layer-on-the-whole-character.md)
+
     [Cook with 3D models](cook-with-models.md)
 
     [Fix a 2D-only book](fix-a-2d-only-book.md)

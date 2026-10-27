@@ -9,7 +9,7 @@ Where depth is painted and models are exported. For steps, see
 | Source | Reached from | Rail lists | Saves to |
 |---|---|---|---|
 | Layer | Ingredient pane **Rise**, or the Ingredient Editor's footer **Rise** | The layer's variants | The layer's archive and its CookBook (**Save depth**) |
-| Recipe roll | Recipe pane **Rise**, beside the reroll die | The roll's layers, bottom first | Nowhere: read-only |
+| Recipe roll | Recipe pane **Rise**, beside the reroll die | The roll's layers, bottom first | The variant that owns the pixel: **Save depth** writes every variant you changed (see [Write-through](#write-through-on-a-recipe-roll)) |
 | Cooked asset | Set browser **Rise** | The Set's assets | Nowhere: read-only |
 | Picture | **Rise a picture...** on the opening screen | The one picture | **Save as .igt...** |
 | Sheet | The same, when the picture has a grid | The sheet's cells | **Save as .igt...** |
@@ -59,6 +59,51 @@ lowers`.
 In the 3D tile, a left-button drag orbits, a right- or middle-button drag pans, and the wheel zooms
 about the pointer.
 
+## Write-through on a recipe roll
+
+On a recipe roll the canvas shows the stack's combined depth, but depth is stored on each layer's own
+variant. The page paints **through** the combined picture onto the one variant you choose. For steps,
+see [Shape one layer on the whole character](../how-to/shape-one-layer-on-the-whole-character.md).
+
+The page has two states. In **picking**, nothing is chosen and the header above the canvas reads
+`click a pixel to choose its layer`. In **targeted**, one layer is chosen: the header reads, for
+example, `editing Body / Planked · in ~234 of 1,200 assets`, the layer's row in the rail is marked, and
+the other layers are drawn dimmed (30%) on the canvas. The 3D tile keeps showing the whole character.
+
+| Input | In picking | In targeted |
+|---|---|---|
+| Left-click a pixel | Chooses the layer that owns that pixel's **front** face. Paints nothing. | Paints that layer's front depth +1, when the pixel is on the chosen layer. |
+| Right-click a pixel | Chooses the layer that owns that pixel's **back** face. Paints nothing. | Paints that layer's back depth +1, when the pixel is on the chosen layer. |
+| A dimmed pixel | Chooses its owner, as above. | Does nothing: a stroke that begins on another layer never begins. |
+| Click a layer's row, or **Enter** on it | Chooses that layer. | Chooses that layer instead. |
+| **Page Up** / **Page Down** | Steps to the next layer up or down the stack, among the layers this roll has. | The same. |
+| **Escape** | Nothing. | Drops the marquee first if there is one, otherwise drops the chosen layer (back to picking). |
+
+**Page Up**, **Page Down** and **Escape** work only while the page has focus and not while you type in
+a field. **Escape** yields to an open dialog.
+
+**Who owns a pixel.** Where layers overlap, the front face belongs to the layer that stands furthest
+forward there and the back face to the one that reaches furthest back; a tie goes to the upper layer.
+So a left-click and a right-click on one pixel can choose two different layers.
+
+**The reach figure** in the header says how much of the collection the chosen variant touches: the
+variant's share of assets, from the same rarity numbers the CookBook card uses, times the book's target
+supply (`in ~234 of 1,200 assets`), or a percentage of assets when the book has none. A leading `~` marks an estimate; `in every asset` means exactly that. The tooltip says
+how it was worked out.
+
+Other rules of the page:
+
+- **Painting works on a locked CookBook**, as a scratch surface. **Save depth** needs the lock opened in
+  the Explorer, and the footer says so.
+- **Undo and redo are one history** for the whole page, across layers. Undoing a stroke on another
+  layer moves the chosen layer to it. A stroke on a variant this roll does not include is restored, and
+  a line says so.
+- **Reroll keeps what you painted.** Depth belongs to the variant, not the roll: a variant that is in the
+  new roll shows it, one that is not keeps it until saved.
+- **One save writes every changed variant**, in one write to the CookBook. If the CookBook changed
+  underneath, the save is refused rather than overwriting it.
+- **A cooked Set is never written.** Its Rise stays read-only.
+
 ## DEPTH tab
 
 | Section | Does |
@@ -96,7 +141,7 @@ was finished before the stop stays.
 | Action | Refused when |
 |---|---|
 | Painting | The item cannot rise, or an export is running. A locked CookBook still paints, as a scratch surface. |
-| Save | The source is read-only (Recipe, Set), the CookBook is locked, or nothing changed. |
+| Save | The source is a cooked Set (always read-only), the CookBook is locked, or nothing changed. |
 | Make voxel-ready | Locked, unsaved depth, or a job running. |
 | Export | The Set is sealed, or nothing checked can rise. |
 | Back | A save or export is running. Leaving with unsaved depth asks first. |

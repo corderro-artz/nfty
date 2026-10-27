@@ -23,8 +23,8 @@ Pick the entry point that matches what you are holding.
 | A **spritesheet** | The same button. See [Rise a spritesheet](rise-a-spritesheet.md). |
 
 A Recipe's Rise shows **one roll**, not a stored asset: the rail lists that roll's layers, and the
-canvas shows their combined depth, read-only. To change a layer's depth, rise that layer's own
-Ingredient. A Set's Rise reads each asset's depth from the CookBook that cooked it, found by hash;
+canvas shows their combined depth. You can paint it, and the depth lands on the layer that owns each
+pixel; see [Shape one layer on the whole character](shape-one-layer-on-the-whole-character.md). A Set's Rise reads each asset's depth from the CookBook that cooked it, found by hash;
 if that book is not found, every asset shows as paper and the page says so.
 
 A Dynamic or Static variant rises as its stored **gray value-map**, exactly as a loose picture of
@@ -60,7 +60,8 @@ For a layer, the footer button is **Save depth**. It writes the depth into the l
 [File formats](../reference/file-formats.md#depth-maps).
 
 A locked CookBook still lets you paint, as a scratch surface, but saving needs the lock opened in the
-Explorer. A cooked Set and a Recipe's roll are read-only: there is nothing to save. A loose picture
+Explorer. A Recipe's roll saves every variant you changed in one go. A cooked Set is read-only: there
+is nothing to save. A loose picture
 saves as an `.igt` (**Save as .igt...**); until you do, its depth lasts for the session only.
 
 ## Export a model
