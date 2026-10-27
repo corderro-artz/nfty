@@ -296,6 +296,56 @@ public class FanOutIdentityTests
         foreach (var img in ing.VariantImages.Values) _ = img[0, 0];
     }
 
+    /// <summary>Records the thread of every image lookup, so a test can see where the encode ran.</summary>
+    private sealed class ThreadRecordingImages(IReadOnlyDictionary<string, Image<Rgba32>> inner)
+        : IReadOnlyDictionary<string, Image<Rgba32>>
+    {
+        public readonly System.Collections.Concurrent.ConcurrentQueue<int> Threads = new();
+        public Image<Rgba32> this[string key] { get { Threads.Enqueue(Environment.CurrentManagedThreadId); return inner[key]; } }
+        public IEnumerable<string> Keys => inner.Keys;
+        public IEnumerable<Image<Rgba32>> Values => inner.Values;
+        public int Count => inner.Count;
+        public bool ContainsKey(string key) => inner.ContainsKey(key);
+        public bool TryGetValue(string key, [System.Diagnostics.CodeAnalysis.MaybeNullWhen(false)] out Image<Rgba32> value)
+        {
+            Threads.Enqueue(Environment.CurrentManagedThreadId);
+            return inner.TryGetValue(key, out value);
+        }
+        public IEnumerator<KeyValuePair<string, Image<Rgba32>>> GetEnumerator() => inner.GetEnumerator();
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task An_async_archive_write_encodes_off_the_calling_thread(bool toFile)
+    {
+        // The App saves a book with WriteAsync from the UI thread. Encoding every variant there,
+        // before the first real await, froze the window for the whole encode and made the save
+        // complete before anything could observe it in flight (CloseGuardTests, RiseSaveTests).
+        var dir = Directory.CreateTempSubdirectory("nfty-fan-").FullName;
+        using var ing = SixVariants(badDepthAt1: "none", badDepthAt2: "none");
+        var images = new ThreadRecordingImages(ing.VariantImages);
+        int caller = Environment.CurrentManagedThreadId;
+
+        Task write;
+        if (toFile)
+            write = IngredientArchive.WriteAsync(Path.Combine(dir, "bg.igt"), ing.Manifest, images,
+                new Dictionary<string, DepthMap>(), default, Parallelism.Sequential);
+        else
+        {
+            var zip = new ZipArchive(new MemoryStream(), ZipArchiveMode.Create);
+            write = IngredientArchive.WriteAsync(zip, ing.Manifest, images,
+                new Dictionary<string, DepthMap>(), default, Parallelism.Sequential);
+        }
+        // Read BEFORE awaiting: whatever ran synchronously inside the call ran on this thread.
+        var first = images.Threads.TryPeek(out int t) ? t : -1;
+        await write;
+
+        Assert.NotEqual(caller, first);
+        Assert.True(images.Threads.Count >= 6);
+    }
+
     // ---------------------------------------------------------------- G6: voxel report
 
     [Theory]

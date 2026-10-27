@@ -260,7 +260,10 @@ public static class IngredientArchive
         IReadOnlyDictionary<string, DepthMap> depths, CancellationToken ct = default,
         Parallelism? parallelism = null)
     {
-        var (png, depth) = EncodeVariants(manifest, variantImages, depths, parallelism, ct);
+        // The encode is the expensive, CPU-bound half: off the caller's thread, so an async save
+        // started from the UI thread neither freezes it nor completes before it can be observed.
+        var (png, depth) = await Task.Run(() => EncodeVariants(manifest, variantImages, depths, parallelism, ct), ct)
+            .ConfigureAwait(false);
         await WriteEncodedAsync(zip, manifest, variantImages, png, depth, ct).ConfigureAwait(false);
     }
 
@@ -324,7 +327,10 @@ public static class IngredientArchive
         IReadOnlyDictionary<string, DepthMap> depths, CancellationToken ct = default,
         Parallelism? parallelism = null)
     {
-        var (png, depth) = EncodeVariants(manifest, variantImages, depths, parallelism, ct);
+        // The encode is the expensive, CPU-bound half: off the caller's thread, so an async save
+        // started from the UI thread neither freezes it nor completes before it can be observed.
+        var (png, depth) = await Task.Run(() => EncodeVariants(manifest, variantImages, depths, parallelism, ct), ct)
+            .ConfigureAwait(false);
         using var zip = ZipFile.Open(path, ZipArchiveMode.Create);
         await WriteEncodedAsync(zip, manifest, variantImages, png, depth, ct).ConfigureAwait(false);
     }
