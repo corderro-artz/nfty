@@ -400,4 +400,41 @@ public class ModalFitTests
         }
         finally { window.Close(); }
     }
+
+    /// <summary>
+    /// V-4: the modals allowed to scroll, each with the reason, so the exemption is a decision on
+    /// record and not an omission. "No modal scrolls" is about a card being cut off where its height
+    /// is a property of the DESIGN; these three hold lists whose length is the user's data.
+    /// </summary>
+    private static readonly (string Name, string Reason)[] ScrollingModals =
+    {
+        ("export", "its three tabs' content varies with seal and shape; the manifest and footer stay outside the scroller"),
+        ("validity", "how many problems a book has is the book's business; heading and footer stay outside"),
+        ("voxel-ready", "how many variants carry partial alpha is the book's business; heading and footer stay outside"),
+    };
+
+    /// <summary>The voxel-ready card is the third allowed scroller: its list scrolls (so the exemption
+    /// is not stale), and the card still sits inside the smallest page.</summary>
+    [AvaloniaFact]
+    public void Only_the_named_modals_may_scroll()
+    {
+        Assert.All(ScrollingModals, m => Assert.False(string.IsNullOrWhiteSpace(m.Reason), m.Name));
+        Assert.Contains(ScrollingModals, m => m.Name == "voxel-ready");
+
+        using var card = RiseVoxelReadyTests.PreviewCard(new FakeDialogs(), 60);
+        var view = new Views.VoxelReadyDialogView { DataContext = card };
+        var area = RisePages.MinArea;
+        var window = new Window { Content = view, Width = area.Width, Height = area.Height };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        try
+        {
+            var scroll = view.FindControl<ScrollViewer>("RowsScroll")!;
+            Assert.True(scroll.Extent.Height > scroll.Viewport.Height,
+                "voxel-ready no longer scrolls - drop it from the exemption list");
+            var cardBorder = view.GetVisualDescendants().OfType<Border>().First(b => b.Classes.Contains("modal"));
+            Assert.True(cardBorder.Bounds.Height <= view.Bounds.Height + 0.5);
+        }
+        finally { window.Close(); }
+    }
 }
