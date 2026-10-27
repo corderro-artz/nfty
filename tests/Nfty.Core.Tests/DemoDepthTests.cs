@@ -23,7 +23,8 @@ public class DemoDepthTests
     private static LoadedCookBook Read()
     {
         var dir = Directory.CreateTempSubdirectory().FullName;
-        return CookBookArchive.Read(DemoCookBook.WriteTo(dir));
+        try { return CookBookArchive.Read(DemoCookBook.WriteTo(dir)); }
+        finally { Directory.Delete(dir, true); }   // every image is decoded eagerly; nothing reads the file again
     }
 
     private static IEnumerable<LoadedIngredient> AllIngredients(LoadedCookBook book) =>

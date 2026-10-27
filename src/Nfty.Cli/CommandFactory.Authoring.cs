@@ -247,6 +247,11 @@ public static partial class CommandFactory
             throw new FileNotFoundException($"--map '{mapPath}' does not exist.", mapPath);
         try
         {
+            // Depth is two exact bytes per pixel; a lossy format (JPEG) quantizes them. PNG only.
+            var format = Image.DetectFormat(mapPath);
+            if (format is not SixLabors.ImageSharp.Formats.Png.PngFormat)
+                throw new InvalidOperationException(
+                    $"--map '{mapPath}' is a {format.Name} image; depth must be a PNG, because a lossy format changes the depth values.");
             return Image.Load<Rgba32>(mapPath);
         }
         catch (UnknownImageFormatException)

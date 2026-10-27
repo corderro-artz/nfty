@@ -137,6 +137,23 @@ public class SetDepthCommandTests
     }
 
     [Fact]
+    public void A_lossy_map_is_refused_by_format_and_the_igt_is_untouched()
+    {
+        string dir = Directory.CreateTempSubdirectory().FullName;
+        string igt = MakeIgt(dir);
+        string map = Path.Combine(dir, "d.jpg");
+        using (var img = new Image<Rgba32>(2, 2)) img.SaveAsJpeg(map);
+        var before = File.ReadAllBytes(igt);
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            Run("set", "depth", igt, "--variant", "v", "--map", map));
+
+        Assert.Contains("Jpeg", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("PNG", ex.Message, StringComparison.Ordinal);
+        Assert.Equal(before, File.ReadAllBytes(igt));
+    }
+
+    [Fact]
     public void An_unknown_variant_names_the_ingredients_variants()
     {
         string dir = Directory.CreateTempSubdirectory().FullName;

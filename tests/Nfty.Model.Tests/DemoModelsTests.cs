@@ -12,7 +12,8 @@ public class DemoModelsTests
     private static LoadedCookBook Read()
     {
         var dir = Directory.CreateTempSubdirectory().FullName;
-        return CookBookArchive.Read(DemoCookBook.WriteTo(dir));
+        try { return CookBookArchive.Read(DemoCookBook.WriteTo(dir)); }
+        finally { Directory.Delete(dir, true); }   // every image is decoded eagerly; nothing reads the file again
     }
 
     private static string BodyId(LoadedRecipe r) =>
@@ -28,16 +29,16 @@ public class DemoModelsTests
         foreach (var recipe in book.Recipes)
         {
             string bodyId = BodyId(recipe);
-            string feet = Layer(recipe, "feet").Manifest.Variants[0].Id;
+            foreach (var feetVariant in Layer(recipe, "feet").Manifest.Variants)
             foreach (var body in Layer(recipe, bodyId).Manifest.Variants)
                 foreach (var overlayId in new[] { "bands", "lock", "trim" })
                 {
                     var overlay = Layer(recipe, overlayId);
                     foreach (var variant in overlay.Manifest.Variants)
                     {
-                        using var withoutRise = StackDepth.ForSelection(recipe, [("feet", feet), (bodyId, body.Id)]);
+                        using var withoutRise = StackDepth.ForSelection(recipe, [("feet", feetVariant.Id), (bodyId, body.Id)]);
                         using var withRise = StackDepth.ForSelection(recipe,
-                            [("feet", feet), (bodyId, body.Id), (overlayId, variant.Id)]);
+                            [("feet", feetVariant.Id), (bodyId, body.Id), (overlayId, variant.Id)]);
                         var without = withoutRise.Depth;
                         var with = withRise.Depth;
                         var art = overlay.VariantImages[variant.Id];
