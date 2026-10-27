@@ -1,3 +1,4 @@
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Services;
@@ -21,7 +22,7 @@ public partial class CookDialogViewModel : ViewModelBase
     private CancellationTokenSource? _cts;
     private string? _outDir;
 
-    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(CookCommand))] private int _count = 50;
+    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(CookCommand))] [NotifyPropertyChangedFor(nameof(ResultingTotalText))] private int _count = 50;
     [ObservableProperty] private string _seed = Guid.NewGuid().ToString("N")[..8];
     [ObservableProperty] private bool _pack;
 
@@ -84,7 +85,33 @@ public partial class CookDialogViewModel : ViewModelBase
     /// <summary>True once the chosen folder turns out to already hold a Set, so this cook is adding
     /// to it rather than starting one. Set during the run, because it depends on the folder the user
     /// picks - which is also why the dialog cannot say so up front.</summary>
-    [ObservableProperty] private bool _isExtending;
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(ResultingTotalText))] [NotifyPropertyChangedFor(nameof(RecipeChoiceEnabled))] private bool _isExtending;
+
+    /// <summary>How many assets the folder's Set already held when this cook found it. Zero until a
+    /// folder has been read.</summary>
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(ResultingTotalText))] private int _existingCount;
+
+    /// <summary>What the Set will hold once an extend finishes: <c>→ 62 total</c>, invariant and
+    /// thousands-separated. Empty on a fresh cook - the view reserves the room and draws no ink, so
+    /// finding out the folder holds a Set moves nothing. Count keeps meaning "how many more".</summary>
+    public string ResultingTotalText => IsExtending
+        ? $"→ {((long)ExistingCount + Math.Max(0, Count)).ToString("N0", CultureInfo.InvariantCulture)} total"
+        : "";
+
+    /// <summary>The recipes this cook may be limited to: any (by weight), then each recipe in the
+    /// book's own order. A shelved recipe (weight 0) is listed and labeled, since <c>--recipe</c>
+    /// cooks it too.</summary>
+    public IReadOnlyList<RecipeChoice> RecipeChoices { get; }
+
+    /// <summary>The chosen recipe; the first entry (any recipe, by weight) unless the person picks.</summary>
+    [ObservableProperty] private RecipeChoice _selectedRecipe;
+
+    /// <summary>Whether the recipe choice can be changed. Off while extending: restricting would
+    /// silently change a Set's mix part-way through the collection.</summary>
+    public bool RecipeChoiceEnabled => !IsExtending;
+
+    /// <summary>The reason the recipe choice is off, drawn beside it while extending.</summary>
+    public const string RecipeLockedReason = "An extend continues the Set's own mix.";
 
     /// <summary>Also write a 3D model of every asset into <c>models/</c>.</summary>
     /// <remarks>Disabled for a 2D-only book, but a disabled box is a label: <see cref="Cook"/>
@@ -144,12 +171,33 @@ public partial class CookDialogViewModel : ViewModelBase
     public CookDialogViewModel(LoadedCookBook book, IFilePickerService picker, IFolderRevealer revealer, IDialogService dialogs)
     {
         _book = book; _picker = picker; _revealer = revealer; _dialogs = dialogs;
+        RecipeChoices = BuildRecipeChoices(book);
+        _selectedRecipe = RecipeChoices[0];
         var partial = VoxelReport.Scan(book).Count(v => !v.IsClean);
         BookIsTwoDOnly = partial > 0;
         ModelsNote = BookIsTwoDOnly
             ? $"This book is 2D only — {partial} {(partial == 1 ? "variant has" : "variants have")} partly transparent pixels. "
               + "Open a layer in Rise and use Make voxel-ready."
             : "Writes a model of every asset into models/.";
+    }
+
+    private static List<RecipeChoice> BuildRecipeChoices(LoadedCookBook book)
+    {
+        var rank = new Dictionary<string, int>(StringComparer.Ordinal);
+        if (book.Manifest.RecipeOrder is { } order)
+            for (int i = 0; i < order.Count; i++) rank.TryAdd(order[i], i);
+
+        var choices = new List<RecipeChoice> { new(null, "Any recipe (by weight)") };
+        choices.AddRange(book.Recipes
+            .Select((r, i) => (r, i))
+            .OrderBy(t => rank.TryGetValue(t.r.Manifest.Id, out int k) ? k : int.MaxValue)
+            .ThenBy(t => t.i)
+            .Select(t =>
+            {
+                bool shelved = !book.Manifest.RecipeWeights.TryGetValue(t.r.Manifest.Id, out double w) || w <= 0;
+                return new RecipeChoice(t.r.Manifest.Id, shelved ? $"{t.r.Manifest.Name} (shelved)" : t.r.Manifest.Name);
+            }));
+        return choices;
     }
 
     /// <summary>Whether the options form is showing rather than the progress view.</summary>
@@ -186,6 +234,7 @@ public partial class CookDialogViewModel : ViewModelBase
             PhaseText = "Reading existing…";
             var existing = await SetWriter.ReadExistingAsync(dir, _cts.Token);
             IsExtending = existing.Dnas.Count > 0;
+            ExistingCount = IsExtending ? existing.NextNumber - 1 : 0;
 
             // A Set cooked with models keeps making them, whatever the box says: models are decided
             // once, at its first cook, as `extend` does. Built BEFORE rolling so a 2D-only book is
@@ -201,8 +250,11 @@ public partial class CookDialogViewModel : ViewModelBase
                     })
                     : null;
 
-            var opts = new GenerateOptions(Count, Seed, EnforceUniqueDna: !Unlimited);
-            PhaseText = IsExtending ? $"Extending {existing.Dnas.Count} assets…" : "Generating…";
+            // An extend continues the Set's own mix, so the recipe choice is ignored then: the combo is
+            // disabled, but a disabled box is a label, and the gate is checked here too.
+            var opts = new GenerateOptions(Count, Seed, RecipeId: IsExtending ? null : SelectedRecipe.Id,
+                EnforceUniqueDna: !Unlimited);
+            PhaseText = IsExtending ? $"Extending {ExistingCount} assets {ResultingTotalText}…" : "Generating…";
             var genProgress = new Progress<GenerationProgress>(p => Progress = p.Fraction);
             set = await Generator.GenerateAsync(_book, opts, existing.Dnas, existing.NextNumber,
                 genProgress, _cts.Token);
@@ -216,7 +268,7 @@ public partial class CookDialogViewModel : ViewModelBase
             int made = set.Assets.Count;
             string noun = made == 1 ? "asset" : "assets";
             ResultText = IsExtending
-                ? $"Added +{made} {noun} — {existing.Dnas.Count + made} total in the collection."
+                ? $"Added +{made} {noun} — {ExistingCount + made} total in the collection."
                 : $"Cooked {made} {noun}.";
             if (modeler is not null)
             {
@@ -263,6 +315,11 @@ public partial class CookDialogViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanClose))] private void Close() => _dialogs.Close(null);
     private bool CanClose() => !IsRunning;
 }
+
+/// <summary>One entry of the recipe picker.</summary>
+/// <param name="Id">The recipe id the cook is limited to, or null for any recipe by weight.</param>
+/// <param name="Label">What the picker shows.</param>
+public sealed record RecipeChoice(string? Id, string Label);
 
 /// <summary>One entry of the model format picker.</summary>
 /// <param name="Value">What the choice sets.</param>

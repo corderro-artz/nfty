@@ -1202,6 +1202,34 @@ public class VisualCapture
         }
     }
 
+    /// <summary>The Cook card with the recipe choice, and an extend with the total it reaches.</summary>
+    [AvaloniaFact]
+    public void Capture_cook_dialog_recipe_and_total()
+    {
+        if (Dir is null) return;   // inert unless explicitly capturing
+
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            var key = variant.Key.ToString()!.ToLowerInvariant();
+            using var book = CookRecipeAndTotalTests.Book();
+            CookDialogViewModel Vm() =>
+                new(book, new FilePickerService(), new NoopFolderRevealer(), new FakeDialogs()) { Count = 50, Seed = "vapor" };
+
+            var chosen = Vm();
+            chosen.SelectedRecipe = chosen.RecipeChoices.Single(c => c.Id == "dog");
+            Capture(new Views.CookDialogView { DataContext = chosen }, variant, $"cook-recipe-choice-{key}.png");
+
+            var extending = Vm();
+            extending.IsExtending = true; extending.ExistingCount = 4200;
+            Capture(new Views.CookDialogView { DataContext = extending }, variant, $"cook-extending-total-{key}.png");
+
+            var running = Vm();
+            running.IsExtending = true; running.ExistingCount = 4200; running.IsRunning = true;
+            running.PhaseText = $"Extending 4200 assets {running.ResultingTotalText}…"; running.Progress = 0.4;
+            Capture(new Views.CookDialogView { DataContext = running }, variant, $"cook-running-{key}.png");
+        }
+    }
+
     /// <summary>The 2D-only marks (Explorer tree, Kitchen shelf) and the opacity-lock warning.</summary>
     [AvaloniaFact]
     public void Capture_two_d_only_marks()

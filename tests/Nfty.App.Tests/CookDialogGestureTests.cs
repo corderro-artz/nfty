@@ -59,7 +59,10 @@ public class CookDialogGestureTests
             // passed with the notification deleted. That is the vacuous-assertion trap again: it was
             // reading a value nothing under test writes.
             var dead = view.GetVisualDescendants().OfType<Button>()
-                .Where(b => b.IsEffectivelyVisible && !b.IsEffectivelyEnabled)
+                // "Shows" excludes the form's own controls: the card keeps the three states in one cell
+                // and inks only the current one, so the others are laid out at opacity 0.
+                .Where(b => b.IsEffectivelyVisible && !b.IsEffectivelyEnabled
+                    && !b.GetSelfAndVisualAncestors().OfType<Avalonia.Visual>().Any(v => v.Opacity == 0))
                 .Select(b => b.Content as string ?? b.Name ?? "<unnamed>")
                 .ToArray();
 
