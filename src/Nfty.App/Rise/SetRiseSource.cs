@@ -50,7 +50,7 @@ public sealed class SetRiseSource : RiseSource
         IImageBridge bridge, Func<string, LoadedCookBook>? readBook = null)
     {
         ArgumentNullException.ThrowIfNull(set);
-        _readBook = readBook ?? CookBookArchive.Read;
+        _readBook = readBook ?? (path => CookBookArchive.Read(path));
         ArgumentNullException.ThrowIfNull(bridge);
         if (set.Items.Count == 0) throw new ArgumentException("The Set has no assets to rise.", nameof(set));
         _set = set;
