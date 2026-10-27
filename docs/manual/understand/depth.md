@@ -17,11 +17,11 @@ So a pixel with front 2 and back 1 is 1 + 2 + 1 = 4 voxels thick. Front and back
 [File formats](../reference/file-formats.md#depth-maps).
 
 The model is the art, extruded. Its texture is one image with the **front** picture on the left and the
-**back** picture on the right, a one-pixel gutter between them so smoothing never bleeds one into the
-other. The sides of every column take the color of the art's **edge pixel** there, so a column whose
+**back** picture on the right, a one-pixel gutter between them so a sample exactly on the front half's right edge
+(models sample with NEAREST, and float rounding can land on the edge) never reads the back half. The sides of every column take the color of the art's **edge pixel** there, so a column whose
 edge pixel is near black gets a near-black side. That is how it is drawn, not a bug; give the edge a
 lighter outline if you want lighter sides. Where two layers own a column's front and back, its side
-changes from the back owner's color to the front owner's at the seam. Nothing is colored a second time.
+changes from the back owner's color to the front owner's at the seam. A layer under the top one is colored with its own rolled color, so the back shows the right layer's color.
 
 Sets cooked before this stacking rule keep the models they were cooked with; cook again to get the
 new ones.

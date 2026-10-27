@@ -6,8 +6,9 @@ namespace Nfty.Model;
 /// <summary>
 /// The texture every model carries: <c>[front W][gutter 1][back W]</c>, height H. The front half is
 /// what the front faces (and front-owned wall voxels) show, the back half what the back faces show.
-/// The one-pixel gutter repeats the front half's last column, so a <c>NEAREST</c> sample exactly on
-/// the front half's right edge (u = W / (2W + 1)) cannot land in the back half.
+/// The one-pixel gutter repeats the front half's last column. The sampler is <c>NEAREST</c>, so there is
+/// no smoothing to bleed; the gutter guards the edge texel: a sample exactly on the front half's right
+/// edge (u = W / (2W + 1)), or pushed there by float rounding, reads the gutter, never the back half.
 /// </summary>
 /// <remarks>
 /// A single picture uses the atlas too — its back half repeats the art — so the writers and the

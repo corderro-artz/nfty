@@ -24,11 +24,16 @@ public sealed class RiseSubject : IDisposable
     public RiseSubject(Image<Rgba32> art, DepthMap? stored, bool ownsArt = true, StackFaces? faces = null)
     {
         ArgumentNullException.ThrowIfNull(art);
+        // Everything that can throw is built first; nothing is assigned (so nothing can leak) until it all exists.
+        var depth = new DepthSurface(art, stored);
+        Image<Rgba32> texture;
+        try { texture = FaceAtlas.Build(art, faces); }
+        catch { faces?.Dispose(); throw; }
         Art = art;
         Faces = faces;
-        Texture = FaceAtlas.Build(art, faces);
+        Texture = texture;
         _ownsArt = ownsArt;
-        Depth = new DepthSurface(art, stored);
+        Depth = depth;
         History = new EditHistory<DepthPixel>();
         _saved = Depth.ToDepthMap();
     }
@@ -70,10 +75,14 @@ public sealed class RiseSubject : IDisposable
     /// still reads them, i.e. after the page has been told.</returns>
     public IDisposable Reseed(DepthMap? stored, StackFaces? faces = null)
     {
+        var depth = new DepthSurface(Art, stored);
+        Image<Rgba32> texture;
+        try { texture = FaceAtlas.Build(Art, faces); }
+        catch { faces?.Dispose(); throw; }
         var retired = new Retired(Texture, Faces);
         Faces = faces;
-        Texture = FaceAtlas.Build(Art, faces);
-        Depth = new DepthSurface(Art, stored);
+        Texture = texture;
+        Depth = depth;
         History = new EditHistory<DepthPixel>();
         _saved = Depth.ToDepthMap();
         return retired;
