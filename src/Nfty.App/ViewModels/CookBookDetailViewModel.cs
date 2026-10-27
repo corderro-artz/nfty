@@ -298,7 +298,7 @@ public partial class CookBookDetailViewModel : ViewModelBase
         var problems = Validator.Validate(book);
         IsValid = problems.Count == 0;
         StatusText = IsValid ? "Valid" : problems.Count == 1 ? "1 problem" : $"{problems.Count} problems";
-        StatusTip = IsValid ? null : string.Join(Environment.NewLine, problems);
+        StatusTip = IsValid ? null : Problems.Join(problems);
 
         // Four fits the room the invalid state frees up; past that the list is bounded and says so,
         // rather than growing until it pushes the mint bar and Cook off the bottom of the card.

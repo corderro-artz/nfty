@@ -1,3 +1,4 @@
+using Nfty.App.Services;
 using System.ComponentModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -402,20 +403,13 @@ public sealed partial class RiseViewModel
             // The .gltf names its .bin, so its bytes depend on the stem the user has not picked yet:
             // that format's figure is said to be approximate; the other two carry no name at all.
             _manifestSize = (Format == ModelFormat.GltfWithBin ? "~" : "")
-                + SizeText(result.Files.Sum(f => (long)f.Bytes.Length));
+                + SizeText.Of(result.Files.Sum(f => (long)f.Bytes.Length));
         }
         catch (Exception)
         {
             _manifestSize = "";     // a figure we cannot stand behind is left off, not guessed
         }
     }
-
-    private static string SizeText(long bytes) => bytes switch
-    {
-        < 1024 => string.Create(CultureInfo.InvariantCulture, $"{bytes} B"),
-        < 1024 * 1024 => string.Create(CultureInfo.InvariantCulture, $"{bytes / 1024.0:0.#} KB"),
-        _ => string.Create(CultureInfo.InvariantCulture, $"{bytes / (1024.0 * 1024.0):0.#} MB"),
-    };
 
     // ---------------------------------------------------------------- export
 
@@ -442,7 +436,7 @@ public sealed partial class RiseViewModel
         catch (Exception ex)
         {
             if (!_disposed)
-                await _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, "Could not export", ex.Message));
+                await _dialogs.ShowErrorAsync("Could not export", ex.Message);
         }
         finally
         {

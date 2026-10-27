@@ -262,14 +262,8 @@ public partial class ImportImageViewModel : WizardViewModelBase, IDisposable
     /// tuned, and stating a different pair here would make two ways of creating a layer produce two
     /// different layers.</remarks>
     /// <returns>The colorization, or null for a Custom layer.</returns>
-    public Colorization? BuildColorization() => Kind switch
-    {
-        LayerKind.Dynamic => new Colorization(ColorModel, 12, 4,
-            new[] { new ColorEntry(1, new ColorRange(HueMin, HueMax, SatMin, SatMax), null) }),
-        LayerKind.Static => new Colorization(ColorModel, 12, 4,
-            new[] { new ColorEntry(1, null, FixedColor) }),
-        _ => null,
-    };
+    public Colorization? BuildColorization() => Colorization.Starter(Kind, ColorModel,
+        new ColorRange(HueMin, HueMax, SatMin, SatMax), FixedColor);
 
     /// <summary>
     /// The layer this form describes, with the picture as its one variant.

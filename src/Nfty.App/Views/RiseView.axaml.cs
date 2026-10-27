@@ -9,6 +9,7 @@ using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.Reactive;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
@@ -108,18 +109,18 @@ public partial class RiseView : UserControl
         WireKeys();
 
         DataContextChanged += (_, _) => Rebind();
-        _surface.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ => Reframe()));
+        _surface.GetObservable(BoundsProperty).Subscribe(new AnonymousObserver<Rect>(_ => Reframe()));
         // And the backdrop's own bounds: the art sits in a fixed host centered in it, so the host's
         // POSITION keeps moving as the pane resizes after the image has stopped changing size.
-        _backdrop.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ => { FitHost(); _canvas.RebuildBackdrop(); }));
+        _backdrop.GetObservable(BoundsProperty).Subscribe(new AnonymousObserver<Rect>(_ => { FitHost(); _canvas.RebuildBackdrop(); }));
         // The things the canvas must keep clear of: the tile (which changes size) and the grid chip.
-        _tile.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ => FitHost()));
-        _gridChip.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ => FitHost()));
-        _targetChip.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ => FitHost()));
+        _tile.GetObservable(BoundsProperty).Subscribe(new AnonymousObserver<Rect>(_ => FitHost()));
+        _gridChip.GetObservable(BoundsProperty).Subscribe(new AnonymousObserver<Rect>(_ => FitHost()));
+        _targetChip.GetObservable(BoundsProperty).Subscribe(new AnonymousObserver<Rect>(_ => FitHost()));
         LayoutUpdated += (_, _) => { SnapRailFold(); SnapListFold(); };
         // The bitmap is what the geometry is mapped against: a new picture is a new frame. Watched on
         // the Image itself, so the frame is never read against a bitmap the binding has not delivered.
-        _img.GetObservable(Image.SourceProperty).Subscribe(new Sub<IImage?>(_ => Reframe()));
+        _img.GetObservable(Image.SourceProperty).Subscribe(new AnonymousObserver<IImage?>(_ => Reframe()));
         Rebind();
     }
 
@@ -656,12 +657,4 @@ public partial class RiseView : UserControl
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
 
-    /// <summary>Minimal <see cref="IObserver{T}"/> for an Avalonia property subscription — the
-    /// framework hands out <c>IObservable</c> and the BCL has no lambda overload for it.</summary>
-    private sealed class Sub<T>(Action<T> onNext) : IObserver<T>
-    {
-        public void OnCompleted() { }
-        public void OnError(Exception error) { }
-        public void OnNext(T value) => onNext(value);
-    }
 }

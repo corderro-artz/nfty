@@ -3,6 +3,7 @@ using System.Globalization;
 using Nfty.Core.Editing;
 using Nfty.Core.Formats;
 using Nfty.Core.Model;
+using static Nfty.Cli.CliGuards;
 
 namespace Nfty.Cli;
 
@@ -30,16 +31,6 @@ public static partial class CommandFactory
         });
         return weight;
     }
-
-    /// <summary>Refuses an option that belongs to the other form of a command, never ignores it.</summary>
-    private static void RejectGiven(string? value, string option, string why)
-    {
-        if (value is not null)
-            throw new InvalidOperationException($"{option} {why}");
-    }
-
-    private static string RequireGiven(string? value, string option, string why) =>
-        value ?? throw new InvalidOperationException($"{option} is required {why}");
 
     /// <summary>Which of the allowed kinds <paramref name="path"/> is; anything else is refused by name.</summary>
     private static ArchiveKind ExpectKind(string path, params ArchiveKind[] allowed)

@@ -26,8 +26,7 @@ public static class CookBookPersistence
         if (session.SourcePath is not string dest)
             throw new InvalidOperationException("The cookbook has no source file to save to.");
         await AtomicFile.ReplaceAsync(dest, tmp => CookBookArchive.WriteAsync(tmp, book2.Manifest, book2.Recipes, ct));
-        string sha;
-        using (var s = File.OpenRead(dest)) sha = Convert.ToHexString(SHA256.HashData(s)).ToLowerInvariant();
+        string sha = await CookBookArchive.HashOfAsync(dest, ct);
         var book3 = new LoadedCookBook { Manifest = book2.Manifest, Recipes = book2.Recipes, SourceSha256 = sha };
         session.Replace(book3);
         return book3;

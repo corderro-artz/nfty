@@ -1,3 +1,4 @@
+using Nfty.App.Services;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -93,7 +94,7 @@ public sealed partial class RiseViewModel
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, "Could not save depth", ex.Message));
+            await _dialogs.ShowErrorAsync("Could not save depth", ex.Message);
         }
         finally
         {

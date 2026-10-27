@@ -50,16 +50,6 @@ public sealed class PaletteService : IPaletteService
     /// <summary>The store file the swatches live in.</summary>
     public const string FileName = "palette.json";
 
-    // camelCase on the way out to match every other JSON this project writes, and case-INSENSITIVE
-    // on the way in because this file is meant to be hand-edited: a palette must never be the reason
-    // the editor will not open, and "Color" spelled with a capital is not a corrupt file.
-    private static readonly JsonSerializerOptions Json = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true,
-    };
-
     /// <summary>The on-disk shape: one spec list per mode.
     ///
     /// <para>Nullable members because this is read from a file a user may have edited by hand — a
@@ -105,16 +95,12 @@ public sealed class PaletteService : IPaletteService
         var loaded = Fresh();
         if (string.IsNullOrWhiteSpace(json)) return loaded;
 
-        try
-        {
-            var stored = JsonSerializer.Deserialize<Stored>(json, Json);
-            loaded[PaletteMode.Grayscale].AddRange(Palette.FromSpecs(stored?.Grayscale));
-            loaded[PaletteMode.Color].AddRange(Palette.FromSpecs(stored?.Color));
-            return loaded;
-        }
         // FromSpecs skips what it cannot parse, so one mangled swatch costs only itself; a file that
-        // is not JSON, or not an object, lands here and loads as empty.
-        catch { return Fresh(); }
+        // is not JSON, or not an object, reads as null and loads as empty.
+        if (StateJson.TryRead<Stored>(json) is not { } stored) return loaded;
+        loaded[PaletteMode.Grayscale].AddRange(Palette.FromSpecs(stored.Grayscale));
+        loaded[PaletteMode.Color].AddRange(Palette.FromSpecs(stored.Color));
+        return loaded;
     }
 
     private static PaletteMode[] Modes => [PaletteMode.Grayscale, PaletteMode.Color];
@@ -122,9 +108,9 @@ public sealed class PaletteService : IPaletteService
     private static Dictionary<PaletteMode, List<RgbColor>> Fresh() =>
         Modes.ToDictionary(m => m, _ => new List<RgbColor>());
 
-    private void Save() => _store.Write(FileName, JsonSerializer.Serialize(new Stored
+    private void Save() => _store.Write(FileName, StateJson.Write(new Stored
     {
         Grayscale = Palette.ToSpecs(_swatches[PaletteMode.Grayscale]).Cast<string?>().ToList(),
         Color = Palette.ToSpecs(_swatches[PaletteMode.Color]).Cast<string?>().ToList(),
-    }, Json));
+    }));
 }

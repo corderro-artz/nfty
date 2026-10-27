@@ -48,3 +48,15 @@ public sealed class DialogService : IDialogService
         _tcs = null;
     }
 }
+
+/// <summary>Dialog helpers every ViewModel shares.</summary>
+public static class DialogServiceExtensions
+{
+    /// <summary>Shows the standard error card and waits for it to close.</summary>
+    /// <param name="dialogs">The dialog layer.</param>
+    /// <param name="title">The card's title.</param>
+    /// <param name="message">What went wrong, in words a person can act on.</param>
+    /// <returns>A task that completes when the card is dismissed.</returns>
+    public static Task ShowErrorAsync(this IDialogService dialogs, string title, string message) =>
+        dialogs.ShowAsync<object>(new ErrorDialogViewModel(dialogs, title, message));
+}

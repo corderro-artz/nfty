@@ -52,15 +52,6 @@ public sealed class EditorViewStateService : IEditorViewState
     /// <summary>The store file the preferences live in.</summary>
     public const string FileName = "editor-view.json";
 
-    // camelCase out, case-insensitive in — the rule every JSON this project writes follows, and the
-    // second half is what keeps a hand-edited file from being the reason the editor will not open.
-    private static readonly JsonSerializerOptions Json = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true,
-    };
-
     private readonly IStateStore _store;
 
     /// <summary>Creates the service and loads whatever the store holds.</summary>
@@ -81,7 +72,7 @@ public sealed class EditorViewStateService : IEditorViewState
         ArgumentNullException.ThrowIfNull(state);
         if (state == Current) return;
         Current = state;
-        try { _store.Write(FileName, JsonSerializer.Serialize(state, Json)); }
+        try { _store.Write(FileName, StateJson.Write(state)); }
         catch (NotSupportedException) { /* convenience state — never surface */ }
     }
 
@@ -95,12 +86,7 @@ public sealed class EditorViewStateService : IEditorViewState
     /// </remarks>
     private static EditorViewState Load(string? json)
     {
-        if (string.IsNullOrWhiteSpace(json)) return new EditorViewState();
-        try
-        {
-            var read = JsonSerializer.Deserialize<EditorViewState>(json, Json);
-            return read is null ? new EditorViewState() : read with { GridStep = Math.Max(1, read.GridStep) };
-        }
-        catch (JsonException) { return new EditorViewState(); }
+        var read = StateJson.TryRead<EditorViewState>(json);
+        return read is null ? new EditorViewState() : read with { GridStep = Math.Max(1, read.GridStep) };
     }
 }

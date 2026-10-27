@@ -52,7 +52,6 @@ public sealed class PictureRiseSource : RiseSource
     private int _snappedCount;
     private readonly Func<Task<string?>>? _pickPath;
     private readonly List<RiseItem> _retired = new();
-    private Task? _inFlight;
     private string? _saveResultNote;
     private List<RiseItem> _items = new();
     private RiseItem _initial = null!;
@@ -150,7 +149,7 @@ public sealed class PictureRiseSource : RiseSource
     /// grid again is a no-op, so nothing is rewritten and no depth is lost.</remarks>
     public void ApplyGrid(SheetGrid? grid)
     {
-        if (_inFlight is not null || _gridInFlight is not null)
+        if (SaveInFlight is not null || _gridInFlight is not null)
             throw new InvalidOperationException("A save or grid write is running. Try again when it has finished.");
         if (!PrepareGrid(ref grid, out bool remove)) return;
         if (grid is not null) WriteGrid(grid); else if (remove) RemoveGrid();
@@ -167,7 +166,7 @@ public sealed class PictureRiseSource : RiseSource
     /// queued, because the caller decided against a source that is about to change.</exception>
     public Task ApplyGridAsync(SheetGrid? grid)
     {
-        if (_inFlight is not null || _gridInFlight is not null)
+        if (SaveInFlight is not null || _gridInFlight is not null)
             throw new InvalidOperationException("A save or grid write is running. Try again when it has finished.");
         if (!PrepareGrid(ref grid, out bool remove)) return Task.CompletedTask;
         var task = ApplyGridCoreAsync(grid, remove);
@@ -357,7 +356,7 @@ public sealed class PictureRiseSource : RiseSource
     /// <returns>What it did, or null when depth is unsaved or nothing is partial.</returns>
     public override Task<VoxelReadyOutcome?> MakeVoxelReadyAsync()
     {
-        if (IsDirty || _gridInFlight is not null || _inFlight is not null)
+        if (IsDirty || _gridInFlight is not null || SaveInFlight is not null)
             return Task.FromResult<VoxelReadyOutcome?>(null);   // reseeding would drop painted depth; a write is running
         var plan = PlanVoxelReady();
         if (plan.Count == 0) return Task.FromResult<VoxelReadyOutcome?>(null);
@@ -374,7 +373,7 @@ public sealed class PictureRiseSource : RiseSource
     /// <inheritdoc />
     public override Task UndoVoxelReadyAsync()
     {
-        if (IsDirty || _gridInFlight is not null || _inFlight is not null || _preSnap is not { } original)
+        if (IsDirty || _gridInFlight is not null || SaveInFlight is not null || _preSnap is not { } original)
             return Task.CompletedTask;
         _image.Dispose();
         _image = original;
@@ -395,7 +394,7 @@ public sealed class PictureRiseSource : RiseSource
             var item = _items[index];
             if (item.Subject is not { } current) continue;
             var art = Grid is { } g ? CutCell(g, index) : _image.Clone();
-            if (SamePixels(art, current.Art)) { art.Dispose(); continue; }
+            if (PixelCompare.Same(art, current.Art)) { art.Dispose(); continue; }
             if (item.Thumbnail is { } oldThumb) oldThumbs.Add(oldThumb);
             item.Thumbnail = _bridge.ToBitmap(art);
             var old = item.Replace(new RiseSubject(art, current.Depth.ToDepthMap(), ownsArt: true));
@@ -406,17 +405,6 @@ public sealed class PictureRiseSource : RiseSource
         foreach (var t in oldThumbs) t.Dispose();
     }
 
-    private static bool SamePixels(Image<Rgba32> a, Image<Rgba32> b)
-    {
-        if (a.Width != b.Width || a.Height != b.Height) return false;
-        bool same = true;
-        a.ProcessPixelRows(b, (ra, rb) =>
-        {
-            for (int y = 0; y < ra.Height && same; y++)
-                if (!ra.GetRowSpan(y).SequenceEqual(rb.GetRowSpan(y))) same = false;
-        });
-        return same;
-    }
 
     private string OriginWord => GridOrigin switch
     {
@@ -513,22 +501,9 @@ public sealed class PictureRiseSource : RiseSource
     public override Task SaveAsync()
     {
         if (_pickPath is null) return Task.CompletedTask;
-        if (_inFlight is { } running) return running;
-        if (_gridInFlight is not null)
+        if (SaveInFlight is null && _gridInFlight is not null)
             throw new InvalidOperationException("The grid is being written. Save when it has finished.");
-        var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        _inFlight = done.Task;
-        _ = RunSaveAsync(done);
-        return done.Task;
-    }
-
-    private async Task RunSaveAsync(TaskCompletionSource done)
-    {
-        Exception? failure = null;
-        try { await SaveCoreAsync(); }
-        catch (Exception ex) { failure = ex; }
-        _inFlight = null;
-        if (failure is null) done.SetResult(); else done.SetException(failure);
+        return SingleFlight(SaveCoreAsync);
     }
 
     private async Task SaveCoreAsync()
@@ -563,7 +538,7 @@ public sealed class PictureRiseSource : RiseSource
         var manifest = new IngredientManifest(id, _stem, LayerKind.Custom, null, variants);
         var problems = Validator.ValidateIngredient(
             new LoadedIngredient { Manifest = manifest, VariantImages = images, Depths = depths });
-        if (problems.Count > 0) throw new InvalidOperationException(string.Join(Environment.NewLine, problems));
+        if (problems.Count > 0) throw new InvalidOperationException(Problems.Join(problems));
 
         await AtomicFile.ReplaceAsync(path, tmp => IngredientArchive.WriteAsync(tmp, manifest, images, depths));
 

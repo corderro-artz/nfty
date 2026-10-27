@@ -174,7 +174,7 @@ public partial class MenuExportDialogViewModel : ViewModelBase
         catch (AtlasTooLargeException ex) { Failure = ex.Problem + ". Choose Loose above."; }
         catch (Exception ex)
         {
-            await _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, "Menu export failed", ex.Message));
+            await _dialogs.ShowErrorAsync("Menu export failed", ex.Message);
         }
         finally
         {

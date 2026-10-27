@@ -81,8 +81,6 @@ public static partial class CommandFactory
             string? file = result.GetValue(input);
             if (string.IsNullOrEmpty(file)) return;   // the missing-argument error already speaks
 
-            bool Given(Option option) => result.GetResult(option) is { Implicit: false };
-
             switch (ModelInputOf(file))
             {
                 case null:
@@ -90,35 +88,35 @@ public static partial class CommandFactory
                         + $"({Archives.IngredientExtension}) with --variant, or a Recipe "
                         + $"({Archives.RecipeExtension}) with --seed; '{file}' is none of them.");
                     return;
-                case ModelInput.Picture when Given(variant):
+                case ModelInput.Picture when result.IsGiven(variant):
                     result.AddError("--variant names one variant of an .igt; a .png is one picture already.");
                     break;
-                case ModelInput.Ingredient when !Given(variant):
+                case ModelInput.Ingredient when !result.IsGiven(variant):
                     result.AddError($"--variant is required to model '{file}': an Ingredient holds "
                         + "several variants and a model is made of one.");
                     break;
-                case ModelInput.Recipe when Given(variant):
+                case ModelInput.Recipe when result.IsGiven(variant):
                     result.AddError("--variant names one variant of an .igt; a Recipe is rolled with --seed.");
                     break;
-                case ModelInput.Recipe when Given(front) || Given(back):
+                case ModelInput.Recipe when result.IsGiven(front) || result.IsGiven(back):
                     result.AddError("--front and --back fill a picture or one variant; a Recipe takes the "
                         + "depth its layers store.");
                     break;
-                case ModelInput.Recipe when !Given(seed):
+                case ModelInput.Recipe when !result.IsGiven(seed):
                     result.AddError($"--seed is required to model '{file}': a Recipe is rolled, and the "
                         + "seed says which roll.");
                     break;
             }
-            if (Given(seed) && ModelInputOf(file) is not ModelInput.Recipe)
+            if (result.IsGiven(seed) && ModelInputOf(file) is not ModelInput.Recipe)
                 result.AddError("--seed rolls a Recipe (.rcp); a picture or a variant is not rolled.");
 
-            if (Given(front) != Given(back))
+            if (result.IsGiven(front) != result.IsGiven(back))
                 result.AddError("--front and --back fill every opaque pixel together; pass both "
                     + "(0 leaves a side flat).");
             foreach (var (option, name) in new (Option<int> Option, string Name)[] { (front, "--front"), (back, "--back") })
             {
                 int value = result.GetValue(option);
-                if (Given(option) && value is < 0 or > 255)
+                if (result.IsGiven(option) && value is < 0 or > 255)
                     result.AddError($"{name} must be 0..255 (one byte per side); got {value}.");
             }
 
@@ -137,7 +135,7 @@ public static partial class CommandFactory
             // GetValue on an option whose value failed that check throws instead of returning it —
             // this is the one place that value is needed for something AcceptOnlyFromAmong does not
             // already say, so it must not re-trip the same failure into an unhandled exception.
-            string fmt = Given(format) ? result.GetResult(format)!.Tokens[0].Value : "glb";
+            string fmt = result.IsGiven(format) ? result.GetResult(format)!.Tokens[0].Value : "glb";
             if (outPath is not null && ModelTokens.FormatNames.Contains(fmt, StringComparer.Ordinal))
             {
                 string expected = fmt == "glb" ? ".glb" : ".gltf";
@@ -157,7 +155,7 @@ public static partial class CommandFactory
                 Pivot = ModelTokens.PivotOf(parse.GetValue(pivot)!),
                 Format = ModelTokens.FormatOf(parse.GetValue(format)!),
             };
-            (byte Front, byte Back)? fill = parse.GetResult(front) is { Implicit: false }
+            (byte Front, byte Back)? fill = parse.IsGiven(front)
                 ? ((byte)parse.GetValue(front), (byte)parse.GetValue(back))
                 : null;
 
@@ -209,7 +207,7 @@ public static partial class CommandFactory
     /// </summary>
     private static Option<double> ModelVoxelSizeOption() => new("--voxel-size")
     {
-        Description = "World units per pixel, and per voxel of depth, from 0.001 to 1000.",
+        Description = "World units per pixel, and per voxel of depth, from " + ModelVoxelSize.Min.ToString(CultureInfo.InvariantCulture) + " to " + ModelVoxelSize.Max.ToString(CultureInfo.InvariantCulture) + ".",
         DefaultValueFactory = _ => 1d,
         CustomParser = result =>
         {
@@ -294,9 +292,7 @@ public static partial class CommandFactory
             foreach (var layer in rolled)
             {
                 // Rendered as StackPreview.Render does: the rolled color wins over its spelling.
-                var image = layer.Rolled is { } color
-                    ? VariantPreview.Render(layer.Ingredient, layer.VariantId, color)
-                    : VariantPreview.Render(layer.Ingredient, layer.VariantId, layer.ColorSpec);
+                var image = layer.Render();
                 images.Add(image);
                 pairs.Add((image, layer.Ingredient.Depths.GetValueOrDefault(layer.VariantId)));
             }

@@ -1,3 +1,4 @@
+using Nfty.App.Imaging;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -52,7 +53,7 @@ public sealed partial class PaletteSwatch : ObservableObject
     public PaletteSwatch(RgbColor rgb, System.Windows.Input.ICommand? forget = null)
     {
         Rgb = rgb;
-        Color = Avalonia.Media.Color.FromRgb(rgb.R, rgb.G, rgb.B);
+        Color = rgb.ToAvalonia();
         Spec = ColorSpec.Format(rgb);
         ForgetCommand = forget;
         CanForget = forget is not null;
@@ -153,8 +154,7 @@ public partial class IngredientEditorViewModel
     /// <summary>The paint color as a swatch, alpha included — under the lock alpha is always 255,
     /// so the swatch only ever looks translucent when a translucent stroke is really what is armed.</summary>
     public Avalonia.Media.Color BrushSwatch =>
-        Avalonia.Media.Color.FromArgb((byte)(IsAlphaEnabled ? BrushAlpha : 255),
-            CurrentRgb.R, CurrentRgb.G, CurrentRgb.B);
+        CurrentRgb.ToAvalonia((byte)(IsAlphaEnabled ? BrushAlpha : 255));
 
     /// <summary>The armed color as a spec, for the strip's readout.</summary>
     public string BrushSpec => ColorSpec.Format(CurrentRgb);

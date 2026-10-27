@@ -8,6 +8,7 @@ using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.Reactive;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
@@ -216,7 +217,7 @@ public partial class IngredientEditorView : UserControl
         // The marquee has to survive the gesture that made it, so it is redrawn whenever the
         // selection changes and whenever the canvas is re-laid-out under it.
         DataContextChanged += (_, _) => Rebind();
-        _surface.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ =>
+        _surface.GetObservable(BoundsProperty).Subscribe(new AnonymousObserver<Rect>(_ =>
         {
             DrawBand();
             _canvas.RebuildBackdrop();
@@ -226,7 +227,7 @@ public partial class IngredientEditorView : UserControl
         // moving as the pane resizes - and the lattice is anchored on that position. Keyed on the
         // image alone, the backdrop was built once from wherever the host happened to be mid-layout
         // and then never corrected.
-        _backdrop.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ => _canvas.RebuildBackdrop()));
+        _backdrop.GetObservable(BoundsProperty).Subscribe(new AnonymousObserver<Rect>(_ => _canvas.RebuildBackdrop()));
         Rebind();
     }
 
@@ -529,12 +530,4 @@ public partial class IngredientEditorView : UserControl
         AvaloniaXamlLoader.Load(this);
     }
 
-    /// <summary>Minimal <see cref="IObserver{T}"/> for an Avalonia property subscription — the
-    /// framework hands out <c>IObservable</c> and the BCL has no lambda overload for it.</summary>
-    private sealed class Sub<T>(Action<T> onNext) : IObserver<T>
-    {
-        public void OnCompleted() { }
-        public void OnError(Exception error) { }
-        public void OnNext(T value) => onNext(value);
-    }
 }

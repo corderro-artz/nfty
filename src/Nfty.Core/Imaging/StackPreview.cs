@@ -34,7 +34,16 @@ namespace Nfty.Core.Imaging;
 /// <para>Null for Static (an author-written spec, resolved identically by generation, so already
 /// exact) and for Custom (no color at all).</para></param>
 public readonly record struct PreviewLayer(
-    LoadedIngredient Ingredient, string VariantId, string? ColorSpec, RolledColor? Rolled = null);
+    LoadedIngredient Ingredient, string VariantId, string? ColorSpec, RolledColor? Rolled = null)
+{
+    /// <summary>Renders this layer through <see cref="VariantPreview"/>: the rolled color when there is
+    /// one (it is exact; the spec beside it is only its 8-bit spelling), the spec otherwise. The one
+    /// place that choice is made, for the stack preview and the CLI's <c>model</c> alike.</summary>
+    /// <returns>The rendered layer; the caller owns and disposes it.</returns>
+    public Image<Rgba32> Render() => Rolled is { } rolled
+        ? VariantPreview.Render(Ingredient, VariantId, rolled)
+        : VariantPreview.Render(Ingredient, VariantId, ColorSpec);
+}
 
 /// <summary>
 /// A recipe's reference layers split around the one being edited: what paints under it, and what
@@ -103,9 +112,7 @@ public static class StackPreview
                 // that same color, but it can only spell what 8-bit RGB can represent, so rendering
                 // through it would quantize a value generation never quantizes — and this whole class
                 // exists to show what generation would draw, not something within a step of it.
-                var image = layer.Rolled is { } rolled
-                    ? VariantPreview.Render(layer.Ingredient, layer.VariantId, rolled)
-                    : VariantPreview.Render(layer.Ingredient, layer.VariantId, layer.ColorSpec);
+                var image = layer.Render();
                 rendered.Add(image);
 
                 // Rejected, never scaled. A preview that quietly resizes a layer is lying about

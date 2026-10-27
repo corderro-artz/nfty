@@ -32,6 +32,24 @@ public class RecentsServiceTests
     }
 
     [Fact]
+    public void Recents_load_a_hand_edited_PascalCase_path()
+    {
+        var dir = TempDir();
+        try
+        {
+            var file = Path.Combine(dir, "x.cbk");
+            File.WriteAllText(Path.Combine(dir, RecentsService.FileName),
+                $$"""[{"Name":"X","Meta":"m","Path":{{JsonSerializer.Serialize(file)}},"Loose":false}]""");
+
+            var svc = new RecentsService(dir);
+
+            Assert.Single(svc.Items);
+            Assert.Equal(file, svc.Items[0].Path);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
     public void Add_caps_the_list_at_ten()
     {
         var dir = TempDir();

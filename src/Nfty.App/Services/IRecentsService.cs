@@ -25,7 +25,6 @@ public interface IRecentsService
 public sealed class RecentsService : IRecentsService
 {
     private const int Cap = 10;
-    private static readonly JsonSerializerOptions Json = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
 
     /// <summary>The store file this list lives in.</summary>
     public const string FileName = "recents.json";
@@ -74,18 +73,13 @@ public sealed class RecentsService : IRecentsService
 
     private static List<RecentItem> Parse(string? json)
     {
-        if (string.IsNullOrWhiteSpace(json)) return new();
-        try
-        {
-            // Well-formed JSON of the wrong shape ([null], [{}]) deserializes "successfully" —
-            // drop anything without a usable path so a later Add can't NRE on it.
-            return (JsonSerializer.Deserialize<List<RecentItem?>>(json, Json) ?? new())
-                .Where(i => i is not null && !string.IsNullOrWhiteSpace(i.Path))
-                .Select(i => i!)
-                .ToList();
-        }
-        catch { return new(); }   // corrupt → start empty, never throw
+        // Well-formed JSON of the wrong shape ([null], [{}]) deserializes "successfully":
+        // drop anything without a usable path so a later Add can't NRE on it. Corrupt reads as empty.
+        return (StateJson.TryRead<List<RecentItem?>>(json) ?? new())
+            .Where(i => i is not null && !string.IsNullOrWhiteSpace(i.Path))
+            .Select(i => i!)
+            .ToList();
     }
 
-    private void Save() => _store.Write(FileName, JsonSerializer.Serialize(_items, Json));
+    private void Save() => _store.Write(FileName, StateJson.Write(_items));
 }

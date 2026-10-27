@@ -339,8 +339,7 @@ public static partial class CommandFactory
         // user reaches for it. So resolve tolerantly (last id wins, like Validator) and name a
         // dangling layerOrder entry rather than throwing a raw KeyNotFoundException at someone
         // trying to see what is wrong.
-        var byId = new Dictionary<string, LoadedIngredient>();
-        foreach (var i in recipe.Ingredients) byId[i.Manifest.Id] = i;
+        var byId = RecipeLayers.ById(recipe);
         foreach (var layerId in recipe.Manifest.LayerOrder)
         {
             if (byId.TryGetValue(layerId, out var ing))
@@ -355,33 +354,33 @@ public static partial class CommandFactory
             Console.WriteLine($"{indent}  Rule {i + 1}: {RuleLine(recipe.Manifest.Rules[i])}");
     }
 
-    private static void PrintIngredient(LoadedIngredient ing, string indent)
-    {
-        // The ID as well as the kind. It used to print only the name and the kind, which was fine
-        // while nothing on the command line took an ingredient id — and stopped being fine the
-        // moment `add rule --when` did: the id was the one thing the user needed and the one thing
-        // inspect would not tell them. Found by driving the command, not by a test.
-        PrintIngredient(ing, indent, absentPercent: 0);
-    }
-
     /// <summary>
     /// One ingredient, with the chance its owning recipe leaves it out. The chance lives on the
     /// RECIPE, so it is passed in rather than read off the ingredient — an .igt inspected on its own
-    /// has no owning recipe and therefore no chance to print, which is exactly right.
+    /// has no owning recipe and therefore no chance to print, which is exactly right. The ID is
+    /// printed with the kind: `add rule --when` takes an ingredient id, and inspect is where the
+    /// user reads it.
     /// </summary>
-    private static void PrintIngredient(LoadedIngredient ing, string indent, double absentPercent)
+    private static void PrintIngredient(LoadedIngredient ing, string indent, double absentPercent = 0)
     {
-        string absent = absentPercent > 0
+        Console.WriteLine(
+            $"{indent}Ingredient: {ing.Manifest.Name} [{ing.Manifest.Id}] ({ing.Manifest.Kind}){AbsentSuffix(absentPercent)}");
+        foreach (var v in ing.Manifest.Variants)
+            Console.WriteLine(VariantLine(indent, v.Name, v.Id, v.Weight));
+    }
+
+    /// <summary>The "  absent 20%" / "  never appears" tail of an ingredient line; empty when the layer
+    /// always appears. Shared by the book and the Menu printer so the two cannot word it apart.</summary>
+    private static string AbsentSuffix(double absentPercent) =>
+        absentPercent > 0
             ? absentPercent >= 100
                 ? "  never appears"
                 : $"  absent {Pct(absentPercent)}"
             : string.Empty;
-        Console.WriteLine(
-            $"{indent}Ingredient: {ing.Manifest.Name} [{ing.Manifest.Id}] ({ing.Manifest.Kind}){absent}");
-        foreach (var v in ing.Manifest.Variants)
-            Console.WriteLine(
-                $"{indent}  Variant: {v.Name} [{v.Id}] (w={v.Weight.ToString(CultureInfo.InvariantCulture)})");
-    }
+
+    /// <summary>One variant line under an ingredient printed at <paramref name="indent"/>.</summary>
+    private static string VariantLine(string indent, string name, string id, double weight) =>
+        $"{indent}  Variant: {name} [{id}] (w={weight.ToString(CultureInfo.InvariantCulture)})";
 
     /// <summary>
     /// A Menu's tree: recipes, layers, variants, its art mode/size, and the source book's hash —
@@ -407,8 +406,7 @@ public static partial class CommandFactory
         Console.WriteLine(
             $"{indent}Recipe: {recipe.Name} [{recipe.Id}] (weight={recipe.Weight.ToString(CultureInfo.InvariantCulture)})");
 
-        var byId = new Dictionary<string, MenuLayer>(StringComparer.Ordinal);
-        foreach (var layer in recipe.Layers) byId[layer.Id] = layer;
+        var byId = Lookup.ById(recipe.Layers, l => l.Id);
         foreach (string layerId in recipe.LayerOrder)
         {
             if (byId.TryGetValue(layerId, out var layer))
@@ -423,15 +421,9 @@ public static partial class CommandFactory
 
     private static void PrintMenuLayer(MenuLayer layer, string indent, double absentPercent)
     {
-        string absent = absentPercent > 0
-            ? absentPercent >= 100
-                ? "  never appears"
-                : $"  absent {Pct(absentPercent)}"
-            : string.Empty;
-        Console.WriteLine($"{indent}Ingredient: {layer.Name} [{layer.Id}] ({layer.Kind}){absent}");
+        Console.WriteLine($"{indent}Ingredient: {layer.Name} [{layer.Id}] ({layer.Kind}){AbsentSuffix(absentPercent)}");
         foreach (var v in layer.Variants)
-            Console.WriteLine(
-                $"{indent}  Variant: {v.Name} [{v.Id}] (w={v.Weight.ToString(CultureInfo.InvariantCulture)})");
+            Console.WriteLine(VariantLine(indent, v.Name, v.Id, v.Weight));
     }
 
     private static Command Validate()
@@ -580,8 +572,6 @@ public static partial class CommandFactory
             string? file = result.GetValue(path);
             if (string.IsNullOrEmpty(file)) return;   // the missing-argument error already speaks
 
-            bool Given(Option option) => result.GetResult(option) is { Implicit: false };
-
             // Neither form, checked first. Without this the else-branch below treats "not a .rcp" as
             // "an .igt", so `preview book.cbk` was told --variant is required — advice that, followed,
             // produced a different error from a different layer. Say what preview actually reads, and
@@ -596,29 +586,27 @@ public static partial class CommandFactory
 
             if (IsRecipePath(file))
             {
-                if (Given(variant))
+                if (result.IsGiven(variant))
                     result.AddError("--variant names one Variant of an .igt; the .rcp form rolls "
                         + "every layer's variant from --seed. Use --with-variant for the --with layer.");
-                if (Given(color))
+                if (result.IsGiven(color))
                     result.AddError("--color applies to the .igt form; in the .rcp form each "
                         + "colorized layer's color is rolled from --seed, as generation rolls it.");
-                if (Given(model))
+                if (result.IsGiven(model))
                     result.AddError("--model applies to the .igt form; in the .rcp form every layer "
                         + "renders in the color model its own ingredient declares.");
-                if (Given(withVariant) && !Given(with))
+                if (result.IsGiven(withVariant) && !result.IsGiven(with))
                     result.AddError("--with-variant names a variant of --with, but no --with was given.");
             }
             else
             {
-                if (!Given(variant))
+                if (!result.IsGiven(variant))
                     result.AddError($"--variant is required to preview '{file}': an Ingredient holds "
                         + "several variants and this form renders exactly one. Pass a .rcp instead to "
                         + "roll a whole stack.");
-                foreach (var (option, name) in new (Option Option, string Name)[]
-                         { (seed, "--seed"), (only, "--only"), (with, "--with"), (withVariant, "--with-variant") })
-                    if (Given(option))
-                        result.AddError($"{name} applies to the .rcp form, which rolls a whole layer "
-                            + "stack; this form renders the one variant named by --variant.");
+                result.RejectUnless(false, "applies to the .rcp form, which rolls a whole layer "
+                    + "stack; this form renders the one variant named by --variant.",
+                    seed, only, with, withVariant);
             }
         });
 
@@ -904,12 +892,8 @@ public static partial class CommandFactory
         // so a --pivot typed anyway would silently do nothing.
         cmd.Validators.Add(result =>
         {
-            bool Given(Option option) => result.GetResult(option) is { Implicit: false };
-            if (!result.GetValue(models))
-                foreach (var (option, name) in new (Option, string)[]
-                    { (modelFormat, "--model-format"), (pivot, "--pivot"), (voxelSize, "--voxel-size") })
-                    if (Given(option))
-                        result.AddError($"{name} applies only with --models; without it no model is made.");
+            result.RejectUnless(result.GetValue(models),
+                "applies only with --models; without it no model is made.", modelFormat, pivot, voxelSize);
             CheckVoxelSize(result, voxelSize);
         });
         cmd.SetAction(parse =>
@@ -1102,9 +1086,8 @@ public static partial class CommandFactory
         // something.
         cmd.Validators.Add(result =>
         {
-            bool Given(Option option) => result.GetResult(option) is { Implicit: false };
-            bool hasSeed = Given(seed);
-            bool hasTicket = Given(ticket);
+            bool hasSeed = result.IsGiven(seed);
+            bool hasTicket = result.IsGiven(ticket);
             if (hasSeed == hasTicket)
                 result.AddError(hasSeed
                     ? "--seed and --ticket ask for different things — roll a fresh asset, or "
@@ -1114,7 +1097,7 @@ public static partial class CommandFactory
 
             // --max-rerolls governs the ROLL, and --ticket has nothing to roll — it renders a
             // selection that was already made. Rejected rather than quietly ignored, same rule.
-            if (hasTicket && Given(maxRerolls))
+            if (hasTicket && result.IsGiven(maxRerolls))
                 result.AddError("--max-rerolls applies to a --seed roll; --ticket renders an "
                     + "already-rolled ticket, so there is nothing left to reroll.");
         });

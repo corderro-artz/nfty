@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Markup.Xaml;
+using Avalonia.Reactive;
 using Nfty.App.ViewModels;
 
 namespace Nfty.App.Views;
@@ -76,12 +77,4 @@ public partial class LandingView : UserControl
         Focus();
     }
 
-    /// <summary>Minimal <see cref="IObserver{T}"/> for an Avalonia property subscription — the
-    /// framework hands out <c>IObservable</c> and the BCL has no lambda overload for it.</summary>
-    private sealed class AnonymousObserver<T>(Action<T> onNext) : IObserver<T>
-    {
-        public void OnCompleted() { }
-        public void OnError(Exception error) { }
-        public void OnNext(T value) => onNext(value);
-    }
 }

@@ -958,18 +958,18 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
         if (ActiveDraft is not { } target) return;
         string? path;
         try { path = await _picker.OpenFileAsync("Import variant image", ".png"); }
-        catch (Exception ex) { await ShowErrorAsync("Could not import", ex.Message); return; }
+        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not import", ex.Message); return; }
         if (path is null) return;   // canceled
 
         Image<Rgba32> img;
         try { img = Image.Load<Rgba32>(path); }
-        catch (Exception ex) { await ShowErrorAsync("Could not import", ex.Message); return; }
+        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not import", ex.Message); return; }
         try
         {
             var canvas = _draft.Canvas;
             if (img.Width != canvas.Width || img.Height != canvas.Height)
             {
-                await ShowErrorAsync("Wrong size",
+                await _dialogs.ShowErrorAsync("Wrong size",
                     $"This image is {img.Width}×{img.Height}; the canvas is {canvas.Width}×{canvas.Height}.");
                 return;
             }
@@ -1012,7 +1012,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
 
             if (hadColor)
             {
-                await ShowErrorAsync("Color flattened",
+                await _dialogs.ShowErrorAsync("Color flattened",
                     "This layer is a value-map: it stores lightness only, and its color is chosen at "
                     + "generation time. The imported image was converted to its lightness, so its own "
                     + "colors are gone. Import into a custom layer instead to keep the image exactly "
@@ -1028,7 +1028,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
     }
 
     private async Task ShowErrorAsync(string title, string message) =>
-        await _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, title, message));
+        await _dialogs.ShowErrorAsync(title, message);
 
     /// <summary>Re-render one filmstrip entry's thumbnail after its pixels changed.</summary>
     private void RefreshThumbnail(string variantId)
@@ -1576,7 +1576,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
         .Select(i => i.Manifest.Name).ToHashSet(StringComparer.Ordinal);
 
     private LoadedRecipe LiveRecipe =>
-        _session.Current?.Recipes.FirstOrDefault(r => r.Manifest.Id == _recipe.Manifest.Id) ?? _recipe;
+        _session.Current is { } current && current.TryRecipe(_recipe.Manifest.Id, out var live) ? live : _recipe;
 
     /// <summary>The first of <c>basis</c>, <c>basis 2</c>, <c>basis 3</c>… not already taken.</summary>
     private static string Unique(string basis, ICollection<string> taken)
@@ -1612,7 +1612,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
         // A Rise save changed this layer's pixels while edits were unsaved here: refuse, say why.
         if (_staleReason is { } stale)
         {
-            await ShowErrorAsync("Cannot save this layer", stale);
+            await _dialogs.ShowErrorAsync("Cannot save this layer", stale);
             return;
         }
 
@@ -1634,8 +1634,9 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
             // Only the surviving draft variants' depth maps: a deleted variant's key was already
             // dropped from _depths (DeleteVariant), but filtering here too means a stale key left by
             // any other path can never reach the file.
+            var variantIds = _draft.Variants.Select(v => v.Id).ToHashSet(StringComparer.Ordinal);
             var depths = _depths
-                .Where(kv => _draft.Variants.Any(v => v.Id == kv.Key))
+                .Where(kv => variantIds.Contains(kv.Key))
                 .ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal);
 
             // NOTHING ELSE ON THIS PATH VALIDATES. CookBookPersistence writes what it is handed, and
@@ -1648,55 +1649,81 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
             if (problems.Count > 0)
             {
                 foreach (var i in images.Values) i.Dispose();   // ours until a save path adopts them
-                await ShowErrorAsync("Cannot save this layer", string.Join(Environment.NewLine, problems));
+                await _dialogs.ShowErrorAsync("Cannot save this layer", Problems.Join(problems));
                 return;
             }
 
-            // Loose (.igt) save: write the ingredient straight back to its own archive.
             if (_looseSavePath is string loosePath)
-            {
-                // What is on disk after this save, kept so Rise (which reads the saved layer) sees it.
-                var kept = images.ToDictionary(kv => kv.Key, kv => kv.Value.Clone(), StringComparer.Ordinal);
-                try
-                {
-                    await AtomicFile.ReplaceAsync(loosePath,
-                        tmp => IngredientArchive.WriteAsync(tmp, manifest, images, depths));
-                }
-                finally
-                {
-                    foreach (var i in images.Values) i.Dispose();   // our copies — ours to free
-                }
-                var replacedLoose = _ing;
-                _ing = new LoadedIngredient { Manifest = manifest, VariantImages = kept, Depths = depths };
-                // The ingredient this save replaced: its images are orphaned now (Dispose is idempotent,
-                // so the wrapper book freeing them again later is harmless).
-                foreach (var img in replacedLoose.VariantImages.Values) img.Dispose();
-                IsDirty = false;
-                return;   // loose has no cookbook/session/Explorer to refresh
-            }
-
-            // Splice a loaded ingredient over the draft's export into the live book (we own its images
-            // until Upsert adopts them), then persist (temp write → atomic move → rehash → Replace).
-            var newIng = new LoadedIngredient { Manifest = manifest, VariantImages = images, Depths = depths };
-            var book2 = CookBookEdits.UpsertIngredient(_session.Current!, _recipe.Manifest.Id, newIng);
-
-            // Only a save that REPLACED this ingredient orphans its images. Saving color art as a
-            // new ingredient leaves the original in the book — disposing its images there would
-            // blank the layer it was supposed to leave alone.
-            var replaced = string.Equals(_ing.Manifest.Id, manifest.Id, StringComparison.Ordinal) ? _ing : null;
-            var book3 = await CookBookPersistence.PersistAsync(_session, book2);
-            _ing = newIng;                                     // subsequent saves target the new ingredient
-            if (replaced is not null)
-                foreach (var img in replaced.VariantImages.Values) img.Dispose();   // free the orphaned images
-
-            IsDirty = false;
-            Saved?.Invoke(book3);
+                await SaveLooseAsync(loosePath, manifest, images, depths);
+            else
+                await SaveIntoBookAsync(manifest, images, depths);
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, "Could not save", ex.Message));
+            await _dialogs.ShowErrorAsync("Could not save", ex.Message);
         }
         finally { IsSaving = false; }
+    }
+
+    /// <summary>Loose (.igt) save: writes the ingredient straight back to its own archive. Loose has no
+    /// cookbook, session or Explorer to refresh.</summary>
+    /// <param name="loosePath">The .igt the editor was opened on.</param>
+    /// <param name="manifest">The manifest to write.</param>
+    /// <param name="images">The rasters to write; ours until this returns, freed here.</param>
+    /// <param name="depths">The surviving variants' depth maps.</param>
+    private async Task SaveLooseAsync(string loosePath, IngredientManifest manifest,
+        IReadOnlyDictionary<string, Image<Rgba32>> images, Dictionary<string, DepthMap> depths)
+    {
+        // What is on disk after this save, kept so Rise (which reads the saved layer) sees it.
+        var kept = images.ToDictionary(kv => kv.Key, kv => kv.Value.Clone(), StringComparer.Ordinal);
+        try
+        {
+            await AtomicFile.ReplaceAsync(loosePath,
+                tmp => IngredientArchive.WriteAsync(tmp, manifest, images, depths));
+        }
+        finally
+        {
+            foreach (var i in images.Values) i.Dispose();   // our copies - ours to free
+        }
+        var replacedLoose = _ing;
+        _ing = new LoadedIngredient { Manifest = manifest, VariantImages = kept, Depths = depths };
+        // The ingredient this save replaced: its images are orphaned now (Dispose is idempotent,
+        // so the wrapper book freeing them again later is harmless).
+        foreach (var img in replacedLoose.VariantImages.Values) img.Dispose();
+        IsDirty = false;
+    }
+
+    /// <summary>Splices the exported ingredient over the live book's and persists (temp write, atomic
+    /// move, rehash, Replace).</summary>
+    /// <param name="manifest">The manifest to write.</param>
+    /// <param name="images">The rasters; ours until the persisted book adopts them.</param>
+    /// <param name="depths">The surviving variants' depth maps.</param>
+    private async Task SaveIntoBookAsync(IngredientManifest manifest,
+        IReadOnlyDictionary<string, Image<Rgba32>> images, Dictionary<string, DepthMap> depths)
+    {
+        // THE LOCK IS CHECKED HERE AS WELL AS FIRST IN SaveCore: this is the method that rewrites the
+        // archive, so it must refuse on its own account, not trust that its caller already did.
+        if (IsReadOnly)
+        {
+            foreach (var i in images.Values) i.Dispose();
+            return;
+        }
+
+        // We own the loaded images until Upsert adopts them.
+        var newIng = new LoadedIngredient { Manifest = manifest, VariantImages = images, Depths = depths };
+        var book2 = CookBookEdits.UpsertIngredient(_session.Current!, _recipe.Manifest.Id, newIng);
+
+        // Only a save that REPLACED this ingredient orphans its images. Saving color art as a
+        // new ingredient leaves the original in the book - disposing its images there would
+        // blank the layer it was supposed to leave alone.
+        var replaced = string.Equals(_ing.Manifest.Id, manifest.Id, StringComparison.Ordinal) ? _ing : null;
+        var book3 = await CookBookPersistence.PersistAsync(_session, book2);
+        _ing = newIng;                                     // subsequent saves target the new ingredient
+        if (replaced is not null)
+            foreach (var img in replaced.VariantImages.Values) img.Dispose();   // free the orphaned images
+
+        IsDirty = false;
+        Saved?.Invoke(book3);
     }
 
     /// <summary>Whether Rise may open: it reads the SAVED picture, so the editor must have no unsaved
@@ -1746,18 +1773,8 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
         a.Depths.Count == b.Depths.Count
         && a.Depths.All(kv => b.Depths.TryGetValue(kv.Key, out var o) && o.ToBytes().AsSpan().SequenceEqual(kv.Value.ToBytes()))
         && a.VariantImages.Count == b.VariantImages.Count
-        && a.VariantImages.All(kv => b.VariantImages.TryGetValue(kv.Key, out var o) && SamePixels(kv.Value, o));
+        && a.VariantImages.All(kv => b.VariantImages.TryGetValue(kv.Key, out var o) && (ReferenceEquals(kv.Value, o) || PixelCompare.Same(kv.Value, o)));
 
-    private static bool SamePixels(Image<Rgba32> a, Image<Rgba32> b)
-    {
-        if (ReferenceEquals(a, b)) return true;
-        if (a.Width != b.Width || a.Height != b.Height) return false;
-        var x = new Rgba32[a.Width * a.Height];
-        var y = new Rgba32[x.Length];
-        a.CopyPixelDataTo(x);
-        b.CopyPixelDataTo(y);
-        return x.AsSpan().SequenceEqual(y);
-    }
 
     /// <summary>The stored depth map of a variant as this editor holds it, or null (test hook).</summary>
     internal DepthMap? DepthOf(string variantId) => _depths.GetValueOrDefault(variantId);

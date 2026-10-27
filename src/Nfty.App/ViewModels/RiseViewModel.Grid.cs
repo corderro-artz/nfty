@@ -1,3 +1,4 @@
+using Nfty.App.Services;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -170,7 +171,7 @@ public sealed partial class RiseViewModel
         {
             foreach (var item in old) item.PropertyChanged += OnItemExportChanged;
             if (!_disposed)
-                await _dialogs.ShowAsync<object>(new ErrorDialogViewModel(_dialogs, "Could not change the grid", ex.Message));
+                await _dialogs.ShowErrorAsync("Could not change the grid", ex.Message);
             return;
         }
         finally { IsVoxelBusy = false; }
