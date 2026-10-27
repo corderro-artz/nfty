@@ -113,14 +113,11 @@ public static partial class CommandFactory
         // typed without --sheet would silently make no sheet. Counts below one cannot name a grid.
         cmd.Validators.Add(result =>
         {
-            bool Given(Option option) => result.GetResult(option) is { Implicit: false };
-            if (!result.GetValue(sheet))
-                foreach (var (option, name) in new (Option, string)[] { (sheetCols, "--sheet-cols"), (sheetRows, "--sheet-rows") })
-                    if (Given(option)) result.AddError($"{name} sizes the spritesheet; it needs --sheet.");
+            result.RejectUnless(result.GetValue(sheet), "sizes the spritesheet; it needs --sheet.", sheetCols, sheetRows);
             foreach (var (option, name) in new (Option<int>, string)[] { (sheetCols, "--sheet-cols"), (sheetRows, "--sheet-rows") })
-                if (Given(option) && result.GetValue(option) < 1)
+                if (result.IsGiven(option) && result.GetValue(option) < 1)
                     result.AddError($"{name} must be at least 1.");
-            if (!result.GetValue(watermark) && Given(watermarkCorner))
+            if (!result.GetValue(watermark) && result.IsGiven(watermarkCorner))
                 result.AddError("--watermark-corner places the number; it needs --watermark.");
             if (result.GetValue(models) && result.GetValue(noModels))
                 result.AddError("--models and --no-models ask for different things.");
@@ -151,8 +148,8 @@ public static partial class CommandFactory
                 options = options with
                 {
                     SpriteSheet = true,
-                    SpriteSheetColumns = parse.GetResult(sheetCols) is { Implicit: false } ? parse.GetValue(sheetCols) : null,
-                    SpriteSheetRows = parse.GetResult(sheetRows) is { Implicit: false } ? parse.GetValue(sheetRows) : null,
+                    SpriteSheetColumns = parse.IsGiven(sheetCols) ? parse.GetValue(sheetCols) : null,
+                    SpriteSheetRows = parse.IsGiven(sheetRows) ? parse.GetValue(sheetRows) : null,
                 };
             if (parse.GetValue(watermark))
                 options = options with

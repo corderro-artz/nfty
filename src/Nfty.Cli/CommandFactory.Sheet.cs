@@ -39,13 +39,12 @@ public static partial class CommandFactory
 
         cmd.Validators.Add(result =>
         {
-            bool Given(Option option) => result.GetResult(option) is { Implicit: false };
-            bool colsRows = Given(cols) || Given(rows);
-            if (Given(cols) != Given(rows))
+            bool colsRows = result.IsGiven(cols) || result.IsGiven(rows);
+            if (result.IsGiven(cols) != result.IsGiven(rows))
                 result.AddError("--cols and --rows describe the grid together; pass both.");
-            if (colsRows && Given(cell))
+            if (colsRows && result.IsGiven(cell))
                 result.AddError("--cell and --cols/--rows are two ways to say one grid; pass one.");
-            if (result.GetValue(clear) && (colsRows || Given(cell)))
+            if (result.GetValue(clear) && (colsRows || result.IsGiven(cell)))
                 result.AddError("--clear removes the grid; it cannot be combined with --cols, --rows or --cell.");
         });
 
@@ -54,7 +53,7 @@ public static partial class CommandFactory
             string file = parse.GetValue(png)!;
             if (!File.Exists(file)) throw new FileNotFoundException($"No spritesheet at '{file}'.", file);
 
-            bool setCols = parse.GetResult(cols) is { Implicit: false };
+            bool setCols = parse.IsGiven(cols);
             bool setCell = parse.GetValue(cell) is { Length: > 0 };
 
             if (parse.GetValue(clear))
