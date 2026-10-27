@@ -236,6 +236,10 @@ public static partial class CommandFactory
         var group = new Command("set", "Change a property of an existing archive.");
         group.Subcommands.Add(SetChance());
         group.Subcommands.Add(SetDepth());
+        group.Subcommands.Add(SetVariant());
+        group.Subcommands.Add(SetRecipe());
+        group.Subcommands.Add(SetCookbook());
+        group.Subcommands.Add(SetVoxelReady());
         return group;
     }
 
@@ -440,6 +444,9 @@ public static partial class CommandFactory
     {
         var group = new Command("remove", "Remove an item from an existing archive.");
         group.Subcommands.Add(RemoveRule());
+        group.Subcommands.Add(RemoveIngredient());
+        group.Subcommands.Add(RemoveVariant());
+        group.Subcommands.Add(RemoveRecipe());
         return group;
     }
 
@@ -741,6 +748,7 @@ public static partial class CommandFactory
     {
         var group = new Command("move", "Reorder the layers an existing archive stacks.");
         group.Subcommands.Add(MoveIngredient());
+        group.Subcommands.Add(MoveRecipe());
         return group;
     }
 
