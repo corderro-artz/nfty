@@ -84,6 +84,10 @@ public static class StackDepth
 
             var bytes = new byte[checked(w * h * 2)];
             var seams = new int[w * h];
+            var frontOwners = new int[w * h];
+            var backOwners = new int[w * h];
+            Array.Fill(frontOwners, -1);
+            Array.Fill(backOwners, -1);
             for (int y = 0; y < h; y++)
             {
                 for (int x = 0; x < w; x++)
@@ -101,6 +105,8 @@ public static class StackDepth
                         if (b > maxB) { maxB = b; ownB = i; }
                     }
 
+                    frontOwners[(y * w) + x] = ownF;
+                    backOwners[(y * w) + x] = ownB;
                     int k = ((y * w) + x) * 2;
                     bytes[k] = (byte)maxF;
                     bytes[k + 1] = (byte)maxB;
@@ -116,7 +122,7 @@ public static class StackDepth
                 }
             }
             var faces = new StackFaces(front, back, seams);
-            var rise = new StackRise(art, DepthMap.FromBytes(w, h, bytes), faces);
+            var rise = new StackRise(art, DepthMap.FromBytes(w, h, bytes), faces, frontOwners, backOwners);
             art = front = back = null;   // owned by the rise now
             return rise;
         }

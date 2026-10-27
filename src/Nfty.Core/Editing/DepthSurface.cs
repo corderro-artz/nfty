@@ -162,6 +162,25 @@ public sealed class DepthSurface : IEditSurface<DepthPixel>
     public List<(int x, int y)> SameColorRegion(int x, int y) =>
         IsSolid(x, y) ? Footprint.Region(_art, x, y) : new List<(int x, int y)>();
 
+    /// <summary>Replaces the whole depth with a stored map, in place: every solid pixel takes the
+    /// map's pair, non-solid pixels stay 0. The instance is unchanged, so references to it stay valid.</summary>
+    /// <param name="map">The depth to take, or null for flat paper (0/0 everywhere).</param>
+    /// <exception cref="ArgumentException"><paramref name="map"/> is another size than the surface.</exception>
+    public void Overwrite(DepthMap? map)
+    {
+        if (map is not null && (map.Width != Width || map.Height != Height))
+            throw new ArgumentException(
+                $"Depth map is {map.Width}x{map.Height} but the surface is {Width}x{Height}.", nameof(map));
+        for (int y = 0; y < Height; y++)
+            for (int x = 0; x < Width; x++)
+            {
+                int i = y * Width + x;
+                bool take = map is not null && _solid[i];
+                _depth[i * 2] = take ? map!.Front(x, y) : (byte)0;
+                _depth[i * 2 + 1] = take ? map!.Back(x, y) : (byte)0;
+            }
+    }
+
     /// <summary>The depth as a map to store.</summary>
     /// <returns>Null when every solid pixel is 0 front and 0 back, so flat has one spelling: absent.</returns>
     public DepthMap? ToDepthMap() =>

@@ -336,6 +336,28 @@ public class StackDepthTests
         Assert.Contains("walnut", ex.Message);
     }
 
+    [Fact]
+    public void Owners_are_the_topmost_layers_reaching_each_max()
+    {
+        using var body = Row(Red, Red, Red, Clear);
+        using var strap = Row(Clear, Clear, Blue, Clear);
+        using var rise = Rise((body, Map(1, 9, 1, 9, 1, 9, 0, 0)), (strap, Map(0, 0, 0, 0, 3, 0, 0, 0)));
+        Assert.Equal(1, rise.FrontOwner(2, 0));
+        Assert.Equal(0, rise.BackOwner(2, 0));
+        Assert.Equal((0, 0), (rise.FrontOwner(1, 0), rise.BackOwner(1, 0)));
+        Assert.Equal((-1, -1), (rise.FrontOwner(3, 0), rise.BackOwner(3, 0)));
+    }
+
+    [Fact]
+    public void On_a_paper_stack_both_owners_are_the_topmost_solid_layer()
+    {
+        using var bottom = Row(Red, Red);
+        using var top = Row(Clear, Blue);
+        using var rise = Rise((bottom, null), (top, null));
+        Assert.Equal((1, 1), (rise.FrontOwner(1, 0), rise.BackOwner(1, 0)));
+        Assert.Equal((0, 0), (rise.FrontOwner(0, 0), rise.BackOwner(0, 0)));
+    }
+
     private static LoadedIngredient Layer(string id, string variant, Image<Rgba32> img, DepthMap? depth) => new()
     {
         Manifest = new IngredientManifest(id, id, LayerKind.Custom, null, new[] { new Variant(variant, variant, 1) }),
