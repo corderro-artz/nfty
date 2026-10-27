@@ -186,9 +186,10 @@ public static class SetWriter
 
     /// <summary>Reads what an existing Set already holds, for extend.</summary>
     /// <param name="outDir">The Set folder.</param>
+    /// <param name="parallelism">How wide the per-file parsing may run; null means <see cref="Parallelism.Default"/>. The result never depends on it.</param>
     /// <returns>Its DNAs and the next free number. An empty Set yields no DNAs and number 1.</returns>
     /// <exception cref="CorruptSetException">An item file is unreadable or missing its fields.</exception>
-    public static ExistingSet ReadExisting(string outDir)
+    public static ExistingSet ReadExisting(string outDir, Parallelism? parallelism = null)
     {
         string? sha = RecordedShaAt(outDir);
         var recordedModels = RecordedModelsAt(outDir);
@@ -196,24 +197,24 @@ public static class SetWriter
         var nftyDir = Path.Combine(outDir, SetLayout.NftyDir);
         if (!Directory.Exists(nftyDir)) return new ExistingSet(Array.Empty<string>(), 1, sha, recordedModels);
 
-        var dnas = new List<string>();
-        int maxNumber = 0;
-        foreach (var file in Directory.EnumerateFiles(nftyDir, "*.json"))
-        {
-            var (dna, number) = ReadDnaAndNumber(File.ReadAllText(file), file);
-            dnas.Add(dna);
-            maxNumber = Math.Max(maxNumber, number);
-        }
-        return new ExistingSet(dnas, maxNumber + 1, sha, recordedModels);
+        // Parsed in parallel into slots; the DNA list keeps enumeration order, and the maximum is
+        // order-free. The listing is not sorted: DNA order is observable to nothing, and a damaged
+        // file is named by lowest index in enumeration order either way.
+        var files = Directory.EnumerateFiles(nftyDir, "*.json").ToList();
+        var parsed = new (string Dna, int Number)[files.Count];
+        ParallelWork.For(files.Count, parallelism ?? Parallelism.Default, CancellationToken.None,
+            i => parsed[i] = ReadDnaAndNumber(File.ReadAllText(files[i]), files[i]));
+        return Assemble(parsed, sha, recordedModels);
     }
 
     /// <summary>Reads what an existing Set already holds, for extend.</summary>
     /// <param name="outDir">The Set folder.</param>
     /// <param name="cancellationToken">Cancels the read.</param>
+    /// <param name="parallelism">How wide the per-file parsing may run; null means <see cref="Parallelism.Default"/>.</param>
     /// <returns>Its DNAs and the next free number.</returns>
     /// <exception cref="CorruptSetException">An item file is unreadable or missing its fields.</exception>
     public static async Task<ExistingSet> ReadExistingAsync(
-        string outDir, CancellationToken cancellationToken = default)
+        string outDir, CancellationToken cancellationToken = default, Parallelism? parallelism = null)
     {
         string setJson = SetJsonPath(outDir);
         string? sha = null;
@@ -229,15 +230,30 @@ public static class SetWriter
         var nftyDir = Path.Combine(outDir, SetLayout.NftyDir);
         if (!Directory.Exists(nftyDir)) return new ExistingSet(Array.Empty<string>(), 1, sha, recordedModels);
 
-        var dnas = new List<string>();
+        var files = Directory.EnumerateFiles(nftyDir, "*.json").ToList();
+        var parsed = new (string Dna, int Number)[files.Count];
+        await ParallelWork.ForEachAsync(Enumerable.Range(0, files.Count).ToList(),
+            parallelism ?? Parallelism.Default, cancellationToken,
+            async (i, ct) =>
+            {
+                var text = await File.ReadAllTextAsync(files[i], ct).ConfigureAwait(false);
+                parsed[i] = ReadDnaAndNumber(text, files[i]);
+            }).ConfigureAwait(false);
+        return Assemble(parsed, sha, recordedModels);
+    }
+
+    /// <summary>Folds the per-file slots into an <see cref="ExistingSet"/>: DNAs in slot order, the
+    /// next number one past the largest.</summary>
+    private static ExistingSet Assemble((string Dna, int Number)[] parsed, string? sha, SetModels? models)
+    {
+        var dnas = new List<string>(parsed.Length);
         int maxNumber = 0;
-        foreach (var file in Directory.EnumerateFiles(nftyDir, "*.json"))
+        foreach (var (dna, number) in parsed)
         {
-            var (dna, number) = ReadDnaAndNumber(await File.ReadAllTextAsync(file, cancellationToken).ConfigureAwait(false), file);
             dnas.Add(dna);
             maxNumber = Math.Max(maxNumber, number);
         }
-        return new ExistingSet(dnas, maxNumber + 1, sha, recordedModels);
+        return new ExistingSet(dnas, maxNumber + 1, sha, models);
     }
 
     /// <summary>

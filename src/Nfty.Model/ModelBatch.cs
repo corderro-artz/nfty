@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text;
+using Nfty.Core;
 using Nfty.Core.Model;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -229,6 +230,108 @@ public static class ModelBatch
         }
         sink.Complete();
         // Skips are reported in the caller's order, as Build reports them.
+        var rank = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        for (int k = 0; k < names.Count; k++) rank[names[k]] = k;
+        skipped.Sort((x, y) => rank[x.Name].CompareTo(rank[y.Name]));
+        return new ModelExportResult(written, skipped, replaced);
+    }
+
+    /// <summary>Rises a batch like <see cref="Export(IReadOnlyList{string}, Func{int, ModelInput}, Action{ModelInput}?, RiseOptions, ModelDestination, IProgress{int}?, CancellationToken, Action{string}?)"/>,
+    /// but builds meshes in a bounded window of pictures at once and writes them strictly in ordinal
+    /// order, so the destination holds exactly the bytes the sequential overload gives.</summary>
+    /// <param name="baseNames">One wanted name per picture; made safe and distinct exactly as
+    /// <see cref="Build"/> does, in this order.</param>
+    /// <param name="open">Hands over picture <c>i</c>. <b>Called from worker threads</b>, possibly
+    /// several at once and for several different pictures: it must be safe to call concurrently. Each
+    /// picture is released before the batch asks for one beyond the window. Its
+    /// <see cref="ModelInput.BaseName"/> is ignored: the name is <paramref name="baseNames"/>'s.</param>
+    /// <param name="release">Called once for every opened picture as soon as its model is built (or its
+    /// build failed), on the thread that built it; null when the caller keeps ownership.</param>
+    /// <param name="options">How to rise and write.</param>
+    /// <param name="destination">A folder or a zip.</param>
+    /// <param name="parallelism">How many pictures build at once. A sequential degree gives exactly
+    /// the sequential overload's behavior, on the calling thread.</param>
+    /// <param name="progress">Told how many pictures are done (written or skipped), in order, one call at a time.</param>
+    /// <param name="cancellation">Checked before each window and each picture. A canceled zip is never left
+    /// behind; a canceled folder keeps every window finished before the stop, each model whole.</param>
+    /// <param name="onWritten">Told each file's name once it is in the destination, in write order, on
+    /// the calling thread.</param>
+    /// <returns>The file names written, the pictures skipped, and the files that already existed.</returns>
+    /// <remarks>
+    /// <para><b>Build wide, write narrow.</b> The mesh build and the file encode are pure functions of
+    /// one picture and fan out into slots; the sink (a zip's entries share one stream) is only ever
+    /// touched by the calling thread, in the ordinal order the sequential overload uses. Memory is
+    /// bounded by the window — at most twice the degree of finished models wait to be written.</para>
+    /// <para>When several pictures in one window fail, the lowest-ordinal one is rethrown, so the
+    /// message never depends on the thread count. A window that fails writes nothing of itself.</para>
+    /// </remarks>
+    public static ModelExportResult Export(IReadOnlyList<string> baseNames, Func<int, ModelInput> open,
+        Action<ModelInput>? release, RiseOptions options, ModelDestination destination,
+        Parallelism parallelism, IProgress<int>? progress = null, CancellationToken cancellation = default,
+        Action<string>? onWritten = null)
+    {
+        ArgumentNullException.ThrowIfNull(baseNames);
+        ArgumentNullException.ThrowIfNull(open);
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(destination);
+        ArgumentNullException.ThrowIfNull(parallelism);
+
+        var names = UniqueBaseNames(baseNames);
+        var order = Enumerable.Range(0, names.Count)
+            .OrderBy(i => FileNamesFor(names[i], options.Format)[0], StringComparer.Ordinal).ToList();
+        foreach (var n in names)
+            foreach (var f in FileNamesFor(n, options.Format)) CheckPlain(f);
+
+        var written = new List<string>();
+        var skipped = new List<SkippedModel>();
+        var replaced = new List<string>();
+        using var sink = destination.Open(replaced);
+        int done = 0;
+        int window = parallelism.IsSequential ? 1 : parallelism.Effective * 2;
+        for (int start = 0; start < order.Count; start += window)
+        {
+            cancellation.ThrowIfCancellationRequested();
+            int count = Math.Min(window, order.Count - start);
+            var filesSlots = new IReadOnlyList<ModelFile>?[count];
+            var skipSlots = new SkippedModel?[count];
+
+            ParallelWork.For(count, parallelism, cancellation, k =>
+            {
+                int i = order[start + k];
+                string name = names[i];
+                var input = open(i);
+                try
+                {
+                    var mesh = Riser.TryBuild(input.Art, input.Depth, options, $"'{name}'", input.Faces);
+                    if (mesh is null)
+                        skipSlots[k] = new SkippedModel(name, SkipReason.NothingSolid, "nothing in it is fully opaque, so there is nothing to rise");
+                    else
+                        filesSlots[k] = ModelWriter.Write(mesh, input.Art, options, name, input.Faces);
+                }
+                catch (PartialAlphaException ex)
+                {
+                    skipSlots[k] = new SkippedModel(name, SkipReason.PartialAlpha, ex.Message);
+                }
+                finally
+                {
+                    release?.Invoke(input);
+                }
+            });
+
+            for (int k = 0; k < count; k++)
+            {
+                if (skipSlots[k] is { } skip) skipped.Add(skip);
+                if (filesSlots[k] is { } files)
+                    foreach (var f in files)
+                    {
+                        sink.Add(f);
+                        onWritten?.Invoke(f.FileName);
+                        written.Add(f.FileName);
+                    }
+                progress?.Report(++done);
+            }
+        }
+        sink.Complete();
         var rank = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         for (int k = 0; k < names.Count; k++) rank[names[k]] = k;
         skipped.Sort((x, y) => rank[x.Name].CompareTo(rank[y.Name]));

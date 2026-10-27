@@ -80,6 +80,17 @@ internal static class ArchiveIo
     /// <returns>The decoded image; the caller owns it.</returns>
     public static Image<Rgba32> DecodeImage(byte[] bytes) => Image.Load<Rgba32>(bytes);
 
+    /// <summary>Encodes an image as PNG exactly as <see cref="WriteImage"/> would store it. Pure, and
+    /// safe to call from many threads at once on different images.</summary>
+    /// <param name="img">The image; the caller keeps ownership.</param>
+    /// <returns>The encoded bytes.</returns>
+    public static byte[] EncodePng(Image<Rgba32> img)
+    {
+        using var ms = new MemoryStream();
+        img.Save(ms, new PngEncoder());
+        return ms.ToArray();
+    }
+
     /// <summary>Writes one entry's raw bytes, unencoded.</summary>
     /// <param name="zip">The open archive.</param>
     /// <param name="name">The entry to write.</param>

@@ -49,13 +49,15 @@ public static class CookBookArchive
     /// <param name="manifest">The book's manifest. Its <c>PartialAlpha</c> is ignored — the
     /// written value is recomputed from <paramref name="recipes"/>' images.</param>
     /// <param name="recipes">Recipes to nest inside it.</param>
-    public static void Write(string path, CookBookManifest manifest, IReadOnlyList<LoadedRecipe> recipes)
+    /// <param name="parallelism">How wide image encoding or decoding may run; null means <see cref="Parallelism.Default"/>. Never changes the bytes.</param>
+    public static void Write(string path, CookBookManifest manifest, IReadOnlyList<LoadedRecipe> recipes,
+        Parallelism? parallelism = null)
     {
         using var zip = ZipFile.Open(path, ZipArchiveMode.Create);
         ArchiveIo.WriteManifest(zip, Stamped(manifest, recipes));
         foreach (var r in recipes)
             ArchiveIo.WriteNested(zip, $"recipes/{r.Manifest.Id}.rcp",
-                inner => RecipeArchive.Write(inner, r.Manifest, r.Ingredients));
+                inner => RecipeArchive.Write(inner, r.Manifest, r.Ingredients, parallelism));
     }
 
     /// <summary>
@@ -74,12 +76,13 @@ public static class CookBookArchive
 
     /// <summary>Reads a CookBook, eagerly decoding every variant image inside it.</summary>
     /// <param name="path">Archive path.</param>
+    /// <param name="parallelism">How wide decoding may run; null means <see cref="Parallelism.Default"/>.</param>
     /// <returns>The loaded book. The caller owns it and must dispose it — that frees every
     /// decoded image in the tree. Its manifest's <c>PartialAlpha</c> is recomputed from its loaded
     /// recipes rather than trusting the stored value.</returns>
     /// <exception cref="InvalidDataException">The archive or a manifest inside it is unreadable.</exception>
     /// <exception cref="UnsupportedSchemaVersionException">It declares a newer schema than this build reads.</exception>
-    public static LoadedCookBook Read(string path)
+    public static LoadedCookBook Read(string path, Parallelism? parallelism = null)
     {
         using var zip = ZipFile.OpenRead(path);
         var manifest = ArchiveIo.ReadManifest<CookBookManifest>(zip);
@@ -87,7 +90,7 @@ public static class CookBookArchive
         try
         {
             foreach (var name in InOrder(ArchiveIo.EntryNamesUnder(zip, "recipes/"), manifest))
-                recipes.Add(ArchiveIo.ReadNested(zip, name, RecipeArchive.Read));
+                recipes.Add(ArchiveIo.ReadNested(zip, name, inner => RecipeArchive.Read(inner, parallelism)));
 
             // Inside the try, not after it. The hash reads the whole file and can fail — on I/O, or
             // on cancellation in the async twin — and at this point `recipes` owns every decoded
@@ -115,24 +118,27 @@ public static class CookBookArchive
     /// written value is recomputed from <paramref name="recipes"/>' images.</param>
     /// <param name="recipes">Recipes to nest inside it.</param>
     /// <param name="ct">Cancels the write.</param>
+    /// <param name="parallelism">How wide image encoding or decoding may run; null means <see cref="Parallelism.Default"/>. Never changes the bytes.</param>
     /// <returns>A task that completes when the archive is written.</returns>
     public static async Task WriteAsync(string path, CookBookManifest manifest,
-        IReadOnlyList<LoadedRecipe> recipes, CancellationToken ct = default)
+        IReadOnlyList<LoadedRecipe> recipes, CancellationToken ct = default, Parallelism? parallelism = null)
     {
         using var zip = ZipFile.Open(path, ZipArchiveMode.Create);
         await ArchiveIo.WriteManifestAsync(zip, Stamped(manifest, recipes), ct).ConfigureAwait(false);
         foreach (var r in recipes)
             await ArchiveIo.WriteNestedAsync(zip, $"recipes/{r.Manifest.Id}.rcp",
-                inner => RecipeArchive.WriteAsync(inner, r.Manifest, r.Ingredients, ct), ct).ConfigureAwait(false);
+                inner => RecipeArchive.WriteAsync(inner, r.Manifest, r.Ingredients, ct, parallelism), ct).ConfigureAwait(false);
     }
 
     /// <summary>Reads a CookBook, eagerly decoding every variant image inside it.</summary>
     /// <param name="path">Archive path.</param>
     /// <param name="ct">Cancels the read. Anything already decoded is disposed before the
     /// cancellation propagates.</param>
+    /// <param name="parallelism">How wide decoding may run; null means <see cref="Parallelism.Default"/>.</param>
     /// <returns>The loaded book; the caller owns it. Its manifest's <c>PartialAlpha</c> is
     /// recomputed from its loaded recipes rather than trusting the stored value.</returns>
-    public static async Task<LoadedCookBook> ReadAsync(string path, CancellationToken ct = default)
+    public static async Task<LoadedCookBook> ReadAsync(string path, CancellationToken ct = default,
+        Parallelism? parallelism = null)
     {
         var recipes = new List<LoadedRecipe>();
         try
@@ -142,7 +148,7 @@ public static class CookBookArchive
             {
                 manifest = await ArchiveIo.ReadManifestAsync<CookBookManifest>(zip, ct).ConfigureAwait(false);
                 foreach (var name in InOrder(ArchiveIo.EntryNamesUnder(zip, "recipes/"), manifest))
-                    recipes.Add(await ArchiveIo.ReadNestedAsync(zip, name, RecipeArchive.ReadAsync, ct).ConfigureAwait(false));
+                    recipes.Add(await ArchiveIo.ReadNestedAsync(zip, name, (inner, token) => RecipeArchive.ReadAsync(inner, token, parallelism), ct).ConfigureAwait(false));
             }
 
             // The hash is inside the try because cancellation genuinely lands here: this method

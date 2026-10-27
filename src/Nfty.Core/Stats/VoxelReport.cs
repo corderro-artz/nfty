@@ -43,43 +43,79 @@ public static class VoxelReport
 {
     /// <summary>Scans one ingredient's variants.</summary>
     /// <param name="ing">The layer to scan.</param>
+    /// <param name="parallelism">How wide the pixel scans may run; null means <see cref="Parallelism.Default"/>. The rows never depend on it.</param>
     /// <returns>One row per variant, in manifest order.</returns>
-    public static IReadOnlyList<VoxelVariant> Scan(LoadedIngredient ing)
+    public static IReadOnlyList<VoxelVariant> Scan(LoadedIngredient ing, Parallelism? parallelism = null)
     {
-        var rows = new List<VoxelVariant>();
-        foreach (var v in ing.Manifest.Variants)
-        {
-            if (!ing.VariantImages.TryGetValue(v.Id, out var img)) continue;
-            rows.Add(new VoxelVariant(ing.Manifest.Name, v.Name, v.Id,
-                img.Width * img.Height, CountPartial(img)));
-        }
-        return rows;
+        var targets = new List<Target>();
+        AddTargets(targets, ing);
+        return Run(targets, parallelism);
     }
 
     /// <summary>Scans every variant of every layer in a recipe, in paint order.</summary>
     /// <param name="recipe">The recipe to scan.</param>
+    /// <param name="parallelism">How wide the pixel scans may run; null means <see cref="Parallelism.Default"/>. The rows never depend on it.</param>
     /// <returns>One row per variant.</returns>
-    public static IReadOnlyList<VoxelVariant> Scan(LoadedRecipe recipe)
+    public static IReadOnlyList<VoxelVariant> Scan(LoadedRecipe recipe, Parallelism? parallelism = null)
+    {
+        var targets = new List<Target>();
+        AddTargets(targets, recipe);
+        return Run(targets, parallelism);
+    }
+
+    /// <summary>Scans every variant in a cookbook.</summary>
+    /// <param name="book">The book to scan.</param>
+    /// <param name="parallelism">How wide the pixel scans may run; null means <see cref="Parallelism.Default"/>. The rows never depend on it.</param>
+    /// <returns>One row per variant.</returns>
+    public static IReadOnlyList<VoxelVariant> Scan(LoadedCookBook book, Parallelism? parallelism = null)
+    {
+        var targets = new List<Target>();
+        foreach (var r in book.Recipes) AddTargets(targets, r);
+        return Run(targets, parallelism);
+    }
+
+    /// <summary>One variant to scan, fixed in report order before any scan runs.</summary>
+    private readonly record struct Target(string IngredientName, string VariantName, string VariantId,
+        Image<Rgba32> Image);
+
+    private static void AddTargets(List<Target> targets, LoadedIngredient ing)
+    {
+        foreach (var v in ing.Manifest.Variants)
+        {
+            if (!ing.VariantImages.TryGetValue(v.Id, out var img)) continue;
+            targets.Add(new Target(ing.Manifest.Name, v.Name, v.Id, img));
+        }
+    }
+
+    private static void AddTargets(List<Target> targets, LoadedRecipe recipe)
     {
         // Resolve tolerantly and walk in layerOrder, matching what inspect prints: a report run on a
         // broken archive is exactly when someone reaches for it.
         var byId = new Dictionary<string, LoadedIngredient>(StringComparer.Ordinal);
         foreach (var i in recipe.Ingredients) byId[i.Manifest.Id] = i;
 
-        var rows = new List<VoxelVariant>();
         foreach (var id in recipe.Manifest.LayerOrder)
             if (byId.TryGetValue(id, out var ing))
-                rows.AddRange(Scan(ing));
-        return rows;
+                AddTargets(targets, ing);
     }
 
-    /// <summary>Scans every variant in a cookbook.</summary>
-    /// <param name="book">The book to scan.</param>
-    /// <returns>One row per variant.</returns>
-    public static IReadOnlyList<VoxelVariant> Scan(LoadedCookBook book)
+    /// <summary>
+    /// Counts each target's partial pixels in parallel into its own slot, then builds the rows in
+    /// target order. A count per image is not a cross-item sum, so it is safe to fan out.
+    /// </summary>
+    private static IReadOnlyList<VoxelVariant> Run(List<Target> targets, Parallelism? parallelism)
     {
-        var rows = new List<VoxelVariant>();
-        foreach (var r in book.Recipes) rows.AddRange(Scan(r));
+        var counts = new int[targets.Count];
+        ParallelWork.For(targets.Count, parallelism ?? Parallelism.Default, CancellationToken.None,
+            i => counts[i] = CountPartial(targets[i].Image));
+
+        var rows = new List<VoxelVariant>(targets.Count);
+        for (var i = 0; i < targets.Count; i++)
+        {
+            var t = targets[i];
+            rows.Add(new VoxelVariant(t.IngredientName, t.VariantName, t.VariantId,
+                t.Image.Width * t.Image.Height, counts[i]));
+        }
         return rows;
     }
 

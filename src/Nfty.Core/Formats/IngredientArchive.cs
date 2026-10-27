@@ -71,22 +71,38 @@ public static class IngredientArchive
     /// <param name="depths">Depth maps by variant id. A variant with no entry, or whose entry is
     /// flat once zeroed over transparency, gets no <c>depth/</c> entry at all. An entry whose key
     /// is not one of this manifest's variants is ignored.</param>
+    /// <param name="parallelism">How wide PNG encoding (or decoding) may run; null means <see cref="Parallelism.Default"/>. Never changes the bytes.</param>
     public static void Write(ZipArchive zip, IngredientManifest manifest,
         IReadOnlyDictionary<string, Image<Rgba32>> variantImages,
-        IReadOnlyDictionary<string, DepthMap> depths)
+        IReadOnlyDictionary<string, DepthMap> depths, Parallelism? parallelism = null)
     {
-        ArchiveIo.WriteManifest(zip, Stamped(manifest, variantImages));
-        foreach (var v in manifest.Variants)
+        var (png, depth) = EncodeVariants(manifest, variantImages, depths, parallelism, CancellationToken.None);
+        WriteEncoded(zip, manifest, variantImages, png, depth);
+    }
+
+    /// <summary>
+    /// Encodes every variant's PNG and depth entry in parallel, into slots indexed by manifest
+    /// position. Nothing touches the archive, so a failure here leaves it (and the file) untouched.
+    /// </summary>
+    /// <remarks>Encode wide, write narrow: a <c>ZipArchive</c>'s entries share one stream, so the
+    /// caller writes the returned bytes sequentially in manifest order — the entry order, and so the
+    /// archive bytes, are the same at any thread count. The images are only read, never disposed.</remarks>
+    private static (byte[][] Png, byte[]?[] Depth) EncodeVariants(IngredientManifest manifest,
+        IReadOnlyDictionary<string, Image<Rgba32>> variantImages, IReadOnlyDictionary<string, DepthMap> depths,
+        Parallelism? parallelism, CancellationToken ct)
+    {
+        var variants = manifest.Variants;
+        var png = new byte[variants.Count][];
+        var depth = new byte[]?[variants.Count];
+        ParallelWork.For(variants.Count, parallelism ?? Parallelism.Default, ct, i =>
         {
-            var image = variantImages[v.Id];
-            ArchiveIo.WriteImage(zip, $"variants/{v.Id}.png", image);
-            if (depths.TryGetValue(v.Id, out var map))
-            {
-                var bytes = DepthBytesToWrite(manifest.Id, v.Id, image, map);
-                if (bytes is not null)
-                    ArchiveIo.WriteBytes(zip, $"depth/{v.Id}.dep", bytes);
-            }
-        }
+            var id = variants[i].Id;
+            var image = variantImages[id];
+            png[i] = ArchiveIo.EncodePng(image);
+            if (depths.TryGetValue(id, out var map))
+                depth[i] = DepthBytesToWrite(manifest.Id, id, image, map);
+        });
+        return (png, depth);
     }
 
     /// <summary>For each variant, the wrong-length message <see cref="ReadDepths"/> and its async
@@ -153,15 +169,16 @@ public static class IngredientArchive
 
     /// <summary>Reads an Ingredient from an already-open archive, decoding every variant PNG.</summary>
     /// <param name="zip">The open archive.</param>
+    /// <param name="parallelism">How wide PNG encoding (or decoding) may run; null means <see cref="Parallelism.Default"/>. Never changes the bytes.</param>
     /// <returns>The loaded ingredient; the caller owns it. Its manifest's <c>PartialAlpha</c> is
     /// recomputed from the decoded images rather than trusting the stored value.</returns>
     /// <exception cref="InvalidDataException">A stored depth entry's length disagrees with its
     /// variant image's dimensions.</exception>
-    public static LoadedIngredient Read(ZipArchive zip)
+    public static LoadedIngredient Read(ZipArchive zip, Parallelism? parallelism = null)
     {
         var manifest = ArchiveIo.ReadManifest<IngredientManifest>(zip);
         EnsureUniqueVariantIds(manifest);
-        var images = DecodeVariants(zip, manifest);
+        var images = DecodeVariants(zip, manifest, parallelism);
         Dictionary<string, DepthMap> depths;
         try
         {
@@ -178,7 +195,7 @@ public static class IngredientArchive
     /// <summary>
     /// Variant ids must be unique within an ingredient: they key the variant-image dictionary,
     /// and a hand-edited (or otherwise malformed) archive could carry duplicates. Catch that here,
-    /// before either <see cref="Read(ZipArchive)"/> or <see cref="ReadAsync(ZipArchive, CancellationToken)"/>
+    /// before either <see cref="Read(ZipArchive, Parallelism?)"/> or <see cref="ReadAsync(ZipArchive, CancellationToken, Parallelism?)"/>
     /// builds that dictionary, so both fail the same way with a message that names the file's
     /// actual problem instead of a raw "same key" exception from the framework.
     /// </summary>
@@ -196,21 +213,38 @@ public static class IngredientArchive
     /// <param name="manifest">The ingredient's manifest.</param>
     /// <param name="variantImages">One image per variant id.</param>
     /// <param name="depths">Depth maps by variant id.</param>
+    /// <param name="parallelism">How wide PNG encoding (or decoding) may run; null means <see cref="Parallelism.Default"/>. Never changes the bytes.</param>
     public static void Write(string path, IngredientManifest manifest,
         IReadOnlyDictionary<string, Image<Rgba32>> variantImages,
-        IReadOnlyDictionary<string, DepthMap> depths)
+        IReadOnlyDictionary<string, DepthMap> depths, Parallelism? parallelism = null)
     {
+        // Encode before the file exists: a variant that cannot be encoded leaves no archive behind.
+        var (png, depth) = EncodeVariants(manifest, variantImages, depths, parallelism, CancellationToken.None);
         using var zip = ZipFile.Open(path, ZipArchiveMode.Create);
-        Write(zip, manifest, variantImages, depths);
+        WriteEncoded(zip, manifest, variantImages, png, depth);
+    }
+
+    /// <summary>Writes the manifest and the already-encoded entries, in manifest order.</summary>
+    private static void WriteEncoded(ZipArchive zip, IngredientManifest manifest,
+        IReadOnlyDictionary<string, Image<Rgba32>> variantImages, byte[][] png, byte[]?[] depth)
+    {
+        ArchiveIo.WriteManifest(zip, Stamped(manifest, variantImages));
+        for (var i = 0; i < manifest.Variants.Count; i++)
+        {
+            var id = manifest.Variants[i].Id;
+            ArchiveIo.WriteBytes(zip, $"variants/{id}.png", png[i]);
+            if (depth[i] is { } bytes) ArchiveIo.WriteBytes(zip, $"depth/{id}.dep", bytes);
+        }
     }
 
     /// <summary>Reads an Ingredient from a file, decoding every variant PNG.</summary>
     /// <param name="path">Archive path.</param>
+    /// <param name="parallelism">How wide PNG encoding (or decoding) may run; null means <see cref="Parallelism.Default"/>. Never changes the bytes.</param>
     /// <returns>The loaded ingredient; the caller owns it and must dispose it.</returns>
-    public static LoadedIngredient Read(string path)
+    public static LoadedIngredient Read(string path, Parallelism? parallelism = null)
     {
         using var zip = ZipFile.OpenRead(path);
-        return Read(zip);
+        return Read(zip, parallelism);
     }
 
     /// <summary>Writes an Ingredient into an already-open archive.</summary>
@@ -219,37 +253,46 @@ public static class IngredientArchive
     /// <param name="variantImages">One image per variant id.</param>
     /// <param name="depths">Depth maps by variant id. See the sync overload for the write rules.</param>
     /// <param name="ct">Cancels the write.</param>
+    /// <param name="parallelism">How wide PNG encoding (or decoding) may run; null means <see cref="Parallelism.Default"/>. Never changes the bytes.</param>
     /// <returns>A task that completes when it is written.</returns>
     public static async Task WriteAsync(ZipArchive zip, IngredientManifest manifest,
         IReadOnlyDictionary<string, Image<Rgba32>> variantImages,
-        IReadOnlyDictionary<string, DepthMap> depths, CancellationToken ct = default)
+        IReadOnlyDictionary<string, DepthMap> depths, CancellationToken ct = default,
+        Parallelism? parallelism = null)
+    {
+        var (png, depth) = EncodeVariants(manifest, variantImages, depths, parallelism, ct);
+        await WriteEncodedAsync(zip, manifest, variantImages, png, depth, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>Async twin of <see cref="WriteEncoded"/>.</summary>
+    private static async Task WriteEncodedAsync(ZipArchive zip, IngredientManifest manifest,
+        IReadOnlyDictionary<string, Image<Rgba32>> variantImages, byte[][] png, byte[]?[] depth,
+        CancellationToken ct)
     {
         await ArchiveIo.WriteManifestAsync(zip, Stamped(manifest, variantImages), ct).ConfigureAwait(false);
-        foreach (var v in manifest.Variants)
+        for (var i = 0; i < manifest.Variants.Count; i++)
         {
-            var image = variantImages[v.Id];
-            await ArchiveIo.WriteImageAsync(zip, $"variants/{v.Id}.png", image, ct).ConfigureAwait(false);
-            if (depths.TryGetValue(v.Id, out var map))
-            {
-                var bytes = DepthBytesToWrite(manifest.Id, v.Id, image, map);
-                if (bytes is not null)
-                    await ArchiveIo.WriteBytesAsync(zip, $"depth/{v.Id}.dep", bytes, ct).ConfigureAwait(false);
-            }
+            var id = manifest.Variants[i].Id;
+            await ArchiveIo.WriteBytesAsync(zip, $"variants/{id}.png", png[i], ct).ConfigureAwait(false);
+            if (depth[i] is { } bytes)
+                await ArchiveIo.WriteBytesAsync(zip, $"depth/{id}.dep", bytes, ct).ConfigureAwait(false);
         }
     }
 
     /// <summary>Reads an Ingredient from an already-open archive.</summary>
     /// <param name="zip">The open archive.</param>
     /// <param name="ct">Cancels the read; anything already decoded is disposed first.</param>
+    /// <param name="parallelism">How wide PNG encoding (or decoding) may run; null means <see cref="Parallelism.Default"/>. Never changes the bytes.</param>
     /// <returns>The loaded ingredient; the caller owns it. Its manifest's <c>PartialAlpha</c> is
     /// recomputed from the decoded images rather than trusting the stored value.</returns>
     /// <exception cref="InvalidDataException">A stored depth entry's length disagrees with its
     /// variant image's dimensions.</exception>
-    public static async Task<LoadedIngredient> ReadAsync(ZipArchive zip, CancellationToken ct = default)
+    public static async Task<LoadedIngredient> ReadAsync(ZipArchive zip, CancellationToken ct = default,
+        Parallelism? parallelism = null)
     {
         var manifest = await ArchiveIo.ReadManifestAsync<IngredientManifest>(zip, ct).ConfigureAwait(false);
         EnsureUniqueVariantIds(manifest);
-        var images = await DecodeVariantsAsync(zip, manifest, ct).ConfigureAwait(false);
+        var images = await DecodeVariantsAsync(zip, manifest, ct, parallelism).ConfigureAwait(false);
         Dictionary<string, DepthMap> depths;
         try
         {
@@ -274,23 +317,28 @@ public static class IngredientArchive
     /// <param name="variantImages">One image per variant id.</param>
     /// <param name="depths">Depth maps by variant id.</param>
     /// <param name="ct">Cancels the write.</param>
+    /// <param name="parallelism">How wide PNG encoding (or decoding) may run; null means <see cref="Parallelism.Default"/>. Never changes the bytes.</param>
     /// <returns>A task that completes when it is written.</returns>
     public static async Task WriteAsync(string path, IngredientManifest manifest,
         IReadOnlyDictionary<string, Image<Rgba32>> variantImages,
-        IReadOnlyDictionary<string, DepthMap> depths, CancellationToken ct = default)
+        IReadOnlyDictionary<string, DepthMap> depths, CancellationToken ct = default,
+        Parallelism? parallelism = null)
     {
+        var (png, depth) = EncodeVariants(manifest, variantImages, depths, parallelism, ct);
         using var zip = ZipFile.Open(path, ZipArchiveMode.Create);
-        await WriteAsync(zip, manifest, variantImages, depths, ct).ConfigureAwait(false);
+        await WriteEncodedAsync(zip, manifest, variantImages, png, depth, ct).ConfigureAwait(false);
     }
 
     /// <summary>Reads an Ingredient from a file.</summary>
     /// <param name="path">Archive path.</param>
     /// <param name="ct">Cancels the read; anything already decoded is disposed first.</param>
+    /// <param name="parallelism">How wide decoding may run; null means <see cref="Parallelism.Default"/>.</param>
     /// <returns>The loaded ingredient; the caller owns it.</returns>
-    public static async Task<LoadedIngredient> ReadAsync(string path, CancellationToken ct = default)
+    public static async Task<LoadedIngredient> ReadAsync(string path, CancellationToken ct = default,
+        Parallelism? parallelism = null)
     {
         using var zip = ZipFile.OpenRead(path);
-        return await ReadAsync(zip, ct).ConfigureAwait(false);
+        return await ReadAsync(zip, ct, parallelism).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -298,6 +346,7 @@ public static class IngredientArchive
     /// </summary>
     /// <param name="zip">The open archive.</param>
     /// <param name="manifest">The ingredient's manifest, which fixes the order.</param>
+    /// <param name="parallelism">How wide decoding may run; null means <see cref="Parallelism.Default"/>.</param>
     /// <returns>The decoded images by variant id, inserted in manifest order.</returns>
     /// <remarks>
     /// <para>Two phases, because the two halves have opposite threading rules. A ZipArchive's
@@ -310,7 +359,7 @@ public static class IngredientArchive
     /// depended on which decode finished first would be an order that varied by machine.</para>
     /// </remarks>
     private static Dictionary<string, Image<Rgba32>> DecodeVariants(
-        ZipArchive zip, IngredientManifest manifest)
+        ZipArchive zip, IngredientManifest manifest, Parallelism? parallelism)
     {
         var variants = manifest.Variants;
         var encoded = new byte[variants.Count][];
@@ -320,7 +369,7 @@ public static class IngredientArchive
         var decoded = new Image<Rgba32>[variants.Count];
         try
         {
-            ParallelWork.For(variants.Count, Parallelism.Default, CancellationToken.None,
+            ParallelWork.For(variants.Count, parallelism ?? Parallelism.Default, CancellationToken.None,
                 i => decoded[i] = ArchiveIo.DecodeImage(encoded[i]));
         }
         catch
@@ -340,10 +389,11 @@ public static class IngredientArchive
     /// <param name="zip">The open archive.</param>
     /// <param name="manifest">The ingredient's manifest, which fixes the order.</param>
     /// <param name="ct">Cancels the read.</param>
+    /// <param name="parallelism">How wide decoding may run; null means <see cref="Parallelism.Default"/>.</param>
     /// <returns>The decoded images by variant id, inserted in manifest order.</returns>
     /// <inheritdoc cref="DecodeVariants" path="/remarks"/>
     private static async Task<Dictionary<string, Image<Rgba32>>> DecodeVariantsAsync(
-        ZipArchive zip, IngredientManifest manifest, CancellationToken ct)
+        ZipArchive zip, IngredientManifest manifest, CancellationToken ct, Parallelism? parallelism)
     {
         var variants = manifest.Variants;
         var encoded = new byte[variants.Count][];
@@ -353,7 +403,7 @@ public static class IngredientArchive
         var decoded = new Image<Rgba32>[variants.Count];
         try
         {
-            ParallelWork.For(variants.Count, Parallelism.Default, ct, i => decoded[i] = ArchiveIo.DecodeImage(encoded[i]));
+            ParallelWork.For(variants.Count, parallelism ?? Parallelism.Default, ct, i => decoded[i] = ArchiveIo.DecodeImage(encoded[i]));
         }
         catch
         {

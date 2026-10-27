@@ -50,11 +50,13 @@ public static class MenuWriter
     /// <param name="book">The book to project and pack. The caller keeps ownership.</param>
     /// <param name="path">The <c>.mnu</c> to write.</param>
     /// <param name="options">Atlas or loose.</param>
+    /// <param name="parallelism">How wide the PNG encoding may run; null means <see cref="Parallelism.Default"/>. The file never depends on it.</param>
     /// <exception cref="InvalidOperationException"><see cref="Validator"/> reports a problem with the
     /// book (the message lists every one, as <c>Generator</c>'s does, and nothing is written); or the
     /// atlas would exceed the pixel ceiling — retry with <see cref="MenuArtMode.Loose"/>.</exception>
-    public static void Write(LoadedCookBook book, string path, MenuWriteOptions options) =>
-        WriteAsync(book, path, options, null, default).GetAwaiter().GetResult();
+    public static void Write(LoadedCookBook book, string path, MenuWriteOptions options,
+        Parallelism? parallelism = null) =>
+        WriteAsync(book, path, options, null, default, parallelism).GetAwaiter().GetResult();
 
     /// <summary>
     /// Writes a Menu, reporting progress and stopping when asked.
@@ -64,6 +66,7 @@ public static class MenuWriter
     /// <param name="options">Atlas or loose.</param>
     /// <param name="progress">One step per cell encoded, then per cell placed or written.</param>
     /// <param name="ct">Stops between cells.</param>
+    /// <param name="parallelism">How wide the PNG encoding may run; null means <see cref="Parallelism.Default"/>. The file never depends on it.</param>
     /// <exception cref="InvalidOperationException"><see cref="Validator"/> reports a problem with the
     /// book (the message lists every one, as <c>Generator</c>'s does, and nothing is written); or the
     /// atlas would exceed the pixel ceiling — retry with <see cref="MenuArtMode.Loose"/>.</exception>
@@ -73,7 +76,7 @@ public static class MenuWriter
     /// for an export. Blocking is safe because nothing in Core captures a synchronization context.
     /// </remarks>
     public static async Task WriteAsync(LoadedCookBook book, string path, MenuWriteOptions options,
-        IProgress<MenuWriteProgress>? progress, CancellationToken ct)
+        IProgress<MenuWriteProgress>? progress, CancellationToken ct, Parallelism? parallelism = null)
     {
         ArgumentNullException.ThrowIfNull(book);
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
@@ -104,30 +107,37 @@ public static class MenuWriter
         // LoadedIngredient.Depths dictionary that has never been zeroed by any writer.
         var depthBytesByKey = new Dictionary<string, byte[]>(StringComparer.Ordinal);
 
-        int written = 0;
+        // Flatten (recipe, ingredient, variant) in book order. Encoding is a pure function of one
+        // variant, so it fans out into slots indexed by this list; the two dictionaries are then
+        // filled SEQUENTIALLY in list order, because their insertion order is observable (depth
+        // entries are written in it) and an order that followed completion would vary by machine.
+        var cellList = new List<(int Index, string Key, LoadedIngredient Ing, string VariantId)>(total);
         foreach (var recipe in book.Recipes)
-        {
             foreach (var ing in recipe.Ingredients)
-            {
                 foreach (var v in ing.Manifest.Variants)
-                {
-                    ct.ThrowIfCancellationRequested();
-                    string key = MenuBook.CellKey(recipe.Manifest.Id, ing.Manifest.Id, v.Id);
-                    var img = ing.VariantImages[v.Id];
-                    using var ms = new MemoryStream();
-                    await img.SaveAsync(ms, new PngEncoder(), ct).ConfigureAwait(false);
-                    encoded[key] = ms.ToArray();
+                    cellList.Add((cellList.Count, MenuBook.CellKey(recipe.Manifest.Id, ing.Manifest.Id, v.Id), ing, v.Id));
 
-                    if (ing.Depths.TryGetValue(v.Id, out var map))
-                    {
-                        var bytes = IngredientArchive.DepthBytesToWrite(ing.Manifest.Id, v.Id, img, map);
-                        if (bytes is not null) depthBytesByKey[key] = bytes;
-                    }
+        var pngSlots = new byte[cellList.Count][];
+        var depthSlots = new byte[]?[cellList.Count];
+        var degree = parallelism ?? Parallelism.Default;
+        await Task.Run(() => ParallelWork.ForEachReporting(cellList, degree, ct,
+            cell =>
+            {
+                var img = cell.Ing.VariantImages[cell.VariantId];
+                using var ms = new MemoryStream();
+                img.Save(ms, new PngEncoder());
+                pngSlots[cell.Index] = ms.ToArray();
 
-                    written++;
-                    progress?.Report(new MenuWriteProgress(written, total, "Encoding art…"));
-                }
-            }
+                if (cell.Ing.Depths.TryGetValue(cell.VariantId, out var map))
+                    depthSlots[cell.Index] = IngredientArchive.DepthBytesToWrite(
+                        cell.Ing.Manifest.Id, cell.VariantId, img, map);
+            },
+            done => progress?.Report(new MenuWriteProgress(done, total, "Encoding art…"))), ct).ConfigureAwait(false);
+
+        for (var i = 0; i < cellList.Count; i++)
+        {
+            encoded[cellList[i].Key] = pngSlots[i];
+            if (depthSlots[i] is { } depthBytes) depthBytesByKey[cellList[i].Key] = depthBytes;
         }
 
         // Group cell keys by the SHA-256 of their encoded bytes, so identical art shares one rect.
@@ -153,7 +163,7 @@ public static class MenuWriter
         byte[]? atlasBytes = null;
         if (options.Art == MenuArtMode.Atlas)
         {
-            (art, atlasBytes) = await PackAtlasAsync(menuBook.Canvas, ordered, encoded, progress, ct)
+            (art, atlasBytes) = await PackAtlasAsync(menuBook.Canvas, ordered, encoded, progress, degree, ct)
                 .ConfigureAwait(false);
         }
         else
@@ -256,6 +266,7 @@ public static class MenuWriter
         List<(string FirstKey, IReadOnlyList<string> Keys)> ordered,
         IReadOnlyDictionary<string, byte[]> encoded,
         IProgress<MenuWriteProgress>? progress,
+        Parallelism parallelism,
         CancellationToken ct)
     {
         int n = ordered.Count;
@@ -286,7 +297,7 @@ public static class MenuWriter
                 int y = row * canvas.Height;
 
                 using (var img = Image.Load<Rgba32>(encoded[ordered[i].FirstKey]))
-                    atlas.Mutate(ctx => ctx.DrawImage(img, new Point(x, y), 1f));
+                    atlas.Mutate(parallelism.ImageConfiguration(insideParallelBody: false), ctx => ctx.DrawImage(img, new Point(x, y), 1f));
 
                 foreach (var key in ordered[i].Keys)
                     cells.Add(new MenuCell(key, x, y, canvas.Width, canvas.Height));

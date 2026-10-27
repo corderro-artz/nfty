@@ -172,12 +172,14 @@ public static class SetExporter
     /// <param name="cookBookPath">The <c>.cbk</c> to ship, when
     /// <see cref="ExportOptions.IncludeCookBook"/> is set.</param>
     /// <param name="passphrase">Required when <see cref="ExportOptions.Sealed"/> is set.</param>
+    /// <param name="parallelism">How wide the per-asset numbering may run; null means <see cref="Parallelism.Default"/>. The exported files never depend on it.</param>
     /// <returns>Where it landed, and what went into it.</returns>
     /// <exception cref="ArgumentException">The options ask for something that cannot be built.</exception>
     /// <exception cref="SealedSetException">The source is itself sealed, or sealing failed.</exception>
     public static ExportResult Export(string setPath, string outDir, ExportOptions options,
-        string? cookBookPath = null, string? passphrase = null) =>
-        ExportAsync(setPath, outDir, options, cookBookPath, passphrase).GetAwaiter().GetResult();
+        string? cookBookPath = null, string? passphrase = null, Parallelism? parallelism = null) =>
+        ExportAsync(setPath, outDir, options, cookBookPath, passphrase, parallelism: parallelism)
+            .GetAwaiter().GetResult();
 
     /// <summary>
     /// Exports a Set, reporting progress and stopping when asked.
@@ -190,6 +192,7 @@ public static class SetExporter
     /// <param name="passphrase">Required when <see cref="ExportOptions.Sealed"/> is set.</param>
     /// <param name="progress">One step per asset stitched and per file written.</param>
     /// <param name="cancellationToken">Stops between steps.</param>
+    /// <param name="parallelism">How wide the per-asset numbering may run; null means <see cref="Parallelism.Default"/>. The exported files never depend on it.</param>
     /// <returns>Where it landed, and what went into it.</returns>
     /// <exception cref="ArgumentException">The options ask for something that cannot be built.</exception>
     /// <exception cref="SealedSetException">The source is itself sealed, or sealing failed.</exception>
@@ -205,7 +208,8 @@ public static class SetExporter
     /// </remarks>
     public static async Task<ExportResult> ExportAsync(string setPath, string outDir,
         ExportOptions options, string? cookBookPath = null, string? passphrase = null,
-        IProgress<ExportProgress>? progress = null, CancellationToken cancellationToken = default)
+        IProgress<ExportProgress>? progress = null, CancellationToken cancellationToken = default,
+        Parallelism? parallelism = null)
     {
         // Leave the caller's thread first: with no watermark and no sheet there is no await before the
         // sync tail (extract, zip, PBKDF2), which would otherwise run on whoever called - the UI thread.
@@ -245,7 +249,8 @@ public static class SetExporter
             if (options.NumberWatermark)
             {
                 (plan, artTemp, stamped) = await StampAsync(
-                    source.Dir, plan, options, progress, cancellationToken).ConfigureAwait(false);
+                    source.Dir, plan, options, progress, parallelism ?? Parallelism.Default, cancellationToken)
+                    .ConfigureAwait(false);
             }
 
             int stitched = 0;
@@ -290,6 +295,7 @@ public static class SetExporter
     /// <param name="plan">The plan so far.</param>
     /// <param name="options">The request, for the corner.</param>
     /// <param name="progress">The run's progress sink.</param>
+    /// <param name="parallelism">How many assets are numbered at once.</param>
     /// <param name="cancellationToken">Stops between assets.</param>
     /// <returns>The plan pointing at the stamped art, the temp folder, and the steps spent.</returns>
     /// <remarks>
@@ -302,42 +308,67 @@ public static class SetExporter
     /// down.</b> An asset's stem is its set number, and reading it back costs nothing where opening
     /// every <c>nfty/NNNN.json</c> to look up the same integer would cost a file read apiece. A stem
     /// that is not a number is left unstamped rather than guessed at.</para>
+    ///
+    /// <para><b>Each asset is its own file</b> and the stamp is a pure function of (pixels, number),
+    /// so the assets are numbered in parallel; each result lands in the entry slot found by
+    /// precomputed position, never by search. When several assets cannot be read the LOWEST-positioned
+    /// one is named, whatever the thread count. A failure removes the temp folder it created: the
+    /// caller never receives the path, so nobody else could.</para>
     /// </remarks>
     private static async Task<(ExportPlan Plan, string Temp, int Steps)> StampAsync(string setDir,
         ExportPlan plan, ExportOptions options, IProgress<ExportProgress>? progress,
-        CancellationToken cancellationToken)
+        Parallelism parallelism, CancellationToken cancellationToken)
     {
         string temp = Directory.CreateTempSubdirectory("nfty-stamp-").FullName;
-        string prefix = SetLayout.ImagesDir + "/";
-        var art = plan.Entries.Where(e => e.Name.StartsWith(prefix, StringComparison.Ordinal)).ToList();
-
-        int total = art.Count * 2 + plan.Entries.Count;
-        var entries = plan.Entries.ToList();
-
-        for (int i = 0; i < art.Count; i++)
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var entry = art[i];
+            string prefix = SetLayout.ImagesDir + "/";
+            var artAt = new List<int>();
+            for (int e = 0; e < plan.Entries.Count; e++)
+                if (plan.Entries[e].Name.StartsWith(prefix, StringComparison.Ordinal)) artAt.Add(e);
 
-            string stem = Path.GetFileNameWithoutExtension(entry.Source);
-            string target = Path.Combine(temp, Path.GetFileName(entry.Source));
+            int total = artAt.Count * 2 + plan.Entries.Count;
+            var entries = plan.Entries.ToList();
+            var stamped = new ExportEntry?[artAt.Count];
 
-            if (int.TryParse(stem, System.Globalization.NumberStyles.Integer,
-                    System.Globalization.CultureInfo.InvariantCulture, out int number))
-            {
-                using var image = await Image.LoadAsync<Rgba32>(entry.Source, cancellationToken)
-                    .ConfigureAwait(false);
-                NumberStamp.Draw(image, number, options.WatermarkCorner);
-                await image.SaveAsync(target, new PngEncoder(), cancellationToken)
-                    .ConfigureAwait(false);
+            await Task.Run(() => ParallelWork.ForEachReporting(Enumerable.Range(0, artAt.Count).ToList(),
+                parallelism, cancellationToken,
+                i =>
+                {
+                    var entry = plan.Entries[artAt[i]];
+                    string stem = Path.GetFileNameWithoutExtension(entry.Source);
+                    if (!int.TryParse(stem, System.Globalization.NumberStyles.Integer,
+                            System.Globalization.CultureInfo.InvariantCulture, out int number))
+                        return;
 
-                entries[entries.IndexOf(entry)] = Entry(target, entry.Name);
-            }
+                    string target = Path.Combine(temp, Path.GetFileName(entry.Source));
+                    try
+                    {
+                        using var image = Image.Load<Rgba32>(entry.Source);
+                        NumberStamp.Draw(image, number, options.WatermarkCorner);
+                        image.Save(target, new PngEncoder());
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        throw new CorruptSetException(entry.Source,
+                            $"Asset {Path.GetFileName(entry.Source)} could not be numbered: {ex.Message}");
+                    }
 
-            Report(progress, i + 1, total, "Numbering...");
+                    stamped[i] = Entry(target, entry.Name);
+                },
+                done => Report(progress, done, total, "Numbering...")), cancellationToken)
+                .ConfigureAwait(false);
+
+            for (int i = 0; i < artAt.Count; i++)
+                if (stamped[i] is { } replaced) entries[artAt[i]] = replaced;
+
+            return (plan with { Entries = entries }, temp, artAt.Count);
         }
-
-        return (plan with { Entries = entries }, temp, art.Count);
+        catch
+        {
+            try { Directory.Delete(temp, recursive: true); } catch { /* best effort */ }
+            throw;
+        }
     }
 
     /// <summary>

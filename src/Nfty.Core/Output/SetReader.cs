@@ -89,21 +89,22 @@ public static class SetReader
 
     /// <summary>Reads a Set.</summary>
     /// <param name="path">A Set folder, or a <c>.set</c> archive.</param>
+    /// <param name="parallelism">How wide the per-asset JSON parsing may run; null means <see cref="Parallelism.Default"/>. The result never depends on it.</param>
     /// <returns>The manifest and items; the caller owns it and must dispose it.</returns>
     /// <exception cref="CorruptSetException">The Set is missing or malformed.</exception>
-    public static LoadedSet Read(string path) => Read(path, NewTemp);
+    public static LoadedSet Read(string path, Parallelism? parallelism = null) => Read(path, NewTemp, parallelism);
 
     private static string NewTemp() => Directory.CreateTempSubdirectory("nfty-set-").FullName;
 
-    /// <summary><see cref="Read(string)"/> with the temp directory supplied, so a test can watch it go.</summary>
-    internal static LoadedSet Read(string path, Func<string> newTemp)
+    /// <summary><see cref="Read(string, Parallelism?)"/> with the temp directory supplied, so a test can watch it go.</summary>
+    internal static LoadedSet Read(string path, Func<string> newTemp, Parallelism? parallelism = null)
     {
-        if (!File.Exists(path)) return Load(path, null, path, CancellationToken.None);
+        if (!File.Exists(path)) return Load(path, null, path, CancellationToken.None, parallelism);
         // A .set archive (or any file) → extract to a temp dir, which goes again if anything fails.
         string temp = newTemp();
         try { ZipFile.ExtractToDirectory(path, temp); }
         catch { DeleteQuietly(temp); throw; }
-        return Load(temp, temp, path, CancellationToken.None);
+        return Load(temp, temp, path, CancellationToken.None, parallelism);
     }
 
     /// <summary>Parses an unpacked Set. Owns <paramref name="temp"/> on failure: deletes it before
@@ -112,7 +113,9 @@ public static class SetReader
     /// <param name="temp">The temp copy to delete on failure (and to hand to the result), or null.</param>
     /// <param name="path">What the caller asked for, for messages.</param>
     /// <param name="ct">Checked before each asset.</param>
-    internal static LoadedSet Load(string dir, string? temp, string path, CancellationToken ct)
+    /// <param name="parallelism">How wide the per-asset JSON parsing may run; null means <see cref="Parallelism.Default"/>. The result never depends on it.</param>
+    internal static LoadedSet Load(string dir, string? temp, string path, CancellationToken ct,
+        Parallelism? parallelism = null)
     {
         try
         {
@@ -140,13 +143,17 @@ public static class SetReader
                 // adds assets to a Set whose existing files are already named — a collection-wide
                 // width would leave one Set holding two paddings. Sorting by the number nfty
                 // actually has is correct at every size and changes no byte on disk.
-                foreach (var m in Directory.EnumerateFiles(nftyDir, "*.json")
-                             .Select(f =>
-                             {
-                                 ct.ThrowIfCancellationRequested();
-                                 return SetItemFile.ReadNfty(f, File.ReadAllText(f));
-                             })
-                             .OrderBy(m => m.SetNumber))
+                //
+                // PARSED IN PARALLEL, SORTED AFTERWARDS. Each file is parsed on its own into a slot;
+                // the sort is by number, never by completion. The file list is sorted ordinally
+                // first, so when several files are damaged the same one is always the one named.
+                var files = Directory.EnumerateFiles(nftyDir, "*.json").ToList();
+                files.Sort(StringComparer.Ordinal);
+                var parsed = new NftyMetadata[files.Count];
+                ParallelWork.For(files.Count, parallelism ?? Parallelism.Default, ct,
+                    i => parsed[i] = SetItemFile.ReadNfty(files[i], File.ReadAllText(files[i])));
+
+                foreach (var m in parsed.OrderBy(m => m.SetNumber))
                 {
                     string stem = m.SetNumber.ToString("D4", CultureInfo.InvariantCulture);
                     items.Add(new SetItem(m.SetNumber, Path.Combine(imagesDir, $"{stem}.png"),
@@ -179,19 +186,22 @@ public static class SetReader
     /// or failed read deletes its unpacked copy.</summary>
     /// <param name="path">A Set folder, or a <c>.set</c> archive.</param>
     /// <param name="ct">Cancels the read.</param>
+    /// <param name="parallelism">How wide the per-asset JSON parsing may run; null means <see cref="Parallelism.Default"/>. The result never depends on it.</param>
     /// <returns>The manifest and items; the caller owns it and must dispose it.</returns>
-    public static Task<LoadedSet> ReadAsync(string path, CancellationToken ct = default) => ReadAsync(path, ct, NewTemp);
+    public static Task<LoadedSet> ReadAsync(string path, CancellationToken ct = default,
+        Parallelism? parallelism = null) => ReadAsync(path, ct, NewTemp, parallelism);
 
-    /// <summary><see cref="ReadAsync(string, CancellationToken)"/> with the temp directory supplied.</summary>
-    internal static async Task<LoadedSet> ReadAsync(string path, CancellationToken ct, Func<string> newTemp)
+    /// <summary><see cref="ReadAsync(string, CancellationToken, Parallelism?)"/> with the temp directory supplied.</summary>
+    internal static async Task<LoadedSet> ReadAsync(string path, CancellationToken ct, Func<string> newTemp,
+        Parallelism? parallelism = null)
     {
-        if (!File.Exists(path)) return await Task.Run(() => Load(path, null, path, ct), ct).ConfigureAwait(false);
+        if (!File.Exists(path)) return await Task.Run(() => Load(path, null, path, ct, parallelism), ct).ConfigureAwait(false);
         string temp = newTemp();
         try
         {
             await ZipFile.ExtractToDirectoryAsync(path, temp, ct).ConfigureAwait(false);
             // Load owns the copy once it runs; if the token stops it from starting, the catch does.
-            return await Task.Run(() => Load(temp, temp, path, ct), ct).ConfigureAwait(false);
+            return await Task.Run(() => Load(temp, temp, path, ct, parallelism), ct).ConfigureAwait(false);
         }
         catch
         {
