@@ -350,6 +350,13 @@
               <TextBlock Text="Reports" />
             </StackPanel>
           </Button>
+          <Button Command="{Binding ExportMenuCommand}" Classes="tbtn"
+                  ToolTip.Tip="Write a .mnu: every weight, rule, color and the art, so a game or server can roll without this book">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Path Classes="ico sm" Data="{StaticResource IconDownload}" />
+              <TextBlock Text="Export Menu…" />
+            </StackPanel>
+          </Button>
           <Button Command="{Binding CookCommand}" Classes="accent">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <Path Classes="ico sm" Data="{StaticResource IconArrowRight}" />

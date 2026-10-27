@@ -333,7 +333,7 @@ public class VisualCapture
             var cookBook = ExplorerViewModelTests.TwoRecipeBook();
             // showReports supplied, or the Reports button captures DISABLED and the frame is no
             // evidence that it renders - the same fixture blind spot as the editor's toolstrip.
-            var cookBookVm = new CookBookDetailViewModel(cookBook, () => { }, () => { }, () => { });
+            var cookBookVm = new CookBookDetailViewModel(cookBook, () => { }, () => { }, () => { }, () => { });
             Capture(new Views.CookBookDetailView { DataContext = cookBookVm }, variant, $"cookbook-detail-{key}.png");
 
             // The SAME card over the built-in demo, whose DNA space is 7,155,000. Every other fixture
@@ -345,7 +345,7 @@ public class VisualCapture
             {
                 Capture(new Views.CookBookDetailView
                 {
-                    DataContext = new CookBookDetailViewModel(demo, () => { }, () => { }, () => { }),
+                    DataContext = new CookBookDetailViewModel(demo, () => { }, () => { }, () => { }, () => { }),
                 }, variant, $"cookbook-detail-demo-{key}.png");
             }
             demoDir.Delete(recursive: true);
@@ -1329,7 +1329,7 @@ public class VisualCapture
             // card must show its problem count, and Cook Set must be visibly disabled.
             using (var broken = InvalidBook())
             {
-                var vm = new CookBookDetailViewModel(broken, () => { }, () => { }, () => { });
+                var vm = new CookBookDetailViewModel(broken, () => { }, () => { }, () => { }, () => { });
                 Capture(new Views.CookBookDetailView { DataContext = vm }, variant,
                     $"zz-cookbook-detail-invalid-{key}.png");
             }
@@ -1424,6 +1424,19 @@ public class VisualCapture
                     new NoopFolderRevealer(), dialogs) { Count = 500, Seed = "vapor", Unlimited = true };
                 Capture(new Views.CookDialogView { DataContext = cookForm }, variant,
                     $"zz-dialog-cook-form-{key}.png");
+            }
+
+            // The Menu export card, atlas-refused (the long warning on its reserved line) and quiet.
+            {
+                using var wide = MenuExportDialogTests.WideBook();
+                Capture(new Views.MenuExportDialogView { DataContext = MenuExportDialogTests.RefusedVm(wide) },
+                    variant, $"zz-dialog-menu-export-{key}.png");
+                using var calm = CookDialogModelsTests.Book();
+                Capture(new Views.MenuExportDialogView
+                {
+                    DataContext = new MenuExportDialogViewModel(calm, @"C:/Users/Corde/Kitchen/Blocks.cbk",
+                        new FilePickerService(), dialogs, new StatusService()),
+                }, variant, $"zz-dialog-menu-export-quiet-{key}.png");
             }
 
             // The ingredient pane for a chase layer: its absent flag beside the rule flag, and the

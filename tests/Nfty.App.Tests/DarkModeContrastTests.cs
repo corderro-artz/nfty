@@ -367,7 +367,7 @@ public class DarkModeContrastTests
         // DISABLED - Fluent dims a disabled button's content to 0.38, and this sweep rightly scored
         // the dim "status" label and its count as unreadable. A screen list must build a screen the
         // way the app builds it; a state the app cannot reach is not a state worth scoring.
-        var brokenVm = new CookBookDetailViewModel(EmptyBook(), () => { }, () => { }, () => { });
+        var brokenVm = new CookBookDetailViewModel(EmptyBook(), () => { }, () => { }, () => { }, () => { });
 
         // The rule form, in the state that carries its warning ink — a WarningBrush sentence and a
         // DISABLED accent button, which are the two runs on it most likely to fall under the floor.
@@ -486,6 +486,12 @@ public class DarkModeContrastTests
             { IncludeModels = true, ShowModelOptions = true },
         }, solidBook.Dispose);
 
+        // The Menu export card in its riskiest state: the atlas refusal in warning ink on the reserved
+        // line, over a path strip and a tray whose second half is the way out.
+        var menuBook = MenuExportDialogTests.WideBook();
+        var menuVm = MenuExportDialogTests.RefusedVm(menuBook);
+        yield return ("dialog-menu-export-refused", new Views.MenuExportDialogView { DataContext = menuVm }, menuBook.Dispose);
+
         // The Cook card extending: the recipe combo is disabled (dimmed to 0.38) with its reason
         // beside it, and the total carries ink. The riskiest ink the recipe choice adds.
         var extendBook = CookRecipeAndTotalTests.Book();
@@ -498,7 +504,7 @@ public class DarkModeContrastTests
         yield return ("cookbook-detail-invalid",
             new Views.CookBookDetailView { DataContext = brokenVm }, null);
 
-        var goodVm = new CookBookDetailViewModel(ExplorerViewModelTests.TwoRecipeBook(), () => { }, () => { }, () => { });
+        var goodVm = new CookBookDetailViewModel(ExplorerViewModelTests.TwoRecipeBook(), () => { }, () => { }, () => { }, () => { });
         yield return ("cookbook-detail", new Views.CookBookDetailView { DataContext = goodVm }, null);
 
         // Detail bodies for the other two node kinds, and the editor - the editor twice, because its

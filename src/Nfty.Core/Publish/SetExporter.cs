@@ -95,14 +95,7 @@ public record ExportPlan(
 
     /// <summary>The total, for a person: <c>636 KB</c>, <c>1.2 MB</c>.</summary>
     /// <returns>The size as text, invariant like every other figure this product prints.</returns>
-    public string SizeText() => Bytes switch
-    {
-        >= 1024L * 1024 => string.Create(System.Globalization.CultureInfo.InvariantCulture,
-            $"{Bytes / 1024.0 / 1024:0.0} MB"),
-        >= 1024 => string.Create(System.Globalization.CultureInfo.InvariantCulture,
-            $"{Bytes / 1024.0:0} KB"),
-        _ => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{Bytes} bytes"),
-    };
+    public string SizeText() => Publish.SizeText.Of(Bytes);
 
     /// <summary>Whether the source CookBook is among the entries — the one inclusion with a
     /// consequence a user should be warned about rather than merely told.</summary>

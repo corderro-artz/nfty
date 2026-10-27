@@ -114,6 +114,7 @@ public partial class CookBookDetailViewModel : ViewModelBase
     private readonly Action _cook;
     private readonly Action? _showReports;
     private readonly Action? _showValidity;
+    private readonly Action? _exportMenu;
 
     /// <summary>The BOOK's name — what the titlebar, the tree and the recents list all show.</summary>
     /// <remarks>
@@ -266,9 +267,11 @@ public partial class CookBookDetailViewModel : ViewModelBase
     /// <param name="showReports">Opens the stats/inspect reports; null leaves that button unavailable.</param>
     /// <param name="showValidity">Opens the full validation report; null leaves the status chip inert,
     /// which is what a fixture with no dialog layer gets.</param>
+    /// <param name="exportMenu">Opens the Export a Menu card; null leaves that button unavailable.</param>
     public CookBookDetailViewModel(LoadedCookBook book, Action cook,
-        Action? showReports = null, Action? showValidity = null)
+        Action? showReports = null, Action? showValidity = null, Action? exportMenu = null)
     {
+        _exportMenu = exportMenu;
         _cook = cook;
         _showReports = showReports;
         _showValidity = showValidity;
@@ -582,4 +585,10 @@ public partial class CookBookDetailViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanShowReports))]
     private void ShowReports() => _showReports!();
     private bool CanShowReports() => _showReports is not null;
+
+    /// <summary>Opens the Export a Menu card. Unavailable when no dialog layer was supplied. Not
+    /// gated on validity: the card opens on a broken book and says why it cannot write.</summary>
+    [RelayCommand(CanExecute = nameof(CanExportMenu))]
+    private void ExportMenu() => _exportMenu!();
+    private bool CanExportMenu() => _exportMenu is not null;
 }
