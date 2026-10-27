@@ -262,6 +262,78 @@ public static class CookBookEdits
         };
     }
 
+    /// <summary>
+    /// Edits the book's identity: its own name, the marketplace-facing collection record, and the
+    /// intended supply. Nothing else in the manifest moves.
+    /// </summary>
+    /// <param name="book">The book to edit.</param>
+    /// <param name="name">The book's display name (what the titlebar, tree and recents show).</param>
+    /// <param name="collection">What <c>SetWriter</c> publishes: the collection name that prefixes
+    /// every asset, plus description and symbol.</param>
+    /// <param name="targetSupply">How many assets the author intends to mint, or null for no commitment.</param>
+    /// <returns>A NEW graph SHARING every image and recipe with the previous book. Nothing is
+    /// disposed. Nothing is validated either: <c>Validator</c> is the one place that decides what a
+    /// legal book is, and the caller runs it before writing.</returns>
+    /// <remarks>None of these fields is read by a roll, so this can never change what a seed
+    /// produces.</remarks>
+    public static LoadedCookBook EditIdentity(
+        LoadedCookBook book, string name, Collection collection, int? targetSupply)
+    {
+        ArgumentNullException.ThrowIfNull(book);
+        ArgumentNullException.ThrowIfNull(name);
+        ArgumentNullException.ThrowIfNull(collection);
+        return new LoadedCookBook
+        {
+            Manifest = book.Manifest with { Name = name, Collection = collection, TargetSupply = targetSupply },
+            Recipes = book.Recipes,
+            SourceSha256 = book.SourceSha256,
+        };
+    }
+
+    /// <summary>
+    /// Sets one recipe's selection weight in the book. Zero shelves the recipe: it stays in the book
+    /// and the roll skips it.
+    /// </summary>
+    /// <param name="book">The book to edit.</param>
+    /// <param name="recipeId">Which recipe.</param>
+    /// <param name="weight">The new weight. Not validated here; <c>Validator</c> reports a negative one.</param>
+    /// <returns>A NEW graph SHARING every image. Nothing is disposed.</returns>
+    /// <remarks>UNLIKE an identity edit, this DOES change which assets a seed produces: the weight is
+    /// part of the roll's cumulative table.</remarks>
+    /// <exception cref="KeyNotFoundException">No such recipe.</exception>
+    public static LoadedCookBook SetRecipeWeight(LoadedCookBook book, string recipeId, double weight)
+    {
+        ArgumentNullException.ThrowIfNull(book);
+        if (book.Recipes.All(r => r.Manifest.Id != recipeId))
+            throw new KeyNotFoundException($"No recipe '{recipeId}' in cookbook '{book.Manifest.Id}'.");
+        var weights = book.Manifest.RecipeWeights.ToDictionary(kv => kv.Key, kv => kv.Value);
+        weights[recipeId] = weight;
+        return new LoadedCookBook
+        {
+            Manifest = book.Manifest with { RecipeWeights = weights },
+            Recipes = book.Recipes,
+            SourceSha256 = book.SourceSha256,
+        };
+    }
+
+    /// <summary>Replaces the swatches the book carries.</summary>
+    /// <param name="book">The book to edit.</param>
+    /// <param name="swatches">Prefixed color specs (<c>hex:d6249f</c>), in order. An empty list stores
+    /// null ("the book has never saved a palette") rather than an empty array, so a book with no
+    /// swatches is written the way every book before the field was.</param>
+    /// <returns>A NEW graph SHARING every image. Nothing is disposed.</returns>
+    public static LoadedCookBook SetPalette(LoadedCookBook book, IReadOnlyList<string> swatches)
+    {
+        ArgumentNullException.ThrowIfNull(book);
+        ArgumentNullException.ThrowIfNull(swatches);
+        return new LoadedCookBook
+        {
+            Manifest = book.Manifest with { Palette = swatches.Count == 0 ? null : swatches.ToArray() },
+            Recipes = book.Recipes,
+            SourceSha256 = book.SourceSha256,
+        };
+    }
+
     /// <summary>Removes a recipe from a cookbook (and its selection-weight entry). Reuses every surviving
     /// image; the caller owns the removed recipe's ingredient images.</summary>
     public static LoadedCookBook RemoveRecipe(LoadedCookBook book, string recipeId)
