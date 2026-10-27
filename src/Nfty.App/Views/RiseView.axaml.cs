@@ -116,7 +116,7 @@ public partial class RiseView : UserControl
         _tile.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ => FitHost()));
         _gridChip.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ => FitHost()));
         _targetChip.GetObservable(BoundsProperty).Subscribe(new Sub<Rect>(_ => FitHost()));
-        LayoutUpdated += (_, _) => SnapRailFold();
+        LayoutUpdated += (_, _) => { SnapRailFold(); SnapListFold(); };
         // The bitmap is what the geometry is mapped against: a new picture is a new frame. Watched on
         // the Image itself, so the frame is never read against a bitmap the binding has not delivered.
         _img.GetObservable(Image.SourceProperty).Subscribe(new Sub<IImage?>(_ => Reframe()));
@@ -299,6 +299,55 @@ public partial class RiseView : UserControl
     /// alone (Height NaN); otherwise the viewport is cut back to the last section that fits whole.</para>
     /// <para>Written only when the answer changes, with NaN tested first.</para>
     /// </remarks>
+    private double _layerPitch, _tilePitch;
+
+    /// <summary>
+    /// Folds the source rail's list on a whole row, so the last row is never sliced by the rail
+    /// foot: the layers list (Recipe) and the tile grid (Set) each get a <c>MaxHeight</c> of their
+    /// own top inset plus a whole number of row pitches.
+    /// </summary>
+    /// <remarks>
+    /// The Set browser's <c>RarityRailSnap</c> rule: the room is read off the host's PARENT star row
+    /// (a row the Grid sizes, which a height written on the child cannot change), the pitch is
+    /// measured once and remembered, and the comparison treats an unset <c>MaxHeight</c> (infinity)
+    /// as "different" so the first pass cannot silently skip the snap. Exact at scroll offset 0; a
+    /// scrolled list folds wherever the wheel left it, as every scroller does.
+    /// </remarks>
+    private void SnapListFold()
+    {
+        if (this.FindControl<Grid>("SourceGrid") is not { } grid || grid.RowDefinitions.Count < 4) return;
+        double room = grid.RowDefinitions[3].ActualHeight;
+        if (room <= 0) return;
+
+        if (this.FindControl<ScrollViewer>("LayersScroll") is { IsVisible: true } layers
+            && layers.Content is ItemsControl items)
+        {
+            if (_layerPitch <= 0
+                && items.GetVisualDescendants().OfType<Button>().FirstOrDefault(b => b.Classes.Contains("vcard")) is { } row
+                && row.Bounds.Height > 0)
+                _layerPitch = row.Bounds.Height + row.Margin.Bottom;
+            if (_layerPitch > 0) Fold(layers, items.Margin.Top, _layerPitch, room);
+        }
+
+        if (this.FindControl<ListBox>("TileList") is { IsVisible: true } tiles)
+        {
+            if (_tilePitch <= 0
+                && tiles.GetVisualDescendants().OfType<ListBoxItem>().FirstOrDefault() is { } item
+                && item.Bounds.Height > 0)
+                _tilePitch = item.Bounds.Height;
+            if (_tilePitch > 0) Fold(tiles, tiles.Padding.Top, _tilePitch, room);
+        }
+    }
+
+    private static void Fold(Control host, double inset, double pitch, double room)
+    {
+        // At least one row: a rail too short for even one is a smaller window than the app allows.
+        int fits = Math.Max(1, (int)((room - inset) / pitch));
+        double snapped = inset + fits * pitch;
+        if (double.IsInfinity(host.MaxHeight) || Math.Abs(host.MaxHeight - snapped) > 0.5)
+            host.MaxHeight = snapped;
+    }
+
     private void SnapRailFold()
     {
         var row = _railGrid.RowDefinitions.Count > 1 ? _railGrid.RowDefinitions[1] : null;

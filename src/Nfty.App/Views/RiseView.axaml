@@ -38,7 +38,7 @@
 
       <!-- ============ SOURCE rail ============ -->
       <Border Grid.Column="0" Classes="pane">
-        <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
+        <Grid x:Name="SourceGrid" RowDefinitions="Auto,Auto,Auto,*,Auto">
           <Border Grid.Row="0" Classes="pane-hrow">
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Grid.Column="0" Text="{Binding Source.Kicker}" Classes="pane-h"
@@ -162,7 +162,8 @@
                  the variant card's selected mark. A row that cannot be chosen (left out of this roll, or
                  a read-only page) takes no pointer and no focus, rather than being disabled: a dimmed
                  row would be a second reason to read it as broken. -->
-            <ScrollViewer IsVisible="{Binding IsRecipeRail}" HorizontalScrollBarVisibility="Disabled">
+            <ScrollViewer x:Name="LayersScroll" IsVisible="{Binding IsRecipeRail}" VerticalAlignment="Top"
+                          HorizontalScrollBarVisibility="Disabled">
               <ItemsControl Margin="12,12,12,5" ItemsSource="{Binding LayerRows}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="rise:RiseLayerRow">
@@ -192,7 +193,8 @@
             <!-- SET: tiles, three to a row. The ListBox's unit is the ROW (it virtualizes one element
                  per item), so the items are chunked by RiseTileRowConverter and each row is a run of
                  three; see RowChunkConverter for why a grid is built this way in Avalonia. -->
-            <ListBox Classes="tiles" Background="Transparent" Padding="6,8,6,5"
+            <ListBox x:Name="TileList" Classes="tiles" Background="Transparent" Padding="6,8,6,5"
+                     VerticalAlignment="Top"
                      ItemsSource="{Binding Items, Converter={x:Static conv:RiseTileRowConverter.Instance}}"
                      IsVisible="{Binding IsTileRail}"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
