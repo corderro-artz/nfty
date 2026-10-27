@@ -200,9 +200,14 @@ public partial class ShellViewModel : ViewModelBase
     /// <param name="status">The status bar's guidance channel.</param>
     /// <param name="kitchen">The open workspace, if any.</param>
     /// <param name="session">The open CookBook, so closing a document can free it.</param>
+    /// <param name="parallelism">The worker-thread setting the Settings card edits. Null falls back
+    /// to a session-only one, so a shell built without it still opens a working card.</param>
     public ShellViewModel(INavigationService nav, IDialogService dialogs, IThemeService theme,
-        IStatusService status, IKitchenSession? kitchen = null, ICookBookSession? session = null)
+        IStatusService status, IKitchenSession? kitchen = null, ICookBookSession? session = null,
+        IParallelismSetting? parallelism = null)
     {
+        _parallelism = parallelism
+            ?? new ParallelismSettingService(StateStore.InMemory(), () => null);
         _nav = nav; _dialogs = dialogs; _theme = theme; _status = status;
         _kitchen = kitchen;
         _session = session;
@@ -220,6 +225,13 @@ public partial class ShellViewModel : ViewModelBase
     }
 
     [RelayCommand] private void ShowHelp() => _dialogs.ShowAsync<object>(new HelpViewModel(_dialogs));
+
+    private readonly IParallelismSetting _parallelism;
+
+    [RelayCommand]
+    private void ShowSettings() =>
+        _dialogs.ShowAsync<object>(new SettingsDialogViewModel(_dialogs, _parallelism));
+
     /// <summary>
     /// Closes whatever modal is open — the scrim's click, and Escape.
     ///

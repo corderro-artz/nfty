@@ -33,6 +33,9 @@ public static class ServiceRegistration
             new PaletteService(sp.GetRequiredService<IStateStore>()));
         services.AddSingleton<IEditorViewState>(sp =>
             new EditorViewStateService(sp.GetRequiredService<IStateStore>()));
+        services.AddSingleton<IParallelismSetting>(sp =>
+            new ParallelismSettingService(sp.GetRequiredService<IStateStore>(),
+                () => Environment.GetEnvironmentVariable(ParallelismSettingService.EnvironmentVariable)));
         services.AddSingleton<IImageBridge, ImageBridge>();
         services.AddSingleton<IFolderRevealer, NoopFolderRevealer>();
         services.AddSingleton<IClipboardService, NoopClipboardService>();

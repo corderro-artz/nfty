@@ -340,6 +340,13 @@ public class DarkModeContrastTests
         yield return ("landing", new Views.LandingView { DataContext = landing }, null);
 
         yield return ("help", new Views.HelpView { DataContext = new HelpViewModel(dialogs) }, null);
+        // The environment-locked state: tray and stepper both disabled (dimmed), and the note naming
+        // the variable. The riskiest ink the card can carry; Auto is the same card with less dimming.
+        yield return ("settings-env-locked", new Views.SettingsDialogView
+        {
+            DataContext = new SettingsDialogViewModel(dialogs,
+                new ParallelismSettingService(StateStore.InMemory(), () => "2")),
+        }, null);
         yield return ("leave-editor", new Views.LeaveDialogView { DataContext = new LeaveDialogViewModel(dialogs, "Leave the editor?", "Aura has unsaved changes. Leaving discards them.", canSave: true) }, null);
 
         yield return ("wizard-cookbook",

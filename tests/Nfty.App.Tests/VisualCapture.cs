@@ -1337,6 +1337,14 @@ public class VisualCapture
             Capture(new Views.HelpView { DataContext = new HelpViewModel(dialogs) }, variant,
                 $"zz-help-sheet-{key}.png");
 
+            var autoSetting = new ParallelismSettingService(StateStore.InMemory(), () => null);
+            Capture(new Views.SettingsDialogView { DataContext = new SettingsDialogViewModel(dialogs, autoSetting) },
+                variant, $"zz-dialog-settings-auto-{key}.png");
+            var customSetting = new ParallelismSettingService(StateStore.InMemory(), () => null);
+            customSetting.Set(Nfty.Core.Parallelism.LogicalProcessors);
+            Capture(new Views.SettingsDialogView { DataContext = new SettingsDialogViewModel(dialogs, customSetting) },
+                variant, $"zz-dialog-settings-custom-{key}.png");
+
             Capture(new Views.ErrorDialogView
             { DataContext = new ErrorDialogViewModel(dialogs, "Could not open", "The file is not a readable CookBook.") },
                 variant, $"zz-dialog-error-{key}.png");

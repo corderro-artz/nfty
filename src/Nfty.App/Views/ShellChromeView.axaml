@@ -258,6 +258,7 @@
               <TextBlock Classes="sbar" VerticalAlignment="Center" Width="46" TextAlignment="Center"
                          Text="{Binding Zoom, StringFormat='{}{0}%'}" />
               <Button Command="{Binding ZoomInCommand}" Classes="zoomctl" ToolTip.Tip="Zoom in"><Path Classes="ico sm" Data="{StaticResource IconZoomIn}" /></Button>
+              <Button Command="{Binding ShowSettingsCommand}" Classes="helpbtn" ToolTip.Tip="Settings"><Path Classes="ico sm" Data="{StaticResource IconSettings}" /></Button>
               <Button Command="{Binding ShowHelpCommand}" Classes="helpbtn" ToolTip.Tip="Help"><Path Classes="ico sm" Data="{StaticResource IconHelp}" /></Button>
             </StackPanel>
           </Grid>

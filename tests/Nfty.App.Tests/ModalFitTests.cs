@@ -198,6 +198,23 @@ public class ModalFitTests
             size.Height * ShellViewModel.BaseScale + Chrome);
     }
 
+    [AvaloniaTheory]
+    [InlineData("")]
+    [InlineData("2")]
+    public void The_settings_card_fits_the_smallest_window(string env)
+    {
+        // Auto and the environment-locked state: the two with the longest note.
+        var setting = new ParallelismSettingService(StateStore.InMemory(), () => env);
+        var size = Measure(new Views.SettingsDialogView
+        {
+            DataContext = new SettingsDialogViewModel(new FakeDialogs(), setting),
+        });
+
+        Fits("The settings card",
+            size.Width * ShellViewModel.BaseScale + 24,
+            size.Height * ShellViewModel.BaseScale + Chrome);
+    }
+
     [AvaloniaFact]
     public void The_passphrase_prompt_fits_the_smallest_window()
     {

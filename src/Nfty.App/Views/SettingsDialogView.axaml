@@ -1,0 +1,55 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             x:Class="Nfty.App.Views.SettingsDialogView"
+             x:DataType="vm:SettingsDialogViewModel">
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Escape" Command="{Binding CloseCommand}" />
+  </UserControl.KeyBindings>
+  <!-- One row and one sentence, a fixed-size card that never scrolls. The heading is a title alone:
+       there is no category above "Settings" for an eyebrow to name. -->
+  <Border Classes="modal small">
+    <Grid RowDefinitions="Auto,Auto">
+      <Border Grid.Row="0" Classes="modal-body tight">
+        <StackPanel Spacing="14">
+          <TextBlock Text="Settings" Classes="m-h" Margin="0" />
+
+          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+            <TextBlock Grid.Column="0" Classes="seglbl" Text="WORKER THREADS" />
+            <Border Grid.Column="1" Classes="seg tiny" HorizontalAlignment="Left"
+                    IsHitTestVisible="{Binding TrayEnabled}">
+              <!-- NOT IsEnabled: the app dims a disabled control to 0.38, which is legible over full
+                   ink and not over the muted ink the idle segment wears (the contrast sweep scored it
+                   1.2 to 1.5). Locked, the tray simply stops taking the pointer; the line below says
+                   why, and the VM commands refuse as well. -->
+              <StackPanel Orientation="Horizontal">
+                <Button Classes="seg-b tiny" Content="Auto"
+                        Classes.on="{Binding IsAuto}"
+                        Command="{Binding UseAutoCommand}" />
+                <Button Classes="seg-b tiny" Content="Custom"
+                        Classes.on="{Binding IsCustom}"
+                        Command="{Binding UseCustomCommand}" />
+              </StackPanel>
+            </Border>
+            <!-- Always laid out: in Auto it is dimmed and shows the count Auto uses, so choosing
+                 Custom changes ink and never moves anything. -->
+            <NumericUpDown x:Name="ThreadsField" Grid.Column="2" Classes="nin" Width="74"
+                           MinWidth="0" Minimum="1" Maximum="{Binding Maximum}" FormatString="0"
+                           Value="{Binding Threads}" IsEnabled="{Binding StepperEnabled}" />
+          </Grid>
+
+          <!-- Two lines reserved: the longest sentence wraps, and the card must not change height
+               as the choice changes. -->
+          <TextBlock Classes="m-sub" Margin="0" MinHeight="32" Text="{Binding Note}" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Row="1" Classes="modal-foot">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0" Classes="keyhint" VerticalAlignment="Center" Text="Esc to close" />
+          <Button Grid.Column="1" Content="Close" Command="{Binding CloseCommand}" Classes="accent" />
+        </Grid>
+      </Border>
+    </Grid>
+  </Border>
+</UserControl>
