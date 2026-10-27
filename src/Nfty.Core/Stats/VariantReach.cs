@@ -34,13 +34,15 @@ public sealed record VariantReach(double Percent, int? TargetSupply, bool Recipe
             recipe is not null && recipe.Manifest.Rules.Count > 0);
     }
 
+    private const double AllEpsilon = 1e-9;
+
     /// <summary>The reach as a sentence fragment, invariant: <c>in ~900 of 1,200 assets</c>,
     /// <c>in all 1,200 assets</c>, <c>in 75% of assets</c> or <c>in every asset</c>.</summary>
     public string Text
     {
         get
         {
-            bool all = Percent >= 100;
+            bool all = Percent >= 100 - AllEpsilon;   // 99.999... is every asset: a sum of shares can land a hair under 100
             if (TargetSupply is { } supply)
             {
                 string total = supply.ToString("N0", CultureInfo.InvariantCulture);

@@ -1,11 +1,12 @@
 using Avalonia.Media.Imaging;
+using CommunityToolkit.Mvvm.ComponentModel;
 using Nfty.Core.Model;
 
 namespace Nfty.App.Rise;
 
 /// <summary>One layer of a rolled recipe, as the Rise page's layer rail lists it: where it paints,
 /// which variant the roll picked, and what depth that variant carries on its own.</summary>
-public sealed class RiseLayerRow : IDisposable
+public sealed partial class RiseLayerRow : ObservableObject, IDisposable
 {
     /// <summary>Creates a row.</summary>
     /// <param name="depth">1-based position, bottom first: depth 1 paints first, sits furthest back.</param>
@@ -15,9 +16,15 @@ public sealed class RiseLayerRow : IDisposable
     /// <param name="depthText">The variant's own depth, worded like the item chip.</param>
     /// <param name="isAbsent">Whether the roll left this layer out.</param>
     /// <param name="thumbnail">The rolled variant as generation colorizes it; the row owns it.</param>
+    /// <param name="ingredientId">The layer's id; empty when the row does not name one.</param>
+    /// <param name="variantId">The rolled variant's id, or null for an absent layer.</param>
+    /// <param name="isPickable">Whether clicking the row may make this layer the one being painted.</param>
     public RiseLayerRow(int depth, string name, string variantName, LayerKind kind, string depthText,
-        bool isAbsent, Bitmap? thumbnail)
+        bool isAbsent, Bitmap? thumbnail, string ingredientId = "", string? variantId = null, bool isPickable = false)
     {
+        IngredientId = ingredientId;
+        VariantId = variantId;
+        IsPickable = isPickable && !isAbsent;
         Depth = depth;
         Name = name;
         VariantName = variantName;
@@ -27,6 +34,18 @@ public sealed class RiseLayerRow : IDisposable
         IsAbsent = isAbsent;
         Thumbnail = thumbnail;
     }
+
+    /// <summary>The layer's id.</summary>
+    public string IngredientId { get; }
+
+    /// <summary>The rolled variant's id, or null when the roll left the layer out.</summary>
+    public string? VariantId { get; }
+
+    /// <summary>Whether the row can become the painted layer: present in the roll, and the source is editable.</summary>
+    public bool IsPickable { get; }
+
+    /// <summary>Whether this is the layer the page paints on.</summary>
+    [ObservableProperty] private bool _isTarget;
 
     /// <summary>1-based position, bottom first.</summary>
     public int Depth { get; }

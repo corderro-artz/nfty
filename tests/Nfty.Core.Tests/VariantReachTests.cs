@@ -94,4 +94,30 @@ public class VariantReachTests
         Assert.DoesNotContain("Rules", VariantReach.Of(Book(null), "chest", "body", "oak").Tip);
         Assert.Contains("Rules can change it", VariantReach.Of(Book(null, rules: true), "chest", "body", "oak").Tip);
     }
+
+    [Fact]
+    public void A_share_a_hair_under_a_hundred_reads_as_every_asset()
+    {
+        Assert.Equal("in every asset", new VariantReach(99.9999999999, null, false).Text);
+        Assert.Equal("in all 1,200 assets", new VariantReach(99.9999999999, 1200, false).Text);
+        Assert.NotEqual("in every asset", new VariantReach(99.99, null, false).Text);
+    }
+
+    [Fact]
+    public void A_zero_weight_recipe_reaches_nothing()
+    {
+        var one = Book(1200);
+        var shelved = new LoadedCookBook
+        {
+            Manifest = one.Manifest with { RecipeWeights = new Dictionary<string, double> { ["chest"] = 0, ["other"] = 1 } },
+            Recipes = one.Recipes.Append(new LoadedRecipe
+            {
+                Manifest = new RecipeManifest("other", "Other", new[] { "body" }, Array.Empty<IncompatibilityRule>()),
+                Ingredients = new[] { Ing("body", ("oak", 1)) },
+            }).ToList(),
+        };
+        var r = VariantReach.Of(shelved, "chest", "body", "oak");
+        Assert.Equal(0, r.Percent);
+        Assert.Equal("in ~0 of 1,200 assets", r.Text);
+    }
 }

@@ -88,6 +88,27 @@ public sealed class RiseSubject : IDisposable
         return retired;
     }
 
+    /// <summary>Takes a recombined stack's depth and faces in place: the same <see cref="Depth"/> instance
+    /// and the same <see cref="History"/>, a new <see cref="Texture"/>. A derived union is never unsaved
+    /// work, so the result is marked saved.</summary>
+    /// <param name="union">The stack's union depth, or null for paper.</param>
+    /// <param name="faces">The face owners that go with it, or null; taken.</param>
+    /// <returns>The retired texture and faces. The caller disposes it once nothing still reads them,
+    /// i.e. after the page has been told.</returns>
+    public IDisposable ReplaceCombined(DepthMap? union, StackFaces? faces)
+    {
+        Image<Rgba32> texture;
+        try { texture = FaceAtlas.Build(Art, faces); }
+        catch { faces?.Dispose(); throw; }   // the faces are taken whatever happens
+        try { Depth.Overwrite(union); }
+        catch { texture.Dispose(); faces?.Dispose(); throw; }
+        var retired = new Retired(Texture, Faces);
+        Faces = faces;
+        Texture = texture;
+        _saved = union;
+        return retired;
+    }
+
     private sealed class Retired(Image<Rgba32> texture, StackFaces? faces) : IDisposable
     {
         public void Dispose()

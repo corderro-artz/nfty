@@ -358,6 +358,59 @@ public class StackDepthTests
         Assert.Equal((0, 0), (rise.FrontOwner(0, 0), rise.BackOwner(0, 0)));
     }
 
+    // Three layers, the middle one absent from the pick: owners count PRESENT picks, so the strap that is
+    // the third layer of the recipe is owner 1, not 2.
+    private static LoadedRecipe ThreeLayers(Image<Rgba32> body, Image<Rgba32> mid, Image<Rgba32> strap,
+        IReadOnlyDictionary<string, double>? absent = null) => new()
+    {
+        Manifest = new RecipeManifest("r", "R", new[] { "body", "mid", "strap" }, Array.Empty<IncompatibilityRule>(),
+            AbsentPercent: absent),
+        Ingredients = new[]
+        {
+            Layer("body", "b", body, Art.Depth(body, (_, _) => (1, 9))),
+            Layer("mid", "m", mid, Art.Depth(mid, (_, _) => (2, 0))),
+            Layer("strap", "s", strap, Art.Depth(strap, (_, _) => (4, 0))),
+        },
+    };
+
+    [Fact]
+    public void Selection_owners_index_into_the_present_picks_not_the_recipe()
+    {
+        using var body = Art.FromAscii("##");
+        using var mid = Art.FromAscii("##");
+        using var strap = Art.FromAscii(".#");
+        var recipe = ThreeLayers(body, mid, strap);
+
+        using var rise = StackDepth.ForSelection(recipe, [new StackPick("body", "b"), new StackPick("strap", "s")]);
+
+        Assert.Equal(1, rise.FrontOwner(1, 0));   // the strap: second PRESENT pick, third layer of the recipe
+        Assert.Equal(0, rise.BackOwner(1, 0));    // the body
+        Assert.Equal(0, rise.FrontOwner(0, 0));
+    }
+
+    [Fact]
+    public void Asset_owners_index_into_the_present_traits_not_the_recipe()
+    {
+        using var body = Art.FromAscii("##");
+        using var mid = Art.FromAscii("##");
+        using var strap = Art.FromAscii(".#");
+        var recipe = ThreeLayers(body, mid, strap, new Dictionary<string, double> { ["mid"] = 100 });
+        using var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "CB", new Dimensions(2, 1), new Collection("CB", "d", "CB"),
+                new Dictionary<string, double> { ["r"] = 100 }),
+            Recipes = [recipe],
+        };
+        using var set = Generator.Generate(book, new GenerateOptions(1, "seed", EnforceUniqueDna: false));
+        var asset = set.Assets[0];
+        Assert.Equal(new[] { "body", "strap" }, asset.Traits.Select(t => t.IngredientId).ToArray());   // mid is really absent
+
+        using var rise = StackDepth.ForAsset(recipe, asset)!;
+
+        Assert.Equal(1, rise.FrontOwner(1, 0));
+        Assert.Equal(0, rise.BackOwner(1, 0));
+    }
+
     private static LoadedIngredient Layer(string id, string variant, Image<Rgba32> img, DepthMap? depth) => new()
     {
         Manifest = new IngredientManifest(id, id, LayerKind.Custom, null, new[] { new Variant(variant, variant, 1) }),

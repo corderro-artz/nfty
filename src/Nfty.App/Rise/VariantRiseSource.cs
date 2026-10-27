@@ -89,9 +89,6 @@ public sealed class VariantRiseSource : RiseSource
         _initial.IsSelected = true;
     }
 
-    /// <summary>Raised after a book save, with the book the session now holds.</summary>
-    public event Action<LoadedCookBook>? Saved;
-
     /// <summary>Raised after a loose <c>.igt</c> save, with the ingredient now on disk. A loose save has no
     /// book to hand out, so this is how the editor that launched the page learns the new depth.</summary>
     public event Action<LoadedIngredient>? LooseSaved;
@@ -243,7 +240,7 @@ public sealed class VariantRiseSource : RiseSource
         // the subjects looking unsaved after a good write.
         foreach (var (subject, map) in written) subject.MarkSaved(map);
         foreach (var item in _items) item.RefreshDepth();
-        if (persisted is not null) Saved?.Invoke(persisted);
+        if (persisted is not null) RaiseSaved(persisted);
         if (looseNext is not null) LooseSaved?.Invoke(looseNext);
         RaiseChanged();
     }
@@ -402,7 +399,7 @@ public sealed class VariantRiseSource : RiseSource
             if (old is not null) oldSubjects.Add(old);
         }
         RaiseChanged();
-        if (persisted is not null) Saved?.Invoke(persisted);
+        if (persisted is not null) RaiseSaved(persisted);
         if (_looseSavePath is not null) LooseSaved?.Invoke(ours);
         foreach (var s in oldSubjects) s.Dispose();
         foreach (var t in oldThumbs) t.Dispose();

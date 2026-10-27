@@ -51,8 +51,11 @@ public sealed class TargetedHistory<TKey, TPixel>
     {
         ArgumentNullException.ThrowIfNull(surfaceOf);
         if (_undo.Count == 0) { key = default!; return false; }
-        var (k, cmd) = _undo.Pop();
-        cmd.Undo(surfaceOf(k));
+        // Peek, resolve, and only then pop: a resolver that throws (an unknown key) must not lose the step.
+        var (k, cmd) = _undo.Peek();
+        var surface = surfaceOf(k);
+        _undo.Pop();
+        cmd.Undo(surface);
         _redo.Push((k, cmd));
         key = k;
         return true;
@@ -66,8 +69,10 @@ public sealed class TargetedHistory<TKey, TPixel>
     {
         ArgumentNullException.ThrowIfNull(surfaceOf);
         if (_redo.Count == 0) { key = default!; return false; }
-        var (k, cmd) = _redo.Pop();
-        cmd.Apply(surfaceOf(k));
+        var (k, cmd) = _redo.Peek();
+        var surface = surfaceOf(k);
+        _redo.Pop();
+        cmd.Apply(surface);
         _undo.Push((k, cmd));
         key = k;
         return true;

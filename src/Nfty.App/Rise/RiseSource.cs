@@ -1,5 +1,6 @@
 using System.Globalization;
 using Nfty.Core.Editing;
+using Nfty.Core.Formats;
 using Nfty.Model;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -76,6 +77,29 @@ public abstract class RiseSource : IDisposable
 
     /// <summary>Whether any item has depth that is not saved yet.</summary>
     public virtual bool IsDirty => Items.Any(i => i.IsDirty);
+
+    /// <summary>How many pieces of unsaved depth there are (variants, pictures): what a save would write.</summary>
+    public virtual int DirtyCount => Items.Count(i => i.IsDirty);
+
+    /// <summary>What the page paints this subject's depth through. The same instance until the subject
+    /// changes.</summary>
+    /// <param name="subject">A subject of this source.</param>
+    /// <returns>The editor.</returns>
+    public virtual IDepthEditor EditorFor(RiseSubject subject)
+    {
+        ArgumentNullException.ThrowIfNull(subject);
+        return _editors.GetValue(subject, s => new SubjectDepthEditor(s));
+    }
+
+    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<RiseSubject, IDepthEditor> _editors = new();
+
+    /// <summary>Raised after a save into a CookBook, with the book the session now holds. The Explorer,
+    /// the recents and the open editor learn the new depth from this.</summary>
+    public event Action<LoadedCookBook>? Saved;
+
+    /// <summary>Raises <see cref="Saved"/>.</summary>
+    /// <param name="book">The book the session now holds.</param>
+    protected void RaiseSaved(LoadedCookBook book) => Saved?.Invoke(book);
 
     /// <summary>Whether <see cref="SaveAsync"/> would write something: editable and not locked.</summary>
     public virtual bool CanSave => IsEditable && !IsLocked;

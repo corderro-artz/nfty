@@ -62,4 +62,38 @@ public class TargetedHistoryTests
         h.Do("a", Raise(1), s);
         Assert.False(h.CanRedo);
     }
+
+    [Fact]
+    public void Undo_and_redo_resolve_a_key_the_caller_alone_knows()
+    {
+        // The page's roll may no longer contain the layer a step touched; the resolver still owns its surface.
+        var offRoll = Surface();
+        var h = new TargetedHistory<string, DepthPixel>();
+        h.Do("gone", Raise(0), offRoll);
+
+        Assert.True(h.Undo(k => k == "gone" ? offRoll : throw new KeyNotFoundException(k), out var key));
+        Assert.Equal("gone", key);
+        Assert.Equal(new DepthPixel(0, 0), offRoll.Get(0, 0));
+        Assert.True(h.Redo(k => k == "gone" ? offRoll : throw new KeyNotFoundException(k), out key));
+        Assert.Equal("gone", key);
+        Assert.Equal(new DepthPixel(1, 0), offRoll.Get(0, 0));
+    }
+
+    [Fact]
+    public void A_resolver_that_throws_loses_no_step()
+    {
+        var s = Surface();
+        var h = new TargetedHistory<string, DepthPixel>();
+        h.Do("a", Raise(0), s);
+
+        Assert.Throws<KeyNotFoundException>(() => h.Undo(k => throw new KeyNotFoundException(k), out _));
+        Assert.True(h.CanUndo);
+        Assert.Equal(new DepthPixel(1, 0), s.Get(0, 0));
+
+        Assert.True(h.Undo(_ => s, out _));
+        Assert.Throws<KeyNotFoundException>(() => h.Redo(k => throw new KeyNotFoundException(k), out _));
+        Assert.True(h.CanRedo);
+        Assert.True(h.Redo(_ => s, out _));
+        Assert.Equal(new DepthPixel(1, 0), s.Get(0, 0));
+    }
 }
