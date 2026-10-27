@@ -217,7 +217,7 @@ public static class MenuWriter
     /// <param name="rows">Cells down.</param>
     /// <param name="cellWidth">One cell's width — the book's canvas width.</param>
     /// <param name="cellHeight">One cell's height — the book's canvas height.</param>
-    /// <exception cref="InvalidOperationException">The grid is past
+    /// <exception cref="AtlasTooLargeException">The grid is past
     /// <see cref="Publish.SpriteSheet.MaxSide"/> on a side, or past
     /// <see cref="Publish.SpriteSheet.MaxPixels"/> in area.</exception>
     /// <remarks>
@@ -238,17 +238,17 @@ public static class MenuWriter
         string size = string.Create(CultureInfo.InvariantCulture, $"{width} x {height}");
 
         if (width > SpriteSheet.MaxSide || height > SpriteSheet.MaxSide)
-            throw new InvalidOperationException(
+            throw new AtlasTooLargeException(
                 $"A Menu atlas of {size} is past the {SpriteSheet.MaxSide} pixel limit on a side. "
                 + "Most things that would load an atlas texture cannot open one larger, so this is "
-                + "refused rather than built — write with --art loose instead.");
+                + "refused rather than built");
 
         long pixels = width * height;
         if (pixels > SpriteSheet.MaxPixels)
-            throw new InvalidOperationException(
+            throw new AtlasTooLargeException(
                 $"A Menu atlas of {size} is {pixels / 1_000_000} megapixels, past the "
                 + $"{SpriteSheet.MaxPixels / 1_000_000} megapixel limit. An atlas is one contiguous "
-                + "image and this one would not fit in memory — write with --art loose instead.");
+                + "image and this one would not fit in memory");
     }
 
     private static async Task<(MenuArt Art, byte[] AtlasBytes)> PackAtlasAsync(

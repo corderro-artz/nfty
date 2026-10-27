@@ -215,10 +215,38 @@ public class MenuWriterTests
         // Build a book whose atlas would exceed the pixel ceiling, and assert the refusal names the
         // size and points at --art loose rather than throwing OutOfMemoryException minutes later.
         // Use a synthetic book with a very large canvas; do not actually allocate the atlas.
-        var ex = Assert.Throws<InvalidOperationException>(() =>
+        var ex = Assert.Throws<AtlasTooLargeException>(() =>
             MenuWriter.CheckAtlasFits(columns: 200, rows: 200, cellWidth: 1000, cellHeight: 1000));
         Assert.Contains("loose", ex.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("200000", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_side_refusal_keeps_the_text_the_command_line_always_printed()
+    {
+        // Pinned word for word: splitting the refusal into Problem + Hint must not change what the
+        // CLI prints. The expected string is the one the writer threw before it had a type.
+        var ex = Assert.Throws<AtlasTooLargeException>(() =>
+            MenuWriter.CheckAtlasFits(columns: 200, rows: 200, cellWidth: 1000, cellHeight: 1000));
+        Assert.Equal("A Menu atlas of 200000 x 200000 is past the 16384 pixel limit on a side. "
+            + "Most things that would load an atlas texture cannot open one larger, so this is "
+            + "refused rather than built — write with --art loose instead.", ex.Message);
+        Assert.EndsWith("refused rather than built", ex.Problem);
+        Assert.Equal("write with --art loose instead.", ex.Hint);
+        Assert.DoesNotContain("--art", ex.Problem, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_one_pixel_strip_past_the_side_limit_is_the_same_typed_refusal()
+    {
+        // (The area branch cannot be reached on its own: MaxPixels is MaxSide squared, so a grid whose
+        // sides both fit always fits in area too. Its text is pinned by the side case above.)
+        var ex = Assert.Throws<AtlasTooLargeException>(() =>
+            MenuWriter.CheckAtlasFits(columns: 1, rows: 1, cellWidth: 16385, cellHeight: 1));
+        Assert.Equal("A Menu atlas of 16385 x 1 is past the 16384 pixel limit on a side. "
+            + "Most things that would load an atlas texture cannot open one larger, so this is "
+            + "refused rather than built — write with --art loose instead.", ex.Message);
+        Assert.IsAssignableFrom<InvalidOperationException>(ex);
     }
 
     // ------------------------------------------------------------------ validation

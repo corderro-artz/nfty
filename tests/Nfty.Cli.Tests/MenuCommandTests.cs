@@ -655,4 +655,43 @@ public class MenuCommandTests
         }
         finally { Directory.Delete(dir, recursive: true); }
     }
+
+    [Fact]
+    public void An_atlas_too_big_to_build_is_refused_with_the_text_the_command_line_always_printed()
+    {
+        // The refusal gained a type that carries the problem and the hint apart (the GUI shows only the
+        // problem). What THIS surface prints is the whole sentence, word for word as before.
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            int w = 16_385;
+            var ing = new LoadedIngredient
+            {
+                Manifest = new IngredientManifest("body", "Body", LayerKind.Custom, null,
+                    [new Variant("v0", "V0", Weight: 1)]),
+                VariantImages = new Dictionary<string, Image<Rgba32>>
+                {
+                    ["v0"] = new Image<Rgba32>(w, 1, new Rgba32(200, 40, 40, 255)),
+                },
+            };
+            var recipe = new LoadedRecipe
+            {
+                Manifest = new RecipeManifest("cat", "Cat", LayerOrder: ["body"], Rules: []),
+                Ingredients = [ing],
+            };
+            var book = Path.Combine(dir, "wide.cbk");
+            CookBookArchive.Write(book, new CookBookManifest("cb", "Wide", new Dimensions(w, 1),
+                new Collection("Wide", "", "WD"), new Dictionary<string, double> { ["cat"] = 1 }), [recipe]);
+
+            var ex = Assert.Throws<Nfty.Core.Publish.AtlasTooLargeException>(() =>
+                Run("menu", book, "--out", Path.Combine(dir, "wide.mnu")));
+
+            Assert.StartsWith("error: A Menu atlas of 16385 x 1 is past the 16384 pixel limit on a side. "
+                + "Most things that would load an atlas texture cannot open one larger, so this is "
+                + "refused rather than built — write with --art loose instead.",
+                ErrorReport.Format(ex, verbose: false), StringComparison.Ordinal);
+            Assert.False(File.Exists(Path.Combine(dir, "wide.mnu")));
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
 }
