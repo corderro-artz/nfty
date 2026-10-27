@@ -1,0 +1,281 @@
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Headless;
+using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
+using Nfty.App.Services;
+using Nfty.App.ViewModels;
+using Nfty.Core.Formats;
+using Nfty.Core.Model;
+using Nfty.Core.Publish;
+using Nfty.Ticket;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using Xunit;
+
+namespace Nfty.App.Tests;
+
+/// <summary>
+/// The CookBook card's "Export Menu…": a dialog that calls the CLI's own <see cref="MenuWriter"/>.
+/// </summary>
+/// <remarks>
+/// The journey test is the one that matters: dialog → file on disk → read back with
+/// <see cref="MenuArchive"/> → one asset rolled and rendered, pixel-equal to what the CLI's
+/// <c>menu</c> + <c>serve</c> path produces from the same book. The rest pin the card's own rules.
+/// </remarks>
+public class MenuExportDialogTests
+{
+    private sealed class SavePicker(string? path) : IFilePickerService
+    {
+        public Task<string?> OpenFileAsync(string t, params string[] e) => Task.FromResult<string?>(null);
+        public Task<string?> SaveFileAsync(string t, string e) => Task.FromResult(path);
+        public Task<string?> PickFolderAsync(string t) => Task.FromResult<string?>(null);
+    }
+
+    private static MenuExportDialogViewModel Vm(LoadedCookBook book, string mnu, FakeDialogs? dialogs = null,
+        IStatusService? status = null) =>
+        new(book, Path.ChangeExtension(mnu, ".cbk"), new SavePicker(null), dialogs ?? new FakeDialogs(),
+            status ?? new StatusService());
+
+    private static string Roll(MenuArchive menu, string seed, out byte[] pixels)
+    {
+        var prepared = Ticketer.Prepare(menu.Book);
+        var rng = new Nfty.Core.Generation.SplitMix64Rng(Nfty.Core.Generation.SeedHash.ToUlong(seed));
+        AssetTicket? ticket = null;
+        for (int i = 0; i < 50 && ticket is null; i++) ticket = Ticketer.TryRoll(prepared, rng);
+        Assert.NotNull(ticket);
+        using var image = MenuRenderer.Render(menu, ticket!);
+        var buffer = new Rgba32[image.Width * image.Height];
+        image.CopyPixelDataTo(buffer);
+        pixels = buffer.SelectMany(p => new[] { p.R, p.G, p.B, p.A }).ToArray();
+        return ticket!.Dna;
+    }
+
+    [AvaloniaFact]
+    public async Task Exporting_an_atlas_menu_writes_a_readable_mnu()
+    {
+        string dir = Directory.CreateTempSubdirectory().FullName;
+        using var book = CookDialogModelsTests.Book(variants: 4);
+        string mnu = Path.Combine(dir, "Blocks.mnu");
+        var status = new StatusService();
+        var vm = Vm(book, mnu, status: status);
+
+        await vm.ExportCommand.ExecuteAsync(null);
+
+        Assert.True(File.Exists(mnu));
+        Assert.Empty(Directory.GetFiles(dir, "*.tmp"));
+        Assert.Matches(@"^Wrote Blocks\.mnu \(\d+(\.\d)? (bytes|KB|MB)\)\.$", status.Last);
+
+        // The same book written by the CLI's own call, rolled and rendered the same way `serve` does.
+        string cli = Path.Combine(dir, "cli.mnu");
+        MenuWriter.Write(book, cli, new MenuWriteOptions());
+        using var fromDialog = MenuArchive.Open(mnu);
+        using var fromCli = MenuArchive.Open(cli);
+        Assert.Equal(MenuArtMode.Atlas, fromDialog.Book.Art.Mode);
+        string dnaA = Roll(fromDialog, "serve-seed", out var a);
+        string dnaB = Roll(fromCli, "serve-seed", out var b);
+        Assert.Equal(dnaB, dnaA);
+        Assert.Equal(b, a);
+        Assert.Contains(a, x => x != 0);
+    }
+
+    [AvaloniaFact]
+    public async Task Exporting_a_loose_menu_writes_one_png_per_variant()
+    {
+        string dir = Directory.CreateTempSubdirectory().FullName;
+        using var book = CookDialogModelsTests.Book(variants: 3);
+        string mnu = Path.Combine(dir, "Blocks.mnu");
+        var vm = Vm(book, mnu);
+        vm.ChooseLooseCommand.Execute(null);
+
+        await vm.ExportCommand.ExecuteAsync(null);
+
+        using var zip = ZipFile.OpenRead(mnu);
+        Assert.DoesNotContain(zip.Entries, e => e.FullName == "atlas.png");
+        // Three variants of solid, DIFFERENT-id-but-identical-pixels art pack once per distinct
+        // image in the atlas, but loose mode writes a cell per variant key.
+        Assert.Equal(3, zip.Entries.Count(e => e.FullName.StartsWith("art/") && e.FullName.EndsWith(".png")));
+        using var menu = MenuArchive.Open(mnu);
+        Assert.Equal(MenuArtMode.Loose, menu.Book.Art.Mode);
+    }
+
+    /// <summary>A card that has already been refused: the long atlas message on its reserved line.</summary>
+    internal static MenuExportDialogViewModel RefusedVm(LoadedCookBook wideBook)
+    {
+        var vm = Vm(wideBook, Path.Combine(Path.GetTempPath(), "Wide.mnu"));
+        vm.ExportCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+        return vm;
+    }
+
+    internal static LoadedCookBook WideBook()
+    {
+        // One variant on a canvas wider than the atlas side ceiling: a few KB of pixels, and the
+        // smallest honest way to meet CheckAtlasFits without allocating a huge atlas.
+        int w = SpriteSheet.MaxSide + 1;
+        var ing = new LoadedIngredient
+        {
+            Manifest = new IngredientManifest("body", "Body", LayerKind.Custom, null,
+                new[] { new Variant("v0", "V0", 1) }),
+            VariantImages = new Dictionary<string, Image<Rgba32>>
+            {
+                ["v0"] = new Image<Rgba32>(w, 1, new Rgba32(200, 40, 40, 255)),
+            },
+        };
+        return new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "Wide", new Dimensions(w, 1),
+                new Collection("Wide", "", "WD"), new Dictionary<string, double> { ["cat"] = 1 }),
+            Recipes = new[]
+            {
+                new LoadedRecipe
+                {
+                    Manifest = new RecipeManifest("cat", "Cat", new[] { "body" }, Array.Empty<IncompatibilityRule>()),
+                    Ingredients = new[] { ing },
+                },
+            },
+        };
+    }
+
+    [AvaloniaFact]
+    public async Task An_atlas_too_large_is_refused_in_the_card_and_points_at_loose()
+    {
+        string dir = Directory.CreateTempSubdirectory().FullName;
+        using var book = WideBook();
+        string mnu = Path.Combine(dir, "Wide.mnu");
+        var dialogs = new FakeDialogs();
+        var vm = Vm(book, mnu, dialogs);
+
+        await vm.ExportCommand.ExecuteAsync(null);
+
+        Assert.False(File.Exists(mnu));
+        Assert.Empty(Directory.GetFiles(dir));
+        Assert.True(vm.MessageIsProblem);
+        Assert.Contains("pixel limit on a side", vm.Message);
+        Assert.Contains("Loose", vm.Message);
+        Assert.False(vm.IsRunning);
+        Assert.Equal(0, vm.Progress);
+
+        // And Loose is the way out, as the line says.
+        vm.ChooseLooseCommand.Execute(null);
+        Assert.Equal("", vm.Message);
+        await vm.ExportCommand.ExecuteAsync(null);
+        Assert.True(File.Exists(mnu));
+    }
+
+    private static ExplorerViewModel Explorer(LoadedCookBook book, FakeDialogs dialogs, bool unlock)
+    {
+        var nav = new FakeNav();
+        var session = new CookBookSession();
+        var vm = new ExplorerViewModel(book, nav, dialogs, new ImageBridge(),
+            ExplorerViewModelTests.EditorFactory(nav), ExplorerViewModelTests.CookFactory(dialogs), session,
+            new FilePickerService(), ExplorerViewModelTests.LooseEditorFactory(nav, session, dialogs),
+            new StatusService());
+        vm.SelectedNode = vm.Root;
+        if (unlock) vm.IsEditing = true;
+        return vm;
+    }
+
+    [AvaloniaFact]
+    public void The_button_opens_the_card()
+    {
+        // A real click on the real button, on a LOCKED book: the export reads and edits nothing.
+        using var book = CookDialogModelsTests.Book();
+        var dialogs = new FakeDialogs();
+        using var explorer = Explorer(book, dialogs, unlock: false);
+        Assert.False(explorer.IsEditing);
+        var detail = Assert.IsType<CookBookDetailViewModel>(explorer.CurrentDetail);
+        var view = new Views.CookBookDetailView { DataContext = detail };
+        var window = new Window { Content = view, Width = 1100, Height = 700 };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        try
+        {
+            var button = view.GetVisualDescendants().OfType<Button>()
+                .Single(b => b.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text == "Export Menu…"));
+            Assert.True(button.IsEffectivelyEnabled);
+            // A real pointer press and release over the button, not a call to its command.
+            var at = button.TranslatePoint(new Avalonia.Point(button.Bounds.Width / 2, button.Bounds.Height / 2), window)!.Value;
+            window.MouseDown(at, Avalonia.Input.MouseButton.Left);
+            window.MouseUp(at, Avalonia.Input.MouseButton.Left);
+            Dispatcher.UIThread.RunJobs();
+            Assert.IsType<MenuExportDialogViewModel>(dialogs.Active);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public async Task The_menu_export_works_on_a_locked_book()
+    {
+        string dir = Directory.CreateTempSubdirectory().FullName;
+        string cbk = Path.Combine(dir, "Blocks.cbk");
+        using var book = CookDialogModelsTests.Book();
+        var dialogs = new FakeDialogs();
+        using var explorer = Explorer(book, dialogs, unlock: false);
+        Assert.False(explorer.IsEditing);
+
+        // Through the real seam: the card the Explorer builds for a locked book, over a session whose
+        // source path is the .cbk.
+        var vm = new MenuExportDialogViewModel(book, cbk, new SavePicker(null), dialogs, new StatusService());
+        Assert.True(vm.ExportCommand.CanExecute(null));
+        await vm.ExportCommand.ExecuteAsync(null);
+        Assert.True(File.Exists(Path.Combine(dir, "Blocks.mnu")));
+    }
+
+    [AvaloniaFact]
+    public async Task The_menu_export_is_disabled_on_an_invalid_book_with_a_reason()
+    {
+        string dir = Directory.CreateTempSubdirectory().FullName;
+        // Zero recipes: Validator reports a problem, MenuWriter would throw.
+        using var book = new LoadedCookBook
+        {
+            Manifest = new CookBookManifest("cb", "Empty", new Dimensions(4, 4),
+                new Collection("Empty", "", "EM"), new Dictionary<string, double>()),
+            Recipes = Array.Empty<LoadedRecipe>(),
+        };
+        string mnu = Path.Combine(dir, "Empty.mnu");
+        var vm = Vm(book, mnu);
+
+        Assert.False(vm.ExportCommand.CanExecute(null));
+        Assert.True(vm.MessageIsProblem);
+        Assert.Contains("cannot be written", vm.Message);
+        Assert.Contains(Validator.Validate(book)[0], vm.Message);
+        // A disabled button is a label: invoking the command anyway writes nothing.
+        await vm.ExportCommand.ExecuteAsync(null);
+        Assert.False(File.Exists(mnu));
+    }
+
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void The_menu_card_fits_the_smallest_window(bool refused)
+    {
+        // The tallest states: the long atlas refusal filling its reserved line, and the invalid book's
+        // reason. Both must live inside the reserved room, so the card is one height.
+        using var book = refused ? WideBook() : CookDialogModelsTests.Book();
+        var vm = refused ? RefusedVm(book) : Vm(book, Path.Combine(Path.GetTempPath(), "x.mnu"));
+        var view = new Views.MenuExportDialogView { DataContext = vm };
+        var window = new Window { Content = view, Width = 1600, Height = 1200 };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        try
+        {
+            view.Measure(Avalonia.Size.Infinity);
+            var size = view.DesiredSize;
+            double needW = size.Width * ShellViewModel.BaseScale + 24;
+            double needH = size.Height * ShellViewModel.BaseScale + ShellViewModel.ChromeReserve;
+            Assert.True(ShellViewModel.MinWindowWidth >= needW && ShellViewModel.MinWindowHeight >= needH,
+                $"the Menu card needs {needW:0} x {needH:0}; the minimum window is " +
+                $"{ShellViewModel.MinWindowWidth:0} x {ShellViewModel.MinWindowHeight:0}");
+
+            // Reserve space, toggle ink: the refused state is the same size as the quiet one.
+            var message = view.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Classes.Contains("msg"));
+            Assert.Equal(66, message.Bounds.Height, 0.5);
+            Assert.True(message.DesiredSize.Height <= message.Height + 0.5);
+        }
+        finally { window.Close(); }
+    }
+}

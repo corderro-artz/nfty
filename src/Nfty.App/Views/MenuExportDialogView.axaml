@@ -1,0 +1,88 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             x:Class="Nfty.App.Views.MenuExportDialogView"
+             x:DataType="vm:MenuExportDialogViewModel">
+  <UserControl.Styles>
+    <!-- The reserved line: muted when it only informs, warning ink when it refuses. Font size and
+         line box travel together, stated as the pair every other problem line uses. -->
+    <Style Selector="TextBlock.msg">
+      <Setter Property="FontSize" Value="11.5" />
+      <Setter Property="LineHeight" Value="16" />
+      <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    </Style>
+    <Style Selector="TextBlock.msg.problem">
+      <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+    </Style>
+  </UserControl.Styles>
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Escape" Command="{Binding CloseCommand}" />
+  </UserControl.KeyBindings>
+  <Border Classes="modal small">
+    <Grid RowDefinitions="Auto,Auto">
+      <Border Grid.Row="0" Classes="modal-body tight">
+        <StackPanel Spacing="11">
+          <StackPanel Classes="plabel-row">
+            <Ellipse Classes="kdot" />
+            <TextBlock Text="MENU" Classes="slbl" />
+          </StackPanel>
+          <TextBlock Text="Export a Menu" Classes="m-h" />
+          <TextBlock Classes="m-sub" TextWrapping="Wrap" Margin="0"
+                     Text="A Menu carries every weight, rule and color of this book plus its art, so a game or server can roll and render assets without the CookBook." />
+
+          <!-- The art tray. The note under it is one line for each mode and the slot is always laid
+               out, so switching modes moves nothing. -->
+          <StackPanel Spacing="6">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <TextBlock Classes="seglbl" Text="ART" VerticalAlignment="Center" />
+              <Border Classes="seg tiny" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal">
+                  <Button Classes="seg-b tiny" Content="Atlas" Classes.on="{Binding IsAtlas}"
+                          Command="{Binding ChooseAtlasCommand}" />
+                  <Button Classes="seg-b tiny" Content="Loose" Classes.on="{Binding IsLoose}"
+                          Command="{Binding ChooseLooseCommand}" />
+                </StackPanel>
+              </Border>
+            </StackPanel>
+            <TextBlock Classes="m-sub" Margin="0" Text="{Binding ModeNote}" />
+          </StackPanel>
+
+          <!-- The whole strip is the picker, as on the cook card's result: a path beside a separate
+               Browse button is two controls for one intent. -->
+          <Button Classes="pathstrip" Command="{Binding BrowseCommand}" ToolTip.Tip="{Binding Path}">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="9">
+              <Path Grid.Column="0" Classes="ico sm" Data="{StaticResource IconOpen}"
+                    VerticalAlignment="Center" />
+              <StackPanel Grid.Column="1" Spacing="1">
+                <TextBlock Classes="leaf" Text="{Binding PathLeaf}" />
+                <TextBlock Classes="parent" Text="{Binding PathParent}" />
+              </StackPanel>
+            </Grid>
+          </Button>
+
+          <!-- Reserved: the bar is always laid out and the line below it always has its room, so a
+               refusal or a run changes ink and nothing else. The ink is a TextBlock class swap on
+               the one control, never two controls. -->
+          <ProgressBar Minimum="0" Maximum="1" Value="{Binding Progress}" />
+          <TextBlock Classes="msg" Margin="0" Height="66" TextWrapping="Wrap"
+                     TextTrimming="CharacterEllipsis" Text="{Binding Message}"
+                     Classes.problem="{Binding MessageIsProblem}" />
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Row="1" Classes="modal-foot">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0" Classes="keyhint" VerticalAlignment="Center"
+                     Text="Reads the book; changes nothing in it" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+            <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="tbtn"
+                    IsVisible="{Binding IsRunning}" />
+            <Button Content="Close" Command="{Binding CloseCommand}" Classes="tbtn"
+                    IsVisible="{Binding !IsRunning}" />
+            <Button Content="Export" Command="{Binding ExportCommand}" Classes="accent" />
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
+  </Border>
+</UserControl>

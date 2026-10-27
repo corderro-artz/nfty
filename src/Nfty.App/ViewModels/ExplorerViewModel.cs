@@ -348,7 +348,11 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
                     new ReportDialogViewModel(_book, _dialogs, _clipboard ?? new NoopClipboardService())),
                 // The card's status chip and the status bar's open the SAME report, because they
                 // state the same count and a reader who clicks either is asking the same question.
-                () => ShowValidityCommand.Execute(null)),
+                () => ShowValidityCommand.Execute(null),
+                // Reads the book and writes a .mnu beside it; allowed on a locked book because it
+                // edits nothing.
+                () => _ = _dialogs.ShowAsync<object>(new MenuExportDialogViewModel(
+                    _book, _session.SourcePath, _picker, _dialogs, _status))),
             ExplorerNodeKind.Recipe => new RecipeDetailViewModel((LoadedRecipe)newValue!.Domain!, _book, _bridge,
                 id => OpenIngredientCommand.Execute(id),
                 // The pane asks; the Explorer owns the graph, the gate and the file. It reads _book at
