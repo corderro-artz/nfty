@@ -42,7 +42,7 @@
 
       <!-- The problems. Selectable, because a Validator message is the thing a reader copies into a
            search or pastes at whoever authored the book, and it is the same string the CLI prints. -->
-      <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled"
+      <ScrollViewer x:Name="ProblemScroll" Grid.Row="1" VerticalAlignment="Top" HorizontalScrollBarVisibility="Disabled"
                     VerticalScrollBarVisibility="Auto" Margin="24,0,24,0"
                     IsVisible="{Binding HasProblems}">
         <ItemsControl ItemsSource="{Binding Problems}">
