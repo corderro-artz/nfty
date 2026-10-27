@@ -5,9 +5,11 @@ namespace Nfty.App.Tests;
 
 public sealed class FakeNav : INavigationService
 {
+    private readonly List<ViewModelBase> _pages = new();
     public ViewModelBase? Current { get; private set; }
+    public IReadOnlyList<ViewModelBase> Pages => _pages.ToArray();
     public event Action? Changed;
-    public void To(ViewModelBase page) { Current = page; Changed?.Invoke(); }
+    public void To(ViewModelBase page) { _pages.Insert(0, page); Current = page; Changed?.Invoke(); }
     public int BackCount { get; private set; }
     public void Back() { BackCount++; }
 }

@@ -108,6 +108,17 @@ public sealed partial class RiseViewModel
     {
         // A disabled button is a label: the generated command does not consult CanExecute.
         if (!CanLeave()) return;
+        if (await ConfirmLeaveAsync()) _nav.Back();
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> ConfirmLeaveAsync()
+    {
+        if (!CanLeave())
+        {
+            _status.Say("Wait for the export to finish.");
+            return false;
+        }
         CancelDepthPreview();
         // A save that is running decides what is unsaved. Asking now would offer to discard depth that
         // is about to land anyway, and leaving now would hand the Explorer a book a moment before the
@@ -120,11 +131,7 @@ public sealed partial class RiseViewModel
         }
         int n = DirtyCount;
         bool snap = Source.HasUnsavedSnap;
-        if (n == 0 && !snap)
-        {
-            _nav.Back();
-            return;
-        }
+        if (n == 0 && !snap) return true;
         string unsaved = n == 0
             ? "an unsaved voxel-ready snap"
             : string.Create(CultureInfo.InvariantCulture, $"unsaved depth on {n} {DirtyNoun(n)}")
@@ -135,14 +142,12 @@ public sealed partial class RiseViewModel
         switch (choice)
         {
             case LeaveChoice.Discard:
-                _nav.Back();
-                break;
+                return true;
             case LeaveChoice.SaveAndLeave:
                 await Save();
-                if (!HasUnsavedWork) _nav.Back();
-                break;
+                return !HasUnsavedWork;
             default:
-                break;      // Stay, and a card dismissed without an answer
+                return false;      // Stay, and a card dismissed without an answer
         }
     }
 

@@ -157,7 +157,7 @@ public class IngredientEditorSaveTests
         try
         {
             var nav = new FakeNav();
-            var dialogs = new FakeConfirmingDialogs(confirm: false);   // user cancels the discard
+            var dialogs = new FakeConfirmingDialogs(confirm: false);   // user answers Stay on the leave card
             var vm = new IngredientEditorViewModel(ing, recipe, session.Current!, new ImageBridge(),
                 nav, session, dialogs, new FilePickerService());
             vm.ActiveTool = EditorTool.Fill; vm.BrushValue = 10;
@@ -196,7 +196,7 @@ public class IngredientEditorSaveTests
         public ViewModelBase? Active => null;
         public event Action? Changed { add { } remove { } }
         public Task<TResult?> ShowAsync<TResult>(ViewModelBase dialog)
-        { Shown = true; return Task.FromResult((TResult?)(object?)_confirm); }
+        { Shown = true; return Task.FromResult((TResult?)(_confirm ? (object)LeaveChoice.Discard : LeaveChoice.Stay)); }
         public void Close(object? result) { }
     }
 }

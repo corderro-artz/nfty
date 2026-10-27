@@ -340,6 +340,7 @@ public class DarkModeContrastTests
         yield return ("landing", new Views.LandingView { DataContext = landing }, null);
 
         yield return ("help", new Views.HelpView { DataContext = new HelpViewModel(dialogs) }, null);
+        yield return ("leave-editor", new Views.LeaveDialogView { DataContext = new LeaveDialogViewModel(dialogs, "Leave the editor?", "Aura has unsaved changes. Leaving discards them.", canSave: true) }, null);
 
         yield return ("wizard-cookbook",
             new Views.NewCookBookView { DataContext = new NewCookBookViewModel(dialogs) { Name = "Vapor Pets", Symbol = "VP" } }, null);

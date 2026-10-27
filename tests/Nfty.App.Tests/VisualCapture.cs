@@ -910,6 +910,9 @@ public class VisualCapture
 
             Capture(new Views.HelpView { DataContext = new HelpViewModel(dialogs) }, variant, $"help-{key}.png");
 
+            // The card the window close, the editor's Back and Rise's Back all raise over unsaved work.
+            Capture(new Views.LeaveDialogView { DataContext = new LeaveDialogViewModel(dialogs, "Leave the editor?", "Aura has unsaved changes. Leaving discards them.", canSave: true) }, variant, $"leave-editor-{key}.png");
+
             Capture(new Views.NewCookBookView { DataContext = new NewCookBookViewModel(dialogs) { Name = "Vapor Pets", Symbol = "VP", Description = "A cosy little collection." } },
                 variant, $"wizard-cookbook-{key}.png");
 

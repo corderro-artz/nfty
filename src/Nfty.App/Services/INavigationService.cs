@@ -10,6 +10,8 @@ public interface INavigationService
 {
     /// <summary>The page on top, or null before the first navigation.</summary>
     ViewModelBase? Current { get; }
+    /// <summary>Every page on the stack, top first.</summary>
+    IReadOnlyList<ViewModelBase> Pages { get; }
     /// <summary>Raised whenever the top of the stack changes.</summary>
     event Action? Changed;
     /// <summary>Pushes a page.</summary>
@@ -26,6 +28,8 @@ public sealed class NavigationService : INavigationService, IDisposable
     private readonly Stack<ViewModelBase> _stack = new();
     /// <inheritdoc />
     public ViewModelBase? Current => _stack.Count > 0 ? _stack.Peek() : null;
+    /// <inheritdoc />
+    public IReadOnlyList<ViewModelBase> Pages => _stack.ToArray();   // Stack enumerates top first
     /// <inheritdoc />
     public event Action? Changed;
 

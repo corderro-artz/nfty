@@ -142,6 +142,42 @@ public partial class ShellViewModel : ViewModelBase
         CloseDocumentCommand.NotifyCanExecuteChanged();
     }
 
+    private readonly IStatusService _status;
+
+    /// <summary>The close check the window started, for tests: closing is a fire-and-forget gesture,
+    /// so it owes an observable handle. Null until the window asks.</summary>
+    public Task<bool>? PendingClose { get; private set; }
+
+    /// <summary>The window's close request. Starts <see cref="ConfirmCloseAsync"/> and remembers it
+    /// as <see cref="PendingClose"/>; a request made while one is still asking gets that one back.</summary>
+    /// <returns>The check; true means the window may close.</returns>
+    public Task<bool> BeginClose() =>
+        PendingClose is { IsCompleted: false } running ? running : PendingClose = ConfirmCloseAsync();
+
+    /// <summary>
+    /// Whether the window may close: every page on the stack that holds unsaved work is asked, top
+    /// first, and the first refusal stops the walk. Asking only the page on top would let a dirty
+    /// editor under a Rise page vanish with the window.
+    /// </summary>
+    /// <returns>True when nothing is lost by closing, or the author chose to lose it.</returns>
+    public async Task<bool> ConfirmCloseAsync()
+    {
+        var holders = _nav.Pages.OfType<IUnsavedWork>().Where(p => p.HasUnsavedWork).ToList();
+        if (holders.Count == 0) return true;
+
+        // One slot for modals: a second card would replace the open one and orphan its answer.
+        if (HasDialog)
+        {
+            _status.Say($"Close the open dialog first \u2014 {holders.Count} unsaved "
+                + $"{(holders.Count == 1 ? "change" : "changes")} would be lost.");
+            return false;
+        }
+
+        foreach (var page in holders)
+            if (!await page.ConfirmLeaveAsync()) return false;
+        return true;
+    }
+
     /// <summary>Raised when the titlebar's minimise is pressed; the head owns the window.</summary>
     public event Action? MinimizeRequested;
     /// <summary>Raised when maximise is pressed or the titlebar is double-clicked.</summary>
@@ -167,7 +203,7 @@ public partial class ShellViewModel : ViewModelBase
     public ShellViewModel(INavigationService nav, IDialogService dialogs, IThemeService theme,
         IStatusService status, IKitchenSession? kitchen = null, ICookBookSession? session = null)
     {
-        _nav = nav; _dialogs = dialogs; _theme = theme;
+        _nav = nav; _dialogs = dialogs; _theme = theme; _status = status;
         _kitchen = kitchen;
         _session = session;
         if (_kitchen is not null)

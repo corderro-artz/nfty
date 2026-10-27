@@ -75,7 +75,7 @@ public partial class EditorVariant : ObservableObject
 /// detail pane. Wired to the real opened ingredient — the filmstrip is its actual variants with
 /// rendered thumbnails. Painting, undo/redo, and variant list mutation remain stubs; canvas/live
 /// preview bitmaps arrive in Task 7.</summary>
-public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
+public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUnsavedWork
 {
     private readonly INavigationService _nav;
     private readonly IImageBridge _bridge;
@@ -1729,14 +1729,30 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private async Task Back()
     {
-        if (IsDirty)
+        if (await ConfirmLeaveAsync()) _nav.Back();
+    }
+
+    /// <inheritdoc />
+    public bool HasUnsavedWork => IsDirty;
+
+    /// <inheritdoc />
+    public async Task<bool> ConfirmLeaveAsync()
+    {
+        if (!IsDirty) return true;
+        var choice = await _dialogs.ShowAsync<LeaveChoice>(new LeaveDialogViewModel(_dialogs,
+            "Leave the editor?",
+            $"{_ing.Manifest.Name} has unsaved changes. Leaving discards them.",
+            canSave: CanSave));
+        switch (choice)
         {
-            var ok = await _dialogs.ShowAsync<bool>(
-                new ConfirmDialogViewModel(_dialogs, "Discard edits?",
-                    "You have unsaved changes to this ingredient.", "Discard"));
-            if (!ok) return;
+            case LeaveChoice.Discard:
+                return true;
+            case LeaveChoice.SaveAndLeave:
+                await Save();
+                return !IsDirty;
+            default:
+                return false;      // Stay, and a card dismissed without an answer
         }
-        _nav.Back();
     }
 
     [RelayCommand] private void RerollPreview() { _previewSalt++; RebuildSurfaces(); }

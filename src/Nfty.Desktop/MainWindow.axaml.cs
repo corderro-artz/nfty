@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Markup.Xaml;
@@ -31,6 +32,31 @@ public partial class MainWindow : Window
             if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
                 BeginResizeDrag(WindowEdge.SouthEast, e);
         };
+    }
+
+    private bool _closeConfirmed;
+
+    /// <summary>Asks the shell before the window goes: the titlebar button, Alt+F4 and the OS ending
+    /// the session all arrive here, so no way of closing skips the unsaved-work check.</summary>
+    /// <param name="e">Canceled while the shell asks; the window closes itself once it answers yes.</param>
+    protected override void OnClosing(WindowClosingEventArgs e)
+    {
+        base.OnClosing(e);
+        if (_closeConfirmed || DataContext is not ShellViewModel shell) return;
+        e.Cancel = true;
+        _ = ConfirmThenCloseAsync(shell);
+    }
+
+    private async Task ConfirmThenCloseAsync(ShellViewModel shell)
+    {
+        bool alreadyAsking = shell.PendingClose is { IsCompleted: false };
+        var answer = shell.BeginClose();
+        if (alreadyAsking) return;        // the request already running closes the window on yes
+        if (await answer)
+        {
+            _closeConfirmed = true;
+            Close();
+        }
     }
 
     private void OnTitlebarPointerPressed(object? sender, PointerPressedEventArgs e)
