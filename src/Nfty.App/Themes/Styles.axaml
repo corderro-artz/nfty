@@ -2588,6 +2588,18 @@
   <Style Selector="Button.titlelink:pointerover TextBlock.idname">
     <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
   </Style>
+  <!-- The pencil beside the title: reserved (it is an overlay, it costs no layout) and inked only
+       while the title is hovered or keyboard-focused. Ink toggled, space kept. -->
+  <Style Selector="Path.ico.pen">
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+  <Style Selector="Button.titlelink:pointerover Path.ico.pen">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector="Button.titlelink:focus-visible Path.ico.pen">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
 
   <!-- Book settings card: the weight caveat line is reserved and lit only while a weight differs from
        the saved one (ink toggled, space kept); a refusal under it takes the warning ink. -->

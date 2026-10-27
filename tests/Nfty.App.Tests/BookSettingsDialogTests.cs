@@ -405,4 +405,54 @@ public class BookSettingsDialogTests
         }
         finally { window.Close(); Cleanup(vm, session, path); }
     }
+
+    /// <summary>
+    /// The pencil that says the title is a link costs the card no geometry: it is an overlay drawn
+    /// in the gap beside the title, inked only while the title is hovered or focused. At rest the
+    /// button is exactly the title's width, the suffix is still one column gap away, and the pencil is
+    /// transparent; its ink fits inside that gap. (The card's pixels at rest were also diffed against
+    /// the frames from before the pencil existed: identical.)
+    /// </summary>
+    [AvaloniaFact]
+    public async Task The_title_pencil_is_reserved_in_the_gap_and_inked_only_on_hover()
+    {
+        var (vm, session, path, dialogs) = Explorer();
+        var window = new Window
+        {
+            Content = new Views.ExplorerView { DataContext = vm },
+            Width = (ShellViewModel.MinWindowWidth - 24) / ShellViewModel.BaseScale,
+            Height = (ShellViewModel.MinWindowHeight - ShellViewModel.ChromeReserve) / ShellViewModel.BaseScale,
+        };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        try
+        {
+            vm.SelectNodeCommand.Execute(vm.Root);
+            Dispatcher.UIThread.RunJobs();
+            var title = window.GetVisualDescendants().OfType<Button>().First(b => b.Classes.Contains("titlelink"));
+            var text = title.GetVisualDescendants().OfType<TextBlock>().First(t => t.Classes.Contains("idname"));
+            var pen = title.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Path>().First(p => p.Classes.Contains("pen"));
+            var suffix = window.GetVisualDescendants().OfType<TextBlock>().First(t => t.Classes.Contains("mintname"));
+
+            // No layout cost: the button is the title's width, and the suffix still starts one gap on.
+            Assert.Equal(text.Bounds.Width, title.Bounds.Width, 0.5);
+            double buttonRight = title.TranslatePoint(new Avalonia.Point(title.Bounds.Width, 0), window)!.Value.X;
+            double suffixLeft = suffix.TranslatePoint(new Avalonia.Point(0, 0), window)!.Value.X;
+            Assert.Equal(10, suffixLeft - buttonRight, 0.5);
+
+            // The ink (2..10 of the 12px box) lands inside that gap.
+            double penLeft = pen.TranslatePoint(new Avalonia.Point(0, 0), window)!.Value.X;
+            Assert.True(penLeft >= buttonRight - 0.5 && penLeft + 10 <= suffixLeft + 0.5,
+                $"the pencil's ink spans {penLeft + 2:F1}..{penLeft + 10:F1} in a gap of {buttonRight:F1}..{suffixLeft:F1}");
+
+            // Ink toggled, not space: transparent at rest, drawn once the pointer is on the title.
+            Assert.Equal(0, pen.Opacity);
+            var centre = title.TranslatePoint(new Avalonia.Point(title.Bounds.Width / 2, title.Bounds.Height / 2), window)!.Value;
+            window.MouseMove(centre);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(1, pen.Opacity);
+            await Task.CompletedTask;
+        }
+        finally { window.Close(); Cleanup(vm, session, path); }
+    }
 }

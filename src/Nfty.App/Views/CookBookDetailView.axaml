@@ -43,7 +43,15 @@
           <Button Grid.Column="1" Classes="titlelink" Command="{Binding EditSettingsCommand}"
                   VerticalAlignment="Bottom" MaxWidth="330"
                   ToolTip.Tip="Book settings: names, supply, recipe weights and palette">
-            <TextBlock Classes="idname" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+            <!-- THE EDIT AFFORDANCE: a pencil that is inked on hover and keyboard focus only. It is an
+                 overlay in a Panel cell, so it occupies no layout: it is drawn in the 10px column gap
+                 beside the title (the glyph's ink spans 2..10 of its 12px box) and the title, the suffix
+                 and the rows below sit exactly where they did before it existed. -->
+            <Panel>
+              <TextBlock Classes="idname" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+              <Path Classes="ico xs pen" Data="{StaticResource IconPencil}" IsHitTestVisible="False"
+                    HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-12,0" />
+            </Panel>
           </Button>
           <TextBlock Grid.Column="2" Classes="mintname" Text="{Binding MintName}"
                      VerticalAlignment="Bottom" TextTrimming="CharacterEllipsis"
