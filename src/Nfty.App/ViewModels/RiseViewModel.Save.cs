@@ -20,11 +20,12 @@ public sealed partial class RiseViewModel
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanSave))]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RerollCommand))]
     private bool _isSaving;
 
     /// <summary>The Save button is inked: the source is one depth can be saved into. Space is reserved
     /// either way; a locked book keeps the button, dimmed, beside the sentence that says why.</summary>
-    public bool ShowSave => Source.IsEditable;
+    public bool ShowSave => Source.IsEditable || DirtyCount > 0;
 
     /// <summary>Whether Save would write something right now.</summary>
     public bool CanSave => SaveGate && !IsSaving;
@@ -47,7 +48,7 @@ public sealed partial class RiseViewModel
     {
         get
         {
-            if (!Source.IsEditable) return "read-only source — nothing to save";
+            if (!Source.IsEditable && DirtyCount == 0) return "read-only source — nothing to save";
             if (!Source.CanSave && !Source.IsLocked && Source.UnsavableNote is { } why) return why;
             int n = DirtyCount;
             if (n == 0) return Source.HasUnsavedSnap
@@ -119,7 +120,7 @@ public sealed partial class RiseViewModel
         }
         int n = DirtyCount;
         bool snap = Source.HasUnsavedSnap;
-        if (!Source.IsEditable || (n == 0 && !snap))
+        if (n == 0 && !snap)
         {
             _nav.Back();
             return;

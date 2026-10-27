@@ -104,7 +104,7 @@ internal static class RisePages
 
     /// <summary>The shipped Chest Demo, written to a temp folder, read back and opened in a session -
     /// the way the app itself opens it. Returns the folder so a Set can be cooked beside the book.</summary>
-    private static (CookBookSession Session, string Dir) DemoSession()
+    internal static (CookBookSession Session, string Dir) DemoSession()
     {
         var dir = Directory.CreateTempSubdirectory("nfty-rise-demo-").FullName;
         var path = DemoCookBook.WriteTo(dir);

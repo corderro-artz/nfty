@@ -104,6 +104,14 @@ public class VariantReachTests
     }
 
     [Fact]
+    public void A_variant_that_exists_never_reads_as_about_zero()
+    {
+        Assert.Equal("in <1 of 1,200 assets", new VariantReach(0.01, 1200, false).Text);   // 0.12 assets
+        Assert.Equal("in ~1 of 1,200 assets", new VariantReach(0.05, 1200, false).Text);
+        Assert.Equal("in ~0 of 1,200 assets", new VariantReach(0, 1200, false).Text);       // a variant nothing rolls
+    }
+
+    [Fact]
     public void A_zero_weight_recipe_reaches_nothing()
     {
         var one = Book(1200);

@@ -317,9 +317,16 @@
               </Button>
 
               <!-- The mouse map. Only a source that can be painted has one to print; constant per page. -->
-              <TextBlock Classes="smallmono" Text="{x:Static svc:KeyHints.RiseLegend}"
-                         IsVisible="{Binding Source.IsEditable}"
-                         ToolTip.Tip="{x:Static svc:KeyHints.RiseLegendTip}" />
+              <Panel IsVisible="{Binding Source.IsEditable}">
+                <TextBlock Classes="smallmono" Text="{x:Static svc:KeyHints.RiseLegend}"
+                           Opacity="{Binding PaintLegendOpacity}"
+                           IsHitTestVisible="{Binding !IsPicking}"
+                           ToolTip.Tip="{x:Static svc:KeyHints.RiseLegendTip}" />
+                <TextBlock Classes="smallmono" Text="{x:Static svc:KeyHints.RiseLegendPicking}"
+                           Opacity="{Binding PickLegendOpacity}"
+                           IsHitTestVisible="{Binding IsPicking}"
+                           ToolTip.Tip="{x:Static svc:KeyHints.RiseLegendPickingTip}" />
+              </Panel>
             </ctl:StripPanel>
           </Border>
 

@@ -194,7 +194,10 @@ public sealed class RecipeRiseSource : RiseSource
     public override bool IsDirty => DirtyCount > 0;
 
     /// <inheritdoc />
-    public override bool CanSave => IsEditable && !IsLocked && DirtyCount > 0;
+    // Keyed on the SESSION, not on the current roll: depth painted on a variant stays unsaved work after a reroll
+    // into a roll that cannot rise (partial alpha, a book that cannot cook). The edited variants' own pictures
+    // were checked when they were painted and are stale-guarded at save.
+    public override bool CanSave => _session is not null && !IsLocked && DirtyCount > 0;
 
     /// <inheritdoc />
     public override IDepthEditor EditorFor(RiseSubject subject)
@@ -524,6 +527,13 @@ public sealed class RecipeRiseSource : RiseSource
         }
     }
 
+    /// <summary>A whole combine of the roll from the layers' current maps, for a test to hold the incremental
+    /// result against. The page itself never calls it.</summary>
+    /// <returns>The rise; the caller disposes it. Null when the roll has no layer to combine.</returns>
+    public StackRise? CombineFromScratch() => _picks.Count == 0 || _item.Subject is not { } subject
+        ? null
+        : StackDepth.Combine(PairsOf(_picks), $"the {_recipe.Manifest.Name} recipe", subject.Art);
+
     /// <summary>How many times a changed rectangle has been recombined since the page opened: one per stroke,
     /// undo or standing preview that changed a pixel, never two for the same change.</summary>
     public int RecombineCount { get; private set; }
@@ -609,7 +619,7 @@ public sealed class RecipeRiseSource : RiseSource
 
     private DepthSurface SurfaceOf((string Ing, string Variant) key) => EditFor(key.Ing, key.Variant).Surface;
 
-    // Painting, undo and redo stay live WHILE A SAVE RUNS, on purpose: SaveCoreAsync takes each variant's map
+    // Painting, undo and redo stay live WHILE A SAVE RUNS, on purpose (and so does the retarget an undo makes): SaveCoreAsync takes each variant's map
     // as a snapshot and marks THAT snapshot saved afterwards (edit.Baseline = what was written), so a stroke
     // painted during the write is simply still dirty when the write ends. Only changing WHICH layers are
     // present (reroll) or which variant is the target is refused, because those would swap the edits a

@@ -1690,7 +1690,26 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     {
         var fresh = book.Recipes.FirstOrDefault(r => r.Manifest.Id == _recipe.Manifest.Id)?
             .Ingredients.FirstOrDefault(i => i.Manifest.Id == _ing.Manifest.Id);
-        if (fresh is not null) AdoptSavedDepth(fresh);
+        if (fresh is null || SameStored(fresh, _ing)) return;   // another ingredient's save: not ours to reload
+        AdoptSavedDepth(fresh);
+    }
+
+    // What a Rise save can change on an ingredient: the depth of a variant, or (voxel-ready) its pixels.
+    private static bool SameStored(LoadedIngredient a, LoadedIngredient b) =>
+        a.Depths.Count == b.Depths.Count
+        && a.Depths.All(kv => b.Depths.TryGetValue(kv.Key, out var o) && o.ToBytes().AsSpan().SequenceEqual(kv.Value.ToBytes()))
+        && a.VariantImages.Count == b.VariantImages.Count
+        && a.VariantImages.All(kv => b.VariantImages.TryGetValue(kv.Key, out var o) && SamePixels(kv.Value, o));
+
+    private static bool SamePixels(Image<Rgba32> a, Image<Rgba32> b)
+    {
+        if (ReferenceEquals(a, b)) return true;
+        if (a.Width != b.Width || a.Height != b.Height) return false;
+        var x = new Rgba32[a.Width * a.Height];
+        var y = new Rgba32[x.Length];
+        a.CopyPixelDataTo(x);
+        b.CopyPixelDataTo(y);
+        return x.AsSpan().SequenceEqual(y);
     }
 
     /// <summary>The stored depth map of a variant as this editor holds it, or null (test hook).</summary>

@@ -548,7 +548,7 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable
     /// <summary>Whether the source can reroll.</summary>
     public bool HasDie => Source is RecipeRiseSource;
 
-    private bool CanReroll() => HasDie && !IsExporting;
+    private bool CanReroll() => HasDie && !IsExporting && !IsSaving;
 
     /// <summary>Rolls the recipe again. The die never lands on the face it is showing: the face is the
     /// button's only confirmation. Random.Shared, never the engine's RNG: decoration must not touch

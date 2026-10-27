@@ -100,6 +100,16 @@ public sealed partial class RiseViewModel
         Recipe?.SetTarget(null);
     }
 
+    // The toolstrip prints one of TWO mouse maps, both laid out always, one inked (reserve space, toggle ink):
+    // while a recipe is choosing a layer the buttons PICK, so the painting legend would mislead, and swapping
+    // the text itself changed the strip's width and so where it wraps.
+
+    /// <summary>Ink of the painting legend.</summary>
+    public double PaintLegendOpacity => IsPicking ? 0 : 1;
+
+    /// <summary>Ink of the picking legend.</summary>
+    public double PickLegendOpacity => IsPicking ? 1 : 0;
+
     private void SayTarget()
     {
         if (Recipe?.Target is { } t) _status.Say($"Painting {t.Name}.");
@@ -110,6 +120,8 @@ public sealed partial class RiseViewModel
     {
         OnPropertyChanged(nameof(IsWriteThrough));
         OnPropertyChanged(nameof(IsPicking));
+        OnPropertyChanged(nameof(PaintLegendOpacity));
+        OnPropertyChanged(nameof(PickLegendOpacity));
         OnPropertyChanged(nameof(ShowTargetHeader));
         OnPropertyChanged(nameof(TargetHeader));
         OnPropertyChanged(nameof(TargetHeaderTip));

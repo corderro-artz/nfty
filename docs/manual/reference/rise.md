@@ -77,7 +77,7 @@ the other layers are drawn dimmed (30%) on the canvas. The 3D tile keeps showing
 | A dimmed pixel | Chooses its owner, as above. | Does nothing: a stroke that begins on another layer never begins. |
 | Click a layer's row, or **Enter** on it | Chooses that layer. | Chooses that layer instead. |
 | **Page Up** / **Page Down** | Steps to the next layer up or down the stack, among the layers this roll has. | The same. |
-| **Escape** | Nothing. | Drops the marquee first if there is one, otherwise drops the chosen layer (back to picking). |
+| **Escape** | Drops the marquee, if there is one. | Drops the marquee first if there is one, otherwise drops the chosen layer (back to picking). |
 
 **Page Up**, **Page Down** and **Escape** work only while the page has focus and not while you type in
 a field. **Escape** yields to an open dialog.

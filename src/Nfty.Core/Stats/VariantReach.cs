@@ -48,6 +48,8 @@ public sealed record VariantReach(double Percent, int? TargetSupply, bool Recipe
                 string total = supply.ToString("N0", CultureInfo.InvariantCulture);
                 if (all) return $"in all {total} assets";
                 double count = Math.Round(Percent / 100 * supply, MidpointRounding.AwayFromZero);
+                // A variant that exists must not read like one that does not: "~0" is what an absent trait says.
+                if (count < 1 && Percent > 0) return $"in <1 of {total} assets";
                 return $"in ~{count.ToString("N0", CultureInfo.InvariantCulture)} of {total} assets";
             }
             return all ? "in every asset" : $"in {RarityText.Percent(Percent)} of assets";

@@ -111,6 +111,14 @@ public static class KeyHints
     /// stay one line at the window the app opens at, and the spelled-out form ("left front · right
     /// back") was nine pixels too wide for it; the opening line and the tools' tooltips spell it out.</summary>
     public static string RiseLegend { get; } = $"L front · R back · {LowerDepth} lowers";
+
+    /// <summary>The same strip while a recipe roll is choosing the layer to paint: the buttons pick.</summary>
+    public static string RiseLegendPicking { get; } = "L picks front · R picks back";
+
+    /// <summary>The picking legend spelled out.</summary>
+    public static string RiseLegendPickingTip { get; } =
+        "Click a pixel to choose the layer to paint. The left mouse button chooses the layer that owns "
+        + "the pixel's front, the right one the layer that owns its back. Nothing is painted by that click.";
     /// <summary>Move the selected layer up or down the stack.</summary>
     public static string MoveLayer { get; } = Alt + Gap + "↑↓";
     /// <summary>Drop the editor's selection marquee.</summary>
