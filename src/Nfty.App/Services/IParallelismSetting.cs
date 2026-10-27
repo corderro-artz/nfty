@@ -72,7 +72,7 @@ public sealed class ParallelismSettingService : IParallelismSetting
         _store = store;
         Saved = Load(store.Read(FileName));
         var raw = env()?.Trim();
-        if (TryParse(raw, out var parsed))
+        if (Parallelism.TryParse(raw, out var parsed))
         {
             _fromEnvironment = parsed;
             EnvironmentText = parsed.Requested == 0 ? "max" : parsed.Requested.ToString(CultureInfo.InvariantCulture);
@@ -104,17 +104,6 @@ public sealed class ParallelismSettingService : IParallelismSetting
         try { _store.Write(FileName, JsonSerializer.Serialize(new SettingsFile(next), Json)); }
         catch (NotSupportedException) { /* convenience state: never surface */ }
         Changed?.Invoke();
-    }
-
-    /// <summary>A positive whole number, or <c>max</c> / <c>0</c> for every processor. Anything else is no override.</summary>
-    private static bool TryParse(string? text, out Parallelism parallelism)
-    {
-        parallelism = Parallelism.Default;
-        if (string.IsNullOrEmpty(text)) return false;
-        if (text.Equals("max", StringComparison.OrdinalIgnoreCase)) { parallelism = Parallelism.All; return true; }
-        if (!int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var n)) return false;
-        parallelism = n == 0 ? Parallelism.All : new Parallelism(n);
-        return true;
     }
 
     private static int? Load(string? json)

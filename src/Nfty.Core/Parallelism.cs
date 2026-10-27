@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using SixLabors.ImageSharp;
 
 namespace Nfty.Core;
@@ -42,6 +43,29 @@ public sealed record Parallelism(int Requested)
 
     /// <summary>Every logical processor.</summary>
     public static Parallelism All { get; } = new(0);
+
+    /// <summary>The environment variable that overrides the saved or default count for one run.</summary>
+    public const string EnvironmentVariable = "NFTY_THREADS";
+
+    /// <summary>
+    /// Reads a thread count as people spell it: a whole number, or <c>max</c>; <c>0</c> and
+    /// <c>max</c> both mean every logical processor. The one rule the CLI's <c>--threads</c>, the
+    /// <c>NFTY_THREADS</c> variable and the app's Settings card all share. Nothing is clamped
+    /// here: a count above the machine's is a valid request, and <see cref="Effective"/> brings it down.
+    /// </summary>
+    /// <param name="text">The text, with surrounding whitespace ignored.</param>
+    /// <param name="parallelism">The count when this returns true; <see cref="Default"/> otherwise.</param>
+    /// <returns>False for empty text, a sign, a fraction or anything else that is not a whole number or <c>max</c>.</returns>
+    public static bool TryParse(string? text, out Parallelism parallelism)
+    {
+        parallelism = Default;
+        text = text?.Trim();
+        if (string.IsNullOrEmpty(text)) return false;
+        if (text.Equals("max", StringComparison.OrdinalIgnoreCase)) { parallelism = All; return true; }
+        if (!int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var n)) return false;
+        parallelism = n == 0 ? All : new Parallelism(n);
+        return true;
+    }
 
     /// <summary>The degree requested; 0 means all.</summary>
     public int Requested { get; } = Requested >= 0
