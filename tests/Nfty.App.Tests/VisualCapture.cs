@@ -1411,14 +1411,14 @@ public class VisualCapture
             }
 
             // The book settings card: a weight edited (the caveat lit), then the same card refusing.
-            foreach (var (tag, locked, refusal) in new (string, bool, string?)[]
+            foreach (var (tag, locked, refuse) in new (string, bool, bool)[]
             {
-                ("edited", false, null),
-                ("refused", false, "CookBook has zero total recipe weight."),
-                ("locked", true, null),
+                ("edited", false, false),
+                ("refused", false, true),
+                ("locked", true, false),
             })
             {
-                var card = BookSettingsCard(dialogs, out var settingsBook, locked, refusal);
+                var card = BookSettingsCard(dialogs, out var settingsBook, locked, refuse);
                 Capture(new Views.BookSettingsDialogView { DataContext = card }, variant,
                     $"zz-dialog-book-settings-{tag}-{key}.png");
                 settingsBook.Dispose();
@@ -2004,9 +2004,11 @@ public class VisualCapture
     /// <param name="dialogs">The dialog layer.</param>
     /// <param name="book">Disposed by the caller; the card only reads it.</param>
     /// <param name="locked">Whether the book is locked, so Save is dimmed with its reason.</param>
-    /// <param name="refusal">A refusal to print in the footer, or null.</param>
+    /// <param name="refuse">Whether to shelve every recipe and press Save, so the footer prints the
+    /// REAL refusal the Validator gives for that edit (zero total weight, introduced by it) over
+    /// weights that show the cause. Never a hand-written sentence over contradicting values.</param>
     internal static BookSettingsDialogViewModel BookSettingsCard(IDialogService dialogs,
-        out Nfty.Core.Formats.LoadedCookBook book, bool locked, string? refusal)
+        out Nfty.Core.Formats.LoadedCookBook book, bool locked, bool refuse)
     {
         var plain = ExplorerViewModelTests.TwoRecipeBook();
         book = new Nfty.Core.Formats.LoadedCookBook
@@ -2018,10 +2020,20 @@ public class VisualCapture
             },
             Recipes = plain.Recipes,
         };
+        var live = book;
         var vm = new BookSettingsDialogViewModel(dialogs, book, null, () => !locked,
-            _ => System.Threading.Tasks.Task.FromResult(new BookSettingsOutcome(true, [])));
-        vm.Weights[0].Weight = vm.Weights[0].SavedWeight + 15;
-        if (refusal is not null) vm.StatusLine = refusal;
+            edit => System.Threading.Tasks.Task.FromResult(
+                Nfty.Core.Formats.Validator.Validate(live).Count == 0
+                    && Nfty.Core.Formats.Validator.Validate(edit(live)) is { Count: > 0 } introduced
+                    ? new BookSettingsOutcome(false, introduced)
+                    : new BookSettingsOutcome(true, [])));
+        if (refuse)
+        {
+            foreach (var w in vm.Weights) w.Weight = 0;
+            // The commit above completes synchronously, so this returns having printed the refusal.
+            vm.SaveCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+        }
+        else vm.Weights[0].Weight = vm.Weights[0].SavedWeight + 15;
         return vm;
     }
 

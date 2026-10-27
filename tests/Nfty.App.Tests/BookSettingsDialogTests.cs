@@ -322,6 +322,26 @@ public class BookSettingsDialogTests
         finally { Cleanup(vm, session, path); }
     }
 
+    [AvaloniaFact]
+    public async Task A_refusal_is_cleared_once_the_author_changes_a_value()
+    {
+        var (vm, session, path, dialogs) = Explorer();
+        try
+        {
+            vm.ToggleLockCommand.Execute(null);
+            vm.SelectNodeCommand.Execute(vm.Root);
+            var card = await Open(vm, dialogs);
+            card.Weights[0].Weight = 0;
+            await card.SaveCommand.ExecuteAsync(null);
+            Assert.Contains("zero total recipe weight", card.StatusLine);     // survives the save's own bookkeeping
+
+            card.Weights[0].Weight = 5;                                       // the cause is gone
+
+            Assert.Equal(string.Empty, card.StatusLine);
+        }
+        finally { Cleanup(vm, session, path); }
+    }
+
     // ---- fit and geometry -----------------------------------------------------------------------
 
     [AvaloniaFact]

@@ -268,8 +268,10 @@ public sealed partial class BookSettingsDialogViewModel : ViewModelBase
     /// else nothing. The line's space is reserved either way.</summary>
     public string FooterNote => HasStatus ? StatusLine : LockNote;
 
-    private void Changed()
+    private void Changed(bool editedByAuthor = true)
     {
+        // A refusal describes the values it was given; once they move it is a stale sentence.
+        if (editedByAuthor && StatusLine.Length > 0) StatusLine = string.Empty;
         OnPropertyChanged(nameof(IsDirty));
         OnPropertyChanged(nameof(CanSave));
         OnPropertyChanged(nameof(HasWeightChange));
@@ -281,7 +283,7 @@ public sealed partial class BookSettingsDialogViewModel : ViewModelBase
     partial void OnSymbolChanged(string value) => Changed();
     partial void OnDescriptionChanged(string value) => Changed();
     partial void OnNoTargetChanged(bool value) => Changed();
-    partial void OnIsSavingChanged(bool value) => Changed();
+    partial void OnIsSavingChanged(bool value) => Changed(editedByAuthor: false);
 
     partial void OnTargetSupplyChanged(int value)
     {

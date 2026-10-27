@@ -378,12 +378,12 @@ public class DarkModeContrastTests
         }, null);
 
         // The book settings card in its riskiest ink: a refusal in WarningBrush, the lit weight caveat,
-        // and a DISABLED accent Save (a locked book). Unlocked and refusing would leave Save enabled.
-        var settings = VisualCapture.BookSettingsCard(dialogs, out var settingsBook, locked: true,
-            refusal: "CookBook has zero total recipe weight.");
+        // and the accent Save still offered for a retry (the refusal is a real Validator sentence).
+        var settings = VisualCapture.BookSettingsCard(dialogs, out var settingsBook, locked: false,
+            refuse: true);
         yield return ("dialog-book-settings", new Views.BookSettingsDialogView { DataContext = settings },
             settingsBook.Dispose);
-        var lockedCard = VisualCapture.BookSettingsCard(dialogs, out var lockedBook, locked: true, refusal: null);
+        var lockedCard = VisualCapture.BookSettingsCard(dialogs, out var lockedBook, locked: true, refuse: false);
         yield return ("dialog-book-settings-locked", new Views.BookSettingsDialogView { DataContext = lockedCard },
             lockedBook.Dispose);
 
