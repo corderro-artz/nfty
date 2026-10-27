@@ -97,7 +97,7 @@ public partial class MenuExportDialogViewModel : ViewModelBase
     /// run open (a real write of a small book is over before a test can press Cancel) and so prove
     /// that a canceled or failed run leaves the file that was already there.</summary>
     internal Func<LoadedCookBook, string, MenuWriteOptions, IProgress<MenuWriteProgress>, CancellationToken, Task> Writer
-    { get; set; } = MenuWriter.WriteAsync;
+    { get; set; } = (book, path, options, progress, ct) => MenuWriter.WriteAsync(book, path, options, progress, ct);
 
     /// <summary>The art mode the tray has chosen.</summary>
     public MenuArtMode Mode => IsAtlas ? MenuArtMode.Atlas : MenuArtMode.Loose;
