@@ -57,6 +57,7 @@ ignored.
 nfty model sprite.png --out sprite.glb
 nfty model sprite.png --out sprite.glb --front 2 --back 1
 nfty model hat.igt --variant red --out hat.gltf --format gltf
+nfty model chest.rcp --seed launch --out chest.glb
 ```
 
 Every fully opaque pixel becomes a column of voxels: one for the paper, plus its **front** depth
@@ -71,10 +72,11 @@ cooked. The Rise page does the same thing with a picture, a layer, a roll or a c
 |---|---|
 | `--out` | The model to write. Required. Its extension must match the format: `.glb`, or `.gltf`. |
 | `--variant <id>` | Which variant of an `.igt` to rise. Required for an `.igt`, refused for a `.png`. |
-| `--front N --back M` | Fill-all: every opaque pixel gets front `N` and back `M` (0 to 255 each), replacing any stored depth. Pass both or neither. |
+| `--seed <text>` | Roll a Recipe (`.rcp`) with this seed and rise the whole stack, the same draw `nfty preview chest.rcp --seed <text>` shows. Required for an `.rcp`, refused otherwise. |
+| `--front N --back M` | Fill-all: every opaque pixel gets front `N` and back `M` (0 to 255 each), replacing any stored depth. Pass both or neither. Refused for an `.rcp`, which takes the depth its layers store. |
 | `--format` | `glb` (one file, the default), `gltf` (text plus a `.bin` beside it) or `gltf-embedded` (one text file). |
 | `--pivot` | Which point of the model sits at the origin: `bottom-center` (the default), `center` or `min-corner`. |
-| `--voxel-size` | World units per pixel. Defaults to 1. |
+| `--voxel-size` | World units per pixel, from 0.001 to 1000. Defaults to 1. The Rise page and the cook dialog keep the same range. |
 
 A picture with a **partly transparent** pixel is refused, naming it: a voxel is either there or not,
 and nfty does not round your art for you. `nfty inspect <file> --voxel` lists the variants that carry
@@ -122,6 +124,11 @@ NFTY_KEY=... nfty export ./collection --out ./dist --preset sealedcritique --key
 | `--images` / `--no-images` | The generated art (`images/`). |
 | `--opensea` / `--no-opensea` | The standard ERC-721 fields (`metadata/`). |
 | `--nfty` / `--no-nfty` | Per-asset DNA, seed and layer colors (`nfty/`). What a buyer wants and a public listing does not. |
+| `--models` / `--no-models` | The 3D models (`models/`). `--models` is refused on a Set cooked without them. |
+| `--sheet` | Also stitch every asset into one `spritesheet.png`, in the Set's own numbering, carrying its grid inside the file. |
+| `--sheet-cols N` / `--sheet-rows N` | The sheet's grid. Need `--sheet`; one alone lets the other follow. |
+| `--watermark` | Stamp each exported image with its set number. The cooked Set is never touched and models never carry it. |
+| `--watermark-corner <corner>` | `top-left`, `top-right`, `bottom-left` or `bottom-right` (the default). Needs `--watermark`. |
 | `--book <cbk>` | Ship the source CookBook alongside. A Set records only its book's hash, so the path has to be given. |
 | `--folder` / `--pack` | Shape. `--pack` (one archive) is the default; a sealed export is always one file. |
 | `--seal` | Encrypt it and mark it view-only. Writes a `.tin`. |
@@ -129,8 +136,7 @@ NFTY_KEY=... nfty export ./collection --out ./dist --preset sealedcritique --key
 | `--key <source>` | Where the passphrase comes from — see below. Omit it and nfty asks at the terminal. |
 
 A Set cooked with `--models` ships its `models/` in every preset except `marketplace`, which leaves
-them out. There is no flag for it: the export card in the app has a **3D models** box, and the command
-line follows the preset. The export prints a `3D models (N)` line when it carries them.
+them out; `--models` / `--no-models` override that. The export prints a `3D models (N)` line when it carries them.
 
 `set.json` always ships -- it is what makes the result a Set rather than a folder of pictures, and it
 carries the collection-wide rarity table, so even the leanest export still answers "what is this and
@@ -138,7 +144,22 @@ how rare is what". It also carries the seed and the source book's hash; a seed i
 book, but it is there.
 
 The command prints every part that went, by name, and warns when the export carries the source
-CookBook.
+CookBook. A `--book` that is not the book that cooked the Set is warned about on stderr and still
+shipped, the rule `extend` keeps about the same comparison. Dependent options (`--sheet-cols` without
+`--sheet`, `--watermark-corner` without `--watermark`) are **rejected**, not ignored.
+
+### The grid a spritesheet carries
+
+```bash
+nfty sheet grid spritesheet.png                  # prints the embedded grid (or none) and the detected one
+nfty sheet grid spritesheet.png --cols 8 --rows 4
+nfty sheet grid spritesheet.png --cell 64x64
+nfty sheet grid spritesheet.png --clear
+```
+
+Writing or clearing rewrites the file in place, keeping every pixel. A grid that does not divide the
+picture is refused with the reason. `--cols` and `--rows` go together; `--cell` is the other way to
+say the same grid; `--clear` takes none of them.
 
 ### Where a passphrase comes from
 
