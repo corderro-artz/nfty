@@ -1678,12 +1678,23 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable
     // write the old maps back over it, rebuild the surroundings, and tell the Explorer as for any save.
     private void OnRiseSaved(LoadedCookBook book)
     {
-        var fresh = book.Recipes.FirstOrDefault(r => r.Manifest.Id == _recipe.Manifest.Id)?
-            .Ingredients.FirstOrDefault(i => i.Manifest.Id == _ing.Manifest.Id);
-        if (fresh is not null) AdoptSavedDepth(fresh);
+        AdoptExternalSave(book);
         RefreshFromBook(book);
         Saved?.Invoke(book);
     }
+
+    /// <summary>Reloads this editor's draft from the ingredient a save made elsewhere (a Rise page) put into
+    /// <paramref name="book"/>. The ingredient is found by id; a book without it changes nothing.</summary>
+    /// <param name="book">The graph the other page's save produced.</param>
+    internal void AdoptExternalSave(LoadedCookBook book)
+    {
+        var fresh = book.Recipes.FirstOrDefault(r => r.Manifest.Id == _recipe.Manifest.Id)?
+            .Ingredients.FirstOrDefault(i => i.Manifest.Id == _ing.Manifest.Id);
+        if (fresh is not null) AdoptSavedDepth(fresh);
+    }
+
+    /// <summary>The stored depth map of a variant as this editor holds it, or null (test hook).</summary>
+    internal DepthMap? DepthOf(string variantId) => _depths.GetValueOrDefault(variantId);
 
     private void OnLooseRiseSaved(LoadedIngredient saved) => AdoptSavedDepth(saved);
 

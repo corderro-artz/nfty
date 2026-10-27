@@ -423,7 +423,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     {
         if (_riseFactory is null) { source.Dispose(); return; }
         var rise = _riseFactory(source);
-        rise.Saved += OnEditorSaved;
+        rise.Saved += OnRiseSaved;
         rise.Closed += () => { if (ReferenceEquals(_openRise, rise)) _openRise = null; };
         _openRise = rise;
         // Nothing said here: the shell says the opening line after navigation.
@@ -448,6 +448,14 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         // into this book, behind the same edit lock a variant's Rise page answers to.
         OpenRise(new Nfty.App.Rise.RecipeRiseSource(_book, r, seed, _bridge, _session, () => IsEditing));
     };
+
+    /// <summary>A Rise page persisted depth: everything an editor save does, plus the editor that may be open
+    /// underneath, whose draft holds the OLD depth maps and would write them back on its next Save.</summary>
+    internal void OnRiseSaved(LoadedCookBook book)
+    {
+        OnEditorSaved(book);
+        _openEditor?.AdoptExternalSave(book);
+    }
 
     /// <summary>The editor persisted an ingredient; the session now holds the spliced graph. Rebuild
     /// the tree from it and reselect the same ingredient so its detail/thumbnails refresh in place.</summary>
