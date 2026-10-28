@@ -86,4 +86,46 @@ public class GltfReaderTests
         var ex = Assert.Throws<UnsupportedModelException>(() => GltfReader.Read(bytes));
         Assert.Contains("sparse accessors", ex.Message);
     }
+
+    // Hostile input never escapes as anything but UnsupportedModelException: a viewer that catches
+    // that one type falls back to rising the asset instead of failing the tile.
+    [Fact]
+    public void A_chunk_length_past_int_range_is_refused_not_overflowed()
+    {
+        var (_, files) = Written(ModelFormat.Glb);
+        var bytes = files[0].Bytes.ToArray();
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(12), 0xFFFFFFF0);
+        Assert.Throws<UnsupportedModelException>(() => GltfReader.Read(bytes));
+    }
+
+    [Theory]
+    [InlineData("""{"asset":{},"meshes":[{}],"accessors":[],"bufferViews":[],"buffers":[{"byteLength":0}],"images":[]}""")]
+    [InlineData("""{"asset":{},"meshes":[{"primitives":[{}]}],"accessors":[],"bufferViews":[],"buffers":[{"byteLength":0}],"images":[]}""")]
+    [InlineData("""{"asset":{},"meshes":[null],"accessors":[],"bufferViews":[],"buffers":[{"byteLength":0}],"images":[]}""")]
+    [InlineData("""{"asset":{},"meshes":[],"accessors":[],"bufferViews":[],"buffers":[null],"images":[]}""")]
+    public void A_structurally_hollow_glb_is_refused(string json)
+    {
+        var bytes = GlbContainer.Frame(System.Text.Encoding.UTF8.GetBytes(json), new byte[4]);
+        Assert.Throws<UnsupportedModelException>(() => GltfReader.Read(bytes));
+    }
+
+    [Theory]
+    [InlineData("data:application/octet-stream;base64,!!!not base64!!!")]
+    [InlineData("../outside.bin")]
+    [InlineData("sub/inside.bin")]
+    [InlineData("missing.bin")]
+    public void A_gltf_buffer_uri_nfty_never_writes_is_refused(string uri)
+    {
+        var (_, files) = Written(ModelFormat.GltfEmbedded);
+        var json = JsonNode.Parse(files[0].Bytes)!;
+        json["buffers"]![0]!["uri"] = uri;
+        var dir = Directory.CreateTempSubdirectory();
+        try
+        {
+            string path = Path.Combine(dir.FullName, "sprite.gltf");
+            File.WriteAllText(path, json.ToJsonString());
+            Assert.Throws<UnsupportedModelException>(() => GltfReader.Read(path));
+        }
+        finally { dir.Delete(true); }
+    }
 }

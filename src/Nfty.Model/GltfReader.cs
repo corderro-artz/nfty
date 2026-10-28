@@ -32,8 +32,37 @@ public static class GltfReader
         if (string.Equals(ext, ".glb", StringComparison.OrdinalIgnoreCase)) return Read(bytes);
         if (!string.Equals(ext, ".gltf", StringComparison.OrdinalIgnoreCase))
             throw new UnsupportedModelException($"the file type '{ext}' (only .glb and .gltf)");
-        string? dir = Path.GetDirectoryName(Path.GetFullPath(path));
-        return Parse(bytes, uri => File.ReadAllBytes(Path.Combine(dir ?? "", Uri.UnescapeDataString(uri))), null);
+        string dir = Path.GetDirectoryName(Path.GetFullPath(path)) ?? "";
+        return Guarded(() => Parse(bytes, uri => Beside(dir, uri), null));
+    }
+
+    // nfty names its .bin by a bare file name beside the .gltf. Anything else (a path into another
+    // folder, a rooted path) is a file nfty never wrote, and is refused rather than read.
+    private static byte[] Beside(string dir, string uri)
+    {
+        string name = Uri.UnescapeDataString(uri);
+        if (name.Length == 0 || name.IndexOfAny(['/', '\\', ':']) >= 0 || name is "." or ".."
+            || name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            throw new UnsupportedModelException($"a buffer uri that is not a file beside the .gltf ('{uri}')");
+        try { return File.ReadAllBytes(Path.Combine(dir, name)); }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        {
+            throw new UnsupportedModelException($"a .gltf whose buffer '{name}' is not beside it");
+        }
+    }
+
+    // Hostile bytes must surface as the one exception the contract names: a caller that catches
+    // UnsupportedModelException (a Set tile falling back to rising its asset) must never meet an
+    // OverflowException, a FormatException or a null member of a hollow structure instead.
+    private static ReadModel Guarded(Func<ReadModel> read)
+    {
+        try { return read(); }
+        catch (Exception ex) when (ex is OverflowException or FormatException or NullReferenceException
+                                       or IndexOutOfRangeException or ArgumentException or InvalidCastException
+                                       or InvalidOperationException)
+        {
+            throw new UnsupportedModelException($"a structure nfty never writes ({ex.Message})");
+        }
     }
 
     /// <summary>Reads a GLB held in memory.</summary>
@@ -41,6 +70,12 @@ public static class GltfReader
     /// <returns>The mesh and texture.</returns>
     /// <exception cref="UnsupportedModelException">The bytes are not a GLB nfty could have written.</exception>
     public static ReadModel Read(ReadOnlySpan<byte> glb)
+    {
+        byte[] copy = glb.ToArray();
+        return Guarded(() => ReadGlb(copy));
+    }
+
+    private static ReadModel ReadGlb(ReadOnlySpan<byte> glb)
     {
         if (glb.Length < 20 || BinaryPrimitives.ReadUInt32LittleEndian(glb) != GlbContainer.Magic)
             throw new UnsupportedModelException("a container that is not GLB");
