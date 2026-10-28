@@ -90,6 +90,21 @@ public partial class ExplorerView : UserControl
         _tree.AddHandler(InputElement.PointerReleasedEvent, OnTreePointerReleased,
             RoutingStrategies.Bubble, handledEventsToo: true);
         _tree.PointerCaptureLost += (_, _) => EndDrag();
+
+        // The menu path to the viewer gesture: right-click a row, Open in viewer. The node is read
+        // when the menu is requested, so selection is not what decides which row it acts on.
+        ExplorerNode? menuNode = null;
+        var openInViewer = new MenuItem { Header = "Open in viewer" };
+        openInViewer.Click += (_, _) =>
+        {
+            if (menuNode is { } n && DataContext is ExplorerViewModel vm) vm.PopOutNodeCommand.Execute(n);
+        };
+        _tree.ContextMenu = new ContextMenu { Items = { openInViewer } };
+        _tree.ContextRequested += (_, e) =>
+        {
+            menuNode = NodeUnder(e.Source as Visual);
+            if (menuNode is null) e.Handled = true;     // no row under the pointer: no menu
+        };
         // TUNNEL, like the press, and for a sharper reason: a TreeView handles the ARROW KEYS
         // itself, for navigation, and it does so whatever modifier is held - so a bubble handler
         // here never saw Alt+Up at all and the chord silently moved the SELECTION instead of the
@@ -134,6 +149,15 @@ public partial class ExplorerView : UserControl
     {
         _pressNode = null;
         if (DataContext is not ExplorerViewModel vm) return;
+        // Ctrl+click or middle-click opens a viewer and does nothing else. This is a TUNNEL handler
+        // because TreeView marks a press handled for its own selection; claiming the press here
+        // keeps the selection where it was and never arms a reorder drag.
+        if (ViewerGesture.IsViewerPress(e, _tree))
+        {
+            if (NodeUnder(e.Source as Visual) is { } popped) vm.PopOutNodeCommand.Execute(popped);
+            e.Handled = true;
+            return;
+        }
         // Left button only. Avalonia reports a touch contact and a pen tip as the left button too, so
         // this costs the touch path nothing; what it rules out is a right-click on a row capturing
         // the pointer and committing a reorder on release.

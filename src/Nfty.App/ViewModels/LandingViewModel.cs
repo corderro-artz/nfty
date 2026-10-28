@@ -32,6 +32,8 @@ public partial class LandingViewModel : ViewModelBase
     private readonly IStateStore? _store;
     private readonly Func<Nfty.App.Rise.RiseSource, RiseViewModel>? _rise;
     private readonly IStatusService? _status;
+    private readonly IViewerHost? _viewer;
+    private readonly Func<IEnumerable<string>>? _bookCandidates;
     private readonly IImageBridge _bridge;
     private readonly IParallelismSetting? _threads;
 
@@ -66,6 +68,8 @@ public partial class LandingViewModel : ViewModelBase
     /// <param name="status">Where the page's opening line and the grid note are said.</param>
     /// <param name="bridge">Makes the Rise rail's thumbnails; the shipped bridge when null.</param>
     /// <param name="threads">The worker-thread setting, read at the start of each open; null runs at the default.</param>
+    /// <param name="viewer">Where Open in viewer shows its subject; null leaves that button dim.</param>
+    /// <param name="bookCandidates">CookBook paths the app can name, so a Set shown in the viewer can show its model.</param>
     public LandingViewModel(INavigationService nav, IDialogService dialogs,
         IFilePickerService picker, IRecentsService recents, ICookBookSession session,
         Func<LoadedCookBook, ExplorerViewModel> explorerFactory,
@@ -73,8 +77,10 @@ public partial class LandingViewModel : ViewModelBase
         Func<LoadedIngredient, LoadedCookBook, string, IngredientEditorViewModel> looseEditorFactory,
         IKitchenSession? kitchen = null, IStateStore? store = null,
         Func<Nfty.App.Rise.RiseSource, RiseViewModel>? rise = null, IStatusService? status = null,
-        IImageBridge? bridge = null, IParallelismSetting? threads = null)
+        IImageBridge? bridge = null, IParallelismSetting? threads = null,
+        IViewerHost? viewer = null, Func<IEnumerable<string>>? bookCandidates = null)
     {
+        _viewer = viewer; _bookCandidates = bookCandidates;
         _threads = threads;
         _rise = rise; _status = status; _bridge = bridge ?? new ImageBridge();
         _nav = nav; _dialogs = dialogs; _picker = picker; _recents = recents;
@@ -436,6 +442,22 @@ public partial class LandingViewModel : ViewModelBase
     public static string RecentMeta(LoadedCookBook book) =>
         $"cookbook · {book.Recipes.Count} {(book.Recipes.Count == 1 ? "recipe" : "recipes")} · "
         + $"{book.Manifest.Canvas.Width}×{book.Manifest.Canvas.Height}";
+
+    /// <summary>Whether a viewer is there to open into.</summary>
+    public bool CanOpenInViewer => _viewer is not null;
+
+    /// <summary>Picks any file the viewer understands and shows it there, routed by extension. Nothing
+    /// is opened for editing and nothing is added to Recents: the viewer only reads.</summary>
+    [RelayCommand(CanExecute = nameof(CanOpenInViewer))]
+    private async Task OpenInViewer()
+    {
+        if (_viewer is not { } host) return;
+        var path = await _picker.OpenFileAsync("Open in viewer", Nfty.App.Viewer.ViewerOpener.Extensions);
+        if (path is null) return;
+        var subject = await Nfty.App.Viewer.ViewerOpener.OpenAsync(path, _dialogs, host: host,
+            bookCandidates: _bookCandidates);
+        if (subject is not null) host.Open(subject);
+    }
 
     [RelayCommand]
     private async Task OpenSet()

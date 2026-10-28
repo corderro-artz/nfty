@@ -64,7 +64,16 @@ public static class ServiceRegistration
             sp.GetRequiredService<Func<Nfty.App.Rise.RiseSource, RiseViewModel>>(),
             sp.GetRequiredService<IStatusService>(),
             sp.GetRequiredService<IImageBridge>(),
-            sp.GetRequiredService<IParallelismSetting>()));
+            sp.GetRequiredService<IParallelismSetting>(),
+            viewer: sp.GetService<IViewerHost>(),
+            bookCandidates: () =>
+            {
+                var session = sp.GetRequiredService<ICookBookSession>();
+                var paths = new List<string>();
+                if (session.SourcePath is { Length: > 0 } open) paths.Add(open);
+                paths.AddRange(sp.GetRequiredService<IRecentsService>().Items.Select(i => i.Path));
+                return paths;
+            }));
 
         services.AddSingleton<Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, Func<bool>, IngredientEditorViewModel>>(sp =>
             (ing, recipe, book, isEditing) => RememberOnSave(sp, new IngredientEditorViewModel(ing, recipe, book,
@@ -108,7 +117,7 @@ public static class ServiceRegistration
                 sp.GetRequiredService<IRecentsService>()
                   .Add(new RecentItem(ing.Manifest.Name, $"loose ingredient · {ing.Manifest.Variants.Count} variants",
                                       path, Loose: true));
-                return new IngredientEditorViewModel(ing, book.Recipes[0], book,
+                return WithViewer(sp, new IngredientEditorViewModel(ing, book.Recipes[0], book,
                     sp.GetRequiredService<IImageBridge>(), sp.GetRequiredService<INavigationService>(),
                     sp.GetRequiredService<ICookBookSession>(),
                     sp.GetRequiredService<IDialogService>(), sp.GetRequiredService<IFilePickerService>(),
@@ -116,7 +125,7 @@ public static class ServiceRegistration
                     kitchen: sp.GetRequiredService<IKitchenSession>(),
                     palette: sp.GetRequiredService<IPaletteService>(),
                     viewState: sp.GetRequiredService<IEditorViewState>(),
-                    rise: sp.GetRequiredService<Func<Nfty.App.Rise.RiseSource, RiseViewModel>>());
+                    rise: sp.GetRequiredService<Func<Nfty.App.Rise.RiseSource, RiseViewModel>>()));
             });
 
         // The Rise page, built over a source. The factory the "Rise" buttons call; the page owns the
@@ -138,7 +147,7 @@ public static class ServiceRegistration
                 sp.GetRequiredService<IParallelismSetting>()));
 
         services.AddSingleton<Func<LoadedCookBook, ExplorerViewModel>>(sp =>
-            book => new ExplorerViewModel(book,
+            book => WithViewer(sp, new ExplorerViewModel(book,
                 sp.GetRequiredService<INavigationService>(),
                 sp.GetRequiredService<IDialogService>(),
                 sp.GetRequiredService<IImageBridge>(),
@@ -160,9 +169,9 @@ public static class ServiceRegistration
                 sp.GetRequiredService<Func<LoadedCookBook, ExplorerViewModel>>(),
                 sp.GetRequiredService<IRecentsService>(),
                 sp.GetRequiredService<IParallelismSetting>(),
-                sp.GetRequiredService<IPaletteService>()));
+                sp.GetRequiredService<IPaletteService>())));
 
-        services.AddSingleton<Func<LoadedSet, SetBrowserViewModel>>(sp => set => new SetBrowserViewModel(
+        services.AddSingleton<Func<LoadedSet, SetBrowserViewModel>>(sp => set => WithViewer(sp, new SetBrowserViewModel(
             set, sp.GetRequiredService<IFilePickerService>(), sp.GetRequiredService<IDialogService>(),
             sp.GetRequiredService<IStatusService>(), sp.GetRequiredService<IFolderRevealer>(),
             // The CookBooks this app can name, for the export dialog to check against the hash the
@@ -182,7 +191,7 @@ public static class ServiceRegistration
             rise: sp.GetRequiredService<Func<Nfty.App.Rise.RiseSource, RiseViewModel>>(),
             nav: sp.GetRequiredService<INavigationService>(),
             bridge: sp.GetRequiredService<IImageBridge>(),
-            threads: sp.GetRequiredService<IParallelismSetting>()));
+            threads: sp.GetRequiredService<IParallelismSetting>())));
 
         // Further VM registrations are added incrementally by the task that creates each
         // ViewModel (see Tasks 12-13).
@@ -207,12 +216,31 @@ public static class ServiceRegistration
     {
         var session = sp.GetRequiredService<ICookBookSession>();
         var recents = sp.GetRequiredService<IRecentsService>();
+        rise.Viewer = sp.GetService<IViewerHost>();
         rise.Saved += book =>
         {
             if (session.SourcePath is { } path)
                 recents.Add(new RecentItem(book.Manifest.Name, LandingViewModel.RecentMeta(book), path, false));
         };
         return rise;
+    }
+
+    private static ExplorerViewModel WithViewer(IServiceProvider sp, ExplorerViewModel vm)
+    {
+        vm.Viewer = sp.GetService<IViewerHost>();
+        return vm;
+    }
+
+    private static SetBrowserViewModel WithViewer(IServiceProvider sp, SetBrowserViewModel vm)
+    {
+        vm.Viewer = sp.GetService<IViewerHost>();
+        return vm;
+    }
+
+    private static IngredientEditorViewModel WithViewer(IServiceProvider sp, IngredientEditorViewModel vm)
+    {
+        vm.Viewer = sp.GetService<IViewerHost>();
+        return vm;
     }
 
     /// <summary>
@@ -231,6 +259,7 @@ public static class ServiceRegistration
     {
         var session = sp.GetRequiredService<ICookBookSession>();
         var recents = sp.GetRequiredService<IRecentsService>();
+        editor.Viewer = sp.GetService<IViewerHost>();
         editor.Saved += book =>
         {
             if (session.SourcePath is { } path)

@@ -79,6 +79,15 @@ public partial class IngredientEditorView : UserControl
         _backdrop = this.FindControl<Panel>("CanvasBackdrop")!;
         _canvas = new PixelCanvasHost(_img, _surface, _backdrop, () => _vm, Brush);
 
+        // Ctrl+click or middle-click on the corner tile opens the viewer. On the tunnel so the tile's
+        // own buttons and the canvas never see the press; a plain click is untouched.
+        this.FindControl<Border>("PreviewTile")!.AddHandler(PointerPressedEvent, (_, e) =>
+        {
+            if (!ViewerGesture.IsViewerPress(e, this)) return;
+            _vm?.PopOutCommand.Execute(null);
+            e.Handled = true;
+        }, RoutingStrategies.Tunnel);
+
         _surface.PointerPressed += (_, e) =>
         {
             // CAPTURE, or a gesture that wanders off the 320px tile is simply abandoned: moves stop

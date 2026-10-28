@@ -27,7 +27,7 @@ namespace Nfty.App.ViewModels;
 /// replaces its item's subject and disposes the old one, so <see cref="Subject"/> is read from the
 /// item each time, and the surface a standing preview was applied to is remembered with it.</para>
 /// </remarks>
-public sealed partial class RiseViewModel : ViewModelBase, IDisposable, IUnsavedWork, IZoomPan
+public sealed partial class RiseViewModel : ViewModelBase, IDisposable, IUnsavedWork, IZoomPan, Nfty.App.Viewer.ILiveViewerSource
 {
     /// <summary>Roughly 30 repaints a second of the model while a stroke is being dragged.</summary>
     internal const int MeshBudgetMs = 33;
@@ -433,6 +433,42 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable, IUnsaved
         Mesh = BuildMesh();
         if (Mesh is { } m) _preview?.SetSubject(m.Min, m.Max);
         MeshRebuilt?.Invoke();
+        ViewerChanged?.Invoke();
+    }
+
+    // ---------------------------------------------------------------- the pop-out viewer
+
+    /// <summary>Where a viewer opens; null on a page built without one, which leaves Pop out dim.</summary>
+    public Nfty.App.Services.IViewerHost? Viewer { get; set; }
+
+    /// <inheritdoc />
+    public string ViewerTitle => Source.Title;
+
+    /// <inheritdoc />
+    public Image<Rgba32> ViewerArt => Subject.Art;
+
+    /// <inheritdoc />
+    public Nfty.App.Viewer.ViewerModel? ViewerModel =>
+        Mesh is { } m ? new Nfty.App.Viewer.ViewerModel(m, Subject.Texture, null) : null;
+
+    /// <inheritdoc />
+    public bool AllowExport => Source is not SetRiseSource { IsSealed: true };
+
+    /// <inheritdoc />
+    public event Action? ViewerChanged;
+
+    /// <inheritdoc />
+    public event Action? Detached;
+
+    /// <summary>Whether Pop out can do anything.</summary>
+    public bool CanPopOut => Viewer is not null && !_disposed;
+
+    /// <summary>Opens a viewer that follows this page.</summary>
+    [RelayCommand]
+    private void PopOut()
+    {
+        if (!CanPopOut) return;     // RelayCommand.Execute does not consult CanExecute
+        Viewer!.Open(new Nfty.App.Viewer.LiveSubject(this));
     }
 
     partial void OnDepthEdited();
@@ -697,6 +733,9 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable, IUnsaved
         // editor's Dispose does the same).
         Closed?.Invoke();
         Closed = null;
+        Detached?.Invoke();     // while the images are alive: a following viewer takes its last copy
+        Detached = null;
+        ViewerChanged = null;
         UndoStanding();
         _disposed = true;
         Source.Changed -= OnSourceChanged;

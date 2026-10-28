@@ -64,6 +64,11 @@ public partial class RiseView : UserControl
     private readonly List<(int x, int y)> _points = new();
     private bool _drawing;
     private bool _panning;
+    private bool _ctrlHold;
+    private Point _ctrlFrom;
+    private KeyModifiers _ctrlMods;
+    private double _panTravel;
+    private const double PanClickSlop = 4;
     private Point _panFrom;
     private KeyModifiers _mods;
     private DepthSide _side;
@@ -90,6 +95,14 @@ public partial class RiseView : UserControl
         _model = this.FindControl<ModelPreviewView>("ModelView")!;
         _host = this.FindControl<Border>("CanvasHost")!;
         _tile = this.FindControl<Border>("ModelTile")!;
+        // Ctrl+click or middle-click on the 3D tile opens the viewer. On the tunnel so the model's own
+        // orbit drag and the tile's buttons never see the press.
+        _tile.AddHandler(PointerPressedEvent, (_, e) =>
+        {
+            if (!ViewerGesture.IsViewerPress(e, this)) return;
+            _vm?.PopOutCommand.Execute(null);
+            e.Handled = true;
+        }, RoutingStrategies.Tunnel);
         _gridChip = this.FindControl<Border>("GridChip")!;
         _targetChip = this.FindControl<Border>("TargetChip")!;
         _railScroll = this.FindControl<ScrollViewer>("RailScroll")!;
@@ -412,40 +425,56 @@ public partial class RiseView : UserControl
     {
         _surface.PointerPressed += (_, e) =>
         {
+            var props = e.GetCurrentPoint(_surface).Properties;
+            // Ctrl is also how a stroke is constrained to a straight line, so Ctrl+press cannot decide
+            // yet what it is: HELD, nothing painted, no tool armed. A release that never moved is the
+            // viewer gesture (like the middle button's click, below); a move past the slop begins the
+            // stroke from where the press landed, exactly as an ordinary press would have.
+            if (props.PointerUpdateKind == PointerUpdateKind.LeftButtonPressed
+                && ViewerGesture.IsViewerPress(e, _surface))
+            {
+                e.Handled = true;
+                if (_vm?.ShowPaintCanvas != true) { _vm?.PopOutCommand.Execute(null); return; }
+                e.Pointer.Capture(_surface);
+                _ctrlHold = true;
+                _ctrlFrom = e.GetPosition(_surface);
+                _ctrlMods = e.KeyModifiers;
+                return;
+            }
             // The surface is still there when the 3D view has the pane; a stroke would land unseen.
             if (_vm?.ShowPaintCanvas != true) return;
             e.Pointer.Capture(_surface);
             _mods = e.KeyModifiers;
 
-            var props = e.GetCurrentPoint(_surface).Properties;
             // PointerUpdateKind AND the flag: platforms differ about which one a press populates.
             if (props.PointerUpdateKind == PointerUpdateKind.MiddleButtonPressed || props.IsMiddleButtonPressed)
             {
                 _panning = true;
+                _panTravel = 0;
                 _panFrom = e.GetPosition(_surface);
                 e.Handled = true;
                 return;
             }
 
-            _side = props.IsRightButtonPressed || props.PointerUpdateKind == PointerUpdateKind.RightButtonPressed
-                ? DepthSide.Back : DepthSide.Front;
-            _lower = _mods.HasFlag(KeyModifiers.Shift);
-            _drawing = true;
-            _points.Clear();
-            AddPoint(e);
-            _applyingSelection = _vm.ActiveTool == EditorTool.Select && _points.Count > 0
-                && _vm.SelectionContains(_points[0].x, _points[0].y);
-            // Budgeted 3D repaints for the length of the stroke; GestureEnded lifts it.
-            _model.HostInteracting = true;
-            _vm.PreviewDepthStroke(Gesture(), _side, _lower);
-            DrawBand();
+            BeginStroke(e.GetPosition(_surface),
+                props.IsRightButtonPressed || props.PointerUpdateKind == PointerUpdateKind.RightButtonPressed);
         };
 
         _surface.PointerMoved += (_, e) =>
         {
+            if (_ctrlHold)
+            {
+                var at = e.GetPosition(_surface);
+                if (Math.Abs(at.X - _ctrlFrom.X) + Math.Abs(at.Y - _ctrlFrom.Y) < PanClickSlop) return;
+                // It was a drag after all: begin the stroke at the press, then carry on as one.
+                _ctrlHold = false;
+                _mods = _ctrlMods;
+                BeginStroke(_ctrlFrom, back: false);
+            }
             if (_panning)
             {
                 var now = e.GetPosition(_surface);
+                _panTravel += Math.Abs(now.X - _panFrom.X) + Math.Abs(now.Y - _panFrom.Y);
                 _vm?.PanBy(now.X - _panFrom.X, now.Y - _panFrom.Y);
                 // The anchor follows the pointer even where the clamp refused the move.
                 _panFrom = now;
@@ -464,7 +493,21 @@ public partial class RiseView : UserControl
 
         _surface.PointerReleased += (_, e) =>
         {
-            if (_panning) { _panning = false; e.Pointer.Capture(null); return; }
+            if (_ctrlHold)
+            {
+                _ctrlHold = false;
+                e.Pointer.Capture(null);
+                _vm?.PopOutCommand.Execute(null);
+                return;
+            }
+            if (_panning)
+            {
+                _panning = false;
+                e.Pointer.Capture(null);
+                // A middle click that never moved is the viewer gesture; one that moved was a pan.
+                if (_panTravel < PanClickSlop) _vm?.PopOutCommand.Execute(null);
+                return;
+            }
             if (!_drawing) return;
             _mods = e.KeyModifiers;
             // Cleared BEFORE the capture is released: releasing raises PointerCaptureLost, which would
@@ -483,6 +526,7 @@ public partial class RiseView : UserControl
         _surface.PointerCaptureLost += (_, _) =>
         {
             _panning = false;
+            _ctrlHold = false;
             if (_drawing) AbortGesture();
         };
 
@@ -514,10 +558,31 @@ public partial class RiseView : UserControl
     }
 
     /// <summary>Maps the pointer (control space) to a canvas pixel and extends the path.</summary>
-    private void AddPoint(PointerEventArgs e)
+    private void AddPoint(PointerEventArgs e) => AddPointAt(e.GetPosition(_surface));
+
+    /// <summary>Starts a stroke at a point of the surface.</summary>
+    /// <param name="at">Where the press landed.</param>
+    /// <param name="back">Whether the press was the right button (the back); a stroke begun late (a held
+    /// Ctrl press that moved) is always the left button.</param>
+    private void BeginStroke(Point at, bool back)
+    {
+        if (_vm is null) return;
+        _side = back ? DepthSide.Back : DepthSide.Front;
+        _lower = _mods.HasFlag(KeyModifiers.Shift);
+        _drawing = true;
+        _points.Clear();
+        AddPointAt(at);
+        _applyingSelection = _vm.ActiveTool == EditorTool.Select && _points.Count > 0
+            && _vm.SelectionContains(_points[0].x, _points[0].y);
+        // Budgeted 3D repaints for the length of the stroke; GestureEnded lifts it.
+        _model.HostInteracting = true;
+        _vm.PreviewDepthStroke(Gesture(), _side, _lower);
+        DrawBand();
+    }
+
+    private void AddPointAt(Point p)
     {
         if (_img.Source is not Bitmap bmp || !_canvas.TryGeometry(out var scale, out var offX, out var offY)) return;
-        var p = e.GetPosition(_surface);
         var pt = CanvasMapping.PixelAt(new CanvasFrame(scale, offX, offY), p.X, p.Y,
             bmp.PixelSize.Width, bmp.PixelSize.Height);
         if (_points.Count == 0 || _points[^1] != pt) _points.Add(pt);

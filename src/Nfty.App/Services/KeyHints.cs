@@ -119,6 +119,11 @@ public static class KeyHints
     public static string RiseLegendPickingTip { get; } =
         "Click a pixel to choose the layer to paint. The left mouse button chooses the layer that owns "
         + "the pixel's front, the right one the layer that owns its back. Nothing is painted by that click.";
+    /// <summary>The viewer gesture in words: Ctrl+click (not on macOS, where Ctrl+click is a right click)
+    /// or the middle button.</summary>
+    public static string ViewerClick { get; } = OperatingSystem.IsMacOS() ? "middle-click" : "Ctrl+click or middle-click";
+    /// <summary>Tooltip of every Pop out button: what it does and the gesture that does the same.</summary>
+    public static string PopOut { get; } = "Open in a viewer window" + Tail(ViewerClick);
     /// <summary>Move the selected layer up or down the stack.</summary>
     public static string MoveLayer { get; } = Alt + Gap + "↑↓";
     /// <summary>Drop the editor's selection marquee.</summary>

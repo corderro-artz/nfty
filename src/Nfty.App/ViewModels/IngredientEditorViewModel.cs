@@ -75,7 +75,7 @@ public partial class EditorVariant : ObservableObject
 /// detail pane. Wired to the real opened ingredient — the filmstrip is its actual variants with
 /// rendered thumbnails. Painting, undo/redo, and variant list mutation remain stubs; canvas/live
 /// preview bitmaps arrive in Task 7.</summary>
-public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUnsavedWork, IZoomPan
+public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUnsavedWork, IZoomPan, Nfty.App.Viewer.ILiveViewerSource
 {
     private readonly INavigationService _nav;
     private readonly IImageBridge _bridge;
@@ -653,6 +653,57 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
         Canvas = RenderCanvas();
         Preview = RenderPreview();
         oldCanvas?.Dispose(); oldPreview?.Dispose();
+        ViewerChanged?.Invoke();
+    }
+
+    // ---------------------------------------------------------------- the pop-out viewer
+
+    private Image<Rgba32>? _viewerArt;
+
+    /// <summary>Where a viewer opens; null on an editor built without one, which leaves Pop out dim.</summary>
+    public IViewerHost? Viewer { get; set; }
+
+    /// <inheritdoc />
+    public string ViewerTitle => SelectedVariant is { } v ? $"{_ing.Manifest.Name} / {v.Name}" : _ing.Manifest.Name;
+
+    /// <summary>The layer as generation would render it - what the corner tile shows - as an image.
+    /// Rendered when asked (the viewer asks once a frame, never on a stroke) and freed when the next
+    /// ask replaces it; the viewer copies it at once.</summary>
+    public Image<Rgba32> ViewerArt
+    {
+        get
+        {
+            using var subject = RenderSubject();
+            var next = IsColorMode || _ing.Manifest.Colorization is null
+                ? subject.Clone()
+                : VariantImagery.ColorizeWith(subject, Mode == LayerKind.Dynamic,
+                    HueMin, HueMax, SatMin, SatMax, FixedColor, ColorModel, _previewSalt);
+            _viewerArt?.Dispose();
+            return _viewerArt = next;
+        }
+    }
+
+    /// <inheritdoc />
+    public Nfty.App.Viewer.ViewerModel? ViewerModel => null;
+
+    /// <inheritdoc />
+    public bool AllowExport => true;
+
+    /// <inheritdoc />
+    public event Action? ViewerChanged;
+
+    /// <inheritdoc />
+    public event Action? Detached;
+
+    /// <summary>Whether Pop out can do anything.</summary>
+    public bool CanPopOut => Viewer is not null && SelectedVariant is not null;
+
+    /// <summary>Opens a viewer that follows this layer.</summary>
+    [RelayCommand]
+    private void PopOut()
+    {
+        if (!CanPopOut) return;     // RelayCommand.Execute does not consult CanExecute
+        Viewer!.Open(new Nfty.App.Viewer.LiveSubject(this));
     }
 
     partial void OnModeChanged(LayerKind value)
@@ -1874,6 +1925,10 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
     public void Dispose()
     {
         Closed?.Invoke();   // let the Explorer drop its reference BEFORE we tear anything down
+        Detached?.Invoke(); // a following viewer takes its last copy while the images are alive
+        Detached = null;
+        ViewerChanged = null;
+        _viewerArt?.Dispose();
         Saved = null;   // release any subscriber (e.g. the Explorer) when the editor is navigated away
         Closed = null;
         foreach (var v in Variants) v.Thumbnail.Dispose();

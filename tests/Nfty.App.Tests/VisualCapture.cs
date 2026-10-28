@@ -528,7 +528,8 @@ public partial class VisualCapture
                 // showing a DISABLED New Kitchen button at 0.38 opacity — a state the app cannot
                 // actually be in, which is worse than not capturing the screen at all: it made a
                 // working action look unavailable and matched the bug that was being investigated.
-                new KitchenSession(), rise: _ => null!);
+                // The shipped app always has a viewer, so Open in viewer is live in the frame.
+                new KitchenSession(), rise: _ => null!, viewer: new ArchiveGalleryTests.Host());
             Capture(new Views.LandingView { DataContext = vm }, variant, $"landing-{key}.png");
             if (!empty)
             {
@@ -655,7 +656,7 @@ public partial class VisualCapture
                 CookDemoSet(dir, 12);
                 var loaded = SetReader.Read(dir);
                 var vm = new SetBrowserViewModel(loaded, rise: _ => throw new NotSupportedException(),
-                    nav: new FakeNav(), bridge: new ImageBridge());
+                    nav: new FakeNav(), bridge: new ImageBridge()) { Viewer = new ArchiveGalleryTests.Host() };
                 vm.SelectedItem = vm.Items[0];
                 AssertFirstTileHasArt(vm);
                 Capture(new Views.SetBrowserView { DataContext = vm }, variant, $"set-browser-{key}.png");
@@ -1155,7 +1156,7 @@ public partial class VisualCapture
         var dir = Directory.CreateTempSubdirectory().FullName;
         CookDemoSet(dir, 3);
         using var loaded = SetReader.Read(dir);
-        using var browser = new SetBrowserViewModel(loaded);
+        using var browser = new SetBrowserViewModel(loaded) { Viewer = new ArchiveGalleryTests.Host() };
         AssertFirstTileHasArt(browser);
 
         foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })

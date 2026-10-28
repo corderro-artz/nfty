@@ -719,6 +719,29 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
         return top ? dna[..cut] : dna[cut..];
     }
 
+    /// <summary>Where a pop-out viewer opens; null leaves Pop out doing nothing (a head with no viewer).</summary>
+    public Nfty.App.Services.IViewerHost? Viewer { get; set; }
+
+    /// <summary>Opens a viewer on one asset: its picture and, when the Set records one or the book that
+    /// cooked it is found, its model. A sealed Set's viewer is view-only.</summary>
+    /// <param name="row">The asset; null means the one the rail shows.</param>
+    [RelayCommand]
+    private async Task PopOutAsync(SetItemRow? row)
+    {
+        row ??= Shown;
+        if (row is null || Viewer is not { } host) return;
+        try
+        {
+            var subject = await Nfty.App.Viewer.ModelSubjects.ForSetAssetAsync(_set, row.Item, _bookCandidates);
+            host.Open(subject);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
+                                       or SixLabors.ImageSharp.ImageFormatException)
+        {
+            _status.Say($"Could not open {row.Number} in a viewer: {ex.Message}");
+        }
+    }
+
     /// <summary>Opens the full-size inspector on one asset.</summary>
     /// <param name="row">The asset to open on.</param>
     [RelayCommand]
@@ -727,7 +750,7 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
         if (row is null) return;
         SelectedItem = row;
         using var vm = new SetInspectViewModel(Items, IndexOf(row), _picker, _dialogs, _status,
-            allowExport: CanExport);
+            allowExport: CanExport, popOut: Viewer is null ? null : r => PopOutAsync(r));
 
         // The inspector can walk the Set with the arrow keys, and what the user last LOOKED AT is
         // what they expect to find selected when they close it. Without this you could arrow from

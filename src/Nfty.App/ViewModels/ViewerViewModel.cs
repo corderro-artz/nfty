@@ -68,6 +68,7 @@ public sealed partial class ViewerViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(Mesh));
         OnPropertyChanged(nameof(Texture));
         OnPropertyChanged(nameof(CanShowThreeD));
+        OnPropertyChanged(nameof(LiveBadge));     // a source closing turns "live" into "snapshot"
         old?.Dispose();
     }
 

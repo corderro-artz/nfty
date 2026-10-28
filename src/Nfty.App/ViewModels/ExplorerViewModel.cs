@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Models;
 using Nfty.App.Services;
+using Nfty.App.Viewer;
 using Nfty.Core.Editing;
 using Nfty.Core.Formats;
 using Nfty.Core.Imaging;
@@ -455,8 +456,59 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
                 : null,
             _ => null,
         };
+        if (CurrentDetail is RecipeDetailViewModel recipePane && newValue?.Domain is LoadedRecipe shown)
+        {
+            // By id, read from the live book at call time: the node's graph is the one the pane was
+            // built from, and a save since then replaced it.
+            string recipeId = shown.Manifest.Id;
+            recipePane.PopOutLayer = ingredientId => PopOutIngredient(recipeId, ingredientId);
+        }
         RebuildCrumbs();
         DeleteSelectedCommand.NotifyCanExecuteChanged();
+    }
+
+    // ---------------------------------------------------------------- the pop-out viewer
+
+    /// <summary>Where a viewer opens; null leaves the commands doing nothing.</summary>
+    public IViewerHost? Viewer { get; set; }
+
+    /// <summary>Opens a viewer on a tree node: a layer shows its first variant, a recipe one roll of
+    /// itself. The CookBook root has nothing of its own to show. Selection does not move.</summary>
+    /// <param name="node">The node; null means the selected one.</param>
+    [RelayCommand]
+    private void PopOutNode(ExplorerNode? node)
+    {
+        node ??= SelectedNode;
+        switch (node?.Domain)
+        {
+            case (LoadedRecipe r, LoadedIngredient i):
+                PopOutIngredient(r.Manifest.Id, i.Manifest.Id);
+                break;
+            case LoadedRecipe recipe:
+                PopOutSubject(() => BookSubjects.ForRecipe(
+                    _book.Recipes.FirstOrDefault(x => x.Manifest.Id == recipe.Manifest.Id) ?? recipe));
+                break;
+        }
+    }
+
+    private void PopOutIngredient(string recipeId, string ingredientId) => PopOutSubject(() =>
+    {
+        var ingredient = _book.Recipes.FirstOrDefault(r => r.Manifest.Id == recipeId)
+            ?.Ingredients.FirstOrDefault(i => i.Manifest.Id == ingredientId);
+        return ingredient is null ? null : BookSubjects.ForIngredient(ingredient);
+    });
+
+    private void PopOutSubject(Func<ViewerSubject?> make)
+    {
+        if (Viewer is not { } host) return;
+        try
+        {
+            if (make() is { } subject) host.Open(subject);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _status.Say($"Could not open a viewer: {ex.Message}");
+        }
     }
 
     // The editor currently on top of this page, so a save can refresh what it is showing. Cleared

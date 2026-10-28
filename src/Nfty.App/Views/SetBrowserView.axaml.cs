@@ -151,6 +151,15 @@ public partial class SetBrowserView : UserControl
     /// </remarks>
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
+        if (ViewerGesture.IsViewerPress(e, this) && TileUnder(e.Source) is { } popped)
+        {
+            // Ctrl+click and middle-click open a viewer and do nothing else: no selection, no
+            // inspector. Handled on the tunnel so the tile Button never sees the press, and so
+            // never raises the Click that opens the inspector.
+            Vm?.PopOutCommand.Execute(popped);
+            e.Handled = true;
+            return;
+        }
         if (!e.GetCurrentPoint(this).Properties.IsRightButtonPressed) return;
         if (TileUnder(e.Source) is not { } row) return;
         Vm?.SelectCommand.Execute(row);

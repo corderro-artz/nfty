@@ -25,6 +25,13 @@ namespace Nfty.App.Viewer;
 /// </remarks>
 public static class ViewerOpener
 {
+    /// <summary>Every extension the viewer opens, for a file picker's filter.</summary>
+    public static readonly string[] Extensions =
+    {
+        ".cbk", ".rcp", ".igt", Archives.SetExtension, Archives.SealedExtension, ".mnu", ".ktn",
+        ".png", ".jpg", ".jpeg", ".glb", ".gltf", ".json",
+    };
+
     /// <summary>What the error card says for a JSON file that is not an asset's metadata.</summary>
     public const string NotMetadata = "Not an nfty asset metadata file.";
 

@@ -7,6 +7,7 @@
              xmlns:core="using:Nfty.Core.Output"
              xmlns:conv="using:Avalonia.Data.Converters"
              xmlns:appconv="using:Nfty.App.Converters"
+             xmlns:svc="using:Nfty.App.Services"
              x:Class="Nfty.App.Views.SetBrowserView"
              x:DataType="vm:SetBrowserViewModel"
              RenderOptions.BitmapInterpolationMode="None">
@@ -424,14 +425,21 @@
             </ScrollViewer>
 
           <Border Grid.Row="2" Classes="rail-foot">
-            <Button Classes="savebtn" HorizontalAlignment="Stretch"
-                    Command="{Binding SaveImageCommand}"
-                    ToolTip.Tip="Write the selected asset's PNG somewhere of your choosing">
-              <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                <Path Classes="ico xs" Data="{StaticResource IconDownload}" />
-                <TextBlock Text="Save image…" />
-              </StackPanel>
-            </Button>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+              <Button Grid.Column="0" Classes="savebtn" HorizontalAlignment="Stretch"
+                      Command="{Binding SaveImageCommand}"
+                      ToolTip.Tip="Write the selected asset's PNG somewhere of your choosing">
+                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                  <Path Classes="ico xs" Data="{StaticResource IconDownload}" />
+                  <TextBlock Text="Save image…" />
+                </StackPanel>
+              </Button>
+              <!-- The pointer path (Ctrl+click or middle-click on a tile) has this one beside it. -->
+              <Button Grid.Column="1" Classes="savebtn" Command="{Binding PopOutCommand}"
+                      ToolTip.Tip="{x:Static svc:KeyHints.PopOut}">
+                <Path Classes="ico xs" Data="{StaticResource IconPopout}" />
+              </Button>
+            </Grid>
           </Border>
         </Grid>
       </Border>

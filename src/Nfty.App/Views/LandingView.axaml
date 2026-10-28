@@ -162,6 +162,11 @@
         <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconKitchen}" /><TextBlock Classes="lbl" Text="Open Kitchen…" /></StackPanel></Grid>
       </Button>
 
+      <!-- The pop-out viewer: any file nfty can show, in a window of its own. -->
+      <Button Classes="landing tbtn" Command="{Binding OpenInViewerCommand}">
+        <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconPopout}" /><TextBlock Classes="lbl" Text="Open in viewer…" /></StackPanel></Grid>
+      </Button>
+
       <!-- Rise: pixel art to 3D. A picture or a spritesheet is not an archive, so it has no other way in. -->
       <Button Classes="landing tbtn" Command="{Binding RisePictureCommand}">
         <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconRise}" /><TextBlock Classes="lbl" Text="Rise a picture…" /></StackPanel></Grid>

@@ -803,6 +803,15 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
 
     [RelayCommand] private void OpenIngredient(string id) => _openIngredient(id);
 
+    /// <summary>Opens a viewer on a layer, by ingredient id; set by the Explorer that owns the book.
+    /// Null leaves <see cref="PopOutLayerAtCommand"/> doing nothing.</summary>
+    public Action<string>? PopOutLayer { get; set; }
+
+    /// <summary>Opens a viewer on a layer without opening the layer's page. This is what Ctrl+click
+    /// and middle-click on a layer row, and the row's context menu, ask for.</summary>
+    /// <param name="id">The ingredient id.</param>
+    [RelayCommand] private void PopOutLayerAt(string? id) { if (id is not null) PopOutLayer?.Invoke(id); }
+
     private readonly Action<int>? _rise;
 
     /// <summary>Whether the Rise button can act: the Explorer offered a way to open the page.</summary>

@@ -4,6 +4,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Nfty.App.ViewModels"
+             xmlns:svc="using:Nfty.App.Services"
              x:Class="Nfty.App.Views.SetInspectView"
              x:DataType="vm:SetInspectViewModel"
              RenderOptions.BitmapInterpolationMode="None">
@@ -73,7 +74,7 @@
 
       <!-- ===== footer ===== -->
       <Border Grid.Row="2" Classes="ins-f">
-        <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto" ColumnSpacing="9">
+        <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="9">
           <Button Grid.Column="0" Classes="insb" Command="{Binding PreviousCommand}"
                   ToolTip.Tip="Previous asset — ←">
             <Path Classes="ico xs" Data="{StaticResource IconChevronLeft}" />
@@ -105,7 +106,12 @@
             <Run Text="{Binding SourceSize}" /><Run Text=" · drag to pan · wheel to zoom" />
           </TextBlock>
 
-          <Button Grid.Column="10" Classes="savebtn" Command="{Binding SaveCommand}"
+          <Button Grid.Column="10" Classes="insb" Command="{Binding PopOutCommand}"
+                  ToolTip.Tip="{x:Static svc:KeyHints.PopOut}">
+            <Path Classes="ico xs" Data="{StaticResource IconPopout}" />
+          </Button>
+
+          <Button Grid.Column="11" Classes="savebtn" Command="{Binding SaveCommand}"
                   ToolTip.Tip="Save this image">
             <StackPanel Orientation="Horizontal" Spacing="7">
               <Path Classes="ico xs" Data="{StaticResource IconDownload}" />

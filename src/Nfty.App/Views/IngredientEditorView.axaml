@@ -457,6 +457,12 @@
                        IsVisible="{Binding ShowPaintCanvas}" />
                 <Image Source="{Binding Canvas}" Stretch="UniformToFill"
                        IsVisible="{Binding PreviewFillsPane}" />
+                <!-- Pop out: the tile's own caption is full (three buttons and a word), so this one
+                     rides the opposite corner. Ctrl+click or middle-click on the tile does the same. -->
+                <Button Classes="icon" Padding="3" HorizontalAlignment="Right" VerticalAlignment="Top"
+                        Margin="5" Background="{DynamicResource PanelBrush}"
+                        Command="{Binding PopOutCommand}" ToolTip.Tip="{x:Static svc:KeyHints.PopOut}">
+                  <Path Classes="ico xs" Data="{StaticResource IconPopout}" /></Button>
                 <Border Classes="tilecap">
                   <!-- Three buttons, in the mockup's order: reroll, enlarge, fill-pane
                        (ingredient-editor.html's .ov). Enlarge was missing - the ViewModel had the

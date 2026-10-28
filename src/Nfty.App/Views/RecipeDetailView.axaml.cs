@@ -45,6 +45,20 @@ public partial class RecipeDetailView : UserControl
         // what keeps a drag from being a navigation.
         _rows.AddHandler(InputElement.PointerPressedEvent, OnRowsPointerPressed, RoutingStrategies.Tunnel);
         _rows.PointerMoved += OnRowsPointerMoved;
+
+        // The menu path to the viewer gesture: right-click a layer row, Open in viewer.
+        LayerRow? menuRow = null;
+        var openInViewer = new MenuItem { Header = "Open in viewer" };
+        openInViewer.Click += (_, _) =>
+        {
+            if (menuRow is { } r && DataContext is RecipeDetailViewModel vm) vm.PopOutLayerAtCommand.Execute(r.Id);
+        };
+        _rows.ContextMenu = new ContextMenu { Items = { openInViewer } };
+        _rows.ContextRequested += (_, e) =>
+        {
+            menuRow = LayerRowUnder(e.Source as Visual);
+            if (menuRow is null) e.Handled = true;
+        };
         _rows.PointerReleased += OnRowsPointerReleased;
         _rows.PointerCaptureLost += (_, _) => EndDrag();
         AddHandler(KeyDownEvent, OnKeyDown, RoutingStrategies.Bubble);
@@ -106,8 +120,25 @@ public partial class RecipeDetailView : UserControl
     /// (pointerdown/pointermove/pointerup plus setPointerCapture), works identically under touch, and
     /// needs no payload for a reorder that never leaves the control it started in.
     /// </summary>
+    private static LayerRow? LayerRowUnder(Visual? source)
+    {
+        for (var v = source; v is not null; v = v.GetVisualParent())
+            if (v is Button { DataContext: LayerRow row }) return row;
+        return null;
+    }
+
     private void OnRowsPointerPressed(object? sender, PointerPressedEventArgs e)
     {
+        // Ctrl+click or middle-click on a layer row opens a viewer on that layer instead of navigating
+        // to it. Settled first, ahead of the reorder gate, so it works on a locked book too: looking
+        // is not editing. Handled on the tunnel so the row's Button never raises the Click that
+        // navigates, and no drag arms.
+        if (DataContext is RecipeDetailViewModel viewing && ViewerGesture.IsViewerPress(e, _rows))
+        {
+            if (LayerRowUnder(e.Source as Visual) is { } popped) viewing.PopOutLayerAtCommand.Execute(popped.Id);
+            e.Handled = true;
+            return;
+        }
         if (DataContext is not RecipeDetailViewModel vm || !vm.CanReorder) return;
         // Left button only. Avalonia reports a touch contact and a pen tip as the left button too, so
         // this costs the touch path nothing — what it rules out is a RIGHT- or middle-click on a grip

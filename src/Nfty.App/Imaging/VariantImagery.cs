@@ -22,14 +22,24 @@ public static class VariantImagery
     /// <returns>The bitmap; the caller owns it.</returns>
     public static Bitmap Render(IImageBridge bridge, LoadedIngredient ing, string variantId, int salt = 0)
     {
+        using var image = RenderImage(ing, variantId, salt);
+        return bridge.ToBitmap(image);
+    }
+
+    /// <summary>The picture <see cref="Render"/> draws, as an image.</summary>
+    /// <param name="ing">The layer.</param>
+    /// <param name="variantId">Which variant.</param>
+    /// <param name="salt">Varies the sampled color.</param>
+    /// <returns>A new image the caller owns; a Custom layer's art is copied, never shared.</returns>
+    public static Image<Rgba32> RenderImage(LoadedIngredient ing, string variantId, int salt = 0)
+    {
         var map = ing.VariantImages[variantId];
         var coloriz = ing.Manifest.Colorization;
-        if (coloriz is null) return bridge.ToBitmap(map);        // custom — raw, book owns the source
+        if (coloriz is null) return map.Clone();        // custom — raw, book owns the source
 
         var rng = new SplitMix64Rng(SeedHash.ToUlong($"{ing.Manifest.Id}:{variantId}:{salt}"));
         var c = ColorRoller.Roll(coloriz, rng);
-        using var colored = Colorizer.Apply(map, c.H, c.S, coloriz.Model);
-        return bridge.ToBitmap(colored);
+        return Colorizer.Apply(map, c.H, c.S, coloriz.Model);
     }
 
     /// <summary>Renders one variant once per color the layer can take, for the Colorways panel.</summary>
@@ -73,6 +83,25 @@ public static class VariantImagery
     public static Bitmap RenderWith(IImageBridge bridge, Image<Rgba32> valueMap, bool dynamic,
         double hueMin, double hueMax, double satMin, double satMax, string fixedColor, ColorModel model, int salt = 0)
     {
+        using var colored = ColorizeWith(valueMap, dynamic, hueMin, hueMax, satMin, satMax, fixedColor, model, salt);
+        return bridge.ToBitmap(colored);
+    }
+
+    /// <summary>The picture <see cref="RenderWith"/> draws, as an image: the one rule, so the editor's
+    /// corner tile and the pop-out viewer cannot disagree.</summary>
+    /// <param name="valueMap">The source image.</param>
+    /// <param name="dynamic">Whether to sample the range; false uses the fixed color.</param>
+    /// <param name="hueMin">Lowest hue in degrees.</param>
+    /// <param name="hueMax">Highest hue in degrees.</param>
+    /// <param name="satMin">Lowest saturation, 0-100.</param>
+    /// <param name="satMax">Highest saturation, 0-100.</param>
+    /// <param name="fixedColor">A fixed color spec, or null.</param>
+    /// <param name="model">The layer's color model.</param>
+    /// <param name="salt">Varies the sample.</param>
+    /// <returns>A new image the caller owns.</returns>
+    public static Image<Rgba32> ColorizeWith(Image<Rgba32> valueMap, bool dynamic,
+        double hueMin, double hueMax, double satMin, double satMax, string fixedColor, ColorModel model, int salt = 0)
+    {
         try
         {
             RolledColor c;
@@ -87,9 +116,8 @@ public static class VariantImagery
             {
                 c = ColorRoller.FromFixed(fixedColor, model);
             }
-            using var colored = Colorizer.Apply(valueMap, c.H, c.S, model);
-            return bridge.ToBitmap(colored);
+            return Colorizer.Apply(valueMap, c.H, c.S, model);
         }
-        catch (FormatException) { return bridge.ToBitmap(valueMap); }        // bad color spec — show raw
+        catch (FormatException) { return valueMap.Clone(); }        // bad color spec — show raw
     }
 }

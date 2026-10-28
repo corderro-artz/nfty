@@ -26,6 +26,7 @@ public partial class SetInspectViewModel : ViewModelBase, IDisposable
     private readonly IFilePickerService _picker;
     private readonly IDialogService _dialogs;
     private readonly IStatusService _status;
+    private readonly Func<SetItemRow, Task>? _popOut;
     private Bitmap? _full;
     private int _fullFor = -1;
 
@@ -56,13 +57,15 @@ public partial class SetInspectViewModel : ViewModelBase, IDisposable
     /// <param name="picker">Used by <see cref="SaveCommand"/>.</param>
     /// <param name="dialogs">The layer this modal lives in; used to close.</param>
     /// <param name="status">Where the save result is reported.</param>
+    /// <param name="popOut">Opens a viewer on an asset; null hides Pop out.</param>
     /// <param name="allowExport">Whether the assets may be written out. False for a Set opened from
     /// a sealed export — saving one asset's PNG IS an export, and a seal that stopped the Export
     /// button while leaving this one working would be theater.</param>
     public SetInspectViewModel(IReadOnlyList<SetItemRow> items, int index,
         IFilePickerService picker, IDialogService dialogs, IStatusService status,
-        bool allowExport = true)
+        bool allowExport = true, Func<SetItemRow, Task>? popOut = null)
     {
+        _popOut = popOut;
         AllowExport = allowExport;
         _items = items;
         _picker = picker;
@@ -194,6 +197,18 @@ public partial class SetInspectViewModel : ViewModelBase, IDisposable
         {
             _status.Say($"Could not save {Number}: {ex.Message}");
         }
+    }
+
+    /// <summary>Whether Pop out is offered: the browser that built this inspector has a viewer.</summary>
+    public bool CanPopOut => _popOut is not null;
+
+    /// <summary>Opens a viewer on the asset being inspected. The inspector stays open; a viewer is a
+    /// window of its own.</summary>
+    [RelayCommand(CanExecute = nameof(CanPopOut))]
+    private async Task PopOutAsync()
+    {
+        if (_popOut is null || Current is null) return;
+        await _popOut(Current);
     }
 
     /// <summary>Frees the full-size bitmap.</summary>
