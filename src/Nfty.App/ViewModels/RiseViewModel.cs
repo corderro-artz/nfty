@@ -43,6 +43,10 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable, IUnsaved
     private ModelPreviewViewModel? _preview;
     private long _lastMeshMs = long.MinValue / 2;
     private bool _switching;
+    private readonly IParallelismSetting? _threads;
+
+    /// <summary>The thread count for the export starting now.</summary>
+    private Nfty.Core.Parallelism Threads => _threads?.Current ?? Nfty.Core.Parallelism.Default;
     private bool _disposed;
 
     /// <summary>Opens the page over a source.</summary>
@@ -52,11 +56,13 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable, IUnsaved
     /// <param name="dialogs">Dialogs.</param>
     /// <param name="picker">File and folder pickers.</param>
     /// <param name="status">The status bar.</param>
+    /// <param name="threads">The thread count model export uses, read when an export starts; null = the machine default.</param>
     public RiseViewModel(RiseSource source, IImageBridge bridge, INavigationService nav, IDialogService dialogs,
-        IFilePickerService picker, IStatusService status)
+        IFilePickerService picker, IStatusService status, IParallelismSetting? threads = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         Source = source;
+        _threads = threads;
         _bridge = bridge;
         _nav = nav;
         _dialogs = dialogs;

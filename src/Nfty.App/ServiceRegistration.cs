@@ -125,7 +125,8 @@ public static class ServiceRegistration
                 sp.GetRequiredService<INavigationService>(),
                 sp.GetRequiredService<IDialogService>(),
                 sp.GetRequiredService<IFilePickerService>(),
-                sp.GetRequiredService<IStatusService>())));
+                sp.GetRequiredService<IStatusService>(),
+                sp.GetService<IParallelismSetting>())));
 
         services.AddSingleton<Func<LoadedCookBook, CookDialogViewModel>>(sp =>
             book => new CookDialogViewModel(book,

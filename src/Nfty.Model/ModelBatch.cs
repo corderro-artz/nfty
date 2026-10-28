@@ -253,7 +253,7 @@ public static class ModelBatch
     /// the sequential overload's behavior, on the calling thread.</param>
     /// <param name="progress">Told how many pictures are done (written or skipped), in order, one call at a time.</param>
     /// <param name="cancellation">Checked before each window and each picture. A canceled zip is never left
-    /// behind; a canceled folder keeps every window finished before the stop, each model whole.</param>
+    /// behind; a canceled folder keeps every model written before the stop, each one whole.</param>
     /// <param name="onWritten">Told each file's name once it is in the destination, in write order, on
     /// the calling thread.</param>
     /// <returns>The file names written, the pictures skipped, and the files that already existed.</returns>
@@ -320,6 +320,9 @@ public static class ModelBatch
 
             for (int k = 0; k < count; k++)
             {
+                // A stop lands between models, as in the sequential overload: built models past it
+                // are dropped, and no model is ever half written.
+                cancellation.ThrowIfCancellationRequested();
                 if (skipSlots[k] is { } skip) skipped.Add(skip);
                 if (filesSlots[k] is { } files)
                     foreach (var f in files)

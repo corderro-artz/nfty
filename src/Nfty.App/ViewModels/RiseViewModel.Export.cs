@@ -488,7 +488,7 @@ public sealed partial class RiseViewModel
         // does while the model is written can reach it, and nothing it frees can be under the build.
         using var snapshot = Source.SnapshotExport(new[] { item });
         var result = await Task.Run(() => ModelBatch.Export(new[] { stem }, i => snapshot.Open(i, stem),
-            RiseExportSnapshot.Release, options, ModelDestination.Folder(dir)));
+            RiseExportSnapshot.Release, options, ModelDestination.Folder(dir), Threads));
 
         MarkSkippedItems(result.Skipped, new[] { item }, new[] { stem });
         if (result.FileNames.Count == 0)
@@ -545,7 +545,7 @@ public sealed partial class RiseViewModel
                     // whether anything was WRITTEN (a skipped model is done but wrote nothing, and
                     // the folder is created only by the first file), and Progress<T> only posts.
                     return await Task.Run(() => ModelBatch.Export(bases, i => snapshot.Open(i, bases[i]),
-                        RiseExportSnapshot.Release, options, target, shown, token,
+                        RiseExportSnapshot.Release, options, target, Threads, shown, token,
                         onWritten: name => { Interlocked.Increment(ref written); FileWritten?.Invoke(name); }));
                 }, cancellable: true);
         }
