@@ -11,8 +11,8 @@ both side by side.
   the 3D tile, or middle-click it (on a Mac, middle-click only). The viewer opens on what the page
   shows and **follows it live**: paint, and the viewer redraws. The Ingredient Editor's viewer shows
   the picture only, with no model.
-- **From a recipe row** in the tree: right-click it and choose the viewer. This shows a snapshot, one
-  roll of that recipe.
+- **From the tree or a recipe's layer table:** right-click a row and choose **Open in viewer**, or
+  Ctrl+click or middle-click it. A recipe shows a snapshot, one roll of that recipe.
 - **From the Set browser:** open an asset, then open it in the viewer. A Set asset shows its model when
   the Set carries one or the CookBook that cooked it can be found.
 - **From a file:** use **Open in viewer** on the Landing page. It takes a `.cbk`, `.rcp`, `.igt`,
@@ -37,13 +37,13 @@ An archive opens as a gallery of tiles. Click a tile to open that one in its own
 ## Live or snapshot
 
 The badge beside the title says which. **live** means the viewer is following the Rise page that
-opened it. When that page closes, or the subject was never live, the badge reads **snapshot**: the
+opened it (or the Ingredient Editor). When that page closes, or the subject was never live, the badge reads **snapshot**: the
 viewer keeps its own copy, so you can close or save the book under it and it still shows what you
 opened.
 
 ## Sealed files
 
-A `.tin` asks for its passphrase, then shows its assets **view-only**: Save and Export are off and
+A `.tin` asks for its passphrase, then shows its assets **view-only**: Save, Copy and Export are off and
 the info rail says why. A sealed Set is a lock on a door, not a wall; see
 [Sealing](../understand/sealing.md).
 
