@@ -107,6 +107,19 @@ The three model options are **rejected** without `--models`, not ignored. `inspe
 
 `extend` takes no model options: a Set is modeled whole or not at all, so it reuses the options recorded in `set.json` and makes models for the new assets in the same format. Extending a modeled Set with a book that has partial alpha is refused.
 
+## Menus and tickets
+
+```bash
+nfty menu mybook.cbk --out mybook.mnu [--art atlas|loose]
+nfty serve mybook.mnu --seed player-42 --out asset.png
+nfty serve mybook.mnu --ticket "<wire text>" --out asset.png
+```
+
+`menu` flattens a CookBook into a `.mnu` that can roll and render with no `.cbk`. `serve` rolls one
+asset (`--seed`) or renders an already-rolled one (`--ticket`, quoted) through the same render
+`generate` uses. Exactly one of the two is required; `--max-rerolls` goes with `--seed` only. See
+[Roll assets at runtime](../how-to/roll-assets-at-runtime.md).
+
 ## Publishing
 
 A cook writes *your* copy and holds everything. `export` writes somebody else's.

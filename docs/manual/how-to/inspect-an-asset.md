@@ -3,8 +3,7 @@
 Thumbnails tell you a collection is varied. They do not tell you whether one asset's pixels are
 right. Click any tile in the Set browser and it opens full size.
 
-![The asset inspector, showing one asset full size over the dimmed browser](../images/inspector-light.png#only-light)
-![The asset inspector, showing one asset full size over the dimmed browser](../images/inspector-dark.png#only-dark)
+<!-- capture: inspector-light/dark.png — The asset inspector, showing one asset full size over the dimmed browser -->
 
 ## In the inspector
 
@@ -39,8 +38,7 @@ the asset you actually just examined.
 
 ## Saving
 
-![The Set browser: a row washes on hover, the tile under the pointer washes further, and the selected one keeps its accent caption](../images/set-browser-light.png#only-light)
-![The Set browser: a row washes on hover, the tile under the pointer washes further, and the selected one keeps its accent caption](../images/set-browser-dark.png#only-dark)
+<!-- capture: set-browser-light/dark.png — The Set browser: a row washes on hover, the tile under the pointer washes further, and the selected one keeps its accent caption -->
 
 **Save** in the inspector writes the asset you are looking at. **Save image…** at the foot of the
 browser's right-hand rail writes the one currently selected — the button never moves, only what it

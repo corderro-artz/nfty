@@ -53,4 +53,10 @@ away from the work, rather than in the middle of it.
 
     The refusal that looks unhelpful and is not.
 
+-   [**Frequently asked questions**](faq.md)
+
+    ---
+
+    Old archives, seeds, 2D-only books, sealed files and other things people ask.
+
 </div>

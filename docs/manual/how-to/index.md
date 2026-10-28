@@ -61,4 +61,6 @@ around; if you do not, start with [Get started](../get-started/index.md).
 
     [Share a collection with somebody](share-a-collection.md)
 
+    [Roll assets at runtime from a Menu](roll-assets-at-runtime.md)
+
 </div>

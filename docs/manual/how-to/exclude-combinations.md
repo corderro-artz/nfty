@@ -11,8 +11,7 @@ particular aura invisible. A **rule** forbids one.
 
 A rule reads *when this variant is picked, exclude that one*:
 
-![A rule excluding the Spark aura whenever the Rays background is picked](../images/rules-light.png#only-light)
-![A rule excluding the Spark aura whenever the Rays background is picked](../images/rules-dark.png#only-dark)
+<!-- capture: rules-light/dark.png — A rule excluding the Spark aura whenever the Rays background is picked -->
 
 That one says: whenever **Background = Rays** is rolled, **Aura = Spark** cannot be. The two are
 individually fine and never appear on the same asset.

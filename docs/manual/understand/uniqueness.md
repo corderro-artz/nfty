@@ -33,8 +33,7 @@ see [Raise the unique-asset count](../how-to/raise-unique-count.md).
 assets the book can produce: every combination of variants that the rules allow, multiplied by the
 color buckets each layer can land in.
 
-![The CookBook panel, showing the DNA space broken down per recipe](../images/cookbook-panel-light.png#only-light)
-![The CookBook panel, showing the DNA space broken down per recipe](../images/cookbook-panel-dark.png#only-dark)
+<!-- capture: cookbook-panel-light/dark.png — The CookBook panel, showing the DNA space broken down per recipe -->
 
 The DNA SPACE list shows the arithmetic per Recipe, so you can see which layer is the bottleneck.
 

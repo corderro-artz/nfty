@@ -10,8 +10,7 @@ nfty stacks layered pixel art into large collections. You draw a few options for
 backgrounds, a few bodies, a few hats — and nfty combines and colors them, giving every asset a
 fingerprint that proves it is unlike any other in the set.
 
-![The nfty opening screen](images/landing-light.png#only-light)
-![The nfty opening screen](images/landing-dark.png#only-dark)
+<!-- capture: landing-light/dark.png — The nfty opening screen -->
 
 <div class="grid cards" markdown>
 

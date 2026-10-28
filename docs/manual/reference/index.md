@@ -25,6 +25,10 @@ in [Get started](../get-started/index.md) and [How nfty works](../understand/ind
 
     [Command line](cli.md)
 
+    [Ticket and Menu API](ticket-api.md)
+
+    [Settings and file locations](settings.md)
+
 -   **Data**
 
     ---

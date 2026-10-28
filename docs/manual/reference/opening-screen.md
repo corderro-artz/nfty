@@ -2,8 +2,7 @@
 
 What nfty shows before anything is open.
 
-![The opening screen](../images/landing-light.png#only-light)
-![The opening screen](../images/landing-dark.png#only-dark)
+<!-- capture: landing-light/dark.png — The opening screen -->
 
 ## Create
 
@@ -35,8 +34,7 @@ it. The list holds ten entries and lives with the application, not in your user 
 The band along the bottom. It is **always present and always the same height**, whether a Kitchen is
 open, none is, or the open one is empty -- so opening a Kitchen never reflows the screen above it.
 
-![The Kitchen shelf](../images/kitchen-shelf-light.png#only-light)
-![The Kitchen shelf](../images/kitchen-shelf-dark.png#only-dark)
+<!-- capture: kitchen-shelf-light/dark.png — The Kitchen shelf -->
 
 With one open it lists the folder's contents: CookBooks first, then loose Recipes and Ingredients.
 The chevrons at the right page through by kind. A small flat-sheet mark in a card's corner means that book,

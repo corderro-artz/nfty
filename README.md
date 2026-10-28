@@ -26,7 +26,6 @@ of them, out of twenty-nine 32×32 sprites.
 **Delivery**  
 [![CI](https://img.shields.io/github/actions/workflow/status/corderro-artz/nfty/ci.yml?branch=main&label=CI&logo=githubactions&logoColor=white)](https://github.com/corderro-artz/nfty/actions/workflows/ci.yml)
 [![Docs](https://img.shields.io/github/actions/workflow/status/corderro-artz/nfty/docs.yml?branch=main&label=Docs&logo=githubactions&logoColor=white)](https://github.com/corderro-artz/nfty/actions/workflows/docs.yml)
-[![Tests](https://img.shields.io/badge/tests-2286%20passing-3d6b52)](#testing)
 [![Warnings](https://img.shields.io/badge/warnings-0-3d6b52)](#house-rules)
 [![License: MIT](https://img.shields.io/badge/License-MIT-a11f31?logo=open-source-initiative&logoColor=white)](LICENSE)
 
@@ -35,12 +34,7 @@ of them, out of twenty-nine 32×32 sprites.
 [![Avalonia 12](https://img.shields.io/badge/Avalonia-12.1.1-8B44AC)](https://avaloniaui.net/)
 [![Platform](https://img.shields.io/badge/platform-windows%20%7C%20linux%20%7C%20macOS-lightgrey)](https://github.com/corderro-artz/nfty)
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/corderro-artz/nfty/main/assets/readme/hero-dark.png">
-    <img alt="The nfty Explorer with the built-in demo CookBook open: a layer tree on the left, and a card reading 2 recipes, 12 layers, 31 variants and 615,600 unique DNA, over a per-recipe DNA-space table and a mint-distribution bar." src="https://raw.githubusercontent.com/corderro-artz/nfty/main/assets/readme/hero-light.png" width="900">
-  </picture>
-</p>
+<!-- capture: hero-light/dark.png — the Explorer with the demo CookBook open: layer tree, card showing 2 recipes, 7,155,000 unique DNA, per-recipe DNA-space table -->
 
 > **Using the app rather than working on it?** Read the
 > **[User Manual](https://www.vaporsoft.dev/nfty/)** instead — this file is for developers. Its
@@ -49,6 +43,7 @@ of them, out of twenty-nine 32×32 sprites.
 ## Table of Contents
 
 - [Overview](#overview)
+- [The Suite](#the-suite)
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
@@ -88,6 +83,20 @@ string seed, and published as images plus two parallel sets of per-asset metadat
 | Extend | Re-open a cooked Set, add to it, and recompute rarity across the whole collection |
 | Open formats | Every archive is a ZIP with a `manifest.json`; the custom extension is a renamed `.zip` |
 
+## The Suite
+
+| Part | What it is | Where to start |
+| --- | --- | --- |
+| **App** (`Nfty.Desktop`) | Avalonia desktop app: Explorer, pixel editor, Set browser, cook and export dialogs | [Get started](https://www.vaporsoft.dev/nfty/docs/get-started/) |
+| **CLI** (`Nfty.Cli`) | Every operation headless, for scripts and CI | [Command line](docs/manual/reference/cli.md) |
+| **Ticket** (`Nfty.Ticket`) | Dependency-free runtime API: roll an asset's identity from a Menu and a seed | [Ticket and Menu API](docs/manual/reference/ticket-api.md) |
+| **Menu** (`.mnu`) | A CookBook flattened with its art, so a runtime rolls and renders with no `.cbk` | [Roll assets at runtime](docs/manual/how-to/roll-assets-at-runtime.md) |
+| **Rise** (`Nfty.Model`) | Pixel art to a 3D model (glTF): depth painting, models inside Sets | [Make a 3D model](docs/manual/how-to/make-a-3d-model.md) |
+| **Viewer** | Pop-out window for one asset or model, 2D and 3D | [View an asset in its own window](docs/manual/how-to/view-an-asset-in-its-own-window.md) |
+
+More in the [User Manual](https://www.vaporsoft.dev/nfty/): [keyboard shortcuts](docs/manual/reference/shortcuts.md),
+[settings](docs/manual/reference/settings.md) and the [FAQ](docs/manual/understand/faq.md).
+
 ## Requirements
 
 | Requirement | Version | Notes |
@@ -116,15 +125,18 @@ Prebuilt Windows builds are on the
 [releases page](https://github.com/corderro-artz/nfty/releases/latest). Every download carries both
 front-ends, the demo CookBook, and the licenses.
 
-| Shape | Size | .NET 10 needed | For |
+| Zip | Size | .NET 10 needed | For |
 | --- | --- | --- | --- |
-| **Portable** | 84 MB | No | Unzip anywhere and run. Start here if you are unsure. |
-| **Single file** | 76 MB | No | One `.exe`. Unpacks itself on first launch, so that launch is slower. |
-| **Single file, .NET** | 14 MB | Yes | One `.exe` with the runtime left out. |
-| **Framework-dependent** | 14 MB | Yes | The same, as a folder. |
+| **portable** | 84 MB | No | Unzip anywhere and run. Start here if you are unsure. |
+| **single-file** | 76 MB | No | One `.exe`. Unpacks itself on first launch, so that launch is slower. |
+| **framework-dependent** | 14 MB | Yes | A small folder; needs the .NET 10 desktop runtime. |
+| **single-file-net10** | 14 MB | Yes | One `.exe` with the runtime left out. |
+
+Zips are named `nfty-<version>-<rid>-<shape>.zip` (`tools/release/build.py` makes them). The app is
+`Nfty.Desktop.exe`; the command line sits in the `cli` folder.
 
 nfty keeps its settings in a `.nfty` folder **beside the executable**, so a copy carries its own
-recent-files list and palette and writes nothing elsewhere. Move or delete the folder and nothing is
+recent-files list, palette and thread setting and writes nothing elsewhere. Move or delete the folder and nothing is
 left behind.
 
 To build from source:
@@ -153,6 +165,15 @@ dotnet run --project src/Nfty.Cli -- validate ChestDemo.cbk # is it sound
 dotnet run --project src/Nfty.Cli -- stats    ChestDemo.cbk # what odds its weights imply
 dotnet run --project src/Nfty.Cli -- generate ChestDemo.cbk --count 8 --seed hello --out ./out
 ```
+
+Roll one asset at runtime from a Menu, with no `.cbk` present:
+
+```bash
+dotnet run --project src/Nfty.Cli -- menu  ChestDemo.cbk --out chest.mnu
+dotnet run --project src/Nfty.Cli -- serve chest.mnu --seed hello --out one.png
+```
+
+Every command takes `--threads N` (or the `NFTY_THREADS` variable); output is identical at any count.
 
 The desktop app is the same engine with a UI on top:
 
@@ -240,11 +261,12 @@ nfty/
 │   │   ├── Output/         Set writer, dual metadata, extend loader
 │   │   ├── Publish/        Export planning and AES-256-GCM sealing
 │   │   └── Stats/          Rarity, and the reports both front-ends print
+│   ├── Nfty.Ticket/        Roll + Menu runtime, no dependencies   (net10.0)
 │   ├── Nfty.Model/         Rise: pixel art to a 3D model, glTF    (net10.0)
 │   ├── Nfty.Cli/           System.CommandLine wiring              (net10.0)
 │   ├── Nfty.App/           Avalonia GUI — ViewModels, Views, Themes
 │   └── Nfty.Desktop/       Desktop head — window, clipboard, pickers
-├── tests/                  2,291 tests across three xunit.v3 projects
+├── tests/                  Tests across five xunit.v3 projects
 │   └── fixtures/           Archives an older build wrote, and still reads
 ├── docs/
 │   ├── manual/             The end-user manual (Material for MkDocs)
@@ -312,9 +334,11 @@ dotnet run --project src/Nfty.Cli -- --help
 | `export <set>` | Publish a cooked Set: choose what goes with it, and in what shape |
 | `new ingredient\|recipe\|cookbook\|kitchen` | Build an archive from a manifest and its parts |
 | `add variant\|ingredient\|recipe\|rule` | Append to an existing archive |
-| `move ingredient` | Reorder a Recipe's layers |
+| `move ingredient\|recipe` | Reorder a Recipe's layers, or a book's recipe listing |
 | `remove rule` | Remove one incompatibility rule, addressed by its 1-based position |
-| `set chance` | Set how often a layer is left out of an asset entirely |
+| `set chance\|depth\|variant\|recipe\|cookbook\|voxel-ready` | Change a layer's absent chance, a variant's depth map or weight, a recipe's weight, book metadata; snap partial alpha |
+| `remove ingredient\|variant\|recipe` | Remove a layer, variant or recipe |
+| `sheet grid <png>` | Read, set or clear the grid a spritesheet carries |
 
 Errors surface as a message, never a stack trace — add `--verbose` for the trace.
 

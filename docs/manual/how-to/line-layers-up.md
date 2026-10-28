@@ -7,8 +7,7 @@ the character while you draw one piece of it.
 
 In the Ingredient Editor, scroll the right-hand panel to **IN THIS RECIPE** and tick any layer:
 
-![The reference layer list, with layers marked UNDER and OVER](../images/reference-layers-light.png#only-light)
-![The reference layer list, with layers marked UNDER and OVER](../images/reference-layers-dark.png#only-dark)
+<!-- capture: reference-layers-light/dark.png — The reference layer list, with layers marked UNDER and OVER -->
 
 Each one composites at its real depth:
 

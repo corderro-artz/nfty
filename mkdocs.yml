@@ -157,6 +157,7 @@ nav:
       - how-to/cook-with-models.md
       - how-to/fix-a-2d-only-book.md
       - how-to/rise-a-spritesheet.md
+      - how-to/roll-assets-at-runtime.md
       - how-to/inspect-an-asset.md
       - how-to/more-assets.md
       - how-to/share-a-collection.md
@@ -172,6 +173,7 @@ nav:
       - understand/sealing.md
       - understand/depth.md
       - understand/no-resizing.md
+      - understand/faq.md
   - Reference:
       - reference/index.md
       - reference/opening-screen.md
@@ -180,6 +182,8 @@ nav:
       - reference/rise.md
       - reference/shortcuts.md
       - reference/cli.md
+      - reference/ticket-api.md
+      - reference/settings.md
       - reference/file-formats.md
       - reference/set-contents.md
       - reference/errors.md

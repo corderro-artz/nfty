@@ -7,8 +7,7 @@ everything.
 
 1. Unlock editing (click the **read-only** chip in the title bar). Grips appear at the left of each row:
 
-    ![The layer table unlocked, showing drag grips](../images/layers-unlocked-light.png#only-light)
-    ![The layer table unlocked, showing drag grips](../images/layers-unlocked-dark.png#only-dark)
+    <!-- capture: layers-unlocked-light/dark.png — The layer table unlocked, showing drag grips -->
 
 2. Either **drag a row by its grip**, or select a row and press ++alt+up++ / ++alt+down++.
 

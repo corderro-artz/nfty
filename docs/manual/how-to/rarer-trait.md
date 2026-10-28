@@ -13,8 +13,7 @@ as often as one at weight 1. They do not need to add up to anything.
 
 Back on the layer's panel you can see what the numbers actually mean:
 
-![A variant list showing weight, share within the recipe, and share overall](../images/variant-weights-light.png#only-light)
-![A variant list showing weight, share within the recipe, and share overall](../images/variant-weights-dark.png#only-dark)
+<!-- capture: variant-weights-light/dark.png — A variant list showing weight, share within the recipe, and share overall -->
 
 - **WEIGHT** — the raw number you set
 - **IN RECIPE** — what share of *this* Recipe's assets get it

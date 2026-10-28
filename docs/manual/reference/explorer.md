@@ -3,8 +3,7 @@
 Where a CookBook is read and edited. A tree on the left, a panel on the right that changes with the
 selection.
 
-![The Explorer, with a CookBook selected](../images/explorer-light.png#only-light)
-![The Explorer, with a CookBook selected](../images/explorer-dark.png#only-dark)
+<!-- capture: explorer-light/dark.png — The Explorer, with a CookBook selected -->
 
 ## The toolbar
 
@@ -31,8 +30,7 @@ kind: <span class="kind dynamic">D</span>ynamic, <span class="kind static">S</sp
 
 ## The CookBook panel
 
-![The CookBook panel](../images/cookbook-panel-light.png#only-light)
-![The CookBook panel](../images/cookbook-panel-dark.png#only-dark)
+<!-- capture: cookbook-panel-light/dark.png — The CookBook panel -->
 
 - **Identity card** -- name, description, symbol, canvas size, colorize model, and validity status.
 - **Four counts** -- recipes, layers, variants, and **UNIQUE DNA**.
@@ -43,8 +41,7 @@ kind: <span class="kind dynamic">D</span>ynamic, <span class="kind static">S</sp
 
 ## The Recipe panel
 
-![The Recipe panel](../images/recipe-panel-light.png#only-light)
-![The Recipe panel](../images/recipe-panel-dark.png#only-dark)
+<!-- capture: recipe-panel-light/dark.png — The Recipe panel -->
 
 - **Identity card** -- a rolled preview of this character, the per-layer variant counts multiplied
   out, and the resulting **art combinations**.
@@ -54,8 +51,7 @@ kind: <span class="kind dynamic">D</span>ynamic, <span class="kind static">S</sp
 
 ## The Ingredient panel
 
-![The Ingredient panel](../images/ingredient-panel-light.png#only-light)
-![The Ingredient panel](../images/ingredient-panel-dark.png#only-dark)
+<!-- capture: ingredient-panel-light/dark.png — The Ingredient panel -->
 
 - **Identity card** -- a preview, the layer's kind and coloring model, and a rule pill if this layer
   appears in one. The **pencil** opens the editor.
@@ -67,8 +63,7 @@ kind: <span class="kind dynamic">D</span>ynamic, <span class="kind static">S</sp
 
 ## The Cook dialog
 
-![The Cook dialog](../images/cook-dialog-light.png#only-light)
-![The Cook dialog](../images/cook-dialog-dark.png#only-dark)
+<!-- capture: cook-dialog-light/dark.png — The Cook dialog -->
 
 | Field | Means |
 |---|---|
