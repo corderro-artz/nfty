@@ -15,7 +15,8 @@ which is what you want.
 
 You can see the stack, in paint order, on the Recipe's panel:
 
-<!-- capture: layer-stack-light/dark.png — The layer table, numbered in paint order with each layer's kind -->
+![The layer table, numbered in paint order with each layer's kind](../images/layer-stack-light.png#only-light)
+![The layer table, numbered in paint order with each layer's kind](../images/layer-stack-dark.png#only-dark)
 
 Select **Body** and click the **pencil**.
 
@@ -26,7 +27,8 @@ show the background underneath while you draw.
 
 Scroll the right-hand panel down to **IN THIS RECIPE** and tick **Background**.
 
-<!-- capture: reference-layers-light/dark.png — The reference layer list, with layers marked UNDER and OVER -->
+![The reference layer list, with layers marked UNDER and OVER](../images/reference-layers-light.png#only-light)
+![The reference layer list, with layers marked UNDER and OVER](../images/reference-layers-dark.png#only-dark)
 
 Your background now composites behind the canvas, tagged **UNDER** because it sits below this layer.
 Anything above would be tagged **OVER** and drawn dimmed, so it cannot hide your work.
@@ -35,7 +37,8 @@ Anything above would be tagged **OVER** and drawn dimmed, so it cannot hide your
 
 The tools run along the top of the canvas:
 
-<!-- capture: toolstrip-light/dark.png — The editor toolstrip -->
+![The editor toolstrip](../images/toolstrip-light.png#only-light)
+![The editor toolstrip](../images/toolstrip-dark.png#only-dark)
 
 Pencil, eraser, flood fill · rectangle, ellipse, triangle, line, select · undo, redo · the value
 slider, the current swatch, and the brush size.
@@ -89,7 +92,8 @@ numbers are handed out, so every roll downstream of it changes too. See
 You have used every drawing tool, the value slider, reference layers and the live preview. The
 finished Vapor Pets in this manual's screenshots is five layers built exactly this way:
 
-<!-- capture: set-browser-light/dark.png — The finished Vapor Pets collection in the Set browser -->
+![The finished Chest Demo collection in the Set browser](../images/set-browser-light.png#only-light)
+![The finished Chest Demo collection in the Set browser](../images/set-browser-dark.png#only-dark)
 
 From here the manual stops leading. Pick a question in [How do I…](../how-to/index.md), or read
 [How nfty works](../understand/index.md) to understand what you have been doing.

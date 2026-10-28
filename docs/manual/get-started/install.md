@@ -31,7 +31,8 @@ The first build takes a minute or two while packages download.
 
 You should get this window:
 
-<!-- capture: landing-light/dark.png — the opening screen with nothing open: create and open actions, recents, Kitchen shelf -->
+![the opening screen with nothing open: create and open actions, recents, Kitchen shelf](../images/landing-light.png#only-light)
+![the opening screen with nothing open: create and open actions, recents, Kitchen shelf](../images/landing-dark.png#only-dark)
 
 If you see it, you are done.
 

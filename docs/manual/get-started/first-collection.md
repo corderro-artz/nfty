@@ -14,7 +14,8 @@ A **CookBook** is your whole project in one file.
 
 On the opening screen, click **New CookBook**. Fill it in like this:
 
-<!-- capture: new-cookbook-light/dark.png — The New CookBook dialog, filled in with a name, symbol and canvas size -->
+![The New CookBook dialog, filled in with a name, symbol and canvas size](../images/new-cookbook-light.png#only-light)
+![The New CookBook dialog, filled in with a name, symbol and canvas size](../images/new-cookbook-dark.png#only-dark)
 
 - **Name** — `Vapor Pets`
 - **Symbol** — `VP`, a short code for the collection
@@ -60,7 +61,8 @@ collection's variety comes from. The other two kinds are covered in
 Select **Background** in the tree, then click the **pencil** button on its panel. The Ingredient
 Editor opens.
 
-<!-- capture: editor-light/dark.png — The Ingredient Editor -->
+![The Ingredient Editor](../images/editor-light.png#only-light)
+![The Ingredient Editor](../images/editor-dark.png#only-dark)
 
 Draw the first option:
 
@@ -83,7 +85,8 @@ Click **Save** at the bottom right, then **Back**.
 
 Click **Vapor Pets** at the top of the tree. The panel shows the book's numbers:
 
-<!-- capture: cookbook-panel-light/dark.png — The CookBook panel, showing counts and the unique DNA space -->
+![The CookBook panel, showing counts and the unique DNA space](../images/cookbook-panel-light.png#only-light)
+![The CookBook panel, showing counts and the unique DNA space](../images/cookbook-panel-dark.png#only-dark)
 
 The number that matters before cooking is **UNIQUE DNA** — how many genuinely different assets this
 book can produce. With one Dynamic layer and two variants it is already in the hundreds, because each
@@ -98,7 +101,8 @@ asset also rolls its own color.
 
 Click **Cook Set**.
 
-<!-- capture: cook-dialog-light/dark.png — The Cook dialog, with a count and a seed -->
+![The Cook dialog, with a count and a seed](../images/cook-dialog-light.png#only-light)
+![The Cook dialog, with a count and a seed](../images/cook-dialog-dark.png#only-dark)
 
 - **Count** — how many assets to make. Try `50` for a first run; the screenshot shows the
   finished Vapor Pets at 500.
@@ -108,7 +112,8 @@ Click **Cook Set**.
 
 Click **Cook**, then choose an empty folder to write into.
 
-<!-- capture: cook-done-light/dark.png — The Cook dialog reporting the finished set -->
+![The Cook dialog reporting the finished set](../images/cook-done-light.png#only-light)
+![The Cook dialog reporting the finished set](../images/cook-done-dark.png#only-dark)
 
 Click the folder to open it. Inside:
 

@@ -89,7 +89,8 @@ Everything else.
 
 The Set browser reads the same file when you select an asset:
 
-<!-- capture: rarity-light/dark.png — An asset's rarity panel in the Set browser -->
+![An asset's rarity panel in the Set browser](../images/rarity-light.png#only-light)
+![An asset's rarity panel in the Set browser](../images/rarity-dark.png#only-dark)
 
 | Field | Is |
 |---|---|

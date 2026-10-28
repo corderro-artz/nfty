@@ -6,6 +6,9 @@ both side by side.
 
 ## Open it
 
+![The pop-out viewer showing the 2D art and the 3D model side by side, with the backdrop, camera and export controls underneath](../images/viewer-light.png#only-light)
+![The pop-out viewer showing the 2D art and the 3D model side by side, with the backdrop, camera and export controls underneath](../images/viewer-dark.png#only-dark)
+
 - **From a pop-out button:** the Rise page, the Ingredient Editor, the Set browser and the asset
   inspector each carry one (its tooltip names the shortcut). On the Rise page you can also Ctrl+click
   the 3D tile, or middle-click it (on a Mac, middle-click only). The viewer opens on what the page
@@ -22,6 +25,9 @@ both side by side.
 An archive opens as a gallery of tiles. Click a tile to open that one in its own viewer.
 
 ## The controls
+
+![The viewer opened on a CookBook, laying every variant out as a gallery with the book's counts on the info panel](../images/viewer-gallery-light.png#only-light)
+![The viewer opened on a CookBook, laying every variant out as a gallery with the book's counts on the info panel](../images/viewer-gallery-dark.png#only-dark)
 
 - **Layout** (top right): **2D**, **Both** or **3D**. Switching moves nothing else on the screen.
 - **2D:** wheel to zoom, drag to pan, **fit** to reset, **1:1** for one art pixel per screen pixel, and

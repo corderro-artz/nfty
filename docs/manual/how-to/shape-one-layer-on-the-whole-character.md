@@ -23,6 +23,9 @@ choosing.
 
 ## Paint
 
+![The Rise page on a rolled Chest recipe, with the Body layer targeted: its own pixels are dimmed in, the other layers sit back, and the toast names the variant and how many assets it reaches](../images/rise-recipe-light.png#only-light)
+![The Rise page on a rolled Chest recipe, with the Body layer targeted: its own pixels are dimmed in, the other layers sit back, and the toast names the variant and how many assets it reaches](../images/rise-recipe-dark.png#only-dark)
+
 Paint as on any layer: left button front +1, right button back +1, **Shift** to subtract. Only the
 chosen layer takes the stroke; pressing on a dimmed pixel does nothing. The 3D tile follows as you
 paint, and the union of all layers stays what the model uses.

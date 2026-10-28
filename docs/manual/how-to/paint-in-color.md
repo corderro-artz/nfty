@@ -8,7 +8,8 @@ paint in color and save it as a **Custom** layer.
 
 The palette strip under the tools has a **Gray / Color** switch:
 
-<!-- capture: palette-strip-light/dark.png — The palette strip, with the Gray and Color switch, swatches and the opacity padlock -->
+![The palette strip, with the Gray and Color switch, swatches and the opacity padlock](../images/palette-strip-light.png#only-light)
+![The palette strip, with the Gray and Color switch, swatches and the opacity padlock](../images/palette-strip-dark.png#only-dark)
 
 Click **Color**. Three things change:
 
@@ -16,7 +17,8 @@ Click **Color**. Three things change:
 - the right-hand panel becomes **Paint Hue** and **Paint Saturation**
 - your existing drawing comes with you, in gray, so you can paint over it
 
-<!-- capture: editor-color-light/dark.png — The editor in color mode -->
+![The editor in color mode](../images/editor-color-light.png#only-light)
+![The editor in color mode](../images/editor-color-dark.png#only-dark)
 
 Hue and saturation from the panel, brightness from the value slider by the tools -- those three give
 you any color. Or type one straight into the hex field.

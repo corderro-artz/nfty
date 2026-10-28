@@ -21,6 +21,9 @@ nfty export ./collection --out ./dist --preset assetpack
 nfty export ./collection --out ./dist --preset fullproject --book mybook.cbk
 ```
 
+![The Export card on its Contents tab, with the Asset pack preset chosen and the plan of files it will write](../images/export-light.png#only-light)
+![The Export card on its Contents tab, with the Asset pack preset chosen and the plan of files it will write](../images/export-dark.png#only-dark)
+
 ## The one you are most likely to get wrong
 
 `nfty/NNNN.json` records, for every asset, the seed and the exact color rolled on every layer. A

@@ -12,6 +12,12 @@ paper: every opaque pixel is one voxel thick.
 
 ## Open the Rise page on what you want to rise
 
+![The Rise page opened on a single picture, which starts out as flat paper](../images/rise-picture-light.png#only-light)
+![The Rise page opened on a single picture, which starts out as flat paper](../images/rise-picture-dark.png#only-dark)
+
+![The Rise page on one variant: the depth panel, the thickness bars and the live 3D tile](../images/rise-page-light.png#only-light)
+![The Rise page on one variant: the depth panel, the thickness bars and the live 3D tile](../images/rise-page-dark.png#only-dark)
+
 Pick the entry point that matches what you are holding.
 
 | You want to rise | Go to |
@@ -32,6 +38,9 @@ those pixels would. There is no colorize option on the Rise page. A Custom varia
 colors.
 
 ## Paint depth
+
+![The 3D tile in the corner of the canvas, showing the chest as it rises](../images/rise-3d-tile-light.png#only-light)
+![The 3D tile in the corner of the canvas, showing the chest as it rises](../images/rise-3d-tile-dark.png#only-dark)
 
 The toolstrip has a brush, a line, a rectangle, a same-color fill and a region select. A stroke
 changes the depth of every solid pixel it passes over by one step:

@@ -3,7 +3,8 @@
 Where a CookBook is read and edited. A tree on the left, a panel on the right that changes with the
 selection.
 
-<!-- capture: explorer-light/dark.png — The Explorer, with a CookBook selected -->
+![The Explorer, with a CookBook selected](../images/explorer-light.png#only-light)
+![The Explorer, with a CookBook selected](../images/explorer-dark.png#only-dark)
 
 ## The toolbar
 
@@ -30,7 +31,8 @@ kind: <span class="kind dynamic">D</span>ynamic, <span class="kind static">S</sp
 
 ## The CookBook panel
 
-<!-- capture: cookbook-panel-light/dark.png — The CookBook panel -->
+![The CookBook panel](../images/cookbook-panel-light.png#only-light)
+![The CookBook panel](../images/cookbook-panel-dark.png#only-dark)
 
 - **Identity card** -- name, description, symbol, canvas size, colorize model, and validity status.
 - **Four counts** -- recipes, layers, variants, and **UNIQUE DNA**.
@@ -41,7 +43,8 @@ kind: <span class="kind dynamic">D</span>ynamic, <span class="kind static">S</sp
 
 ## The Recipe panel
 
-<!-- capture: recipe-panel-light/dark.png — The Recipe panel -->
+![The Recipe panel](../images/recipe-panel-light.png#only-light)
+![The Recipe panel](../images/recipe-panel-dark.png#only-dark)
 
 - **Identity card** -- a rolled preview of this character, the per-layer variant counts multiplied
   out, and the resulting **art combinations**.
@@ -51,7 +54,8 @@ kind: <span class="kind dynamic">D</span>ynamic, <span class="kind static">S</sp
 
 ## The Ingredient panel
 
-<!-- capture: ingredient-panel-light/dark.png — The Ingredient panel -->
+![The Ingredient panel](../images/ingredient-panel-light.png#only-light)
+![The Ingredient panel](../images/ingredient-panel-dark.png#only-dark)
 
 - **Identity card** -- a preview, the layer's kind and coloring model, and a rule pill if this layer
   appears in one. The **pencil** opens the editor.
@@ -61,9 +65,13 @@ kind: <span class="kind dynamic">D</span>ynamic, <span class="kind static">S</sp
   it.
 - **Export preview...** -- writes one variant as generation would render it.
 
+![The Book settings card: names, symbol, target supply, description, recipe weights and the palette](../images/book-settings-light.png#only-light)
+![The Book settings card: names, symbol, target supply, description, recipe weights and the palette](../images/book-settings-dark.png#only-dark)
+
 ## The Cook dialog
 
-<!-- capture: cook-dialog-light/dark.png — The Cook dialog -->
+![The Cook dialog](../images/cook-dialog-light.png#only-light)
+![The Cook dialog](../images/cook-dialog-dark.png#only-dark)
 
 | Field | Means |
 |---|---|

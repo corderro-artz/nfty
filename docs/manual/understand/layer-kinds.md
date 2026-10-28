@@ -40,7 +40,8 @@ nothing else to an asset's fingerprint.
 The Ingredient panel shows the band of colors a layer can actually take, with its hue and saturation
 ranges under it:
 
-<!-- capture: colorways-light/dark.png — The Colorways strip, showing a Dynamic layer's hue and saturation ranges -->
+![The Colorways strip, showing a Dynamic layer's hue and saturation ranges](../images/colorways-light.png#only-light)
+![The Colorways strip, showing a Dynamic layer's hue and saturation ranges](../images/colorways-dark.png#only-dark)
 
 A Static layer shows one swatch there, and a Custom layer says colorization does not apply.
 

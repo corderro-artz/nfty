@@ -2,11 +2,13 @@
 
 Three panes: variants on the left, the canvas in the middle, colorize settings on the right.
 
-<!-- capture: editor-light/dark.png — The Ingredient Editor -->
+![The Ingredient Editor](../images/editor-light.png#only-light)
+![The Ingredient Editor](../images/editor-dark.png#only-dark)
 
 ## The toolstrip
 
-<!-- capture: toolstrip-light/dark.png — The toolstrip -->
+![The toolstrip](../images/toolstrip-light.png#only-light)
+![The toolstrip](../images/toolstrip-dark.png#only-dark)
 
 | Tool | Behavior |
 |---|---|
@@ -22,7 +24,8 @@ To their right: the **value slider**, the **current swatch**, and the **brush si
 
 ## The palette strip
 
-<!-- capture: palette-strip-light/dark.png — The palette strip -->
+![The palette strip](../images/palette-strip-light.png#only-light)
+![The palette strip](../images/palette-strip-dark.png#only-dark)
 
 | Control | Does |
 |---|---|
@@ -52,7 +55,8 @@ becomes the brightness of the color you are painting.
 
 ## The colorize rail
 
-<!-- capture: colorize-rail-light/dark.png — The colorize rail -->
+![The colorize rail](../images/colorize-rail-light.png#only-light)
+![The colorize rail](../images/colorize-rail-dark.png#only-dark)
 
 On a **Dynamic** layer: **HUE RANGE** and **SATURATION RANGE** bound the colors this layer can roll,
 and **QUANTIZE** decides how finely that space is divided into colors nfty treats as different. The
@@ -65,7 +69,8 @@ In **color mode** it becomes **Paint Hue** and **Paint Saturation** plus a hex f
 
 ## Reference layers
 
-<!-- capture: reference-layers-light/dark.png — The reference layer list -->
+![The reference layer list](../images/reference-layers-light.png#only-light)
+![The reference layer list](../images/reference-layers-dark.png#only-dark)
 
 Tick any other layer in the Recipe to composite it at its real depth -- **UNDER** below you, **OVER**
 above. **Ghost above** dims the ones above so they cannot hide your work; **True color** shows the

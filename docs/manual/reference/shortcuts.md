@@ -2,7 +2,8 @@
 
 The app also carries this list: press ++ctrl+slash++ for the quick-reference sheet.
 
-<!-- capture: help-sheet-light/dark.png — The in-app quick reference sheet -->
+![The in-app quick reference sheet](../images/help-sheet-light.png#only-light)
+![The in-app quick reference sheet](../images/help-sheet-dark.png#only-dark)
 
 ## Anywhere
 

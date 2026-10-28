@@ -10,7 +10,8 @@ Four ways to raise it, cheapest first -- and a fifth option at the end, which is
 
 On a Dynamic layer, open the editor and drag the **HUE RANGE** handles apart:
 
-<!-- capture: colorize-rail-light/dark.png — The colorize rail, with hue range, saturation range and quantize -->
+![The colorize rail, with hue range, saturation range and quantize](../images/colorize-rail-light.png#only-light)
+![The colorize rail, with hue range, saturation range and quantize](../images/colorize-rail-dark.png#only-dark)
 
 A wider range means more distinguishable colors, and the count is multiplied by them. This costs no
 drawing at all.

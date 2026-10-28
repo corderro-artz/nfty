@@ -2,6 +2,9 @@
 
 ## The Settings card
 
+![The Settings card with the worker thread control on Auto](../images/settings-light.png#only-light)
+![The Settings card with the worker thread control on Auto](../images/settings-dark.png#only-dark)
+
 Press the gear in the title bar. It has one control: **worker threads**, how many threads heavy work
 uses (reading and writing archives, cooking, exporting, building models). **Auto** uses two thirds of
 the machine's logical processors; a custom value lets you pick a number. The count never changes what

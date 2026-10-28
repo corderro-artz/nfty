@@ -12,7 +12,8 @@ folder that file sits in* is the vault -- everything beside it is in the Kitchen
 
 The **shelf** along the bottom of the opening screen lists everything in the folder:
 
-<!-- capture: kitchen-shelf-light/dark.png — The Kitchen shelf, listing the CookBooks in the folder -->
+![The Kitchen shelf, listing the CookBooks in the folder](../images/kitchen-shelf-light.png#only-light)
+![The Kitchen shelf, listing the CookBooks in the folder](../images/kitchen-shelf-dark.png#only-dark)
 
 CookBooks first, then loose Recipes and Ingredients. Click a card to open it; use the arrows to page
 through by kind.

@@ -34,7 +34,12 @@ of them, out of twenty-nine 32×32 sprites.
 [![Avalonia 12](https://img.shields.io/badge/Avalonia-12.1.1-8B44AC)](https://avaloniaui.net/)
 [![Platform](https://img.shields.io/badge/platform-windows%20%7C%20linux%20%7C%20macOS-lightgrey)](https://github.com/corderro-artz/nfty)
 
-<!-- capture: hero-light/dark.png — the Explorer with the demo CookBook open: layer tree, card showing 2 recipes, 7,155,000 unique DNA, per-recipe DNA-space table -->
+![The nfty Explorer with the Chest Demo CookBook open: 2 recipes, 49 variants and 7,155,000 unique DNA](assets/readme/hero-light.png#gh-light-mode-only)
+![The nfty Explorer with the Chest Demo CookBook open: 2 recipes, 49 variants and 7,155,000 unique DNA](assets/readme/hero-dark.png#gh-dark-mode-only)
+
+| Rise: paint depth into a rolled recipe | The pop-out viewer, 2D beside 3D |
+|---|---|
+| ![The Rise page on a rolled Chest recipe with its 3D tile](assets/readme/rise-light.png#gh-light-mode-only)![The Rise page on a rolled Chest recipe with its 3D tile](assets/readme/rise-dark.png#gh-dark-mode-only) | ![The viewer showing a chest in 2D and 3D side by side](assets/readme/viewer-light.png#gh-light-mode-only)![The viewer showing a chest in 2D and 3D side by side](assets/readme/viewer-dark.png#gh-dark-mode-only) |
 
 > **Using the app rather than working on it?** Read the
 > **[User Manual](https://www.vaporsoft.dev/nfty/)** instead — this file is for developers. Its
