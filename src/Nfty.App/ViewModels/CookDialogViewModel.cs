@@ -14,8 +14,15 @@ namespace Nfty.App.ViewModels;
 /// <summary>Runs the real generate+write pipeline for a borrowed <see cref="LoadedCookBook"/>.
 /// The book is owned by the caller — never disposed here; only the <see cref="GeneratedSet"/>
 /// this run produces is disposed once written.</summary>
-public partial class CookDialogViewModel : ViewModelBase
+public partial class CookDialogViewModel : ViewModelBase, IUnsavedWork
 {
+    /// <inheritdoc />
+    public bool HasUnsavedWork => false;
+    /// <inheritdoc />
+    public bool IsBusy => IsRunning;
+    /// <inheritdoc />
+    public Task<bool> ConfirmLeaveAsync() => Task.FromResult(!IsRunning);
+
     private readonly LoadedCookBook _book;
     private readonly IFilePickerService _picker;
     private readonly IFolderRevealer _revealer;

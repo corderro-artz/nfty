@@ -162,6 +162,17 @@ public partial class ShellViewModel : ViewModelBase
     /// <returns>True when nothing is lost by closing, or the author chose to lose it.</returns>
     public async Task<bool> ConfirmCloseAsync()
     {
+        // An open card can hold work too: a cook or an export mid-write, or book settings not yet
+        // saved. Cards are never asked (one slot for modals), only refused on - the reader finishes
+        // or dismisses the card, then closes.
+        if (ActiveDialog is IUnsavedWork card && (card.HasUnsavedWork || card.IsBusy))
+        {
+            _status.Say(card.IsBusy
+                ? "Wait for the open dialog to finish before closing."
+                : "Save or cancel the open dialog first — closing would lose its changes.");
+            return false;
+        }
+
         var holders = _nav.Pages.OfType<IUnsavedWork>().Where(p => p.HasUnsavedWork || p.IsBusy).ToList();
         if (holders.Count == 0) return true;
 

@@ -115,8 +115,15 @@ public sealed class BookSwatch
 /// <c>RelayCommand</c>'s <c>ExecuteAsync</c> does not consult its own <c>CanExecute</c> - so the
 /// command re-asks <c>isEditing</c> itself before anything is committed.</para>
 /// </remarks>
-public sealed partial class BookSettingsDialogViewModel : ViewModelBase
+public sealed partial class BookSettingsDialogViewModel : ViewModelBase, IUnsavedWork
 {
+    /// <inheritdoc />
+    public bool HasUnsavedWork => IsDirty;
+    /// <inheritdoc />
+    bool IUnsavedWork.IsBusy => IsSaving;
+    /// <inheritdoc />
+    public Task<bool> ConfirmLeaveAsync() => Task.FromResult(!IsDirty && !IsSaving);
+
     /// <summary>How many weight rows a page shows. Stated, not measured: the card is a modal and
     /// cannot scroll, so its height must be a pure function of this number.</summary>
     public const int PageSize = 4;

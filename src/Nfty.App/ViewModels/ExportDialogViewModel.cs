@@ -110,8 +110,15 @@ public enum ExportTab
     Seal,
 }
 
-public partial class ExportDialogViewModel : ViewModelBase
+public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
 {
+    /// <inheritdoc />
+    public bool HasUnsavedWork => false;
+    /// <inheritdoc />
+    public bool IsBusy => IsRunning;
+    /// <inheritdoc />
+    public Task<bool> ConfirmLeaveAsync() => Task.FromResult(!IsRunning);
+
     private readonly string _setDirectory;
     private readonly IFilePickerService _picker;
     private readonly IParallelismSetting? _threads;

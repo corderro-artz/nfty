@@ -245,6 +245,19 @@ public class BookSettingsDialogTests
     }
 
     [AvaloniaFact]
+    public void Unsaved_settings_hold_the_window_open_until_saved_or_canceled()
+    {
+        using var book = TwelveRecipes();
+        var vm = new BookSettingsDialogViewModel(new FakeDialogs(), book, null, () => true,
+            _ => Task.FromResult(new BookSettingsOutcome(true, [])));
+        Nfty.App.Services.IUnsavedWork work = vm;
+        Assert.False(work.HasUnsavedWork);
+        vm.Name = "Changed";
+        Assert.True(work.HasUnsavedWork);
+        Assert.False(work.IsBusy);
+    }
+
+    [AvaloniaFact]
     public void Weight_zero_reads_shelved_and_the_shares_follow_the_weights()
     {
         using var book = TwelveRecipes();

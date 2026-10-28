@@ -224,6 +224,46 @@ public class CloseGuardTests
         finally { vm.Dispose(); Cleanup(path, session); }
     }
 
+    /// <summary>A modal card mid-write (a cook, an export) with no page holding work.</summary>
+    private sealed class BusyCard : ViewModelBase, IUnsavedWork
+    {
+        public bool HasUnsavedWork { get; init; }
+        public bool IsBusy { get; init; }
+        public Task<bool> ConfirmLeaveAsync() => Task.FromResult(false);
+    }
+
+    [AvaloniaFact]
+    public async Task Closing_while_an_open_card_is_writing_is_refused_even_with_every_page_clean()
+    {
+        var nav = new FakeNav();
+        nav.To(new PlainPage());
+        var dialogs = new FakeDialogs();
+        var status = new StatusService();
+        var shell = Shell(nav, dialogs, status);
+        _ = dialogs.ShowAsync<object>(new BusyCard { IsBusy = true });
+
+        Assert.False(await shell.ConfirmCloseAsync());
+        Assert.Equal("Wait for the open dialog to finish before closing.", status.Last);
+        Assert.IsType<BusyCard>(dialogs.Active);
+    }
+
+    [AvaloniaFact]
+    public async Task Closing_over_a_card_with_unsaved_edits_is_refused_and_a_clean_card_is_not()
+    {
+        var nav = new FakeNav();
+        nav.To(new PlainPage());
+        var dialogs = new FakeDialogs();
+        var status = new StatusService();
+        var shell = Shell(nav, dialogs, status);
+        _ = dialogs.ShowAsync<object>(new BusyCard { HasUnsavedWork = true });
+        Assert.False(await shell.ConfirmCloseAsync());
+        Assert.Equal("Save or cancel the open dialog first — closing would lose its changes.", status.Last);
+
+        dialogs.Close(null);
+        _ = dialogs.ShowAsync<object>(new BusyCard());
+        Assert.True(await shell.ConfirmCloseAsync());
+    }
+
     [AvaloniaFact]
     public async Task The_editor_back_button_offers_save_as_well_as_discard()
     {

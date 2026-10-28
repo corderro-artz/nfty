@@ -27,8 +27,15 @@ namespace Nfty.App.ViewModels;
 /// leaves the Menu that was there, not half of a new one. This card reads the book and never edits
 /// it, so it is available on a locked book.</para>
 /// </remarks>
-public partial class MenuExportDialogViewModel : ViewModelBase
+public partial class MenuExportDialogViewModel : ViewModelBase, IUnsavedWork
 {
+    /// <inheritdoc />
+    public bool HasUnsavedWork => false;
+    /// <inheritdoc />
+    public bool IsBusy => IsRunning;
+    /// <inheritdoc />
+    public Task<bool> ConfirmLeaveAsync() => Task.FromResult(!IsRunning);
+
     private readonly LoadedCookBook _book;
     private readonly IFilePickerService _picker;
     private readonly IDialogService _dialogs;
