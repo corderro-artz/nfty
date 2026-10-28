@@ -20,7 +20,7 @@ A model needs every pixel either solid or empty. A partly transparent pixel has 
 nfty names it and refuses. Use the opacity lock while painting, or snap existing art with
 `nfty set voxel-ready`. See [Depth](depth.md) and [Fix a 2D-only book](../how-to/fix-a-2d-only-book.md).
 
-**The unique count says "at least" or "at most". Why not a number?**
+**The unique DNA count says "at least" or "at most". Why not a number?**
 Some counts cannot be reached exactly. The wording tells you which direction the figure is bounded in,
 so nfty never claims more than it knows. See [How uniqueness is decided](uniqueness.md).
 

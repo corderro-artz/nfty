@@ -870,7 +870,7 @@ public static partial class CommandFactory
         {
             Description = "Accept every roll instead of requiring each asset to have unique DNA. "
                 + "Identity is carried by the sequential token id, per the ERC-721 standard, so "
-                + "assets may repeat and any --count is producible regardless of the unique space. "
+                + "assets may repeat and any --count is producible regardless of the unique DNA space. "
                 + "Skips the dedup and space-counting work — use it for large runs on slow "
                 + "machines. Incompatibility rules are still enforced.",
         };
@@ -1155,7 +1155,7 @@ public static partial class CommandFactory
         {
             Description = "Per-asset reroll budget before generation gives up finding a legal, "
                 + "unique roll. Raise it when a run reports the reroll budget ran out before the "
-                + "unique space did; the default suits most CookBooks.",
+                + "unique DNA space did; the default suits most CookBooks.",
             DefaultValueFactory = _ => GenerateOptions.DefaultMaxRerolls,
         };
         opt.Validators.Add(result =>

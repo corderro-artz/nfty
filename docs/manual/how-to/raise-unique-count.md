@@ -1,4 +1,4 @@
-# Raise the unique-asset count
+# Raise the unique DNA count
 
 **UNIQUE DNA** on the CookBook panel is how many genuinely distinct assets the book can produce. Ask
 for more than that and nfty refuses, and tells you the real maximum, rather than shipping duplicates

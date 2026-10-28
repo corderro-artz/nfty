@@ -9,12 +9,12 @@ Every drawing in a project shares one canvas size, and nfty will not resize your
 
 **Fix:** re-export at the right size. See [Why nfty never resizes your art](../understand/no-resizing.md).
 
-## "...allows exactly N unique assets, but M were requested."
+## "...allows exactly N unique DNA, but M were requested."
 
 The book cannot make that many distinct assets. The message states the real maximum.
 
 **Fix:** add variants, widen a hue range, or make the quantize steps finer. See
-[Raise the unique-asset count](../how-to/raise-unique-count.md).
+[Raise the unique DNA count](../how-to/raise-unique-count.md).
 
 ## A rule conflict
 

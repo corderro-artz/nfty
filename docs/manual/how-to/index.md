@@ -13,7 +13,7 @@ around; if you do not, start with [Get started](../get-started/index.md).
 
     [Stop two traits appearing together](exclude-combinations.md)
 
-    [Raise the unique-asset count](raise-unique-count.md)
+    [Raise the unique DNA count](raise-unique-count.md)
 
 -   **Drawing**
 

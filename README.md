@@ -240,7 +240,7 @@ the generator consumes one roll per layer in order, so moving a layer moves whic
 ### Two Ways to Mint
 
 Rejecting duplicates is the default, and it is a promise: no two assets in a Set are the same, and a
-run that cannot fill its count from the unique space fails and states the real maximum.
+run that cannot fill its count from the unique DNA space fails and states the real maximum.
 
 It is not the only way. **Allow repeats** in the Cook dialog, or `--unlimited` on the command line,
 keeps every roll — so any count is producible from any book, and identity is the token number as
@@ -295,7 +295,7 @@ Both rejections re-enter at the recipe roll and share one `MaxRerollsPerAsset` b
 
 The **DNA** is a SHA-256 over the recipe id, each layer's variant id, and the *quantized* color of
 each colorized layer. Quantizing folds a continuous color space into something countable, which is
-what lets `stats` tell you how many unique assets a book can produce before you try to mint them.
+what lets `stats` tell you how many unique DNA a book can produce before you try to mint them.
 
 ### Design Principles
 

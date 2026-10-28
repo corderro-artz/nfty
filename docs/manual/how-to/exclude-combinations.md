@@ -22,7 +22,7 @@ individually fine and never appear on the same asset.
 nfty rolls a whole asset, checks it against the rules, and re-rolls if a rule is broken. It keeps
 going until it finds a legal combination.
 
-This means rules **shrink the unique space** — see [Raise the unique-asset count](raise-unique-count.md).
+This means rules **shrink the unique DNA space** — see [Raise the unique DNA count](raise-unique-count.md).
 The Recipe's card shows its **art combinations** figure with rules already taken into account.
 
 !!! warning "Rules can exclude everything"

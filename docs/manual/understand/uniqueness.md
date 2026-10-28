@@ -25,7 +25,7 @@ how coarsely: a hue quantize of 30 divides the wheel into 30-degree buckets, and
 bucket count as the same color.
 
 That is what makes uniqueness mean something. It is also the dial you turn when you need more of it --
-see [Raise the unique-asset count](../how-to/raise-unique-count.md).
+see [Raise the unique DNA count](../how-to/raise-unique-count.md).
 
 ## The count is a promise
 
@@ -45,7 +45,7 @@ maximum. It will not quietly ship duplicates.
 
 They look similar and mean opposite things:
 
-- **"allows exactly N unique assets, but M were requested"** -- the space is real, you asked for more
+- **"allows exactly N unique DNA, but M were requested"** -- the space is real, you asked for more
   than exists. Make the space bigger.
 - **a rule conflict** -- the rules exclude *every* combination, so the space is empty. Remove or
   loosen a rule.
