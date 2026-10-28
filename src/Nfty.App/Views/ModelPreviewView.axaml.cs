@@ -69,6 +69,8 @@ public sealed partial class ModelPreviewView : UserControl
     private long _lastRepaint;
     private IDisposable? _budgetTimer;
     private bool _hostInteracting;
+    private DispatcherTimer? _turntable;
+    private long _lastTurn;
 
     /// <summary>At most one repaint per this long while a gesture is running (about 30 per second): a
     /// 512px frame costs more than a dispatcher turn at 60 Hz, so an orbit or pan paints at the pace
@@ -172,7 +174,54 @@ public sealed partial class ModelPreviewView : UserControl
         if (vm is not null) vm.PropertyChanged += OnViewModelChanged;
     }
 
-    private void OnViewModelChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => MarkDirty();
+    private void OnViewModelChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ModelPreviewViewModel.Turntable)) UpdateTurntable();
+        MarkDirty();
+    }
+
+    // The turntable timer exists only while a speed is chosen AND the view is on screen: an idle
+    // viewer owns no timer.
+    private void UpdateTurntable()
+    {
+        bool wanted = VisualRoot is not null && _subscribed is { Turntable: not TurntableSpeed.Off };
+        if (!wanted)
+        {
+            _turntable?.Stop();
+            _turntable = null;
+            return;
+        }
+        if (_turntable is not null) return;
+        _lastTurn = Clock();
+        _turntable = new DispatcherTimer(TimeSpan.FromMilliseconds(33), DispatcherPriority.Render, (_, _) => TurnOnce());
+        _turntable.Start();
+    }
+
+    /// <summary>One turntable step by the time since the last one; the timer calls it, and a test
+    /// calls it to turn without waiting.</summary>
+    internal void TurnOnce()
+    {
+        long now = Clock();
+        double seconds = (now - _lastTurn) / (double)Stopwatch.Frequency;
+        _lastTurn = now;
+        _subscribed?.Tick(TimeSpan.FromSeconds(seconds));
+    }
+
+    /// <summary>Whether the turntable timer is running.</summary>
+    internal bool TurntableRunning => _turntable is not null;
+
+    /// <summary>The frame on screen as PNG bytes (transparent background, wireframe included when it is
+    /// on), or null when nothing is drawn.</summary>
+    /// <returns>The PNG, or null.</returns>
+    internal byte[]? EncodeStill()
+    {
+        if (RepaintPending) RepaintNow();
+        if (_target is null) return null;
+        using var image = SixLabors.ImageSharp.Image.LoadPixelData<Rgba32>(_target.Color, _target.Width, _target.Height);
+        using var ms = new MemoryStream();
+        image.SaveAsPng(ms);
+        return ms.ToArray();
+    }
 
     /// <summary>Takes initial focus the FIRST time the view reaches the screen, so the keyboard path
     /// (arrow keys, +/-, Home) lands on this control rather than silently on the window behind it. Only
@@ -183,6 +232,7 @@ public sealed partial class ModelPreviewView : UserControl
     {
         base.OnAttachedToVisualTree(e);
         Subscribe(DataContext as ModelPreviewViewModel);
+        UpdateTurntable();
         if (!_focusedOnce)
         {
             _focusedOnce = true;
@@ -197,6 +247,7 @@ public sealed partial class ModelPreviewView : UserControl
     {
         base.OnDetachedFromVisualTree(e);
         Subscribe(null);
+        UpdateTurntable();
         _budgetTimer?.Dispose();
         _budgetTimer = null;
         _surface.Source = null; // never dispose a bitmap that is still the Source: measure reads it
@@ -372,6 +423,7 @@ public sealed partial class ModelPreviewView : UserControl
             _target = new RenderTarget(width, height);
         _target.Clear(new Rgba32(0, 0, 0, 0)); // the WriteableBitmap composites over the control's own themed Background
         Raster.Render(mesh, texture, vm.CameraState, _target);
+        if (vm.Wireframe) Raster.DrawEdges(mesh, vm.CameraState, _target);
 
         var size = new PixelSize(width, height);
         // The DPI makes the bitmap lay out at the control's logical Bounds whatever its pixel count.

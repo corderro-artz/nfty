@@ -1,10 +1,12 @@
 using System.Numerics;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Services;
 using Nfty.App.Viewer;
 using Nfty.Core.Imaging;
+using Nfty.Model;
 using SixLabors.ImageSharp;
 
 namespace Nfty.App.ViewModels;
@@ -189,6 +191,107 @@ public sealed partial class ViewerViewModel : ViewModelBase, IDisposable
         {
             await _dialogs.ShowErrorAsync("Could not save image", ex.Message);
         }
+    }
+
+    /// <summary>Gives the current 3D frame as PNG bytes, or null when nothing is drawn. The 3D view
+    /// sets this, since only it holds the raster target.</summary>
+    public Func<byte[]?>? StillSource { get; set; }
+
+    /// <summary>The format an in-memory model is exported in. A model that came from a file is copied
+    /// in the format it has, whatever this says.</summary>
+    [ObservableProperty]
+    private ModelFormat _exportFormat = ModelFormat.Glb;
+
+    /// <summary>Whether the model being shown is a file whose bytes are copied as they are.</summary>
+    public bool HasModelFiles => Subject.Model?.Files is { Count: > 0 };
+
+    /// <summary>Ink for the format choice: dimmed when the file's own format wins.</summary>
+    public double ExportFormatOpacity => HasModelFiles ? 0.45 : 1;
+
+    /// <summary>Whether a model can be exported: allowed by the subject and there is one.</summary>
+    public bool CanExportModel => CanExport && CanShowThreeD;
+
+    /// <summary>Selects the format for an in-memory model.</summary>
+    /// <param name="format">The format.</param>
+    [RelayCommand]
+    private void SetExportFormat(ModelFormat format) => ExportFormat = format;
+
+    /// <summary>Whether glb is the chosen export format.</summary>
+    public bool IsGlb => ExportFormat == ModelFormat.Glb;
+    /// <summary>Whether glTF with a .bin is the chosen export format.</summary>
+    public bool IsGltf => ExportFormat == ModelFormat.GltfWithBin;
+    /// <summary>Whether embedded glTF is the chosen export format.</summary>
+    public bool IsGltfEmbedded => ExportFormat == ModelFormat.GltfEmbedded;
+
+    partial void OnExportFormatChanged(ModelFormat value)
+    {
+        OnPropertyChanged(nameof(IsGlb));
+        OnPropertyChanged(nameof(IsGltf));
+        OnPropertyChanged(nameof(IsGltfEmbedded));
+    }
+
+    /// <summary>Jumps the 3D camera to a named angle.</summary>
+    /// <param name="angle">Which side to look from.</param>
+    [RelayCommand]
+    private void ShowAngle(ViewAngle angle) => Preview.Preset(angle, Preview.ViewportAspect);
+
+    /// <summary>Sets the turntable speed.</summary>
+    /// <param name="speed">The speed.</param>
+    [RelayCommand]
+    private void SetTurntable(TurntableSpeed speed) => Preview.Turntable = speed;
+
+    /// <summary>Shows or hides the quad outlines over the solid.</summary>
+    [RelayCommand]
+    private void ToggleWireframe() => Preview.Wireframe = !Preview.Wireframe;
+
+    /// <summary>Saves the current 3D frame as a PNG with a transparent background.</summary>
+    [RelayCommand(CanExecute = nameof(CanExport))]
+    private async Task SaveStill()
+    {
+        if (!CanExport || StillSource?.Invoke() is not { } png) return;
+        var target = await _picker.SaveFileAsync($"Save {Subject.Title} still", ".png");
+        if (string.IsNullOrWhiteSpace(target)) return;
+        try { await File.WriteAllBytesAsync(target, png); }
+        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not save still", ex.Message); }
+    }
+
+    /// <summary>Exports the 3D model. A model that came from a file is copied byte for byte; one built
+    /// in memory is written in <see cref="ExportFormat"/>. A model of several files (glTF plus its
+    /// .bin) goes to a folder, since the .gltf names the .bin and a rename would break it.</summary>
+    [RelayCommand(CanExecute = nameof(CanExportModel))]
+    private async Task ExportModel()
+    {
+        if (!CanExportModel || Subject.Model is not { } model) return;
+        try
+        {
+            var files = model.Files is { Count: > 0 } own
+                ? own
+                : ModelWriter.WriteAtlas(model.Mesh, model.Texture, new RiseOptions { Format = ExportFormat },
+                    FileStem(Subject.Title));
+            if (files.Count == 1)
+            {
+                var target = await _picker.SaveFileAsync($"Export {Subject.Title} model", Path.GetExtension(files[0].FileName));
+                if (string.IsNullOrWhiteSpace(target)) return;
+                await File.WriteAllBytesAsync(target, files[0].Bytes);
+            }
+            else
+            {
+                var folder = await _picker.PickFolderAsync($"Export {Subject.Title} model to");
+                if (string.IsNullOrWhiteSpace(folder)) return;
+                foreach (var f in files) await File.WriteAllBytesAsync(Path.Combine(folder, f.FileName), f.Bytes);
+            }
+        }
+        catch (Exception ex)
+        {
+            await _dialogs.ShowErrorAsync("Could not export model", ex.Message);
+        }
+    }
+
+    private static string FileStem(string title)
+    {
+        var bad = Path.GetInvalidFileNameChars();
+        var stem = new string(title.Select(c => Array.IndexOf(bad, c) >= 0 ? '-' : c).ToArray()).Trim();
+        return stem.Length == 0 ? "model" : stem;
     }
 
     /// <summary>Copies the art to the clipboard as a PNG.</summary>

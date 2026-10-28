@@ -58,6 +58,7 @@ public partial class ViewerView : UserControl
         // narrow one. Never on an ordinary resize, which would throw away an orbit the reader made.
         _model.GetObservable(BoundsProperty).Subscribe(new AnonymousObserver<Rect>(b =>
         {
+            if (_vm is not null && b.Width >= 1 && b.Height >= 1) _vm.Preview.ViewportAspect = (float)(b.Width / b.Height);
             if (_framed || _vm is null || b.Width < 1 || b.Height < 1) return;
             _framed = true;
             _vm.Preview.Reset((float)(b.Width / b.Height));
@@ -87,6 +88,7 @@ public partial class ViewerView : UserControl
             _vm.TwoD.PropertyChanged += OnTwoDChanged;
         }
         _model.DataContext = _vm?.Preview;
+        if (_vm is not null) _vm.StillSource = _model.EncodeStill;
         _framed = false;
         _model.Mesh = _vm?.Mesh;
         _model.Texture = _vm?.Texture;

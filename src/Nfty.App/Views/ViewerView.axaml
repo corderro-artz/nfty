@@ -5,6 +5,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Nfty.App.ViewModels"
              xmlns:vw="using:Nfty.App.Viewer"
+             xmlns:mdl="using:Nfty.Model"
              xmlns:ctl="using:Nfty.App.Controls"
              xmlns:views="using:Nfty.App.Views"
              x:Class="Nfty.App.Views.ViewerView"
@@ -158,6 +159,59 @@
                    Opacity="{Binding TwoD.CustomColorOpacity}" IsHitTestVisible="{Binding TwoD.IsCustom}"
                    Focusable="{Binding TwoD.IsCustom}"
                    ToolTip.Tip="The backdrop color, as #RRGGBB." />
+        </StackPanel>
+
+        <!-- 3D view controls: the camera presets, the turntable and the outline display. All view
+             state; none of it reaches an exported model. -->
+        <StackPanel Orientation="Horizontal" Spacing="6" IsEnabled="{Binding CanShowThreeD}">
+          <TextBlock Classes="seglbl" Text="VIEW" />
+          <Button Classes="tbtn cellbtn" Content="Front" Command="{Binding ShowAngleCommand}"
+                  CommandParameter="{x:Static vm:ViewAngle.Front}" />
+          <Button Classes="tbtn cellbtn" Content="Back" Command="{Binding ShowAngleCommand}"
+                  CommandParameter="{x:Static vm:ViewAngle.Back}" />
+          <Button Classes="tbtn cellbtn" Content="Side" Command="{Binding ShowAngleCommand}"
+                  CommandParameter="{x:Static vm:ViewAngle.Side}" />
+          <Button Classes="tbtn cellbtn" Content="Top" Command="{Binding ShowAngleCommand}"
+                  CommandParameter="{x:Static vm:ViewAngle.Top}" />
+          <Border Classes="seg tiny" VerticalAlignment="Center">
+            <Button Classes="seg-b tiny" Content="Edges" Classes.on="{Binding Preview.Wireframe}"
+                    Command="{Binding ToggleWireframeCommand}"
+                    ToolTip.Tip="Draw the outline of every face over the solid. Only the picture changes; an exported model does not." />
+          </Border>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Spacing="8" IsEnabled="{Binding CanShowThreeD}">
+          <TextBlock Classes="seglbl" Text="TURN" />
+          <Border Classes="seg tiny" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal">
+              <Button Classes="seg-b tiny" Content="Off" Classes.on="{Binding Preview.TurnIsOff}"
+                      Command="{Binding SetTurntableCommand}" CommandParameter="{x:Static vm:TurntableSpeed.Off}" />
+              <Button Classes="seg-b tiny" Content="Slow" Classes.on="{Binding Preview.TurnIsSlow}"
+                      Command="{Binding SetTurntableCommand}" CommandParameter="{x:Static vm:TurntableSpeed.Slow}" />
+              <Button Classes="seg-b tiny" Content="Medium" Classes.on="{Binding Preview.TurnIsMedium}"
+                      Command="{Binding SetTurntableCommand}" CommandParameter="{x:Static vm:TurntableSpeed.Medium}" />
+              <Button Classes="seg-b tiny" Content="Fast" Classes.on="{Binding Preview.TurnIsFast}"
+                      Command="{Binding SetTurntableCommand}" CommandParameter="{x:Static vm:TurntableSpeed.Fast}" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Spacing="6" IsEnabled="{Binding CanShowThreeD}">
+          <TextBlock Classes="seglbl" Text="MODEL" />
+          <Button Classes="tbtn cellbtn" Content="Save still" Command="{Binding SaveStillCommand}"
+                  ToolTip.Tip="Save the 3D frame as a PNG with a clear background." />
+          <Border Classes="seg tiny" VerticalAlignment="Center" Opacity="{Binding ExportFormatOpacity}"
+                  ToolTip.Tip="The format an in-memory model is written in. A model that came from a file is copied as it is.">
+            <StackPanel Orientation="Horizontal">
+              <Button Classes="seg-b tiny" Content="glb" Classes.on="{Binding IsGlb}"
+                      Command="{Binding SetExportFormatCommand}" CommandParameter="{x:Static mdl:ModelFormat.Glb}" />
+              <Button Classes="seg-b tiny" Content="gltf" Classes.on="{Binding IsGltf}"
+                      Command="{Binding SetExportFormatCommand}" CommandParameter="{x:Static mdl:ModelFormat.GltfWithBin}" />
+              <Button Classes="seg-b tiny" Content="embedded" Classes.on="{Binding IsGltfEmbedded}"
+                      Command="{Binding SetExportFormatCommand}" CommandParameter="{x:Static mdl:ModelFormat.GltfEmbedded}" />
+            </StackPanel>
+          </Border>
+          <Button Classes="tbtn cellbtn" Content="Export model" Command="{Binding ExportModelCommand}" />
         </StackPanel>
 
         <StackPanel Orientation="Horizontal" Spacing="6">

@@ -20,11 +20,13 @@ public sealed record ViewerWindowEntry(double Width, double Height, double? X, d
 /// <param name="ThreeD">The entry for a window that opens with the Both or 3D layout.</param>
 /// <param name="Backdrop">The 2D backdrop, as the <see cref="ViewModels.ViewerBackdrop"/> name.</param>
 /// <param name="BackdropColor">The custom backdrop color, as #RRGGBB.</param>
+/// <param name="Wireframe">Whether the 3D pane draws the outline of every face over the solid.</param>
 public sealed record ViewerWindowState(
     ViewerWindowEntry TwoD,
     ViewerWindowEntry ThreeD,
     string Backdrop = "Checker",
-    string BackdropColor = "#808080")
+    string BackdropColor = "#808080",
+    bool Wireframe = false)
 {
     /// <summary>The 2D-only window size nobody has changed.</summary>
     public static readonly ViewerWindowEntry DefaultTwoD = new(900, 700, null, null, false);

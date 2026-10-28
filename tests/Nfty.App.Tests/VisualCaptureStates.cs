@@ -100,6 +100,9 @@ public partial class VisualCapture
                 mesh is null ? null : new Nfty.App.Viewer.ViewerModel(mesh, Nfty.Model.FaceAtlas.Build(art), null))
             { AllowExport = !isSealed };
             var vm = ViewerViewTests.Vm(subject);
+            // The outline display is on in the two frames that picture the 3D pane at its smallest and
+            // its usual size; the rest show the solid shaded.
+            vm.Preview.Wireframe = tag is "both-default" or "min";
             var view = new Views.ViewerView { DataContext = vm };
             var solid = view.FindControl<Views.ModelPreviewView>("ModelView")!;
             // The solid paints on a posted repaint once the pane has a size, so the frame waits for

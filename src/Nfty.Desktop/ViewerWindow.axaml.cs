@@ -143,6 +143,7 @@ public partial class ViewerWindow : Window
             ThreeD = twoD ? current.ThreeD : entry,
             Backdrop = _vm.TwoD.Backdrop.ToString(),
             BackdropColor = _vm.TwoD.BackdropColor,
+            Wireframe = _vm.Preview.Wireframe,
         });
     }
 }

@@ -282,4 +282,27 @@ public class ViewerWindowTests
         }
         finally { windows[1].Close(); }
     }
+
+    [AvaloniaFact]
+    public void The_outline_display_the_reader_chose_is_remembered_and_applied_to_the_next_viewer()
+    {
+        var state = MemoryState();
+        var host = Host(state, () => null);
+        var windows = new System.Collections.Generic.List<ViewerWindow>();
+        host.Opened += windows.Add;
+        using var art = ViewerViewTests.Art();
+        var mesh = Nfty.Model.Riser.TryBuild(art, null, new Nfty.Model.RiseOptions(), "t")!;
+        using var atlas = Nfty.Model.FaceAtlas.Build(art);
+        var model = new Nfty.App.Viewer.ViewerModel(mesh, atlas, null);
+
+        host.Open(new ViewerViewTests.TrackedSubject("first", art, model));
+        Assert.False(windows[0].ViewModel.Preview.Wireframe);
+        windows[0].ViewModel.Preview.Wireframe = true;
+        windows[0].Close();
+        Assert.True(state.Current.Wireframe);
+
+        host.Open(new ViewerViewTests.TrackedSubject("second", art, model));
+        try { Assert.True(windows[1].ViewModel.Preview.Wireframe); }
+        finally { windows[1].Close(); }
+    }
 }

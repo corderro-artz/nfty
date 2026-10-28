@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
@@ -198,7 +199,10 @@ public class ViewerViewTests
 
             // Every button is inside the view AND reachable: a button arranged past an edge still
             // reports bounds, and is simply not drawn.
-            var buttons = view.GetVisualDescendants().OfType<Button>().Where(b => b.IsEffectivelyVisible).ToList();
+            // The facts rail scrolls when the footer's wrapped lines leave it short, and its scrollbar's own
+            // arrow buttons are the scroller's, not a control the view lays out.
+            var buttons = view.GetVisualDescendants().OfType<Button>()
+                .Where(b => b.IsEffectivelyVisible && b is not RepeatButton).ToList();
             Assert.NotEmpty(buttons);
             foreach (var b in buttons)
             {
@@ -206,7 +210,7 @@ public class ViewerViewTests
                 Assert.True(centre.X > 0 && centre.X < w && centre.Y > 0 && centre.Y < h,
                     $"button '{b.Content}' centre {centre} is outside {w}x{h}");
                 var hit = view.GetVisualAt(centre, v => v.IsEffectivelyVisible);
-                Assert.True(hit is not null && (ReferenceEquals(hit, b) || b.IsVisualAncestorOf(hit)),
+Assert.True(hit is not null && (ReferenceEquals(hit, b) || b.IsVisualAncestorOf(hit)),
                     $"button '{b.Content}' is covered by {hit}");
             }
         }

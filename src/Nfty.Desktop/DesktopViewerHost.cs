@@ -69,6 +69,7 @@ public sealed class DesktopViewerHost : IViewerHost
         var vm = new ViewerViewModel(subject, _picker, _clipboard, dialogs, _bridge);
         if (Enum.TryParse<ViewerBackdrop>(remembered.Backdrop, out var backdrop)) vm.TwoD.Backdrop = backdrop;
         vm.TwoD.BackdropColor = remembered.BackdropColor;
+        vm.Preview.Wireframe = remembered.Wireframe;
 
         var entry = vm.Layout == ViewerLayout.TwoD ? remembered.TwoD : remembered.ThreeD;
         var window = new ViewerWindow(vm, dialogs, _state, entry);
