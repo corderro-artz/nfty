@@ -217,7 +217,7 @@ Changing and removing, on a `.cbk` or on the loose part it holds. Each checks th
 
 | Command | Does |
 |---|---|
-| `nfty remove ingredient <cbk\|rcp> --id I [--recipe R]` | Drops a layer and its place in the stack. `--recipe` is required on a `.cbk` and refused on a `.rcp`. |
+| `nfty remove ingredient <cbk\|rcp> --id I [--recipe R]` | Drops a layer, its place in the stack, its absent chance and every rule naming it. `--recipe` is required on a `.cbk` and refused on a `.rcp`. |
 | `nfty remove variant <cbk\|igt> --id V [--recipe R --ingredient I]` | Drops one variant. The last variant of a layer is refused. |
 | `nfty remove recipe <cbk> --id R` | Drops a recipe and its roll weight. |
 | `nfty move recipe <cbk> --id R --to N` | Moves a recipe within the listing; `N` is 1-based, as in `remove rule --at`. Presentation only: the same seed cooks the same Set. |
@@ -228,6 +228,14 @@ Changing and removing, on a `.cbk` or on the loose part it holds. Each checks th
 
 Files resolve by convention: a layer id `aura` looks for `aura.igt`, a variant id `glow` looks for
 `glow.png`.
+
+## Worker threads
+
+Every command takes `--threads N` (or `max`; `0` also means all). It sets how many worker threads
+heavy work uses: reading and writing archives, cooking, exporting, building models. When it is not
+given, the `NFTY_THREADS` environment variable sets it; otherwise nfty uses two thirds of the
+machine's logical processors. A count above the machine's runs at the machine's and says so.
+The count never changes what is written: the same command gives the same bytes at any thread count.
 
 ## Getting help
 
