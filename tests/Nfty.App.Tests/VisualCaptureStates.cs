@@ -40,21 +40,28 @@ public partial class VisualCapture
         Action? verify = null, double width = 1180, double height = 720)
     {
         var window = new Window { RequestedThemeVariant = variant, Content = view, Width = width, Height = height };
-        window.Show();
-        Dispatcher.UIThread.RunJobs();
-        if (until is not null)
+        // Closed when the frame is saved: callers dispose the view model right after, and a window left
+        // open keeps rendering its Image over the bitmap just disposed (ObjectDisposedException in the
+        // NEXT frame's render pass).
+        try
         {
-            var sw = System.Diagnostics.Stopwatch.StartNew();
-            while (!until() && sw.ElapsedMilliseconds < 5000)
-            {
-                Dispatcher.UIThread.RunJobs();
-                Thread.Sleep(1);
-            }
+            window.Show();
             Dispatcher.UIThread.RunJobs();
-            Assert.True(until(), $"{file}: the state the frame claims never arrived");
+            if (until is not null)
+            {
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+                while (!until() && sw.ElapsedMilliseconds < 5000)
+                {
+                    Dispatcher.UIThread.RunJobs();
+                    Thread.Sleep(1);
+                }
+                Dispatcher.UIThread.RunJobs();
+                Assert.True(until(), $"{file}: the state the frame claims never arrived");
+            }
+            verify?.Invoke();
+            window.CaptureRenderedFrame()!.Save(Path.Combine(Dir!, file), PngBitmapEncoderOptions.Default);
         }
-        verify?.Invoke();
-        window.CaptureRenderedFrame()!.Save(Path.Combine(Dir!, file), PngBitmapEncoderOptions.Default);
+        finally { window.Close(); }
     }
 
     /// <summary>
@@ -129,6 +136,36 @@ public partial class VisualCapture
                 width: w, height: h);
             vm.Dispose();
             vm.Subject.Dispose();
+        }
+    }
+
+    /// <summary>The viewer on a metadata file's facts (no picture of its own) and on a detached snapshot,
+    /// in both themes. Each verifies the badge it claims before saving.</summary>
+    [AvaloniaFact]
+    public void Capture_viewer_metadata_and_snapshot()
+    {
+        if (Dir is null) return;
+        var scale = ShellViewModel.BaseScale;
+        foreach (var variant in Themes)
+        {
+            var facts = new List<Nfty.App.Viewer.ViewerFact>
+            {
+                new("NAME", "Vapor Pets #42"), new("RARITY", "1 in 24"), new("DNA", "3fa9c1d2e4b5a697"),
+                new("Lock", "brass"), new("Bands", "teal"),
+            };
+            using var none = new Nfty.App.Viewer.SnapshotSubject("0042.json", facts, null, null) { ImageMissing = true };
+            var meta = ViewerViewTests.Vm(none);
+            Shoot(new Views.ViewerView { DataContext = meta }, variant, $"viewer-metadata-{KeyOf(variant)}.png",
+                verify: () => Assert.Equal("snapshot", meta.LiveBadge), width: 900 / scale, height: 700 / scale);
+            meta.Dispose();
+
+            using var art = new Image<Rgba32>(32, 32, new Rgba32(70, 110, 220, 255));
+            using var snap = new ViewerViewTests.TrackedSubject("Chest (detached)", art, null);
+            var vm = ViewerViewTests.Vm(snap);
+            Shoot(new Views.ViewerView { DataContext = vm }, variant, $"viewer-snapshot-{KeyOf(variant)}.png",
+                verify: () => { Assert.False(snap.IsLive); Assert.Equal("snapshot", vm.LiveBadge); },
+                width: 900 / scale, height: 700 / scale);
+            vm.Dispose();
         }
     }
 

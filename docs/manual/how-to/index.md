@@ -33,6 +33,8 @@ around; if you do not, start with [Get started](../get-started/index.md).
 
     [Make a 3D model](make-a-3d-model.md)
 
+    [View an asset in its own window](view-an-asset-in-its-own-window.md)
+
     [Shape one layer on the whole character](shape-one-layer-on-the-whole-character.md)
 
     [Cook with 3D models](cook-with-models.md)

@@ -388,3 +388,21 @@ state. Reachable only after an exception has already escaped the dispatcher; not
 **The Kitchen has no creation wizard.** `New Kitchen` is a save-file picker, so there is no `wizard-kitchen` frame to capture although the audit list (V-M3) named one. If a wizard is ever built, add the frame and a `DarkModeContrastTests` screen with it.
 
 **The `set-browser-loading` capture shows a mixed state.** A Set browser's first four tiles decode even a 25-megapixel picture inside the first layout pass on this machine, so the frame shows four decoded blue squares beside two loading diamonds, not six diamonds. Making it fully deterministic needs a way to hold `ThumbnailGate` closed from a test (the gate is built inside `SetBrowserViewModel`). Pick up by letting the view model take a gate.
+
+**Pop-out viewer: no OS file association.** Double-clicking a `.cbk`, `.set`, `.glb` and so on does not open the viewer. Deferred because registering a file type edits the user's system settings, so it must be opt-in, per-user (HKCU, no admin rights) and removable from the app; none of that is built. Pick up as an opt-in toggle that writes and removes the per-user registry keys, with a test around the key writer behind an interface.
+
+**Pop-out viewer: no single-instance hand-off.** Opening a file from the shell would start a second app process. Deferred because it needs a named pipe or mutex plus argument forwarding, and it is only useful once a file association exists. Pick up together with the association: the second process sends its path to the first and exits.
+
+**Pop-out viewer: no drag-and-drop onto a window.** `Avalonia.Headless` registers no platform drag source and no test can drive a drop, so a drop handler would ship unverified. Pick up when a headless-testable seam exists (a handler taking the dropped paths, exercised directly) and wire both the viewer and the shell window to it.
+
+**Pop-out viewer: no `nfty view <file>` command.** The viewer lives in `Nfty.App`; the CLI does not reference it and must not start a GUI. Pick up as a small launcher in `Nfty.Desktop` that accepts a path argument and opens the viewer at startup.
+
+**Pop-out viewer: a generic glTF reader.** `GltfReader` reads only the subset nfty's own `ModelWriter` writes (one mesh, one texture, the fixed accessors), and refuses anything else by name. A model from elsewhere needs sparse accessors, other component types, multiple nodes, materials and cameras. Deferred: nothing in the product produces such a file and the zero-new-packages rule rules out a library. Pick up only if people ask to inspect foreign models.
+
+**Pop-out viewer: near-plane quads are skipped, not clipped.** The 3D pane's software rasterizer drops a quad that crosses the camera's near plane instead of clipping it, so zooming the camera into a model can make faces vanish. Reason: clipping adds polygon splitting for a case the zoom limits mostly prevent. Pick up by clipping quads against the near plane before projection and asserting no hole at the closest zoom.
+
+**Pop-out viewer: Edges draws quad edges, not a per-voxel grid.** The greedy mesh merges coplanar voxels into big quads, so the outline shows those quads, not every voxel. A per-voxel grid needs the voxel lattice drawn over the faces (or an unmerged mesh for the pane only). Pick up by building the lattice lines from the depth map in the viewer, never changing the exported mesh.
+
+**Pop-out viewer: the Ingredient Editor's viewer has no model.** The editor holds one layer's value-map, not a risen stack, so its viewer shows the picture only. Pick up by letting the editor hand the viewer a `Riser` result for the current variant with its stored depth, following the Rise page's source.
+
+**Pop-out viewer: a recipe tree row is a fixed-seed 2D snapshot.** The row's viewer rolls the recipe once with a fixed seed and shows a picture, with no reroll and no model. Pick up by routing the row through the Rise page's recipe source (reroll, model) or giving the viewer its own reroll control.
