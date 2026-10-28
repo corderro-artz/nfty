@@ -100,7 +100,7 @@ User-entered color must carry explicit prefix — `hex:`, `rgb:`, `hsl:`, `hsv:`
 
 ## Deferred work
 
-`BACKLOG.md` holds what's deliberately not done, with reason + context to pick up cold — manual reshoot against Chest Demo, and one branch of passphrase reader no test can reach.
+`BACKLOG.md` holds what's deliberately not done, with reason + context to pick up cold.
 Nothing there is a defect in shipped behaviour. Read before concluding something overlooked.
 
 ## Conventions

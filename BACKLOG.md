@@ -9,42 +9,6 @@ reporting ceiling (0.7.2), and `Total` not being a lower bound when the walk is 
 
 ---
 
-## Reshoot the manual against the Chest Demo
-
-**Status:** deferred by the author until the manual is reworked, some time before 1.0.0.
-
-Every figure in `docs/manual/images/` except `landing-*.png` still shows **Vapor Pets** — the
-project that predated the built-in demo. The pages are not *wrong*: the tutorials build Vapor Pets
-by hand, step by step, so the words and the pictures agree. But the app now ships with the Chest
-Demo, so a reader's first screen and the manual's screenshots are two different collections.
-
-**What it involves.** `tools/docs-capture/` regenerates the figures from the *running app*, and
-`tools/demo/build-demo.py --workspace <dir>` already lays out a Kitchen, loose parts and a cooked
-Set for exactly this purpose. The capture README carries the two PowerShell traps (`$h` silently
-clobbering an `-H` parameter; a blind `Ctrl+T` that yields the same theme twice). Figures are
-**pairs** — `thing-light.png#only-light` beside `thing-dark.png#only-dark`.
-
-**Do it as one pass, not piecemeal.** Half-reshot pages would show two collections in one document,
-which is worse than one consistently old one. The tutorial prose has to move with the pictures.
-
-**The Rise pages have no figures yet, on purpose.** `how-to/make-a-3d-model.md`, `cook-with-models.md`,
-`fix-a-2d-only-book.md`, `rise-a-spritesheet.md`, `understand/depth.md` and `reference/rise.md` (step 8) were
-written without screenshots, because shooting them against anything but a demo that carries depth would add a
-third collection to the document. That prerequisite is **met** (step 9: the Chest Demo carries depth), but the
-reshoot **stays deferred and stays one pass**. Figures to add in that pass: the Rise page (both tabs), the Cook
-dialog's model options, the voxel-ready card and the grid row. `.superpowers/frames-step9` held step-9 frames of
-the demo for reference only (gitignored, not a source).
-
-**Note the capture size changed.** Page frames were captured at 1416x950 against the old 1128x924
-window minimum. The minimum is 1280x720 now (see `ShellViewModel`), so that standard is stale.
-
-**The README's hero is already current and is NOT part of this pass.** `assets/readme/` holds one
-fresh pair of the Chest Demo, shot with the same tools; see its README. Leave it where it is — a
-figure inside the manual has to agree with the prose beside it, and that is what makes this a single
-pass; the hero answers to nobody.
-
----
-
 ## The interactive passphrase prompt has no test
 
 **Status:** accepted, and mostly closed by `--key`.
@@ -322,8 +286,6 @@ either keeps "exact, never estimated". Measure first.
 `finally`, so an export is never left waiting, but an exception from a listener or a reseed mid-loop leaves
 some loaded subjects reseeded with the book's depth and some not, and the next export snapshots that mixed
 state. Reachable only after an exception has already escaped the dispatcher; noted, not fixed.
-
-**README hero image and alt text show the old demo:** `README.md` (around line 41) embeds a screenshot of the Explorer with the built-in demo open, and its alt text quotes "2 recipes, 12 layers, 31 variants and 615,600 unique DNA". The demo was redrawn (29 drawings, more variants per layer, clean art) and now counts 7,155,000 exactly, so both the picture and the alt text are stale. To pick it up: regenerate figures with `tools/docs-capture/` (its README has the PowerShell traps), take the Explorer frame for the demo CookBook in both themes, replace the hero image(s) the README references, and rewrite the alt text from the new card (read the real counts off the rendered frame; do not retype them from here). The manual's own figures are a separate reshoot already noted above.
 
 ## The audit-fixes pass: performance ideas measured as not worth it yet
 

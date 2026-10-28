@@ -4,6 +4,13 @@ nfty runs on Windows, macOS and Linux. Prebuilt Windows downloads are on the
 [releases page](https://github.com/corderro-artz/nfty/releases/latest); on other systems, build from
 source.
 
+## What you need
+
+- **Windows, macOS or Linux.** Prebuilt downloads are for Windows; elsewhere, build from source.
+- **A screen of 1280×720 or larger.** That is the smallest window nfty will open at. It opens at
+  1366×768 and remembers nothing about size, so a small display is the only case where it matters.
+- **.NET 10** only for the two framework-dependent downloads. The other two carry their own runtime.
+
 ## Download it
 
 Every download holds both the app and the command line, the demo CookBook and the licenses.

@@ -45,14 +45,20 @@ lists. Any short, neutral folder works — but keep it short: it appears in the 
 
 ## The capture size
 
-**1416x950.** The height moved up from 864 when the window minimum became 924, which is set by the
-quick-reference sheet — the largest modal. A shorter capture is a size the app will not open at.
+**1416x792**, which `shot.ps1 -Height 792` produces (the default 950 is still fine for a tall page).
+`shot.ps1` insets the window by the 12px shadow gutter, so every page frame is **1392x768**, the
+size the manual's figures use. The window minimum is 1280x720 (`ShellViewModel.MinWindowWidth` and
+`MinWindowHeight`); a shorter capture is a size the app will not open at.
+
+The pop-out viewer is a separate window: capture it at 1288x776 (1264x752 after the gutter), and
+note that it opens behind the main window. Start the app from a scratch copy, with its own `.nfty`
+and demo folder, so a capture run never touches the shipped demo or your own state.
 
 The sheet is the one exception and needs its own taller run, because it is larger than what fits
 inside a minimum window's page area:
 
 ```bash
-python tools/docs-capture/pair.py help <shots-dir> 1010
+python tools/docs-capture/pair.py help <shots-dir> 1010   # the sheet needs its own taller run
 ```
 
 ## Three traps, all of which cost real time

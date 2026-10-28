@@ -109,6 +109,7 @@ More in the [User Manual](https://www.vaporsoft.dev/nfty/): [keyboard shortcuts]
 | .NET SDK | 10.0 | Pinned by [`global.json`](global.json); needed to build, not to run a release |
 | .NET desktop runtime | 10.0 | Only for the two framework-dependent download shapes |
 | OS | Windows, macOS, Linux | The desktop head is Avalonia; the CLI is platform-agnostic |
+| Screen | 1280×720 or larger | The app's window minimum; it opens at 1366×768 |
 | Python | 3.10+ | Optional — the manual, the demo generator and the icon build are Python tools |
 
 ### Dependencies
@@ -132,10 +133,10 @@ front-ends, the demo CookBook, and the licenses.
 
 | Zip | Size | .NET 10 needed | For |
 | --- | --- | --- | --- |
-| **portable** | 84 MB | No | Unzip anywhere and run. Start here if you are unsure. |
-| **single-file** | 76 MB | No | One `.exe`. Unpacks itself on first launch, so that launch is slower. |
-| **framework-dependent** | 14 MB | Yes | A small folder; needs the .NET 10 desktop runtime. |
-| **single-file-net10** | 14 MB | Yes | One `.exe` with the runtime left out. |
+| **portable** | 85 MB | No | Unzip anywhere and run. Start here if you are unsure. |
+| **single-file** | 77 MB | No | One `.exe`. Unpacks itself on first launch, so that launch is slower. |
+| **framework-dependent** | 15 MB | Yes | A small folder; needs the .NET 10 desktop runtime. |
+| **single-file-net10** | 15 MB | Yes | One `.exe` with the runtime left out. |
 
 Zips are named `nfty-<version>-<rid>-<shape>.zip` (`tools/release/build.py` makes them). The app is
 `Nfty.Desktop.exe`; the command line sits in the `cli` folder.
