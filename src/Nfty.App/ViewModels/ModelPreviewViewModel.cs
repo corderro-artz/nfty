@@ -161,8 +161,21 @@ public sealed partial class ModelPreviewViewModel : ObservableObject
     /// <param name="boundsMax">Maximum corner of the subject's bounding box.</param>
     public void SetSubject(Vector3 boundsMin, Vector3 boundsMax)
     {
+        // A camera nobody has touched still shows the default framing of the OLD box (the placeholder
+        // a viewer opens with before its mesh arrives): follow the subject so it opens centered, not
+        // left aiming at where the placeholder was.
+        var def = Camera.FramedOn(_boundsMin, _boundsMax);
+        bool untouched = CameraState.Target == def.Target && CameraState.Yaw == def.Yaw
+            && CameraState.Pitch == def.Pitch && MathF.Abs(CameraState.Distance - def.Distance) < 1e-3f;
         _boundsMin = boundsMin;
         _boundsMax = boundsMax;
+        if (untouched)
+        {
+            var fresh = Camera.FramedOn(boundsMin, boundsMax);
+            if (CameraState.BoundsMin != fresh.BoundsMin || CameraState.BoundsMax != fresh.BoundsMax
+                || CameraState.Target != fresh.Target) CameraState = fresh;
+            return;
+        }
         // The camera's distance limits, clip planes and target confinement all follow the subject's
         // box, so a depth edit that changes the extent must reach it. Orientation, target and distance
         // are kept; an unchanged box leaves the very same instance (no spurious repaint).

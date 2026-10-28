@@ -1,5 +1,7 @@
 using System.Numerics;
 using Nfty.App.ViewModels;
+using Nfty.Core.Model;
+using Nfty.Model;
 using Nfty.Model.Render;
 using Xunit;
 
@@ -138,6 +140,7 @@ public class ModelPreviewViewModelTests
     {
         // A box shifted sideways has the same radius; the target confinement must still follow it.
         var vm = New();
+        vm.OrbitStep(new Vector2(1, 0)); // a touched camera is kept, so the clamp is what moves it
         vm.SetSubject(new Vector3(9, -1, -1), new Vector3(11, 1, 1));
         Assert.Equal(new Vector3(9, -1, -1), vm.CameraState.BoundsMin);
         Assert.Equal(9f, vm.CameraState.Target.X); // old target (origin) is clamped into the new box
@@ -179,5 +182,57 @@ public class ModelPreviewViewModelTests
         vm.ZoomStep(1f);
 
         Assert.Contains(nameof(ModelPreviewViewModel.CameraState), raised);
+    }
+
+    [Fact]
+    public void The_default_view_faces_the_user_square_on()
+    {
+        var vm = New();
+        Assert.Equal(0f, vm.CameraState.Yaw);
+        Assert.Equal(0f, vm.CameraState.Pitch);
+        vm.OrbitStep(new Vector2(1, 1));
+        vm.Reset();
+        Assert.Equal(0f, vm.CameraState.Yaw);
+        Assert.Equal(0f, vm.CameraState.Pitch);
+    }
+
+    [Fact]
+    public void An_untouched_view_opened_on_a_placeholder_centers_the_mesh_that_arrives()
+    {
+        // Rise and the viewer open on a +-1 placeholder, then the mesh arrives. A sprite risen with
+        // BottomCenter sits far from the origin; the camera must follow it, not keep aiming at 0,0,0.
+        var vm = New();
+        var min = new Vector3(-8, 0, -1.5f);
+        var max = new Vector3(8, 16, 1.5f);
+        vm.SetSubject(min, max);
+
+        Assert.Equal((min + max) / 2f, vm.CameraState.Target);
+        Assert.Equal(0f, vm.CameraState.Yaw);
+        Assert.Equal(0f, vm.CameraState.Pitch);
+    }
+
+    [Fact]
+    public void The_default_frame_has_its_opaque_pixels_centered_in_a_wide_pane()
+    {
+        using var art = new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(8, 8,
+            new SixLabors.ImageSharp.PixelFormats.Rgba32(200, 80, 80, 255));
+        var mesh = Riser.TryBuild(art, null, new RiseOptions(), "t")!;
+        using var atlas = FaceAtlas.Build(art);
+        var vm = New();
+        vm.SetSubject(mesh.Min, mesh.Max);
+        const int w = 300, h = 200;
+        vm.Reset(w / (float)h);
+        var target = new RenderTarget(w, h);
+        target.Clear(new SixLabors.ImageSharp.PixelFormats.Rgba32(0, 0, 0, 0));
+        Raster.Render(mesh, atlas, vm.CameraState, target);
+
+        int x0 = w, x1 = -1, y0 = h, y1 = -1;
+        for (int y = 0; y < h; y++)
+        for (int x = 0; x < w; x++)
+            if (target.Color[y * w + x].A > 0) { x0 = Math.Min(x0, x); x1 = Math.Max(x1, x); y0 = Math.Min(y0, y); y1 = Math.Max(y1, y); }
+
+        Assert.True(x1 >= 0, "nothing drew");
+        Assert.InRange((x0 + x1) / 2.0, w / 2.0 - 3, w / 2.0 + 3);
+        Assert.InRange((y0 + y1) / 2.0, h / 2.0 - 3, h / 2.0 + 3);
     }
 }

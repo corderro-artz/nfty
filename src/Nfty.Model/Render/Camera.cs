@@ -213,8 +213,8 @@ public sealed class Camera
 
     /// <summary>A camera framing the given bounds: centered on the box, pulled back to fit its
     /// bounding sphere in the NARROWER of the vertical and horizontal fields of view (so a tall
-    /// viewport, <paramref name="aspect"/> below 1, does not crop sideways) with 15% margin, at a
-    /// three-quarter starting angle rather than a flat silhouette.</summary>
+    /// viewport, <paramref name="aspect"/> below 1, does not crop sideways) with 15% margin, looking
+    /// square-on at the front face (yaw 0, pitch 0) with the box center on the viewport center.</summary>
     public static Camera FramedOn(Vector3 min, Vector3 max, float aspect = 1f)
     {
         var center = (min + max) / 2f;
@@ -223,7 +223,7 @@ public sealed class Camera
         float horizontalFov = 2f * MathF.Atan(MathF.Tan(FovRadians / 2f) * safeAspect);
         float fittedFov = MathF.Min(FovRadians, horizontalFov);
         float distance = radius / MathF.Sin(fittedFov / 2f) * 1.15f;
-        return new Camera(center, distance, yaw: 30f * MathF.PI / 180f, pitch: 20f * MathF.PI / 180f, min, max);
+        return new Camera(center, distance, yaw: 0f, pitch: 0f, min, max);
     }
 
     /// <summary>The same view (target, distance, orientation) over a new subject box: the radius, the
