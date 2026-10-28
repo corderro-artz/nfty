@@ -114,10 +114,10 @@
                      WrapPanel's full width and not half of one: at the smallest pane a cell is about
                      215px and 52 + 120 + 34 plus gaps does not go in. The track is a stated 120
                      (Border.rt, and PercentToWidthConverter.ForBarWidth120 is the same number), the
-                     percent is a stated 34, and the name takes what is left and trims - the same
+                     percent is a stated 44 ("15.38%" clipped at 34), and the name takes what is left and trims - the same
                      rule the DNA-space rows follow, and for the same reason: a right-aligned block
                      given less than it asks for overflows its LEADING edge and eats the label. -->
-                <Grid ColumnDefinitions="*,Auto,34" ColumnSpacing="8" Margin="0,0,14,11"
+                <Grid ColumnDefinitions="*,Auto,44" ColumnSpacing="8" Margin="0,0,14,11"
                       VerticalAlignment="Center">
                   <TextBlock Grid.Column="0" Classes="cshare" Text="{Binding Name}"
                              VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />

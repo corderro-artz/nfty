@@ -476,6 +476,46 @@ public class DarkModeContrastTests
             },
         }, null);
 
+        // The audit's missing states, each in its riskiest ink: the half-built book's amber
+        // explanation, the export card refusing twice (sheet grid, passphrase mismatch - warning ink
+        // over the footer and the disabled Export button), and the two reports' monospace text.
+        var halfBuilt = new Nfty.Core.Formats.LoadedCookBook
+        {
+            Manifest = new Nfty.Core.Model.CookBookManifest("cb", "New book", new Nfty.Core.Model.Dimensions(8, 8),
+                new Nfty.Core.Model.Collection("New book", "", "NB"), new Dictionary<string, double> { ["cat"] = 1 }),
+            Recipes = new[]
+            {
+                new Nfty.Core.Formats.LoadedRecipe
+                {
+                    Manifest = new Nfty.Core.Model.RecipeManifest("cat", "Cat", Array.Empty<string>(), Array.Empty<Nfty.Core.Model.IncompatibilityRule>()),
+                    Ingredients = Array.Empty<Nfty.Core.Formats.LoadedIngredient>(),
+                },
+            },
+        };
+        yield return ("dialog-validity-halfbuilt", new Views.ValidityDialogView
+        {
+            DataContext = new ValidityDialogViewModel(dialogs, halfBuilt, Nfty.Core.Formats.Validator.Validate(halfBuilt)),
+        }, halfBuilt.Dispose);
+
+        var sheetRefused = new ExportDialogViewModel(VisualCapture.ExportCaptureSet(), new FilePickerService(),
+            new NoopFolderRevealer(), dialogs)
+        { Tab = ExportTab.Images, MakeSpriteSheet = true, SheetColumns = 1, SheetRows = 1 };
+        yield return ("dialog-export-sheet-refused", new Views.ExportDialogView { DataContext = sheetRefused }, null);
+
+        var sealMismatch = new ExportDialogViewModel(VisualCapture.ExportCaptureSet(), new FilePickerService(),
+            new NoopFolderRevealer(), dialogs)
+        {
+            Tab = ExportTab.Seal, IsSealed = true,
+            Passphrase = "correct-horse-battery", PassphraseConfirm = "correct-horse-batterx",
+        };
+        yield return ("dialog-export-seal-mismatch", new Views.ExportDialogView { DataContext = sealMismatch }, null);
+
+        var reportBook = ExplorerViewModelTests.TwoRecipeBook();
+        yield return ("dialog-report", new Views.ReportDialogView
+        {
+            DataContext = new ReportDialogViewModel(reportBook, dialogs, new NoopClipboardService()),
+        }, reportBook.Dispose);
+
         // THE SET BROWSER AND ITS INSPECTOR, neither of which this sweep walked. It is a page in the
         // same sense Landing and the Explorer are - LandingViewModel navigates to it with the same
         // _nav.To - and this list is hand-written, so a screen it never walks cannot be found

@@ -33,7 +33,7 @@ namespace Nfty.App.Tests;
 /// <summary>Renders styled primitives under the themed test app and saves a PNG, so visual parity
 /// with the mockups can be checked from a real rendered frame (not imagined from XAML). No-ops in a
 /// normal test run; set env var NFTY_CAPTURE=1 (and optionally NFTY_CAPTURE_DIR) to activate.</summary>
-public class VisualCapture
+public partial class VisualCapture
 {
     private static string? Dir
     {
@@ -2064,7 +2064,7 @@ public class VisualCapture
         {
             foreach (var w in vm.Weights) w.Weight = 0;
             // The commit above completes synchronously, so this returns having printed the refusal.
-            vm.SaveCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+            UiThreadWait.For(vm.SaveCommand.ExecuteAsync(null));
         }
         else vm.Weights[0].Weight = vm.Weights[0].SavedWeight + 15;
         return vm;

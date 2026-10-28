@@ -324,3 +324,67 @@ some loaded subjects reseeded with the book's depth and some not, and the next e
 state. Reachable only after an exception has already escaped the dispatcher; noted, not fixed.
 
 **README hero image and alt text show the old demo:** `README.md` (around line 41) embeds a screenshot of the Explorer with the built-in demo open, and its alt text quotes "2 recipes, 12 layers, 31 variants and 615,600 unique DNA". The demo was redrawn (29 drawings, more variants per layer, clean art) and now counts 7,155,000 exactly, so both the picture and the alt text are stale. To pick it up: regenerate figures with `tools/docs-capture/` (its README has the PowerShell traps), take the Explorer frame for the demo CookBook in both themes, replace the hero image(s) the README references, and rewrite the alt text from the new card (read the real counts off the rendered frame; do not retype them from here). The manual's own figures are a separate reshoot already noted above.
+
+## The audit-fixes pass: performance ideas measured as not worth it yet
+
+**Status:** deferred; each wants a measurement before it wants code. All five are throughput ideas, none a defect.
+
+**Sprite-sheet decode window (T-G2).** `SpriteSheet` builds one asset at a time so the sheet is the only large thing in memory. A bounded look-ahead (decode asset N+1..N+k while N draws) would overlap the PNG decode with the draw. Deferred because the draw must stay sequential (every asset paints into one image) and decode is the minority of the time at demo sizes. Pick up when a 1000px, several-thousand-asset sheet is reported slow: measure decode vs draw with a `Perf` scope first.
+
+**Book-wide decode (T-G5).** `CookBookArchive.Read` decodes every variant PNG up front, which `ArchivePeek` exists to avoid for listings. Reads that need only some variants (a Rise page on one recipe) still pay for all. Deferred: lazy decoding changes `Loaded*` ownership and disposal (`IDisposable` down to every image). Pick up with a measurement of open time on a book with hundreds of variants at 512px.
+
+**Parallel `Validator` pixel checks (T-G7).** `Validator` checks each variant image against the canvas, and for partial alpha, one image at a time. The per-image work is independent and would fit `ParallelWork` (results into slots, report order unchanged). Deferred: `Validator` must report in a stable order and the checks are cheap next to decode. Pick up if `validate` on a large book shows up in `Perf`.
+
+**Pipelined `ModelBatch.Export` (T-G10 / R12).** The batch builds a window of 2x degree, then writes in ordinal order on the calling thread; build and write do not overlap across windows. A producer/consumer pipeline would hide the writes. Deferred: output must stay byte-identical at any degree (`ModelBatchParallelTests`) and the windowed form is easy to reason about. Pick up when exporting a few thousand models is measured write-bound.
+
+**CookBook card and Explorer validation/counting cost (T-U6 / T-U7).** `CookBookDetailViewModel` validates and counts `UniqueSpace` on construction, and `ExplorerViewModel` re-validates after edits. At demo size these are invisible; at hundreds of recipes they may not be. First step: add `Perf` scopes `Card.Validate`, `Card.UniqueSpace` and `Explorer.Validate` and read them on a large book. Only then choose between caching, a debounce, or moving them off the UI thread.
+
+## A deep review, and possibly a merge, of the `UniqueSpace` and `SelectionOdds` walks (S-C14 / author ruling Q1)
+
+**Status:** deferred by author ruling (2026-10-27): leave as is, review deeply later.
+
+**What.** `UniqueSpace.Walk(depth, BigInteger)` and `SelectionOdds.Walk(depth, double)` walk the same tree. Both use the same selection dictionary, the same absent-as-omission rule, the same `RulesEngine.IsLegal` leaf and the same `DefaultEnumerationBudget` gate. `SelectionOdds`' own remark says "the walk is UniqueSpace's".
+
+**Why not now.** Two walkers are one copy too many only once a third appears.
+
+**Risk.** Every DNA figure on every surface (CLI `stats`, the CookBook card, the cook failure message, the Set rail's exact odds) depends on one of them. The `SpaceCertainty` direction (`Exact`/`AtLeast`/`AtMost`/`Unknown`) and the budget-exhaustion behavior must survive exactly. Float summation order in `SelectionOdds` must not change: the order of additions is the number.
+
+**Shape if done.** A generic `RuleWalk.Sum<T>` over `INumber<T>`, allocation-free.
+
+**Pinned by.** `UniqueSpace*`, `SelectionOddsTests` (prediction against a real cook), `DemoCookBookTests` (the demo's exact count) and `GeneratorTests`' failure-message tests.
+
+**Pick up when.** A third walker is written, or a bug is fixed in one walker that the other also has.
+
+## Small leftovers from the audit-fixes pass
+
+**Status:** each is a minor a review noted and the author did not rule on. None is a defect in shipped behavior. One paragraph each: what, why deferred, how to pick up.
+
+**A canceled cook leaves partial files and no `set.json`.** Canceling `Generator`/`SetWriter` mid-write stops the parallel writes but does not remove the images, `metadata/` and `nfty/` files already written, and `set.json` is written last, so the folder is not a readable Set. Deferred: the folder is the author's, and deleting from a cancel path is a destructive guess. Pick up by writing into a temp sibling and renaming on success, or by saying so on the cook dialog's Canceled line. `SetReader.IsSetFolder` already reports "not a Set" correctly.
+
+**The watermark-stamp test's "lowest-named file" assertion is vacuous.** `CorruptSetException` names the lowest-positioned unreadable asset, but the test corrupts only one file, so it cannot fail if the choice becomes nondeterministic. Pick up by corrupting two files and asserting the lower one is named at several degrees of parallelism, then probe by choosing the higher.
+
+**A test that diffs the global TEMP directory could flake.** A test asserting a temp folder was removed compares listings of the shared TEMP, so another process or test creating a folder there fails it. Pick up by giving the code under test an injectable temp root and diffing that instead.
+
+**ImageSharp's own parallelism can oversubscribe inside `ParallelWork`.** A decode or encode run inside a parallel body starts ImageSharp's internal parallel work, so `--threads N` is a floor on CPU use, not a ceiling. Pick up by passing `Configuration.MaxDegreeOfParallelism = 1` for images processed inside a parallel body (`insideParallelBody`), measured first: single-image calls outside one benefit from the default.
+
+**`IngredientArchive.ReadAsync` may decode on the caller's thread.** ZIP entries are read sequentially (as `ZipArchive` requires) and the decode is parallel, but part of the decode can still land on the calling thread, which on the UI thread is the freeze the async twin exists to prevent. `WriteAsync` was fixed to run off the caller (34ed37b); the read side was not. Pick up with a test asserting no decode runs on the calling thread, the shape `WriteAsync`'s test has.
+
+**The Rise page has no 1px lattice-phase assertion.** The Ingredient editor's `CanvasGridTests` measures the backdrop lattice's PHASE against the art's corner; the Rise canvas shares the idea but not the test. Pick up by copying that measurement onto `RiseView`'s backdrop.
+
+**A `.tin` opened at startup does not set `PendingOpen`.** Opening a sealed Set through the startup path (a file argument) shows the passphrase prompt without exposing the observable handle `LandingViewModel.PendingOpen` gives a fire-and-forget open, so a test cannot await it. Pick up by setting `PendingOpen` on that path, as Landing's own open does.
+
+**`RiseExport` sealed-set test: a possible flake, unreproduced.** One review saw it fail once and could not repeat it. Suspect an unawaited continuation of the fire-and-forget open (see the previous entry). Pick up by running it in a loop (200 times) with `--blame`; if it reproduces, it will name the missing handle.
+
+**The `rise-set-batch-export` capture is nondeterministic.** Two of 156 frames differ between identical runs (a pre-existing capture race, not a regression). Pick up by pumping until the batch card's progress text settles before capturing, as `Shoot` does for thumbnails.
+
+**The sheet-grid read-only fallback has no CLI test.** `SheetGrid.WriteInto`/`RemoveFrom` keep the grid for the session when the file is read-only; `sheet grid` has no test driving that through the command. Pick up by marking a temp PNG read-only and asserting the command reports it without throwing.
+
+**Two `ToDictionary` calls and one color conversion are not on the shared helpers.** `ExplorerViewModel` (around line 366) and `IngredientDetailViewModel` (around line 383) build dictionaries with `ToDictionary`, which throws on a duplicate id where the repo's rule is to check first or use the helper; `BookSettings` builds `Color.FromRgb` where everything else goes through `ToAvalonia`. Deferred because a validated book cannot reach the duplicate case from these two. Pick up as one small cleanup.
+
+**`Problems.Join` joins with LF.** The report text is invariant across machines, which is why it is LF, but a Windows clipboard paste into some editors shows one line. Pick up only if someone reports it; CRLF on Windows would make the same report differ across machines.
+
+**The PIVOT layout test covers the variant source only.** The Rise rail's PIVOT-above-the-fold test measures the layout for a single variant; the Recipe and Set sources have different rail heights (different note lines). Pick up by running the same measurement for those two sources at the smallest window.
+
+**The Kitchen has no creation wizard.** `New Kitchen` is a save-file picker, so there is no `wizard-kitchen` frame to capture although the audit list (V-M3) named one. If a wizard is ever built, add the frame and a `DarkModeContrastTests` screen with it.
+
+**The `set-browser-loading` capture shows a mixed state.** A Set browser's first four tiles decode even a 25-megapixel picture inside the first layout pass on this machine, so the frame shows four decoded blue squares beside two loading diamonds, not six diamonds. Making it fully deterministic needs a way to hold `ThumbnailGate` closed from a test (the gate is built inside `SetBrowserViewModel`). Pick up by letting the view model take a gate.
