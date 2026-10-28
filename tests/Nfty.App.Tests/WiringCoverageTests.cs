@@ -38,6 +38,8 @@ public class WiringCoverageTests
         // the whole item template with it. Covered by
         // IngredientEditorColorModeTests.A_books_own_swatches_show_first_and_cannot_be_forgotten_from_the_editor.
         ["ForgetSwatchCommand"] = "invoked via PaletteSwatch.ForgetCommand, which the VM assigns",
+        // Pop-out viewer plan: the viewer's markup lands in Task 2; drop this exemption then.
+        ["OneToOneCommand"] = "TwoDPaneViewModel's 1:1 button is added with the viewer view (Task 2)",
     };
 
     private static string RepoRoot()
