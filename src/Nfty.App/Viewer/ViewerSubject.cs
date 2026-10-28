@@ -26,6 +26,10 @@ public abstract class ViewerSubject : IDisposable
     /// <summary>False when saving or copying is refused, such as inside a sealed export.</summary>
     public bool AllowExport { get; init; } = true;
 
+    /// <summary>True when the subject names a picture that could not be found (a metadata file whose
+    /// image is gone), so the 2D pane says so instead of looking like a blank asset.</summary>
+    public bool ImageMissing { get; init; }
+
     /// <summary>Raised when a live subject's content changed.</summary>
     public event Action? Changed;
 

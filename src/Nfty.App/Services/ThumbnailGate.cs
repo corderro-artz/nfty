@@ -19,6 +19,7 @@ public sealed class ThumbnailGate
     private readonly SemaphoreSlim _slots;
     private int _inFlight;
     private int _peak;
+    private int _decodes;
 
     /// <summary>Creates a gate of <paramref name="degree"/> slots.</summary>
     /// <param name="degree">How many decodes may run at once; at least one.</param>
@@ -47,6 +48,7 @@ public sealed class ThumbnailGate
     /// <summary>Called by a decode as it starts, to count it.</summary>
     internal void Enter()
     {
+        Interlocked.Increment(ref _decodes);
         var now = Interlocked.Increment(ref _inFlight);
         int peak;
         while (now > (peak = Volatile.Read(ref _peak)))
@@ -59,6 +61,10 @@ public sealed class ThumbnailGate
 
     /// <summary>The most decodes ever running at once. For tests.</summary>
     internal int Peak => Volatile.Read(ref _peak);
+
+    /// <summary>How many decodes have started through this gate. For tests: a listing that decodes
+    /// nothing leaves it at zero.</summary>
+    internal int Decodes => Volatile.Read(ref _decodes);
 
     /// <summary>Runs inside a decode, so a test can hold it open long enough for others to overlap.</summary>
     internal Action? Probe { get; set; }

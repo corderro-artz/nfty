@@ -7,6 +7,7 @@
              xmlns:vw="using:Nfty.App.Viewer"
              xmlns:mdl="using:Nfty.Model"
              xmlns:ctl="using:Nfty.App.Controls"
+             xmlns:appconv="using:Nfty.App.Converters"
              xmlns:views="using:Nfty.App.Views"
              x:Class="Nfty.App.Views.ViewerView"
              x:Name="Root"
@@ -37,11 +38,11 @@
           <TextBlock Text="{Binding Subject.Title}" FontSize="13" FontWeight="SemiBold"
                      VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
         </StackPanel>
-        <Border Grid.Column="1" Classes="idchip" VerticalAlignment="Center"
+        <Border Grid.Column="1" Classes="idchip" VerticalAlignment="Center" IsVisible="{Binding IsNotGallery}"
                 ToolTip.Tip="A live viewer follows the page it was opened from; a snapshot is a frozen copy.">
           <TextBlock Classes="ck" Text="{Binding LiveBadge}" />
         </Border>
-        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center"
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" IsVisible="{Binding IsNotGallery}"
                     ToolTip.Tip="{Binding LayoutNote}">
           <TextBlock Classes="seglbl" Text="LAYOUT" />
           <Border Classes="seg tiny" VerticalAlignment="Center">
@@ -73,7 +74,7 @@
          in one of the three. The panes share a grid of their own, so whatever they round to cannot
          reach the rail. -->
     <Grid Grid.Row="1" ColumnDefinitions="*,240">
-    <Grid Grid.Column="0" x:Name="PaneGrid" ColumnDefinitions="*,*">
+    <Grid Grid.Column="0" x:Name="PaneGrid" ColumnDefinitions="*,*" IsVisible="{Binding IsNotGallery}">
 
       <!-- 2D PANE: the same canvas host the editor and the Rise page draw on. -->
       <Border Grid.Column="0" Classes="pane" ClipToBounds="True"
@@ -82,6 +83,9 @@
           <Panel x:Name="CanvasSurface" Background="Transparent">
             <Image x:Name="CanvasImage" Source="{Binding ArtBitmap}" Stretch="Uniform" />
             <ctl:PixelGridLayer x:Name="GridLines" IsVisible="{Binding TwoD.PixelGrid}" />
+            <!-- The picture this subject names is not there: the same static mark a Set tile uses. -->
+            <Border Classes="tmissing" IsVisible="{Binding ImageMissing}" IsHitTestVisible="False"
+                    ToolTip.Tip="The image file this metadata describes was not found beside it." />
           </Panel>
         </Panel>
       </Border>
@@ -93,6 +97,50 @@
       </Border>
 
     </Grid>
+
+
+    <!-- ARCHIVE GALLERY: the body when the subject is an archive. A virtualizing list of tile rows
+         (RowChunk's reason), so only the rows on screen decode their pictures. Opening a tile is the
+         code-behind's bubbled click, which reads the tile from the button's DataContext. -->
+    <ListBox Grid.Column="0" x:Name="GalleryList" Classes="tiles" Margin="0,0,16,0" Background="Transparent"
+             IsVisible="{Binding IsGallery}">
+      <ListBox.ItemsSource>
+        <MultiBinding Converter="{x:Static appconv:GalleryRowChunkConverter.Instance}">
+          <Binding Path="Gallery.Items" />
+          <Binding ElementName="GalleryList" Path="Bounds.Width" />
+        </MultiBinding>
+      </ListBox.ItemsSource>
+      <ListBox.ItemTemplate>
+        <DataTemplate x:DataType="appconv:GalleryRow">
+          <Border Classes="trow">
+            <ItemsControl ItemsSource="{Binding Tiles}" HorizontalAlignment="Center">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="10" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vw:GalleryItem">
+                  <Button Classes="ghost tcell" Padding="6" HorizontalContentAlignment="Center">
+                    <StackPanel Spacing="6" HorizontalAlignment="Center">
+                      <Border Classes="tile" Width="120" Height="120" ClipToBounds="True">
+                        <Panel>
+                          <Border Classes="tload" IsVisible="{Binding IsLoading}" />
+                          <Border Classes="tmissing" IsVisible="{Binding ImageMissing}"
+                                  ToolTip.Tip="This picture could not be read" />
+                          <Image Source="{Binding Thumbnail}" Width="120" Height="120" Stretch="UniformToFill" />
+                        </Panel>
+                      </Border>
+                      <TextBlock Classes="mono tcap" FontSize="11" HorizontalAlignment="Center" MaxWidth="120"
+                                 TextTrimming="CharacterEllipsis" Text="{Binding Caption}"
+                                 ToolTip.Tip="{Binding Caption}" />
+                    </StackPanel>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Border>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
 
       <!-- INFO RAIL: fixed width, so a layout change cannot move a thing in it. -->
       <Border Grid.Column="1" BorderBrush="{DynamicResource LineBrush}" BorderThickness="1,0,0,0">
@@ -119,7 +167,7 @@
     </Grid>
 
     <!-- FOOTER: 2D view controls, then export. Groups wrap, never overrun. -->
-    <Border Grid.Row="2" Classes="pane-hrow toolstrip" BorderThickness="0,1,0,0">
+    <Border Grid.Row="2" Classes="pane-hrow toolstrip" BorderThickness="0,1,0,0" IsVisible="{Binding IsNotGallery}">
       <ctl:StripPanel Spacing="14">
         <StackPanel Orientation="Horizontal" Spacing="6">
           <Button Classes="ttool" Command="{Binding TwoD.OneToOneCommand}"

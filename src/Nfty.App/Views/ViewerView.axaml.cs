@@ -6,6 +6,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Reactive;
+using Avalonia.VisualTree;
 using Nfty.App.Controls;
 using Nfty.App.Services;
 using Nfty.App.ViewModels;
@@ -68,7 +69,20 @@ public partial class ViewerView : UserControl
         ActualThemeVariantChanged += (_, _) => { _canvas.Detach(); ApplyBackdrop(); };
         AttachedToVisualTree += (_, _) => { _canvas.Detach(); ApplyBackdrop(); };
         WirePointer();
+        // A gallery tile's click arrives here, bubbled from its button; the tile is the button's own
+        // DataContext, so no binding has to hop out of the row template to reach the command.
+        AddHandler(Button.ClickEvent, OnTileClick);
         Rebind();
+    }
+
+    private void OnTileClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (e.Source is Control c && c.FindAncestorOfType<Button>(includeSelf: true) is { DataContext: Nfty.App.Viewer.GalleryItem item }
+            && _vm?.Gallery is { } gallery)
+        {
+            e.Handled = true;
+            gallery.OpenTileCommand.Execute(item);
+        }
     }
 
     private IBrush? Brush(string key) =>

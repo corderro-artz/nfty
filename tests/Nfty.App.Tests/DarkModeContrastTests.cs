@@ -15,6 +15,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Nfty.App.Services;
 using Nfty.App.ViewModels;
+using Nfty.App.Viewer;
 using Xunit;
 
 namespace Nfty.App.Tests;
@@ -527,6 +528,12 @@ public class DarkModeContrastTests
         var viewerVm = ViewerViewTests.Vm(viewerSubject);
         yield return ("viewer-sealed", new Views.ViewerView { DataContext = viewerVm },
             () => { viewerVm.Dispose(); viewerSubject.Dispose(); viewerArt.Dispose(); });
+
+        // THE VIEWER AS AN ARCHIVE GALLERY, with one tile whose picture is gone: the static warning mark
+        // and the tile captions over the grid ground, which no other screen paints.
+        var galleryVm = ViewerViewTests.Vm(new GallerySubject(ArchiveGalleryTests.MixedGallery()));
+        yield return ("viewer-gallery", new Views.ViewerView { DataContext = galleryVm },
+            () => { galleryVm.Dispose(); galleryVm.Subject.Dispose(); });
 
         // THE SET BROWSER AND ITS INSPECTOR, neither of which this sweep walked. It is a page in the
         // same sense Landing and the Explorer are - LandingViewModel navigates to it with the same

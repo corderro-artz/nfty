@@ -113,6 +113,18 @@ public sealed partial class ViewerViewModel : ViewModelBase, IDisposable
     /// <summary>Whether the 3D pane takes input.</summary>
     public bool ThreeDHit => Layout != ViewerLayout.TwoD;
 
+    /// <summary>The tile grid when the subject is an archive; null otherwise.</summary>
+    public ArchiveGalleryViewModel? Gallery => (Subject as GallerySubject)?.Gallery;
+
+    /// <summary>Whether the body is a tile grid rather than a picture and a solid.</summary>
+    public bool IsGallery => Subject is GallerySubject;
+
+    /// <summary>Whether the body is a picture and a solid: shows the panes and the footer.</summary>
+    public bool IsNotGallery => !IsGallery;
+
+    /// <summary>Whether the 2D pane names a picture it could not find.</summary>
+    public bool ImageMissing => Subject.ImageMissing;
+
     /// <summary>Whether the layout is 2D only.</summary>
     public bool IsTwoD => Layout == ViewerLayout.TwoD;
     /// <summary>Whether the layout is side by side.</summary>

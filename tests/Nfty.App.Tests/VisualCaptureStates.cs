@@ -114,6 +114,24 @@ public partial class VisualCapture
         }
     }
 
+    /// <summary>The viewer as an archive gallery (the demo CookBook's variants, one tile missing), in
+    /// both themes, at the viewer's default window and at its smallest.</summary>
+    [AvaloniaFact]
+    public void Capture_viewer_gallery()
+    {
+        if (Dir is null) return;
+        var scale = ShellViewModel.BaseScale;
+        foreach (var variant in Themes)
+        foreach (var (tag, w, h) in new[] { ("default", 1280 / scale, 760 / scale), ("min", 640 / scale, 480 / scale) })
+        {
+            var vm = ViewerViewTests.Vm(new Nfty.App.Viewer.GallerySubject(ArchiveGalleryTests.MixedGallery()));
+            Shoot(new Views.ViewerView { DataContext = vm }, variant, $"viewer-gallery-{tag}-{KeyOf(variant)}.png",
+                width: w, height: h);
+            vm.Dispose();
+            vm.Subject.Dispose();
+        }
+    }
+
     /// <summary>V-M1: the two CLI reports a CookBook card opens.</summary>
     [AvaloniaFact]
     public void Capture_reports()

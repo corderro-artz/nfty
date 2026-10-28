@@ -21,7 +21,7 @@ namespace Nfty.App.ViewModels;
 /// detail rail to show what's selected.</summary>
 public partial class SetItemRow : ObservableObject, IDisposable
 {
-    private const int ThumbW = 128;
+    internal const int ThumbW = 128;
     private volatile Bitmap? _thumbnail;
     private volatile bool _imageMissing;
     private bool _decodeStarted;
@@ -232,7 +232,7 @@ public partial class SetItemRow : ObservableObject, IDisposable
     /// <remarks>IHDR is fixed at bytes 16..19, big-endian, immediately after the 8-byte signature and
     /// the chunk's own length and type. Eight bytes off the front of a file the decoder is about to
     /// read anyway; cheaper than decoding and measuring.</remarks>
-    private static int PngWidth(Stream fs)
+    internal static int PngWidth(Stream fs)
     {
         Span<byte> head = stackalloc byte[24];
         if (fs.ReadAtLeast(head, head.Length, throwOnEndOfStream: false) < head.Length) return ThumbW;

@@ -67,6 +67,44 @@ public static class ArchivePeek
         return new PeekedCookBook(manifest, recipes);
     }
 
+    /// <summary>
+    /// Reads a Recipe and every Ingredient manifest nested inside it, without decoding an image.
+    /// </summary>
+    /// <param name="path">Path to a <c>.rcp</c>.</param>
+    /// <returns>The recipe's manifests.</returns>
+    /// <exception cref="InvalidDataException">The archive or a manifest inside it is unreadable.</exception>
+    /// <exception cref="UnsupportedSchemaVersionException">It, or something inside it, declares a
+    /// newer schema than this build reads.</exception>
+    public static PeekedRecipe RecipeTree(string path)
+    {
+        using var zip = ZipFile.OpenRead(path);
+        return PeekRecipe(zip);
+    }
+
+    /// <summary>
+    /// One variant's stored PNG bytes, read out of a <c>.igt</c>, a <c>.rcp</c> or a <c>.cbk</c>
+    /// without opening any other variant: only the nested archives on the way to it are read.
+    /// </summary>
+    /// <param name="path">The archive.</param>
+    /// <param name="recipeId">The recipe holding the ingredient; required for a <c>.cbk</c>, null otherwise.</param>
+    /// <param name="ingredientId">The ingredient holding the variant; required for a <c>.cbk</c> or <c>.rcp</c>, null for a <c>.igt</c>.</param>
+    /// <param name="variantId">The variant.</param>
+    /// <returns>The encoded PNG exactly as stored: a Dynamic or Static variant is its gray value-map.</returns>
+    /// <exception cref="InvalidDataException">The archive, or an entry on the way, is missing or unreadable.</exception>
+    public static byte[] VariantPng(string path, string? recipeId, string? ingredientId, string variantId)
+    {
+        using var zip = ZipFile.OpenRead(path);
+        string entry = $"variants/{variantId}.png";
+        return recipeId is not null
+            ? ArchiveIo.ReadNested(zip, $"recipes/{recipeId}.rcp",
+                rcp => ArchiveIo.ReadNested(rcp, $"ingredients/{ingredientId}.igt",
+                    igt => ArchiveIo.ReadImageBytes(igt, entry)))
+            : ingredientId is not null
+                ? ArchiveIo.ReadNested(zip, $"ingredients/{ingredientId}.igt",
+                    igt => ArchiveIo.ReadImageBytes(igt, entry))
+                : ArchiveIo.ReadImageBytes(zip, entry);
+    }
+
     /// <summary>One nested <c>.rcp</c>, as manifests.</summary>
     private static PeekedRecipe PeekRecipe(ZipArchive zip)
     {
