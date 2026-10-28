@@ -194,6 +194,11 @@
             <ContentControl Content="{Binding ActiveDialog}"
                             HorizontalAlignment="Center" VerticalAlignment="Center" />
           </Panel>
+          <!-- The pop-out viewer on a head with no second window: above the dialog layer, so a
+               dialog it raises (a save error) is not hidden behind it. Empty on a desktop, and a
+               ContentControl with no content and no background is not hit-testable. -->
+          <ContentControl Name="OverlaySlot" Content="{Binding Overlay}"
+                          HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
         </Panel>
 
         <!-- Status bar, with the resize grip OVERLAID on its bottom-right corner rather than being

@@ -14,6 +14,10 @@ public partial class ShellViewModel : ViewModelBase
 
     [ObservableProperty] private ViewModelBase? _currentPage;
     [ObservableProperty] private ViewModelBase? _activeDialog;
+
+    /// <summary>A full-screen view above the page and the dialog layer, for a head with no second
+    /// window to open the pop-out viewer in. Null on a desktop.</summary>
+    [ObservableProperty] private ViewModelBase? _overlay;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ZoomScale))]
     [NotifyPropertyChangedFor(nameof(EffectivePageScale))]

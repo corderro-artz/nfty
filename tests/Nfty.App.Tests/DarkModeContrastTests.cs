@@ -516,6 +516,18 @@ public class DarkModeContrastTests
             DataContext = new ReportDialogViewModel(reportBook, dialogs, new NoopClipboardService()),
         }, reportBook.Dispose);
 
+        // THE POP-OUT VIEWER, in its riskiest state: a SEALED subject, so the disabled Save and Copy
+        // (dimmed to 0.38) are drawn beside the sentence that says why, over the info rail's muted
+        // ink. An open subject paints neither.
+        var viewerArt = ViewerViewTests.Art();
+        var viewerSubject = new ViewerViewTests.TrackedSubject("Chest #42", viewerArt, ViewerViewTests.Model())
+        {
+            AllowExport = false,
+        };
+        var viewerVm = ViewerViewTests.Vm(viewerSubject);
+        yield return ("viewer-sealed", new Views.ViewerView { DataContext = viewerVm },
+            () => { viewerVm.Dispose(); viewerSubject.Dispose(); viewerArt.Dispose(); });
+
         // THE SET BROWSER AND ITS INSPECTOR, neither of which this sweep walked. It is a page in the
         // same sense Landing and the Explorer are - LandingViewModel navigates to it with the same
         // _nav.To - and this list is hand-written, so a screen it never walks cannot be found

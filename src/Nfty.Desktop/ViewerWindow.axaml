@@ -1,0 +1,24 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Nfty.App.ViewModels"
+        x:Class="Nfty.Desktop.ViewerWindow"
+        MinWidth="640" MinHeight="480"
+        Background="{DynamicResource BgBrush}">
+  <!-- A viewer is its own OS window with the operating system's own frame: it is meant to be dragged
+       to a second screen and maximized, which is what a native frame already does well. The content
+       renders at the shell's base scale so a viewer reads at the same size as the app it came from.
+       The whole of it, dialog layer included, sits inside that scale, as the shell's does. -->
+  <LayoutTransformControl>
+    <LayoutTransformControl.LayoutTransform>
+      <ScaleTransform ScaleX="{x:Static vm:ShellViewModel.BaseScale}" ScaleY="{x:Static vm:ShellViewModel.BaseScale}" />
+    </LayoutTransformControl.LayoutTransform>
+    <Panel x:Name="Layers">
+      <!-- This window's OWN dialog layer: the app-wide one draws into the main window, which may
+           already be closed. -->
+      <Panel x:Name="DialogScrim" IsVisible="False" ZIndex="1"
+             Background="{DynamicResource ScrimBrush}">
+        <ContentControl x:Name="DialogSlot" HorizontalAlignment="Center" VerticalAlignment="Center" />
+      </Panel>
+    </Panel>
+  </LayoutTransformControl>
+</Window>

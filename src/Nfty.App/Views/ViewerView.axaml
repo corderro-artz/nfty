@@ -1,0 +1,182 @@
+<!-- RenderOptions.BitmapInterpolationMode=None on the root: pixel art scales with nearest neighbour,
+     never a filter. It inherits to the art image, and PixelPerfectRenderingTests fails naming any view
+     that drops it. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             xmlns:vw="using:Nfty.App.Viewer"
+             xmlns:ctl="using:Nfty.App.Controls"
+             xmlns:views="using:Nfty.App.Views"
+             x:Class="Nfty.App.Views.ViewerView"
+             x:Name="Root"
+             x:DataType="vm:ViewerViewModel"
+             Classes="viewer"
+             RenderOptions.BitmapInterpolationMode="None"
+             Focusable="True" IsTabStop="False"
+             Background="{DynamicResource BgBrush}">
+  <!--
+    The pop-out viewer: ONE subject, in 2D, in 3D, or both side by side. Nothing here edits anything.
+
+    Three bands, as the Rise page is built: a 41px header (title, live badge, layout), a body of
+    2D pane | 3D pane | a 240px info rail, and a footer of controls that wraps by group
+    (StripPanel) rather than overrunning at the smallest window.
+
+    THE LAYOUT SWITCH RESERVES SPACE. The two panes share one fixed pair of columns; the layout
+    only moves the hidden pane's column to zero and takes its ink and hit-testing away, and the rail
+    is a fixed width, so nothing in the rail moves when the layout does (ViewerViewTests pixel-diffs
+    the rail across all three).
+  -->
+  <Grid RowDefinitions="Auto,*,Auto">
+
+    <!-- HEADER -->
+    <Border Grid.Row="0" Classes="pane-hrow">
+      <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="10">
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <Path Classes="ico sm" Data="{StaticResource IconPopout}" VerticalAlignment="Center" />
+          <TextBlock Text="{Binding Subject.Title}" FontSize="13" FontWeight="SemiBold"
+                     VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+        </StackPanel>
+        <Border Grid.Column="1" Classes="idchip" VerticalAlignment="Center"
+                ToolTip.Tip="A live viewer follows the page it was opened from; a snapshot is a frozen copy.">
+          <TextBlock Classes="ck" Text="{Binding LiveBadge}" />
+        </Border>
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center"
+                    ToolTip.Tip="{Binding LayoutNote}">
+          <TextBlock Classes="seglbl" Text="LAYOUT" />
+          <Border Classes="seg tiny" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal">
+              <Button Classes="seg-b tiny" Content="2D" Classes.on="{Binding IsTwoD}"
+                      Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static vm:ViewerLayout.TwoD}" />
+              <Button Classes="seg-b tiny" Content="Both" Classes.on="{Binding IsBoth}"
+                      Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static vm:ViewerLayout.Both}"
+                      Opacity="{Binding ThreeDAvailableOpacity}" />
+              <Button Classes="seg-b tiny" Content="3D" Classes.on="{Binding IsThreeD}"
+                      Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static vm:ViewerLayout.ThreeD}"
+                      Opacity="{Binding ThreeDAvailableOpacity}" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+        <!-- An overlay's way out. Last in its container, so showing it shoves nothing; a window has
+             the operating system's own close button and never shows this. -->
+        <Button Grid.Column="3" Classes="icon" Command="{Binding CloseCommand}" IsVisible="{Binding ShowClose}"
+                ToolTip.Tip="Close the viewer">
+          <Path Classes="ico" Data="{StaticResource IconClose}" />
+        </Button>
+      </Grid>
+    </Border>
+
+    <!-- BODY -->
+    <!-- The rail is NOT a third column beside the two panes. Two star columns that split an odd
+         width land on a half pixel, and layout rounding then pushes everything after them a pixel to
+         the right: the rail sat at x=828 in Both and x=827 in 2D or 3D, a pixel off the window's edge
+         in one of the three. The panes share a grid of their own, so whatever they round to cannot
+         reach the rail. -->
+    <Grid Grid.Row="1" ColumnDefinitions="*,240">
+    <Grid Grid.Column="0" x:Name="PaneGrid" ColumnDefinitions="*,*">
+
+      <!-- 2D PANE: the same canvas host the editor and the Rise page draw on. -->
+      <Border Grid.Column="0" Classes="pane" ClipToBounds="True"
+              Opacity="{Binding TwoDOpacity}" IsHitTestVisible="{Binding TwoDHit}">
+        <Panel x:Name="CanvasBackdrop">
+          <Panel x:Name="CanvasSurface" Background="Transparent">
+            <Image x:Name="CanvasImage" Source="{Binding ArtBitmap}" Stretch="Uniform" />
+            <ctl:PixelGridLayer x:Name="GridLines" IsVisible="{Binding TwoD.PixelGrid}" />
+          </Panel>
+        </Panel>
+      </Border>
+
+      <!-- 3D PANE -->
+      <Border Grid.Column="1" ClipToBounds="True"
+              Opacity="{Binding ThreeDOpacity}" IsHitTestVisible="{Binding ThreeDHit}">
+        <views:ModelPreviewView x:Name="ModelView" />
+      </Border>
+
+    </Grid>
+
+      <!-- INFO RAIL: fixed width, so a layout change cannot move a thing in it. -->
+      <Border Grid.Column="1" BorderBrush="{DynamicResource LineBrush}" BorderThickness="1,0,0,0">
+        <Grid RowDefinitions="Auto,*,Auto" Margin="16,14">
+          <TextBlock Grid.Row="0" Classes="plabel" Text="INFO" />
+          <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Subject.Facts}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vw:ViewerFact">
+                  <StackPanel Margin="0,0,0,10">
+                    <TextBlock Classes="plabel" Margin="0,0,0,2" Text="{Binding Label}" />
+                    <TextBlock FontFamily="{DynamicResource MonoFontFamily}" FontSize="12" Text="{Binding Value}" TextWrapping="Wrap" />
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+          <!-- Reserved: a sealed subject says why export is off here, and an open one leaves the
+               same height empty. -->
+          <TextBlock Grid.Row="2" Classes="readtxt" VerticalAlignment="Top" Text="{Binding ExportNote}" TextWrapping="Wrap"
+                     MinHeight="32" />
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- FOOTER: 2D view controls, then export. Groups wrap, never overrun. -->
+    <Border Grid.Row="2" Classes="pane-hrow toolstrip" BorderThickness="0,1,0,0">
+      <ctl:StripPanel Spacing="14">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <Button Classes="ttool" Command="{Binding TwoD.OneToOneCommand}"
+                  ToolTip.Tip="One art pixel per screen pixel.">
+            <TextBlock Text="1:1" FontSize="11.5" />
+          </Button>
+          <Button Classes="zchip" Classes.on="{Binding TwoD.IsZoomed}" Command="{Binding TwoD.FitCommand}"
+                  Content="{Binding TwoD.ZoomText}"
+                  ToolTip.Tip="The zoom. Wheel over the picture to zoom, drag to pan; click to fit." />
+          <Button Classes="ttool" Classes.on="{Binding TwoD.PixelGrid}" Command="{Binding TwoD.TogglePixelGridCommand}"
+                  ToolTip.Tip="Draw a line between the art's own pixels (once they are big enough on screen).">
+            <Path Classes="ico sm" Data="{StaticResource IconGrid}" />
+          </Button>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <TextBlock Classes="seglbl" Text="BACKDROP" />
+          <Border Classes="seg tiny" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal">
+              <Button Classes="seg-b tiny" Content="Checker" Classes.on="{Binding TwoD.IsChecker}"
+                      Command="{Binding TwoD.SetBackdropCommand}"
+                      CommandParameter="{x:Static vm:ViewerBackdrop.Checker}" />
+              <Button Classes="seg-b tiny" Content="Light" Classes.on="{Binding TwoD.IsLight}"
+                      Command="{Binding TwoD.SetBackdropCommand}"
+                      CommandParameter="{x:Static vm:ViewerBackdrop.Light}" />
+              <Button Classes="seg-b tiny" Content="Dark" Classes.on="{Binding TwoD.IsDark}"
+                      Command="{Binding TwoD.SetBackdropCommand}"
+                      CommandParameter="{x:Static vm:ViewerBackdrop.Dark}" />
+              <Button Classes="seg-b tiny" Content="Custom" Classes.on="{Binding TwoD.IsCustom}"
+                      Command="{Binding TwoD.SetBackdropCommand}"
+                      CommandParameter="{x:Static vm:ViewerBackdrop.Custom}" />
+            </StackPanel>
+          </Border>
+          <!-- Reserved: always laid out, inked only while Custom is the choice. -->
+          <TextBox x:Name="CustomColorBox" Classes="nin" Text="{Binding TwoD.BackdropColor}"
+                   MaxLength="7" VerticalAlignment="Center"
+                   Opacity="{Binding TwoD.CustomColorOpacity}" IsHitTestVisible="{Binding TwoD.IsCustom}"
+                   Focusable="{Binding TwoD.IsCustom}"
+                   ToolTip.Tip="The backdrop color, as #RRGGBB." />
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <TextBlock Classes="seglbl" Text="SAVE IMAGE" />
+          <Button Classes="tbtn cellbtn" Content="1x" Command="{Binding SaveImageCommand}">
+            <Button.CommandParameter><x:Int32>1</x:Int32></Button.CommandParameter>
+          </Button>
+          <Button Classes="tbtn cellbtn" Content="2x" Command="{Binding SaveImageCommand}">
+            <Button.CommandParameter><x:Int32>2</x:Int32></Button.CommandParameter>
+          </Button>
+          <Button Classes="tbtn cellbtn" Content="4x" Command="{Binding SaveImageCommand}">
+            <Button.CommandParameter><x:Int32>4</x:Int32></Button.CommandParameter>
+          </Button>
+          <Button Classes="tbtn cellbtn" Content="8x" Command="{Binding SaveImageCommand}">
+            <Button.CommandParameter><x:Int32>8</x:Int32></Button.CommandParameter>
+          </Button>
+          <Button Classes="tbtn cellbtn" Content="Copy" Command="{Binding CopyCommand}" />
+        </StackPanel>
+      </ctl:StripPanel>
+    </Border>
+  </Grid>
+</UserControl>

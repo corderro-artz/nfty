@@ -19,5 +19,8 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Nfty.App\Nfty.App.csproj" />
+    <!-- The pop-out viewer window and its host live in the desktop head; their behavior (not owned by
+         the main window, writes its size on close, states its shutdown mode) is tested where it is. -->
+    <ProjectReference Include="..\..\src\Nfty.Desktop\Nfty.Desktop.csproj" />
   </ItemGroup>
 </Project>

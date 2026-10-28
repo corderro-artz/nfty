@@ -57,6 +57,60 @@ public partial class VisualCapture
         window.CaptureRenderedFrame()!.Save(Path.Combine(Dir!, file), PngBitmapEncoderOptions.Default);
     }
 
+    /// <summary>
+    /// The pop-out viewer. It is neither a page nor a modal: it is its OWN window, which renders at
+    /// <see cref="ShellViewModel.BaseScale"/> inside the operating system's frame, so the area its
+    /// content really has is the window size over the scale. Frames per theme, each a size the
+    /// viewer can really be: the side-by-side default (1280x760 over 1.2), the 2D default (900x700),
+    /// and the smallest it may be (640x480). The 1180x720 and 1067x526 frames are there too, as the
+    /// page and smallest-page references every other screen is shot at; the last is sealed.
+    /// </summary>
+    [AvaloniaFact]
+    public void Capture_viewer()
+    {
+        if (Dir is null) return;
+        var scale = ShellViewModel.BaseScale;
+        var sizes = new (string Tag, double W, double H, bool Model, bool Sealed)[]
+        {
+            ("both-default", 1280 / scale, 760 / scale, true, false),
+            ("2d-default", 900 / scale, 700 / scale, false, false),
+            ("min", 640 / scale, 480 / scale, true, false),
+            ("page", 1180, 720, true, false),
+            ("smallest-page", 1067, 526, true, true),
+        };
+        foreach (var variant in Themes)
+        foreach (var (tag, w, h, withModel, isSealed) in sizes)
+        {
+            using var art = new Image<Rgba32>(32, 32);
+            for (int y = 0; y < 32; y++)
+            for (int x = 0; x < 32; x++)
+            {
+                double d = ((x - 15.5) * (x - 15.5)) + ((y - 15.5) * (y - 15.5));
+                if (d > 196) continue;
+                art[x, y] = (x < 16, y < 16) switch
+                {
+                    (true, true) => new Rgba32(220, 70, 60, 255),
+                    (false, true) => new Rgba32(70, 170, 90, 255),
+                    (true, false) => new Rgba32(70, 110, 220, 255),
+                    _ => new Rgba32(230, 200, 70, 255),
+                };
+            }
+            var mesh = withModel ? Nfty.Model.Riser.TryBuild(art, null, new Nfty.Model.RiseOptions()) : null;
+            using var subject = new ViewerViewTests.TrackedSubject("Vapor Pets #42", art,
+                mesh is null ? null : new Nfty.App.Viewer.ViewerModel(mesh, Nfty.Model.FaceAtlas.Build(art), null))
+            { AllowExport = !isSealed };
+            var vm = ViewerViewTests.Vm(subject);
+            var view = new Views.ViewerView { DataContext = vm };
+            var solid = view.FindControl<Views.ModelPreviewView>("ModelView")!;
+            // The solid paints on a posted repaint once the pane has a size, so the frame waits for
+            // one: a viewer captured before it lands pictures an empty 3D pane that is not the app's.
+            Shoot(view, variant, $"viewer-{tag}-{KeyOf(variant)}.png",
+                until: withModel ? () => solid.RepaintCount > 0 && !solid.RepaintPending : null,
+                width: w, height: h);
+            vm.Dispose();
+        }
+    }
+
     /// <summary>V-M1: the two CLI reports a CookBook card opens.</summary>
     [AvaloniaFact]
     public void Capture_reports()

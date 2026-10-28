@@ -33,6 +33,8 @@ public static class ServiceRegistration
             new PaletteService(sp.GetRequiredService<IStateStore>()));
         services.AddSingleton<IEditorViewState>(sp =>
             new EditorViewStateService(sp.GetRequiredService<IStateStore>()));
+        services.AddSingleton<IViewerWindowState>(sp =>
+            new ViewerWindowStateService(sp.GetRequiredService<IStateStore>()));
         services.AddSingleton<IParallelismSetting>(sp =>
             new ParallelismSettingService(sp.GetRequiredService<IStateStore>(),
                 () => Environment.GetEnvironmentVariable(ParallelismSettingService.EnvironmentVariable)));
@@ -187,6 +189,15 @@ public static class ServiceRegistration
 
         return services;
     }
+
+    /// <summary>
+    /// Registers the viewer host for a head with no second window (a single-view platform): the
+    /// viewer is drawn full-screen over the shell instead of in a window of its own.
+    /// </summary>
+    /// <param name="services">The container.</param>
+    /// <returns>The container.</returns>
+    public static IServiceCollection AddOverlayViewerHost(this IServiceCollection services) =>
+        services.AddSingleton<IViewerHost, OverlayViewerHost>();
 
     /// <summary>
     /// Re-records a CookBook's Recent entry whenever the Rise page saves depth into it — the same

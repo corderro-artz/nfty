@@ -31,8 +31,21 @@ public sealed partial class TwoDPaneViewModel : ObservableObject, IZoomPan
     public double Zoom
     {
         get => _zoom;
-        set => SetProperty(ref _zoom, Math.Clamp(double.IsFinite(value) ? value : 1, CanvasMapping.ZoomMin, ZoomMax));
+        set
+        {
+            if (!SetProperty(ref _zoom, Math.Clamp(double.IsFinite(value) ? value : 1, CanvasMapping.ZoomMin, ZoomMax))) return;
+            OnPropertyChanged(nameof(ZoomText));
+            OnPropertyChanged(nameof(IsZoomed));
+        }
     }
+
+    /// <summary>Whether the art is magnified past fitted.</summary>
+    public bool IsZoomed => Zoom > CanvasMapping.ZoomMin + 0.0001;
+
+    /// <summary>What the zoom chip reads: "fit", or a percentage of the fitted size.</summary>
+    public string ZoomText => IsZoomed
+        ? (Zoom * 100).ToString("0", System.Globalization.CultureInfo.InvariantCulture) + "%"
+        : "fit";
 
     /// <summary>Horizontal pan from centered.</summary>
     [ObservableProperty] private double _panX;
@@ -46,13 +59,45 @@ public sealed partial class TwoDPaneViewModel : ObservableObject, IZoomPan
     /// <summary>The color used when <see cref="Backdrop"/> is Custom, as #RRGGBB.</summary>
     [ObservableProperty] private string _backdropColor = "#808080";
 
+    /// <summary>Ink for the custom color box: reserved space, shown only while Custom is chosen.</summary>
+    public double CustomColorOpacity => IsCustom ? 1 : 0;
+
+    /// <summary>Whether the backdrop is the transparency checker.</summary>
+    public bool IsChecker => Backdrop == ViewerBackdrop.Checker;
+    /// <summary>Whether the backdrop is the light ground.</summary>
+    public bool IsLight => Backdrop == ViewerBackdrop.Light;
+    /// <summary>Whether the backdrop is the dark ground.</summary>
+    public bool IsDark => Backdrop == ViewerBackdrop.Dark;
+    /// <summary>Whether the backdrop is the author's own color.</summary>
+    public bool IsCustom => Backdrop == ViewerBackdrop.Custom;
+
+    partial void OnBackdropChanged(ViewerBackdrop value)
+    {
+        OnPropertyChanged(nameof(IsChecker));
+        OnPropertyChanged(nameof(IsLight));
+        OnPropertyChanged(nameof(IsDark));
+        OnPropertyChanged(nameof(IsCustom));
+        OnPropertyChanged(nameof(CustomColorOpacity));
+    }
+
+    /// <summary>Selects a backdrop.</summary>
+    /// <param name="backdrop">The backdrop to show behind the art.</param>
+    [RelayCommand]
+    private void SetBackdrop(ViewerBackdrop backdrop) => Backdrop = backdrop;
+
     /// <summary>Whether the pixel grid is drawn.</summary>
     [ObservableProperty] private bool _pixelGrid;
+
+    /// <summary>Shows or hides the pixel grid.</summary>
+    [RelayCommand]
+    private void TogglePixelGrid() => PixelGrid = !PixelGrid;
 
     /// <summary>The lattice step; the viewer's grid is one art pixel.</summary>
     public int GridSize => 1;
 
-    bool IZoomPan.ShowPixelGrid => PixelGrid;
+    // The editor's "pixel grid" IS the lattice of the art's own pixels; here that lattice is the
+    // Checker backdrop. The PixelGrid toggle is a separate line grid drawn over the art.
+    bool IZoomPan.ShowPixelGrid => Backdrop == ViewerBackdrop.Checker;
 
     /// <summary>Tells the pane the art and surface sizes, which 1:1 needs.</summary>
     /// <param name="artW">Art width in pixels.</param>

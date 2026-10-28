@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +16,14 @@ namespace Nfty.Desktop;
 /// </summary>
 public partial class App : Application
 {
+    /// <summary>
+    /// The application keeps running until its LAST window closes. Avalonia's default is the same, so
+    /// this is stated rather than changed: pop-out viewers are separate windows that outlive the
+    /// main one, and a later edit must not be able to end the whole app when the shell closes by
+    /// silently changing the default.
+    /// </summary>
+    public const ShutdownMode Shutdown = ShutdownMode.OnLastWindowClose;
+
     /// <summary>Loads the application's XAML.</summary>
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
@@ -27,13 +36,17 @@ public partial class App : Application
             .AddNftyApp()
             .AddSingleton<IFilePickerService, DesktopFilePicker>()
             .AddSingleton<IFolderRevealer, DesktopFolderRevealer>()
-            .AddSingleton<IClipboardService, DesktopClipboard>()
-            .BuildServiceProvider();
-        var shell = services.GetRequiredService<ShellViewModel>();
-        var landing = services.GetRequiredService<LandingViewModel>();
-        services.GetRequiredService<INavigationService>().To(landing);
+            .AddSingleton<IClipboardService, DesktopClipboard>();
+        // A head with a second window opens a viewer in one; a single-view head draws it over the shell.
+        if (ApplicationLifetime is ISingleViewApplicationLifetime) services.AddOverlayViewerHost();
+        else services.AddSingleton<IViewerHost, DesktopViewerHost>();
+        var provider = services.BuildServiceProvider();
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        var landing = provider.GetRequiredService<LandingViewModel>();
+        provider.GetRequiredService<INavigationService>().To(landing);
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            desktop.ShutdownMode = Shutdown;
             var window = new MainWindow { DataContext = shell };
             desktop.MainWindow = window;
             // A path given at launch opens once the shell is ON SCREEN, through the routing a Recent
@@ -46,7 +59,7 @@ public partial class App : Application
                 };
             // The container owns the singleton ICookBookSession, which owns the open
             // cookbook's decoded images; dispose it on exit so that cleanup runs.
-            desktop.Exit += (_, _) => services.Dispose();
+            desktop.Exit += (_, _) => provider.Dispose();
         }
         base.OnFrameworkInitializationCompleted();
     }
