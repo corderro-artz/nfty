@@ -73,11 +73,20 @@ internal sealed class PixelCanvasHost
         scale = offX = offY = 0;
         if (_image.Source is not Bitmap bmp) return false;
         var vm = _vm();
-        if (!CanvasMapping.TryFrame(bmp.PixelSize.Width, bmp.PixelSize.Height,
+        if (!CanvasMapping.TryFrame(SizeOf(bmp).Width, SizeOf(bmp).Height,
                 _surface.Bounds.Width, _surface.Bounds.Height,
                 vm?.Zoom ?? 1, vm?.PanX ?? 0, vm?.PanY ?? 0, out var frame)) return false;
         (scale, offX, offY) = (frame.Scale, frame.OffX, frame.OffY);
         return true;
+    }
+
+    /// <summary>A bitmap's pixel size, or empty when it has been disposed. The page frees its pictures
+    /// when it is popped, a moment BEFORE the host swaps its view, and the old view is told its
+    /// DataContext moved in that gap: asking a disposed bitmap its size there ended the app.</summary>
+    private static Avalonia.PixelSize SizeOf(Bitmap bmp)
+    {
+        try { return bmp.PixelSize; }
+        catch (ObjectDisposedException) { return default; }
     }
 
     /// <summary>The drawn art as a rectangle in the surface's coordinates, or empty while there is
@@ -85,7 +94,7 @@ internal sealed class PixelCanvasHost
     public Rect Geometry()
     {
         if (_image.Source is not Bitmap bmp || !TryGeometry(out var s, out var x, out var y)) return default;
-        return new Rect(x, y, bmp.PixelSize.Width * s, bmp.PixelSize.Height * s);
+        return new Rect(x, y, SizeOf(bmp).Width * s, SizeOf(bmp).Height * s);
     }
 
     /// <summary>The frame as the value the pointer mapping takes, or null while there is none.</summary>
@@ -133,7 +142,7 @@ internal sealed class PixelCanvasHost
     public void ClampPan()
     {
         if (_vm() is not { } vm || _image.Source is not Bitmap bmp) return;
-        var (x, y) = CanvasMapping.ClampPan(bmp.PixelSize.Width, bmp.PixelSize.Height,
+        var (x, y) = CanvasMapping.ClampPan(SizeOf(bmp).Width, SizeOf(bmp).Height,
             _surface.Bounds.Width, _surface.Bounds.Height, vm.Zoom, vm.PanX, vm.PanY);
 
         // Assigned unconditionally: the generated setter drops an equal value, so this settles in
@@ -159,7 +168,7 @@ internal sealed class PixelCanvasHost
         double after = vm.Zoom;
         if (after == before) return;                  // already at a limit
 
-        var (panX, panY) = CanvasMapping.PanKeeping(bmp.PixelSize.Width, bmp.PixelSize.Height,
+        var (panX, panY) = CanvasMapping.PanKeeping(SizeOf(bmp).Width, SizeOf(bmp).Height,
             _surface.Bounds.Width, _surface.Bounds.Height,
             new CanvasFrame(scale, offX, offY), before, after, pointer.X, pointer.Y);
         vm.PanX = panX;
