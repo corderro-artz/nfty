@@ -54,6 +54,9 @@ internal sealed class PixelCanvasHost
         _backdrop = backdrop;
         _vm = vm;
         _brush = brush;
+        // The lattice's two inks are read from the theme when it is BUILT, and the geometry cache
+        // below never sees a theme change: switching to light kept the dark squares on every canvas.
+        backdrop.ActualThemeVariantChanged += (_, _) => { Detach(); RebuildBackdrop(); };
     }
 
     /// <summary>Other images that move with the art under one transform (the Rise page's dimmed

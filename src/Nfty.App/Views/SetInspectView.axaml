@@ -49,22 +49,7 @@
       <!-- ===== viewport =====
            The checker is the editor's own transparency ground, so alpha reads honestly rather than
            against a flat panel that could be mistaken for the art. -->
-      <Border Grid.Row="1" x:Name="Viewport" ClipToBounds="True">
-        <Border.Background>
-          <!-- The editor's own 18px checker, inline rather than in a Style Setter: a brush built in
-               a Setter is constructed ONCE and shared, so its DynamicResource children never
-               re-resolve on a theme change. Inline in the view they resolve against the visual tree
-               and follow the theme. -->
-          <DrawingBrush TileMode="Tile" SourceRect="0,0,36,36" DestinationRect="0,0,36,36">
-            <DrawingBrush.Drawing>
-              <DrawingGroup>
-                <GeometryDrawing Brush="{DynamicResource BgAltBrush}" Geometry="M0,0 H36 V36 H0 Z" />
-                <GeometryDrawing Brush="{DynamicResource BgAlt2Brush}" Geometry="M0,0 H18 V18 H0 Z" />
-                <GeometryDrawing Brush="{DynamicResource BgAlt2Brush}" Geometry="M18,18 H36 V36 H18 Z" />
-              </DrawingGroup>
-            </DrawingBrush.Drawing>
-          </DrawingBrush>
-        </Border.Background>
+      <Border Grid.Row="1" x:Name="Viewport" ClipToBounds="True" Background="{DynamicResource CheckerBrush}">
         <!-- The transform group is built in code-behind, not here: a Transform is not a Control, so
              x:Name on one is not reachable through FindControl, and the gesture code needs to write
              both parts on every frame. -->
