@@ -294,7 +294,8 @@ public class EditorStripAlignmentTests
             var tile = Tile(view);
             Assert.True(tile.IsEffectivelyVisible, "the tile carrying the buttons vanished");
             var buttons = tile.GetVisualDescendants().OfType<Button>().ToList();
-            Assert.Equal(3, buttons.Count);
+            // Reroll, enlarge, fill-pane, and the pop-out button on the opposite corner.
+            Assert.Equal(4, buttons.Count);
             Assert.All(buttons, b => Assert.True(b.IsEffectivelyVisible && b.Bounds.Width > 0));
         }
         finally { window.Close(); vm.Dispose(); }
