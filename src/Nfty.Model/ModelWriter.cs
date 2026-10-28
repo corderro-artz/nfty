@@ -61,6 +61,35 @@ public static class ModelWriter
         using var _ = Perf.Measure("ModelWriter.Write");
 
         using var atlas = FaceAtlas.Build(art, faces);
+        return WriteAtlas(mesh, atlas, options, baseName);
+    }
+
+    /// <summary>Writes one model from a texture that is already the mesh's <see cref="FaceAtlas"/>:
+    /// what a viewer holds when it was handed a mesh and its atlas but not the art they came from.
+    /// The bytes are exactly those <see cref="Write"/> produces for the same atlas.</summary>
+    /// <param name="mesh">The mesh.</param>
+    /// <param name="atlas">The atlas the mesh's UVs address; not modified.</param>
+    /// <param name="options">Which format to write.</param>
+    /// <param name="baseName">The file name without extension, and without any folder.</param>
+    /// <returns>The files, as for <see cref="Write"/>.</returns>
+    /// <exception cref="ArgumentException">The atlas is not the size the mesh addresses, or the base
+    /// name is not a plain file name.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="options"/>'s format is not named.</exception>
+    public static IReadOnlyList<ModelFile> WriteAtlas(Mesh mesh, Image<Rgba32> atlas, RiseOptions options, string baseName)
+    {
+        ArgumentNullException.ThrowIfNull(mesh);
+        ArgumentNullException.ThrowIfNull(atlas);
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentException.ThrowIfNullOrWhiteSpace(baseName);
+        if (baseName.AsSpan().IndexOfAny('/', '\\') >= 0)
+            throw new ArgumentException(
+                $"'{baseName}' is not a plain file name; the writer names files, the caller chooses the folder.",
+                nameof(baseName));
+        if (atlas.Width != mesh.TextureWidth || atlas.Height != mesh.TextureHeight)
+            throw new ArgumentException(
+                $"The mesh addresses a {mesh.TextureWidth}x{mesh.TextureHeight} atlas; this one is "
+                + $"{atlas.Width}x{atlas.Height}.", nameof(atlas));
+
         var (root, bin) = GltfBuilder.Build(mesh, EncodeTexture(atlas));
         return options.Format switch
         {

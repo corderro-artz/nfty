@@ -163,6 +163,74 @@ public static class Raster
         }
     }
 
+    /// <summary>Draws the outline of every visible quad over what <see cref="Render"/> already put in
+    /// <paramref name="target"/>, one pixel wide: the wireframe display. A risen mesh is made of quads
+    /// (four vertices, six indices each), so the outlines are the greedy faces' and walls' own edges,
+    /// not the triangle diagonals. An outline is drawn only where it lies on the surface the z-buffer
+    /// holds (a small relative tolerance), so edges behind the solid stay hidden, and it changes only
+    /// a pixel's color, never its alpha or depth. The ink is white on a dark pixel and black on a
+    /// light one, so it reads on any texture. A quad with a corner behind the near plane is skipped
+    /// whole rather than clipped; the camera never enters the solid's box, so this only shows when
+    /// zoomed to the surface.</summary>
+    /// <param name="mesh">The solid, already rendered into <paramref name="target"/>.</param>
+    /// <param name="camera">The camera that rendered it.</param>
+    /// <param name="target">The surface to draw on.</param>
+    public static void DrawEdges(Mesh mesh, Camera camera, RenderTarget target)
+    {
+        ArgumentNullException.ThrowIfNull(mesh);
+        ArgumentNullException.ThrowIfNull(camera);
+        ArgumentNullException.ThrowIfNull(target);
+        using var _ = Perf.Measure("Raster.DrawEdges");
+
+        var viewProjection = camera.ViewProjection(target.Width, target.Height);
+        var positions = mesh.PositionData;
+        var indices = mesh.IndexData;
+        Span<ScreenVertex> quad = stackalloc ScreenVertex[4];
+
+        for (int t = 0; t + 6 <= indices.Length; t += 6)
+        {
+            // Quad layout from MeshBuilder: first, first+1, first+2, first, first+2, first+3.
+            bool ok = true;
+            for (int k = 0; k < 4 && ok; k++)
+            {
+                int v = (int)indices[t + (k == 3 ? 5 : k)];
+                var clip = Vector4.Transform(
+                    new Vector4(positions[v * 3], positions[(v * 3) + 1], positions[(v * 3) + 2], 1f), viewProjection);
+                ok = clip.Z >= 0f && TryProject(new ClipVertex(clip, 0f, 0f), target, out quad[k]);
+            }
+            if (!ok) continue;
+
+            float area = ((quad[1].X - quad[0].X) * (quad[2].Y - quad[0].Y))
+                         - ((quad[2].X - quad[0].X) * (quad[1].Y - quad[0].Y));
+            if (area >= 0f) continue; // back-facing, as in Render
+
+            for (int k = 0; k < 4; k++) DrawLine(quad[k], quad[(k + 1) & 3], target);
+        }
+    }
+
+    private static void DrawLine(ScreenVertex a, ScreenVertex b, RenderTarget target)
+    {
+        float dx = b.X - a.X, dy = b.Y - a.Y;
+        int steps = (int)MathF.Ceiling(MathF.Max(MathF.Abs(dx), MathF.Abs(dy)));
+        if (steps == 0) return;
+        float invA = 1f / a.W, invB = 1f / b.W;
+        for (int i = 0; i <= steps; i++)
+        {
+            float f = i / (float)steps;
+            int x = (int)MathF.Floor(a.X + (dx * f)), y = (int)MathF.Floor(a.Y + (dy * f));
+            if ((uint)x >= (uint)target.Width || (uint)y >= (uint)target.Height) continue;
+            int p = (y * target.Width) + x;
+            float surface = target.Depth[p];
+            if (float.IsPositiveInfinity(surface)) continue;
+            float depth = 1f / (invA + ((invB - invA) * f));
+            if (depth > surface * 1.004f) continue; // behind the visible surface
+            var c = target.Color[p];
+            bool dark = ((c.R * 299) + (c.G * 587) + (c.B * 114)) / 1000 < 110;
+            byte Mix(byte v) => dark ? (byte)(v + ((255 - v) / 2)) : (byte)(v / 2);
+            target.Color[p] = new Rgba32(Mix(c.R), Mix(c.G), Mix(c.B), c.A);
+        }
+    }
+
     /// <summary>Flat, quantized head-light shading: the lit fraction snaps DOWN to one of
     /// <see cref="ShadeLevels"/> steps, then maps linearly from <see cref="Ambient"/> up to exactly
     /// 1 — the top step is full brightness, so a face the light points at shows its texel untouched.</summary>
