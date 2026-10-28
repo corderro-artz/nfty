@@ -199,10 +199,11 @@ public class ViewerViewTests
 
             // Every button is inside the view AND reachable: a button arranged past an edge still
             // reports bounds, and is simply not drawn.
-            // The facts rail scrolls when the footer's wrapped lines leave it short, and its scrollbar's own
-            // arrow buttons are the scroller's, not a control the view lays out.
+            // No scrollbar anywhere: a footer that wraps to many lines squeezes the facts rail until it scrolls.
+            Assert.DoesNotContain(view.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.ScrollBar>(),
+                sb => sb.IsEffectivelyVisible);
             var buttons = view.GetVisualDescendants().OfType<Button>()
-                .Where(b => b.IsEffectivelyVisible && b is not RepeatButton).ToList();
+                .Where(b => b.IsEffectivelyVisible).ToList();
             Assert.NotEmpty(buttons);
             foreach (var b in buttons)
             {
