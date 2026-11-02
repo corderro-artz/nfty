@@ -31,6 +31,10 @@ on:
       - 'docs/requirements.txt'
       - 'tools/mkdocs-hooks/**'
       - 'src/Nfty.App/Assets/Fonts/**'
+      # The embedding guide includes regions of the compiled samples, and the API reference pages
+      # are generated from the libraries' doc comments.
+      - 'samples/**'
+      - 'tools/api-docs/**'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 
