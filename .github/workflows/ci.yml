@@ -153,11 +153,27 @@ jobs:
       - name: The API reference matches the code
         run: python tools/api-docs/build.py --check
 
+      # The ONE manual build. It never publishes: the manual is served at www.vaporsoft.dev/nfty/docs/
+      # by the Vaporsoft site, which clones this repository and runs this same pinned toolchain on
+      # every deploy (GitHub Pages is deliberately disabled here: a repository Pages site reserves
+      # /<repo>/** on the parent user site). Failing here catches a broken link or missing figure on
+      # the commit that caused it, not in the site's deploy later. --strict turns either into a
+      # failure. The checkout must include src/Nfty.App/Assets/Fonts: tools/mkdocs-hooks/fonts.py zips
+      # the app's fonts into the site as the typeface download.
       - name: Build the manual
         run: python -m mkdocs build --strict
 
+      # Written by the hook at post-build; missing, the page renders and its download link 404s.
       - name: Check the typeface bundle was built
         run: test -s .mkdocs-site/assets/fonts/ibm-plex-nfty.zip
+
+      # Kept for inspection, not for publishing - the site builds its own copy.
+      - name: Upload the built manual
+        uses: actions/upload-artifact@v4
+        with:
+          name: nfty-manual
+          path: .mkdocs-site
+          retention-days: 7
 
   # The two embedding samples are the documentation's proof, so they are RUN, not just compiled: a
   # sample that builds and then throws on a real Menu teaches the wrong thing. Linux and Windows,

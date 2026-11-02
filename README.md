@@ -25,7 +25,6 @@ of them, out of twenty-nine 32×32 sprites.
 
 **Delivery**  
 [![CI](https://img.shields.io/github/actions/workflow/status/corderro-artz/nfty/ci.yml?branch=main&label=CI&logo=githubactions&logoColor=white)](https://github.com/corderro-artz/nfty/actions/workflows/ci.yml)
-[![Docs](https://img.shields.io/github/actions/workflow/status/corderro-artz/nfty/docs.yml?branch=main&label=Docs&logo=githubactions&logoColor=white)](https://github.com/corderro-artz/nfty/actions/workflows/docs.yml)
 [![Warnings](https://img.shields.io/badge/warnings-0-3d6b52)](#house-rules)
 [![License: MIT](https://img.shields.io/badge/License-MIT-a11f31?logo=open-source-initiative&logoColor=white)](LICENSE)
 
@@ -471,8 +470,10 @@ gh release create v<version> .release/*.zip
 - **CI**: [`ci.yml`](.github/workflows/ci.yml) — builds and tests on Windows, audits the dependency
   graph for advisories separately, and re-runs the engine and CLI on Ubuntu, macOS (arm64) and
   Windows, because determinism is promised across architectures.
-- **Manual**: [`docs.yml`](.github/workflows/docs.yml) publishes `docs/manual/` to GitHub Pages. The
-  site is built there rather than committed.
+- **Manual**: the same [`ci.yml`](.github/workflows/ci.yml) checks that the committed API reference
+  and demo match their generators, builds `docs/manual/` with `mkdocs --strict`, and runs both
+  embedding samples. It publishes nothing: the manual is served at
+  [vaporsoft.dev/nfty/docs](https://www.vaporsoft.dev/nfty/docs/) by the Vaporsoft site.
 - **Releases**: [GitHub Releases](https://github.com/corderro-artz/nfty/releases) — each carries both
   front-ends, the demo CookBook, the MIT license and the SIL Open Font License.
 
@@ -502,7 +503,6 @@ gh release create v<version> .release/*.zip
 | Deferred work | [BACKLOG.md](BACKLOG.md) |
 | Design specs | [docs/superpowers/](docs/superpowers/) |
 | CI workflow | [.github/workflows/ci.yml](.github/workflows/ci.yml) |
-| Docs workflow | [.github/workflows/docs.yml](.github/workflows/docs.yml) |
 | Actions | [GitHub Actions](https://github.com/corderro-artz/nfty/actions) |
 | Issues | [GitHub issues](https://github.com/corderro-artz/nfty/issues) |
 | Pull requests | [GitHub pull requests](https://github.com/corderro-artz/nfty/pulls) |
