@@ -124,6 +124,16 @@ public static class KeyHints
     public static string ViewerClick { get; } = OperatingSystem.IsMacOS() ? "middle-click" : "Ctrl+click or middle-click";
     /// <summary>Tooltip of every Pop out button: what it does and the gesture that does the same.</summary>
     public static string PopOut { get; } = "Open in a viewer window" + Tail(ViewerClick);
+    /// <summary>Rise page: step the painted layer up or down the roll.</summary>
+    public static string StepTarget { get; } = "PgUp PgDn";
+    /// <summary>Rise page: zoom in, zoom out.</summary>
+    public static string ZoomKeys { get; } = "+  −";
+    /// <summary>Rise page: zoom to fit.</summary>
+    public static string ZoomFit { get; } = "0";
+    /// <summary>The arrow keys, as the 3D view orbits with them.</summary>
+    public static string Arrows { get; } = "← ↑ ↓ →";
+    /// <summary>The 3D view's reset key.</summary>
+    public static string ResetView { get; } = "Home";
     /// <summary>Move the selected layer up or down the stack.</summary>
     public static string MoveLayer { get; } = Alt + Gap + "↑↓";
     /// <summary>Drop the editor's selection marquee.</summary>

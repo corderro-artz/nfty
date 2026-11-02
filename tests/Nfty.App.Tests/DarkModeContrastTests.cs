@@ -375,6 +375,10 @@ public class DarkModeContrastTests
         yield return ("landing", new Views.LandingView { DataContext = landing }, null);
 
         yield return ("help", new Views.HelpView { DataContext = new HelpViewModel(dialogs) }, null);
+        // The two other pages of the same sheet: new text, new ink, and an inactive page sits at
+        // Opacity 0 beneath the showing one, so each is scored with its own tab selected.
+        yield return ("help-rise", new Views.HelpView { DataContext = new HelpViewModel(dialogs) { Tab = HelpTab.Rise } }, null);
+        yield return ("help-viewer", new Views.HelpView { DataContext = new HelpViewModel(dialogs) { Tab = HelpTab.Viewer } }, null);
         // The environment-locked state: tray and stepper both disabled (dimmed), and the note naming
         // the variable. The riskiest ink the card can carry; Auto is the same card with less dimming.
         yield return ("settings-env-locked", new Views.SettingsDialogView

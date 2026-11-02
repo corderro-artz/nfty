@@ -3300,8 +3300,16 @@
     <Setter Property="HorizontalAlignment" Value="Center" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
+  <!-- The three pages of the sheet share one grid cell; the inactive two are inked out, not collapsed,
+       so the cell is the tallest page's height and switching tabs moves nothing. -->
+  <Style Selector="Grid.helppage.off">
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+  </Style>
+  <!-- Padding is horizontal only: the head's 46px row is stated on the grid, so the tabs can stretch
+       to its bottom edge and put their underlines on the rule. -->
   <Style Selector="Border.sh-h">
-    <Setter Property="Padding" Value="20,11" />
+    <Setter Property="Padding" Value="20,0" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
     <Setter Property="BorderThickness" Value="0,0,0,1" />
   </Style>
@@ -3355,7 +3363,7 @@
        (BaseScale) that a 1366x768 laptop either has or does not. Trimmed from 18/20 with the header
        and footer bands, which together bought the last twenty. -->
   <Style Selector="Border.sh-col">
-    <Setter Property="Padding" Value="20,14,20,16" />
+    <Setter Property="Padding" Value="20,12,20,12" />
   </Style>
   <Style Selector="Border.sh-col.div">
     <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
@@ -3375,7 +3383,7 @@
     <Setter Property="ColumnSpacing" Value="10" />
   </Style>
   <Style Selector="Grid.sh-kline">
-    <Setter Property="Margin" Value="0,0,0,9" />
+    <Setter Property="Margin" Value="0,0,0,8" />
     <Setter Property="ColumnSpacing" Value="10" />
   </Style>
   <!-- `align-items:start`. Avalonia's ArrangeCore treats Stretch as Center once an explicit Height
@@ -3775,6 +3783,7 @@
   </Style>
   <Style Selector="TextBlock.sh-kdesc">
     <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="TextWrapping" Value="Wrap" />   <!-- a long description wraps; clipped at the card edge it read as a truncated word -->
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>

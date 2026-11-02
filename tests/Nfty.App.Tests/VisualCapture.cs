@@ -972,6 +972,8 @@ public partial class VisualCapture
             var dialogs = new FakeDialogs();
 
             Capture(new Views.HelpView { DataContext = new HelpViewModel(dialogs) }, variant, $"help-{key}.png");
+            Capture(new Views.HelpView { DataContext = new HelpViewModel(dialogs) { Tab = HelpTab.Rise } }, variant, $"help-rise-{key}.png");
+            Capture(new Views.HelpView { DataContext = new HelpViewModel(dialogs) { Tab = HelpTab.Viewer } }, variant, $"help-viewer-{key}.png");
 
             // The card the window close, the editor's Back and Rise's Back all raise over unsaved work.
             Capture(new Views.LeaveDialogView { DataContext = new LeaveDialogViewModel(dialogs, "Leave the editor?", "Aura has unsaved changes. Leaving discards them.", canSave: true) }, variant, $"leave-editor-{key}.png");

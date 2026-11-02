@@ -126,6 +126,8 @@ public class TextBaselineTests
 
         var dialogs = new FakeDialogs();
         Sweep("help", new Views.HelpView { DataContext = new HelpViewModel(dialogs) });
+        Sweep("help-rise", new Views.HelpView { DataContext = new HelpViewModel(dialogs) { Tab = HelpTab.Rise } });
+        Sweep("help-viewer", new Views.HelpView { DataContext = new HelpViewModel(dialogs) { Tab = HelpTab.Viewer } });
 
         var nav = new FakeNav();
         var session = new CookBookSession();

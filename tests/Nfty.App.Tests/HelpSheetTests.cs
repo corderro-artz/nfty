@@ -91,7 +91,8 @@ public class HelpSheetTests
         // KEYS is two groups now: the sheet listed 4 of the app's 14 shortcuts, which made it a
         // sample rather than a reference.
         Assert.Contains("KEYS · ANYWHERE", labels);
-        Assert.Contains("KEYS · EDITING", labels);
+        Assert.Contains("KEYS · LANDING", labels);
+        Assert.Contains("KEYS · TREE & EDITOR", labels);
     }
 
     /// <summary>
