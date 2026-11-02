@@ -15,6 +15,11 @@ public record TraitSelection(string IngredientId, string IngredientName, string 
 /// The resolved color of one layer, for the rich nfty metadata. Represents every kind:
 /// Dynamic and Static carry (Model, H, S); Custom carries none (all null, composited as-is).
 /// </summary>
+/// <param name="LayerId">The layer's ingredient id.</param>
+/// <param name="Kind">The layer's kind.</param>
+/// <param name="Model">The color model rolled in; null for a Custom layer.</param>
+/// <param name="H">The rolled hue in degrees; null for a Custom layer.</param>
+/// <param name="S">The rolled saturation as a 0..1 fraction; null for a Custom layer.</param>
 public record ColorRoll(string LayerId, LayerKind Kind, ColorModel? Model, double? H, double? S);
 
 /// <summary>
@@ -67,6 +72,13 @@ public class GeneratedAsset : IDisposable
 /// afford the whole set at once should use <see cref="Generator.GenerateStreaming"/> instead
 /// and dispose each asset as it lands.
 /// </summary>
+/// <param name="CollectionName">The collection's published name.</param>
+/// <param name="Description">The collection's description.</param>
+/// <param name="Symbol">The collection's ticker-style symbol.</param>
+/// <param name="Seed">The seed that produced the run.</param>
+/// <param name="Assets">The finished assets, in set-number order. Owned by this set.</param>
+/// <param name="CookbookSha256">Hash of the source <c>.cbk</c>; null for a book never read from a file.</param>
+/// <param name="UniqueDna">Whether the run enforced distinct DNA.</param>
 public record GeneratedSet(
     string CollectionName, string Description, string Symbol, string Seed,
     IReadOnlyList<GeneratedAsset> Assets,
@@ -81,6 +93,8 @@ public record GeneratedSet(
 }
 
 /// <summary>How far a generation run has got. <see cref="Fraction"/> suits a progress bar.</summary>
+/// <param name="Completed">Assets finished so far.</param>
+/// <param name="Total">Assets the run will produce.</param>
 public readonly record struct GenerationProgress(int Completed, int Total)
 {
     /// <summary>Completion as 0..1, suitable for a progress bar.</summary>

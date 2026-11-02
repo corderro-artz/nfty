@@ -17,11 +17,8 @@ namespace Nfty.Core.Imaging;
 /// </summary>
 public static class VariantPreview
 {
-    /// <summary>The rendered variant. The caller owns the returned image and must dispose it —
-    /// including for a Custom layer, where a CLONE is returned rather than the ingredient's own
-    /// image. Returning the borrowed one for one kind and an owned one for the others would make
-    /// disposal depend on the layer kind, which is exactly the sort of ownership rule that gets a
-    /// double-free or a leak eventually.</summary>
+    /// <summary>Renders one variant of a layer, colorized from a prefixed color spec the way a
+    /// Static layer's fixed color is at generation time.</summary>
     /// <param name="ingredient">The layer the variant belongs to; supplies the kind and the
     /// colorization.</param>
     /// <param name="variantId">Which variant of it to render.</param>
@@ -29,6 +26,13 @@ public static class VariantPreview
     /// <c>hsv:</c>). Required for a colorized layer; ignored for Custom.</param>
     /// <param name="modelOverride">Renders in a different color model than the ingredient declares,
     /// for comparing the two. Null uses the ingredient's own.</param>
+    /// <returns>The rendered variant. The caller owns the returned image and must dispose it —
+    /// including for a Custom layer, where a CLONE is returned rather than the ingredient's own
+    /// image. Returning the borrowed one for one kind and an owned one for the others would make
+    /// disposal depend on the layer kind, which is exactly the sort of ownership rule that gets a
+    /// double-free or a leak eventually.</returns>
+    /// <exception cref="InvalidOperationException">The layer is colorized but <paramref name="colorSpec"/> is null, or it carries no colorization block.</exception>
+    /// <exception cref="FormatException"><paramref name="colorSpec"/> is not a valid prefixed color spec.</exception>
     public static Image<Rgba32> Render(LoadedIngredient ingredient, string variantId,
         string? colorSpec = null, ColorModel? modelOverride = null)
     {
@@ -117,6 +121,8 @@ public static class VariantPreview
 
     /// <summary>Whether <paramref name="ingredient"/> needs a color to be previewed. Custom does
     /// not; a UI can use this to decide whether to ask.</summary>
+    /// <param name="ingredient">The layer to ask about.</param>
+    /// <returns>True for a Dynamic or Static layer; false for Custom, which is never colorized.</returns>
     public static bool NeedsColor(LoadedIngredient ingredient) =>
         ingredient.Manifest.Kind != LayerKind.Custom;
 }

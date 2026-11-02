@@ -92,6 +92,7 @@ public static class SpriteSheet
     /// <summary>
     /// The grid a Set falls into when nobody has chosen one: as square as it gets.
     /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">An argument is not positive.</exception>
     /// <param name="count">How many assets.</param>
     /// <param name="cellWidth">The canvas width.</param>
     /// <param name="cellHeight">The canvas height.</param>

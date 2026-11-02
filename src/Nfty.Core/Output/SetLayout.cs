@@ -61,6 +61,7 @@ public static class SetLayout
     /// recorded format) for each numbered asset that was not recorded as skipped. Nothing else in
     /// <c>models/</c>, and nothing at all for a Set without the block.
     /// </summary>
+    /// <exception cref="ArgumentException"><paramref name="setDir"/> is null or whitespace.</exception>
     /// <param name="setDir">The Set folder.</param>
     /// <returns>Absolute paths, in <see cref="StringComparer.Ordinal"/> order.</returns>
     /// <remarks>This is the one rule for "which of the folder's <c>models/</c> is the Set's": the
@@ -125,6 +126,7 @@ public static class SetLayout
     /// Every file that belongs to the Set in <paramref name="setDir"/>, and nothing else in that
     /// folder.
     /// </summary>
+    /// <exception cref="ArgumentException"><paramref name="setDir"/> is null or whitespace.</exception>
     /// <param name="setDir">The Set folder.</param>
     /// <returns>
     /// Absolute paths, in <see cref="StringComparer.Ordinal"/> order. Ordinal because these reach an

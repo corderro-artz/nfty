@@ -157,6 +157,7 @@ public record ExportOptions
     public StampCorner WatermarkCorner { get; init; } = StampCorner.BottomRight;
 
     /// <summary>The options a preset starts from.</summary>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="preset"/> is not a defined preset.</exception>
     /// <param name="preset">Which one.</param>
     /// <returns>Ordinary options; change any of them afterward.</returns>
     public static ExportOptions For(ExportPreset preset) => preset switch
@@ -170,6 +171,7 @@ public record ExportOptions
     };
 
     /// <summary>The preset's name, as a person reads it.</summary>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="preset"/> is not a defined preset.</exception>
     /// <param name="preset">Which one.</param>
     /// <returns>A short title.</returns>
     public static string TitleOf(ExportPreset preset) => preset switch
@@ -185,6 +187,7 @@ public record ExportOptions
     /// One sentence saying who the preset is for. Stated in Core so the CLI's help and the GUI's
     /// tiles cannot describe the same choice differently.
     /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="preset"/> is not a defined preset.</exception>
     /// <param name="preset">Which one.</param>
     /// <returns>The sentence.</returns>
     public static string SummaryOf(ExportPreset preset) => preset switch

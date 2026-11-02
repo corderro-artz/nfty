@@ -16,6 +16,10 @@ public record RarityAttribute(string Trait_type, string Value, double RarityPct)
 /// Standard ERC-721 / OpenSea per-item metadata. Written to <c>metadata/NNNN.json</c>.
 /// Deliberately kept standards-pure — only the fields marketplaces expect, no nfty extras.
 /// </summary>
+/// <param name="Name">The item's published name, <c>"{collection} #{n}"</c>.</param>
+/// <param name="Description">The collection's description.</param>
+/// <param name="Image">Where the item's image lives, as the metadata records it.</param>
+/// <param name="Attributes">The item's traits.</param>
 public record OpenSeaMetadata(
     string Name,
     string Description,
@@ -39,6 +43,13 @@ public record LayerColor(string Layer, string Kind, string? Model, double? H, do
 /// Rich nfty-specific per-item metadata. Written to <c>nfty/NNNN.json</c> alongside the
 /// OpenSea file so the OpenSea file stays standards-pure. Carries the generator's extras.
 /// </summary>
+/// <param name="SetNumber">The asset's number within the Set.</param>
+/// <param name="Recipe">The id of the recipe it was rolled from.</param>
+/// <param name="Dna">Its identity hash.</param>
+/// <param name="Seed">The seed of the run that produced it.</param>
+/// <param name="Rarity">The share of the collection carrying each of its traits.</param>
+/// <param name="Layers">What each layer contributed, including the color it rolled.</param>
+/// <param name="AbsentLayers">The ids of optional layers the roll left out; null when none were.</param>
 public record NftyMetadata(
     int SetNumber,
     string Recipe,
@@ -60,6 +71,12 @@ public record NftyMetadata(
 /// <param name="Percent">Its share of the collection.</param>
 public record RecipeCount(string Recipe, int Count, double Percent);
 
+/// <summary>
+/// The Set's own record, written to <c>set.json</c>: its name, size, seed, the hash of the book that
+/// produced it, the collection-wide rarity table and the per-recipe distribution. Reports such as
+/// <see cref="Nfty.Core.Stats.SetReport"/> read it alone, so inspecting a large Set costs the same
+/// as inspecting a small one.
+/// </summary>
 /// <param name="Name">The collection's name.</param>
 /// <param name="Count">How many assets the Set holds.</param>
 /// <param name="Seed">The seed that produced it; the same seed and cookbook reproduce it exactly.</param>

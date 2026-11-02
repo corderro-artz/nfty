@@ -6,16 +6,16 @@ namespace Nfty.Core.Imaging;
 /// <summary>Which corner a stamp sits in.</summary>
 public enum StampCorner
 {
-    /// <summary>Top left.</summary>
+    /// <summary>The top-left corner of the image.</summary>
     TopLeft,
 
-    /// <summary>Top right.</summary>
+    /// <summary>The top-right corner of the image.</summary>
     TopRight,
 
-    /// <summary>Bottom left.</summary>
+    /// <summary>The bottom-left corner of the image.</summary>
     BottomLeft,
 
-    /// <summary>Bottom right.</summary>
+    /// <summary>The bottom-right corner of the image.</summary>
     BottomRight,
 }
 

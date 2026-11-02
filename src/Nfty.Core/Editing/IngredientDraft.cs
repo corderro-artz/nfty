@@ -74,6 +74,8 @@ public sealed class IngredientDraft
     }
 
     /// <summary>Removes a variant by id. Throws if it is absent (the caller enforces any minimum count).</summary>
+    /// <param name="id">Id of the variant to remove.</param>
+    /// <exception cref="InvalidOperationException">The ingredient has no variant with that id.</exception>
     public void RemoveVariant(string id)
     {
         var v = Variants.FirstOrDefault(x => x.Id == id)

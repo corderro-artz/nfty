@@ -18,6 +18,8 @@ public static class KitchenArchive
         ArchiveIo.WriteManifest(zip, manifest);
 
     /// <summary>Reads the manifest from an already-open archive.</summary>
+    /// <exception cref="InvalidDataException">The archive, or a manifest or image inside it, is missing or unreadable.</exception>
+    /// <exception cref="UnsupportedSchemaVersionException">A manifest declares a schema this build does not read: newer than <see cref="Schema.Current"/>, or older than <see cref="Schema.Oldest"/>.</exception>
     /// <param name="zip">The open archive.</param>
     /// <returns>The manifest.</returns>
     public static KitchenManifest Read(ZipArchive zip) =>
@@ -33,6 +35,8 @@ public static class KitchenArchive
     }
 
     /// <summary>Reads a <c>.ktn</c>.</summary>
+    /// <exception cref="InvalidDataException">The archive, or a manifest or image inside it, is missing or unreadable.</exception>
+    /// <exception cref="UnsupportedSchemaVersionException">A manifest declares a schema this build does not read: newer than <see cref="Schema.Current"/>, or older than <see cref="Schema.Oldest"/>.</exception>
     /// <param name="path">Archive path.</param>
     /// <returns>The manifest.</returns>
     public static KitchenManifest Read(string path)
@@ -57,6 +61,9 @@ public static class KitchenArchive
     }
 
     /// <summary>Reads a <c>.ktn</c>.</summary>
+    /// <exception cref="InvalidDataException">The archive, or a manifest or image inside it, is missing or unreadable.</exception>
+    /// <exception cref="UnsupportedSchemaVersionException">A manifest declares a schema this build does not read: newer than <see cref="Schema.Current"/>, or older than <see cref="Schema.Oldest"/>.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     /// <param name="path">Archive path.</param>
     /// <param name="cancellationToken">Cancels the read.</param>
     /// <returns>The manifest.</returns>

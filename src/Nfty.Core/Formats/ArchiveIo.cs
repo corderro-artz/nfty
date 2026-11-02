@@ -56,6 +56,7 @@ internal static class ArchiveIo
     /// <summary>
     /// Extracts one entry's bytes without decoding them.
     /// </summary>
+    /// <exception cref="InvalidDataException">The archive has no entry with that name.</exception>
     /// <param name="zip">The open archive.</param>
     /// <param name="name">The entry to read.</param>
     /// <returns>The entry's bytes.</returns>

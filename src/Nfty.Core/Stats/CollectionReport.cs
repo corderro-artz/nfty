@@ -19,6 +19,8 @@ public static class CollectionReport
     /// <see cref="CultureInfo.InvariantCulture"/>: this is a report a user copies, pastes into an
     /// issue and compares against someone else's, so a decimal comma on one machine and a point on
     /// another would make two identical collections look different.</summary>
+    /// <param name="book">The cookbook to describe.</param>
+    /// <returns>The report text, invariant-culture formatted.</returns>
     public static string Render(LoadedCookBook book)
     {
         var report = RarityCalculator.Compute(book);
