@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The embedding guide's second sample: the full engine. Reads a CookBook, cooks a few assets,
+    renders a ticket from a Menu, and rises one asset to a glTF model. References only repository
+    projects - the imaging package arrives transitively through Nfty.Core.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Nfty.Core\Nfty.Core.csproj" />
+    <ProjectReference Include="..\..\src\Nfty.Model\Nfty.Model.csproj" />
+  </ItemGroup>
+
+</Project>

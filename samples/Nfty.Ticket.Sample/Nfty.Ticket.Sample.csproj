@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The embedding guide's first sample: roll and plate from a Menu with Nfty.Ticket ALONE. The one
+    reference below is the point - no Nfty.Core, no ImageSharp, no package of any kind - so building
+    this project is what proves the claim "a server that only decides what a drop contains takes
+    Nfty.Ticket.dll and nothing else".
+
+    The manual includes regions of Program.cs (docs/manual/how-to/embed-the-ticket-library.md), so the
+    code a reader copies is the code CI compiled.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- A sample documents nothing public; the doc bar exists to serve consumers of a library. -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Nfty.Ticket\Nfty.Ticket.csproj" />
+  </ItemGroup>
+
+</Project>
