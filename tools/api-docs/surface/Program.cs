@@ -41,6 +41,10 @@ static Dictionary<string, object> Describe(Type t)
         ["kind"] = KindOf(t),
         ["declaration"] = TypeDeclaration(t),
     };
+    // Names the lint (build.py --lint) expects a <typeparam> for. Reflection lists the generic
+    // parameters of enclosing types too; only the ones this type declares itself need documenting.
+    var ownTypeParams = t.GetGenericArguments().Skip(t.DeclaringType?.GetGenericArguments().Length ?? 0).Select(a => a.Name).ToList();
+    if (ownTypeParams.Count > 0) d["typeparams"] = ownTypeParams;
     var members = new List<object>();
     const BindingFlags all = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
                              | BindingFlags.Static | BindingFlags.DeclaredOnly;
@@ -123,8 +127,13 @@ static Dictionary<string, object> Describe(Type t)
         string display = op ? OperatorName(m) : m.Name;
         string sig = Access(m) + Modifiers(m) + (op ? OperatorKeyword(m) : ret + " " + display + tp)
                      + "(" + ParamList(m.GetParameters()) + ")";
-        members.Add(Member(id, op ? "operator" : "method", sig, display + tp + "(" + TypeList(m.GetParameters()) + ")",
-            m.GetParameters(), Inherits(m, isProperty: false)));
+        var method = Member(id, op ? "operator" : "method", sig, display + tp + "(" + TypeList(m.GetParameters()) + ")",
+            m.GetParameters(), Inherits(m, isProperty: false));
+        // The lint wants <returns> on anything that returns a value, and <typeparam> per generic parameter.
+        // A Task or ValueTask with no result returns nothing a <returns> could describe.
+        method["returnsValue"] = m.ReturnType != typeof(void) && m.ReturnType != typeof(Task) && m.ReturnType != typeof(ValueTask);
+        if (m.IsGenericMethodDefinition) method["typeparams"] = m.GetGenericArguments().Select(a => a.Name).ToList();
+        members.Add(method);
     }
 
     d["members"] = members;
@@ -259,6 +268,12 @@ static List<string>? Inherits(MethodInfo m, bool isProperty)
     void Add(MethodInfo target)
     {
         if (target.DeclaringType is null || target == m) return;
+        // A base or interface closed over this type's own generic arguments (RegionEditCommand<TPixel>
+        // seen from AlphaSnap<TPixel>) is a different reflection object from the open definition the
+        // XML documentation ids name, and spells its id with the arguments, which matches nothing.
+        if (target.DeclaringType.IsGenericType && !target.DeclaringType.IsGenericTypeDefinition)
+            target = (MethodInfo)MethodBase.GetMethodFromHandle(target.MethodHandle, target.DeclaringType.GetGenericTypeDefinition().TypeHandle)!;
+        if (target.DeclaringType is null) return;
         if (isProperty)
         {
             var prop = target.DeclaringType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly)

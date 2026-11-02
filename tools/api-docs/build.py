@@ -14,6 +14,7 @@ disagree, so the generated half cannot quietly become the real one.
 
     python tools/api-docs/build.py                 # rebuild the libraries, regenerate the pages
     python tools/api-docs/build.py --check         # regenerate to a temp folder, diff, exit 1 on drift
+    python tools/api-docs/build.py --lint          # complain about thin or broken documentation, exit 1
     python tools/api-docs/build.py --surface s.json   # reuse a surface dump instead of running dotnet
 
 Only the standard library is used. Output is deterministic: ordinal sorts, LF line endings, no
@@ -304,10 +305,10 @@ def sections(model, doc_id, member=None, seen=None):
         return {}
     seen = seen | {doc_id}
     el = model.docs.get(doc_id)
-    result = {'param': {}, 'typeparam': {}, 'exception': []}
+    result = {'param': {}, 'typeparam': {}, 'exception': [], 'seealso': []}
     if el is None and not (member and member.get('inherits')):
         return result
-    own = {'param': {}, 'typeparam': {}, 'exception': []}
+    own = {'param': {}, 'typeparam': {}, 'exception': [], 'seealso': []}
     inherit_el = None
     if el is not None:
         for child in el:
@@ -319,6 +320,8 @@ def sections(model, doc_id, member=None, seen=None):
                 own['typeparam'][child.get('name')] = child
             elif child.tag == 'exception':
                 own['exception'].append(child)
+            elif child.tag == 'seealso':
+                own['seealso'].append(child)
             elif child.tag == 'inheritdoc':
                 inherit_el = child
 
@@ -349,6 +352,8 @@ def sections(model, doc_id, member=None, seen=None):
     result['param'].update(own['param'])
     result['typeparam'].update(own['typeparam'])
     result['exception'] = own['exception'] + [e for e in result['exception'] if e not in own['exception']]
+    # A block-level <seealso> is a reference list, so it is the member's own and never inherited.
+    result['seealso'] = own['seealso']
     return result
 
 
@@ -370,6 +375,13 @@ def table_cell(text):
 # ------------------------------------------------------------------------------------------------
 # Pages
 # ------------------------------------------------------------------------------------------------
+
+def see_also(r, s):
+    """The 'See also' list for a member or type: every block-level <seealso> it carries."""
+    items = [r.inline_el(e) for e in s.get('seealso', [])]
+    items = [i for i in items if i]
+    return ['**See also**', ''] + ['- ' + i for i in items] + [''] if items else []
+
 
 def render_member(model, r, tid, m):
     s = sections(model, m['id'], m)
@@ -415,6 +427,7 @@ def render_member(model, r, tid, m):
         b = r.blocks(s['example'])
         if b:
             out += ['**Example**', '', b, '']
+    out += see_also(r, s)
     return out
 
 
@@ -440,6 +453,9 @@ def render_type(model, t):
             b = r.blocks(s[tag])
             if b:
                 out += [f'## {title}', '', b, '']
+    sa = see_also(r, s)
+    if sa:
+        out += ['## See also', ''] + sa[2:]
 
     members = t.get('members', [])
     if t['kind'] == 'enum':
@@ -510,6 +526,96 @@ def render_root(model, by_asm):
     return 'index.md', '\n'.join(out).rstrip() + '\n'
 
 
+# ------------------------------------------------------------------------------------------------
+# Lint
+# ------------------------------------------------------------------------------------------------
+
+def _plain(el):
+    return re.sub(r'\s+', ' ', ''.join(el.itertext())).strip()
+
+
+def _squash(text):
+    return re.sub(r'[^a-z0-9]', '', text.lower())
+
+
+def lint(surface):
+    """Every complaint about the documentation of the PUBLIC surface, as a sorted list of strings.
+
+    The compiler already refuses a missing <summary> (CS1591) and a documented-but-mismatched
+    <param> (CS1573 and friends), but it cannot see that a summary is blank or merely repeats the
+    member's name, that a method which returns a value never says what, that a type parameter went
+    undescribed, or that a cref points at nothing (`!:` in the XML: a warning that is easy to
+    suppress and, in the generated page, renders as plain code that looks fine). Those are what this
+    reports, so the bar the pages are generated against is stated in one place.
+    """
+    model = Model(surface)
+    problems = []
+
+    def check_crefs(doc_id, label):
+        el = model.docs.get(doc_id)
+        if el is None:
+            return
+        for node in el.iter():
+            cref = node.get('cref')
+            if cref and cref.startswith('!:'):
+                problems.append(f'{label}: unresolved cref "{cref[2:]}"')
+
+    def check_summary(doc_id, label, name, member=None, fallback=None, param_doc=None, pname=None):
+        s = sections(model, doc_id, member)
+        if s.get('summary') is None and fallback is not None:
+            s['summary'] = fallback.get('summary')
+        if s.get('summary') is None and param_doc is not None and param_doc.get(pname) is not None:
+            s['summary'] = param_doc[pname]
+        text = _plain(s['summary']) if s.get('summary') is not None else ''
+        if not text:
+            problems.append(f'{label}: missing or empty <summary>')
+        elif _squash(text) == _squash(name):
+            problems.append(f'{label}: <summary> only repeats the name')
+        return s
+
+    def described(table, name):
+        d = table.get(name)
+        return d is not None and bool(_plain(d))
+
+    for t in model.types.values():
+        tl = f"{t['assembly']} {t['id'][2:]}"
+        s = check_summary(t['id'], tl, t['name'].split('<')[0])
+        check_crefs(t['id'], tl)
+        for tp in t.get('typeparams', []):
+            if not described(s['typeparam'], tp):
+                problems.append(f'{tl}: <typeparam name="{tp}"> missing or empty')
+        # A record documents its positional parameters on the type itself.
+        record_params = s['param']
+        is_record = t['kind'] in ('record', 'record struct')
+        for m in t.get('members', []):
+            ml = f"{t['assembly']} {m['id'][2:]}"
+            # The compiler cannot document an IMPLICIT parameterless constructor, so none is demanded.
+            if m['kind'] == 'constructor' and not m.get('params') and m['id'] not in model.docs:
+                continue
+            # A record's positional properties and its constructor are documented by the type's own
+            # <param> tags (the compiler copies those into the XML for the property; the constructor
+            # repeats the type's summary, as render_member also assumes).
+            ms = check_summary(m['id'], ml, m['display'].split('(')[0].split('<')[0], m,
+                               fallback=s if is_record and m['kind'] == 'constructor' else None,
+                               param_doc=record_params if is_record and m['kind'] == 'property' else None,
+                               pname=m['display'])
+            check_crefs(m['id'], ml)
+            if t['kind'] == 'enum':
+                continue
+            for p in m.get('params', []):
+                if not (described(ms['param'], p['name'])
+                        or (m['kind'] == 'constructor' and described(record_params, p['name']))):
+                    problems.append(f"{ml}: <param name=\"{p['name']}\"> missing or empty")
+            for tp in m.get('typeparams', []):
+                if not described(ms['typeparam'], tp):
+                    problems.append(f'{ml}: <typeparam name="{tp}"> missing or empty')
+            if m.get('returnsValue'):
+                r = ms.get('returns')
+                if r is None or not _plain(r):
+                    problems.append(f'{ml}: <returns> missing or empty')
+    return sorted(set(problems))
+
+
 def generate(surface):
     model = Model(surface)
     files = {}
@@ -557,6 +663,9 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--check', action='store_true',
                     help='regenerate to a temporary folder and compare; exit 1 when the committed pages differ')
+    ap.add_argument('--lint', action='store_true',
+                    help='check the documentation itself (blank or name-only summaries, missing param, '
+                         'typeparam and returns, unresolved cref); exit 1 listing every offender')
     ap.add_argument('--surface', metavar='FILE',
                     help='use a saved surface dump (the JSON the surface tool prints) instead of running dotnet')
     args = ap.parse_args()
@@ -566,6 +675,14 @@ def main():
             surface = json.load(f)
     else:
         surface = run_surface()
+    if args.lint:
+        found = lint(surface)
+        if found:
+            print(f'api-docs: {len(found)} documentation problem(s) in the public surface:\n')
+            print('\n'.join(found))
+            return 1
+        print('api-docs: documentation lint clean')
+        return 0
     files = generate(surface)
 
     if not args.check:

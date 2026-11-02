@@ -108,6 +108,7 @@ jobs:
   # to build. None of this needs a display, so it runs on Linux, once.
   #
   #   - tools/api-docs/build.py --check   the API reference pages vs the XML docs and public surface
+  #   - tools/api-docs/build.py --lint    the XML docs themselves: blank, name-only or incomplete entries
   #   - tools/demo/build-demo.py --check  the embedded demo CookBook vs the script that draws it
   #   - mkdocs build --strict             a broken link or a snippet that includes nothing fails here
   #
@@ -152,6 +153,13 @@ jobs:
       # regenerating the pages.
       - name: The API reference matches the code
         run: python tools/api-docs/build.py --check
+
+      # The compiler enforces that a comment EXISTS and that its param/typeparam/cref tags agree with
+      # the code; it cannot see a blank summary, one that only repeats the member's name, a method
+      # that returns a value without saying what, or an undescribed type parameter. The pages are the
+      # published reference, so that bar is checked here, against the same XML they are made from.
+      - name: Every public member is documented, not just commented
+        run: python tools/api-docs/build.py --lint
 
       # The ONE manual build. It never publishes: the manual is served at www.vaporsoft.dev/nfty/docs/
       # by the Vaporsoft site, which clones this repository and runs this same pinned toolchain on

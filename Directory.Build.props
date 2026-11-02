@@ -50,6 +50,29 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
     <!--
+      The documentation diagnostics, named so the bar survives a change to WarningLevel or an
+      over-eager NoWarn. TreatWarningsAsErrors already turns each into an error; listing them in
+      WarningsAsErrors as well means a later "WarningsNotAsErrors" or a project-level
+      TreatWarningsAsErrors=false cannot quietly demote them. (CS1573 is a level-4 warning, and
+      Roslyn's default WarningLevel for net10.0 is 9999, so all of them are live.)
+
+        CS1591  public or protected member without a comment
+        CS1571  duplicate <param> tag       CS1572  <param> names no parameter
+        CS1573  some parameters documented, others not
+        CS1574  cref that resolves to nothing    CS1580  cref with a bad parameter type
+        CS1584  cref with bad syntax        CS1587  XML comment in a place it documents nothing
+        CS1710  duplicate <typeparam>       CS1711  <typeparam> names no type parameter
+        CS1712  type parameters partly documented
+        CS1734  <paramref> / <typeparamref> naming nothing
+        CS1658  a warning reporting a malformed XML comment
+
+      What these cannot see - a blank summary, a missing <returns>, an undescribed type parameter,
+      an unresolved cref in a position the compiler ignores - is checked by
+      the lint mode of tools/api-docs/build.py, which CI runs.
+    -->
+    <WarningsAsErrors>$(WarningsAsErrors);CS1591;CS1571;CS1572;CS1573;CS1574;CS1580;CS1584;CS1587;CS1658;CS1710;CS1711;CS1712;CS1734</WarningsAsErrors>
+
+    <!--
       And warnings are errors, so the bar cannot quietly erode. The build has been at zero warnings
       throughout; this makes that a property of the build rather than a habit.
 
