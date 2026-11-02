@@ -13,6 +13,8 @@ around; if you do not, start with [Get started](../get-started/index.md).
 
     [Stop two traits appearing together](exclude-combinations.md)
 
+    [Leave a layer out sometimes](leave-a-layer-out.md)
+
     [Raise the unique DNA count](raise-unique-count.md)
 
 -   **Drawing**
@@ -62,5 +64,11 @@ around; if you do not, start with [Get started](../get-started/index.md).
     [Share a collection with somebody](share-a-collection.md)
 
     [Roll assets at runtime from a Menu](roll-assets-at-runtime.md)
+
+-   **In your own program**
+
+    ---
+
+    [Embed nfty in your program](embed-nfty.md)
 
 </div>

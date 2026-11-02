@@ -10,6 +10,22 @@ dotnet run --project src/Nfty.Cli -- <command> [args]
 
 The examples below write `nfty` for brevity.
 
+Every command at a glance. Each is covered in the section named.
+
+| Command | Section |
+|---|---|
+| `demo` | [The demo](#the-demo) |
+| `inspect`, `validate`, `stats` | [Reading](#reading) |
+| `preview` | [Rendering](#rendering) |
+| `model` | [Making a 3D model](#making-a-3d-model) |
+| `generate`, `extend` | [Cooking](#cooking) |
+| `menu`, `serve` | [Menus and tickets](#menus-and-tickets) |
+| `export`, `sheet grid` | [Publishing](#publishing) |
+| `new`, `add`, `move`, `remove`, `set` | [Authoring](#authoring) |
+
+Options on every command: `--threads N|max` ([below](#worker-threads)), `--verbose` (print the stack
+trace when a command fails) and `-h`/`--help`. `nfty --version` prints the version.
+
 ## The demo
 
 | Command | Does |
@@ -25,6 +41,7 @@ See [The demo CookBook](../get-started/the-demo.md) for what is in it.
 |---|---|
 | `nfty inspect <file>` | Prints what is inside any `.cbk`, `.rcp`, `.igt`, `.set`, `.ktn` or `.tin`, plus a book's own palette. A `.cbk` also prints its collection name and symbol, target supply and recipe order. A cooked Set also works as a **folder** -- which is what `generate --out` writes when you do not pass `--pack`. |
 | `nfty inspect <tin>` | A sealed export prints its header with **no passphrase**: the collection, the asset count, the sender's note and what you are permitted to do. Add `--key <source>` and it prints the full report of what is inside. |
+| `nfty inspect <tin> --key <source>` | See the line above. `<source>` is one of the [passphrase sources](#where-a-passphrase-comes-from). |
 | `nfty inspect <file> --voxel` | Also lists every variant carrying partial transparency. Costs a full scan of every image. Refused on a `.ktn` and on a cooked Set: both list paths without opening them, and a Set is the output rather than the source -- run it on the CookBook that produced it. |
 | `nfty validate <file>` | Reports every problem it finds, rather than stopping at the first. Takes a `.cbk`, or a loose `.rcp` or `.igt` (checked for everything that needs no canvas). |
 | `nfty stats <cbk>` | The odds the weights imply, trait by trait, plus the unique DNA space. |
@@ -47,9 +64,19 @@ nfty preview aura.igt --variant glow --color hsv:200,70,90 --out one.png
 nfty preview cat.rcp --seed alpha --out stack.png
 ```
 
-An `.igt` renders one variant; a `.rcp` renders the whole stack rolled at a seed, with `--only` and
-`--with` to include or exclude layers. Options belonging to the other form are **rejected**, not
-ignored.
+An `.igt` renders one variant; a `.rcp` renders the whole stack rolled at a seed. Options belonging
+to the other form are **rejected**, not ignored.
+
+| Option | Form | Does |
+|---|---|---|
+| `--out <png>` | both | Where to write. Defaults to `preview.png`. |
+| `--variant <id>` | `.igt` | Which variant to render. Required. |
+| `--color <spec>` | `.igt` | The color for a Dynamic or Static layer, with its prefix: `hex:`, `rgb:`, `hsl:` or `hsv:`. Required for those kinds, omitted for Custom. A missing or unknown prefix is an error, never a guess. |
+| `--model hsv\|hsl` | `.igt` | Preview as if the layer used the other color model. Normally leave it: generation uses the layer's own. |
+| `--seed <text>` | `.rcp` | The roll that picks every layer's variant and color. Defaults to `nfty`. |
+| `--only a,b` | `.rcp` | Draw only these layers. They keep their real depths, and the whole recipe is still rolled, so a layer looks the same with or without its neighbors. |
+| `--with <igt>` | `.rcp` | Composite a loose layer on top, to see a layer you are making against the Recipe it will join. It must match the Recipe's canvas. |
+| `--with-variant <id>` | `.rcp` | Which variant of `--with` to draw. Defaults to its highest-weight one, so it holds still while you vary `--seed`. |
 
 ## Making a 3D model
 
@@ -104,6 +131,19 @@ nfty extend   mybook.cbk ./collection --to 750
 | `--pivot`, `--voxel-size` | With `--models`: as for `nfty model`. |
 
 The three model options are **rejected** without `--models`, not ignored. `inspect` on the finished Set prints a `Models:` line (format, pivot, voxel size, and how many assets were skipped).
+
+`extend` options:
+
+| Option | Does |
+|---|---|
+| `--to` | The total the Set should reach. Required. Only the new assets are rolled. |
+| `--seed` | The seed for the new rolls. |
+| `--unlimited` | As for `generate`. |
+| `--pack` | Also repackage the extended Set as a `.set`. |
+| `--max-rerolls` | As for `generate`. |
+
+`extend` rewrites the rarity of existing assets, since rarity is collection-wide. It warns on stderr
+(and carries on) when the book's hash differs from the one the Set recorded.
 
 `extend` takes no model options: a Set is modeled whole or not at all, so it reuses the options recorded in `set.json` and makes models for the new assets in the same format. Extending a modeled Set with a book that has partial alpha is refused.
 
@@ -220,6 +260,11 @@ nfty add ingredient cat.rcp  --igt aura.igt --index 3
 nfty add recipe     book.cbk --rcp cat.rcp --weight 60
 
 nfty move ingredient cat.rcp --id aura --to 2
+nfty move ingredient cat.rcp --id aura --up
+
+nfty add rule       cat.rcp --type exclude --when bg:night --then glow:sparks
+nfty set chance     cat.rcp --id hat --absent 90
+nfty remove rule    cat.rcp --at 2
 
 nfty set depth chestbody.igt --variant stone --map stone-depth.png
 ```
@@ -230,6 +275,10 @@ Changing and removing, on a `.cbk` or on the loose part it holds. Each checks th
 
 | Command | Does |
 |---|---|
+| `nfty add rule <rcp> --type exclude\|require --when layer:variant --then layer:variant [--then ...]` | Adds an [incompatibility rule](../how-to/exclude-combinations.md). *Exclude*: none of the `--then` targets may be rolled with the trigger. *Require*: **all** of them must be, so repeat `--then` once per target. |
+| `nfty remove rule <rcp> --at N` | Removes rule number `N`, 1-based, as `nfty inspect` numbers them. |
+| `nfty set chance <rcp> --id I --absent P` | How often layer `I` is left out, as a **percent**. `0` always present, `100` never ([Leave a layer out sometimes](../how-to/leave-a-layer-out.md)). |
+| `nfty move ingredient <rcp> --id I (--to N \| --up \| --down)` | Moves a layer in the stack. Depth `1` is the bottom: it paints first and sits furthest back. `--to` past the top clamps to the top; `--up` (toward the front) and `--down` (toward the back) are no-ops at the ends. |
 | `nfty remove ingredient <cbk\|rcp> --id I [--recipe R]` | Drops a layer, its place in the stack, its absent chance and every rule naming it. `--recipe` is required on a `.cbk` and refused on a `.rcp`. |
 | `nfty remove variant <cbk\|igt> --id V [--recipe R --ingredient I]` | Drops one variant. The last variant of a layer is refused. |
 | `nfty remove recipe <cbk> --id R` | Drops a recipe and its roll weight. |
@@ -238,6 +287,12 @@ Changing and removing, on a `.cbk` or on the loose part it holds. Each checks th
 | `nfty set recipe <cbk> --id R --weight W` | Changes a recipe's roll weight. `0` shelves it. |
 | `nfty set cookbook <cbk> [--name] [--collection-name] [--symbol] [--description] [--target-supply N\|none]` | Changes the book's name or collection metadata. At least one option is required. |
 | `nfty set voxel-ready <cbk> [--dry-run]` | Snaps every partially transparent pixel to solid or clear at 50% alpha, listing each variant it changes. `--dry-run` lists and writes nothing. |
+
+Other options on these commands: `add variant` takes `--name` (display name; defaults to the id), and
+`new cookbook` and `add recipe` take `--force` to write even though validation reported problems.
+`add ingredient --index N` is the 0-based position in the stack to insert at. `new ingredient|recipe|cookbook`
+read a manifest JSON (`--manifest`) and the folder of parts it names (`--images`, `--ingredients`,
+`--recipes`).
 
 Files resolve by convention: a layer id `aura` looks for `aura.igt`, a variant id `glow` looks for
 `glow.png`.

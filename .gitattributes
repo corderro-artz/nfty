@@ -14,3 +14,6 @@ tests/fixtures/** -text
 *.set -text
 *.ktn -text
 *.tin -text
+
+# Generated API pages: tools/api-docs/build.py --check compares bytes, so they must stay LF on every platform.
+docs/manual/reference/api/** text eol=lf

@@ -28,6 +28,11 @@ site_dir: .mkdocs-site
 exclude_docs: |
   includes/
 
+# The ~240 generated API type pages are reached from their assembly index, not from the nav: a sidebar
+# of every type would bury the manual. Without this MkDocs logs one INFO line per page.
+not_in_nav: |
+  /reference/api/nfty-*/Nfty.*.md
+
 copyright: >
   &copy; 2026 <a href="https://www.vaporsoft.dev" rel="noopener">Vaporsoft</a>. All rights reserved.
 
@@ -121,6 +126,10 @@ markdown_extensions:
       # there or it silently resolves to nothing and every abbreviation quietly disappears.
       base_path:
         - docs/manual
+        # The project root, so the embedding guide can include regions of the compiled samples under
+        # samples/ (`--8<-- "samples/.../Program.cs:region"`): the code a reader copies is the code CI
+        # built, and the two cannot drift.
+        - .
       check_paths: true
       auto_append:
         - includes/glossary.md
@@ -162,7 +171,9 @@ nav:
       - how-to/more-assets.md
       - how-to/share-a-collection.md
       - how-to/kitchen.md
+      - how-to/leave-a-layer-out.md
       - how-to/raise-unique-count.md
+      - how-to/embed-nfty.md
   - How nfty works:
       - understand/index.md
       - understand/six-words.md
@@ -173,6 +184,7 @@ nav:
       - understand/sealing.md
       - understand/depth.md
       - understand/no-resizing.md
+      - understand/embedding.md
       - understand/faq.md
   - Reference:
       - reference/index.md
@@ -183,6 +195,11 @@ nav:
       - reference/shortcuts.md
       - reference/cli.md
       - reference/ticket-api.md
+      - API reference:
+          - reference/api/index.md
+          - reference/api/nfty-ticket/index.md
+          - reference/api/nfty-core/index.md
+          - reference/api/nfty-model/index.md
       - reference/settings.md
       - reference/file-formats.md
       - reference/set-contents.md

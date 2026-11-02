@@ -12,6 +12,13 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same branch or PR makes an in-flight run's answer irrelevant, so it is replaced
+# rather than left to burn a Windows runner. A push to main is never cancelled by another: every
+# commit on main keeps its own result.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   build-and-test:
     # Windows because the GUI tests render through Avalonia's headless backend with Skia, and the
@@ -27,6 +34,15 @@ jobs:
         with:
           global-json-file: global.json
 
+      # The packages are the slow half of a restore (Avalonia and Skia are large). Keyed on everything
+      # that can change what is resolved, so a dependency bump misses the cache instead of reusing a
+      # stale one.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Packages.props', 'global.json') }}
+          restore-keys: nuget-${{ runner.os }}-
+
       # nuget.config clears inherited sources and pins nuget.org, so a restore here resolves from
       # exactly what the repository declares. (No --locked-mode: lock files that drift out of step
       # with Directory.Packages.props fail CI in a way that reads as a broken pipeline rather than a
@@ -35,7 +51,8 @@ jobs:
         run: dotnet restore nfty.sln
 
       # TreatWarningsAsErrors is on in Directory.Build.props, so "0 warnings" is enforced by the
-      # build itself rather than by reading the log.
+      # build itself rather than by reading the log. The solution includes samples/, so the code the
+      # manual's embedding guide quotes is compiled here on every change.
       - name: Build
         run: dotnet build nfty.sln --no-restore -c Release
 
@@ -86,3 +103,95 @@ jobs:
       # A model's bytes are promised identical for identical input on any machine, exactly as a
       # cooked Set's are, so the engine that writes them is checked on all three systems too.
       - run: dotnet test tests/Nfty.Model.Tests -c Release
+
+  # What is GENERATED and committed has to be what the source would generate now, and the manual has
+  # to build. None of this needs a display, so it runs on Linux, once.
+  #
+  #   - tools/api-docs/build.py --check   the API reference pages vs the XML docs and public surface
+  #   - tools/demo/build-demo.py --check  the embedded demo CookBook vs the script that draws it
+  #   - mkdocs build --strict             a broken link or a snippet that includes nothing fails here
+  #
+  # tools/icons has no --check: IconSourceTests already fails the build when Icons.axaml and the SVGs
+  # disagree, so it is covered by the test job rather than restated.
+  generated-and-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Packages.props', 'global.json') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            docs/requirements.txt
+            tools/demo/requirements.txt
+
+      - name: Install the pinned Python toolchain
+        run: python -m pip install -r docs/requirements.txt -r tools/demo/requirements.txt
+
+      # The demo script drives the CLI's own authoring commands through `dotnet run --no-build`, which
+      # wants the Debug build.
+      - name: Build the CLI
+        run: dotnet build src/Nfty.Cli
+
+      - name: The embedded demo CookBook matches its generator
+        run: python tools/demo/build-demo.py --check
+
+      # Builds the libraries in Release (their XML docs are an input) and a small tool that prints
+      # their public surface, so this step is also what notices a doc comment edited without
+      # regenerating the pages.
+      - name: The API reference matches the code
+        run: python tools/api-docs/build.py --check
+
+      - name: Build the manual
+        run: python -m mkdocs build --strict
+
+      - name: Check the typeface bundle was built
+        run: test -s .mkdocs-site/assets/fonts/ibm-plex-nfty.zip
+
+  # The two embedding samples are the documentation's proof, so they are RUN, not just compiled: a
+  # sample that builds and then throws on a real Menu teaches the wrong thing. Linux and Windows,
+  # because the claim is that the libraries behave the same on both.
+  samples:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Packages.props', 'global.json') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Make a Menu from the demo CookBook
+        shell: bash
+        run: |
+          dotnet run --project src/Nfty.Cli -c Release -- demo "$RUNNER_TEMP/demo"
+          dotnet run --project src/Nfty.Cli -c Release -- menu "$RUNNER_TEMP/demo/ChestDemo.cbk" --out "$RUNNER_TEMP/demo/chest.mnu"
+
+      - name: Run the Nfty.Ticket sample (references nothing but Nfty.Ticket)
+        shell: bash
+        run: dotnet run --project samples/Nfty.Ticket.Sample -c Release -- "$RUNNER_TEMP/demo/chest.mnu" ci-seed
+
+      - name: Run the full-engine sample
+        shell: bash
+        run: |
+          dotnet run --project samples/Nfty.Embedding.Sample -c Release --             "$RUNNER_TEMP/demo/ChestDemo.cbk" "$RUNNER_TEMP/demo/chest.mnu" "$RUNNER_TEMP/demo/out"
+          test -s "$RUNNER_TEMP/demo/out/0001.glb"
+          test -s "$RUNNER_TEMP/demo/out/ticket.png"
