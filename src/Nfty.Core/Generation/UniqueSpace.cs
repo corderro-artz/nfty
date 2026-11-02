@@ -114,6 +114,7 @@ public record UniqueSpaceCount(
     public bool IsExact => Certainty == SpaceCertainty.Exact;
 
     /// <summary>An unknown recipe id has no space at all, and no space is exactly known.</summary>
+    /// <param name="recipeId">The recipe's id.</param>
     public RecipeSpace this[string recipeId] =>
         Recipes.GetValueOrDefault(recipeId) ?? new RecipeSpace(0, 0, SpaceCertainty.Exact);
 
@@ -525,6 +526,9 @@ public static class UniqueSpace
     /// <summary>
     /// What a SUM of two spaces is, given what each of them is.
     /// </summary>
+    /// <param name="a">How the first space is bounded.</param>
+    /// <param name="b">How the second space is bounded.</param>
+    /// <returns>How the sum of the two spaces is bounded; <see cref="SpaceCertainty.Unknown"/> when no direction can be claimed.</returns>
     /// <remarks>
     /// A floor plus a floor is a floor; a ceiling plus a ceiling is a ceiling; either plus an exact
     /// figure keeps its direction. <b>A floor plus a ceiling is nothing</b> — the two bounds point

@@ -11,6 +11,7 @@ namespace Nfty.Core.Editing;
 public static class CookBookEdits
 {
     /// <summary>Returns a book with one ingredient replaced or added.</summary>
+    /// <exception cref="KeyNotFoundException">No recipe has <paramref name="recipeId"/>.</exception>
     /// <param name="book">The book to edit.</param>
     /// <param name="recipeId">Which recipe owns the layer.</param>
     /// <param name="ingredient">The replacement.</param>
@@ -74,6 +75,11 @@ public static class CookBookEdits
     /// <summary>Removes an ingredient from a recipe (dropping it from the layer order, its absent
     /// chance and the rules that name it too). Reuses every
     /// surviving image; the caller owns the removed ingredient's images.</summary>
+    /// <param name="book">The book to edit; not modified.</param>
+    /// <param name="recipeId">Id of the recipe that holds the ingredient.</param>
+    /// <param name="ingredientId">Id of the ingredient (layer) to remove.</param>
+    /// <returns>A new book without the layer; every surviving image is shared with <paramref name="book"/>.</returns>
+    /// <exception cref="KeyNotFoundException">No recipe has <paramref name="recipeId"/>, or that recipe has no such ingredient.</exception>
     public static LoadedCookBook RemoveIngredient(LoadedCookBook book, string recipeId, string ingredientId)
     {
         var recipe = book.Recipes.FirstOrDefault(r => r.Manifest.Id == recipeId)
@@ -164,6 +170,10 @@ public static class CookBookEdits
 
     /// <summary>Adds a recipe to a cookbook (or replaces one with the same id) and sets its selection
     /// weight. Reuses every other recipe/image by reference; disposes nothing.</summary>
+    /// <param name="book">The book to edit; not modified.</param>
+    /// <param name="recipe">The recipe to add, or to put in place of the one with the same id.</param>
+    /// <param name="weight">The recipe's selection weight in the book.</param>
+    /// <returns>A new book holding <paramref name="recipe"/> with <paramref name="weight"/>; every other recipe is shared.</returns>
     public static LoadedCookBook UpsertRecipe(LoadedCookBook book, LoadedRecipe recipe, double weight)
     {
         var recipes = book.Recipes.Where(r => r.Manifest.Id != recipe.Manifest.Id).Append(recipe).ToList();
@@ -361,6 +371,10 @@ public static class CookBookEdits
 
     /// <summary>Removes a recipe from a cookbook (and its selection-weight entry). Reuses every surviving
     /// image; the caller owns the removed recipe's ingredient images.</summary>
+    /// <param name="book">The book to edit; not modified.</param>
+    /// <param name="recipeId">Id of the recipe to remove.</param>
+    /// <returns>A new book without the recipe or its weight entry.</returns>
+    /// <exception cref="KeyNotFoundException">No recipe has <paramref name="recipeId"/>.</exception>
     public static LoadedCookBook RemoveRecipe(LoadedCookBook book, string recipeId)
     {
         if (book.Recipes.All(r => r.Manifest.Id != recipeId))

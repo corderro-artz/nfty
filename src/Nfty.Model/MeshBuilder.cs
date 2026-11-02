@@ -65,6 +65,7 @@ internal sealed class MeshBuilder
     /// <summary>One exposed wall segment of pixel (x, y), spanning z0 &lt; z1. Every corner samples
     /// the pixel's center in the front half of the atlas, or in the back half when
     /// <paramref name="backColor"/>, so a wall takes exactly one owner's color for that pixel.</summary>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="face"/> is not a defined wall face.</exception>
     public void Wall(WallFace face, int x, int y, float z0, float z1, bool backColor)
     {
         float x0 = x, x1 = x + 1, y0 = _height - 1 - y, y1 = _height - y;
@@ -90,6 +91,7 @@ internal sealed class MeshBuilder
     }
 
     /// <summary>Applies the pivot and the voxel size, and freezes the result.</summary>
+    /// <exception cref="ArgumentOutOfRangeException">The options name an undefined pivot.</exception>
     public Mesh ToMesh(RiseOptions options)
     {
         var min = new Vector3(float.PositiveInfinity);

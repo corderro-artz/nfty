@@ -45,6 +45,7 @@ public sealed class ValueMap : IEditSurface<GrayPixel>
     public static ValueMap ForCanvas(Dimensions canvas) => new(canvas.Width, canvas.Height);
 
     /// <summary>An independent deep copy — cloned value/alpha buffers, same dimensions.</summary>
+    /// <returns>A new map with its own buffers.</returns>
     public ValueMap Clone()
     {
         var c = new ValueMap(Width, Height);

@@ -30,6 +30,8 @@ public static class RecipeArchive
     }
 
     /// <summary>Reads a Recipe from an already-open archive, decoding every variant PNG.</summary>
+    /// <exception cref="InvalidDataException">The archive, or a manifest or image inside it, is missing or unreadable.</exception>
+    /// <exception cref="UnsupportedSchemaVersionException">A manifest declares a schema this build does not read: newer than <see cref="Schema.Current"/>, or older than <see cref="Schema.Oldest"/>.</exception>
     /// <param name="zip">The open archive.</param>
     /// <param name="parallelism">How wide image encoding or decoding may run; null means <see cref="Parallelism.Default"/>. Never changes the bytes.</param>
     /// <returns>The loaded recipe; the caller owns it. Its manifest's <c>PartialAlpha</c> is
@@ -66,6 +68,8 @@ public static class RecipeArchive
     }
 
     /// <summary>Reads a Recipe from a file, decoding every variant PNG.</summary>
+    /// <exception cref="InvalidDataException">The archive, or a manifest or image inside it, is missing or unreadable.</exception>
+    /// <exception cref="UnsupportedSchemaVersionException">A manifest declares a schema this build does not read: newer than <see cref="Schema.Current"/>, or older than <see cref="Schema.Oldest"/>.</exception>
     /// <param name="path">Archive path.</param>
     /// <param name="parallelism">How wide image encoding or decoding may run; null means <see cref="Parallelism.Default"/>. Never changes the bytes.</param>
     /// <returns>The loaded recipe; the caller owns it and must dispose it.</returns>
@@ -93,6 +97,9 @@ public static class RecipeArchive
     }
 
     /// <summary>Reads a Recipe from an already-open archive.</summary>
+    /// <exception cref="InvalidDataException">The archive, or a manifest or image inside it, is missing or unreadable.</exception>
+    /// <exception cref="UnsupportedSchemaVersionException">A manifest declares a schema this build does not read: newer than <see cref="Schema.Current"/>, or older than <see cref="Schema.Oldest"/>.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="ct"/> was canceled.</exception>
     /// <param name="zip">The open archive.</param>
     /// <param name="ct">Cancels the read; anything already decoded is disposed first.</param>
     /// <param name="parallelism">How wide image encoding or decoding may run; null means <see cref="Parallelism.Default"/>. Never changes the bytes.</param>
@@ -132,6 +139,9 @@ public static class RecipeArchive
     }
 
     /// <summary>Reads a Recipe from a file.</summary>
+    /// <exception cref="InvalidDataException">The archive, or a manifest or image inside it, is missing or unreadable.</exception>
+    /// <exception cref="UnsupportedSchemaVersionException">A manifest declares a schema this build does not read: newer than <see cref="Schema.Current"/>, or older than <see cref="Schema.Oldest"/>.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="ct"/> was canceled.</exception>
     /// <param name="path">Archive path.</param>
     /// <param name="ct">Cancels the read; anything already decoded is disposed first.</param>
     /// <param name="parallelism">How wide decoding may run; null means <see cref="Parallelism.Default"/>.</param>

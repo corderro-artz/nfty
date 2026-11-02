@@ -72,7 +72,7 @@ public sealed class StackRise : IDisposable
     /// <summary>The front and back owners' pictures and the wall seams.</summary>
     public StackFaces Faces { get; }
 
-    /// <inheritdoc />
+    /// <summary>Disposes the art and the face pictures this rise owns.</summary>
     public void Dispose()
     {
         Art.Dispose();

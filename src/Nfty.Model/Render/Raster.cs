@@ -41,6 +41,10 @@ public static class Raster
     /// projection is built here from <paramref name="target"/>'s own size, so it can never disagree
     /// with the surface it is drawn on. Does not clear <paramref name="target"/> first — the caller
     /// owns the background and calls <see cref="RenderTarget.Clear"/> itself.</summary>
+    /// <param name="mesh">The mesh to draw.</param>
+    /// <param name="texture">The face atlas the mesh was built against.</param>
+    /// <param name="camera">The view to draw it from.</param>
+    /// <param name="target">The surface to draw into.</param>
     /// <returns>How many SOURCE triangles (index triples) survived clipping and culling and were
     /// rasterized; one split in two by the near plane counts once.</returns>
     /// <exception cref="ArgumentException"><paramref name="texture"/> is not the size of the art the

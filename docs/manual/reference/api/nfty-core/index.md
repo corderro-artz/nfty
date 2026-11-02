@@ -153,7 +153,7 @@ The whole engine: archives, validation, generation, rendering, Sets, export, sea
 | [`SetItem`](Nfty.Core.Output.SetItem.md) | record | One asset in a Set already on disk. |
 | [`SetItemSelection`](Nfty.Core.Output.SetItemSelection.md) | class | Recovers which variant of which layer an asset in a Set was made from. |
 | [`SetLayout`](Nfty.Core.Output.SetLayout.md) | class | The parts a cooked Set is made of, named once. |
-| [`SetManifest`](Nfty.Core.Output.SetManifest.md) | record |  |
+| [`SetManifest`](Nfty.Core.Output.SetManifest.md) | record | The Set's own record, written to `set.json`: its name, size, seed, the hash of the book that produced it, the collection-wide rarity table and the per-recipe distribution. |
 | [`SetModels`](Nfty.Core.Output.SetModels.md) | record | `set.json`'s record of the 3D models a cook made. |
 | [`SetProvenance`](Nfty.Core.Output.SetProvenance.md) | class | Whether the CookBook in front of you is the one a Set on disk was cooked from, and what to say when it is not. |
 | [`SetReader`](Nfty.Core.Output.SetReader.md) | class | Opens a cooked Set — a folder, or a packed `.set` archive. |

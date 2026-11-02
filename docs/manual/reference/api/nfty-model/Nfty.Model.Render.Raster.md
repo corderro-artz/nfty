@@ -40,10 +40,10 @@ Draws every triangle of `mesh`, sampling `texture` nearest-neighbor, into `targe
 
 **Parameters**
 
-- `mesh` (`Mesh`)
-- `texture` (`Image<Rgba32>`)
-- `camera` (`Camera`)
-- `target` (`RenderTarget`)
+- `mesh` (`Mesh`) - The mesh to draw.
+- `texture` (`Image<Rgba32>`) - The face atlas the mesh was built against.
+- `camera` (`Camera`) - The view to draw it from.
+- `target` (`RenderTarget`) - The surface to draw into.
 
 **Returns.** How many SOURCE triangles (index triples) survived clipping and culling and were rasterized; one split in two by the near plane counts once.
 

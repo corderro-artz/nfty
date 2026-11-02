@@ -127,4 +127,8 @@ Removes a variant by id. Throws if it is absent (the caller enforces any minimum
 
 **Parameters**
 
-- `id` (`string`)
+- `id` (`string`) - Id of the variant to remove.
+
+**Exceptions**
+
+- `InvalidOperationException` - The ingredient has no variant with that id.

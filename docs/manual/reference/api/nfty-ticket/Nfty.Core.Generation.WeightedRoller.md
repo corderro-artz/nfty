@@ -61,7 +61,9 @@ Resolves the draw order and running totals of a weight table. Pure: an unusable 
 
 **Parameters**
 
-- `weights` (`IReadOnlyDictionary<string, double>`)
+- `weights` (`IReadOnlyDictionary<string, double>`) - Weight per key; keys are drawn in ordinal order whatever the dictionary's own.
+
+**Returns.** The table to hand to [`WeightedRoller.Roll()`](Nfty.Core.Generation.WeightedRoller.md#m-roll-nfty-core-generation-weightedroller-weighttable-n-cabca6).
 
 ### Roll(IReadOnlyDictionary&lt;string, double&gt;, IRng) { #m-roll-system-collections-generic-ireadonlydictionary-sy-f53023 }
 

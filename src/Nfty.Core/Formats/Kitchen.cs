@@ -12,6 +12,11 @@ namespace Nfty.Core.Formats;
 /// Every list is sorted with <see cref="StringComparer.Ordinal"/>. Nothing here reaches an output
 /// file, but a workspace listing that reorders itself by machine locale is its own small bug, and
 /// the ordinal rule is the one this codebase keeps everywhere else.</summary>
+/// <param name="Manifest">The Kitchen's own manifest.</param>
+/// <param name="Directory">The folder the Kitchen sits in, which was scanned.</param>
+/// <param name="CookBooks">Paths of the <c>.cbk</c> files found, ordinal order.</param>
+/// <param name="Recipes">Paths of the loose <c>.rcp</c> files found, ordinal order.</param>
+/// <param name="Ingredients">Paths of the loose <c>.igt</c> files found, ordinal order.</param>
 public sealed record KitchenContents(
     KitchenManifest Manifest,
     string Directory,
@@ -66,6 +71,7 @@ public static class Kitchen
     /// Only the immediate directory is scanned. Recursing would make a Kitchen opened at a high
     /// level swallow everything beneath it, and nested Kitchens are explicitly out of scope — a
     /// workspace inside a workspace doubles every path rule and buys nothing here.</summary>
+    /// <exception cref="InvalidDataException">The path has no containing folder, or the Kitchen manifest is unreadable.</exception>
     /// <param name="path">Path to the <c>.ktn</c>.</param>
     /// <returns>The manifest plus what the folder holds, as paths.</returns>
     public static KitchenContents Open(string path)
@@ -81,6 +87,7 @@ public static class Kitchen
     }
 
     /// <summary>Opens a Kitchen and lists what its folder holds.</summary>
+    /// <exception cref="InvalidDataException">The path has no containing folder, or the Kitchen manifest is unreadable.</exception>
     /// <param name="path">Path to the <c>.ktn</c>.</param>
     /// <param name="cancellationToken">Cancels the read.</param>
     /// <returns>The manifest plus what the folder holds, as paths.</returns>

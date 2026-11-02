@@ -18,7 +18,7 @@ Conversions between RGB and the two color spaces a layer can be authored in. Hue
 public static RgbColor HslToRgb(double h, double s, double l);
 ```
 
-HSL to RGB.
+Converts a hue/saturation/lightness color to RGB.
 
 **Parameters**
 
@@ -34,7 +34,7 @@ HSL to RGB.
 public static RgbColor HsvToRgb(double h, double s, double v);
 ```
 
-HSV to RGB.
+Converts a hue/saturation/value color to RGB.
 
 **Parameters**
 
@@ -50,7 +50,7 @@ HSV to RGB.
 public static (double, double, double) RgbToHsl(RgbColor c);
 ```
 
-RGB to HSL.
+Converts an RGB color to hue/saturation/lightness.
 
 **Parameters**
 
@@ -64,7 +64,7 @@ RGB to HSL.
 public static (double, double, double) RgbToHsv(RgbColor c);
 ```
 
-RGB to HSV.
+Converts an RGB color to hue/saturation/value.
 
 **Parameters**
 

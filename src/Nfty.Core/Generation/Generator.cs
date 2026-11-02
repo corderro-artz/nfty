@@ -28,6 +28,17 @@ public static class Generator
     /// dispose it when done. For large runs prefer <see cref="GenerateStreaming"/>, which never
     /// holds more than one asset at a time.
     /// </summary>
+    /// <param name="book">The cookbook to roll from; validated first. The caller keeps ownership.</param>
+    /// <param name="opts">Count, seed and the other per-run settings.</param>
+    /// <param name="existingDnas">DNA of assets already produced (an <c>extend</c> run), so no new asset repeats one. Null for a fresh run.</param>
+    /// <param name="startNumber">The set number of the first asset produced; 1 for a fresh run.</param>
+    /// <param name="progress">Receives one report per asset, one at a time, in increasing order. Null for none.</param>
+    /// <param name="cancellationToken">Stops the run between assets.</param>
+    /// <returns>The whole collection. The set owns every asset image; dispose it.</returns>
+    /// <exception cref="InvalidOperationException"><see cref="GenerateOptions.Count"/> is not positive, the book fails <see cref="Nfty.Core.Formats.Validator"/> (the message lists every problem), or <see cref="GenerateOptions.RecipeId"/> names no recipe.</exception>
+    /// <exception cref="RuleConflictException">The recipe rules exclude every combination, so no asset can be rolled.</exception>
+    /// <exception cref="UniqueSpaceExhaustedException">The unique DNA space is real but smaller than the count requested.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     /// <remarks>
     /// <para><b>Two phases, and only the second is parallel.</b> Rolling consumes the RNG and does
     /// the duplicate check, and both depend on the exact order every asset is decided in — so the
@@ -104,6 +115,17 @@ public static class Generator
     /// <see cref="Task.Run(Action)"/> over the sync core rather than genuine async — it exists
     /// so a UI thread stays responsive, and reports through <paramref name="progress"/>.
     /// </summary>
+    /// <param name="book">The cookbook to roll from; validated first. The caller keeps ownership.</param>
+    /// <param name="opts">Count, seed and the other per-run settings.</param>
+    /// <param name="existingDnas">DNA of assets already produced (an <c>extend</c> run), so no new asset repeats one. Null for a fresh run.</param>
+    /// <param name="startNumber">The set number of the first asset produced; 1 for a fresh run.</param>
+    /// <param name="progress">Receives one report per asset, one at a time, in increasing order. Null for none.</param>
+    /// <param name="cancellationToken">Stops the run between assets.</param>
+    /// <returns>A task for the finished collection. The set owns every asset image; dispose it.</returns>
+    /// <exception cref="InvalidOperationException"><see cref="GenerateOptions.Count"/> is not positive, the book fails <see cref="Nfty.Core.Formats.Validator"/> (the message lists every problem), or <see cref="GenerateOptions.RecipeId"/> names no recipe.</exception>
+    /// <exception cref="RuleConflictException">The recipe rules exclude every combination, so no asset can be rolled.</exception>
+    /// <exception cref="UniqueSpaceExhaustedException">The unique DNA space is real but smaller than the count requested.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static Task<GeneratedSet> GenerateAsync(
         LoadedCookBook book,
         GenerateOptions opts,
@@ -120,6 +142,16 @@ public static class Generator
     /// next is rolled. **The caller owns every asset yielded** — an abandoned enumeration leaves
     /// the last asset undisposed. The cookbook is validated eagerly, before enumeration starts.
     /// </summary>
+    /// <param name="book">The cookbook to roll from; validated first. The caller keeps ownership.</param>
+    /// <param name="opts">Count, seed and the other per-run settings.</param>
+    /// <param name="existingDnas">DNA of assets already produced (an <c>extend</c> run), so no new asset repeats one. Null for a fresh run.</param>
+    /// <param name="startNumber">The set number of the first asset produced; 1 for a fresh run.</param>
+    /// <param name="progress">Receives one report per asset, one at a time, in increasing order. Null for none.</param>
+    /// <param name="cancellationToken">Stops the run between assets.</param>
+    /// <returns>The assets, rolled lazily one per step. The caller owns each asset yielded and must dispose it.</returns>
+    /// <exception cref="InvalidOperationException">Raised eagerly, before enumeration starts: the count is not positive, the book is invalid, or <see cref="GenerateOptions.RecipeId"/> names no recipe.</exception>
+    /// <exception cref="RuleConflictException">Raised during enumeration when the rules exclude every combination.</exception>
+    /// <exception cref="UniqueSpaceExhaustedException">Raised during enumeration when the unique space is smaller than the count requested.</exception>
     public static IEnumerable<GeneratedAsset> GenerateStreaming(
         LoadedCookBook book,
         GenerateOptions opts,

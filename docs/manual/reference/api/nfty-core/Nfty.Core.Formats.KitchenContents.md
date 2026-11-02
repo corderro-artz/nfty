@@ -20,11 +20,11 @@ public KitchenContents(KitchenManifest Manifest, string Directory, IReadOnlyList
 
 **Parameters**
 
-- `Manifest` (`KitchenManifest`)
-- `Directory` (`string`)
-- `CookBooks` (`IReadOnlyList<string>`)
-- `Recipes` (`IReadOnlyList<string>`)
-- `Ingredients` (`IReadOnlyList<string>`)
+- `Manifest` (`KitchenManifest`) - The Kitchen's own manifest.
+- `Directory` (`string`) - The folder the Kitchen sits in, which was scanned.
+- `CookBooks` (`IReadOnlyList<string>`) - Paths of the `.cbk` files found, ordinal order.
+- `Recipes` (`IReadOnlyList<string>`) - Paths of the loose `.rcp` files found, ordinal order.
+- `Ingredients` (`IReadOnlyList<string>`) - Paths of the loose `.igt` files found, ordinal order.
 
 ## Properties
 
@@ -34,17 +34,23 @@ public KitchenContents(KitchenManifest Manifest, string Directory, IReadOnlyList
 public IReadOnlyList<string> CookBooks { get; init; }
 ```
 
+Paths of the `.cbk` files found, ordinal order.
+
 ### Directory { #p-directory }
 
 ```csharp
 public string Directory { get; init; }
 ```
 
+The folder the Kitchen sits in, which was scanned.
+
 ### Ingredients { #p-ingredients }
 
 ```csharp
 public IReadOnlyList<string> Ingredients { get; init; }
 ```
+
+Paths of the loose `.igt` files found, ordinal order.
 
 ### IsEmpty { #p-isempty }
 
@@ -60,8 +66,12 @@ Nothing has been put in this Kitchen yet — a fresh workspace, not a broken one
 public KitchenManifest Manifest { get; init; }
 ```
 
+The Kitchen's own manifest.
+
 ### Recipes { #p-recipes }
 
 ```csharp
 public IReadOnlyList<string> Recipes { get; init; }
 ```
+
+Paths of the loose `.rcp` files found, ordinal order.

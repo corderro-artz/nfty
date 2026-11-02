@@ -75,9 +75,13 @@ Width in pixels.
 public byte AlphaOf(DepthPixel pixel);
 ```
 
+The alpha channel of a pixel in this surface's format.
+
 **Parameters**
 
-- `pixel` (`DepthPixel`)
+- `pixel` (`DepthPixel`) - The pixel to read.
+
+**Returns.** Alpha, 0-255.
 
 ### ArtAt(int, int) { #m-artat-system-int32-system-int32 }
 
@@ -100,10 +104,14 @@ The art pixel at a coordinate, in bounds.
 public DepthPixel Get(int x, int y);
 ```
 
+Reads one pixel. The coordinate must be in bounds.
+
 **Parameters**
 
-- `x` (`int`)
-- `y` (`int`)
+- `x` (`int`) - Column.
+- `y` (`int`) - Row.
+
+**Returns.** The stored pixel.
 
 ### Histogram() { #m-histogram }
 
@@ -121,10 +129,14 @@ Solid pixels counted by total thickness (`1 + front + back`).
 public bool InBounds(int x, int y);
 ```
 
+Whether a coordinate is inside the surface.
+
 **Parameters**
 
-- `x` (`int`)
-- `y` (`int`)
+- `x` (`int`) - Column.
+- `y` (`int`) - Row.
+
+**Returns.** True when the pixel exists.
 
 ### IsSolid(int, int) { #m-issolid-system-int32-system-int32 }
 
@@ -236,7 +248,11 @@ The depth as a map to store.
 public DepthPixel WithAlpha(DepthPixel pixel, byte alpha);
 ```
 
+The same pixel with its alpha replaced and every other channel untouched.
+
 **Parameters**
 
-- `pixel` (`DepthPixel`)
-- `alpha` (`byte`)
+- `pixel` (`DepthPixel`) - The pixel to rewrite.
+- `alpha` (`byte`) - The alpha it should carry.
+
+**Returns.** A pixel identical to `pixel` apart from its alpha.

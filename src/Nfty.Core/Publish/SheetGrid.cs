@@ -72,6 +72,7 @@ public sealed record SheetGrid(int Columns, int Rows, int CellWidth, int CellHei
         int.TryParse(s, NumberStyles.None, CultureInfo.InvariantCulture, out int n) && n > 0 ? n : null;
 
     /// <summary>Reads the grid a PNG carries, without decoding its pixels.</summary>
+    /// <exception cref="ArgumentException"><paramref name="pngPath"/> is null or whitespace.</exception>
     /// <param name="pngPath">The sheet.</param>
     /// <returns>The grid, or null when the file has no <c>nfty-grid</c> entry, it is malformed, or the file is not an image.</returns>
     public static SheetGrid? Read(string pngPath)
@@ -275,6 +276,7 @@ public sealed record SheetGrid(int Columns, int Rows, int CellWidth, int CellHei
 
     /// <summary>Takes the grid out of a PNG, keeping every pixel exactly: the file becomes one
     /// picture again.</summary>
+    /// <exception cref="ArgumentException"><paramref name="pngPath"/> is null or whitespace.</exception>
     /// <param name="pngPath">The sheet to rewrite.</param>
     /// <returns>How many bytes the file changed by (negative when it shrank); 0, with nothing
     /// written, when the file carries no grid.</returns>

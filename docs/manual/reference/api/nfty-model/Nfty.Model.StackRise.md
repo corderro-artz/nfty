@@ -74,6 +74,8 @@ The union depth at a pixel, without building a map.
 public void Dispose();
 ```
 
+Disposes the art and the face pictures this rise owns.
+
 ### FrontOwner(int, int) { #m-frontowner-system-int32-system-int32 }
 
 ```csharp

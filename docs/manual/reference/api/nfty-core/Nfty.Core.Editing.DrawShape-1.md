@@ -39,6 +39,10 @@ Draws a filled shape.
 protected override IReadOnlyList<(int, int, TPixel)> ComputePixels(IEditSurface<TPixel> surface);
 ```
 
+Target pixels and their new values. Only in-bounds pixels, each coordinate at most once; computed before any mutation.
+
 **Parameters**
 
-- `surface` (`IEditSurface<TPixel>`)
+- `surface` (`IEditSurface<TPixel>`) - The surface being edited, for reading the pixels the edit depends on.
+
+**Returns.** The pixels to write, before the opacity lock is applied to them.

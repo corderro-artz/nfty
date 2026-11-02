@@ -21,6 +21,8 @@ namespace Nfty.Core.Formats;
 public static class AtomicFile
 {
     /// <summary>Writes through a unique temp file beside <paramref name="path"/>, then replaces it.</summary>
+    /// <exception cref="ArgumentException"><paramref name="path"/> is null or whitespace.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="writeTemp"/> is null.</exception>
     /// <param name="path">The file to replace; created when absent.</param>
     /// <param name="writeTemp">Writes the new contents to the path it is given, which does not exist yet.</param>
     public static void Replace(string path, Action<string> writeTemp)
@@ -41,6 +43,8 @@ public static class AtomicFile
     }
 
     /// <summary>The awaiting twin of <see cref="Replace"/>.</summary>
+    /// <exception cref="ArgumentException"><paramref name="path"/> is null or whitespace.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="writeTemp"/> is null.</exception>
     /// <param name="path">The file to replace; created when absent.</param>
     /// <param name="writeTemp">Writes the new contents to the path it is given, which does not exist yet.</param>
     /// <returns>A task that completes when the file has been replaced.</returns>

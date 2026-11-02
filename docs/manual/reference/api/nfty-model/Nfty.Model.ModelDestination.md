@@ -26,6 +26,10 @@ A folder, created on the first file.
 
 **Returns.** The destination.
 
+**Exceptions**
+
+- `ArgumentException` - `directory` is null or whitespace.
+
 ### Zip(string) { #m-zip-system-string }
 
 ```csharp
@@ -39,3 +43,7 @@ One zip: ordinal entries, fixed timestamps, in place only once complete.
 - `zipPath` (`string`) - The zip to create or replace.
 
 **Returns.** The destination.
+
+**Exceptions**
+
+- `ArgumentException` - `zipPath` is null or whitespace.

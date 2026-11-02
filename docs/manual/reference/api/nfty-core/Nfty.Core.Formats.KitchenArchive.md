@@ -26,6 +26,11 @@ Reads the manifest from an already-open archive.
 
 **Returns.** The manifest.
 
+**Exceptions**
+
+- `InvalidDataException` - The archive, or a manifest or image inside it, is missing or unreadable.
+- [`UnsupportedSchemaVersionException`](Nfty.Core.Formats.UnsupportedSchemaVersionException.md) - A manifest declares a schema this build does not read: newer than [`Schema.Current`](../nfty-ticket/Nfty.Core.Model.Schema.md#f-current), or older than [`Schema.Oldest`](../nfty-ticket/Nfty.Core.Model.Schema.md#f-oldest).
+
 ### Read(string) { #m-read-system-string }
 
 ```csharp
@@ -39,6 +44,11 @@ Reads a `.ktn`.
 - `path` (`string`) - Archive path.
 
 **Returns.** The manifest.
+
+**Exceptions**
+
+- `InvalidDataException` - The archive, or a manifest or image inside it, is missing or unreadable.
+- [`UnsupportedSchemaVersionException`](Nfty.Core.Formats.UnsupportedSchemaVersionException.md) - A manifest declares a schema this build does not read: newer than [`Schema.Current`](../nfty-ticket/Nfty.Core.Model.Schema.md#f-current), or older than [`Schema.Oldest`](../nfty-ticket/Nfty.Core.Model.Schema.md#f-oldest).
 
 ### ReadAsync(string, CancellationToken) { #m-readasync-system-string-system-threading-cancellationtoken }
 
@@ -54,6 +64,12 @@ Reads a `.ktn`.
 - `cancellationToken` (`CancellationToken`) - Cancels the read.
 
 **Returns.** The manifest.
+
+**Exceptions**
+
+- `InvalidDataException` - The archive, or a manifest or image inside it, is missing or unreadable.
+- [`UnsupportedSchemaVersionException`](Nfty.Core.Formats.UnsupportedSchemaVersionException.md) - A manifest declares a schema this build does not read: newer than [`Schema.Current`](../nfty-ticket/Nfty.Core.Model.Schema.md#f-current), or older than [`Schema.Oldest`](../nfty-ticket/Nfty.Core.Model.Schema.md#f-oldest).
+- `OperationCanceledException` - `cancellationToken` was canceled.
 
 ### Write(ZipArchive, KitchenManifest) { #m-write-system-io-compression-ziparchive-nfty-core-model-184ed1 }
 

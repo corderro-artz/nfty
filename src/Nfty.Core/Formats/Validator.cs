@@ -33,6 +33,8 @@ public static class Validator
     /// <see cref="Validate(LoadedCookBook)"/> remains the authoritative whole-book gate. Used by the
     /// CLI's <c>new ingredient</c> / <c>add variant</c>, which build an .igt before a canvas exists.
     /// </summary>
+    /// <param name="ing">The ingredient to check.</param>
+    /// <returns>One sentence per problem; empty when the ingredient is valid. Never throws for a bad ingredient.</returns>
     public static IReadOnlyList<string> ValidateIngredient(LoadedIngredient ing)
     {
         var problems = new List<string>();
@@ -47,6 +49,8 @@ public static class Validator
     /// across all its ingredients share one size, so they could match some future canvas. Used by
     /// the CLI's <c>new recipe</c> / <c>add ingredient</c>.
     /// </summary>
+    /// <param name="r">The recipe to check.</param>
+    /// <returns>One sentence per problem; empty when the recipe is valid. Never throws for a bad recipe.</returns>
     public static IReadOnlyList<string> ValidateRecipe(LoadedRecipe r)
     {
         var problems = new List<string>();

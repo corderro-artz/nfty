@@ -49,6 +49,10 @@ Opens a Kitchen and lists what its folder holds. Only the immediate directory is
 
 **Returns.** The manifest plus what the folder holds, as paths.
 
+**Exceptions**
+
+- `InvalidDataException` - The path has no containing folder, or the Kitchen manifest is unreadable.
+
 ### OpenAsync(string, CancellationToken) { #m-openasync-system-string-system-threading-cancellationtoken }
 
 ```csharp
@@ -63,6 +67,10 @@ Opens a Kitchen and lists what its folder holds.
 - `cancellationToken` (`CancellationToken`) - Cancels the read.
 
 **Returns.** The manifest plus what the folder holds, as paths.
+
+**Exceptions**
+
+- `InvalidDataException` - The path has no containing folder, or the Kitchen manifest is unreadable.
 
 ### TryFindIn(string) { #m-tryfindin-system-string }
 

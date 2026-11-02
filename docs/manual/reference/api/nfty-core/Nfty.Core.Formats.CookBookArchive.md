@@ -81,6 +81,12 @@ Reads a CookBook, eagerly decoding every variant image inside it.
 
 **Returns.** The loaded book; the caller owns it. Its manifest's `PartialAlpha` is recomputed from its loaded recipes rather than trusting the stored value.
 
+**Exceptions**
+
+- `InvalidDataException` - The archive, or a manifest or image inside it, is missing or unreadable.
+- [`UnsupportedSchemaVersionException`](Nfty.Core.Formats.UnsupportedSchemaVersionException.md) - A manifest declares a schema this build does not read: newer than [`Schema.Current`](../nfty-ticket/Nfty.Core.Model.Schema.md#f-current), or older than [`Schema.Oldest`](../nfty-ticket/Nfty.Core.Model.Schema.md#f-oldest).
+- `OperationCanceledException` - `ct` was canceled.
+
 ### Write(string, CookBookManifest, IReadOnlyList&lt;LoadedRecipe&gt;, Parallelism?) { #m-write-system-string-nfty-core-model-cookbookmanifest-s-2267ba }
 
 ```csharp

@@ -22,8 +22,12 @@ Allocates a [`RenderTarget.Width`](Nfty.Model.Render.RenderTarget.md#p-width) ×
 
 **Parameters**
 
-- `width` (`int`)
-- `height` (`int`)
+- `width` (`int`) - Width in pixels; must be positive.
+- `height` (`int`) - Height in pixels; must be positive.
+
+**Exceptions**
+
+- `ArgumentOutOfRangeException` - A dimension is not positive.
 
 ## Properties
 
@@ -71,4 +75,4 @@ Resets every pixel to `background` and every depth to infinity.
 
 **Parameters**
 
-- `background` (`Rgba32`)
+- `background` (`Rgba32`) - The color to fill with.

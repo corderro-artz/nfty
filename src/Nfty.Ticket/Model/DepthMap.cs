@@ -32,6 +32,7 @@ public sealed class DepthMap
 
     /// <summary>Builds a flat map — every pixel's front and back at zero — for a canvas of the given
     /// size.</summary>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="width"/> or <paramref name="height"/> is not positive.</exception>
     /// <param name="width">Width in pixels; must be positive.</param>
     /// <param name="height">Height in pixels; must be positive.</param>
     /// <returns>A new, all-zero <see cref="DepthMap"/>.</returns>
@@ -66,11 +67,13 @@ public sealed class DepthMap
     private int IndexOf(int x, int y) => (y * Width + x) * 2;
 
     /// <summary>The front depth (0..255) at a pixel.</summary>
+    /// <returns>The front depth, 0 for flat paper.</returns>
     /// <param name="x">Column, 0-based.</param>
     /// <param name="y">Row, 0-based.</param>
     public byte Front(int x, int y) => _bytes[IndexOf(x, y)];
 
     /// <summary>The back depth (0..255) at a pixel.</summary>
+    /// <returns>The back depth, 0 for flat paper.</returns>
     /// <param name="x">Column, 0-based.</param>
     /// <param name="y">Row, 0-based.</param>
     public byte Back(int x, int y) => _bytes[IndexOf(x, y) + 1];

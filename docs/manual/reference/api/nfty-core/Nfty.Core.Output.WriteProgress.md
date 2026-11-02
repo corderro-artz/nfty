@@ -20,8 +20,8 @@ public WriteProgress(int Completed, int Total);
 
 **Parameters**
 
-- `Completed` (`int`)
-- `Total` (`int`)
+- `Completed` (`int`) - Assets written so far.
+- `Total` (`int`) - Assets the write will produce.
 
 ## Properties
 
@@ -30,6 +30,8 @@ public WriteProgress(int Completed, int Total);
 ```csharp
 public int Completed { get; init; }
 ```
+
+Assets written so far.
 
 ### Fraction { #p-fraction }
 
@@ -44,3 +46,5 @@ Completion as 0..1, suitable for a progress bar.
 ```csharp
 public int Total { get; init; }
 ```
+
+Assets the write will produce.

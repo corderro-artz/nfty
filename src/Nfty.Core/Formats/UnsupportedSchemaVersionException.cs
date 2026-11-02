@@ -46,6 +46,9 @@ public class UnsupportedSchemaVersionException : NotSupportedException
     /// author's decision, no archives kept (see CLAUDE.md) — so a schemaVersion below the floor is
     /// now refused too, by the same exception type and the same "name it, don't misparse it" reason
     /// as a too-new one, distinguished from a version below 1 (which was never a schema at all).</summary>
+    /// <typeparam name="T">The manifest type; its name (minus "Manifest") appears in the message.</typeparam>
+    /// <param name="manifest">The manifest whose <see cref="ISchemaVersioned.SchemaVersion"/> to check.</param>
+    /// <exception cref="UnsupportedSchemaVersionException">The version is newer than <see cref="Schema.Current"/>, older than <see cref="Schema.Oldest"/>, or not a schema at all.</exception>
     public static void Require<T>(T manifest) where T : ISchemaVersioned
     {
         if (Schema.IsSupported(manifest.SchemaVersion, Schema.Current)) return;

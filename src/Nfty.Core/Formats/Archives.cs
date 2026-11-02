@@ -75,6 +75,9 @@ public static class Archives
     /// The archive kind for <paramref name="path"/>. An unknown extension is an error rather
     /// than a guess — the same rule color specs follow.
     /// </summary>
+    /// <param name="path">A file path; only its extension is read.</param>
+    /// <returns>The kind that extension names.</returns>
+    /// <exception cref="NotSupportedException">The extension is unknown, or the path has none.</exception>
     public static ArchiveKind KindOf(string path) =>
         TryKindOf(path, out var kind) ? kind
         : throw new NotSupportedException(Path.GetExtension(path) is { Length: > 0 } ext

@@ -138,6 +138,9 @@ public static class CookBookArchive
     }
 
     /// <summary>Reads a CookBook, eagerly decoding every variant image inside it.</summary>
+    /// <exception cref="InvalidDataException">The archive, or a manifest or image inside it, is missing or unreadable.</exception>
+    /// <exception cref="UnsupportedSchemaVersionException">A manifest declares a schema this build does not read: newer than <see cref="Schema.Current"/>, or older than <see cref="Schema.Oldest"/>.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="ct"/> was canceled.</exception>
     /// <param name="path">Archive path.</param>
     /// <param name="ct">Cancels the read. Anything already decoded is disposed before the
     /// cancellation propagates.</param>

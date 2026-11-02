@@ -56,4 +56,12 @@ Accepts any schema this build understands — [`Schema.Oldest`](../nfty-ticket/N
 
 **Parameters**
 
-- `manifest` (`T`)
+- `manifest` (`T`) - The manifest whose [`ISchemaVersioned.SchemaVersion`](../nfty-ticket/Nfty.Core.Model.ISchemaVersioned.md#p-schemaversion) to check.
+
+**Type parameters**
+
+- `T` - The manifest type; its name (minus "Manifest") appears in the message.
+
+**Exceptions**
+
+- [`UnsupportedSchemaVersionException`](Nfty.Core.Formats.UnsupportedSchemaVersionException.md) - The version is newer than [`Schema.Current`](../nfty-ticket/Nfty.Core.Model.Schema.md#f-current), older than [`Schema.Oldest`](../nfty-ticket/Nfty.Core.Model.Schema.md#f-oldest), or not a schema at all.

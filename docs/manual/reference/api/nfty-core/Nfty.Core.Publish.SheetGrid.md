@@ -200,6 +200,10 @@ Reads the grid a PNG carries, without decoding its pixels.
 
 **Returns.** The grid, or null when the file has no `nfty-grid` entry, it is malformed, or the file is not an image.
 
+**Exceptions**
+
+- `ArgumentException` - `pngPath` is null or whitespace.
+
 ### RemoveFrom(string) { #m-removefrom-system-string }
 
 ```csharp
@@ -213,6 +217,10 @@ Takes the grid out of a PNG, keeping every pixel exactly: the file becomes one p
 - `pngPath` (`string`) - The sheet to rewrite.
 
 **Returns.** How many bytes the file changed by (negative when it shrank); 0, with nothing written, when the file carries no grid.
+
+**Exceptions**
+
+- `ArgumentException` - `pngPath` is null or whitespace.
 
 **Remarks**
 

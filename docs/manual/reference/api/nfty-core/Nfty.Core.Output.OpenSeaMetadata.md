@@ -20,10 +20,10 @@ public OpenSeaMetadata(string Name, string Description, string Image, IReadOnlyL
 
 **Parameters**
 
-- `Name` (`string`)
-- `Description` (`string`)
-- `Image` (`string`)
-- `Attributes` (`IReadOnlyList<MetadataAttribute>`)
+- `Name` (`string`) - The item's published name, `"{collection} #{n}"`.
+- `Description` (`string`) - The collection's description.
+- `Image` (`string`) - Where the item's image lives, as the metadata records it.
+- `Attributes` (`IReadOnlyList<MetadataAttribute>`) - The item's traits.
 
 ## Properties
 
@@ -33,11 +33,15 @@ public OpenSeaMetadata(string Name, string Description, string Image, IReadOnlyL
 public IReadOnlyList<MetadataAttribute> Attributes { get; init; }
 ```
 
+The item's traits.
+
 ### Description { #p-description }
 
 ```csharp
 public string Description { get; init; }
 ```
+
+The collection's description.
 
 ### Image { #p-image }
 
@@ -45,8 +49,12 @@ public string Description { get; init; }
 public string Image { get; init; }
 ```
 
+Where the item's image lives, as the metadata records it.
+
 ### Name { #p-name }
 
 ```csharp
 public string Name { get; init; }
 ```
+
+The item's published name, `"{collection} #{n}"`.

@@ -64,6 +64,7 @@ public static class DemoCookBook
     /// <summary>
     /// Writes the demo into <paramref name="directory"/> and returns the file's path.
     /// </summary>
+    /// <exception cref="ArgumentException"><paramref name="directory"/> is null or whitespace.</exception>
     /// <param name="directory">Where to put it. Created if it does not exist.</param>
     /// <param name="overwrite">Whether to replace a copy that is already there. The default is
     /// <c>false</c> — and that default is the point: the demo is meant to be edited, so a second

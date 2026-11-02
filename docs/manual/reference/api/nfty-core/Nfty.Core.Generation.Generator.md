@@ -26,12 +26,21 @@ Generates the whole collection into memory. The returned set owns every asset im
 
 **Parameters**
 
-- `book` (`LoadedCookBook`)
-- `opts` (`GenerateOptions`)
-- `existingDnas` (`IReadOnlyList<string>?`)
-- `startNumber` (`int`)
-- `progress` (`IProgress<GenerationProgress>?`)
-- `cancellationToken` (`CancellationToken`)
+- `book` (`LoadedCookBook`) - The cookbook to roll from; validated first. The caller keeps ownership.
+- `opts` (`GenerateOptions`) - Count, seed and the other per-run settings.
+- `existingDnas` (`IReadOnlyList<string>?`) - DNA of assets already produced (an `extend` run), so no new asset repeats one. Null for a fresh run.
+- `startNumber` (`int`) - The set number of the first asset produced; 1 for a fresh run.
+- `progress` (`IProgress<GenerationProgress>?`) - Receives one report per asset, one at a time, in increasing order. Null for none.
+- `cancellationToken` (`CancellationToken`) - Stops the run between assets.
+
+**Returns.** The whole collection. The set owns every asset image; dispose it.
+
+**Exceptions**
+
+- `InvalidOperationException` - [`GenerateOptions.Count`](Nfty.Core.Generation.GenerateOptions.md#p-count) is not positive, the book fails [`Validator`](Nfty.Core.Formats.Validator.md) (the message lists every problem), or [`GenerateOptions.RecipeId`](Nfty.Core.Generation.GenerateOptions.md#p-recipeid) names no recipe.
+- [`RuleConflictException`](Nfty.Core.Generation.RuleConflictException.md) - The recipe rules exclude every combination, so no asset can be rolled.
+- [`UniqueSpaceExhaustedException`](Nfty.Core.Generation.UniqueSpaceExhaustedException.md) - The unique DNA space is real but smaller than the count requested.
+- `OperationCanceledException` - `cancellationToken` was canceled.
 
 **Remarks**
 
@@ -49,12 +58,21 @@ Generation offloaded to a background thread. The work is CPU-bound, so this is a
 
 **Parameters**
 
-- `book` (`LoadedCookBook`)
-- `opts` (`GenerateOptions`)
-- `existingDnas` (`IReadOnlyList<string>?`)
-- `startNumber` (`int`)
-- `progress` (`IProgress<GenerationProgress>?`)
-- `cancellationToken` (`CancellationToken`)
+- `book` (`LoadedCookBook`) - The cookbook to roll from; validated first. The caller keeps ownership.
+- `opts` (`GenerateOptions`) - Count, seed and the other per-run settings.
+- `existingDnas` (`IReadOnlyList<string>?`) - DNA of assets already produced (an `extend` run), so no new asset repeats one. Null for a fresh run.
+- `startNumber` (`int`) - The set number of the first asset produced; 1 for a fresh run.
+- `progress` (`IProgress<GenerationProgress>?`) - Receives one report per asset, one at a time, in increasing order. Null for none.
+- `cancellationToken` (`CancellationToken`) - Stops the run between assets.
+
+**Returns.** A task for the finished collection. The set owns every asset image; dispose it.
+
+**Exceptions**
+
+- `InvalidOperationException` - [`GenerateOptions.Count`](Nfty.Core.Generation.GenerateOptions.md#p-count) is not positive, the book fails [`Validator`](Nfty.Core.Formats.Validator.md) (the message lists every problem), or [`GenerateOptions.RecipeId`](Nfty.Core.Generation.GenerateOptions.md#p-recipeid) names no recipe.
+- [`RuleConflictException`](Nfty.Core.Generation.RuleConflictException.md) - The recipe rules exclude every combination, so no asset can be rolled.
+- [`UniqueSpaceExhaustedException`](Nfty.Core.Generation.UniqueSpaceExhaustedException.md) - The unique DNA space is real but smaller than the count requested.
+- `OperationCanceledException` - `cancellationToken` was canceled.
 
 ### GenerateStreaming(LoadedCookBook, GenerateOptions, IReadOnlyList&lt;string&gt;?, int, IProgress&lt;GenerationProgress&gt;?, CancellationToken) { #m-generatestreaming-nfty-core-formats-loadedcookbook-nft-7dbe9b }
 
@@ -66,9 +84,17 @@ Yields assets one at a time so a caller can write or draw each and dispose it be
 
 **Parameters**
 
-- `book` (`LoadedCookBook`)
-- `opts` (`GenerateOptions`)
-- `existingDnas` (`IReadOnlyList<string>?`)
-- `startNumber` (`int`)
-- `progress` (`IProgress<GenerationProgress>?`)
-- `cancellationToken` (`CancellationToken`)
+- `book` (`LoadedCookBook`) - The cookbook to roll from; validated first. The caller keeps ownership.
+- `opts` (`GenerateOptions`) - Count, seed and the other per-run settings.
+- `existingDnas` (`IReadOnlyList<string>?`) - DNA of assets already produced (an `extend` run), so no new asset repeats one. Null for a fresh run.
+- `startNumber` (`int`) - The set number of the first asset produced; 1 for a fresh run.
+- `progress` (`IProgress<GenerationProgress>?`) - Receives one report per asset, one at a time, in increasing order. Null for none.
+- `cancellationToken` (`CancellationToken`) - Stops the run between assets.
+
+**Returns.** The assets, rolled lazily one per step. The caller owns each asset yielded and must dispose it.
+
+**Exceptions**
+
+- `InvalidOperationException` - Raised eagerly, before enumeration starts: the count is not positive, the book is invalid, or [`GenerateOptions.RecipeId`](Nfty.Core.Generation.GenerateOptions.md#p-recipeid) names no recipe.
+- [`RuleConflictException`](Nfty.Core.Generation.RuleConflictException.md) - Raised during enumeration when the rules exclude every combination.
+- [`UniqueSpaceExhaustedException`](Nfty.Core.Generation.UniqueSpaceExhaustedException.md) - Raised during enumeration when the unique space is smaller than the count requested.

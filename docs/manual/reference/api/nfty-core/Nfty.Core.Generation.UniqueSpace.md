@@ -38,8 +38,10 @@ What a SUM of two spaces is, given what each of them is.
 
 **Parameters**
 
-- `a` (`SpaceCertainty`)
-- `b` (`SpaceCertainty`)
+- `a` (`SpaceCertainty`) - How the first space is bounded.
+- `b` (`SpaceCertainty`) - How the second space is bounded.
+
+**Returns.** How the sum of the two spaces is bounded; [`SpaceCertainty.Unknown`](Nfty.Core.Generation.SpaceCertainty.md#f-unknown) when no direction can be claimed.
 
 **Remarks**
 

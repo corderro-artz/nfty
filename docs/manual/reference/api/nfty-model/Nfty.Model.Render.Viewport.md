@@ -22,9 +22,11 @@ NDC (x right, y up, both −1..1) to pixel coordinates (x right, y DOWN, origin 
 
 **Parameters**
 
-- `ndc` (`Vector2`)
-- `width` (`int`)
-- `height` (`int`)
+- `ndc` (`Vector2`) - Normalized device coordinates.
+- `width` (`int`) - Viewport width in pixels.
+- `height` (`int`) - Viewport height in pixels.
+
+**Returns.** The position in pixels.
 
 ### ScreenToNdc(Vector2, int, int) { #m-screentondc-system-numerics-vector2-system-int32-system-int32 }
 
@@ -36,6 +38,8 @@ The exact inverse of [`Viewport.NdcToScreen()`](Nfty.Model.Render.Viewport.md#m-
 
 **Parameters**
 
-- `screen` (`Vector2`)
-- `width` (`int`)
-- `height` (`int`)
+- `screen` (`Vector2`) - A position in pixels.
+- `width` (`int`) - Viewport width in pixels.
+- `height` (`int`) - Viewport height in pixels.
+
+**Returns.** Normalized device coordinates.

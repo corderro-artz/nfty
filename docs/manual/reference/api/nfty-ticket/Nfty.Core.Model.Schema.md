@@ -40,5 +40,7 @@ Whether `version` is readable by a build whose newest schema is `current`. `curr
 
 **Parameters**
 
-- `version` (`int`)
-- `current` (`int`)
+- `version` (`int`) - The schema version a manifest declares.
+- `current` (`int`) - The newest schema the reading build understands.
+
+**Returns.** True when `version` lies between [`Schema.Oldest`](Nfty.Core.Model.Schema.md#f-oldest) and `current`.

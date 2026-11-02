@@ -8,6 +8,8 @@ using SixLabors.ImageSharp.Formats.Png;
 namespace Nfty.Core.Output;
 
 /// <summary>How far a set write has got. <see cref="Fraction"/> suits a progress bar.</summary>
+/// <param name="Completed">Assets written so far.</param>
+/// <param name="Total">Assets the write will produce.</param>
 public readonly record struct WriteProgress(int Completed, int Total)
 {
     /// <summary>Completion as 0..1, suitable for a progress bar.</summary>

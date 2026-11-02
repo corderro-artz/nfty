@@ -20,11 +20,11 @@ public ColorRoll(string LayerId, LayerKind Kind, ColorModel? Model, double? H, d
 
 **Parameters**
 
-- `LayerId` (`string`)
-- `Kind` (`LayerKind`)
-- `Model` (`ColorModel?`)
-- `H` (`double?`)
-- `S` (`double?`)
+- `LayerId` (`string`) - The layer's ingredient id.
+- `Kind` (`LayerKind`) - The layer's kind.
+- `Model` (`ColorModel?`) - The color model rolled in; null for a Custom layer.
+- `H` (`double?`) - The rolled hue in degrees; null for a Custom layer.
+- `S` (`double?`) - The rolled saturation as a 0..1 fraction; null for a Custom layer.
 
 ## Properties
 
@@ -34,11 +34,15 @@ public ColorRoll(string LayerId, LayerKind Kind, ColorModel? Model, double? H, d
 public double? H { get; init; }
 ```
 
+The rolled hue in degrees; null for a Custom layer.
+
 ### Kind { #p-kind }
 
 ```csharp
 public LayerKind Kind { get; init; }
 ```
+
+The layer's kind.
 
 ### LayerId { #p-layerid }
 
@@ -46,14 +50,20 @@ public LayerKind Kind { get; init; }
 public string LayerId { get; init; }
 ```
 
+The layer's ingredient id.
+
 ### Model { #p-model }
 
 ```csharp
 public ColorModel? Model { get; init; }
 ```
 
+The color model rolled in; null for a Custom layer.
+
 ### S { #p-s }
 
 ```csharp
 public double? S { get; init; }
 ```
+
+The rolled saturation as a 0..1 fraction; null for a Custom layer.

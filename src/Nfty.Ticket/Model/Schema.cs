@@ -35,5 +35,8 @@ public static class Schema
     /// value, which makes "accepts older versions" indistinguishable from "demands exact equality" —
     /// a test written against the constant passes either way and proves nothing. Passing a
     /// hypothetical current lets the rule be pinned now, before there is a version 2 to try it on.</summary>
+    /// <param name="version">The schema version a manifest declares.</param>
+    /// <param name="current">The newest schema the reading build understands.</param>
+    /// <returns>True when <paramref name="version"/> lies between <see cref="Oldest"/> and <paramref name="current"/>.</returns>
     public static bool IsSupported(int version, int current) => version >= Oldest && version <= current;
 }
