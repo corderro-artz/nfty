@@ -41,6 +41,8 @@ A sealed Set can be risen but not exported.
 | Same-color fill | G | Steps a region of same-colored pixels. |
 | Select | M | Mark a region, then click inside it to raise the whole region. |
 
+**[** and **]** shrink and grow the brush, **Ctrl+A** marks everything, **+** / **-** / **0** zoom and fit, and the arrow keys pan while zoomed in. **Ctrl+Z** undoes, **Ctrl+Y** (or Ctrl+Shift+Z) redoes.
+
 Every tool changes **solid pixels only**. A stroke steps each pixel it crosses once, however often it
 crosses it.
 
@@ -56,8 +58,13 @@ crosses it.
 **Shift never constrains on this page.** The legend on the toolstrip reads `L front · R back · Shift
 lowers`.
 
+On the canvas, the wheel zooms about the pointer and a middle-button drag pans. A middle-click that
+does not move, or a Ctrl+click that does not drag, opens the viewer instead (Mac: middle-click only).
+
 In the 3D tile, a left-button drag orbits, a right- or middle-button drag pans, and the wheel zooms
-about the pointer.
+about the pointer. Double-click resets the camera. With the tile focused, the arrow keys orbit,
+**+** / **-** zoom and **Home** resets. Ctrl+click or middle-click the tile to open the viewer.
+The full list is in [Keyboard shortcuts](shortcuts.md).
 
 ## Write-through on a recipe roll
 
@@ -77,7 +84,7 @@ the other layers are drawn dimmed (30%) on the canvas. The 3D tile keeps showing
 | A dimmed pixel | Chooses its owner, as above. | Does nothing: a stroke that begins on another layer never begins. |
 | Click a layer's row, or **Enter** on it | Chooses that layer. | Chooses that layer instead. |
 | **Page Up** / **Page Down** | Steps to the next layer up or down the stack, among the layers this roll has. | The same. |
-| **Escape** | Drops the marquee, if there is one. | Drops the marquee first if there is one, otherwise drops the chosen layer (back to picking). |
+| **Escape** | Cancels a stroke in progress; else drops the marquee, if there is one. | Drops the marquee first if there is one, otherwise drops the chosen layer (back to picking). |
 
 **Page Up**, **Page Down** and **Escape** work only while the page has focus and not while you type in
 a field. **Escape** yields to an open dialog.

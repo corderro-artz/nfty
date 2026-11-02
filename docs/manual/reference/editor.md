@@ -58,9 +58,11 @@ becomes the brightness of the color you are painting.
 ![The colorize rail](../images/colorize-rail-light.png#only-light)
 ![The colorize rail](../images/colorize-rail-dark.png#only-dark)
 
-On a **Dynamic** layer: **HUE RANGE** and **SATURATION RANGE** bound the colors this layer can roll,
+On a **Dynamic** layer: **HUE RANGE** (0-360) and **SATURATION RANGE** (0-100) bound the colors this layer can roll,
 and **QUANTIZE** decides how finely that space is divided into colors nfty treats as different. The
 readout beside it shows how many distinct colors the current settings admit.
+A number field left empty or unreadable goes back to its previous value; a range end typed past its
+axis lands on the nearest end.
 
 On a **Static** layer the rail collapses to one fixed color. On **Custom** it says colorization does
 not apply.

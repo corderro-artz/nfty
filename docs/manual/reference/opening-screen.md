@@ -9,7 +9,7 @@ What nfty shows before anything is open.
 
 | Control | Makes |
 |---|---|
-| **New CookBook** | A new `.cbk`. Asks for a name, symbol, canvas size, optional target supply and description. |
+| **New CookBook** | A new `.cbk`. Asks for a name, symbol, canvas size, optional target supply (empty means "not decided") and description. |
 | **New Kitchen...** | A new `.ktn`, turning its folder into a workspace. |
 | **Recipe** | A loose `.rcp` with no CookBook around it. |
 | **Ingredient** | A loose `.igt` with no Recipe around it. |

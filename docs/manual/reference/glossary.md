@@ -81,7 +81,7 @@
 :   A layer kind: a gray value-map with one fixed color on every asset.
 
 **Target supply**
-:   An optional note on a CookBook of how many assets it is meant to produce. Advisory only.
+:   An optional note on a CookBook of how many assets it is meant to produce. Advisory only; empty means "not decided".
 
 **Unique DNA**
 :   How many distinguishable assets a CookBook can produce. A promise, not an estimate.

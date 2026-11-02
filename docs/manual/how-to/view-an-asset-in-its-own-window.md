@@ -11,7 +11,8 @@ both side by side.
 
 - **From a pop-out button:** the Rise page, the Ingredient Editor, the Set browser and the asset
   inspector each carry one (its tooltip names the shortcut). On the Rise page you can also Ctrl+click
-  the 3D tile, or middle-click it (on a Mac, middle-click only). The viewer opens on what the page
+  the 3D tile or the canvas, or middle-click either (on a Mac, middle-click only; a drag is still a
+  stroke or a pan). The viewer opens on what the page
   shows and **follows it live**: paint, and the viewer redraws. The Ingredient Editor's viewer shows
   the picture only, with no model.
 - **From the tree or a recipe's layer table:** right-click a row and choose **Open in viewer**, or
@@ -30,15 +31,19 @@ An archive opens as a gallery of tiles. Click a tile to open that one in its own
 ![The viewer opened on a CookBook, laying every variant out as a gallery with the book's counts on the info panel](../images/viewer-gallery-dark.png#only-dark)
 
 - **Layout** (top right): **2D**, **Both** or **3D**. Switching moves nothing else on the screen.
-- **2D:** wheel to zoom, drag to pan, **fit** to reset, **1:1** for one art pixel per screen pixel, and
+- **2D:** wheel to zoom, drag (left or middle button) to pan, **fit** to reset, **1:1** for one art pixel per screen pixel, and
   the grid button to draw the art's own pixel lines. **Backdrop** is Checker, Light, Dark or Custom
   (type a `#RRGGBB`).
-- **3D:** drag to turn the model, wheel to zoom. **Front / Back / Side / Top** set the camera,
+- **3D:** drag to turn the model, right- or middle-drag to pan, wheel to zoom, double-click to reset
+  the camera. With the 3D half focused, the arrow keys orbit, **+** / **-** zoom and **Home** resets. **Front / Back / Side / Top** set the camera,
   **Edges** draws the outline of every face over the solid, and **Off / Slow / Med / Fast** is the
   turntable. All of this is how you look; none of it reaches an exported model.
 - **Save:** **Still** saves the 3D frame as a PNG with a clear background. **PNG 1x to 8x** saves the
   art at that scale, **Copy** puts it on the clipboard. **Export** writes the model as `glb`, `gltf` or
   `inline` (one `.gltf` with the data embedded).
+
+**Ctrl+W** closes the viewer window; **Esc** closes a dialog open in it. Every key is on the
+[shortcuts page](../reference/shortcuts.md#in-the-viewer-window).
 
 ## Live or snapshot
 

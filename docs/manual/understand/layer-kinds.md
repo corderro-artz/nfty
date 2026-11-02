@@ -11,7 +11,7 @@ Use it for anything that should vary: auras, fur, clothing, gems. This is where 
 happens -- one gray drawing with a wide hue range becomes dozens of visibly different assets.
 
 You set a **hue range** (0-360 degrees around the color wheel) and a **saturation range** (0-100%,
-gray to vivid). Every asset rolls a color inside those.
+gray to vivid). Every asset rolls a color inside those. A range end typed outside its axis lands on the nearest end.
 
 ## <span class="kind static">S</span> Static -- one fixed color, always
 

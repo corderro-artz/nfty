@@ -21,7 +21,7 @@ On the opening screen, click **New CookBook**. Fill it in like this:
 - **Symbol** — `VP`, a short code for the collection
 - **Canvas** — `64` by `64`. Every drawing in this project will be exactly this size.
 
-Leave **Target supply** and **Description** alone. Click **Create CookBook** and choose where to save
+Leave **Target supply** (it may stay empty, which means "not decided") and **Description** alone. Click **Create CookBook** and choose where to save
 it.
 
 !!! warning "The canvas size is permanent"

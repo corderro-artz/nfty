@@ -52,7 +52,8 @@ changes the depth of every solid pixel it passes over by one step:
 | Hold **Shift** | Subtract 1 instead (never below 0) |
 | Hold **Ctrl** | Constrain: a straight stroke, 45 degrees for a line, a square for a rectangle |
 
-Shift never constrains on this page, because it is the lowering key. Clear pixels stay untouched:
+Shift never constrains on this page, because it is the lowering key. Tools have letter keys (B, L, R, G,
+M); see [Keyboard shortcuts](../reference/shortcuts.md#on-the-rise-page). Clear pixels stay untouched:
 depth only exists where there is something to rise.
 
 To give **every** solid pixel the same thickness at once, use **FILL ALL** on the DEPTH tab: set
