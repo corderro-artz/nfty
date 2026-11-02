@@ -2,6 +2,7 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
+using Avalonia.Controls.Presenters;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -12,19 +13,23 @@ using Xunit;
 namespace Nfty.App.Tests;
 
 /// <summary>
-/// The quick-reference sheet is three underline tabs: BASICS, RISE &amp; 3D, VIEWER &amp; RUNTIME.
+/// The quick-reference sheet is four tabs in a segmented tray: BASICS, EDITOR, RISE &amp; 3D,
+/// VIEWER &amp; RUNTIME.
 /// </summary>
 /// <remarks>
-/// The three pages share one grid cell and the inactive two are inked out, never collapsed, so the
-/// sheet is as tall as the tallest page whichever tab shows and a tab switch moves nothing. The
-/// sheet is a fixed card that may not scroll at the smallest window (<c>ModalFitTests</c> owns that
-/// number; the area is re-derived here from the same <c>ShellViewModel</c> constants).
+/// The pages share one grid cell and the inactive ones are inked out, never collapsed, so the sheet is
+/// as tall as the tallest page whichever tab shows and a tab switch moves nothing. The sheet is a
+/// fixed card that may not scroll at the smallest window (<c>ModalFitTests</c> owns that number; the
+/// area is re-derived here from the same <c>ShellViewModel</c> constants).
 /// </remarks>
 public class HelpTabsTests
 {
-    private static (Window window, Views.HelpView view, HelpViewModel vm) Render(bool smallest = false)
+    private static readonly HelpTab[] All = [HelpTab.Basics, HelpTab.Editor, HelpTab.Rise, HelpTab.Viewer];
+    private static readonly string[] Labels = ["BASICS", "EDITOR", "RISE & 3D", "VIEWER & RUNTIME"];
+
+    internal static (Window window, Views.HelpView view, HelpViewModel vm) Render(bool smallest = false, string query = "")
     {
-        var vm = new HelpViewModel(new FakeDialogs());
+        var vm = new HelpViewModel(new FakeDialogs()) { Query = query };
         var view = new Views.HelpView { DataContext = vm };
         var window = new Window
         {
@@ -37,14 +42,18 @@ public class HelpTabsTests
         return (window, view, vm);
     }
 
-    private static Grid Page(Views.HelpView v, HelpTab t) =>
-        v.FindControl<Grid>(t switch { HelpTab.Basics => "SheetBody", HelpTab.Rise => "RisePage", _ => "ViewerPage" })!;
+    internal static Grid Page(Views.HelpView v, HelpTab t) =>
+        v.GetVisualDescendants().OfType<Grid>()
+            .Single(g => g.Classes.Contains("helppage") && g.DataContext is HelpPage p && p.Tab == t);
 
-    private static Button Tab(Views.HelpView v, string label) =>
-        v.GetVisualDescendants().OfType<Button>()
-            .Where(b => b.Classes.Contains("railtab")).Single(b => (b.Content as string) == label);
+    internal static Button Tab(Views.HelpView v, string label) =>
+        v.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("seg-b"))
+            .Single(b => b.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text == label));
 
-    private static string TextOf(Visual root) => string.Join("\n",
+    private static IBrush? Fill(Button b) =>
+        b.GetVisualDescendants().OfType<ContentPresenter>().First(c => c.Name == "PART_ContentPresenter").Background;
+
+    internal static string TextOf(Visual root) => string.Join("\n",
         root.GetVisualDescendants().OfType<TextBlock>().Select(t =>
             (t.Text ?? "") + string.Concat(t.Inlines?.OfType<Run>().Select(r => r.Text) ?? [])));
 
@@ -55,11 +64,11 @@ public class HelpTabsTests
         try
         {
             Assert.True(vm.IsBasicsTab);
-            foreach (var t in new[] { HelpTab.Basics, HelpTab.Rise, HelpTab.Viewer })
+            foreach (var t in All)
             {
                 vm.ShowTabCommand.Execute(t);
                 Dispatcher.UIThread.RunJobs();
-                foreach (var p in new[] { HelpTab.Basics, HelpTab.Rise, HelpTab.Viewer })
+                foreach (var p in All)
                 {
                     var g = Page(view, p);
                     Assert.Equal(p == t ? 1.0 : 0.0, g.Opacity);
@@ -71,19 +80,22 @@ public class HelpTabsTests
     }
 
     [AvaloniaFact]
-    public void Switching_tabs_moves_neither_the_tabs_nor_the_sheet()
+    public void Switching_tabs_moves_neither_the_segments_nor_the_sheet()
     {
         var (w, view, vm) = Render();
         try
         {
-            var labels = new[] { "BASICS", "RISE & 3D", "VIEWER & RUNTIME" };
-            var tabs = labels.Select(l => Tab(view, l).Bounds).ToArray();
+            var segs = Labels.Select(l => Tab(view, l).Bounds).ToArray();
             var sheet = view.FindControl<Border>("Sheet")!.Bounds;
-            foreach (var t in new[] { HelpTab.Rise, HelpTab.Viewer })
+            var tray = view.FindControl<Border>("TabTray")!.Bounds;
+            foreach (var t in All)
             {
                 vm.ShowTabCommand.Execute(t);
                 Dispatcher.UIThread.RunJobs();
-                Assert.Equal(tabs, labels.Select(l => Tab(view, l).Bounds).ToArray());
+                // Selection is bold + a fill, and neither may change a segment's box: identical bounds
+                // whichever one is chosen (a width that followed the label's weight would shove its neighbours).
+                Assert.Equal(segs, Labels.Select(l => Tab(view, l).Bounds).ToArray());
+                Assert.Equal(tray, view.FindControl<Border>("TabTray")!.Bounds);
                 Assert.Equal(sheet, view.FindControl<Border>("Sheet")!.Bounds);
             }
         }
@@ -91,20 +103,32 @@ public class HelpTabsTests
     }
 
     [AvaloniaFact]
-    public void Only_the_active_tab_is_underlined_in_accent()
+    public void The_chosen_segment_is_filled_and_the_others_are_not()
     {
         var (w, view, vm) = Render();
         try
         {
-            Application.Current!.TryGetResource("AccentBrush", w.ActualThemeVariant, out var a);
-            Assert.Equal((IBrush)a!, Tab(view, "BASICS").BorderBrush);
-            Assert.Equal(Brushes.Transparent, Tab(view, "RISE & 3D").BorderBrush);
-            Assert.Equal(new Thickness(0, 0, 0, 2), Tab(view, "RISE & 3D").BorderThickness);   // present when off too
-
-            vm.ShowTabCommand.Execute(HelpTab.Rise);
-            Dispatcher.UIThread.RunJobs();
-            Assert.Equal(Brushes.Transparent, Tab(view, "BASICS").BorderBrush);
-            Assert.Equal((IBrush)a!, Tab(view, "RISE & 3D").BorderBrush);
+            Application.Current!.TryGetResource("AccentBrush", w.ActualThemeVariant, out var accent);
+            foreach (var t in All)
+            {
+                vm.ShowTabCommand.Execute(t);
+                Dispatcher.UIThread.RunJobs();
+                for (var i = 0; i < All.Length; i++)
+                {
+                    var b = Tab(view, Labels[i]);
+                    if (All[i] == t)
+                    {
+                        Assert.Equal((IBrush)accent!, Fill(b));
+                        Assert.Equal(FontWeight.SemiBold, b.FontWeight);
+                    }
+                    else
+                    {
+                        Assert.Equal(Brushes.Transparent, Fill(b));
+                        Assert.NotEqual(FontWeight.SemiBold, b.FontWeight);
+                        Assert.NotEqual(Tab(view, Labels[Array.IndexOf(All, t)]).Foreground, b.Foreground);
+                    }
+                }
+            }
         }
         finally { w.Close(); }
     }
@@ -116,34 +140,43 @@ public class HelpTabsTests
         var (w, view, _) = Render();
         try
         {
-            var cell = view.FindControl<Panel>("Pages")!;
-            var wants = new[] { HelpTab.Basics, HelpTab.Rise, HelpTab.Viewer }
-                .Select(t => { var g = Page(view, t); g.Measure(new Size(980, double.PositiveInfinity)); return g.DesiredSize.Height; })
+            var cell = view.FindControl<ItemsControl>("PagesHost")!;
+            var wants = All
+                .Select(t => { var g = Page(view, t); g.Measure(new Size(1040, double.PositiveInfinity)); return g.DesiredSize.Height; })
                 .ToArray();
             Assert.True(wants.All(h => h > 100), "a page that measures nothing proves nothing: " + string.Join(", ", wants));
             Assert.Equal(wants.Max(), cell.Bounds.Height, 0.5);
-            foreach (var t in new[] { HelpTab.Basics, HelpTab.Rise, HelpTab.Viewer })
+            foreach (var t in All)
                 Assert.Equal(cell.Bounds.Height, Page(view, t).Bounds.Height, 0.5);
         }
         finally { w.Close(); }
     }
 
     [AvaloniaFact]
-    public void The_sheet_fits_the_smallest_modal_area_on_every_tab_without_a_scrollbar()
+    public void The_sheet_fits_the_smallest_modal_area_on_every_tab_and_in_a_search_without_a_scrollbar()
     {
         var (w, view, vm) = Render(smallest: true);
         try
         {
-            foreach (var t in new[] { HelpTab.Basics, HelpTab.Rise, HelpTab.Viewer })
+            void Check(string what)
             {
-                vm.ShowTabCommand.Execute(t);
-                Dispatcher.UIThread.RunJobs();
                 var sheet = view.FindControl<Border>("Sheet")!;
                 Assert.True(sheet.Bounds.Height <= view.Bounds.Height + 0.5,
-                    $"{t}: sheet {sheet.Bounds.Height:0} tall in {view.Bounds.Height:0}");
+                    $"{what}: sheet {sheet.Bounds.Height:0} tall in {view.Bounds.Height:0}");
+                Assert.True(sheet.Bounds.Width <= view.Bounds.Width + 0.5,
+                    $"{what}: sheet {sheet.Bounds.Width:0} wide in {view.Bounds.Width:0}");
                 Assert.DoesNotContain(view.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.ScrollBar>(),
                     s => s.IsEffectivelyVisible);
             }
+            foreach (var t in All)
+            {
+                vm.ShowTabCommand.Execute(t);
+                Dispatcher.UIThread.RunJobs();
+                Check(t.ToString());
+            }
+            vm.Query = "zoom";     // a handful of hits: fills the cell with no bar
+            Dispatcher.UIThread.RunJobs();
+            Check("search");
         }
         finally { w.Close(); }
     }
@@ -155,7 +188,7 @@ public class HelpTabsTests
         try
         {
             var footer = view.GetVisualDescendants().OfType<Border>().Single(b => b.Classes.Contains("sh-f"));
-            foreach (var t in new[] { HelpTab.Basics, HelpTab.Rise, HelpTab.Viewer })
+            foreach (var t in All)
             {
                 vm.ShowTabCommand.Execute(t);
                 Dispatcher.UIThread.RunJobs();
@@ -167,7 +200,7 @@ public class HelpTabsTests
     }
 
     [AvaloniaFact]
-    public void The_new_pages_say_what_they_promise_and_never_spell_a_modifier_by_hand()
+    public void The_pages_say_what_they_promise_and_never_spell_a_modifier_by_hand()
     {
         var (w, view, _) = Render();
         try
@@ -178,6 +211,11 @@ public class HelpTabsTests
             Assert.Contains("2D only", rise);
             Assert.Contains("3D VIEW", rise);
 
+            var editor = TextOf(Page(view, HelpTab.Editor));
+            Assert.Contains("eraser", editor);
+            Assert.Contains("SET INSPECTOR", editor);
+            Assert.Contains("[  ]", editor);
+
             var viewer = TextOf(Page(view, HelpTab.Viewer));
             Assert.Contains("snapshot", viewer);
             Assert.Contains("view-only", viewer, System.StringComparison.OrdinalIgnoreCase);
@@ -186,13 +224,13 @@ public class HelpTabsTests
             Assert.Contains("Nfty.Ticket", viewer);
             Assert.Contains(Services.KeyHints.ViewerClick, viewer);
 
-            // A modifier is spelled by KeyHints (or it is wrong on a Mac). Everything the markup writes
-            // by hand on the two new pages must be free of them; the KeyHints strings are the only source.
+            // A modifier is spelled by KeyHints (or it is wrong on a Mac). Everything the catalog writes
+            // by hand must be free of them once the KeyHints strings are taken out.
             string[] banned = ["Ctrl", "Shift", "Alt", "⌘", "⌥", "⇧"];
-            var hints = new[] { Services.KeyHints.ViewerClick, Services.KeyHints.RiseConstrain, Services.KeyHints.LowerDepth, Services.KeyHints.CloseDocument };
-            foreach (var page in new[] { rise, viewer })
+            var hints = HelpCatalogTests.AllHints();
+            foreach (var page in new[] { rise, editor, viewer })
             {
-                var stripped = hints.Aggregate(page, (s, h) => s.Replace(h, ""));
+                var stripped = hints.OrderByDescending(h => h.Length).Aggregate(page, (s, h) => s.Replace(h, ""));
                 foreach (var b in banned)
                     Assert.DoesNotContain(b, stripped, System.StringComparison.Ordinal);
             }

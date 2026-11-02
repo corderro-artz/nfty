@@ -377,6 +377,10 @@ public class DarkModeContrastTests
         yield return ("help", new Views.HelpView { DataContext = new HelpViewModel(dialogs) }, null);
         // The two other pages of the same sheet: new text, new ink, and an inactive page sits at
         // Opacity 0 beneath the showing one, so each is scored with its own tab selected.
+        yield return ("help-editor", new Views.HelpView { DataContext = new HelpViewModel(dialogs) { Tab = HelpTab.Editor } }, null);
+        // The search replaces the pages: a hit list (key caps, chips, the count line) and the empty state.
+        yield return ("help-search", new Views.HelpView { DataContext = new HelpViewModel(dialogs) { Query = "zoom" } }, null);
+        yield return ("help-search-empty", new Views.HelpView { DataContext = new HelpViewModel(dialogs) { Query = "qzxv" } }, null);
         yield return ("help-rise", new Views.HelpView { DataContext = new HelpViewModel(dialogs) { Tab = HelpTab.Rise } }, null);
         yield return ("help-viewer", new Views.HelpView { DataContext = new HelpViewModel(dialogs) { Tab = HelpTab.Viewer } }, null);
         // The environment-locked state: tray and stepper both disabled (dimmed), and the note naming

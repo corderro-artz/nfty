@@ -47,6 +47,10 @@ public static class KeyHints
     public static string Undo { get; } = WithMod("Z");
     /// <summary>Redo.</summary>
     public static string Redo { get; } = WithMod("Y");
+    /// <summary>Select everything in the editor (and arm the Select tool).</summary>
+    public static string MarkAll { get; } = WithMod("A");
+    /// <summary>The second redo chord (the editor and the Rise page accept it beside <see cref="Redo"/>).</summary>
+    public static string RedoAlt { get; } = WithMod((OperatingSystem.IsMacOS() ? "⇧" : "Shift") + Gap + "Z");
     /// <summary>Hold while drawing: 45° for a line, a square bounding box for a shape. Ctrl does the
     /// same thing and is deliberately not printed — the product teaches the convention, and the
     /// second key is there so reaching for the wrong one still works.</summary>
@@ -79,7 +83,7 @@ public static class KeyHints
     /// <summary>The select tool's tooltip.</summary>
     public static string SelectTool { get; } = "Select region, then drag it to move  (M)"
         + Tail($"{Constrain} squares the marquee and constrains the move")
-        + Tail($"{WithMod("A")} marks everything, Delete clears what is marked");
+        + Tail($"{MarkAll} marks everything, Delete clears what is marked");
     /// <summary>The fill tool's tooltip.</summary>
     public static string FillTool { get; } = "Fill  (G)";
     /// <summary>The brush-size field's tooltip.</summary>

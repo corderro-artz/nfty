@@ -972,7 +972,11 @@ public partial class VisualCapture
             var dialogs = new FakeDialogs();
 
             Capture(new Views.HelpView { DataContext = new HelpViewModel(dialogs) }, variant, $"help-{key}.png");
+            Capture(new Views.HelpView { DataContext = new HelpViewModel(dialogs) { Tab = HelpTab.Editor } }, variant, $"help-editor-{key}.png");
             Capture(new Views.HelpView { DataContext = new HelpViewModel(dialogs) { Tab = HelpTab.Rise } }, variant, $"help-rise-{key}.png");
+            // The search replaces the pages in the same cell: a hit list, and the empty state.
+            Capture(new Views.HelpView { DataContext = new HelpViewModel(dialogs) { Query = "zoom" } }, variant, $"help-search-{key}.png");
+            Capture(new Views.HelpView { DataContext = new HelpViewModel(dialogs) { Query = "qzxv" } }, variant, $"help-search-empty-{key}.png");
             Capture(new Views.HelpView { DataContext = new HelpViewModel(dialogs) { Tab = HelpTab.Viewer } }, variant, $"help-viewer-{key}.png");
 
             // The card the window close, the editor's Back and Rise's Back all raise over unsaved work.
