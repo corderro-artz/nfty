@@ -14,6 +14,13 @@ If the `NFTY_THREADS` environment variable is set, it wins for the session: the 
 says so. The command line takes `--threads N` or `max` on every command, and falls back to the same
 variable.
 
+## Environment variables
+
+| Variable | Does |
+|---|---|
+| `NFTY_THREADS` | The worker thread count, as a whole number or `max`. Read when `--threads` is not given, and locks the Settings card. |
+| `NFTY_PERF` | Set to `1` to switch on the built-in timing scopes (`Nfty.Core.Diagnostics.Perf`), which record wall time and allocation for whole operations. Nothing prints by itself: a program embedding the libraries reads them with `Perf.Report()`. Off, a scope costs one branch. It never changes what is written. |
+
 ## The `.nfty` folder
 
 nfty keeps its state in a `.nfty` folder, normally **beside the program**, so a copy carries its own

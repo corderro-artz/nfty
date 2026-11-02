@@ -4,6 +4,8 @@
 *[Ingredient]: One layer - its kind, its coloring and its weighted variants. Saved as .igt
 *[Variant]: One option inside a layer - a drawing, a name and a weight
 *[Kitchen]: Your shelf of loose parts - Ingredients and Recipes belonging to no one CookBook. Saved as .ktn
+*[Menu]: A CookBook flattened for runtime - weights, rules, colorization and art, no .cbk needed. Saved as .mnu
+*[Ticket]: One rolled outcome - the recipe, one variant per layer, rolled colors and the DNA - without any pixels
 *[DNA]: An asset's fingerprint, hashed from its recipe, variants and quantized colors
 *[Dynamic]: A layer kind - a gray value-map whose color is rolled per asset
 *[Static]: A layer kind - a gray value-map with one fixed color on every asset

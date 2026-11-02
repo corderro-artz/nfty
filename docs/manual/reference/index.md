@@ -27,6 +27,8 @@ in [Get started](../get-started/index.md) and [How nfty works](../understand/ind
 
     [Ticket and Menu API](ticket-api.md)
 
+    [API reference](api/index.md)
+
     [Settings and file locations](settings.md)
 
 -   **Data**

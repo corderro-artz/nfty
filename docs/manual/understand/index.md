@@ -53,6 +53,12 @@ away from the work, rather than in the middle of it.
 
     The refusal that looks unhelpful and is not.
 
+-   [**Three ways to use nfty**](embedding.md)
+
+    ---
+
+    The app, the command line and the libraries are one engine. Why the roll is its own assembly.
+
 -   [**Frequently asked questions**](faq.md)
 
     ---

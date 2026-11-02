@@ -44,11 +44,20 @@
 :   The paint order of a Recipe's Ingredients, bottom to top. Depth 1 paints first and sits furthest
     back.
 
+**Absent chance**
+:   The percent of assets that leave a layer out entirely, set per layer on a Recipe. `0` always
+    shows it, `100` never does. See [Leave a layer out sometimes](../how-to/leave-a-layer-out.md).
+
 **Opacity lock**
 :   The editor padlock that keeps every painted pixel fully opaque or fully erased.
 
 **Paper**
 :   The one voxel every solid pixel always has. A picture with no depth painted is paper everywhere.
+
+**Menu** (`.mnu`)
+:   A CookBook flattened for runtime: every weight, rule, colorization and all the art, so a program
+    can roll and render assets without the `.cbk`. See
+    [Roll assets at runtime](../how-to/roll-assets-at-runtime.md).
 
 **Quantize**
 :   How finely a layer's color range is divided into colors nfty treats as different. Finer steps
@@ -71,17 +80,30 @@
 :   The page, and the act, of turning finished pixel art into a 3D model by giving each pixel a
     thickness. See [Depth: paper, front and back](../understand/depth.md).
 
+**Sealed** (`.tin`)
+:   A Set encrypted for somebody else, optionally marked view-only. See
+    [What sealing does and does not do](../understand/sealing.md).
+
 **Seed**
 :   The word that drives generation. Same book plus same seed produces identical output.
 
 **Set** (`.set`)
 :   A cooked collection: images, metadata, rarity and the seed that made it.
 
+**Spritesheet**
+:   Every asset stitched into one image in the Set's own numbering. It carries its own grid inside the
+    file. See [Rise a spritesheet](../how-to/rise-a-spritesheet.md).
+
 **Static**
 :   A layer kind: a gray value-map with one fixed color on every asset.
 
 **Target supply**
 :   An optional note on a CookBook of how many assets it is meant to produce. Advisory only; empty means "not decided".
+
+**Ticket**
+:   One rolled outcome, a few hundred bytes: the Recipe, one variant per layer, each colored layer's
+    rolled hue and saturation, and the DNA. It names a selection, not pixels. See
+    [Embed nfty in your program](../how-to/embed-nfty.md).
 
 **Unique DNA**
 :   How many distinguishable assets a CookBook can produce. A promise, not an estimate.
