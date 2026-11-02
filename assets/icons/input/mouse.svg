@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <title>IconMouse</title>
+  <desc>A mouse seen from above, BODY ONLY: the two button seams. Every mouse-* fill glyph registers over it exactly (same 24-unit box), stroked and filled in the accent as a second Path, because a Path.ico is one path with one brush.</desc>
+  <path d="M12 2a6 6 0 0 1 6 6v8a6 6 0 0 1-12 0V8a6 6 0 0 1 6-6zM6 11h12M12 2v9"/>
+</svg>

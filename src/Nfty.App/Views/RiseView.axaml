@@ -713,7 +713,7 @@
         <TextBlock Grid.Column="0" Classes="cshare" TextAlignment="Left" TextTrimming="CharacterEllipsis"
                    Text="{Binding FooterText}" />
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-          <Button Content="Back" Command="{Binding BackCommand}" Classes="tbtn ghost" />
+          <Button Command="{Binding BackCommand}" Classes="tbtn ghost"><StackPanel Orientation="Horizontal" Spacing="6"><Path Classes="ico sm" Data="{StaticResource IconArrowLeft}" /><TextBlock Text="Back" /></StackPanel></Button>
           <!-- Always laid out: a source that cannot save keeps the button's box and loses its ink,
                so the footer is the same footer for every source. -->
           <Panel Classes="inkslot" Classes.on="{Binding ShowSave}">

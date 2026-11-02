@@ -190,7 +190,7 @@
             <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="tbtn ghost" />
             <Button Command="{Binding SaveCommand}" Classes="accent">
               <StackPanel Orientation="Horizontal" Spacing="6">
-                <Path Classes="ico sm" Data="{StaticResource IconCheck}" />
+                <Path Classes="ico sm" Data="{StaticResource IconSave}" />
                 <TextBlock Text="Save settings" />
               </StackPanel>
             </Button>

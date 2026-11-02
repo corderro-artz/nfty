@@ -271,7 +271,7 @@ public class ExportDialogLayoutTests
             try
             {
                 var button = view.GetVisualDescendants().OfType<Button>()
-                    .Single(b => (b.Content as string) == "Export");
+                    .Single(b => (b.Content as string) == "Export" || b.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text == "Export"));   // the button carries an icon now
                 var p = button.TranslatePoint(default, view);
 
                 Assert.NotNull(p);

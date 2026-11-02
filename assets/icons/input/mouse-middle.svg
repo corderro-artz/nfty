@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <title>IconMouseMiddleFill</title>
+  <desc>The wheel of IconMouse, drawn alone so it can be filled in the accent over the body (a click on the wheel, not a scroll).</desc>
+  <path d="M10.5 4.5h3v5h-3z"/>
+</svg>

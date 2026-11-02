@@ -167,7 +167,7 @@
     <!-- The DNA-space table. One row per recipe, on one line, paged rather than scrolled. -->
     <Grid Grid.Row="2" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="0">
       <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,7">
-        <TextBlock Grid.Column="0" Classes="sub-h" Text="DNA SPACE" VerticalAlignment="Center" />
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"><Path Classes="ico xs" Data="{StaticResource IconDna}" /><TextBlock Classes="sub-h" Text="DNA SPACE" VerticalAlignment="Center" /></StackPanel>
         <!-- The pager is present at one page as well as ten - disabled, never absent - so a resize
              that changes the page count does not move anything beside it. -->
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
@@ -367,13 +367,13 @@
           <Button Command="{Binding ExportMenuCommand}" Classes="tbtn"
                   ToolTip.Tip="Write a .mnu: every weight, rule, color and the art, so a game or server can roll without this book">
             <StackPanel Orientation="Horizontal" Spacing="6">
-              <Path Classes="ico sm" Data="{StaticResource IconDownload}" />
+              <Path Classes="ico sm" Data="{StaticResource IconUpload}" />
               <TextBlock Text="Export Menu…" />
             </StackPanel>
           </Button>
           <Button Command="{Binding CookCommand}" Classes="accent">
             <StackPanel Orientation="Horizontal" Spacing="6">
-              <Path Classes="ico sm" Data="{StaticResource IconArrowRight}" />
+              <Path Classes="ico sm" Data="{StaticResource IconFlame}" />
               <TextBlock Text="Cook Set" />
             </StackPanel>
           </Button>

@@ -39,7 +39,7 @@
           <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
             <TextBlock Classes="ins-no" Text="{Binding Number}" />
             <Border Classes="rtag"><TextBlock Text="{Binding Recipe}" /></Border>
-            <TextBlock Classes="ins-dna" Text="{Binding DnaShort}" ToolTip.Tip="This asset's fingerprint" />
+            <StackPanel Orientation="Horizontal" Spacing="5" ToolTip.Tip="This asset's fingerprint"><Path Classes="ico xs" Data="{StaticResource IconDna}" /><TextBlock Classes="ins-dna" Text="{Binding DnaShort}" /></StackPanel>
           </StackPanel>
           <Button Grid.Column="1" Classes="esc" Content="ESC" Command="{Binding CloseCommand}"
                   ToolTip.Tip="Close — Esc" />

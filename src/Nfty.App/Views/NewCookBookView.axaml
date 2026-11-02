@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctl="using:Nfty.App.Controls"
              xmlns:vm="using:Nfty.App.ViewModels"
              x:Class="Nfty.App.Views.NewCookBookView"
              x:DataType="vm:NewCookBookViewModel"
@@ -123,13 +124,13 @@
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
             <StackPanel Orientation="Horizontal" Spacing="4">
-              <Border Classes="kbd keys"><TextBlock Text="Tab" /></Border><TextBlock Text="move fields" Classes="keyhint" />
+              <ctl:KeyChord Chord="Tab" Compact="True" /><TextBlock Text="move fields" Classes="keyhint" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="4">
-              <Border Classes="kbd keys"><TextBlock Text="Enter" /></Border><TextBlock Text="create" Classes="keyhint" />
+              <ctl:KeyChord Chord="Enter" Compact="True" /><TextBlock Text="create" Classes="keyhint" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="4">
-              <Border Classes="kbd keys"><TextBlock Text="Esc" /></Border><TextBlock Text="cancel" Classes="keyhint" />
+              <ctl:KeyChord Chord="Esc" Compact="True" /><TextBlock Text="cancel" Classes="keyhint" />
             </StackPanel>
           </StackPanel>
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">

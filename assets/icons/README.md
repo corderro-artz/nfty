@@ -1,6 +1,6 @@
 # Icon sources
 
-The 54 glyphs the app draws, as SVG. **These are the drawings.**
+The glyphs the app draws, as SVG. **These are the drawings.**
 `src/Nfty.App/Themes/Icons.axaml` is generated from them:
 
 ```bash
@@ -30,3 +30,23 @@ truth" that nothing checks.
 
 `tools/icons/extract.py` is the one-shot that seeded this directory out of the old hand-written
 `Icons.axaml`. It has done its job and is kept only as the record of where these came from.
+
+## The input group (`input/`)
+
+Mouse and key drawings live in `assets/icons/input/`, a subfolder, not mixed in with the app's own
+glyphs: `mouse` (the body), `mouse-left|right|middle|back|forward` (ONE button each, drawn alone),
+`wheel`, `wheel-up`, `wheel-down`, and the keys a drawing says better than a word (`key-up|down|left|
+right`, `key-enter`, `key-backspace`, `key-tab`, `key-shift`, `key-space`). `build.py` emits each
+subfolder as a labelled group in `Icons.axaml`; keys are still the `<title>`, so a group can later be
+lifted into its own resource set by moving the folder.
+
+- **Two inks, two paths.** A `Path.ico` is one stroked path with one brush, so a highlighted mouse
+  button is a SECOND glyph (`mouse-left` etc., a `...Fill`) stroked and filled in the accent over
+  `mouse`, the way `die-1-pip` sits over `die-1`. Same 24-unit box, so they register exactly.
+- **Used through `Controls/KeyChord`**, never drawn by hand in a view: give it the chord string
+  `Services/KeyHints.cs` produces (`Ctrl Shift Z`, `Alt ↑↓`, `Right click`) and it draws one cap per
+  key. `Controls/KeyGlyphs.cs` is the ONE table from token to glyph.
+- **Adding a token:** draw the SVG in `input/` -> `python tools/icons/build.py` -> add one row to
+  `KeyGlyphs.Table` naming the resource key (spelled out, so `DeadCodeAuditTests` sees it used). A
+  token with no row is a plain text cap, so a new chord is correct before anyone draws it.
+

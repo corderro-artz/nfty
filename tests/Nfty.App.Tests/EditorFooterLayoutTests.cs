@@ -41,7 +41,7 @@ public class EditorFooterLayoutTests
         {
             var note = view.GetVisualDescendants().OfType<TextBlock>()
                 .First(t => t.Classes.Contains("cshare") && t.Text == vm.SaveNoteText);
-            var back = view.GetVisualDescendants().OfType<Button>().First(b => Equals(b.Content, "Back"));
+            var back = view.GetVisualDescendants().OfType<Button>().First(b => Equals(b.Content, "Back") || b.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text == "Back"));   // Back carries an arrow now
             double noteRight = note.TranslatePoint(new Point(note.Bounds.Width, 0), view)!.Value.X;
             double backLeft = back.TranslatePoint(new Point(0, 0), view)!.Value.X;
             Assert.True(backLeft - noteRight >= 8 - 0.5,

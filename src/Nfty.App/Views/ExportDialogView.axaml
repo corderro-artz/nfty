@@ -305,8 +305,8 @@
                     IsVisible="{Binding IsRunning}" />
             <Button Content="Close" Command="{Binding CloseCommand}" Classes="tbtn"
                     IsVisible="{Binding !IsRunning}" />
-            <Button Content="Export" Command="{Binding ExportCommand}" Classes="accent"
-                    IsVisible="{Binding ShowForm}" />
+            <Button Command="{Binding ExportCommand}" Classes="accent"
+                    IsVisible="{Binding ShowForm}"><StackPanel Orientation="Horizontal" Spacing="6"><Path Classes="ico sm" Data="{StaticResource IconUpload}" /><TextBlock Text="Export" /></StackPanel></Button>
           </StackPanel>
         </Grid>
       </Border>

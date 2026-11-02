@@ -153,6 +153,9 @@ public static class HelpCatalog
     private static HelpCommand C(string cmd, string desc) =>
         new() { Tab = HelpTab.Viewer, Column = 3, Section = "COMMANDS", Term = cmd, Description = desc };
 
+    /// <summary>The compact key cap's height (<c>KeyCapHeightSm</c> in Tokens.axaml), which the width estimate needs.</summary>
+    private const double CapHeight = 18;
+
     private static IReadOnlyList<HelpEntry> Build()
     {
         const HelpTab B = HelpTab.Basics, E = HelpTab.Editor, R = HelpTab.Rise, V = HelpTab.Viewer;
@@ -244,7 +247,7 @@ public static class HelpCatalog
             K(R, 2, "PAGE", KeyHints.DropSelection, "cancel stroke, or drop marquee, then target"),
 
             K(R, 3, "3D VIEW", "Drag", "orbit"),
-            K(R, 3, "3D VIEW", "R / M drag", "pan"),
+            K(R, 3, "3D VIEW", "Right or Middle drag", "pan"),
             K(R, 3, "3D VIEW", "Wheel", "zoom at pointer"),
             K(R, 3, "3D VIEW", KeyHints.Arrows, "orbit"),
             K(R, 3, "3D VIEW", KeyHints.ZoomKeys, "zoom"),
@@ -274,7 +277,8 @@ public static class HelpCatalog
         // column - across its sections too - without a short cap leaving a wide hole beside it.
         foreach (var g in list.OfType<HelpKey>().GroupBy(k => (k.Tab, k.Column)))
         {
-            var w = Math.Max(30, g.Max(k => k.Key.Length) * 6.4 + 18);
+            // The widest chord as KeyChord will draw it (compact caps), plus the gap to the action.
+            var w = g.Max(k => Controls.KeyGlyphs.EstimateWidth(k.Key, CapHeight)) + 10;
             foreach (var k in g) k.KeyWidth = Math.Ceiling(w);
         }
         return list;

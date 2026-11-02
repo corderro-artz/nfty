@@ -75,27 +75,40 @@ def build():
     if not os.path.isdir(SRC):
         raise SystemExit('no %s directory' % SRC)
 
-    entries = []
-    for name in sorted(os.listdir(SRC)):
-        if not name.endswith('.svg'):
-            continue
-        full = os.path.join(SRC, name)
-        text = io.open(full, encoding='utf-8').read()
-        entries.append((key_of(text, name[:-4]), note_of(text), path_of(text, full)))
+    # assets/icons/*.svg are the app's own glyphs; every subfolder is a GROUP (today: input/, the
+    # mouse and key drawings KeyCap composes). A group is only a folder and a comment in the output -
+    # keys are still the <title> - so a group can later be lifted out as its own resource set by
+    # moving the folder and the Icons-<group>.axaml it would emit, nothing else.
+    groups = [('', [])]
+    for sub in sorted(d for d in os.listdir(SRC) if os.path.isdir(os.path.join(SRC, d))):
+        groups.append((sub, []))
+    for group, entries in groups:
+        folder = os.path.join(SRC, group) if group else SRC
+        for name in sorted(os.listdir(folder)):
+            if not name.endswith('.svg'):
+                continue
+            full = os.path.join(folder, name)
+            text = io.open(full, encoding='utf-8').read()
+            entries.append((key_of(text, name[:-4]), note_of(text), path_of(text, full)))
 
-    if not entries:
+    total = sum(len(e) for _, e in groups)
+    if not total:
         raise SystemExit('no .svg files in %s' % SRC)
 
     body = []
-    for key, note, d in entries:
-        if note:
-            body.append('  <!-- %s -->' % note)
-        body.append('  <StreamGeometry x:Key="%s">%s</StreamGeometry>' % (key, d))
-        body.append('')
+    for group, entries in groups:
+        if group:
+            body.append('  <!-- ===== group: %s (assets/icons/%s/) ===== -->' % (group, group))
+            body.append('')
+        for key, note, d in entries:
+            if note:
+                body.append('  <!-- %s -->' % note)
+            body.append('  <StreamGeometry x:Key="%s">%s</StreamGeometry>' % (key, d))
+            body.append('')
 
     out = HEADER + '\n' + '\n'.join(body) + '</ResourceDictionary>\n'
     io.open(OUT, 'w', encoding='utf-8', newline='\n').write(out)
-    print('wrote %s from %d svg sources' % (OUT, len(entries)))
+    print('wrote %s from %d svg sources' % (OUT, total))
 
 
 if __name__ == '__main__':

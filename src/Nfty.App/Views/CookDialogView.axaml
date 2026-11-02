@@ -208,8 +208,8 @@
             <Button Content="Open Set" Command="{Binding OpenSetCommand}" Classes="accent"
                     IsVisible="{Binding IsDone}"
                     ToolTip.Tip="Browse the assets, and export - the art, either metadata set, the source CookBook, sealed or not." />
-            <Button Content="Cook" Command="{Binding CookCommand}" Classes="accent"
-                    IsVisible="{Binding ShowForm}" />
+            <Button Command="{Binding CookCommand}" Classes="accent"
+                    IsVisible="{Binding ShowForm}"><StackPanel Orientation="Horizontal" Spacing="6"><Path Classes="ico sm" Data="{StaticResource IconFlame}" /><TextBlock Text="Cook" /></StackPanel></Button>
           </StackPanel>
         </Grid>
       </Border>

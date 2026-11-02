@@ -102,7 +102,7 @@
               VerticalAlignment="Center"
               ToolTip.Tip="Choose what leaves this machine: the art, either metadata set, the source CookBook - and whether to seal it.">
         <StackPanel Orientation="Horizontal" Spacing="7">
-          <Path Classes="ico xs" Data="{StaticResource IconDownload}" />
+          <Path Classes="ico xs" Data="{StaticResource IconUpload}" />
           <TextBlock Text="Export…" />
         </StackPanel>
       </Button>
@@ -275,7 +275,7 @@
                    the arithmetic rather than a hard-coded 32, so a future hash of another length
                    still splits instead of losing its tail. -->
               <StackPanel Spacing="5">
-                <TextBlock Classes="sub-h" Text="DNA" />
+                <StackPanel Orientation="Horizontal" Spacing="6"><Path Classes="ico xs" Data="{StaticResource IconDna}" /><TextBlock Classes="sub-h" Text="DNA" /></StackPanel>
                 <Border Classes="dnabox">
                   <StackPanel>
                     <TextBlock Text="{Binding ShownDnaTop}" />

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <title>IconKeyUp</title>
+  <desc>The up arrow key, a short-shafted arrow so it does not pass for IconArrowRight turned.</desc>
+  <path d="M12 18V7M7 12l5-5 5 5"/>
+</svg>

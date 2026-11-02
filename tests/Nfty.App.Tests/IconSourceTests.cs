@@ -50,7 +50,7 @@ public class IconSourceTests
     private static Dictionary<string, string> Sources()
     {
         var map = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var file in Directory.EnumerateFiles(SvgDir(), "*.svg"))
+        foreach (var file in Directory.EnumerateFiles(SvgDir(), "*.svg", SearchOption.AllDirectories))
         {
             var text = File.ReadAllText(file);
             var key = Regex.Match(text, @"<title>(\w+)</title>").Groups[1].Value;
@@ -121,7 +121,7 @@ public class IconSourceTests
     public void Every_drawing_is_in_the_shared_twenty_four_unit_box()
     {
         var wrong = new List<string>();
-        foreach (var file in Directory.EnumerateFiles(SvgDir(), "*.svg"))
+        foreach (var file in Directory.EnumerateFiles(SvgDir(), "*.svg", SearchOption.AllDirectories))
         {
             var text = File.ReadAllText(file);
             var box = Regex.Match(text, @"viewBox=""([^""]+)""").Groups[1].Value;
@@ -131,5 +131,23 @@ public class IconSourceTests
 
         Assert.True(wrong.Count == 0,
             "These are not drawn in the shared 24-unit box: " + string.Join(", ", wrong));
+    }
+
+    /// <summary>
+    /// Every glyph lies inside its 24-unit box. A drawing whose geometry strays outside is scaled by
+    /// the same factor as the rest and simply clips or overlaps its neighbour at 12px, which no
+    /// viewBox check sees.
+    /// </summary>
+    [Avalonia.Headless.XUnit.AvaloniaFact]
+    public void Every_glyph_lies_inside_the_box()
+    {
+        var outside = new List<string>();
+        foreach (var (key, d) in Sources())
+        {
+            var b = Avalonia.Media.Geometry.Parse(d).Bounds;
+            if (b.Left < -0.01 || b.Top < -0.01 || b.Right > 24.01 || b.Bottom > 24.01)
+                outside.Add($"{key} {b}");
+        }
+        Assert.True(outside.Count == 0, "These glyphs stray outside 0..24: " + string.Join("; ", outside));
     }
 }
