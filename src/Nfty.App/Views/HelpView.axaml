@@ -3,573 +3,227 @@
              xmlns:vm="using:Nfty.App.ViewModels"
              xmlns:svc="using:Nfty.App.Services"
              xmlns:views="using:Nfty.App.Views"
+             xmlns:ctl="using:Nfty.App.Controls"
+             x:Name="Root"
              x:Class="Nfty.App.Views.HelpView"
              x:DataType="vm:HelpViewModel">
   <!--
-    The quick-reference sheet (docs/design/mockups/help.html, then .demo/proposal A): an 820px
-    three-column card summoned over whatever the user is doing.
+    The quick-reference sheet (docs/design/archive/mockups/help.html, then four tabs and a search): a
+    card summoned over whatever the user is doing.
 
-    Four things diverge from the locked mockup, all approved:
+    EVERYTHING ON THE PAGES COMES FROM vm:HelpCatalog. The pages draw the catalog by column and
+    section; the search filters the same list. There is no second copy of a sentence in this file, so
+    a result can never say something its page does not, nor a page carry something search cannot find.
 
-      1. KITCHEN is here, below a dashed rule. It is the sixth word, but it is NOT in the
-         CookBook > Recipe > Ingredient > Variant chain — it is the shelf of loose parts that chain
-         draws from. Listing it in the run would teach the wrong shape, so the rule separates it and
-         the copy says what it is FOR ("pull them into any project") rather than where it lives.
-      2. The chain is stated once, under the header, so the five read as a sequence and not a list.
-      3. KEYS listed 4 of the app's 14 shortcuts. Split into ANYWHERE and EDITING, complete. COLOR
-         moves to column two to pay for the height.
+    Things that diverge from the locked mockup, all approved:
+
+      1. KITCHEN is below a dashed rule: the sixth word, but NOT a link in the CookBook > Recipe >
+         Ingredient > Variant chain. The copy says what it holds ("pull them into any project").
+      2. The chain is stated once, under the six-words label, so the five read as a sequence.
+      3. KEYS are split by where they work, and the editor's, Rise's and the inspector's live on
+         their own tabs instead of crowding the basics.
       4. The modifier follows the platform (svc:KeyHints). The mockup draws Command because it was
-         authored on a Mac; on Windows and Linux that glyph is not a style choice, it is wrong.
+         authored on a Mac.
+      5. TABS are a segmented tray (the app's own `seg` vocabulary), and the SEARCH replaces the pages
+         in the same reserved cell, so nothing moves when you type.
 
-    Copy is otherwise the mockup's, verbatim. Where the mockup relies on CSS `text-transform`
-    (.slbl, .esc) the text is written already-uppercased, since Avalonia has no text-transform.
-
-    Every entry is the same strict `20px | 10px gap | rest` grid, so the terms align down the whole
-    page regardless of which glyph sits in the gutter. Column ratios and every surface color come
-    from Styles.axaml/Tokens.axaml; nothing here carries a raw hex.
+    Where the mockup relies on CSS `text-transform` the catalog already holds the uppercased text.
+    Every surface color comes from Styles.axaml/Tokens.axaml; nothing here carries a raw hex.
   -->
-  <UserControl.KeyBindings>
-    <KeyBinding Gesture="Escape" Command="{Binding CloseCommand}" />
-  </UserControl.KeyBindings>
+  <UserControl.DataTemplates>
+    <!-- A term: optional 20px glyph gutter, the word (with its extension), a sentence. -->
+    <DataTemplate DataType="vm:HelpTerm">
+      <Grid Classes="sh-e" ColumnDefinitions="Auto,*" ColumnSpacing="0">
+        <ctl:HelpGlyph Grid.Column="0" Classes="sh-g" Width="20" Margin="0,0,10,0"
+                       Glyph="{Binding Glyph}" IsVisible="{Binding HasGlyph}" />
+        <StackPanel Grid.Column="1">
+          <TextBlock Classes="sh-t" Classes.plain="{Binding IsPlain}"><Run Text="{Binding Term}" /><Run Text="{Binding ExtText}" FontFamily="{DynamicResource MonoFontFamily}" FontSize="9.5" FontWeight="Normal" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
+          <ctl:RichText Classes="sh-s" Markup="{Binding Description}" IsVisible="{Binding HasDescription}" />
+        </StackPanel>
+      </Grid>
+    </DataTemplate>
 
-  <!-- The sheet is taller than the mockup's (Kitchen plus the KEYS split) and MainWindow allows a
-       580px window, so the scroller earns its keep more than before. It centers exactly as a bare
-       Border would whenever there is room. -->
+    <!-- A key: a cap as wide as its section's widest, then the action. -->
+    <DataTemplate DataType="vm:HelpKey">
+      <Grid Classes="sh-kline" ColumnDefinitions="Auto,*">
+        <Border Grid.Column="0" Classes="kbd sh-k" Width="{Binding KeyWidth}"><TextBlock Text="{Binding Key}" /></Border>
+        <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="{Binding Term}" />
+      </Grid>
+    </DataTemplate>
+
+    <DataTemplate DataType="vm:HelpSpec">
+      <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,0,0,7">
+        <TextBlock Classes="sh-cs pre" Text="{Binding Term}" /><TextBlock Classes="sh-cs" Text="{Binding Description}" />
+      </StackPanel>
+    </DataTemplate>
+
+    <DataTemplate DataType="vm:HelpNote">
+      <Panel>
+        <ctl:RichText Classes="sh-chain" Margin="0,0,0,10" Markup="{Binding Description}" IsVisible="{Binding Chain}" />
+        <ctl:RichText Classes="sh-fine" Markup="{Binding Description}" IsVisible="{Binding IsFine}" />
+      </Panel>
+    </DataTemplate>
+
+    <DataTemplate DataType="vm:HelpCommand">
+      <StackPanel Margin="0,0,0,12">
+        <TextBlock Classes="sh-cs" Text="{Binding Term}" Margin="0,0,0,2" />
+        <TextBlock Classes="sh-fine" Text="{Binding Description}" Margin="0" />
+      </StackPanel>
+    </DataTemplate>
+
+    <!-- A section: a label, or a dashed rule instead of one. -->
+    <DataTemplate DataType="vm:HelpSection">
+      <StackPanel>
+        <!-- Avalonia's Border cannot dash, and a Height="1" Rectangle still strokes BOTH long edges
+             so the gaps land in each other's dashes and the line renders solid. A 3px rectangle
+             whose top edge is the only one inside a 1px clip draws it. -->
+        <Border Classes="sh-split" Height="1" ClipToBounds="True" Margin="{Binding RuleMargin}" IsVisible="{Binding Dashed}">
+          <Rectangle Height="3" VerticalAlignment="Top" Stroke="{DynamicResource LineStrongBrush}"
+                     StrokeThickness="1" StrokeDashArray="3,3" />
+        </Border>
+        <TextBlock Classes="slbl sh" Text="{Binding Title}" Margin="{Binding TitleMargin}" IsVisible="{Binding HasTitle}" />
+        <ItemsControl ItemsSource="{Binding Entries}" />
+      </StackPanel>
+    </DataTemplate>
+
+    <DataTemplate DataType="vm:HelpColumn">
+      <ItemsControl ItemsSource="{Binding Sections}" />
+    </DataTemplate>
+
+    <!-- One tab's page: four columns, the hairline between the two PAIRS only. -->
+    <DataTemplate DataType="vm:HelpPage">
+      <Grid Classes="helppage" Classes.off="{Binding !IsActive}" ColumnDefinitions="1.08*,1.0*,1.0*,1.0*">
+        <Border Grid.Column="0" Classes="sh-col"><ContentControl Content="{Binding Column0}" /></Border>
+        <Border Grid.Column="1" Classes="sh-col"><ContentControl Content="{Binding Column1}" /></Border>
+        <Border Grid.Column="2" Classes="sh-col div"><ContentControl Content="{Binding Column2}" /></Border>
+        <Border Grid.Column="3" Classes="sh-col div"><ContentControl Content="{Binding Column3}" /></Border>
+      </Grid>
+    </DataTemplate>
+  </UserControl.DataTemplates>
+
+  <!-- A card that fits and never scrolls at the smallest window (ModalFitTests owns the number); the
+       scroller is only the safety net for a window smaller than the app allows. -->
   <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
   <Border x:Name="Sheet" Classes="sheet">
     <Grid RowDefinitions="Auto,Auto,Auto">
 
-      <!-- ===== .sh-h: brandtile, wordmark, divider, label, Esc ===== -->
+      <!-- ===== .sh-h: brand, tabs, search, Esc ===== -->
       <Border Grid.Row="0" Classes="sh-h">
-        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="22" Height="44">
+        <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="18" Height="48">
           <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="11" VerticalAlignment="Center">
-            <!-- The same tile the titlebar wears, as the same control. It was a plain rotated
-                 square here while the titlebar carried a rotated letter: two marks for one product,
-                 with nothing in the code saying they were meant to agree. -->
             <views:BrandMarkView />
             <TextBlock Classes="wordmark" VerticalAlignment="Center"><Run Text="nft" /><Run Text="y" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
             <Border Width="1" Height="18" Background="{DynamicResource LineStrongBrush}" />
             <TextBlock Classes="slbl sh" Text="QUICK REFERENCE" Margin="0" />
           </StackPanel>
-          <!-- Underline tabs, the export card's vocabulary: the 2px underline is present in BOTH
-               states (transparent when off), bottom-aligned onto the header's rule. -->
-          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="18" VerticalAlignment="Stretch">
-            <Button Classes="railtab" Classes.on="{Binding IsBasicsTab}" Content="BASICS"
-                    Command="{Binding ShowTabCommand}"
-                    CommandParameter="{x:Static vm:HelpTab.Basics}" />
-            <Button Classes="railtab" Classes.on="{Binding IsRiseTab}" Content="RISE &amp; 3D"
-                    Command="{Binding ShowTabCommand}"
-                    CommandParameter="{x:Static vm:HelpTab.Rise}" />
-            <Button Classes="railtab" Classes.on="{Binding IsViewerTab}" Content="VIEWER &amp; RUNTIME"
-                    Command="{Binding ShowTabCommand}"
-                    CommandParameter="{x:Static vm:HelpTab.Viewer}" />
-          </StackPanel>
-          <Button Grid.Column="2" Classes="esc" Content="ESC" Command="{Binding CloseCommand}"
+
+          <!-- The tabs are the app's own segmented tray (`seg`, as the Set browser's rarity unit and
+               the editor's Dynamic/Static): the chosen segment is FILLED, so which page you are on
+               reads at a glance, where a 2px underline did not. Every segment states its width, so
+               the bold of the chosen one cannot move its neighbours. -->
+          <Border Grid.Column="1" Classes="seg tiny" HorizontalAlignment="Center" VerticalAlignment="Center" x:Name="TabTray">
+            <StackPanel Orientation="Horizontal" Spacing="2">
+              <Button Classes="seg-b tiny hl" Classes.on="{Binding IsBasicsTab}" Width="86"
+                      Command="{Binding ShowTabCommand}" CommandParameter="{x:Static vm:HelpTab.Basics}">
+                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                  <Path Classes="ico sm" Data="{StaticResource IconTypeCookBook}" Stroke="{Binding $parent[Button].Foreground}" />
+                  <TextBlock Text="BASICS" />
+                </StackPanel>
+              </Button>
+              <Button Classes="seg-b tiny hl" Classes.on="{Binding IsEditorTab}" Width="86"
+                      Command="{Binding ShowTabCommand}" CommandParameter="{x:Static vm:HelpTab.Editor}">
+                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                  <Path Classes="ico sm" Data="{StaticResource IconPencil}" Stroke="{Binding $parent[Button].Foreground}" />
+                  <TextBlock Text="EDITOR" />
+                </StackPanel>
+              </Button>
+              <Button Classes="seg-b tiny hl" Classes.on="{Binding IsRiseTab}" Width="104"
+                      Command="{Binding ShowTabCommand}" CommandParameter="{x:Static vm:HelpTab.Rise}">
+                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                  <Path Classes="ico sm" Data="{StaticResource IconRise}" Stroke="{Binding $parent[Button].Foreground}" />
+                  <TextBlock Text="RISE &amp; 3D" />
+                </StackPanel>
+              </Button>
+              <Button Classes="seg-b tiny hl" Classes.on="{Binding IsViewerTab}" Width="152"
+                      Command="{Binding ShowTabCommand}" CommandParameter="{x:Static vm:HelpTab.Viewer}">
+                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                  <Path Classes="ico sm" Data="{StaticResource IconPopout}" Stroke="{Binding $parent[Button].Foreground}" />
+                  <TextBlock Text="VIEWER &amp; RUNTIME" />
+                </StackPanel>
+              </Button>
+            </StackPanel>
+          </Border>
+
+          <!-- The search lives in the header, always: it is a way INTO the sheet, not a page of it.
+               The "/" hint and the clear button share one cell and swap by ink, so typing moves
+               nothing. -->
+          <Border Grid.Column="2" Classes="search help" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+              <Path Grid.Column="0" Classes="ico sm" Data="{StaticResource IconSearch}" VerticalAlignment="Center" />
+              <TextBox Grid.Column="1" x:Name="SearchBox" Classes="bare" Text="{Binding Query}"
+                       Margin="8,0" VerticalAlignment="Center"
+                       PlaceholderText="Search keys and terms" ToolTip.Tip="Search this sheet" />
+              <Panel Grid.Column="2" Width="22" VerticalAlignment="Center">
+                <Border Classes="kbd" HorizontalAlignment="Center"
+                        IsVisible="{Binding ShowPages}"><TextBlock Text="/" /></Border>
+                <Button x:Name="ClearQuery" Classes="searchclear" Command="{Binding ClearSearchCommand}"
+                        IsVisible="{Binding IsSearching}" ToolTip.Tip="Clear search — Esc">
+                  <Path Classes="ico sm" Data="{StaticResource IconClose}" />
+                </Button>
+              </Panel>
+            </Grid>
+          </Border>
+
+          <Button Grid.Column="3" Classes="esc" Content="ESC" Command="{Binding CloseCommand}"
                   ToolTip.Tip="Close — Esc" />
         </Grid>
       </Border>
 
-      <!-- ===== .sh-b: 1.28fr / 1.06fr / .9fr, hairline between ===== -->
-      <!-- ===== .sh-b: four columns, hairline between the two PAIRS =====
-           Four, not three, and 980 wide rather than 820. The sheet was tall because it was
-           NARROW: every description wrapped three lines deep and the card reached 687, taller
-           than a 1366x768 laptop can show at all. Wider and shorter is also the right shape
-           for something you SCAN.
-
-           Columns 0 and 1 are ONE spread with no divider between them - the six words run on
-           from the first into the second. Kitchen leads column 1, which is the layout finally
-           agreeing with what the dashed rule above it has always said: it is the sixth word
-           but NOT a link in the CookBook > Recipe > Ingredient > Variant chain. -->
-      <!-- All three pages share this one cell, so the row is as tall as the TALLEST and switching
-           tabs moves nothing: the ink toggles (Opacity, hit-testing), never the layout. -->
+      <!-- ===== the pages, or the search results in their place =====
+           One cell. The pages stack in it and the inactive ones are inked out, never collapsed, so
+           it is the tallest page's height whichever tab shows. The results layer is given EXACTLY
+           that height (bound to the pages' own bounds, which it cannot change) and is inked in
+           instead, so searching moves nothing. -->
       <Panel Grid.Row="1" x:Name="Pages">
-      <Grid x:Name="SheetBody" Classes="helppage" Classes.off="{Binding !IsBasicsTab}" ColumnDefinitions="1.12*,1.0*,1.0*,0.88*">
+        <ItemsControl x:Name="PagesHost" ItemsSource="{Binding Pages}" Classes="helppage" Classes.off="{Binding IsSearching}"
+                      VerticalAlignment="Top">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><Panel /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+        </ItemsControl>
 
-        <!-- ===== The six words ===== -->
-        <Border Grid.Column="0" Classes="sh-col">
-          <StackPanel>
-            <TextBlock Classes="slbl sh" Text="THE SIX WORDS" />
+        <Grid x:Name="ResultsLayer" Classes="helppage" Classes.off="{Binding ShowPages}"
+              VerticalAlignment="Top" Height="{Binding #PagesHost.Bounds.Height}" RowDefinitions="Auto,*" Margin="20,12,20,0">
+          <TextBlock Grid.Row="0" Classes="sh-fine" Margin="0,2,0,8" Text="{Binding ResultCountText}" />
+          <ScrollViewer Grid.Row="1" x:Name="ResultsScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                        IsVisible="{Binding HasResults}">
+            <ItemsControl x:Name="ResultsList" ItemsSource="{Binding Results}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="vm:HelpEntry">
+                  <Button Classes="hrow" Command="{Binding #Root.((vm:HelpViewModel)DataContext).JumpCommand}" CommandParameter="{Binding}">
+                    <Grid ColumnDefinitions="136,*,Auto" ColumnSpacing="14">
+                      <Border Grid.Column="0" Classes="kbd sh-k" HorizontalAlignment="Left" MinWidth="30" Padding="8,2"
+                              IsVisible="{Binding LeadIsKey}"><TextBlock Text="{Binding Lead}" /></Border>
+                      <TextBlock Grid.Column="0" Classes="sh-t rlead" Text="{Binding Lead}" IsVisible="{Binding !LeadIsKey}"
+                                 TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
+                      <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="{Binding Body}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
+                      <Border Grid.Column="2" Classes="idchip"><TextBlock Classes="ck" Text="{Binding Where}" /></Border>
+                    </Grid>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
 
-            <!-- The nesting, said once. Without it the five below are a list of definitions; with
-                 it they are visibly a chain, which is the single most useful thing to know. -->
-            <TextBlock Classes="sh-chain"><Run Text="CookBook " /><Run Text="›" Foreground="{DynamicResource AccentTextBrush}" /><Run Text=" Recipe " /><Run Text="›" Foreground="{DynamicResource AccentTextBrush}" /><Run Text=" Ingredient " /><Run Text="›" Foreground="{DynamicResource AccentTextBrush}" /><Run Text=" Variant  —  cook it to get a Set" /></TextBlock>
-
-            <Grid Classes="sh-e" ColumnDefinitions="20,*">
-              <Panel Grid.Column="0" Classes="sh-g">
-                <Path Classes="ico ti-sh" Data="{StaticResource IconTypeCookBook}" />
-              </Panel>
-              <StackPanel Grid.Column="1">
-                <TextBlock Classes="sh-t"><Run Text="CookBook" /><Run Text=" .cbk" FontFamily="{DynamicResource MonoFontFamily}" FontSize="9.5" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
-                <TextBlock Classes="sh-s"><Run Text="An " /><Run Text="uncooked" Foreground="{DynamicResource FgBrush}" /><Run Text=" Set — holds the Recipes, the canvas size, the collection." /></TextBlock>
-              </StackPanel>
-            </Grid>
-
-            <Grid Classes="sh-e" ColumnDefinitions="20,*">
-              <Panel Grid.Column="0" Classes="sh-g">
-                <Path Classes="ico ti-sh" Data="{StaticResource IconTypeRecipe}" />
-              </Panel>
-              <StackPanel Grid.Column="1">
-                <TextBlock Classes="sh-t"><Run Text="Recipe" /><Run Text=" .rcp" FontFamily="{DynamicResource MonoFontFamily}" FontSize="9.5" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
-                <TextBlock Classes="sh-s"><Run Text="One character " /><Run Text="type" Foreground="{DynamicResource FgBrush}" /><Run Text=" — an ordered stack of layers, plus its rules." /></TextBlock>
-              </StackPanel>
-            </Grid>
-
-            <Grid Classes="sh-e" ColumnDefinitions="20,*">
-              <Panel Grid.Column="0" Classes="sh-g">
-                <Path Classes="ico ti-sh" Data="{StaticResource IconTypeIngredient}" />
-              </Panel>
-              <StackPanel Grid.Column="1">
-                <TextBlock Classes="sh-t"><Run Text="Ingredient" /><Run Text=" .igt" FontFamily="{DynamicResource MonoFontFamily}" FontSize="9.5" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
-                <TextBlock Classes="sh-s" Text="One layer — its kind, its coloring, its weighted variants." />
-              </StackPanel>
-            </Grid>
-
-            <Grid Classes="sh-e" ColumnDefinitions="20,*">
-              <Panel Grid.Column="0" Classes="sh-g">
-                <Path Classes="ico ti-sh" Data="{StaticResource IconTypeVariant}" />
-              </Panel>
-              <StackPanel Grid.Column="1">
-                <TextBlock Classes="sh-t" Text="Variant" />
-                <TextBlock Classes="sh-s" Text="One image and a weight, inside an Ingredient." />
-              </StackPanel>
-            </Grid>
-
-            <Grid Classes="sh-e" ColumnDefinitions="20,*" Margin="0">
-              <Panel Grid.Column="0" Classes="sh-g">
-                <Path Classes="ico ti-sh" Data="{StaticResource IconTypeSet}" />
-              </Panel>
-              <StackPanel Grid.Column="1">
-                <TextBlock Classes="sh-t"><Run Text="Set" /><Run Text=" .set" FontFamily="{DynamicResource MonoFontFamily}" FontSize="9.5" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
-                <TextBlock Classes="sh-s"><Run Text="What " /><Run Text="Cook" Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold" /><Run Text=" produces: images, metadata, rarity, seed." /></TextBlock>
-              </StackPanel>
-            </Grid>
+          <!-- The empty state says WHICH emptiness, and carries the click that undoes it. -->
+          <StackPanel Grid.Row="1" x:Name="EmptyState" IsVisible="{Binding NoMatch}" HorizontalAlignment="Center"
+                      VerticalAlignment="Center" Spacing="12">
+            <TextBlock Classes="sh-t" Text="{Binding EmptyText}" HorizontalAlignment="Center" />
+            <TextBlock Classes="sh-fine" Margin="0" HorizontalAlignment="Center" Text="Try a key, a tool, or a word like zoom, redo or Kitchen." />
+            <Button x:Name="EmptyClear" Classes="tbtn" Content="Clear search" HorizontalAlignment="Center"
+                    Command="{Binding ClearSearchCommand}" />
           </StackPanel>
-        </Border>
-
-        <!-- ===== The layer kinds, then Kitchen =====
-             LAYER KINDS leads so all four columns start on a label at the same line; a column that
-             opened on a bare dashed rule read as a divider under an invisible heading, and its
-             content sat a row lower than its neighbours. Kitchen trails it, still below that rule,
-             which is where the rule has always belonged and what it has always meant: Kitchen is
-             the sixth word but NOT a link in the CookBook > Recipe > Ingredient > Variant chain.
-             There is no divider between this column and the last, so the two read as one spread. -->
-        <Border Grid.Column="1" Classes="sh-col">
-          <StackPanel>
-            <TextBlock Classes="slbl sh" Text="LAYER KINDS" />
-
-            <Grid Classes="sh-e" ColumnDefinitions="20,*">
-              <Panel Grid.Column="0" Classes="sh-g"><TextBlock Classes="kmark kdyn" Text="D" /></Panel>
-              <StackPanel Grid.Column="1">
-                <TextBlock Classes="sh-t" Text="dynamic" />
-                <TextBlock Classes="sh-s"><Run Text="Gray value-map. Color " /><Run Text="rolled" Foreground="{DynamicResource FgBrush}" /><Run Text=" per asset." /></TextBlock>
-              </StackPanel>
-            </Grid>
-
-            <Grid Classes="sh-e" ColumnDefinitions="20,*">
-              <Panel Grid.Column="0" Classes="sh-g"><TextBlock Classes="kmark kstat" Text="S" /></Panel>
-              <StackPanel Grid.Column="1">
-                <TextBlock Classes="sh-t" Text="static" />
-                <TextBlock Classes="sh-s"><Run Text="Gray value-map. One " /><Run Text="fixed" Foreground="{DynamicResource FgBrush}" /><Run Text=" color." /></TextBlock>
-              </StackPanel>
-            </Grid>
-
-            <Grid Classes="sh-e" ColumnDefinitions="20,*" Margin="0">
-              <Panel Grid.Column="0" Classes="sh-g"><TextBlock Classes="kmark kcust" Text="C" /></Panel>
-              <StackPanel Grid.Column="1">
-                <TextBlock Classes="sh-t" Text="custom" />
-                <TextBlock Classes="sh-s"><Run Text="Full color, composited " /><Run Text="as-is" Foreground="{DynamicResource FgBrush}" /><Run Text="." /></TextBlock>
-              </StackPanel>
-            </Grid>
-
-            <!-- Kitchen is below the rule because it is not a link in the chain above it. The dash
-                 is the signal: a solid hairline reads as a divider between peers, which is the
-                 opposite of the point.
-
-                 Avalonia's Border cannot dash, and a Height="1" Rectangle does not either — it
-                 still draws BOTH long edges, one left-to-right and one right-to-left, so their
-                 gaps land in each other's dashes and the line renders solid. It looked correct in
-                 the markup and wrong in the frame. So: a 3px rectangle whose top edge is the only
-                 one inside a 1px clip. -->
-            <Border Classes="sh-split" Height="1" ClipToBounds="True"
-                    Margin="0,22,0,0">
-              <Rectangle Height="3" VerticalAlignment="Top"
-                         Stroke="{DynamicResource LineStrongBrush}"
-                         StrokeThickness="1" StrokeDashArray="3,3" />
-            </Border>
-
-            <Grid Classes="sh-e" ColumnDefinitions="20,*" Margin="0">
-              <Panel Grid.Column="0" Classes="sh-g">
-                <Path Classes="ico ti-sh" Data="{StaticResource IconKitchen}" />
-              </Panel>
-              <StackPanel Grid.Column="1">
-                <TextBlock Classes="sh-t"><Run Text="Kitchen" /><Run Text=" .ktn" FontFamily="{DynamicResource MonoFontFamily}" FontSize="9.5" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
-                <TextBlock Classes="sh-s"><Run Text="Your shelf of " /><Run Text="loose parts" Foreground="{DynamicResource FgBrush}" /><Run Text=" — Ingredients and Recipes that belong to no one CookBook. Pull them into any project. Found by " /><Run Text="scanning the folder" Foreground="{DynamicResource FgBrush}" /><Run Text="." /></TextBlock>
-              </StackPanel>
-            </Grid>
-
-          </StackPanel>
-        </Border>
-
-        <!-- ===== Rules and state, then color ===== -->
-        <Border Grid.Column="2" Classes="sh-col div">
-          <StackPanel>
-            <TextBlock Classes="slbl sh" Text="RULES &amp; STATE" />
-
-            <!-- The three marks MUST come from the IconMark* keys, not the visually identical
-                 IconClose / IconArrowRight: this legend is the published meaning of the mark the
-                 app draws, so a later change to the window chrome must not silently redefine a
-                 rule. See the note above these keys in Icons.axaml. -->
-            <Grid Classes="sh-e" ColumnDefinitions="20,*">
-              <Panel Grid.Column="0" Classes="sh-g">
-                <Path Classes="ico sm" Data="{StaticResource IconMarkExclude}" Stroke="{DynamicResource AccentTextBrush}" />
-              </Panel>
-              <TextBlock Grid.Column="1" Classes="sh-t plain" Text="never together" />
-            </Grid>
-
-            <Grid Classes="sh-e" ColumnDefinitions="20,*">
-              <Panel Grid.Column="0" Classes="sh-g">
-                <Path Classes="ico sm" Data="{StaticResource IconMarkRequire}" Stroke="{DynamicResource SuccessBrush}" />
-              </Panel>
-              <TextBlock Grid.Column="1" Classes="sh-t plain" Text="always together" />
-            </Grid>
-
-            <Grid Classes="sh-e" ColumnDefinitions="20,*">
-              <Panel Grid.Column="0" Classes="sh-g">
-                <Path Classes="ico sm" Data="{StaticResource IconMarkFlag}" />
-              </Panel>
-              <TextBlock Grid.Column="1" Classes="sh-t plain" Text="this layer is in a rule" />
-            </Grid>
-
-            <!-- The mockup's ● here is real typography, not a stand-in for an icon; drawn as an
-                 Ellipse the way the status bar's own validity dot and Ellipse.kdot already are. -->
-            <Grid Classes="sh-e" ColumnDefinitions="20,*">
-              <Panel Grid.Column="0" Classes="sh-g">
-                <Ellipse Width="7" Height="7" Fill="{DynamicResource SuccessBrush}" />
-              </Panel>
-              <TextBlock Grid.Column="1" Classes="sh-t plain" Text="CookBook is valid" />
-            </Grid>
-
-            <!-- Added: the padlock is the most-encountered state in the app and the legend never
-                 mentioned it. It governs STRUCTURE — add, delete, reorder — and deliberately not
-                 the pencil, so the wording says "adding, deleting, reordering" rather than the
-                 flat "editing" the status bar uses. -->
-            <Grid Classes="sh-e" ColumnDefinitions="20,*" Margin="0">
-              <Panel Grid.Column="0" Classes="sh-g">
-                <Path Classes="ico sm" Data="{StaticResource IconLock}" />
-              </Panel>
-              <TextBlock Grid.Column="1" Classes="sh-t plain" Text="adding, deleting, reordering locked" />
-            </Grid>
-
-            <TextBlock Classes="slbl sh" Text="COLOR" Margin="0,20,0,14" />
-
-            <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,0,0,7">
-              <TextBlock Classes="sh-cs pre" Text="hex:" /><TextBlock Classes="sh-cs" Text="d6249f" />
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,0,0,7">
-              <TextBlock Classes="sh-cs pre" Text="rgb:" /><TextBlock Classes="sh-cs" Text="214,36,159" />
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,0,0,7">
-              <TextBlock Classes="sh-cs pre" Text="hsl:" /><TextBlock Classes="sh-cs" Text="322,72,49" />
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,0,0,7">
-              <TextBlock Classes="sh-cs pre" Text="hsv:" /><TextBlock Classes="sh-cs" Text="322,83,84" />
-            </StackPanel>
-
-            <TextBlock Classes="sh-fine" Text="The prefix is required — a color is never guessed." />
-          </StackPanel>
-        </Border>
-
-        <!-- ===== Keys ===== -->
-        <Border Grid.Column="3" Classes="sh-col div">
-          <StackPanel>
-            <TextBlock Classes="slbl sh" Text="KEYS · ANYWHERE" />
-
-            <Grid Classes="sh-kline" ColumnDefinitions="62,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.Help}" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="this sheet" />
-            </Grid>
-            <Grid Classes="sh-kline" ColumnDefinitions="62,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.CloseDocument}" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="close document" />
-            </Grid>
-            <Grid Classes="sh-kline" ColumnDefinitions="62,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.Theme}" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="light / dark" />
-            </Grid>
-            <Grid Classes="sh-kline" ColumnDefinitions="62,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.ZoomReset}" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="zoom to 100%" />
-            </Grid>
-
-            <TextBlock Classes="slbl sh" Text="KEYS · LANDING" Margin="0,12,0,10" />
-
-            <Grid Classes="sh-kline" ColumnDefinitions="62,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.NewCookBook}" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="new CookBook" />
-            </Grid>
-            <Grid Classes="sh-kline" ColumnDefinitions="62,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.Open}" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="open" />
-            </Grid>
-
-            <TextBlock Classes="slbl sh" Text="KEYS · TREE &amp; EDITOR" Margin="0,12,0,10" />
-
-            <Grid Classes="sh-kline" ColumnDefinitions="62,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.Search}" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="search" />
-            </Grid>
-            <Grid Classes="sh-kline" ColumnDefinitions="62,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.MoveLayer}" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="move layer" />
-            </Grid>
-
-
-            <Grid Classes="sh-kline" ColumnDefinitions="62,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.Undo}" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="undo" />
-            </Grid>
-            <Grid Classes="sh-kline" ColumnDefinitions="62,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.Redo}" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="redo" />
-            </Grid>
-            <Grid Classes="sh-kline" ColumnDefinitions="62,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.DropSelection}" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="drop selection" />
-            </Grid>
-          </StackPanel>
-        </Border>
-
-      </Grid>
-
-      <!-- ===== RISE & 3D: same columns, same entry grammar, no glyph gutter (these are verbs, not
-           the six words, so there is no mark to hang in one). Every chord comes from KeyHints; the
-           letters and mouse buttons are not modifiers and so are not platform-dependent. ===== -->
-      <Grid x:Name="RisePage" Classes="helppage" Classes.off="{Binding !IsRiseTab}"
-            ColumnDefinitions="1.12*,1.0*,1.0*,0.88*">
-
-        <Border Grid.Column="0" Classes="sh-col">
-          <StackPanel>
-            <TextBlock Classes="slbl sh" Text="WHAT RISE DOES" />
-            <Grid Classes="sh-e" ColumnDefinitions="*">
-              <StackPanel>
-                <TextBlock Classes="sh-t" Text="Pixel art to a 3D model" />
-                <TextBlock Classes="sh-s"><Run Text="Each solid pixel gets a " /><Run Text="depth" Foreground="{DynamicResource FgBrush}" /><Run Text=": how far it stands out." /></TextBlock>
-              </StackPanel>
-            </Grid>
-            <Grid Classes="sh-e" ColumnDefinitions="*">
-              <StackPanel>
-                <TextBlock Classes="sh-t" Text="Front and back" />
-                <TextBlock Classes="sh-s" Text="Measured in voxels, one pixel wide. Zero on both is flat paper." />
-              </StackPanel>
-            </Grid>
-            <Grid Classes="sh-e" ColumnDefinitions="*">
-              <StackPanel>
-                <TextBlock Classes="sh-t" Text="2D only" />
-                <TextBlock Classes="sh-s"><Run Text="Partial alpha cannot rise. Fix it with " /><Run Text="Make voxel-ready" Foreground="{DynamicResource FgBrush}" /><Run Text="." /></TextBlock>
-              </StackPanel>
-            </Grid>
-            <Grid Classes="sh-e" ColumnDefinitions="*" Margin="0">
-              <StackPanel>
-                <TextBlock Classes="sh-t" Text="Export" />
-                <TextBlock Classes="sh-s"><Run Text="GLB, " /><Run Text="glTF + .bin" Foreground="{DynamicResource FgBrush}" /><Run Text=", or glTF with the data embedded." /></TextBlock>
-              </StackPanel>
-            </Grid>
-          </StackPanel>
-        </Border>
-
-        <Border Grid.Column="1" Classes="sh-col">
-          <StackPanel>
-            <TextBlock Classes="slbl sh" Text="PAINT DEPTH" />
-            <Grid Classes="sh-kline" ColumnDefinitions="74,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="Left" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="raise the front" />
-            </Grid>
-            <Grid Classes="sh-kline" ColumnDefinitions="74,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="Right" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="raise the back" />
-            </Grid>
-            <Grid Classes="sh-kline" ColumnDefinitions="74,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.LowerDepth}" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="lower instead" />
-            </Grid>
-            <Grid Classes="sh-kline" ColumnDefinitions="74,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.RiseConstrain}" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="straighten a stroke" />
-            </Grid>
-            <TextBlock Classes="sh-fine"><Run Text="On a Recipe roll the first click " /><Run Text="picks" Foreground="{DynamicResource FgBrush}" /><Run Text=" the layer that owns the pixel: left the front owner, right the back owner. It paints nothing." /></TextBlock>
-          </StackPanel>
-        </Border>
-
-        <Border Grid.Column="2" Classes="sh-col div">
-          <StackPanel>
-            <TextBlock Classes="slbl sh" Text="TOOLS" />
-            <Grid Classes="sh-kline" ColumnDefinitions="74,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="B" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="brush" />
-            </Grid>
-            <Grid Classes="sh-kline" ColumnDefinitions="74,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="L" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="line" />
-            </Grid>
-            <Grid Classes="sh-kline" ColumnDefinitions="74,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="R" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="rectangle" />
-            </Grid>
-            <Grid Classes="sh-kline" ColumnDefinitions="74,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="G" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="same-color fill" />
-            </Grid>
-            <Grid Classes="sh-kline" ColumnDefinitions="74,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="M" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="select; click inside to raise" />
-            </Grid>
-
-            <TextBlock Classes="slbl sh" Text="PAGE" Margin="0,20,0,14" />
-            <Grid Classes="sh-kline" ColumnDefinitions="74,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.StepTarget}" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="step target layer" />
-            </Grid>
-            <Grid Classes="sh-kline" ColumnDefinitions="74,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.ZoomKeys}" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="zoom" />
-            </Grid>
-            <Grid Classes="sh-kline" ColumnDefinitions="74,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.ZoomFit}" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="fit" />
-            </Grid>
-            <Grid Classes="sh-kline" ColumnDefinitions="74,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.DropSelection}" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="cancel stroke, or drop marquee, then target" />
-            </Grid>
-          </StackPanel>
-        </Border>
-
-        <Border Grid.Column="3" Classes="sh-col div">
-          <StackPanel>
-            <TextBlock Classes="slbl sh" Text="3D VIEW" />
-            <Grid Classes="sh-kline" ColumnDefinitions="74,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="Drag" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="orbit" />
-            </Grid>
-            <Grid Classes="sh-kline" ColumnDefinitions="74,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="R / M drag" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="pan" />
-            </Grid>
-            <Grid Classes="sh-kline" ColumnDefinitions="74,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="Wheel" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="zoom at pointer" />
-            </Grid>
-            <Grid Classes="sh-kline" ColumnDefinitions="74,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.Arrows}" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="orbit" />
-            </Grid>
-            <Grid Classes="sh-kline" ColumnDefinitions="74,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.ZoomKeys}" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="zoom" />
-            </Grid>
-            <Grid Classes="sh-kline" ColumnDefinitions="74,*">
-              <Border Grid.Column="0" Classes="kbd sh-k"><TextBlock Text="{x:Static svc:KeyHints.ResetView}" /></Border>
-              <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="reset, or double-click" />
-            </Grid>
-          </StackPanel>
-        </Border>
-      </Grid>
-
-      <!-- ===== VIEWER & RUNTIME ===== -->
-      <Grid x:Name="ViewerPage" Classes="helppage" Classes.off="{Binding !IsViewerTab}"
-            ColumnDefinitions="1.12*,1.0*,1.0*,0.88*">
-
-        <Border Grid.Column="0" Classes="sh-col">
-          <StackPanel>
-            <TextBlock Classes="slbl sh" Text="THE VIEWER" />
-            <Grid Classes="sh-e" ColumnDefinitions="*">
-              <StackPanel>
-                <TextBlock Classes="sh-t" Text="A window of its own" />
-                <TextBlock Classes="sh-s" Text="2D art and the 3D model side by side, without leaving your page." />
-              </StackPanel>
-            </Grid>
-            <Grid Classes="sh-e" ColumnDefinitions="*">
-              <StackPanel>
-                <TextBlock Classes="sh-t" Text="Live or snapshot" />
-                <TextBlock Classes="sh-s"><Run Text="Live" Foreground="{DynamicResource FgBrush}" /><Run Text=" follows the editor or Rise page; a " /><Run Text="snapshot" Foreground="{DynamicResource FgBrush}" /><Run Text=" is a copy that stays." /></TextBlock>
-              </StackPanel>
-            </Grid>
-            <Grid Classes="sh-e" ColumnDefinitions="*">
-              <StackPanel>
-                <TextBlock Classes="sh-t" Text="In the window" />
-                <TextBlock Classes="sh-s"><Run Text="Wheel zooms the 2D art; left or middle drag pans. " /><Run Text="{x:Static svc:KeyHints.CloseDocument}" Foreground="{DynamicResource FgBrush}" /><Run Text=" closes the window." /></TextBlock>
-              </StackPanel>
-            </Grid>
-            <Grid Classes="sh-e" ColumnDefinitions="*" Margin="0">
-              <StackPanel>
-                <TextBlock Classes="sh-t" Text="Sealed .tin" />
-                <TextBlock Classes="sh-s"><Run Text="View-only: " /><Run Text="no save, copy or export" Foreground="{DynamicResource FgBrush}" /><Run Text="." /></TextBlock>
-              </StackPanel>
-            </Grid>
-          </StackPanel>
-        </Border>
-
-        <Border Grid.Column="1" Classes="sh-col">
-          <StackPanel>
-            <TextBlock Classes="slbl sh" Text="OPEN IT" />
-            <Grid Classes="sh-e" ColumnDefinitions="*">
-              <StackPanel>
-                <TextBlock Classes="sh-t" Text="Pop out" />
-                <TextBlock Classes="sh-s" Text="The Pop out buttons beside previews and the 3D tile." />
-              </StackPanel>
-            </Grid>
-            <Grid Classes="sh-e" ColumnDefinitions="*">
-              <StackPanel>
-                <TextBlock Classes="sh-t" Text="Tile, row, canvas or 3D tile" />
-                <TextBlock Classes="sh-s"><Run Text="{x:Static svc:KeyHints.ViewerClick}" Foreground="{DynamicResource FgBrush}" /><Run Text=", or right-click " /><Run Text="Open in viewer" Foreground="{DynamicResource FgBrush}" /><Run Text="." /></TextBlock>
-              </StackPanel>
-            </Grid>
-            <Grid Classes="sh-e" ColumnDefinitions="*" Margin="0">
-              <StackPanel>
-                <TextBlock Classes="sh-t" Text="From a file" />
-                <TextBlock Classes="sh-s"><Run Text="Open in viewer…" Foreground="{DynamicResource FgBrush}" /><Run Text=" on the opening screen." /></TextBlock>
-              </StackPanel>
-            </Grid>
-          </StackPanel>
-        </Border>
-
-        <Border Grid.Column="2" Classes="sh-col div">
-          <StackPanel>
-            <TextBlock Classes="slbl sh" Text="RUNTIME" />
-            <Grid Classes="sh-e" ColumnDefinitions="*">
-              <StackPanel>
-                <TextBlock Classes="sh-t"><Run Text="Menu" /><Run Text=" .mnu" FontFamily="{DynamicResource MonoFontFamily}" FontSize="9.5" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
-                <TextBlock Classes="sh-s"><Run Text="A CookBook " /><Run Text="flattened" Foreground="{DynamicResource FgBrush}" /><Run Text=" for runtime: weights, rules, colors and art. No .cbk needed." /></TextBlock>
-              </StackPanel>
-            </Grid>
-            <Grid Classes="sh-e" ColumnDefinitions="*">
-              <StackPanel>
-                <TextBlock Classes="sh-t" Text="Ticket" />
-                <TextBlock Classes="sh-s"><Run Text="One rolled outcome in a few hundred bytes. It names the " /><Run Text="selection" Foreground="{DynamicResource FgBrush}" /><Run Text=", not the pixels." /></TextBlock>
-              </StackPanel>
-            </Grid>
-            <Grid Classes="sh-e" ColumnDefinitions="*" Margin="0">
-              <StackPanel>
-                <TextBlock Classes="sh-t"><Run Text="Nfty.Ticket" /><Run Text=" .dll" FontFamily="{DynamicResource MonoFontFamily}" FontSize="9.5" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
-                <TextBlock Classes="sh-s" Text="No dependencies. A server or game engine rolls with it alone." />
-              </StackPanel>
-            </Grid>
-          </StackPanel>
-        </Border>
-
-        <Border Grid.Column="3" Classes="sh-col div">
-          <StackPanel>
-            <TextBlock Classes="slbl sh" Text="COMMANDS" />
-            <TextBlock Classes="sh-cs" Text="nfty menu" Margin="0,0,0,2" />
-            <TextBlock Classes="sh-fine" Text="Writes a .mnu from a .cbk." Margin="0,0,0,12" />
-            <TextBlock Classes="sh-cs" Text="nfty serve --seed" Margin="0,0,0,2" />
-            <TextBlock Classes="sh-fine" Text="Rolls and renders one asset." Margin="0,0,0,12" />
-            <TextBlock Classes="sh-cs" Text="nfty serve --ticket" Margin="0,0,0,2" />
-            <TextBlock Classes="sh-fine" Text="Renders an asset already rolled." Margin="0,0,0,12" />
-            <TextBlock Classes="sh-fine" Text="Manual, Reference: Ticket API." Margin="0" />
-          </StackPanel>
-        </Border>
-      </Grid>
+        </Grid>
       </Panel>
 
       <!-- ===== .sh-f: the DNA sentence + its arithmetic chip ===== -->

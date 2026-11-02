@@ -3290,7 +3290,7 @@
        three lines deep and the card grew to 687 - taller than a 1366x768 laptop can show at all.
        Wider and shorter is also simply the right shape for something you SCAN rather than read. -->
   <Style Selector="Border.sheet">
-    <Setter Property="Width" Value="980" />
+    <Setter Property="Width" Value="1040" />
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
     <Setter Property="BorderThickness" Value="1" />
@@ -3302,7 +3302,7 @@
   </Style>
   <!-- The three pages of the sheet share one grid cell; the inactive two are inked out, not collapsed,
        so the cell is the tallest page's height and switching tabs moves nothing. -->
-  <Style Selector="Grid.helppage.off">
+  <Style Selector=":is(Control).helppage.off">
     <Setter Property="Opacity" Value="0" />
     <Setter Property="IsHitTestVisible" Value="False" />
   </Style>
@@ -3324,6 +3324,72 @@
     <Setter Property="Margin" Value="0,0,0,14" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
+
+  <!-- The sheet's tab segments. The shared `seg` tray and `seg-b` button, with the sheet's own size:
+       24px tall, labels centered, and a hover wash on the segments that are not chosen (seg-b states
+       none, so an unchosen segment gave no sign it was a button). The chosen segment is the accent
+       fill `seg-b.on` already draws. Mono is fixed-advance, so SemiBold changes no width, and every
+       segment states its Width regardless. -->
+  <Style Selector="Button.seg-b.hl">
+    <Setter Property="Height" Value="24" />
+    <Setter Property="Padding" Value="8,0" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="LetterSpacing" Value="1.0" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+  </Style>
+  <Style Selector="Button.seg-b.hl:pointerover:not(.on) /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+  </Style>
+  <Style Selector="Button.seg-b.hl:pointerover:not(.on)">
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+  </Style>
+  <!-- The header's search pill: Border.search at the header's scale. -->
+  <Style Selector="Border.search.help">
+    <Setter Property="Padding" Value="10,0" />
+    <Setter Property="Height" Value="30" />
+    <Setter Property="Width" Value="236" />
+    <Setter Property="MinWidth" Value="0" />
+  </Style>
+  <Style Selector="Border.search.help:focus-within">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+  </Style>
+  <Style Selector="Button.searchclear">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="3" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.searchclear /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.searchclear:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+  </Style>
+  <!-- A search result row: one hairline-separated line, washed under the pointer. -->
+  <Style Selector="Button.hrow">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="Padding" Value="4,7" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Button.hrow /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="CornerRadius" Value="0" />
+  </Style>
+  <Style Selector="Button.hrow:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+  </Style>
+  <Style Selector="TextBlock.sh-t.rlead">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
   <!-- .esc — a chip in the mockup, a Button here: Escape (the KeyBinding) is otherwise the sheet's
        ONLY way out, and the scrim behind it does not dismiss. Fluent's hover/pressed fills are
        neutralized explicitly rather than left unset, which would hand the states back to its blue. -->
@@ -3414,7 +3480,7 @@
   <Style Selector="TextBlock.sh-s">
     <Setter Property="FontSize" Value="11.5" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
-    <Setter Property="LineHeight" Value="17.25" />   <!-- 1.5 -->
+    <Setter Property="LineHeight" Value="16.5" />   <!-- 1.43: tightened from 1.5 to buy the sheet its slack back -->
     <Setter Property="TextWrapping" Value="Wrap" />
     <Setter Property="Margin" Value="0,3,0,0" />
   </Style>

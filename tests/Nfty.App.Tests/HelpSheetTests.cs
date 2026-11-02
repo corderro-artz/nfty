@@ -88,11 +88,13 @@ public class HelpSheetTests
         Assert.Contains("LAYER KINDS", labels);
         Assert.Contains("RULES & STATE", labels);
         Assert.Contains("COLOR", labels);
-        // KEYS is two groups now: the sheet listed 4 of the app's 14 shortcuts, which made it a
-        // sample rather than a reference.
         Assert.Contains("KEYS · ANYWHERE", labels);
         Assert.Contains("KEYS · LANDING", labels);
-        Assert.Contains("KEYS · TREE & EDITOR", labels);
+        Assert.Contains("KEYS · TREE", labels);
+        // the editor's keys and the Set inspector's moved to their own page
+        Assert.Contains("TOOLS", labels);
+        Assert.Contains("HISTORY", labels);
+        Assert.Contains("SET INSPECTOR", labels);
     }
 
     /// <summary>
@@ -148,26 +150,29 @@ public class HelpSheetTests
     // taller than a 1366x768 laptop can display at all. Columns 0 and 1 are one spread with no
     // divider between them; the dividers fall before 2 and 3.
     [AvaloniaFact]
-    public void Body_columns_hold_the_design_star_ratios()
+    public void Every_page_holds_the_design_star_ratios()
     {
-        var body = Sheet().FindControl<Grid>("SheetBody")!;
-
-        Assert.Equal(4, body.ColumnDefinitions.Count);
-        Assert.Equal(new GridLength(1.12, GridUnitType.Star), body.ColumnDefinitions[0].Width);
-        Assert.Equal(new GridLength(1.0, GridUnitType.Star), body.ColumnDefinitions[1].Width);
-        Assert.Equal(new GridLength(1.0, GridUnitType.Star), body.ColumnDefinitions[2].Width);
-        Assert.Equal(new GridLength(0.88, GridUnitType.Star), body.ColumnDefinitions[3].Width);
+        var grids = Sheet().GetVisualDescendants().OfType<Grid>()
+            .Where(g => g.Classes.Contains("helppage") && g.DataContext is HelpPage).ToList();
+        Assert.Equal(4, grids.Count);
+        foreach (var body in grids)
+        {
+            Assert.Equal(4, body.ColumnDefinitions.Count);
+            Assert.Equal(new GridLength(1.08, GridUnitType.Star), body.ColumnDefinitions[0].Width);
+            for (var c = 1; c < 4; c++)
+                Assert.Equal(new GridLength(1.0, GridUnitType.Star), body.ColumnDefinitions[c].Width);
+        }
     }
 
-    // The sheet is a fixed-width reference card, not a panel that stretches to whatever hosts it -
-    // the placeholder this replaced filled its host and left 80% of the surface empty. 980 now: it
-    // is the ONE fixed modal left in the app, so it alone sets ShellViewModel's window minimum, and
-    // wider-and-shorter is what let that minimum drop far enough for a laptop to open the app.
+    // The sheet is a fixed-width reference card, not a panel that stretches to whatever hosts it.
+    // 1040: wide enough that the editor's longest caps (Ctrl Shift Z, Double-click) leave a readable
+    // action beside them, still inside the ~1067px of modal area the smallest window gives a modal.
     [AvaloniaFact]
-    public void Sheet_is_a_fixed_980px_card()
+    public void Sheet_is_a_fixed_1040px_card_inside_the_smallest_modal_area()
     {
         var sheet = Sheet().FindControl<Border>("Sheet")!;
-        Assert.Equal(980, sheet.Width);
+        Assert.Equal(1040, sheet.Width);
+        Assert.True(sheet.Width <= ShellViewModel.MinWindowWidth / ShellViewModel.BaseScale);
     }
 
     [AvaloniaFact]
