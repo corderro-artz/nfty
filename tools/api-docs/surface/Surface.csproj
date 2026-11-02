@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Prints the PUBLIC surface of the three library assemblies as JSON, for tools/api-docs/build.py.
+
+    Why it exists: the compiler's XML documentation file lists EVERY documented member, internal and
+    private included, and carries no return types, modifiers, nullability or defaults. Reading the
+    assemblies is the only honest way to know what a consumer can call and what its signature is.
+    The XML still supplies all prose; this supplies the shape.
+
+    Not part of nfty.sln and not shipped: build.py builds and runs it. It references the libraries
+    rather than loading DLLs by path, so the dependencies (ImageSharp) resolve without a loader.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <IsPackable>false</IsPackable>
+    <!-- Keeps a project that nobody ships out of the audit noise of the real ones. -->
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Nfty.Ticket\Nfty.Ticket.csproj" />
+    <ProjectReference Include="..\..\..\src\Nfty.Core\Nfty.Core.csproj" />
+    <ProjectReference Include="..\..\..\src\Nfty.Model\Nfty.Model.csproj" />
+  </ItemGroup>
+
+</Project>

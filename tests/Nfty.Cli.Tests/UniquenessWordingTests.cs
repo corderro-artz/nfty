@@ -18,7 +18,12 @@ public class UniquenessWordingTests
         var root = Root();
         var bad = new Regex(@"unique[ -](art\w*|assets?|space|count)\b", RegexOptions.IgnoreCase);
         var files = new List<string> { Path.Combine(root, "README.md") };
-        files.AddRange(Directory.EnumerateFiles(Path.Combine(root, "docs", "manual"), "*.md", SearchOption.AllDirectories));
+        // reference/api is GENERATED from the libraries' /// comments, which this test exempts line by
+        // line below ("unique assets" is accurate in a comment a maintainer reads). The pages mirror
+        // those comments, so they are exempt as a folder; the prose the manual WRITES is not.
+        var generated = Path.Combine(root, "docs", "manual", "reference", "api") + Path.DirectorySeparatorChar;
+        files.AddRange(Directory.EnumerateFiles(Path.Combine(root, "docs", "manual"), "*.md", SearchOption.AllDirectories)
+            .Where(f => !f.StartsWith(generated, StringComparison.OrdinalIgnoreCase)));
         files.AddRange(Directory.EnumerateFiles(Path.Combine(root, "src", "Nfty.App"), "*.axaml", SearchOption.AllDirectories));
         files.AddRange(Directory.EnumerateFiles(Path.Combine(root, "src", "Nfty.Cli"), "*.cs", SearchOption.AllDirectories));
 
