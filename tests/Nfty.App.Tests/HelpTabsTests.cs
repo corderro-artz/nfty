@@ -53,9 +53,12 @@ public class HelpTabsTests
     private static IBrush? Fill(Button b) =>
         b.GetVisualDescendants().OfType<ContentPresenter>().First(c => c.Name == "PART_ContentPresenter").Background;
 
+    // A key is drawn by KeyChord (a cap per key, some of them drawings), so the chord string as the
+    // catalog spells it is part of what a page says.
     internal static string TextOf(Visual root) => string.Join("\n",
         root.GetVisualDescendants().OfType<TextBlock>().Select(t =>
-            (t.Text ?? "") + string.Concat(t.Inlines?.OfType<Run>().Select(r => r.Text) ?? [])));
+            (t.Text ?? "") + string.Concat(t.Inlines?.OfType<Run>().Select(r => r.Text) ?? []))
+        .Concat(root.GetVisualDescendants().OfType<Nfty.App.Controls.KeyChord>().Select(c => c.Chord ?? "")));
 
     [AvaloniaFact]
     public void Opens_on_basics_and_each_tab_shows_only_its_page()

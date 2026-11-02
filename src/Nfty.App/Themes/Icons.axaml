@@ -19,6 +19,9 @@
   <!-- A single flat sheet seen at an angle, no depth face: the picture that cannot rise. Must not read as Rise (a block), the rect tool, a lock or an eye. -->
   <StreamGeometry x:Key="Icon2dOnly">M2.5 17.5 7 8h14.5L17 17.5z</StreamGeometry>
 
+  <!-- A long arrow pointing left: Back, the way out of a page to the one before it. -->
+  <StreamGeometry x:Key="IconArrowLeft">M19 12H5M12 5l-7 7 7 7</StreamGeometry>
+
   <!-- landing.html: the arrow trailing the "cooking metaphor" link (explorer.html reuses it as cook_go) -->
   <StreamGeometry x:Key="IconArrowRight">M5 12h13M12 6l6 6-6 6</StreamGeometry>
 
@@ -59,6 +62,9 @@
   <!-- One face of the recipe portrait's reroll die. The six share one body - the rounded square that shipped as the single four-pip IconDiceFace - and differ only in their pips, so pressing the button reads as the same die landing differently rather than as the icon being swapped. The pips are stroked rather than filled, because a Path.ico is one stroke; at this size a ring that small closes into a dot. The grid is wider than the old four-pip face's so that six fit without touching. -->
   <StreamGeometry x:Key="IconDie6">M7.4 4h9.2A3.4 3.4 0 0 1 20 7.4v9.2a3.4 3.4 0 0 1-3.4 3.4H7.4A3.4 3.4 0 0 1 4 16.6V7.4A3.4 3.4 0 0 1 7.4 4zM9.5 8.7a0.8 0.8 0 1 1 -1.6 0 a0.8 0.8 0 0 1 1.6 0zM16.1 8.7a0.8 0.8 0 1 1 -1.6 0 a0.8 0.8 0 0 1 1.6 0zM9.5 12a0.8 0.8 0 1 1 -1.6 0 a0.8 0.8 0 0 1 1.6 0zM16.1 12a0.8 0.8 0 1 1 -1.6 0 a0.8 0.8 0 0 1 1.6 0zM9.5 15.3a0.8 0.8 0 1 1 -1.6 0 a0.8 0.8 0 0 1 1.6 0zM16.1 15.3a0.8 0.8 0 1 1 -1.6 0 a0.8 0.8 0 0 1 1.6 0z</StreamGeometry>
 
+  <!-- A double helix: two strands crossing twice with a rung in each loop. Marks every place the product says DNA, so the word and the picture are learned together. -->
+  <StreamGeometry x:Key="IconDna">M8 3c0 5 8 4 8 9s-8 4-8 9M16 3c0 5-8 4-8 9s8 4 8 9M9.6 6.6h4.8M9.6 17.4h4.8</StreamGeometry>
+
   <!-- Save-to-disk. Tray with an arrow into it: the standard download mark, not a floppy. -->
   <StreamGeometry x:Key="IconDownload">M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3</StreamGeometry>
 
@@ -72,6 +78,12 @@
 
   <!-- A tipped paint bucket with its handle and a drip. The handle is what makes it read. -->
   <StreamGeometry x:Key="IconFill">M11 5.5 4.6 11.9a1.5 1.5 0 0 0 0 2.2l4.3 4.3a1.5 1.5 0 0 0 2.2 0l6.4-6.4zM8.4 3 11 5.5M19.5 14.5c1.5 2 2 3 0 3s-1.5-1 0-3z</StreamGeometry>
+
+  <!-- A flame: Cook, the product's own verb for turning a CookBook into a Set. -->
+  <StreamGeometry x:Key="IconFlame">M12 3c.5 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2.5-4.5.2 1.5.8 2.3 1.8 2.7C11.5 8.5 11 5.5 12 3z</StreamGeometry>
+
+  <!-- An open folder: opening a file or a folder from disk. IconOpen is the arrow-out-of-a-box that means open IN A WINDOW OF ITS OWN, which is not the same thing. -->
+  <StreamGeometry x:Key="IconFolderOpen">M4 19V6h5l2 2h7v3M4 19l2.4-8H21l-2.4 8z</StreamGeometry>
 
   <!-- A 2x2 lattice: the rect tool's rounded box crossed once each way. Two lines each way was tried first and turns to mush at 12px, which is the size this is drawn at. -->
   <StreamGeometry x:Key="IconGrid">M6 4.5h12a1.5 1.5 0 0 1 1.5 1.5v12a1.5 1.5 0 0 1-1.5 1.5H6a1.5 1.5 0 0 1-1.5-1.5V6A1.5 1.5 0 0 1 6 4.5zM12 4.5v15M4.5 12h15</StreamGeometry>
@@ -130,6 +142,9 @@
   <!-- A flat picture pushed out into a solid: an oblique block, front face square-on with its top and side faces showing depth. Must not read as Kitchen (a wide lidded archive box) or as a lock, eye or the rect tool. -->
   <StreamGeometry x:Key="IconRise">M3 10h12v11H3zM3 10l5-6h12l-5 6M20 4v11l-5 6</StreamGeometry>
 
+  <!-- A floppy disk: the shutter on top, the label below. Save, as opposed to IconDownload (a file leaving for somewhere else). -->
+  <StreamGeometry x:Key="IconSave">M5 3h11l4 4v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM8 3v5h7V3M7 21v-7h10v7</StreamGeometry>
+
   <!-- explorer.html: magnifier (mockup uses <circle cx=11 cy=11 r=7> + the handle path) -->
   <StreamGeometry x:Key="IconSearch">M18 11a7 7 0 1 1-14 0 7 7 0 0 1 14 0zm3 10-4-4</StreamGeometry>
 
@@ -161,6 +176,9 @@
 
   <!-- explorer.html: the unlocked variant (open shackle) -->
   <StreamGeometry x:Key="IconUnlock">M8 11V8a4 4 0 0 1 7.5-1.9M7 11h10a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2z</StreamGeometry>
+
+  <!-- An arrow out of a tray: export, the other direction from IconDownload and IconImport. -->
+  <StreamGeometry x:Key="IconUpload">M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12</StreamGeometry>
 
   <StreamGeometry x:Key="IconZoomIn">M12 5v14M5 12h14</StreamGeometry>
 

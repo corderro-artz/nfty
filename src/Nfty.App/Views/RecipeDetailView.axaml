@@ -122,7 +122,7 @@
 
             <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,4,0,0">
               <TextBlock Classes="rtotal" Text="{Binding TotalText}" />
-              <TextBlock Classes="rlabel" Text="unique DNA" VerticalAlignment="Bottom" Margin="0,0,0,3" />
+              <Path Classes="ico xs" Data="{StaticResource IconDna}" VerticalAlignment="Bottom" Margin="0,0,0,4" /><TextBlock Classes="rlabel" Text="unique DNA" VerticalAlignment="Bottom" Margin="0,0,0,3" />
             </StackPanel>
 
             <!-- .rstats. The figure carries the ink and the word stays muted, so the row can be

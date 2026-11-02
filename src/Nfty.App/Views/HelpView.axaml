@@ -228,9 +228,10 @@
 
       <!-- ===== .sh-f: the DNA sentence + its arithmetic chip ===== -->
       <Border Grid.Row="2" Classes="sh-f">
-        <Grid ColumnDefinitions="*,Auto">
-          <TextBlock Grid.Column="0" Classes="sh-dna"><Run Text="Unique DNA" Foreground="{DynamicResource FgBrush}" FontWeight="SemiBold" /><Run Text=" — one Recipe, its rolled Variants, their colors. It's what makes an asset distinct, and what a collection is counted in." /></TextBlock>
-          <Border Grid.Column="1" Classes="kbd sh-eq">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <Path Grid.Column="0" Classes="ico sm" Data="{StaticResource IconDna}" Stroke="{DynamicResource AccentTextBrush}" Margin="0,0,10,0" />
+          <TextBlock Grid.Column="1" Classes="sh-dna"><Run Text="Unique DNA" Foreground="{DynamicResource FgBrush}" FontWeight="SemiBold" /><Run Text=" — one Recipe, its rolled Variants, their colors. It's what makes an asset distinct, and what a collection is counted in." /></TextBlock>
+          <Border Grid.Column="2" Classes="kbd sh-eq">
             <TextBlock><Run Text="4 × 3 × 5 × 6 " /><Run Text="=" Foreground="{DynamicResource AccentTextBrush}" /><Run Text=" 360" /></TextBlock>
           </Border>
         </Grid>

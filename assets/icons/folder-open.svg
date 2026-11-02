@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <title>IconFolderOpen</title>
+  <desc>An open folder: opening a file or a folder from disk. IconOpen is the arrow-out-of-a-box that means open IN A WINDOW OF ITS OWN, which is not the same thing.</desc>
+  <path d="M4 19V6h5l2 2h7v3M4 19l2.4-8H21l-2.4 8z"/>
+</svg>

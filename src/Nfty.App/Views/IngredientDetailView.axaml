@@ -267,7 +267,7 @@
         <Button Command="{Binding ExportPreviewCommand}" Classes="tbtn"
                 ToolTip.Tip="Write a PNG of this variant exactly as generation would render it">
           <StackPanel Orientation="Horizontal" Spacing="6">
-            <Path Classes="ico sm" Data="{StaticResource IconImport}" />
+            <Path Classes="ico sm" Data="{StaticResource IconUpload}" />
             <TextBlock Text="Export preview…" />
           </StackPanel>
         </Button>
