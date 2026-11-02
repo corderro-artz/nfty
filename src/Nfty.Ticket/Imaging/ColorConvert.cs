@@ -6,7 +6,7 @@ public static class ColorConvert
 {
     private static byte B(double x) => (byte)Math.Clamp((int)Math.Round(x * 255.0), 0, 255);
 
-    /// <summary>HSV to RGB.</summary>
+    /// <summary>Converts a hue/saturation/value color to RGB.</summary>
     /// <param name="h">Hue in degrees; wrapped, so 360 is 0.</param>
     /// <param name="s">Saturation, 0..1.</param>
     /// <param name="v">Value, 0..1.</param>
@@ -18,7 +18,7 @@ public static class ColorConvert
         return FromChroma(h, c, v - c);
     }
 
-    /// <summary>HSL to RGB.</summary>
+    /// <summary>Converts a hue/saturation/lightness color to RGB.</summary>
     /// <param name="h">Hue in degrees; wrapped, so 360 is 0.</param>
     /// <param name="s">Saturation, 0..1.</param>
     /// <param name="l">Lightness, 0..1.</param>
@@ -52,7 +52,7 @@ public static class ColorConvert
         return new RgbColor(B(r + m), B(g + m), B(b + m));
     }
 
-    /// <summary>RGB to HSV.</summary>
+    /// <summary>Converts an RGB color to hue/saturation/value.</summary>
     /// <param name="c">The color.</param>
     /// <returns>Hue in degrees, saturation and value as 0..1.</returns>
     public static (double H, double S, double V) RgbToHsv(RgbColor c)
@@ -64,7 +64,7 @@ public static class ColorConvert
         return (Hue(r, g, b, max, d), s, max);
     }
 
-    /// <summary>RGB to HSL.</summary>
+    /// <summary>Converts an RGB color to hue/saturation/lightness.</summary>
     /// <param name="c">The color.</param>
     /// <returns>Hue in degrees, saturation and lightness as 0..1.</returns>
     public static (double H, double S, double L) RgbToHsl(RgbColor c)

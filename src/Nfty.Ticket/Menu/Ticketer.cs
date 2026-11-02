@@ -89,6 +89,20 @@ public static class Ticketer
     /// <param name="rng">The run's RNG.</param>
     /// <returns>The ticket, or <see langword="null"/> when the recipe's rules reject the selection —
     /// which is the caller's signal to reroll, exactly as <c>Generator</c>'s loop does.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="menu"/> or <paramref name="rng"/> is null.</exception>
+    /// <example>
+    /// Roll with a bounded retry, as the generator does. One generator is one stream, so give each
+    /// worker its own.
+    /// <code>
+    /// var menu = Ticketer.Prepare(book);
+    /// var rng = new SplitMix64Rng(SeedHash.ToUlong("my-seed"));
+    /// AssetTicket? ticket = null;
+    /// for (int attempt = 0; attempt &lt; 10_000 &amp;&amp; ticket is null; attempt++)
+    ///     ticket = Ticketer.TryRoll(menu, rng);
+    /// </code>
+    /// </example>
+    /// <seealso cref="Prepare"/>
+    /// <seealso cref="AssetTicket"/>
     public static AssetTicket? TryRoll(PreparedMenu menu, IRng rng)
     {
         ArgumentNullException.ThrowIfNull(menu);

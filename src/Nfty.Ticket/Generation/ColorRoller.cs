@@ -56,6 +56,10 @@ public static class ColorRoller
     /// Used by Static layers, which colorize with exactly one fixed color and no per-asset roll,
     /// and by <c>preview</c>, so a rendered preview resolves color exactly as generation does.
     /// </summary>
+    /// <param name="fixedSpec">A prefixed color spec (<c>hex:</c>, <c>rgb:</c>, <c>hsl:</c>, <c>hsv:</c>).</param>
+    /// <param name="model">Which model hue and saturation are read in; the value or lightness is dropped.</param>
+    /// <returns>The hue (degrees) and saturation (0..1) of the color.</returns>
+    /// <exception cref="FormatException">The spec has no prefix, an unknown one, or a malformed body.</exception>
     public static RolledColor FromFixed(string fixedSpec, ColorModel model)
     {
         var rgb = ColorSpec.Parse(fixedSpec);

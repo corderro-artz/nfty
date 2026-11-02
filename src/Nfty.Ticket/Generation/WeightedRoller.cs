@@ -33,6 +33,8 @@ public static class WeightedRoller
     /// (zero or negative total) is not rejected here but on the <see cref="Roll(WeightTable, IRng)"/>
     /// that tries to use it, so preparing a table early cannot move where the error surfaces.
     /// </summary>
+    /// <param name="weights">Weight per key; keys are drawn in ordinal order whatever the dictionary's own.</param>
+    /// <returns>The table to hand to <see cref="Roll(WeightTable, IRng)"/>.</returns>
     public static WeightTable Prepare(IReadOnlyDictionary<string, double> weights)
     {
         // Ordinal, not the default culture-sensitive comparison: the draw order decides which key
