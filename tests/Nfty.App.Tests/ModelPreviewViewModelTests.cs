@@ -140,10 +140,10 @@ public class ModelPreviewViewModelTests
     {
         // A box shifted sideways has the same radius; the target confinement must still follow it.
         var vm = New();
-        vm.OrbitStep(new Vector2(1, 0)); // a touched camera is kept, so the clamp is what moves it
+        vm.OrbitStep(new Vector2(1, 0)); // touched: orientation kept, target carried with the box
         vm.SetSubject(new Vector3(9, -1, -1), new Vector3(11, 1, 1));
         Assert.Equal(new Vector3(9, -1, -1), vm.CameraState.BoundsMin);
-        Assert.Equal(9f, vm.CameraState.Target.X); // old target (origin) is clamped into the new box
+        Assert.Equal(10f, vm.CameraState.Target.X); // the target moves with the box center, not clamped to its edge
     }
 
     [Fact]
@@ -234,5 +234,23 @@ public class ModelPreviewViewModelTests
         Assert.True(x1 >= 0, "nothing drew");
         Assert.InRange((x0 + x1) / 2.0, w / 2.0 - 3, w / 2.0 + 3);
         Assert.InRange((y0 + y1) / 2.0, h / 2.0 - 3, h / 2.0 + 3);
+    }
+
+    [Fact]
+    public void A_new_subject_keeps_the_orbit_on_the_models_middle_after_the_camera_was_touched()
+    {
+        // Orbited, then a reroll changed the box (a layer left out shifts the solid). The camera
+        // must keep turning about the MODEL, not the old box's middle beside it.
+        var vm = New();
+        vm.SetSubject(new Vector3(-8, 0, -1), new Vector3(8, 16, 1));
+        vm.Orbit(new Vector2(40, 0));
+        float yaw = vm.CameraState.Yaw;
+
+        var min = new Vector3(-4, 0, -1);
+        var max = new Vector3(10, 12, 3);
+        vm.SetSubject(min, max);
+
+        Assert.Equal((min + max) / 2f, vm.CameraState.Target);
+        Assert.Equal(yaw, vm.CameraState.Yaw);
     }
 }

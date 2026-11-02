@@ -790,6 +790,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
     // hop for the same reason the rounding above does.
     partial void OnHueMinChanged(double value)
     {
+        if (RangeAxis.Off(value, RangeAxis.Hue)) { HueMin = RangeAxis.Clamp(value, RangeAxis.Hue); return; }
         if (NotWhole(value)) { HueMin = Math.Round(value); return; }
         if (value > HueMax) { HueMin = HueMax; return; }
         RebuildSurfaces(); OnPropertyChanged(nameof(HueRangeText)); ColorsChanged();
@@ -797,6 +798,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
 
     partial void OnHueMaxChanged(double value)
     {
+        if (RangeAxis.Off(value, RangeAxis.Hue)) { HueMax = RangeAxis.Clamp(value, RangeAxis.Hue); return; }
         if (NotWhole(value)) { HueMax = Math.Round(value); return; }
         if (value < HueMin) { HueMax = HueMin; return; }
         RebuildSurfaces(); OnPropertyChanged(nameof(HueRangeText)); ColorsChanged();
@@ -804,6 +806,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
 
     partial void OnSatMinChanged(double value)
     {
+        if (RangeAxis.Off(value, RangeAxis.Sat)) { SatMin = RangeAxis.Clamp(value, RangeAxis.Sat); return; }
         if (NotWhole(value)) { SatMin = Math.Round(value); return; }
         if (value > SatMax) { SatMin = SatMax; return; }
         RebuildSurfaces(); OnPropertyChanged(nameof(SatRangeText)); ColorsChanged();
@@ -811,6 +814,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
 
     partial void OnSatMaxChanged(double value)
     {
+        if (RangeAxis.Off(value, RangeAxis.Sat)) { SatMax = RangeAxis.Clamp(value, RangeAxis.Sat); return; }
         if (NotWhole(value)) { SatMax = Math.Round(value); return; }
         if (value < SatMin) { SatMax = SatMin; return; }
         RebuildSurfaces(); OnPropertyChanged(nameof(SatRangeText)); ColorsChanged();

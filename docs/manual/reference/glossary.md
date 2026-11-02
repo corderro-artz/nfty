@@ -4,10 +4,6 @@
 :   Marks a book, Recipe or Ingredient with at least one partly transparent pixel. It cooks images
     normally but cannot rise. Fixed with **Make voxel-ready**.
 
-**Art combinations**
-:   How many distinct *variant* combinations a Recipe can produce, with its rules applied. Colors are
-    not counted here -- that is the DNA space.
-
 **Canvas**
 :   The pixel size every drawing in a CookBook shares. Fixed when the book is created and permanent.
 

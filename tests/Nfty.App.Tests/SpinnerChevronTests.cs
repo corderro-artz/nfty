@@ -20,7 +20,7 @@ public class SpinnerChevronTests
 {
     private static (Window window, Views.NewCookBookView view) Render()
     {
-        var vm = new NewCookBookViewModel(new FakeDialogs()) { Name = "Vapor Pets", Symbol = "VP" };
+        var vm = new NewCookBookViewModel(new FakeDialogs()) { Name = "Vapor Pets", Symbol = "VP", TargetSupply = 0 };
         var view = new Views.NewCookBookView { DataContext = vm };
         var window = new Window { Content = view, Width = 1180, Height = 900 };
         window.Show();
@@ -42,7 +42,7 @@ public class SpinnerChevronTests
         var (window, view) = Render();
         try
         {
-            // Target supply opens at 0, which is its Minimum — so Decrease is the disabled half.
+            // Target supply at 0, its Minimum (it opens empty, "not decided") — so Decrease is the disabled half.
             var supply = view.GetVisualDescendants().OfType<NumericUpDown>()
                 .First(n => n.Minimum == 0 && n.Value == 0);
             var down = Part(supply, "PART_DecreaseButton");

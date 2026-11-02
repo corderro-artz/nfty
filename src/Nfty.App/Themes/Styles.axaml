@@ -1150,7 +1150,7 @@
        the two are otherwise the same shape, and the old dialogs left the distinction entirely to the
        title text. -->
   <!-- The recipe hero's stat row: the FIGURE and the word for it. Splitting them is what lets the
-       row be scanned instead of read - it is the same treatment "108 art combinations" gets a line
+       row be scanned instead of read - it is the same treatment "unique DNA" gets a line
        above, where the number is large and the label is muted. -->
   <Style Selector="TextBlock.statn">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
@@ -2316,6 +2316,20 @@
        the fix for one row height and the bug for the other; SliderBandAlignmentTests now asserts the
        thing that actually matters, that band center == thumb center, rather than any one number.
        40 is safe: the thumb occupies 10..30 of the row, so nothing clips. -->
+  <!-- A NUMBER FIELD NEVER SHOWS A .NET EXCEPTION. A field bound to a number whose text is empty or
+       unreadable used to print the binding's conversion failure under it ("System.InvalidCast-
+       Exception: Could not convert '(null)'..."). No view model reports validation through
+       DataValidationErrors, so every message it could draw is one of those: the template is empty,
+       and NumericFieldGuard puts the held value back when the field is left. -->
+  <Style Selector="DataValidationErrors">
+    <Setter Property="ErrorTemplate">
+      <DataTemplate><Panel /></DataTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="TextBox, NumericUpDown">
+    <Setter Property="ctl:NumericFieldGuard.IsEnabled" Value="True" />
+  </Style>
+
   <Style Selector="Panel.band">
     <Setter Property="Height" Value="40" />
     <!-- TWO STACKED SLIDERS GIVE THE TOP ONE EVERY PRESS. Each is the full width of the band, so

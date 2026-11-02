@@ -126,24 +126,28 @@ public partial class NewIngredientViewModel : WizardViewModelBase
     // author one creates an ingredient the book it joins cannot validate.
     partial void OnHueMinChanged(double value)
     {
+        if (RangeAxis.Off(value, RangeAxis.Hue)) { HueMin = RangeAxis.Clamp(value, RangeAxis.Hue); return; }
         if (value > HueMax) { HueMin = HueMax; return; }
         OnPropertyChanged(nameof(HueRangeText));
     }
 
     partial void OnHueMaxChanged(double value)
     {
+        if (RangeAxis.Off(value, RangeAxis.Hue)) { HueMax = RangeAxis.Clamp(value, RangeAxis.Hue); return; }
         if (value < HueMin) { HueMax = HueMin; return; }
         OnPropertyChanged(nameof(HueRangeText));
     }
 
     partial void OnSatMinChanged(double value)
     {
+        if (RangeAxis.Off(value, RangeAxis.Sat)) { SatMin = RangeAxis.Clamp(value, RangeAxis.Sat); return; }
         if (value > SatMax) { SatMin = SatMax; return; }
         OnPropertyChanged(nameof(SatRangeText));
     }
 
     partial void OnSatMaxChanged(double value)
     {
+        if (RangeAxis.Off(value, RangeAxis.Sat)) { SatMax = RangeAxis.Clamp(value, RangeAxis.Sat); return; }
         if (value < SatMin) { SatMax = SatMin; return; }
         OnPropertyChanged(nameof(SatRangeText));
     }

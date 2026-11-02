@@ -47,7 +47,7 @@ kind: <span class="kind dynamic">D</span>ynamic, <span class="kind static">S</sp
 ![The Recipe panel](../images/recipe-panel-dark.png#only-dark)
 
 - **Identity card** -- a rolled preview of this character, the per-layer variant counts multiplied
-  out, and the resulting **art combinations**.
+  out, and the recipe's resulting **unique DNA**.
 - **LAYERS** -- the stack in paint order. `1` paints first and sits furthest back. Unlocked, each row
   gains a drag grip.
 - **RULES** -- this Recipe's exclusions.

@@ -266,17 +266,26 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
     /// multiplied together to reach <see cref="TotalText"/>.</summary>
     public IReadOnlyList<FactorChip> Factors { get; private set; }
 
-    /// <summary>Product of the layers' variant counts - the combinations this recipe's art alone can
-    /// make, before color. Deliberately NOT UniqueSpace.Count: that folds in each dynamic layer's
-    /// quantized color buckets, and this line exists to explain the chips beside it, which are
-    /// variant counts. The color-inclusive figure is the cookbook detail's business.</summary>
+    /// <summary>The unique DNA this recipe admits - legal variant combinations times each dynamic
+    /// layer's quantized colors - worded by <see cref="SpaceText"/>, or an em dash when the recipe
+    /// cannot be counted.</summary>
     public string TotalText { get; }
+
+    private static string RecipeDna(LoadedCookBook book, string recipeId)
+    {
+        try
+        {
+            var space = UniqueSpace.Count(book)[recipeId];
+            return space.IsCountable ? SpaceText.Describe(space.Total, space.Certainty, compact: true) : "—";
+        }
+        catch { return "—"; }   // informational: a mid-edit book must still open
+    }
     /// <summary>The three hero counts, split into the FIGURE and the WORD for it.</summary>
     /// <remarks>
     /// They used to be three finished sentences in one muted mono style — "5 layers  13 variants
     /// 1 rule" — which is a row a reader has to actually read rather than scan. The numbers are
     /// what the eye is after, so they get the ink and the words stay muted, which is exactly what
-    /// the "108 art combinations" line one row above already does. The whole-sentence properties
+    /// the "unique DNA" line one row above already does. The whole-sentence properties
     /// stay: the tests and the status bar read them, and a sentence is the right form there.
     /// </remarks>
     public string LayerCount { get; } = "";
@@ -380,11 +389,11 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
 
         var ordered = Ordered();
         Factors = BuildFactors(ordered, _recipe.Manifest);
-        // long, not int: a dozen 5-variant layers already overflows int.
-        // The same arithmetic the chips show, for the same reason: a total derived independently
-        // would be free to disagree with the chips it sits under.
-        long total = Factors.Aggregate(1L, (acc, f) => acc * Math.Max(1, f.VariantCount));
-        TotalText = total.ToString("N0");
+        // The recipe's UNIQUE DNA, from the counter the CookBook card's rows read, so the two
+        // screens cannot disagree. Was the chips' product under the label "art combinations": a
+        // second name for a second figure (variants only, no color) beside every other screen's
+        // "Unique DNA". The chips stay as the variant factors; the colors are the rest.
+        TotalText = RecipeDna(book, recipe.Manifest.Id);
         LayerCount = Layers.Count.ToString();
         LayerCountWord = Layers.Count == 1 ? "layer" : "layers";
         LayerCountText = Layers.Count == 1 ? "1 layer" : $"{Layers.Count} layers";

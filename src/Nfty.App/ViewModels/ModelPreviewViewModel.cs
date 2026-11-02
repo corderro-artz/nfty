@@ -177,11 +177,18 @@ public sealed partial class ModelPreviewViewModel : ObservableObject
             return;
         }
         // The camera's distance limits, clip planes and target confinement all follow the subject's
-        // box, so a depth edit that changes the extent must reach it. Orientation, target and distance
-        // are kept; an unchanged box leaves the very same instance (no spurious repaint).
-        if (CameraState.BoundsMin != Vector3.Min(boundsMin, boundsMax)
-            || CameraState.BoundsMax != Vector3.Max(boundsMin, boundsMax))
-            CameraState = CameraState.WithSubject(boundsMin, boundsMax);
+        // box, so a depth edit that changes the extent must reach it. Orientation and distance are
+        // kept; an unchanged box leaves the very same instance (no spurious repaint).
+        var min = Vector3.Min(boundsMin, boundsMax);
+        var max = Vector3.Max(boundsMin, boundsMax);
+        if (CameraState.BoundsMin == min && CameraState.BoundsMax == max) return;
+        // THE TARGET MOVES WITH THE BOX'S CENTER. Kept where it was, a reroll that dropped a layer
+        // (or a deeper front) left the camera orbiting the OLD middle: the model sat off to one side
+        // and swung around a point beside it - "slightly right, hard to rotate". Carrying the offset
+        // keeps a deliberate pan exactly as panned, relative to the model.
+        var shift = (min + max) / 2f - (CameraState.BoundsMin + CameraState.BoundsMax) / 2f;
+        CameraState = new Camera(CameraState.Target + shift, CameraState.Distance, CameraState.Yaw,
+            CameraState.Pitch, min, max);
     }
 
     /// <summary>Home or double-click: back to the framed camera on the current subject bounds,

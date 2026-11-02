@@ -103,11 +103,11 @@
                 <StackPanel Classes="plabel-row">
                   <TextBlock Text="TARGET SUPPLY" Classes="plabel" />
                   <Border Classes="qmark"
-                          ToolTip.Tip="How many assets you intend to mint. Optional — leave it at 0 if you have not decided. It is declarative: it never limits a cook, which takes its count from the Cook dialog.">
+                          ToolTip.Tip="How many assets you intend to mint. Optional — leave it empty if you have not decided. It is declarative: it never limits a cook, which takes its count from the Cook dialog.">
                     <TextBlock />
                   </Border>
                 </StackPanel>
-                <NumericUpDown Value="{Binding TargetSupply}" Minimum="0" Increment="100" />
+                <NumericUpDown Value="{Binding TargetSupply}" Minimum="0" Increment="100" FormatString="0" PlaceholderText="not decided" />
               </StackPanel>
 
               <TextBlock Classes="m-sub" Margin="0" TextWrapping="Wrap"
