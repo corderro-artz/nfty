@@ -20,10 +20,10 @@ public PixelRect(int X, int Y, int Width, int Height);
 
 **Parameters**
 
-- `X` (`int`)
-- `Y` (`int`)
-- `Width` (`int`)
-- `Height` (`int`)
+- `X` (`int`) - Left edge, in pixels from the image's left.
+- `Y` (`int`) - Top edge, in pixels from the image's top.
+- `Width` (`int`) - Width in pixels.
+- `Height` (`int`) - Height in pixels.
 
 ## Properties
 
@@ -33,11 +33,15 @@ public PixelRect(int X, int Y, int Width, int Height);
 public int Height { get; init; }
 ```
 
+Height in pixels.
+
 ### Width { #p-width }
 
 ```csharp
 public int Width { get; init; }
 ```
+
+Width in pixels.
 
 ### X { #p-x }
 
@@ -45,8 +49,12 @@ public int Width { get; init; }
 public int X { get; init; }
 ```
 
+Left edge, in pixels from the image's left.
+
 ### Y { #p-y }
 
 ```csharp
 public int Y { get; init; }
 ```
+
+Top edge, in pixels from the image's top.

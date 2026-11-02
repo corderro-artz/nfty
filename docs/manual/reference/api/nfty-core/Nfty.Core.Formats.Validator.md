@@ -38,7 +38,9 @@ Validates a standalone ingredient — every check that does NOT need a canvas. T
 
 **Parameters**
 
-- `ing` (`LoadedIngredient`)
+- `ing` (`LoadedIngredient`) - The ingredient to check.
+
+**Returns.** One sentence per problem; empty when the ingredient is valid. Never throws for a bad ingredient.
 
 ### ValidateRecipe(LoadedRecipe) { #m-validaterecipe-nfty-core-formats-loadedrecipe }
 
@@ -50,4 +52,6 @@ Validates a standalone recipe — every canvas-independent check, plus that all 
 
 **Parameters**
 
-- `r` (`LoadedRecipe`)
+- `r` (`LoadedRecipe`) - The recipe to check.
+
+**Returns.** One sentence per problem; empty when the recipe is valid. Never throws for a bad recipe.

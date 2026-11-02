@@ -110,9 +110,15 @@ Removes an ingredient from a recipe (dropping it from the layer order, its absen
 
 **Parameters**
 
-- `book` (`LoadedCookBook`)
-- `recipeId` (`string`)
-- `ingredientId` (`string`)
+- `book` (`LoadedCookBook`) - The book to edit; not modified.
+- `recipeId` (`string`) - Id of the recipe that holds the ingredient.
+- `ingredientId` (`string`) - Id of the ingredient (layer) to remove.
+
+**Returns.** A new book without the layer; every surviving image is shared with `book`.
+
+**Exceptions**
+
+- `KeyNotFoundException` - No recipe has `recipeId`, or that recipe has no such ingredient.
 
 ### RemoveRecipe(LoadedCookBook, string) { #m-removerecipe-nfty-core-formats-loadedcookbook-system-string }
 
@@ -124,8 +130,14 @@ Removes a recipe from a cookbook (and its selection-weight entry). Reuses every 
 
 **Parameters**
 
-- `book` (`LoadedCookBook`)
-- `recipeId` (`string`)
+- `book` (`LoadedCookBook`) - The book to edit; not modified.
+- `recipeId` (`string`) - Id of the recipe to remove.
+
+**Returns.** A new book without the recipe or its weight entry.
+
+**Exceptions**
+
+- `KeyNotFoundException` - No recipe has `recipeId`.
 
 ### RemoveVariant(LoadedCookBook, string, string, string) { #m-removevariant-nfty-core-formats-loadedcookbook-system-c5e652 }
 
@@ -210,6 +222,10 @@ Returns a book with one ingredient replaced or added.
 
 **Returns.** A NEW graph SHARING the previous book's images, which is why the session swaps it in with `Replace` rather than `Open` — disposing the old book would dispose images the new one still points at.
 
+**Exceptions**
+
+- `KeyNotFoundException` - No recipe has `recipeId`.
+
 ### UpsertRecipe(LoadedCookBook, LoadedRecipe, double) { #m-upsertrecipe-nfty-core-formats-loadedcookbook-nfty-cor-8d5e9a }
 
 ```csharp
@@ -220,9 +236,11 @@ Adds a recipe to a cookbook (or replaces one with the same id) and sets its sele
 
 **Parameters**
 
-- `book` (`LoadedCookBook`)
-- `recipe` (`LoadedRecipe`)
-- `weight` (`double`)
+- `book` (`LoadedCookBook`) - The book to edit; not modified.
+- `recipe` (`LoadedRecipe`) - The recipe to add, or to put in place of the one with the same id.
+- `weight` (`double`) - The recipe's selection weight in the book.
+
+**Returns.** A new book holding `recipe` with `weight`; every other recipe is shared.
 
 ### WithoutLayer(RecipeManifest, string) { #m-withoutlayer-nfty-core-model-recipemanifest-system-string }
 

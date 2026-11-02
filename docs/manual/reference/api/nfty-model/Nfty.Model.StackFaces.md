@@ -98,6 +98,8 @@ Copies a rectangle of another set of faces over this one, in place (the same siz
 public void Dispose();
 ```
 
+Disposes the front and back pictures.
+
 ### Uniform(Image&lt;Rgba32&gt;) { #m-uniform-sixlabors-imagesharp-image-sixlabors-imageshar-8fb129 }
 
 ```csharp

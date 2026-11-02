@@ -44,3 +44,24 @@ Rolls one asset.
 - `rng` (`IRng`) - The run's RNG.
 
 **Returns.** The ticket, or `null` when the recipe's rules reject the selection — which is the caller's signal to reroll, exactly as `Generator`'s loop does.
+
+**Exceptions**
+
+- `ArgumentNullException` - `menu` or `rng` is null.
+
+**Example**
+
+Roll with a bounded retry, as the generator does. One generator is one stream, so give each worker its own.
+
+```csharp
+var menu = Ticketer.Prepare(book);
+var rng = new SplitMix64Rng(SeedHash.ToUlong("my-seed"));
+AssetTicket? ticket = null;
+for (int attempt = 0; attempt < 10_000 && ticket is null; attempt++)
+    ticket = Ticketer.TryRoll(menu, rng);
+```
+
+**See also**
+
+- [`Ticketer.Prepare()`](Nfty.Ticket.Ticketer.md#m-prepare-nfty-ticket-menubook)
+- [`AssetTicket`](Nfty.Ticket.AssetTicket.md)

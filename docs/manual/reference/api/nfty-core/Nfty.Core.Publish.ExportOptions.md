@@ -180,6 +180,10 @@ The options a preset starts from.
 
 **Returns.** Ordinary options; change any of them afterward.
 
+**Exceptions**
+
+- `ArgumentOutOfRangeException` - `preset` is not a defined preset.
+
 ### MatchingPreset() { #m-matchingpreset }
 
 ```csharp
@@ -212,6 +216,10 @@ One sentence saying who the preset is for. Stated in Core so the CLI's help and 
 
 **Returns.** The sentence.
 
+**Exceptions**
+
+- `ArgumentOutOfRangeException` - `preset` is not a defined preset.
+
 ### TitleOf(ExportPreset) { #m-titleof-nfty-core-publish-exportpreset }
 
 ```csharp
@@ -225,3 +233,7 @@ The preset's name, as a person reads it.
 - `preset` (`ExportPreset`) - Which one.
 
 **Returns.** A short title.
+
+**Exceptions**
+
+- `ArgumentOutOfRangeException` - `preset` is not a defined preset.

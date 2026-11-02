@@ -62,6 +62,10 @@ The grid a Set falls into when nobody has chosen one: as square as it gets.
 
 **Returns.** A layout that holds every asset.
 
+**Exceptions**
+
+- `ArgumentOutOfRangeException` - An argument is not positive.
+
 **Remarks**
 
 Square by COLUMN COUNT rather than by pixels, because a sheet is read as a grid of cells and a 4:1 canvas would otherwise produce a grid four cells wide. The last row is allowed to be short — that is what a spritesheet looks like — and the empty cells are transparent.

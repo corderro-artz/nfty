@@ -80,3 +80,5 @@ A pick with no color from an (ingredient, variant) pair.
 **Parameters**
 
 - `t` (`(string, string)`) - The pair.
+
+**Returns.** The pick.

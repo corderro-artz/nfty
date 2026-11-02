@@ -8,6 +8,8 @@ Namespace `Nfty.Core.Output` in assembly `Nfty.Core`.
 public record SetManifest
 ```
 
+The Set's own record, written to `set.json`: its name, size, seed, the hash of the book that produced it, the collection-wide rarity table and the per-recipe distribution. Reports such as [`SetReport`](Nfty.Core.Stats.SetReport.md) read it alone, so inspecting a large Set costs the same as inspecting a small one.
+
 ## Constructors
 
 ### SetManifest(string, int, string, string?, string, IReadOnlyList&lt;RecipeCount&gt;, IReadOnlyList&lt;RarityAttribute&gt;, bool?, SetModels?) { #m-ctor-system-string-system-int32-system-string-system-s-3bb89f }

@@ -22,8 +22,14 @@ Resolves a single fixed color spec to its (H, S) deterministically, consuming NO
 
 **Parameters**
 
-- `fixedSpec` (`string`)
-- `model` (`ColorModel`)
+- `fixedSpec` (`string`) - A prefixed color spec (`hex:`, `rgb:`, `hsl:`, `hsv:`).
+- `model` (`ColorModel`) - Which model hue and saturation are read in; the value or lightness is dropped.
+
+**Returns.** The hue (degrees) and saturation (0..1) of the color.
+
+**Exceptions**
+
+- `FormatException` - The spec has no prefix, an unknown one, or a malformed body.
 
 ### Roll(Colorization, IRng) { #m-roll-nfty-core-model-colorization-nfty-core-generation-irng }
 

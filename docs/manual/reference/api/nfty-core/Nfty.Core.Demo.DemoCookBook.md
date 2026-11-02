@@ -84,3 +84,7 @@ Writes the demo into `directory` and returns the file's path.
 - `overwrite` (`bool`) - Whether to replace a copy that is already there. The default is `false` — and that default is the point: the demo is meant to be edited, so a second "open the demo" must hand back the book with the user's changes in it rather than silently reverting their work. Pass `true` for an explicit "reset the demo".
 
 **Returns.** The full path to the archive.
+
+**Exceptions**
+
+- `ArgumentException` - `directory` is null or whitespace.

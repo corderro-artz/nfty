@@ -27,6 +27,11 @@ Reads a Recipe from an already-open archive, decoding every variant PNG.
 
 **Returns.** The loaded recipe; the caller owns it. Its manifest's `PartialAlpha` is recomputed from its loaded ingredients rather than trusting the stored value.
 
+**Exceptions**
+
+- `InvalidDataException` - The archive, or a manifest or image inside it, is missing or unreadable.
+- [`UnsupportedSchemaVersionException`](Nfty.Core.Formats.UnsupportedSchemaVersionException.md) - A manifest declares a schema this build does not read: newer than [`Schema.Current`](../nfty-ticket/Nfty.Core.Model.Schema.md#f-current), or older than [`Schema.Oldest`](../nfty-ticket/Nfty.Core.Model.Schema.md#f-oldest).
+
 ### Read(string, Parallelism?) { #m-read-system-string-nfty-core-parallelism }
 
 ```csharp
@@ -41,6 +46,11 @@ Reads a Recipe from a file, decoding every variant PNG.
 - `parallelism` (`Parallelism?`) - How wide image encoding or decoding may run; null means [`Parallelism.Default`](Nfty.Core.Parallelism.md#p-default). Never changes the bytes.
 
 **Returns.** The loaded recipe; the caller owns it and must dispose it.
+
+**Exceptions**
+
+- `InvalidDataException` - The archive, or a manifest or image inside it, is missing or unreadable.
+- [`UnsupportedSchemaVersionException`](Nfty.Core.Formats.UnsupportedSchemaVersionException.md) - A manifest declares a schema this build does not read: newer than [`Schema.Current`](../nfty-ticket/Nfty.Core.Model.Schema.md#f-current), or older than [`Schema.Oldest`](../nfty-ticket/Nfty.Core.Model.Schema.md#f-oldest).
 
 ### ReadAsync(ZipArchive, CancellationToken, Parallelism?) { #m-readasync-system-io-compression-ziparchive-system-thre-71f25d }
 
@@ -58,6 +68,12 @@ Reads a Recipe from an already-open archive.
 
 **Returns.** The loaded recipe; the caller owns it. Its manifest's `PartialAlpha` is recomputed from its loaded ingredients rather than trusting the stored value.
 
+**Exceptions**
+
+- `InvalidDataException` - The archive, or a manifest or image inside it, is missing or unreadable.
+- [`UnsupportedSchemaVersionException`](Nfty.Core.Formats.UnsupportedSchemaVersionException.md) - A manifest declares a schema this build does not read: newer than [`Schema.Current`](../nfty-ticket/Nfty.Core.Model.Schema.md#f-current), or older than [`Schema.Oldest`](../nfty-ticket/Nfty.Core.Model.Schema.md#f-oldest).
+- `OperationCanceledException` - `ct` was canceled.
+
 ### ReadAsync(string, CancellationToken, Parallelism?) { #m-readasync-system-string-system-threading-cancellationt-ab739a }
 
 ```csharp
@@ -73,6 +89,12 @@ Reads a Recipe from a file.
 - `parallelism` (`Parallelism?`) - How wide decoding may run; null means [`Parallelism.Default`](Nfty.Core.Parallelism.md#p-default).
 
 **Returns.** The loaded recipe; the caller owns it.
+
+**Exceptions**
+
+- `InvalidDataException` - The archive, or a manifest or image inside it, is missing or unreadable.
+- [`UnsupportedSchemaVersionException`](Nfty.Core.Formats.UnsupportedSchemaVersionException.md) - A manifest declares a schema this build does not read: newer than [`Schema.Current`](../nfty-ticket/Nfty.Core.Model.Schema.md#f-current), or older than [`Schema.Oldest`](../nfty-ticket/Nfty.Core.Model.Schema.md#f-oldest).
+- `OperationCanceledException` - `ct` was canceled.
 
 ### Write(ZipArchive, RecipeManifest, IReadOnlyList&lt;LoadedIngredient&gt;, Parallelism?) { #m-write-system-io-compression-ziparchive-nfty-core-model-03530f }
 

@@ -59,3 +59,5 @@ public override string ToString();
 ```
 
 The line form: `name: message`.
+
+**Returns.** The line, without a trailing newline.

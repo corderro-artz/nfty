@@ -20,13 +20,13 @@ public NftyMetadata(int SetNumber, string Recipe, string Dna, string Seed, IRead
 
 **Parameters**
 
-- `SetNumber` (`int`)
-- `Recipe` (`string`)
-- `Dna` (`string`)
-- `Seed` (`string`)
-- `Rarity` (`IReadOnlyList<RarityAttribute>`)
-- `Layers` (`IReadOnlyList<LayerColor>`)
-- `AbsentLayers` (`IReadOnlyList<string>?`)
+- `SetNumber` (`int`) - The asset's number within the Set.
+- `Recipe` (`string`) - The id of the recipe it was rolled from.
+- `Dna` (`string`) - Its identity hash.
+- `Seed` (`string`) - The seed of the run that produced it.
+- `Rarity` (`IReadOnlyList<RarityAttribute>`) - The share of the collection carrying each of its traits.
+- `Layers` (`IReadOnlyList<LayerColor>`) - What each layer contributed, including the color it rolled.
+- `AbsentLayers` (`IReadOnlyList<string>?`) - The ids of optional layers the roll left out; null when none were.
 
 ## Properties
 
@@ -36,11 +36,15 @@ public NftyMetadata(int SetNumber, string Recipe, string Dna, string Seed, IRead
 public IReadOnlyList<string>? AbsentLayers { get; init; }
 ```
 
+The ids of optional layers the roll left out; null when none were.
+
 ### Dna { #p-dna }
 
 ```csharp
 public string Dna { get; init; }
 ```
+
+Its identity hash.
 
 ### Layers { #p-layers }
 
@@ -48,11 +52,15 @@ public string Dna { get; init; }
 public IReadOnlyList<LayerColor> Layers { get; init; }
 ```
 
+What each layer contributed, including the color it rolled.
+
 ### Rarity { #p-rarity }
 
 ```csharp
 public IReadOnlyList<RarityAttribute> Rarity { get; init; }
 ```
+
+The share of the collection carrying each of its traits.
 
 ### Recipe { #p-recipe }
 
@@ -60,14 +68,20 @@ public IReadOnlyList<RarityAttribute> Rarity { get; init; }
 public string Recipe { get; init; }
 ```
 
+The id of the recipe it was rolled from.
+
 ### Seed { #p-seed }
 
 ```csharp
 public string Seed { get; init; }
 ```
 
+The seed of the run that produced it.
+
 ### SetNumber { #p-setnumber }
 
 ```csharp
 public int SetNumber { get; init; }
 ```
+
+The asset's number within the Set.

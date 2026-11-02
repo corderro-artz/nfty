@@ -12,7 +12,7 @@ Which corner a stamp sits in.
 
 ## Values
 
-- <span id="f-topleft"></span>`TopLeft = 0` - Top left.
-- <span id="f-topright"></span>`TopRight = 1` - Top right.
-- <span id="f-bottomleft"></span>`BottomLeft = 2` - Bottom left.
-- <span id="f-bottomright"></span>`BottomRight = 3` - Bottom right.
+- <span id="f-topleft"></span>`TopLeft = 0` - The top-left corner of the image.
+- <span id="f-topright"></span>`TopRight = 1` - The top-right corner of the image.
+- <span id="f-bottomleft"></span>`BottomLeft = 2` - The bottom-left corner of the image.
+- <span id="f-bottomright"></span>`BottomRight = 3` - The bottom-right corner of the image.

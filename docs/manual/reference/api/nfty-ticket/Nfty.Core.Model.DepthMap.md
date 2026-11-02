@@ -51,6 +51,8 @@ The back depth (0..255) at a pixel.
 - `x` (`int`) - Column, 0-based.
 - `y` (`int`) - Row, 0-based.
 
+**Returns.** The back depth, 0 for flat paper.
+
 ### Flat(int, int) { #m-flat-system-int32-system-int32 }
 
 ```csharp
@@ -65,6 +67,10 @@ Builds a flat map — every pixel's front and back at zero — for a canvas of t
 - `height` (`int`) - Height in pixels; must be positive.
 
 **Returns.** A new, all-zero [`DepthMap`](Nfty.Core.Model.DepthMap.md).
+
+**Exceptions**
+
+- `ArgumentOutOfRangeException` - `width` or `height` is not positive.
 
 ### FromBytes(int, int, ReadOnlySpan&lt;byte&gt;) { #m-frombytes-system-int32-system-int32-system-readonlyspa-a448ef }
 
@@ -98,6 +104,8 @@ The front depth (0..255) at a pixel.
 
 - `x` (`int`) - Column, 0-based.
 - `y` (`int`) - Row, 0-based.
+
+**Returns.** The front depth, 0 for flat paper.
 
 ### ToBytes() { #m-tobytes }
 

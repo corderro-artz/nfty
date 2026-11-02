@@ -20,13 +20,13 @@ public GeneratedSet(string CollectionName, string Description, string Symbol, st
 
 **Parameters**
 
-- `CollectionName` (`string`)
-- `Description` (`string`)
-- `Symbol` (`string`)
-- `Seed` (`string`)
-- `Assets` (`IReadOnlyList<GeneratedAsset>`)
-- `CookbookSha256` (`string?`)
-- `UniqueDna` (`bool`)
+- `CollectionName` (`string`) - The collection's published name.
+- `Description` (`string`) - The collection's description.
+- `Symbol` (`string`) - The collection's ticker-style symbol.
+- `Seed` (`string`) - The seed that produced the run.
+- `Assets` (`IReadOnlyList<GeneratedAsset>`) - The finished assets, in set-number order. Owned by this set.
+- `CookbookSha256` (`string?`) - Hash of the source `.cbk`; null for a book never read from a file.
+- `UniqueDna` (`bool`) - Whether the run enforced distinct DNA.
 
 ## Properties
 
@@ -36,11 +36,15 @@ public GeneratedSet(string CollectionName, string Description, string Symbol, st
 public IReadOnlyList<GeneratedAsset> Assets { get; init; }
 ```
 
+The finished assets, in set-number order. Owned by this set.
+
 ### CollectionName { #p-collectionname }
 
 ```csharp
 public string CollectionName { get; init; }
 ```
+
+The collection's published name.
 
 ### CookbookSha256 { #p-cookbooksha256 }
 
@@ -48,11 +52,15 @@ public string CollectionName { get; init; }
 public string? CookbookSha256 { get; init; }
 ```
 
+Hash of the source `.cbk`; null for a book never read from a file.
+
 ### Description { #p-description }
 
 ```csharp
 public string Description { get; init; }
 ```
+
+The collection's description.
 
 ### Seed { #p-seed }
 
@@ -60,17 +68,23 @@ public string Description { get; init; }
 public string Seed { get; init; }
 ```
 
+The seed that produced the run.
+
 ### Symbol { #p-symbol }
 
 ```csharp
 public string Symbol { get; init; }
 ```
 
+The collection's ticker-style symbol.
+
 ### UniqueDna { #p-uniquedna }
 
 ```csharp
 public bool UniqueDna { get; init; }
 ```
+
+Whether the run enforced distinct DNA.
 
 ## Methods
 

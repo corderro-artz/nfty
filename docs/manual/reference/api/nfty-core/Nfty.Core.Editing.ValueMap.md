@@ -59,9 +59,13 @@ Width in pixels.
 public byte AlphaOf(GrayPixel pixel);
 ```
 
+The alpha channel of a pixel in this surface's format.
+
 **Parameters**
 
-- `pixel` (`GrayPixel`)
+- `pixel` (`GrayPixel`) - The pixel to read.
+
+**Returns.** Alpha, 0-255.
 
 ### Clone() { #m-clone }
 
@@ -70,6 +74,8 @@ public ValueMap Clone();
 ```
 
 An independent deep copy — cloned value/alpha buffers, same dimensions.
+
+**Returns.** A new map with its own buffers.
 
 ### ForCanvas(Dimensions) { #m-forcanvas-nfty-core-model-dimensions }
 
@@ -204,7 +210,11 @@ Renders to a grayscale RGBA image — the form an `.igt` stores.
 public GrayPixel WithAlpha(GrayPixel pixel, byte alpha);
 ```
 
+The same pixel with its alpha replaced and every other channel untouched.
+
 **Parameters**
 
-- `pixel` (`GrayPixel`)
-- `alpha` (`byte`)
+- `pixel` (`GrayPixel`) - The pixel to rewrite.
+- `alpha` (`byte`) - The alpha it should carry.
+
+**Returns.** A pixel identical to `pixel` apart from its alpha.

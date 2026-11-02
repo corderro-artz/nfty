@@ -80,7 +80,13 @@ The archive kind for `path`. An unknown extension is an error rather than a gues
 
 **Parameters**
 
-- `path` (`string`)
+- `path` (`string`) - A file path; only its extension is read.
+
+**Returns.** The kind that extension names.
+
+**Exceptions**
+
+- `NotSupportedException` - The extension is unknown, or the path has none.
 
 ### TryKindOf(string, ArchiveKind) { #m-trykindof-system-string-nfty-core-formats-archivekind }
 

@@ -55,9 +55,13 @@ Width in pixels.
 public byte AlphaOf(Rgba32 pixel);
 ```
 
+The alpha channel of a pixel in this surface's format.
+
 **Parameters**
 
-- `pixel` (`Rgba32`)
+- `pixel` (`Rgba32`) - The pixel to read.
+
+**Returns.** Alpha, 0-255.
 
 ### Clone() { #m-clone }
 
@@ -171,7 +175,11 @@ Renders to a full-color RGBA image — the form a Custom variant stores.
 public Rgba32 WithAlpha(Rgba32 pixel, byte alpha);
 ```
 
+The same pixel with its alpha replaced and every other channel untouched.
+
 **Parameters**
 
-- `pixel` (`Rgba32`)
-- `alpha` (`byte`)
+- `pixel` (`Rgba32`) - The pixel to rewrite.
+- `alpha` (`byte`) - The alpha it should carry.
+
+**Returns.** A pixel identical to `pixel` apart from its alpha.

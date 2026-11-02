@@ -89,7 +89,7 @@ An unknown recipe id has no space at all, and no space is exactly known.
 
 **Parameters**
 
-- `recipeId` (`string`)
+- `recipeId` (`string`) - The recipe's id.
 
 ## Methods
 

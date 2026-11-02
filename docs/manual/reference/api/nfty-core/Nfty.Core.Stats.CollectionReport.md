@@ -22,7 +22,9 @@ Renders the report. Every number is formatted with `InvariantCulture`: this is a
 
 **Parameters**
 
-- `book` (`LoadedCookBook`)
+- `book` (`LoadedCookBook`) - The cookbook to describe.
+
+**Returns.** The report text, invariant-culture formatted.
 
 ### UniqueDnaLine(LoadedCookBook) { #m-uniquednaline-nfty-core-formats-loadedcookbook }
 

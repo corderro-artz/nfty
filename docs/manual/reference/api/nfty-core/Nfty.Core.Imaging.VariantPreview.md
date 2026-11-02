@@ -22,7 +22,9 @@ Whether `ingredient` needs a color to be previewed. Custom does not; a UI can us
 
 **Parameters**
 
-- `ingredient` (`LoadedIngredient`)
+- `ingredient` (`LoadedIngredient`) - The layer to ask about.
+
+**Returns.** True for a Dynamic or Static layer; false for Custom, which is never colorized.
 
 ### Render(LoadedIngredient, string, RolledColor, ColorModel?) { #m-render-nfty-core-formats-loadedingredient-system-strin-0ee4a3 }
 
@@ -51,7 +53,7 @@ A Static layer needs no such overload: its color is an author-written spec, so g
 public static Image<Rgba32> Render(LoadedIngredient ingredient, string variantId, string? colorSpec = null, ColorModel? modelOverride = null);
 ```
 
-The rendered variant. The caller owns the returned image and must dispose it — including for a Custom layer, where a CLONE is returned rather than the ingredient's own image. Returning the borrowed one for one kind and an owned one for the others would make disposal depend on the layer kind, which is exactly the sort of ownership rule that gets a double-free or a leak eventually.
+Renders one variant of a layer, colorized from a prefixed color spec the way a Static layer's fixed color is at generation time.
 
 **Parameters**
 
@@ -59,3 +61,10 @@ The rendered variant. The caller owns the returned image and must dispose it —
 - `variantId` (`string`) - Which variant of it to render.
 - `colorSpec` (`string?`) - A prefixed color spec (`hex:`, `rgb:`, `hsl:`, `hsv:`). Required for a colorized layer; ignored for Custom.
 - `modelOverride` (`ColorModel?`) - Renders in a different color model than the ingredient declares, for comparing the two. Null uses the ingredient's own.
+
+**Returns.** The rendered variant. The caller owns the returned image and must dispose it — including for a Custom layer, where a CLONE is returned rather than the ingredient's own image. Returning the borrowed one for one kind and an owned one for the others would make disposal depend on the layer kind, which is exactly the sort of ownership rule that gets a double-free or a leak eventually.
+
+**Exceptions**
+
+- `InvalidOperationException` - The layer is colorized but `colorSpec` is null, or it carries no colorization block.
+- `FormatException` - `colorSpec` is not a valid prefixed color spec.

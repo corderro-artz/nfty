@@ -95,6 +95,10 @@ The file names [`ModelWriter.Write()`](Nfty.Model.ModelWriter.md#m-write-nfty-mo
 
 **Returns.** The names, in the writer's order.
 
+**Exceptions**
+
+- `ArgumentOutOfRangeException` - `format` is not a defined model format.
+
 ### SafeBaseName(string) { #m-safebasename-system-string }
 
 ```csharp
@@ -140,6 +144,10 @@ Writes the files into a folder, creating it.
 - `directory` (`string`) - The folder.
 - `files` (`IReadOnlyList<ModelFile>`) - The files.
 
+**Exceptions**
+
+- `ArgumentException` - `directory` is null or whitespace.
+
 ### WriteZip(string, IReadOnlyList&lt;ModelFile&gt;) { #m-writezip-system-string-system-collections-generic-irea-a9168e }
 
 ```csharp
@@ -152,3 +160,7 @@ Writes the files into a zip: ordinal-sorted entries, fixed timestamp, so identic
 
 - `zipPath` (`string`) - The zip to create or replace.
 - `files` (`IReadOnlyList<ModelFile>`) - The files.
+
+**Exceptions**
+
+- `ArgumentException` - `zipPath` is null or whitespace.

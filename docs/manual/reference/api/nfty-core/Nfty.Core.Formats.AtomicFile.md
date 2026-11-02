@@ -29,6 +29,11 @@ Writes through a unique temp file beside `path`, then replaces it.
 - `path` (`string`) - The file to replace; created when absent.
 - `writeTemp` (`Action<string>`) - Writes the new contents to the path it is given, which does not exist yet.
 
+**Exceptions**
+
+- `ArgumentException` - `path` is null or whitespace.
+- `ArgumentNullException` - `writeTemp` is null.
+
 ### ReplaceAsync(string, Func&lt;string, Task&gt;) { #m-replaceasync-system-string-system-func-system-string-s-f40a6b }
 
 ```csharp
@@ -43,3 +48,8 @@ The awaiting twin of [`AtomicFile.Replace()`](Nfty.Core.Formats.AtomicFile.md#m-
 - `writeTemp` (`Func<string, Task>`) - Writes the new contents to the path it is given, which does not exist yet.
 
 **Returns.** A task that completes when the file has been replaced.
+
+**Exceptions**
+
+- `ArgumentException` - `path` is null or whitespace.
+- `ArgumentNullException` - `writeTemp` is null.

@@ -153,9 +153,11 @@ A camera framing the given bounds: centered on the box, pulled back to fit its b
 
 **Parameters**
 
-- `min` (`Vector3`)
-- `max` (`Vector3`)
-- `aspect` (`float`)
+- `min` (`Vector3`) - Minimum corner of the subject box.
+- `max` (`Vector3`) - Maximum corner of the subject box.
+- `aspect` (`float`) - Viewport width over height; a non-positive or non-finite value counts as 1.
+
+**Returns.** The framing camera.
 
 ### Orbit(float, float) { #m-orbit-system-single-system-single }
 
@@ -167,8 +169,10 @@ A new camera orbited by the given deltas; yaw is free, pitch clamps.
 
 **Parameters**
 
-- `deltaYawRadians` (`float`)
-- `deltaPitchRadians` (`float`)
+- `deltaYawRadians` (`float`) - Change in yaw, in radians.
+- `deltaPitchRadians` (`float`) - Change in pitch, in radians; the result is clamped.
+
+**Returns.** The orbited camera; this one is unchanged.
 
 ### Pan(Vector2, int) { #m-pan-system-numerics-vector2-system-int32 }
 
@@ -180,8 +184,10 @@ A new camera panned so a `screenDeltaPixels` drag moves content under the pointe
 
 **Parameters**
 
-- `screenDeltaPixels` (`Vector2`)
-- `viewportHeight` (`int`)
+- `screenDeltaPixels` (`Vector2`) - The drag, in screen pixels (x right, y down).
+- `viewportHeight` (`int`) - Height of the viewport in pixels, which fixes how much world one pixel covers.
+
+**Returns.** The panned camera; this one is unchanged.
 
 ### Reset(Vector3, Vector3, float) { #m-reset-system-numerics-vector3-system-numerics-vector3-0c7a99 }
 
@@ -193,9 +199,11 @@ Reframes on new bounds, discarding the current orientation — what "reset" mean
 
 **Parameters**
 
-- `min` (`Vector3`)
-- `max` (`Vector3`)
-- `aspect` (`float`)
+- `min` (`Vector3`) - Minimum corner of the subject box.
+- `max` (`Vector3`) - Maximum corner of the subject box.
+- `aspect` (`float`) - Viewport width over height.
+
+**Returns.** The framing camera, as [`Camera.FramedOn()`](Nfty.Model.Render.Camera.md#m-framedon-system-numerics-vector3-system-numerics-vecto-161a10) builds it.
 
 ### ViewProjection(int, int) { #m-viewprojection-system-int32-system-int32 }
 
@@ -207,8 +215,10 @@ The one function that owns view and projection together. The near and far planes
 
 **Parameters**
 
-- `width` (`int`)
-- `height` (`int`)
+- `width` (`int`) - Viewport width in pixels; fixes the aspect ratio.
+- `height` (`int`) - Viewport height in pixels; fixes the aspect ratio.
+
+**Returns.** View multiplied by projection.
 
 ### WithSubject(Vector3, Vector3) { #m-withsubject-system-numerics-vector3-system-numerics-vector3 }
 
@@ -223,6 +233,8 @@ The same view (target, distance, orientation) over a new subject box: the radius
 - `min` (`Vector3`) - Minimum corner of the new box.
 - `max` (`Vector3`) - Maximum corner of the new box.
 
+**Returns.** The camera over the new box.
+
 ### Zoom(float) { #m-zoom-system-single }
 
 ```csharp
@@ -233,7 +245,9 @@ A new camera at [`Camera.Distance`](Nfty.Model.Render.Camera.md#p-distance) scal
 
 **Parameters**
 
-- `factor` (`float`)
+- `factor` (`float`) - Multiplier for the eye distance.
+
+**Returns.** The zoomed camera; this one is unchanged.
 
 ### ZoomAnchored(float, Vector2, int, int) { #m-zoomanchored-system-single-system-numerics-vector2-sys-d064a7 }
 
@@ -245,7 +259,9 @@ A new camera zoomed by `factor` such that the world point under `pointerScreen` 
 
 **Parameters**
 
-- `factor` (`float`)
-- `pointerScreen` (`Vector2`)
-- `width` (`int`)
-- `height` (`int`)
+- `factor` (`float`) - Multiplier for the eye distance.
+- `pointerScreen` (`Vector2`) - The pointer position in screen pixels.
+- `width` (`int`) - Viewport width in pixels.
+- `height` (`int`) - Viewport height in pixels.
+
+**Returns.** The zoomed camera; this one is unchanged.
