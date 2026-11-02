@@ -23,6 +23,9 @@ public sealed class RenderTarget
 
     /// <summary>Allocates a <see cref="Width"/> × <see cref="Height"/> surface. Both dimensions must
     /// be positive.</summary>
+    /// <param name="width">Width in pixels; must be positive.</param>
+    /// <param name="height">Height in pixels; must be positive.</param>
+    /// <exception cref="ArgumentOutOfRangeException">A dimension is not positive.</exception>
     public RenderTarget(int width, int height)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
@@ -34,6 +37,7 @@ public sealed class RenderTarget
     }
 
     /// <summary>Resets every pixel to <paramref name="background"/> and every depth to infinity.</summary>
+    /// <param name="background">The color to fill with.</param>
     public void Clear(Rgba32 background)
     {
         Array.Fill(Color, background);

@@ -30,6 +30,8 @@ internal static class GreedyRects
     public const int Unset = -1;
 
     /// <summary>Merges a grid.</summary>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="width"/> or <paramref name="height"/> is not positive.</exception>
+    /// <exception cref="ArgumentException"><paramref name="keys"/> does not hold exactly width times height entries.</exception>
     /// <param name="width">Columns.</param>
     /// <param name="height">Rows.</param>
     /// <param name="keys">One key per cell, row-major, top row first; negative means unset.</param>

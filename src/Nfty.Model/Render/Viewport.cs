@@ -12,10 +12,18 @@ public static class Viewport
 {
     /// <summary>NDC (x right, y up, both −1..1) to pixel coordinates (x right, y DOWN, origin at the
     /// top-left corner of the top-left pixel).</summary>
+    /// <param name="ndc">Normalized device coordinates.</param>
+    /// <param name="width">Viewport width in pixels.</param>
+    /// <param name="height">Viewport height in pixels.</param>
+    /// <returns>The position in pixels.</returns>
     public static Vector2 NdcToScreen(Vector2 ndc, int width, int height) =>
         new((ndc.X * 0.5f + 0.5f) * width, (1f - (ndc.Y * 0.5f + 0.5f)) * height);
 
     /// <summary>The exact inverse of <see cref="NdcToScreen"/>.</summary>
+    /// <param name="screen">A position in pixels.</param>
+    /// <param name="width">Viewport width in pixels.</param>
+    /// <param name="height">Viewport height in pixels.</param>
+    /// <returns>Normalized device coordinates.</returns>
     public static Vector2 ScreenToNdc(Vector2 screen, int width, int height) =>
         new(screen.X / width * 2f - 1f, 1f - screen.Y / height * 2f);
 }

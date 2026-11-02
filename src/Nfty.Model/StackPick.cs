@@ -11,6 +11,7 @@ namespace Nfty.Model;
 public readonly record struct StackPick(string IngredientId, string VariantId, RolledColor? Color = null)
 {
     /// <summary>A pick with no color from an (ingredient, variant) pair.</summary>
+    /// <returns>The pick.</returns>
     /// <param name="t">The pair.</param>
     public static implicit operator StackPick((string IngredientId, string VariantId) t) =>
         new(t.IngredientId, t.VariantId);

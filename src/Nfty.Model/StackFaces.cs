@@ -79,7 +79,7 @@ public sealed class StackFaces : IDisposable
         return new StackFaces(art.Clone(), art.Clone(), new int[art.Width * art.Height]);
     }
 
-    /// <inheritdoc />
+    /// <summary>Disposes the front and back pictures.</summary>
     public void Dispose()
     {
         Front.Dispose();

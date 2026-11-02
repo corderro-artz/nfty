@@ -136,16 +136,24 @@ public sealed class Camera
     }
 
     /// <summary>A new camera orbited by the given deltas; yaw is free, pitch clamps.</summary>
+    /// <param name="deltaYawRadians">Change in yaw, in radians.</param>
+    /// <param name="deltaPitchRadians">Change in pitch, in radians; the result is clamped.</param>
+    /// <returns>The orbited camera; this one is unchanged.</returns>
     public Camera Orbit(float deltaYawRadians, float deltaPitchRadians) =>
         new(Target, Distance, Yaw + deltaYawRadians, Pitch + deltaPitchRadians, BoundsMin, BoundsMax);
 
     /// <summary>A new camera at <see cref="Distance"/> scaled by <paramref name="factor"/>, clamped.
     /// <paramref name="factor"/> below 1 moves the eye closer.</summary>
+    /// <param name="factor">Multiplier for the eye distance.</param>
+    /// <returns>The zoomed camera; this one is unchanged.</returns>
     public Camera Zoom(float factor) => new(Target, Distance * factor, Yaw, Pitch, BoundsMin, BoundsMax);
 
     /// <summary>A new camera panned so a <paramref name="screenDeltaPixels"/> drag moves content
     /// under the pointer by the same number of pixels, at the current <see cref="Distance"/> and
     /// <see cref="FovDegrees"/>.</summary>
+    /// <param name="screenDeltaPixels">The drag, in screen pixels (x right, y down).</param>
+    /// <param name="viewportHeight">Height of the viewport in pixels, which fixes how much world one pixel covers.</param>
+    /// <returns>The panned camera; this one is unchanged.</returns>
     public Camera Pan(Vector2 screenDeltaPixels, int viewportHeight)
     {
         float worldPerPixel = WorldPerPixel(Distance, viewportHeight);
@@ -170,6 +178,11 @@ public sealed class Camera
     /// Exact while the corrected target stays inside the subject box; over empty space far beside the
     /// model the target clamp wins and the anchor drifts — orbiting about empty air is what the clamp
     /// exists to prevent.</summary>
+    /// <param name="factor">Multiplier for the eye distance.</param>
+    /// <param name="pointerScreen">The pointer position in screen pixels.</param>
+    /// <param name="width">Viewport width in pixels.</param>
+    /// <param name="height">Viewport height in pixels.</param>
+    /// <returns>The zoomed camera; this one is unchanged.</returns>
     public Camera ZoomAnchored(float factor, Vector2 pointerScreen, int width, int height)
     {
         var anchor = Unproject(pointerScreen, width, height);
@@ -202,6 +215,9 @@ public sealed class Camera
 
     /// <summary>The one function that owns view and projection together. The near and far planes
     /// scale with <see cref="Radius"/>.</summary>
+    /// <param name="width">Viewport width in pixels; fixes the aspect ratio.</param>
+    /// <param name="height">Viewport height in pixels; fixes the aspect ratio.</param>
+    /// <returns>View multiplied by projection.</returns>
     public Matrix4x4 ViewProjection(int width, int height)
     {
         var view = Matrix4x4.CreateLookAt(Eye, Target, Vector3.UnitY);
@@ -215,6 +231,10 @@ public sealed class Camera
     /// bounding sphere in the NARROWER of the vertical and horizontal fields of view (so a tall
     /// viewport, <paramref name="aspect"/> below 1, does not crop sideways) with 15% margin, looking
     /// square-on at the front face (yaw 0, pitch 0) with the box center on the viewport center.</summary>
+    /// <param name="min">Minimum corner of the subject box.</param>
+    /// <param name="max">Maximum corner of the subject box.</param>
+    /// <param name="aspect">Viewport width over height; a non-positive or non-finite value counts as 1.</param>
+    /// <returns>The framing camera.</returns>
     public static Camera FramedOn(Vector3 min, Vector3 max, float aspect = 1f)
     {
         var center = (min + max) / 2f;
@@ -229,12 +249,17 @@ public sealed class Camera
     /// <summary>The same view (target, distance, orientation) over a new subject box: the radius, the
     /// distance limits and the target's confinement follow the box, the camera does not jump (the
     /// target is only moved if it would fall outside, the distance only if it would break the floor).</summary>
+    /// <returns>The camera over the new box.</returns>
     /// <param name="min">Minimum corner of the new box.</param>
     /// <param name="max">Maximum corner of the new box.</param>
     public Camera WithSubject(Vector3 min, Vector3 max) => new(Target, Distance, Yaw, Pitch, min, max);
 
     /// <summary>Reframes on new bounds, discarding the current orientation — what "reset" means when
     /// the subject itself has bounds, as opposed to re-centering the existing view.</summary>
+    /// <param name="min">Minimum corner of the subject box.</param>
+    /// <param name="max">Maximum corner of the subject box.</param>
+    /// <param name="aspect">Viewport width over height.</param>
+    /// <returns>The framing camera, as <see cref="FramedOn"/> builds it.</returns>
     public Camera Reset(Vector3 min, Vector3 max, float aspect = 1f) => FramedOn(min, max, aspect);
 
     // The ONE perspective world-units-per-pixel formula: the size of one pixel on a plane `depth`

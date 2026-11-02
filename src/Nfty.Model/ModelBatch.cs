@@ -36,6 +36,7 @@ public enum SkipReason
 public sealed record SkippedModel(string Name, SkipReason Reason, string Message)
 {
     /// <summary>The line form: <c>name: message</c>.</summary>
+    /// <returns>The line, without a trailing newline.</returns>
     public override string ToString() => $"{Name}: {Message}";
 }
 
@@ -109,6 +110,7 @@ public static class ModelBatch
     }
 
     /// <summary>The file names <see cref="ModelWriter.Write"/> writes for a base name.</summary>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="format"/> is not a defined model format.</exception>
     /// <param name="baseName">The base name.</param>
     /// <param name="format">The format.</param>
     /// <returns>The names, in the writer's order.</returns>
@@ -342,6 +344,7 @@ public static class ModelBatch
     }
 
     /// <summary>Writes the files into a folder, creating it.</summary>
+    /// <exception cref="ArgumentException"><paramref name="directory"/> is null or whitespace.</exception>
     /// <param name="directory">The folder.</param>
     /// <param name="files">The files.</param>
     public static void WriteFolder(string directory, IReadOnlyList<ModelFile> files)
@@ -360,6 +363,7 @@ public static class ModelBatch
 
     /// <summary>Writes the files into a zip: ordinal-sorted entries, fixed timestamp, so identical
     /// input gives identical bytes.</summary>
+    /// <exception cref="ArgumentException"><paramref name="zipPath"/> is null or whitespace.</exception>
     /// <param name="zipPath">The zip to create or replace.</param>
     /// <param name="files">The files.</param>
     public static void WriteZip(string zipPath, IReadOnlyList<ModelFile> files)
@@ -393,6 +397,7 @@ public abstract class ModelDestination
     private protected ModelDestination() { }
 
     /// <summary>A folder, created on the first file.</summary>
+    /// <exception cref="ArgumentException"><paramref name="directory"/> is null or whitespace.</exception>
     /// <param name="directory">The folder.</param>
     /// <returns>The destination.</returns>
     public static ModelDestination Folder(string directory)
@@ -402,6 +407,7 @@ public abstract class ModelDestination
     }
 
     /// <summary>One zip: ordinal entries, fixed timestamps, in place only once complete.</summary>
+    /// <exception cref="ArgumentException"><paramref name="zipPath"/> is null or whitespace.</exception>
     /// <param name="zipPath">The zip to create or replace.</param>
     /// <returns>The destination.</returns>
     public static ModelDestination Zip(string zipPath)
