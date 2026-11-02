@@ -537,10 +537,6 @@
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
-  <Style Selector="Button.landing TextBlock.hk.on-accent">
-    <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
-    <Setter Property="Opacity" Value="0.8" />
-  </Style>
 
   <Style Selector="TextBlock.muted">
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
@@ -699,6 +695,60 @@
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="10.5" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+
+  <!-- KEY CAPS (Controls/KeyChord). A chord is a row of these; every colour is a token, both themes.
+       Height and MinWidth are the stated KeyCapHeight tokens, so a cap is square for one character and
+       a row holding a chord is the same height whatever the chord says. The heavier bottom edge is the
+       KeyCapShadow inset, not a thicker border, so the corner radius stays true; the 1px of bottom
+       padding puts the label in the middle of the face the shadow leaves. -->
+  <Style Selector="Border.keycap">
+    <Setter Property="Background" Value="{DynamicResource KeyCapFaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BoxShadow" Value="{DynamicResource KeyCapShadow}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="Height" Value="{DynamicResource KeyCapHeight}" />
+    <Setter Property="MinWidth" Value="{DynamicResource KeyCapHeight}" />
+    <Setter Property="Padding" Value="5,0,5,1" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.keycap.sm">
+    <Setter Property="Height" Value="{DynamicResource KeyCapHeightSm}" />
+    <Setter Property="MinWidth" Value="{DynamicResource KeyCapHeightSm}" />
+    <Setter Property="Padding" Value="4,0,4,1" />
+  </Style>
+  <Style Selector="Border.keycap TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.keycap.sm TextBlock"><Setter Property="FontSize" Value="10" /></Style>
+  <Style Selector="Border.keycap Path.ico.keyink"><Setter Property="Stroke" Value="{DynamicResource FgBrush}" /></Style>
+  <!-- The highlighted mouse button: the fill glyph, stroked AND filled in the accent over the body. -->
+  <Style Selector="Border.keycap Path.ico.keyfill">
+    <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
+    <Setter Property="Fill" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+  <Style Selector="TextBlock.keyjoin">
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- On an accent button (Landing's New CookBook) the cap is a ghost of the button's own ink, not a light key. -->
+  <Style Selector="StackPanel.keychord.onaccent Border.keycap">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource OnAccentBrush}" />
+    <Setter Property="BoxShadow" Value="none" />
+    <Setter Property="Opacity" Value="0.85" />
+  </Style>
+  <Style Selector="StackPanel.keychord.onaccent Border.keycap TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+  </Style>
+  <Style Selector="StackPanel.keychord.onaccent Border.keycap Path.ico.keyink">
+    <Setter Property="Stroke" Value="{DynamicResource OnAccentBrush}" />
   </Style>
 
   <!-- The TextBox that sits INSIDE Border.search: the pill already draws the chrome, so this must
@@ -1386,15 +1436,6 @@
     <Setter Property="FontSize" Value="10.5" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
-  </Style>
-  <!-- .keys kbd - the footer hint chips. Distinct from Border.kbd (the search pill's shortcut chip):
-       the mockup gives these a panel fill and the stronger line. -->
-  <Style Selector="Border.kbd.keys">
-    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
-  </Style>
-  <Style Selector="Border.kbd.keys > TextBlock">
-    <Setter Property="FontSize" Value="10" />
   </Style>
   <Style Selector="TextBlock.keyhint">
     <Setter Property="FontSize" Value="11" />
@@ -3838,15 +3879,6 @@
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 
-    <!-- .kline / .k — the keyboard rows. Border.kbd already carries the chip's border, radius and
-       mono 10.5 ink; only the fill, the flatter padding and the centered glyph differ here. -->
-  <Style Selector="Border.kbd.sh-k">
-    <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
-    <Setter Property="Padding" Value="0,2" />
-  </Style>
-  <Style Selector="Border.kbd.sh-k > TextBlock">
-    <Setter Property="TextAlignment" Value="Center" />
-  </Style>
   <Style Selector="TextBlock.sh-kdesc">
     <Setter Property="FontSize" Value="11.5" />
     <Setter Property="TextWrapping" Value="Wrap" />   <!-- a long description wraps; clipped at the card edge it read as a truncated word -->

@@ -1650,7 +1650,8 @@ public partial class VisualCapture
             all[m.Groups[1].Value] = (Geometry)res!;
         }
         var order = new List<string> { "IconKitchen", "IconRise", "Icon2dOnly", "IconLock", "IconRect", "IconImport", "IconDownload", "IconTypeSet" };
-        order.AddRange(all.Keys.Where(k => !order.Contains(k)));
+        // The *Fill glyphs are second layers drawn over IconMouse; alone they are specks, so the chord strip below shows them where they live.
+        order.AddRange(all.Keys.Where(k => !order.Contains(k) && !k.EndsWith("Fill", StringComparison.Ordinal)));
         Assert.Contains("IconRise", all.Keys);
         Assert.Contains("Icon2dOnly", all.Keys);
 
@@ -1672,8 +1673,13 @@ public partial class VisualCapture
                 }
                 // Three times larger: a 12px glyph at 1:1 cannot be inspected, and the stroke weight, the cut
                 // corners and the gap to its neighbour are exactly what this sheet is for.
+                var chords = new WrapPanel { Margin = new Thickness(0, 6, 0, 0) };
+                foreach (var chord in new[] { "Left", "Right", "Middle", "Mouse4", "Mouse5", "Right click", "Middle drag", "Double-click", "Wheel", "Wheel up", "Wheel down",
+                                              "Ctrl Shift Z", "Alt ↑↓", "← ↑ ↓ →", "Enter", "Tab", "Backspace", "Space", "PgUp PgDn", "Right or Middle drag" })
+                    chords.Children.Add(new Controls.KeyChord { Chord = chord, Compact = px == 12, Margin = new Thickness(0, 0, 14, 8) });
+                panel.Children.Add(new Border { Width = 860, Child = chords });
                 var big = new LayoutTransformControl { LayoutTransform = new ScaleTransform(3, 3), Child = panel };
-                var window = new Window { RequestedThemeVariant = variant, Width = 2700, Height = 1080, Content = big };
+                var window = new Window { RequestedThemeVariant = variant, Width = 2700, Height = 1500, Content = big };
                 window.Show();
                 Dispatcher.UIThread.RunJobs();
                 using var frame = window.CaptureRenderedFrame()!;

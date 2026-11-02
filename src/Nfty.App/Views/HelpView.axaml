@@ -46,7 +46,7 @@
     <!-- A key: a cap as wide as its section's widest, then the action. -->
     <DataTemplate DataType="vm:HelpKey">
       <Grid Classes="sh-kline" ColumnDefinitions="Auto,*">
-        <Border Grid.Column="0" Classes="kbd sh-k" Width="{Binding KeyWidth}"><TextBlock Text="{Binding Key}" /></Border>
+        <Panel Grid.Column="0" Width="{Binding KeyWidth}"><ctl:KeyChord Chord="{Binding Key}" Compact="True" HorizontalAlignment="Left" /></Panel>
         <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="{Binding Term}" />
       </Grid>
     </DataTemplate>
@@ -164,8 +164,8 @@
                        Margin="8,0" VerticalAlignment="Center"
                        PlaceholderText="Search keys and terms" ToolTip.Tip="Search this sheet" />
               <Panel Grid.Column="2" Width="22" VerticalAlignment="Center">
-                <Border Classes="kbd" HorizontalAlignment="Center"
-                        IsVisible="{Binding ShowPages}"><TextBlock Text="/" /></Border>
+                <ctl:KeyChord Chord="/" Compact="True" HorizontalAlignment="Center"
+                              IsVisible="{Binding ShowPages}" />
                 <Button x:Name="ClearQuery" Classes="searchclear" Command="{Binding ClearSearchCommand}"
                         IsVisible="{Binding IsSearching}" ToolTip.Tip="Clear search — Esc">
                   <Path Classes="ico sm" Data="{StaticResource IconClose}" />
@@ -202,8 +202,8 @@
                 <DataTemplate DataType="vm:HelpEntry">
                   <Button Classes="hrow" Command="{Binding #Root.((vm:HelpViewModel)DataContext).JumpCommand}" CommandParameter="{Binding}">
                     <Grid ColumnDefinitions="136,*,Auto" ColumnSpacing="14">
-                      <Border Grid.Column="0" Classes="kbd sh-k" HorizontalAlignment="Left" MinWidth="30" Padding="8,2"
-                              IsVisible="{Binding LeadIsKey}"><TextBlock Text="{Binding Lead}" /></Border>
+                      <ctl:KeyChord Grid.Column="0" Chord="{Binding Lead}" Compact="True" HorizontalAlignment="Left"
+                                    IsVisible="{Binding LeadIsKey}" />
                       <TextBlock Grid.Column="0" Classes="sh-t rlead" Text="{Binding Lead}" IsVisible="{Binding !LeadIsKey}"
                                  TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
                       <TextBlock Grid.Column="1" Classes="sh-kdesc" Text="{Binding Body}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />

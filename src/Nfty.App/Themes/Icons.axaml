@@ -166,4 +166,60 @@
 
   <!-- status bar: zoom out / in, and help (<circle cx=12 cy=12 r=9> + the query stroke + dot) -->
   <StreamGeometry x:Key="IconZoomOut">M6 12h12</StreamGeometry>
+
+  <!-- ===== group: input (assets/icons/input/) ===== -->
+
+  <!-- The Backspace key: a tag pointing left with a cross. -->
+  <StreamGeometry x:Key="IconKeyBackspace">M9 5h11a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H9l-6-7zM12 10l5 5M17 10l-5 5</StreamGeometry>
+
+  <!-- The down arrow key. -->
+  <StreamGeometry x:Key="IconKeyDown">M12 6v11M7 12l5 5 5-5</StreamGeometry>
+
+  <!-- The Enter key: the return arrow. -->
+  <StreamGeometry x:Key="IconKeyEnter">M20 5v7a2 2 0 0 1-2 2H5M9 10l-4 4 4 4</StreamGeometry>
+
+  <!-- The left arrow key. -->
+  <StreamGeometry x:Key="IconKeyLeft">M18 12H7M12 7l-5 5 5 5</StreamGeometry>
+
+  <!-- The right arrow key. -->
+  <StreamGeometry x:Key="IconKeyRight">M6 12h11M12 7l5 5-5 5</StreamGeometry>
+
+  <!-- The Shift key: the hollow up arrow. -->
+  <StreamGeometry x:Key="IconKeyShift">M12 3l8 9h-5v8H9v-8H4z</StreamGeometry>
+
+  <!-- The Space bar: the open bracket under a line of text. -->
+  <StreamGeometry x:Key="IconKeySpace">M4 10v6h16v-6</StreamGeometry>
+
+  <!-- The Tab key: an arrow into a stop. -->
+  <StreamGeometry x:Key="IconKeyTab">M3 12h14M12 7l5 5-5 5M21 5v14</StreamGeometry>
+
+  <!-- The up arrow key, a short-shafted arrow so it does not pass for IconArrowRight turned. -->
+  <StreamGeometry x:Key="IconKeyUp">M12 18V7M7 12l5-5 5 5</StreamGeometry>
+
+  <!-- The lower thumb button (mouse 4, back), a tab on the left flank of IconMouse, filled in the accent over the body. -->
+  <StreamGeometry x:Key="IconMouseBackFill">M4.5 13h1.5v4.5h-1.5z</StreamGeometry>
+
+  <!-- The upper thumb button (mouse 5, forward), a tab on the left flank of IconMouse, filled in the accent over the body. -->
+  <StreamGeometry x:Key="IconMouseForwardFill">M4.5 8h1.5v3.5h-1.5z</StreamGeometry>
+
+  <!-- The left button of IconMouse, drawn alone so it can be filled in the accent over the body. -->
+  <StreamGeometry x:Key="IconMouseLeftFill">M12 2a6 6 0 0 0-6 6v3h6z</StreamGeometry>
+
+  <!-- The wheel of IconMouse, drawn alone so it can be filled in the accent over the body (a click on the wheel, not a scroll). -->
+  <StreamGeometry x:Key="IconMouseMiddleFill">M10.5 4.5h3v5h-3z</StreamGeometry>
+
+  <!-- The right button of IconMouse, drawn alone so it can be filled in the accent over the body. -->
+  <StreamGeometry x:Key="IconMouseRightFill">M12 2a6 6 0 0 1 6 6v3h-6z</StreamGeometry>
+
+  <!-- A mouse seen from above, BODY ONLY: the two button seams. Every mouse-* fill glyph registers over it exactly (same 24-unit box), stroked and filled in the accent as a second Path, because a Path.ico is one path with one brush. -->
+  <StreamGeometry x:Key="IconMouse">M12 2a6 6 0 0 1 6 6v8a6 6 0 0 1-12 0V8a6 6 0 0 1 6-6zM6 11h12M12 2v9</StreamGeometry>
+
+  <!-- The scroll wheel rolled down toward the user: the roller over one down chevron. -->
+  <StreamGeometry x:Key="IconWheelDown">M10.5 9h3a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-5a.5.5 0 0 1 .5-.5zM9 18.5l3 3 3-3</StreamGeometry>
+
+  <!-- The scroll wheel rolled up away from the user: the roller under one up chevron. -->
+  <StreamGeometry x:Key="IconWheelUp">M10.5 9h3a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-5a.5.5 0 0 1 .5-.5zM9 5.5l3-3 3 3</StreamGeometry>
+
+  <!-- The scroll wheel, either way: the roller between an up and a down chevron. The roller is what tells it from IconChevronUp and IconChevronDown. -->
+  <StreamGeometry x:Key="IconWheel">M10.5 9h3a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-5a.5.5 0 0 1 .5-.5zM9 5.5l3-3 3 3M9 18.5l3 3 3-3</StreamGeometry>
 </ResourceDictionary>

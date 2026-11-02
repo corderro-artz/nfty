@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctl="using:Nfty.App.Controls"
              xmlns:svc="using:Nfty.App.Services"
              xmlns:vm="using:Nfty.App.ViewModels"
              x:Class="Nfty.App.Views.RuleDialogView"
@@ -113,7 +114,7 @@
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
             <StackPanel Orientation="Horizontal" Spacing="4">
-              <Border Classes="kbd keys"><TextBlock Text="Esc" /></Border>
+              <ctl:KeyChord Chord="Esc" Compact="True" />
               <TextBlock Text="cancel" Classes="keyhint" />
             </StackPanel>
           </StackPanel>

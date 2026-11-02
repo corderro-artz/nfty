@@ -22,6 +22,11 @@
         </DrawingBrush.Drawing>
       </DrawingBrush>
       <SolidColorBrush x:Key="PanelBrush" Color="#f8f3ed" />
+      <!-- A key cap (Controls/KeyChord): a face a shade lighter than the panel it sits on, and the 2px
+           lower edge that makes it a key rather than a chip, as ONE inset shadow so the bottom edge
+           is heavier than the rim without a second border. -->
+      <SolidColorBrush x:Key="KeyCapFaceBrush" Color="#fcfaf6" />
+      <BoxShadows x:Key="KeyCapShadow">inset 0 -2 0 0 #38121418</BoxShadows>
       <!-- Modal scrim: a 52% veil of the page background (mockup `.scrim`), so a light-theme dialog
            sits on a lightened wash rather than a heavy black veil. Avalonia is #AARRGGBB. -->
       <SolidColorBrush x:Key="ScrimBrush" Color="#85f4efe8" />
@@ -161,6 +166,8 @@
         </DrawingBrush.Drawing>
       </DrawingBrush>
       <SolidColorBrush x:Key="PanelBrush" Color="#0b0c10" />
+      <SolidColorBrush x:Key="KeyCapFaceBrush" Color="#181b24" />
+      <BoxShadows x:Key="KeyCapShadow">inset 0 -2 0 0 #8c000000</BoxShadows>
       <SolidColorBrush x:Key="ScrimBrush" Color="#8507080b" />
       <SolidColorBrush x:Key="TileCaptionBrush" Color="#d90b0c10" />
       <SolidColorBrush x:Key="TileBrush" Color="#12141c" />
@@ -277,6 +284,10 @@
        Controls.axaml, which is hand-authored precisely so this number can exist. -->
   <x:Double x:Key="FieldHeight">32</x:Double>
   <x:Double x:Key="FieldHeightSm">26</x:Double>
+  <!-- A key cap's height (Controls/KeyChord): the form size, and the one for a dense table or rail.
+       Stated here so a row holding a chord is the same height whatever chord it holds. -->
+  <x:Double x:Key="KeyCapHeight">20</x:Double>
+  <x:Double x:Key="KeyCapHeightSm">18</x:Double>
   <x:Double x:Key="StepperWidth">17</x:Double>
   <!-- One DNA-space row. STATED, not measured, and that is a correctness fix rather than a tidy-up:
        CookBookDetailView divides the rows host by this to decide how many rows a page holds, and it

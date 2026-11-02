@@ -130,10 +130,8 @@ public class HelpSheetTests
     [AvaloniaFact]
     public void Key_hints_use_the_platforms_own_modifier()
     {
-        var chips = Sheet().GetVisualDescendants().OfType<Border>()
-            .Where(b => b.Classes.Contains("sh-k"))
-            .SelectMany(b => b.GetVisualDescendants().OfType<TextBlock>())
-            .Select(t => t.Text ?? "")
+        var chips = Sheet().GetVisualDescendants().OfType<Controls.KeyChord>()
+            .Select(c => c.Chord ?? "")
             .ToArray();
 
         Assert.NotEmpty(chips);
