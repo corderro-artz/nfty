@@ -53,7 +53,7 @@
                   <TextBlock Text="SYMBOL" Classes="plabel" />
                   <Border Classes="qmark"
                           ToolTip.Tip="The collection's ticker. Convention is 3–5 uppercase characters (VPET, PUNK) — what marketplaces display well. Up to 255; may be left empty.">
-                    <TextBlock />
+                    <Path Classes="ico xs" Data="{StaticResource IconHelp}" />
                   </Border>
                 </StackPanel>
                 <TextBox Text="{Binding Symbol}" MaxLength="255" PlaceholderText="VP" />
@@ -82,7 +82,7 @@
                   <TextBlock Text="CANVAS" Classes="plabel" />
                   <Border Classes="qmark"
                           ToolTip.Tip="Every Recipe and painted layer is validated against this exact size. It can't change once art is added.">
-                    <TextBlock />
+                    <Path Classes="ico xs" Data="{StaticResource IconHelp}" />
                   </Border>
                 </StackPanel>
                 <!-- Width / aspect lock / height, with the lock centered between the two fields.
@@ -98,6 +98,9 @@
                   </ToggleButton>
                   <NumericUpDown Grid.Column="2" Value="{Binding Height}" Minimum="1" />
                 </Grid>
+                <!-- Reserved: always laid out, inked past 512 x 512 (CanvasAdvice). -->
+                <TextBlock Classes="canvaswarn" Text="{x:Static vm:CanvasAdvice.LargeWarning}"
+                           Opacity="{Binding LargeCanvasOpacity}" />
               </StackPanel>
 
               <StackPanel Spacing="6">
@@ -105,7 +108,7 @@
                   <TextBlock Text="TARGET SUPPLY" Classes="plabel" />
                   <Border Classes="qmark"
                           ToolTip.Tip="How many assets you intend to mint. Optional — leave it empty if you have not decided. It is declarative: it never limits a cook, which takes its count from the Cook dialog.">
-                    <TextBlock />
+                    <Path Classes="ico xs" Data="{StaticResource IconHelp}" />
                   </Border>
                 </StackPanel>
                 <NumericUpDown Value="{Binding TargetSupply}" Minimum="0" Increment="100" FormatString="0" PlaceholderText="not decided" />

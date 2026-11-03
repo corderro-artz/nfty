@@ -1382,30 +1382,25 @@
     <Setter Property="ToolTip.ShowDelay" Value="2200" />
   </Style>
 
+  <!-- The "?" help badge: the drawn help glyph (circle + mark, one geometry, centered by
+       construction) rather than a 9px "?" character in a 13px ring, whose glyph sat off the ring's
+       middle and beside the caps label it belongs to. The Border is the hover and tooltip target. -->
   <Style Selector="Border.qmark">
     <Setter Property="Width" Value="13" />
     <Setter Property="Height" Value="13" />
-    <Setter Property="CornerRadius" Value="7" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="Background" Value="Transparent" />
     <Setter Property="VerticalAlignment" Value="Center" />
     <!-- The exception to the 2.2s rule above, and the only one: a "?" badge is never crossed by
          accident on the way somewhere - it is hovered on purpose, and waiting two seconds for the
          thing you deliberately pointed at reads as broken. Still slower than Fluent's default. -->
     <Setter Property="ToolTip.ShowDelay" Value="600" />
   </Style>
-  <Style Selector="Border.qmark:pointerover">
-    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
-  </Style>
-  <Style Selector="Border.qmark > TextBlock">
-    <Setter Property="Text" Value="?" />
-    <Setter Property="FontSize" Value="9" />
-    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  <Style Selector="Border.qmark > Path.ico">
     <Setter Property="HorizontalAlignment" Value="Center" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
-  <Style Selector="Border.qmark:pointerover > TextBlock">
-    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+  <Style Selector="Border.qmark:pointerover > Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
   </Style>
   <!-- Label + badge sit on one row; the label keeps its own bottom margin off this wrapper. -->
   <Style Selector="StackPanel.plabel-row">
@@ -2409,6 +2404,10 @@
 
   <Style Selector="Panel.band">
     <Setter Property="Height" Value="40" />
+    <!-- Drawn 40 tall (the thumb's offset needs it) but laid out 24: the 18px track sits in the middle,
+         so the band's top and bottom 8 are air that read as a gap between a bar and its own label.
+         The overhang is transparent and hit-testable, so nothing is lost. -->
+    <Setter Property="Margin" Value="0,-8,0,-8" />
     <!-- TWO STACKED SLIDERS GIVE THE TOP ONE EVERY PRESS. Each is the full width of the band, so
          the second one declared covers the first and a click on the low handle dragged the HIGH one
          to the pointer - the low handle could not be moved by mouse at all, and every range in the
@@ -4719,5 +4718,14 @@
     <Setter Property="LineHeight" Value="14" />
     <Setter Property="TextWrapping" Value="NoWrap" />
     <Setter Property="Margin" Value="0,2,0,0" />
+  </Style>
+  <!-- The large-canvas warning under a canvas field: one line, warning ink, its height always
+       reserved (Opacity toggles) so typing past 512 x 512 moves nothing on the card. -->
+  <Style Selector="TextBlock.canvaswarn">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="LineHeight" Value="14" />
+    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="MaxLines" Value="2" />
   </Style>
 </Styles>

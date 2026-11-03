@@ -55,7 +55,7 @@
                   <TextBlock Text="KIND" Classes="plabel" />
                   <Border Classes="qmark"
                           ToolTip.Tip="How this layer becomes pixels. Dynamic and Static are grayscale value-maps that get colorized; Custom is full-color art composited untouched. This cannot be changed later without repainting.">
-                    <TextBlock />
+                    <Path Classes="ico xs" Data="{StaticResource IconHelp}" />
                   </Border>
                 </StackPanel>
                 <!-- .kinds: three equal-width cards, copy verbatim from wizard-ingredient.html -->
@@ -120,7 +120,7 @@
                 <TextBlock Text="COLOR" Classes="plabel" />
                 <Border Classes="qmark"
                         ToolTip.Tip="Dynamic and Static layers are grayscale value-maps: the art carries the lightness and this decides the hue and saturation. Custom art carries its own color and is composited untouched.">
-                  <TextBlock />
+                  <Path Classes="ico xs" Data="{StaticResource IconHelp}" />
                 </Border>
               </StackPanel>
 
@@ -152,7 +152,7 @@
                      patch of color space this layer rolls from) rather than two. -->
                 <Grid ColumnDefinitions="*,14,*">
                   <StackPanel Grid.Column="0" Spacing="4">
-                    <Grid ColumnDefinitions="Auto,*">
+                    <Grid Classes="ctlh" ColumnDefinitions="Auto,*">
                       <TextBlock Grid.Column="0" Text="HUE" Classes="plabel" VerticalAlignment="Center" />
                       <TextBlock Grid.Column="1" Classes="cv" Text="{Binding HueRangeText}" />
                     </Grid>
@@ -165,7 +165,7 @@
                     </Panel>
                   </StackPanel>
                   <StackPanel Grid.Column="2" Spacing="4">
-                    <Grid ColumnDefinitions="Auto,*">
+                    <Grid Classes="ctlh" ColumnDefinitions="Auto,*">
                       <TextBlock Grid.Column="0" Text="SATURATION" Classes="plabel" VerticalAlignment="Center" />
                       <TextBlock Grid.Column="1" Classes="cv" Text="{Binding SatRangeText}" />
                     </Grid>
@@ -188,7 +188,7 @@
                     <TextBlock Text="FIXED COLOR" Classes="plabel" />
                     <Border Classes="qmark"
                             ToolTip.Tip="Needs an explicit prefix — hex:, rgb:, hsl: or hsv:. A bare value is rejected, never guessed.">
-                      <TextBlock />
+                      <Path Classes="ico xs" Data="{StaticResource IconHelp}" />
                     </Border>
                   </StackPanel>
                   <TextBox PlaceholderText="hex:d6249f" Text="{Binding FixedColor}" />
@@ -209,10 +209,13 @@
                   <TextBlock Text="CANVAS" Classes="plabel" />
                   <Border Classes="qmark"
                           ToolTip.Tip="A loose Ingredient has no CookBook to inherit from, so you must choose. Import rejects a mismatch rather than resampling — resizing a value-map would soften the art the DNA was built on.">
-                    <TextBlock />
+                    <Path Classes="ico xs" Data="{StaticResource IconHelp}" />
                   </Border>
                 </StackPanel>
-                <TextBox PlaceholderText="512x512" Text="{Binding CanvasSize}" />
+                <TextBox PlaceholderText="32x32" Text="{Binding CanvasSize}" />
+                <!-- Reserved: always laid out, inked past 512 x 512 (CanvasAdvice). -->
+                <TextBlock Classes="canvaswarn" Text="{x:Static vm:CanvasAdvice.LargeWarning}"
+                           Opacity="{Binding LargeCanvasOpacity}" />
               </StackPanel>
             </StackPanel>
           </Grid>

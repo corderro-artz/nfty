@@ -40,7 +40,7 @@
                     <TextBlock Text="COLLECTION NAME" Classes="plabel" Margin="0" />
                     <Border Classes="qmark"
                             ToolTip.Tip="What every cooked asset is published under, as the name in each metadata file, and what an export is named after. It is a separate field from the book's own name.">
-                      <TextBlock />
+                      <Path Classes="ico xs" Data="{StaticResource IconHelp}" />
                     </Border>
                   </StackPanel>
                   <TextBox Text="{Binding CollectionName}" />
@@ -58,7 +58,7 @@
                       <TextBlock Text="TARGET SUPPLY" Classes="plabel" Margin="0" />
                       <Border Classes="qmark"
                               ToolTip.Tip="How many assets you intend to mint. Declarative: it never limits a cook. None is a choice of its own - a target of zero is a number nothing can mint.">
-                        <TextBlock />
+                        <Path Classes="ico xs" Data="{StaticResource IconHelp}" />
                       </Border>
                     </StackPanel>
                     <Grid ColumnDefinitions="140,Auto" ColumnSpacing="12">

@@ -542,7 +542,7 @@
                    so rather than adding a third pair of sliders the same two components take the
                    rail's free space and set ONE color. The third axis, V, is the toolstrip's value
                    ramp — unchanged in meaning from grayscale mode. -->
-              <StackPanel Spacing="14" IsVisible="{Binding IsColorMode}">
+              <StackPanel Spacing="18" IsVisible="{Binding IsColorMode}">
                 <StackPanel Spacing="7">
                   <Grid Classes="ctlh" ColumnDefinitions="*,Auto">
                     <TextBlock Grid.Column="0" Text="PAINT HUE" Classes="plabel" VerticalAlignment="Center" />
@@ -584,7 +584,7 @@
                 </Panel>
               </StackPanel>
 
-              <StackPanel Spacing="14" IsVisible="{Binding ShowColorRange}">
+              <StackPanel Spacing="18" IsVisible="{Binding ShowColorRange}">
                 <!-- .dual (hue): two ring handles over the hue rainbow, with a live readout. -->
                 <StackPanel Spacing="7">
                   <Grid Classes="ctlh" ColumnDefinitions="*,Auto">

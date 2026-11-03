@@ -11,8 +11,12 @@ public partial class NewCookBookViewModel : WizardViewModelBase
 {
     [ObservableProperty] private string _name = "";
     [ObservableProperty] private string _symbol = "";
-    [ObservableProperty] private int _width = 1000;
-    [ObservableProperty] private int _height = 1000;
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(LargeCanvasOpacity))] private int _width = CanvasAdvice.DefaultSide;
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(LargeCanvasOpacity))] private int _height = CanvasAdvice.DefaultSide;
+
+    /// <summary>Ink for the large-canvas warning: its line is always laid out, so it appearing
+    /// moves nothing.</summary>
+    public double LargeCanvasOpacity => CanvasAdvice.IsLarge(Width, Height) ? 1 : 0;
     [ObservableProperty] private bool _aspectLocked = true;
     [ObservableProperty] private string _description = "";
 

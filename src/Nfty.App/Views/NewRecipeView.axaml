@@ -51,7 +51,7 @@
                 <TextBlock Text="WEIGHT" Classes="plabel" />
                 <Border Classes="qmark"
                         ToolTip.Tip="How often this Recipe is rolled, relative to its siblings — not a percentage. Any positive number works; the book normalizes them.">
-                  <TextBlock />
+                  <Path Classes="ico xs" Data="{StaticResource IconHelp}" />
                 </Border>
               </StackPanel>
               <NumericUpDown Value="{Binding Weight}" Minimum="0" IsEnabled="{Binding WeightEnabled}" />
@@ -104,7 +104,7 @@
                 <TextBlock Text="DESTINATION" Classes="plabel" />
                 <Border Classes="qmark"
                         ToolTip.Tip="A Recipe inside a CookBook is stored as recipes/fox.rcp within the .cbk. A Kitchen Recipe is a loose .rcp file you can import into any book later.">
-                  <TextBlock />
+                  <Path Classes="ico xs" Data="{StaticResource IconHelp}" />
                 </Border>
               </StackPanel>
               <!-- .dest cards, copy from wizard-recipe.html. The mockup's first subtitle names the

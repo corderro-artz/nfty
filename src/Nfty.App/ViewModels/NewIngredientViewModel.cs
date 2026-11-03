@@ -21,7 +21,10 @@ public partial class NewIngredientViewModel : WizardViewModelBase
     [ObservableProperty] private RecipeDestination _destination = RecipeDestination.IntoCookBook;
     [ObservableProperty] private double _hueMin, _hueMax = 360, _satMin = 40, _satMax = 100;
     [ObservableProperty] private string _fixedColor = "hex:d6249f";
-    [ObservableProperty] private string _canvasSize = "512x512";
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(LargeCanvasOpacity))] private string _canvasSize = "32x32";
+
+    /// <summary>Ink for the large-canvas warning under the loose canvas field: always laid out.</summary>
+    public double LargeCanvasOpacity => TryGetCanvas(out var c) && CanvasAdvice.IsLarge(c.Width, c.Height) ? 1 : 0;
 
     /// <summary>The color model the hue and saturation are read in. Changing it loses nothing: the
     /// numbers are the same, read in another model.</summary>

@@ -76,7 +76,7 @@
                     <TextBlock Text="KIND" Classes="plabel" />
                     <Border Classes="qmark"
                             ToolTip.Tip="How this layer becomes pixels. Custom keeps the picture exactly as it is. Dynamic and Static keep only its lightness and take their color at generation time, which is how one drawing becomes thousands of colorways.">
-                      <TextBlock />
+                      <Path Classes="ico xs" Data="{StaticResource IconHelp}" />
                     </Border>
                   </StackPanel>
                   <!-- Custom FIRST here, unlike the New Ingredient wizard. That form starts from
@@ -131,7 +131,7 @@
                      patch of color space this layer rolls from) rather than two. -->
                 <Grid ColumnDefinitions="*,14,*">
                   <StackPanel Grid.Column="0" Spacing="4">
-                    <Grid ColumnDefinitions="Auto,*">
+                    <Grid Classes="ctlh" ColumnDefinitions="Auto,*">
                       <TextBlock Grid.Column="0" Text="HUE" Classes="plabel" VerticalAlignment="Center" />
                       <TextBlock Grid.Column="1" Classes="cv" Text="{Binding HueRangeText}" />
                     </Grid>
@@ -144,7 +144,7 @@
                     </Panel>
                   </StackPanel>
                   <StackPanel Grid.Column="2" Spacing="4">
-                    <Grid ColumnDefinitions="Auto,*">
+                    <Grid Classes="ctlh" ColumnDefinitions="Auto,*">
                       <TextBlock Grid.Column="0" Text="SATURATION" Classes="plabel" VerticalAlignment="Center" />
                       <TextBlock Grid.Column="1" Classes="cv" Text="{Binding SatRangeText}" />
                     </Grid>
@@ -164,7 +164,7 @@
                     <TextBlock Text="FIXED COLOR" Classes="plabel" />
                     <Border Classes="qmark"
                             ToolTip.Tip="A prefixed color spec — hex:, rgb:, hsl: or hsv:. A missing prefix is refused rather than guessed at.">
-                      <TextBlock />
+                      <Path Classes="ico xs" Data="{StaticResource IconHelp}" />
                     </Border>
                   </StackPanel>
                   <TextBox Text="{Binding FixedColor}" PlaceholderText="hex:d6249f" />
