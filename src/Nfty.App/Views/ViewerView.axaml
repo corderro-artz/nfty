@@ -150,7 +150,7 @@
                          pixels, so the values line up whatever a label says): a stacked pair cost a
                          line per fact and put a scrollbar on the rail at the smallest window. -->
                     <Border Classes="factrow">
-                      <Grid ColumnDefinitions="14,56,*" RowDefinitions="Auto,Auto" ColumnSpacing="7">
+                      <Grid ColumnDefinitions="14,72,*" RowDefinitions="Auto,Auto" ColumnSpacing="6">
                         <Path Grid.Column="0" Classes="ico xs" VerticalAlignment="Top" Margin="0,1,0,0"
                               Data="{Binding Label, Converter={x:Static appconv:FactIconConverter.Instance}}" />
                         <TextBlock Grid.Column="1" Classes="factlbl" Text="{Binding Label}"
