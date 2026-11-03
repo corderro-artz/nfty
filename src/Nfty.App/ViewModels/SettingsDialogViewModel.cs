@@ -20,6 +20,9 @@ public enum SettingsTab
 
     /// <summary>What the app remembers about itself, and the folder it keeps it in.</summary>
     Data,
+
+    /// <summary>Which files Windows opens with nfty. Shown on Windows only.</summary>
+    System,
 }
 
 /// <summary>How the PUBLISHING page's connection chip reads.</summary>
@@ -65,6 +68,7 @@ public partial class SettingsDialogViewModel : ViewModelBase
     private readonly IFolderRevealer? _revealer;
     private readonly IViewerWindowState? _viewerState;
     private readonly IEditorViewState? _editorState;
+    private readonly IFileAssociations? _associations;
     private bool _syncing;
     private CancellationTokenSource? _checkCts;
 
@@ -79,10 +83,13 @@ public partial class SettingsDialogViewModel : ViewModelBase
     /// <param name="revealer">Opens the store's folder.</param>
     /// <param name="viewerState">The viewer windows' remembered sizes, which DATA can reset.</param>
     /// <param name="editorState">The editor's remembered view, which DATA can reset.</param>
+    /// <param name="associations">The machine's file associations; SYSTEM is shown only when these
+    /// are supported (Windows), and is absent otherwise.</param>
     public SettingsDialogViewModel(IDialogService dialogs, IParallelismSetting setting,
         IAppSettings? general = null, IThemeService? theme = null, IPublishingSettings? publishing = null,
         IRecentsService? recents = null, IStateStore? store = null, IFolderRevealer? revealer = null,
-        IViewerWindowState? viewerState = null, IEditorViewState? editorState = null)
+        IViewerWindowState? viewerState = null, IEditorViewState? editorState = null,
+        IFileAssociations? associations = null)
     {
         _dialogs = dialogs;
         _setting = setting;
@@ -95,18 +102,20 @@ public partial class SettingsDialogViewModel : ViewModelBase
         _revealer = revealer;
         _viewerState = viewerState;
         _editorState = editorState;
+        _associations = associations is { IsSupported: true } ? associations : null;
 
         _threads = setting.Current.Effective;
         _canvasSide = _general.DefaultCanvasSide;
         _kuboApi = _publishing.KuboApi;
         PendingCheck = CheckAsync();
+        if (_associations is not null) ReadAssociations(adoptChoice: true);
     }
 
     // ================================================================ tabs
 
     /// <summary>Which page is showing.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsGeneralTab), nameof(IsPerformanceTab), nameof(IsPublishingTab), nameof(IsDataTab))]
+    [NotifyPropertyChangedFor(nameof(IsGeneralTab), nameof(IsPerformanceTab), nameof(IsPublishingTab), nameof(IsDataTab), nameof(IsSystemTab))]
     private SettingsTab _tab = SettingsTab.General;
 
     /// <summary>Whether GENERAL is showing.</summary>
@@ -117,6 +126,8 @@ public partial class SettingsDialogViewModel : ViewModelBase
     public bool IsPublishingTab => Tab == SettingsTab.Publishing;
     /// <summary>Whether DATA is showing.</summary>
     public bool IsDataTab => Tab == SettingsTab.Data;
+    /// <summary>Whether SYSTEM is showing.</summary>
+    public bool IsSystemTab => Tab == SettingsTab.System;
 
     /// <summary>Shows a page.</summary>
     /// <param name="tab">Which one.</param>
@@ -444,5 +455,197 @@ public partial class SettingsDialogViewModel : ViewModelBase
     private void OpenDataFolder()
     {
         if (_store?.Resolution.Directory is { } dir) _revealer?.Reveal(dir);
+    }
+
+    // ================================================================ SYSTEM
+
+    /// <summary>Whether this machine has file associations nfty can write: the SYSTEM tab exists
+    /// only then. Fixed for the platform, so the tab row never changes while the card is open.</summary>
+    public bool ShowsSystemTab => _associations is not null;
+
+    private AssociationStatus? _registered;
+
+    /// <summary>What nfty's own archives open in.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsNftyOff), nameof(IsNftyApp), nameof(IsNftyViewer))]
+    private AssociationTarget _nftyTarget = AssociationTarget.Off;
+
+    /// <summary>What pictures and 3D models open in.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsPicturesOff), nameof(IsPicturesViewer))]
+    private AssociationTarget _picturesTarget = AssociationTarget.Off;
+
+    /// <summary>What asset metadata JSON opens in.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMetadataOff), nameof(IsMetadataViewer))]
+    private AssociationTarget _metadataTarget = AssociationTarget.Off;
+
+    /// <summary>nfty's archives: not registered.</summary>
+    public bool IsNftyOff => NftyTarget == AssociationTarget.Off;
+    /// <summary>nfty's archives: the app.</summary>
+    public bool IsNftyApp => NftyTarget == AssociationTarget.App;
+    /// <summary>nfty's archives: the viewer.</summary>
+    public bool IsNftyViewer => NftyTarget == AssociationTarget.Viewer;
+    /// <summary>Pictures and models: not registered.</summary>
+    public bool IsPicturesOff => PicturesTarget == AssociationTarget.Off;
+    /// <summary>Pictures and models: the viewer.</summary>
+    public bool IsPicturesViewer => PicturesTarget == AssociationTarget.Viewer;
+    /// <summary>Metadata: not registered.</summary>
+    public bool IsMetadataOff => MetadataTarget == AssociationTarget.Off;
+    /// <summary>Metadata: the viewer.</summary>
+    public bool IsMetadataViewer => MetadataTarget == AssociationTarget.Viewer;
+
+    /// <summary>nfty's archive extensions, as one line.</summary>
+    public string NftyExtensions => FileTypeCatalog.ExtensionsOf(AssociationGroup.NftyFiles);
+    /// <summary>The picture and model extensions, as one line.</summary>
+    public string PictureExtensions => FileTypeCatalog.ExtensionsOf(AssociationGroup.PicturesAndModels);
+    /// <summary>The metadata extension, as a line.</summary>
+    public string MetadataExtensions => FileTypeCatalog.ExtensionsOf(AssociationGroup.Metadata) + " · a Set's asset files";
+
+    /// <summary>nfty's archive types by name, for the row's tooltip.</summary>
+    public string NftyTypesTip => TypesTip(AssociationGroup.NftyFiles)
+        + " A Menu opens in the viewer either way: the app does not edit one.";
+    /// <summary>The picture and model types by name.</summary>
+    public string PictureTypesTip => TypesTip(AssociationGroup.PicturesAndModels);
+    /// <summary>What registering .json means.</summary>
+    public string MetadataTypesTip =>
+        "nfty is offered for every .json file, and shows the ones that are an asset's metadata (nfty/NNNN.json, metadata/NNNN.json); any other JSON file says so.";
+
+    private static string TypesTip(AssociationGroup group) =>
+        string.Join(", ", FileTypeCatalog.Of(group).Select(t => $"{t.Extension} {t.FriendlyName}")) + ".";
+
+    /// <summary>The choice the trays show.</summary>
+    public AssociationChoice Choice => new(NftyTarget, PicturesTarget, MetadataTarget);
+
+    /// <summary>Whether the trays differ from a complete registration. A broken one keeps saying
+    /// "needs repair" whatever the trays show: Repair writes what they show.</summary>
+    public bool HasPendingAssociationChange =>
+        _registered is { State: AssociationState.Registered } r && Choice != r.Current;
+
+    /// <summary>The chip's words.</summary>
+    public string AssociationSummary => _registered is not { } r ? ""
+        : HasPendingAssociationChange ? "not applied"
+        : r.State switch
+        {
+            AssociationState.Registered => "registered",
+            AssociationState.NeedsRepair => "needs repair",
+            _ => "not registered",
+        };
+
+    /// <summary>The sentence under the chip.</summary>
+    public string AssociationDetail => _registered is not { } r ? ""
+        : HasPendingAssociationChange ? "Changed above. Apply registers the new choice."
+        : r.Detail;
+
+    /// <summary>Whether the chip's dot is the success ink.</summary>
+    public bool IsAssociated => _registered is { State: AssociationState.Registered } && !HasPendingAssociationChange;
+
+    /// <summary>Whether the chip's dot is the muted ink: nothing registered, or a change owed.</summary>
+    public bool IsAssociationIdle => _registered is { State: AssociationState.NotRegistered } || HasPendingAssociationChange;
+
+    /// <summary>The apply button's word: Repair when the registration is broken and unchanged.</summary>
+    public string ApplyLabel => _registered is { State: AssociationState.NeedsRepair } && !HasPendingAssociationChange
+        ? "Repair" : "Apply";
+
+    /// <summary>The shared-type line: what Windows keeps for the user to decide.</summary>
+    public string DefaultsNote =>
+        "Windows lets only you make nfty the default for pictures, models and .json: Apply lists nfty, Default apps sets it.";
+
+    /// <summary>Sets what nfty's archives open in.</summary>
+    /// <param name="target">Off, App or Viewer.</param>
+    [RelayCommand] private void UseNftyTarget(AssociationTarget target) => NftyTarget = target;
+
+    /// <summary>Sets what pictures and models open in.</summary>
+    /// <param name="target">Off or Viewer; anything else is the viewer for these.</param>
+    [RelayCommand] private void UsePicturesTarget(AssociationTarget target) =>
+        PicturesTarget = target == AssociationTarget.Off ? AssociationTarget.Off : AssociationTarget.Viewer;
+
+    /// <summary>Sets what metadata JSON opens in.</summary>
+    /// <param name="target">Off or Viewer.</param>
+    [RelayCommand] private void UseMetadataTarget(AssociationTarget target) =>
+        MetadataTarget = target == AssociationTarget.Off ? AssociationTarget.Off : AssociationTarget.Viewer;
+
+    partial void OnNftyTargetChanged(AssociationTarget value) => AssociationChanged();
+    partial void OnPicturesTargetChanged(AssociationTarget value) => AssociationChanged();
+    partial void OnMetadataTargetChanged(AssociationTarget value) => AssociationChanged();
+
+    private void AssociationChanged()
+    {
+        OnPropertyChanged(nameof(Choice));
+        OnPropertyChanged(nameof(HasPendingAssociationChange));
+        OnPropertyChanged(nameof(AssociationSummary));
+        OnPropertyChanged(nameof(AssociationDetail));
+        OnPropertyChanged(nameof(IsAssociated));
+        OnPropertyChanged(nameof(IsAssociationIdle));
+        OnPropertyChanged(nameof(ApplyLabel));
+        ApplyAssociationsCommand.NotifyCanExecuteChanged();
+        RemoveAssociationsCommand.NotifyCanExecuteChanged();
+    }
+
+    private void ReadAssociations(bool adoptChoice)
+    {
+        if (_associations is null) return;
+        AssociationStatus status;
+        try { status = _associations.Inspect(); }
+        catch (Exception ex) when (AssociationText.IsRefusal(ex))
+        {
+            status = new AssociationStatus(AssociationState.NeedsRepair, AssociationChoice.None, AssociationText.CannotRead);
+        }
+        _registered = status;
+        if (adoptChoice)
+        {
+            // Nothing registered: the trays propose a starting point rather than three Offs, and the
+            // chip still says "not registered" until Apply.
+            var shown = status.State == AssociationState.NotRegistered ? AssociationChoice.Suggested : status.Current;
+            NftyTarget = shown.NftyFiles;
+            PicturesTarget = shown.PicturesAndModels;
+            MetadataTarget = shown.Metadata;
+        }
+        AssociationChanged();
+    }
+
+    private bool CanApplyAssociations() => _associations is not null && Choice.Any
+        && (_registered is not { State: AssociationState.Registered } || HasPendingAssociationChange);
+
+    [RelayCommand(CanExecute = nameof(CanApplyAssociations))]
+    private async Task ApplyAssociationsAsync()
+    {
+        if (_associations is null) return;
+        try { _associations.Apply(Choice); }
+        catch (Exception ex) when (AssociationText.IsRefusal(ex))
+        {
+            ReadAssociations(adoptChoice: false);
+            await _dialogs.ShowErrorAsync(AssociationText.ApplyFailedTitle, AssociationText.ApplyFailed);
+            return;
+        }
+        ReadAssociations(adoptChoice: false);
+    }
+
+    private bool CanRemoveAssociations() => _registered is { State: not AssociationState.NotRegistered };
+
+    [RelayCommand(CanExecute = nameof(CanRemoveAssociations))]
+    private async Task RemoveAssociationsAsync()
+    {
+        if (_associations is null) return;
+        try { _associations.Remove(); }
+        catch (Exception ex) when (AssociationText.IsRefusal(ex))
+        {
+            ReadAssociations(adoptChoice: false);
+            await _dialogs.ShowErrorAsync(AssociationText.RemoveFailedTitle, AssociationText.RemoveFailed);
+            return;
+        }
+        ReadAssociations(adoptChoice: true);
+    }
+
+    private bool CanOpenDefaultApps() => _associations is not null;
+
+    [RelayCommand(CanExecute = nameof(CanOpenDefaultApps))]
+    private async Task OpenDefaultAppsAsync()
+    {
+        try { _associations?.OpenDefaultApps(); }
+        catch (Exception ex) when (AssociationText.IsRefusal(ex) || ex is InvalidOperationException)
+        {
+            await _dialogs.ShowErrorAsync(AssociationText.DefaultAppsFailedTitle, AssociationText.DefaultAppsFailed);
+        }
     }
 }

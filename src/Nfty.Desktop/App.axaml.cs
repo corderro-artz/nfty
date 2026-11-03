@@ -41,7 +41,14 @@ public partial class App : Application
         if (ApplicationLifetime is ISingleViewApplicationLifetime) services.AddOverlayViewerHost();
         else services.AddSingleton<IViewerHost, DesktopViewerHost>();
         var provider = services.BuildServiceProvider();
-        var shell = provider.GetRequiredService<ShellViewModel>();
+        var shell = provider.GetRequiredService<ShellViewModel>();   // applies the remembered theme
+        if (Program.ViewerOnly && Program.StartupPath is { } viewerPath
+            && ApplicationLifetime is IClassicDesktopStyleApplicationLifetime viewerDesktop)
+        {
+            StartViewerOnly(viewerDesktop, provider, viewerPath);
+            base.OnFrameworkInitializationCompleted();
+            return;
+        }
         var landing = provider.GetRequiredService<LandingViewModel>();
         provider.GetRequiredService<INavigationService>().To(landing);
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
@@ -62,5 +69,36 @@ public partial class App : Application
             desktop.Exit += (_, _) => provider.Dispose();
         }
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>
+    /// <c>nfty --viewer &lt;path&gt;</c>: the path opens in a pop-out viewer ALONE, the app shell never
+    /// shown. A small launch window carries the dialog layer the open may need (busy, passphrase,
+    /// error) and closes once the viewer is up - after it, so the viewer is never the window that
+    /// leaves the app with none - or once a failure's error card is dismissed, which ends the app.
+    /// Each launch is its own process: a second double-click opens a second viewer, which is what a
+    /// viewer is for, so no single-instance forwarding is attempted.
+    /// </summary>
+    private static void StartViewerOnly(IClassicDesktopStyleApplicationLifetime desktop, ServiceProvider provider, string path)
+    {
+        desktop.ShutdownMode = Shutdown;
+        var host = provider.GetRequiredService<IViewerHost>();
+        var recents = provider.GetRequiredService<IRecentsService>();
+        var launch = new ViewerLaunchWindow(path);
+        desktop.MainWindow = launch;
+        launch.Opened += async (_, _) =>
+        {
+            try
+            {
+                var full = Path.GetFullPath(path);
+                var subject = await Nfty.App.Viewer.ViewerOpener.OpenAsync(full, launch.Dialogs, host: host,
+                    bookCandidates: () => recents.Items.Select(i => i.Path).ToList());
+                if (subject is not null) host.Open(subject);
+            }
+            catch (Exception) { /* the open reports its own failures; never crash the launch */ }
+            finally { launch.Close(); }
+        };
+        desktop.Exit += (_, _) => provider.Dispose();
+        launch.Show();
     }
 }

@@ -57,9 +57,36 @@ public static class ViewerOpener
         catch (OperationCanceledException) { return null; }
         catch (Exception ex)
         {
-            await dialogs.ShowErrorAsync("Could not open", ex.Message);
+            await dialogs.ShowErrorAsync("Could not open", Failure(path, ex));
             return null;
         }
+    }
+
+    /// <summary>
+    /// The sentence a failed open shows. The engine's own exceptions carry sentences written to be
+    /// shown; the framework's (a damaged ZIP's "End of Central Directory record could not be found",
+    /// a picture codec's complaint, an access refusal) do not, and are worded here instead - a file
+    /// double-clicked in Explorer reaches this path with nothing else on screen to explain it.
+    /// </summary>
+    /// <param name="path">What was being opened.</param>
+    /// <param name="ex">Why it failed.</param>
+    /// <returns>The sentence.</returns>
+    public static string Failure(string path, Exception ex)
+    {
+        string name = Path.GetFileName(path.TrimEnd('\\', '/'));
+        return ex switch
+        {
+            InvalidDataException or UnknownImageFormatException or InvalidImageContentException
+                or JsonException or EndOfStreamException =>
+                $"“{name}” could not be read: it is damaged, only partly downloaded, or not the kind of file its name says. Download or export it again.",
+            UnauthorizedAccessException or System.Security.SecurityException =>
+                $"nfty is not allowed to read “{name}”. Check the file's permissions, or copy it somewhere you can read, then open it again.",
+            FileNotFoundException or DirectoryNotFoundException =>
+                $"“{name}” is not there any more, so there is nothing to show.",
+            IOException =>
+                $"“{name}” could not be read: another program may have it open. Close it there and try again.",
+            _ => ex.Message,
+        };
     }
 
     private static async Task<ViewerSubject?> OpenCoreAsync(string path, IDialogService dialogs,

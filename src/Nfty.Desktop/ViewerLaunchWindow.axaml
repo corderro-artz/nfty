@@ -1,0 +1,34 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Nfty.App.ViewModels"
+        xmlns:ctl="using:Nfty.App.Controls"
+        xmlns:views="using:Nfty.App.Views"
+        x:Class="Nfty.Desktop.ViewerLaunchWindow"
+        Width="640" Height="420" MinWidth="480" MinHeight="320"
+        WindowStartupLocation="CenterScreen" Title="nfty viewer"
+        Background="Transparent" TransparencyLevelHint="Transparent"
+        ExtendClientAreaToDecorationsHint="True" WindowDecorations="None">
+  <!-- `nfty (viewer switch) path`: the file opens in the viewer ALONE, with no app shell. Opening can ask
+       something first - a busy card while a Set unpacks, the passphrase for a .tin, an error card when
+       the file cannot be shown - and those need a dialog layer, so this window is that layer, drawn in
+       the same WindowFrame every nfty window wears. It closes the moment the viewer opens, or once the
+       error card is dismissed; the app then ends with its last window. -->
+  <ctl:WindowFrame x:Name="Frame" Scale="{x:Static vm:ShellViewModel.BaseScale}"
+                   EdgeResize="False" ShowResizeGrip="False">
+    <ctl:WindowFrame.TitleLeft>
+      <StackPanel Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center" Spacing="9">
+        <views:BrandMarkView />
+        <TextBlock Classes="wordmark" VerticalAlignment="Center"><Run Text="nft" /><Run Text="y" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
+      </StackPanel>
+    </ctl:WindowFrame.TitleLeft>
+    <ctl:WindowFrame.Body>
+      <Panel Background="{DynamicResource BgBrush}">
+        <TextBlock x:Name="Opening" Classes="m-sub" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   TextTrimming="CharacterEllipsis" Margin="24,0" />
+        <Panel x:Name="DialogScrim" IsVisible="False" ZIndex="1" Background="{DynamicResource ScrimBrush}">
+          <ContentControl x:Name="DialogSlot" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Panel>
+      </Panel>
+    </ctl:WindowFrame.Body>
+  </ctl:WindowFrame>
+</Window>

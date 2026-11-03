@@ -943,7 +943,8 @@
   </Style>
   <!-- ONE HEIGHT FOR ALL FOUR PAGES, the export card's rule: switching tabs moves neither the footer
        nor the card. The tallest page's height, measured at the smallest window: PUBLISHING 221, DATA
-       184, GENERAL 131, PERFORMANCE 70 - so the card is 358 tall in the 526 a modal is given
+       184, GENERAL 131, PERFORMANCE 70, and Windows' SYSTEM fits under the same floor in its longest
+       state (the moved-copy sentence wrapping) - so the card is 358 tall in the 526 a modal is given
        (SettingsPagesTests.Every_page_is_the_same_height_and_fits_the_smallest_window_unscrolled). -->
   <Style Selector="Border.modal.settings Panel.settingspages">
     <Setter Property="MinHeight" Value="221" />
