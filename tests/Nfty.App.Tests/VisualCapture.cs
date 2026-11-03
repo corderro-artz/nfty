@@ -1061,7 +1061,7 @@ public partial class VisualCapture
                 new NoopFolderRevealer(), new FakeDialogs())
             {
                 Tab = ExportTab.Marketplace,
-                BaseUri = "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/",
+                ImageBaseUri = "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/",
                 TokenIdNames = true,
                 StartAtZero = true,
                 ExternalUrlBase = "https://chests.example/token/",
@@ -1078,7 +1078,7 @@ public partial class VisualCapture
                 new NoopFolderRevealer(), new FakeDialogs())
             {
                 Tab = ExportTab.Marketplace,
-                BaseUri = "ipfs://bafy",
+                ImageBaseUri = "ipfs://bafy",
                 ExternalUrlBase = "chests.example",
                 IncludeCollectionMetadata = true,
                 ExternalLink = "chests",

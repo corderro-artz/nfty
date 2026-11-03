@@ -58,7 +58,7 @@ public class BundleGalleryTests
 
     internal static ExportOptions MarketplaceOptions() => ExportOptions.For(ExportPreset.Marketplace) with
     {
-        BaseUri = "ipfs://bafyexample/", TokenNaming = TokenNaming.TokenId, RoyaltyPercent = 5,
+        ImageBaseUri = "ipfs://bafyexample/", TokenNaming = TokenNaming.TokenId, RoyaltyPercent = 5,
         FeeRecipient = "0x1234567890abcdef1234567890ABCDEF12345678", ExternalLink = "https://chests.example/",
     };
 
@@ -92,7 +92,7 @@ public class BundleGalleryTests
         Assert.Contains(opened.Facts, f => f.Label == "BUNDLE");
         Assert.Contains(opened.Facts, f => f.Label == "NAME" && f.Value == "Chest Demo #2");
         Assert.Contains(opened.Facts, f => f.Label == "BACKGROUND");        // the trait, as a fact
-        Assert.Contains(opened.Facts, f => f.Label == "IMAGE" && f.Value == "ipfs://bafyexample/images/2.png");
+        Assert.Contains(opened.Facts, f => f.Label == "IMAGE" && f.Value == "ipfs://bafyexample/2.png");
     }
 
     [AvaloniaFact]
@@ -153,7 +153,7 @@ public class BundleGalleryTests
         Assert.NotNull(subject.Art);
 
         // And a bundle (no set.json): the image field decides.
-        string bundle = Export(CookedSet(), ExportOptions.For(ExportPreset.Marketplace) with { BaseUri = "ipfs://CID/" });
+        string bundle = Export(CookedSet(), ExportOptions.For(ExportPreset.Marketplace) with { ImageBaseUri = "ipfs://CID/" });
         using var viaField = await ViewerOpener.OpenAsync(Path.Combine(bundle, "metadata", "0002.json"),
             new ArchiveGalleryTests.Scripted());
         Assert.False(viaField!.ImageMissing);

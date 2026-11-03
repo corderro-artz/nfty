@@ -37,7 +37,7 @@ public partial class VisualCapture
         string bundle = SetExporter.Export(setDir, Path.Combine(work, "upload"),
             ExportOptions.For(ExportPreset.Marketplace) with
             {
-                Shape = ExportShape.Folder, BaseUri = "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/",
+                Shape = ExportShape.Folder, ImageBaseUri = "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/",
                 TokenNaming = TokenNaming.TokenId, RoyaltyPercent = 5,
                 FeeRecipient = "0x1234567890abcdef1234567890ABCDEF12345678",
                 ExternalLink = "https://chests.example/",

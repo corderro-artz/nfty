@@ -28,25 +28,13 @@ public ExportOptions();
 
 ## Properties
 
-### BaseUri { #p-baseuri }
-
-```csharp
-public string? BaseUri { get; init; }
-```
-
-Prefix every `image` link (and the `animation_url` of a model) with this address, so the metadata is upload-ready: `ipfs://CID/` gives `ipfs://CID/images/1.png`.
-
-**Remarks**
-
-Export-only; the cooked Set keeps its relative paths. Must be absolute, use the scheme `ipfs`, `https`, `http` or `ar`, and end with `/` ([`MarketplaceRules.BaseUriProblem()`](Nfty.Core.Publish.MarketplaceRules.md#m-baseuriproblem-system-string)). Never guessed or repaired. Null leaves the relative path and the plan says so.
-
 ### CollectionImage { #p-collectionimage }
 
 ```csharp
 public string? CollectionImage { get; init; }
 ```
 
-`collection.json`'s `image`. Null falls to the first token's image address when a [`ExportOptions.BaseUri`](Nfty.Core.Publish.ExportOptions.md#p-baseuri) is set and the art is exported, and is otherwise left out.
+`collection.json`'s `image`. Null falls to the first token's image address when a [`ExportOptions.ImageBaseUri`](Nfty.Core.Publish.ExportOptions.md#p-imagebaseuri) is set and the art is exported, and is otherwise left out.
 
 ### ExternalLink { #p-externallink }
 
@@ -71,6 +59,20 @@ public string? FeeRecipient { get; init; }
 ```
 
 Who the royalty is paid to: `0x` and 40 hexadecimal digits.
+
+### ImageBaseUri { #p-imagebaseuri }
+
+```csharp
+public string? ImageBaseUri { get; init; }
+```
+
+Where the uploaded `images/` folder lives. Each `image` link becomes this followed by the image's FILE NAME: `ipfs://CID/` gives `ipfs://CID/1.png`.
+
+**Remarks**
+
+By file name, not by path inside the export: uploading the `images/` folder to IPFS (Pinata, NFT.Storage, `ipfs add -r`) gives a CID whose root IS that folder's contents, so the right link has no `images/` in it. It is also the only order that works: the metadata carries this address, so the art has to be uploaded (and addressed) first.
+
+Export-only; the cooked Set keeps its relative paths. Must be absolute, use the scheme `ipfs`, `https`, `http` or `ar`, and end with `/` ([`MarketplaceRules.BaseUriProblem()`](Nfty.Core.Publish.MarketplaceRules.md#m-baseuriproblem-system-string-system-string)). Never guessed or repaired. Null leaves the relative path and the plan says so.
 
 ### Images { #p-images }
 
@@ -115,6 +117,18 @@ Include `set.json` — the Set's own record: seed, source-book hash, rarity tabl
 **Remarks**
 
 **On by default, off for [`ExportPreset.Marketplace`](Nfty.Core.Publish.ExportPreset.md#f-marketplace)**: a public drop has no use for the seed and the book's hash, and a seed that should stay private until the reveal is otherwise published with the art. An export without it is for UPLOAD, not for opening — nfty reads a Set by its `set.json`, so it cannot reopen one, and a sealed export (which exists to be opened) refuses to leave it out.
+
+### ModelBaseUri { #p-modelbaseuri }
+
+```csharp
+public string? ModelBaseUri { get; init; }
+```
+
+Where the uploaded `models/` folder lives. Each `animation_url` becomes this followed by the model's file name: `ipfs://CID/` gives `ipfs://CID/1.glb`.
+
+**Remarks**
+
+Same rules and reason as [`ExportOptions.ImageBaseUri`](Nfty.Core.Publish.ExportOptions.md#p-imagebaseuri). An `animation_url` is written only when this is set, the models are exported and their format is glb.
 
 ### Models { #p-models }
 

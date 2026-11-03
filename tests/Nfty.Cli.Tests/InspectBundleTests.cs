@@ -49,7 +49,7 @@ public class InspectBundleTests
         return SetExporter.Export(set, Path.Combine(root, "out"),
             ExportOptions.For(ExportPreset.Marketplace) with
             {
-                Shape = ExportShape.Folder, TokenNaming = TokenNaming.TokenId, BaseUri = "ipfs://CID/",
+                Shape = ExportShape.Folder, TokenNaming = TokenNaming.TokenId, ImageBaseUri = "ipfs://CID/",
                 RoyaltyPercent = 2.5, FeeRecipient = "0x1234567890abcdef1234567890ABCDEF12345678",
             }).Path;
     }

@@ -69,7 +69,7 @@ internal static class MarketplaceFiles
     /// <param name="number">Its set number.</param>
     /// <param name="options">The export request.</param>
     /// <param name="fallbackName">The collection's name, for an item whose own name carries no <c>#</c>.</param>
-    /// <param name="animationFile">The model's name inside the export (for example <c>models/1.glb</c>), or null.</param>
+    /// <param name="animationFile">The model's file name (for example <c>1.glb</c>), or null.</param>
     internal static byte[] RenderItem(string sourcePath, int number, ExportOptions options,
         string fallbackName, string? animationFile)
     {
@@ -79,17 +79,18 @@ internal static class MarketplaceFiles
         int hash = item.Name.LastIndexOf(" #", StringComparison.Ordinal);
         string prefix = hash > 0 ? item.Name[..hash] : fallbackName;
 
-        string imagePath = SetLayout.ImagesDir + "/" + ExportNaming.ImageFile(number, options);
+        string imageFile = ExportNaming.ImageFile(number, options);
         // Always the link the export's own naming gives: for a Set's own names that IS what the writer
-        // put there, and for a re-export of an export it replaces the previous run's links.
-        string image = options.BaseUri is { } b ? b + imagePath : imagePath;
+        // put there, and for a re-export of an export it replaces the previous run's links. With a base
+        // URI the link is the FILE NAME under it (an uploaded images/ folder is the CID's root).
+        string image = options.ImageBaseUri is { } b ? b + imageFile : SetLayout.ImagesDir + "/" + imageFile;
 
         var exported = new ExportedItem(
             Name: $"{prefix} #{id}",
             Description: item.Description,
             Image: image,
             ExternalUrl: options.ExternalUrlBase is { Length: > 0 } ext ? ext + id : null,
-            AnimationUrl: animationFile is not null && options.BaseUri is { } baseUri ? baseUri + animationFile : null,
+            AnimationUrl: animationFile is not null && options.ModelBaseUri is { } baseUri ? baseUri + animationFile : null,
             Attributes: item.Attributes);
         return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(exported, Json.Options));
     }

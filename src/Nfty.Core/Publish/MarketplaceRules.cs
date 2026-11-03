@@ -68,15 +68,16 @@ public static class MarketplaceRules
 
     /// <summary>Why a base URI is unusable, or null when it is fine (or empty, meaning "none").</summary>
     /// <param name="value">The text.</param>
+    /// <param name="what">What the address is, for the message (for example <c>Image base URI</c>).</param>
     /// <returns>The reason, naming the rule.</returns>
-    public static string? BaseUriProblem(string? value)
+    public static string? BaseUriProblem(string? value, string what = "Base URI")
     {
         if (string.IsNullOrEmpty(value)) return null;
         if (!IsAbsolute(value, UriSchemes))
-            return $"Base URI '{value}' is not valid: it must be an absolute URI with the scheme ipfs, https, http or ar "
+            return $"{what} '{value}' is not valid: it must be an absolute URI with the scheme ipfs, https, http or ar "
                 + "(for example ipfs://<CID>/).";
         if (!value.EndsWith('/'))
-            return $"Base URI '{value}' must end with '/', because each file name is appended to it as it stands.";
+            return $"{what} '{value}' must end with '/', because each file name is appended to it as it stands.";
         return null;
     }
 

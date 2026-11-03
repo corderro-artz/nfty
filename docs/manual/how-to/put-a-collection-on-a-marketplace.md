@@ -2,7 +2,7 @@
 
 A cooked Set cannot go straight to OpenSea, and that is deliberate: it records files by the paths
 inside the Set (`images/0001.png`), and a marketplace needs **addresses** it can fetch
-(`ipfs://<CID>/images/1.png`), file names the contract can compute (`1`, not `0001.json`), and a
+(`ipfs://<CID>/1.png`), file names the contract can compute (`1`, not `0001.json`), and a
 collection file for the contract itself. The **Marketplace** tab of the export card, and the matching
 `nfty export` options, write all of that into the *export*. Your cooked Set is never changed.
 
@@ -12,26 +12,48 @@ Open the Set, press **Export…**, choose the **Marketplace** preset, and open t
 ![The Export card's Marketplace tab, filled in as a seller would](../images/export-marketplace-dark.png#only-dark)
 
 ```bash
+# 1. the art first, nothing that needs an address yet
+nfty export ./collection --out ./dist-art --art-only --token-names token-id
+# ... upload dist-art/<name>/images, copy its folder CID ...
+# 2. the metadata, now that the art has an address
 nfty export ./collection --out ./dist --preset marketplace \
-    --base-uri ipfs://<CID>/ \
+    --image-base-uri ipfs://<imagesCID>/ \
     --token-names token-id --start-id 1 \
     --external-url https://example.com/chest/ \
     --external-link https://example.com/ \
     --royalty 5 --fee-recipient 0x1234567890abcdef1234567890abcdef12345678
 ```
 
-## Make the image links absolute
+## The two-step upload
 
-Upload the exported `images/` folder, get its address, and give it as the **base URI**:
-`ipfs://<CID>/`. Every `image` becomes `ipfs://<CID>/images/1.png`, and a model's `animation_url`
-(below) uses the same prefix. The address must be absolute (`ipfs`, `https`, `http` or `ar`) and must
-**end with a slash**; nfty refuses anything else and says which rule it broke, rather than guessing
-what you meant.
+nfty does **not** upload, pin, deploy a contract or mint. It produces upload-ready files; you take
+them to a pinning service and a marketplace. Every NFT drop runs in the same order, because the
+metadata has to carry the address of the art, so the art must be uploaded first:
 
-Leave it empty and the links stay relative. The card and the terminal both warn you, because a
-marketplace cannot resolve `images/0001.png`:
+1. **Export the art only.** On the **MARKETPLACE** tab press **Art only** (or, in the terminal,
+   `--art-only`). That exports `images/` (and `models/` when the Set has them) with no metadata,
+   no `collection.json` and no `set.json`. Use the same **Token id** naming you will use in step 3,
+   so the file names match.
+2. **Upload `images/` (and `models/`) and copy each folder's address.** Any IPFS pinning
+   service works: Pinata or NFT.Storage (upload the folder in the browser), or Kubo
+   (`ipfs add -r --cid-version=1 images`). The CID you get is the folder's own: its contents sit at the
+   root, so the first picture is `ipfs://<imagesCID>/1.png`. There is no `images/` in the link.
+3. **Export again with the addresses.** Put `ipfs://<imagesCID>/` in **Image base URI** (and
+   `ipfs://<modelsCID>/` in **Model base URI** if you have glb models), or pass `--image-base-uri` and
+   `--model-base-uri`. Every `image` becomes `ipfs://<imagesCID>/1.png` and each `animation_url`
+   `ipfs://<modelsCID>/1.glb`. Open the result in nfty (below) to check it before you upload it.
+4. **Upload `metadata/`.** Its folder CID is your contract's base URI, `ipfs://<metaCID>/`: with
+   **Token id** naming, `baseURI + tokenId` resolves to `metadata/1`. Point the contract's
+   `contractURI` at `collection.json`.
 
-> Image links are relative; set a base URI before uploading.
+Each address must be absolute (`ipfs`, `https`, `http` or `ar`) and must **end with a slash**; nfty
+refuses anything else and says which rule it broke, rather than guessing what you meant. A model
+address is used only for glb models that are exported.
+
+Leave the image address empty and the links stay relative. The card and the terminal both tell you
+what is missing, because a marketplace cannot resolve `images/0001.png`:
+
+> Image links are relative: upload images/ first, then export again with --image-base-uri ipfs://&lt;CID&gt;/
 
 ## Name the files the way your contract counts
 
@@ -61,7 +83,7 @@ Tick **collection.json** (on in the Marketplace preset) and nfty writes OpenSea'
 {
   "name": "Chest Demo",
   "description": "A demo collection that ships with nfty: layered chests to open, edit and cook. Nothing here is precious - break it and rebuild it.",
-  "image": "ipfs://<CID>/images/1.png",
+  "image": "ipfs://<imagesCID>/1.png",
   "external_link": "https://example.com/",
   "seller_fee_basis_points": 500,
   "fee_recipient": "0x1234567890abcdef1234567890abcdef12345678",
@@ -72,15 +94,15 @@ Tick **collection.json** (on in the Marketplace preset) and nfty writes OpenSea'
 The name, description and symbol come from the Set. **External link** is your site; **Royalty** is a
 percentage from 0 to 100 with at most two decimals (it becomes whole basis points, 2.5% is `250`) and
 needs a **Fee recipient**, `0x` and 40 hexadecimal digits. The `image` is the first token's image
-when a base URI is set and the art is included, unless you give one. A field left empty is left out
+when an image base URI is set and the art is included, unless you give one. A field left empty is left out
 of the file.
 
 ## Link each item back to you
 
 Give **External URL** an address and each item gets an `external_url` of that address followed by its
-token id. When the Set was cooked with 3D models in `glb`, the base URI is set and models are being
-exported, each item also gets an `animation_url` pointing at its `models/<id>.glb`; models in other
-formats are not linked, and the card says so.
+token id. When the Set was cooked with 3D models in `glb`, a **Model base URI** is set and models are being
+exported, each item also gets an `animation_url`, that address followed by `<id>.glb`; models in
+other formats are not linked, and the card says so.
 
 ## Keep the seed to yourself
 
@@ -95,7 +117,7 @@ to upload. Start nfty on the folder (`nfty <folder>`) or open a packed `.set` wi
 opens in the viewer's gallery marked **upload bundle, not a Set**, with one tile per `metadata/`
 item. A tile shows the picture, the name and every trait; the rail shows what `collection.json` says
 (name, symbol, royalty, payee, links). Pictures are found inside the bundle: a relative link is a path
-in it, and an absolute `ipfs://` or `https://` link is matched by its trailing `images/<file>` onto
+in it, and an absolute `ipfs://` or `https://` link is matched by its trailing file name (`.../1.png`) onto
 the bundle's own `images/` folder. Nothing is fetched from the network. A picture the bundle does not
 carry shows the missing mark. From the terminal, `nfty inspect <folder>` prints the same check: item
 count, pictures found, `collection.json` and every trait with its values.
@@ -111,7 +133,7 @@ This is `metadata/1` exported from the demo CookBook with the options above:
 {
   "name": "Chest Demo #1",
   "description": "A demo collection that ships with nfty: layered chests to open, edit and cook. Nothing here is precious - break it and rebuild it.",
-  "image": "ipfs://<CID>/images/1.png",
+  "image": "ipfs://<imagesCID>/1.png",
   "external_url": "https://example.com/chest/1",
   "attributes": [
     { "trait_type": "Type", "value": "Chest" },

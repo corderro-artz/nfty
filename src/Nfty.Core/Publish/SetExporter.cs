@@ -548,7 +548,8 @@ public static class SetExporter
         // The marketplace values, each refused with the sentence the dialog shows beside the field.
         foreach (var problem in new[]
         {
-            MarketplaceRules.BaseUriProblem(options.BaseUri),
+            MarketplaceRules.BaseUriProblem(options.ImageBaseUri, "Image base URI"),
+            MarketplaceRules.BaseUriProblem(options.ModelBaseUri, "Model base URI"),
             MarketplaceRules.ImageUriProblem(options.CollectionImage),
             MarketplaceRules.WebUrlProblem(options.ExternalUrlBase, "External URL base"),
             MarketplaceRules.WebUrlProblem(options.ExternalLink, "External link"),
@@ -648,7 +649,8 @@ public static class SetExporter
         // whatever the names; the block is dropped again when an export goes back to the Set's own.
         var from = manifest.FileNaming;      // how the source names its files (an export can be re-exported)
         var to = ExportNaming.Of(options);   // how this export will
-        bool relinked = options.BaseUri is not null || options.ExternalUrlBase is not null;
+        bool relinked = options.ImageBaseUri is not null || options.ModelBaseUri is not null
+            || options.ExternalUrlBase is not null;
         bool rewrite = manifest.Files is not null || !to.IsDefault || relinked;
         if (options.IncludeSetManifest)
         {
@@ -663,7 +665,7 @@ public static class SetExporter
 
         // Which assets have a model that will ship AS a .glb: only those get an animation_url.
         var glbNumbers = new HashSet<int>();
-        if (options.Models && options.BaseUri is not null && modelFormat == "glb")
+        if (options.Models && options.ModelBaseUri is not null && modelFormat == "glb")
             foreach (var f in files)
                 if (Path.GetExtension(f) == ".glb" && from.NumberOf(f) is { } n) glbNumbers.Add(n);
 
@@ -702,9 +704,9 @@ public static class SetExporter
             switch (dir)
             {
                 case SetLayout.ImagesDir:
-                    string imageName = SetLayout.ImagesDir + "/" + ExportNaming.ImageFile(num, options);
-                    if (firstImage is null || num < firstImage) { firstImage = num; firstImageName = imageName; }
-                    entries.Add(Entry(file, imageName) with { SetNumber = num });
+                    string imageFile = ExportNaming.ImageFile(num, options);
+                    if (firstImage is null || num < firstImage) { firstImage = num; firstImageName = imageFile; }
+                    entries.Add(Entry(file, SetLayout.ImagesDir + "/" + imageFile) with { SetNumber = num });
                     break;
 
                 case SetLayout.ModelsDir:
@@ -728,7 +730,7 @@ public static class SetExporter
                     if (rewrite)
                     {
                         string? animation = glbNumbers.Contains(num)
-                            ? SetLayout.ModelsDir + "/" + to.Stem(num) + ".glb"
+                            ? to.Stem(num) + ".glb"
                             : null;
                         string collectionName = manifest.Name;
                         entry = entry with { Render = () => MarketplaceFiles.RenderItem(file, num, options, collectionName, animation) };
@@ -742,7 +744,7 @@ public static class SetExporter
         {
             string? image = options.CollectionImage is { Length: > 0 } given
                 ? given
-                : options.BaseUri is { } baseUri && firstImageName is not null ? baseUri + firstImageName : null;
+                : options.ImageBaseUri is { } baseUri && firstImageName is not null ? baseUri + firstImageName : null;
             string description = firstDescription ?? ReadFirstDescription(setDir);
             byte[] bytes = MarketplaceFiles.RenderCollection(manifest, description, image, options);
             entries.Add(new ExportEntry(string.Empty, MarketplaceFiles.CollectionName, bytes.Length)
@@ -763,18 +765,23 @@ public static class SetExporter
                 nameof(options));
 
         var warnings = new List<string>();
-        if (options.OpenSeaMetadata && anyMetadata && options.BaseUri is null)
-            warnings.Add("Image links are relative; set a base URI before uploading.");
+        if (options.OpenSeaMetadata && anyMetadata && options.ImageBaseUri is null)
+            warnings.Add("Image links are relative: upload images/ first, then export again with "
+                + "--image-base-uri ipfs://<CID>/ (the dialog's Image base URI).");
         if (options.OpenSeaMetadata && anyMetadata && !options.Images)
             warnings.Add("The metadata links to images this export does not carry; the links dangle "
                 + "unless the art is uploaded to the same place.");
         if (options.IncludeCollectionMetadata && options.CollectionImage is not { Length: > 0 }
-            && (options.BaseUri is null || firstImageName is null))
-            warnings.Add("collection.json has no image: set a base URI (with the art included) or a collection image.");
-        if (options.BaseUri is not null && options.OpenSeaMetadata && options.Models && anyModels
+            && (options.ImageBaseUri is null || firstImageName is null))
+            warnings.Add("collection.json has no image: set an image base URI (with the art included) or a collection image.");
+        if (options.ModelBaseUri is not null && options.OpenSeaMetadata && options.Models && anyModels
             && modelFormat != "glb")
             warnings.Add("Models are linked by animation_url only when they are glb; these are not, so the "
                 + "metadata does not link them.");
+        if (options.OpenSeaMetadata && anyMetadata && options.Models && anyModels && modelFormat == "glb"
+            && options.ModelBaseUri is null)
+            warnings.Add("Models are not linked: upload models/, then export again with --model-base-uri "
+                + "ipfs://<CID>/ to write animation_url.");
 
         string stem = FileNameFor(manifest.Name, leaf);
         string name = options.Shape == ExportShape.Folder ? stem

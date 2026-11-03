@@ -16,10 +16,10 @@ Every method returns the sentence to show (or null when the value is fine) inste
 
 ## Methods
 
-### BaseUriProblem(string?) { #m-baseuriproblem-system-string }
+### BaseUriProblem(string?, string) { #m-baseuriproblem-system-string-system-string }
 
 ```csharp
-public static string? BaseUriProblem(string? value);
+public static string? BaseUriProblem(string? value, string what = "Base URI");
 ```
 
 Why a base URI is unusable, or null when it is fine (or empty, meaning "none").
@@ -27,6 +27,7 @@ Why a base URI is unusable, or null when it is fine (or empty, meaning "none").
 **Parameters**
 
 - `value` (`string?`) - The text.
+- `what` (`string`) - What the address is, for the message (for example `Image base URI`).
 
 **Returns.** The reason, naming the rule.
 

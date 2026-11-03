@@ -40,7 +40,7 @@ public class ExportMarketplaceTabTests
     public void The_values_become_options_only_where_something_would_read_them()
     {
         var vm = Dialog();
-        vm.BaseUri = " ipfs://CID/ ";
+        vm.ImageBaseUri = " ipfs://CID/ ";
         vm.TokenIdNames = true;
         vm.StartAtZero = true;
         vm.ExternalUrlBase = "https://x.example/t/";
@@ -50,7 +50,7 @@ public class ExportMarketplaceTabTests
         vm.FeeRecipient = "0x1234567890abcdef1234567890abcdef12345678";
 
         var o = vm.Options;
-        Assert.Equal("ipfs://CID/", o.BaseUri);
+        Assert.Equal("ipfs://CID/", o.ImageBaseUri);
         Assert.Equal(TokenNaming.TokenId, o.TokenNaming);
         Assert.Equal(0, o.TokenStart);
         Assert.Equal("https://x.example/t/", o.ExternalUrlBase);
@@ -67,7 +67,7 @@ public class ExportMarketplaceTabTests
 
         // And with no metadata and no collection.json, a base URI has nothing to rewrite.
         vm.OpenSeaMetadata = false;
-        Assert.Null(vm.Options.BaseUri);
+        Assert.Null(vm.Options.ImageBaseUri);
         Assert.Null(vm.Options.ExternalUrlBase);
     }
 
@@ -76,14 +76,14 @@ public class ExportMarketplaceTabTests
     {
         var vm = Dialog();
         vm.IncludeCollectionMetadata = true;
-        vm.BaseUri = "ipfs://CID";
+        vm.ImageBaseUri = "ipfs://CID";
         vm.ExternalUrlBase = "site";
         vm.ExternalLink = "site";
         vm.Royalty = "2.555";
         vm.FeeRecipient = "0x12";
 
-        Assert.Equal(MarketplaceRules.BaseUriProblem("ipfs://CID"), vm.BaseUriProblem);
-        Assert.Contains("must end with '/'", vm.BaseUriProblem);
+        Assert.Equal(MarketplaceRules.BaseUriProblem("ipfs://CID", "Image base URI"), vm.ImageBaseUriProblem);
+        Assert.Contains("must end with '/'", vm.ImageBaseUriProblem);
         Assert.Contains("External URL", vm.ExternalUrlProblem);
         Assert.Contains("External link", vm.ExternalLinkProblem);
         Assert.Contains("2 decimals", vm.RoyaltyProblem);
@@ -91,10 +91,10 @@ public class ExportMarketplaceTabTests
 
         // The footer states the first of them, without the framework's "(Parameter ...)" tail, and
         // Export is refused.
-        Assert.Equal(vm.BaseUriProblem, vm.Problem);
+        Assert.Equal(vm.ImageBaseUriProblem, vm.Problem);
         Assert.False(vm.ExportCommand.CanExecute(null));
 
-        vm.BaseUri = "ipfs://CID/";
+        vm.ImageBaseUri = "ipfs://CID/";
         vm.ExternalUrlBase = "https://x.example/";
         vm.ExternalLink = "https://x.example/";
         vm.Royalty = "5";
@@ -127,12 +127,12 @@ public class ExportMarketplaceTabTests
     public void The_marketplace_preset_turns_collection_json_on_and_set_json_off_and_keeps_the_typed_values()
     {
         var vm = Dialog();
-        vm.BaseUri = "ipfs://CID/";
+        vm.ImageBaseUri = "ipfs://CID/";
         vm.ApplyPresetCommand.Execute(vm.Presets.Single(t => t.Preset == ExportPreset.Marketplace));
 
         Assert.True(vm.IncludeCollectionMetadata);
         Assert.False(vm.IncludeSetManifest);
-        Assert.Equal("ipfs://CID/", vm.BaseUri);
+        Assert.Equal("ipfs://CID/", vm.ImageBaseUri);
         Assert.True(vm.Presets.Single(t => t.Preset == ExportPreset.Marketplace).IsSelected);
 
         vm.ApplyPresetCommand.Execute(vm.Presets.Single(t => t.Preset == ExportPreset.AssetPack));
@@ -151,15 +151,40 @@ public class ExportMarketplaceTabTests
 
         // The plan's own warning, in the pinned block; gone once a base URI is set.
         Assert.Contains(vm.Consequences, c => c.Contains("relative", StringComparison.Ordinal));
-        vm.BaseUri = "ipfs://CID/";
+        vm.ImageBaseUri = "ipfs://CID/";
         Assert.DoesNotContain(vm.Consequences, c => c.Contains("relative", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Art_only_is_step_one_and_the_model_address_follows_the_models()
+    {
+        var vm = Dialog();
+        vm.ApplyPresetCommand.Execute(vm.Presets.Single(t => t.Preset == ExportPreset.Marketplace));
+        vm.ImageBaseUri = "ipfs://CID/";
+        vm.ModelBaseUri = "ipfs://MODELS";
+
+        // The demo Set has no models: that address has nothing to name, so it is neither sent nor judged.
+        Assert.False(vm.ModelBaseUriEnabled);
+        Assert.Equal("", vm.ModelBaseUriProblem);
+        Assert.Null(vm.Options.ModelBaseUri);
+
+        vm.ArtOnlyCommand.Execute(null);
+        var o = vm.Options;
+        Assert.True(o.Images);
+        Assert.False(o.OpenSeaMetadata);
+        Assert.False(o.NftyMetadata);
+        Assert.False(o.IncludeCollectionMetadata);
+        Assert.False(o.IncludeSetManifest);
+        Assert.Null(o.ImageBaseUri);   // nothing carries an address yet: this is the export that gets one
+        Assert.Contains(vm.Parts, p => p.StartsWith("images/", StringComparison.Ordinal));
+        Assert.DoesNotContain(vm.Parts, p => p.StartsWith("metadata/", StringComparison.Ordinal));
     }
 
     [Fact]
     public void Dropping_the_art_warns_that_the_links_dangle()
     {
         var vm = Dialog();
-        vm.BaseUri = "ipfs://CID/";
+        vm.ImageBaseUri = "ipfs://CID/";
         vm.Images = false;
         Assert.Contains(vm.Consequences, c => c.Contains("dangle", StringComparison.Ordinal));
     }
@@ -188,7 +213,7 @@ public class ExportMarketplaceTabTests
         var vm = Dialog();
         vm.Tab = ExportTab.Marketplace;
         vm.IncludeCollectionMetadata = true;
-        vm.BaseUri = "ipfs://CID";
+        vm.ImageBaseUri = "ipfs://CID";
         vm.Royalty = "x";
         var view = new Views.ExportDialogView { DataContext = vm };
         var window = new Window
