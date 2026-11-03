@@ -48,6 +48,26 @@
                   <Image Source="{Binding Preview}" Stretch="Uniform" />
                 </Border>
 
+                <!-- COLOR PROFILE (bounded block). A picture drawn in Display P3 / Adobe RGB carries an
+                     ICC profile nfty reads itself (Core's PictureProfile) and converts to sRGB, box on by
+                     default; the preview above follows the box. RESERVED: the row is the same height
+                     with no profile, a convertible one, or one nfty can't convert - ink toggles, nothing
+                     moves. Two runs share one cell, each empty unless its case holds: body ink for the
+                     actionable note, muted for "imported as is". -->
+                <Panel x:Name="ProfileRow" Height="32" Margin="0,-6,0,0">
+                  <CheckBox x:Name="ConvertBox" VerticalAlignment="Top" MinHeight="0"
+                            IsChecked="{Binding ConvertToSrgb}" Opacity="{Binding ConvertBoxOpacity}"
+                            IsHitTestVisible="{Binding CanConvertProfile}" IsTabStop="{Binding CanConvertProfile}"
+                            AutomationProperties.Name="Convert to sRGB" ToolTip.Tip="{Binding ProfileNote}">
+                    <TextBlock Classes="m-sub" Margin="0" LineHeight="16" MaxLines="2"
+                               TextTrimming="CharacterEllipsis" Foreground="{DynamicResource FgBrush}"
+                               Text="{Binding ProfileNoteConvertible}" />
+                  </CheckBox>
+                  <TextBlock Classes="m-sub" Margin="0" LineHeight="16" MaxLines="2"
+                             TextTrimming="CharacterEllipsis" VerticalAlignment="Top"
+                             Text="{Binding ProfileNoteUnsupported}" ToolTip.Tip="{Binding ProfileNote}" />
+                </Panel>
+
                 <StackPanel Spacing="6">
                   <TextBlock Text="NAME" Classes="plabel" />
                   <TextBox x:Name="NameField" Text="{Binding Name}" PlaceholderText="Aura" />

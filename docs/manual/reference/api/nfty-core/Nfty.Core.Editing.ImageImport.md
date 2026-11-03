@@ -36,6 +36,30 @@ Whether any pixel carries color — channels that are not all equal.
 
 What a value-map import WARNS about: the conversion is lossy exactly when this is true, and silently lossless when it is not. A fully transparent pixel cannot show color, so it is skipped — otherwise a stray colored pixel under zero alpha would warn about art that looks identical before and after.
 
+### Load(string, bool, PictureProfile) { #m-load-system-string-system-boolean-nfty-core-imaging-pi-f3b358 }
+
+```csharp
+public static Image<Rgba32> Load(string path, bool convertToSrgb, out PictureProfile profile);
+```
+
+Reads a picture for import: decodes it, reads its embedded color profile with nfty's own reader, and converts it to sRGB when asked and possible.
+
+**Parameters**
+
+- `path` (`string`) - The PNG or JPEG.
+- `convertToSrgb` (`bool`) - Convert a non-sRGB profile's pixels to sRGB.
+- `profile` (`PictureProfile`) - What the picture's profile was.
+
+**Returns.** The decoded picture, converted when `convertToSrgb` and the profile allow; the caller owns it.
+
+**Exceptions**
+
+- [`PictureUnreadableException`](Nfty.Core.Editing.PictureUnreadableException.md) - The file is missing, locked, not a PNG/JPEG, or damaged — with a sentence in the product's words.
+
+**Remarks**
+
+The one load every picture import shares (the CLI's `add variant` and `new ingredient`, the editor's variant import); the Import image form holds both forms for its live preview and calls [`PictureProfile.ConvertToSrgb()`](Nfty.Core.Imaging.PictureProfile.md#m-converttosrgb-sixlabors-imagesharp-image-sixlabors-ima-5c1c7c) itself.
+
 ### ToValueMap(Image&lt;Rgba32&gt;) { #m-tovaluemap-sixlabors-imagesharp-image-sixlabors-images-032d59 }
 
 ```csharp
@@ -53,3 +77,22 @@ The value-map a picture becomes on a Dynamic or Static layer.
 **Remarks**
 
 **Desaturated FIRST, rather than handing the color image straight to [`ValueMap.FromImage()`](Nfty.Core.Editing.ValueMap.md#m-fromimage-sixlabors-imagesharp-image-sixlabors-imagesh-0fdee0).** That reads the RED channel — exact and lossless for its real job, round-tripping a layer's own already-grayscale PNG, and arbitrary for foreign art: pure green would import as pure BLACK and pure red as pure WHITE, though both read as mid-bright to the eye. `Grayscale()` is ITU-R BT.709 luminance, so R==G==B afterwards and `FromImage`'s own contract is left exactly as it was. Alpha is untouched either way.
+
+### Unreadable(string, Exception) { #m-unreadable-system-string-system-exception }
+
+```csharp
+public static string? Unreadable(string leaf, Exception ex);
+```
+
+The product's sentence for a picture that could not be read, or null for an exception that is not about the file (a bug, which should surface as itself).
+
+**Parameters**
+
+- `leaf` (`string`) - The file's name, as the sentence prints it.
+- `ex` (`Exception`) - What reading it threw.
+
+**Returns.** The sentence, or null.
+
+**Remarks**
+
+No exception's own message reaches a screen: a decoder's or the OS's wording names internals at someone who only chose the wrong file. Every sentence says what to do next.

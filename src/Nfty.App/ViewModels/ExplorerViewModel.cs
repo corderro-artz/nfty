@@ -1199,6 +1199,13 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
             else
                 await ImportImage(path);
         }
+        catch (Exception ex) when (!path.EndsWith(".rcp", StringComparison.OrdinalIgnoreCase)
+            && !path.EndsWith(".igt", StringComparison.OrdinalIgnoreCase)
+            && ImageImport.Unreadable(Path.GetFileName(path), ex) is { } sentence)
+        {
+            // A picture's own failures in the product's words, never the decoder's or the OS's.
+            await _dialogs.ShowErrorAsync("Can't import that picture", sentence);
+        }
         catch (Exception ex)
         {
             await _dialogs.ShowErrorAsync("Could not import", ErrorText.For(ex));

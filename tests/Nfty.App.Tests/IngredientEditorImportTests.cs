@@ -132,7 +132,10 @@ public class IngredientEditorImportTests
 
             await vm.ImportImageCommand.ExecuteAsync(null);
 
-            Assert.Equal("Could not import", dialogs.ErrorTitle);
+            Assert.Equal("Can't import that picture", dialogs.ErrorTitle);
+            // The product's sentence, never the decoder's.
+            Assert.Equal("“bad.png” is not a PNG or JPEG picture. Save it as PNG from your drawing program and import that.",
+                dialogs.ErrorMessage);
             Assert.Equal(0, vm.ValueAt(4, 4));
             Assert.False(vm.IsDirty);
             vm.Dispose();

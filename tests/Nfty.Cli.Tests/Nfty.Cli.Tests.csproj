@@ -19,4 +19,8 @@
     <ProjectReference Include="..\..\src\Nfty.Cli\Nfty.Cli.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- ICC profiles built byte by byte from published colorimetry, shared with Nfty.Core.Tests. -->
+    <Compile Include="..\Nfty.Core.Tests\IccProfiles.cs" Link="IccProfiles.cs" />
+  </ItemGroup>
 </Project>

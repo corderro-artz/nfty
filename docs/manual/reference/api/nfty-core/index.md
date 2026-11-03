@@ -4,7 +4,7 @@
 
 The whole engine: archives, validation, generation, rendering, Sets, export, sealing, statistics. Depends on Nfty.Ticket and ImageSharp.
 
-180 public types. Each page lists the public and protected members with their signatures and the documentation written beside the code.
+183 public types. Each page lists the public and protected members with their signatures and the documentation written beside the code.
 
 ## Nfty.Core
 
@@ -59,6 +59,7 @@ The whole engine: archives, validation, generation, rendering, Sets, export, sea
 | [`LayerDepth`](Nfty.Core.Editing.LayerDepth.md) | class | Depth, as a projection of [`RecipeManifest.LayerOrder`](../nfty-ticket/Nfty.Core.Model.RecipeManifest.md#p-layerorder): 1-based, dense, and bottom-first — **depth 1 is the layer that paints first**, and everything above paints over it. |
 | [`MoveSelection<TPixel>`](Nfty.Core.Editing.MoveSelection-1.md) | class | Moves a rectangular selection by (dx, dy) on a single flat raster: the source area is cleared to transparent and its pixels are re-stamped at the shifted position. |
 | [`OpacityLock`](Nfty.Core.Editing.OpacityLock.md) | enum | Whether a paint command may write partial alpha. |
+| [`PictureUnreadableException`](Nfty.Core.Editing.PictureUnreadableException.md) | class | A picture could not be read for import. |
 | [`PixelRect`](Nfty.Core.Editing.PixelRect.md) | struct | An integer pixel rectangle (top-left origin). |
 | [`RegionEditCommand<TPixel>`](Nfty.Core.Editing.RegionEditCommand-1.md) | class | Base for edits expressed as "these pixels get these new values". |
 | [`RuleEdits`](Nfty.Core.Editing.RuleEdits.md) | class | Authoring for a recipe's incompatibility rules: add, replace, remove. |
@@ -129,6 +130,8 @@ The whole engine: archives, validation, generation, rendering, Sets, export, sea
 | [`Opacity`](Nfty.Core.Imaging.Opacity.md) | class | Whether a pixel — or a whole image, layer or book — carries partial alpha: a level of transparency that is neither fully there nor fully absent. |
 | [`Palette`](Nfty.Core.Imaging.Palette.md) | class | The palette a painting front-end offers: [`Palette.Slots`](Nfty.Core.Imaging.Palette.md#f-slots) ramp entries that change with the [`PaletteMode`](Nfty.Core.Imaging.PaletteMode.md), plus the rules for the swatches a user saves beside them. |
 | [`PaletteMode`](Nfty.Core.Imaging.PaletteMode.md) | enum | Which ramp a [`Palette`](Nfty.Core.Imaging.Palette.md)'s ten slots currently offer. |
+| [`PictureProfile`](Nfty.Core.Imaging.PictureProfile.md) | class | A picture's embedded ICC profile, read by nfty's own reader, and the one conversion of it to sRGB both front-ends use. |
+| [`PictureProfileKind`](Nfty.Core.Imaging.PictureProfileKind.md) | enum | What an imported picture's embedded color profile means for it. |
 | [`PixelCompare`](Nfty.Core.Imaging.PixelCompare.md) | class | Comparing two pictures pixel for pixel. |
 | [`PreviewLayer`](Nfty.Core.Imaging.PreviewLayer.md) | struct | One reference layer in a stack preview: which ingredient, which of its variants, and the color to draw it in. |
 | [`StackPreview`](Nfty.Core.Imaging.StackPreview.md) | class | Composites several layers at their real depths, so art authored one layer at a time can be lined up against the layers it will actually sit between. |

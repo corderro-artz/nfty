@@ -175,7 +175,7 @@ public class ImageFormatsTests
     {
         var bad = new List<string>();
         var decode = new Regex(
-            @"\bImage\.(Load|LoadAsync|Identify|IdentifyAsync|DetectFormat|DetectFormatAsync)\b|Configuration\.Default\.ImageFormats|new\s+(Png|Jpeg|Tiff|Bmp|Gif|Webp|Tga|Qoi|Pbm)Decoder\b|HistogramEqualization|\bTiff\w*|CcittT[46]|IccProfile\.Entries|CheckIntegrity",
+            @"\bImage\.(Load|LoadAsync|Identify|IdentifyAsync|DetectFormat|DetectFormatAsync)\b|Configuration\.Default\.ImageFormats|new\s+(Png|Jpeg|Tiff|Bmp|Gif|Webp|Tga|Qoi|Pbm)Decoder\b|HistogramEqualization|\bTiff\w*|CcittT[46]|IccProfile\.Entries|CheckIntegrity|\bIccProfile\b|Metadata\.Profiles\.Icc",
             RegexOptions.Compiled);
         foreach (var file in Directory.EnumerateFiles(Path.Combine(RepoRoot(), "src"), "*.cs", SearchOption.AllDirectories))
         {

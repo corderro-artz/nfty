@@ -23,4 +23,8 @@
          the main window, writes its size on close, states its shutdown mode) is tested where it is. -->
     <ProjectReference Include="..\..\src\Nfty.Desktop\Nfty.Desktop.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- ICC profiles built byte by byte from published colorimetry, shared with Nfty.Core.Tests. -->
+    <Compile Include="..\Nfty.Core.Tests\IccProfiles.cs" Link="IccProfiles.cs" />
+  </ItemGroup>
 </Project>

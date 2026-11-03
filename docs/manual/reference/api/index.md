@@ -7,7 +7,7 @@ The public types of the three libraries you can reference from your own program.
 | Assembly | Types | What it is |
 |---|---|---|
 | [`Nfty.Ticket`](nfty-ticket/index.md) | 49 | The roll, and nothing else. `net10.0`, no NuGet packages, no imaging library: reference this alone to decide what an asset is - recipe, variants, rolled color, DNA - on a server or in an engine. |
-| [`Nfty.Core`](nfty-core/index.md) | 180 | The whole engine: archives, validation, generation, rendering, Sets, export, sealing, statistics. Depends on Nfty.Ticket and ImageSharp. |
+| [`Nfty.Core`](nfty-core/index.md) | 183 | The whole engine: archives, validation, generation, rendering, Sets, export, sealing, statistics. Depends on Nfty.Ticket and ImageSharp. |
 | [`Nfty.Model`](nfty-model/index.md) | 31 | Rise: pixel art to 3D. Voxel meshes, glTF writing and reading. Depends on Nfty.Core. |
 
 ## Namespaces are not assemblies

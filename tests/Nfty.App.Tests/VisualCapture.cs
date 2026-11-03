@@ -1147,6 +1147,17 @@ public partial class VisualCapture
             using var import = ImportImageForm(new FakeDialogs());
             Capture(new Views.ImportImageView { DataContext = import }, variant,
                 $"import-image-{key}.png", width: 1180, height: 780);
+
+            // The color-profile row in its two inked states: a Display P3 picture (box on, preview
+            // converted) and a profile nfty can't convert (muted note, no box).
+            using var p3 = ImportImageForm(new FakeDialogs(), Nfty.Core.Tests.IccProfiles.DisplayP3);
+            p3.Kind = LayerKind.Custom;
+            Capture(new Views.ImportImageView { DataContext = p3 }, variant,
+                $"import-image-p3-{key}.png", width: 1180, height: 780);
+            using var lut = ImportImageForm(new FakeDialogs(), Nfty.Core.Tests.IccProfiles.LutOnlyProfile("Fogra39 Coated"));
+            lut.Kind = LayerKind.Custom;
+            Capture(new Views.ImportImageView { DataContext = lut }, variant,
+                $"import-image-lut-{key}.png", width: 1180, height: 780);
         }
     }
 
@@ -1162,7 +1173,7 @@ public partial class VisualCapture
     /// </remarks>
     /// <param name="dialogs">The dialog layer.</param>
     /// <returns>The loaded form; the caller disposes it.</returns>
-    internal static ImportImageViewModel ImportImageForm(IDialogService dialogs)
+    internal static ImportImageViewModel ImportImageForm(IDialogService dialogs, byte[]? profile = null)
     {
         var dir = Directory.CreateTempSubdirectory("nfty-imp-").FullName;
         string picture = Path.Combine(dir, "bg.png");
@@ -1173,7 +1184,12 @@ public partial class VisualCapture
             for (int y = 0; y < 64; y++)
                 for (int x = 0; x < 64; x++)
                     img[x, y] = new Rgba32((byte)(x * 4), (byte)(y * 3), (byte)(200 - x * 2), 255);
-            img.Save(picture);
+            using var ms = new MemoryStream();
+            img.Save(ms, new SixLabors.ImageSharp.Formats.Png.PngEncoder());
+            var png = ms.ToArray();
+            // An embedded ICC profile (Display P3, or one nfty can't convert) when a frame asks for one.
+            File.WriteAllBytes(picture, profile is null ? png
+                : Nfty.Core.Tests.IccProfiles.WithChunk(png, "iCCP", Nfty.Core.Tests.IccProfiles.IccpData(profile)));
         }
 
         var form = new ImportImageViewModel(dialogs, picture, new Dimensions(64, 64),

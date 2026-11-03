@@ -1012,6 +1012,17 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
 
     private bool CanImport() => SelectedVariant is not null && !IsSaving;
 
+    /// <summary>The sentence the variant import says about the picture's color profile, or null when
+    /// there is none to say (no profile, or sRGB). The editor converts without asking - it replaces one
+    /// variant, where the Import image form, which creates a layer, offers the box.</summary>
+    internal static string? ProfileNotice(PictureProfile profile, string leaf) => profile.Kind switch
+    {
+        PictureProfileKind.Convertible =>
+            $"\u201c{leaf}\u201d uses {profile.Name}; nfty converted it to sRGB so it looks the same everywhere.",
+        PictureProfileKind.Unsupported => profile.Note,
+        _ => null,
+    };
+
     /// <summary>Replaces the selected variant's raster from a PNG on disk, into whichever surface the
     /// paint mode is editing. Color mode keeps every channel; grayscale mode reduces the image to its
     /// lightness, because a <see cref="ValueMap"/> stores nothing else. Either way the matching undo
@@ -1025,9 +1036,13 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
         catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not import", ErrorText.For(ex)); return; }
         if (path is null) return;   // canceled
 
+        // Core's one picture-import rule: a non-sRGB color profile is converted to sRGB FIRST (before
+        // any lightness is taken), and a file that cannot be read is a product sentence.
         Image<Rgba32> img;
-        try { img = ImageFormats.Load(path); }
-        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not import", ErrorText.For(ex)); return; }
+        PictureProfile profile;
+        try { img = ImageImport.Load(path, convertToSrgb: true, out profile); }
+        catch (PictureUnreadableException ex) { await _dialogs.ShowErrorAsync("Can't import that picture", ErrorText.For(ex)); return; }
+        string? profileNote = ProfileNotice(profile, Path.GetFileName(path));
         try
         {
             var canvas = _draft.Canvas;
@@ -1050,6 +1065,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
                 RebuildSurfaces();
                 RefreshThumbnail(target.Id);
                 NotifySaveAvailability();
+                if (profileNote is not null) await _dialogs.ShowErrorAsync("Color profile", profileNote);
                 return;   // img itself is disposed by the finally below
             }
 
@@ -1077,11 +1093,13 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
             if (hadColor)
             {
                 await _dialogs.ShowErrorAsync("Color flattened",
-                    "This layer is a value-map: it stores lightness only, and its color is chosen at "
+                    (profileNote is null ? "" : profileNote + " ")
+                    + "This layer is a value-map: it stores lightness only, and its color is chosen at "
                     + "generation time. The imported image was converted to its lightness, so its own "
                     + "colors are gone. Import into a custom layer instead to keep the image exactly "
                     + "as-is.");
             }
+            else if (profileNote is not null) await _dialogs.ShowErrorAsync("Color profile", profileNote);
             RedoCommand.NotifyCanExecuteChanged();
             IsDirty = true;
             RebuildSurfaces();
