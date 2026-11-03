@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -26,12 +27,15 @@ public class ExportUploadTests
     }
 
     /// <summary>Answers a CID per folder; optionally holds every upload until released.</summary>
-    internal sealed class FakePinning(bool reachable, TaskCompletionSource? gate = null) : IPinningService
+    internal sealed class FakePinning(bool reachable, TaskCompletionSource? gate = null, bool pinata = false) : IPinningService
     {
         public List<string> Labels { get; } = new();
-        public string Provider => "Local IPFS";
+        public string Provider => pinata ? "Pinata" : "Local IPFS";
         public Task<PinningStatus> StatusAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult(new PinningStatus(reachable, Provider, reachable ? "connected · kubo 0.29.0" : "not reachable",
+            Task.FromResult(pinata
+                ? new PinningStatus(reachable, Provider, reachable ? "connected · pinata" : "key refused",
+                    reachable ? "Pinata accepted the key." : "Pinata refused the key (401). Check it, or save a new one.")
+                : new PinningStatus(reachable, Provider, reachable ? "connected · kubo 0.29.0" : "not reachable",
                 reachable ? "Connected to kubo 0.29.0 at http://127.0.0.1:5001."
                     : "Local IPFS is not reachable at http://127.0.0.1:5001. Start IPFS Desktop or Kubo (ipfs daemon)."));
 
@@ -146,6 +150,10 @@ public class ExportUploadTests
     public async Task The_footer_action_follows_the_page_and_the_card_keeps_its_height()
     {
         var vm = Dialog(new FakePinning(true), Directory.CreateTempSubdirectory().FullName);
+        // An address in the field, so CONTENTS carries no "links are relative" warnings: those outgrow
+        // the manifest's reserved height on every page but UPLOAD (which describes the upload's own
+        // export, links included), and that overflow is the marketplace preset's, not this page's.
+        vm.ImageBaseUri = "ipfs://bafyexample/";
         await vm.PendingUploadCheck;
         var view = new Views.ExportDialogView { DataContext = vm };
         var window = new Window
@@ -164,12 +172,46 @@ public class ExportUploadTests
             Assert.True(upload.IsVisible);
             Assert.False(export.IsVisible);
             double uploadHeight = card.Bounds.Height;
+            string Rows() => string.Join(",", ((Grid)card.Child!).Children.Select(c => $"{c.GetType().Name}:{c.Bounds.Height:0.#}"));
+            string up = Rows();
 
             vm.Tab = ExportTab.Contents;
             Dispatcher.UIThread.RunJobs();
             Assert.False(upload.IsVisible);
             Assert.True(export.IsVisible);
-            Assert.Equal(card.Bounds.Height, uploadHeight);
+            Assert.True(card.Bounds.Height == uploadHeight, up + " vs " + Rows());
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaTheory]
+    [InlineData("ready")]
+    [InlineData("unreachable")]
+    [InlineData("running")]
+    [InlineData("done")]
+    public async Task The_upload_page_never_scrolls_at_the_smallest_window(string state)
+    {
+        ExportDialogViewModel vm = state switch
+        {
+            "done" => VisualCapture.UploadDone(new FakeDialogs()),
+            _ => Dialog(new FakePinning(state != "unreachable"), Directory.CreateTempSubdirectory().FullName),
+        };
+        await vm.PendingUploadCheck;
+        if (state == "running") { vm.IsRunning = true; vm.PhaseText = "Uploading images... 1.2 MB of 3.1 MB"; }
+        var view = new Views.ExportDialogView { DataContext = vm };
+        var window = new Window
+        {
+            Content = view,
+            Width = ShellViewModel.MinWindowWidth / ShellViewModel.BaseScale,
+            Height = (ShellViewModel.MinWindowHeight - ShellViewModel.ChromeReserve) / ShellViewModel.BaseScale,
+        };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        try
+        {
+            var scroller = view.GetVisualDescendants().OfType<ScrollViewer>().First();
+            Assert.True(scroller.Extent.Height <= scroller.Viewport.Height + 0.5,
+                $"{state}: the body wants {scroller.Extent.Height:0} of {scroller.Viewport.Height:0}");
         }
         finally { window.Close(); }
     }

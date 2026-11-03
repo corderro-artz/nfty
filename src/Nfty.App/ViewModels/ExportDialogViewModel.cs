@@ -593,7 +593,7 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
         UpdateSelectedPreset();
         try
         {
-            var plan = SetExporter.Plan(_setDirectory, Options, CookBookPath);
+            var plan = SetExporter.Plan(_setDirectory, PlanOptions, CookBookPath);
             Parts = plan.Parts();
             OutputName = plan.OutputName;
             SizeText = plan.SizeText();

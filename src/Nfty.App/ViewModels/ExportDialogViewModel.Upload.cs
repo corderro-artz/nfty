@@ -24,6 +24,22 @@ public partial class ExportDialogViewModel
     private readonly IClipboardService? _clipboard;
     private CancellationTokenSource? _uploadCheckCts;
 
+    /// <summary>
+    /// What the manifest describes. On UPLOAD it is the export the upload will write, whose links
+    /// carry addresses the upload has not made yet - so the plan is asked with a stand-in address,
+    /// and the "links are relative, upload first" warnings that would otherwise describe the very
+    /// step this page performs are not shown.
+    /// </summary>
+    private ExportOptions PlanOptions => IsUploadTab
+        ? Options with
+        {
+            ImageBaseUri = PendingAddress,
+            ModelBaseUri = Options.Models && SetHasModels ? PendingAddress : null,
+        }
+        : Options;
+
+    private const string PendingAddress = "ipfs://pending-upload/";
+
     /// <summary>Whether the footer's primary button exports (every page but UPLOAD).</summary>
     public bool IsExportAction => !IsUploadTab;
 
@@ -82,6 +98,7 @@ public partial class ExportDialogViewModel
     // Opening the page re-asks a provider that was not reachable: the reader may have just started it.
     partial void OnTabChanged(ExportTab value)
     {
+        Refresh();   // the manifest describes the upload's export on UPLOAD (PlanOptions)
         if (value == ExportTab.Upload && Connection is ConnectionState.NotReachable or ConnectionState.Unchecked)
             PendingUploadCheck = CheckUploadAsync();
     }

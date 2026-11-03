@@ -306,6 +306,10 @@
                  never uploads blind. Before a run the page explains; after, the same space holds the
                  addresses a contract needs, each copyable. -->
             <StackPanel Spacing="10" IsVisible="{Binding IsUploadTab}">
+              <!-- Before a run: where it goes, whether it can, and what will happen. After, the
+                   addresses take the whole page - the done line below already names the provider,
+                   and the card has no height to spare for both. -->
+              <StackPanel Spacing="10" IsVisible="{Binding !HasUploadResult}">
               <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="10">
                 <TextBlock Grid.Column="0" Classes="seglbl" Text="UPLOAD TO" />
                 <Border Grid.Column="1" x:Name="UploadChip" Classes="idchip" VerticalAlignment="Center">
@@ -324,11 +328,12 @@
               <!-- Two lines reserved: the longest "not reachable" sentence wraps once. -->
               <TextBlock Classes="m-sub" Margin="0" MinHeight="32" Text="{Binding UploadStatusDetail}" />
 
-              <StackPanel Spacing="8" IsVisible="{Binding !HasUploadResult}">
+              <StackPanel Spacing="8">
                 <TextBlock Classes="m-sub" Margin="0"
                            Text="One step instead of two: uploads images/ (and models/), writes the metadata with their ipfs:// addresses, uploads metadata/ with collection.json beside it, then exports to the folder you choose with the same addresses." />
                 <TextBlock Classes="m-sub" Margin="0"
                            Text="Uses this export's choices on CONTENTS and MARKETPLACE. The provider and its key are in Settings, under Publishing." />
+              </StackPanel>
               </StackPanel>
 
               <StackPanel Spacing="6" IsVisible="{Binding HasUploadResult}">

@@ -165,7 +165,7 @@ public partial class SettingsDialogViewModel : ViewModelBase
 
     /// <summary>What the starting canvas is for.</summary>
     public string CanvasNote =>
-        $"New CookBooks and loose Ingredients start at {Side} × {Side}. A CookBook's canvas is fixed once it is made.";
+        $"New CookBooks and loose Ingredients start at {Side} × {Side}; the new-item form can still change it.";
 
     private int Side => _general.DefaultCanvasSide;
 
@@ -267,6 +267,7 @@ public partial class SettingsDialogViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsPinata));
         OnPropertyChanged(nameof(KeyLine));
         OnPropertyChanged(nameof(ApiProblem));
+        OnPropertyChanged(nameof(KeyPlaceholder));
         PendingCheck = CheckAsync();
     }
 
@@ -290,6 +291,11 @@ public partial class SettingsDialogViewModel : ViewModelBase
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveKeyCommand))]
     private string _pinataKeyInput = "";
+
+    /// <summary>The key box's placeholder: only while the box is live. A disabled box is dimmed to
+    /// 0.38 by the app, and placeholder ink is already muted - the two together are unreadable, so the
+    /// dim box shows nothing rather than a hint nobody can read.</summary>
+    public string KeyPlaceholder => IsPinata ? "paste the API key's JWT" : "";
 
     /// <summary>Whether a key can be kept on this machine at all.</summary>
     public bool CanStoreKey => _publishing.SecureStorageAvailable;
