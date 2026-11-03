@@ -11,6 +11,7 @@ using Nfty.Core.Generation;
 using Nfty.Core.Model;
 using Nfty.Core.Output;
 using Nfty.Core.Publish;
+using Nfty.Model;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using Xunit;
@@ -24,7 +25,7 @@ namespace Nfty.App.Tests;
 /// </summary>
 public class BundleGalleryTests
 {
-    internal static string CookedSet(int count = 4)
+    internal static string CookedSet(int count = 4, bool models = false)
     {
         var dir = Path.Combine(Directory.CreateTempSubdirectory("nfty-bun-").FullName, "Chest Demo");
         var ids = new[] { "a", "b", "c", "d", "e", "f" };
@@ -48,7 +49,7 @@ public class BundleGalleryTests
             },
         };
         using var set = Generator.Generate(book, new GenerateOptions(count, "launch"));
-        SetWriter.Write(set, dir, pack: false);
+        SetWriter.Write(set, dir, pack: false, models ? new SetModeler(book, new RiseOptions()) : null);
         return dir;
     }
 
@@ -202,5 +203,28 @@ public class BundleGalleryTests
         Assert.Null(nav.Current);                                   // not the Set browser
         Assert.IsType<GallerySubject>(Assert.Single(host.Opened));
         Assert.Contains(vm.Recents, r => r.Path == bundle && r.Meta.StartsWith("upload bundle", StringComparison.Ordinal));
+    }
+
+    [AvaloniaFact]
+    public async Task A_metadata_file_is_titled_by_its_name_and_shows_its_linked_model()
+    {
+        // The marketplace preset links each item's glb through animation_url; the file sits in the
+        // export's own models/ folder, so the viewer shows it in 3D without fetching anything.
+        string export = Export(CookedSet(models: true), ExportOptions.For(ExportPreset.Marketplace) with
+        {
+            ImageBaseUri = "ipfs://bafyimages/", ModelBaseUri = "ipfs://bafymodels/", TokenNaming = TokenNaming.TokenId,
+        });
+        Assert.Contains("animation_url", File.ReadAllText(Path.Combine(export, "metadata", "1")), StringComparison.Ordinal);
+
+        using var item = await ViewerOpener.OpenAsync(Path.Combine(export, "metadata", "1"), new ArchiveGalleryTests.Scripted());
+        Assert.NotNull(item);
+        Assert.Equal("Chest Demo #1", item!.Title);
+        Assert.NotNull(item.Model);
+
+        // The bundle gallery's tile opens the same model.
+        using var bundle = MarketplaceBundle.Read(export);
+        var gallery = GalleryBuilder.ForBundle(bundle);
+        using var tile = await gallery.Items[0].Open();
+        Assert.NotNull(tile.Model);
     }
 }

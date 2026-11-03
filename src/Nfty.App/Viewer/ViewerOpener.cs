@@ -286,8 +286,32 @@ internal static class MetadataSubject
         try { art = ImageFormats.Load(png); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or UnknownImageFormatException
                                        or InvalidImageContentException) { /* the missing mark says so */ }
+
+        // An OpenSea item that links a model (animation_url) shows it in 3D when the file sits in the
+        // export's own models/ folder - mapped by file name, never fetched.
+        var model = AnimationUrl(json) is { Length: > 0 } link
+            && MarketplaceBundle.ResolveModel(root, link) is { } modelPath
+                ? ModelSubjects.TryModel(modelPath) : null;
+
+        // The title is the item's published name ("Chest Demo #1"), not the file's ("1").
+        string title = Try<OpenSeaMetadata>(json) is { Name: { Length: > 0 } name } ? name : Path.GetFileName(path);
         using (art)
-            return new SnapshotSubject(Path.GetFileName(path), facts, art, null) { ImageMissing = art is null };
+        using (model?.Texture)
+            return new SnapshotSubject(title, facts, art, model) { ImageMissing = art is null };
+    }
+
+    // OpenSeaMetadata is the standards-pure record nfty WRITES and carries no animation_url; an
+    // export's item does when its models were linked, so it is read straight off the JSON.
+    private static string? AnimationUrl(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            return doc.RootElement.ValueKind == JsonValueKind.Object
+                && doc.RootElement.TryGetProperty("animation_url", out var v) && v.ValueKind == JsonValueKind.String
+                    ? v.GetString() : null;
+        }
+        catch (JsonException) { return null; }
     }
 
     private static T? Try<T>(string json) where T : class

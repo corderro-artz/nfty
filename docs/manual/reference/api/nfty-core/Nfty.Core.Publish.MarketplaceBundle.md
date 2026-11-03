@@ -64,3 +64,18 @@ Finds the picture an item's `image` field names, inside the bundle.
 - `imageField` (`string`) - The metadata's `image` value.
 
 **Returns.** The full path of a file that exists inside `root`, or null. Nothing is fetched: a link with a scheme (`ipfs://`, `https://`) is mapped by its trailing file name (or `images/<file>`) onto the bundle's own `images/` folder.
+
+### ResolveModel(string, string) { #m-resolvemodel-system-string-system-string }
+
+```csharp
+public static string? ResolveModel(string root, string animationUrl);
+```
+
+Finds the model an item's `animation_url` names, inside the bundle: the same rule as [`MarketplaceBundle.ResolveImage()`](Nfty.Core.Publish.MarketplaceBundle.md#m-resolveimage-system-string-system-string), onto the bundle's own `models/` folder.
+
+**Parameters**
+
+- `root` (`string`) - The bundle folder.
+- `animationUrl` (`string`) - The metadata's `animation_url` value.
+
+**Returns.** The full path of a file that exists inside `root`, or null.

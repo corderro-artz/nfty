@@ -99,7 +99,22 @@ public static class ModelSubjects
             .Where(f => string.Equals(Path.GetFileNameWithoutExtension(f), stem, StringComparison.Ordinal))
             .ToList();
         string? main = files.FirstOrDefault(f => Path.GetExtension(f) is ".glb" or ".gltf");
-        if (main is null) return null;
+        return main is null ? null : TryModel(main, files);
+    }
+
+    /// <summary>
+    /// The model in a <c>.glb</c>/<c>.gltf</c> nfty wrote (with the <c>.bin</c> beside a
+    /// <c>.gltf</c>), or null when it is damaged, foreign or unreadable - a caller showing an item
+    /// falls back to its picture, never refuses to open.
+    /// </summary>
+    /// <param name="main">The <c>.glb</c> or <c>.gltf</c>.</param>
+    /// <param name="files">Every file of the model, for Export; null means the main file and, for a
+    /// <c>.gltf</c>, its <c>.bin</c>.</param>
+    /// <returns>The model, which the caller owns, or null.</returns>
+    internal static ViewerModel? TryModel(string main, IReadOnlyList<string>? files = null)
+    {
+        files ??= new[] { main, Path.ChangeExtension(main, ".bin") }
+            .Where(f => File.Exists(f) && (f == main || Path.GetExtension(main) == ".gltf")).ToList();
         try
         {
             var read = GltfReader.Read(main);
@@ -107,9 +122,10 @@ public static class ModelSubjects
             var model = files.Select(f => new ModelFile(Path.GetFileName(f), File.ReadAllBytes(f))).ToList();
             return new ViewerModel(read.Mesh, texture, model);
         }
-        catch (Exception ex) when (ex is UnsupportedModelException or IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is UnsupportedModelException or IOException or UnauthorizedAccessException
+                                       or UnknownImageFormatException or InvalidImageContentException)
         {
-            return null;   // a damaged or foreign file: fall back to rising it, never refuse to open
+            return null;   // a damaged or foreign file: fall back to the picture, never refuse to open
         }
     }
 

@@ -184,8 +184,13 @@ public static class GalleryBuilder
                     try { if (item.ImagePath is not null) art = ImageFormats.Load(item.ImagePath); }
                     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
                                                    or UnknownImageFormatException or InvalidImageContentException) { }
+                    // The item's own model, when its animation_url names a file in the bundle's models/.
+                    var model = item.AnimationUrl is { Length: > 0 } link
+                        && MarketplaceBundle.ResolveModel(bundle.SourceDirectory, link) is { } modelPath
+                            ? ModelSubjects.TryModel(modelPath) : null;
                     using (art)
-                        return new SnapshotSubject(item.Name, facts, art, null) { ImageMissing = art is null };
+                    using (model?.Texture)
+                        return new SnapshotSubject(item.Name, facts, art, model) { ImageMissing = art is null };
                 }), gate));
         }
 

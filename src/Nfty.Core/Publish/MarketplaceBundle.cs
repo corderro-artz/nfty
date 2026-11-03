@@ -279,11 +279,24 @@ public static class MarketplaceBundle
     /// <returns>The full path of a file that exists inside <paramref name="root"/>, or null.
     /// Nothing is fetched: a link with a scheme (<c>ipfs://</c>, <c>https://</c>) is mapped by its
     /// trailing file name (or <c>images/&lt;file&gt;</c>) onto the bundle's own <c>images/</c> folder.</returns>
-    public static string? ResolveImage(string root, string imageField)
-    {
-        if (string.IsNullOrWhiteSpace(root) || string.IsNullOrWhiteSpace(imageField)) return null;
+    public static string? ResolveImage(string root, string imageField) =>
+        Resolve(root, imageField, SetLayout.ImagesDir);
 
-        string text = imageField.Trim();
+    /// <summary>
+    /// Finds the model an item's <c>animation_url</c> names, inside the bundle: the same rule as
+    /// <see cref="ResolveImage"/>, onto the bundle's own <c>models/</c> folder.
+    /// </summary>
+    /// <param name="root">The bundle folder.</param>
+    /// <param name="animationUrl">The metadata's <c>animation_url</c> value.</param>
+    /// <returns>The full path of a file that exists inside <paramref name="root"/>, or null.</returns>
+    public static string? ResolveModel(string root, string animationUrl) =>
+        Resolve(root, animationUrl, SetLayout.ModelsDir);
+
+    private static string? Resolve(string root, string field, string dir)
+    {
+        if (string.IsNullOrWhiteSpace(root) || string.IsNullOrWhiteSpace(field)) return null;
+
+        string text = field.Trim();
         int cut = text.IndexOfAny(['?', '#']);
         if (cut >= 0) text = text[..cut];
 
@@ -292,16 +305,16 @@ public static class MarketplaceBundle
         if (scheme >= 0)
         {
             string tail = "/" + Uri.UnescapeDataString(text[(scheme + 3)..]);
-            int at = tail.LastIndexOf("/images/", StringComparison.Ordinal);
+            int at = tail.LastIndexOf("/" + dir + "/", StringComparison.Ordinal);
             if (at >= 0) candidates.Add(tail[(at + 1)..]);
-            candidates.Add(SetLayout.ImagesDir + "/" + tail[(tail.LastIndexOf('/') + 1)..]);
+            candidates.Add(dir + "/" + tail[(tail.LastIndexOf('/') + 1)..]);
         }
         else
         {
             string rel = Uri.UnescapeDataString(text).Replace('\\', '/').TrimStart('/');
             while (rel.StartsWith("./", StringComparison.Ordinal)) rel = rel[2..];
             candidates.Add(rel);
-            if (!rel.Contains('/')) candidates.Add(SetLayout.ImagesDir + "/" + rel);
+            if (!rel.Contains('/')) candidates.Add(dir + "/" + rel);
         }
 
         string full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
