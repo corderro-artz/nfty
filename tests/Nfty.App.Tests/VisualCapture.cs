@@ -1117,6 +1117,13 @@ public partial class VisualCapture
 
             Capture(new Views.ExportDialogView { DataContext = UploadDone(new FakeDialogs()) }, variant,
                 $"export-upload-done-{key}.png");
+            Capture(new Views.ExportDialogView { DataContext = UploadDone(new FakeDialogs(), withModels: false) }, variant,
+                $"export-upload-done-nomodels-{key}.png");
+            var contents = ExportCaptureSet(withModels: true);
+            var contentsMarket = new ExportDialogViewModel(contents, new FilePickerService(), new NoopFolderRevealer(),
+                new FakeDialogs());
+            contentsMarket.ApplyPresetCommand.Execute(contentsMarket.Presets.Single(p => p.Preset == Nfty.Core.Publish.ExportPreset.Marketplace));
+            Capture(new Views.ExportDialogView { DataContext = contentsMarket }, variant, $"export-marketplace-contents-{key}.png");
 
             // The busy card, in the state it is actually seen in: mid-job, with a real phase line.
             var busy = new BusyViewModel("Opening Set", "Unpacking...")
@@ -1179,21 +1186,22 @@ public partial class VisualCapture
     /// <summary>A real cooked Set on disk, so the manifest lines are real counts and real sizes
     /// rather than a fixture's idea of them.</summary>
     /// <summary>The export card after an upload: the addresses a contract needs, each with Copy.</summary>
-    internal static ExportDialogViewModel UploadDone(IDialogService dialogs) =>
-        new(ExportCaptureSet(withModels: true), new FilePickerService(), new NoopFolderRevealer(), dialogs,
-            publishing: ExportUploadTests.Publishing(new ExportUploadTests.FakePinning(true)))
-        {
-            Tab = ExportTab.Upload,
-            UploadBaseUri = "ipfs://bafybeih4x2rdkcvbvs5rmhm2bodgsrtyuqfkxcjn7bxgtv2rtkpxfgdueu/",
-            UploadContractUri = "ipfs://bafybeih4x2rdkcvbvs5rmhm2bodgsrtyuqfkxcjn7bxgtv2rtkpxfgdueu/collection.json",
-            UploadImagesUri = "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/",
-            UploadModelsUri = "ipfs://bafybeiczsscdsbs7ffqz55asqdf3smv6klcw3gofszvwlyarci47bgf354/",
-            UploadMetadataUri = "ipfs://bafybeih4x2rdkcvbvs5rmhm2bodgsrtyuqfkxcjn7bxgtv2rtkpxfgdueu/",
-            HasUploadResult = true,
-            ResultText = "Uploaded 3 assets to Local IPFS and exported them with the same addresses.",
-            OutputPath = @"C:\Users\you\Exports\Chest Demo",
-            IsDone = true,
-        };
+    internal static ExportDialogViewModel UploadDone(IDialogService dialogs, bool withModels = true)
+    {
+        // A REAL run through a fake pinning service, so the frame shows what the card shows after an
+        // upload (addresses, rows with nothing, a manifest made from what was written) rather than a
+        // fixture's guess at it.
+        var vm = new ExportDialogViewModel(ExportCaptureSet(withModels: withModels),
+            new ExportUploadTests.FixedFolder(Directory.CreateTempSubdirectory("nfty-cap-out-").FullName),
+            new NoopFolderRevealer(), dialogs,
+            publishing: ExportUploadTests.Publishing(new ExportUploadTests.FakePinning(true)));
+        vm.ApplyPresetCommand.Execute(vm.Presets.Single(p => p.Preset == Nfty.Core.Publish.ExportPreset.Marketplace));
+        vm.Packed = false;
+        vm.Tab = ExportTab.Upload;
+        UiThreadWait.For(vm.PendingUploadCheck);
+        UiThreadWait.For(vm.UploadCommand.ExecuteAsync(null));
+        return vm;
+    }
 
     internal static string ExportCaptureSet(bool withModels = false)
     {
@@ -1228,6 +1236,14 @@ public partial class VisualCapture
             var models = Path.Combine(dir, SetLayout.ModelsDir);
             Directory.CreateDirectory(models);
             File.WriteAllBytes(Path.Combine(models, "0001.glb"), new byte[] { 1, 2, 3, 4 });
+            // A models/ folder is the Set's only as far as set.json says so: without the block the
+            // card (rightly) reports "none in this Set" and a frame of it shows the wrong state.
+            var json = Path.Combine(dir, SetLayout.ManifestFile);
+            var manifest = System.Text.Json.JsonSerializer.Deserialize<SetManifest>(
+                File.ReadAllText(json), Nfty.Core.Formats.Json.Options)!;
+            File.WriteAllText(json, System.Text.Json.JsonSerializer.Serialize(
+                manifest with { Models = new SetModels("glb", "bottom-center", 1f, Skipped: [2, 3, 4]) },
+                Nfty.Core.Formats.Json.Options));
         }
         return dir;
     }

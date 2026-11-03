@@ -24,7 +24,7 @@ public enum ExportShape
 /// </remarks>
 public enum ExportPreset
 {
-    /// <summary>Art, standard fields and <c>collection.json</c>. No per-asset DNA, colors or seed.</summary>
+    /// <summary>Art, models, standard fields and <c>collection.json</c>, named by token id. No per-asset DNA, colors or seed.</summary>
     Marketplace,
 
     /// <summary>Everything a buyer gets, rarity and DNA included, but not the book.</summary>
@@ -75,10 +75,10 @@ public record ExportOptions
     /// Include <c>models/</c> — the 3D model written for each asset at cook time.
     /// </summary>
     /// <remarks>
-    /// <para><b>On by default, off for <see cref="ExportPreset.Marketplace"/></b> — a marketplace
-    /// mints the art and its standard fields and has no use for the models. A Set cooked without
-    /// models has no <c>models/</c>, so the flag then changes nothing and the plan never mentions
-    /// the part.</para>
+    /// <para><b>On by default, and on for <see cref="ExportPreset.Marketplace"/> too</b> — a
+    /// marketplace shows a glb <c>animation_url</c> as a 3D viewer, so the models are part of the
+    /// listing, not an extra. A Set cooked without models has no <c>models/</c>, so the flag then
+    /// changes nothing and the plan never mentions the part.</para>
     ///
     /// <para><b>The models are copied as cooked and never re-rendered</b>, so the debug mark
     /// (<see cref="NumberWatermark"/>), which stamps only the art on the way out, cannot reach one:
@@ -244,9 +244,11 @@ public record ExportOptions
         ExportPreset.Marketplace => new ExportOptions
         {
             NftyMetadata = false,
-            Models = false,
             IncludeCollectionMetadata = true,
             IncludeSetManifest = false,
+            // A contract's tokenURI is baseURI + tokenId, so the files are named by token id (and
+            // the metadata has no extension) or nothing the contract asks for resolves.
+            TokenNaming = TokenNaming.TokenId,
         },
         ExportPreset.AssetPack => new ExportOptions(),
         ExportPreset.FullProject =>
@@ -304,7 +306,8 @@ public record ExportOptions
     /// screen cannot go on claiming a preset after a box beneath it was unticked. The note is
     /// ignored: it is a message to a person, not part of the export's shape. So are the marketplace
     /// VALUES (base URI, naming, links, royalty): they fill in what a content axis writes, they do
-    /// not choose what leaves.</para>
+    /// not choose what leaves. <see cref="ExportPreset.Marketplace"/> STARTS at token-id naming, but
+    /// a different naming does not un-name it.</para>
     ///
     /// <para><b><see cref="Shape"/> is ignored too, and that is the correction.</b> A preset names
     /// WHAT LEAVES the machine; folder-or-file is how it is packed, and the two are separate

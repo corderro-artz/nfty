@@ -19,7 +19,7 @@ namespace Nfty.App.Tests;
 /// </summary>
 public class ExportUploadTests
 {
-    private sealed class FixedFolder(string dir) : IFilePickerService
+    internal sealed class FixedFolder(string dir) : IFilePickerService
     {
         public Task<string?> OpenFileAsync(string t, params string[] e) => Task.FromResult<string?>(null);
         public Task<string?> SaveFileAsync(string t, string e) => Task.FromResult<string?>(null);
@@ -102,6 +102,49 @@ public class ExportUploadTests
 
         await vm.CopyCommand.ExecuteAsync(vm.UploadBaseUri);
         Assert.Equal(vm.UploadBaseUri, clipboard.Last);
+    }
+
+    private static ExportDialogViewModel ModeledMarketplace()
+    {
+        var vm = new ExportDialogViewModel(VisualCapture.ExportCaptureSet(withModels: true), new FixedFolder("x"),
+            new NoopFolderRevealer(), new FakeDialogs(), publishing: Publishing(new FakePinning(true)));
+        vm.ApplyPresetCommand.Execute(vm.Presets.Single(p => p.Preset == ExportPreset.Marketplace));
+        return vm;
+    }
+
+    [AvaloniaFact]
+    public async Task After_an_upload_the_manifest_describes_what_was_written_and_empty_rows_cannot_be_copied()
+    {
+        var vm = Dialog(new FakePinning(true), Directory.CreateTempSubdirectory("nfty-upload-").FullName);
+        await vm.PendingUploadCheck;
+
+        // Before the run, on UPLOAD, "will do" notes are not warnings: none of them is listed.
+        Assert.DoesNotContain(vm.Consequences, c => c.Contains("relative", StringComparison.Ordinal));
+        Assert.DoesNotContain(vm.Consequences, c => c.Contains("no image", StringComparison.Ordinal));
+        Assert.DoesNotContain(vm.Consequences, c => c.Contains('<'));
+        Assert.Contains("token id", vm.UploadChoicesNote, StringComparison.Ordinal);
+
+        await vm.UploadCommand.ExecuteAsync(null);
+
+        // After it, the plan is made from the addresses the upload gave: nothing stale is left.
+        vm.Tab = ExportTab.Contents;
+        Assert.DoesNotContain(vm.Consequences, c => c.Contains("relative", StringComparison.Ordinal));
+        Assert.DoesNotContain(vm.Consequences, c => c.Contains("no image", StringComparison.Ordinal));
+        Assert.DoesNotContain(vm.Consequences, c => c.Contains("--", StringComparison.Ordinal));
+
+        // This Set has no models: the row says none, and has nothing to copy. The contract row has one.
+        Assert.False(vm.HasUploadModels);
+        Assert.True(vm.HasUploadContract);
+    }
+
+    [AvaloniaFact]
+    public void The_dialog_words_its_warnings_with_field_names_not_flags()
+    {
+        var vm = new ExportDialogViewModel(VisualCapture.ExportCaptureSet(), new FixedFolder("x"),
+            new NoopFolderRevealer(), new FakeDialogs());
+        Assert.NotEmpty(vm.Consequences);
+        Assert.DoesNotContain(vm.Consequences, c => c.Contains("--", StringComparison.Ordinal));
+        Assert.Contains(vm.Consequences, c => c.Contains("Image base URI", StringComparison.Ordinal));
     }
 
     [AvaloniaFact]
@@ -193,15 +236,18 @@ public class ExportUploadTests
     // The marketplace preset with no address yet, on CONTENTS: two link warnings in the manifest.
     // Wrapped, they pushed the card past the window and every tab scrolled; one line each fits.
     [InlineData("contents")]
+    // The same with a Set that has models: a third link warning (models not linked) must not scroll it.
+    [InlineData("contents-models")]
     public async Task The_upload_page_never_scrolls_at_the_smallest_window(string state)
     {
         ExportDialogViewModel vm = state switch
         {
             "done" => VisualCapture.UploadDone(new FakeDialogs()),
+            "contents-models" => ModeledMarketplace(),
             _ => Dialog(new FakePinning(state != "unreachable"), Directory.CreateTempSubdirectory().FullName),
         };
         await vm.PendingUploadCheck;
-        if (state == "contents") vm.Tab = ExportTab.Contents;
+        if (state is "contents" or "contents-models") vm.Tab = ExportTab.Contents;
         if (state == "running") { vm.IsRunning = true; vm.PhaseText = "Uploading images... 1.2 MB of 3.1 MB"; }
         var view = new Views.ExportDialogView { DataContext = vm };
         var window = new Window

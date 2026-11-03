@@ -81,6 +81,18 @@ public int Count { get; init; }
 
 How many assets the Set holds.
 
+### DialogWarnings { #p-dialogwarnings }
+
+```csharp
+public IReadOnlyList<string> DialogWarnings { get; init; }
+```
+
+The same warnings, in the same order, worded for the export dialog: they name its fields ("Image base URI") where [`ExportPlan.Warnings`](Nfty.Core.Publish.ExportPlan.md#p-warnings) names the command-line flags.
+
+**Remarks**
+
+Core owns both wordings so the two front-ends cannot disagree about WHICH warnings apply, only about what to call the control that fixes them. Empty only when [`ExportPlan.Warnings`](Nfty.Core.Publish.ExportPlan.md#p-warnings) is.
+
 ### Entries { #p-entries }
 
 ```csharp

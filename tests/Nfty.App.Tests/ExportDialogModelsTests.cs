@@ -85,14 +85,18 @@ public class ExportDialogModelsTests
     }
 
     [AvaloniaFact]
-    public void The_marketplace_tile_unticks_models()
+    public void The_marketplace_tile_keeps_models_and_names_files_by_token_id()
     {
         var vm = Vm(withModels: true);
         Assert.True(vm.Models);
+        Assert.False(vm.TokenIdNames);
 
         vm.ApplyPresetCommand.Execute(vm.Presets.Single(t => t.Preset == ExportPreset.Marketplace));
 
-        Assert.False(vm.Models);
+        Assert.True(vm.Models);
+        Assert.True(vm.ModelsShown);
+        Assert.True(vm.TokenIdNames);
+        Assert.Contains(vm.Parts, p => p.StartsWith("3D models", StringComparison.Ordinal));
         Assert.True(vm.Presets.Single(t => t.Preset == ExportPreset.Marketplace).IsSelected);
     }
 

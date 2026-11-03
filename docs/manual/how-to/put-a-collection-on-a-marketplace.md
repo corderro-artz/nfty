@@ -22,7 +22,7 @@ by default, or to Pinata with your own API key.
    your system's credential store (Windows Credential Manager, the macOS keychain, the Secret Service
    on Linux), never in a file, and the card only ever shows its last four characters.
 2. Open the Set, press **Export…**, choose the **Marketplace** preset and fill in the **MARKETPLACE**
-   tab. Choose **Token id** file names for a contract drop. Leave the base URIs empty: the upload
+   tab. The preset already chooses **Token id** file names, which a contract drop needs. Leave the base URIs empty: the upload
    writes them.
 3. Open the **UPLOAD** tab. It names the provider and shows whether nfty can reach it
    (`connected · kubo 0.29.0`, or `not reachable` with what to start). Press **Upload** and choose
@@ -92,7 +92,11 @@ address is used only for glb models that are exported.
 Leave the image address empty and the links stay relative. The card and the terminal both tell you
 what is missing, because a marketplace cannot resolve `images/0001.png`:
 
-> Image links are relative: upload images/ first, then export again with --image-base-uri ipfs://&lt;CID&gt;/
+> Image links are relative: upload images/ first, then set the Image base URI to where they live.
+
+(The terminal's version names the flag, `--image-base-uri`.) On the UPLOAD tab these are not warnings:
+the upload writes the addresses, so nothing about them is listed, and once it has finished the
+card describes what was written.
 
 ## Name the files the way your contract counts
 
@@ -102,7 +106,7 @@ token-id`) and the files are named by that id alone: `metadata/1` with **no exte
 is `1` (the default) or `0`, as your contract counts: the id is the asset's number minus one plus
 that start.
 
-The default, **Padded**, is exactly what nfty has always written (`0001.json`, `0001.png`), byte for
+The Marketplace preset starts at **Token id**. The default for everything else, **Padded**, is exactly what nfty has always written (`0001.json`, `0001.png`), byte for
 byte. `nfty/` keeps the Set's own names and numbering whichever you pick; it is nfty's record of the
 Set, cross-referenced by set number, and not what a marketplace reads.
 

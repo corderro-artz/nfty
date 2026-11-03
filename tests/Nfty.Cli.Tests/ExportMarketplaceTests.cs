@@ -193,6 +193,20 @@ public class ExportMarketplaceTests
     }
 
     [Fact]
+    public void The_marketplace_preset_alone_names_files_so_baseURI_plus_tokenId_resolves()
+    {
+        string root = Directory.CreateTempSubdirectory().FullName;
+        string set = Cook(root);
+
+        string made = Export(set, root, out _, "--preset", "marketplace", "--image-base-uri", "ipfs://CID/");
+
+        // No --token-names: the preset's own default is token-id, so "<baseURI>1" is a real file.
+        Assert.True(File.Exists(Path.Combine(made, "metadata", "1")));
+        Assert.True(File.Exists(Path.Combine(made, "images", "1.png")));
+        Assert.False(File.Exists(Path.Combine(made, "metadata", "0001.json")));
+    }
+
+    [Fact]
     public void Relative_image_links_print_a_warning_on_stderr()
     {
         string root = Directory.CreateTempSubdirectory().FullName;

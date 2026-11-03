@@ -150,7 +150,7 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
     /// <summary>What the models box DRAWS: ticked only when models would really ship. On a Set
     /// without models a disabled ticked box reads as "models will be exported", so it draws
     /// unticked while <see cref="Models"/> stays true internally - which keeps the presets
-    /// matching on unmodeled Sets, since every preset but Marketplace says models on.</summary>
+    /// matching on unmodeled Sets, since every preset says models on.</summary>
     public bool ModelsShown => Models && SetHasModels;
     [ObservableProperty] private bool _includeCookBook;
     [ObservableProperty] private bool _packed = true;
@@ -525,6 +525,9 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
         IncludeSetManifest = o.IncludeSetManifest;
         IsSealed = o.Sealed;
         Packed = o.Shape == ExportShape.Archive;
+        // Marketplace names files by token id so baseURI + tokenId resolves; the others keep the
+        // Set's own names. Naming is a starting point like every box here: change it afterwards.
+        TokenIdNames = o.TokenNaming == TokenNaming.TokenId;
     }
 
     /// <summary>
@@ -593,7 +596,9 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
         UpdateSelectedPreset();
         try
         {
-            var plan = SetExporter.Plan(_setDirectory, Options, CookBookPath);
+            // After an upload the manifest describes what was WRITTEN: the same options, with the
+            // addresses the upload gave, so no "links are relative" is left standing.
+            var plan = SetExporter.Plan(_setDirectory, WrittenOptions(), CookBookPath);
             Parts = plan.Parts();
             OutputName = plan.OutputName;
             SizeText = plan.SizeText();
@@ -610,9 +615,9 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
                 notes.Add("That CookBook is not the one this Set was cooked from: its hash differs "
                     + "from the one set.json recorded. Cooking from it produces a different "
                     + "collection, not this one.");
-            // Core words these (relative links, dangling links), so the terminal and this card say the
-            // same thing about the same request.
-            notes.AddRange(IsUploadTab ? UploadPhrased(plan.Warnings) : plan.Warnings);
+            // Core words these (relative links, dangling links), in the dialog's own vocabulary (field
+            // names, not flags), so the terminal and this card agree about the same request.
+            notes.AddRange(OneLinePerFix(IsUploadTab && !HasUploadResult ? UploadPhrased(plan.DialogWarnings) : plan.DialogWarnings));
             if (IsSealed)
                 notes.Add("Sealed: unreadable without the passphrase. Anyone you give it to can "
                     + "still take the art - nfty declines, a screenshot does not.");
@@ -649,6 +654,20 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
             // framework's "(Parameter 'options')" tail, and the field already says it better.
             Problem = MarketplaceProblem() is { Length: > 0 } field ? field : ex.Message;
         }
+    }
+
+    /// <summary>
+    /// Drops "collection.json has no image" while the relative-links warning stands: both have the
+    /// same fix (the Image base URI), and listing it twice cost a third line the manifest's
+    /// reserved height cannot hold once the Set also has models.
+    /// </summary>
+    private static IEnumerable<string> OneLinePerFix(IEnumerable<string> warnings)
+    {
+        var all = warnings.ToList();
+        bool relative = all.Any(w => w.StartsWith("Image links are relative", StringComparison.Ordinal));
+        return relative
+            ? all.Where(w => !w.StartsWith("collection.json has no image", StringComparison.Ordinal))
+            : all;
     }
 
     /// <summary>

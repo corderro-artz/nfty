@@ -106,7 +106,11 @@ public class MarketplaceExportTests
     {
         string set = CookedSet();
         var plan = SetExporter.Plan(set, new ExportOptions());
-        Assert.Contains(plan.Warnings, w => w.Contains("relative", StringComparison.Ordinal) && w.Contains("base URI", StringComparison.Ordinal));
+        Assert.Contains(plan.Warnings, w => w.Contains("relative", StringComparison.Ordinal) && w.Contains("--image-base-uri", StringComparison.Ordinal));
+        // The dialog's wording names its field, never a flag, and carries the same warnings in the same order.
+        Assert.Contains(plan.DialogWarnings, w => w.Contains("relative", StringComparison.Ordinal) && w.Contains("Image base URI", StringComparison.Ordinal));
+        Assert.DoesNotContain(plan.DialogWarnings, w => w.Contains("--", StringComparison.Ordinal));
+        Assert.Equal(plan.Warnings.Count, plan.DialogWarnings.Count);
 
         string export = Export(set, new ExportOptions());
         Assert.Equal("images/0001.png", Read(export, "metadata/0001.json").GetProperty("image").GetString());

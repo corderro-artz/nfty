@@ -90,8 +90,10 @@ public class SetExporterTests
             ExportOptions.For(ExportPreset.Marketplace));
 
         var names = EntriesOf(result.Path);
-        Assert.Contains("images/0001.png", names);
-        Assert.Contains("metadata/0001.json", names);
+        // Token-id names: a contract's baseURI + tokenId must resolve, so the metadata is "1" with no
+        // extension and the art is "1.png".
+        Assert.Contains("images/1.png", names);
+        Assert.Contains("metadata/1", names);
         Assert.DoesNotContain(names, n => n.StartsWith("nfty/", StringComparison.Ordinal));
         // set.json is an axis now, and the marketplace preset turns it off: it records the seed and
         // the source book's hash, which a public drop has no use for.
@@ -435,15 +437,18 @@ public class SetExporterTests
     }
 
     [Fact]
-    public void The_marketplace_preset_leaves_models_out()
+    public void The_marketplace_preset_ships_the_models_a_set_has()
     {
+        // A marketplace shows a glb animation_url as a 3D viewer, so the models are part of the listing.
         var options = ExportOptions.For(ExportPreset.Marketplace);
-        Assert.False(options.Models);
-        Assert.DoesNotContain(SetExporter.Plan(ModeledSet(), options).Entries,
+        Assert.True(options.Models);
+        Assert.Contains(SetExporter.Plan(ModeledSet(), options).Entries,
             e => e.Name.StartsWith("models/"));
+        Assert.Equal(TokenNaming.TokenId, options.TokenNaming);
+        Assert.Equal(ExportPreset.Marketplace, options.MatchingPreset());
 
-        // The new axis takes part in preset matching like every other.
-        Assert.Null((options with { Models = true }).MatchingPreset());
+        // The axis takes part in preset matching like every other.
+        Assert.Null((options with { Models = false }).MatchingPreset());
         Assert.Equal(ExportPreset.AssetPack, ExportOptions.For(ExportPreset.AssetPack).MatchingPreset());
         Assert.True(ExportOptions.For(ExportPreset.AssetPack).Models);
     }
