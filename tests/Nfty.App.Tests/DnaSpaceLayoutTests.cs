@@ -131,7 +131,9 @@ public class DnaSpaceLayoutTests
             TextBlock Find(string text) => view.GetVisualDescendants().OfType<TextBlock>()
                 .First(t => t.Text == text);
             double header = Find("RECIPE").TranslatePoint(default, root)!.Value.X;
-            double section = Find("DNA SPACE").TranslatePoint(default, root)!.Value.X;
+            // The section heading starts at its DNA glyph; the label run is the second thing in it.
+            var heading = (Avalonia.Visual?)Find("DNA SPACE").GetVisualParent() ?? Find("DNA SPACE");
+            double section = heading.TranslatePoint(default, root)!.Value.X;
 
             Assert.True(Math.Abs(header - section) < 0.5,
                 $"RECIPE starts at {header:F0} and DNA SPACE above it at {section:F0}");
