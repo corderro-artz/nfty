@@ -34,7 +34,7 @@
                out, so switching modes moves nothing. -->
           <StackPanel Spacing="6">
             <StackPanel Orientation="Horizontal" Spacing="10">
-              <TextBlock Classes="seglbl" Text="ART" VerticalAlignment="Center" />
+              <TextBlock Classes="plabel" Margin="0" Text="ART" VerticalAlignment="Center" />
               <Border Classes="seg tiny" VerticalAlignment="Center">
                 <StackPanel Orientation="Horizontal">
                   <Button Classes="seg-b tiny" Content="Atlas" Classes.on="{Binding IsAtlas}"

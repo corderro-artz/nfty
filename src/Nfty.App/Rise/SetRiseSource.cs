@@ -312,7 +312,7 @@ public sealed class SetRiseSource : RiseSource
         }
         catch (PartialAlphaException ex)
         {
-            return (null, null, false, ex.Message);   // which layer keeps this asset 2D, said in the note
+            return (null, null, false, ErrorText.For(ex));   // which layer keeps this asset 2D, said in the note
         }
     }
 

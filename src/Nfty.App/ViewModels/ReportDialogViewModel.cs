@@ -38,7 +38,7 @@ public partial class ReportDialogViewModel : ViewModelBase
     }
 
     /// <summary>The heading, naming which report is showing.</summary>
-    public string Title => ShowingIdentity ? "Identity — ids for the CLI" : "Stats — the odds these weights imply";
+    public string Title => ShowingIdentity ? "Ids for the CLI" : "The odds these weights imply";
 
     /// <summary>Rendered on demand rather than cached: a book can be edited behind this dialog, and
     /// a stale report is worse than a slightly slower one.</summary>

@@ -50,7 +50,7 @@
                  box of hex. A Grid rather than two StackPanels so the two labels share one column and
                  stay aligned by construction. -->
             <Grid ColumnDefinitions="60,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="10">
-              <TextBlock Grid.Row="0" Grid.Column="0" Text="Count" VerticalAlignment="Center" Classes="muted" />
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="COUNT" VerticalAlignment="Center" Classes="plabel" Margin="0" />
               <!-- "How many more", with the total an extend reaches beside it. The total's slot is
                    always laid out and only its ink comes and goes, so finding out the folder holds a
                    Set moves nothing. -->
@@ -60,7 +60,7 @@
                 <TextBlock Grid.Column="1" x:Name="TotalText" Classes="m-sub" VerticalAlignment="Center" Margin="0"
                            Text="{Binding ResultingTotalText}" />
               </Grid>
-              <TextBlock Grid.Row="1" Grid.Column="0" Text="Seed" VerticalAlignment="Center" Classes="muted" />
+              <TextBlock Grid.Row="1" Grid.Column="0" Text="SEED" VerticalAlignment="Center" Classes="plabel" Margin="0" />
               <!-- The seed: type any word, or roll a fresh one with the die. Same 190 column as Count and
                    Recipe above and below it, so the three fields share one edge; the die sits in the
                    gutter the other rows give their notes. What a seed means is the footer's line already. -->
@@ -77,7 +77,7 @@
                   </Panel>
                 </Button>
               </Grid>
-              <TextBlock Grid.Row="2" Grid.Column="0" Text="Recipe" VerticalAlignment="Center" Classes="muted" />
+              <TextBlock Grid.Row="2" Grid.Column="0" Text="RECIPE" VerticalAlignment="Center" Classes="plabel" Margin="0" />
               <!-- The reason sits OUTSIDE the combo (a disabled control is dimmed to 0.38) and shares its
                    row, so it costs no height; the slot is always laid out and only the ink toggles. -->
               <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="190,*" ColumnSpacing="10">
@@ -149,7 +149,7 @@
                  labeled rows: the expanded card has to fit the modal area. Session-only choices. -->
             <Grid ColumnDefinitions="*,*,76" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="4"
                   IsVisible="{Binding ShowModelOptionsSection}">
-              <TextBlock Grid.Row="0" Grid.Column="0" Text="Format" Classes="m-sub" />
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="FORMAT" Classes="plabel" Margin="0" />
               <ComboBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding FormatChoices}"
                         SelectedValueBinding="{Binding Value}" SelectedValue="{Binding ModelFormat}"
                         HorizontalAlignment="Stretch">
@@ -159,7 +159,7 @@
                   </DataTemplate>
                 </ComboBox.ItemTemplate>
               </ComboBox>
-              <TextBlock Grid.Row="0" Grid.Column="1" Text="Pivot" Classes="m-sub" />
+              <TextBlock Grid.Row="0" Grid.Column="1" Text="PIVOT" Classes="plabel" Margin="0" />
               <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding PivotChoices}"
                         SelectedValueBinding="{Binding Value}" SelectedValue="{Binding ModelPivot}"
                         HorizontalAlignment="Stretch">
@@ -169,7 +169,7 @@
                   </DataTemplate>
                 </ComboBox.ItemTemplate>
               </ComboBox>
-              <TextBlock Grid.Row="0" Grid.Column="2" Text="Voxel size" Classes="m-sub" />
+              <TextBlock Grid.Row="0" Grid.Column="2" Text="VOXEL SIZE" Classes="plabel" Margin="0" />
               <NumericUpDown Grid.Row="1" Grid.Column="2" Value="{Binding VoxelSize}" Minimum="{Binding VoxelSizeMin, Mode=OneTime}" Maximum="{Binding VoxelSizeMax, Mode=OneTime}"
                              FormatString="0.###" Increment="0.1" MinWidth="0" Width="76" />
             </Grid>
@@ -199,7 +199,7 @@
             <!-- Said in the CLI's own words (SetProvenance.Warning), after the folder it is about.
                  Last in the stack so nothing above moves when it has something to say; a warning,
                  never a refusal - the Set was extended. -->
-            <TextBlock x:Name="ProvenanceText" Classes="warnline" Text="{Binding ProvenanceHeadline}"
+            <TextBlock x:Name="ProvenanceText" Classes="caveat" Text="{Binding ProvenanceHeadline}"
                        ToolTip.Tip="{Binding ProvenanceWarning}"
                        Classes.absent="{Binding !ProvenanceShown}" />
           </StackPanel>

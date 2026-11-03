@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctl="using:Nfty.App.Controls"
              xmlns:vm="using:Nfty.App.ViewModels"
              x:Class="Nfty.App.Views.ExportDialogView"
              x:DataType="vm:ExportDialogViewModel"
@@ -311,7 +312,7 @@
                    and the card has no height to spare for both. -->
               <StackPanel Spacing="10" IsVisible="{Binding !HasUploadResult}">
               <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="10">
-                <TextBlock Grid.Column="0" Classes="seglbl" Text="UPLOAD TO" />
+                <TextBlock Grid.Column="0" Classes="plabel" VerticalAlignment="Center" Margin="0" Text="UPLOAD TO" />
                 <Border Grid.Column="1" x:Name="UploadChip" Classes="idchip" VerticalAlignment="Center">
                   <StackPanel Orientation="Horizontal" Spacing="6">
                     <Ellipse Width="6" Height="6" VerticalAlignment="Center" Classes="vdot"
@@ -338,27 +339,27 @@
 
               <StackPanel Spacing="6" IsVisible="{Binding HasUploadResult}">
                 <Grid ColumnDefinitions="110,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="3" ColumnSpacing="8">
-                    <TextBlock Grid.Row="0" Grid.Column="0" Classes="seglbl" Text="BASE URI" />
+                    <TextBlock Grid.Row="0" Grid.Column="0" Classes="plabel" VerticalAlignment="Center" Margin="0" Text="BASE URI" />
                     <SelectableTextBlock Grid.Row="0" Grid.Column="1" Classes="uri" Text="{Binding UploadBaseUri}"
                                          ToolTip.Tip="{Binding UploadBaseUri}" />
                     <Button Grid.Row="0" Grid.Column="2" Classes="tbtn cellbtn" Content="Copy"
                             Command="{Binding CopyCommand}" CommandParameter="{Binding UploadBaseUri}" />
-                    <TextBlock Grid.Row="1" Grid.Column="0" Classes="seglbl" Text="CONTRACT URI" />
+                    <TextBlock Grid.Row="1" Grid.Column="0" Classes="plabel" VerticalAlignment="Center" Margin="0" Text="CONTRACT URI" />
                     <SelectableTextBlock Grid.Row="1" Grid.Column="1" Classes="uri" Classes.none="{Binding !HasUploadContract}" Text="{Binding UploadContractUri}"
                                          ToolTip.Tip="{Binding UploadContractUri}" />
                     <Button Grid.Row="1" Grid.Column="2" Classes="tbtn cellbtn" Content="Copy" IsEnabled="{Binding HasUploadContract}"
                             Command="{Binding CopyCommand}" CommandParameter="{Binding UploadContractUri}" />
-                    <TextBlock Grid.Row="2" Grid.Column="0" Classes="seglbl" Text="IMAGES" />
+                    <TextBlock Grid.Row="2" Grid.Column="0" Classes="plabel" VerticalAlignment="Center" Margin="0" Text="IMAGES" />
                     <SelectableTextBlock Grid.Row="2" Grid.Column="1" Classes="uri" Text="{Binding UploadImagesUri}"
                                          ToolTip.Tip="{Binding UploadImagesUri}" />
                     <Button Grid.Row="2" Grid.Column="2" Classes="tbtn cellbtn" Content="Copy"
                             Command="{Binding CopyCommand}" CommandParameter="{Binding UploadImagesUri}" />
-                    <TextBlock Grid.Row="3" Grid.Column="0" Classes="seglbl" Text="MODELS" />
+                    <TextBlock Grid.Row="3" Grid.Column="0" Classes="plabel" VerticalAlignment="Center" Margin="0" Text="MODELS" />
                     <SelectableTextBlock Grid.Row="3" Grid.Column="1" Classes="uri" Classes.none="{Binding !HasUploadModels}" Text="{Binding UploadModelsUri}"
                                          ToolTip.Tip="{Binding UploadModelsUri}" />
                     <Button Grid.Row="3" Grid.Column="2" Classes="tbtn cellbtn" Content="Copy" IsEnabled="{Binding HasUploadModels}"
                             Command="{Binding CopyCommand}" CommandParameter="{Binding UploadModelsUri}" />
-                    <TextBlock Grid.Row="4" Grid.Column="0" Classes="seglbl" Text="METADATA" />
+                    <TextBlock Grid.Row="4" Grid.Column="0" Classes="plabel" VerticalAlignment="Center" Margin="0" Text="METADATA" />
                     <SelectableTextBlock Grid.Row="4" Grid.Column="1" Classes="uri" Text="{Binding UploadMetadataUri}"
                                          ToolTip.Tip="{Binding UploadMetadataUri}" />
                     <Button Grid.Row="4" Grid.Column="2" Classes="tbtn cellbtn" Content="Copy"
@@ -431,8 +432,12 @@
                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="9">
                   <Path Grid.Column="0" Classes="ico sm" Data="{StaticResource IconOpen}"
                         VerticalAlignment="Center" />
-                  <TextBlock Grid.Column="1" Classes="leaf" Text="{Binding OutputPath}"
-                             TextTrimming="CharacterEllipsis" />
+                  <!-- Leaf over parent, the cook and Menu cards' path strip: a path is read from its
+                       end, so the export's own name is never the part that trims. -->
+                  <StackPanel Grid.Column="1" Spacing="1">
+                    <TextBlock Classes="leaf" Text="{Binding OutputLeaf}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="parent" Text="{Binding OutputParent}" />
+                  </StackPanel>
                 </Grid>
               </Button>
             </StackPanel>
@@ -449,10 +454,15 @@
               <!-- The point of this screen. Every line is generated by the same SetExporter.Plan
                    call that then does the writing, so the screen cannot promise one thing and ship
                    another - which is precisely the defect this feature exists to prevent. -->
-                <StackPanel Spacing="6">
-                  <Grid ColumnDefinitions="*,Auto">
+                <Grid RowDefinitions="Auto,Auto,*" RowSpacing="6">
+                  <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12">
                     <TextBlock Grid.Column="0" Classes="fn" Text="{Binding OutputName}" />
-                    <TextBlock Grid.Column="1" Classes="part" VerticalAlignment="Center"
+                    <!-- How many consequences sit below the fold. Fluent's scrollbar hides at rest, so
+                         without this a third note would be invisible AND unannounced. Always laid
+                         out; only its ink comes and goes (ExportDialogView.OnLayoutUpdated). -->
+                    <TextBlock Grid.Column="1" x:Name="MoreNotes" Classes="caveat" VerticalAlignment="Center"
+                               TextWrapping="NoWrap" Opacity="0" />
+                    <TextBlock Grid.Column="2" Classes="part" VerticalAlignment="Center"
                                Text="{Binding SizeText}" />
                   </Grid>
                   <!-- THE PARTS ARE A RUN, NOT A COLUMN. One short item per line spent five lines
@@ -461,7 +471,7 @@
                        spritesheet joined the list - so the body's fold moved when you switched tabs.
                        A wrap reads as one sentence about one file, costs two lines whatever is in
                        it, and leaves the height to the reserve below rather than to the plan. -->
-                  <ItemsControl ItemsSource="{Binding Parts}">
+                  <ItemsControl Grid.Row="1" ItemsSource="{Binding Parts}">
                     <ItemsControl.ItemsPanel>
                       <ItemsPanelTemplate>
                         <WrapPanel />
@@ -478,7 +488,15 @@
                        collection.json with no image) took three lines, outgrew the reserved 96 and pushed
                        the card past the 526 a modal is given - every tab then scrolled its page at the
                        smallest window. One line each keeps the common states inside the reserve. -->
-                  <ItemsControl ItemsSource="{Binding Consequences}" Margin="0,2,0,0">
+                  <!-- THE BLOCK IS ONE HEIGHT, AND ONLY ITS CONSEQUENCES SCROLL. A third consequence
+                       (a debug mark, a seal) grew the block past its reserve and the card - which
+                       has no more room at the smallest window - took the difference from the PAGE:
+                       IMAGES and SEAL scrolled their forms and cut the debug-mark sentence mid-glyph.
+                       Rows scroll, the screen does not: the rule the validity list and the Set rail
+                       already keep. Each line's whole sentence is on its tooltip. -->
+                  <ScrollViewer Grid.Row="2" x:Name="ConsequenceScroller" HorizontalScrollBarVisibility="Disabled"
+                                VerticalScrollBarVisibility="Auto" VerticalAlignment="Top">
+                  <ItemsControl ItemsSource="{Binding Consequences}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="x:String">
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" Margin="0,2,0,0" ToolTip.Tip="{Binding}">
@@ -490,18 +508,24 @@
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
-                </StackPanel>
+                  </ScrollViewer>
+                </Grid>
       </Border>
 
       <Border Grid.Row="3" Classes="modal-foot">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
           <!-- The reason Export is unavailable, in words. A control that is dim for a reason the
                screen does not give is a control the user has to guess at. -->
-          <TextBlock Grid.Column="0" Classes="keyhint" VerticalAlignment="Center"
-                     TextTrimming="CharacterEllipsis" Text="{Binding Problem}" IsVisible="{Binding IsExportAction}" />
+          <TextBlock Grid.Column="0" Classes="keyhint problem" VerticalAlignment="Center"
+                     TextTrimming="CharacterEllipsis" Text="{Binding Problem}" ToolTip.Tip="{Binding Problem}" IsVisible="{Binding IsExportAction}" />
+          <!-- Nothing to explain: the Esc hint every card's footer carries. -->
+          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center"
+                      IsVisible="{Binding FooterHintVisible}">
+            <ctl:KeyChord Chord="Esc" Compact="True" /><TextBlock Text="close" Classes="keyhint" />
+          </StackPanel>
           <!-- On UPLOAD the footer speaks for the button it carries: why Upload is unavailable. -->
-          <TextBlock Grid.Column="0" Classes="keyhint" VerticalAlignment="Center"
-                     TextTrimming="CharacterEllipsis" Text="{Binding UploadProblem}" IsVisible="{Binding IsUploadTab}" />
+          <TextBlock Grid.Column="0" Classes="keyhint problem" VerticalAlignment="Center"
+                     TextTrimming="CharacterEllipsis" Text="{Binding UploadProblem}" ToolTip.Tip="{Binding UploadProblem}" IsVisible="{Binding IsUploadTab}" />
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
             <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="tbtn"
                     IsVisible="{Binding IsRunning}" />

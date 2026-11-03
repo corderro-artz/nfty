@@ -69,7 +69,7 @@ public sealed partial class ArchiveGalleryViewModel : ViewModelBase, IDisposable
         catch (OperationCanceledException) { return; }   // the opener already said why
         catch (Exception ex)
         {
-            if (Dialogs is not null) await Dialogs.ShowErrorAsync("Could not open", ex.Message);
+            if (Dialogs is not null) await Dialogs.ShowErrorAsync("Could not open", ErrorText.For(ex));
             return;
         }
         Host.Open(subject);

@@ -396,7 +396,7 @@ public partial class CookDialogViewModel : ViewModelBase, IUnsavedWork
         catch (OperationCanceledException) { PhaseText = "Canceled"; }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync("Cook failed", ex.Message);
+            await _dialogs.ShowErrorAsync("Cook failed", ErrorText.For(ex));
         }
         finally
         {

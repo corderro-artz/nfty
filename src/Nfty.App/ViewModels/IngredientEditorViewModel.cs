@@ -1022,12 +1022,12 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
         if (ActiveDraft is not { } target) return;
         string? path;
         try { path = await _picker.OpenFileAsync("Import variant image", ".png"); }
-        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not import", ex.Message); return; }
+        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not import", ErrorText.For(ex)); return; }
         if (path is null) return;   // canceled
 
         Image<Rgba32> img;
         try { img = Image.Load<Rgba32>(path); }
-        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not import", ex.Message); return; }
+        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not import", ErrorText.For(ex)); return; }
         try
         {
             var canvas = _draft.Canvas;
@@ -1724,7 +1724,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync("Could not save", ex.Message);
+            await _dialogs.ShowErrorAsync("Could not save", ErrorText.For(ex));
         }
         finally { IsSaving = false; }
     }

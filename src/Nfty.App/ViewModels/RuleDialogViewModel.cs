@@ -281,7 +281,7 @@ public partial class RuleDialogViewModel : ViewModelBase
         if (rule is null) { Problem = "Pick a layer and a variant on every row."; return; }
 
         try { RuleEdits.Validate(rule); }
-        catch (ArgumentException ex) { Problem = ex.Message; return; }
+        catch (ArgumentException ex) { Problem = ErrorText.For(ex); return; }
 
         for (int i = 0; i < _recipe.Rules.Count; i++)
             if (i != _editingIndex && RuleEdits.AreSame(_recipe.Rules[i], rule))

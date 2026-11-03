@@ -218,7 +218,7 @@ public sealed class StateStore : IStateStore
 
         string dir;
         try { dir = Path.Combine(Path.GetFullPath(directory), FolderName); }
-        catch (Exception ex) { return new StoreChoice(false, $"'{directory}' is not a usable path — {ex.Message}"); }
+        catch (Exception ex) { return new StoreChoice(false, $"'{directory}' is not a usable path. {ErrorText.For(ex)}"); }
 
         // Deliberately no Directory.Exists / attribute check first: those are the path checks this
         // must not rely on. The probe is the whole test.
@@ -318,7 +318,7 @@ public sealed class StateStore : IStateStore
             // existence rule above, pinning the store to a folder it cannot write to — the one
             // failure the existence rule is not allowed to cause.
             if (created) { try { Directory.Delete(dir, recursive: true); } catch { /* best effort */ } }
-            return ex.Message;
+            return ErrorText.For(ex);
         }
     }
 }

@@ -331,7 +331,18 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
     private bool _isDone;
 
     /// <summary>Where the export landed, once it has.</summary>
-    [ObservableProperty] private string _outputPath = "";
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(OutputLeaf))] [NotifyPropertyChangedFor(nameof(OutputParent))] private string _outputPath = "";
+
+    /// <summary>The export's own name, stated in full - the cook card's path strip, read from the END.</summary>
+    public string OutputLeaf => string.IsNullOrEmpty(OutputPath)
+        ? ""
+        : System.IO.Path.GetFileName(OutputPath.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar))
+          is { Length: > 0 } leaf ? leaf : OutputPath;
+
+    /// <summary>Where it sits. Trimmed when long; the tooltip carries the whole path.</summary>
+    public string OutputParent => string.IsNullOrEmpty(OutputPath)
+        ? ""
+        : System.IO.Path.GetDirectoryName(OutputPath.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar)) ?? "";
 
     /// <summary>What the run produced, as a sentence.</summary>
     [ObservableProperty] private string _resultText = "";
@@ -652,7 +663,7 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
             Consequences = Array.Empty<string>();
             // A field's own reason first: Core refuses the same bad value, but its message carries the
             // framework's "(Parameter 'options')" tail, and the field already says it better.
-            Problem = MarketplaceProblem() is { Length: > 0 } field ? field : ex.Message;
+            Problem = MarketplaceProblem() is { Length: > 0 } field ? field : ErrorText.For(ex);
         }
     }
 
@@ -773,7 +784,7 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
     protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
     {
         base.OnPropertyChanged(e);
-        if (e.PropertyName is nameof(Problem) or nameof(IsRunning) or nameof(Connection)) UploadInputsChanged();
+        if (e.PropertyName is nameof(Problem) or nameof(IsRunning) or nameof(Connection) or nameof(Tab)) UploadInputsChanged();
         else if (e.PropertyName is { } input && PlanInputs.Contains(input)) UploadInputsChanged();
         if (e.PropertyName is { } name && MarketplaceInputs.Contains(name))
             foreach (var derived in MarketplaceDerived) OnPropertyChanged(derived);
@@ -826,7 +837,7 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync("Export failed", ex.Message);
+            await _dialogs.ShowErrorAsync("Export failed", ErrorText.For(ex));
         }
         finally
         {
