@@ -124,6 +124,7 @@ public class ExportDialogTests
             nameof(ExportDialogViewModel.UploadImagesUri), nameof(ExportDialogViewModel.UploadModelsUri),
             nameof(ExportDialogViewModel.UploadMetadataUri), nameof(ExportDialogViewModel.UploadWarnings),
             nameof(ExportDialogViewModel.PendingUpload), nameof(ExportDialogViewModel.PendingUploadCheck),
+            nameof(ExportDialogViewModel.HasUploadModels), nameof(ExportDialogViewModel.HasUploadContract),
         };
 
         var settable = typeof(ExportDialogViewModel)

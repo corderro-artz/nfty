@@ -153,7 +153,7 @@ public class BundleGalleryTests
         Assert.NotNull(subject.Art);
 
         // And a bundle (no set.json): the image field decides.
-        string bundle = Export(CookedSet(), ExportOptions.For(ExportPreset.Marketplace) with { ImageBaseUri = "ipfs://CID/" });
+        string bundle = Export(CookedSet(), ExportOptions.For(ExportPreset.Marketplace) with { ImageBaseUri = "ipfs://CID/", TokenNaming = TokenNaming.Padded });
         using var viaField = await ViewerOpener.OpenAsync(Path.Combine(bundle, "metadata", "0002.json"),
             new ArchiveGalleryTests.Scripted());
         Assert.False(viaField!.ImageMissing);

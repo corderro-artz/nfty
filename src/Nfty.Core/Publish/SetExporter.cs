@@ -74,6 +74,16 @@ public record ExportPlan(
     /// destination (a folder of art uploaded separately, say).</remarks>
     public IReadOnlyList<string> Warnings { get; init; } = [];
 
+    /// <summary>
+    /// The same warnings, in the same order, worded for the export dialog: they name its fields
+    /// ("Image base URI") where <see cref="Warnings"/> names the command-line flags.
+    /// </summary>
+    /// <remarks>
+    /// Core owns both wordings so the two front-ends cannot disagree about WHICH warnings apply,
+    /// only about what to call the control that fixes them. Empty only when <see cref="Warnings"/> is.
+    /// </remarks>
+    public IReadOnlyList<string> DialogWarnings { get; init; } = [];
+
     /// <summary>The total size of everything being shipped.</summary>
     /// <remarks>
     /// A planned <see cref="SpriteSheet"/> contributes nothing, because nothing has encoded it yet
@@ -765,23 +775,32 @@ public static class SetExporter
                 nameof(options));
 
         var warnings = new List<string>();
+        var dialogWarnings = new List<string>();
+        void Warn(string cli, string dialog) { warnings.Add(cli); dialogWarnings.Add(dialog); }
         if (options.OpenSeaMetadata && anyMetadata && options.ImageBaseUri is null)
-            warnings.Add("Image links are relative: upload images/ first, then export again with "
-                + "--image-base-uri ipfs://<CID>/ (the dialog's Image base URI).");
+            Warn("Image links are relative: upload images/ first, then export again with "
+                + "--image-base-uri ipfs://<CID>/.",
+                "Image links are relative: upload images/ first, then set the Image base URI to where they live.");
         if (options.OpenSeaMetadata && anyMetadata && !options.Images)
-            warnings.Add("The metadata links to images this export does not carry; the links dangle "
+            Warn("The metadata links to images this export does not carry; the links dangle "
+                + "unless the art is uploaded to the same place.",
+                "The metadata links to images this export does not carry; the links dangle "
                 + "unless the art is uploaded to the same place.");
         if (options.IncludeCollectionMetadata && options.CollectionImage is not { Length: > 0 }
             && (options.ImageBaseUri is null || firstImageName is null))
-            warnings.Add("collection.json has no image: set an image base URI (with the art included) or a collection image.");
+            Warn("collection.json has no image: set an image base URI (with the art included) or a collection image.",
+                "collection.json has no image: set the Image base URI, with the art included.");
         if (options.ModelBaseUri is not null && options.OpenSeaMetadata && options.Models && anyModels
             && modelFormat != "glb")
-            warnings.Add("Models are linked by animation_url only when they are glb; these are not, so the "
+            Warn("Models are linked by animation_url only when they are glb; these are not, so the "
+                + "metadata does not link them.",
+                "Models are linked by animation_url only when they are glb; these are not, so the "
                 + "metadata does not link them.");
         if (options.OpenSeaMetadata && anyMetadata && options.Models && anyModels && modelFormat == "glb"
             && options.ModelBaseUri is null)
-            warnings.Add("Models are not linked: upload models/, then export again with --model-base-uri "
-                + "ipfs://<CID>/ to write animation_url.");
+            Warn("Models are not linked: upload models/, then export again with --model-base-uri "
+                + "ipfs://<CID>/ to write animation_url.",
+                "Models are not linked: upload models/, then set the Model base URI to write animation_url.");
 
         string stem = FileNameFor(manifest.Name, leaf);
         string name = options.Shape == ExportShape.Folder ? stem
@@ -793,6 +812,7 @@ public static class SetExporter
             SetHasModels = anyModels,
             RecordedCookBookSha256 = manifest.CookbookSha256,
             Warnings = warnings,
+            DialogWarnings = dialogWarnings,
         };
     }
 

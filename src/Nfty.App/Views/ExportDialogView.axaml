@@ -332,7 +332,7 @@
                 <TextBlock Classes="m-sub" Margin="0"
                            Text="One step instead of two: uploads images/ (and models/), writes the metadata with their ipfs:// addresses, uploads metadata/ with collection.json beside it, then exports to the folder you choose with the same addresses." />
                 <TextBlock Classes="m-sub" Margin="0"
-                           Text="Uses this export's choices on CONTENTS and MARKETPLACE. The provider and its key are in Settings, under Publishing." />
+                           Text="{Binding UploadChoicesNote}" />
               </StackPanel>
               </StackPanel>
 
@@ -344,9 +344,9 @@
                     <Button Grid.Row="0" Grid.Column="2" Classes="tbtn cellbtn" Content="Copy"
                             Command="{Binding CopyCommand}" CommandParameter="{Binding UploadBaseUri}" />
                     <TextBlock Grid.Row="1" Grid.Column="0" Classes="seglbl" Text="CONTRACT URI" />
-                    <SelectableTextBlock Grid.Row="1" Grid.Column="1" Classes="uri" Text="{Binding UploadContractUri}"
+                    <SelectableTextBlock Grid.Row="1" Grid.Column="1" Classes="uri" Classes.none="{Binding !HasUploadContract}" Text="{Binding UploadContractUri}"
                                          ToolTip.Tip="{Binding UploadContractUri}" />
-                    <Button Grid.Row="1" Grid.Column="2" Classes="tbtn cellbtn" Content="Copy"
+                    <Button Grid.Row="1" Grid.Column="2" Classes="tbtn cellbtn" Content="Copy" IsEnabled="{Binding HasUploadContract}"
                             Command="{Binding CopyCommand}" CommandParameter="{Binding UploadContractUri}" />
                     <TextBlock Grid.Row="2" Grid.Column="0" Classes="seglbl" Text="IMAGES" />
                     <SelectableTextBlock Grid.Row="2" Grid.Column="1" Classes="uri" Text="{Binding UploadImagesUri}"
@@ -354,9 +354,9 @@
                     <Button Grid.Row="2" Grid.Column="2" Classes="tbtn cellbtn" Content="Copy"
                             Command="{Binding CopyCommand}" CommandParameter="{Binding UploadImagesUri}" />
                     <TextBlock Grid.Row="3" Grid.Column="0" Classes="seglbl" Text="MODELS" />
-                    <SelectableTextBlock Grid.Row="3" Grid.Column="1" Classes="uri" Text="{Binding UploadModelsUri}"
+                    <SelectableTextBlock Grid.Row="3" Grid.Column="1" Classes="uri" Classes.none="{Binding !HasUploadModels}" Text="{Binding UploadModelsUri}"
                                          ToolTip.Tip="{Binding UploadModelsUri}" />
-                    <Button Grid.Row="3" Grid.Column="2" Classes="tbtn cellbtn" Content="Copy"
+                    <Button Grid.Row="3" Grid.Column="2" Classes="tbtn cellbtn" Content="Copy" IsEnabled="{Binding HasUploadModels}"
                             Command="{Binding CopyCommand}" CommandParameter="{Binding UploadModelsUri}" />
                     <TextBlock Grid.Row="4" Grid.Column="0" Classes="seglbl" Text="METADATA" />
                     <SelectableTextBlock Grid.Row="4" Grid.Column="1" Classes="uri" Text="{Binding UploadMetadataUri}"
@@ -481,8 +481,12 @@
                   <ItemsControl ItemsSource="{Binding Consequences}" Margin="0,2,0,0">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="x:String">
-                        <TextBlock Classes="caveat" Text="{Binding}" Margin="0,2,0,0" TextWrapping="NoWrap"
-                                   TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding}" />
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" Margin="0,2,0,0" ToolTip.Tip="{Binding}">
+                          <Path Grid.Column="0" Classes="ico xs" Data="{StaticResource IconTriangle}"
+                                Stroke="{DynamicResource WarningBrush}" VerticalAlignment="Center" />
+                          <TextBlock Grid.Column="1" Classes="caveat" Text="{Binding}" TextWrapping="NoWrap"
+                                     TextTrimming="CharacterEllipsis" />
+                        </Grid>
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>

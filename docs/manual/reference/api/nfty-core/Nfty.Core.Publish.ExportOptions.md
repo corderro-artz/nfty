@@ -140,7 +140,7 @@ Include `models/` — the 3D model written for each asset at cook time.
 
 **Remarks**
 
-**On by default, off for [`ExportPreset.Marketplace`](Nfty.Core.Publish.ExportPreset.md#f-marketplace)** — a marketplace mints the art and its standard fields and has no use for the models. A Set cooked without models has no `models/`, so the flag then changes nothing and the plan never mentions the part.
+**On by default, and on for [`ExportPreset.Marketplace`](Nfty.Core.Publish.ExportPreset.md#f-marketplace) too** — a marketplace shows a glb `animation_url` as a 3D viewer, so the models are part of the listing, not an extra. A Set cooked without models has no `models/`, so the flag then changes nothing and the plan never mentions the part.
 
 **The models are copied as cooked and never re-rendered**, so the debug mark ([`ExportOptions.NumberWatermark`](Nfty.Core.Publish.ExportOptions.md#p-numberwatermark)), which stamps only the art on the way out, cannot reach one: a model's texture is the unstamped asset.
 
@@ -314,7 +314,7 @@ Which preset these options ARE, or null when they are a combination of the autho
 
 **Remarks**
 
-Answered by comparing content rather than by remembering which button was pressed, so a screen cannot go on claiming a preset after a box beneath it was unticked. The note is ignored: it is a message to a person, not part of the export's shape. So are the marketplace VALUES (base URI, naming, links, royalty): they fill in what a content axis writes, they do not choose what leaves.
+Answered by comparing content rather than by remembering which button was pressed, so a screen cannot go on claiming a preset after a box beneath it was unticked. The note is ignored: it is a message to a person, not part of the export's shape. So are the marketplace VALUES (base URI, naming, links, royalty): they fill in what a content axis writes, they do not choose what leaves. [`ExportPreset.Marketplace`](Nfty.Core.Publish.ExportPreset.md#f-marketplace) STARTS at token-id naming, but a different naming does not un-name it.
 
 **[`ExportOptions.Shape`](Nfty.Core.Publish.ExportOptions.md#p-shape) is ignored too, and that is the correction.** A preset names WHAT LEAVES the machine; folder-or-file is how it is packed, and the two are separate questions — which is why the shape controls sit in their own column rather than among the content boxes. Comparing it meant every preset came un-named the moment the shape was changed: ticking all four content boxes and choosing Single file left Full project lit until the shape was touched and then lit nothing at all, and Marketplace did the same in the other direction, unnoticed because its default shape is the common one. The presets still START at a shape apiece ([`ExportPreset.FullProject`](Nfty.Core.Publish.ExportPreset.md#f-fullproject) at a folder, the rest at an archive), which is what a starting point is for.
 

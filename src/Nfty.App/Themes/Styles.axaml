@@ -1098,7 +1098,9 @@
        reason; the block BELOW them was the half nobody reserved. 100 is the measured tallest, and
        the card has the room: 502 of the 506 a modal is given at the smallest window. -->
   <Style Selector="Border.modal.export Border.ship">
-    <Setter Property="MinHeight" Value="96" />
+    <!-- 103: the tallest tab's block with its warning glyphs (the UPLOAD tab shows fewer lines now,
+         since "will do" notes are not warnings there, so it must be held to the others by this). -->
+    <Setter Property="MinHeight" Value="103" />
     <Setter Property="Padding" Value="14,8,12,8" />
   </Style>
   <Style Selector="Border.ship TextBlock.part">
@@ -3288,6 +3290,10 @@
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+  <!-- A row with no address ("none"): muted ink, and its Copy button is disabled in the markup. -->
+  <Style Selector="SelectableTextBlock.uri.none">
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
   <Style Selector="Ellipse.vdot.idle">
     <Setter Property="Fill" Value="{DynamicResource FgMutedBrush}" />

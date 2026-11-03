@@ -13,7 +13,8 @@ Open the Set and press **Export…**, or run `nfty export`. Four presets cover t
 | **Sealed critique** | ✓ | ✓ | ✓ | -- | ✓ |
 
 The Marketplace preset also leaves `set.json` out, so the seed and the source book's hash are not
-published; the other three keep it. Links, file names and royalty are on the MARKETPLACE tab: see
+published; the other three keep it. It names files by **token id** (`metadata/1`, `images/1.png`) so a
+contract's `baseURI + tokenId` finds them; the others keep the Set's padded names. Links, file names and royalty are on the MARKETPLACE tab: see
 [Put a collection on a marketplace](put-a-collection-on-a-marketplace.md).
 
 A preset is a starting point, not a mode. Every box stays yours to change afterwards, and sealing is
@@ -41,9 +42,8 @@ cannot promise one thing and ship another.
 ## 3D models
 
 A Set cooked with [3D models](cook-with-models.md) carries a `models/` folder. Export has a **3D models**
-box on its CONTENTS page for it: ticked for Asset pack, Full project and Sealed critique, unticked for
-**Marketplace**, which mints art and standard fields and has no use for models. On a Set cooked
-without models the box is dimmed and says so.
+box on its CONTENTS page for it, ticked in every preset: a marketplace shows a glb as a 3D viewer
+through `animation_url`. On a Set cooked without models the box is dimmed and says so.
 
 Models are copied exactly as cooked. The debug number mark on the IMAGES page stamps exported art only
 and never touches a model; the page says so beneath the option. From the terminal, `nfty export` follows

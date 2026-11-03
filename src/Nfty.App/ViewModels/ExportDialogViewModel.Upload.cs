@@ -25,24 +25,29 @@ public partial class ExportDialogViewModel
     private CancellationTokenSource? _uploadCheckCts;
 
     /// <summary>
-    /// The manifest's warnings as the UPLOAD page reads them. Three of Core's sentences tell the
-    /// reader to upload first and export again - the very step this page performs - so here they
-    /// say what the upload will do instead.
+    /// The manifest's warnings as the UPLOAD page reads them. Three of Core's sentences (links still
+    /// relative, models not linked, collection.json without an image) describe what is missing
+    /// BEFORE an upload - the very step this page performs and its own description already states.
+    /// They are not problems here, so they are left out; every other warning is a real one and stays.
     /// </summary>
     /// <remarks>
-    /// <b>Reworded, never dropped.</b> The manifest is reserved at one height for every page and each
-    /// consequence is one line, so a page that showed FEWER lines than its neighbors would change the
-    /// card's height when the tab changed; <c>Every_tab_is_the_same_height_with_the_models_row</c> holds it.
+    /// The manifest block is reserved at one height for every page, so showing fewer lines on this
+    /// page does not change the card's height (<c>Every_tab_is_the_same_height_with_the_models_row</c>).
     /// </remarks>
     private static IEnumerable<string> UploadPhrased(IEnumerable<string> warnings) =>
-        warnings.Select(w =>
-            w.StartsWith("Image links are relative", StringComparison.Ordinal)
-                ? "Image links are relative until the upload writes its address: each becomes ipfs://<imagesCID>/ and its file name."
-            : w.StartsWith("Models are not linked", StringComparison.Ordinal)
-                ? "Models are not linked yet: the upload writes ipfs://<modelsCID>/ into each glb's animation_url."
-            : w.StartsWith("collection.json has no image", StringComparison.Ordinal)
-                ? "collection.json has no image yet: the upload gives it the first token's ipfs:// image."
-            : w);
+        warnings.Where(w =>
+            !w.StartsWith("Image links are relative", StringComparison.Ordinal)
+            && !w.StartsWith("Models are not linked", StringComparison.Ordinal)
+            && !w.StartsWith("collection.json has no image", StringComparison.Ordinal));
+
+    /// <summary>The page's second explanatory line: what the upload uses, and how the files will be named.</summary>
+    /// <remarks>States the naming up front, because padded names upload fine and then resolve to
+    /// nothing from a contract's <c>baseURI + tokenId</c>.</remarks>
+    public string UploadChoicesNote => "Uses this export's choices on CONTENTS and MARKETPLACE. "
+        + (TokenIdNames
+            ? "Files are named by token id (1, 2, 3...), so baseURI + tokenId resolves."
+            : "Files keep padded names (0001): baseURI + tokenId will not find them. Turn on Token id names.")
+        + " The provider and its key are in Settings.";
 
     /// <summary>Whether the footer's primary button exports (every page but UPLOAD).</summary>
     public bool IsExportAction => !IsUploadTab;
@@ -93,6 +98,7 @@ public partial class ExportDialogViewModel
 
     private void UploadInputsChanged()
     {
+        OnPropertyChanged(nameof(UploadChoicesNote));
         OnPropertyChanged(nameof(UploadProblem));
         UploadCommand.NotifyCanExecuteChanged();
     }
@@ -177,9 +183,13 @@ public partial class ExportDialogViewModel
             UploadContractUri = result.ContractUri ?? "none: collection.json is off";
             UploadImagesUri = $"ipfs://{result.ImageCid}/";
             UploadModelsUri = result.ModelCid is { } m ? $"ipfs://{m}/" : "none";
+            HasUploadModels = result.ModelCid is not null;
+            HasUploadContract = result.ContractUri is not null;
+            _uploaded = (UploadImagesUri, result.ModelCid is { } mc ? $"ipfs://{mc}/" : null);
             UploadMetadataUri = $"ipfs://{result.MetadataCid}/";
             UploadWarnings = result.Warnings;
             HasUploadResult = true;
+            Refresh();
             ResultText = $"Uploaded {result.Local.Plan.Count} assets to {result.Provider} and exported them with the same addresses.";
             IsDone = true;
         }
@@ -198,6 +208,19 @@ public partial class ExportDialogViewModel
             _cts = null;
         }
     }
+
+    private (string Images, string? Models)? _uploaded;
+
+    /// <summary>The options as the export was WRITTEN: after an upload, with its addresses filled in.</summary>
+    private ExportOptions WrittenOptions() => _uploaded is { } u
+        ? Options with { ImageBaseUri = u.Images, ModelBaseUri = u.Models }
+        : Options;
+
+    /// <summary>Whether the models row has an address to copy.</summary>
+    [ObservableProperty] private bool _hasUploadModels;
+
+    /// <summary>Whether the contract row has an address to copy.</summary>
+    [ObservableProperty] private bool _hasUploadContract;
 
     /// <summary>Whether the upload finished and its addresses are showing.</summary>
     [ObservableProperty] private bool _hasUploadResult;

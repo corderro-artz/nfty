@@ -208,8 +208,10 @@ NFTY_KEY=... nfty export ./collection --out ./dist --preset sealedcritique --key
 | `--pinata-key <source>` | Where the Pinata JWT comes from: a [named source](#where-a-passphrase-comes-from), never the key itself. Omit it and nfty asks at the terminal. Needs `--pinata`. |
 | `--set-manifest` / `--no-set-manifest` | Include `set.json`. Off for `marketplace` so the seed and book hash are not published; such an export is an upload bundle (open it read only, or `inspect` it) and cannot be sealed. An export that keeps it records its file naming and reopens as a Set. |
 
-A Set cooked with `--models` ships its `models/` in every preset except `marketplace`, which leaves
-them out; `--models` / `--no-models` override that. The export prints a `3D models (N)` line when it carries them.
+A Set cooked with `--models` ships its `models/` in every preset (a marketplace shows a glb
+`animation_url` as a 3D viewer); `--models` / `--no-models` override that. The `marketplace` preset
+also starts at `--token-names token-id`, so a contract's `baseURI + tokenId` resolves; `--token-names
+padded` overrides it. The export prints a `3D models (N)` line when it carries them.
 
 `set.json` ships in every preset but `marketplace` -- it is what makes the result a Set rather than a
 folder of pictures, and it carries the collection-wide rarity table, the seed and the source book's
