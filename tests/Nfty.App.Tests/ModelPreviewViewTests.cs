@@ -597,9 +597,50 @@ public class ModelPreviewViewTests
             view.RepaintNow();
             var bitmap = (WriteableBitmap)view.Surface.Source!;
             Assert.Equal(new PixelSize(120, 120), bitmap.PixelSize);
-            // And it still lays out at the control's logical size: DPI carries the scale.
-            Assert.Equal(96 * 1.2, bitmap.Dpi.X, precision: 3);
-            Assert.Equal(100, bitmap.Size.Width, precision: 3);
+            // 96 DPI: the Uniform image fits it to the control. A DPI carrying the scale drew only the
+            // frame's top-left on a scaled display (source rect in DIPs, bitmap drawn in pixels).
+            Assert.Equal(96, bitmap.Dpi.X, precision: 3);
+            Assert.Equal(100, view.Surface.Bounds.Width, precision: 3);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public void Under_a_layout_scale_the_whole_frame_is_drawn_centered()
+    {
+        // The real shell renders at 1.2: the model must land in the middle of the control, not the
+        // top-left of the frame magnified into it ("anchored to the bottom-right").
+        var vm = new ModelPreviewViewModel(new Vector3(-1, -1, 0), new Vector3(1, 1, 0));
+        var view = new ModelPreviewView
+        {
+            Width = 100, Height = 100, DataContext = vm,
+            Mesh = ModelPreviewGestureTests.TinyQuad(), Texture = ModelPreviewGestureTests.TinyTexture(),
+        };
+        var host = new LayoutTransformControl { LayoutTransform = new ScaleTransform(1.2, 1.2), Child = view };
+        var window = new Window { Content = host, Width = 400, Height = 400, Background = Avalonia.Media.Brushes.Black };
+        window.Show(); Dispatcher.UIThread.RunJobs();
+        try
+        {
+            view.RepaintNow();
+            Dispatcher.UIThread.RunJobs();
+            using var frame = window.CaptureRenderedFrame()!;
+            var origin = view.TranslatePoint(default, window)!.Value;
+            int x0 = (int)Math.Round(origin.X), y0 = (int)Math.Round(origin.Y), side = 120;
+            using var fb = frame.Lock();
+            var px = new int[fb.Size.Width * fb.Size.Height];
+            for (int y = 0; y < fb.Size.Height; y++)
+                System.Runtime.InteropServices.Marshal.Copy(fb.Address + y * fb.RowBytes, px, y * fb.Size.Width, fb.Size.Width);
+            int bg = px[(y0 + 1) * fb.Size.Width + x0 + 1];
+            int l = int.MaxValue, r = -1, t = int.MaxValue, b = -1;
+            for (int y = y0; y < y0 + side && y < fb.Size.Height; y++)
+            for (int x = x0; x < x0 + side && x < fb.Size.Width; x++)
+            {
+                if (px[y * fb.Size.Width + x] == bg) continue;
+                l = Math.Min(l, x); r = Math.Max(r, x); t = Math.Min(t, y); b = Math.Max(b, y);
+            }
+            Assert.True(r >= 0, "nothing drew");
+            Assert.InRange((l + r) / 2.0 - x0, side / 2.0 - 3, side / 2.0 + 3);
+            Assert.InRange((t + b) / 2.0 - y0, side / 2.0 - 3, side / 2.0 + 3);
         }
         finally { window.Close(); }
     }

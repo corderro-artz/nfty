@@ -426,8 +426,12 @@ public sealed partial class ModelPreviewView : UserControl
         if (vm.Wireframe) Raster.DrawEdges(mesh, vm.CameraState, _target);
 
         var size = new PixelSize(width, height);
-        // The DPI makes the bitmap lay out at the control's logical Bounds whatever its pixel count.
-        var dpi = new Vector(96 * scale, 96 * scale);
+        // 96 DPI, ALWAYS, and the Stretch="Uniform" Image fits the larger bitmap to the control. A
+        // DPI of 96 x scale was meant to lay the bitmap out at the logical Bounds, but the image's
+        // source rect is then in DIPs while the bitmap is drawn in pixels: on any scaled display only
+        // the top-left 1/scale of the frame was shown, magnified - the model sat low and right in its
+        // tile, "anchored to the bottom-right". Headless renders at scale 1, so no test saw it.
+        var dpi = new Vector(96, 96);
         bool reused = _bitmap is not null && _bitmap.PixelSize == size && _bitmap.Dpi == dpi;
         var bitmap = reused
             ? _bitmap!
