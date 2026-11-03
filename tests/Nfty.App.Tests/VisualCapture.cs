@@ -1550,6 +1550,28 @@ public partial class VisualCapture
                 { Tab = SettingsTab.Data },
             }, variant, $"zz-dialog-settings-data-{key}.png");
 
+            // SYSTEM (Windows only), over a memory registry: nothing registered (the proposed start),
+            // registered, and registered to a moved copy (the longest detail line).
+            Capture(new Views.SettingsDialogView
+            {
+                DataContext = new SettingsDialogViewModel(dialogs, new ParallelismSettingService(StateStore.InMemory(), () => null),
+                    associations: new FileAssociationRegistrar(new InMemoryRegistryHive(), AssociationLayout.Windows,
+                        @"C:\Program Files\nfty\nfty.exe")) { Tab = SettingsTab.System },
+            }, variant, $"zz-dialog-settings-system-unregistered-{key}.png");
+            var registeredHive = new InMemoryRegistryHive();
+            var registered = new FileAssociationRegistrar(registeredHive, AssociationLayout.Windows, @"C:\Program Files\nfty\nfty.exe");
+            registered.Apply(AssociationChoice.Suggested);
+            Capture(new Views.SettingsDialogView
+            {
+                DataContext = new SettingsDialogViewModel(dialogs, new ParallelismSettingService(StateStore.InMemory(), () => null),
+                    associations: registered) { Tab = SettingsTab.System },
+            }, variant, $"zz-dialog-settings-system-registered-{key}.png");
+            Capture(new Views.SettingsDialogView
+            {
+                DataContext = new SettingsDialogViewModel(dialogs, new ParallelismSettingService(StateStore.InMemory(), () => null),
+                    associations: SettingsPagesTests.StaleAssociations()) { Tab = SettingsTab.System },
+            }, variant, $"zz-dialog-settings-system-repair-{key}.png");
+
             Capture(new Views.ErrorDialogView
             { DataContext = new ErrorDialogViewModel(dialogs, "Could not open", "The file is not a readable CookBook.") },
                 variant, $"zz-dialog-error-{key}.png");

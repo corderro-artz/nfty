@@ -21,4 +21,13 @@ public static class StartupPath
         }
         return null;
     }
+
+    /// <summary>
+    /// Whether the process was asked to open its path in the viewer ALONE: <c>nfty --viewer x.png</c>,
+    /// which is the command the Windows "open with the nfty viewer" registration runs.
+    /// </summary>
+    /// <param name="args">The process arguments.</param>
+    /// <returns>True when <c>--viewer</c> is among them.</returns>
+    public static bool WantsViewer(IEnumerable<string>? args) =>
+        args?.Any(a => string.Equals(a, FileAssociationRegistrar.ViewerSwitch, StringComparison.OrdinalIgnoreCase)) == true;
 }

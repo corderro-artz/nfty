@@ -53,6 +53,8 @@ around; if you do not, start with [Get started](../get-started/index.md).
 
     [Work out of a Kitchen folder](kitchen.md)
 
+    [Open files with nfty on Windows](open-files-with-nfty-on-windows.md)
+
 -   **After cooking**
 
     ---

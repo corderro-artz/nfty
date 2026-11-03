@@ -5,7 +5,7 @@
 ![The Settings card's Publishing page](../images/settings-light.png#only-light)
 ![The Settings card's Publishing page](../images/settings-dark.png#only-dark)
 
-Press the gear in the title bar. The card has four pages.
+Press the gear in the title bar. The card has four pages, and a fifth, **SYSTEM**, on Windows.
 
 ### GENERAL
 
@@ -44,6 +44,23 @@ Where the export card's **Upload** goes.
 | **Clear recents** | Forgets the start screen's Recent list. No file is touched. |
 | **Reset** | Viewer windows open at their default sizes again, and the editor at its default grid and rail. |
 | **Open folder** | Opens the `.nfty` folder. |
+
+### SYSTEM (Windows only)
+
+Which files Windows opens with nfty, for this Windows user. See
+[Open files with nfty on Windows](../how-to/open-files-with-nfty-on-windows.md).
+
+| Control | Does |
+|---|---|
+| **NFTY FILES** | `.cbk` `.rcp` `.igt` `.set` `.tin` `.ktn` `.mnu`: **Off**, **App**, or **Viewer** (the viewer alone, no app window). A Menu always opens in the viewer. |
+| **PICTURES, 3D** | `.png` `.jpg` `.jpeg` `.glb` `.gltf`: **Off** or **Viewer**. |
+| **METADATA** | `.json`: **Off** or **Viewer**. |
+| **Registration** | **registered**, **not registered**, **not applied** (changed above), or **needs repair** (pointing at another copy of nfty, or incomplete), with the reason under it. |
+| **Apply** / **Repair** | Registers the choice: nfty's ProgIDs, the **Open with** entries, and nfty's entry in Windows Default apps. Becomes the default for nfty's own extensions when no other program claims them. No administrator rights. |
+| **Remove** | Deletes exactly what nfty registered; nothing another program wrote. |
+| **Default apps…** | Opens Windows Settings on nfty's Default apps page. Windows lets only you make a program the default for `.png`, `.jpg`, `.json` and models. |
+
+The registered commands are `"<folder>/Nfty.Desktop.exe" "<file>"` (app) and `"<folder>/Nfty.Desktop.exe" --viewer "<file>"` (viewer); the same switch works from a shortcut or a terminal.
 
 ## Environment variables
 

@@ -456,6 +456,14 @@ public partial class LandingViewModel : ViewModelBase
         $"cookbook · {book.Recipes.Count} {(book.Recipes.Count == 1 ? "recipe" : "recipes")} · "
         + $"{book.Manifest.Canvas.Width}×{book.Manifest.Canvas.Height}";
 
+    private async Task OpenMenuInViewerAsync(string path)
+    {
+        if (_viewer is not { } host) return;
+        var subject = await Nfty.App.Viewer.ViewerOpener.OpenAsync(path, _dialogs, host: host,
+            bookCandidates: _bookCandidates);
+        if (subject is not null) host.Open(subject);
+    }
+
     /// <summary>Whether a viewer is there to open into.</summary>
     public bool CanOpenInViewer => _viewer is not null;
 
@@ -714,6 +722,13 @@ public partial class LandingViewModel : ViewModelBase
             // note warns about, and it is gone now that the enum names every archive this app opens.
             case ArchiveKind.Set: OpenSetPath(path); return;
             case ArchiveKind.Sealed: _ = OpenSealedAsync(path); return;
+            // A Kitchen double-clicked in Explorer becomes the open workspace, as Open Kitchen… does.
+            case ArchiveKind.Kitchen when _kitchen is not null:
+                try { _kitchen.Open(path); }
+                catch (Exception ex) { _ = _dialogs.ShowErrorAsync("Could not open", ex.Message); }
+                return;
+            // The app does not edit a Menu; the viewer shows one, so the open goes there.
+            case ArchiveKind.Menu when _viewer is not null: _ = OpenMenuInViewerAsync(path); return;
             default:
                 _ = _dialogs.ShowErrorAsync("Can't open", $"nfty does not open a {kind} from here: “{path}”.");
                 return;
