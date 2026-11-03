@@ -1,3 +1,4 @@
+using Nfty.Core.Imaging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -171,7 +172,7 @@ public partial class ImportImageViewModel : WizardViewModelBase, IDisposable
     /// <returns>Null when the form is ready to show, or the reason it cannot be.</returns>
     public string? TryLoad()
     {
-        try { _source = Image.Load<Rgba32>(SourcePath); }
+        try { _source = ImageFormats.Load(SourcePath); }
         catch (Exception ex) { return $"“{SourceLeaf}” could not be read as an image: {ex.Message}"; }
 
         if (_source.Width != _canvas.Width || _source.Height != _canvas.Height)

@@ -1,3 +1,4 @@
+using Nfty.Core.Imaging;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -79,7 +80,7 @@ internal static class ArchiveIo
     /// <summary>Decodes PNG bytes. Pure, and safe to call from many threads at once.</summary>
     /// <param name="bytes">The encoded image.</param>
     /// <returns>The decoded image; the caller owns it.</returns>
-    public static Image<Rgba32> DecodeImage(byte[] bytes) => Image.Load<Rgba32>(bytes);
+    public static Image<Rgba32> DecodeImage(byte[] bytes) => ImageFormats.Load(bytes);
 
     /// <summary>Encodes an image as PNG exactly as <see cref="WriteImage"/> would store it. Pure, and
     /// safe to call from many threads at once on different images.</summary>

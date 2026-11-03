@@ -53,13 +53,13 @@ public static class MenuRenderer
                 bool ownsWhole;
                 if (menu.Book.Art.Mode == MenuArtMode.Atlas)
                 {
-                    atlas ??= Image.Load<Rgba32>(menu.ArtBytes(draw.ImageKey));
+                    atlas ??= ImageFormats.Load(menu.ArtBytes(draw.ImageKey));
                     whole = atlas;
                     ownsWhole = false;
                 }
                 else
                 {
-                    whole = Image.Load<Rgba32>(menu.ArtBytes(draw.ImageKey));
+                    whole = ImageFormats.Load(menu.ArtBytes(draw.ImageKey));
                     ownsWhole = true;
                 }
 

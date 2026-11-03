@@ -1,3 +1,4 @@
+using Nfty.Core.Imaging;
 using System.Globalization;
 using System.IO.Compression;
 using System.Security.Cryptography;
@@ -296,7 +297,7 @@ public static class MenuWriter
                 int x = column * canvas.Width;
                 int y = row * canvas.Height;
 
-                using (var img = Image.Load<Rgba32>(encoded[ordered[i].FirstKey]))
+                using (var img = ImageFormats.Load(encoded[ordered[i].FirstKey]))
                     atlas.Mutate(parallelism.ImageConfiguration(insideParallelBody: false), ctx => ctx.DrawImage(img, new Point(x, y), 1f));
 
                 foreach (var key in ordered[i].Keys)

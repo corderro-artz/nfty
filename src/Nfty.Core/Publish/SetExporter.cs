@@ -440,7 +440,7 @@ public static class SetExporter
                     Image<Rgba32> image;
                     try
                     {
-                        image = Image.Load<Rgba32>(entry.Source);
+                        image = ImageFormats.Load(entry.Source);
                     }
                     catch (Exception ex) when (ex is ImageFormatException or IOException)
                     {
@@ -884,7 +884,7 @@ public static class SetExporter
         int cellW, cellH;
         try
         {
-            var info = Image.Identify(first);
+            var info = ImageFormats.Identify(first);
             cellW = info.Width;
             cellH = info.Height;
         }

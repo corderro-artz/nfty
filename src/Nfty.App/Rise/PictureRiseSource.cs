@@ -79,7 +79,7 @@ public sealed class PictureRiseSource : RiseSource
         ArgumentNullException.ThrowIfNull(bridge);
 
         Image<Rgba32> image;
-        try { image = Image.Load<Rgba32>(path); }
+        try { image = ImageFormats.Load(path); }
         catch (Exception ex) when (ex is ImageFormatException or NotSupportedException or IOException or UnauthorizedAccessException)
         {
             throw new InvalidOperationException($"{System.IO.Path.GetFileName(path)} could not be read as a picture — {ex.Message}", ex);

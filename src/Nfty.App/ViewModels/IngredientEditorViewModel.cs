@@ -1026,7 +1026,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
         if (path is null) return;   // canceled
 
         Image<Rgba32> img;
-        try { img = Image.Load<Rgba32>(path); }
+        try { img = ImageFormats.Load(path); }
         catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not import", ex.Message); return; }
         try
         {

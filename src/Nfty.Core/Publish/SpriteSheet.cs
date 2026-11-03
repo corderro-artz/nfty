@@ -1,3 +1,4 @@
+using Nfty.Core.Imaging;
 using System.Globalization;
 using Nfty.Core.Output;
 using SixLabors.ImageSharp;
@@ -221,7 +222,7 @@ public static class SpriteSheet
 
             try
             {
-                using var asset = await Image.LoadAsync<Rgba32>(items[i].ImagePath, cancellationToken)
+                using var asset = await ImageFormats.LoadAsync(items[i].ImagePath, cancellationToken)
                     .ConfigureAwait(false);
                 sheet.Mutate(ctx => ctx.DrawImage(asset, at, 1f));
             }

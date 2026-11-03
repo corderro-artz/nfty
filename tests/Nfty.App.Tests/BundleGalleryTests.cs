@@ -144,20 +144,37 @@ public class BundleGalleryTests
     [AvaloniaFact]
     public async Task A_metadata_file_of_an_export_finds_its_renamed_picture()
     {
-        string export = Export(CookedSet(), new ExportOptions { TokenNaming = TokenNaming.Padded, TokenStart = 0 });
+        // Token-id naming: metadata/0 has NO extension, set number 1.
+        string export = Export(CookedSet(), new ExportOptions { TokenNaming = TokenNaming.TokenId, TokenStart = 0 });
+        string bare = Path.Combine(export, "metadata", "0");
+        Assert.True(File.Exists(bare));
+        Assert.Equal(string.Empty, Path.GetExtension(bare));
 
-        // set.json present: padded names starting at 0, so metadata/0000.json is set number 1.
-        using var subject = await ViewerOpener.OpenAsync(Path.Combine(export, "metadata", "0000.json"),
-            new ArchiveGalleryTests.Scripted());
+        using var subject = await ViewerOpener.OpenAsync(bare, new ArchiveGalleryTests.Scripted());
+        Assert.NotNull(subject);
         Assert.False(subject!.ImageMissing);
         Assert.NotNull(subject.Art);
 
         // And a bundle (no set.json): the image field decides.
-        string bundle = Export(CookedSet(), ExportOptions.For(ExportPreset.Marketplace) with { ImageBaseUri = "ipfs://CID/", TokenNaming = TokenNaming.Padded });
-        using var viaField = await ViewerOpener.OpenAsync(Path.Combine(bundle, "metadata", "0002.json"),
+        string bundle = Export(CookedSet(), ExportOptions.For(ExportPreset.Marketplace) with { ImageBaseUri = "ipfs://CID/", TokenNaming = TokenNaming.TokenId });
+        using var viaField = await ViewerOpener.OpenAsync(Path.Combine(bundle, "metadata", "2"),
             new ArchiveGalleryTests.Scripted());
+        Assert.NotNull(viaField);
         Assert.False(viaField!.ImageMissing);
         Assert.NotNull(viaField.Art);
+    }
+
+    [AvaloniaFact]
+    public async Task An_extensionless_file_that_is_not_metadata_is_refused_by_name()
+    {
+        string dir = Directory.CreateTempSubdirectory().FullName;
+        string notMeta = Path.Combine(dir, "7");
+        File.WriteAllText(notMeta, "{\"name\": 3}");
+        var dialogs = new ArchiveGalleryTests.Scripted();
+        Assert.Null(await ViewerOpener.OpenAsync(notMeta, dialogs));
+        Assert.False(ViewerOpener.LooksLikeMetadata(notMeta));
+        File.WriteAllText(notMeta, "{\"name\": \"a #1\", \"image\": \"1.png\"}");
+        Assert.True(ViewerOpener.LooksLikeMetadata(notMeta));
     }
 
     private sealed class NoPicker : Nfty.App.Services.IFilePickerService

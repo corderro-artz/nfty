@@ -252,11 +252,11 @@ public static partial class CommandFactory
         try
         {
             // Depth is two exact bytes per pixel; a lossy format (JPEG) quantizes them. PNG only.
-            var format = Image.DetectFormat(mapPath);
+            var format = ImageFormats.DetectFormat(mapPath);
             if (format is not SixLabors.ImageSharp.Formats.Png.PngFormat)
                 throw new InvalidOperationException(
                     $"--map '{mapPath}' is a {format.Name} image; depth must be a PNG, because a lossy format changes the depth values.");
-            return Image.Load<Rgba32>(mapPath);
+            return ImageFormats.Load(mapPath);
         }
         catch (UnknownImageFormatException)
         {
@@ -616,7 +616,7 @@ public static partial class CommandFactory
                 throw new InvalidOperationException(
                     $"Ingredient '{existing.Manifest.Id}' already has a variant '{vid}'.");
 
-            var newImg = Image.Load<Rgba32>(parse.GetValue(image)!);
+            var newImg = ImageFormats.Load(parse.GetValue(image)!);
             try
             {
                 var images = new Dictionary<string, Image<Rgba32>>(existing.VariantImages) { [vid] = newImg };
@@ -903,7 +903,7 @@ public static partial class CommandFactory
                 if (!File.Exists(png))
                     throw new FileNotFoundException(
                         $"No image for variant '{v.Id}': expected {png}", png);
-                loaded[v.Id] = Image.Load<Rgba32>(png);
+                loaded[v.Id] = ImageFormats.Load(png);
             }
         }
         catch
