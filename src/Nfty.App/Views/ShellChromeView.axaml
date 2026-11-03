@@ -2,284 +2,211 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Nfty.App.ViewModels"
              xmlns:views="using:Nfty.App.Views"
+             xmlns:ctl="using:Nfty.App.Controls"
              x:Class="Nfty.App.Views.ShellChromeView"
              x:DataType="vm:ShellViewModel">
   <!--
-    The application shell: window frame, titlebar and status bar. This lives in Nfty.App rather than
+    The application shell: the window frame and titlebar (the shared WindowFrame), this shell's
+    titlebar content, the page + dialog layers, and the status bar. This lives in Nfty.App rather than
     in the desktop head so that it is ordinary, head-agnostic UI - which means the visual-capture
     harness renders THIS control, the same one the app runs. It previously lived in
     Nfty.Desktop/MainWindow.axaml, where the tests could not reach it, and was mirrored by a
     hand-written C# replica in VisualCapture; the screenshots therefore showed the replica rather
     than the shell, and nothing detected the two drifting apart.
 
-    The head keeps only what needs a Window: drag-to-move and resize are wired by MainWindow.axaml.cs
-    against the TitlebarArea / ResizeGripArea properties below, and minimise/maximise/close go through
-    ShellViewModel's events.
+    The frame itself - border, shadow gutter, titlebar, caption buttons, resize grip - is
+    Controls/WindowFrame, which the pop-out viewer hosts too, so the two windows cannot drift. This
+    file supplies only what is the SHELL's: the slots below.
+
+    The head keeps only what needs a Window: Nfty.Desktop's ChromeWiring attaches drag-to-move and
+    resize to the frame's events, and minimise/maximise/close go through ShellViewModel's commands.
   -->
+  <ctl:WindowFrame x:Name="ChromeFrame" Scale="{Binding ChromeScale}"
+                   MinimizeCommand="{Binding MinimizeCommand}"
+                   ToggleMaximizeCommand="{Binding ToggleMaximizeCommand}"
+                   CloseCommand="{Binding CloseCommand}">
 
-    <!-- The window itself is transparent (SystemDecorations=None gives no OS frame to draw a shadow
-         against); this Border is the mockup's `.window` — border + radius + shadow — and the sole
-         chrome frame. Margin gives WinShadow's blur room to render inside the transparent window
-         surface without being clipped at the OS window's edge. ClipToBounds keeps the titlebar's own
-         square corners from poking out past the rounded corners below. -->
-    <!-- Margin is NOT set here. It lives on Border.frame in Styles.axaml, because a local value beats
-         every Style setter in Avalonia - so MainWindow's `Window[WindowState=Maximized] Border.frame`
-         override could never win against an inline Margin, and a maximized window kept the 12px
-         shadow gutter as a visible gap on all four edges. -->
-    <Border Classes="frame">
-      <!-- The clip is on an INNER border, not on the frame itself. A Border that both draws a
-           CornerRadius stroke and clips to its own bounds clips the outer half of that stroke
-           exactly where the arc is, so the border thinned to nothing at all four corners while the
-           straight edges kept full thickness. Splitting the roles - outer draws, inner clips - lets
-           the stroke render whole. The inner radius is one pixel tighter so it hugs the INSIDE of
-           that stroke rather than sitting under it. -->
-      <Border Classes="frame-clip" ClipToBounds="True">
-      <!-- The whole shell renders at ShellViewModel.BaseScale. The mockups are authored 1:1 and the
-           app reproduces them exactly, which on a large high-DPI display reads as uniformly too small
-           - correct in logical pixels, tiny in physical ones. Scaling here rather than growing the
-           font/padding tokens keeps every mockup proportion intact and leaves one number to tune.
+    <ctl:WindowFrame.TitleLeft>
+      <StackPanel Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center" Spacing="9">
+        <!-- The brand is also the way out of an open document, the way a logo is "home" almost
+             everywhere. Deliberately reusing an element the locked titlebar already has rather
+             than inventing a Close button: there is no such control in explorer.html, and
+             adding chrome to a locked design to fix a wiring gap is the wrong trade. The
+             Button carries no paint of its own (Classes="bare"), so the titlebar renders
+             identically; it is disabled on Landing, where there is nothing to close. -->
+        <Button Classes="bare" Command="{Binding CloseDocumentCommand}"
+                ToolTip.Tip="Close and return to the start screen  ·  Ctrl+W">
+          <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
+            <!-- The mark is the application icon's own symbol: a stack of layers, the top
+                 one live. One control, shared with the quick-reference sheet and the viewer's
+                 titlebar, so the tiles cannot drift; see BrandMarkView.axaml. -->
+            <views:BrandMarkView />
+            <TextBlock Classes="wordmark" VerticalAlignment="Center"><Run Text="nft" /><Run Text="y" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
+          </StackPanel>
+        </Button>
+        <!-- Carmine, not the LineStrong the Kitchen chip uses on either side of itself. This
+             one separates the BRAND from the document, which is a different kind of boundary
+             than one crumb from the next: everything left of it is the application and
+             everything right of it is the file you have open. It is present whenever there is
+             a trail to divide from. -->
+        <Border Width="1" Height="16" Background="{DynamicResource AccentBrush}" Opacity="0.75"
+                IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
-           Chrome is INSIDE this one (the titlebar and status bar looked small too) but outside the
-           zoom transform further down, which stays page-only so the window buttons and resize grip
-           keep their place at the window's edge. -->
-      <LayoutTransformControl>
-        <LayoutTransformControl.LayoutTransform>
-          <ScaleTransform ScaleX="{Binding ChromeScale}" ScaleY="{Binding ChromeScale}" />
-        </LayoutTransformControl.LayoutTransform>
-      <Grid RowDefinitions="Auto,*,Auto">
-        <!-- Titlebar (drag to move, double-click to maximize/restore — wired in code-behind) -->
-        <!-- x:Name lives on this Border (not the inner Grid) because the Border is what carries the
-             opaque gradient Background — MainWindow.axaml.cs wires PointerPressed here for drag-to-move,
-             and a click on the Grid's own unfilled cells would otherwise hit-test straight through to
-             this Border without ever reaching a Grid-level handler. -->
-        <Border x:Name="Titlebar" Grid.Row="0" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,0,1"
-                BoxShadow="{DynamicResource TitlebarHighlightShadow}">
-          <Border.Background>
-            <LinearGradientBrush StartPoint="50%,0%" EndPoint="50%,100%">
-              <GradientStop Color="{DynamicResource PanelColor}" Offset="0" />
-              <GradientStop Color="{DynamicResource BgAltColor}" Offset="1" />
-            </LinearGradientBrush>
-          </Border.Background>
-          <!-- 36, not the mockup's 46. The mockup is authored 1:1 and the whole shell renders at
-               ShellViewModel.BaseScale (1.2), so 46 arrives as 55 device pixels and reads heavy.
-               A deliberate, user-directed divergence — see the note in CLAUDE.md. Trimmed from 40
-               with the status bar below, to give the page area back some height; the pair keeps its
-               8px difference, which is what stops the window reading as having two footers.
-               ChromeReserveTests measures both and holds the relation. -->
-          <Grid ColumnDefinitions="Auto,*,Auto,Auto" Height="36">
-            <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center" Spacing="9">
-              <!-- The brand is also the way out of an open document, the way a logo is "home" almost
-                   everywhere. Deliberately reusing an element the locked titlebar already has rather
-                   than inventing a Close button: there is no such control in explorer.html, and
-                   adding chrome to a locked design to fix a wiring gap is the wrong trade. The
-                   Button carries no paint of its own (Classes="bare"), so the titlebar renders
-                   identically; it is disabled on Landing, where there is nothing to close. -->
-              <Button Classes="bare" Command="{Binding CloseDocumentCommand}"
-                      ToolTip.Tip="Close and return to the start screen  ·  Ctrl+W">
-                <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
-                  <!-- The mark is the application icon's own symbol: a stack of layers, the top
-                       one live. It replaced the product's initial turned 45 degrees, which spelled
-                       the name and said nothing about what the app makes - and before that a plain
-                       rotated square, which said less. One control, shared with the quick-reference
-                       sheet, so the two tiles cannot drift; see BrandMarkView.axaml. -->
-                  <views:BrandMarkView />
-                  <TextBlock Classes="wordmark" VerticalAlignment="Center"><Run Text="nft" /><Run Text="y" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
-                </StackPanel>
-              </Button>
-              <!-- Carmine, not the LineStrong the Kitchen chip uses on either side of itself. This
-                   one separates the BRAND from the document, which is a different kind of boundary
-                   than one crumb from the next: everything left of it is the application and
-                   everything right of it is the file you have open. It is present whenever there is
-                   a trail to divide from. -->
-              <Border Width="1" Height="16" Background="{DynamicResource AccentBrush}" Opacity="0.75"
-                      IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}" />
-
-              <!-- Kitchen chip: the OPEN workspace, named. It used to read the literal word "Kitchen"
-                   because none existed to name; it now shows the manifest's name and hides entirely
-                   when no Kitchen is open, which is a normal state — a CookBook opened from anywhere
-                   on disk needs no workspace. Per explorer.html this is "fixed for every item below
-                   it; changes only when you close this Kitchen and open another", which is why it
-                   binds to the shell rather than to the selection. -->
-              <StackPanel Orientation="Horizontal" Spacing="9" IsVisible="{Binding HasKitchen}">
-                <Border Width="1" Height="18" Background="{DynamicResource LineStrongBrush}" />
-                <Border Classes="kroot" ToolTip.Tip="Open workspace — the Kitchen">
-                  <StackPanel Orientation="Horizontal" Spacing="6">
-                    <Path Classes="ico" Data="{StaticResource IconKitchen}" />
-                    <TextBlock Classes="kroot-txt" Text="{Binding KitchenName}" />
-                  </StackPanel>
-                </Border>
-                <Border Width="1" Height="18" Background="{DynamicResource LineStrongBrush}" />
-              </StackPanel>
+        <!-- Kitchen chip: the OPEN workspace, named. Hides entirely when no Kitchen is open, which
+             is a normal state - a CookBook opened from anywhere on disk needs no workspace. Per
+             explorer.html this is "fixed for every item below it; changes only when you close this
+             Kitchen and open another", which is why it binds to the shell rather than to the
+             selection. -->
+        <StackPanel Orientation="Horizontal" Spacing="9" IsVisible="{Binding HasKitchen}">
+          <Border Width="1" Height="18" Background="{DynamicResource LineStrongBrush}" />
+          <Border Classes="kroot" ToolTip.Tip="Open workspace — the Kitchen">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Path Classes="ico" Data="{StaticResource IconKitchen}" />
+              <TextBlock Classes="kroot-txt" Text="{Binding KitchenName}" />
             </StackPanel>
+          </Border>
+          <Border Width="1" Height="18" Background="{DynamicResource LineStrongBrush}" />
+        </StackPanel>
+      </StackPanel>
+    </ctl:WindowFrame.TitleLeft>
 
-            <!-- Per-item breadcrumb (explorer.html .crumbs) — bound through ShellViewModel.CurrentExplorer
-                 since the titlebar is shared chrome outside any one page's own view-model. -->
-            <ItemsControl Grid.Column="1" ItemsSource="{Binding CurrentExplorer.Crumbs}" VerticalAlignment="Center">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="4" /></ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:Crumb">
-                  <StackPanel Orientation="Horizontal" Spacing="2">
-                    <TextBlock Text="›" Classes="cseg" Opacity="0.45" IsVisible="{Binding Leading}" />
-                    <!-- A segment navigates, as it does in explorer.html where each is role="link"
-                         with a tabindex and handles click and Enter/Space. Ours were plain text, so
-                         the trail could say where you were and not take you anywhere. Paint-free
-                         Button so the type still renders exactly as the .cseg run it replaced. -->
-                    <Button Classes="bare"
-                            Command="{Binding $parent[ItemsControl].DataContext.CurrentExplorer.SelectNodeCommand}"
-                            CommandParameter="{Binding Target}"
-                            IsEnabled="{Binding Target, Converter={x:Static ObjectConverters.IsNotNull}}">
-                      <TextBlock Text="{Binding Text}" Classes="cseg" Classes.active="{Binding Active}" />
-                    </Button>
-                  </StackPanel>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
+    <!-- Per-item breadcrumb (explorer.html .crumbs) - bound through ShellViewModel.CurrentExplorer
+         since the titlebar is shared chrome outside any one page's own view-model. -->
+    <ctl:WindowFrame.TitleCenter>
+      <ItemsControl ItemsSource="{Binding CurrentExplorer.Crumbs}" VerticalAlignment="Center">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="4" /></ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:Crumb">
+            <StackPanel Orientation="Horizontal" Spacing="2">
+              <TextBlock Text="›" Classes="cseg" Opacity="0.45" IsVisible="{Binding Leading}" />
+              <!-- A segment navigates, as it does in explorer.html where each is role="link"
+                   with a tabindex and handles click and Enter/Space. Paint-free Button so the type
+                   still renders exactly as the .cseg run it replaced. -->
+              <Button Classes="bare"
+                      Command="{Binding $parent[ItemsControl].DataContext.CurrentExplorer.SelectNodeCommand}"
+                      CommandParameter="{Binding Target}"
+                      IsEnabled="{Binding Target, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <TextBlock Text="{Binding Text}" Classes="cseg" Classes.active="{Binding Active}" />
+              </Button>
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ctl:WindowFrame.TitleCenter>
 
-            <!-- The badge IS the switch. There used to be a lock button in the toolbar one row
-                 below as well - two controls for one piece of state, with the badge reporting what
-                 the button did. A reader has to learn which of them acts. Pressing the badge is also
-                 the obvious guess, and it did nothing.
-                 Carmine outline and ink when unlocked, so the live mode is visible from across the
-                 room rather than by reading a word. -->
-            <!-- The right margin is not decoration: column 3 opens with the window-button divider
-                 and carries no left inset, so a badge with no margin sits flush against that hairline
-                 and the two read as one control with a stripe down it. 12 matches the brand's own
-                 inset on the far left, so both ends of the titlebar breathe by the same amount. -->
-            <Button Grid.Column="2" Classes="lockflag" VerticalAlignment="Center" Margin="0,0,12,0"
-                    Classes.editing="{Binding CurrentExplorer.IsEditing}"
-                    Command="{Binding CurrentExplorer.ToggleLockCommand}"
-                    ToolTip.Tip="{Binding CurrentExplorer.LockTip}"
-                    IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}">
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <Path Classes="ico xs" Data="{StaticResource IconLock}" IsVisible="{Binding !CurrentExplorer.IsEditing}" />
-                <Path Classes="ico xs" Data="{StaticResource IconUnlock}" IsVisible="{Binding CurrentExplorer.IsEditing}" />
-                <TextBlock Classes="lockflag-txt" Text="{Binding CurrentExplorer.LockStateText}" />
+    <!-- The badge IS the switch. There used to be a lock button in the toolbar one row below as
+         well - two controls for one piece of state, with the badge reporting what the button did.
+         Carmine outline and ink when unlocked, so the live mode is visible from across the room.
+         The right margin is not decoration: the next column opens with the window-button divider
+         and carries no left inset, so a badge with no margin sits flush against that hairline and
+         the two read as one control with a stripe down it. 12 matches the brand's own inset on the
+         far left. -->
+    <ctl:WindowFrame.TitleRight>
+      <Button Classes="lockflag" VerticalAlignment="Center" Margin="0,0,12,0"
+              Classes.editing="{Binding CurrentExplorer.IsEditing}"
+              Command="{Binding CurrentExplorer.ToggleLockCommand}"
+              ToolTip.Tip="{Binding CurrentExplorer.LockTip}"
+              IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <Path Classes="ico xs" Data="{StaticResource IconLock}" IsVisible="{Binding !CurrentExplorer.IsEditing}" />
+          <Path Classes="ico xs" Data="{StaticResource IconUnlock}" IsVisible="{Binding CurrentExplorer.IsEditing}" />
+          <TextBlock Classes="lockflag-txt" Text="{Binding CurrentExplorer.LockStateText}" />
+        </StackPanel>
+      </Button>
+    </ctl:WindowFrame.TitleRight>
+
+    <!-- Page + dialog overlay: flush under the titlebar, no second bordered/shadowed frame here
+         (that inner "card inside a card" look was the audit's double-chrome finding). -->
+    <ctl:WindowFrame.Body>
+      <Panel>
+        <Border Background="{DynamicResource BgBrush}">
+          <!-- Zoom used to be tracked and shown in the status bar without being applied to
+               anything, so the percentage changed and the app did not.
+               LayoutTransformControl, not RenderTransform: a render transform scales the finished
+               pixels, which magnifies a layout still measured at 100% - text stays on the same
+               line and just gets blurry, and the chrome does not reflow. A layout transform
+               re-measures the content at the new scale, which is what VS Code does and what makes
+               zooming out actually fit more on screen. The status bar and titlebar stay outside it
+               deliberately: window chrome is not content, and scaling it would move the resize
+               grip and window buttons away from the window edge. -->
+          <LayoutTransformControl>
+            <LayoutTransformControl.LayoutTransform>
+              <ScaleTransform ScaleX="{Binding ZoomScale}" ScaleY="{Binding ZoomScale}" />
+            </LayoutTransformControl.LayoutTransform>
+            <ContentControl Content="{Binding CurrentPage}" />
+          </LayoutTransformControl>
+        </Border>
+        <Panel Name="DialogScrim"
+               IsVisible="{Binding ActiveDialog, Converter={x:Static ObjectConverters.IsNotNull}}"
+               Background="{DynamicResource ScrimBrush}">
+          <ContentControl Content="{Binding ActiveDialog}"
+                          HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Panel>
+        <!-- The pop-out viewer on a head with no second window: above the dialog layer, so a
+             dialog it raises (a save error) is not hidden behind it. Empty on a desktop, and a
+             ContentControl with no content and no background is not hit-testable. -->
+        <ContentControl Name="OverlaySlot" Content="{Binding Overlay}"
+                        HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+      </Panel>
+    </ctl:WindowFrame.Body>
+
+    <!-- Status bar. The frame overlays the resize grip on its bottom-right corner. -->
+    <ctl:WindowFrame.Footer>
+      <Border Background="{DynamicResource BgAltBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0">
+        <!-- 28 + the 1px top border above = 29 drawn. Deliberately shorter than the titlebar:
+             that bar carries the brand, the document name and the window buttons, and a status
+             strip of equal weight makes the frame read as two footers. -->
+        <Grid ColumnDefinitions="*,Auto" Height="28">
+          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="14" Margin="16,0" VerticalAlignment="Center">
+            <!-- A BUTTON, because it is a count and a count owes the reader the thing it counted.
+                 It opens on a valid book too: a green light nobody can interrogate is a green
+                 light nobody should trust. -->
+            <Button Classes="vchip" Command="{Binding CurrentExplorer.ShowValidityCommand}"
+                    IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}"
+                    ToolTip.Tip="{Binding CurrentExplorer.ValidityButtonTip}">
+              <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                <Ellipse Width="6" Height="6" VerticalAlignment="Center"
+                         Classes.ok="{Binding CurrentExplorer.IsValid}" Classes="vdot" />
+                <TextBlock Classes="sbar vstate" Classes.ok="{Binding CurrentExplorer.IsValid}"
+                           Text="{Binding CurrentExplorer.ValidityText}" />
               </StackPanel>
             </Button>
-
-            <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
-              <Border Width="1" Height="18" Background="{DynamicResource LineStrongBrush}" Margin="0,0,10,0" />
-              <Button Command="{Binding MinimizeCommand}" Classes="icon" ToolTip.Tip="Minimise"><Path Classes="ico" Data="{StaticResource IconMinimise}" /></Button>
-              <Button Command="{Binding ToggleMaximizeCommand}" Classes="icon" ToolTip.Tip="Maximise"><Path Classes="ico" Data="{StaticResource IconMaximise}" /></Button>
-              <Button Command="{Binding CloseCommand}" Classes="icon danger" ToolTip.Tip="Close"><Path Classes="ico" Data="{StaticResource IconClose}" /></Button>
+            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"
+                        IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}">
+              <!-- explorer.html's .statusbar .state.editing switches to the accent color, so the
+                   unlocked state reads as a live mode rather than another muted count. -->
+              <Path Classes="ico sm" Data="{StaticResource IconLock}" IsVisible="{Binding !CurrentExplorer.IsEditing}" />
+              <Path Classes="ico sm editing" Data="{StaticResource IconUnlock}" IsVisible="{Binding CurrentExplorer.IsEditing}" />
+              <TextBlock Classes="sbar" Classes.editing="{Binding CurrentExplorer.IsEditing}"
+                         Text="{Binding CurrentExplorer.LockStateText}" />
             </StackPanel>
-          </Grid>
-        </Border>
-
-        <!-- Page + dialog overlay: flush under the titlebar, no second bordered/shadowed frame here
-             (that inner "card inside a card" look was the audit's double-chrome finding). -->
-        <Panel Grid.Row="1">
-          <Border Background="{DynamicResource BgBrush}">
-            <!-- Zoom used to be tracked and shown in the status bar without being applied to
-                 anything, so the percentage changed and the app did not.
-                 LayoutTransformControl, not RenderTransform: a render transform scales the finished
-                 pixels, which magnifies a layout still measured at 100% - text stays on the same
-                 line and just gets blurry, and the chrome does not reflow. A layout transform
-                 re-measures the content at the new scale, which is what VS Code does and what makes
-                 zooming out actually fit more on screen. The status bar and titlebar stay outside it
-                 deliberately: window chrome is not content, and scaling it would move the resize
-                 grip and window buttons away from the window edge. -->
-            <LayoutTransformControl>
-              <LayoutTransformControl.LayoutTransform>
-                <ScaleTransform ScaleX="{Binding ZoomScale}" ScaleY="{Binding ZoomScale}" />
-              </LayoutTransformControl.LayoutTransform>
-              <ContentControl Content="{Binding CurrentPage}" />
-            </LayoutTransformControl>
-          </Border>
-          <Panel Name="DialogScrim"
-                 IsVisible="{Binding ActiveDialog, Converter={x:Static ObjectConverters.IsNotNull}}"
-                 Background="{DynamicResource ScrimBrush}">
-            <ContentControl Content="{Binding ActiveDialog}"
-                            HorizontalAlignment="Center" VerticalAlignment="Center" />
-          </Panel>
-          <!-- The pop-out viewer on a head with no second window: above the dialog layer, so a
-               dialog it raises (a save error) is not hidden behind it. Empty on a desktop, and a
-               ContentControl with no content and no background is not hit-testable. -->
-          <ContentControl Name="OverlaySlot" Content="{Binding Overlay}"
-                          HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
-        </Panel>
-
-        <!-- Status bar, with the resize grip OVERLAID on its bottom-right corner rather than being
-             the last child of the zoom StackPanel. As a StackPanel child it inherited that panel's
-             8px right margin and its vertical centering, so it sat ~8px in from the edge with a hit
-             rect much shorter than the corner it appeared to occupy - the user could see a grip and
-             miss it. An overlay pins it to the frame's real corner and gives it the whole 22px
-             square, and being last in the Panel puts it above the status bar content so nothing
-             steals the hover. -->
-        <Panel Grid.Row="2">
-        <Border Background="{DynamicResource BgAltBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0">
-          <!-- 28 + the 1px top border above = 29 drawn. Deliberately shorter than the titlebar:
-               that bar carries the brand, the document name and the window buttons, and a status
-               strip of equal weight makes the frame read as two footers. -->
-          <Grid ColumnDefinitions="*,Auto" Height="28">
-            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="14" Margin="16,0" VerticalAlignment="Center">
-              <!-- This used to be a hardcoded green "Valid" shown for every book, without anything
-                   ever running Validator - the shell asserted a fact it had not checked. It now
-                   reports the real result, turns warning-colored when there are problems, and lists
-                   them on the tooltip. Hidden with no cookbook open: there is nothing to validate. -->
-              <!-- A BUTTON, because it is a count and a count owes the reader the thing it counted.
-                   The problems used to live only on this tooltip, where a list of sentences cannot
-                   be read, copied or scrolled - and past the four the CookBook card shows, the only
-                   way to see the rest was to run the CLI's validate. It opens on a valid book too:
-                   a green light nobody can interrogate is a green light nobody should trust. -->
-              <Button Classes="vchip" Command="{Binding CurrentExplorer.ShowValidityCommand}"
-                      IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}"
-                      ToolTip.Tip="{Binding CurrentExplorer.ValidityButtonTip}">
-                <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
-                  <Ellipse Width="6" Height="6" VerticalAlignment="Center"
-                           Classes.ok="{Binding CurrentExplorer.IsValid}" Classes="vdot" />
-                  <TextBlock Classes="sbar vstate" Classes.ok="{Binding CurrentExplorer.IsValid}"
-                             Text="{Binding CurrentExplorer.ValidityText}" />
-                </StackPanel>
-              </Button>
-              <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"
-                          IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}">
-                <!-- explorer.html's .statusbar .state.editing switches to the accent color, so the
-                     unlocked state reads as a live mode rather than another muted count. -->
-                <Path Classes="ico sm" Data="{StaticResource IconLock}" IsVisible="{Binding !CurrentExplorer.IsEditing}" />
-                <Path Classes="ico sm editing" Data="{StaticResource IconUnlock}" IsVisible="{Binding CurrentExplorer.IsEditing}" />
-                <TextBlock Classes="sbar" Classes.editing="{Binding CurrentExplorer.IsEditing}"
-                           Text="{Binding CurrentExplorer.LockStateText}" />
-              </StackPanel>
-              <TextBlock Classes="sbar" Text="{Binding CurrentExplorer.RecipeCountText}"
-                         IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}" />
-              <TextBlock Classes="sbar" Text="{Binding CurrentExplorer.IngredientCountText}"
-                         IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}" />
-              <TextBlock Classes="sbar" Text="{Binding CurrentExplorer.VariantCountText}"
-                         IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}" />
-              <!-- Beyond the mockup's static bar: the app's real gating/guidance feed (StatusMessage,
-                   e.g. "Editing unlocked…", "Unlock editing to add a recipe") has no mockup counterpart, but dropping
-                   it would regress real UX the shell relies on — shown only when non-empty. -->
-              <TextBlock Classes="sbar" Text="{Binding StatusMessage}"
-                         IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-            </StackPanel>
-            <!-- Right margin 24, not 8: the resize grip is a 22px square pinned to this corner, and
-                 at 8 the help button sat under it - the grip won the hover and the button looked
-                 like it was falling off the window. -->
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,24,0" VerticalAlignment="Center" Spacing="2">
-              <Button Command="{Binding ZoomOutCommand}" Classes="zoomctl" ToolTip.Tip="Zoom out"><Path Classes="ico sm" Data="{StaticResource IconZoomOut}" /></Button>
-              <TextBlock Classes="sbar" VerticalAlignment="Center" Width="46" TextAlignment="Center"
-                         Text="{Binding Zoom, StringFormat='{}{0}%'}" />
-              <Button Command="{Binding ZoomInCommand}" Classes="zoomctl" ToolTip.Tip="Zoom in"><Path Classes="ico sm" Data="{StaticResource IconZoomIn}" /></Button>
-              <Button Command="{Binding ShowSettingsCommand}" Classes="helpbtn" ToolTip.Tip="Settings"><Path Classes="ico sm" Data="{StaticResource IconSettings}" /></Button>
-              <Button Command="{Binding ShowHelpCommand}" Classes="helpbtn" ToolTip.Tip="Help"><Path Classes="ico sm" Data="{StaticResource IconHelp}" /></Button>
-            </StackPanel>
-          </Grid>
-        </Border>
-
-        <!-- Overlaid last so it sits above the status bar content and nothing steals the hover. -->
-        <Border x:Name="ResizeGrip" Width="22" Height="22" Cursor="BottomRightCorner"
-                HorizontalAlignment="Right" VerticalAlignment="Bottom" Background="Transparent"
-                ToolTip.Tip="Resize">
-          <Path Width="12" Height="12" HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                Margin="0,0,3,3" Stroke="{DynamicResource FgMutedBrush}" StrokeThickness="1"
-                Data="M11,4 L4,11 M11,8 L8,11" />
-        </Border>
-        </Panel>
-      </Grid>
-      </LayoutTransformControl>
+            <TextBlock Classes="sbar" Text="{Binding CurrentExplorer.RecipeCountText}"
+                       IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <TextBlock Classes="sbar" Text="{Binding CurrentExplorer.IngredientCountText}"
+                       IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <TextBlock Classes="sbar" Text="{Binding CurrentExplorer.VariantCountText}"
+                       IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <!-- Beyond the mockup's static bar: the app's real gating/guidance feed (StatusMessage,
+                 e.g. "Editing unlocked…", "Unlock editing to add a recipe") has no mockup counterpart, but dropping
+                 it would regress real UX the shell relies on - shown only when non-empty. -->
+            <TextBlock Classes="sbar" Text="{Binding StatusMessage}"
+                       IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          </StackPanel>
+          <!-- Right margin 24, not 8: the resize grip is a 22px square pinned to this corner, and
+               at 8 the help button sat under it - the grip won the hover and the button looked
+               like it was falling off the window. -->
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,24,0" VerticalAlignment="Center" Spacing="2">
+            <Button Command="{Binding ZoomOutCommand}" Classes="zoomctl" ToolTip.Tip="Zoom out"><Path Classes="ico sm" Data="{StaticResource IconZoomOut}" /></Button>
+            <TextBlock Classes="sbar" VerticalAlignment="Center" Width="46" TextAlignment="Center"
+                       Text="{Binding Zoom, StringFormat='{}{0}%'}" />
+            <Button Command="{Binding ZoomInCommand}" Classes="zoomctl" ToolTip.Tip="Zoom in"><Path Classes="ico sm" Data="{StaticResource IconZoomIn}" /></Button>
+            <Button Command="{Binding ShowSettingsCommand}" Classes="helpbtn" ToolTip.Tip="Settings"><Path Classes="ico sm" Data="{StaticResource IconSettings}" /></Button>
+            <Button Command="{Binding ShowHelpCommand}" Classes="helpbtn" ToolTip.Tip="Help"><Path Classes="ico sm" Data="{StaticResource IconHelp}" /></Button>
+          </StackPanel>
+        </Grid>
       </Border>
-    </Border>
+    </ctl:WindowFrame.Footer>
+  </ctl:WindowFrame>
 </UserControl>

@@ -36,22 +36,6 @@
     <KeyBinding Gesture="Escape" Command="{Binding CloseDialogCommand}" />
   </Window.KeyBindings>
 
-  <Window.Styles>
-    <!-- A maximized window has no desktop around it to float in: the 12px shadow gutter would show
-         as a transparent gap on all four edges and the rounded corners would cut the screen edge.
-         Fill the screen instead, the way every OS-decorated window does. -->
-    <Style Selector="Window[WindowState=Maximized] Border.frame">
-      <Setter Property="Margin" Value="0" />
-      <Setter Property="CornerRadius" Value="0" />
-      <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="BoxShadow" Value="none" />
-    </Style>
-    <!-- The inner clip has to square off too, or maximizing leaves rounded content corners inside a
-         square window and the desktop shows through four small notches. -->
-    <Style Selector="Window[WindowState=Maximized] Border.frame-clip">
-      <Setter Property="CornerRadius" Value="0" />
-    </Style>
-  </Window.Styles>
   <!-- The shell chrome itself is head-agnostic UI and lives in Nfty.App so the visual-capture tests
        can render the real thing; this head supplies only the window behavior it needs a Window for. -->
   <views:ShellChromeView x:Name="Chrome" />

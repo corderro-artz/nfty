@@ -158,8 +158,8 @@ public class WindowChromeTests
 
         // The titlebar is inside the base-scale transform; if it were a sibling, "everything 20%
         // bigger" would have skipped the chrome the user was actually complaining about.
-        Assert.Contains(chrome.t, view.FindControl<Border>("Titlebar")!.GetVisualAncestors());
-        Assert.DoesNotContain(page.t, view.FindControl<Border>("Titlebar")!.GetVisualAncestors());
+        Assert.Contains(chrome.t, view.Frame.TitlebarArea.GetVisualAncestors());
+        Assert.DoesNotContain(page.t, view.Frame.TitlebarArea.GetVisualAncestors());
     }
 
     /// <summary>The resize grip is pinned to the frame's real corner with a full-square hit area. It
