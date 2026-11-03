@@ -4,7 +4,7 @@
 
 The whole engine: archives, validation, generation, rendering, Sets, export, sealing, statistics. Depends on Nfty.Ticket and ImageSharp.
 
-162 public types. Each page lists the public and protected members with their signatures and the documentation written beside the code.
+168 public types. Each page lists the public and protected members with their signatures and the documentation written beside the code.
 
 ## Nfty.Core
 
@@ -152,6 +152,7 @@ The whole engine: archives, validation, generation, rendering, Sets, export, sea
 | [`RarityAttribute`](Nfty.Core.Output.RarityAttribute.md) | record | One trait with how common it is across the whole collection. |
 | [`RecipeCount`](Nfty.Core.Output.RecipeCount.md) | record | How many assets one recipe produced. |
 | [`SetFile`](Nfty.Core.Output.SetFile.md) | record | One file a modeler produced for an asset. |
+| [`SetFiles`](Nfty.Core.Output.SetFiles.md) | record | ONE mapping between a set number and the name its files carry: `images/`, `metadata/` and `models/`. |
 | [`SetItem`](Nfty.Core.Output.SetItem.md) | record | One asset in a Set already on disk. |
 | [`SetItemSelection`](Nfty.Core.Output.SetItemSelection.md) | class | Recovers which variant of which layer an asset in a Set was made from. |
 | [`SetLayout`](Nfty.Core.Output.SetLayout.md) | class | The parts a cooked Set is made of, named once. |
@@ -168,6 +169,9 @@ The whole engine: archives, validation, generation, rendering, Sets, export, sea
 | Type | Kind | Summary |
 |---|---|---|
 | [`AtlasTooLargeException`](Nfty.Core.Publish.AtlasTooLargeException.md) | class | A Menu atlas would be larger than one image can be (a pixel ceiling on a side, or in area), so the write is refused rather than built. |
+| [`BundleCollection`](Nfty.Core.Publish.BundleCollection.md) | record | `collection.json` as an upload bundle carries it. |
+| [`BundleItem`](Nfty.Core.Publish.BundleItem.md) | record | One item of an upload bundle, as its metadata file describes it. |
+| [`BundleReport`](Nfty.Core.Publish.BundleReport.md) | class | The text report for an upload bundle, rendered in Core so `inspect` and any other surface say the identical thing. |
 | [`ExportEntry`](Nfty.Core.Publish.ExportEntry.md) | record | One file an export will carry, and where it will sit. |
 | [`ExportOptions`](Nfty.Core.Publish.ExportOptions.md) | record | Exactly what leaves the machine. |
 | [`ExportPlan`](Nfty.Core.Publish.ExportPlan.md) | record | Everything an export will contain, worked out without writing anything. |
@@ -175,6 +179,8 @@ The whole engine: archives, validation, generation, rendering, Sets, export, sea
 | [`ExportProgress`](Nfty.Core.Publish.ExportProgress.md) | record | How far an export has got. |
 | [`ExportResult`](Nfty.Core.Publish.ExportResult.md) | record | What an export produced. |
 | [`ExportShape`](Nfty.Core.Publish.ExportShape.md) | enum | Whether an export lands as a folder or as one file. |
+| [`LoadedBundle`](Nfty.Core.Publish.LoadedBundle.md) | class | An upload bundle opened for looking at: a marketplace export that left `set.json` out. |
+| [`MarketplaceBundle`](Nfty.Core.Publish.MarketplaceBundle.md) | class | Recognizes and reads a marketplace upload bundle: `images/` and `metadata/` (and optionally `collection.json`) with no `set.json`. |
 | [`MarketplaceRules`](Nfty.Core.Publish.MarketplaceRules.md) | class | The rules for the marketplace fields of [`ExportOptions`](Nfty.Core.Publish.ExportOptions.md), stated once. |
 | [`MenuRenderer`](Nfty.Core.Publish.MenuRenderer.md) | class | Renders a rolled [`AssetTicket`](../nfty-ticket/Nfty.Ticket.AssetTicket.md) back into pixels from the `.mnu` it was rolled against — the read-side counterpart to [`MenuWriter`](Nfty.Core.Publish.MenuWriter.md). |
 | [`MenuWriteOptions`](Nfty.Core.Publish.MenuWriteOptions.md) | record | How [`MenuWriter`](Nfty.Core.Publish.MenuWriter.md) packs a CookBook's art into a Menu. |

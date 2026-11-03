@@ -43,13 +43,15 @@ that start.
 
 The default, **Padded**, is exactly what nfty has always written (`0001.json`, `0001.png`), byte for
 byte. `nfty/` keeps the Set's own names and numbering whichever you pick; it is nfty's record of the
-Set, cross-referenced by set number, and not what a marketplace reads. An export renamed to token ids
-is for uploading, not for reopening in nfty.
+Set, cross-referenced by set number, and not what a marketplace reads.
 
-!!! note "Models as `.gltf` plus `.bin` cannot be renamed"
+An export that keeps `set.json` records how it named its files (a `files` block with the naming and the
+first id), so nfty reopens it as a full Set whatever you chose, and exporting it again renames the files
+for the new request. You cannot **extend** such an export: it would mix names. Extend the source Set,
+then export again.
 
-    A separate `.bin` is named inside its `.gltf`. Cook the models as `glb` (or `gltf-embedded`) to
-    export them under token ids.
+Models cooked as `.gltf` plus a separate `.bin` are renamed as a pair: nfty rewrites the one link inside
+the `.gltf` that names its `.bin`, and nothing else in the file changes.
 
 ## Describe the collection for the contract
 
@@ -83,8 +85,23 @@ formats are not linked, and the card says so.
 ## Keep the seed to yourself
 
 `set.json` records the seed and the hash of the book. The Marketplace preset turns **set.json** off so
-a public drop does not publish them. An export without it cannot be reopened in nfty (it reads a Set
-by that file) and cannot be sealed. Every other preset keeps it.
+a public drop does not publish them. An export without it cannot be sealed, and it is not a Set: it
+records no seed, rarity or DNA. Every other preset keeps it.
+
+## Check the bundle before you upload it
+
+nfty still opens a bundle without `set.json`, read only, so you can look at exactly what you are about
+to upload. Start nfty on the folder (`nfty <folder>`) or open a packed `.set` with **Open a cooked .set**, and it
+opens in the viewer's gallery marked **upload bundle, not a Set**, with one tile per `metadata/`
+item. A tile shows the picture, the name and every trait; the rail shows what `collection.json` says
+(name, symbol, royalty, payee, links). Pictures are found inside the bundle: a relative link is a path
+in it, and an absolute `ipfs://` or `https://` link is matched by its trailing `images/<file>` onto
+the bundle's own `images/` folder. Nothing is fetched from the network. A picture the bundle does not
+carry shows the missing mark. From the terminal, `nfty inspect <folder>` prints the same check: item
+count, pictures found, `collection.json` and every trait with its values.
+
+A folder counts as a bundle only when it has no `set.json`, has a `metadata/` folder, and the first
+file in it is an item with a `name`, an `image` and an `attributes` list. Any other folder is left alone.
 
 ## What a finished item looks like
 

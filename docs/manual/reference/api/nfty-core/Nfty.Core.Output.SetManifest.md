@@ -12,10 +12,10 @@ The Set's own record, written to `set.json`: its name, size, seed, the hash of t
 
 ## Constructors
 
-### SetManifest(string, int, string, string?, string, IReadOnlyList&lt;RecipeCount&gt;, IReadOnlyList&lt;RarityAttribute&gt;, bool?, SetModels?, string?, int?) { #m-ctor-system-string-system-int32-system-string-system-s-a59cf1 }
+### SetManifest(string, int, string, string?, string, IReadOnlyList&lt;RecipeCount&gt;, IReadOnlyList&lt;RarityAttribute&gt;, bool?, SetModels?, string?, int?, SetFiles?) { #m-ctor-system-string-system-int32-system-string-system-s-6043a8 }
 
 ```csharp
-public SetManifest(string Name, int Count, string Seed, string? CookbookSha256, string GeneratorVersion, IReadOnlyList<RecipeCount> Distribution, IReadOnlyList<RarityAttribute> Rarity, bool? UniqueDna = null, SetModels? Models = null, string? Symbol = null, int? MetadataShape = null);
+public SetManifest(string Name, int Count, string Seed, string? CookbookSha256, string GeneratorVersion, IReadOnlyList<RecipeCount> Distribution, IReadOnlyList<RarityAttribute> Rarity, bool? UniqueDna = null, SetModels? Models = null, string? Symbol = null, int? MetadataShape = null, SetFiles? Files = null);
 ```
 
 **Parameters**
@@ -31,6 +31,7 @@ public SetManifest(string Name, int Count, string Seed, string? CookbookSha256, 
 - `Models` (`SetModels?`) - The 3D models the cook made, or null (and absent from the file) when it made none. Additive and optional, no schema bump.
 - `Symbol` (`string?`) - The collection's ticker-style symbol, so an export can write `collection.json` without the source book. Additive and optional, no schema bump; null in a Set cooked before it existed.
 - `MetadataShape` (`int?`) - Which shape of per-item metadata the Set carries ([`MetadataTraits`](Nfty.Core.Output.MetadataTraits.md)): absent means 1, the shape before color traits and explicit `None`; new cooks write 2. `extend` keeps writing the recorded shape. Additive and optional, no schema bump.
+- `Files` (`SetFiles?`) - How the Set's per-asset files are NAMED when an export renamed them (token ids, a different start id), or marks an export whose metadata links were rewritten; null (and absent from the file) means the writer's own padded names from 1. Written only by an export, and read by every reader of per-asset files through [`SetFiles`](Nfty.Core.Output.SetFiles.md), so an export reopens as a Set whatever it was named. Additive and optional, no schema bump.
 
 ## Properties
 
@@ -59,6 +60,22 @@ public IReadOnlyList<RecipeCount> Distribution { get; init; }
 ```
 
 Per-recipe counts and shares across the Set.
+
+### FileNaming { #p-filenaming }
+
+```csharp
+public SetFiles FileNaming { get; }
+```
+
+The naming this Set's per-asset files follow: [`SetManifest.Files`](Nfty.Core.Output.SetManifest.md#p-files), or the writer's own.
+
+### Files { #p-files }
+
+```csharp
+public SetFiles? Files { get; init; }
+```
+
+How the Set's per-asset files are NAMED when an export renamed them (token ids, a different start id), or marks an export whose metadata links were rewritten; null (and absent from the file) means the writer's own padded names from 1. Written only by an export, and read by every reader of per-asset files through [`SetFiles`](Nfty.Core.Output.SetFiles.md), so an export reopens as a Set whatever it was named. Additive and optional, no schema bump.
 
 ### GeneratorVersion { #p-generatorversion }
 

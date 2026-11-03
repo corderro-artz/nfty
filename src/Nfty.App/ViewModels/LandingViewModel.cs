@@ -348,7 +348,7 @@ public partial class LandingViewModel : ViewModelBase
         var path = await _picker.OpenFileAsync("Import", ".cbk", ".rcp", ".igt");
         if (path is null) return;
         // Same reason as OpenRecent's: a Set folder has no extension to resolve.
-        if (SetReader.IsSetFolder(path)) { OpenSetPath(path); return; }
+        if (SetReader.IsSetFolder(path) || Directory.Exists(path) && MarketplaceBundle.IsBundle(path)) { OpenSetPath(path); return; }
 
         ArchiveKind kind;
         try { kind = Archives.KindOf(path); }
@@ -496,6 +496,19 @@ public partial class LandingViewModel : ViewModelBase
     /// </remarks>
     private async Task OpenSetPathAsync(string path)
     {
+        // An upload bundle (a marketplace export without set.json) is not a Set: it opens read-only in
+        // the pop-out viewer's gallery, marked as a bundle, and is not added to Recents.
+        if (_viewer is { } viewerHost && MarketplaceBundle.IsBundle(path))
+        {
+            var bundle = await Nfty.App.Viewer.ViewerOpener.OpenAsync(path, _dialogs, host: viewerHost,
+                bookCandidates: _bookCandidates);
+            if (bundle is null) return;
+            viewerHost.Open(bundle);
+            if (bundle is Nfty.App.Viewer.GallerySubject g)
+                RecordRecent(new RecentItem(g.Title, $"upload bundle · {g.Gallery.Items.Count} items", path, false));
+            return;
+        }
+
         LoadedSet set;
         var par = Threads;
         try
@@ -673,7 +686,7 @@ public partial class LandingViewModel : ViewModelBase
         // true. Without it the next statement threw "has no extension", which describes the
         // mechanism rather than the situation, and the entry could never be reopened.
         // `CommandFactory.Inspect` has done it in this order since the CLI learned to read a Set.
-        if (SetReader.IsSetFolder(path)) { OpenSetPath(path); return; }
+        if (SetReader.IsSetFolder(path) || Directory.Exists(path) && MarketplaceBundle.IsBundle(path)) { OpenSetPath(path); return; }
 
         ArchiveKind kind;
         try { kind = Archives.KindOf(path); }

@@ -8,37 +8,28 @@ using Nfty.Core.Output;
 namespace Nfty.Core.Publish;
 
 /// <summary>
-/// The names an export gives its files and the token ids they carry: ONE mapping, read by the
-/// plan, by the metadata it rewrites and by the model rule, so a file's name, its link and the
-/// <c>#n</c> in its <c>name</c> cannot disagree.
+/// The names an export gives its files, as a <see cref="SetFiles"/>: the SAME mapping the readers use
+/// (<c>SetReader</c>, the models lookup, the viewer), so a file's name, its link, the <c>#n</c> in its
+/// <c>name</c> and the way nfty finds it again cannot disagree.
 /// </summary>
 internal static class ExportNaming
 {
+    /// <summary>The naming these options give the exported files.</summary>
+    internal static SetFiles Of(ExportOptions o) => new(TokenNamingTokens.Spell(o.TokenNaming), o.TokenStart);
+
     /// <summary>Whether these options leave every name exactly as the Set wrote it.</summary>
-    internal static bool IsDefault(ExportOptions o) => o.TokenNaming == TokenNaming.Padded && o.TokenStart == 1;
+    internal static bool IsDefault(ExportOptions o) => Of(o).IsDefault;
 
     /// <summary>The token id of the asset with this set number.</summary>
-    internal static int Id(int number, ExportOptions o) => number - 1 + o.TokenStart;
+    internal static int Id(int number, ExportOptions o) => Of(o).Id(number);
 
     /// <summary>The name an asset's files share, without extension.</summary>
-    internal static string Stem(int number, ExportOptions o) =>
-        o.TokenNaming == TokenNaming.Padded
-            ? SetLayout.Stem(Id(number, o))
-            : Id(number, o).ToString(CultureInfo.InvariantCulture);
+    internal static string Stem(int number, ExportOptions o) => Of(o).Stem(number);
 
-    internal static string ImageFile(int number, ExportOptions o) => Stem(number, o) + ".png";
+    internal static string ImageFile(int number, ExportOptions o) => Of(o).ImageFile(number);
 
     /// <summary>A metadata file's name: the bare token id when a contract's <c>baseURI + tokenId</c> must resolve it.</summary>
-    internal static string MetadataFile(int number, ExportOptions o) =>
-        o.TokenNaming == TokenNaming.Padded ? Stem(number, o) + ".json" : Stem(number, o);
-
-    /// <summary>The set number an Set file's name carries, or null for a name the writer would not have given it.</summary>
-    internal static int? NumberOf(string file)
-    {
-        string stem = Path.GetFileNameWithoutExtension(file);
-        return int.TryParse(stem, NumberStyles.None, CultureInfo.InvariantCulture, out int n) && n >= 1
-            && stem == SetLayout.Stem(n) ? n : null;
-    }
+    internal static string MetadataFile(int number, ExportOptions o) => Of(o).MetadataFile(number);
 }
 
 /// <summary>One item's metadata as exported: the standard fields plus the optional links.</summary>
@@ -89,9 +80,9 @@ internal static class MarketplaceFiles
         string prefix = hash > 0 ? item.Name[..hash] : fallbackName;
 
         string imagePath = SetLayout.ImagesDir + "/" + ExportNaming.ImageFile(number, options);
-        string image = options.BaseUri is { } b
-            ? b + imagePath
-            : ExportNaming.IsDefault(options) ? item.Image : imagePath;
+        // Always the link the export's own naming gives: for a Set's own names that IS what the writer
+        // put there, and for a re-export of an export it replaces the previous run's links.
+        string image = options.BaseUri is { } b ? b + imagePath : imagePath;
 
         var exported = new ExportedItem(
             Name: $"{prefix} #{id}",

@@ -75,18 +75,17 @@ public static class SetLayout
         var recorded = ReadManifest(setDir);
         if (recorded?.Models is not { } models || !Directory.Exists(dir)) return [];
 
+        var naming = recorded.FileNaming;
         var extensions = ExtensionsFor(models.Format);
         var skipped = models.Skipped is null ? new HashSet<int>() : new HashSet<int>(models.Skipped);
         var files = new List<string>();
         foreach (string file in Directory.EnumerateFiles(dir, "*", SearchOption.TopDirectoryOnly))
         {
             if (!extensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase)) continue;
-            if (!int.TryParse(Path.GetFileNameWithoutExtension(file), System.Globalization.NumberStyles.None,
-                    System.Globalization.CultureInfo.InvariantCulture, out int number)) continue;
-            if (number < 1 || number > recorded.Count || skipped.Contains(number)) continue;
-            // Exactly the name the writer gives it (SetWriter pads with D4, growing past 9999): a
-            // user's own 1.glb or 00002.glb is not a Set file.
-            if (Path.GetFileNameWithoutExtension(file) != Stem(number)) continue;
+            // Exactly the name the Set's own naming gives it (the writer pads with D4, growing past
+            // 9999; an export may use token ids): a user's own 1.glb or 00002.glb is not a Set file.
+            if (naming.NumberOf(file) is not { } number) continue;
+            if (number > recorded.Count || skipped.Contains(number)) continue;
             files.Add(file);
         }
         files.Sort(StringComparer.Ordinal);
@@ -108,6 +107,12 @@ public static class SetLayout
         // A token this build does not know: stay inside nfty's own shapes rather than guess wider.
         _ => [".glb", ".gltf", ".bin"],
     };
+
+    /// <summary>How the Set in <paramref name="setDir"/> names its per-asset files: what its
+    /// <c>set.json</c> records, or the writer's own names when it records none or has no manifest.</summary>
+    /// <param name="setDir">The Set folder.</param>
+    /// <returns>The naming; ask it for a number's file name rather than spelling one here.</returns>
+    public static SetFiles NamingOf(string setDir) => ReadManifest(setDir)?.FileNaming ?? SetFiles.Default;
 
     private static SetManifest? ReadManifest(string setDir)
     {

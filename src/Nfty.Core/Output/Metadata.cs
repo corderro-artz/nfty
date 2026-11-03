@@ -110,6 +110,11 @@ public record RecipeCount(string Recipe, int Count, double Percent);
 /// <param name="MetadataShape">Which shape of per-item metadata the Set carries (<see cref="MetadataTraits"/>):
 /// absent means 1, the shape before color traits and explicit <c>None</c>; new cooks write 2.
 /// <c>extend</c> keeps writing the recorded shape. Additive and optional, no schema bump.</param>
+/// <param name="Files">How the Set's per-asset files are NAMED when an export renamed them (token ids,
+/// a different start id), or marks an export whose metadata links were rewritten; null (and absent from
+/// the file) means the writer's own padded names from 1. Written only by an export, and read by every
+/// reader of per-asset files through <see cref="SetFiles"/>, so an export reopens as a Set whatever it
+/// was named. Additive and optional, no schema bump.</param>
 public record SetManifest(
     string Name,
     int Count,
@@ -127,7 +132,88 @@ public record SetManifest(
     string? Symbol = null,
     [property: System.Text.Json.Serialization.JsonIgnore(
         Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
-    int? MetadataShape = null);
+    int? MetadataShape = null,
+    [property: System.Text.Json.Serialization.JsonIgnore(
+        Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    SetFiles? Files = null)
+{
+    /// <summary>The naming this Set's per-asset files follow: <see cref="Files"/>, or the writer's own.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public SetFiles FileNaming => Files ?? SetFiles.Default;
+}
+
+/// <summary>
+/// ONE mapping between a set number and the name its files carry: <c>images/</c>, <c>metadata/</c>
+/// and <c>models/</c>. The writer's own names (<c>0001.png</c>) are the default; an export may rename
+/// them to token ids and shift the first id, and records that in <c>set.json</c> so every reader
+/// finds the same files the exporter wrote.
+/// </summary>
+/// <remarks>
+/// <b>Every reader of a per-asset file asks here</b> - <c>SetReader</c>, the models lookup, the
+/// viewer, the exporter itself - because a second copy of "number to file name" is how a renamed
+/// export stops opening. <c>nfty/</c> is the exception by design: it keeps the Set's own names, as
+/// nfty's cross-referenced record, and carries the set number inside.
+/// </remarks>
+/// <param name="Naming">The spelling token: <c>padded</c> (<c>0001</c>) or <c>token-id</c> (<c>1</c>).</param>
+/// <param name="Start">The token id of the first asset: 1, or 0.</param>
+public sealed record SetFiles(string Naming = SetFiles.PaddedWord, int Start = 1)
+{
+    /// <summary>The token for the writer's own zero-padded names.</summary>
+    public const string PaddedWord = "padded";
+
+    /// <summary>The token for bare token-id names.</summary>
+    public const string TokenIdWord = "token-id";
+
+    /// <summary>The writer's own names, starting at 1: what a Set with no record follows.</summary>
+    public static SetFiles Default { get; } = new();
+
+    /// <summary>Whether this is exactly the writer's own naming.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool IsDefault => IsPadded && Start == 1;
+
+    /// <summary>Whether names are zero-padded.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool IsPadded => string.Equals(Naming, PaddedWord, StringComparison.Ordinal);
+
+    /// <summary>Whether this build knows the spelling; an unknown one is refused rather than guessed.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool IsKnown => IsPadded || string.Equals(Naming, TokenIdWord, StringComparison.Ordinal);
+
+    /// <summary>The token id of the asset with this set number.</summary>
+    /// <param name="number">The set number, from 1.</param>
+    /// <returns>The id.</returns>
+    public int Id(int number) => number - 1 + Start;
+
+    /// <summary>The name an asset's files share, without extension.</summary>
+    /// <param name="number">The set number.</param>
+    /// <returns>For example <c>0001</c> or <c>0</c>.</returns>
+    public string Stem(int number) => IsPadded
+        ? SetLayout.Stem(Id(number))
+        : Id(number).ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>The asset's picture, relative to <c>images/</c>.</summary>
+    /// <param name="number">The set number.</param>
+    /// <returns>The file name.</returns>
+    public string ImageFile(int number) => Stem(number) + ".png";
+
+    /// <summary>The asset's metadata file, relative to <c>metadata/</c>: the bare token id when token-id
+    /// named, so a contract's <c>baseURI + tokenId</c> resolves it.</summary>
+    /// <param name="number">The set number.</param>
+    /// <returns>The file name.</returns>
+    public string MetadataFile(int number) => IsPadded ? Stem(number) + ".json" : Stem(number);
+
+    /// <summary>The set number a per-asset file's name carries, or null for a name the writer would not have given.</summary>
+    /// <param name="file">A file name or path; the extension is ignored.</param>
+    /// <returns>The set number, from 1, or null.</returns>
+    public int? NumberOf(string file)
+    {
+        string stem = Path.GetFileNameWithoutExtension(file);
+        if (!int.TryParse(stem, System.Globalization.NumberStyles.None,
+                System.Globalization.CultureInfo.InvariantCulture, out int id)) return null;
+        int n = id - Start + 1;
+        return n >= 1 && stem == Stem(n) ? n : null;
+    }
+}
 
 /// <summary>
 /// <c>set.json</c>'s record of the 3D models a cook made. Additive and optional, so

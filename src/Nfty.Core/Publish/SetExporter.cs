@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Nfty.Core.Formats;
 using Nfty.Core.Imaging;
 using Nfty.Core.Output;
@@ -642,17 +643,29 @@ public static class SetExporter
         // set.json is an axis (IncludeSetManifest): the leanest export for a public drop leaves it
         // out, because it records the seed and the source book's hash. On by default, since it is
         // what makes the result a Set rather than a folder of pictures.
+        //
+        // It records how THIS export names its files (SetFiles), so nfty reopens the result as a Set
+        // whatever the names; the block is dropped again when an export goes back to the Set's own.
+        var from = manifest.FileNaming;      // how the source names its files (an export can be re-exported)
+        var to = ExportNaming.Of(options);   // how this export will
+        bool relinked = options.BaseUri is not null || options.ExternalUrlBase is not null;
+        bool rewrite = manifest.Files is not null || !to.IsDefault || relinked;
         if (options.IncludeSetManifest)
-            entries.Add(Entry(SetLayout.ManifestPath(setDir), SetLayout.ManifestFile));
+        {
+            var setEntry = Entry(SetLayout.ManifestPath(setDir), SetLayout.ManifestFile);
+            SetFiles? record = !to.IsDefault || relinked ? to : null;
+            if (record is not null || manifest.Files is not null)
+                setEntry = setEntry with { Render = () => RenderSetManifest(SetLayout.ManifestPath(setDir), record) };
+            entries.Add(setEntry);
+        }
 
-        bool defaultNames = ExportNaming.IsDefault(options);
         string? modelFormat = manifest.Models?.Format;
 
         // Which assets have a model that will ship AS a .glb: only those get an animation_url.
         var glbNumbers = new HashSet<int>();
         if (options.Models && options.BaseUri is not null && modelFormat == "glb")
             foreach (var f in files)
-                if (Path.GetExtension(f) == ".glb" && ExportNaming.NumberOf(f) is { } n) glbNumbers.Add(n);
+                if (Path.GetExtension(f) == ".glb" && from.NumberOf(f) is { } n) glbNumbers.Add(n);
 
         string? firstDescription = null;
         int? firstImage = null;
@@ -675,7 +688,7 @@ public static class SetExporter
                 continue;
 
             string dir = rel[..rel.IndexOf('/')];
-            int? number = dir == SetLayout.NftyDir ? null : ExportNaming.NumberOf(file);
+            int? number = dir == SetLayout.NftyDir ? null : from.NumberOf(file);
 
             // nfty/ keeps the Set's own names and numbering: it is nfty's record of the Set,
             // cross-referenced by set number, and not what a marketplace reads.
@@ -695,14 +708,16 @@ public static class SetExporter
                     break;
 
                 case SetLayout.ModelsDir:
-                    if (!defaultNames && ext is ".bin" or ".gltf" && modelFormat == "gltf")
-                        throw new ArgumentException(
-                            "These models are a .gltf with a separate .bin, which the .gltf names by file; "
-                            + "renaming them to token ids would break that link. Cook the models as glb "
-                            + "(or gltf-embedded), or export with the padded names and start id 1.",
-                            nameof(options));
-                    entries.Add(Entry(file, SetLayout.ModelsDir + "/" + ExportNaming.Stem(num, options) + ext)
-                        with { SetNumber = num });
+                    var model = Entry(file, SetLayout.ModelsDir + "/" + to.Stem(num) + ext)
+                        with { SetNumber = num };
+                    // A .gltf names its .bin by file, so renaming the pair rewrites that one link -
+                    // through the JSON object model, leaving every other byte of the document alone.
+                    if (ext == ".gltf" && modelFormat == "gltf" && from.Stem(num) != to.Stem(num))
+                    {
+                        string newStem = to.Stem(num);
+                        model = model with { Render = () => RenderGltfRelink(file, newStem) };
+                    }
+                    entries.Add(model);
                     break;
 
                 default:   // metadata
@@ -710,10 +725,10 @@ public static class SetExporter
                     string metaName = SetLayout.MetadataDir + "/" + ExportNaming.MetadataFile(num, options);
                     var entry = Entry(file, metaName) with { SetNumber = num };
                     firstDescription ??= ReadDescription(file);
-                    if (!defaultNames || options.BaseUri is not null || options.ExternalUrlBase is not null)
+                    if (rewrite)
                     {
                         string? animation = glbNumbers.Contains(num)
-                            ? SetLayout.ModelsDir + "/" + ExportNaming.Stem(num, options) + ".glb"
+                            ? SetLayout.ModelsDir + "/" + to.Stem(num) + ".glb"
                             : null;
                         string collectionName = manifest.Name;
                         entry = entry with { Render = () => MarketplaceFiles.RenderItem(file, num, options, collectionName, animation) };
@@ -772,6 +787,28 @@ public static class SetExporter
             RecordedCookBookSha256 = manifest.CookbookSha256,
             Warnings = warnings,
         };
+    }
+
+    /// <summary><c>set.json</c> as an export carries it: every field as the Set wrote it, with the
+    /// <c>files</c> block replaced by <paramref name="record"/> (or removed when it is null).</summary>
+    private static byte[] RenderSetManifest(string path, SetFiles? record)
+    {
+        var root = JsonNode.Parse(File.ReadAllText(path))?.AsObject()
+            ?? throw new CorruptSetException(path, $"'{path}' is not a readable Set manifest.");
+        root.Remove("files");
+        if (record is not null) root["files"] = JsonSerializer.SerializeToNode(record, Json.Options);
+        return System.Text.Encoding.UTF8.GetBytes(root.ToJsonString(Json.Options));
+    }
+
+    /// <summary>A <c>.gltf</c> whose <c>buffers[0].uri</c> names the renamed <c>.bin</c>; nothing else changes.</summary>
+    private static byte[] RenderGltfRelink(string path, string newStem)
+    {
+        var root = JsonNode.Parse(File.ReadAllText(path))?.AsObject()
+            ?? throw new CorruptSetException(path, $"'{path}' is not a readable glTF.");
+        if (root["buffers"] is JsonArray { Count: > 0 } buffers && buffers[0] is JsonObject buffer
+            && buffer["uri"]?.GetValue<string>() is { } uri && !uri.StartsWith("data:", StringComparison.Ordinal))
+            buffer["uri"] = newStem + Path.GetExtension(uri);
+        return System.Text.Encoding.UTF8.GetBytes(root.ToJsonString());
     }
 
     /// <summary>The description a Set's metadata file carries, or null when it cannot be read.</summary>

@@ -140,6 +140,20 @@ The model files `set.json` in `setDir` accounts for: for a Set that recorded a `
 
 This is the one rule for "which of the folder's `models/` is the Set's": the listing, `Pack`, the exporter and the export dialog all ask here, so a user's own `models/secret-source.blend` - or a stray `0001.glb` beside a Set cooked without models - cannot ride along into a buyer's archive.
 
+### NamingOf(string) { #m-namingof-system-string }
+
+```csharp
+public static SetFiles NamingOf(string setDir);
+```
+
+How the Set in `setDir` names its per-asset files: what its `set.json` records, or the writer's own names when it records none or has no manifest.
+
+**Parameters**
+
+- `setDir` (`string`) - The Set folder.
+
+**Returns.** The naming; ask it for a number's file name rather than spelling one here.
+
 ### Stem(int) { #m-stem-system-int32 }
 
 ```csharp

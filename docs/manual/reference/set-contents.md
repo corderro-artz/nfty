@@ -31,8 +31,12 @@ everything nfty knows. Neither is a subset of the other.
 
 [Exporting](../how-to/share-a-collection.md) writes the same shape with parts removed -- a
 marketplace export has no `nfty/`, and one for a collaborator has a `.cbk` beside `set.json`.
-`set.json` is on in every preset but Marketplace, which leaves it out so the seed is not published; an
-export without it is for uploading and cannot be reopened in nfty.
+`set.json` is on in every preset but Marketplace, which leaves it out so the seed is not published. An
+export that keeps it reopens as a Set whatever its file names: when the names are not the Set's own
+(token ids, a first id of 0) or the links were rewritten, it carries a `files` block, for example
+`"files": { "naming": "token-id", "start": 1 }` (`naming` is `padded` or `token-id`; absent means
+padded from 1). Such an export cannot be extended. An export without `set.json` is an upload bundle:
+nfty opens it read only in the viewer gallery, and `inspect` summarizes it, but it is not a Set.
 
 A **sealed** export is the exception. It is a `.tin`, and its shape is different:
 

@@ -151,6 +151,68 @@ public static class GalleryBuilder
         return new ArchiveGalleryViewModel(set.Manifest.Name, facts, items, gate, [set], allowExport: !sealedSet);
     }
 
+    /// <summary>A marketplace upload bundle (no <c>set.json</c>): one tile per metadata item, each showing its
+    /// picture, name and traits as facts, and the bundle's <c>collection.json</c> as the rail's facts.
+    /// Marked as an upload bundle, never as a Set.</summary>
+    /// <param name="bundle">The bundle; the gallery takes ownership and disposes it.</param>
+    /// <param name="gate">The decode limit; null for the app default.</param>
+    /// <returns>The gallery. Exporting from a tile is allowed: the bundle is the user's own files.</returns>
+    public static ArchiveGalleryViewModel ForBundle(LoadedBundle bundle, ThumbnailGate? gate = null)
+    {
+        gate ??= DefaultGate();
+        var items = new List<GalleryItem>();
+        foreach (var it in bundle.Items)
+        {
+            var item = it;
+            items.Add(new GalleryItem("#" + item.Number.ToString(CultureInfo.InvariantCulture),
+                () => item.ImagePath is null ? null : File.ReadAllBytes(item.ImagePath),
+                () => Task.Run<ViewerSubject>(() =>
+                {
+                    var facts = new List<ViewerFact>
+                    {
+                        new("BUNDLE", "upload bundle, not a Set"),
+                        new("NAME", item.Name),
+                    };
+                    if (item.Description.Length > 0) facts.Add(new("ABOUT", item.Description));
+                    foreach (var a in item.Attributes) facts.Add(new(a.Trait_type.ToUpperInvariant(), a.Value));
+                    facts.Add(new("IMAGE", item.ImageField));
+                    if (item.ExternalUrl is { Length: > 0 }) facts.Add(new("LINK", item.ExternalUrl));
+                    if (item.AnimationUrl is { Length: > 0 }) facts.Add(new("MODEL URL", item.AnimationUrl));
+                    facts.Add(new("FILE", SetLayout.MetadataDir + "/" + item.File));
+                    Image<Rgba32>? art = null;
+                    try { if (item.ImagePath is not null) art = Image.Load<Rgba32>(item.ImagePath); }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
+                                                   or UnknownImageFormatException or InvalidImageContentException) { }
+                    using (art)
+                        return new SnapshotSubject(item.Name, facts, art, null) { ImageMissing = art is null };
+                }), gate));
+        }
+
+        var rail = new List<ViewerFact>
+        {
+            new("BUNDLE", "upload bundle, not a Set - read only"),
+            new("COLLECTION", bundle.Collection?.Name is { Length: > 0 } cn ? cn : bundle.Name),
+            new("ITEMS", bundle.Items.Count.ToString(CultureInfo.InvariantCulture)),
+            new("IMAGES", string.Create(CultureInfo.InvariantCulture,
+                $"{bundle.Items.Count(i => i.ImagePath is not null)} of {bundle.Items.Count}")),
+        };
+        if (bundle.Collection is { } c)
+        {
+            if (c.Symbol is { Length: > 0 }) rail.Add(new("SYMBOL", c.Symbol));
+            if (c.Description.Length > 0) rail.Add(new("ABOUT", c.Description));
+            if (c.SellerFeeBasisPoints is { } bps)
+                rail.Add(new("ROYALTY", string.Create(CultureInfo.InvariantCulture, $"{bps / 100m:0.##}%")));
+            if (c.FeeRecipient is { Length: > 0 }) rail.Add(new("PAYEE", c.FeeRecipient));
+            if (c.ExternalLink is { Length: > 0 }) rail.Add(new("LINK", c.ExternalLink));
+            if (c.Image is { Length: > 0 }) rail.Add(new("COVER", c.Image));
+        }
+        else rail.Add(new("FILE", "no collection.json"));
+        if (bundle.Problems.Count > 0)
+            rail.Add(new("PROBLEMS", string.Create(CultureInfo.InvariantCulture, $"{bundle.Problems.Count}: ")
+                + string.Join("; ", bundle.Problems.Take(3))));
+        return new ArchiveGalleryViewModel(bundle.Name, rail, items, gate, [bundle]);
+    }
+
     /// <summary>A Menu: one tile per art cell, cropped by its rect.</summary>
     /// <param name="path">The <c>.mnu</c>.</param>
     /// <param name="gate">The decode limit; null for the app default.</param>

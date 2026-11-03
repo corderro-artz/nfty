@@ -164,7 +164,7 @@ public static partial class CommandFactory
     {
         var path = new Argument<string>("file")
         {
-            Description = "Path to a .cbk, .rcp, .igt, .ktn, .set or .tin file.",
+            Description = "Path to a .cbk, .rcp, .igt, .ktn, .set or .tin file, a cooked Set folder, or a marketplace upload bundle folder.",
         };
         var key = KeyOption();
         var voxel = new Option<bool>("--voxel")
@@ -196,6 +196,10 @@ public static partial class CommandFactory
             // so `inspect ./collection` is the very next thing a person types — and it used to fail
             // with "has no extension", which describes the mechanism rather than the situation.
             if (SetReader.IsSetFolder(file)) { PrintSet(file, wantVoxel, threads); return 0; }
+
+            // A marketplace export left without set.json is not a Set, so it is summarized as what it
+            // is - an upload bundle - to check it before uploading. Also a packed .set without one.
+            if (MarketplaceBundle.IsBundle(file)) { PrintBundle(file, wantVoxel); return 0; }
 
             var kind = Archives.KindOf(file);
             switch (kind)
@@ -318,6 +322,17 @@ public static partial class CommandFactory
 
         using var set = SetReader.Read(path, threads);
         Console.Write(SetReport.Render(set));
+    }
+
+    /// <summary>Prints the summary of an upload bundle: a marketplace export with no <c>set.json</c>.</summary>
+    private static void PrintBundle(string path, bool wantVoxel)
+    {
+        if (wantVoxel)
+            throw new InvalidOperationException(
+                "--voxel scans the ARTWORK a book is built from, and an upload bundle holds finished assets. "
+                + "Run it on the CookBook that produced them.");
+        using var bundle = MarketplaceBundle.Read(path);
+        Console.Write(BundleReport.Render(bundle));
     }
 
     /// <summary>Prints the voxel-readiness report under whatever tree was just printed. Rendered in
