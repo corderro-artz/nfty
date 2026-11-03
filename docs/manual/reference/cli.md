@@ -202,6 +202,10 @@ NFTY_KEY=... nfty export ./collection --out ./dist --preset sealedcritique --key
 | `--royalty <percent>` | 0 to 100, at most 2 decimals; written as `seller_fee_basis_points`. Needs `--fee-recipient` and `--collection`. |
 | `--fee-recipient <0x...>` | `0x` and 40 hexadecimal digits. Needs `--collection`. |
 | `--collection-image <uri>` | `collection.json`'s `image`. Defaults to the first token's image when `--image-base-uri` is set and the art is included. Needs `--collection`. |
+| `--upload` | Upload as well as export, in one step: pin `images/` (and `models/`), write the metadata with those `ipfs://` addresses, pin `metadata/` with `collection.json` beside it, then write the export to `--out` with the same addresses. Prints the CIDs, the contract's `baseURI` and its `contractURI`. To the local IPFS node unless `--pinata`. Refused beside `--seal`, `--art-only`, `--image-base-uri` and `--model-base-uri`, and refused before anything is written when the service cannot be reached. |
+| `--api <url>` | The local node's RPC address (IPFS Desktop or Kubo). Default `http://127.0.0.1:5001`. Needs `--upload`. |
+| `--pinata` | Upload to Pinata instead, with your own API key. Needs `--upload`. |
+| `--pinata-key <source>` | Where the Pinata JWT comes from: a [named source](#where-a-passphrase-comes-from), never the key itself. Omit it and nfty asks at the terminal. Needs `--pinata`. |
 | `--set-manifest` / `--no-set-manifest` | Include `set.json`. Off for `marketplace` so the seed and book hash are not published; such an export is an upload bundle (open it read only, or `inspect` it) and cannot be sealed. An export that keeps it records its file naming and reopens as a Set. |
 
 A Set cooked with `--models` ships its `models/` in every preset except `marketplace`, which leaves
@@ -222,6 +226,32 @@ CookBook. A `--book` that is not the book that cooked the Set is warned about on
 shipped, the rule `extend` keeps about the same comparison. Dependent options (`--sheet-cols` without
 `--sheet`, `--watermark-corner` without `--watermark`) are **rejected**, not ignored.
 
+### Uploading to IPFS
+
+```bash
+nfty ipfs status                                   # is the local node reachable? exits 1 when not
+nfty ipfs status --api http://127.0.0.1:5002
+NFTY_PINATA=... nfty ipfs status --pinata --pinata-key env:NFTY_PINATA
+
+nfty export ./collection --out ./dist --preset marketplace --token-names token-id --upload
+nfty export ./collection --out ./dist --preset marketplace --token-names token-id \
+    --upload --pinata --pinata-key file:./pinata.jwt
+```
+
+`ipfs status` prints the provider, a one-line state (`connected · kubo 0.29.0`, `not reachable`,
+`key refused`) and what to do about it. `export --upload` prints, on stdout:
+
+```text
+Uploaded to Local IPFS
+  images:      ipfs://<imagesCID>/
+  metadata:    ipfs://<metadataCID>/
+  baseURI:     ipfs://<metadataCID>/
+  contractURI: ipfs://<metadataCID>/collection.json
+```
+
+then the usual export listing. Progress goes to stderr, one line per step. With padded file names
+it also warns that a contract's `baseURI + tokenId` will not find them.
+
 ### The grid a spritesheet carries
 
 ```bash
@@ -237,7 +267,8 @@ say the same grid; `--clear` takes none of them.
 
 ### Where a passphrase comes from
 
-`--key` names its **source**. An unprefixed value is an error, never a guess -- the same rule a
+`--key` names its **source**, and so does `--pinata-key` for a Pinata key: the same sources, the same
+rules. An unprefixed value is an error, never a guess -- the same rule a
 [color spec](../understand/layer-kinds.md) follows, and for a sharper reason: `--key hunter2` looks
 like it works, and treating it as the passphrase would put your secret in the process list.
 

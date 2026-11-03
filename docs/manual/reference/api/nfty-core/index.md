@@ -4,7 +4,7 @@
 
 The whole engine: archives, validation, generation, rendering, Sets, export, sealing, statistics. Depends on Nfty.Ticket and ImageSharp.
 
-169 public types. Each page lists the public and protected members with their signatures and the documentation written beside the code.
+179 public types. Each page lists the public and protected members with their signatures and the documentation written beside the code.
 
 ## Nfty.Core
 
@@ -203,6 +203,21 @@ The whole engine: archives, validation, generation, rendering, Sets, export, sea
 | [`SpriteSheetProgress`](Nfty.Core.Publish.SpriteSheetProgress.md) | record | How far a sheet has got. |
 | [`TokenNaming`](Nfty.Core.Publish.TokenNaming.md) | enum | How an export names the files that go to a marketplace. |
 | [`TokenNamingTokens`](Nfty.Core.Publish.TokenNamingTokens.md) | class | The one mapping between [`TokenNaming`](Nfty.Core.Publish.TokenNaming.md) and the words the CLI, the export dialog and the manual spell it with, so none of them can name a choice two ways. |
+
+## Nfty.Core.Publish.Ipfs
+
+| Type | Kind | Summary |
+|---|---|---|
+| [`IPinningService`](Nfty.Core.Publish.Ipfs.IPinningService.md) | interface | Somewhere a folder can be put on IPFS and kept there: a local Kubo node, or a pinning service. |
+| [`KuboPinning`](Nfty.Core.Publish.Ipfs.KuboPinning.md) | class | A local IPFS node — IPFS Desktop or the Kubo daemon — reached over its HTTP RPC. |
+| [`MarketplaceUpload`](Nfty.Core.Publish.Ipfs.MarketplaceUpload.md) | class | The whole marketplace upload in one call: art first, then metadata that points at it. |
+| [`PinProgress`](Nfty.Core.Publish.Ipfs.PinProgress.md) | record | How far a folder upload has got. |
+| [`PinataPinning`](Nfty.Core.Publish.Ipfs.PinataPinning.md) | class | Pinata, the hosted pinning service, reached with the author's own API key (a JWT). |
+| [`PinningException`](Nfty.Core.Publish.Ipfs.PinningException.md) | class | A pinning service refused, failed or answered with something unusable. |
+| [`PinningStatus`](Nfty.Core.Publish.Ipfs.PinningStatus.md) | record | Whether a pinning service can be talked to right now, and what it said about itself. |
+| [`UploadProgress`](Nfty.Core.Publish.Ipfs.UploadProgress.md) | record | How far an upload has got. |
+| [`UploadResult`](Nfty.Core.Publish.Ipfs.UploadResult.md) | record | What an upload pinned, and the addresses a contract needs. |
+| [`UploadStage`](Nfty.Core.Publish.Ipfs.UploadStage.md) | enum | Which step of an upload is running. |
 
 ## Nfty.Core.Stats
 
