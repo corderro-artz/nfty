@@ -327,6 +327,12 @@ public static class SetWriter
         try
         {
             var m = JsonSerializer.Deserialize<SetManifest>(json, Json.Options);
+            // An export's files are named for a marketplace, and its metadata links were rewritten.
+            // Adding assets to it would write padded names beside token ids, so it is refused whole.
+            if (m?.Files is not null)
+                throw new InvalidOperationException(
+                    "This Set is an export: its files were renamed or relinked for upload, so assets cannot "
+                    + "be added to it without mixing names. Extend the source Set, then export again.");
             return m is null ? NothingRecorded : new Recorded(m.CookbookSha256, m.Models, m.UniqueDna, m.MetadataShape, true);
         }
         catch (JsonException)

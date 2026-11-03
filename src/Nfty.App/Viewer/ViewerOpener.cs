@@ -68,6 +68,7 @@ public static class ViewerOpener
         if (Directory.Exists(path))
         {
             if (SetReader.IsSetFolder(path)) return await OpenSetAsync(path, dialogs, ct, bookCandidates);
+            if (MarketplaceBundle.IsBundle(path)) return await OpenBundleAsync(path, dialogs, ct);
             await dialogs.ShowErrorAsync("Could not open", $"“{path}” is a folder, but not a cooked Set.");
             return null;
         }
@@ -85,7 +86,9 @@ public static class ViewerOpener
                 case ArchiveKind.Recipe: return Gallery(GalleryBuilder.ForRecipe(path));
                 case ArchiveKind.Ingredient: return Gallery(GalleryBuilder.ForIngredient(path));
                 case ArchiveKind.Menu: return Gallery(GalleryBuilder.ForMenu(path));
-                case ArchiveKind.Set: return await OpenSetAsync(path, dialogs, ct, bookCandidates);
+                case ArchiveKind.Set:
+                    if (MarketplaceBundle.IsBundle(path)) return await OpenBundleAsync(path, dialogs, ct);
+                    return await OpenSetAsync(path, dialogs, ct, bookCandidates);
                 case ArchiveKind.Sealed: return await OpenSealedAsync(path, dialogs, bookCandidates);
                 case ArchiveKind.Kitchen:
                     return Gallery(GalleryBuilder.ForKitchen(path, async p =>
@@ -128,6 +131,15 @@ public static class ViewerOpener
     }
 
     private static GallerySubject Gallery(ArchiveGalleryViewModel g) => new(g);
+
+    /// <summary>Opens a marketplace upload bundle (no <c>set.json</c>) read-only, as a gallery marked as one.</summary>
+    private static async Task<ViewerSubject?> OpenBundleAsync(string path, IDialogService dialogs, CancellationToken ct)
+    {
+        var bundle = await BusyViewModel.RunAsync(dialogs, "Opening upload bundle", "Reading the bundle…",
+            (_, token) => Task.Run(() => MarketplaceBundle.Read(path), token), cancellable: true);
+        ct.ThrowIfCancellationRequested();
+        return Gallery(GalleryBuilder.ForBundle(bundle));
+    }
 
     private static async Task<ViewerSubject?> OpenSetAsync(string path, IDialogService dialogs,
         CancellationToken ct, Func<IEnumerable<string>>? bookCandidates)
@@ -198,7 +210,23 @@ internal static class MetadataSubject
         string kind = Path.GetFileName(folder);
         if (kind is not (SetLayout.NftyDir or SetLayout.MetadataDir)) return null;
         string root = Path.GetDirectoryName(folder) ?? "";
-        string png = Path.Combine(root, SetLayout.ImagesDir, Path.GetFileNameWithoutExtension(path) + ".png");
+        // The picture is named by the Set's own naming (an export may use token ids), or - in an upload
+        // bundle with no set.json - by the metadata's own image field.
+        string png;
+        if (File.Exists(SetLayout.ManifestPath(root)))
+        {
+            var naming = SetLayout.NamingOf(root);
+            int? number = kind == SetLayout.NftyDir && Try<NftyMetadata>(json) is { } n ? n.SetNumber
+                : naming.NumberOf(path);
+            png = Path.Combine(root, SetLayout.ImagesDir,
+                number is { } known ? naming.ImageFile(known) : Path.GetFileNameWithoutExtension(path) + ".png");
+        }
+        else
+        {
+            png = Try<OpenSeaMetadata>(json) is { } meta
+                ? MarketplaceBundle.ResolveImage(root, meta.Image) ?? Path.Combine(root, SetLayout.ImagesDir, "missing.png")
+                : Path.Combine(root, SetLayout.ImagesDir, Path.GetFileNameWithoutExtension(path) + ".png");
+        }
 
         Image<Rgba32>? art = null;
         try { art = Image.Load<Rgba32>(png); }

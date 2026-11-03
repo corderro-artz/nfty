@@ -93,7 +93,7 @@ public static class ModelSubjects
     private static ViewerModel? RecordedModel(LoadedSet set, SetItem item)
     {
         if (set.Manifest.Models is null || string.IsNullOrEmpty(set.SourceDirectory)) return null;
-        string stem = SetLayout.Stem(item.Number);
+        string stem = set.Manifest.FileNaming.Stem(item.Number);
         var files = SetLayout.ModelFilesIn(set.SourceDirectory)
             .Where(f => string.Equals(Path.GetFileNameWithoutExtension(f), stem, StringComparison.Ordinal))
             .ToList();

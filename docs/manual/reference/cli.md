@@ -200,7 +200,7 @@ NFTY_KEY=... nfty export ./collection --out ./dist --preset sealedcritique --key
 | `--royalty <percent>` | 0 to 100, at most 2 decimals; written as `seller_fee_basis_points`. Needs `--fee-recipient` and `--collection`. |
 | `--fee-recipient <0x...>` | `0x` and 40 hexadecimal digits. Needs `--collection`. |
 | `--collection-image <uri>` | `collection.json`'s `image`. Defaults to the first token's image when `--base-uri` is set and the art is included. Needs `--collection`. |
-| `--set-manifest` / `--no-set-manifest` | Include `set.json`. Off for `marketplace` so the seed and book hash are not published; such an export cannot be reopened in nfty or sealed. |
+| `--set-manifest` / `--no-set-manifest` | Include `set.json`. Off for `marketplace` so the seed and book hash are not published; such an export is an upload bundle (open it read only, or `inspect` it) and cannot be sealed. An export that keeps it records its file naming and reopens as a Set. |
 
 A Set cooked with `--models` ships its `models/` in every preset except `marketplace`, which leaves
 them out; `--models` / `--no-models` override that. The export prints a `3D models (N)` line when it carries them.

@@ -126,6 +126,14 @@ public static class SetReader
             var manifest = JsonSerializer.Deserialize<SetManifest>(File.ReadAllText(setJson), Json.Options)
                 ?? throw new InvalidOperationException($"Could not read the Set manifest in {path}.");
 
+            // The names the per-asset files carry: the writer's own unless an export renamed them and
+            // said so. An unknown spelling is refused, not guessed - a wrong guess opens a Set of
+            // missing pictures that looks like damage.
+            var naming = manifest.FileNaming;
+            if (!naming.IsKnown)
+                throw new CorruptSetException(path,
+                    $"The Set in {path} names its files '{naming.Naming}', which this build does not know.");
+
             string nftyDir = Path.Combine(dir, SetLayout.NftyDir);
             string imagesDir = Path.Combine(dir, SetLayout.ImagesDir);
             var items = new List<SetItem>();
@@ -155,8 +163,7 @@ public static class SetReader
 
                 foreach (var m in parsed.OrderBy(m => m.SetNumber))
                 {
-                    string stem = SetLayout.Stem(m.SetNumber);
-                    items.Add(new SetItem(m.SetNumber, Path.Combine(imagesDir, $"{stem}.png"),
+                    items.Add(new SetItem(m.SetNumber, Path.Combine(imagesDir, naming.ImageFile(m.SetNumber)),
                         m.Dna, m.Recipe, m.Rarity, m.Layers, m.AbsentLayers));
                 }
             }
