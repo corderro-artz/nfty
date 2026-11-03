@@ -125,6 +125,18 @@ The sheet this export will stitch, or null when it is not making one.
 
 **The one part of an export that does not exist yet.** Every [`ExportEntry`](Nfty.Core.Publish.ExportEntry.md) names a file on disk and carries its real size; a sheet is built BY the export, so at plan time there is a grid and a pixel size and no bytes. It is described here rather than left out of the plan, because the plan is what the screen promises and a sheet that appeared in the output without appearing in the list is exactly the defect this seam exists to prevent. The plan [`ExportResult`](Nfty.Core.Publish.ExportResult.md) carries has it as an ordinary entry, with its real size.
 
+### Warnings { #p-warnings }
+
+```csharp
+public IReadOnlyList<string> Warnings { get; init; }
+```
+
+Things true of this export that its author should hear before uploading it — dangling image links, links still relative — worded here so the terminal and the dialog say the same thing.
+
+**Remarks**
+
+Warnings, never refusals: each describes an export that is legitimate for SOME destination (a folder of art uploaded separately, say).
+
 ## Methods
 
 ### Parts() { #m-parts }

@@ -141,6 +141,8 @@ public static class Validator
                 + "is the trait it is published under, so two layers sharing one name merge into a "
                 + "single trait and a single rarity bucket.");
 
+        CheckTraitNames(problems, r);
+
         // Built duplicate-tolerantly (last wins) so a duplicate is reported above rather than
         // thrown here; the rest of the checks still run and report what they find.
         var ingById = RecipeLayers.ById(r);
@@ -161,6 +163,37 @@ public static class Validator
 
         CheckRuleSanity(problems, r);
         CheckAbsentChances(problems, r);
+    }
+
+    /// <summary>
+    /// The names a published trait could be confused with: a layer named like another colorized
+    /// layer's color trait, and a variant spelled like the explicit absence.
+    /// </summary>
+    /// <remarks>
+    /// Same family as the reserved <c>Type</c>: an asset publishes <c>"{Layer} Color"</c> for every
+    /// Dynamic or Static layer, so a layer actually NAMED that would merge with it in the attributes
+    /// and in the rarity table; and an optional layer publishes the value <c>None</c> when the roll
+    /// leaves it out, so a variant literally named <c>None</c> on it could not be told from absence.
+    /// </remarks>
+    private static void CheckTraitNames(List<string> problems, LoadedRecipe r)
+    {
+        var colorized = r.Ingredients
+            .Where(i => i.Manifest.Kind is LayerKind.Dynamic or LayerKind.Static)
+            .Select(i => i.Manifest.Name).ToHashSet(StringComparer.Ordinal);
+        foreach (var ing in r.Ingredients)
+            if (ing.Manifest.Name.EndsWith(Imaging.ColorName.Suffix, StringComparison.Ordinal)
+                && colorized.Contains(ing.Manifest.Name[..^Imaging.ColorName.Suffix.Length])
+                && !string.Equals(ing.Manifest.Name[..^Imaging.ColorName.Suffix.Length], ing.Manifest.Name, StringComparison.Ordinal))
+                problems.Add($"Recipe '{r.Manifest.Id}' has an ingredient named '{ing.Manifest.Name}', which "
+                    + $"is the trait the color of '{ing.Manifest.Name[..^Imaging.ColorName.Suffix.Length]}' is published "
+                    + "under, so the two would merge into one trait and one rarity bucket. Rename the ingredient.");
+
+        foreach (var ing in r.Ingredients)
+            if (r.Manifest.AbsentPercentOf(ing.Manifest.Id) > 0
+                && ing.Manifest.Variants.Any(v => string.Equals(v.Name, Output.MetadataTraits.Absent, StringComparison.Ordinal)))
+                problems.Add($"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}' is optional and has a variant named "
+                    + $"'{Output.MetadataTraits.Absent}', which is what a left-out layer is published as, so a "
+                    + "buyer could not tell the variant from the layer being absent. Rename the variant.");
     }
 
     /// <summary>

@@ -1,0 +1,128 @@
+using System.Globalization;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Nfty.Core.Formats;
+using Nfty.Core.Output;
+
+namespace Nfty.Core.Publish;
+
+/// <summary>
+/// The names an export gives its files and the token ids they carry: ONE mapping, read by the
+/// plan, by the metadata it rewrites and by the model rule, so a file's name, its link and the
+/// <c>#n</c> in its <c>name</c> cannot disagree.
+/// </summary>
+internal static class ExportNaming
+{
+    /// <summary>Whether these options leave every name exactly as the Set wrote it.</summary>
+    internal static bool IsDefault(ExportOptions o) => o.TokenNaming == TokenNaming.Padded && o.TokenStart == 1;
+
+    /// <summary>The token id of the asset with this set number.</summary>
+    internal static int Id(int number, ExportOptions o) => number - 1 + o.TokenStart;
+
+    /// <summary>The name an asset's files share, without extension.</summary>
+    internal static string Stem(int number, ExportOptions o) =>
+        o.TokenNaming == TokenNaming.Padded
+            ? SetLayout.Stem(Id(number, o))
+            : Id(number, o).ToString(CultureInfo.InvariantCulture);
+
+    internal static string ImageFile(int number, ExportOptions o) => Stem(number, o) + ".png";
+
+    /// <summary>A metadata file's name: the bare token id when a contract's <c>baseURI + tokenId</c> must resolve it.</summary>
+    internal static string MetadataFile(int number, ExportOptions o) =>
+        o.TokenNaming == TokenNaming.Padded ? Stem(number, o) + ".json" : Stem(number, o);
+
+    /// <summary>The set number an Set file's name carries, or null for a name the writer would not have given it.</summary>
+    internal static int? NumberOf(string file)
+    {
+        string stem = Path.GetFileNameWithoutExtension(file);
+        return int.TryParse(stem, NumberStyles.None, CultureInfo.InvariantCulture, out int n) && n >= 1
+            && stem == SetLayout.Stem(n) ? n : null;
+    }
+}
+
+/// <summary>One item's metadata as exported: the standard fields plus the optional links.</summary>
+internal sealed record ExportedItem(
+    string Name,
+    string Description,
+    string Image,
+    [property: JsonPropertyName("external_url"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    string? ExternalUrl,
+    [property: JsonPropertyName("animation_url"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    string? AnimationUrl,
+    IReadOnlyList<MetadataAttribute> Attributes);
+
+/// <summary>OpenSea's contract-level metadata, as <c>collection.json</c>.</summary>
+internal sealed record CollectionFile(
+    string Name,
+    string Description,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Image,
+    [property: JsonPropertyName("external_link"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    string? ExternalLink,
+    [property: JsonPropertyName("seller_fee_basis_points"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    int? SellerFeeBasisPoints,
+    [property: JsonPropertyName("fee_recipient"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    string? FeeRecipient,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Symbol);
+
+/// <summary>Renders the files an export makes rather than copies.</summary>
+internal static class MarketplaceFiles
+{
+    /// <summary>The name of the contract-level file.</summary>
+    internal const string CollectionName = "collection.json";
+
+    /// <summary>
+    /// One item's metadata, rewritten for upload.
+    /// </summary>
+    /// <param name="sourcePath">The Set's <c>metadata/NNNN.json</c>.</param>
+    /// <param name="number">Its set number.</param>
+    /// <param name="options">The export request.</param>
+    /// <param name="fallbackName">The collection's name, for an item whose own name carries no <c>#</c>.</param>
+    /// <param name="animationFile">The model's name inside the export (for example <c>models/1.glb</c>), or null.</param>
+    internal static byte[] RenderItem(string sourcePath, int number, ExportOptions options,
+        string fallbackName, string? animationFile)
+    {
+        var item = SetItemFile.ReadOpenSea(sourcePath, File.ReadAllText(sourcePath));
+        string id = Id(number, options);
+
+        int hash = item.Name.LastIndexOf(" #", StringComparison.Ordinal);
+        string prefix = hash > 0 ? item.Name[..hash] : fallbackName;
+
+        string imagePath = SetLayout.ImagesDir + "/" + ExportNaming.ImageFile(number, options);
+        string image = options.BaseUri is { } b
+            ? b + imagePath
+            : ExportNaming.IsDefault(options) ? item.Image : imagePath;
+
+        var exported = new ExportedItem(
+            Name: $"{prefix} #{id}",
+            Description: item.Description,
+            Image: image,
+            ExternalUrl: options.ExternalUrlBase is { Length: > 0 } ext ? ext + id : null,
+            AnimationUrl: animationFile is not null && options.BaseUri is { } baseUri ? baseUri + animationFile : null,
+            Attributes: item.Attributes);
+        return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(exported, Json.Options));
+    }
+
+    private static string Id(int number, ExportOptions o) =>
+        ExportNaming.Id(number, o).ToString(CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// <c>collection.json</c>.
+    /// </summary>
+    /// <param name="manifest">The Set's record, for the name and symbol.</param>
+    /// <param name="description">The collection's description, read from the Set's metadata.</param>
+    /// <param name="image">The collection image, or null to leave it out.</param>
+    /// <param name="options">The export request.</param>
+    internal static byte[] RenderCollection(SetManifest manifest, string description, string? image, ExportOptions options)
+    {
+        var file = new CollectionFile(
+            Name: manifest.Name,
+            Description: description,
+            Image: image,
+            ExternalLink: options.ExternalLink is { Length: > 0 } link ? link : null,
+            SellerFeeBasisPoints: options.RoyaltyPercent is { } pct ? MarketplaceRules.BasisPoints(pct) : null,
+            FeeRecipient: options.FeeRecipient is { Length: > 0 } fee ? fee : null,
+            Symbol: manifest.Symbol is { Length: > 0 } sym ? sym : null);
+        return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(file, Json.Options));
+    }
+}

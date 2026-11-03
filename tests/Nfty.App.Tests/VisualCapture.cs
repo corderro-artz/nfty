@@ -1055,6 +1055,39 @@ public partial class VisualCapture
             Capture(new Views.ExportDialogView { DataContext = sealing }, variant,
                 $"export-sealed-{key}.png", width: 1180, height: 780);
 
+            // THE MARKETPLACE PAGE, FILLED IN AS A SELLER WOULD AND THEN WITH A MISTAKE IN EACH
+            // FIELD, so the reserved reason line is photographed holding a reason.
+            var market = new ExportDialogViewModel(ExportCaptureSet(), new FilePickerService(),
+                new NoopFolderRevealer(), new FakeDialogs())
+            {
+                Tab = ExportTab.Marketplace,
+                BaseUri = "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/",
+                TokenIdNames = true,
+                StartAtZero = true,
+                ExternalUrlBase = "https://chests.example/token/",
+                IncludeCollectionMetadata = true,
+                ExternalLink = "https://chests.example/",
+                Royalty = "5",
+                FeeRecipient = "0x1234567890abcdef1234567890abcdef12345678",
+                IncludeSetManifest = false,
+            };
+            Capture(new Views.ExportDialogView { DataContext = market }, variant,
+                $"export-marketplace-{key}.png", width: 1180, height: 780);
+
+            var mistakes = new ExportDialogViewModel(ExportCaptureSet(), new FilePickerService(),
+                new NoopFolderRevealer(), new FakeDialogs())
+            {
+                Tab = ExportTab.Marketplace,
+                BaseUri = "ipfs://bafy",
+                ExternalUrlBase = "chests.example",
+                IncludeCollectionMetadata = true,
+                ExternalLink = "chests",
+                Royalty = "2.555",
+                FeeRecipient = "0x12",
+            };
+            Capture(new Views.ExportDialogView { DataContext = mistakes }, variant,
+                $"export-marketplace-invalid-{key}.png", width: 1180, height: 780);
+
             // The busy card, in the state it is actually seen in: mid-job, with a real phase line.
             var busy = new BusyViewModel("Opening Set", "Unpacking...")
             {

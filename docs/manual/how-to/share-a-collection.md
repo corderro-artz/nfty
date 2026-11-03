@@ -7,10 +7,14 @@ Open the Set and press **Export…**, or run `nfty export`. Four presets cover t
 
 | Preset | Art | Marketplace metadata | nfty metadata | CookBook | Sealed |
 |---|:--:|:--:|:--:|:--:|:--:|
-| **Marketplace** | ✓ | ✓ | -- | -- | -- |
+| **Marketplace** | ✓ | ✓ (+ `collection.json`) | -- | -- | -- |
 | **Asset pack** | ✓ | ✓ | ✓ | -- | -- |
 | **Full project** | ✓ | ✓ | ✓ | ✓ | -- |
 | **Sealed critique** | ✓ | ✓ | ✓ | -- | ✓ |
+
+The Marketplace preset also leaves `set.json` out, so the seed and the source book's hash are not
+published; the other three keep it. Links, file names and royalty are on the MARKETPLACE tab: see
+[Put a collection on a marketplace](put-a-collection-on-a-marketplace.md).
 
 A preset is a starting point, not a mode. Every box stays yours to change afterwards, and sealing is
 a switch you can put on any of the four.
@@ -51,7 +55,7 @@ the preset.
 nfty export ./collection --out ./dist --preset marketplace
 ```
 
-You get `Chest Demo.set` holding `images/`, `metadata/` and `set.json`. The export is named after the
+You get `Chest Demo.set` holding `images/`, `metadata/` and `collection.json`. The export is named after the
 **collection**, not the folder you happened to cook into.
 
 Prefer loose files for an uploader? Add `--folder`.

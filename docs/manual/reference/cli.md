@@ -187,14 +187,29 @@ NFTY_KEY=... nfty export ./collection --out ./dist --preset sealedcritique --key
 | `--seal` | Encrypt it and mark it view-only. Writes a `.tin`. |
 | `--note "<text>"` | A line for the recipient. On a sealed export it travels in the clear. |
 | `--key <source>` | Where the passphrase comes from — see below. Omit it and nfty asks at the terminal. |
+| `--base-uri <uri>` | Prefix every image link (and a glb model's `animation_url`): `ipfs://<CID>/` gives `ipfs://<CID>/images/1.png`. Absolute, scheme `ipfs`/`https`/`http`/`ar`, must end with `/`; never repaired. Without it the links stay relative and a warning is printed on stderr. |
+| `--token-names padded\|token-id` | `padded` (default) is the Set's own `0001.json` / `0001.png`. `token-id` is `metadata/1` (no extension), `images/1.png`, `models/1.glb`, and renames the `#n` in each name and every link. `nfty/` keeps the Set's names. |
+| `--start-id 0\|1` | The token id of the first asset (default 1). Id = set number - 1 + this. |
+| `--external-url <uri>` | Each item's `external_url`: this address followed by its token id. |
+| `--collection` / `--no-collection` | Write `collection.json`, OpenSea's contract-level file (on for `marketplace`). |
+| `--external-link <uri>` | `collection.json`'s `external_link`. Needs `--collection`. |
+| `--royalty <percent>` | 0 to 100, at most 2 decimals; written as `seller_fee_basis_points`. Needs `--fee-recipient` and `--collection`. |
+| `--fee-recipient <0x...>` | `0x` and 40 hexadecimal digits. Needs `--collection`. |
+| `--collection-image <uri>` | `collection.json`'s `image`. Defaults to the first token's image when `--base-uri` is set and the art is included. Needs `--collection`. |
+| `--set-manifest` / `--no-set-manifest` | Include `set.json`. Off for `marketplace` so the seed and book hash are not published; such an export cannot be reopened in nfty or sealed. |
 
 A Set cooked with `--models` ships its `models/` in every preset except `marketplace`, which leaves
 them out; `--models` / `--no-models` override that. The export prints a `3D models (N)` line when it carries them.
 
-`set.json` always ships -- it is what makes the result a Set rather than a folder of pictures, and it
-carries the collection-wide rarity table, so even the leanest export still answers "what is this and
-how rare is what". It also carries the seed and the source book's hash; a seed is inert without the
-book, but it is there.
+`set.json` ships in every preset but `marketplace` -- it is what makes the result a Set rather than a
+folder of pictures, and it carries the collection-wide rarity table, the seed and the source book's
+hash. `--no-set-manifest` leaves it out; an export of nothing at all is refused.
+
+The marketplace options are all export-only; the cooked Set is never changed. They are **rejected**
+where nothing would read them (`--base-uri` with neither `--opensea` metadata nor `--collection`,
+`--royalty` without `--collection`), and a bad value is refused with the rule it broke. Warnings
+(relative image links, metadata whose images are not in the export) print on stderr. See
+[Put a collection on a marketplace](../how-to/put-a-collection-on-a-marketplace.md).
 
 The command prints every part that went, by name, and warns when the export carries the source
 CookBook. A `--book` that is not the book that cooked the Set is warned about on stderr and still

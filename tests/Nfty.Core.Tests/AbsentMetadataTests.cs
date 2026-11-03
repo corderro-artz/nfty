@@ -10,11 +10,11 @@ namespace Nfty.Core.Tests;
 /// <summary>
 /// What a finished Set records about a layer that was left out.
 ///
-/// <para>The split is the point. The OpenSea file omits absence entirely — that is what the standard
-/// means by not having something, and it falls out for free because that file is built from the
-/// asset's traits, which an absent layer never enters. The rich nfty file records it, because
-/// otherwise nothing downstream can tell "this asset has no hat" from "this collection has no hat
-/// layer".</para>
+/// <para>Absence is PUBLISHED, from metadata shape 2 on: an optional layer the roll left out appears
+/// in the OpenSea attributes as the value <c>None</c>, spelled by one constant that the rarity table
+/// and the rich nfty file share, so a buyer can filter for "no hat". The rich file also records the
+/// layer in <c>absentLayers</c>. Shape 1 (older Sets) keeps its old behavior, tested in
+/// <c>ColorTraitsTests</c>.</para>
 /// </summary>
 public class AbsentMetadataTests
 {
@@ -54,7 +54,7 @@ public class AbsentMetadataTests
     }
 
     [Fact]
-    public void A_layer_that_never_appears_is_recorded_as_absent_and_published_as_nothing()
+    public void A_layer_that_never_appears_is_recorded_as_absent_and_published_as_None()
     {
         var (set, dir) = Cook(hatAbsent: 100);
         try
@@ -65,10 +65,12 @@ public class AbsentMetadataTests
                 Assert.Equal("Hat", Assert.Single(i.AbsentLayers!));
             });
 
-            // The OpenSea half carries no trace: no Hat attribute, and no "None" value invented to
-            // stand in for one.
+            // The OpenSea half states it: "Hat": "None", spelled by the one shared constant.
             string json = File.ReadAllText(Path.Combine(dir, "metadata", "0001.json"));
-            Assert.DoesNotContain("Hat", json, StringComparison.Ordinal);
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            var hat = doc.RootElement.GetProperty("attributes").EnumerateArray()
+                .Single(a => a.GetProperty("trait_type").GetString() == "Hat");
+            Assert.Equal(MetadataTraits.Absent, hat.GetProperty("value").GetString());
             Assert.Contains("Background", json, StringComparison.Ordinal);
         }
         finally { set.Dispose(); Directory.Delete(dir, recursive: true); }
@@ -111,7 +113,8 @@ public class AbsentMetadataTests
                 .GroupBy(r => r.Value)
                 .ToDictionary(g => g.Key, g => g.First().RarityPct);
 
-            Assert.Contains("(none)", hatRows.Keys);
+            Assert.Contains(MetadataTraits.Absent, hatRows.Keys);
+            Assert.DoesNotContain("(none)", hatRows.Keys);
             Assert.Contains("crown", hatRows.Keys);
             Assert.Equal(100, hatRows.Values.Sum(), 1);
         }

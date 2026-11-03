@@ -108,6 +108,11 @@ public enum ExportTab
 
     /// <summary>Encryption and the note that travels with it.</summary>
     Seal,
+
+    /// <summary>What a marketplace needs written into the files: links, token names, collection.json.</summary>
+    /// <remarks>Appended after the others so the numbering of the existing pages does not move; the
+    /// card shows it second, beside the contents it rewrites.</remarks>
+    Marketplace,
 }
 
 public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
@@ -152,6 +157,7 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
     [NotifyPropertyChangedFor(nameof(IsContentsTab))]
     [NotifyPropertyChangedFor(nameof(IsImagesTab))]
     [NotifyPropertyChangedFor(nameof(IsSealTab))]
+    [NotifyPropertyChangedFor(nameof(IsMarketplaceTab))]
     private ExportTab _tab = ExportTab.Contents;
 
     /// <summary>Whether the contents page is showing.</summary>
@@ -160,6 +166,74 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
     public bool IsImagesTab => Tab == ExportTab.Images;
     /// <summary>Whether the seal page is showing.</summary>
     public bool IsSealTab => Tab == ExportTab.Seal;
+    /// <summary>Whether the marketplace page is showing.</summary>
+    public bool IsMarketplaceTab => Tab == ExportTab.Marketplace;
+
+    // ---------------------------------------------------------------- the marketplace page
+    //
+    // Every value here is a STRING the user types, validated by Core's MarketplaceRules - the same
+    // sentences the CLI refuses with - and turned into ExportOptions only when it is meaningful for
+    // what is being exported. A value in a disabled field is not sent, so a stale base URI left in
+    // the box cannot rewrite metadata the export no longer carries.
+
+    /// <summary>Include <c>set.json</c> (the seed, the source book's hash, the rarity table).</summary>
+    [ObservableProperty] private bool _includeSetManifest = true;
+
+    /// <summary>Write <c>collection.json</c>.</summary>
+    [ObservableProperty]
+    private bool _includeCollectionMetadata;
+
+    /// <summary>Prefix for every image link, for example <c>ipfs://CID/</c>.</summary>
+    [ObservableProperty]
+    private string _baseUri = "";
+
+    /// <summary>Name files by bare token id rather than the Set's padded numbers.</summary>
+    [ObservableProperty] private bool _tokenIdNames;
+
+    /// <summary>Token ids start at 0 rather than 1.</summary>
+    [ObservableProperty] private bool _startAtZero;
+
+    /// <summary>Address that each item's token id is appended to as its <c>external_url</c>.</summary>
+    [ObservableProperty]
+    private string _externalUrlBase = "";
+
+    /// <summary><c>collection.json</c>'s website link.</summary>
+    [ObservableProperty]
+    private string _externalLink = "";
+
+    /// <summary>Creator royalty, as typed: a percentage with at most 2 decimals.</summary>
+    [ObservableProperty]
+    private string _royalty = "";
+
+    /// <summary>Who the royalty is paid to.</summary>
+    [ObservableProperty]
+    private string _feeRecipient = "";
+
+    /// <summary>Whether a base URI would be written anywhere: into the metadata or collection.json.</summary>
+    public bool BaseUriEnabled => OpenSeaMetadata || IncludeCollectionMetadata;
+    /// <summary>Whether an external URL would be written anywhere: only into the item metadata.</summary>
+    public bool ExternalUrlEnabled => OpenSeaMetadata;
+    /// <summary>Whether the collection.json fields are live.</summary>
+    public bool CollectionFieldsEnabled => IncludeCollectionMetadata;
+
+    /// <summary>Why the base URI is unusable; empty when it is fine or not in use.</summary>
+    public string BaseUriProblem => BaseUriEnabled ? MarketplaceRules.BaseUriProblem(BaseUri.Trim()) ?? "" : "";
+    /// <summary>Why the external URL is unusable; empty when it is fine or not in use.</summary>
+    public string ExternalUrlProblem =>
+        ExternalUrlEnabled ? MarketplaceRules.WebUrlProblem(ExternalUrlBase.Trim(), "External URL") ?? "" : "";
+    /// <summary>Why the external link is unusable; empty when it is fine or not in use.</summary>
+    public string ExternalLinkProblem =>
+        CollectionFieldsEnabled ? MarketplaceRules.WebUrlProblem(ExternalLink.Trim(), "External link") ?? "" : "";
+    /// <summary>Why the royalty is unusable; empty when it is fine or not in use.</summary>
+    public string RoyaltyProblem =>
+        CollectionFieldsEnabled ? MarketplaceRules.TryParseRoyalty(Royalty, out _) ?? "" : "";
+    /// <summary>Why the fee recipient is unusable; empty when it is fine or not in use.</summary>
+    public string FeeRecipientProblem =>
+        CollectionFieldsEnabled ? MarketplaceRules.FeeRecipientProblem(FeeRecipient.Trim()) ?? "" : "";
+
+    private string MarketplaceProblem() =>
+        new[] { BaseUriProblem, ExternalUrlProblem, ExternalLinkProblem, RoyaltyProblem, FeeRecipientProblem }
+            .FirstOrDefault(p => p.Length > 0) ?? "";
 
     /// <summary>Also stitch every asset into one sheet.</summary>
     /// <remarks>
@@ -380,9 +454,20 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
     /// </remarks>
     [ObservableProperty] private IReadOnlyList<string> _consequences = Array.Empty<string>();
 
+    private static string? Trimmed(string text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+
     /// <summary>The options as they currently stand.</summary>
     public ExportOptions Options => new()
     {
+        IncludeSetManifest = IncludeSetManifest,
+        IncludeCollectionMetadata = IncludeCollectionMetadata,
+        BaseUri = BaseUriEnabled ? Trimmed(BaseUri) : null,
+        TokenNaming = TokenIdNames ? TokenNaming.TokenId : TokenNaming.Padded,
+        TokenStart = StartAtZero ? 0 : 1,
+        ExternalUrlBase = ExternalUrlEnabled ? Trimmed(ExternalUrlBase) : null,
+        ExternalLink = CollectionFieldsEnabled ? Trimmed(ExternalLink) : null,
+        RoyaltyPercent = CollectionFieldsEnabled && MarketplaceRules.TryParseRoyalty(Royalty, out var pct) is null ? pct : null,
+        FeeRecipient = CollectionFieldsEnabled ? Trimmed(FeeRecipient) : null,
         Images = Images,
         OpenSeaMetadata = OpenSeaMetadata,
         NftyMetadata = NftyMetadata,
@@ -411,6 +496,8 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
         NftyMetadata = o.NftyMetadata;
         Models = o.Models;
         IncludeCookBook = o.IncludeCookBook;
+        IncludeCollectionMetadata = o.IncludeCollectionMetadata;
+        IncludeSetManifest = o.IncludeSetManifest;
         IsSealed = o.Sealed;
         Packed = o.Shape == ExportShape.Archive;
     }
@@ -478,6 +565,9 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
                 notes.Add("That CookBook is not the one this Set was cooked from: its hash differs "
                     + "from the one set.json recorded. Cooking from it produces a different "
                     + "collection, not this one.");
+            // Core words these (relative links, dangling links), so the terminal and this card say the
+            // same thing about the same request.
+            notes.AddRange(plan.Warnings);
             if (IsSealed)
                 notes.Add("Sealed: unreadable without the passphrase. Anyone you give it to can "
                     + "still take the art - nfty declines, a screenshot does not.");
@@ -499,7 +589,8 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
             // The grid's own problem is reported through the SAME footer the seal uses, so a
             // refusal reads the same wherever it came from - and Core words it, so the dialog and
             // the command line cannot disagree about the same grid.
-            Problem = SheetProblem() is { Length: > 0 } grid ? grid : SealProblem();
+            Problem = MarketplaceProblem() is { Length: > 0 } market ? market
+                : SheetProblem() is { Length: > 0 } grid ? grid : SealProblem();
         }
         catch (Exception ex)
         {
@@ -509,7 +600,9 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
             OutputName = "";
             SizeText = "";
             Consequences = Array.Empty<string>();
-            Problem = ex.Message;
+            // A field's own reason first: Core refuses the same bad value, but its message carries the
+            // framework's "(Parameter 'options')" tail, and the field already says it better.
+            Problem = MarketplaceProblem() is { Length: > 0 } field ? field : ex.Message;
         }
     }
 
@@ -589,14 +682,34 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
         nameof(Packed), nameof(IsSealed), nameof(Passphrase), nameof(PassphraseConfirm),
         nameof(Note), nameof(CookBookPath), nameof(MakeSpriteSheet), nameof(SheetColumns),
         nameof(SheetRows), nameof(NumberWatermark), nameof(WatermarkCorner),
+        nameof(IncludeSetManifest), nameof(IncludeCollectionMetadata), nameof(BaseUri),
+        nameof(TokenIdNames), nameof(StartAtZero), nameof(ExternalUrlBase), nameof(ExternalLink),
+        nameof(Royalty), nameof(FeeRecipient),
     };
+
+    private static readonly IReadOnlySet<string> MarketplaceInputs = new HashSet<string>(StringComparer.Ordinal)
+    {
+        nameof(OpenSeaMetadata), nameof(IncludeCollectionMetadata), nameof(BaseUri), nameof(ExternalUrlBase),
+        nameof(ExternalLink), nameof(Royalty), nameof(FeeRecipient),
+    };
+
+    /// <summary>The read-only members that follow the marketplace inputs: which fields are live, and why not.</summary>
+    private static readonly System.ComponentModel.PropertyChangedEventArgs[] MarketplaceDerived =
+        new[]
+        {
+            nameof(BaseUriEnabled), nameof(ExternalUrlEnabled), nameof(CollectionFieldsEnabled),
+            nameof(BaseUriProblem), nameof(ExternalUrlProblem), nameof(ExternalLinkProblem),
+            nameof(RoyaltyProblem), nameof(FeeRecipientProblem),
+        }.Select(n => new System.ComponentModel.PropertyChangedEventArgs(n)).ToArray();
 
     /// <summary>Recomputes the manifest whenever anything it depends on changes.</summary>
     /// <param name="e">The property that changed.</param>
     protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
     {
         base.OnPropertyChanged(e);
-        if (e.PropertyName is { } name && PlanInputs.Contains(name)) Refresh();
+        if (e.PropertyName is { } name && MarketplaceInputs.Contains(name))
+            foreach (var derived in MarketplaceDerived) OnPropertyChanged(derived);
+        if (e.PropertyName is { } plan && PlanInputs.Contains(plan)) Refresh();
     }
 
     private bool CanExport() => !IsRunning && Problem.Length == 0;

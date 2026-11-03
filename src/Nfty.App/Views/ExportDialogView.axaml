@@ -28,6 +28,9 @@
             <Button Classes="railtab" Classes.on="{Binding IsContentsTab}" Content="CONTENTS"
                     Command="{Binding ShowTabCommand}"
                     CommandParameter="{x:Static vm:ExportTab.Contents}" />
+            <Button Classes="railtab" Classes.on="{Binding IsMarketplaceTab}" Content="MARKETPLACE"
+                    Command="{Binding ShowTabCommand}"
+                    CommandParameter="{x:Static vm:ExportTab.Marketplace}" />
             <Button Classes="railtab" Classes.on="{Binding IsImagesTab}" Content="IMAGES"
                     Command="{Binding ShowTabCommand}"
                     CommandParameter="{x:Static vm:ExportTab.Images}" />
@@ -183,6 +186,93 @@
                   </StackPanel>
                 </Grid>
               </StackPanel>
+            </StackPanel>
+
+            <!-- ============================ MARKETPLACE ============================
+                 What a marketplace needs written INTO the files. Every value is export-only: the
+                 cooked Set is never touched. Each field's reason sits on its own label line, in
+                 warning ink and reserved, so a mistyped URI says why without the page growing a row;
+                 the same sentence is in the footer, which is what stops Export. -->
+            <StackPanel Spacing="12" IsVisible="{Binding IsMarketplaceTab}"
+                        IsEnabled="{Binding ShowForm}">
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="22">
+                <StackPanel Grid.Column="0" Spacing="9">
+                  <StackPanel Spacing="4">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                      <TextBlock Grid.Column="0" Text="BASE URI" Classes="slbl" />
+                      <TextBlock Grid.Column="1" Classes="caveat" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                                 Text="{Binding BaseUriProblem}" ToolTip.Tip="{Binding BaseUriProblem}" />
+                    </Grid>
+                    <TextBox x:Name="BaseUriBox" Text="{Binding BaseUri}" IsEnabled="{Binding BaseUriEnabled}"
+                             PlaceholderText="ipfs://CID/"
+                             ToolTip.Tip="Put in front of every image link so the metadata is upload-ready: ipfs://CID/ gives ipfs://CID/images/1.png. Absolute, ipfs / https / http / ar, ending in a slash." />
+                  </StackPanel>
+                  <StackPanel Spacing="4">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                      <TextBlock Grid.Column="0" Text="EXTERNAL URL" Classes="slbl" />
+                      <TextBlock Grid.Column="1" Classes="caveat" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                                 Text="{Binding ExternalUrlProblem}" ToolTip.Tip="{Binding ExternalUrlProblem}" />
+                    </Grid>
+                    <TextBox x:Name="ExternalUrlBox" Text="{Binding ExternalUrlBase}"
+                             IsEnabled="{Binding ExternalUrlEnabled}"
+                             PlaceholderText="https://example.com/token/"
+                             ToolTip.Tip="Each item links out to this address followed by its token id." />
+                  </StackPanel>
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                    <StackPanel Grid.Column="0" Spacing="3">
+                      <TextBlock Text="FILE NAMES" Classes="slbl" />
+                      <StackPanel Spacing="0">
+                        <RadioButton GroupName="names" Content="Padded 0001" IsChecked="{Binding !TokenIdNames}"
+                                     ToolTip.Tip="The Set's own names: 0001.json, 0001.png." />
+                        <RadioButton GroupName="names" Content="Token id 1" IsChecked="{Binding TokenIdNames}"
+                                     ToolTip.Tip="What a contract's baseURI + tokenId resolves: metadata/1 (no extension), images/1.png, models/1.glb. The #n in each name follows." />
+                      </StackPanel>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="3">
+                      <TextBlock Text="FIRST ID" Classes="slbl" />
+                      <StackPanel Spacing="0">
+                        <RadioButton GroupName="firstid" Content="1" IsChecked="{Binding !StartAtZero}"
+                                     ToolTip.Tip="The first asset is token 1." />
+                        <RadioButton GroupName="firstid" Content="0" IsChecked="{Binding StartAtZero}"
+                                     ToolTip.Tip="The first asset is token 0, as many contracts count." />
+                      </StackPanel>
+                    </StackPanel>
+                  </Grid>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Spacing="9">
+                  <CheckBox Content="collection.json" IsChecked="{Binding IncludeCollectionMetadata}"
+                            ToolTip.Tip="The contract-level metadata (OpenSea's contractURI): name, description, image, link, royalty." />
+                  <StackPanel Spacing="4">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                      <TextBlock Grid.Column="0" Text="EXTERNAL LINK" Classes="slbl" />
+                      <TextBlock Grid.Column="1" Classes="caveat" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                                 Text="{Binding ExternalLinkProblem}" ToolTip.Tip="{Binding ExternalLinkProblem}" />
+                    </Grid>
+                    <TextBox x:Name="ExternalLinkBox" Text="{Binding ExternalLink}"
+                             IsEnabled="{Binding CollectionFieldsEnabled}"
+                             PlaceholderText="https://example.com/" />
+                  </StackPanel>
+                  <Grid ColumnDefinitions="84,*" ColumnSpacing="9" RowDefinitions="Auto,Auto" RowSpacing="4">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="ROYALTY %" Classes="slbl"
+                               ToolTip.Tip="{Binding RoyaltyProblem}" />
+                    <Grid Grid.Row="0" Grid.Column="1" ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                      <TextBlock Grid.Column="0" Text="FEE RECIPIENT" Classes="slbl" />
+                      <TextBlock Grid.Column="1" Classes="caveat" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                                 Text="{Binding FeeRecipientProblem}" ToolTip.Tip="{Binding FeeRecipientProblem}" />
+                    </Grid>
+                    <TextBox Grid.Row="1" Grid.Column="0" x:Name="RoyaltyBox" Text="{Binding Royalty}"
+                             IsEnabled="{Binding CollectionFieldsEnabled}" PlaceholderText="2.5"
+                             ToolTip.Tip="Percentage, at most 2 decimals. Written as seller_fee_basis_points (2.5 becomes 250)." />
+                    <TextBox Grid.Row="1" Grid.Column="1" x:Name="FeeRecipientBox" Text="{Binding FeeRecipient}"
+                             IsEnabled="{Binding CollectionFieldsEnabled}" PlaceholderText="0x…" />
+                  </Grid>
+                  <TextBlock Classes="caveat" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding RoyaltyProblem}"
+                             ToolTip.Tip="{Binding RoyaltyProblem}" />
+                  <CheckBox Content="set.json" IsChecked="{Binding IncludeSetManifest}"
+                            ToolTip.Tip="The Set's own record: the seed, the source book's hash, the rarity table. Leave it out of a public drop; nfty cannot reopen an export without it." />
+                </StackPanel>
+              </Grid>
             </StackPanel>
 
             <!-- ============================== SEAL ============================== -->

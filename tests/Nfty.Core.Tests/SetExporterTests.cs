@@ -93,38 +93,32 @@ public class SetExporterTests
         Assert.Contains("images/0001.png", names);
         Assert.Contains("metadata/0001.json", names);
         Assert.DoesNotContain(names, n => n.StartsWith("nfty/", StringComparison.Ordinal));
-        Assert.Contains(SetLayout.ManifestFile, names);
+        // set.json is an axis now, and the marketplace preset turns it off: it records the seed and
+        // the source book's hash, which a public drop has no use for.
+        Assert.DoesNotContain(SetLayout.ManifestFile, names);
+        Assert.Contains("collection.json", names);
     }
 
     [Fact]
-    public void Even_the_leanest_export_still_carries_the_seed_and_the_books_hash()
+    public void A_default_export_still_carries_the_seed_and_the_books_hash()
     {
-        // Stated as a test because it is what stops the Marketplace preset being described as
-        // "nothing that says how it was made", which an early draft of its own summary claimed.
-        // set.json is not one of the axes, and it holds both - a seed is inert without the book,
-        // but it is there, and a preset that promised otherwise would be lying to a seller.
-        var result = SetExporter.Export(CookedSet(), OutDir(),
-            ExportOptions.For(ExportPreset.Marketplace));
+        // The seed and the book's hash live in set.json, which every preset but the marketplace one
+        // still ships - so the marketplace summary must not claim "nothing that says how it was made".
+        var result = SetExporter.Export(CookedSet(), OutDir(), ExportOptions.For(ExportPreset.AssetPack));
 
         using var reopened = SetReader.Read(result.Path);
         Assert.Equal("launch", reopened.Manifest.Seed);
-        Assert.DoesNotContain("Nothing", ExportOptions.SummaryOf(ExportPreset.Marketplace));
+        Assert.Contains("seed", ExportOptions.SummaryOf(ExportPreset.Marketplace));
     }
 
     [Fact]
-    public void The_set_manifest_ships_even_when_everything_optional_is_dropped()
+    public void An_export_with_nothing_in_it_is_refused()
     {
-        // set.json is not one of the axes. It is what makes the result a Set rather than a folder of
-        // pictures, it is what `inspect` reads, and it carries the collection-wide rarity table - so
-        // even the leanest export still answers "what is this, and how rare is what".
-        var result = SetExporter.Export(CookedSet(), OutDir(), new ExportOptions
-        {
-            Images = false,
-            OpenSeaMetadata = false,
-            NftyMetadata = false,
-        });
-
-        Assert.Equal(new[] { SetLayout.ManifestFile }, EntriesOf(result.Path));
+        // set.json alone says what the Set is and ships none of it; the report that found this
+        // watched `export --no-images --no-opensea --no-nfty` exit 0 with a lone manifest.
+        var ex = Assert.Throws<ArgumentException>(() => SetExporter.Export(CookedSet(), OutDir(),
+            new ExportOptions { Images = false, OpenSeaMetadata = false, NftyMetadata = false, Models = false }));
+        Assert.Contains("Nothing to export", ex.Message);
     }
 
     [Theory]

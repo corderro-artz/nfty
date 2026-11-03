@@ -42,6 +42,30 @@ public string Name { get; init; }
 
 Its path inside the export, always with `/` separators.
 
+### Render { #p-render }
+
+```csharp
+public Func<byte[]>? Render { get; init; }
+```
+
+Makes the file's bytes when the export is written, for a file the export rewrites or invents (item metadata with new links, `collection.json`); null for a file copied as it stands.
+
+**Remarks**
+
+For a rewritten item [`ExportEntry.Source`](Nfty.Core.Publish.ExportEntry.md#p-source) is the Set's own file and [`ExportEntry.Bytes`](Nfty.Core.Publish.ExportEntry.md#p-bytes) is that file's size, close to but not the final size; the plan an [`ExportResult`](Nfty.Core.Publish.ExportResult.md) carries has the real one.
+
+### SetNumber { #p-setnumber }
+
+```csharp
+public int? SetNumber { get; init; }
+```
+
+The set number of the asset this file belongs to, or null for a file that is not one asset's.
+
+**Remarks**
+
+Carried explicitly because a renamed file (token ids, a different start) no longer spells it; the number stamped into a debug image must stay the SET number.
+
 ### Source { #p-source }
 
 ```csharp

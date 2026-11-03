@@ -63,6 +63,8 @@ around; if you do not, start with [Get started](../get-started/index.md).
 
     [Share a collection with somebody](share-a-collection.md)
 
+    [Put a collection on a marketplace](put-a-collection-on-a-marketplace.md)
+
     [Roll assets at runtime from a Menu](roll-assets-at-runtime.md)
 
 -   **In your own program**

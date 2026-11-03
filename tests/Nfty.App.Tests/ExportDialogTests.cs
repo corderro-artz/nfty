@@ -234,6 +234,7 @@ public class ExportDialogTests
         vm.CookBookPath = book;
         vm.IncludeCookBook = true;
         vm.IsSealed = true;
+        vm.BaseUri = "ipfs://CID/";   // else the relative-links warning is a third line
 
         Assert.Equal(2, vm.Consequences.Count);
         Assert.Contains(vm.Consequences, c => c.Contains("source CookBook", StringComparison.Ordinal));
