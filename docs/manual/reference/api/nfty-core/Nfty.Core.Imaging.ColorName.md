@@ -83,6 +83,26 @@ Names a color.
 
 A non-finite input is `Gray`: nothing meaningful can be said of it, and a metadata writer must not throw on a color it was handed.
 
+### Shares(Colorization) { #m-shares-nfty-core-model-colorization }
+
+```csharp
+public static IReadOnlyDictionary<string, double> Shares(Colorization colorization);
+```
+
+The exact chance that one roll of `colorization` is published under each color name: the book-side twin of [`ColorName.Of()`](Nfty.Core.Imaging.ColorName.md#m-of-system-double-system-double), so the predicted rarity table and the cooked one speak about the same buckets.
+
+**Parameters**
+
+- `colorization` (`Colorization`) - The layer's colorization (Dynamic or Static).
+
+**Returns.** Name to probability, only names that can occur, ordinal-sorted by name, summing to 1. Empty when the entries carry no weight (the roller itself refuses that colorization).
+
+**Remarks**
+
+Matches `ColorRoller.Roll` exactly: an entry is picked by weight (`w/W`; a zero-weight entry never), a ranged entry then samples hue and saturation **independently**, each as `Min + r*(Max-Min)` with `r` in `[0,1)`, so each is uniform on the half-open interval and a name's chance is `|H and sector| / |H| * |S and band| / |S|`. A degenerate axis (`Min == Max`) is a point mass, named by the very comparisons [`ColorName.Of()`](Nfty.Core.Imaging.ColorName.md#m-of-system-double-system-double) makes. A fixed entry is a point mass on `ColorRoller.FromFixed`. Red's sector wraps (345..360 and 0..15), and a hue range wider than a turn counts every lap. The color model does not enter: it only decides how a fixed spec is read, and ranges are stated in the model's own H and S.
+
+Sums run in entry order and sector order, sequentially, so the figures are identical on every machine.
+
 ### TraitTypeOf(string) { #m-traittypeof-system-string }
 
 ```csharp

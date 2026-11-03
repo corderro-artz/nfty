@@ -12,10 +12,10 @@ One variant's odds, both within its recipe and across the whole collection.
 
 ## Constructors
 
-### TraitOdds(string, string, string, string, string, string, double, double) { #m-ctor-system-string-system-string-system-string-system-79240c }
+### TraitOdds(string, string, string, string, string, string, double, double, TraitRowKind) { #m-ctor-system-string-system-string-system-string-system-f95b08 }
 
 ```csharp
-public TraitOdds(string RecipeId, string RecipeName, string IngredientId, string IngredientName, string VariantId, string VariantName, double WithinRecipePercent, double OverallPercent);
+public TraitOdds(string RecipeId, string RecipeName, string IngredientId, string IngredientName, string VariantId, string VariantName, double WithinRecipePercent, double OverallPercent, TraitRowKind Kind = TraitRowKind.Variant);
 ```
 
 **Parameters**
@@ -28,6 +28,7 @@ public TraitOdds(string RecipeId, string RecipeName, string IngredientId, string
 - `VariantName` (`string`) - The variant's name.
 - `WithinRecipePercent` (`double`) - Share among that recipe's mints.
 - `OverallPercent` (`double`) - Share of the whole collection — the recipe's own share folded in.
+- `Kind` (`TraitRowKind`) - Whether the row is a variant, a color name or the layer being absent. For a color row `IngredientName` is the published trait type (`Body Color`) and the variant id and name are both the color name; for an absent row both are `None`. Anything keyed by a real variant id must filter on [`TraitRowKind.Variant`](Nfty.Core.Stats.TraitRowKind.md#f-variant).
 
 ## Properties
 
@@ -46,6 +47,14 @@ public string IngredientName { get; init; }
 ```
 
 The layer's name.
+
+### Kind { #p-kind }
+
+```csharp
+public TraitRowKind Kind { get; init; }
+```
+
+Whether the row is a variant, a color name or the layer being absent. For a color row `IngredientName` is the published trait type (`Body Color`) and the variant id and name are both the color name; for an absent row both are `None`. Anything keyed by a real variant id must filter on [`TraitRowKind.Variant`](Nfty.Core.Stats.TraitRowKind.md#f-variant).
 
 ### OverallPercent { #p-overallpercent }
 

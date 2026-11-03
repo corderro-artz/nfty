@@ -4,7 +4,7 @@
 
 The whole engine: archives, validation, generation, rendering, Sets, export, sealing, statistics. Depends on Nfty.Ticket and ImageSharp.
 
-162 public types. Each page lists the public and protected members with their signatures and the documentation written beside the code.
+163 public types. Each page lists the public and protected members with their signatures and the documentation written beside the code.
 
 ## Nfty.Core
 
@@ -214,6 +214,7 @@ The whole engine: archives, validation, generation, rendering, Sets, export, sea
 | [`SelectionOdds`](Nfty.Core.Stats.SelectionOdds.md) | class | How likely one asset's exact selection was, computed from the CookBook that produced it. |
 | [`SetReport`](Nfty.Core.Stats.SetReport.md) | class | The `inspect` report for a cooked Set: what it holds, what made it, and the rarity it actually came out with. |
 | [`TraitOdds`](Nfty.Core.Stats.TraitOdds.md) | record | One variant's odds, both within its recipe and across the whole collection. |
+| [`TraitRowKind`](Nfty.Core.Stats.TraitRowKind.md) | enum | What a [`TraitOdds`](Nfty.Core.Stats.TraitOdds.md) row describes. |
 | [`VariantReach`](Nfty.Core.Stats.VariantReach.md) | record | How far one variant's edit reaches: the share of the collection that carries it, and, when the book states a target supply, the expected number of assets. |
 | [`VoxelReport`](Nfty.Core.Stats.VoxelReport.md) | class | Reports whether an archive's artwork can be turned into a voxel model, and where it cannot. |
 | [`VoxelVariant`](Nfty.Core.Stats.VoxelVariant.md) | struct | What a single variant's artwork does about transparency. |

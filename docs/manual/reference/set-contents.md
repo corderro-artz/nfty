@@ -89,6 +89,9 @@ on (every new cook):
 - **A left-out layer.** A layer that is optional in the asset's Recipe and was left out is
   published as the value `None`. A layer the Recipe does not stack is not listed at all.
 
+`nfty stats` predicts both from the CookBook: each color name's chance is computed exactly from the layer's
+hue and saturation ranges and entry weights, then scaled by how often the layer is present.
+
 Because the two would merge with a real trait, the Validator refuses a layer named like another
 colored layer's color trait (`Body` and `Body Color`), and a variant named `None` on an optional layer.
 DNA never includes either: names are a view of the roll.

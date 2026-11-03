@@ -28,7 +28,7 @@ public sealed record VariantReach(double Percent, int? TargetSupply, bool Recipe
     {
         ArgumentNullException.ThrowIfNull(book);
         var odds = RarityCalculator.Compute(book).Traits.FirstOrDefault(t =>
-            t.RecipeId == recipeId && t.IngredientId == ingredientId && t.VariantId == variantId);
+            t.Kind == TraitRowKind.Variant && t.RecipeId == recipeId && t.IngredientId == ingredientId && t.VariantId == variantId);
         var recipe = book.Recipes.FirstOrDefault(r => r.Manifest.Id == recipeId);
         return new VariantReach(odds?.OverallPercent ?? 0, book.Manifest.TargetSupply,
             recipe is not null && recipe.Manifest.Rules.Count > 0);

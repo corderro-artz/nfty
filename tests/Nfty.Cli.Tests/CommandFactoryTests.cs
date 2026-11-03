@@ -218,6 +218,26 @@ public class CommandFactoryTests
         }
     }
 
+    [Fact]
+    public void Stats_lists_the_predicted_color_traits_beside_the_variants()
+    {
+        var tmp = Directory.CreateTempSubdirectory();
+        try
+        {
+            string cookbook = Path.Combine(tmp.FullName, "VaporPets.cbk");
+            WriteSelfContainedCookBook(cookbook);
+
+            string output = RunAndCaptureStdout(() =>
+                CommandFactory.Build().Parse(["stats", cookbook]).Invoke(NonThrowingConfig));
+
+            Assert.Matches(@" \w+ Color +\S", output);
+        }
+        finally
+        {
+            tmp.Delete(recursive: true);
+        }
+    }
+
     // --- inspect: a dangling layerOrder entry is named, not crashed on ---
 
     [Fact]

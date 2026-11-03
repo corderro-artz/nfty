@@ -52,6 +52,10 @@ CookBook reports what the weights **predict**. Both group their traits the same 
 trait is in the same place in each; `stats` additionally splits its rows by Recipe, because a Set's
 rarity is collection-wide by definition.
 
+The predicted table carries the [color traits](set-contents.md#color-traits-and-none) too: a `<Layer> Color`
+row per color name a Dynamic or Static layer can roll, with its exact chance from the layer's ranges and weights
+(already scaled by how often the layer is present), and a `None` row for each optional layer.
+
 ```
 nfty inspect ./collection          # what this run produced
 nfty stats   mybook.cbk            # what its weights imply

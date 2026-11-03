@@ -379,7 +379,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
         ColorwayCountText = ColorwayCount(ing.Manifest);
 
         var traits = RarityCalculator.Compute(book).Traits
-            .Where(t => t.RecipeId == recipe.Manifest.Id && t.IngredientId == ing.Manifest.Id)
+            .Where(t => t.Kind == TraitRowKind.Variant && t.RecipeId == recipe.Manifest.Id && t.IngredientId == ing.Manifest.Id)
             .ToDictionary(t => t.VariantId, StringComparer.Ordinal);
 
         _variants = ing.Manifest.Variants.Select(v =>

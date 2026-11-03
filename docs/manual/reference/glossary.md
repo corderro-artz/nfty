@@ -24,7 +24,7 @@ CookBook, Recipe, Ingredient, Variant, Set and Kitchen — are explained as a st
 **Color trait**
 :   `"<Layer> Color"`, a published trait naming the color a Dynamic or Static layer rolled -- `Red`,
     `Pale Mint`, `Gray` -- so assets that differ only in hue differ on a marketplace. See
-    [Color traits and None](set-contents.md#color-traits-and-none).
+    [Color traits and None](set-contents.md#color-traits-and-none). `stats` predicts their odds from the CookBook.
 
 **Colorways**
 :   The band of colors a layer can take, shown on the Ingredient panel.

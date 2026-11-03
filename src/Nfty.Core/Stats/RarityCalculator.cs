@@ -1,4 +1,7 @@
 using Nfty.Core.Formats;
+using Nfty.Core.Imaging;
+using Nfty.Core.Model;
+using Nfty.Core.Output;
 
 namespace Nfty.Core.Stats;
 
@@ -7,6 +10,19 @@ namespace Nfty.Core.Stats;
 /// <param name="RecipeName">Its display name.</param>
 /// <param name="Percent">Its share of mints.</param>
 public record RecipeOdds(string RecipeId, string RecipeName, double Percent);
+
+/// <summary>What a <see cref="TraitOdds"/> row describes.</summary>
+public enum TraitRowKind
+{
+    /// <summary>One of a layer's variants.</summary>
+    Variant,
+
+    /// <summary>A named color of a Dynamic or Static layer (<c>"{Layer} Color"</c>).</summary>
+    Color,
+
+    /// <summary>The layer being left out (<c>MetadataTraits.Absent</c>).</summary>
+    Absent,
+}
 
 /// <summary>One variant's odds, both within its recipe and across the whole collection.</summary>
 /// <param name="RecipeId">The owning recipe's id.</param>
@@ -17,11 +33,16 @@ public record RecipeOdds(string RecipeId, string RecipeName, double Percent);
 /// <param name="VariantName">The variant's name.</param>
 /// <param name="WithinRecipePercent">Share among that recipe's mints.</param>
 /// <param name="OverallPercent">Share of the whole collection — the recipe's own share folded in.</param>
+/// <param name="Kind">Whether the row is a variant, a color name or the layer being absent. For a
+/// color row <paramref name="IngredientName"/> is the published trait type (<c>Body Color</c>) and
+/// the variant id and name are both the color name; for an absent row both are <c>None</c>. Anything
+/// keyed by a real variant id must filter on <see cref="TraitRowKind.Variant"/>.</param>
 public record TraitOdds(
     string RecipeId, string RecipeName,
     string IngredientId, string IngredientName,
     string VariantId, string VariantName,
-    double WithinRecipePercent, double OverallPercent);
+    double WithinRecipePercent, double OverallPercent,
+    TraitRowKind Kind = TraitRowKind.Variant);
 
 /// <summary>The odds a cookbook's weights imply, before anything is generated.</summary>
 /// <param name="Recipes">Per-recipe shares.</param>
@@ -81,6 +102,28 @@ public static class RarityCalculator
                     traits.Add(new TraitOdds(r.Manifest.Id, r.Manifest.Name,
                         ing.Manifest.Id, ing.Manifest.Name, v.Id, v.Name, within, overall));
                 }
+
+                // The "{Layer} Color" trait the cook publishes right after the layer's own: its shares
+                // are ColorName's exact chances, scaled by presence like the variants above.
+                if (ing.Manifest.Kind is LayerKind.Dynamic or LayerKind.Static && ing.Manifest.Colorization is { } colorization)
+                    foreach (var (colorName, share) in ColorName.Shares(colorization))
+                    {
+                        double within = share * 100 * presentShare;
+                        traits.Add(new TraitOdds(r.Manifest.Id, r.Manifest.Name,
+                            ing.Manifest.Id, ColorName.TraitTypeOf(ing.Manifest.Name), colorName, colorName,
+                            within, recipePct / 100 * within, TraitRowKind.Color));
+                    }
+            }
+
+            // Optional layers the roll can leave out publish MetadataTraits.Absent under the layer's own
+            // trait type, after every present trait, exactly as the cook orders them.
+            foreach (var layerId in r.Manifest.LayerOrder)
+            {
+                double absentPct = Math.Clamp(r.Manifest.AbsentPercentOf(layerId), 0, 100);
+                if (absentPct <= 0 || !ingById.TryGetValue(layerId, out var ing)) continue;
+                traits.Add(new TraitOdds(r.Manifest.Id, r.Manifest.Name,
+                    ing.Manifest.Id, ing.Manifest.Name, MetadataTraits.Absent, MetadataTraits.Absent,
+                    absentPct, recipePct / 100 * absentPct, TraitRowKind.Absent));
             }
         }
 
