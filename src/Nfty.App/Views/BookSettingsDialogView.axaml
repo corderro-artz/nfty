@@ -187,7 +187,7 @@
                        ToolTip.Tip="{Binding FooterNote}" />
           </StackPanel>
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-            <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="tbtn ghost" />
+            <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="tbtn" />
             <Button Command="{Binding SaveCommand}" Classes="accent">
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <Path Classes="ico sm" Data="{StaticResource IconSave}" />
