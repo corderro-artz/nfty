@@ -25,6 +25,9 @@
   <!-- landing.html: the arrow trailing the "cooking metaphor" link (explorer.html reuses it as cook_go) -->
   <StreamGeometry x:Key="IconArrowRight">M5 12h13M12 6l6 6-6 6</StreamGeometry>
 
+  <!-- A still of the 3D view: the frame as the camera sees it, saved as a picture. Not IconSave (the art itself). -->
+  <StreamGeometry x:Key="IconCamera">M3 9a2 2 0 0 1 2-2h2.5l1.5-3h6l1.5 3H19a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM15.5 13.5a3.5 3.5 0 1 1-7 0a3.5 3.5 0 1 1 7 0z</StreamGeometry>
+
   <!-- wizard-*.html: the tick on the accent Create button -->
   <StreamGeometry x:Key="IconCheck">M5 12.5l4.5 4.5L19 7.5</StreamGeometry>
 
@@ -40,6 +43,9 @@
   <StreamGeometry x:Key="IconCircle">M19.5 12a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0z</StreamGeometry>
 
   <StreamGeometry x:Key="IconClose">M7 7l10 10M17 7 7 17</StreamGeometry>
+
+  <!-- Copy to the clipboard: two sheets, the copy in front of the original. Not IconLink (a reference, nothing duplicated). -->
+  <StreamGeometry x:Key="IconCopy">M10 9h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zM5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1</StreamGeometry>
 
   <!-- The one face's single pip, alone, so it can be stroked in the accent over IconDie1's body. Same 24-unit box and same centre as every other pip, so the two drawings register exactly. -->
   <StreamGeometry x:Key="IconDie1Pip">M12.8 12a0.8 0.8 0 1 1 -1.6 0 a0.8 0.8 0 0 1 1.6 0z</StreamGeometry>
@@ -215,21 +221,21 @@
   <StreamGeometry x:Key="IconKeyUp">M12 18V7M7 12l5-5 5 5</StreamGeometry>
 
   <!-- The lower thumb button (mouse 4, back), a tab on the left flank of IconMouse, filled in the accent over the body. -->
-  <StreamGeometry x:Key="IconMouseBackFill">M4.5 13h1.5v4.5h-1.5z</StreamGeometry>
+  <StreamGeometry x:Key="IconMouseBackFill">M3 13a1 1 0 0 1 1 1v2.5a1 1 0 0 1-2 0V14a1 1 0 0 1 1-1z</StreamGeometry>
 
   <!-- The upper thumb button (mouse 5, forward), a tab on the left flank of IconMouse, filled in the accent over the body. -->
-  <StreamGeometry x:Key="IconMouseForwardFill">M4.5 8h1.5v3.5h-1.5z</StreamGeometry>
+  <StreamGeometry x:Key="IconMouseForwardFill">M3 7.5a1 1 0 0 1 1 1V11a1 1 0 0 1-2 0V8.5a1 1 0 0 1 1-1z</StreamGeometry>
 
   <!-- The left button of IconMouse, drawn alone so it can be filled in the accent over the body. -->
-  <StreamGeometry x:Key="IconMouseLeftFill">M12 2a6 6 0 0 0-6 6v3h6z</StreamGeometry>
+  <StreamGeometry x:Key="IconMouseLeftFill">M7.75 9.25V8a4.25 4.25 0 0 1 2.5-3.873V9.25z</StreamGeometry>
 
   <!-- The wheel of IconMouse, drawn alone so it can be filled in the accent over the body (a click on the wheel, not a scroll). -->
-  <StreamGeometry x:Key="IconMouseMiddleFill">M10.5 4.5h3v5h-3z</StreamGeometry>
+  <StreamGeometry x:Key="IconMouseMiddleFill">M12 4.5a1.5 1.5 0 0 1 1.5 1.5v2a1.5 1.5 0 0 1-3 0V6a1.5 1.5 0 0 1 1.5-1.5z</StreamGeometry>
 
   <!-- The right button of IconMouse, drawn alone so it can be filled in the accent over the body. -->
-  <StreamGeometry x:Key="IconMouseRightFill">M12 2a6 6 0 0 1 6 6v3h-6z</StreamGeometry>
+  <StreamGeometry x:Key="IconMouseRightFill">M16.25 9.25V8a4.25 4.25 0 0 0-2.5-3.873V9.25z</StreamGeometry>
 
-  <!-- A mouse seen from above, BODY ONLY: the two button seams. Every mouse-* fill glyph registers over it exactly (same 24-unit box), stroked and filled in the accent as a second Path, because a Path.ico is one path with one brush. -->
+  <!-- A mouse seen from above, BODY ONLY: the two button seams. Every mouse-* fill glyph registers over it exactly (same 24-unit box), filled (never stroked) in the accent as a second Path, inset from these lines, because a Path.ico is one path with one brush. -->
   <StreamGeometry x:Key="IconMouse">M12 2a6 6 0 0 1 6 6v8a6 6 0 0 1-12 0V8a6 6 0 0 1 6-6zM6 11h12M12 2v9</StreamGeometry>
 
   <!-- The scroll wheel rolled down toward the user: the roller over one down chevron. -->

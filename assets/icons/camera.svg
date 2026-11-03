@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <title>IconCamera</title>
+  <desc>A still of the 3D view: the frame as the camera sees it, saved as a picture. Not IconSave (the art itself).</desc>
+  <path d="M3 9a2 2 0 0 1 2-2h2.5l1.5-3h6l1.5 3H19a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM15.5 13.5a3.5 3.5 0 1 1-7 0a3.5 3.5 0 1 1 7 0z"/>
+</svg>

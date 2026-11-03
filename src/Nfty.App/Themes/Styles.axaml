@@ -727,9 +727,12 @@
   </Style>
   <Style Selector="Border.keycap.sm TextBlock"><Setter Property="FontSize" Value="10" /></Style>
   <Style Selector="Border.keycap Path.ico.keyink"><Setter Property="Stroke" Value="{DynamicResource FgBrush}" /></Style>
-  <!-- The highlighted mouse button: the fill glyph, stroked AND filled in the accent over the body. -->
+  <!-- The highlighted mouse button: the fill glyph, FILLED (never stroked) in the accent inside the
+       body. The glyphs are drawn inset from the body's outline and seams; a 2-unit stroke on them
+       spilled over both and squared the seam off - the "blocky" red. -->
   <Style Selector="Border.keycap Path.ico.keyfill">
-    <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
+    <Setter Property="Stroke" Value="{x:Null}" />
+    <Setter Property="StrokeThickness" Value="0" />
     <Setter Property="Fill" Value="{DynamicResource AccentTextBrush}" />
   </Style>
   <Style Selector="TextBlock.keyjoin">
@@ -1557,6 +1560,7 @@
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
   <Style Selector="Border.idchip">
+
     <Setter Property="Background" Value="{DynamicResource TileBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
     <Setter Property="BorderThickness" Value="1" />
@@ -4647,5 +4651,84 @@
   </Style>
   <Style Selector="Button.accent.quiet:disabled Path.ico">
     <Setter Property="Stroke" Value="{DynamicResource FgBrush}" />
+  </Style>
+  <!-- The viewer rail's two cards (facts, export): a tile-ground panel with a hairline, the same
+       object as a pane's card. The fact rows are separated by hairlines, each drawn on the row's TOP
+       edge and skipped on the first, so the card's own border never doubles up. -->
+  <Style Selector="Border.factcard">
+    <Setter Property="Background" Value="{DynamicResource TileBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="Padding" Value="10,0" />
+  </Style>
+  <Style Selector="Border.factcard.act">
+    <Setter Property="Padding" Value="6" />
+  </Style>
+  <Style Selector="Border.factrow">
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="Padding" Value="0,3" />
+  </Style>
+  <Style Selector="ItemsControl.facts > ContentPresenter:nth-child(1) > Border.factrow">
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <!-- Why export is off, on the EXPORT heading's own line: warning ink, right-aligned. -->
+  <Style Selector="TextBlock.sealnote">
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Right" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- The viewer's control tray: the seg vocabulary at one height (28) shared with its square icon
+       buttons (ttool.bar), so a strip of trays and buttons is one row of equal boxes - mixing the 30px
+       tool buttons, 32px cell buttons and 22px tiny trays is what made the old footer read as
+       thrown about. -->
+  <Style Selector="Border.seg.bar">
+    <Setter Property="Padding" Value="2" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.seg-b.bar">
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Padding" Value="8,3" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+  </Style>
+  <!-- IBM Plex Mono's own line box is far taller than its em: stated, so the tray is 26 not 38. -->
+  <Style Selector="Button.seg-b.bar TextBlock">
+    <Setter Property="LineHeight" Value="16" />
+  </Style>
+  <Style Selector="Button.seg-b.on Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource OnAccentBrush}" />
+  </Style>
+  <Style Selector="Button.ttool.bar">
+    <Setter Property="Width" Value="28" />
+    <Setter Property="Height" Value="28" />
+  </Style>
+  <!-- "2D" / "3D": which pane a footer group governs, in the idchip shape. -->
+  <Style Selector="Border.idchip.vtag">
+    <Setter Property="Padding" Value="5,2" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- In the rail's export card the trays share a 236px line with two square buttons: a narrower
+       segment, same height. -->
+  <Style Selector="Border.factcard.act Button.seg-b.bar">
+    <Setter Property="Padding" Value="6,3" />
+  </Style>
+  <!-- The cook dialog's seed die: the recipe card's die, sized to stand beside a 32px form field
+       and carrying a resting hairline, so it reads as the field's button rather than a loose glyph. -->
+  <Style Selector="Button.sampleroll.seeddie">
+    <Setter Property="Width" Value="32" />
+    <Setter Property="Height" Value="32" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+  </Style>
+  <Style Selector="SelectableTextBlock.factval.wide">
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="LineHeight" Value="14" />
+    <Setter Property="TextWrapping" Value="NoWrap" />
+    <Setter Property="Margin" Value="0,2,0,0" />
   </Style>
 </Styles>

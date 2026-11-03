@@ -84,29 +84,29 @@ public class ViewerWindowTests
         // A 2D-only subject writes the 2D entry and leaves the 3D one alone.
         host.Open(new ViewerViewTests.TrackedSubject("flat", art, null));
         var flat = windows[0];
-        flat.Width = 777; flat.Height = 555;
+        flat.Width = 1001; flat.Height = 577;
         Dispatcher.UIThread.RunJobs();
         flat.Close();
-        Assert.Equal(777, state.Current.TwoD.Width);
-        Assert.Equal(555, state.Current.TwoD.Height);
+        Assert.Equal(1001, state.Current.TwoD.Width);
+        Assert.Equal(577, state.Current.TwoD.Height);
         Assert.Equal(ViewerWindowState.DefaultThreeD, state.Current.ThreeD);
 
         // A subject with a model writes the 3D entry.
         host.Open(new ViewerViewTests.TrackedSubject("solid", art, ViewerViewTests.Model()));
         var solid = windows[1];
-        solid.Width = 1000; solid.Height = 640;
+        solid.Width = 1100; solid.Height = 640;
         Dispatcher.UIThread.RunJobs();
         solid.Close();
-        Assert.Equal(1000, state.Current.ThreeD.Width);
+        Assert.Equal(1100, state.Current.ThreeD.Width);
         Assert.Equal(640, state.Current.ThreeD.Height);
-        Assert.Equal(777, state.Current.TwoD.Width);
+        Assert.Equal(1001, state.Current.TwoD.Width);
     }
 
     [AvaloniaFact]
     public void The_next_viewer_opens_at_the_remembered_size_for_its_layout()
     {
         var state = MemoryState();
-        state.Save(state.Current with { TwoD = new ViewerWindowEntry(820, 610, null, null, false) });
+        state.Save(state.Current with { TwoD = new ViewerWindowEntry(1020, 610, null, null, false) });
         var host = Host(state, () => null);
         ViewerWindow? opened = null;
         host.Opened += w => opened = w;
@@ -114,7 +114,7 @@ public class ViewerWindowTests
         host.Open(new ViewerViewTests.TrackedSubject("flat", art, null));
         try
         {
-            Assert.Equal(820, opened!.Width);
+            Assert.Equal(1020, opened!.Width);
             Assert.Equal(610, opened.Height);
         }
         finally { opened?.Close(); }
@@ -236,7 +236,7 @@ public class ViewerWindowTests
         {
             var first = new ViewerWindowStateService(StateStore.At(dir.FullName));
             var wanted = new ViewerWindowState(
-                new ViewerWindowEntry(910, 705, 40, 50, false),
+                new ViewerWindowEntry(1010, 705, 40, 50, false),
                 new ViewerWindowEntry(1300, 800, null, null, true),
                 nameof(ViewerBackdrop.Custom), "#112233");
             first.Save(wanted);

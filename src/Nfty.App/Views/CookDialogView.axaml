@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Nfty.App.ViewModels"
+             xmlns:conv="using:Nfty.App.Converters"
              x:Class="Nfty.App.Views.CookDialogView"
              x:DataType="vm:CookDialogViewModel">
   <UserControl.Styles>
@@ -55,13 +56,27 @@
                    Set moves nothing. -->
               <Grid Grid.Row="0" Grid.Column="1" ColumnDefinitions="190,*" ColumnSpacing="10">
                 <NumericUpDown Grid.Column="0" Value="{Binding Count}" Minimum="1"
-                               Width="140" HorizontalAlignment="Left" />
+                               HorizontalAlignment="Stretch" />
                 <TextBlock Grid.Column="1" x:Name="TotalText" Classes="m-sub" VerticalAlignment="Center" Margin="0"
                            Text="{Binding ResultingTotalText}" />
               </Grid>
               <TextBlock Grid.Row="1" Grid.Column="0" Text="Seed" VerticalAlignment="Center" Classes="muted" />
-              <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Seed}"
-                       ToolTip.Tip="Any word. The same book and the same seed always cook the same collection." />
+              <!-- The seed: type any word, or roll a fresh one with the die. Same 190 column as Count and
+                   Recipe above and below it, so the three fields share one edge; the die sits in the
+                   gutter the other rows give their notes. What a seed means is the footer's line already. -->
+              <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="190,Auto,*" ColumnSpacing="8">
+                <TextBox Grid.Column="0" x:Name="SeedBox" FontFamily="{DynamicResource MonoFontFamily}" VerticalAlignment="Center" Text="{Binding Seed}"
+                         ToolTip.Tip="Any word. The same book and the same seed always cook the same collection." />
+                <Button Grid.Column="1" x:Name="SeedDie" Classes="sampleroll seeddie" Command="{Binding RerollSeedCommand}"
+                        ToolTip.Tip="Roll a new random seed. Or type your own in the box.">
+                  <Panel Classes="dieroll">
+                    <Path Classes="ico ti"
+                          Data="{Binding SeedDieFace, Converter={x:Static conv:DieFaceConverter.Instance}}" />
+                    <Path Classes="ico ti pip1"
+                          Data="{Binding SeedDieFace, Converter={x:Static conv:DieFaceConverter.AccentPip}}" />
+                  </Panel>
+                </Button>
+              </Grid>
               <TextBlock Grid.Row="2" Grid.Column="0" Text="Recipe" VerticalAlignment="Center" Classes="muted" />
               <!-- The reason sits OUTSIDE the combo (a disabled control is dimmed to 0.38) and shares its
                    row, so it costs no height; the slot is always laid out and only the ink toggles. -->

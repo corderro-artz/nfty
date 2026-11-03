@@ -3,5 +3,5 @@
      stroke-linecap="round" stroke-linejoin="round">
   <title>IconMouseBackFill</title>
   <desc>The lower thumb button (mouse 4, back), a tab on the left flank of IconMouse, filled in the accent over the body.</desc>
-  <path d="M4.5 13h1.5v4.5h-1.5z"/>
+  <path d="M3 13a1 1 0 0 1 1 1v2.5a1 1 0 0 1-2 0V14a1 1 0 0 1 1-1z"/>
 </svg>

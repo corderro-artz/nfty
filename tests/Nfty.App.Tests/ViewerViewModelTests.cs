@@ -71,7 +71,7 @@ public class ViewerViewModelTests
         Assert.False(vm.CanExport);
         Assert.False(vm.SaveImageCommand.CanExecute(1));
         Assert.False(vm.CopyCommand.CanExecute(null));
-        Assert.Equal("View-only: this file was sealed.", vm.ExportNote);
+        Assert.Equal("sealed · view-only", vm.ExportNote);
         // Even invoked around CanExecute, nothing is written.
         await vm.SaveImageCommand.ExecuteAsync(1);
         await vm.CopyCommand.ExecuteAsync(null);

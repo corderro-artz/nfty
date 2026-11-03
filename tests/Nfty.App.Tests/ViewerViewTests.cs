@@ -125,7 +125,7 @@ public class ViewerViewTests
 
             // Position as well as pixels: the two star columns beside it split 827px into 413.5 each,
             // and layout rounding once pushed the rail a pixel right in Both only.
-            Assert.All(widths, w => Assert.Equal(240, w));
+            Assert.All(widths, w => Assert.Equal(264, w));
             Assert.Single(lefts.Distinct());
             Assert.Equal(frames[0], frames[1]);
             Assert.Equal(frames[0], frames[2]);
@@ -259,7 +259,7 @@ Assert.True(hit is not null && (ReferenceEquals(hit, b) || b.IsVisualAncestorOf(
                 t => t.Text == vm.ExportNote && t.Text!.Length > 0);
             var save = view.GetVisualDescendants().OfType<Button>().First(b => Equals(b.Content, "2x"));
             Assert.False(save.IsEffectivelyEnabled);
-            var copy = view.GetVisualDescendants().OfType<Button>().First(b => Equals(b.Content, "Copy"));
+            var copy = view.GetVisualDescendants().OfType<Button>().First(b => b.Name == "CopyImageButton");
             Assert.False(copy.IsEffectivelyEnabled);
         }
         finally { window.Close(); vm.Dispose(); }

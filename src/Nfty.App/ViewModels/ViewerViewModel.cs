@@ -207,7 +207,7 @@ public sealed partial class ViewerViewModel : ViewModelBase, IDisposable
     public bool CanExport => Subject.AllowExport;
 
     /// <summary>Says why export is blocked; empty when it is not.</summary>
-    public string ExportNote => CanExport ? "" : "View-only: this file was sealed.";
+    public string ExportNote => CanExport ? "" : "sealed · view-only";
 
     /// <summary>Saves the art as a PNG enlarged by a whole-pixel factor (1, 2, 4 or 8).</summary>
     /// <param name="factor">The enlargement factor.</param>
@@ -226,6 +226,32 @@ public sealed partial class ViewerViewModel : ViewModelBase, IDisposable
         {
             await _dialogs.ShowErrorAsync("Could not save image", ex.Message);
         }
+    }
+
+    /// <summary>The enlargement Save image writes at: 1, 2, 4 or 8.</summary>
+    [ObservableProperty]
+    private int _imageScale = 1;
+
+    /// <summary>Picks the enlargement for Save image.</summary>
+    /// <param name="factor">1, 2, 4 or 8.</param>
+    [RelayCommand]
+    private void SetImageScale(int factor) => ImageScale = factor;
+
+    /// <summary>Whether 1x is the chosen enlargement.</summary>
+    public bool IsScale1 => ImageScale == 1;
+    /// <summary>Whether 2x is the chosen enlargement.</summary>
+    public bool IsScale2 => ImageScale == 2;
+    /// <summary>Whether 4x is the chosen enlargement.</summary>
+    public bool IsScale4 => ImageScale == 4;
+    /// <summary>Whether 8x is the chosen enlargement.</summary>
+    public bool IsScale8 => ImageScale == 8;
+
+    partial void OnImageScaleChanged(int value)
+    {
+        OnPropertyChanged(nameof(IsScale1));
+        OnPropertyChanged(nameof(IsScale2));
+        OnPropertyChanged(nameof(IsScale4));
+        OnPropertyChanged(nameof(IsScale8));
     }
 
     /// <summary>Gives the current 3D frame as PNG bytes, or null when nothing is drawn. The 3D view
@@ -335,7 +361,7 @@ public sealed partial class ViewerViewModel : ViewModelBase, IDisposable
     private async Task CopyFacts()
     {
         if (!CanCopyFacts) return;     // RelayCommand.Execute does not consult CanExecute
-        await _clipboard.SetTextAsync(ViewerFact.AsText(Facts));
+        await _clipboard.SetTextAsync(ViewerFact.AsText(Subject.Title, Facts));
     }
 
     /// <summary>Whether Copy info can do anything: there is something to copy and the subject may leave.</summary>

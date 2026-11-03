@@ -247,7 +247,7 @@ public class ViewerChromeTests
         try
         {
             string[] Values() => view.GetVisualDescendants().OfType<SelectableTextBlock>()
-                .Where(t => t.Classes.Contains("factval")).Select(t => t.Text!).ToArray();
+                .Where(t => t.Classes.Contains("factval") && t.IsVisible).Select(t => t.Text!).ToArray();
             Assert.Equal(new[] { "one" }, Values());
 
             source.Facts = new ViewerFact[] { new("FAKE", "two"), new("MORE", "three") };
@@ -295,7 +295,15 @@ public class ViewerChromeTests
         Assert.True(vm.CopyFactsCommand.CanExecute(null));
         await vm.CopyFactsCommand.ExecuteAsync(null);
         Assert.NotNull(clip.Text);
-        Assert.All(subject.Facts, f => Assert.Contains($"{f.Label}: {f.Value}", clip.Text));
+        // Ready to paste: the name, a rule, then aligned "Label:  value" lines.
+        var lines = clip.Text!.Split(Environment.NewLine);
+        Assert.Equal("x", lines[0]);
+        Assert.Equal("-", lines[1]);
+        Assert.Equal(subject.Facts.Count + 2, lines.Length);
+        Assert.All(subject.Facts, f => Assert.Contains(lines, l =>
+            l.StartsWith(f.Label, StringComparison.OrdinalIgnoreCase) && l.EndsWith(f.Value, StringComparison.Ordinal)));
+        // Values start in one column.
+        Assert.Single(subject.Facts.Zip(lines.Skip(2), (f, l) => l.Length - f.Value.Length).Distinct());
         vm.Dispose();
     }
 

@@ -20,7 +20,7 @@
     The pop-out viewer: ONE subject, in 2D, in 3D, or both side by side. Nothing here edits anything.
 
     Three bands, as the Rise page is built: a 41px header (title, live badge, layout), a body of
-    2D pane | 3D pane | a 240px info rail, and a footer of controls that wraps by group
+    2D pane | 3D pane | a 264px info rail, and a footer of controls that wraps by group
     (StripPanel) rather than overrunning at the smallest window.
 
     THE LAYOUT SWITCH RESERVES SPACE. The two panes share one fixed pair of columns; the layout
@@ -58,7 +58,7 @@
          the right: the rail sat at x=828 in Both and x=827 in 2D or 3D, a pixel off the window's edge
          in one of the three. The panes share a grid of their own, so whatever they round to cannot
          reach the rail. -->
-    <Grid Grid.Row="1" ColumnDefinitions="*,240">
+    <Grid Grid.Row="1" ColumnDefinitions="*,264">
     <Grid Grid.Column="0" x:Name="PaneGrid" ColumnDefinitions="*,*" IsVisible="{Binding IsNotGallery}">
 
       <!-- 2D PANE: the same canvas host the editor and the Rise page draw on. -->
@@ -127,75 +127,154 @@
       </ListBox.ItemTemplate>
     </ListBox>
 
-      <!-- INFO RAIL: fixed width, so a layout change cannot move a thing in it. -->
+      <!-- INFO RAIL: fixed width, so a layout change cannot move a thing in it. Two cards: what the
+           subject IS (the facts, each with the glyph the rest of the app gives that thing), and
+           what can be TAKEN from it (export), pinned to the foot so a long fact list scrolls inside
+           its own card rather than pushing the actions off the window. -->
       <Border Grid.Column="1" BorderBrush="{DynamicResource LineBrush}" BorderThickness="1,0,0,0">
-        <Grid RowDefinitions="Auto,*,Auto" Margin="16,14">
+        <Grid RowDefinitions="Auto,*,Auto" Margin="14,10">
           <!-- The rail's head: the name of the panel left, its one action right. The button is always
                laid out and dimmed (a sealed subject, or nothing to say) rather than appearing. -->
-          <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,10" MinHeight="26">
-            <TextBlock Grid.Column="0" Classes="plabel" Text="INFO" VerticalAlignment="Center" Margin="0" />
-            <Button Grid.Column="1" Classes="tbtn cellbtn" Content="Copy info" Command="{Binding CopyFactsCommand}"
+          <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="7" Margin="0,0,0,6" MinHeight="26">
+            <Path Grid.Column="0" Classes="ico xs" Data="{StaticResource IconTypeVariant}" />
+            <TextBlock Grid.Column="1" Classes="plabel" Text="INFO" VerticalAlignment="Center" Margin="0" />
+            <Button Grid.Column="2" Classes="tbtn cellbtn" Content="Copy info" Command="{Binding CopyFactsCommand}"
                     ToolTip.Tip="Copy these lines as text." />
           </Grid>
-          <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-            <ItemsControl ItemsSource="{Binding Facts}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vw:ViewerFact">
-                  <!-- Label and value side by side in two fixed columns (every row states the same
-                       pixels, so the values line up whatever a label says): a stacked pair cost a
-                       line per fact and put a scrollbar on the rail at the smallest window. -->
-                  <Grid ColumnDefinitions="76,*" ColumnSpacing="8" Margin="0,0,0,7">
-                    <TextBlock Grid.Column="0" Classes="factlbl" Text="{Binding Label}"
-                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Label}" />
-                    <SelectableTextBlock Grid.Column="1" Classes="factval" Text="{Binding Value}" />
-                  </Grid>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </ScrollViewer>
+          <Border Grid.Row="1" Classes="factcard" VerticalAlignment="Top" IsVisible="{Binding HasFacts}">
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+              <ItemsControl Classes="facts" ItemsSource="{Binding Facts}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vw:ViewerFact">
+                    <!-- Glyph, label and value in three fixed columns (every row states the same
+                         pixels, so the values line up whatever a label says): a stacked pair cost a
+                         line per fact and put a scrollbar on the rail at the smallest window. -->
+                    <Border Classes="factrow">
+                      <Grid ColumnDefinitions="14,56,*" RowDefinitions="Auto,Auto" ColumnSpacing="7">
+                        <Path Grid.Column="0" Classes="ico xs" VerticalAlignment="Top" Margin="0,1,0,0"
+                              Data="{Binding Label, Converter={x:Static appconv:FactIconConverter.Instance}}" />
+                        <TextBlock Grid.Column="1" Classes="factlbl" Text="{Binding Label}"
+                                   TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Label}" />
+                        <SelectableTextBlock Grid.Column="2" Classes="factval" Text="{Binding Value}"
+                                             IsVisible="{Binding !IsWide}" />
+                        <!-- A hash runs under its label across the card, split at its half. -->
+                        <SelectableTextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Classes="factval wide"
+                                             Text="{Binding WideText}" IsVisible="{Binding IsWide}" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Border>
           <!-- A subject with nothing to say says so, instead of leaving a blank rail that reads as a
                panel that failed to load. -->
           <TextBlock Grid.Row="1" Classes="readtxt" TextWrapping="Wrap" VerticalAlignment="Top"
                      IsVisible="{Binding !HasFacts}" Text="Nothing to report for this subject." />
-          <!-- Reserved: a sealed subject says why export is off here, and an open one leaves the
-               same height empty. -->
-          <TextBlock Grid.Row="2" Classes="readtxt" VerticalAlignment="Top" Text="{Binding ExportNote}" TextWrapping="Wrap"
-                     MinHeight="32" Margin="0,6,0,0" />
+
+          <!-- EXPORT: everything that takes something out of the subject, in one place. Two rows:
+               the 2D picture (enlargement, save, copy) and the 3D model (format, export, still). The
+               sealed note shares the heading line, so a sealed subject costs no height. -->
+          <StackPanel Grid.Row="2" Spacing="6" Margin="0,10,0,0" IsVisible="{Binding IsNotGallery}">
+            <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="7" MinHeight="16">
+              <Path Grid.Column="0" Classes="ico xs" Data="{StaticResource IconDownload}" />
+              <TextBlock Grid.Column="1" Classes="plabel" Text="EXPORT" VerticalAlignment="Center" Margin="0" />
+              <TextBlock Grid.Column="2" Classes="sealnote" Text="{Binding ExportNote}"
+                         TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding ExportNote}" />
+            </Grid>
+            <Border Classes="factcard act">
+              <StackPanel Spacing="6">
+                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                  <Border Grid.Column="0" Classes="seg bar" HorizontalAlignment="Left" IsEnabled="{Binding CanExport}"
+                          ToolTip.Tip="How many screen pixels each art pixel becomes in the saved PNG.">
+                    <StackPanel Orientation="Horizontal">
+                      <Button Classes="seg-b bar" Content="1x" Classes.on="{Binding IsScale1}" Command="{Binding SetImageScaleCommand}">
+                        <Button.CommandParameter><x:Int32>1</x:Int32></Button.CommandParameter>
+                      </Button>
+                      <Button Classes="seg-b bar" Content="2x" Classes.on="{Binding IsScale2}" Command="{Binding SetImageScaleCommand}">
+                        <Button.CommandParameter><x:Int32>2</x:Int32></Button.CommandParameter>
+                      </Button>
+                      <Button Classes="seg-b bar" Content="4x" Classes.on="{Binding IsScale4}" Command="{Binding SetImageScaleCommand}">
+                        <Button.CommandParameter><x:Int32>4</x:Int32></Button.CommandParameter>
+                      </Button>
+                      <Button Classes="seg-b bar" Content="8x" Classes.on="{Binding IsScale8}" Command="{Binding SetImageScaleCommand}">
+                        <Button.CommandParameter><x:Int32>8</x:Int32></Button.CommandParameter>
+                      </Button>
+                    </StackPanel>
+                  </Border>
+                  <Button Grid.Column="1" x:Name="SaveImageButton" Classes="ttool bar" Command="{Binding SaveImageCommand}"
+                          CommandParameter="{Binding ImageScale}" ToolTip.Tip="Save the picture as a PNG at the chosen size.">
+                    <Path Classes="ico sm" Data="{StaticResource IconSave}" />
+                  </Button>
+                  <Button Grid.Column="2" x:Name="CopyImageButton" Classes="ttool bar" Command="{Binding CopyCommand}"
+                          ToolTip.Tip="Copy the picture to the clipboard.">
+                    <Path Classes="ico sm" Data="{StaticResource IconCopy}" />
+                  </Button>
+                </Grid>
+                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6" IsEnabled="{Binding CanShowThreeD}">
+                  <Border Grid.Column="0" Classes="seg bar" HorizontalAlignment="Left" Opacity="{Binding ExportFormatOpacity}"
+                          ToolTip.Tip="The format an in-memory model is written in. A model that came from a file is copied as it is.">
+                    <StackPanel Orientation="Horizontal">
+                      <Button Classes="seg-b bar" Content="glb" Classes.on="{Binding IsGlb}"
+                              Command="{Binding SetExportFormatCommand}" CommandParameter="{x:Static mdl:ModelFormat.Glb}" />
+                      <Button Classes="seg-b bar" Content="gltf" Classes.on="{Binding IsGltf}"
+                              Command="{Binding SetExportFormatCommand}" CommandParameter="{x:Static mdl:ModelFormat.GltfWithBin}" />
+                      <Button Classes="seg-b bar" Content="inline" Classes.on="{Binding IsGltfEmbedded}"
+                              Command="{Binding SetExportFormatCommand}" CommandParameter="{x:Static mdl:ModelFormat.GltfEmbedded}" />
+                    </StackPanel>
+                  </Border>
+                  <Button Grid.Column="1" Classes="ttool bar" Command="{Binding ExportModelCommand}"
+                          ToolTip.Tip="Export the 3D model as a file.">
+                    <Path Classes="ico sm" Data="{StaticResource IconRise}" />
+                  </Button>
+                  <Button Grid.Column="2" Classes="ttool bar" Command="{Binding SaveStillCommand}"
+                          ToolTip.Tip="Save the 3D frame as a PNG with a clear background.">
+                    <Path Classes="ico sm" Data="{StaticResource IconCamera}" />
+                  </Button>
+                </Grid>
+              </StackPanel>
+            </Border>
+          </StackPanel>
         </Grid>
       </Border>
     </Grid>
 
-    <!-- FOOTER: 2D view controls, then export. Groups wrap, never overrun. -->
+    <!-- FOOTER: how the subject is LOOKED AT, nothing else (taking it out lives in the rail). Four
+         groups in one tray vocabulary, each opening with what it governs - the 2D view, its backdrop,
+         the 3D camera, the turntable - so the strip wraps by idea, never mid-group. -->
     <Border Grid.Row="2" Classes="pane-hrow toolstrip" BorderThickness="0,1,0,0" IsVisible="{Binding IsNotGallery}">
-      <ctl:StripPanel Spacing="14">
-        <StackPanel Orientation="Horizontal" Spacing="6">
-          <Button Classes="ttool" Command="{Binding TwoD.OneToOneCommand}"
-                  ToolTip.Tip="One art pixel per screen pixel.">
-            <TextBlock Text="1:1" FontSize="11.5" />
-          </Button>
-          <Button Classes="zchip" Classes.on="{Binding TwoD.IsZoomed}" Command="{Binding TwoD.FitCommand}"
-                  Content="{Binding TwoD.ZoomText}"
-                  ToolTip.Tip="The zoom. Wheel over the picture to zoom, drag to pan; click to fit." />
-          <Button Classes="ttool" Classes.on="{Binding TwoD.PixelGrid}" Command="{Binding TwoD.TogglePixelGridCommand}"
-                  ToolTip.Tip="Draw a line between the art's own pixels (once they are big enough on screen).">
-            <Path Classes="ico sm" Data="{StaticResource IconGrid}" />
-          </Button>
+      <ctl:StripPanel Spacing="18">
+        <StackPanel Orientation="Horizontal" Spacing="7">
+          <Border Classes="idchip vtag"><TextBlock Classes="ck" Text="2D" /></Border>
+          <Border Classes="seg bar">
+            <StackPanel Orientation="Horizontal">
+              <Button Classes="seg-b bar" Content="1:1" Command="{Binding TwoD.OneToOneCommand}"
+                      ToolTip.Tip="One art pixel per screen pixel." />
+              <Button Classes="seg-b bar" Content="{Binding TwoD.ZoomText}" Classes.on="{Binding TwoD.IsZoomed}"
+                      Command="{Binding TwoD.FitCommand}"
+                      ToolTip.Tip="The zoom. Wheel over the picture to zoom, drag to pan; click to fit." />
+              <Button Classes="seg-b bar" Classes.on="{Binding TwoD.PixelGrid}" Command="{Binding TwoD.TogglePixelGridCommand}"
+                      ToolTip.Tip="Draw a line between the art's own pixels (once they are big enough on screen).">
+                <Path Classes="ico xs" Data="{StaticResource IconGrid}" />
+              </Button>
+            </StackPanel>
+          </Border>
         </StackPanel>
 
-        <StackPanel Orientation="Horizontal" Spacing="8">
+        <StackPanel Orientation="Horizontal" Spacing="7">
           <TextBlock Classes="seglbl" Text="BACKDROP" />
-          <Border Classes="seg tiny" VerticalAlignment="Center">
+          <Border Classes="seg bar">
             <StackPanel Orientation="Horizontal">
-              <Button Classes="seg-b tiny" Content="Checker" Classes.on="{Binding TwoD.IsChecker}"
+              <Button Classes="seg-b bar" Content="Checker" Classes.on="{Binding TwoD.IsChecker}"
                       Command="{Binding TwoD.SetBackdropCommand}"
                       CommandParameter="{x:Static vm:ViewerBackdrop.Checker}" />
-              <Button Classes="seg-b tiny" Content="Light" Classes.on="{Binding TwoD.IsLight}"
+              <Button Classes="seg-b bar" Content="Light" Classes.on="{Binding TwoD.IsLight}"
                       Command="{Binding TwoD.SetBackdropCommand}"
                       CommandParameter="{x:Static vm:ViewerBackdrop.Light}" />
-              <Button Classes="seg-b tiny" Content="Dark" Classes.on="{Binding TwoD.IsDark}"
+              <Button Classes="seg-b bar" Content="Dark" Classes.on="{Binding TwoD.IsDark}"
                       Command="{Binding TwoD.SetBackdropCommand}"
                       CommandParameter="{x:Static vm:ViewerBackdrop.Dark}" />
-              <Button Classes="seg-b tiny" Content="Custom" Classes.on="{Binding TwoD.IsCustom}"
+              <Button Classes="seg-b bar" Content="Custom" Classes.on="{Binding TwoD.IsCustom}"
                       Command="{Binding TwoD.SetBackdropCommand}"
                       CommandParameter="{x:Static vm:ViewerBackdrop.Custom}" />
             </StackPanel>
@@ -208,73 +287,43 @@
                    ToolTip.Tip="The backdrop color, as #RRGGBB." />
         </StackPanel>
 
-        <!-- 3D view controls: the camera presets, the turntable and the outline display. All view
+        <!-- 3D view controls: the camera presets, the outline display and the turntable. All view
              state; none of it reaches an exported model. -->
-        <StackPanel Orientation="Horizontal" Spacing="6" IsEnabled="{Binding CanShowThreeD}">
-          <Button Classes="tbtn cellbtn" Content="Front" Command="{Binding ShowAngleCommand}"
-                  CommandParameter="{x:Static vm:ViewAngle.Front}" />
-          <Button Classes="tbtn cellbtn" Content="Back" Command="{Binding ShowAngleCommand}"
-                  CommandParameter="{x:Static vm:ViewAngle.Back}" />
-          <Button Classes="tbtn cellbtn" Content="Side" Command="{Binding ShowAngleCommand}"
-                  CommandParameter="{x:Static vm:ViewAngle.Side}" />
-          <Button Classes="tbtn cellbtn" Content="Top" Command="{Binding ShowAngleCommand}"
-                  CommandParameter="{x:Static vm:ViewAngle.Top}" />
-          <Border Classes="seg tiny" VerticalAlignment="Center">
-            <Button Classes="seg-b tiny" Content="Edges" Classes.on="{Binding Preview.Wireframe}"
+        <StackPanel Orientation="Horizontal" Spacing="7" IsEnabled="{Binding CanShowThreeD}">
+          <Border Classes="idchip vtag"><TextBlock Classes="ck" Text="3D" /></Border>
+          <Border Classes="seg bar">
+            <StackPanel Orientation="Horizontal">
+              <Button Classes="seg-b bar" Content="Front" Command="{Binding ShowAngleCommand}"
+                      CommandParameter="{x:Static vm:ViewAngle.Front}" />
+              <Button Classes="seg-b bar" Content="Back" Command="{Binding ShowAngleCommand}"
+                      CommandParameter="{x:Static vm:ViewAngle.Back}" />
+              <Button Classes="seg-b bar" Content="Side" Command="{Binding ShowAngleCommand}"
+                      CommandParameter="{x:Static vm:ViewAngle.Side}" />
+              <Button Classes="seg-b bar" Content="Top" Command="{Binding ShowAngleCommand}"
+                      CommandParameter="{x:Static vm:ViewAngle.Top}" />
+            </StackPanel>
+          </Border>
+          <Border Classes="seg bar">
+            <Button Classes="seg-b bar" Content="Edges" Classes.on="{Binding Preview.Wireframe}"
                     Command="{Binding ToggleWireframeCommand}"
                     ToolTip.Tip="Draw the outline of every face over the solid. Only the picture changes; an exported model does not." />
           </Border>
         </StackPanel>
 
-        <StackPanel Orientation="Horizontal" Spacing="8" IsEnabled="{Binding CanShowThreeD}">
-          <Border Classes="seg tiny" VerticalAlignment="Center">
+        <StackPanel Orientation="Horizontal" Spacing="7" IsEnabled="{Binding CanShowThreeD}">
+          <TextBlock Classes="seglbl" Text="SPIN" ToolTip.Tip="The turntable: the camera circles the model." />
+          <Border Classes="seg bar">
             <StackPanel Orientation="Horizontal">
-              <Button Classes="seg-b tiny" Content="Off" Classes.on="{Binding Preview.TurnIsOff}"
+              <Button Classes="seg-b bar" Content="Off" Classes.on="{Binding Preview.TurnIsOff}"
                       Command="{Binding SetTurntableCommand}" CommandParameter="{x:Static vm:TurntableSpeed.Off}" />
-              <Button Classes="seg-b tiny" Content="Slow" Classes.on="{Binding Preview.TurnIsSlow}"
+              <Button Classes="seg-b bar" Content="Slow" Classes.on="{Binding Preview.TurnIsSlow}"
                       Command="{Binding SetTurntableCommand}" CommandParameter="{x:Static vm:TurntableSpeed.Slow}" />
-              <Button Classes="seg-b tiny" Content="Med" Classes.on="{Binding Preview.TurnIsMedium}"
+              <Button Classes="seg-b bar" Content="Med" Classes.on="{Binding Preview.TurnIsMedium}"
                       Command="{Binding SetTurntableCommand}" CommandParameter="{x:Static vm:TurntableSpeed.Medium}" />
-              <Button Classes="seg-b tiny" Content="Fast" Classes.on="{Binding Preview.TurnIsFast}"
+              <Button Classes="seg-b bar" Content="Fast" Classes.on="{Binding Preview.TurnIsFast}"
                       Command="{Binding SetTurntableCommand}" CommandParameter="{x:Static vm:TurntableSpeed.Fast}" />
             </StackPanel>
           </Border>
-        </StackPanel>
-
-        <StackPanel Orientation="Horizontal" Spacing="6" IsEnabled="{Binding CanShowThreeD}">
-          <Button Classes="tbtn cellbtn" Content="Still" Command="{Binding SaveStillCommand}"
-                  ToolTip.Tip="Save the 3D frame as a PNG with a clear background." />
-          <Border Classes="seg tiny" VerticalAlignment="Center" Opacity="{Binding ExportFormatOpacity}"
-                  ToolTip.Tip="The format an in-memory model is written in. A model that came from a file is copied as it is.">
-            <StackPanel Orientation="Horizontal">
-              <Button Classes="seg-b tiny" Content="glb" Classes.on="{Binding IsGlb}"
-                      Command="{Binding SetExportFormatCommand}" CommandParameter="{x:Static mdl:ModelFormat.Glb}" />
-              <Button Classes="seg-b tiny" Content="gltf" Classes.on="{Binding IsGltf}"
-                      Command="{Binding SetExportFormatCommand}" CommandParameter="{x:Static mdl:ModelFormat.GltfWithBin}" />
-              <Button Classes="seg-b tiny" Content="inline" Classes.on="{Binding IsGltfEmbedded}"
-                      Command="{Binding SetExportFormatCommand}" CommandParameter="{x:Static mdl:ModelFormat.GltfEmbedded}" />
-            </StackPanel>
-          </Border>
-          <Button Classes="tbtn cellbtn" Content="Export" Command="{Binding ExportModelCommand}"
-                  ToolTip.Tip="Export the 3D model as a file." />
-        </StackPanel>
-
-        <StackPanel Orientation="Horizontal" Spacing="6">
-          <Path Classes="ico sm" Data="{StaticResource IconSave}" VerticalAlignment="Center" />
-          <TextBlock Classes="seglbl" Text="PNG" />
-          <Button Classes="tbtn cellbtn" Content="1x" Command="{Binding SaveImageCommand}">
-            <Button.CommandParameter><x:Int32>1</x:Int32></Button.CommandParameter>
-          </Button>
-          <Button Classes="tbtn cellbtn" Content="2x" Command="{Binding SaveImageCommand}">
-            <Button.CommandParameter><x:Int32>2</x:Int32></Button.CommandParameter>
-          </Button>
-          <Button Classes="tbtn cellbtn" Content="4x" Command="{Binding SaveImageCommand}">
-            <Button.CommandParameter><x:Int32>4</x:Int32></Button.CommandParameter>
-          </Button>
-          <Button Classes="tbtn cellbtn" Content="8x" Command="{Binding SaveImageCommand}">
-            <Button.CommandParameter><x:Int32>8</x:Int32></Button.CommandParameter>
-          </Button>
-          <Button Classes="tbtn cellbtn" Content="Copy" Command="{Binding CopyCommand}" />
         </StackPanel>
       </ctl:StripPanel>
     </Border>

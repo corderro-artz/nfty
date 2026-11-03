@@ -3,5 +3,5 @@
      stroke-linecap="round" stroke-linejoin="round">
   <title>IconMouseLeftFill</title>
   <desc>The left button of IconMouse, drawn alone so it can be filled in the accent over the body.</desc>
-  <path d="M12 2a6 6 0 0 0-6 6v3h6z"/>
+  <path d="M7.75 9.25V8a4.25 4.25 0 0 1 2.5-3.873V9.25z"/>
 </svg>

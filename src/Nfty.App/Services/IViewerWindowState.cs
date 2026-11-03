@@ -28,21 +28,22 @@ public sealed record ViewerWindowState(
     string BackdropColor = "#808080",
     bool Wireframe = false)
 {
-    /// <summary>The 2D-only window size nobody has changed.</summary>
-    public static readonly ViewerWindowEntry DefaultTwoD = new(900, 700, null, null, false);
+    /// <summary>The 2D-only window size nobody has changed: 16:9, like every viewer size.</summary>
+    public static readonly ViewerWindowEntry DefaultTwoD = new(1024, 576, null, null, false);
 
-    /// <summary>The side-by-side window size nobody has changed.</summary>
-    public static readonly ViewerWindowEntry DefaultThreeD = new(1280, 760, null, null, false);
+    /// <summary>The side-by-side window size nobody has changed: the main window's own 1280 x 720.</summary>
+    public static readonly ViewerWindowEntry DefaultThreeD = new(1280, 720, null, null, false);
 
-    /// <summary>The narrowest a viewer window may be, in device-independent pixels. The window is the
-    /// shared frame now: the 640 the content needs at the shell's scale (a 533px-wide area), the
-    /// frame's 12px shadow gutter and 1px border each side, and 54px more so the titlebar keeps room
-    /// for the subject's name beside the badge, the layout switch and the three caption buttons.</summary>
-    public const double MinWidth = 720;
+    /// <summary>The narrowest a viewer window may be, in device-independent pixels. Every size the
+    /// viewer is GIVEN (both defaults and this floor) is 16:9, the shape of the main window's 1280 x 720
+    /// minimum; the viewer is a streamlined window, so its floor sits below the shell's, at 960 x 540.
+    /// The content inside the shared frame (24 gutter + 2 border, 36 titlebar, at the shell's 1.2 scale)
+    /// is then 778 x 392, which the footer's two wrapped lines and the rail's two cards fit unscrolled
+    /// (<c>The_viewer_fits_the_smallest_window</c>).</summary>
+    public const double MinWidth = 960;
 
-    /// <summary>The shortest a viewer window may be: the 480 the content needs (a 400px-tall area)
-    /// plus the 36px titlebar at the shell's scale, the gutter and the border.</summary>
-    public const double MinHeight = 550;
+    /// <summary>The shortest a viewer window may be: 960 x 540 is 16:9.</summary>
+    public const double MinHeight = 540;
 
     /// <summary>Both entries at their defaults.</summary>
     public static ViewerWindowState Default => new(DefaultTwoD, DefaultThreeD);

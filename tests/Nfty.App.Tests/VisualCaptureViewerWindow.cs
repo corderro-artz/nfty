@@ -38,10 +38,10 @@ public partial class VisualCapture
         if (Dir is null) return;
         var cases = new (string Tag, double W, double H, bool Model, bool Facts, bool Gallery)[]
         {
-            ("window-both", 1280, 760, true, true, false),
+            ("window-both", 1280, 720, true, true, false),
             ("window-min", ViewerWindowState.MinWidth, ViewerWindowState.MinHeight, true, true, false),
-            ("window-nofacts", 900, 700, false, false, false),
-            ("window-gallery", 1280, 760, false, true, true),
+            ("window-nofacts", 1024, 576, false, false, false),
+            ("window-gallery", 1280, 720, false, true, true),
         };
         foreach (var variant in Themes)
         foreach (var (tag, w, h, withModel, withFacts, gallery) in cases)
@@ -64,7 +64,7 @@ public partial class VisualCapture
             var model = mesh is null ? null : new ViewerModel(mesh, Nfty.Model.FaceAtlas.Build(art), null);
             var facts = withFacts
                 ? new List<ViewerFact> { new("ASSET", "#0042"), new("RECIPE", "chest"), new("SIZE", "32 x 32"),
-                    new("MODEL", withModel ? "recorded in the Set" : "none"), new("DNA", "9f3ac1d2e4b57a10c3e1") }
+                    new("MODEL", withModel ? "recorded in the Set" : "none"), new("DNA", "9f3ac1d2e4b57a10c3e1a8d0f4c26b19e7d5a03c8f61b2e94d07a5c3f81e6b2d") }
                 : new List<ViewerFact>();
             ViewerSubject subject = gallery
                 ? new GallerySubject(ArchiveGalleryTests.MixedGallery())

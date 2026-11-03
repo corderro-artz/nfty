@@ -31,7 +31,23 @@ public partial class CookDialogViewModel : ViewModelBase, IUnsavedWork
     private string? _outDir;
 
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(CookCommand))] [NotifyPropertyChangedFor(nameof(ResultingTotalText))] private int _count = 50;
-    [ObservableProperty] private string _seed = Guid.NewGuid().ToString("N")[..8];
+    [ObservableProperty] private string _seed = NewSeed();
+
+    /// <summary>The face the seed's die shows: only the confirmation a reroll gives, never part of the seed.</summary>
+    [ObservableProperty] private int _seedDieFace = 4;
+
+    private static string NewSeed() => Guid.NewGuid().ToString("N")[..8];
+
+    /// <summary>Replaces the seed with a fresh random one. Typing one stays the other way in.</summary>
+    [RelayCommand]
+    private void RerollSeed()
+    {
+        Seed = NewSeed();
+        // A face it is NOT showing, as the recipe card's die does: a repeat face reads as a button that
+        // did nothing. Random.Shared, never the engine's RNG - a decoration.
+        int pick = Random.Shared.Next(1, Converters.DieFaceConverter.Faces);
+        SeedDieFace = pick >= SeedDieFace ? pick + 1 : pick;
+    }
     [ObservableProperty] private bool _pack;
 
     /// <summary>Accept every roll instead of requiring each asset to have distinct DNA.</summary>

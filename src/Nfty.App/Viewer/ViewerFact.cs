@@ -5,6 +5,14 @@ namespace Nfty.App.Viewer;
 /// <param name="Value">Its value, already worded for display.</param>
 public sealed record ViewerFact(string Label, string Value)
 {
+    /// <summary>A long unbroken value (a DNA hash): drawn under its label across the whole card,
+    /// rather than wrapped into the value column four lines deep.</summary>
+    public bool IsWide => Value.Length > 32 && !Value.Contains(' ', StringComparison.Ordinal);
+
+    /// <summary>A wide value split at its half onto two lines of equal length, as the Set browser
+    /// splits a DNA; the value itself, for anything not wide.</summary>
+    public string WideText => IsWide ? $"{Value[..((Value.Length + 1) / 2)]}\n{Value[((Value.Length + 1) / 2)..]}" : Value;
+
     /// <summary>
     /// Turns a one-line fact written for a page ("seed viewer", "canvas 64 × 64", "picture · 32 × 32")
     /// into a label and a value: the first word names it, the rest is the value. A line that does not
@@ -26,9 +34,30 @@ public sealed record ViewerFact(string Label, string Value)
         return new ViewerFact("NOTE", text);
     }
 
-    /// <summary>The facts as plain text, one <c>LABEL: value</c> line each, for the clipboard.</summary>
+    /// <summary>
+    /// The facts as text ready to paste: the subject's name, a rule under it, then one
+    /// <c>Label:  value</c> line per fact with the values aligned in one column, so it reads the
+    /// same in a chat, an issue or a plain-text file. Hashes stay whole on one line.
+    /// </summary>
+    /// <param name="title">The subject's name, the heading.</param>
     /// <param name="facts">The facts.</param>
     /// <returns>The text.</returns>
-    public static string AsText(IEnumerable<ViewerFact> facts) =>
-        string.Join(Environment.NewLine, facts.Select(f => $"{f.Label}: {f.Value}"));
+    public static string AsText(string title, IEnumerable<ViewerFact> facts)
+    {
+        ArgumentNullException.ThrowIfNull(facts);
+        var rows = facts.Select(f => (Label: Word(f.Label) + ":", f.Value)).ToList();
+        int width = rows.Count == 0 ? 0 : rows.Max(r => r.Label.Length);
+        var lines = new List<string>();
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            lines.Add(title.Trim());
+            lines.Add(new string('-', title.Trim().Length));
+        }
+        lines.AddRange(rows.Select(r => r.Label.PadRight(width + 2) + r.Value));
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    // RECIPE -> Recipe, DNA stays DNA: an initialism reads as itself.
+    private static string Word(string label) =>
+        label.Length <= 3 ? label : char.ToUpperInvariant(label[0]) + label[1..].ToLowerInvariant();
 }
