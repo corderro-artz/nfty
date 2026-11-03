@@ -37,6 +37,9 @@
             <Button Classes="railtab" Classes.on="{Binding IsSealTab}" Content="SEAL"
                     Command="{Binding ShowTabCommand}"
                     CommandParameter="{x:Static vm:ExportTab.Seal}" />
+            <Button Classes="railtab" Classes.on="{Binding IsUploadTab}" Content="UPLOAD"
+                    Command="{Binding ShowTabCommand}"
+                    CommandParameter="{x:Static vm:ExportTab.Upload}" />
           </StackPanel>
         </Grid>
       </Border>
@@ -296,6 +299,81 @@
               </Grid>
             </StackPanel>
 
+            <!-- ============================== UPLOAD ==============================
+                 The two-step drop done in one: the art pinned, the metadata written with its
+                 address and pinned, the export written here with the same addresses. Where it goes
+                 is a Settings choice, named on the first row with its live connection, so the reader
+                 never uploads blind. Before a run the page explains; after, the same space holds the
+                 addresses a contract needs, each copyable. -->
+            <StackPanel Spacing="10" IsVisible="{Binding IsUploadTab}">
+              <!-- Before a run: where it goes, whether it can, and what will happen. After, the
+                   addresses take the whole page - the done line below already names the provider,
+                   and the card has no height to spare for both. -->
+              <StackPanel Spacing="10" IsVisible="{Binding !HasUploadResult}">
+              <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="10">
+                <TextBlock Grid.Column="0" Classes="seglbl" Text="UPLOAD TO" />
+                <Border Grid.Column="1" x:Name="UploadChip" Classes="idchip" VerticalAlignment="Center">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Ellipse Width="6" Height="6" VerticalAlignment="Center" Classes="vdot"
+                             Classes.ok="{Binding IsUploadConnected}" Classes.idle="{Binding IsUploadChecking}" />
+                    <TextBlock Classes="cvl" Text="{Binding UploadStatusSummary}" />
+                  </StackPanel>
+                </Border>
+                <TextBlock Grid.Column="2" Classes="m-sub" Margin="0" VerticalAlignment="Center" TextWrapping="NoWrap"
+                           TextTrimming="CharacterEllipsis" Text="{Binding UploadProviderLabel}"
+                           ToolTip.Tip="Change where uploads go in Settings, under Publishing." />
+                <Button Grid.Column="3" Classes="tbtn" Content="Recheck" Command="{Binding RecheckUploadCommand}"
+                        IsEnabled="{Binding ShowForm}" />
+              </Grid>
+              <!-- Two lines reserved: the longest "not reachable" sentence wraps once. -->
+              <TextBlock Classes="m-sub" Margin="0" MinHeight="32" Text="{Binding UploadStatusDetail}" />
+
+              <StackPanel Spacing="8">
+                <TextBlock Classes="m-sub" Margin="0"
+                           Text="One step instead of two: uploads images/ (and models/), writes the metadata with their ipfs:// addresses, uploads metadata/ with collection.json beside it, then exports to the folder you choose with the same addresses." />
+                <TextBlock Classes="m-sub" Margin="0"
+                           Text="Uses this export's choices on CONTENTS and MARKETPLACE. The provider and its key are in Settings, under Publishing." />
+              </StackPanel>
+              </StackPanel>
+
+              <StackPanel Spacing="6" IsVisible="{Binding HasUploadResult}">
+                <Grid ColumnDefinitions="110,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="3" ColumnSpacing="8">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Classes="seglbl" Text="BASE URI" />
+                    <SelectableTextBlock Grid.Row="0" Grid.Column="1" Classes="uri" Text="{Binding UploadBaseUri}"
+                                         ToolTip.Tip="{Binding UploadBaseUri}" />
+                    <Button Grid.Row="0" Grid.Column="2" Classes="tbtn cellbtn" Content="Copy"
+                            Command="{Binding CopyCommand}" CommandParameter="{Binding UploadBaseUri}" />
+                    <TextBlock Grid.Row="1" Grid.Column="0" Classes="seglbl" Text="CONTRACT URI" />
+                    <SelectableTextBlock Grid.Row="1" Grid.Column="1" Classes="uri" Text="{Binding UploadContractUri}"
+                                         ToolTip.Tip="{Binding UploadContractUri}" />
+                    <Button Grid.Row="1" Grid.Column="2" Classes="tbtn cellbtn" Content="Copy"
+                            Command="{Binding CopyCommand}" CommandParameter="{Binding UploadContractUri}" />
+                    <TextBlock Grid.Row="2" Grid.Column="0" Classes="seglbl" Text="IMAGES" />
+                    <SelectableTextBlock Grid.Row="2" Grid.Column="1" Classes="uri" Text="{Binding UploadImagesUri}"
+                                         ToolTip.Tip="{Binding UploadImagesUri}" />
+                    <Button Grid.Row="2" Grid.Column="2" Classes="tbtn cellbtn" Content="Copy"
+                            Command="{Binding CopyCommand}" CommandParameter="{Binding UploadImagesUri}" />
+                    <TextBlock Grid.Row="3" Grid.Column="0" Classes="seglbl" Text="MODELS" />
+                    <SelectableTextBlock Grid.Row="3" Grid.Column="1" Classes="uri" Text="{Binding UploadModelsUri}"
+                                         ToolTip.Tip="{Binding UploadModelsUri}" />
+                    <Button Grid.Row="3" Grid.Column="2" Classes="tbtn cellbtn" Content="Copy"
+                            Command="{Binding CopyCommand}" CommandParameter="{Binding UploadModelsUri}" />
+                    <TextBlock Grid.Row="4" Grid.Column="0" Classes="seglbl" Text="METADATA" />
+                    <SelectableTextBlock Grid.Row="4" Grid.Column="1" Classes="uri" Text="{Binding UploadMetadataUri}"
+                                         ToolTip.Tip="{Binding UploadMetadataUri}" />
+                    <Button Grid.Row="4" Grid.Column="2" Classes="tbtn cellbtn" Content="Copy"
+                            Command="{Binding CopyCommand}" CommandParameter="{Binding UploadMetadataUri}" />
+                </Grid>
+                <ItemsControl ItemsSource="{Binding UploadWarnings}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="x:String">
+                      <TextBlock Classes="caveat" Text="{Binding}" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </StackPanel>
+
             <!-- ============================== SEAL ============================== -->
             <StackPanel Spacing="11" IsVisible="{Binding IsSealTab}" IsEnabled="{Binding ShowForm}">
               <Border Classes="sealbox" Classes.on="{Binding IsSealed}">
@@ -395,10 +473,16 @@
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
+                  <!-- ONE LINE PER CONSEQUENCE, the whole sentence on its tooltip. Wrapped, two link
+                       warnings (the marketplace preset with no address yet: relative links, a
+                       collection.json with no image) took three lines, outgrew the reserved 96 and pushed
+                       the card past the 526 a modal is given - every tab then scrolled its page at the
+                       smallest window. One line each keeps the common states inside the reserve. -->
                   <ItemsControl ItemsSource="{Binding Consequences}" Margin="0,2,0,0">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="x:String">
-                        <TextBlock Classes="caveat" Text="{Binding}" Margin="0,2,0,0" />
+                        <TextBlock Classes="caveat" Text="{Binding}" Margin="0,2,0,0" TextWrapping="NoWrap"
+                                   TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding}" />
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
@@ -410,14 +494,35 @@
           <!-- The reason Export is unavailable, in words. A control that is dim for a reason the
                screen does not give is a control the user has to guess at. -->
           <TextBlock Grid.Column="0" Classes="keyhint" VerticalAlignment="Center"
-                     TextTrimming="CharacterEllipsis" Text="{Binding Problem}" />
+                     TextTrimming="CharacterEllipsis" Text="{Binding Problem}" IsVisible="{Binding IsExportAction}" />
+          <!-- On UPLOAD the footer speaks for the button it carries: why Upload is unavailable. -->
+          <TextBlock Grid.Column="0" Classes="keyhint" VerticalAlignment="Center"
+                     TextTrimming="CharacterEllipsis" Text="{Binding UploadProblem}" IsVisible="{Binding IsUploadTab}" />
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
             <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="tbtn"
                     IsVisible="{Binding IsRunning}" />
             <Button Content="Close" Command="{Binding CloseCommand}" Classes="tbtn"
                     IsVisible="{Binding !IsRunning}" />
-            <Button Command="{Binding ExportCommand}" Classes="accent"
-                    IsVisible="{Binding ShowForm}"><StackPanel Orientation="Horizontal" Spacing="6"><Path Classes="ico sm" Data="{StaticResource IconUpload}" /><TextBlock Text="Export" /></StackPanel></Button>
+            <!-- ONE primary action, named for what it does from this page: Export everywhere, Upload on
+                 UPLOAD. Both state one MinWidth, so swapping them moves neither Close nor Cancel. -->
+            <Button x:Name="ExportButton" Command="{Binding ExportCommand}" Classes="accent" MinWidth="96">
+              <Button.IsVisible>
+                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                  <Binding Path="ShowForm" />
+                  <Binding Path="IsExportAction" />
+                </MultiBinding>
+              </Button.IsVisible>
+              <StackPanel Orientation="Horizontal" Spacing="6"><Path Classes="ico sm" Data="{StaticResource IconUpload}" /><TextBlock Text="Export" /></StackPanel>
+            </Button>
+            <Button x:Name="UploadButton" Command="{Binding UploadCommand}" Classes="accent" MinWidth="96">
+              <Button.IsVisible>
+                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                  <Binding Path="ShowForm" />
+                  <Binding Path="IsUploadTab" />
+                </MultiBinding>
+              </Button.IsVisible>
+              <StackPanel Orientation="Horizontal" Spacing="6"><Path Classes="ico sm" Data="{StaticResource IconUpload}" /><TextBlock Text="Upload" /></StackPanel>
+            </Button>
           </StackPanel>
         </Grid>
       </Border>

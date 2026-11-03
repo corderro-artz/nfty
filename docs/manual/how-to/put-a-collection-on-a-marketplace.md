@@ -11,6 +11,46 @@ Open the Set, press **Export…**, choose the **Marketplace** preset, and open t
 ![The Export card's Marketplace tab, filled in as a seller would](../images/export-marketplace-light.png#only-light)
 ![The Export card's Marketplace tab, filled in as a seller would](../images/export-marketplace-dark.png#only-dark)
 
+## Upload in one step
+
+nfty can do the upload for you. It talks to an IPFS node running on your machine
+([IPFS Desktop](https://docs.ipfs.tech/install/ipfs-desktop/) or Kubo, at `http://127.0.0.1:5001`)
+by default, or to Pinata with your own API key.
+
+1. Start IPFS Desktop (or `ipfs daemon`). To use Pinata instead, open **Settings** (the gear in the
+   title bar), go to **PUBLISHING**, choose **Pinata** and paste your key's JWT. The key is kept in
+   your system's credential store (Windows Credential Manager, the macOS keychain, the Secret Service
+   on Linux), never in a file, and the card only ever shows its last four characters.
+2. Open the Set, press **Export…**, choose the **Marketplace** preset and fill in the **MARKETPLACE**
+   tab. Choose **Token id** file names for a contract drop. Leave the base URIs empty: the upload
+   writes them.
+3. Open the **UPLOAD** tab. It names the provider and shows whether nfty can reach it
+   (`connected · kubo 0.29.0`, or `not reachable` with what to start). Press **Upload** and choose
+   where to keep your copy.
+
+![The Export card's Upload tab, connected to a local IPFS node](../images/export-upload-light.png#only-light)
+![The Export card's Upload tab, connected to a local IPFS node](../images/export-upload-dark.png#only-dark)
+
+nfty then uploads `images/` (and `models/`), writes the metadata with those `ipfs://` addresses,
+uploads `metadata/` with `collection.json` beside the token files, and writes the export to your
+folder with the same addresses, so your copy is byte for byte what was pinned. When it finishes the
+tab shows, each with **Copy**:
+
+| Address | Use |
+|---|---|
+| **Base URI** | Your contract's `baseURI`: `ipfs://<metadataCID>/`. With **Token id** names, `baseURI + tokenId` is `metadata/1`. |
+| **Contract URI** | Your contract's `contractURI`: `ipfs://<metadataCID>/collection.json`. |
+| **Images**, **Models**, **Metadata** | Each uploaded folder. |
+
+**Cancel** stops between steps; whatever the service already received stays pinned. The window will
+not close under a running upload. From the terminal the same run is `nfty export ... --upload`
+(`--pinata --pinata-key <source>` for Pinata); see the [command line reference](../reference/cli.md#uploading-to-ipfs).
+
+## Upload by hand
+
+If you use another pinning service, or want to look at the files between the steps, do the same thing
+in two exports:
+
 ```bash
 # 1. the art first, nothing that needs an address yet
 nfty export ./collection --out ./dist-art --art-only --token-names token-id
@@ -24,10 +64,9 @@ nfty export ./collection --out ./dist --preset marketplace \
     --royalty 5 --fee-recipient 0x1234567890abcdef1234567890abcdef12345678
 ```
 
-## The two-step upload
+### The two steps
 
-nfty does **not** upload, pin, deploy a contract or mint. It produces upload-ready files; you take
-them to a pinning service and a marketplace. Every NFT drop runs in the same order, because the
+nfty does not deploy a contract or mint. Every NFT drop runs in the same order, because the
 metadata has to carry the address of the art, so the art must be uploaded first:
 
 1. **Export the art only.** On the **MARKETPLACE** tab press **Art only** (or, in the terminal,

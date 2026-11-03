@@ -115,6 +115,15 @@ public class ExportDialogTests
             // ships are exempt.
             nameof(ExportDialogViewModel.Tab), nameof(ExportDialogViewModel.Progress),
             nameof(ExportDialogViewModel.PhaseText), nameof(ExportDialogViewModel.SheetSizeText),
+
+            // The UPLOAD page's connection check and its result: what the provider said and what was
+            // pinned, never an input to what an export ships.
+            nameof(ExportDialogViewModel.Connection), nameof(ExportDialogViewModel.UploadStatusSummary),
+            nameof(ExportDialogViewModel.UploadStatusDetail), nameof(ExportDialogViewModel.HasUploadResult),
+            nameof(ExportDialogViewModel.UploadBaseUri), nameof(ExportDialogViewModel.UploadContractUri),
+            nameof(ExportDialogViewModel.UploadImagesUri), nameof(ExportDialogViewModel.UploadModelsUri),
+            nameof(ExportDialogViewModel.UploadMetadataUri), nameof(ExportDialogViewModel.UploadWarnings),
+            nameof(ExportDialogViewModel.PendingUpload), nameof(ExportDialogViewModel.PendingUploadCheck),
         };
 
         var settable = typeof(ExportDialogViewModel)

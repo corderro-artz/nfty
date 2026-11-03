@@ -121,6 +121,7 @@ public static partial class CommandFactory
         root.Subcommands.Add(Serve());
         root.Subcommands.Add(Export());
         root.Subcommands.Add(SheetGroup());
+        root.Subcommands.Add(IpfsGroup());
         root.Subcommands.Add(NewGroup());
         root.Subcommands.Add(AddGroup());
         root.Subcommands.Add(MoveGroup());

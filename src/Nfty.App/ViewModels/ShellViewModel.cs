@@ -217,10 +217,18 @@ public partial class ShellViewModel : ViewModelBase
     /// <param name="session">The open CookBook, so closing a document can free it.</param>
     /// <param name="parallelism">The worker-thread setting the Settings card edits. Null falls back
     /// to a session-only one, so a shell built without it still opens a working card.</param>
+    /// <param name="settingsCard">Builds the Settings card over the app's real services. Null builds
+    /// one over <paramref name="parallelism"/> alone, every other page session-only.</param>
+    /// <param name="general">The remembered theme, applied as the shell is built and updated by the
+    /// titlebar's theme button. Null leaves the theme to the application's default.</param>
     public ShellViewModel(INavigationService nav, IDialogService dialogs, IThemeService theme,
         IStatusService status, IKitchenSession? kitchen = null, ICookBookSession? session = null,
-        IParallelismSetting? parallelism = null)
+        IParallelismSetting? parallelism = null, Func<SettingsDialogViewModel>? settingsCard = null,
+        IAppSettings? general = null)
     {
+        _settingsCard = settingsCard;
+        _general = general;
+        if (general is not null) theme.Apply(general.Theme);
         _parallelism = parallelism
             ?? new ParallelismSettingService(StateStore.InMemory(), () => null);
         _nav = nav; _dialogs = dialogs; _theme = theme; _status = status;
@@ -245,7 +253,10 @@ public partial class ShellViewModel : ViewModelBase
 
     [RelayCommand]
     private void ShowSettings() =>
-        _dialogs.ShowAsync<object>(new SettingsDialogViewModel(_dialogs, _parallelism));
+        _dialogs.ShowAsync<object>(_settingsCard?.Invoke() ?? new SettingsDialogViewModel(_dialogs, _parallelism));
+
+    private readonly Func<SettingsDialogViewModel>? _settingsCard;
+    private readonly IAppSettings? _general;
 
     /// <summary>
     /// Closes whatever modal is open — the scrim's click, and Escape.
@@ -289,7 +300,14 @@ public partial class ShellViewModel : ViewModelBase
     [RelayCommand] private void Minimize() => MinimizeRequested?.Invoke();
     [RelayCommand] private void ToggleMaximize() => ToggleMaximizeRequested?.Invoke();
     [RelayCommand] private void Close() => CloseRequested?.Invoke();
-    [RelayCommand] private void ToggleTheme() => _theme.Toggle();
+    [RelayCommand]
+    private void ToggleTheme()
+    {
+        // Remembered like the Settings card's choice: the titlebar button is the same setting.
+        var next = _theme.IsDark ? ThemeChoice.Light : ThemeChoice.Dark;
+        _theme.Toggle();
+        _general?.SetTheme(next);
+    }
 
     /// <summary>
     /// Closes the open document and returns to Landing, freeing everything it held.

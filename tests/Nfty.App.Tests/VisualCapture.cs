@@ -1088,6 +1088,36 @@ public partial class VisualCapture
             Capture(new Views.ExportDialogView { DataContext = mistakes }, variant,
                 $"export-marketplace-invalid-{key}.png", width: 1180, height: 780);
 
+            // THE UPLOAD PAGE in its four states: connected and ready, the node down, mid-run, done.
+            var uploadReady = new ExportDialogViewModel(ExportCaptureSet(withModels: true), new FilePickerService(),
+                new NoopFolderRevealer(), new FakeDialogs(),
+                publishing: ExportUploadTests.Publishing(new ExportUploadTests.FakePinning(true)));
+            uploadReady.ApplyPresetCommand.Execute(uploadReady.Presets.Single(p => p.Preset == Nfty.Core.Publish.ExportPreset.Marketplace));
+            uploadReady.TokenIdNames = true;
+            uploadReady.Tab = ExportTab.Upload;
+            Capture(new Views.ExportDialogView { DataContext = uploadReady }, variant, $"export-upload-connected-{key}.png");
+
+            var uploadDown = new ExportDialogViewModel(ExportCaptureSet(withModels: true), new FilePickerService(),
+                new NoopFolderRevealer(), new FakeDialogs(),
+                publishing: ExportUploadTests.Publishing(new ExportUploadTests.FakePinning(false)));
+            uploadDown.ApplyPresetCommand.Execute(uploadDown.Presets.Single(p => p.Preset == Nfty.Core.Publish.ExportPreset.Marketplace));
+            uploadDown.Tab = ExportTab.Upload;
+            Capture(new Views.ExportDialogView { DataContext = uploadDown }, variant, $"export-upload-unreachable-{key}.png");
+
+            var uploading = new ExportDialogViewModel(ExportCaptureSet(withModels: true), new FilePickerService(),
+                new NoopFolderRevealer(), new FakeDialogs(),
+                publishing: ExportUploadTests.Publishing(new ExportUploadTests.FakePinning(true)))
+            {
+                Tab = ExportTab.Upload,
+                IsRunning = true,
+                Progress = 0.38,
+                PhaseText = "Uploading images... 1.2 MB of 3.1 MB",
+            };
+            Capture(new Views.ExportDialogView { DataContext = uploading }, variant, $"export-upload-running-{key}.png");
+
+            Capture(new Views.ExportDialogView { DataContext = UploadDone(new FakeDialogs()) }, variant,
+                $"export-upload-done-{key}.png");
+
             // The busy card, in the state it is actually seen in: mid-job, with a real phase line.
             var busy = new BusyViewModel("Opening Set", "Unpacking...")
             {
@@ -1148,6 +1178,23 @@ public partial class VisualCapture
 
     /// <summary>A real cooked Set on disk, so the manifest lines are real counts and real sizes
     /// rather than a fixture's idea of them.</summary>
+    /// <summary>The export card after an upload: the addresses a contract needs, each with Copy.</summary>
+    internal static ExportDialogViewModel UploadDone(IDialogService dialogs) =>
+        new(ExportCaptureSet(withModels: true), new FilePickerService(), new NoopFolderRevealer(), dialogs,
+            publishing: ExportUploadTests.Publishing(new ExportUploadTests.FakePinning(true)))
+        {
+            Tab = ExportTab.Upload,
+            UploadBaseUri = "ipfs://bafybeih4x2rdkcvbvs5rmhm2bodgsrtyuqfkxcjn7bxgtv2rtkpxfgdueu/",
+            UploadContractUri = "ipfs://bafybeih4x2rdkcvbvs5rmhm2bodgsrtyuqfkxcjn7bxgtv2rtkpxfgdueu/collection.json",
+            UploadImagesUri = "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/",
+            UploadModelsUri = "ipfs://bafybeiczsscdsbs7ffqz55asqdf3smv6klcw3gofszvwlyarci47bgf354/",
+            UploadMetadataUri = "ipfs://bafybeih4x2rdkcvbvs5rmhm2bodgsrtyuqfkxcjn7bxgtv2rtkpxfgdueu/",
+            HasUploadResult = true,
+            ResultText = "Uploaded 3 assets to Local IPFS and exported them with the same addresses.",
+            OutputPath = @"C:\Users\you\Exports\Chest Demo",
+            IsDone = true,
+        };
+
     internal static string ExportCaptureSet(bool withModels = false)
     {
         var dir = Path.Combine(Directory.CreateTempSubdirectory("nfty-cap-").FullName, "Chest Demo");
@@ -1444,8 +1491,48 @@ public partial class VisualCapture
                 variant, $"zz-dialog-settings-auto-{key}.png");
             var customSetting = new ParallelismSettingService(StateStore.InMemory(), () => null);
             customSetting.Set(Nfty.Core.Parallelism.LogicalProcessors);
-            Capture(new Views.SettingsDialogView { DataContext = new SettingsDialogViewModel(dialogs, customSetting) },
+            Capture(new Views.SettingsDialogView { DataContext = new SettingsDialogViewModel(dialogs, customSetting) { Tab = SettingsTab.Performance } },
                 variant, $"zz-dialog-settings-custom-{key}.png");
+
+            // EVERY SETTINGS PAGE, each stating its Tab: a capture of a tab nothing switched to is a
+            // picture of the tab beside it.
+            var generalStore = StateStore.InMemory();
+            Capture(new Views.SettingsDialogView
+            {
+                DataContext = new SettingsDialogViewModel(dialogs, new ParallelismSettingService(generalStore, () => null),
+                    new AppSettingsService(generalStore)) { Tab = SettingsTab.General },
+            }, variant, $"zz-dialog-settings-general-{key}.png");
+            Capture(new Views.SettingsDialogView
+            {
+                DataContext = new SettingsDialogViewModel(dialogs, new ParallelismSettingService(StateStore.InMemory(), () => null),
+                    publishing: ExportUploadTests.Publishing(new ExportUploadTests.FakePinning(true))) { Tab = SettingsTab.Publishing },
+            }, variant, $"zz-dialog-settings-publishing-connected-{key}.png");
+            Capture(new Views.SettingsDialogView
+            {
+                DataContext = new SettingsDialogViewModel(dialogs, new ParallelismSettingService(StateStore.InMemory(), () => null),
+                    publishing: ExportUploadTests.Publishing(new ExportUploadTests.FakePinning(false))) { Tab = SettingsTab.Publishing },
+            }, variant, $"zz-dialog-settings-publishing-unreachable-{key}.png");
+            var pinataSecrets = new InMemorySecretStore();
+            var pinata = new PublishingSettingsService(StateStore.InMemory(), pinataSecrets,
+                (_, _, _) => new ExportUploadTests.FakePinning(true, pinata: true));
+            pinata.SetProvider(PinningProvider.Pinata);
+            pinata.SavePinataKey("eyJhbGciOiJIUzI1NiJ9.capture.k3y9");
+            Capture(new Views.SettingsDialogView
+            {
+                DataContext = new SettingsDialogViewModel(dialogs, new ParallelismSettingService(StateStore.InMemory(), () => null),
+                    publishing: pinata) { Tab = SettingsTab.Publishing },
+            }, variant, $"zz-dialog-settings-publishing-pinata-{key}.png");
+            var dataDir = Directory.CreateTempSubdirectory("nfty-capture-data-").FullName;
+            var dataStore = StateStore.At(dataDir);
+            var recents = new RecentsService(dataStore);
+            recents.Add(new Nfty.App.Models.RecentItem("Chest Demo", "2 recipes", Path.Combine(dataDir, "ChestDemo.cbk"), false));
+            Capture(new Views.SettingsDialogView
+            {
+                DataContext = new SettingsDialogViewModel(dialogs, new ParallelismSettingService(dataStore, () => null),
+                    recents: recents, store: dataStore, revealer: new NoopFolderRevealer(),
+                    viewerState: new ViewerWindowStateService(dataStore), editorState: new EditorViewStateService(dataStore))
+                { Tab = SettingsTab.Data },
+            }, variant, $"zz-dialog-settings-data-{key}.png");
 
             Capture(new Views.ErrorDialogView
             { DataContext = new ErrorDialogViewModel(dialogs, "Could not open", "The file is not a readable CookBook.") },

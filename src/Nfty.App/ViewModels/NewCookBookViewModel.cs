@@ -42,6 +42,15 @@ public partial class NewCookBookViewModel : WizardViewModelBase
     /// <param name="dialogs">The dialog layer.</param>
     public NewCookBookViewModel(IDialogService dialogs) : base(dialogs) { }
 
+    /// <summary>Creates the wizard with the canvas starting at the side Settings remembers.</summary>
+    /// <param name="dialogs">The dialog layer.</param>
+    /// <param name="canvasSide">The side both dimensions start at (<see cref="Services.IAppSettings.DefaultCanvasSide"/>).</param>
+    public NewCookBookViewModel(IDialogService dialogs, int canvasSide) : base(dialogs)
+    {
+        Width = canvasSide;
+        Height = canvasSide;
+    }
+
     partial void OnNameChanged(string value)
     {
         OnPropertyChanged(nameof(DerivedId));

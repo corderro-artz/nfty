@@ -50,30 +50,32 @@ public static class Passphrase
     /// passphrase read from a variable, a file or a pipe was not typed here, so asking for it twice
     /// would be asking the same source the same question. A mistyped one is a file nobody can ever
     /// open, its author included, which is why the typed path confirms at all.</param>
+    /// <param name="option">The option the source was named by, for the error messages: <c>--key</c>
+    /// for a passphrase, <c>--pinata-key</c> for a pinning key. The same sources, the same rules.</param>
     /// <returns>The passphrase.</returns>
     /// <exception cref="InvalidOperationException">The source is unknown, or names nothing.</exception>
-    public static string Read(string? spec, string prompt, bool confirm = false)
+    public static string Read(string? spec, string prompt, bool confirm = false, string option = "--key")
     {
-        if (spec is null || spec == PromptSource) return ReadPrompt(prompt, confirm);
+        if (spec is null || spec == PromptSource) return ReadPrompt(prompt, confirm, option);
 
         if (spec.StartsWith(EnvPrefix, StringComparison.Ordinal))
         {
             var name = spec[EnvPrefix.Length..];
             if (name.Length == 0)
-                throw new InvalidOperationException($"--key {EnvPrefix} needs a variable name.");
+                throw new InvalidOperationException($"{option} {EnvPrefix} needs a variable name.");
             return Environment.GetEnvironmentVariable(name) is { Length: > 0 } value
                 ? value
                 : throw new InvalidOperationException(
-                    $"--key named the environment variable '{name}', which is unset or empty.");
+                    $"{option} named the environment variable '{name}', which is unset or empty.");
         }
 
         if (spec.StartsWith(FilePrefix, StringComparison.Ordinal))
         {
             var path = spec[FilePrefix.Length..];
             if (path.Length == 0)
-                throw new InvalidOperationException($"--key {FilePrefix} needs a path.");
+                throw new InvalidOperationException($"{option} {FilePrefix} needs a path.");
             if (!File.Exists(path))
-                throw new InvalidOperationException($"--key named the file '{path}', which is not there.");
+                throw new InvalidOperationException($"{option} named the file '{path}', which is not there.");
             return FirstLine(File.ReadAllText(path))
                 ?? throw new InvalidOperationException($"'{path}' is empty.");
         }
@@ -88,7 +90,7 @@ public static class Passphrase
         // reason - the sources are not interchangeable, so choosing one silently would be choosing
         // the user's threat model for them.
         throw new InvalidOperationException(
-            $"'{spec}' does not name a passphrase source; expected {Sources}.");
+            $"'{spec}' does not name a {(option == "--key" ? "passphrase" : option)} source; expected {Sources}.");
     }
 
     /// <summary>
@@ -110,11 +112,11 @@ public static class Passphrase
         return line.Length == 0 ? null : line;
     }
 
-    private static string ReadPrompt(string prompt, bool confirm)
+    private static string ReadPrompt(string prompt, bool confirm, string option)
     {
         if (Console.IsInputRedirected)
             throw new InvalidOperationException(
-                "There is no terminal to ask for a passphrase at. Name a source with --key "
+                $"There is no terminal to ask at. Name a source with {option} "
                 + $"({Sources}).");
 
         string first = ReadMasked(prompt);

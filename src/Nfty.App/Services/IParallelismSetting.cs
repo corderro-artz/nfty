@@ -93,8 +93,8 @@ public sealed class ParallelismSettingService : IParallelismSetting
         int? next = degree is { } d ? Math.Clamp(d, 1, Math.Max(1, Parallelism.LogicalProcessors)) : null;
         if (next == Saved) return;
         Saved = next;
-        try { _store.Write(FileName, StateJson.Write(new SettingsFile(next))); }
-        catch (NotSupportedException) { /* convenience state: never surface */ }
+        // One key of the shared file: the card's other pages keep theirs (SettingsJson).
+        SettingsJson.Set(_store, "threads", next);
         Changed?.Invoke();
     }
 

@@ -181,13 +181,13 @@ public class SettingsDialogTests
         window = new Window { Content = view, Width = 900, Height = 600 };
         window.Show();
         Dispatcher.UIThread.RunJobs();
-        return (view, view.GetVisualDescendants().OfType<NumericUpDown>().Single());
+        return (view, view.GetVisualDescendants().OfType<NumericUpDown>().Single(n => n.Name == "ThreadsField"));
     }
 
     [AvaloniaFact]
     public void The_stepper_is_laid_out_in_auto_mode()
     {
-        var vm = new SettingsDialogViewModel(new FakeDialogs(), Service(TempDir()));
+        var vm = new SettingsDialogViewModel(new FakeDialogs(), Service(TempDir())) { Tab = SettingsTab.Performance };
         var (view, field) = Show(vm, out var window);
         try
         {

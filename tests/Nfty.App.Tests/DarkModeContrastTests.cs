@@ -388,8 +388,32 @@ public class DarkModeContrastTests
         yield return ("settings-env-locked", new Views.SettingsDialogView
         {
             DataContext = new SettingsDialogViewModel(dialogs,
-                new ParallelismSettingService(StateStore.InMemory(), () => "2")),
+                new ParallelismSettingService(StateStore.InMemory(), () => "2")) { Tab = SettingsTab.Performance },
         }, null);
+        // GENERAL past 512: the large-canvas warning is the page's one WarningBrush run.
+        var settingsGeneral = new SettingsDialogViewModel(dialogs,
+            new ParallelismSettingService(StateStore.InMemory(), () => null)) { CanvasSide = 1024 };
+        yield return ("settings-general", new Views.SettingsDialogView { DataContext = settingsGeneral }, null);
+        // PUBLISHING on Pinata with no secure storage: the disabled API box (0.38), the reason line, a
+        // warning dot - the riskiest ink the page carries. And the connected state's success dot.
+        var unavailable = new PublishingSettingsService(StateStore.InMemory(),
+            new UnavailableSecretStore("Secure storage is unavailable: secret-tool was not found."),
+            (_, _, _) => new ExportUploadTests.FakePinning(false));
+        unavailable.SetProvider(PinningProvider.Pinata);
+        yield return ("settings-publishing-unavailable", new Views.SettingsDialogView
+        {
+            DataContext = new SettingsDialogViewModel(dialogs, new ParallelismSettingService(StateStore.InMemory(), () => null),
+                publishing: unavailable) { Tab = SettingsTab.Publishing },
+        }, null);
+        yield return ("settings-publishing-connected", new Views.SettingsDialogView
+        {
+            DataContext = new SettingsDialogViewModel(dialogs, new ParallelismSettingService(StateStore.InMemory(), () => null),
+                publishing: ExportUploadTests.Publishing(new ExportUploadTests.FakePinning(true))) { Tab = SettingsTab.Publishing },
+        }, null);
+        var dataStore = StateStore.InMemory();
+        var settingsData = new SettingsDialogViewModel(dialogs, new ParallelismSettingService(dataStore, () => null),
+            recents: new RecentsService(dataStore), store: dataStore) { Tab = SettingsTab.Data };
+        yield return ("settings-data", new Views.SettingsDialogView { DataContext = settingsData }, null);
         yield return ("leave-editor", new Views.LeaveDialogView { DataContext = new LeaveDialogViewModel(dialogs, "Leave the editor?", "Aura has unsaved changes. Leaving discards them.", canSave: true) }, null);
 
         yield return ("wizard-cookbook",
@@ -443,6 +467,20 @@ public class DarkModeContrastTests
                 IsSealed = true,
                 Note = "Draft for review",
             },
+        }, null);
+
+        // UPLOAD with the node down: the warning dot, the reason in the footer, a dim Upload button.
+        yield return ("dialog-export-upload-unreachable", new Views.ExportDialogView
+        {
+            DataContext = new ExportDialogViewModel(VisualCapture.ExportCaptureSet(),
+                new FilePickerService(), new NoopFolderRevealer(), dialogs,
+                publishing: ExportUploadTests.Publishing(new ExportUploadTests.FakePinning(false)))
+            { Tab = ExportTab.Upload },
+        }, null);
+        // UPLOAD finished: the copyable addresses, mono, beside their labels and Copy buttons.
+        yield return ("dialog-export-upload-done", new Views.ExportDialogView
+        {
+            DataContext = VisualCapture.UploadDone(dialogs),
         }, null);
 
         // The same dialog on CONTENTS for a Set with no models: the Models row is disabled (dimmed to

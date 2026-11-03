@@ -15,6 +15,10 @@ public interface IRecentsService
     /// <summary>Forgets an entry — used when a remembered file has gone.</summary>
     /// <param name="path">The path to forget.</param>
     void Remove(string path);
+    /// <summary>Forgets every entry (Settings, DATA).</summary>
+    void Clear();
+    /// <summary>Raised after the list changes, so a screen showing it can redraw.</summary>
+    event Action? Changed;
 }
 
 /// <summary>Most-recently-opened files, persisted as JSON in the app's own <see cref="IStateStore"/>.
@@ -81,5 +85,19 @@ public sealed class RecentsService : IRecentsService
             .ToList();
     }
 
-    private void Save() => _store.Write(FileName, StateJson.Write(_items));
+    /// <inheritdoc />
+    public void Clear()
+    {
+        _items.Clear();
+        Save();
+    }
+
+    /// <inheritdoc />
+    public event Action? Changed;
+
+    private void Save()
+    {
+        _store.Write(FileName, StateJson.Write(_items));
+        Changed?.Invoke();
+    }
 }

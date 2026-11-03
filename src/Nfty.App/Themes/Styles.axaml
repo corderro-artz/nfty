@@ -934,6 +934,21 @@
        780px tall, 254 more than the 526 a modal is ever given, so the card photographed tidy while
        the running app scrolled every tab. The shorter pages spend the difference on air above the
        manifest instead of on moving it. -->
+  <!-- THE SETTINGS CARD: four tabbed pages under the export card's head grammar. Wider than the
+       620 form card because the PUBLISHING page puts a 250px field and two buttons beside a 130px
+       label column. Centered, so it hugs its pages and clamps to the window like the export card. -->
+  <Style Selector="Border.modal.settings">
+    <Setter Property="Width" Value="660" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- ONE HEIGHT FOR ALL FOUR PAGES, the export card's rule: switching tabs moves neither the footer
+       nor the card. The tallest page's height, measured at the smallest window: PUBLISHING 221, DATA
+       184, GENERAL 131, PERFORMANCE 70 - so the card is 358 tall in the 526 a modal is given
+       (SettingsPagesTests.Every_page_is_the_same_height_and_fits_the_smallest_window_unscrolled). -->
+  <Style Selector="Border.modal.settings Panel.settingspages">
+    <Setter Property="MinHeight" Value="221" />
+  </Style>
+
   <Style Selector="Border.modal.export StackPanel.exportpages">
     <Setter Property="MinHeight" Value="262" />
   </Style>
@@ -3262,6 +3277,20 @@
   </Style>
   <Style Selector="Ellipse.vdot.ok">
     <Setter Property="Fill" Value="{DynamicResource SuccessBrush}" />
+  </Style>
+  <!-- The Settings card's connection dot while a check runs or is owed: neither yes nor no, so
+       neither the success nor the warning ink. Declared after .ok so it wins at equal specificity. -->
+  <!-- An uploaded address on the export card's UPLOAD page: mono, selectable, trimmed with the whole
+       address on its tooltip. SelectableTextBlock, so it takes its own selector (exact type match). -->
+  <Style Selector="SelectableTextBlock.uri">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+  <Style Selector="Ellipse.vdot.idle">
+    <Setter Property="Fill" Value="{DynamicResource FgMutedBrush}" />
   </Style>
   <Style Selector="TextBlock.vstate">
     <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
