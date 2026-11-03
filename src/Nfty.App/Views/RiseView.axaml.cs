@@ -270,6 +270,21 @@ public partial class RiseView : UserControl
         }
 
         const double edge = 8;
+        // CENTERED FIRST, a little smaller if it must. Trying the other positions at 320 before a
+        // smaller centered square pinned the art to the top of the pane whenever the tile clipped a
+        // corner of the centered 320 - which is the ordinary 1180x720 page - and read as a canvas
+        // that opened misplaced. Down to three quarters of full size, centered wins; past that the
+        // free spot is worth more than the middle.
+        double centerTop = top > 8 ? top : 0;
+        for (double side = HostSide; side >= HostSide * 0.75; side -= 8)
+        {
+            double cx = (w - side) / 2, cy = Math.Max((h - side) / 2, centerTop);
+            if (cx < 0 || cy + side > h) continue;
+            var r = new Rect(cx, cy, side, side);
+            if (avoid.Any(a => a.Intersects(r))) continue;
+            PlaceHost(side, cx, cy);
+            return;
+        }
         for (double side = HostSide; side >= HostMinSide; side -= 8)
         {
             double cx = (w - side) / 2, cy = (h - side) / 2;

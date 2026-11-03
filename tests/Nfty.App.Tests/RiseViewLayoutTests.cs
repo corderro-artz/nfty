@@ -461,8 +461,14 @@ public class RiseViewLayoutTests
         Assert.False(host.Intersects(tile), $"the canvas {host} runs under the 3D tile {tile}");
         Assert.True(host.Width >= 160 && host.Left >= 0 && host.Top >= 0
                     && host.Right <= backdrop.Bounds.Width && host.Bottom <= backdrop.Bounds.Height);
-        // Where there is room it is still the centered 320 the editor draws.
-        if (!minimum && !enlarged) Assert.Equal(320, host.Width);
+        // Where there is room the art opens CENTERED in the pane, both ways - a little under the
+        // editor's 320 when the tile would clip a corner, never pushed to the top to stay at 320.
+        if (!minimum && !enlarged)
+        {
+            Assert.InRange(host.Width, 240, 320);
+            Assert.InRange(host.Center.X - backdrop.Bounds.Width / 2, -1, 1);
+            Assert.InRange(host.Center.Y - backdrop.Bounds.Height / 2, -1, 1);
+        }
     }
 
     [AvaloniaFact]
@@ -678,7 +684,8 @@ public class RiseViewLayoutTests
         Assert.Equal(first, Snapshot(again));
         var backdrop = again.View.FindControl<Panel>("CanvasBackdrop")!;
         var host = RectOf(again.View.FindControl<Border>("CanvasHost")!, backdrop);
-        Assert.Equal(320, host.Width);
+        Assert.InRange(host.Width, 240, 320);
         Assert.InRange(host.Center.X - backdrop.Bounds.Width / 2, -1, 1);
+        Assert.InRange(host.Center.Y - backdrop.Bounds.Height / 2, -1, 1);
     }
 }
