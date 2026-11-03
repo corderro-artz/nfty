@@ -90,6 +90,28 @@
   </PropertyGroup>
 
   <!--
+    The six ImageSharp 3.1.11 advisories, suppressed EXACTLY and only because each is unreachable.
+    Fixes exist only in 3.2.0+, which needs a license key (see Directory.Packages.props). Every
+    decode goes through Nfty.Core.Imaging.ImageFormats, which registers PNG + JPEG only and skips
+    metadata; ImageFormatsReachabilityTests + ImageFormatSweepTests pin that. DELETE these lines
+    when ImageSharp is upgraded.
+  -->
+  <ItemGroup>
+    <!-- TIFF fax tile decoder: no TIFF decoder is registered, a .tiff renamed .png is refused. -->
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-v76p-62qx-wwq2" />
+    <!-- HistogramEqualization: nothing in src/ calls it. -->
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-j3p4-wp97-rph4" />
+    <!-- TIFF CCITT T4 encoder: no TIFF encoder is ever used; output is PNG only. -->
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-j9gm-c75j-xc9q" />
+    <!-- TIFF CCITT T6 encoder: same as above. -->
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-jjfr-hcj7-qf5w" />
+    <!-- BigTIFF IFD decoder hang: no TIFF decoder is registered. -->
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-wmxv-xphr-5c9g" />
+    <!-- ICC CLUT parsing allocation: profiles are skipped (SkipMetadata) or kept unparsed; nothing reads IccProfile.Entries. -->
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-gwg2-r3hj-4w44" />
+  </ItemGroup>
+
+  <!--
     Test projects document nothing public and ship nowhere, so the doc requirement is lifted for
     them. Leaving it on would mean writing a <summary> for every fixture builder to satisfy a rule
     that exists to serve consumers of a library, and these have none.

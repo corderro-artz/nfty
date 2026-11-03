@@ -1,3 +1,4 @@
+using Nfty.Core.Imaging;
 using System.CommandLine;
 using System.Globalization;
 using Nfty.Core.Publish;
@@ -66,7 +67,7 @@ public static partial class CommandFactory
 
             if (setCols || setCell)
             {
-                var info = Image.Identify(file);
+                var info = ImageFormats.Identify(file);
                 SheetGrid? grid;
                 string? problem;
                 if (setCell)
@@ -87,7 +88,7 @@ public static partial class CommandFactory
             }
 
             Console.WriteLine("embedded: " + (SheetGrid.Read(file)?.ToChunkText() ?? "none"));
-            using var image = Image.Load<Rgba32>(file);
+            using var image = ImageFormats.Load(file);
             Console.WriteLine("detected: " + (SheetGrid.Detect(image)?.ToChunkText() ?? "none"));
             return 0;
         });

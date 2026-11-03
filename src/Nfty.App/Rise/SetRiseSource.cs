@@ -1,3 +1,4 @@
+using Nfty.Core.Imaging;
 using System.ComponentModel;
 using System.Globalization;
 using System.Text.Json;
@@ -254,7 +255,7 @@ public sealed class SetRiseSource : RiseSource
     /// "empty", never a crash.</summary>
     private static Image<Rgba32> LoadArt(string path)
     {
-        try { return Image.Load<Rgba32>(path); }
+        try { return ImageFormats.Load(path); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or UnknownImageFormatException
                                        or InvalidImageContentException)
         {

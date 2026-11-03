@@ -4,7 +4,7 @@
 
 The whole engine: archives, validation, generation, rendering, Sets, export, sealing, statistics. Depends on Nfty.Ticket and ImageSharp.
 
-179 public types. Each page lists the public and protected members with their signatures and the documentation written beside the code.
+180 public types. Each page lists the public and protected members with their signatures and the documentation written beside the code.
 
 ## Nfty.Core
 
@@ -124,6 +124,7 @@ The whole engine: archives, validation, generation, rendering, Sets, export, sea
 | [`ColorName`](Nfty.Core.Imaging.ColorName.md) | class | The one table that turns a rolled color into the word a marketplace shows for it. |
 | [`Colorizer`](Nfty.Core.Imaging.Colorizer.md) | class | Tints a grayscale value-map with a hue and saturation, preserving each pixel's own value or lightness — which is what makes one piece of art yield a whole family of variants. |
 | [`Compositor`](Nfty.Core.Imaging.Compositor.md) | class | Stacks finished layer images into one asset. |
+| [`ImageFormats`](Nfty.Core.Imaging.ImageFormats.md) | class | THE one way nfty decodes a picture. |
 | [`NumberStamp`](Nfty.Core.Imaging.NumberStamp.md) | class | Stamps an asset's set number into a corner, for telling loose sprites apart. |
 | [`Opacity`](Nfty.Core.Imaging.Opacity.md) | class | Whether a pixel — or a whole image, layer or book — carries partial alpha: a level of transparency that is neither fully there nor fully absent. |
 | [`Palette`](Nfty.Core.Imaging.Palette.md) | class | The palette a painting front-end offers: [`Palette.Slots`](Nfty.Core.Imaging.Palette.md#f-slots) ramp entries that change with the [`PaletteMode`](Nfty.Core.Imaging.PaletteMode.md), plus the rules for the swatches a user saves beside them. |

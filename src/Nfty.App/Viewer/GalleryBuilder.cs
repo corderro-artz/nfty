@@ -1,3 +1,4 @@
+using Nfty.Core.Imaging;
 using System.Globalization;
 using Nfty.App.Services;
 using Nfty.App.ViewModels;
@@ -104,7 +105,7 @@ public static class GalleryBuilder
                 () => ArchivePeek.VariantPng(path, recipeId, ingredientId, variant.Id),
                 () => Task.Run<ViewerSubject>(() =>
                 {
-                    using var art = Image.Load<Rgba32>(ArchivePeek.VariantPng(path, recipeId, ingredientId, variant.Id));
+                    using var art = ImageFormats.Load(ArchivePeek.VariantPng(path, recipeId, ingredientId, variant.Id));
                     var facts = new List<ViewerFact>
                     {
                         new("VARIANT", variant.Name),
@@ -180,7 +181,7 @@ public static class GalleryBuilder
                     if (item.AnimationUrl is { Length: > 0 }) facts.Add(new("MODEL URL", item.AnimationUrl, Group: ViewerFactGroup.Links));
                     facts.Add(new("FILE", SetLayout.MetadataDir + "/" + item.File, Group: ViewerFactGroup.File));
                     Image<Rgba32>? art = null;
-                    try { if (item.ImagePath is not null) art = Image.Load<Rgba32>(item.ImagePath); }
+                    try { if (item.ImagePath is not null) art = ImageFormats.Load(item.ImagePath); }
                     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
                                                    or UnknownImageFormatException or InvalidImageContentException) { }
                     using (art)
@@ -231,7 +232,7 @@ public static class GalleryBuilder
                 items.Add(new GalleryItem(key, () => cells.Png(key),
                     () => Task.Run<ViewerSubject>(() =>
                     {
-                        using var art = Image.Load<Rgba32>(cells.Png(key));
+                        using var art = ImageFormats.Load(cells.Png(key));
                         var facts = new List<ViewerFact>
                         {
                             new("CELL", key),
@@ -295,7 +296,7 @@ public static class GalleryBuilder
             {
                 var cell = menu.Cell(key);
                 if (menu.Book.Art.Mode != MenuArtMode.Atlas) return menu.ArtBytes(key);
-                _atlas ??= Image.Load<Rgba32>(menu.ArtBytes(key));
+                _atlas ??= ImageFormats.Load(menu.ArtBytes(key));
                 using var crop = _atlas.Clone(c => c.Crop(new Rectangle(cell.X, cell.Y, cell.Width, cell.Height)));
                 using var ms = new MemoryStream();
                 crop.SaveAsPng(ms);

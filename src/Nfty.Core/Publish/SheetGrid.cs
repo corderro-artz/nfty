@@ -1,3 +1,4 @@
+using Nfty.Core.Imaging;
 using Nfty.Core.Formats;
 using System.Globalization;
 using SixLabors.ImageSharp;
@@ -80,7 +81,7 @@ public sealed record SheetGrid(int Columns, int Rows, int CellWidth, int CellHei
         ArgumentException.ThrowIfNullOrWhiteSpace(pngPath);
         try
         {
-            var info = Image.Identify(pngPath);
+            var info = ImageFormats.Identify(pngPath, keepMetadata: true);
             var entry = info.Metadata.GetPngMetadata().TextData
                 .FirstOrDefault(t => t.Keyword == ChunkKeyword);
             return entry.Keyword is null ? null : Parse(entry.Value);
@@ -294,7 +295,7 @@ public sealed record SheetGrid(int Columns, int Rows, int CellWidth, int CellHei
         long before = new FileInfo(pngPath).Length;
         AtomicFile.Replace(pngPath, tmp =>
         {
-            using var image = Image.Load(pngPath);
+            using var image = ImageFormats.LoadAny(pngPath, keepMetadata: true);
             var text = image.Metadata.GetPngMetadata().TextData;
             for (int i = text.Count - 1; i >= 0; i--)
                 if (text[i].Keyword == ChunkKeyword) text.RemoveAt(i);

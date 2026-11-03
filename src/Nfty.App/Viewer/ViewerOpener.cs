@@ -1,3 +1,4 @@
+using Nfty.Core.Imaging;
 using System.Globalization;
 using System.Text.Json;
 using Nfty.App.Services;
@@ -104,7 +105,7 @@ public static class ViewerOpener
             case ".png" or ".jpg" or ".jpeg":
                 return await Task.Run<ViewerSubject>(() =>
                 {
-                    using var art = Image.Load<Rgba32>(path);
+                    using var art = ImageFormats.Load(path);
                     var facts = new List<ViewerFact>
                     {
                         new("FILE", Path.GetFileName(path), Group: ViewerFactGroup.File),
@@ -125,9 +126,35 @@ public static class ViewerOpener
                 return meta;
         }
 
+        // A marketplace export with token-id naming writes metadata/1, no extension: recognised by
+        // what is inside (an OpenSea item: a JSON object with a string name and image), never by name.
+        if (Path.GetExtension(path).Length == 0 && LooksLikeMetadata(path))
+        {
+            var bare = await Task.Run(() => MetadataSubject.Open(path), ct);
+            if (bare is null) await dialogs.ShowErrorAsync("Could not open", NotMetadata);
+            return bare;
+        }
+
         await dialogs.ShowErrorAsync("Could not open",
             $"nfty cannot show “{Path.GetFileName(path)}”: its extension is not one the viewer opens.");
         return null;
+    }
+
+    /// <summary>Whether an extensionless file is an OpenSea metadata item: a small JSON object whose
+    /// <c>name</c> and <c>image</c> are strings.</summary>
+    /// <param name="path">The file.</param>
+    /// <returns><c>true</c> when it is.</returns>
+    internal static bool LooksLikeMetadata(string path)
+    {
+        try
+        {
+            if (new FileInfo(path).Length is 0 or > 1_048_576) return false;
+            using var doc = JsonDocument.Parse(File.ReadAllBytes(path));
+            return doc.RootElement is { ValueKind: JsonValueKind.Object } root
+                && root.TryGetProperty("name", out var name) && name.ValueKind == JsonValueKind.String
+                && root.TryGetProperty("image", out var image) && image.ValueKind == JsonValueKind.String;
+        }
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException) { return false; }
     }
 
     private static GallerySubject Gallery(ArchiveGalleryViewModel g) => new(g);
@@ -229,7 +256,7 @@ internal static class MetadataSubject
         }
 
         Image<Rgba32>? art = null;
-        try { art = Image.Load<Rgba32>(png); }
+        try { art = ImageFormats.Load(png); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or UnknownImageFormatException
                                        or InvalidImageContentException) { /* the missing mark says so */ }
         using (art)

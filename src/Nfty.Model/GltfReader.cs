@@ -1,3 +1,4 @@
+using Nfty.Core.Imaging;
 using System.Buffers.Binary;
 using System.Text.Json;
 using Nfty.Model.Gltf;
@@ -149,7 +150,7 @@ public static class GltfReader
         byte[] png = data.AsSpan(offset, length).ToArray();
 
         ImageInfo info;
-        try { info = Image.Identify(png); }
+        try { info = ImageFormats.Identify(png); }
         catch (Exception ex) when (ex is UnknownImageFormatException or InvalidImageContentException)
         {
             throw new UnsupportedModelException("a texture that is not a readable PNG");

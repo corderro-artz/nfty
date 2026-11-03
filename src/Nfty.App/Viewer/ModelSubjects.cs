@@ -1,3 +1,4 @@
+using Nfty.Core.Imaging;
 using System.Globalization;
 using Nfty.App.Rise;
 using Nfty.App.Services;
@@ -70,7 +71,7 @@ public static class ModelSubjects
     public static SnapshotSubject ForModelFile(string path)
     {
         var read = GltfReader.Read(path);
-        using var texture = Image.Load<Rgba32>(read.TexturePng);
+        using var texture = ImageFormats.Load(read.TexturePng);
         using var art = FrontHalf(texture);
         string dir = Path.GetDirectoryName(Path.GetFullPath(path)) ?? "";
         string stem = Path.GetFileNameWithoutExtension(path);
@@ -102,7 +103,7 @@ public static class ModelSubjects
         try
         {
             var read = GltfReader.Read(main);
-            var texture = Image.Load<Rgba32>(read.TexturePng);
+            var texture = ImageFormats.Load(read.TexturePng);
             var model = files.Select(f => new ModelFile(Path.GetFileName(f), File.ReadAllBytes(f))).ToList();
             return new ViewerModel(read.Mesh, texture, model);
         }
@@ -134,7 +135,7 @@ public static class ModelSubjects
 
     private static Image<Rgba32> LoadArt(string path)
     {
-        try { return Image.Load<Rgba32>(path); }
+        try { return ImageFormats.Load(path); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or UnknownImageFormatException
                                        or InvalidImageContentException)
         {

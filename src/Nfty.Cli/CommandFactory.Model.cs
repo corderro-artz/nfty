@@ -254,7 +254,7 @@ public static partial class CommandFactory
 
     private static int ModelFromPicture(string file, string outPath, RiseOptions options, (byte Front, byte Back)? fill)
     {
-        using var art = Image.Load<Rgba32>(file);
+        using var art = ImageFormats.Load(file);
         DepthMap? depth = fill is { } f ? DepthFill.All(art, f.Front, f.Back) : null;
         return WriteModel(art, depth, options, outPath, $"'{file}'");
     }
