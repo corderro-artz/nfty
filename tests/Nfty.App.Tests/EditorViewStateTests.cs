@@ -78,7 +78,7 @@ public class EditorViewStateTests
 
             Assert.Equal(8, second.GridSize);
             Assert.False(second.ShowPixelGrid);
-            Assert.True(second.PreviewEnlarged);
+            Assert.False(second.PreviewEnlarged); // tile size is not remembered: each open starts small
             Assert.True(second.IsReferencesTab);
         }
         finally { Directory.Delete(dir, recursive: true); }

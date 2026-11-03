@@ -163,7 +163,7 @@ public class RiseViewLayoutTests
         Dispatcher.UIThread.RunJobs();
         Assert.NotEqual("", page.Vm.ReadoutText);          // it really had something to say
         Assert.Equal(without, readout.Bounds.Height);
-        Assert.Equal(28, without);
+        Assert.Equal(40, without);
     }
 
     [AvaloniaFact]
@@ -447,7 +447,7 @@ public class RiseViewLayoutTests
     [InlineData(true, false)]
     [InlineData(false, true)]
     [InlineData(true, true)]
-    public void Fit_never_puts_the_art_under_the_tile_or_the_grid_chip(bool minimum, bool enlarged)
+    public void Fit_never_puts_the_art_under_the_tile(bool minimum, bool enlarged)
     {
         double w = minimum ? Min.Width : 1180, h = minimum ? Min.Height : 720;
         using var page = RisePages.Show(RisePages.VariantVm(oakDepth: RisePages.PaintedOak()), w, h);
@@ -457,10 +457,8 @@ public class RiseViewLayoutTests
         var backdrop = page.View.FindControl<Panel>("CanvasBackdrop")!;
         var host = RectOf(page.View.FindControl<Border>("CanvasHost")!, backdrop);
         var tile = RectOf(page.View.FindControl<Border>("ModelTile")!, backdrop);
-        var chip = RectOf(page.View.FindControl<Border>("GridChip")!, backdrop);
 
         Assert.False(host.Intersects(tile), $"the canvas {host} runs under the 3D tile {tile}");
-        Assert.False(host.Intersects(chip), $"the canvas {host} runs under the grid chip {chip}");
         Assert.True(host.Width >= 160 && host.Left >= 0 && host.Top >= 0
                     && host.Right <= backdrop.Bounds.Width && host.Bottom <= backdrop.Bounds.Height);
         // Where there is room it is still the centered 320 the editor draws.
@@ -647,5 +645,40 @@ public class RiseViewLayoutTests
         Assert.True(tiles < vm.Items.Count, $"all {tiles} of {vm.Items.Count} tiles were realized: the rail does not virtualize");
         // Three to a row, so the realized rows hold a multiple of three (or the short last row).
         Assert.Equal(0, tiles % 3);
+    }
+
+    /// <summary>EVERY OPEN STARTS THE SAME: paint canvas in the pane, small 3D tile in the corner, camera
+    /// front-on and centered, art fitted. Nothing from a previous open (swap, enlarge, orbit, zoom) leaks.</summary>
+    [AvaloniaFact]
+    public void Every_open_starts_with_canvas_in_the_pane_and_the_camera_front_on()
+    {
+        static (bool swapped, bool enlarged, float yaw, float pitch, float dist, double zoom, string state) Snapshot(RisePage p) =>
+            (p.Vm.PreviewSwapped, p.Vm.PreviewEnlarged, p.Vm.Preview.CameraState.Yaw, p.Vm.Preview.CameraState.Pitch,
+             p.Vm.Preview.CameraState.Distance, p.Vm.Zoom, "");
+
+        (bool, bool, float, float, float, double, string) first;
+        using (var page = RisePages.Show(RisePages.VariantVm(oakDepth: RisePages.PaintedOak()), 1180, 720))
+        {
+            first = Snapshot(page);
+            Assert.False(first.Item1);
+            Assert.False(first.Item2);
+            Assert.Equal(0f, first.Item3);
+            Assert.Equal(0f, first.Item4);
+            Assert.False(page.Vm.IsZoomed);
+
+            page.Vm.SwapPreviewCommand.Execute(null);
+            page.Vm.EnlargePreviewCommand.Execute(null);
+            page.Vm.Preview.Orbit(new System.Numerics.Vector2(80, 40));
+            page.Vm.Zoom = 4;
+            Dispatcher.UIThread.RunJobs();
+            Assert.NotEqual(0f, page.Vm.Preview.CameraState.Yaw);
+        }
+
+        using var again = RisePages.Show(RisePages.VariantVm(oakDepth: RisePages.PaintedOak()), 1180, 720);
+        Assert.Equal(first, Snapshot(again));
+        var backdrop = again.View.FindControl<Panel>("CanvasBackdrop")!;
+        var host = RectOf(again.View.FindControl<Border>("CanvasHost")!, backdrop);
+        Assert.Equal(320, host.Width);
+        Assert.InRange(host.Center.X - backdrop.Bounds.Width / 2, -1, 1);
     }
 }

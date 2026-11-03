@@ -2427,18 +2427,6 @@
        64 is what the card can afford, not a design preference - WizardFitsTests measures the form
        at the app's shipping size and the Dynamic kind (the only one that reveals BOTH range bands)
        is 12px from the fold at 76. Reclaim height elsewhere before growing it. -->
-  <!-- The canvas backdrop's own controls, opposite the preview blip. Same chrome as the blip - a
-       panel ground, a hairline and the window shadow - because they are the same KIND of thing: a
-       small control surface floating on the canvas rather than a panel the layout reserves. -->
-  <Style Selector="Border.gridchip">
-    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
-    <Setter Property="BoxShadow" Value="{DynamicResource WinShadow}" />
-    <Setter Property="Padding" Value="6,5" />
-  </Style>
-
   <!-- 160, up from 64. The import form was one narrow column with a hard ceiling, so the preview was
        squeezed to a strip - and a 64px band of a 512px drawing is a swatch, not a preview, on the one
        screen whose whole job is showing what the art becomes before the choice is agreed to. The
@@ -4555,11 +4543,12 @@
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 
-  <!-- The readout under the canvas: fixed height, hairline on top. What it says changes under the
-       pointer, so the row is reserved and only its ink changes. -->
+  <!-- The bar under the canvas on both pages: the canvas' own view controls (grid, grid step, zoom) and,
+       on the Rise page, the pointer readout. Fixed height, hairline on top. What the readout says
+       changes under the pointer, so the row is reserved and only its ink changes. -->
   <Style Selector="Border.readout">
-    <Setter Property="Height" Value="28" />
-    <Setter Property="Padding" Value="16,0" />
+    <Setter Property="Height" Value="40" />
+    <Setter Property="Padding" Value="12,0" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
     <Setter Property="BorderThickness" Value="0,1,0,0" />
   </Style>

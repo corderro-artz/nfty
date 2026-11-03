@@ -40,7 +40,9 @@ public partial class IngredientEditorViewModel
         {
             ShowPixelGrid = state.PixelGrid;
             GridSize = state.GridStep;
-            PreviewEnlarged = state.PreviewEnlarged;
+            // The tile size is NOT restored: every open starts with the small tile in its corner,
+            // the way the Rise page does. A stale record that says enlarged is read and ignored.
+            PreviewEnlarged = false;
             ActiveRailTab = state.ReferencesTab ? RailTab.References : RailTab.Colorize;
         }
         finally { _loadingViewState = false; }
