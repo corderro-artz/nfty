@@ -593,7 +593,7 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
         UpdateSelectedPreset();
         try
         {
-            var plan = SetExporter.Plan(_setDirectory, PlanOptions, CookBookPath);
+            var plan = SetExporter.Plan(_setDirectory, Options, CookBookPath);
             Parts = plan.Parts();
             OutputName = plan.OutputName;
             SizeText = plan.SizeText();
@@ -612,7 +612,7 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
                     + "collection, not this one.");
             // Core words these (relative links, dangling links), so the terminal and this card say the
             // same thing about the same request.
-            notes.AddRange(plan.Warnings);
+            notes.AddRange(IsUploadTab ? UploadPhrased(plan.Warnings) : plan.Warnings);
             if (IsSealed)
                 notes.Add("Sealed: unreadable without the passphrase. Anyone you give it to can "
                     + "still take the art - nfty declines, a screenshot does not.");

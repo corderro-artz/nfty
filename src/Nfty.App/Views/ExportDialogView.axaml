@@ -473,10 +473,16 @@
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
+                  <!-- ONE LINE PER CONSEQUENCE, the whole sentence on its tooltip. Wrapped, two link
+                       warnings (the marketplace preset with no address yet: relative links, a
+                       collection.json with no image) took three lines, outgrew the reserved 96 and pushed
+                       the card past the 526 a modal is given - every tab then scrolled its page at the
+                       smallest window. One line each keeps the common states inside the reserve. -->
                   <ItemsControl ItemsSource="{Binding Consequences}" Margin="0,2,0,0">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="x:String">
-                        <TextBlock Classes="caveat" Text="{Binding}" Margin="0,2,0,0" />
+                        <TextBlock Classes="caveat" Text="{Binding}" Margin="0,2,0,0" TextWrapping="NoWrap"
+                                   TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding}" />
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>

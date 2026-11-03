@@ -25,20 +25,24 @@ public partial class ExportDialogViewModel
     private CancellationTokenSource? _uploadCheckCts;
 
     /// <summary>
-    /// What the manifest describes. On UPLOAD it is the export the upload will write, whose links
-    /// carry addresses the upload has not made yet - so the plan is asked with a stand-in address,
-    /// and the "links are relative, upload first" warnings that would otherwise describe the very
-    /// step this page performs are not shown.
+    /// The manifest's warnings as the UPLOAD page reads them. Three of Core's sentences tell the
+    /// reader to upload first and export again - the very step this page performs - so here they
+    /// say what the upload will do instead.
     /// </summary>
-    private ExportOptions PlanOptions => IsUploadTab
-        ? Options with
-        {
-            ImageBaseUri = PendingAddress,
-            ModelBaseUri = Options.Models && SetHasModels ? PendingAddress : null,
-        }
-        : Options;
-
-    private const string PendingAddress = "ipfs://pending-upload/";
+    /// <remarks>
+    /// <b>Reworded, never dropped.</b> The manifest is reserved at one height for every page and each
+    /// consequence is one line, so a page that showed FEWER lines than its neighbors would change the
+    /// card's height when the tab changed; <c>Every_tab_is_the_same_height_with_the_models_row</c> holds it.
+    /// </remarks>
+    private static IEnumerable<string> UploadPhrased(IEnumerable<string> warnings) =>
+        warnings.Select(w =>
+            w.StartsWith("Image links are relative", StringComparison.Ordinal)
+                ? "Image links are relative until the upload writes its address: each becomes ipfs://<imagesCID>/ and its file name."
+            : w.StartsWith("Models are not linked", StringComparison.Ordinal)
+                ? "Models are not linked yet: the upload writes ipfs://<modelsCID>/ into each glb's animation_url."
+            : w.StartsWith("collection.json has no image", StringComparison.Ordinal)
+                ? "collection.json has no image yet: the upload gives it the first token's ipfs:// image."
+            : w);
 
     /// <summary>Whether the footer's primary button exports (every page but UPLOAD).</summary>
     public bool IsExportAction => !IsUploadTab;
@@ -98,7 +102,7 @@ public partial class ExportDialogViewModel
     // Opening the page re-asks a provider that was not reachable: the reader may have just started it.
     partial void OnTabChanged(ExportTab value)
     {
-        Refresh();   // the manifest describes the upload's export on UPLOAD (PlanOptions)
+        Refresh();   // the manifest words its warnings for the upload on UPLOAD (UploadPhrased)
         if (value == ExportTab.Upload && Connection is ConnectionState.NotReachable or ConnectionState.Unchecked)
             PendingUploadCheck = CheckUploadAsync();
     }

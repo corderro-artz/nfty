@@ -150,9 +150,10 @@ public class ExportUploadTests
     public async Task The_footer_action_follows_the_page_and_the_card_keeps_its_height()
     {
         var vm = Dialog(new FakePinning(true), Directory.CreateTempSubdirectory().FullName);
-        // An address in the field, so CONTENTS carries no "links are relative" warnings: those outgrow
-        // the manifest's reserved height on every page but UPLOAD (which describes the upload's own
-        // export, links included), and that overflow is the marketplace preset's, not this page's.
+        // An address in the field, so no page carries the "links are relative" warnings: at this window
+        // those outgrow the manifest's reserved height on every page, which clamps the card and hides
+        // a height change behind the clamp. Without them the card is free to grow, so equal heights
+        // here mean the footer swap and the UPLOAD page really move nothing.
         vm.ImageBaseUri = "ipfs://bafyexample/";
         await vm.PendingUploadCheck;
         var view = new Views.ExportDialogView { DataContext = vm };
@@ -189,6 +190,9 @@ public class ExportUploadTests
     [InlineData("unreachable")]
     [InlineData("running")]
     [InlineData("done")]
+    // The marketplace preset with no address yet, on CONTENTS: two link warnings in the manifest.
+    // Wrapped, they pushed the card past the window and every tab scrolled; one line each fits.
+    [InlineData("contents")]
     public async Task The_upload_page_never_scrolls_at_the_smallest_window(string state)
     {
         ExportDialogViewModel vm = state switch
@@ -197,6 +201,7 @@ public class ExportUploadTests
             _ => Dialog(new FakePinning(state != "unreachable"), Directory.CreateTempSubdirectory().FullName),
         };
         await vm.PendingUploadCheck;
+        if (state == "contents") vm.Tab = ExportTab.Contents;
         if (state == "running") { vm.IsRunning = true; vm.PhaseText = "Uploading images... 1.2 MB of 3.1 MB"; }
         var view = new Views.ExportDialogView { DataContext = vm };
         var window = new Window
