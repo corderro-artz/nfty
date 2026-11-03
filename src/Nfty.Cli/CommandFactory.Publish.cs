@@ -172,6 +172,15 @@ public static partial class CommandFactory
                 + "export is for upload: nfty cannot reopen it as a Set, and --seal refuses it.",
         };
 
+        var upload = new Option<bool>("--upload")
+        {
+            Description = "Upload as well as export, in one step: pin images/ (and models/), write the "
+                + "metadata with those addresses, pin metadata/ with collection.json beside it, then write "
+                + "the export here with the same addresses. To the local IPFS node by default; --pinata for "
+                + "Pinata. Prints the CIDs, the contract's baseURI and its contractURI.",
+        };
+        var pin = PinningOptions.Create();
+
         var cmd = new Command("export",
             "Publish a cooked Set: choose what goes with it, and in what shape. A cook writes your "
             + "working copy and holds everything; an export is addressed to somebody — a "
@@ -180,7 +189,8 @@ public static partial class CommandFactory
         { path, outDir, preset, images, noImages, openSea, noOpenSea, nfty, noNfty, models, noModels,
           sheet, sheetCols, sheetRows, watermark, watermarkCorner, book, folder, pack, seal, note, key,
           artOnly, imageBaseUri, modelBaseUri, tokenNames, startId, externalUrl, collection, noCollection, externalLink, royalty,
-          feeRecipient, collectionImage, setManifest, noSetManifest };
+          feeRecipient, collectionImage, setManifest, noSetManifest, upload };
+        pin.AddTo(cmd);
 
         // Dependent options are REJECTED without what they depend on, never ignored: a --sheet-cols
         // typed without --sheet would silently make no sheet. Counts below one cannot name a grid.
@@ -201,6 +211,14 @@ public static partial class CommandFactory
                     (result.IsGiven(imageBaseUri), "--image-base-uri"), (result.IsGiven(modelBaseUri), "--model-base-uri"),
                 })
                     if (given) result.AddError($"--art-only exports the art and nothing else; {name} asks for the opposite.");
+            pin.Validate(result, result.GetValue(upload));
+            if (result.GetValue(upload))
+                foreach (var (given, name) in new (bool, string)[]
+                {
+                    (result.GetValue(artOnly), "--art-only"), (result.GetValue(seal), "--seal"),
+                    (result.IsGiven(imageBaseUri), "--image-base-uri"), (result.IsGiven(modelBaseUri), "--model-base-uri"),
+                })
+                    if (given) result.AddError($"--upload uploads the art and writes its address itself; {name} cannot go with it.");
             if (result.GetValue(models) && result.GetValue(noModels))
                 result.AddError("--models and --no-models ask for different things.");
             if (result.GetValue(collection) && result.GetValue(noCollection))
@@ -332,6 +350,12 @@ public static partial class CommandFactory
                 if (bookPath is { Length: > 0 }
                     && SetProvenance.Warning(probe.RecordedCookBookSha256, CookBookArchive.HashOf(bookPath)) is { } warning)
                     Console.Error.WriteLine(warning);
+            }
+
+            if (parse.GetValue(upload))
+            {
+                RunUpload(parse, pin, parse.GetValue(path)!, parse.GetValue(outDir)!, options, bookPath);
+                return 0;
             }
 
             string? passphrase = options.Sealed
