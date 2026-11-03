@@ -257,7 +257,7 @@ Assert.True(hit is not null && (ReferenceEquals(hit, b) || b.IsVisualAncestorOf(
         {
             Assert.Contains(view.GetVisualDescendants().OfType<TextBlock>(),
                 t => t.Text == vm.ExportNote && t.Text!.Length > 0);
-            var save = view.GetVisualDescendants().OfType<Button>().First(b => Equals(b.Content, "2x"));
+            var save = view.GetVisualDescendants().OfType<Button>().First(b => b.Name == "SaveImageButton");
             Assert.False(save.IsEffectivelyEnabled);
             var copy = view.GetVisualDescendants().OfType<Button>().First(b => b.Name == "CopyImageButton");
             Assert.False(copy.IsEffectivelyEnabled);

@@ -185,7 +185,7 @@
             <Border Classes="factcard act">
               <StackPanel Spacing="6">
                 <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
-                  <Border Grid.Column="0" Classes="seg bar" HorizontalAlignment="Left" IsEnabled="{Binding CanExport}"
+                  <Border Grid.Column="0" Classes="seg bar" HorizontalAlignment="Left"
                           ToolTip.Tip="How many screen pixels each art pixel becomes in the saved PNG.">
                     <StackPanel Orientation="Horizontal">
                       <Button Classes="seg-b bar" Content="1x" Classes.on="{Binding IsScale1}" Command="{Binding SetImageScaleCommand}">
