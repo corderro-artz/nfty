@@ -30,6 +30,10 @@ public partial class LandingViewModel : ViewModelBase
     private readonly IKitchenSession? _kitchen;
     private readonly LooseCreation _loose;
     private readonly IStateStore? _store;
+    private readonly IAppSettings? _settings;
+
+    /// <summary>The side a new canvas starts at: the Settings card's choice, else the built-in default.</summary>
+    private int CanvasSide => _settings?.DefaultCanvasSide ?? CanvasAdvice.DefaultSide;
     private readonly Func<Nfty.App.Rise.RiseSource, RiseViewModel>? _rise;
     private readonly IStatusService? _status;
     private readonly IViewerHost? _viewer;
@@ -70,6 +74,7 @@ public partial class LandingViewModel : ViewModelBase
     /// <param name="threads">The worker-thread setting, read at the start of each open; null runs at the default.</param>
     /// <param name="viewer">Where Open in viewer shows its subject; null leaves that button dim.</param>
     /// <param name="bookCandidates">CookBook paths the app can name, so a Set shown in the viewer can show its model.</param>
+    /// <param name="settings">Where a new CookBook's or Ingredient's starting canvas comes from; null starts at 32.</param>
     public LandingViewModel(INavigationService nav, IDialogService dialogs,
         IFilePickerService picker, IRecentsService recents, ICookBookSession session,
         Func<LoadedCookBook, ExplorerViewModel> explorerFactory,
@@ -78,8 +83,10 @@ public partial class LandingViewModel : ViewModelBase
         IKitchenSession? kitchen = null, IStateStore? store = null,
         Func<Nfty.App.Rise.RiseSource, RiseViewModel>? rise = null, IStatusService? status = null,
         IImageBridge? bridge = null, IParallelismSetting? threads = null,
-        IViewerHost? viewer = null, Func<IEnumerable<string>>? bookCandidates = null)
+        IViewerHost? viewer = null, Func<IEnumerable<string>>? bookCandidates = null,
+        IAppSettings? settings = null)
     {
+        _settings = settings;
         _viewer = viewer; _bookCandidates = bookCandidates;
         _threads = threads;
         _rise = rise; _status = status; _bridge = bridge ?? new ImageBridge();
@@ -88,6 +95,12 @@ public partial class LandingViewModel : ViewModelBase
         _looseEditorFactory = looseEditorFactory;
         _kitchen = kitchen;
         _loose = new LooseCreation(dialogs, picker, kitchen);
+        // Cleared from Settings while this screen is showing: the list redraws from the service.
+        _recents.Changed += () =>
+        {
+            OnPropertyChanged(nameof(Recents));
+            OnPropertyChanged(nameof(HasNoRecents));
+        };
         _store = store;
         // Before the Changed subscription below, which loads it.
         KitchenShelf = new KitchenShelfViewModel(OpenKitchenCard);
@@ -145,7 +158,7 @@ public partial class LandingViewModel : ViewModelBase
     [RelayCommand]
     private async Task NewCookBook()
     {
-        var wizard = new NewCookBookViewModel(_dialogs);
+        var wizard = new NewCookBookViewModel(_dialogs, CanvasSide);
         var result = await _dialogs.ShowAsync<NewCookBookViewModel>(wizard);
         if (result is null) return;   // canceled
         if (string.IsNullOrWhiteSpace(result.DerivedId))
@@ -272,7 +285,7 @@ public partial class LandingViewModel : ViewModelBase
     [RelayCommand]
     private async Task NewIngredient()
     {
-        var wizard = new NewIngredientViewModel(_dialogs) { Destination = RecipeDestination.LooseKitchen };
+        var wizard = new NewIngredientViewModel(_dialogs, CanvasSide) { Destination = RecipeDestination.LooseKitchen };
         var result = await _dialogs.ShowAsync<NewIngredientViewModel>(wizard);
         if (result is null) return;   // canceled
 

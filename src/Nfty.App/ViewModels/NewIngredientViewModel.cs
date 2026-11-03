@@ -98,6 +98,12 @@ public partial class NewIngredientViewModel : WizardViewModelBase
     /// <param name="dialogs">The dialog layer.</param>
     public NewIngredientViewModel(IDialogService dialogs) : base(dialogs) { }
 
+    /// <summary>Creates the wizard with a loose canvas starting at the side Settings remembers.</summary>
+    /// <param name="dialogs">The dialog layer.</param>
+    /// <param name="canvasSide">The side the loose canvas starts at (<see cref="Services.IAppSettings.DefaultCanvasSide"/>).</param>
+    public NewIngredientViewModel(IDialogService dialogs, int canvasSide) : base(dialogs) =>
+        CanvasSize = string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{canvasSide}x{canvasSide}");
+
     partial void OnKindChanged(LayerKind value)
     {
         OnPropertyChanged(nameof(ShowColorRange));

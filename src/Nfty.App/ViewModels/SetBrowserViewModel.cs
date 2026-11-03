@@ -273,6 +273,8 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     private readonly INavigationService? _nav;
     private readonly IImageBridge? _bridge;
     private readonly IParallelismSetting? _threads;
+    private readonly IPublishingSettings? _publishing;
+    private readonly IClipboardService? _clipboard;
 
     /// <summary>
     /// The book this Set was cooked from, resolved into what pricing an asset needs — or null,
@@ -409,12 +411,17 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     /// <param name="nav">Where the Rise page is pushed.</param>
     /// <param name="bridge">The bitmap bridge the Rise source is built with.</param>
     /// <param name="threads">The worker-thread setting: sizes the thumbnail decode limit and the export.</param>
+    /// <param name="publishing">Where the export dialog's UPLOAD page uploads to; null leaves it unavailable.</param>
+    /// <param name="clipboard">Where the export dialog copies an uploaded address to.</param>
     public SetBrowserViewModel(LoadedSet set, IFilePickerService? picker = null,
         IDialogService? dialogs = null, IStatusService? status = null,
         IFolderRevealer? revealer = null, Func<IEnumerable<string>>? bookCandidates = null,
         Func<Nfty.App.Rise.RiseSource, RiseViewModel>? rise = null, INavigationService? nav = null,
-        IImageBridge? bridge = null, IParallelismSetting? threads = null)
+        IImageBridge? bridge = null, IParallelismSetting? threads = null,
+        IPublishingSettings? publishing = null, IClipboardService? clipboard = null)
     {
+        _publishing = publishing;
+        _clipboard = clipboard;
         _rise = rise; _nav = nav; _bridge = bridge;
         _bookCandidates = bookCandidates;
         RaritySort = new TableSort("Trait", () => OnPropertyChanged(nameof(ShownRarity)));
@@ -816,7 +823,8 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
                 // A Set records its book's HASH and never the book, so the dialog cannot follow a
                 // path - but it can CHECK one. These are the books this app can already name; the
                 // dialog also looks beside the Set, and accepts only the one that hashes right.
-                _set.Manifest.CookbookSha256, _bookCandidates?.Invoke() ?? Array.Empty<string>(), _threads));
+                _set.Manifest.CookbookSha256, _bookCandidates?.Invoke() ?? Array.Empty<string>(), _threads,
+                _publishing, _clipboard));
 
     /// <summary>Frees every decoded thumbnail and the underlying Set. Rows that were never realized
     /// decoded nothing, and disposing them is a no-op — reading <c>r.Thumbnail</c> here to dispose

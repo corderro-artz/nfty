@@ -38,11 +38,27 @@ public static class ServiceRegistration
         services.AddSingleton<IParallelismSetting>(sp =>
             new ParallelismSettingService(sp.GetRequiredService<IStateStore>(),
                 () => Environment.GetEnvironmentVariable(ParallelismSettingService.EnvironmentVariable)));
+        services.AddSingleton<IAppSettings>(sp => new AppSettingsService(sp.GetRequiredService<IStateStore>()));
+        // The Pinata key lives in the OS credential store, never in .nfty: see ISecretStore.
+        services.AddSingleton<ISecretStore>(_ => SecretStores.ForThisMachine());
+        services.AddSingleton<IPublishingSettings>(sp => new PublishingSettingsService(
+            sp.GetRequiredService<IStateStore>(), sp.GetRequiredService<ISecretStore>()));
         services.AddSingleton<IImageBridge, ImageBridge>();
         services.AddSingleton<IFolderRevealer, NoopFolderRevealer>();
         services.AddSingleton<IClipboardService, NoopClipboardService>();
 
-        services.AddSingleton<ShellViewModel>();
+        services.AddSingleton(sp => new ShellViewModel(
+            sp.GetRequiredService<INavigationService>(), sp.GetRequiredService<IDialogService>(),
+            sp.GetRequiredService<IThemeService>(), sp.GetRequiredService<IStatusService>(),
+            sp.GetRequiredService<IKitchenSession>(), sp.GetRequiredService<ICookBookSession>(),
+            sp.GetRequiredService<IParallelismSetting>(),
+            settingsCard: () => new SettingsDialogViewModel(sp.GetRequiredService<IDialogService>(),
+                sp.GetRequiredService<IParallelismSetting>(), sp.GetRequiredService<IAppSettings>(),
+                sp.GetRequiredService<IThemeService>(), sp.GetRequiredService<IPublishingSettings>(),
+                sp.GetRequiredService<IRecentsService>(), sp.GetRequiredService<IStateStore>(),
+                sp.GetRequiredService<IFolderRevealer>(), sp.GetRequiredService<IViewerWindowState>(),
+                sp.GetRequiredService<IEditorViewState>()),
+            general: sp.GetRequiredService<IAppSettings>()));
         services.AddTransient<HelpViewModel>();
         services.AddTransient<NewCookBookViewModel>();
         services.AddTransient<NewRecipeViewModel>();
@@ -66,6 +82,7 @@ public static class ServiceRegistration
             sp.GetRequiredService<IImageBridge>(),
             sp.GetRequiredService<IParallelismSetting>(),
             viewer: sp.GetService<IViewerHost>(),
+            settings: sp.GetRequiredService<IAppSettings>(),
             bookCandidates: () =>
             {
                 var session = sp.GetRequiredService<ICookBookSession>();
@@ -191,7 +208,9 @@ public static class ServiceRegistration
             rise: sp.GetRequiredService<Func<Nfty.App.Rise.RiseSource, RiseViewModel>>(),
             nav: sp.GetRequiredService<INavigationService>(),
             bridge: sp.GetRequiredService<IImageBridge>(),
-            threads: sp.GetRequiredService<IParallelismSetting>())));
+            threads: sp.GetRequiredService<IParallelismSetting>(),
+            publishing: sp.GetRequiredService<IPublishingSettings>(),
+            clipboard: sp.GetRequiredService<IClipboardService>())));
 
         // Further VM registrations are added incrementally by the task that creates each
         // ViewModel (see Tasks 12-13).

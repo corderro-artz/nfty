@@ -1,50 +1,184 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Nfty.App.ViewModels"
+             xmlns:svc="using:Nfty.App.Services"
              x:Class="Nfty.App.Views.SettingsDialogView"
              x:DataType="vm:SettingsDialogViewModel">
   <UserControl.KeyBindings>
     <KeyBinding Gesture="Escape" Command="{Binding CloseCommand}" />
   </UserControl.KeyBindings>
-  <!-- One row and one sentence, a fixed-size card that never scrolls. The heading is a title alone:
-       there is no category above "Settings" for an eyebrow to name. -->
-  <Border Classes="modal small">
-    <Grid RowDefinitions="Auto,Auto">
-      <Border Grid.Row="0" Classes="modal-body tight">
-        <StackPanel Spacing="14">
-          <TextBlock Text="Settings" Classes="m-h" Margin="0" />
-
-          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
-            <TextBlock Grid.Column="0" Classes="seglbl" Text="WORKER THREADS" />
-            <Border Grid.Column="1" Classes="seg tiny" HorizontalAlignment="Left"
-                    IsHitTestVisible="{Binding TrayEnabled}">
-              <!-- NOT IsEnabled: the app dims a disabled control to 0.38, which is legible over full
-                   ink and not over the muted ink the idle segment wears (the contrast sweep scored it
-                   1.2 to 1.5). Locked, the tray simply stops taking the pointer; the line below says
-                   why, and the VM commands refuse as well. -->
-              <StackPanel Orientation="Horizontal">
-                <Button Classes="seg-b tiny" Content="Auto"
-                        Classes.on="{Binding IsAuto}"
-                        Command="{Binding UseAutoCommand}" />
-                <Button Classes="seg-b tiny" Content="Custom"
-                        Classes.on="{Binding IsCustom}"
-                        Command="{Binding UseCustomCommand}" />
-              </StackPanel>
-            </Border>
-            <!-- Always laid out: in Auto it is dimmed and shows the count Auto uses, so choosing
-                 Custom changes ink and never moves anything. -->
-            <NumericUpDown x:Name="ThreadsField" Grid.Column="2" Classes="nin" Width="74"
-                           MinWidth="0" Minimum="1" Maximum="{Binding Maximum}" FormatString="0"
-                           Value="{Binding Threads}" IsEnabled="{Binding StepperEnabled}" />
-          </Grid>
-
-          <!-- Two lines reserved: the longest sentence wraps, and the card must not change height
-               as the choice changes. -->
-          <TextBlock Classes="m-sub" Margin="0" MinHeight="32" Text="{Binding Note}" TextWrapping="Wrap" />
-        </StackPanel>
+  <!-- Four tabbed pages under one head, the export card's grammar: title left, underline tabs right,
+       one hairline both sit on. Every page shares one reserved height (Panel.settingspages), so
+       switching tabs moves nothing; the card never scrolls. Every row is LABEL | CONTROL on one
+       130px label column, so the four pages read as one form cut into four. -->
+  <Border Classes="modal settings">
+    <Grid RowDefinitions="Auto,Auto,Auto">
+      <Border Grid.Row="0" Classes="exporthead" Margin="24,12,24,0">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="18">
+          <TextBlock Grid.Column="0" Text="Settings" Classes="m-h" VerticalAlignment="Bottom" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="18" VerticalAlignment="Bottom">
+            <Button Classes="railtab" Classes.on="{Binding IsGeneralTab}" Content="GENERAL"
+                    Command="{Binding ShowTabCommand}" CommandParameter="{x:Static vm:SettingsTab.General}" />
+            <Button Classes="railtab" Classes.on="{Binding IsPerformanceTab}" Content="PERFORMANCE"
+                    Command="{Binding ShowTabCommand}" CommandParameter="{x:Static vm:SettingsTab.Performance}" />
+            <Button Classes="railtab" Classes.on="{Binding IsPublishingTab}" Content="PUBLISHING"
+                    Command="{Binding ShowTabCommand}" CommandParameter="{x:Static vm:SettingsTab.Publishing}" />
+            <Button Classes="railtab" Classes.on="{Binding IsDataTab}" Content="DATA"
+                    Command="{Binding ShowTabCommand}" CommandParameter="{x:Static vm:SettingsTab.Data}" />
+          </StackPanel>
+        </Grid>
       </Border>
 
-      <Border Grid.Row="1" Classes="modal-foot">
+      <Border Grid.Row="1" Classes="modal-body tight">
+        <Panel Classes="settingspages">
+
+          <!-- ============================== GENERAL ============================== -->
+          <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="12"
+                IsVisible="{Binding IsGeneralTab}">
+            <TextBlock Grid.Row="0" Grid.Column="0" Classes="seglbl" Text="THEME" />
+            <Border Grid.Row="0" Grid.Column="1" Classes="seg tiny" HorizontalAlignment="Left">
+              <StackPanel Orientation="Horizontal">
+                <Button Classes="seg-b tiny" Content="System" Classes.on="{Binding IsSystemTheme}"
+                        Command="{Binding UseThemeCommand}" CommandParameter="{x:Static svc:ThemeChoice.System}"
+                        ToolTip.Tip="Follow the operating system's light or dark setting." />
+                <Button Classes="seg-b tiny" Content="Light" Classes.on="{Binding IsLightTheme}"
+                        Command="{Binding UseThemeCommand}" CommandParameter="{x:Static svc:ThemeChoice.Light}" />
+                <Button Classes="seg-b tiny" Content="Dark" Classes.on="{Binding IsDarkTheme}"
+                        Command="{Binding UseThemeCommand}" CommandParameter="{x:Static svc:ThemeChoice.Dark}" />
+              </StackPanel>
+            </Border>
+
+            <TextBlock Grid.Row="1" Grid.Column="0" Classes="seglbl" Text="NEW CANVAS" />
+            <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="9">
+              <NumericUpDown x:Name="CanvasField" Classes="nin" Width="86" MinWidth="0" Minimum="1"
+                             Maximum="{Binding CanvasMaximum}" FormatString="0" Value="{Binding CanvasSide}"
+                             ToolTip.Tip="The side, in pixels, a new CookBook's canvas and a new loose Ingredient's canvas start at." />
+              <TextBlock Classes="seglbl" Text="px square" />
+            </StackPanel>
+            <!-- Two lines reserved, and the large-canvas warning always laid out (ink only), so
+                 typing past 512 moves nothing. -->
+            <TextBlock Grid.Row="2" Grid.Column="1" Classes="m-sub" Margin="0" MinHeight="32"
+                       Text="{Binding CanvasNote}" />
+            <TextBlock Grid.Row="3" Grid.Column="1" Classes="caveat" Opacity="{Binding LargeCanvasOpacity}"
+                       Text="{Binding LargeCanvasText}" />
+          </Grid>
+
+          <!-- ============================ PERFORMANCE ============================ -->
+          <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto" RowSpacing="12"
+                IsVisible="{Binding IsPerformanceTab}">
+            <TextBlock Grid.Row="0" Grid.Column="0" Classes="seglbl" Text="WORKER THREADS" />
+            <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="12">
+              <Border Classes="seg tiny" IsHitTestVisible="{Binding TrayEnabled}">
+                <!-- NOT IsEnabled: the app dims a disabled control to 0.38, which is legible over full
+                     ink and not over the muted ink the idle segment wears (the contrast sweep scored it
+                     1.2 to 1.5). Locked, the tray simply stops taking the pointer; the line below says
+                     why, and the VM commands refuse as well. -->
+                <StackPanel Orientation="Horizontal">
+                  <Button Classes="seg-b tiny" Content="Auto" Classes.on="{Binding IsAuto}"
+                          Command="{Binding UseAutoCommand}" />
+                  <Button Classes="seg-b tiny" Content="Custom" Classes.on="{Binding IsCustom}"
+                          Command="{Binding UseCustomCommand}" />
+                </StackPanel>
+              </Border>
+              <!-- Always laid out: in Auto it is dimmed and shows the count Auto uses, so choosing
+                   Custom changes ink and never moves anything. -->
+              <NumericUpDown x:Name="ThreadsField" Classes="nin" Width="74"
+                             MinWidth="0" Minimum="1" Maximum="{Binding Maximum}" FormatString="0"
+                             Value="{Binding Threads}" IsEnabled="{Binding StepperEnabled}" />
+            </StackPanel>
+            <!-- Two lines reserved: the longest sentence wraps, and the page must not change height
+                 as the choice changes. -->
+            <TextBlock Grid.Row="1" Grid.Column="1" Classes="m-sub" Margin="0" MinHeight="32"
+                       Text="{Binding Note}" />
+          </Grid>
+
+          <!-- ============================= PUBLISHING ============================= -->
+          <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="10"
+                IsVisible="{Binding IsPublishingTab}">
+            <TextBlock Grid.Row="0" Grid.Column="0" Classes="seglbl" Text="UPLOAD TO" />
+            <Border Grid.Row="0" Grid.Column="1" Classes="seg tiny" HorizontalAlignment="Left">
+              <StackPanel Orientation="Horizontal">
+                <Button Classes="seg-b tiny" Content="Local IPFS" Classes.on="{Binding IsLocalIpfs}"
+                        Command="{Binding UseProviderCommand}" CommandParameter="{x:Static svc:PinningProvider.LocalIpfs}"
+                        ToolTip.Tip="Your own IPFS node: IPFS Desktop or Kubo, running on this machine. No account, no key." />
+                <Button Classes="seg-b tiny" Content="Pinata" Classes.on="{Binding IsPinata}"
+                        Command="{Binding UseProviderCommand}" CommandParameter="{x:Static svc:PinningProvider.Pinata}"
+                        ToolTip.Tip="Pinata's pinning service, with your own API key." />
+              </StackPanel>
+            </Border>
+
+            <TextBlock Grid.Row="1" Grid.Column="0" Classes="seglbl" Text="IPFS API" />
+            <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="250,*" ColumnSpacing="10">
+              <TextBox x:Name="ApiBox" Grid.Column="0" Text="{Binding KuboApi}" IsEnabled="{Binding IsLocalIpfs}"
+                       PlaceholderText="http://127.0.0.1:5001"
+                       ToolTip.Tip="The node's RPC address: IPFS Desktop and ipfs daemon listen on http://127.0.0.1:5001." />
+              <TextBlock Grid.Column="1" Classes="caveat" VerticalAlignment="Center" TextWrapping="NoWrap"
+                         TextTrimming="CharacterEllipsis" Text="{Binding ApiProblem}" ToolTip.Tip="{Binding ApiProblem}" />
+            </Grid>
+
+            <TextBlock Grid.Row="2" Grid.Column="0" Classes="seglbl" Text="PINATA KEY" />
+            <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="250,Auto,Auto" ColumnSpacing="8"
+                  IsEnabled="{Binding IsPinata}">
+              <TextBox x:Name="KeyBox" Grid.Column="0" PasswordChar="•" Text="{Binding PinataKeyInput}"
+                       PlaceholderText="paste the API key's JWT"
+                       ToolTip.Tip="Create a key at app.pinata.cloud with pinning rights, and paste its JWT. It goes straight to the system credential store." />
+              <Button Grid.Column="1" Classes="tbtn" Content="Save" Command="{Binding SaveKeyCommand}" />
+              <Button Grid.Column="2" Classes="tbtn" Content="Forget" Command="{Binding ForgetKeyCommand}" />
+            </Grid>
+            <TextBlock Grid.Row="3" Grid.Column="1" Classes="m-sub" Margin="0" TextWrapping="NoWrap"
+                       TextTrimming="CharacterEllipsis" Text="{Binding KeyLine}" ToolTip.Tip="{Binding KeyLine}" />
+
+            <TextBlock Grid.Row="4" Grid.Column="0" Classes="seglbl" Text="CONNECTION" />
+            <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Spacing="10">
+              <Border x:Name="ConnectionChip" Classes="idchip" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <Ellipse Width="6" Height="6" VerticalAlignment="Center" Classes="vdot"
+                           Classes.ok="{Binding IsConnected}" Classes.idle="{Binding IsChecking}" />
+                  <TextBlock Classes="cvl" Text="{Binding StatusSummary}" />
+                </StackPanel>
+              </Border>
+              <Button Classes="tbtn" Content="Test connection" Command="{Binding TestConnectionCommand}" />
+            </StackPanel>
+            <!-- Two lines reserved: the longest "not reachable" sentence wraps once. -->
+            <TextBlock Grid.Row="5" Grid.Column="1" Classes="m-sub" Margin="0" MinHeight="32"
+                       Text="{Binding StatusDetail}" />
+          </Grid>
+
+          <!-- ================================ DATA ================================ -->
+          <Grid ColumnDefinitions="130,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="12"
+                IsVisible="{Binding IsDataTab}">
+            <TextBlock Grid.Row="0" Grid.Column="0" Classes="seglbl" VerticalAlignment="Top" Margin="0,1,0,0" Text="KEPT IN" />
+            <TextBlock Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Classes="m-sub" Margin="0"
+                       Text="{Binding StoreText}" />
+
+            <TextBlock Grid.Row="1" Grid.Column="0" Classes="seglbl" Text="RECENT FILES" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Classes="m-sub" Margin="0" VerticalAlignment="Center"
+                       Text="{Binding RecentsText}" />
+            <Button Grid.Row="1" Grid.Column="2" Classes="tbtn" Content="Clear recents"
+                    Command="{Binding ClearRecentsCommand}" HorizontalAlignment="Stretch"
+                    ToolTip.Tip="Forget the Recent list on the start screen. No file is touched." />
+
+            <TextBlock Grid.Row="2" Grid.Column="0" Classes="seglbl" Text="WINDOWS, VIEWS" />
+            <TextBlock Grid.Row="2" Grid.Column="1" Classes="m-sub" Margin="0" VerticalAlignment="Center"
+                       Text="viewer window sizes, the editor's grid and rail" />
+            <Button Grid.Row="2" Grid.Column="2" Classes="tbtn" Content="Reset" Command="{Binding ResetViewsCommand}"
+                    HorizontalAlignment="Stretch"
+                    ToolTip.Tip="Viewer windows open at their default sizes again; the editor opens with its default grid and rail." />
+
+            <TextBlock Grid.Row="3" Grid.Column="0" Classes="seglbl" Text="DATA FOLDER" />
+            <TextBlock Grid.Row="3" Grid.Column="1" Classes="m-sub" Margin="0" VerticalAlignment="Center"
+                       Text="recents, palette, settings, remembered views" />
+            <Button Grid.Row="3" Grid.Column="2" Classes="tbtn" Content="Open folder" Command="{Binding OpenDataFolderCommand}"
+                    HorizontalAlignment="Stretch" />
+
+            <!-- Reserved: what the last action did. -->
+            <TextBlock Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Classes="m-sub" Margin="0" MinHeight="16"
+                       Text="{Binding DataNote}" />
+          </Grid>
+        </Panel>
+      </Border>
+
+      <Border Grid.Row="2" Classes="modal-foot">
         <Grid ColumnDefinitions="*,Auto">
           <TextBlock Grid.Column="0" Classes="keyhint" VerticalAlignment="Center" Text="Esc to close" />
           <Button Grid.Column="1" Content="Close" Command="{Binding CloseCommand}" Classes="accent" />

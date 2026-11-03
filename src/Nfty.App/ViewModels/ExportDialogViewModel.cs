@@ -113,6 +113,9 @@ public enum ExportTab
     /// <remarks>Appended after the others so the numbering of the existing pages does not move; the
     /// card shows it second, beside the contents it rewrites.</remarks>
     Marketplace,
+
+    /// <summary>Upload to IPFS through the provider chosen in Settings, and export with the real addresses.</summary>
+    Upload,
 }
 
 public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
@@ -158,6 +161,8 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
     [NotifyPropertyChangedFor(nameof(IsImagesTab))]
     [NotifyPropertyChangedFor(nameof(IsSealTab))]
     [NotifyPropertyChangedFor(nameof(IsMarketplaceTab))]
+    [NotifyPropertyChangedFor(nameof(IsUploadTab))]
+    [NotifyPropertyChangedFor(nameof(IsExportAction))]
     private ExportTab _tab = ExportTab.Contents;
 
     /// <summary>Whether the contents page is showing.</summary>
@@ -168,6 +173,8 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
     public bool IsSealTab => Tab == ExportTab.Seal;
     /// <summary>Whether the marketplace page is showing.</summary>
     public bool IsMarketplaceTab => Tab == ExportTab.Marketplace;
+    /// <summary>Whether the upload page is showing.</summary>
+    public bool IsUploadTab => Tab == ExportTab.Upload;
 
     // ---------------------------------------------------------------- the marketplace page
     //
@@ -343,11 +350,17 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
     /// <param name="cookBookCandidates">Paths the app can already name that might be that book: the
     /// open one, recent ones. Books beside the Set are looked at as well, without being asked for.</param>
     /// <param name="threads">The worker-thread setting, read when an export starts.</param>
+    /// <param name="publishing">Where the UPLOAD page uploads to; null leaves that page saying no
+    /// provider is available here.</param>
+    /// <param name="clipboard">Where the result's Copy buttons put an address.</param>
     public ExportDialogViewModel(string setDirectory, IFilePickerService picker,
         IFolderRevealer revealer, IDialogService dialogs,
         string? cookBookSha256 = null, IEnumerable<string>? cookBookCandidates = null,
-        IParallelismSetting? threads = null)
+        IParallelismSetting? threads = null, IPublishingSettings? publishing = null,
+        IClipboardService? clipboard = null)
     {
+        _publishing = publishing;
+        _clipboard = clipboard;
         _setDirectory = setDirectory;
         _picker = picker;
         _revealer = revealer;
@@ -369,6 +382,7 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
         SeedSheetGrid();
         OnWatermarkCornerChanged(WatermarkCorner);
         Refresh();
+        PendingUploadCheck = CheckUploadAsync();
     }
 
     /// <summary>
@@ -740,6 +754,8 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
     protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
     {
         base.OnPropertyChanged(e);
+        if (e.PropertyName is nameof(Problem) or nameof(IsRunning) or nameof(Connection)) UploadInputsChanged();
+        else if (e.PropertyName is { } input && PlanInputs.Contains(input)) UploadInputsChanged();
         if (e.PropertyName is { } name && MarketplaceInputs.Contains(name))
             foreach (var derived in MarketplaceDerived) OnPropertyChanged(derived);
         if (e.PropertyName is { } plan && PlanInputs.Contains(plan)) Refresh();
