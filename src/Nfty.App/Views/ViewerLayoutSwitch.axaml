@@ -7,7 +7,7 @@
   <!-- LAYOUT: 2D, Both, 3D. One control, hosted by the overlay's header and by the window's
        titlebar. Dimmed, not disabled, when there is no model: the reader sees why via the tooltip. -->
   <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" IsVisible="{Binding IsNotGallery}"
-              ToolTip.Tip="{Binding LayoutNote}">
+              ToolTip.Tip="{Binding LayoutTip}">
     <TextBlock Classes="seglbl" Text="LAYOUT" IsVisible="{Binding ShowLabel, ElementName=Root}" />
     <Border Classes="seg tiny" VerticalAlignment="Center">
       <StackPanel Orientation="Horizontal">

@@ -329,7 +329,7 @@ public class ViewerChromeTests
         Dispatcher.UIThread.RunJobs();
         try
         {
-            var copyInfo = view.GetVisualDescendants().OfType<Button>().First(b => Equals(b.Content, "Copy info"));
+            var copyInfo = view.GetVisualDescendants().OfType<Button>().First(b => b.Name == "CopyInfoButton");
             Assert.False(copyInfo.IsEffectivelyEnabled);
         }
         finally { win.Close(); vm.Dispose(); }

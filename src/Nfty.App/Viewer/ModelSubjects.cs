@@ -45,7 +45,7 @@ public static class ModelSubjects
         var recorded = RecordedModel(set, item);
         if (recorded is not null)
         {
-            facts.Add(new("MODEL", "recorded in the Set"));
+            facts.Add(new("MODEL", "recorded in the Set", Group: ViewerFactGroup.File));
             using var owned = recorded.Texture;   // the subject clones what it is given
             return new SnapshotSubject($"{set.Manifest.Name} #{number}", facts, art, recorded) { AllowExport = allow };
         }
@@ -53,9 +53,9 @@ public static class ModelSubjects
         var risen = await RiseFromBook(set, item, bookCandidates);
         using var ownedTexture = risen?.Texture;
         {
-            if (risen is not null) facts.Add(new("MODEL", "risen from the CookBook that cooked this Set"));
+            if (risen is not null) facts.Add(new("MODEL", "risen from the CookBook that cooked this Set", Group: ViewerFactGroup.File));
             else facts.Add(new("MODEL", set.Manifest.CookbookSha256 is { Length: > 0 }
-                ? "none: the CookBook was not found, or the asset cannot rise" : "none: this Set records no book"));
+                ? "none: the CookBook was not found, or the asset cannot rise" : "none: this Set records no book", Group: ViewerFactGroup.File));
             return new SnapshotSubject($"{set.Manifest.Name} #{number}", facts, art, risen) { AllowExport = allow };
         }
     }
@@ -83,7 +83,7 @@ public static class ModelSubjects
         }
         var facts = new List<ViewerFact>
         {
-            new("FILE", Path.GetFileName(path)),
+            new("FILE", Path.GetFileName(path), Group: ViewerFactGroup.File),
             new("TRIANGLES", read.Mesh.TriangleCount.ToString("N0", CultureInfo.InvariantCulture)),
         };
         return new SnapshotSubject(Path.GetFileName(path), facts, art,

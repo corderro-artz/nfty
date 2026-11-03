@@ -36,15 +36,19 @@ public partial class VisualCapture
     public void Capture_viewer_window()
     {
         if (Dir is null) return;
-        var cases = new (string Tag, double W, double H, bool Model, bool Facts, bool Gallery)[]
+        var cases = new (string Tag, double W, double H, bool Model, bool Facts, bool Gallery, bool Extended, bool Sealed)[]
         {
-            ("window-both", 1280, 720, true, true, false),
-            ("window-min", ViewerWindowState.MinWidth, ViewerWindowState.MinHeight, true, true, false),
-            ("window-nofacts", 1024, 576, false, false, false),
-            ("window-gallery", 1280, 720, false, true, true),
+            ("window-both", 1280, 720, true, true, false, false, false),
+            ("window-min", ViewerWindowState.MinWidth, ViewerWindowState.MinHeight, true, true, false, false, false),
+            ("window-nofacts", 1024, 576, false, false, false, false, false),
+            ("window-gallery", 1280, 720, false, true, true, false, false),
+            ("window-extended", 1280, 720, true, true, false, true, false),
+            ("window-extended-min", ViewerWindowState.MinWidth, ViewerWindowState.MinHeight, true, true, false, true, false),
+            ("window-sealed", 1280, 720, true, true, false, false, true),
+            ("window-2d", 1024, 576, false, true, false, false, false),
         };
         foreach (var variant in Themes)
-        foreach (var (tag, w, h, withModel, withFacts, gallery) in cases)
+        foreach (var (tag, w, h, withModel, withFacts, gallery, extended, sealedSubject) in cases)
         {
             using var art = new Image<Rgba32>(32, 32);
             for (int y = 0; y < 32; y++)
@@ -64,11 +68,18 @@ public partial class VisualCapture
             var model = mesh is null ? null : new ViewerModel(mesh, Nfty.Model.FaceAtlas.Build(art), null);
             var facts = withFacts
                 ? new List<ViewerFact> { new("ASSET", "#0042"), new("RECIPE", "chest"), new("SIZE", "32 x 32"),
-                    new("MODEL", withModel ? "recorded in the Set" : "none"), new("DNA", "9f3ac1d2e4b57a10c3e1a8d0f4c26b19e7d5a03c8f61b2e94d07a5c3f81e6b2d") }
+                    new("DNA", "9f3ac1d2e4b57a10c3e1a8d0f4c26b19e7d5a03c8f61b2e94d07a5c3f81e6b2d"),
+                    new("BODY", "Planked (24%)", Group: ViewerFactGroup.Traits),
+                    new("BODY COLOR", "hsv:28,61,72", Group: ViewerFactGroup.Traits),
+                    new("BANDS", "Straps (18%)", Group: ViewerFactGroup.Traits),
+                    new("LOCK", "Brass (12.5%)", Group: ViewerFactGroup.Traits),
+                    new("FEET", "Claws (33%)", Group: ViewerFactGroup.Traits),
+                    new("GLOW", "Sparks (50%)", Group: ViewerFactGroup.Traits),
+                    new("MODEL", withModel ? "recorded in the Set" : "none", Group: ViewerFactGroup.File) }
                 : new List<ViewerFact>();
             ViewerSubject subject = gallery
                 ? new GallerySubject(ArchiveGalleryTests.MixedGallery())
-                : new SnapshotSubject("Vapor Pets #42", facts, art, model);
+                : new SnapshotSubject("Vapor Pets #42", facts, art, model) { AllowExport = !sealedSubject };
 
             var host = new DesktopViewerHost(new WindowPicker(), new NoopClipboardService(),
                 new ViewerWindowStateService(StateStore.InMemory()), new ImageBridge(), () => null);
@@ -79,6 +90,7 @@ public partial class VisualCapture
             {
                 Dispatcher.UIThread.RunJobs();
                 window!.Width = w; window.Height = h;
+                window.ViewModel.IsInfoExtended = extended;
                 var solid = window.GetVisualDescendantsOfType<Views.ModelPreviewView>();
                 var sw = System.Diagnostics.Stopwatch.StartNew();
                 while (withModel && sw.ElapsedMilliseconds < 5000

@@ -59,9 +59,6 @@ public sealed partial class TwoDPaneViewModel : ObservableObject, IZoomPan
     /// <summary>The color used when <see cref="Backdrop"/> is Custom, as #RRGGBB.</summary>
     [ObservableProperty] private string _backdropColor = "#808080";
 
-    /// <summary>Ink for the custom color box: reserved space, shown only while Custom is chosen.</summary>
-    public double CustomColorOpacity => IsCustom ? 1 : 0;
-
     /// <summary>Whether the backdrop is the transparency checker.</summary>
     public bool IsChecker => Backdrop == ViewerBackdrop.Checker;
     /// <summary>Whether the backdrop is the light ground.</summary>
@@ -77,7 +74,6 @@ public sealed partial class TwoDPaneViewModel : ObservableObject, IZoomPan
         OnPropertyChanged(nameof(IsLight));
         OnPropertyChanged(nameof(IsDark));
         OnPropertyChanged(nameof(IsCustom));
-        OnPropertyChanged(nameof(CustomColorOpacity));
     }
 
     /// <summary>Selects a backdrop.</summary>

@@ -456,7 +456,8 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable, IUnsaved
                     $"{Subject.Art.Width} x {Subject.Art.Height}")),
             };
             facts.AddRange(Source.Facts.Select(Nfty.App.Viewer.ViewerFact.FromLine));
-            facts.Add(new("MODEL", Mesh is not null ? "solid, drawn in 3D" : "none: 2D only"));
+            facts.Add(new("MODEL", Mesh is not null ? "solid, drawn in 3D" : "none: 2D only",
+                Group: Nfty.App.Viewer.ViewerFactGroup.File));
             return facts;
         }
     }

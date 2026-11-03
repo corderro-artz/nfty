@@ -107,7 +107,7 @@ public static class ViewerOpener
                     using var art = Image.Load<Rgba32>(path);
                     var facts = new List<ViewerFact>
                     {
-                        new("FILE", Path.GetFileName(path)),
+                        new("FILE", Path.GetFileName(path), Group: ViewerFactGroup.File),
                         new("SIZE", string.Create(CultureInfo.InvariantCulture, $"{art.Width} x {art.Height}")),
                     };
                     return new SnapshotSubject(Path.GetFileName(path), facts, art, null);
@@ -197,12 +197,12 @@ internal static class MetadataSubject
             facts.Add(new("DNA", rich.Dna));
             foreach (var r in rich.Rarity)
                 facts.Add(new(r.Trait_type.ToUpperInvariant(),
-                    string.Create(CultureInfo.InvariantCulture, $"{r.Value} ({r.RarityPct:0.##}%)")));
+                    string.Create(CultureInfo.InvariantCulture, $"{r.Value} ({r.RarityPct:0.##}%)"), Group: ViewerFactGroup.Traits));
         }
         else if (Try<OpenSeaMetadata>(json) is { Image: not null, Attributes: not null } open)
         {
             facts.Add(new("NAME", open.Name));
-            foreach (var a in open.Attributes) facts.Add(new(a.Trait_type.ToUpperInvariant(), a.Value));
+            foreach (var a in open.Attributes) facts.Add(new(a.Trait_type.ToUpperInvariant(), a.Value, Group: ViewerFactGroup.Traits));
         }
         else return null;
 

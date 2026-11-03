@@ -125,7 +125,7 @@ public class ViewerViewTests
 
             // Position as well as pixels: the two star columns beside it split 827px into 413.5 each,
             // and layout rounding once pushed the rail a pixel right in Both only.
-            Assert.All(widths, w => Assert.Equal(264, w));
+            Assert.All(widths, w => Assert.Equal(ViewerViewModel.RailWidth, w));
             Assert.Single(lefts.Distinct());
             Assert.Equal(frames[0], frames[1]);
             Assert.Equal(frames[0], frames[2]);
