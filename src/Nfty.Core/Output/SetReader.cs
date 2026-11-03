@@ -99,13 +99,32 @@ public static class SetReader
     /// <summary><see cref="Read(string, Parallelism?)"/> with the temp directory supplied, so a test can watch it go.</summary>
     internal static LoadedSet Read(string path, Func<string> newTemp, Parallelism? parallelism = null)
     {
+        path = FolderOfManifest(path);
         if (!File.Exists(path)) return Load(path, null, path, CancellationToken.None, parallelism);
         // A .set archive (or any file) → extract to a temp dir, which goes again if anything fails.
         string temp = newTemp();
         try { ZipFile.ExtractToDirectory(path, temp); }
+        catch (InvalidDataException) { DeleteQuietly(temp); throw NotAnArchive(path); }
         catch { DeleteQuietly(temp); throw; }
         return Load(temp, temp, path, CancellationToken.None, parallelism);
     }
+
+    /// <summary>
+    /// A Set folder's own <c>set.json</c>, picked where a Set was asked for (a file picker cannot
+    /// choose a folder), names that folder: it is read as the folder. Any other path is unchanged.
+    /// </summary>
+    /// <remarks>Without this the file was handed to the zip reader, and the reader's own words
+    /// ("End of Central Directory record could not be found") were all the author was told.</remarks>
+    private static string FolderOfManifest(string path) =>
+        File.Exists(path)
+        && string.Equals(Path.GetFileName(path), SetLayout.ManifestFile, StringComparison.OrdinalIgnoreCase)
+        && Path.GetDirectoryName(Path.GetFullPath(path)) is { Length: > 0 } dir
+            ? dir
+            : path;
+
+    // A file that is not a zip at all: say what was expected, in product words, not the zip reader's.
+    private static CorruptSetException NotAnArchive(string path) =>
+        new(path, $"'{Path.GetFileName(path)}' is not a cooked Set. Choose a .set file, or a Set folder's set.json.");
 
     /// <summary>Parses an unpacked Set. Owns <paramref name="temp"/> on failure: deletes it before
     /// rethrowing, so a canceled or broken read leaves nothing in TEMP.</summary>
@@ -202,11 +221,13 @@ public static class SetReader
     internal static async Task<LoadedSet> ReadAsync(string path, CancellationToken ct, Func<string> newTemp,
         Parallelism? parallelism = null)
     {
+        path = FolderOfManifest(path);
         if (!File.Exists(path)) return await Task.Run(() => Load(path, null, path, ct, parallelism), ct).ConfigureAwait(false);
         string temp = newTemp();
         try
         {
-            await ZipFile.ExtractToDirectoryAsync(path, temp, ct).ConfigureAwait(false);
+            try { await ZipFile.ExtractToDirectoryAsync(path, temp, ct).ConfigureAwait(false); }
+            catch (InvalidDataException) { throw NotAnArchive(path); }
             // Load owns the copy once it runs; if the token stops it from starting, the catch does.
             return await Task.Run(() => Load(temp, temp, path, ct, parallelism), ct).ConfigureAwait(false);
         }
