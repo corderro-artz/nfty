@@ -69,6 +69,10 @@ public sealed partial class ViewerViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(Texture));
         OnPropertyChanged(nameof(CanShowThreeD));
         OnPropertyChanged(nameof(LiveBadge));     // a source closing turns "live" into "snapshot"
+        OnPropertyChanged(nameof(Title));
+        OnPropertyChanged(nameof(Facts));         // a live page's selection and size move with it
+        OnPropertyChanged(nameof(HasFacts));
+        CopyFactsCommand.NotifyCanExecuteChanged();
         old?.Dispose();
     }
 
@@ -84,6 +88,24 @@ public sealed partial class ViewerViewModel : ViewModelBase, IDisposable
 
     /// <summary>The texture the solid's UVs address, or null.</summary>
     public SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>? Texture => Subject.Model?.Texture;
+
+    /// <summary>The subject's name: the window's title and the overlay header's text. Follows a live
+    /// subject.</summary>
+    public string Title => Subject.Title;
+
+    /// <summary>The lines of the info rail, re-read whenever a live subject changes.</summary>
+    public IReadOnlyList<ViewerFact> Facts => Subject.Facts;
+
+    /// <summary>Whether the rail has anything to say; false dims Copy info rather than leaving it
+    /// copying nothing.</summary>
+    public bool HasFacts => Facts.Count > 0;
+
+    /// <summary>True when the viewer lives in its own window, whose titlebar carries the name, the
+    /// badge and the layout switch; false for the overlay, whose header does.</summary>
+    public bool InWindow { get; init; }
+
+    /// <summary>The header row inside the body: shown only where no titlebar carries those.</summary>
+    public bool ShowBodyHeader => !InWindow;
 
     /// <summary>Whether this viewer is shown as an overlay and so needs its own close button. A
     /// window has the operating system's.</summary>
@@ -306,6 +328,18 @@ public sealed partial class ViewerViewModel : ViewModelBase, IDisposable
         var stem = new string(title.Select(c => Array.IndexOf(bad, c) >= 0 ? '-' : c).ToArray()).Trim();
         return stem.Length == 0 ? "model" : stem;
     }
+
+    /// <summary>Copies the info rail to the clipboard as text. Refused for a sealed subject, like every
+    /// other way of taking something out of it.</summary>
+    [RelayCommand(CanExecute = nameof(CanCopyFacts))]
+    private async Task CopyFacts()
+    {
+        if (!CanCopyFacts) return;     // RelayCommand.Execute does not consult CanExecute
+        await _clipboard.SetTextAsync(ViewerFact.AsText(Facts));
+    }
+
+    /// <summary>Whether Copy info can do anything: there is something to copy and the subject may leave.</summary>
+    public bool CanCopyFacts => CanExport && HasFacts;
 
     /// <summary>Copies the art to the clipboard as a PNG.</summary>
     [RelayCommand(CanExecute = nameof(CanExport))]

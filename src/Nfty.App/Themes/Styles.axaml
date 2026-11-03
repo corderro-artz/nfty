@@ -1524,6 +1524,38 @@
   <Style Selector="Border.frame-clip">
     <Setter Property="CornerRadius" Value="9" />
   </Style>
+  <!-- A maximized window has no desktop around it to float in: the 12px shadow gutter would show
+       as a transparent gap on all four edges and the rounded corners would cut the screen edge.
+       Fill the screen instead, the way every OS-decorated window does. These live HERE, not in a
+       window's own Styles, because the shell and the pop-out viewer share the one WindowFrame and
+       must square off together. -->
+  <Style Selector="Window[WindowState=Maximized] Border.frame">
+    <Setter Property="Margin" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="BoxShadow" Value="none" />
+  </Style>
+  <!-- The inner clip has to square off too, or maximizing leaves rounded content corners inside a
+       square window and the desktop shows through four small notches. -->
+  <Style Selector="Window[WindowState=Maximized] Border.frame-clip">
+    <Setter Property="CornerRadius" Value="0" />
+  </Style>
+  <!-- A value in the viewer's info rail: mono, selectable so the reader can lift one line, wrapping
+       inside the 240px rail. An exact-type selector, so it names SelectableTextBlock itself. -->
+  <Style Selector="SelectableTextBlock.factval">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="LineHeight" Value="16" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <!-- Its label: the same 16px line box as the value beside it, so the two sit on one baseline
+       (Avalonia centers a glyph inside a stated LineHeight; equal boxes line two sizes up). -->
+  <Style Selector="TextBlock.factlbl">
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="LetterSpacing" Value="1.0" />
+    <Setter Property="LineHeight" Value="16" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
   <Style Selector="Border.idchip">
     <Setter Property="Background" Value="{DynamicResource TileBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />

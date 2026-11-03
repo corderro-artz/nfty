@@ -48,7 +48,8 @@ public partial class ViewerWindow : Window
         _dialogs = dialogs;
         _state = state;
 
-        Title = vm.Subject.Title;
+        DataContext = vm;
+        ChromeWiring.Attach(this, this.FindControl<Nfty.App.Controls.WindowFrame>("Frame")!, captionCommands: true);
         Width = Math.Max(entry.Width, MinWidth);
         Height = Math.Max(entry.Height, MinHeight);
         _normalSize = new Size(Width, Height);

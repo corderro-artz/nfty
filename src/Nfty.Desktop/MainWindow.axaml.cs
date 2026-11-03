@@ -26,12 +26,7 @@ public partial class MainWindow : Window
         // itself is Nfty.App's ShellChromeView, which exposes these two surfaces as properties -
         // FindControl cannot cross into a UserControl's own name scope.
         var chrome = this.FindControl<ShellChromeView>("Chrome")!;
-        chrome.TitlebarArea.PointerPressed += OnTitlebarPointerPressed;
-        chrome.ResizeGripArea.PointerPressed += (_, e) =>
-        {
-            if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
-                BeginResizeDrag(WindowEdge.SouthEast, e);
-        };
+        ChromeWiring.Attach(this, chrome.Frame, captionCommands: false);   // the shell's commands are bound
     }
 
     private bool _closeConfirmed;
@@ -57,18 +52,6 @@ public partial class MainWindow : Window
             _closeConfirmed = true;
             Close();
         }
-    }
-
-    private void OnTitlebarPointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
-        // Let the window-control buttons (min/max/close) handle their own clicks.
-        if ((e.Source as Control)?.FindAncestorOfType<Button>(includeSelf: true) is not null) return;
-
-        if (e.ClickCount == 2)
-            WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
-        else
-            BeginMoveDrag(e);
     }
 
     /// <summary>Subscribes to the shell's window-command events once its ViewModel is attached.</summary>

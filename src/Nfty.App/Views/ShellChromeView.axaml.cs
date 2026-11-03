@@ -1,17 +1,18 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Markup.Xaml;
+using Nfty.App.Controls;
 using Nfty.App.ViewModels;
 
 namespace Nfty.App.Views;
 
 /// <summary>
 /// The shell chrome (frame + titlebar + status bar). Head-agnostic on purpose - see the comment in
-/// ShellChromeView.axaml. The two properties below are the seam the desktop head wires window
-/// behavior to; a UserControl has its own name scope, so the host cannot reach these by name.
+/// ShellChromeView.axaml. The properties below are the seam the desktop head wires window behavior
+/// to; a UserControl has its own name scope, so the host cannot reach these by name.
 /// </summary>
-/// <summary>The shell chrome view. Code-behind is limited to loading the XAML and the few
-/// interactions that genuinely need a control reference; everything else is bound.</summary>
+/// <remarks>Code-behind is limited to loading the XAML and the few interactions that genuinely need a
+/// control reference; everything else is bound.</remarks>
 public partial class ShellChromeView : UserControl
 {
     /// <summary>Loads the view.</summary>
@@ -30,9 +31,12 @@ public partial class ShellChromeView : UserControl
         };
     }
 
+    /// <summary>The shared window frame this shell is drawn in.</summary>
+    public WindowFrame Frame => this.FindControl<WindowFrame>("ChromeFrame")!;
+
     /// <summary>The titlebar surface: drag to move, double-click to toggle maximize.</summary>
-    public Control TitlebarArea => this.FindControl<Control>("Titlebar")!;
+    public Control TitlebarArea => Frame.TitlebarArea;
 
     /// <summary>The bottom-right resize grip.</summary>
-    public Control ResizeGripArea => this.FindControl<Control>("ResizeGrip")!;
+    public Control ResizeGripArea => Frame.ResizeGripArea;
 }

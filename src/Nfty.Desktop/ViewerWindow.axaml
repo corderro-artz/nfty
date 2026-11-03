@@ -1,24 +1,54 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Nfty.App.ViewModels"
+        xmlns:svc="using:Nfty.App.Services"
+        xmlns:ctl="using:Nfty.App.Controls"
+        xmlns:views="using:Nfty.App.Views"
         x:Class="Nfty.Desktop.ViewerWindow"
-        MinWidth="640" MinHeight="480"
-        Background="{DynamicResource BgBrush}">
-  <!-- A viewer is its own OS window with the operating system's own frame: it is meant to be dragged
-       to a second screen and maximized, which is what a native frame already does well. The content
-       renders at the shell's base scale so a viewer reads at the same size as the app it came from.
-       The whole of it, dialog layer included, sits inside that scale, as the shell's does. -->
-  <LayoutTransformControl>
-    <LayoutTransformControl.LayoutTransform>
-      <ScaleTransform ScaleX="{x:Static vm:ShellViewModel.BaseScale}" ScaleY="{x:Static vm:ShellViewModel.BaseScale}" />
-    </LayoutTransformControl.LayoutTransform>
-    <Panel x:Name="Layers">
-      <!-- This window's OWN dialog layer: the app-wide one draws into the main window, which may
-           already be closed. -->
-      <Panel x:Name="DialogScrim" IsVisible="False" ZIndex="1"
-             Background="{DynamicResource ScrimBrush}">
-        <ContentControl x:Name="DialogSlot" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        x:DataType="vm:ViewerViewModel"
+        MinWidth="{x:Static svc:ViewerWindowState.MinWidth}" MinHeight="{x:Static svc:ViewerWindowState.MinHeight}"
+        Title="{Binding Title}"
+        Background="Transparent" TransparencyLevelHint="Transparent"
+        ExtendClientAreaToDecorationsHint="True" WindowDecorations="None">
+  <!-- A viewer is its own window and draws the SAME frame as the main window: Nfty.App's
+       WindowFrame (rounded border, shadow gutter, 36px titlebar, caption buttons), so the two cannot
+       drift. The OS supplies no frame (decorations off, transparent surface); the head wires drag,
+       maximize and edge resize in ChromeWiring. The content renders at the shell's base scale, the
+       dialog layer inside it, so a viewer reads at the size of the app it came from.
+       The minimum size is the content's old 640x480 plus this frame (see ViewerWindowState). -->
+  <ctl:WindowFrame x:Name="Frame" Scale="{x:Static vm:ShellViewModel.BaseScale}"
+                   EdgeResize="True" ShowResizeGrip="False">
+    <ctl:WindowFrame.TitleLeft>
+      <StackPanel Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center" Spacing="9">
+        <views:BrandMarkView />
+        <TextBlock Classes="wordmark" VerticalAlignment="Center"><Run Text="nft" /><Run Text="y" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
+        <Border Width="1" Height="18" Background="{DynamicResource LineStrongBrush}" />
+      </StackPanel>
+    </ctl:WindowFrame.TitleLeft>
+    <ctl:WindowFrame.TitleCenter>
+      <!-- A Grid, not a StackPanel: a stack hands its children infinite width, so a long name never
+           trimmed and ran under the badge beside it. -->
+      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" VerticalAlignment="Center">
+        <Path Grid.Column="0" Classes="ico sm" Data="{StaticResource IconPopout}" VerticalAlignment="Center" />
+        <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                   TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Title}" />
+      </Grid>
+    </ctl:WindowFrame.TitleCenter>
+    <ctl:WindowFrame.TitleRight>
+      <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center" Margin="12,0,12,0">
+        <views:ViewerLiveBadge />
+        <views:ViewerLayoutSwitch ShowLabel="False" />
+      </StackPanel>
+    </ctl:WindowFrame.TitleRight>
+    <ctl:WindowFrame.Body>
+      <Panel x:Name="Layers" Background="{DynamicResource BgBrush}">
+        <!-- This window's OWN dialog layer: the app-wide one draws into the main window, which may
+             already be closed. -->
+        <Panel x:Name="DialogScrim" IsVisible="False" ZIndex="1"
+               Background="{DynamicResource ScrimBrush}">
+          <ContentControl x:Name="DialogSlot" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Panel>
       </Panel>
-    </Panel>
-  </LayoutTransformControl>
+    </ctl:WindowFrame.Body>
+  </ctl:WindowFrame>
 </Window>

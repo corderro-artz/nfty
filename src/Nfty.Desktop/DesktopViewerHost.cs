@@ -66,7 +66,7 @@ public sealed class DesktopViewerHost : IViewerHost
         ArgumentNullException.ThrowIfNull(subject);
         var remembered = _state.Current;
         var dialogs = new DialogService();
-        var vm = new ViewerViewModel(subject, _picker, _clipboard, dialogs, _bridge);
+        var vm = new ViewerViewModel(subject, _picker, _clipboard, dialogs, _bridge) { InWindow = true };
         if (Enum.TryParse<ViewerBackdrop>(remembered.Backdrop, out var backdrop)) vm.TwoD.Backdrop = backdrop;
         vm.TwoD.BackdropColor = remembered.BackdropColor;
         vm.Preview.Wireframe = remembered.Wireframe;

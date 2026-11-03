@@ -1,0 +1,25 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             x:Class="Nfty.App.Views.ViewerLayoutSwitch"
+             x:Name="Root"
+             x:DataType="vm:ViewerViewModel">
+  <!-- LAYOUT: 2D, Both, 3D. One control, hosted by the overlay's header and by the window's
+       titlebar. Dimmed, not disabled, when there is no model: the reader sees why via the tooltip. -->
+  <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" IsVisible="{Binding IsNotGallery}"
+              ToolTip.Tip="{Binding LayoutNote}">
+    <TextBlock Classes="seglbl" Text="LAYOUT" IsVisible="{Binding ShowLabel, ElementName=Root}" />
+    <Border Classes="seg tiny" VerticalAlignment="Center">
+      <StackPanel Orientation="Horizontal">
+        <Button Classes="seg-b tiny" Content="2D" Classes.on="{Binding IsTwoD}"
+                Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static vm:ViewerLayout.TwoD}" />
+        <Button Classes="seg-b tiny" Content="Both" Classes.on="{Binding IsBoth}"
+                Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static vm:ViewerLayout.Both}"
+                Opacity="{Binding ThreeDAvailableOpacity}" />
+        <Button Classes="seg-b tiny" Content="3D" Classes.on="{Binding IsThreeD}"
+                Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static vm:ViewerLayout.ThreeD}"
+                Opacity="{Binding ThreeDAvailableOpacity}" />
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>

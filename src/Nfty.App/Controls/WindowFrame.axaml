@@ -1,0 +1,116 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctl="using:Nfty.App.Controls"
+             x:Class="Nfty.App.Controls.WindowFrame"
+             x:Name="Root"
+             x:DataType="ctl:WindowFrame">
+  <!--
+    THE WINDOW FRAME, ONCE: the rounded border with its shadow gutter, the titlebar with the three
+    caption buttons, and an optional footer row. The shell and the pop-out viewer both host this, so
+    the two windows cannot drift: a change to the titlebar's height, the hairline under it, the
+    caption buttons or the way a maximized window squares off lands in both or in neither.
+
+    The head supplies only what needs a Window (drag, resize, minimise/maximise/close); see
+    Nfty.Desktop's ChromeWiring. Everything visible is here, in Nfty.App, so the capture harness
+    renders the shipped control.
+
+    SLOTS are ordinary properties holding controls, presented by ContentPresenters, so a slot's
+    bindings resolve against the DataContext the frame inherits - the shell's slots bind to the
+    ShellViewModel, the viewer's to the ViewerViewModel - with no DataContext of the frame's own.
+
+    The Margin / CornerRadius / BoxShadow of Border.frame are Style setters in Styles.axaml (never
+    inline values, which would beat the maximized override), and the maximized rules live there too.
+  -->
+  <Border Classes="frame">
+    <!-- The clip is on an INNER border, not on the frame itself. A Border that both draws a
+         CornerRadius stroke and clips to its own bounds clips the outer half of that stroke exactly
+         where the arc is, so the border thinned to nothing at all four corners while the straight
+         edges kept full thickness. Outer draws, inner clips; the inner radius is one pixel tighter so
+         it hugs the INSIDE of the stroke. -->
+    <Border Classes="frame-clip" ClipToBounds="True">
+      <Panel>
+        <!-- The whole frame renders at Scale (the shell's BaseScale): the mockups are authored 1:1
+             and read uniformly small on a large high-DPI display. The titlebar is inside it; the
+             page zoom, where there is one, is a slot's business and stays outside. -->
+        <LayoutTransformControl>
+          <LayoutTransformControl.LayoutTransform>
+            <ScaleTransform ScaleX="{Binding Scale, ElementName=Root}" ScaleY="{Binding Scale, ElementName=Root}" />
+          </LayoutTransformControl.LayoutTransform>
+          <Grid RowDefinitions="Auto,*,Auto">
+            <!-- x:Name lives on this Border (not the inner Grid) because the Border is what carries the
+                 opaque gradient Background: a click on the Grid's own unfilled cells would hit-test
+                 straight through to this Border without reaching a Grid-level handler. -->
+            <Border x:Name="Titlebar" Grid.Row="0" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,0,1"
+                    BoxShadow="{DynamicResource TitlebarHighlightShadow}">
+              <Border.Background>
+                <LinearGradientBrush StartPoint="50%,0%" EndPoint="50%,100%">
+                  <GradientStop Color="{DynamicResource PanelColor}" Offset="0" />
+                  <GradientStop Color="{DynamicResource BgAltColor}" Offset="1" />
+                </LinearGradientBrush>
+              </Border.Background>
+              <!-- 36, not the mockup's 46. The mockup is authored 1:1 and the whole frame renders at
+                   1.2, so 46 arrives as 55 device pixels and reads heavy. A deliberate, user-directed
+                   divergence (see CLAUDE.md), trimmed from 40 with the status bar so the pair keeps its
+                   8px difference. ChromeReserveTests measures both. -->
+              <Grid ColumnDefinitions="Auto,*,Auto,Auto" Height="36">
+                <ContentPresenter Grid.Column="0" Content="{Binding TitleLeft, ElementName=Root}"
+                                  HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+                <ContentPresenter Grid.Column="1" Content="{Binding TitleCenter, ElementName=Root}"
+                                  HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+                <ContentPresenter Grid.Column="2" Content="{Binding TitleRight, ElementName=Root}"
+                                  HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
+                  <Border Width="1" Height="18" Background="{DynamicResource LineStrongBrush}" Margin="0,0,10,0" />
+                  <Button x:Name="MinimizeButton" Command="{Binding MinimizeCommand, ElementName=Root}" Classes="icon"
+                          ToolTip.Tip="Minimise"><Path Classes="ico" Data="{StaticResource IconMinimise}" /></Button>
+                  <Button x:Name="MaximizeButton" Command="{Binding ToggleMaximizeCommand, ElementName=Root}" Classes="icon"
+                          ToolTip.Tip="Maximise"><Path Classes="ico" Data="{StaticResource IconMaximise}" /></Button>
+                  <Button x:Name="CloseButton" Command="{Binding CloseCommand, ElementName=Root}" Classes="icon danger"
+                          ToolTip.Tip="Close"><Path Classes="ico" Data="{StaticResource IconClose}" /></Button>
+                </StackPanel>
+              </Grid>
+            </Border>
+
+            <ContentPresenter Grid.Row="1" Content="{Binding Body, ElementName=Root}"
+                              HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+
+            <!-- Footer, with the resize grip OVERLAID on its bottom-right corner rather than being a
+                 child of it: pinned to the frame's real corner with the whole 22px square as its hit
+                 area, and last in the Panel so it sits above the footer's content. -->
+            <Panel Grid.Row="2">
+              <ContentPresenter Content="{Binding Footer, ElementName=Root}"
+                                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+              <Border x:Name="ResizeGrip" Width="22" Height="22" Cursor="BottomRightCorner"
+                      HorizontalAlignment="Right" VerticalAlignment="Bottom" Background="Transparent"
+                      IsVisible="{Binding ShowResizeGrip, ElementName=Root}"
+                      ToolTip.Tip="Resize">
+                <Path Width="12" Height="12" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                      Margin="0,0,3,3" Stroke="{DynamicResource FgMutedBrush}" StrokeThickness="1"
+                      Data="M11,4 L4,11 M11,8 L8,11" />
+              </Border>
+            </Panel>
+          </Grid>
+        </LayoutTransformControl>
+
+        <!-- Resize handles along the four edges and corners, for a window with no footer to carry a
+             grip. Transparent, outside the scale so they hug the real edge, and absent from hit-testing
+             unless EdgeResize is on: the shell's page runs edge to edge under scrollbars. -->
+        <Grid x:Name="Edges" ColumnDefinitions="8,*,8" RowDefinitions="8,*,8"
+              IsVisible="{Binding EdgeResize, ElementName=Root}">
+          <Border Grid.Row="0" Grid.Column="0" Tag="NorthWest" Cursor="TopLeftCorner" Background="Transparent" />
+          <Border Grid.Row="0" Grid.Column="1" Tag="North" Cursor="TopSide" Background="Transparent"
+                  Height="5" VerticalAlignment="Top" />
+          <Border Grid.Row="0" Grid.Column="2" Tag="NorthEast" Cursor="TopRightCorner" Background="Transparent" />
+          <Border Grid.Row="1" Grid.Column="0" Tag="West" Cursor="LeftSide" Background="Transparent"
+                  Width="5" HorizontalAlignment="Left" />
+          <Border Grid.Row="1" Grid.Column="2" Tag="East" Cursor="RightSide" Background="Transparent"
+                  Width="5" HorizontalAlignment="Right" />
+          <Border Grid.Row="2" Grid.Column="0" Tag="SouthWest" Cursor="BottomLeftCorner" Background="Transparent" />
+          <Border Grid.Row="2" Grid.Column="1" Tag="South" Cursor="BottomSide" Background="Transparent"
+                  Height="5" VerticalAlignment="Bottom" />
+          <Border Grid.Row="2" Grid.Column="2" Tag="SouthEast" Cursor="BottomRightCorner" Background="Transparent" />
+        </Grid>
+      </Panel>
+    </Border>
+  </Border>
+</UserControl>

@@ -38,6 +38,8 @@ public class ViewerLiveFollowTests
     {
         public Image<Rgba32> Art = new(2, 2, new Rgba32(1, 2, 3, 255));
         public string ViewerTitle => "fake";
+        public System.Collections.Generic.IReadOnlyList<ViewerFact> Facts = new ViewerFact[] { new("FAKE", "one") };
+        public System.Collections.Generic.IReadOnlyList<ViewerFact> ViewerFacts => Facts;
         public Image<Rgba32> ViewerArt => Art;
         public ViewerModel? ViewerModel => null;
         public bool AllowExport => true;

@@ -34,11 +34,15 @@ public sealed record ViewerWindowState(
     /// <summary>The side-by-side window size nobody has changed.</summary>
     public static readonly ViewerWindowEntry DefaultThreeD = new(1280, 760, null, null, false);
 
-    /// <summary>The smallest a viewer window may be, in device-independent pixels.</summary>
-    public const double MinWidth = 640;
+    /// <summary>The narrowest a viewer window may be, in device-independent pixels. The window is the
+    /// shared frame now: the 640 the content needs at the shell's scale (a 533px-wide area), the
+    /// frame's 12px shadow gutter and 1px border each side, and 54px more so the titlebar keeps room
+    /// for the subject's name beside the badge, the layout switch and the three caption buttons.</summary>
+    public const double MinWidth = 720;
 
-    /// <summary>The smallest a viewer window may be, in device-independent pixels.</summary>
-    public const double MinHeight = 480;
+    /// <summary>The shortest a viewer window may be: the 480 the content needs (a 400px-tall area)
+    /// plus the 36px titlebar at the shell's scale, the gutter and the border.</summary>
+    public const double MinHeight = 550;
 
     /// <summary>Both entries at their defaults.</summary>
     public static ViewerWindowState Default => new(DefaultTwoD, DefaultThreeD);
