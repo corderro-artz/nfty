@@ -85,14 +85,15 @@ public static partial class CommandFactory
             Description = "Directory of variant PNGs; each variant's image is <dir>/{variantId}.png.",
             Required = true,
         };
+        var keep = KeepProfileOption();
         var cmd = new Command("ingredient",
             "Build an .igt from an ingredient manifest and one PNG per variant (named {variantId}.png).")
-            { outPath, manifest, images };
+            { outPath, manifest, images, keep };
         cmd.SetAction(parse =>
         {
             var m = ManifestFile.Read<IngredientManifest>(parse.GetValue(manifest)!);
             string imagesDir = parse.GetValue(images)!;
-            var loaded = LoadVariantImages(m, imagesDir);
+            var loaded = LoadVariantImages(m, imagesDir, !parse.GetValue(keep));
             try
             {
                 var ing = new LoadedIngredient { Manifest = m, VariantImages = loaded };
@@ -605,8 +606,9 @@ public static partial class CommandFactory
         var name = new Option<string?>("--name") { Description = "Display name (defaults to the id)." };
         var weight = new Option<double>("--weight") { Description = "Variant weight (zero or greater).", Required = true };
         var image = new Option<string>("--image") { Description = "PNG for this variant.", Required = true };
+        var keep = KeepProfileOption();
         var cmd = new Command("variant", "Add one variant (id, weight, image) to an existing .igt.")
-            { igtPath, id, name, weight, image };
+            { igtPath, id, name, weight, image, keep };
         cmd.SetAction(parse =>
         {
             string path = parse.GetValue(igtPath)!;
@@ -616,7 +618,7 @@ public static partial class CommandFactory
                 throw new InvalidOperationException(
                     $"Ingredient '{existing.Manifest.Id}' already has a variant '{vid}'.");
 
-            var newImg = ImageFormats.Load(parse.GetValue(image)!);
+            var newImg = LoadPicture(parse.GetValue(image)!, !parse.GetValue(keep));
             try
             {
                 var images = new Dictionary<string, Image<Rgba32>>(existing.VariantImages) { [vid] = newImg };
@@ -892,7 +894,7 @@ public static partial class CommandFactory
     private static void WriteReplacing(string path, Action<string> write) => AtomicFile.Replace(path, write);
 
     /// <summary>Loads one PNG per distinct variant id, by the {id}.png convention.</summary>
-    private static Dictionary<string, Image<Rgba32>> LoadVariantImages(IngredientManifest m, string imagesDir)
+    private static Dictionary<string, Image<Rgba32>> LoadVariantImages(IngredientManifest m, string imagesDir, bool convertToSrgb)
     {
         var loaded = new Dictionary<string, Image<Rgba32>>();
         try
@@ -903,7 +905,7 @@ public static partial class CommandFactory
                 if (!File.Exists(png))
                     throw new FileNotFoundException(
                         $"No image for variant '{v.Id}': expected {png}", png);
-                loaded[v.Id] = ImageFormats.Load(png);
+                loaded[v.Id] = LoadPicture(png, convertToSrgb);
             }
         }
         catch
@@ -912,6 +914,25 @@ public static partial class CommandFactory
             throw;
         }
         return loaded;
+    }
+
+    /// <summary>The option every command that imports a picture takes: converting a non-sRGB color
+    /// profile is the default, because nfty stores untagged pixels and everything downstream reads
+    /// those as sRGB.</summary>
+    private static Option<bool> KeepProfileOption() => new("--keep-profile")
+    {
+        Description = "Import pictures' pixels as stored, without converting an embedded non-sRGB color profile (Display P3, Adobe RGB) to sRGB.",
+    };
+
+    /// <summary>Loads one picture for import through Core's one rule (<see cref="ImageImport.Load"/>),
+    /// saying in one line what happened to its color profile.</summary>
+    private static Image<Rgba32> LoadPicture(string path, bool convertToSrgb)
+    {
+        var img = ImageImport.Load(path, convertToSrgb, out var profile);
+        string leaf = Path.GetFileName(path);
+        if (profile.CanConvert && convertToSrgb) Console.WriteLine($"{leaf}: {profile.ConvertedLine}");
+        else if (profile.Kind == PictureProfileKind.Unsupported) Console.Error.WriteLine($"{leaf}: {profile.Note}");
+        return img;
     }
 
     /// <summary>Prints each validation problem to stderr, as `validate` does.</summary>

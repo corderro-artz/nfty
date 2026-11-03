@@ -344,6 +344,9 @@ Changing and removing, on a `.cbk` or on the loose part it holds. Each checks th
 
 Other options on these commands: `add variant` takes `--name` (display name; defaults to the id), and
 `new cookbook` and `add recipe` take `--force` to write even though validation reported problems.
+`new ingredient` and `add variant` convert a picture with a non-sRGB color profile (Display P3,
+Adobe RGB) to sRGB and print one line saying so; `--keep-profile` imports the pixels as stored. A
+profile nfty can't convert is named on stderr and the picture imported as is.
 `add ingredient --index N` is the 0-based position in the stack to insert at. `new ingredient|recipe|cookbook`
 read a manifest JSON (`--manifest`) and the folder of parts it names (`--images`, `--ingredients`,
 `--recipes`).

@@ -40,6 +40,8 @@ public partial class ImportImageViewModel : WizardViewModelBase, IDisposable
     private readonly Dimensions _canvas;
     private readonly IImageBridge _bridge;
     private Image<Rgba32>? _source;
+    private Image<Rgba32>? _converted;
+    private PictureProfile _profile = PictureProfile.NoProfile;
 
     [ObservableProperty] private string _name = "";
     [ObservableProperty] private LayerKind _kind = LayerKind.Custom;
@@ -74,7 +76,50 @@ public partial class ImportImageViewModel : WizardViewModelBase, IDisposable
     public string SourceText => $"{SourceLeaf} · {SizeText}";
 
     /// <summary>Whether the picture carries color that a value-map import would discard.</summary>
-    public bool LosesColor => Kind != LayerKind.Custom && _source is { } s && ImageImport.HasColor(s);
+    public bool LosesColor => Kind != LayerKind.Custom && Picture() is { } s && ImageImport.HasColor(s);
+
+    /// <summary>Convert the picture's non-sRGB color profile to sRGB. On by default: nfty stores
+    /// untagged pixels and everything downstream reads those as sRGB, so a Display P3 drawing kept as
+    /// stored looks duller everywhere it travels. The preview follows the box.</summary>
+    [ObservableProperty] private bool _convertToSrgb = true;
+
+    /// <summary>The picture's profile note (Core's sentence), or empty when it has none to give.</summary>
+    public string ProfileNote => _profile.Note ?? "";
+
+    /// <summary>Whether the profile can be converted, so the "Convert to sRGB" box is offered.</summary>
+    public bool CanConvertProfile => _profile.CanConvert;
+
+    /// <summary>Whether the note is the muted "imported as is" one.</summary>
+    public bool ProfileUnsupported => _profile.Kind == PictureProfileKind.Unsupported;
+
+    /// <summary>The note when the profile converts (body ink, beside its box), else empty.</summary>
+    public string ProfileNoteConvertible => CanConvertProfile ? ProfileNote : "";
+
+    /// <summary>The note when it cannot (muted ink, no box), else empty.</summary>
+    public string ProfileNoteUnsupported => ProfileUnsupported ? ProfileNote : "";
+
+    /// <summary>The "Convert to sRGB" box's ink: laid out always, so the row never moves, drawn only
+    /// when there is a profile to convert.</summary>
+    public double ConvertBoxOpacity => CanConvertProfile ? 1 : 0;
+
+    /// <summary>The picture as it will be imported: converted to sRGB when asked and possible.</summary>
+    private Image<Rgba32>? Picture()
+    {
+        if (_source is null) return null;
+        if (!ConvertToSrgb || !_profile.CanConvert) return _source;
+        if (_converted is null)
+        {
+            _converted = _source.Clone();
+            _profile.ConvertToSrgb(_converted);
+        }
+        return _converted;
+    }
+
+    partial void OnConvertToSrgbChanged(bool value)
+    {
+        OnPropertyChanged(nameof(LosesColor));
+        Rebuild();
+    }
 
     /// <summary>The color model the hue and saturation are read in. Changing it loses nothing: the
     /// numbers are the same, read in another model.</summary>
@@ -172,8 +217,16 @@ public partial class ImportImageViewModel : WizardViewModelBase, IDisposable
     /// <returns>Null when the form is ready to show, or the reason it cannot be.</returns>
     public string? TryLoad()
     {
-        try { _source = ImageFormats.Load(SourcePath); }
-        catch (Exception ex) { return $"“{SourceLeaf}” could not be read as an image: {ex.Message}"; }
+        // Core's one rule for a picture import, and its own sentence for a file that cannot be read:
+        // no decoder's or OS's wording reaches the screen.
+        try { _source = ImageImport.Load(SourcePath, convertToSrgb: false, out _profile); }
+        catch (PictureUnreadableException ex) { return ex.Message; }
+        OnPropertyChanged(nameof(ProfileNote));
+        OnPropertyChanged(nameof(CanConvertProfile));
+        OnPropertyChanged(nameof(ProfileUnsupported));
+        OnPropertyChanged(nameof(ProfileNoteConvertible));
+        OnPropertyChanged(nameof(ProfileNoteUnsupported));
+        OnPropertyChanged(nameof(ConvertBoxOpacity));
 
         if (_source.Width != _canvas.Width || _source.Height != _canvas.Height)
         {
@@ -244,11 +297,13 @@ public partial class ImportImageViewModel : WizardViewModelBase, IDisposable
     /// value-map import produces is on screen before it is agreed to rather than after.</summary>
     private void Rebuild()
     {
-        if (_source is null) return;
+        if (Picture() is not { } picture) return;
         var old = Preview;
+        // Converted to sRGB FIRST, then (for a value-map kind) its lightness taken: the grays are the
+        // lightness of the colors the artist saw.
         using var shown = Kind == LayerKind.Custom
-            ? _source.Clone()
-            : ImageImport.ToValueMap(_source).ToImage();
+            ? picture.Clone()
+            : ImageImport.ToValueMap(picture).ToImage();
         Preview = _bridge.ToBitmap(shown);
         old?.Dispose();
         Revalidate();
@@ -279,7 +334,7 @@ public partial class ImportImageViewModel : WizardViewModelBase, IDisposable
     /// <exception cref="InvalidOperationException">Called before a successful <see cref="TryLoad"/>.</exception>
     public LoadedIngredient Build()
     {
-        if (_source is null) throw new InvalidOperationException("No image has been loaded.");
+        if (Picture() is not { } picture) throw new InvalidOperationException("No image has been loaded.");
 
         const string variantId = "variant-1";
         var manifest = new IngredientManifest(DerivedId, Name, Kind, BuildColorization(),
@@ -288,8 +343,8 @@ public partial class ImportImageViewModel : WizardViewModelBase, IDisposable
         // Custom keeps every channel; the value-map kinds keep lightness only. Exactly the split
         // ImageImport documents, and the same call the editor's variant import makes.
         var image = Kind == LayerKind.Custom
-            ? _source.Clone()
-            : ImageImport.ToValueMap(_source).ToImage();
+            ? picture.Clone()
+            : ImageImport.ToValueMap(picture).ToImage();
 
         return new LoadedIngredient
         {
@@ -312,6 +367,8 @@ public partial class ImportImageViewModel : WizardViewModelBase, IDisposable
     {
         _source?.Dispose();
         _source = null;
+        _converted?.Dispose();
+        _converted = null;
         Preview?.Dispose();
         Preview = null;
         GC.SuppressFinalize(this);

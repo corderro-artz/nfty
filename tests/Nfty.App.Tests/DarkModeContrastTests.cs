@@ -505,6 +505,15 @@ public class DarkModeContrastTests
         yield return ("dialog-import-image",
             new Views.ImportImageView { DataContext = importForm }, importForm.Dispose);
 
+        // The color-profile row's two inks: the Display P3 note in body ink beside its checkbox, and
+        // the muted "imported as is" note for a profile nfty can't convert.
+        var importP3 = VisualCapture.ImportImageForm(dialogs, Nfty.Core.Tests.IccProfiles.DisplayP3);
+        yield return ("dialog-import-image-p3",
+            new Views.ImportImageView { DataContext = importP3 }, importP3.Dispose);
+        var importLut = VisualCapture.ImportImageForm(dialogs, Nfty.Core.Tests.IccProfiles.LutOnlyProfile("Fogra39 Coated"));
+        yield return ("dialog-import-image-lut",
+            new Views.ImportImageView { DataContext = importLut }, importLut.Dispose);
+
         // The passphrase prompt, on a seal that refuses export - so the sweep meets its "View only"
         // caveat rather than the permissive sentence, and the sender's note on its tinted panel.
         yield return ("dialog-passphrase", new Views.PassphraseDialogView

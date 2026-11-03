@@ -2556,8 +2556,10 @@
     <Setter Property="Background" Value="{DynamicResource WarningBrush}" />
   </Style>
 
+  <!-- 144, was 160: the color-profile row beneath it (ImportImageView) bought part of its 32px here,
+       so the card still fits the 526px modal area with slack (WizardFitsTests, ModalFitTests). -->
   <Style Selector="Border.impshot">
-    <Setter Property="Height" Value="160" />
+    <Setter Property="Height" Value="144" />
     <Setter Property="Background" Value="{DynamicResource TileBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
     <Setter Property="BorderThickness" Value="1" />

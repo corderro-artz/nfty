@@ -1,3 +1,4 @@
+using Nfty.Core.Imaging;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
@@ -72,4 +73,70 @@ public static class ImageImport
         });
         return found;
     }
+
+    /// <summary>
+    /// Reads a picture for import: decodes it, reads its embedded color profile with nfty's own reader,
+    /// and converts it to sRGB when asked and possible.
+    /// </summary>
+    /// <remarks>The one load every picture import shares (the CLI's <c>add variant</c> and
+    /// <c>new ingredient</c>, the editor's variant import); the Import image form holds both
+    /// forms for its live preview and calls <see cref="PictureProfile.ConvertToSrgb"/> itself.</remarks>
+    /// <param name="path">The PNG or JPEG.</param>
+    /// <param name="convertToSrgb">Convert a non-sRGB profile's pixels to sRGB.</param>
+    /// <param name="profile">What the picture's profile was.</param>
+    /// <returns>The decoded picture, converted when <paramref name="convertToSrgb"/> and the profile
+    /// allow; the caller owns it.</returns>
+    /// <exception cref="PictureUnreadableException">The file is missing, locked, not a PNG/JPEG, or
+    /// damaged — with a sentence in the product's words.</exception>
+    public static Image<Rgba32> Load(string path, bool convertToSrgb, out PictureProfile profile)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        byte[] bytes;
+        Image<Rgba32> image;
+        try
+        {
+            bytes = File.ReadAllBytes(path);
+            image = ImageFormats.Load(bytes);
+        }
+        catch (Exception ex) when (Unreadable(Path.GetFileName(path), ex) is { } sentence)
+        {
+            throw new PictureUnreadableException(sentence);
+        }
+        profile = PictureProfile.FromFile(bytes);
+        if (convertToSrgb && profile.CanConvert) profile.ConvertToSrgb(image);
+        return image;
+    }
+
+    /// <summary>
+    /// The product's sentence for a picture that could not be read, or null for an exception that is
+    /// not about the file (a bug, which should surface as itself).
+    /// </summary>
+    /// <remarks>No exception's own message reaches a screen: a decoder's or the OS's wording names
+    /// internals at someone who only chose the wrong file. Every sentence says what to do next.</remarks>
+    /// <param name="leaf">The file's name, as the sentence prints it.</param>
+    /// <param name="ex">What reading it threw.</param>
+    /// <returns>The sentence, or null.</returns>
+    public static string? Unreadable(string leaf, Exception ex) => ex switch
+    {
+        UnknownImageFormatException =>
+            $"“{leaf}” is not a PNG or JPEG picture. Save it as PNG from your drawing program and import that.",
+        InvalidImageContentException or ImageFormatException =>
+            $"“{leaf}” looks like a picture, but its data is damaged. Export it again from your drawing program and import the new file.",
+        FileNotFoundException or DirectoryNotFoundException =>
+            $"“{leaf}” is no longer there. Choose the file again.",
+        UnauthorizedAccessException =>
+            $"nfty is not allowed to read “{leaf}”. Check the file's permissions, or copy it somewhere you own, and try again.",
+        IOException =>
+            $"“{leaf}” could not be opened — another program may be holding it. Close it there and try again.",
+        _ => null,
+    };
+}
+
+/// <summary>A picture could not be read for import. The message is a product sentence, safe to show
+/// verbatim on any screen.</summary>
+public sealed class PictureUnreadableException : Exception
+{
+    /// <summary>Creates the exception.</summary>
+    /// <param name="message">The product sentence.</param>
+    public PictureUnreadableException(string message) : base(message) { }
 }

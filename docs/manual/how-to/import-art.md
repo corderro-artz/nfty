@@ -26,3 +26,17 @@ If you import a full-color image into a Dynamic or Static layer, nfty converts i
 
 That is usually what you want for shading. If you meant to keep the colors, the layer needs to be
 **Custom** — see [Paint in full color](paint-in-color.md).
+
+## Pictures with a color profile
+
+Art drawn on a wide-gamut screen often carries an embedded **color profile** — Display P3 on a
+recent Mac or iPad, Adobe RGB from Photoshop. nfty stores plain pixels, and marketplaces, browsers
+and game engines read plain pixels as **sRGB**, so a P3 picture kept as stored looks duller wherever
+it travels.
+
+When you import such a picture, the form says which profile it uses and offers **Convert to sRGB**,
+ticked by default; the preview shows the result. On a Dynamic or Static layer the conversion happens
+first, then nfty takes the lightness. The Ingredient Editor's **Import image…** converts without
+asking and tells you it did. Profiles nfty can't convert (print profiles like CMYK, and
+table-based ones) are named, and the picture comes in as it is. From the command line,
+`--keep-profile` skips the conversion.
