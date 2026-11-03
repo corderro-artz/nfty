@@ -20,7 +20,7 @@ assets a book admits *before* you ask it for any. The demo built into the binary
 of them, out of twenty-nine 32×32 sprites.
 
 **Access**  
-[![Manual](https://img.shields.io/website?url=https%3A%2F%2Fwww.vaporsoft.dev%2Fnfty%2F&label=User%20Manual&logo=readthedocs&logoColor=white)](https://www.vaporsoft.dev/nfty/)
+[![Manual](https://img.shields.io/website?url=https%3A%2F%2Fwww.vaporsoft.dev%2Fnfty%2Fdocs%2F&label=User%20Manual&logo=readthedocs&logoColor=white)](https://www.vaporsoft.dev/nfty/docs/)
 [![Release](https://img.shields.io/github/v/release/corderro-artz/nfty?label=Download&logo=github&logoColor=white)](https://github.com/corderro-artz/nfty/releases/latest)
 
 **Delivery**  
@@ -33,19 +33,48 @@ of them, out of twenty-nine 32×32 sprites.
 [![Avalonia 12](https://img.shields.io/badge/Avalonia-12.1.1-8B44AC)](https://avaloniaui.net/)
 [![Platform](https://img.shields.io/badge/platform-windows%20%7C%20linux%20%7C%20macOS-lightgrey)](https://github.com/corderro-artz/nfty)
 
-![The nfty Explorer with the Chest Demo CookBook open: 2 recipes, 49 variants and 7,155,000 unique DNA](assets/readme/hero-light.png#gh-light-mode-only)
-![The nfty Explorer with the Chest Demo CookBook open: 2 recipes, 49 variants and 7,155,000 unique DNA](assets/readme/hero-dark.png#gh-dark-mode-only)
+## Download and start in 60 seconds
 
-| Rise: paint depth into a rolled recipe | The pop-out viewer, 2D beside 3D |
+1. **Download** a zip from the [releases page](https://github.com/corderro-artz/nfty/releases/latest)
+   (**portable** if unsure), unzip it and run `Nfty.Desktop.exe`.
+2. Click **Open the demo CookBook**, then **Cook Set**, give it a seed such as `launch`, and pick an
+   empty folder. Fifty distinct chests land in it, numbered, with marketplace metadata beside each.
+3. Click **Open Set** to browse them, or open a Recipe and click **Rise** to turn one into a 3D model.
+
+The same thing from a terminal, and from your own program:
+
+```bash
+nfty demo .                                                    # writes ChestDemo.cbk here
+nfty generate ChestDemo.cbk --count 50 --seed launch --out ./out
+nfty menu ChestDemo.cbk --out chest.mnu                        # flatten it for runtime
+```
+
+- Walk through it with pictures: **[Get started](https://www.vaporsoft.dev/nfty/docs/get-started/)**.
+- Roll in a game or server: **[Embed nfty in your program](https://www.vaporsoft.dev/nfty/docs/how-to/embed-nfty/)**.
+- Every command: **[Command line](https://www.vaporsoft.dev/nfty/docs/reference/cli/)**.
+
+> **Using the app rather than working on it?** The **[User Manual](https://www.vaporsoft.dev/nfty/docs/)** is for you; this file is for
+> people building, embedding or changing nfty. The manual's source is in
+> [`docs/manual/`](docs/manual/index.md).
+
+## A tour
+
+| | |
 |---|---|
-| ![The Rise page on a rolled Chest recipe with its 3D tile](assets/readme/rise-light.png#gh-light-mode-only)![The Rise page on a rolled Chest recipe with its 3D tile](assets/readme/rise-dark.png#gh-dark-mode-only) | ![The viewer showing a chest in 2D and 3D side by side](assets/readme/viewer-light.png#gh-light-mode-only)![The viewer showing a chest in 2D and 3D side by side](assets/readme/viewer-dark.png#gh-dark-mode-only) |
+| ![The Explorer on the Chest Demo: 2 recipes, 12 layers, 49 variants, 7,155,000 unique DNA](assets/readme/hero-light.png#gh-light-mode-only)![The Explorer on the Chest Demo: 2 recipes, 12 layers, 49 variants, 7,155,000 unique DNA](assets/readme/hero-dark.png#gh-dark-mode-only) | ![The Ingredient Editor: a gray value-map, the colorize rail and a live preview](assets/readme/editor-light.png#gh-light-mode-only)![The Ingredient Editor: a gray value-map, the colorize rail and a live preview](assets/readme/editor-dark.png#gh-dark-mode-only) |
+| **Count before you cook.** The Explorer reads the exact number of distinct assets a book admits. | **Draw in gray, color at cook time.** The editor is built in; one drawing rolls a hue per asset. |
+| ![The Set browser: fifty cooked chests with one asset's DNA and trait rarity](assets/readme/set-light.png#gh-light-mode-only)![The Set browser: fifty cooked chests with one asset's DNA and trait rarity](assets/readme/set-dark.png#gh-dark-mode-only) | ![The Rise page on a rolled Chest recipe with its 3D tile](assets/readme/rise-light.png#gh-light-mode-only)![The Rise page on a rolled Chest recipe with its 3D tile](assets/readme/rise-dark.png#gh-dark-mode-only) |
+| **Browse and export.** Every asset carries its fingerprint, rarity and, optionally, a 3D model. | **Rise.** Paint depth into a rolled recipe and export glTF. |
+| ![The viewer showing a chest in 2D and 3D side by side](assets/readme/viewer-light.png#gh-light-mode-only)![The viewer showing a chest in 2D and 3D side by side](assets/readme/viewer-dark.png#gh-dark-mode-only) | ![The Quick Reference sheet with its four tabs and search box](docs/manual/images/help-sheet-light.png#gh-light-mode-only)![The Quick Reference sheet with its four tabs and search box](docs/manual/images/help-sheet-dark.png#gh-dark-mode-only) |
+| **The pop-out viewer.** One asset, 2D beside 3D, in its own window. | **Quick Reference.** Keys and terms in four tabs, with search, one click away. |
 
-> **Using the app rather than working on it?** Read the
-> **[User Manual](https://www.vaporsoft.dev/nfty/)** instead — this file is for developers. Its
-> source is in [`docs/manual/`](docs/manual/index.md).
+Sealing, spritesheets, the Kitchen and the runtime Menu are in the
+[manual](https://www.vaporsoft.dev/nfty/docs/).
 
 ## Table of Contents
 
+- [Download and start in 60 seconds](#download-and-start-in-60-seconds)
+- [A tour](#a-tour)
 - [Overview](#overview)
 - [The Suite](#the-suite)
 - [Requirements](#requirements)
@@ -98,7 +127,7 @@ string seed, and published as images plus two parallel sets of per-asset metadat
 | **Rise** (`Nfty.Model`) | Pixel art to a 3D model (glTF): depth painting, models inside Sets | [Make a 3D model](docs/manual/how-to/make-a-3d-model.md) |
 | **Viewer** | Pop-out window for one asset or model, 2D and 3D | [View an asset in its own window](docs/manual/how-to/view-an-asset-in-its-own-window.md) |
 
-More in the [User Manual](https://www.vaporsoft.dev/nfty/): [keyboard shortcuts](docs/manual/reference/shortcuts.md),
+More in the [User Manual](https://www.vaporsoft.dev/nfty/docs/): [keyboard shortcuts](docs/manual/reference/shortcuts.md),
 [settings](docs/manual/reference/settings.md) and the [FAQ](docs/manual/understand/faq.md).
 
 ## Requirements
@@ -497,7 +526,7 @@ gh release create v<version> .release/*.zip
 | Resource | Link |
 | --- | --- |
 | Repository | [github.com/corderro-artz/nfty](https://github.com/corderro-artz/nfty) |
-| User manual | [vaporsoft.dev/nfty](https://www.vaporsoft.dev/nfty/) |
+| User manual | [vaporsoft.dev/nfty/docs](https://www.vaporsoft.dev/nfty/docs/) |
 | Latest release | [GitHub releases](https://github.com/corderro-artz/nfty/releases/latest) |
 | Developer briefing | [CLAUDE.md](CLAUDE.md) · [AGENTS.md](AGENTS.md) |
 | Deferred work | [BACKLOG.md](BACKLOG.md) |

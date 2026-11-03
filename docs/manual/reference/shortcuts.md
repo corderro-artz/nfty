@@ -1,9 +1,26 @@
 # Keyboard shortcuts
 
-The app also carries this list: press ++ctrl+slash++ for the quick-reference sheet.
+The app carries this list too. Press ++ctrl+slash++, or click the **?** at the bottom right, for the
+**Quick Reference**: one sheet with four tabs, and keys drawn as key caps.
 
-![The in-app quick reference sheet](../images/help-sheet-light.png#only-light)
-![The in-app quick reference sheet](../images/help-sheet-dark.png#only-dark)
+![The Quick Reference, Basics tab: the six words, layer kinds, rules and state, colors and the everywhere, landing and tree keys](../images/help-sheet-light.png#only-light)
+![The Quick Reference, Basics tab: the six words, layer kinds, rules and state, colors and the everywhere, landing and tree keys](../images/help-sheet-dark.png#only-dark)
+
+| Tab | Holds |
+|---|---|
+| **Basics** | The six words, the layer kinds, what the symbols mean, color syntax, and the keys that work everywhere, on the opening screen and in the tree. |
+| **Editor** | Tools, drawing modifiers, the marked region, undo and redo, canvas zoom and pan, and the Set inspector. |
+| **Rise & 3D** | Depth painting and the 3D tile. |
+| **Viewer & runtime** | The pop-out viewer's controls and the commands that roll and render at runtime. |
+
+![The Quick Reference, Editor tab: tools, drawing modifiers, marked region, history and canvas view](../images/help-editor-light.png#only-light)
+![The Quick Reference, Editor tab: tools, drawing modifiers, marked region, history and canvas view](../images/help-editor-dark.png#only-dark)
+
+**Search keys and terms** filters across every tab. Press ++slash++ to jump to the box; matches name
+the tab and section they live in, and ++enter++ opens the first.
+
+![Searching the Quick Reference for seed: two matches, each naming its tab and section](../images/help-search-light.png#only-light)
+![Searching the Quick Reference for seed: two matches, each naming its tab and section](../images/help-search-dark.png#only-dark)
 
 ## Anywhere in the main window
 

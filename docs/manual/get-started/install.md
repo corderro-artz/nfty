@@ -38,8 +38,8 @@ The first build takes a minute or two while packages download.
 
 You should get this window:
 
-![the opening screen with nothing open: create and open actions, recents, Kitchen shelf](../images/landing-light.png#only-light)
-![the opening screen with nothing open: create and open actions, recents, Kitchen shelf](../images/landing-dark.png#only-dark)
+![The opening screen: create and open actions on the left, recent books on the right, the Kitchen shelf along the bottom](../images/landing-light.png#only-light)
+![The opening screen: create and open actions on the left, recent books on the right, the Kitchen shelf along the bottom](../images/landing-dark.png#only-dark)
 
 If you see it, you are done.
 

@@ -76,6 +76,23 @@ folder. Never trust capture order.
 **A modal swallows Ctrl+T entirely.** For a dialog, capture one theme, close it, toggle, and reopen —
 `pair.py` cannot help there.
 
+## More traps, found on the 2026-11 recapture
+
+**A game that owns the mouse eats every click.** A full-screen game that warps or clips the cursor
+makes `click.ps1` report success while nothing happens (read the cursor back: it never moves).
+Minimize it first.
+
+**`shot.ps1` makes nfty TOPMOST.** A native file dialog opened afterwards sits behind it, so click the
+dialog's filename box by screen position before typing. Once the pop-out viewer is open,
+`Process.MainWindowHandle` can resolve to the viewer and `shot.ps1` will resize *it*: close the viewer
+before capturing the main window.
+
+**A cook into a folder that already holds a Set extends it**, and warns that the book is not the one
+that cooked it. Empty the folder first, or the figure reads "+50 assets, 100 total".
+
+**Run the app from a scratch copy** of `bin/Debug/net10.0`: its recents and palette live in a `.nfty`
+folder beside the executable, so your own state never leaks into a figure.
+
 ## Adding a figure
 
 Add a row to `FIGURES` in `crop.py`: the frame it comes from, and the crop box in the frame's own

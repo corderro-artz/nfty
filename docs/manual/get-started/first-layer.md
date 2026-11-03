@@ -90,7 +90,7 @@ numbers are handed out, so every roll downstream of it changes too. See
 ## What you now know
 
 You have used every drawing tool, the value slider, reference layers and the live preview. The
-finished Vapor Pets in this manual's screenshots is five layers built exactly this way:
+Chest Demo in this manual's screenshots is six layers built exactly this way, cooked into fifty assets:
 
 ![The finished Chest Demo collection in the Set browser](../images/set-browser-light.png#only-light)
 ![The finished Chest Demo collection in the Set browser](../images/set-browser-dark.png#only-dark)

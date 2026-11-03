@@ -10,8 +10,8 @@ nfty stacks layered pixel art into large collections. You draw a few options for
 backgrounds, a few bodies, a few hats — and nfty combines and colors them, giving every asset a
 fingerprint that proves it is unlike any other in the set.
 
-![The nfty opening screen](images/landing-light.png#only-light)
-![The nfty opening screen](images/landing-dark.png#only-dark)
+![The nfty opening screen: create, open, recent books and the Kitchen shelf](images/landing-light.png#only-light)
+![The nfty opening screen: create, open, recent books and the Kitchen shelf](images/landing-dark.png#only-dark)
 
 <div class="grid cards" markdown>
 
@@ -61,8 +61,8 @@ nfty reads the gray as *lightness* — how bright each pixel is — then supplie
 time. One gray drawing of an aura becomes a blue aura, a pink aura, a gold one, each keeping the
 shading you drew.
 
-That is why a small amount of art goes a very long way. The five-layer Cat in these screenshots is
-thirteen drawings, and it can produce **699,840** distinguishable assets.
+That is why a small amount of art goes a very long way. The demo CookBook built into nfty is
+twenty-nine small drawings, and it can produce **7,155,000** distinguishable assets.
 
 !!! note "Everything is repeatable"
 
