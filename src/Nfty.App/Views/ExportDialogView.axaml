@@ -203,15 +203,15 @@
                   <StackPanel Spacing="9" IsVisible="{Binding IsSealed}">
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="9" RowDefinitions="Auto,Auto"
                           RowSpacing="4">
-                      <TextBlock Grid.Row="0" Grid.Column="0" Text="Passphrase" Classes="slbl" />
-                      <TextBlock Grid.Row="0" Grid.Column="1" Text="Confirm" Classes="slbl" />
+                      <TextBlock Grid.Row="0" Grid.Column="0" Text="PASSPHRASE" Classes="plabel" />
+                      <TextBlock Grid.Row="0" Grid.Column="1" Text="CONFIRM" Classes="plabel" />
                       <TextBox Grid.Row="1" Grid.Column="0" x:Name="PassphraseBox"
                                PasswordChar="•" Text="{Binding Passphrase}" />
                       <TextBox Grid.Row="1" Grid.Column="1" PasswordChar="•"
                                Text="{Binding PassphraseConfirm}" />
                     </Grid>
                     <StackPanel Spacing="4">
-                      <TextBlock Text="Note to the recipient" Classes="slbl" />
+                      <TextBlock Text="NOTE TO THE RECIPIENT" Classes="plabel" />
                       <TextBox Text="{Binding Note}"
                                PlaceholderText="Draft for review — please don't redistribute" />
                     </StackPanel>

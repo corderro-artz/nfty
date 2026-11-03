@@ -25,7 +25,7 @@
           <TextBlock Text="{Binding Policy}" Classes="caveat" />
 
           <StackPanel Spacing="4">
-            <TextBlock Text="Passphrase" Classes="slbl" />
+            <TextBlock Text="PASSPHRASE" Classes="plabel" />
             <TextBox PasswordChar="•" Text="{Binding Passphrase}" />
           </StackPanel>
 
