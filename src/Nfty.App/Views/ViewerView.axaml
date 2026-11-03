@@ -204,9 +204,9 @@
 
           <!-- TABS: the editor rail's underline tabs (not a seg tray: the export card below already
                holds two trays, and stacked pills read as one control), each with its count. Only
-               groups with facts get a tab; one group draws none, its row still reserved. -->
-          <Border Grid.Row="2" x:Name="FactTabs" Classes="facttabs" Opacity="{Binding TabsOpacity}"
-                  IsHitTestVisible="{Binding ShowTabs}">
+               groups with facts get a tab; one group has nothing to choose, so the strip is not
+               drawn and takes no room. -->
+          <Border Grid.Row="2" x:Name="FactTabs" Classes="facttabs" IsVisible="{Binding ShowTabs}">
             <ItemsControl ItemsSource="{Binding Tabs}">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="13" /></ItemsPanelTemplate>

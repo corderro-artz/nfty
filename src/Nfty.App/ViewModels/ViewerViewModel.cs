@@ -140,12 +140,10 @@ public sealed partial class ViewerViewModel : ViewModelBase, IDisposable
         }
     }
 
-    /// <summary>Whether the tab strip has anything to switch between. One group draws no strip, but
-    /// its row stays reserved, so a live subject gaining a second group moves nothing.</summary>
+    /// <summary>Whether the tab strip has anything to switch between. One group has nothing to
+    /// choose, so the strip is not drawn and takes no room (author's ruling: an empty reserved band
+    /// serves no purpose there); the facts move up into its place.</summary>
     public bool ShowTabs => Tabs.Count > 1;
-
-    /// <summary>Ink for the tab strip: reserved space, inked only when there are tabs to choose.</summary>
-    public double TabsOpacity => ShowTabs ? 1 : 0;
 
     /// <summary>The rows the rail lists: the chosen tab's facts.</summary>
     public IReadOnlyList<ViewerFact> TabFacts
@@ -177,7 +175,7 @@ public sealed partial class ViewerViewModel : ViewModelBase, IDisposable
     {
         foreach (var name in new[]
                  {
-                     nameof(SelectedGroup), nameof(Tabs), nameof(ShowTabs), nameof(TabsOpacity), nameof(TabFacts),
+                     nameof(SelectedGroup), nameof(Tabs), nameof(ShowTabs), nameof(TabFacts),
                      nameof(BannerFacts), nameof(HasBanner), nameof(Sections), nameof(SectionsLeft), nameof(SectionsRight),
                  })
             OnPropertyChanged(name);

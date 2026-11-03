@@ -106,7 +106,7 @@ public class ViewerInfoRailTests
     }
 
     [AvaloniaFact]
-    public void One_group_draws_no_tab_strip_but_its_row_stays_reserved()
+    public void One_group_draws_no_tab_strip_and_gives_its_row_to_the_facts()
     {
         var one = new List<ViewerFact> { new("FILE", "a.png"), new("SIZE", "6 x 5") };
         var (w1, v1, vm1, a1) = Host(one, Smallest);
@@ -116,11 +116,14 @@ public class ViewerInfoRailTests
             Assert.False(vm1.ShowTabs);
             var strip1 = v1.FindControl<Border>("FactTabs")!;
             var strip2 = v2.FindControl<Border>("FactTabs")!;
-            Assert.Equal(0, strip1.Opacity);
-            Assert.False(strip1.IsHitTestVisible);
-            Assert.Equal(1, strip2.Opacity);
-            // Same height, same place: a subject gaining a group moves nothing below the strip.
-            Assert.Equal(strip2.Bounds, strip1.Bounds);
+            Assert.False(strip1.IsVisible);
+            Assert.True(strip2.IsVisible);
+            // The strip's row collapses: the single group's facts start higher than a tabbed rail's.
+            var list1 = v1.FindControl<ItemsControl>("FactList")!;
+            var list2 = v2.FindControl<ItemsControl>("FactList")!;
+            var top1 = list1.TranslatePoint(default, v1)!.Value.Y;
+            var top2 = list2.TranslatePoint(default, v2)!.Value.Y;
+            Assert.True(top1 < top2 - 10, $"single-group facts at {top1}, tabbed at {top2}");
         }
         finally { w1.Close(); w2.Close(); vm1.Dispose(); vm2.Dispose(); a1.Dispose(); a2.Dispose(); }
     }
