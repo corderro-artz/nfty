@@ -187,6 +187,12 @@ public class DeadCodeAuditTests
         // Fluent's own TextBox template reads this key. The app overrides it so a placeholder is the
         // app's muted ink rather than the system gray; nothing here names it, and that is the point.
         ["TextControlPlaceholderForeground"] = "consumed by Fluent's TextBox template, not by us",
+        ["ComboBoxBackground"] = "consumed by Fluent's ComboBox theme, not by us",
+        ["ComboBoxBackgroundPointerOver"] = "consumed by Fluent's ComboBox theme, not by us",
+        ["ComboBoxBackgroundPressed"] = "consumed by Fluent's ComboBox theme, not by us",
+        ["ComboBoxBorderBrush"] = "consumed by Fluent's ComboBox theme, not by us",
+        ["ComboBoxBorderBrushPointerOver"] = "consumed by Fluent's ComboBox theme, not by us",
+        ["ComboBoxBorderBrushPressed"] = "consumed by Fluent's ComboBox theme, not by us",
     };
 
     /// <summary>Every token the theme defines is referenced by something.</summary>
