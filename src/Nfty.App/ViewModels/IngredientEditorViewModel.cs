@@ -666,6 +666,15 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
     /// <inheritdoc />
     public string ViewerTitle => SelectedVariant is { } v ? $"{_ing.Manifest.Name} / {v.Name}" : _ing.Manifest.Name;
 
+    /// <inheritdoc />
+    public IReadOnlyList<Nfty.App.Viewer.ViewerFact> ViewerFacts => new Nfty.App.Viewer.ViewerFact[]
+    {
+        new("LAYER", _ing.Manifest.Name),
+        new("KIND", Mode.ToString().ToUpperInvariant()),
+        new("VARIANT", SelectedVariant?.Name ?? "none"),
+        new("VARIANTS", Variants.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+    };
+
     /// <summary>The layer as generation would render it - what the corner tile shows - as an image.
     /// Rendered when asked (the viewer asks once a frame, never on a stroke) and freed when the next
     /// ask replaces it; the viewer copies it at once.</summary>

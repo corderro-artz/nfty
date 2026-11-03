@@ -445,6 +445,23 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable, IUnsaved
     public string ViewerTitle => Source.Title;
 
     /// <inheritdoc />
+    public IReadOnlyList<Nfty.App.Viewer.ViewerFact> ViewerFacts
+    {
+        get
+        {
+            var facts = new List<Nfty.App.Viewer.ViewerFact>
+            {
+                new("SUBJECT", Source.Title),
+                new("SIZE", string.Create(System.Globalization.CultureInfo.InvariantCulture,
+                    $"{Subject.Art.Width} x {Subject.Art.Height}")),
+            };
+            facts.AddRange(Source.Facts.Select(Nfty.App.Viewer.ViewerFact.FromLine));
+            facts.Add(new("MODEL", Mesh is not null ? "solid, drawn in 3D" : "none: 2D only"));
+            return facts;
+        }
+    }
+
+    /// <inheritdoc />
     public Image<Rgba32> ViewerArt => Subject.Art;
 
     /// <inheritdoc />

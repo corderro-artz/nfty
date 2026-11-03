@@ -1,0 +1,12 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             x:Class="Nfty.App.Views.ViewerLiveBadge"
+             x:DataType="vm:ViewerViewModel">
+  <!-- "live" or "snapshot": one control, so the overlay's header and the window's titlebar word the
+       same fact the same way. Absent for an archive, which is neither. -->
+  <Border Classes="idchip" VerticalAlignment="Center" IsVisible="{Binding IsNotGallery}"
+          ToolTip.Tip="A live viewer follows the page it was opened from; a snapshot is a frozen copy.">
+    <TextBlock Classes="ck" Text="{Binding LiveBadge}" />
+  </Border>
+</UserControl>

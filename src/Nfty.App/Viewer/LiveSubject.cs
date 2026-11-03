@@ -19,6 +19,10 @@ public interface ILiveViewerSource
     /// <summary>The 3D model as it stands now, or null when the page has none.</summary>
     ViewerModel? ViewerModel { get; }
 
+    /// <summary>The facts about what the page shows now, for the viewer's info rail. A page with
+    /// nothing to say returns an empty list, never a placeholder.</summary>
+    IReadOnlyList<ViewerFact> ViewerFacts { get; }
+
     /// <summary>False when the page shows something that may not leave the app.</summary>
     bool AllowExport { get; }
 
@@ -40,6 +44,7 @@ public sealed class LiveSubject : ViewerSubject
     private Image<Rgba32>? _art;
     private ViewerModel? _model;
     private string _title;
+    private IReadOnlyList<ViewerFact> _facts = Array.Empty<ViewerFact>();
     private bool _pending;
     private bool _disposed;
 
@@ -59,7 +64,7 @@ public sealed class LiveSubject : ViewerSubject
     /// <inheritdoc />
     public override string Title => _title;
     /// <inheritdoc />
-    public override IReadOnlyList<ViewerFact> Facts { get; } = Array.Empty<ViewerFact>();
+    public override IReadOnlyList<ViewerFact> Facts => _facts;
     /// <inheritdoc />
     public override Image<Rgba32>? Art => _art;
     /// <inheritdoc />
@@ -100,6 +105,7 @@ public sealed class LiveSubject : ViewerSubject
 
     private void Copy(ILiveViewerSource source)
     {
+        _facts = source.ViewerFacts.ToList();
         _art = source.ViewerArt.Clone();
         _model = source.ViewerModel is { } m ? m with { Texture = m.Texture.Clone() } : null;
     }

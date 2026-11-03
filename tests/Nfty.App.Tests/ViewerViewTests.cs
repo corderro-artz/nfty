@@ -183,8 +183,11 @@ public class ViewerViewTests
 
     [AvaloniaTheory]
     [InlineData(1067.0, 526.0)]
-    // The smallest window a viewer may be (640 x 480), seen through the shell's scale.
+    // The content's old 640 x 480 floor, seen through the shell's scale.
     [InlineData(640 / ShellViewModel.BaseScale, 480 / ShellViewModel.BaseScale)]
+    // The smallest viewer WINDOW, less the shared frame (24 gutter + 2 border, 36 titlebar), at that scale.
+    [InlineData((ViewerWindowState.MinWidth - 26) / ShellViewModel.BaseScale,
+        (ViewerWindowState.MinHeight - 26) / ShellViewModel.BaseScale - 36)]
     public void The_viewer_fits_the_smallest_window(double w, double h)
     {
         using var art = Art();
