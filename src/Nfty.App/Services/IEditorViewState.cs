@@ -7,7 +7,8 @@ namespace Nfty.App.Services;
 /// </summary>
 /// <param name="PixelGrid">Whether the backdrop draws the pixel lattice rather than a flat ground.</param>
 /// <param name="GridStep">How many canvas pixels one lattice square covers.</param>
-/// <param name="PreviewEnlarged">Whether the corner preview tile is at its larger size.</param>
+/// <param name="PreviewEnlarged">Whether the corner preview tile was at its larger size. Recorded for
+/// file compatibility only: it is never restored, every open starts with the small tile.</param>
 /// <param name="ReferencesTab">Whether the rail opens on REFERENCES rather than COLORIZE.</param>
 public sealed record EditorViewState(
     bool PixelGrid = true,

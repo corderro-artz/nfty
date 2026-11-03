@@ -393,24 +393,6 @@
               <TextBlock Classes="ck" Text="{Binding TargetHeader}" TextTrimming="CharacterEllipsis" />
             </Border>
 
-            <!-- The editor's own grid chip, verbatim. -->
-            <Border x:Name="GridChip" Classes="gridchip" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="26,0,0,26">
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <Button Classes="ttool" Classes.on="{Binding ShowPixelGrid}"
-                        Command="{Binding ToggleGridCommand}" ToolTip.Tip="{Binding GridToggleTip}">
-                  <Path Classes="ico sm" Data="{StaticResource IconGrid}" />
-                </Button>
-                <NumericUpDown Classes="nin" Value="{Binding GridSize}" Minimum="1"
-                               Maximum="{Binding GridSizeMax}" Width="58" FormatString="0"
-                               ShowButtonSpinner="False" IsEnabled="{Binding ShowPixelGrid}"
-                               ToolTip.Tip="How many canvas pixels one grid square covers. 1 is a true pixel grid; raise it on a large canvas, where one square per pixel is finer than the screen can draw." />
-                <Border Classes="tsep" />
-                <Button Classes="zchip" Classes.on="{Binding IsZoomed}"
-                        Command="{Binding ZoomToFitCommand}"
-                        Content="{Binding ZoomText}" ToolTip.Tip="{Binding ZoomTip}" />
-              </StackPanel>
-            </Border>
-
             <!-- THE MODEL TILE. Always present, the way the editor's blip is, so the swap is a toggle
                  and not a one-way door: the small tile shows whichever of the pair the big slot is
                  NOT, so the caption names something that is on screen exactly once. The ONE
@@ -465,11 +447,29 @@
             </Border>
           </Panel>
 
-          <!-- The readout: one line, reserved, so hovering a pixel moves nothing. -->
+          <!-- The view bar: the readout one line, reserved, so hovering a pixel moves nothing, with the
+               canvas' own view controls (grid, grid step, zoom) at its left. -->
           <Border Grid.Row="2" Classes="readout">
-            <Grid ColumnDefinitions="*,Auto">
-              <TextBlock Grid.Column="0" Classes="readtxt" Text="{Binding ReadoutText}" TextTrimming="CharacterEllipsis" />
-              <TextBlock Grid.Column="1" Classes="readtxt" Text="{Binding DimensionsText}" />
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+              <!-- VIEW: how the canvas is LOOKED AT, not a painting tool - the grid, what one square is
+                       worth, and the way back to fit. It sits in the bar under the canvas, with the readout, so
+                       the art stays clean and the toolstrip above (already full at the smallest window) is
+                       untouched. One group; the zoom chip has a stated width (a readout that must not resize). -->
+              <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                <Button Classes="ttool" Classes.on="{Binding ShowPixelGrid}"
+                        Command="{Binding ToggleGridCommand}" ToolTip.Tip="{Binding GridToggleTip}">
+                  <Path Classes="ico sm" Data="{StaticResource IconGrid}" />
+                </Button>
+                <NumericUpDown Classes="nin" Value="{Binding GridSize}" Minimum="1"
+                               Maximum="{Binding GridSizeMax}" Width="46" FormatString="0"
+                               ShowButtonSpinner="False" IsEnabled="{Binding ShowPixelGrid}"
+                               ToolTip.Tip="How many canvas pixels one grid square covers. 1 is a true pixel grid; raise it on a large canvas, where one square per pixel is finer than the screen can draw." />
+                <Button Classes="zchip" Classes.on="{Binding IsZoomed}"
+                        Command="{Binding ZoomToFitCommand}"
+                        Content="{Binding ZoomText}" ToolTip.Tip="{Binding ZoomTip}" />
+              </StackPanel>
+              <TextBlock Grid.Column="1" Classes="readtxt" Text="{Binding ReadoutText}" TextTrimming="CharacterEllipsis" />
+              <TextBlock Grid.Column="2" Classes="readtxt" Text="{Binding DimensionsText}" />
             </Grid>
           </Border>
         </Grid>

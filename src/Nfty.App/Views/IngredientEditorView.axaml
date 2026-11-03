@@ -369,6 +369,24 @@
                 <Path Classes="ico sm" Data="{StaticResource IconLock}" />
               </Button>
               </StackPanel>
+
+            <!-- VIEW: how the canvas is LOOKED AT, not a painting tool - the grid, what one square is
+                 worth, and the way back to fit. Part of the strip's controls rather than a chip over
+                 the art, so the canvas stays clean. One group, so a wrap never splits it; the zoom
+                 chip has a stated width (a readout that must not resize). -->
+            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+              <Button Classes="ttool" Classes.on="{Binding ShowPixelGrid}"
+                      Command="{Binding ToggleGridCommand}" ToolTip.Tip="{Binding GridToggleTip}">
+                <Path Classes="ico sm" Data="{StaticResource IconGrid}" />
+              </Button>
+              <NumericUpDown Classes="nin" Value="{Binding GridSize}" Minimum="1"
+                             Maximum="{Binding GridSizeMax}" Width="46" FormatString="0"
+                             ShowButtonSpinner="False" IsEnabled="{Binding ShowPixelGrid}"
+                             ToolTip.Tip="How many canvas pixels one grid square covers. 1 is a true pixel grid; raise it on a large canvas, where one square per pixel is finer than the screen can draw." />
+              <Button Classes="zchip" Classes.on="{Binding IsZoomed}"
+                      Command="{Binding ZoomToFitCommand}"
+                      Content="{Binding ZoomText}" ToolTip.Tip="{Binding ZoomTip}" />
+            </StackPanel>
             </ctl:StripPanel>
           </Border>
 
@@ -405,36 +423,6 @@
                 <!-- "Fill pane with preview": the colorized result takes over the tile. -->
                 <Image Source="{Binding Preview}" Stretch="Uniform" IsVisible="{Binding PreviewFillsPane}" />
               </Panel>
-            </Border>
-
-            <!-- .gridchip: the backdrop's own two controls, pinned to the canvas' bottom-LEFT so
-                 they sit opposite the blip and read as the pair of canvas overlays they are.
-                 NOT IN EITHER STRIP ABOVE. Both of those are width-critical enough to WRAP at the
-                 window sizes this app allows (ToolstripLayoutTests, PaletteStripLayoutTests), and a
-                 setting about how the backdrop is DRAWN belongs with the thing it draws on rather
-                 than in a row of painting tools. The two controls are the whole feature: what a
-                 square is worth, and whether to draw squares at all. -->
-            <Border Classes="gridchip" HorizontalAlignment="Left" VerticalAlignment="Bottom"
-                    Margin="26,0,0,26">
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <Button Classes="ttool" Classes.on="{Binding ShowPixelGrid}"
-                        Command="{Binding ToggleGridCommand}" ToolTip.Tip="{Binding GridToggleTip}">
-                  <Path Classes="ico sm" Data="{StaticResource IconGrid}" />
-                </Button>
-                <!-- The same compact numeric idiom the brush size uses, and the same reason for no
-                     caption: the tooltip carries the meaning and the chip keeps its width. -->
-                <NumericUpDown Classes="nin" Value="{Binding GridSize}" Minimum="1"
-                               Maximum="{Binding GridSizeMax}" Width="58" FormatString="0"
-                               ShowButtonSpinner="False" IsEnabled="{Binding ShowPixelGrid}"
-                               ToolTip.Tip="How many canvas pixels one grid square covers. 1 is a true pixel grid; raise it on a large canvas, where one square per pixel is finer than the screen can draw." />
-                <Border Classes="tsep" />
-                <!-- The zoom lives in the backdrop's own chip for the same reason the grid does: it
-                     is a setting about how the canvas is LOOKED AT rather than a painting tool, and
-                     neither strip above has 52px to spare at the window sizes this app allows. -->
-                <Button Classes="zchip" Classes.on="{Binding IsZoomed}"
-                        Command="{Binding ZoomToFitCommand}"
-                        Content="{Binding ZoomText}" ToolTip.Tip="{Binding ZoomTip}" />
-              </StackPanel>
             </Border>
 
             <!-- .blip: the colorized preview sits ON the canvas' bottom-right corner rather than

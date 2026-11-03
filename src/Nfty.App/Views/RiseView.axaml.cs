@@ -52,7 +52,6 @@ public partial class RiseView : UserControl
     private ModelPreviewView _model = null!;
     private Border _host = null!;
     private Border _tile = null!;
-    private Border _gridChip = null!;
     private Border _targetChip = null!;
     private ScrollViewer _railScroll = null!;
     private Grid _railGrid = null!;
@@ -103,7 +102,6 @@ public partial class RiseView : UserControl
             _vm?.PopOutCommand.Execute(null);
             e.Handled = true;
         }, RoutingStrategies.Tunnel);
-        _gridChip = this.FindControl<Border>("GridChip")!;
         _targetChip = this.FindControl<Border>("TargetChip")!;
         _railScroll = this.FindControl<ScrollViewer>("RailScroll")!;
         _railGrid = this.FindControl<Grid>("RailGrid")!;
@@ -126,9 +124,8 @@ public partial class RiseView : UserControl
         // And the backdrop's own bounds: the art sits in a fixed host centered in it, so the host's
         // POSITION keeps moving as the pane resizes after the image has stopped changing size.
         _backdrop.GetObservable(BoundsProperty).Subscribe(new AnonymousObserver<Rect>(_ => { FitHost(); _canvas.RebuildBackdrop(); }));
-        // The things the canvas must keep clear of: the tile (which changes size) and the grid chip.
+        // The things the canvas must keep clear of: the tile (which changes size).
         _tile.GetObservable(BoundsProperty).Subscribe(new AnonymousObserver<Rect>(_ => FitHost()));
-        _gridChip.GetObservable(BoundsProperty).Subscribe(new AnonymousObserver<Rect>(_ => FitHost()));
         _targetChip.GetObservable(BoundsProperty).Subscribe(new AnonymousObserver<Rect>(_ => FitHost()));
         LayoutUpdated += (_, _) => { SnapRailFold(); SnapListFold(); };
         // The bitmap is what the geometry is mapped against: a new picture is a new frame. Watched on
@@ -249,12 +246,12 @@ public partial class RiseView : UserControl
     /// <remarks>
     /// <para>Centered at 320 is right wherever it clears them, and that is every window a frame is
     /// normally looked at; at the smallest window the backdrop is only ~400 tall, and a centered host
-    /// put the bottom-right of the art under the 3D tile and the bottom-left under the grid chip. So
+    /// put the bottom-right of the art under the 3D tile. So
     /// the candidates are tried in order of how little they move it - centered, centered at the top,
     /// top-left, left-centered - at 320 and then at smaller sides, and the first that clears both
     /// (with a gap) wins. "Fit" therefore means fit in the free part of the pane, which is what the
     /// pointer, the lattice and the labels follow, as they all map through the surface's real bounds.</para>
-    /// <para>It reads only the backdrop, the tile and the chip, all of which are placed by alignment
+    /// <para>It reads only the backdrop and the tile, both of which are placed by alignment
     /// and so cannot be moved by what this writes: no layout loop.</para>
     /// </remarks>
     private void FitHost()
@@ -264,7 +261,6 @@ public partial class RiseView : UserControl
 
         var avoid = new List<Rect>();
         if (_tile.Bounds.Width > 0) avoid.Add(_tile.Bounds.Inflate(HostGap));
-        if (_gridChip.Bounds.Width > 0) avoid.Add(_gridChip.Bounds.Inflate(HostGap));
         // The layer header sits over the top of the pane on a write-through page; the art starts below it.
         double top = 8;
         if (_targetChip.IsVisible && _targetChip.Bounds.Width > 0)

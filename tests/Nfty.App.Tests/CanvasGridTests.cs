@@ -254,28 +254,20 @@ public class CanvasGridTests
         finally { window.Close(); vm.Dispose(); }
     }
 
-    /// <summary>Both controls are reachable from the canvas pane rather than from either strip —
-    /// the two strips already wrap at the window sizes this app allows.</summary>
+    /// <summary>The grid and zoom controls are part of the strip above the canvas, not a chip floating over the art:
+    /// the canvas backdrop holds none of them.</summary>
     [AvaloniaFact]
-    public void The_grid_controls_sit_on_the_canvas_and_not_in_a_strip()
+    public void The_grid_controls_sit_in_the_palette_strip_and_not_on_the_canvas()
     {
         var (window, vm, view) = Render();
         try
         {
-            var chip = view.GetVisualDescendants().OfType<Border>()
-                .FirstOrDefault(b => b.Classes.Contains("gridchip"));
-            Assert.NotNull(chip);
-
             var backdrop = Backdrop(view);
-            Assert.Contains(chip!.GetVisualAncestors(), a => ReferenceEquals(a, backdrop));
-
-            // Inside the pane, and not overlapping the blip it is paired with.
-            var blip = view.GetVisualDescendants().OfType<Border>()
-                .First(b => b.Name == "PreviewTile");
-            var chipRight = chip.TranslatePoint(new Point(chip.Bounds.Width, 0), backdrop)!.Value.X;
-            var blipLeft = blip.TranslatePoint(new Point(0, 0), backdrop)!.Value.X;
-            Assert.True(chipRight < blipLeft,
-                $"the grid chip ends at {chipRight:F0} and the blip starts at {blipLeft:F0}");
+            var strip = view.GetVisualDescendants().OfType<Border>()
+                .First(b => b.Classes.Contains("pstrip"));
+            var zoom = view.GetVisualDescendants().OfType<Button>().First(b => b.Classes.Contains("zchip"));
+            Assert.Contains(zoom.GetVisualAncestors(), a => ReferenceEquals(a, strip));
+            Assert.DoesNotContain(zoom.GetVisualAncestors(), a => ReferenceEquals(a, backdrop));
         }
         finally { window.Close(); vm.Dispose(); }
     }
