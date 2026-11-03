@@ -84,8 +84,9 @@ public static class SetWriter
         ValidateModelNames(models, set);
         var skipped = models is null ? null : new bool[set.Assets.Count];
         var layout = Prepare(outDir, models is not null);
+        int shape = ShapeFor(onDisk, outDir);
         var existing = LoadExisting(layout, set);
-        var rarity = new Rarity(existing, set);
+        var rarity = new Rarity(existing, set, shape);
 
         // One asset's three files depend on that asset and on `rarity`, which is finished being
         // built above and is only read from here on. Nothing is shared and nothing accumulates, so
@@ -97,8 +98,8 @@ public static class SetWriter
         {
             var (imagePath, metaPath, nftyPath) = PathsFor(layout, asset.SetNumber);
             asset.Image.Save(imagePath, new PngEncoder());
-            File.WriteAllText(metaPath, Serialize(BuildOpenSea(set, asset)));
-            File.WriteAllText(nftyPath, Serialize(BuildNfty(set, asset, rarity)));
+            File.WriteAllText(metaPath, Serialize(BuildOpenSea(set, asset, shape)));
+            File.WriteAllText(nftyPath, Serialize(BuildNfty(set, asset, rarity, shape)));
 
             // Built, written and dropped one at a time: memory is one model per worker, never the set.
             var files = ModelFor(models, asset);
@@ -114,7 +115,7 @@ public static class SetWriter
 
         File.WriteAllText(SetJsonPath(outDir),
             Serialize(BuildSetManifest(set, existing, rarity, recorded, onDisk.Unique,
-                MergedModels(models, recordedModels, set, skipped))));
+                MergedModels(models, recordedModels, set, skipped), shape)));
 
         if (pack) Pack(outDir);
     }
@@ -148,8 +149,9 @@ public static class SetWriter
         ValidateModelNames(models, set);
         var skipped = models is null ? null : new bool[set.Assets.Count];
         var layout = Prepare(outDir, models is not null);
+        int shape = ShapeFor(onDisk, outDir);
         var existing = await LoadExistingAsync(layout, set, cancellationToken).ConfigureAwait(false);
-        var rarity = new Rarity(existing, set);
+        var rarity = new Rarity(existing, set, shape);
 
         var slots = SlotsOf(set);
         var progressGate = new Lock();
@@ -158,8 +160,8 @@ public static class SetWriter
         {
             var (imagePath, metaPath, nftyPath) = PathsFor(layout, asset.SetNumber);
             await asset.Image.SaveAsync(imagePath, new PngEncoder(), ct).ConfigureAwait(false);
-            await File.WriteAllTextAsync(metaPath, Serialize(BuildOpenSea(set, asset)), ct).ConfigureAwait(false);
-            await File.WriteAllTextAsync(nftyPath, Serialize(BuildNfty(set, asset, rarity)), ct).ConfigureAwait(false);
+            await File.WriteAllTextAsync(metaPath, Serialize(BuildOpenSea(set, asset, shape)), ct).ConfigureAwait(false);
+            await File.WriteAllTextAsync(nftyPath, Serialize(BuildNfty(set, asset, rarity, shape)), ct).ConfigureAwait(false);
 
             // The modeler is synchronous CPU work; it is not faked async. One model at a time per worker.
             var files = ModelFor(models, asset);
@@ -181,7 +183,7 @@ public static class SetWriter
 
         await File.WriteAllTextAsync(SetJsonPath(outDir),
             Serialize(BuildSetManifest(set, existing, rarity, recorded, onDisk.Unique,
-                MergedModels(models, recordedModels, set, skipped))),
+                MergedModels(models, recordedModels, set, skipped), shape)),
             cancellationToken).ConfigureAwait(false);
 
         // ZipFile has no async API; keep the UI thread free rather than pretend.
@@ -284,7 +286,9 @@ public static class SetWriter
     /// <param name="Sha">The source archive's hash, or null when it did not record one.</param>
     /// <param name="Models">The recorded 3D-models block, or null.</param>
     /// <param name="Unique">What it recorded about its own uniqueness, or null when it never said.</param>
-    private sealed record Recorded(string? Sha, SetModels? Models, bool? Unique);
+    /// <param name="Shape">The recorded <c>metadataShape</c>, or null when absent (the legacy shape).</param>
+    /// <param name="HasManifest">Whether a readable <c>set.json</c> existed at all.</param>
+    private sealed record Recorded(string? Sha, SetModels? Models, bool? Unique, int? Shape = null, bool HasManifest = false);
 
     private static readonly Recorded NothingRecorded = new(null, null, null);
 
@@ -323,7 +327,7 @@ public static class SetWriter
         try
         {
             var m = JsonSerializer.Deserialize<SetManifest>(json, Json.Options);
-            return m is null ? NothingRecorded : new Recorded(m.CookbookSha256, m.Models, m.UniqueDna);
+            return m is null ? NothingRecorded : new Recorded(m.CookbookSha256, m.Models, m.UniqueDna, m.MetadataShape, true);
         }
         catch (JsonException)
         {
@@ -429,10 +433,20 @@ public static class SetWriter
     /// </summary>
     private const string AbsentValue = "(none)";
 
-    private static OpenSeaMetadata BuildOpenSea(GeneratedSet set, GeneratedAsset asset)
+    /// <summary>
+    /// The shape this write produces. A Set already on disk keeps ITS shape (absent means the
+    /// legacy one), so extend never mixes shapes and never rewrites a published file's attributes;
+    /// a Set that is not on disk yet gets the current one.
+    /// </summary>
+    private static int ShapeFor(Recorded onDisk, string outDir) =>
+        onDisk.HasManifest ? onDisk.Shape ?? MetadataTraits.LegacyShape
+        : HasItems(outDir) ? MetadataTraits.LegacyShape
+        : MetadataTraits.CurrentShape;
+
+    private static OpenSeaMetadata BuildOpenSea(GeneratedSet set, GeneratedAsset asset, int shape)
     {
         var attributes = new List<MetadataAttribute> { new(TypeTrait, asset.RecipeName) };
-        attributes.AddRange(asset.Traits.Select(t => new MetadataAttribute(t.IngredientName, t.VariantName)));
+        attributes.AddRange(MetadataTraits.Attributes(asset, shape));
 
         return new OpenSeaMetadata(
             Name: $"{set.CollectionName} #{asset.SetNumber}",
@@ -441,17 +455,19 @@ public static class SetWriter
             Attributes: attributes);
     }
 
-    private static NftyMetadata BuildNfty(GeneratedSet set, GeneratedAsset asset, Rarity rarity)
+    private static NftyMetadata BuildNfty(GeneratedSet set, GeneratedAsset asset, Rarity rarity, int shape)
     {
         var table = new List<RarityAttribute> { rarity.For(TypeTrait, asset.RecipeName) };
-        table.AddRange(asset.Traits.Select(t => rarity.For(t.IngredientName, t.VariantName)));
+        table.AddRange(MetadataTraits.Attributes(asset, shape).Select(t => rarity.For(t.Trait_type, t.Value)));
 
         // An absent layer earns a rarity row of its own. "How unusual is it to have no hat" is a
         // real question about a collection, and it is only answerable if not-having is counted like
         // having. It goes in the RICH file only: the OpenSea attributes above are built from
         // asset.Traits, which an absent layer never enters, so the standards-pure file stays free
         // of a "None" trait — which is what the standard means by not having something.
-        table.AddRange(asset.AbsentLayers.Select(a => rarity.For(a.IngredientName, AbsentValue)));
+        // Shape 1 only: from shape 2 the absence is an ordinary attribute above, spelled once.
+        if (shape < MetadataTraits.CurrentShape)
+            table.AddRange(asset.AbsentLayers.Select(a => rarity.For(a.IngredientName, AbsentValue)));
 
         return new NftyMetadata(
             SetNumber: asset.SetNumber,
@@ -589,7 +605,7 @@ public static class SetWriter
     /// what this Set already recorded as its origin, from <see cref="RecordedAt"/>.</summary>
     private static SetManifest BuildSetManifest(
         GeneratedSet set, IReadOnlyList<ExistingItem> existing, Rarity rarity, string? recordedSha256,
-        bool? recordedUnique = null, SetModels? models = null)
+        bool? recordedUnique = null, SetModels? models = null, int shape = MetadataTraits.CurrentShape)
     {
         var distribution = existing.Select(e => e.Recipe)
             .Concat(set.Assets.Select(a => a.RecipeId))
@@ -620,7 +636,8 @@ public static class SetWriter
 
         return new SetManifest(set.CollectionName, rarity.Total, set.Seed,
             recordedSha256 ?? set.CookbookSha256, GeneratorVersion, distribution, rarity.Table(),
-            unique, models);
+            unique, models, set.Symbol,
+            shape >= MetadataTraits.CurrentShape ? shape : null);
     }
 
     /// <summary>
@@ -693,7 +710,7 @@ public static class SetWriter
 
         public int Total { get; }
 
-        public Rarity(IReadOnlyList<ExistingItem> existing, GeneratedSet set)
+        public Rarity(IReadOnlyList<ExistingItem> existing, GeneratedSet set, int shape)
         {
             foreach (var item in existing)
                 foreach (var attr in item.Attributes) Bump(attr.Trait_type, attr.Value);
@@ -701,10 +718,14 @@ public static class SetWriter
             foreach (var asset in set.Assets)
             {
                 Bump(TypeTrait, asset.RecipeName);
-                foreach (var t in asset.Traits) Bump(t.IngredientName, t.VariantName);
-                // Counted alongside the traits, so the shares of one layer still sum to 100: every
-                // asset contributes exactly one outcome per layer, and "not there" is one of them.
-                foreach (var a in asset.AbsentLayers) Bump(a.IngredientName, AbsentValue);
+                // The same list the metadata file publishes, so the table and the file cannot differ:
+                // color traits and (from shape 2) None are counted exactly as they are written.
+                foreach (var t in MetadataTraits.Attributes(asset, shape)) Bump(t.Trait_type, t.Value);
+                // Shape 1 counts the absence under its old spelling, alongside the traits, so the
+                // shares of one layer still sum to 100: every asset contributes exactly one outcome
+                // per layer, and "not there" is one of them.
+                if (shape < MetadataTraits.CurrentShape)
+                    foreach (var a in asset.AbsentLayers) Bump(a.IngredientName, AbsentValue);
             }
 
             Total = existing.Count + set.Assets.Count;

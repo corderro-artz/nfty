@@ -31,7 +31,8 @@ everything nfty knows. Neither is a subset of the other.
 
 [Exporting](../how-to/share-a-collection.md) writes the same shape with parts removed -- a
 marketplace export has no `nfty/`, and one for a collaborator has a `.cbk` beside `set.json`.
-`set.json` is never optional: it is what makes the result a Set rather than a folder of pictures.
+`set.json` is on in every preset but Marketplace, which leaves it out so the seed is not published; an
+export without it is for uploading and cannot be reopened in nfty.
 
 A **sealed** export is the exception. It is a `.tin`, and its shape is different:
 
@@ -55,18 +56,46 @@ Standards-pure. Nothing nfty-specific in it.
   "description": "Little creatures with a colorful aura.",
   "image": "images/0001.png",
   "attributes": [
-    { "trait_type": "Type",       "value": "Fox" },
-    { "trait_type": "Background", "value": "Plain" },
-    { "trait_type": "Body",       "value": "Stand" },
-    { "trait_type": "Eyes",       "value": "Wink" },
-    { "trait_type": "Aura",       "value": "Glow" },
-    { "trait_type": "Hat",        "value": "Bare" }
+    { "trait_type": "Type",        "value": "Fox" },
+    { "trait_type": "Background",  "value": "Plain" },
+    { "trait_type": "Body",        "value": "Stand" },
+    { "trait_type": "Eyes",        "value": "Wink" },
+    { "trait_type": "Aura",        "value": "Glow" },
+    { "trait_type": "Aura Color",  "value": "Pale Azure" },
+    { "trait_type": "Hat",         "value": "None" }
   ]
 }
 ```
 
 `Type` is the Recipe the asset was rolled from. Every other `trait_type` is a **layer name** -- which
-is why two layers in one Recipe may not share a name.
+is why two layers in one Recipe may not share a name -- or a layer's color (next section). The
+`image` is a relative path in the cooked Set; [an export](../how-to/put-a-collection-on-a-marketplace.md)
+can make it an absolute address, name the files by token id, and add `external_url` and
+`animation_url`. nfty writes no `display_type` or numeric traits: its traits are categories, not
+numbers.
+
+### Color traits and None
+
+Two things used to be invisible in the published traits, and are written from **metadata shape 2**
+on (every new cook):
+
+- **A rolled color.** Each Dynamic layer, and each Static layer, adds `"<Layer> Color"` right after
+  the layer's own trait, named from the exact rolled hue and saturation. Custom layers add none.
+  The name is the color's bucket: saturation below 0.12 is `Gray`; otherwise one of twelve hue names
+  centered every 30 degrees -- Red, Orange, Yellow, Lime, Green, Mint, Cyan, Azure, Blue, Violet,
+  Purple, Magenta -- with `Pale ` in front from 0.12 up to 0.35. Boundaries are half-open, so 15 degrees
+  is Orange and 345 is Red. Two assets that differ only in a hue now publish different traits, and
+  the rarity table counts each color name like any other trait. The exact color stays in `nfty/`.
+- **A left-out layer.** A layer that is optional in the asset's Recipe and was left out is
+  published as the value `None`. A layer the Recipe does not stack is not listed at all.
+
+Because the two would merge with a real trait, the Validator refuses a layer named like another
+colored layer's color trait (`Body` and `Body Color`), and a variant named `None` on an optional layer.
+DNA never includes either: names are a view of the roll.
+
+`set.json` records `metadataShape` (absent means 1, the older shape without these traits). Extending
+a Set writes its new assets in the Set's own shape and never rewrites a published file's attributes,
+so a Set is one shape throughout and its rarity table stays consistent.
 
 ## `nfty/NNNN.json`
 
@@ -122,9 +151,15 @@ re-renders it, so the debug number mark, which stamps exported images only, cann
   "cookbookSha256": "1df72e65a1fa7ce4de73ee52ba11371c02c8f993c40b486ae3802553b7f20214",
   "generatorVersion": "nfty/1.0",
   "distribution": [ { "recipe": "cat", "count": 279, "percent": 55.8 } ],
-  "rarity":       [ { "trait_type": "Aura", "value": "Glow", "rarityPct": 73.4 } ]
+  "rarity":       [ { "trait_type": "Aura", "value": "Glow", "rarityPct": 73.4 } ],
+  "symbol":       "VPET",
+  "metadataShape": 2
 }
 ```
+
+`symbol` is the collection's ticker, kept so an export can write `collection.json` without the book;
+`metadataShape` is explained under [Color traits and None](#color-traits-and-none). Both are optional
+and additive, so older Sets read as before.
 
 A Set cooked with models adds a `models` block; a Set without them has no such key:
 

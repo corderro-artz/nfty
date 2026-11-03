@@ -4,7 +4,7 @@
 
 The whole engine: archives, validation, generation, rendering, Sets, export, sealing, statistics. Depends on Nfty.Ticket and ImageSharp.
 
-157 public types. Each page lists the public and protected members with their signatures and the documentation written beside the code.
+162 public types. Each page lists the public and protected members with their signatures and the documentation written beside the code.
 
 ## Nfty.Core
 
@@ -121,6 +121,7 @@ The whole engine: archives, validation, generation, rendering, Sets, export, sea
 
 | Type | Kind | Summary |
 |---|---|---|
+| [`ColorName`](Nfty.Core.Imaging.ColorName.md) | class | The one table that turns a rolled color into the word a marketplace shows for it. |
 | [`Colorizer`](Nfty.Core.Imaging.Colorizer.md) | class | Tints a grayscale value-map with a hue and saturation, preserving each pixel's own value or lightness — which is what makes one piece of art yield a whole family of variants. |
 | [`Compositor`](Nfty.Core.Imaging.Compositor.md) | class | Stacks finished layer images into one asset. |
 | [`NumberStamp`](Nfty.Core.Imaging.NumberStamp.md) | class | Stamps an asset's set number into a corner, for telling loose sprites apart. |
@@ -145,6 +146,7 @@ The whole engine: archives, validation, generation, rendering, Sets, export, sea
 | [`LayerColor`](Nfty.Core.Output.LayerColor.md) | record | One layer's resolved color for the rich nfty metadata (all kinds represented). |
 | [`LoadedSet`](Nfty.Core.Output.LoadedSet.md) | class | A cooked Set read from disk for browsing: the manifest + per-item metadata and image paths (images are NOT decoded here). |
 | [`MetadataAttribute`](Nfty.Core.Output.MetadataAttribute.md) | record | One OpenSea trait. |
+| [`MetadataTraits`](Nfty.Core.Output.MetadataTraits.md) | class | Which traits an asset publishes, and in which SHAPE of metadata. |
 | [`NftyMetadata`](Nfty.Core.Output.NftyMetadata.md) | record | Rich nfty-specific per-item metadata. |
 | [`OpenSeaMetadata`](Nfty.Core.Output.OpenSeaMetadata.md) | record | Standard ERC-721 / OpenSea per-item metadata. |
 | [`RarityAttribute`](Nfty.Core.Output.RarityAttribute.md) | record | One trait with how common it is across the whole collection. |
@@ -173,6 +175,7 @@ The whole engine: archives, validation, generation, rendering, Sets, export, sea
 | [`ExportProgress`](Nfty.Core.Publish.ExportProgress.md) | record | How far an export has got. |
 | [`ExportResult`](Nfty.Core.Publish.ExportResult.md) | record | What an export produced. |
 | [`ExportShape`](Nfty.Core.Publish.ExportShape.md) | enum | Whether an export lands as a folder or as one file. |
+| [`MarketplaceRules`](Nfty.Core.Publish.MarketplaceRules.md) | class | The rules for the marketplace fields of [`ExportOptions`](Nfty.Core.Publish.ExportOptions.md), stated once. |
 | [`MenuRenderer`](Nfty.Core.Publish.MenuRenderer.md) | class | Renders a rolled [`AssetTicket`](../nfty-ticket/Nfty.Ticket.AssetTicket.md) back into pixels from the `.mnu` it was rolled against — the read-side counterpart to [`MenuWriter`](Nfty.Core.Publish.MenuWriter.md). |
 | [`MenuWriteOptions`](Nfty.Core.Publish.MenuWriteOptions.md) | record | How [`MenuWriter`](Nfty.Core.Publish.MenuWriter.md) packs a CookBook's art into a Menu. |
 | [`MenuWriteProgress`](Nfty.Core.Publish.MenuWriteProgress.md) | record | How far a Menu write has got. |
@@ -192,6 +195,8 @@ The whole engine: archives, validation, generation, rendering, Sets, export, sea
 | [`SpriteSheet`](Nfty.Core.Publish.SpriteSheet.md) | class | Stitches a cooked Set's assets into one image, left to right and top to bottom. |
 | [`SpriteSheetLayout`](Nfty.Core.Publish.SpriteSheetLayout.md) | record | How a sheet is laid out: a grid of cells, in the Set's own canvas size. |
 | [`SpriteSheetProgress`](Nfty.Core.Publish.SpriteSheetProgress.md) | record | How far a sheet has got. |
+| [`TokenNaming`](Nfty.Core.Publish.TokenNaming.md) | enum | How an export names the files that go to a marketplace. |
+| [`TokenNamingTokens`](Nfty.Core.Publish.TokenNamingTokens.md) | class | The one mapping between [`TokenNaming`](Nfty.Core.Publish.TokenNaming.md) and the words the CLI, the export dialog and the manual spell it with, so none of them can name a choice two ways. |
 
 ## Nfty.Core.Stats
 

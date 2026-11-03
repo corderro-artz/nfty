@@ -13,7 +13,22 @@ namespace Nfty.Core.Publish;
 /// <param name="Source">The file on disk now.</param>
 /// <param name="Name">Its path inside the export, always with <c>/</c> separators.</param>
 /// <param name="Bytes">Its size, so a plan can be totalled without opening anything.</param>
-public record ExportEntry(string Source, string Name, long Bytes);
+public record ExportEntry(string Source, string Name, long Bytes)
+{
+    /// <summary>The set number of the asset this file belongs to, or null for a file that is not one asset's.</summary>
+    /// <remarks>Carried explicitly because a renamed file (token ids, a different start) no longer
+    /// spells it; the number stamped into a debug image must stay the SET number.</remarks>
+    public int? SetNumber { get; init; }
+
+    /// <summary>
+    /// Makes the file's bytes when the export is written, for a file the export rewrites or invents
+    /// (item metadata with new links, <c>collection.json</c>); null for a file copied as it stands.
+    /// </summary>
+    /// <remarks>For a rewritten item <see cref="Source"/> is the Set's own file and <see cref="Bytes"/>
+    /// is that file's size, close to but not the final size; the plan an <see cref="ExportResult"/>
+    /// carries has the real one.</remarks>
+    public Func<byte[]>? Render { get; init; }
+}
 
 /// <summary>
 /// Everything an export will contain, worked out without writing anything.
@@ -49,6 +64,14 @@ public record ExportPlan(
 
     /// <summary>The source CookBook hash <c>set.json</c> records, or null when it records none.</summary>
     public string? RecordedCookBookSha256 { get; init; }
+
+    /// <summary>
+    /// Things true of this export that its author should hear before uploading it — dangling image
+    /// links, links still relative — worded here so the terminal and the dialog say the same thing.
+    /// </summary>
+    /// <remarks>Warnings, never refusals: each describes an export that is legitimate for SOME
+    /// destination (a folder of art uploaded separately, say).</remarks>
+    public IReadOnlyList<string> Warnings { get; init; } = [];
 
     /// <summary>The total size of everything being shipped.</summary>
     /// <remarks>
@@ -249,6 +272,7 @@ public static class SetExporter
 
         string? sheetTemp = null;
         string? artTemp = null;
+        string? renderTemp = null;
         try
         {
             // STAMPING COMES FIRST, so the sheet is stitched from the art that will actually ship.
@@ -275,6 +299,11 @@ public static class SetExporter
 
             cancellationToken.ThrowIfCancellationRequested();
 
+            // Rewritten and invented files are made last, once the entry list is final, and swapped
+            // in as ordinary files like the sheet and the stamped art - so every shape below copies,
+            // zips or seals them through the one list it already walks.
+            (plan, renderTemp) = Render(plan, cancellationToken);
+
             int total = stitched + plan.Entries.Count;
             Report(progress, stitched, total, "Writing...");
 
@@ -295,6 +324,43 @@ public static class SetExporter
                 try { File.Delete(sheetTemp); } catch { /* best effort */ }
             if (artTemp is not null && Directory.Exists(artTemp))
                 try { Directory.Delete(artTemp, recursive: true); } catch { /* best effort */ }
+            if (renderTemp is not null && Directory.Exists(renderTemp))
+                try { Directory.Delete(renderTemp, recursive: true); } catch { /* best effort */ }
+        }
+    }
+
+    /// <summary>
+    /// Makes every file the plan lists with a <see cref="ExportEntry.Render"/> and points the entry
+    /// at the result, with its real size.
+    /// </summary>
+    /// <param name="plan">The plan so far.</param>
+    /// <param name="cancellationToken">Stops between files.</param>
+    /// <returns>The plan with ordinary files only, and the temp folder (null when nothing needed making).</returns>
+    private static (ExportPlan Plan, string? Temp) Render(ExportPlan plan, CancellationToken cancellationToken)
+    {
+        if (!plan.Entries.Any(e => e.Render is not null)) return (plan, null);
+
+        string temp = Directory.CreateTempSubdirectory("nfty-render-").FullName;
+        try
+        {
+            var entries = new List<ExportEntry>(plan.Entries.Count);
+            for (int i = 0; i < plan.Entries.Count; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var e = plan.Entries[i];
+                if (e.Render is null) { entries.Add(e); continue; }
+
+                byte[] bytes = e.Render();
+                string path = Path.Combine(temp, i.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                File.WriteAllBytes(path, bytes);
+                entries.Add(e with { Source = path, Bytes = bytes.Length, Render = null });
+            }
+            return (plan with { Entries = entries }, temp);
+        }
+        catch
+        {
+            try { Directory.Delete(temp, recursive: true); } catch { /* best effort */ }
+            throw;
         }
     }
 
@@ -346,9 +412,13 @@ public static class SetExporter
                 i =>
                 {
                     var entry = plan.Entries[artAt[i]];
-                    string stem = Path.GetFileNameWithoutExtension(entry.Source);
-                    if (!int.TryParse(stem, System.Globalization.NumberStyles.Integer,
-                            System.Globalization.CultureInfo.InvariantCulture, out int number))
+                    // The entry's own set number: its file may have been renamed to a token id, and
+                    // the stamp is the SET number. Falls to the source name for a hand-built entry.
+                    int number;
+                    if (entry.SetNumber is { } known) number = known;
+                    else if (!int.TryParse(Path.GetFileNameWithoutExtension(entry.Source),
+                            System.Globalization.NumberStyles.Integer,
+                            System.Globalization.CultureInfo.InvariantCulture, out number))
                         return;
 
                     string target = Path.Combine(temp, Path.GetFileName(entry.Source));
@@ -372,7 +442,7 @@ public static class SetExporter
                         image.Save(target, new PngEncoder());
                     }
 
-                    stamped[i] = Entry(target, entry.Name);
+                    stamped[i] = entry with { Source = target, Bytes = new FileInfo(target).Length };
                 },
                 done => Report(progress, done, total, "Numbering...")), cancellationToken)
                 .ConfigureAwait(false);
@@ -474,6 +544,29 @@ public static class SetExporter
                 + "book's hash and never the book itself, so the file has to be named.",
                 nameof(cookBookPath));
 
+        // The marketplace values, each refused with the sentence the dialog shows beside the field.
+        foreach (var problem in new[]
+        {
+            MarketplaceRules.BaseUriProblem(options.BaseUri),
+            MarketplaceRules.ImageUriProblem(options.CollectionImage),
+            MarketplaceRules.WebUrlProblem(options.ExternalUrlBase, "External URL base"),
+            MarketplaceRules.WebUrlProblem(options.ExternalLink, "External link"),
+            MarketplaceRules.RoyaltyProblem(options.RoyaltyPercent),
+            MarketplaceRules.FeeRecipientProblem(options.FeeRecipient),
+            MarketplaceRules.TokenStartProblem(options.TokenStart),
+        })
+            if (problem is not null) throw new ArgumentException(problem, nameof(options));
+
+        if (options.RoyaltyPercent is > 0 && string.IsNullOrEmpty(options.FeeRecipient))
+            throw new ArgumentException(
+                "A royalty needs a fee recipient: say who the royalty is paid to.", nameof(options));
+
+        // A sealed export is made to be OPENED, and nfty opens a Set by its set.json.
+        if (options.Sealed && !options.IncludeSetManifest)
+            throw new ArgumentException(
+                "A sealed export is opened by nfty, which reads a Set by its set.json; "
+                + "leaving set.json out is only for an export you upload.", nameof(options));
+
         if (!options.IncludeCookBook || cookBookPath is null) return;
         if (!File.Exists(cookBookPath))
             throw new ArgumentException($"No CookBook at '{cookBookPath}'.", nameof(cookBookPath));
@@ -543,29 +636,130 @@ public static class SetExporter
         // models/ is not a taken-whole directory: FilesIn already lists only what set.json accounts
         // for, so the option just gates those.
 
+        var files = SetLayout.FilesIn(setDir);
         var entries = new List<ExportEntry>();
 
-        // set.json is not optional. It is what makes the result a Set rather than a folder of
-        // pictures, it is what `inspect` reads, and it carries the collection-wide rarity table -
-        // so even the leanest export still answers "what is this and how rare is what".
-        string setJson = SetLayout.ManifestPath(setDir);
-        entries.Add(Entry(setJson, SetLayout.ManifestFile));
+        // set.json is an axis (IncludeSetManifest): the leanest export for a public drop leaves it
+        // out, because it records the seed and the source book's hash. On by default, since it is
+        // what makes the result a Set rather than a folder of pictures.
+        if (options.IncludeSetManifest)
+            entries.Add(Entry(SetLayout.ManifestPath(setDir), SetLayout.ManifestFile));
 
-        foreach (var file in SetLayout.FilesIn(setDir))
+        bool defaultNames = ExportNaming.IsDefault(options);
+        string? modelFormat = manifest.Models?.Format;
+
+        // Which assets have a model that will ship AS a .glb: only those get an animation_url.
+        var glbNumbers = new HashSet<int>();
+        if (options.Models && options.BaseUri is not null && modelFormat == "glb")
+            foreach (var f in files)
+                if (Path.GetExtension(f) == ".glb" && ExportNaming.NumberOf(f) is { } n) glbNumbers.Add(n);
+
+        string? firstDescription = null;
+        int? firstImage = null;
+        string? firstImageName = null;
+        bool anyMetadata = false;
+        bool anyModels = false;
+
+        foreach (var file in files)
         {
             string rel = Path.GetRelativePath(setDir, file).Replace(Path.DirectorySeparatorChar, '/');
             if (rel == SetLayout.ManifestFile) continue;
-            if (rel.StartsWith(SetLayout.ModelsDir + "/", StringComparison.Ordinal))
+
+            bool isModel = rel.StartsWith(SetLayout.ModelsDir + "/", StringComparison.Ordinal);
+            if (isModel)
             {
-                if (options.Models) entries.Add(Entry(file, rel));
+                anyModels = true;
+                if (!options.Models) continue;
+            }
+            else if (!wanted.Any(d => rel.StartsWith(d + "/", StringComparison.Ordinal)))
+                continue;
+
+            string dir = rel[..rel.IndexOf('/')];
+            int? number = dir == SetLayout.NftyDir ? null : ExportNaming.NumberOf(file);
+
+            // nfty/ keeps the Set's own names and numbering: it is nfty's record of the Set,
+            // cross-referenced by set number, and not what a marketplace reads.
+            if (dir == SetLayout.NftyDir || number is not { } num)
+            {
+                entries.Add(Entry(file, rel));
                 continue;
             }
-            if (wanted.Any(d => rel.StartsWith(d + "/", StringComparison.Ordinal)))
-                entries.Add(Entry(file, rel));
+
+            string ext = Path.GetExtension(file);
+            switch (dir)
+            {
+                case SetLayout.ImagesDir:
+                    string imageName = SetLayout.ImagesDir + "/" + ExportNaming.ImageFile(num, options);
+                    if (firstImage is null || num < firstImage) { firstImage = num; firstImageName = imageName; }
+                    entries.Add(Entry(file, imageName) with { SetNumber = num });
+                    break;
+
+                case SetLayout.ModelsDir:
+                    if (!defaultNames && ext is ".bin" or ".gltf" && modelFormat == "gltf")
+                        throw new ArgumentException(
+                            "These models are a .gltf with a separate .bin, which the .gltf names by file; "
+                            + "renaming them to token ids would break that link. Cook the models as glb "
+                            + "(or gltf-embedded), or export with the padded names and start id 1.",
+                            nameof(options));
+                    entries.Add(Entry(file, SetLayout.ModelsDir + "/" + ExportNaming.Stem(num, options) + ext)
+                        with { SetNumber = num });
+                    break;
+
+                default:   // metadata
+                    anyMetadata = true;
+                    string metaName = SetLayout.MetadataDir + "/" + ExportNaming.MetadataFile(num, options);
+                    var entry = Entry(file, metaName) with { SetNumber = num };
+                    firstDescription ??= ReadDescription(file);
+                    if (!defaultNames || options.BaseUri is not null || options.ExternalUrlBase is not null)
+                    {
+                        string? animation = glbNumbers.Contains(num)
+                            ? SetLayout.ModelsDir + "/" + ExportNaming.Stem(num, options) + ".glb"
+                            : null;
+                        string collectionName = manifest.Name;
+                        entry = entry with { Render = () => MarketplaceFiles.RenderItem(file, num, options, collectionName, animation) };
+                    }
+                    entries.Add(entry);
+                    break;
+            }
+        }
+
+        if (options.IncludeCollectionMetadata)
+        {
+            string? image = options.CollectionImage is { Length: > 0 } given
+                ? given
+                : options.BaseUri is { } baseUri && firstImageName is not null ? baseUri + firstImageName : null;
+            string description = firstDescription ?? ReadFirstDescription(setDir);
+            byte[] bytes = MarketplaceFiles.RenderCollection(manifest, description, image, options);
+            entries.Add(new ExportEntry(string.Empty, MarketplaceFiles.CollectionName, bytes.Length)
+            {
+                Render = () => bytes,
+            });
         }
 
         if (options.IncludeCookBook && cookBookPath is not null)
             entries.Add(Entry(cookBookPath, Path.GetFileName(cookBookPath)));
+
+        // An export of nothing is a mistake, not a minimal export: set.json alone says what the Set
+        // is and ships none of it. Refused here so the terminal and the dialog share the sentence.
+        if (!options.SpriteSheet && entries.All(e => e.Name == SetLayout.ManifestFile))
+            throw new ArgumentException(
+                "Nothing to export: choose at least one of the art, the metadata, the nfty metadata, "
+                + "the 3D models, collection.json, the spritesheet or the source CookBook.",
+                nameof(options));
+
+        var warnings = new List<string>();
+        if (options.OpenSeaMetadata && anyMetadata && options.BaseUri is null)
+            warnings.Add("Image links are relative; set a base URI before uploading.");
+        if (options.OpenSeaMetadata && anyMetadata && !options.Images)
+            warnings.Add("The metadata links to images this export does not carry; the links dangle "
+                + "unless the art is uploaded to the same place.");
+        if (options.IncludeCollectionMetadata && options.CollectionImage is not { Length: > 0 }
+            && (options.BaseUri is null || firstImageName is null))
+            warnings.Add("collection.json has no image: set a base URI (with the art included) or a collection image.");
+        if (options.BaseUri is not null && options.OpenSeaMetadata && options.Models && anyModels
+            && modelFormat != "glb")
+            warnings.Add("Models are linked by animation_url only when they are glb; these are not, so the "
+                + "metadata does not link them.");
 
         string stem = FileNameFor(manifest.Name, leaf);
         string name = options.Shape == ExportShape.Folder ? stem
@@ -574,10 +768,29 @@ public static class SetExporter
         return new ExportPlan(entries, manifest.Name, manifest.Count, name)
         {
             SpriteSheet = options.SpriteSheet ? SheetLayoutFor(setDir, manifest.Count, options) : null,
-            SetHasModels = SetLayout.FilesIn(setDir).Any(f => Path.GetRelativePath(setDir, f)
-                .Replace(Path.DirectorySeparatorChar, '/').StartsWith(SetLayout.ModelsDir + "/", StringComparison.Ordinal)),
+            SetHasModels = anyModels,
             RecordedCookBookSha256 = manifest.CookbookSha256,
+            Warnings = warnings,
         };
+    }
+
+    /// <summary>The description a Set's metadata file carries, or null when it cannot be read.</summary>
+    private static string? ReadDescription(string metadataFile)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<OpenSeaMetadata>(File.ReadAllText(metadataFile), Json.Options)?.Description;
+        }
+        catch (JsonException) { return null; }
+    }
+
+    /// <summary>The first item's description even when no metadata is in this export; empty when the Set has none.</summary>
+    private static string ReadFirstDescription(string setDir)
+    {
+        string dir = Path.Combine(setDir, SetLayout.MetadataDir);
+        if (!Directory.Exists(dir)) return string.Empty;
+        string? first = Directory.EnumerateFiles(dir, "*.json").OrderBy(f => f, StringComparer.Ordinal).FirstOrDefault();
+        return first is null ? string.Empty : ReadDescription(first) ?? string.Empty;
     }
 
     /// <summary>

@@ -28,6 +28,50 @@ public ExportOptions();
 
 ## Properties
 
+### BaseUri { #p-baseuri }
+
+```csharp
+public string? BaseUri { get; init; }
+```
+
+Prefix every `image` link (and the `animation_url` of a model) with this address, so the metadata is upload-ready: `ipfs://CID/` gives `ipfs://CID/images/1.png`.
+
+**Remarks**
+
+Export-only; the cooked Set keeps its relative paths. Must be absolute, use the scheme `ipfs`, `https`, `http` or `ar`, and end with `/` ([`MarketplaceRules.BaseUriProblem()`](Nfty.Core.Publish.MarketplaceRules.md#m-baseuriproblem-system-string)). Never guessed or repaired. Null leaves the relative path and the plan says so.
+
+### CollectionImage { #p-collectionimage }
+
+```csharp
+public string? CollectionImage { get; init; }
+```
+
+`collection.json`'s `image`. Null falls to the first token's image address when a [`ExportOptions.BaseUri`](Nfty.Core.Publish.ExportOptions.md#p-baseuri) is set and the art is exported, and is otherwise left out.
+
+### ExternalLink { #p-externallink }
+
+```csharp
+public string? ExternalLink { get; init; }
+```
+
+`collection.json`'s `external_link`: the collection's website.
+
+### ExternalUrlBase { #p-externalurlbase }
+
+```csharp
+public string? ExternalUrlBase { get; init; }
+```
+
+When set, each item's `external_url` is this followed by its token id.
+
+### FeeRecipient { #p-feerecipient }
+
+```csharp
+public string? FeeRecipient { get; init; }
+```
+
+Who the royalty is paid to: `0x` and 40 hexadecimal digits.
+
 ### Images { #p-images }
 
 ```csharp
@@ -35,6 +79,18 @@ public bool Images { get; init; }
 ```
 
 Include `images/` — the generated art.
+
+### IncludeCollectionMetadata { #p-includecollectionmetadata }
+
+```csharp
+public bool IncludeCollectionMetadata { get; init; }
+```
+
+Write `collection.json`, the contract-level metadata (OpenSea's `contractURI` shape).
+
+**Remarks**
+
+**An axis of its own.** It is not an item file and no Set contains it; the export makes it. On for [`ExportPreset.Marketplace`](Nfty.Core.Publish.ExportPreset.md#f-marketplace), off elsewhere. The name and symbol come from the Set, the description from its metadata.
 
 ### IncludeCookBook { #p-includecookbook }
 
@@ -47,6 +103,18 @@ Ship the source `.cbk` alongside the Set.
 **Remarks**
 
 A flag, with the PATH supplied to the operation — for the same reason the passphrase is. A Set records only its book's hash, never the book, so the caller is the one that knows which file is meant; but a preset has to be able to say "include it" without knowing where it lives, or [`ExportPreset.FullProject`](Nfty.Core.Publish.ExportPreset.md#f-fullproject) could not be a preset at all.
+
+### IncludeSetManifest { #p-includesetmanifest }
+
+```csharp
+public bool IncludeSetManifest { get; init; }
+```
+
+Include `set.json` — the Set's own record: seed, source-book hash, rarity table.
+
+**Remarks**
+
+**On by default, off for [`ExportPreset.Marketplace`](Nfty.Core.Publish.ExportPreset.md#f-marketplace)**: a public drop has no use for the seed and the book's hash, and a seed that should stay private until the reveal is otherwise published with the art. An export without it is for UPLOAD, not for opening — nfty reads a Set by its `set.json`, so it cannot reopen one, and a sealed export (which exists to be opened) refuses to leave it out.
 
 ### Models { #p-models }
 
@@ -104,6 +172,18 @@ public bool OpenSeaMetadata { get; init; }
 
 Include `metadata/` — the standards-pure ERC-721 / OpenSea fields.
 
+### RoyaltyPercent { #p-royaltypercent }
+
+```csharp
+public double? RoyaltyPercent { get; init; }
+```
+
+Creator royalty, as a percentage from 0 to 100 with at most 2 decimals; null for none.
+
+**Remarks**
+
+Written as `seller_fee_basis_points` (2.5% is 250).
+
 ### Sealed { #p-sealed }
 
 ```csharp
@@ -156,6 +236,30 @@ public int? SpriteSheetRows { get; init; }
 
 Cells down the sheet, or null to derive it from the columns and the count.
 
+### TokenNaming { #p-tokennaming }
+
+```csharp
+public TokenNaming TokenNaming { get; init; }
+```
+
+How the exported files are named — the Set's padded names, or bare token ids.
+
+**Remarks**
+
+Applies to metadata, image and model file names, the `name` inside the metadata and every URI. The rich `nfty/` files keep the Set's own numbering and names: they are nfty's record of the Set, cross-referenced by set number, and are not what a marketplace reads.
+
+### TokenStart { #p-tokenstart }
+
+```csharp
+public int TokenStart { get; init; }
+```
+
+The token id of the Set's first asset: 1 (the default) or 0, as the contract counts.
+
+**Remarks**
+
+Token id = set number - 1 + this.
+
 ### WatermarkCorner { #p-watermarkcorner }
 
 ```csharp
@@ -196,7 +300,7 @@ Which preset these options ARE, or null when they are a combination of the autho
 
 **Remarks**
 
-Answered by comparing content rather than by remembering which button was pressed, so a screen cannot go on claiming a preset after a box beneath it was unticked. The note is ignored: it is a message to a person, not part of the export's shape.
+Answered by comparing content rather than by remembering which button was pressed, so a screen cannot go on claiming a preset after a box beneath it was unticked. The note is ignored: it is a message to a person, not part of the export's shape. So are the marketplace VALUES (base URI, naming, links, royalty): they fill in what a content axis writes, they do not choose what leaves.
 
 **[`ExportOptions.Shape`](Nfty.Core.Publish.ExportOptions.md#p-shape) is ignored too, and that is the correction.** A preset names WHAT LEAVES the machine; folder-or-file is how it is packed, and the two are separate questions — which is why the shape controls sit in their own column rather than among the content boxes. Comparing it meant every preset came un-named the moment the shape was changed: ticking all four content boxes and choosing Single file left Full project lit until the shape was touched and then lit nothing at all, and Marketplace did the same in the other direction, unnoticed because its default shape is the common one. The presets still START at a shape apiece ([`ExportPreset.FullProject`](Nfty.Core.Publish.ExportPreset.md#f-fullproject) at a folder, the rest at an archive), which is what a starting point is for.
 

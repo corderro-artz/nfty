@@ -21,6 +21,11 @@ CookBook, Recipe, Ingredient, Variant, Set and Kitchen — are explained as a st
 :   How a layer gets its color -- a hue and saturation range for Dynamic, one fixed color for Static,
     none at all for Custom.
 
+**Color trait**
+:   `"<Layer> Color"`, a published trait naming the color a Dynamic or Static layer rolled -- `Red`,
+    `Pale Mint`, `Gray` -- so assets that differ only in hue differ on a marketplace. See
+    [Color traits and None](set-contents.md#color-traits-and-none).
+
 **Colorways**
 :   The band of colors a layer can take, shown on the Ingredient panel.
 
@@ -68,6 +73,11 @@ CookBook, Recipe, Ingredient, Variant, Set and Kitchen — are explained as a st
 **Model**
 :   A glTF 3D file (`.glb` or `.gltf`) made by Rise from one picture or one finished asset. A Set can
     carry one per asset in `models/`.
+
+**None**
+:   The value an optional layer is published under when an asset's roll left it out. Spelled once, so
+    the metadata and the rarity table agree. A variant may not be named `None` on an optional layer.
+    See [Color traits and None](set-contents.md#color-traits-and-none).
 
 **Opacity lock**
 :   The editor padlock that keeps every painted pixel fully opaque or fully erased.

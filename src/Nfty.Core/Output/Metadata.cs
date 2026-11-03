@@ -104,6 +104,12 @@ public record RecipeCount(string Recipe, int Count, double Percent);
 /// whereas a bump would make them reject the file outright.</para></param>
 /// <param name="Models">The 3D models the cook made, or null (and absent from the file) when it made
 /// none. Additive and optional, no schema bump.</param>
+/// <param name="Symbol">The collection's ticker-style symbol, so an export can write
+/// <c>collection.json</c> without the source book. Additive and optional, no schema bump; null in a
+/// Set cooked before it existed.</param>
+/// <param name="MetadataShape">Which shape of per-item metadata the Set carries (<see cref="MetadataTraits"/>):
+/// absent means 1, the shape before color traits and explicit <c>None</c>; new cooks write 2.
+/// <c>extend</c> keeps writing the recorded shape. Additive and optional, no schema bump.</param>
 public record SetManifest(
     string Name,
     int Count,
@@ -115,7 +121,13 @@ public record SetManifest(
     bool? UniqueDna = null,
     [property: System.Text.Json.Serialization.JsonIgnore(
         Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
-    SetModels? Models = null);
+    SetModels? Models = null,
+    [property: System.Text.Json.Serialization.JsonIgnore(
+        Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    string? Symbol = null,
+    [property: System.Text.Json.Serialization.JsonIgnore(
+        Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    int? MetadataShape = null);
 
 /// <summary>
 /// <c>set.json</c>'s record of the 3D models a cook made. Additive and optional, so

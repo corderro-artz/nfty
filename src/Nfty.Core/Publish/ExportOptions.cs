@@ -24,7 +24,7 @@ public enum ExportShape
 /// </remarks>
 public enum ExportPreset
 {
-    /// <summary>Art and the standard fields. No per-asset DNA or layer colors.</summary>
+    /// <summary>Art, standard fields and <c>collection.json</c>. No per-asset DNA, colors or seed.</summary>
     Marketplace,
 
     /// <summary>Everything a buyer gets, rarity and DNA included, but not the book.</summary>
@@ -156,13 +156,84 @@ public record ExportOptions
     /// <summary>Which corner the stamp sits in.</summary>
     public StampCorner WatermarkCorner { get; init; } = StampCorner.BottomRight;
 
+    /// <summary>
+    /// Include <c>set.json</c> — the Set's own record: seed, source-book hash, rarity table.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>On by default, off for <see cref="ExportPreset.Marketplace"/></b>: a public drop has no
+    /// use for the seed and the book's hash, and a seed that should stay private until the reveal is
+    /// otherwise published with the art. An export without it is for UPLOAD, not for opening — nfty
+    /// reads a Set by its <c>set.json</c>, so it cannot reopen one, and a sealed export (which exists
+    /// to be opened) refuses to leave it out.</para>
+    /// </remarks>
+    public bool IncludeSetManifest { get; init; } = true;
+
+    /// <summary>
+    /// Prefix every <c>image</c> link (and the <c>animation_url</c> of a model) with this address, so
+    /// the metadata is upload-ready: <c>ipfs://CID/</c> gives <c>ipfs://CID/images/1.png</c>.
+    /// </summary>
+    /// <remarks>
+    /// Export-only; the cooked Set keeps its relative paths. Must be absolute, use the scheme
+    /// <c>ipfs</c>, <c>https</c>, <c>http</c> or <c>ar</c>, and end with <c>/</c>
+    /// (<see cref="MarketplaceRules.BaseUriProblem"/>). Never guessed or repaired. Null leaves the
+    /// relative path and the plan says so.
+    /// </remarks>
+    public string? BaseUri { get; init; }
+
+    /// <summary>How the exported files are named — the Set's padded names, or bare token ids.</summary>
+    /// <remarks>
+    /// Applies to metadata, image and model file names, the <c>name</c> inside the metadata and every
+    /// URI. The rich <c>nfty/</c> files keep the Set's own numbering and names: they are nfty's record
+    /// of the Set, cross-referenced by set number, and are not what a marketplace reads.
+    /// </remarks>
+    public TokenNaming TokenNaming { get; init; } = TokenNaming.Padded;
+
+    /// <summary>The token id of the Set's first asset: 1 (the default) or 0, as the contract counts.</summary>
+    /// <remarks>Token id = set number - 1 + this.</remarks>
+    public int TokenStart { get; init; } = 1;
+
+    /// <summary>When set, each item's <c>external_url</c> is this followed by its token id.</summary>
+    public string? ExternalUrlBase { get; init; }
+
+    /// <summary>
+    /// Write <c>collection.json</c>, the contract-level metadata (OpenSea's <c>contractURI</c> shape).
+    /// </summary>
+    /// <remarks>
+    /// <b>An axis of its own.</b> It is not an item file and no Set contains it; the export makes it.
+    /// On for <see cref="ExportPreset.Marketplace"/>, off elsewhere. The name and symbol come from the
+    /// Set, the description from its metadata.
+    /// </remarks>
+    public bool IncludeCollectionMetadata { get; init; }
+
+    /// <summary><c>collection.json</c>'s <c>external_link</c>: the collection's website.</summary>
+    public string? ExternalLink { get; init; }
+
+    /// <summary>Creator royalty, as a percentage from 0 to 100 with at most 2 decimals; null for none.</summary>
+    /// <remarks>Written as <c>seller_fee_basis_points</c> (2.5% is 250).</remarks>
+    public double? RoyaltyPercent { get; init; }
+
+    /// <summary>Who the royalty is paid to: <c>0x</c> and 40 hexadecimal digits.</summary>
+    public string? FeeRecipient { get; init; }
+
+    /// <summary>
+    /// <c>collection.json</c>'s <c>image</c>. Null falls to the first token's image address when a
+    /// <see cref="BaseUri"/> is set and the art is exported, and is otherwise left out.
+    /// </summary>
+    public string? CollectionImage { get; init; }
+
     /// <summary>The options a preset starts from.</summary>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="preset"/> is not a defined preset.</exception>
     /// <param name="preset">Which one.</param>
     /// <returns>Ordinary options; change any of them afterward.</returns>
     public static ExportOptions For(ExportPreset preset) => preset switch
     {
-        ExportPreset.Marketplace => new ExportOptions { NftyMetadata = false, Models = false },
+        ExportPreset.Marketplace => new ExportOptions
+        {
+            NftyMetadata = false,
+            Models = false,
+            IncludeCollectionMetadata = true,
+            IncludeSetManifest = false,
+        },
         ExportPreset.AssetPack => new ExportOptions(),
         ExportPreset.FullProject =>
             new ExportOptions { IncludeCookBook = true, Shape = ExportShape.Folder },
@@ -201,7 +272,7 @@ public record ExportOptions
         // 140px wide, and a longer sentence there costs the screen a line of height everywhere -
         // which is what pushed the passphrase field below the fold when sealing was armed.
         ExportPreset.Marketplace =>
-            "Art and the standard fields. No per-asset DNA or colors.",
+            "Art and metadata for listing. No seed, DNA or colors.",
         ExportPreset.AssetPack =>
             "What a buyer gets: rarity and DNA, but not the book.",
         ExportPreset.FullProject =>
@@ -217,7 +288,9 @@ public record ExportOptions
     /// <remarks>
     /// <para>Answered by comparing content rather than by remembering which button was pressed, so a
     /// screen cannot go on claiming a preset after a box beneath it was unticked. The note is
-    /// ignored: it is a message to a person, not part of the export's shape.</para>
+    /// ignored: it is a message to a person, not part of the export's shape. So are the marketplace
+    /// VALUES (base URI, naming, links, royalty): they fill in what a content axis writes, they do
+    /// not choose what leaves.</para>
     ///
     /// <para><b><see cref="Shape"/> is ignored too, and that is the correction.</b> A preset names
     /// WHAT LEAVES the machine; folder-or-file is how it is packed, and the two are separate
@@ -236,7 +309,19 @@ public record ExportOptions
     public ExportPreset? MatchingPreset()
     {
         foreach (ExportPreset p in Enum.GetValues<ExportPreset>())
-            if ((For(p) with { Note = Note, Shape = Shape }) == this) return p;
+            if ((For(p) with
+                {
+                    Note = Note,
+                    Shape = Shape,
+                    BaseUri = BaseUri,
+                    TokenNaming = TokenNaming,
+                    TokenStart = TokenStart,
+                    ExternalUrlBase = ExternalUrlBase,
+                    ExternalLink = ExternalLink,
+                    RoyaltyPercent = RoyaltyPercent,
+                    FeeRecipient = FeeRecipient,
+                    CollectionImage = CollectionImage,
+                }) == this) return p;
         return null;
     }
 }

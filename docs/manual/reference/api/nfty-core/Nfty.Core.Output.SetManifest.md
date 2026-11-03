@@ -12,10 +12,10 @@ The Set's own record, written to `set.json`: its name, size, seed, the hash of t
 
 ## Constructors
 
-### SetManifest(string, int, string, string?, string, IReadOnlyList&lt;RecipeCount&gt;, IReadOnlyList&lt;RarityAttribute&gt;, bool?, SetModels?) { #m-ctor-system-string-system-int32-system-string-system-s-3bb89f }
+### SetManifest(string, int, string, string?, string, IReadOnlyList&lt;RecipeCount&gt;, IReadOnlyList&lt;RarityAttribute&gt;, bool?, SetModels?, string?, int?) { #m-ctor-system-string-system-int32-system-string-system-s-a59cf1 }
 
 ```csharp
-public SetManifest(string Name, int Count, string Seed, string? CookbookSha256, string GeneratorVersion, IReadOnlyList<RecipeCount> Distribution, IReadOnlyList<RarityAttribute> Rarity, bool? UniqueDna = null, SetModels? Models = null);
+public SetManifest(string Name, int Count, string Seed, string? CookbookSha256, string GeneratorVersion, IReadOnlyList<RecipeCount> Distribution, IReadOnlyList<RarityAttribute> Rarity, bool? UniqueDna = null, SetModels? Models = null, string? Symbol = null, int? MetadataShape = null);
 ```
 
 **Parameters**
@@ -29,6 +29,8 @@ public SetManifest(string Name, int Count, string Seed, string? CookbookSha256, 
 - `Rarity` (`IReadOnlyList<RarityAttribute>`) - The collection-wide rarity table.
 - `UniqueDna` (`bool?`) - Whether every asset was required to have distinct DNA. Recorded because the seed does NOT reproduce a run on its own. The same cookbook and the same seed generate a different collection depending on this switch — with uniqueness on, a colliding roll is discarded and re-rolled, which consumes RNG draws that the unlimited run never spends, so the two diverge from the first collision onward. Without this field a Set carried two thirds of its own recipe. **Null means "not recorded"**, not "false": Sets written before this field existed cannot say, and claiming they were unique would be inventing a fact. Additive and optional, so `Schema.Current` is deliberately NOT bumped — older builds ignore unknown properties, whereas a bump would make them reject the file outright.
 - `Models` (`SetModels?`) - The 3D models the cook made, or null (and absent from the file) when it made none. Additive and optional, no schema bump.
+- `Symbol` (`string?`) - The collection's ticker-style symbol, so an export can write `collection.json` without the source book. Additive and optional, no schema bump; null in a Set cooked before it existed.
+- `MetadataShape` (`int?`) - Which shape of per-item metadata the Set carries ([`MetadataTraits`](Nfty.Core.Output.MetadataTraits.md)): absent means 1, the shape before color traits and explicit `None`; new cooks write 2. `extend` keeps writing the recorded shape. Additive and optional, no schema bump.
 
 ## Properties
 
@@ -66,6 +68,14 @@ public string GeneratorVersion { get; init; }
 
 The engine version stamp.
 
+### MetadataShape { #p-metadatashape }
+
+```csharp
+public int? MetadataShape { get; init; }
+```
+
+Which shape of per-item metadata the Set carries ([`MetadataTraits`](Nfty.Core.Output.MetadataTraits.md)): absent means 1, the shape before color traits and explicit `None`; new cooks write 2. `extend` keeps writing the recorded shape. Additive and optional, no schema bump.
+
 ### Models { #p-models }
 
 ```csharp
@@ -97,6 +107,14 @@ public string Seed { get; init; }
 ```
 
 The seed that produced it; the same seed and cookbook reproduce it exactly.
+
+### Symbol { #p-symbol }
+
+```csharp
+public string? Symbol { get; init; }
+```
+
+The collection's ticker-style symbol, so an export can write `collection.json` without the source book. Additive and optional, no schema bump; null in a Set cooked before it existed.
 
 ### UniqueDna { #p-uniquedna }
 

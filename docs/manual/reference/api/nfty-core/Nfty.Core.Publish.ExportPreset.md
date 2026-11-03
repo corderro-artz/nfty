@@ -16,7 +16,7 @@ A preset is a starting point, never a mode: [`ExportOptions.For()`](Nfty.Core.Pu
 
 ## Values
 
-- <span id="f-marketplace"></span>`Marketplace = 0` - Art and the standard fields. No per-asset DNA or layer colors.
+- <span id="f-marketplace"></span>`Marketplace = 0` - Art, standard fields and `collection.json`. No per-asset DNA, colors or seed.
 - <span id="f-assetpack"></span>`AssetPack = 1` - Everything a buyer gets, rarity and DNA included, but not the book.
 - <span id="f-fullproject"></span>`FullProject = 2` - The Set and the CookBook that produced it, openly.
 - <span id="f-sealedcritique"></span>`SealedCritique = 3` - Sealed: encrypted, and marked view-only.

@@ -101,13 +101,73 @@ public static partial class CommandFactory
         };
         var key = KeyOption();
 
+        // The marketplace options. All export-only: the cooked Set on disk never changes.
+        var baseUri = new Option<string?>("--base-uri")
+        {
+            Description = "Make each image link upload-ready by prefixing it with this address, "
+                + "e.g. ipfs://<CID>/ gives ipfs://<CID>/images/1.png. Must be absolute (ipfs, https, "
+                + "http or ar) and end with '/'; it is never repaired for you. Without it the links "
+                + "stay relative and nfty warns that OpenSea cannot resolve them.",
+        };
+        var tokenNames = new Option<string?>("--token-names")
+        {
+            Description = "How the exported files are named: padded (0001.json, 0001.png - the "
+                + "default, what nfty has always written) or token-id (metadata/1 with no extension "
+                + "and images/1.png, which is what a contract's baseURI + tokenId resolves). Also "
+                + "renames the #n in each item's name and every link. nfty/ files keep the Set's names.",
+        };
+        tokenNames.AcceptOnlyFromAmong(TokenNamingTokens.Words.ToArray());
+        var startId = new Option<int>("--start-id")
+        {
+            Description = "The token id of the Set's first asset: 1 (the default) or 0, as your "
+                + "contract counts. Id = set number - 1 + this.",
+        };
+        var externalUrl = new Option<string?>("--external-url")
+        {
+            Description = "Give each item an external_url: this address followed by its token id.",
+        };
+        var collection = new Option<bool>("--collection")
+        {
+            Description = "Write collection.json, the contract-level metadata (OpenSea's contractURI).",
+        };
+        var noCollection = new Option<bool>("--no-collection") { Description = "Do not write collection.json." };
+        var externalLink = new Option<string?>("--external-link")
+        {
+            Description = "collection.json's external_link: your collection's website. Needs collection.json.",
+        };
+        var royalty = new Option<string?>("--royalty")
+        {
+            Description = "Creator royalty as a percentage from 0 to 100 with at most 2 decimals "
+                + "(2.5 becomes seller_fee_basis_points 250). Needs --fee-recipient and collection.json.",
+        };
+        var feeRecipient = new Option<string?>("--fee-recipient")
+        {
+            Description = "Who the royalty is paid to: 0x followed by 40 hexadecimal digits. Needs collection.json.",
+        };
+        var collectionImage = new Option<string?>("--collection-image")
+        {
+            Description = "collection.json's image. Defaults to the first token's image when --base-uri "
+                + "is set and the art is included. Needs collection.json.",
+        };
+        var setManifest = new Option<bool>("--set-manifest")
+        {
+            Description = "Include set.json (the seed, the source book's hash, the rarity table).",
+        };
+        var noSetManifest = new Option<bool>("--no-set-manifest")
+        {
+            Description = "Leave set.json out, so the seed and book hash are not published. Such an "
+                + "export is for upload: nfty cannot reopen it as a Set, and --seal refuses it.",
+        };
+
         var cmd = new Command("export",
             "Publish a cooked Set: choose what goes with it, and in what shape. A cook writes your "
             + "working copy and holds everything; an export is addressed to somebody — a "
             + "marketplace, a buyer, a collaborator, a reviewer — and each of those wants a "
             + "different subset.")
         { path, outDir, preset, images, noImages, openSea, noOpenSea, nfty, noNfty, models, noModels,
-          sheet, sheetCols, sheetRows, watermark, watermarkCorner, book, folder, pack, seal, note, key };
+          sheet, sheetCols, sheetRows, watermark, watermarkCorner, book, folder, pack, seal, note, key,
+          baseUri, tokenNames, startId, externalUrl, collection, noCollection, externalLink, royalty,
+          feeRecipient, collectionImage, setManifest, noSetManifest };
 
         // Dependent options are REJECTED without what they depend on, never ignored: a --sheet-cols
         // typed without --sheet would silently make no sheet. Counts below one cannot name a grid.
@@ -121,6 +181,23 @@ public static partial class CommandFactory
                 result.AddError("--watermark-corner places the number; it needs --watermark.");
             if (result.GetValue(models) && result.GetValue(noModels))
                 result.AddError("--models and --no-models ask for different things.");
+            if (result.GetValue(collection) && result.GetValue(noCollection))
+                result.AddError("--collection and --no-collection ask for different things.");
+            if (result.GetValue(setManifest) && result.GetValue(noSetManifest))
+                result.AddError("--set-manifest and --no-set-manifest ask for different things.");
+            if (result.IsGiven(startId) && MarketplaceRules.TokenStartProblem(result.GetValue(startId)) is { } startProblem)
+                result.AddError("--start-id: " + startProblem);
+            // Each value is refused with the sentence the export dialog shows beside the field.
+            foreach (var problem in new[]
+            {
+                MarketplaceRules.BaseUriProblem(result.GetValue(baseUri)),
+                MarketplaceRules.WebUrlProblem(result.GetValue(externalUrl), "--external-url"),
+                MarketplaceRules.WebUrlProblem(result.GetValue(externalLink), "--external-link"),
+                MarketplaceRules.ImageUriProblem(result.GetValue(collectionImage)),
+                MarketplaceRules.FeeRecipientProblem(result.GetValue(feeRecipient)),
+                MarketplaceRules.TryParseRoyalty(result.GetValue(royalty), out _),
+            })
+                if (problem is not null) result.AddError(problem);
         });
 
         cmd.SetAction(parse =>
@@ -161,6 +238,42 @@ public static partial class CommandFactory
             if (parse.GetValue(pack)) options = options with { Shape = ExportShape.Archive };
             if (parse.GetValue(seal)) options = options with { Sealed = true };
             if (parse.GetValue(note) is { Length: > 0 } text) options = options with { Note = text };
+
+            if (parse.GetValue(collection)) options = options with { IncludeCollectionMetadata = true };
+            if (parse.GetValue(noCollection)) options = options with { IncludeCollectionMetadata = false };
+            if (parse.GetValue(setManifest)) options = options with { IncludeSetManifest = true };
+            if (parse.GetValue(noSetManifest)) options = options with { IncludeSetManifest = false };
+
+            // Marketplace values are REJECTED where nothing would read them, never ignored: a
+            // --base-uri typed against an export with no metadata would quietly do nothing.
+            void Needs(bool meaningful, string why, params Option[] given)
+            {
+                foreach (var option in given)
+                    if (parse.IsGiven(option) && !meaningful)
+                        throw new InvalidOperationException($"{option.Name} {why}");
+            }
+            Needs(options.OpenSeaMetadata || options.IncludeCollectionMetadata,
+                "is written into the standard metadata and collection.json, and this export has neither.", baseUri);
+            Needs(options.OpenSeaMetadata, "is written into the standard metadata, and this export has none.",
+                externalUrl);
+            Needs(options.OpenSeaMetadata || options.Images || options.Models,
+                "names the metadata, art and models, and this export has none of them.", tokenNames, startId);
+            Needs(options.IncludeCollectionMetadata, "is written into collection.json; it needs --collection.",
+                externalLink, royalty, feeRecipient, collectionImage);
+
+            MarketplaceRules.TryParseRoyalty(parse.GetValue(royalty), out double? royaltyPercent);
+            options = options with
+            {
+                BaseUri = parse.GetValue(baseUri) is { Length: > 0 } uri ? uri : options.BaseUri,
+                TokenNaming = parse.GetValue(tokenNames) is { } naming
+                    && TokenNamingTokens.TryParse(naming, out var chosenNaming) ? chosenNaming : options.TokenNaming,
+                TokenStart = parse.IsGiven(startId) ? parse.GetValue(startId) : options.TokenStart,
+                ExternalUrlBase = parse.GetValue(externalUrl) is { Length: > 0 } ext ? ext : options.ExternalUrlBase,
+                ExternalLink = parse.GetValue(externalLink) is { Length: > 0 } link ? link : options.ExternalLink,
+                RoyaltyPercent = royaltyPercent ?? options.RoyaltyPercent,
+                FeeRecipient = parse.GetValue(feeRecipient) is { Length: > 0 } fee ? fee : options.FeeRecipient,
+                CollectionImage = parse.GetValue(collectionImage) is { Length: > 0 } img ? img : options.CollectionImage,
+            };
 
             string? bookPath = parse.GetValue(book);
             if (bookPath is { Length: > 0 }) options = options with { IncludeCookBook = true };
@@ -234,6 +347,9 @@ public static partial class CommandFactory
         Console.WriteLine($"{result.Plan.Collection} → {result.Path}");
         foreach (var part in result.Plan.Parts()) Console.WriteLine("  " + part);
         Console.WriteLine($"  {result.Plan.SizeText()}");
+
+        // On stderr so a script reading the list above is not handed prose, and a person still sees it.
+        foreach (var warning in result.Plan.Warnings) Console.Error.WriteLine("warning: " + warning);
 
         if (result.Plan.CarriesCookBook)
             Console.WriteLine(
