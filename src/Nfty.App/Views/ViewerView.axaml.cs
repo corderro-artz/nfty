@@ -2,6 +2,7 @@ using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -72,7 +73,170 @@ public partial class ViewerView : UserControl
         // A gallery tile's click arrives here, bubbled from its button; the tile is the button's own
         // DataContext, so no binding has to hop out of the row template to reach the command.
         AddHandler(Button.ClickEvent, OnTileClick);
+
+        _rows = this.FindControl<ScrollViewer>("FactRows")!;
+        _list = this.FindControl<ItemsControl>("FactList")!;
+        _railGrid = this.FindControl<Grid>("RailGrid")!;
+        LayoutUpdated += (_, _) => SnapRows();
+        // The wheel over the facts moves by WHOLE rows: the ScrollViewer's own wheel step is a pixel
+        // distance that leaves a row cut at the fold. Tunnel, so the ScrollViewer never sees it.
+        _rows.AddHandler(PointerWheelChangedEvent, (_, e) =>
+        {
+            if (e.Delta.Y == 0) return;
+            StepRows(e.Delta.Y > 0 ? -1 : 1);
+            e.Handled = true;
+        }, RoutingStrategies.Tunnel);
+
+        // The viewer's keys, all on one focus-guarded handler (the editor's pattern): the page takes
+        // focus on arrival so they are live, and none fires while a text field (the custom backdrop
+        // color) has the keyboard. handledEventsToo: a focused value text block marks keys handled.
+        AddHandler(KeyDownEvent, (_, e) => OnShortcut(e), RoutingStrategies.Tunnel, handledEventsToo: true);
+        AttachedToVisualTree += (_, _) => Focus();
+
+        // Typing a color makes it the ground. Only while the reader is in the field: the binding
+        // writing a remembered color in must not change the backdrop the window reopened with.
+        var hex = this.FindControl<TextBox>("CustomColorBox")!;
+        hex.TextChanged += (_, _) =>
+        {
+            if (hex.IsKeyboardFocusWithin && _vm is not null) _vm.TwoD.Backdrop = ViewerBackdrop.Custom;
+        };
         Rebind();
+    }
+
+    private readonly ScrollViewer _rows;
+    private readonly ItemsControl _list;
+    private readonly Grid _railGrid;
+    private int _firstRow;
+
+    /// <summary>The first fully shown row of the rail's list, as the snap last settled it.</summary>
+    internal int FirstRow => _firstRow;
+
+    // ---------------------------------------------------------------- the info rail's snap
+
+    // The rows' tops and bottoms in the list's own space. The list is a StackPanel inside a ScrollViewer
+    // that hands it infinite height, so these do not depend on the host's height: writing that height
+    // cannot move them, which is what keeps SnapRows out of an infinite layout loop.
+    private List<(double Top, double Bottom)> RowSpans()
+    {
+        var spans = new List<(double, double)>();
+        foreach (var c in _list.GetRealizedContainers())
+        {
+            if (!c.IsVisible) continue;
+            spans.Add((c.Bounds.Top, c.Bounds.Bottom));
+        }
+        spans.Sort((a, b) => a.Item1.CompareTo(b.Item1));
+        return spans;
+    }
+
+    /// <summary>
+    /// Sizes the facts host to a WHOLE number of rows from the first shown one, so the fold never
+    /// cuts a row, and tells the view model how many sit above and below it.
+    /// </summary>
+    /// <remarks>
+    /// <para>The ROOM is the rail's star row, read off the Grid (the Set browser rarity rail's rule): a
+    /// star row is what is left after the Auto rows, not what its child asks for, so writing the
+    /// host's height cannot change it. The rows' spans cannot change either (see RowSpans). With both
+    /// inputs out of its reach, the handler settles in one pass.</para>
+    /// <para>Rows are not one height (a hash takes two lines, a sentence three), so the snap is a
+    /// prefix of the rows from the first shown one, not a multiple of a pitch. When the rows from
+    /// there to the end leave room, earlier rows are pulled back in: a window grown taller never
+    /// shows a gap under the last row with rows hidden above.</para>
+    /// </remarks>
+    private void SnapRows()
+    {
+        if (_vm is null) return;
+        var spans = RowSpans();
+        double room = _railGrid.RowDefinitions[3].ActualHeight - 8 /* the card's top margin */ - 2 /* its border */;
+        if (spans.Count == 0 || room <= 0 || double.IsNaN(room))
+        {
+            _vm.RowsAbove = 0;
+            _vm.RowsBelow = 0;
+            return;
+        }
+
+        int first = Math.Clamp(_firstRow, 0, spans.Count - 1);
+        // Pull earlier rows back in while everything from there to the end still fits.
+        while (first > 0 && spans[^1].Bottom - spans[first - 1].Top <= room + 0.5) first--;
+        int last = first;
+        while (last + 1 < spans.Count && spans[last + 1].Bottom - spans[first].Top <= room + 0.5) last++;
+
+        // At least one row, even when a single row is taller than the room: a rail too short for one
+        // row is a smaller window than the app allows, and one clipped row beats none.
+        double height = Math.Min(spans[last].Bottom - spans[first].Top, room);
+        _firstRow = first;
+        // IsNaN FIRST: an unset Height is NaN, and every comparison with NaN is false.
+        if (double.IsNaN(_rows.Height) || Math.Abs(_rows.Height - height) > 0.5) _rows.Height = height;
+        double offset = spans[first].Top;
+        if (Math.Abs(_rows.Offset.Y - offset) > 0.5) _rows.Offset = new Vector(0, offset);
+        _vm.RowsAbove = first;
+        _vm.RowsBelow = spans.Count - 1 - last;
+    }
+
+    /// <summary>Moves the first shown row by <paramref name="delta"/> rows, clamped so the last page is
+    /// full, and re-snaps.</summary>
+    /// <param name="delta">Rows to move; negative scrolls up.</param>
+    internal void StepRows(int delta)
+    {
+        var spans = RowSpans();
+        if (spans.Count == 0 || _vm is null) return;
+        int shown = Math.Max(1, spans.Count - _vm.RowsAbove - _vm.RowsBelow);
+        _firstRow = Math.Clamp(_firstRow + delta, 0, Math.Max(0, spans.Count - shown));
+        SnapRows();
+    }
+
+    private void OnMoreRequested(bool down)
+    {
+        if (_vm is null) return;
+        int shown = Math.Max(1, RowSpans().Count - _vm.RowsAbove - _vm.RowsBelow);
+        if (down) StepRows(shown);
+        else { _firstRow = 0; SnapRows(); }
+    }
+
+    // ---------------------------------------------------------------- the keys
+
+    private void OnShortcut(KeyEventArgs e)
+    {
+        if (_vm is null || !FocusIsOurs()) return;
+        if (e.Key == Key.Escape && e.KeyModifiers == KeyModifiers.None)
+        {
+            // Esc folds the extended panel; otherwise it is not ours (the window's dialog layer).
+            if (!_vm.IsInfoExtended) return;
+            _vm.IsInfoExtended = false;
+            e.Handled = true;
+            return;
+        }
+        if (e.KeyModifiers is not (KeyModifiers.None or KeyModifiers.Shift)) return;
+        switch (e.Key)
+        {
+            case Key.I:
+                _vm.IsInfoExtended = !_vm.IsInfoExtended; break;
+            case Key.D1 or Key.NumPad1:
+                _vm.Layout = ViewerLayout.TwoD; break;
+            case Key.D2 or Key.NumPad2:
+                _vm.Layout = ViewerLayout.Both; break;
+            case Key.D3 or Key.NumPad3:
+                _vm.Layout = ViewerLayout.ThreeD; break;
+            case Key.D0 or Key.NumPad0:
+                _vm.TwoD.FitCommand.Execute(null); break;
+            case Key.S when _vm.CanShowThreeD:
+                _vm.CycleTurntableCommand.Execute(null); break;
+            case Key.PageDown:
+                StepRows(Math.Max(1, RowSpans().Count - _vm.RowsAbove - _vm.RowsBelow)); break;
+            case Key.PageUp:
+                StepRows(-Math.Max(1, RowSpans().Count - _vm.RowsAbove - _vm.RowsBelow)); break;
+            default:
+                return;
+        }
+        e.Handled = true;
+    }
+
+    /// <summary>Whether the keyboard is the viewer's: focus is inside this view and not in a text
+    /// field (the custom backdrop color), where a typed "1" is text.</summary>
+    private bool FocusIsOurs()
+    {
+        if (TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() is not Visual v) return false;
+        if (v.FindAncestorOfType<ViewerView>(includeSelf: true) != this) return false;
+        return v.FindAncestorOfType<TextBox>(includeSelf: true) is null;
     }
 
     private void OnTileClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -94,13 +258,16 @@ public partial class ViewerView : UserControl
         {
             _vm.PropertyChanged -= OnVmChanged;
             _vm.TwoD.PropertyChanged -= OnTwoDChanged;
+            _vm.MoreRequested -= OnMoreRequested;
         }
         _vm = DataContext as ViewerViewModel;
         if (_vm is not null)
         {
             _vm.PropertyChanged += OnVmChanged;
             _vm.TwoD.PropertyChanged += OnTwoDChanged;
+            _vm.MoreRequested += OnMoreRequested;
         }
+        _firstRow = 0;
         _model.DataContext = _vm?.Preview;
         if (_vm is not null) _vm.StillSource = _model.EncodeStill;
         _framed = false;
@@ -125,6 +292,14 @@ public partial class ViewerView : UserControl
             case nameof(ViewerViewModel.Texture):
                 _model.Mesh = _vm?.Mesh;
                 _model.Texture = _vm?.Texture;
+                break;
+            case nameof(ViewerViewModel.SelectedGroup):
+                // A new tab starts at its first row.
+                _firstRow = 0;
+                break;
+            case nameof(ViewerViewModel.IsInfoExtended) when _vm is { IsInfoExtended: false }:
+                // Folding the panel hands the keyboard back to the page, not to a control under it.
+                Focus();
                 break;
         }
     }
@@ -180,10 +355,10 @@ public partial class ViewerView : UserControl
                 _canvas.RebuildBackdrop();
                 break;
             case ViewerBackdrop.Light:
-                _backdrop.Background = Brush("TileBrush");
+                _backdrop.Background = Brush("BackdropLightBrush");
                 break;
             case ViewerBackdrop.Dark:
-                _backdrop.Background = Brush("PanelBrush");
+                _backdrop.Background = Brush("BackdropDarkBrush");
                 break;
             default:
                 _backdrop.Background = Color.TryParse(two.BackdropColor, out var c)

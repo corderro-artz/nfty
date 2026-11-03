@@ -263,6 +263,12 @@ public static class HelpCatalog
             T(V, 1, "OPEN IT", "Tile, row, canvas or 3D tile", $"*{KeyHints.ViewerClick}*, or right-click *Open in viewer*."),
             T(V, 1, "OPEN IT", "From a file", "*Open in viewer…* on the opening screen."),
 
+            // Every key here is bound in ViewerView.OnShortcut.
+            K(V, 1, "KEYS · VIEWER", KeyHints.ViewerLayouts, "2D, both, 3D"),
+            K(V, 1, "KEYS · VIEWER", KeyHints.ViewerFit, "fit the 2D art"),
+            K(V, 1, "KEYS · VIEWER", KeyHints.ViewerSpin, "next turntable speed"),
+            K(V, 1, "KEYS · VIEWER", KeyHints.ViewerInfo, "all info (Esc folds it)"),
+
             T(V, 2, "RUNTIME", "Menu", "A CookBook *flattened* for runtime: weights, rules, colors and art. No .cbk needed.", ext: ".mnu"),
             T(V, 2, "RUNTIME", "Ticket", "One rolled outcome in a few hundred bytes. It names the *selection*, not the pixels."),
             T(V, 2, "RUNTIME", "Nfty.Ticket", "No dependencies. A server or game engine rolls with it alone.", ext: ".dll"),

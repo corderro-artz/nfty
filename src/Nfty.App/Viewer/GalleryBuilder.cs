@@ -112,10 +112,10 @@ public static class GalleryBuilder
                         new("KIND", ing.Kind.ToString()),
                         new("WEIGHT", Inv(variant.Weight)),
                         new("SIZE", $"{art.Width} x {art.Height}"),
-                        new("ARCHIVE", Path.GetFileName(path)),
+                        new("ARCHIVE", Path.GetFileName(path), Group: ViewerFactGroup.File),
                     };
                     if (ing.Kind != LayerKind.Custom)
-                        facts.Add(new("SHOWN AS", "its stored gray value-map"));
+                        facts.Add(new("SHOWN AS", "its stored gray value-map", Group: ViewerFactGroup.File));
                     return new SnapshotSubject($"{ing.Name} / {variant.Name}", facts, art, null);
                 }), gate));
         }
@@ -147,7 +147,7 @@ public static class GalleryBuilder
             new("ASSETS", set.Manifest.Count.ToString(CultureInfo.InvariantCulture)),
             new("SEED", set.Manifest.Seed),
         };
-        if (sealedSet) facts.Add(new("SEALED", "view only"));
+        if (sealedSet) facts.Add(new("SEALED", "view only", Group: ViewerFactGroup.File));
         return new ArchiveGalleryViewModel(set.Manifest.Name, facts, items, gate, [set], allowExport: !sealedSet);
     }
 
@@ -174,11 +174,11 @@ public static class GalleryBuilder
                         new("NAME", item.Name),
                     };
                     if (item.Description.Length > 0) facts.Add(new("ABOUT", item.Description));
-                    foreach (var a in item.Attributes) facts.Add(new(a.Trait_type.ToUpperInvariant(), a.Value));
-                    facts.Add(new("IMAGE", item.ImageField));
-                    if (item.ExternalUrl is { Length: > 0 }) facts.Add(new("LINK", item.ExternalUrl));
-                    if (item.AnimationUrl is { Length: > 0 }) facts.Add(new("MODEL URL", item.AnimationUrl));
-                    facts.Add(new("FILE", SetLayout.MetadataDir + "/" + item.File));
+                    foreach (var a in item.Attributes) facts.Add(new(a.Trait_type.ToUpperInvariant(), a.Value, Group: ViewerFactGroup.Traits));
+                    facts.Add(new("IMAGE", item.ImageField, Group: ViewerFactGroup.Links));
+                    if (item.ExternalUrl is { Length: > 0 }) facts.Add(new("LINK", item.ExternalUrl, Group: ViewerFactGroup.Links));
+                    if (item.AnimationUrl is { Length: > 0 }) facts.Add(new("MODEL URL", item.AnimationUrl, Group: ViewerFactGroup.Links));
+                    facts.Add(new("FILE", SetLayout.MetadataDir + "/" + item.File, Group: ViewerFactGroup.File));
                     Image<Rgba32>? art = null;
                     try { if (item.ImagePath is not null) art = Image.Load<Rgba32>(item.ImagePath); }
                     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
@@ -201,15 +201,15 @@ public static class GalleryBuilder
             if (c.Symbol is { Length: > 0 }) rail.Add(new("SYMBOL", c.Symbol));
             if (c.Description.Length > 0) rail.Add(new("ABOUT", c.Description));
             if (c.SellerFeeBasisPoints is { } bps)
-                rail.Add(new("ROYALTY", string.Create(CultureInfo.InvariantCulture, $"{bps / 100m:0.##}%")));
-            if (c.FeeRecipient is { Length: > 0 }) rail.Add(new("PAYEE", c.FeeRecipient));
-            if (c.ExternalLink is { Length: > 0 }) rail.Add(new("LINK", c.ExternalLink));
-            if (c.Image is { Length: > 0 }) rail.Add(new("COVER", c.Image));
+                rail.Add(new("ROYALTY", string.Create(CultureInfo.InvariantCulture, $"{bps / 100m:0.##}%"), Group: ViewerFactGroup.Links));
+            if (c.FeeRecipient is { Length: > 0 }) rail.Add(new("PAYEE", c.FeeRecipient, Group: ViewerFactGroup.Links));
+            if (c.ExternalLink is { Length: > 0 }) rail.Add(new("LINK", c.ExternalLink, Group: ViewerFactGroup.Links));
+            if (c.Image is { Length: > 0 }) rail.Add(new("COVER", c.Image, Group: ViewerFactGroup.Links));
         }
-        else rail.Add(new("FILE", "no collection.json"));
+        else rail.Add(new("FILE", "no collection.json", Group: ViewerFactGroup.File));
         if (bundle.Problems.Count > 0)
             rail.Add(new("PROBLEMS", string.Create(CultureInfo.InvariantCulture, $"{bundle.Problems.Count}: ")
-                + string.Join("; ", bundle.Problems.Take(3))));
+                + string.Join("; ", bundle.Problems.Take(3)), Group: ViewerFactGroup.File));
         return new ArchiveGalleryViewModel(bundle.Name, rail, items, gate, [bundle]);
     }
 
@@ -236,7 +236,7 @@ public static class GalleryBuilder
                         {
                             new("CELL", key),
                             new("SIZE", $"{art.Width} x {art.Height}"),
-                            new("ARCHIVE", Path.GetFileName(path)),
+                            new("ARCHIVE", Path.GetFileName(path), Group: ViewerFactGroup.File),
                         };
                         return new SnapshotSubject(key, facts, art, null);
                     }), gate));

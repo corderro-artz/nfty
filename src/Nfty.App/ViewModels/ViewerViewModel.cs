@@ -49,6 +49,7 @@ public sealed partial class ViewerViewModel : ViewModelBase, IDisposable
         _dialogs = dialogs;
         _layout = subject.Model != null ? ViewerLayout.Both : ViewerLayout.TwoD;
         _preview = NewPreview(subject.Model);
+        _preview.PropertyChanged += OnPreviewChanged;
         subject.Changed += OnSubjectChanged;
     }
 
@@ -68,10 +69,13 @@ public sealed partial class ViewerViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(Mesh));
         OnPropertyChanged(nameof(Texture));
         OnPropertyChanged(nameof(CanShowThreeD));
+        OnPropertyChanged(nameof(LayoutTip));
         OnPropertyChanged(nameof(LiveBadge));     // a source closing turns "live" into "snapshot"
+        OnPropertyChanged(nameof(IsLive));
         OnPropertyChanged(nameof(Title));
         OnPropertyChanged(nameof(Facts));         // a live page's selection and size move with it
         OnPropertyChanged(nameof(HasFacts));
+        RaiseTabs();
         CopyFactsCommand.NotifyCanExecuteChanged();
         old?.Dispose();
     }
@@ -99,6 +103,144 @@ public sealed partial class ViewerViewModel : ViewModelBase, IDisposable
     /// <summary>Whether the rail has anything to say; false dims Copy info rather than leaving it
     /// copying nothing.</summary>
     public bool HasFacts => Facts.Count > 0;
+
+    /// <summary>The rail's width, stated once: the markup reads it and the layout tests measure
+    /// against it. Wide enough for the four tab names and their counts on one line.</summary>
+    public const double RailWidth = 288;
+
+    private ViewerFactGroup _selectedGroup = ViewerFactGroup.Item;
+
+    /// <summary>The tab the reader picked. Remembered for the life of this viewer: a live subject that
+    /// changes keeps it, and only falls back to the first tab while that group has nothing.</summary>
+    public ViewerFactGroup SelectedGroup
+    {
+        get => Tabs.Any(t => t.Group == _selectedGroup) || Tabs.Count == 0 ? _selectedGroup : Tabs[0].Group;
+        set
+        {
+            if (_selectedGroup == value) return;
+            _selectedGroup = value;
+            RaiseTabs();
+        }
+    }
+
+    /// <summary>Shows one group's facts in the rail.</summary>
+    /// <param name="group">The group.</param>
+    [RelayCommand]
+    private void SelectGroup(ViewerFactGroup group) => SelectedGroup = group;
+
+    /// <summary>The rail's tabs: one per group that has facts, in group order.</summary>
+    public IReadOnlyList<ViewerFactTab> Tabs
+    {
+        get
+        {
+            var rows = Facts.Where(f => !f.Banner).ToList();
+            var groups = rows.Select(f => f.Group).Distinct().OrderBy(g => g).ToList();
+            var chosen = groups.Contains(_selectedGroup) || groups.Count == 0 ? _selectedGroup : groups[0];
+            return groups.Select(g => new ViewerFactTab(g, rows.Count(f => f.Group == g), g == chosen)).ToList();
+        }
+    }
+
+    /// <summary>Whether the tab strip has anything to switch between. One group draws no strip, but
+    /// its row stays reserved, so a live subject gaining a second group moves nothing.</summary>
+    public bool ShowTabs => Tabs.Count > 1;
+
+    /// <summary>Ink for the tab strip: reserved space, inked only when there are tabs to choose.</summary>
+    public double TabsOpacity => ShowTabs ? 1 : 0;
+
+    /// <summary>The rows the rail lists: the chosen tab's facts.</summary>
+    public IReadOnlyList<ViewerFact> TabFacts
+    {
+        get
+        {
+            var group = SelectedGroup;
+            return Facts.Where(f => !f.Banner && f.Group == group).ToList();
+        }
+    }
+
+    /// <summary>Statements about the whole subject, drawn above the tabs.</summary>
+    public IReadOnlyList<ViewerFact> BannerFacts => Facts.Where(f => f.Banner).ToList();
+
+    /// <summary>Whether there is a banner to draw.</summary>
+    public bool HasBanner => Facts.Any(f => f.Banner);
+
+    /// <summary>Every group with facts, as the extended panel lists them.</summary>
+    public IReadOnlyList<ViewerFactSection> Sections =>
+        Tabs.Select(t => new ViewerFactSection(t.Group, Facts.Where(f => !f.Banner && f.Group == t.Group).ToList())).ToList();
+
+    /// <summary>The extended panel's left column.</summary>
+    public IReadOnlyList<ViewerFactSection> SectionsLeft => ViewerFactSection.Balance(Sections).Left;
+
+    /// <summary>The extended panel's right column.</summary>
+    public IReadOnlyList<ViewerFactSection> SectionsRight => ViewerFactSection.Balance(Sections).Right;
+
+    private void RaiseTabs()
+    {
+        foreach (var name in new[]
+                 {
+                     nameof(SelectedGroup), nameof(Tabs), nameof(ShowTabs), nameof(TabsOpacity), nameof(TabFacts),
+                     nameof(BannerFacts), nameof(HasBanner), nameof(Sections), nameof(SectionsLeft), nameof(SectionsRight),
+                 })
+            OnPropertyChanged(name);
+        RowsAbove = 0;
+        RowsBelow = 0;
+    }
+
+    /// <summary>Whether the info panel is extended over the panes, every group at once.</summary>
+    [ObservableProperty]
+    private bool _isInfoExtended;
+
+    /// <summary>Extends the info panel over the panes, or folds it back into the rail.</summary>
+    [RelayCommand]
+    private void ToggleInfoExtended() => IsInfoExtended = !IsInfoExtended;
+
+    /// <summary>The extend button's tooltip, which says what pressing it does now.</summary>
+    public string ExtendTip => (IsInfoExtended ? "Back to the rail" : "Show all info")
+                               + "  (" + KeyHints.ViewerInfo + ")";
+
+    partial void OnIsInfoExtendedChanged(bool value) => OnPropertyChanged(nameof(ExtendTip));
+
+    /// <summary>How many rows of the chosen tab sit above the rail's fold (the view counts them).</summary>
+    [ObservableProperty]
+    private int _rowsAbove;
+
+    /// <summary>How many rows of the chosen tab sit below the rail's fold.</summary>
+    [ObservableProperty]
+    private int _rowsBelow;
+
+    /// <summary>What the line under the list says: how many rows are below the fold, or a way back to
+    /// the top once the reader has scrolled to the end. Empty when the whole tab shows.</summary>
+    public string MoreText => RowsBelow > 0
+        ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{RowsBelow} more")
+        : RowsAbove > 0 ? "back to top" : "";
+
+    /// <summary>Whether the more line has something to say; its row is reserved either way.</summary>
+    public bool HasMore => RowsBelow > 0 || RowsAbove > 0;
+
+    /// <summary>Ink for the more line.</summary>
+    public double MoreOpacity => HasMore ? 1 : 0;
+
+    /// <summary>Whether the more line points down (rows below) rather than back to the top.</summary>
+    public bool MorePointsDown => RowsBelow > 0;
+
+    partial void OnRowsAboveChanged(int value) => RaiseMore();
+
+    partial void OnRowsBelowChanged(int value) => RaiseMore();
+
+    private void RaiseMore()
+    {
+        OnPropertyChanged(nameof(MoreText));
+        OnPropertyChanged(nameof(HasMore));
+        OnPropertyChanged(nameof(MoreOpacity));
+        OnPropertyChanged(nameof(MorePointsDown));
+    }
+
+    /// <summary>Raised when the more line is pressed; the view scrolls the list, since only it knows
+    /// where the rows are.</summary>
+    public event Action<bool>? MoreRequested;
+
+    /// <summary>Pages the list down by what is showing, or back to the top from the end.</summary>
+    [RelayCommand]
+    private void ShowMore() => MoreRequested?.Invoke(RowsBelow > 0);
 
     /// <summary>True when the viewer lives in its own window, whose titlebar carries the name, the
     /// badge and the layout switch; false for the overlay, whose header does.</summary>
@@ -161,8 +303,14 @@ public sealed partial class ViewerViewModel : ViewModelBase, IDisposable
     /// <summary>Why the layout control is dimmed; empty when a model exists.</summary>
     public string LayoutNote => CanShowThreeD ? "" : "This subject has no 3D model.";
 
+    /// <summary>The layout switch's tooltip: its keys, or why 3D is dimmed.</summary>
+    public string LayoutTip => CanShowThreeD ? KeyHints.ViewerLayoutTip : LayoutNote;
+
     /// <summary>The live badge: "live" while linked to an open source, otherwise "snapshot".</summary>
     public string LiveBadge => Subject.IsLive ? "live" : "snapshot";
+
+    /// <summary>Whether the viewer still follows its source page: inks the badge's dot.</summary>
+    public bool IsLive => Subject.IsLive;
 
     /// <summary>Selects a layout.</summary>
     /// <param name="layout">The panes to show.</param>
@@ -174,6 +322,7 @@ public sealed partial class ViewerViewModel : ViewModelBase, IDisposable
     public void Dispose()
     {
         Subject.Changed -= OnSubjectChanged;
+        _preview.PropertyChanged -= OnPreviewChanged;
         _artBitmap?.Dispose();
         _artBitmap = null;
     }
@@ -208,6 +357,12 @@ public sealed partial class ViewerViewModel : ViewModelBase, IDisposable
 
     /// <summary>Says why export is blocked; empty when it is not.</summary>
     public string ExportNote => CanExport ? "" : "sealed · view-only";
+
+    /// <summary>Ink for the sealed note and its lock, on the export heading's own line.</summary>
+    public double SealOpacity => CanExport ? 0 : 1;
+
+    /// <summary>Whether the subject is sealed: the titlebar badge row adds a view-only chip.</summary>
+    public bool IsSealed => !CanExport;
 
     /// <summary>Saves the art as a PNG enlarged by a whole-pixel factor (1, 2, 4 or 8).</summary>
     /// <param name="factor">The enlargement factor.</param>
@@ -296,10 +451,35 @@ public sealed partial class ViewerViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private void ShowAngle(ViewAngle angle) => Preview.Preset(angle, Preview.ViewportAspect);
 
-    /// <summary>Sets the turntable speed.</summary>
-    /// <param name="speed">The speed.</param>
+    /// <summary>Steps the turntable to the next speed: off, slow, medium, fast, off. One button in the
+    /// footer rather than a tray of four, so the strip stays one line at the default window.</summary>
     [RelayCommand]
-    private void SetTurntable(TurntableSpeed speed) => Preview.Turntable = speed;
+    private void CycleTurntable() => Preview.Turntable = Preview.Turntable switch
+    {
+        TurntableSpeed.Off => TurntableSpeed.Slow,
+        TurntableSpeed.Slow => TurntableSpeed.Medium,
+        TurntableSpeed.Medium => TurntableSpeed.Fast,
+        _ => TurntableSpeed.Off,
+    };
+
+    /// <summary>The spin button's word for the current speed.</summary>
+    public string TurntableText => Preview.Turntable switch
+    {
+        TurntableSpeed.Slow => "Slow",
+        TurntableSpeed.Medium => "Med",
+        TurntableSpeed.Fast => "Fast",
+        _ => "Off",
+    };
+
+    /// <summary>Whether the model is turning: inks the spin button.</summary>
+    public bool IsSpinning => Preview.Turntable != TurntableSpeed.Off;
+
+    private void OnPreviewChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(ModelPreviewViewModel.Turntable)) return;
+        OnPropertyChanged(nameof(TurntableText));
+        OnPropertyChanged(nameof(IsSpinning));
+    }
 
     /// <summary>Shows or hides the quad outlines over the solid.</summary>
     [RelayCommand]

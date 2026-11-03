@@ -142,4 +142,20 @@ public static class KeyHints
     public static string MoveLayer { get; } = Alt + Gap + "↑↓";
     /// <summary>Drop the editor's selection marquee.</summary>
     public static string DropSelection { get; } = "Esc";
+    /// <summary>Viewer: extend the info panel over the panes, or fold it back.</summary>
+    public static string ViewerInfo { get; } = "I";
+    /// <summary>Viewer: the three layouts, 2D, both and 3D.</summary>
+    public static string ViewerLayouts { get; } = "1 2 3";
+    /// <summary>Viewer: fit the 2D art to its pane.</summary>
+    public static string ViewerFit { get; } = "0";
+    /// <summary>Viewer: step the turntable to its next speed.</summary>
+    public static string ViewerSpin { get; } = "S";
+    /// <summary>Tooltip of the viewer's layout switch.</summary>
+    public static string ViewerLayoutTip { get; } = "2D, both side by side, or 3D" + Tail(ViewerLayouts);
+    /// <summary>Tooltip of the viewer's zoom chip.</summary>
+    public static string ViewerZoomTip { get; } =
+        "The zoom. Wheel over the picture to zoom, drag to pan; click to fit" + Tail(ViewerFit);
+    /// <summary>Tooltip of the viewer's spin button.</summary>
+    public static string ViewerSpinTip { get; } =
+        "The turntable: the camera circles the model. Click for the next speed" + Tail(ViewerSpin);
 }

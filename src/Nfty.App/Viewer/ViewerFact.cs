@@ -1,12 +1,43 @@
 namespace Nfty.App.Viewer;
 
+/// <summary>
+/// Which tab of the info rail a fact sits under. The rail shows one group at a time, so a long
+/// subject (a bundle item with a dozen traits and three links) reads as a few short lists rather than
+/// one tall one that scrolls; the extended panel shows every group at once.
+/// </summary>
+public enum ViewerFactGroup
+{
+    /// <summary>What the subject IS: its number, name, recipe, size, DNA, description.</summary>
+    Item,
+    /// <summary>The published traits, one row per layer (and its rolled color).</summary>
+    Traits,
+    /// <summary>Where it points: image fields, links, cover, payee and royalty.</summary>
+    Links,
+    /// <summary>Where it came from: the file, the archive, how its model was found.</summary>
+    File,
+}
+
 /// <summary>One label/value line in the viewer's facts panel.</summary>
 /// <param name="Label">What the fact is.</param>
 /// <param name="Value">Its value, already worded for display.</param>
 /// <param name="Banner">A statement about the whole subject ("upload bundle - read only") rather than
-/// a label/value pair: drawn as a tinted strip across the card, never squeezed into a value column.</param>
-public sealed record ViewerFact(string Label, string Value, bool Banner = false)
+/// a label/value pair: drawn as a tinted strip across the card, never squeezed into a value column.
+/// A banner belongs to no tab: it stands above them.</param>
+/// <param name="Group">The tab the fact is listed under.</param>
+public sealed record ViewerFact(string Label, string Value, bool Banner = false,
+    ViewerFactGroup Group = ViewerFactGroup.Item)
 {
+    /// <summary>The tab's name as the rail prints it.</summary>
+    /// <param name="group">The group.</param>
+    /// <returns>Its caps label.</returns>
+    public static string GroupTitle(ViewerFactGroup group) => group switch
+    {
+        ViewerFactGroup.Traits => "TRAITS",
+        ViewerFactGroup.Links => "LINKS",
+        ViewerFactGroup.File => "FILE",
+        _ => "ITEM",
+    };
+
     /// <summary>The most characters a value may have and still share its label's line: what the
     /// 116px value column holds in 12px mono. Anything longer moves under its label at full width,
     /// so the rail never wraps a value into a narrow column five lines deep.</summary>

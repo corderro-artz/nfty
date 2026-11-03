@@ -4659,8 +4659,10 @@
     <Setter Property="BorderThickness" Value="0,1,0,0" />
     <Setter Property="Padding" Value="0,3" />
   </Style>
+  <!-- The first row's hairline is INKED out, not removed: a row of zero top border is a pixel shorter
+       than the rest, and the rail snaps its list to whole rows, so every row is one height. -->
   <Style Selector="ItemsControl.facts > ContentPresenter:nth-child(1) > Border.factrow">
-    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="BorderBrush" Value="Transparent" />
   </Style>
   <!-- Why export is off, on the EXPORT heading's own line: warning ink, right-aligned. -->
   <Style Selector="TextBlock.sealnote">
@@ -4755,5 +4757,142 @@
     <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
     <Setter Property="TextWrapping" Value="Wrap" />
     <Setter Property="MaxLines" Value="2" />
+  </Style>
+
+  <!-- ===================== The viewer's info rail: tabs, the more line, the extended panel ===================== -->
+  <!-- The rail head and the extended panel's head share one height (a 28px ttool.bar), so the
+       collapse button lands exactly on the extend button that opened the panel. -->
+  <Style Selector="Grid.railhead">
+    <Setter Property="MinHeight" Value="28" />
+  </Style>
+  <!-- The tab row: always 28 tall with its closing hairline, whether or not it is inked (one group =
+       no strip, the row still reserved). The tabs are railtab, the editor rail's underline tabs. -->
+  <Style Selector="Border.facttabs">
+    <Setter Property="Height" Value="28" />
+    <Setter Property="Margin" Value="0,6,0,0" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+  <!-- Four tabs and their counts share the rail's 260px: a hair smaller and tighter than the editor's
+       two. Declared after Button.railtab, which it narrows (last declared wins at equal specificity). -->
+  <Style Selector="Button.railtab.facttab">
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="LetterSpacing" Value="0.8" />
+  </Style>
+  <!-- The more line under the facts: a quiet mono link, right-aligned, one fixed height so its text
+       changing ("3 more", "back to top", nothing) moves nothing. -->
+  <Style Selector="Button.factmore">
+    <Setter Property="Height" Value="22" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Margin" Value="0,2,0,0" />
+    <Setter Property="Padding" Value="6,0" />
+    <Setter Property="HorizontalAlignment" Value="Right" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="Button.factmore /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.factmore:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+  </Style>
+  <Style Selector="Button.factmore:pointerover">
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+  </Style>
+  <Style Selector="Button.factmore TextBlock">
+    <Setter Property="LineHeight" Value="14" />
+  </Style>
+  <!-- The extended panel: the viewer's own ground over the panes, so it reads as the rail opened out
+       rather than a dialog. -->
+  <Style Selector="Border.infopanel">
+    <Setter Property="Background" Value="{DynamicResource BgBrush}" />
+  </Style>
+  <Style Selector="TextBlock.infotitle">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Margin" Value="6,0,0,0" />
+  </Style>
+  <!-- A value in the extended panel: whole, wrapping at the column, never trimmed. Mono for a value,
+       the reading face for a sentence. -->
+  <Style Selector="SelectableTextBlock.factfull">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="LineHeight" Value="16" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector="SelectableTextBlock.factfull.prose">
+    <Setter Property="FontFamily" Value="{DynamicResource SansFontFamily}" />
+    <Setter Property="FontSize" Value="11.5" />
+  </Style>
+  <!-- Export rows open with the pane they take from, in the footer's own 2D / 3D chip, one stated
+       width so the two trays after them start on one line. -->
+  <Style Selector="Border.idchip.exptag">
+    <Setter Property="Width" Value="30" />
+  </Style>
+  <Style Selector="Border.idchip.exptag > TextBlock">
+    <Setter Property="HorizontalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Path.ico.sealmark">
+    <Setter Property="Stroke" Value="{DynamicResource WarningBrush}" />
+  </Style>
+  <!-- The backdrop swatches: each button shows the ground it picks. A square of the bar tray's own
+       height, so the swatch tray is one row with every other tray. -->
+  <Style Selector="Button.seg-b.bar.swb">
+    <Setter Property="Padding" Value="6,4" />
+  </Style>
+  <Style Selector="Border.swatch">
+    <Setter Property="Width" Value="14" />
+    <Setter Property="Height" Value="14" />
+    <Setter Property="CornerRadius" Value="3" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Button.seg-b.on Border.swatch">
+    <Setter Property="BorderBrush" Value="{DynamicResource OnAccentBrush}" />
+  </Style>
+  <!-- Stated widths on the two segments whose WORD changes under the pointer that pressed them (the
+       zoom readout, the spin speed), so the tray never changes length. -->
+  <Style Selector="Button.seg-b.bar.zoomb">
+    <Setter Property="Width" Value="50" />
+  </Style>
+  <Style Selector="Button.seg-b.bar.spinb">
+    <Setter Property="Width" Value="64" />
+  </Style>
+  <Style Selector="TextBox.nin.hexin">
+    <Setter Property="Width" Value="66" />
+  </Style>
+  <!-- The custom color while it is not the ground: still there and still editable, in muted ink. -->
+  <Style Selector="TextBox.nin.hexin.idle">
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <!-- The viewer gallery's rows stretch, so each row of whole tiles centers in the pane. -->
+  <Style Selector="ListBox.vgallery > ListBoxItem">
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <!-- The titlebar's view-only chip on a sealed subject: the lock and the word in warning ink. -->
+  <Style Selector="Border.idchip.sealchip Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource WarningBrush}" />
+  </Style>
+  <Style Selector="Border.idchip.sealchip TextBlock.ck">
+    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+  </Style>
+  <!-- The live dot inside the live / snapshot chip: accent while linked to its page, muted once it
+       is a frozen copy. -->
+  <Style Selector="Ellipse.livedot">
+    <Setter Property="Width" Value="6" />
+    <Setter Property="Height" Value="6" />
+    <Setter Property="Fill" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Ellipse.livedot.on">
+    <Setter Property="Fill" Value="{DynamicResource AccentBrush}" />
   </Style>
 </Styles>

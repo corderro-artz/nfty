@@ -22,6 +22,11 @@
         </DrawingBrush.Drawing>
       </DrawingBrush>
       <SolidColorBrush x:Key="PanelBrush" Color="#f8f3ed" />
+      <!-- The viewer's Light and Dark backdrops: one light ground and one dark ground in BOTH themes, so the
+           "Dark" swatch is never the lighter of the pair (they were the theme's Tile and Panel, and light
+           Panel is paler than light Tile). -->
+      <SolidColorBrush x:Key="BackdropLightBrush" Color="#f4efe8" />
+      <SolidColorBrush x:Key="BackdropDarkBrush" Color="#0b0c10" />
       <!-- A key cap (Controls/KeyChord): a face a shade lighter than the panel it sits on, and the 2px
            lower edge that makes it a key rather than a chip, as ONE inset shadow so the bottom edge
            is heavier than the rim without a second border. -->
@@ -175,6 +180,8 @@
         </DrawingBrush.Drawing>
       </DrawingBrush>
       <SolidColorBrush x:Key="PanelBrush" Color="#0b0c10" />
+      <SolidColorBrush x:Key="BackdropLightBrush" Color="#f4efe8" />
+      <SolidColorBrush x:Key="BackdropDarkBrush" Color="#0b0c10" />
       <SolidColorBrush x:Key="KeyCapFaceBrush" Color="#181b24" />
       <BoxShadows x:Key="KeyCapShadow">inset 0 -2 0 0 #8c000000</BoxShadows>
       <SolidColorBrush x:Key="ScrimBrush" Color="#8507080b" />
