@@ -66,6 +66,9 @@ public sealed class DesktopViewerHost : IViewerHost
         ArgumentNullException.ThrowIfNull(subject);
         var remembered = _state.Current;
         var dialogs = new DialogService();
+        // A gallery's tiles report into THIS window's dialog layer: the one it was opened through may
+        // be the main window, closed since, or the launch window of `--viewer`, closed at once.
+        if (subject is GallerySubject g) g.Gallery.Dialogs = dialogs;
         var vm = new ViewerViewModel(subject, _picker, _clipboard, dialogs, _bridge) { InWindow = true };
         if (Enum.TryParse<ViewerBackdrop>(remembered.Backdrop, out var backdrop)) vm.TwoD.Backdrop = backdrop;
         vm.TwoD.BackdropColor = remembered.BackdropColor;

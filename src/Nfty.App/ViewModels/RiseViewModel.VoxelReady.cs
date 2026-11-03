@@ -140,7 +140,7 @@ public sealed partial class RiseViewModel
         catch (Exception ex)
         {
             if (!_disposed)
-                await _dialogs.ShowErrorAsync("Could not make voxel-ready", ex.Message);
+                await _dialogs.ShowErrorAsync("Could not make voxel-ready", ErrorText.For(ex));
         }
         finally
         {
@@ -164,7 +164,7 @@ public sealed partial class RiseViewModel
         catch (Exception ex)
         {
             if (!_disposed)
-                await _dialogs.ShowErrorAsync("Could not undo", ex.Message);
+                await _dialogs.ShowErrorAsync("Could not undo", ErrorText.For(ex));
         }
         finally
         {

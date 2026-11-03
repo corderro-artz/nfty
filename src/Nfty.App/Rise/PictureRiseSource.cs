@@ -82,7 +82,7 @@ public sealed class PictureRiseSource : RiseSource
         try { image = ImageFormats.Load(path); }
         catch (Exception ex) when (ex is ImageFormatException or NotSupportedException or IOException or UnauthorizedAccessException)
         {
-            throw new InvalidOperationException($"{System.IO.Path.GetFileName(path)} could not be read as a picture — {ex.Message}", ex);
+            throw new InvalidOperationException($"{System.IO.Path.GetFileName(path)} could not be read as a picture. {ErrorText.For(ex)}", ex);
         }
 
         var source = new PictureRiseSource(path, image, bridge, pickPath);
@@ -236,7 +236,7 @@ public sealed class PictureRiseSource : RiseSource
         }
         catch (Exception ex) when (ex is IOException or ImageFormatException)
         {
-            GridWriteNote = $"{name} could not be written ({ex.Message}) — it keeps its grid, and this session treats it as one picture.";
+            GridWriteNote = $"{name} could not be written, so it keeps its grid and this session treats it as one picture. {ErrorText.For(ex)}";
         }
     }
 
@@ -256,7 +256,7 @@ public sealed class PictureRiseSource : RiseSource
         }
         catch (Exception ex) when (ex is IOException or ImageFormatException)
         {
-            GridWriteNote = $"{name} could not be written ({ex.Message}) — the grid is kept for this session.";
+            GridWriteNote = $"{name} could not be written, so the grid is kept for this session only. {ErrorText.For(ex)}";
         }
     }
 

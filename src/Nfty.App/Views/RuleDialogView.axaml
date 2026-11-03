@@ -49,7 +49,7 @@
                         Content="Always together" />
               </Grid>
             </Border>
-            <TextBlock Text="{Binding RelationText}" Classes="muted" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding RelationText}" Classes="m-sub" Margin="0" />
           </StackPanel>
 
           <StackPanel Spacing="7">
@@ -103,9 +103,8 @@
                the reserved space reads as form padding rather than as an empty box. -->
           <Panel Height="58">
             <Rectangle Classes="dashed btn" IsVisible="{Binding HasProblem}" />
-            <TextBlock Text="{Binding Problem}" TextWrapping="Wrap" Margin="10,7"
-                       IsVisible="{Binding HasProblem}" VerticalAlignment="Top"
-                       Foreground="{DynamicResource WarningBrush}" FontSize="11.5" />
+            <TextBlock Text="{Binding Problem}" Classes="caveat" Margin="10,7"
+                       IsVisible="{Binding HasProblem}" VerticalAlignment="Top" />
           </Panel>
         </StackPanel>
       </Border>

@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctl="using:Nfty.App.Controls"
              xmlns:vm="using:Nfty.App.ViewModels"
              x:Class="Nfty.App.Views.LeaveDialogView"
              x:DataType="vm:LeaveDialogViewModel">
@@ -23,7 +24,9 @@
            Save and leave carries the accent. -->
       <Border Grid.Row="1" Classes="modal-foot">
         <Grid ColumnDefinitions="*,Auto">
-          <TextBlock Grid.Column="0" Classes="keyhint" VerticalAlignment="Center" Text="Esc to keep editing" />
+          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+            <ctl:KeyChord Chord="Esc" Compact="True" /><TextBlock Text="keep editing" Classes="keyhint" />
+          </StackPanel>
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
             <Button Content="Discard changes" Command="{Binding DiscardCommand}" Classes="tbtn" />
             <Button Command="{Binding SaveAndLeaveCommand}" Classes="accent"><StackPanel Orientation="Horizontal" Spacing="6"><Path Classes="ico sm" Data="{StaticResource IconSave}" /><TextBlock Text="Save and leave" /></StackPanel></Button>

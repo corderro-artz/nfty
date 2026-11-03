@@ -1012,10 +1012,6 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
 
     private bool CanImport() => SelectedVariant is not null && !IsSaving;
 
-    /// <summary>What the variant import says when the platform file picker fails.</summary>
-    internal const string PickerFailed =
-        "nfty could not open the file picker. Try again; if it keeps failing, restart nfty.";
-
     /// <summary>The sentence the variant import says about the picture's color profile, or null when
     /// there is none to say (no profile, or sRGB). The editor converts without asking - it replaces one
     /// variant, where the Import image form, which creates a layer, offers the box.</summary>
@@ -1036,10 +1032,8 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
     {
         if (ActiveDraft is not { } target) return;
         string? path;
-        // The platform picker's failures are the OS's, in the OS's words: none of them reaches the
-        // screen, the product's sentence does.
         try { path = await _picker.OpenFileAsync("Import variant image", ".png"); }
-        catch (Exception) { await _dialogs.ShowErrorAsync("Could not open the file picker", PickerFailed); return; }
+        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not import", ErrorText.For(ex)); return; }
         if (path is null) return;   // canceled
 
         // Core's one picture-import rule: a non-sRGB color profile is converted to sRGB FIRST (before
@@ -1047,7 +1041,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
         Image<Rgba32> img;
         PictureProfile profile;
         try { img = ImageImport.Load(path, convertToSrgb: true, out profile); }
-        catch (PictureUnreadableException ex) { await _dialogs.ShowErrorAsync("Can't import that picture", ex.Message); return; }
+        catch (PictureUnreadableException ex) { await _dialogs.ShowErrorAsync("Can't import that picture", ErrorText.For(ex)); return; }
         string? profileNote = ProfileNotice(profile, Path.GetFileName(path));
         try
         {
@@ -1748,7 +1742,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync("Could not save", ex.Message);
+            await _dialogs.ShowErrorAsync("Could not save", ErrorText.For(ex));
         }
         finally { IsSaving = false; }
     }

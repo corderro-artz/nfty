@@ -196,7 +196,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            return new BookSettingsOutcome(false, [ex.Message]);
+            return new BookSettingsOutcome(false, [ErrorText.For(ex)]);
         }
         finally { _reordering = false; }
     }
@@ -507,7 +507,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         }
         catch (InvalidOperationException ex)
         {
-            _status.Say($"Could not open a viewer: {ex.Message}");
+            _status.Say($"Could not open a viewer: {ErrorText.For(ex)}");
         }
     }
 
@@ -778,7 +778,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync("Could not save the rule", ex.Message);
+            await _dialogs.ShowErrorAsync("Could not save the rule", ErrorText.For(ex));
             return null;
         }
     }
@@ -825,7 +825,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync("Could not reorder layers", ex.Message);
+            await _dialogs.ShowErrorAsync("Could not reorder layers", ErrorText.For(ex));
             return null;
         }
         finally { _reordering = false; }
@@ -1032,7 +1032,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync("Could not add recipe", ex.Message);
+            await _dialogs.ShowErrorAsync("Could not add recipe", ErrorText.For(ex));
         }
     }
 
@@ -1082,7 +1082,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync("Could not add ingredient", ex.Message);
+            await _dialogs.ShowErrorAsync("Could not add ingredient", ErrorText.For(ex));
         }
         finally
         {
@@ -1108,7 +1108,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         }
         LoadedRecipe recipe;
         try { recipe = RecipeArchive.Read(path); }
-        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not open", ex.Message); return; }
+        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not open", ErrorText.For(ex)); return; }
         var book = LooseWorkspace.WrapRecipe(recipe);
 
         // Leave the way Close does, not by swapping the session under a live page: Open() disposes
@@ -1156,7 +1156,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         catch (Exception ex)
         {
             ing?.Dispose();   // never reached the editor - free it
-            await _dialogs.ShowErrorAsync("Could not open", ex.Message);
+            await _dialogs.ShowErrorAsync("Could not open", ErrorText.For(ex));
         }
     }
 
@@ -1208,7 +1208,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync("Could not import", ex.Message);
+            await _dialogs.ShowErrorAsync("Could not import", ErrorText.For(ex));
         }
     }
 
@@ -1376,7 +1376,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync("Could not delete", ex.Message);
+            await _dialogs.ShowErrorAsync("Could not delete", ErrorText.For(ex));
         }
     }
 
@@ -1508,7 +1508,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync("Could not reorder", ex.Message);
+            await _dialogs.ShowErrorAsync("Could not reorder", ErrorText.For(ex));
             return false;
         }
         finally { _reordering = false; }
@@ -1555,7 +1555,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync("Could not delete", ex.Message);
+            await _dialogs.ShowErrorAsync("Could not delete", ErrorText.For(ex));
         }
     }
 
@@ -1584,7 +1584,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         catch (OperationCanceledException) { return; }   // the user stopped it: nothing opened
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync("Could not open the set", ex.Message);
+            await _dialogs.ShowErrorAsync("Could not open the set", ErrorText.For(ex));
             return;
         }
         _nav.To(_setBrowserFactory(set));

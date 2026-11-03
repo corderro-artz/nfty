@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctl="using:Nfty.App.Controls"
              xmlns:vm="using:Nfty.App.ViewModels"
              x:Class="Nfty.App.Views.ErrorDialogView"
              x:DataType="vm:ErrorDialogViewModel">
@@ -29,7 +30,9 @@
 
       <Border Grid.Row="1" Classes="modal-foot">
         <Grid ColumnDefinitions="*,Auto">
-          <TextBlock Grid.Column="0" Classes="keyhint" VerticalAlignment="Center" Text="Esc to dismiss" />
+          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+            <ctl:KeyChord Chord="Esc" Compact="True" /><TextBlock Text="close" Classes="keyhint" />
+          </StackPanel>
           <Button Grid.Column="1" Content="OK" Command="{Binding CloseCommand}" Classes="accent" />
         </Grid>
       </Border>

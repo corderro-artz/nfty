@@ -96,8 +96,16 @@ public partial class ExportDialogViewModel
         }
     }
 
+    /// <summary>
+    /// Whether the footer shows the card's Esc hint. The footer's left cell carries the reason the
+    /// primary action is unavailable when there is one, and the keycap hint every other card carries
+    /// when there is not, so the cell is never an unexplained blank.
+    /// </summary>
+    public bool FooterHintVisible => !IsRunning && (IsUploadTab ? UploadProblem.Length == 0 : Problem.Length == 0);
+
     private void UploadInputsChanged()
     {
+        OnPropertyChanged(nameof(FooterHintVisible));
         OnPropertyChanged(nameof(UploadChoicesNote));
         OnPropertyChanged(nameof(UploadProblem));
         UploadCommand.NotifyCanExecuteChanged();
@@ -137,7 +145,7 @@ public partial class ExportDialogViewModel
         catch (OperationCanceledException) { /* superseded */ }
         catch (Exception ex)
         {
-            if (!cts.IsCancellationRequested) SetUploadStatus(ConnectionState.NotReachable, "not reachable", ex.Message);
+            if (!cts.IsCancellationRequested) SetUploadStatus(ConnectionState.NotReachable, "not reachable", ErrorText.For(ex));
         }
     }
 
@@ -199,7 +207,7 @@ public partial class ExportDialogViewModel
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync("Upload failed", ex.Message);
+            await _dialogs.ShowErrorAsync("Upload failed", ErrorText.For(ex));
         }
         finally
         {

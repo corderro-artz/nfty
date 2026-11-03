@@ -655,7 +655,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
 
         string? path;
         try { path = await _picker.SaveFileAsync("Export preview", ".png"); }
-        catch (Exception ex) { await ShowPreviewError(ex.Message); return; }
+        catch (Exception ex) { await ShowPreviewError(ErrorText.For(ex)); return; }
         if (path is null) return;   // canceled
 
         try
@@ -670,7 +670,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
                 new SixLabors.ImageSharp.Formats.Png.PngEncoder());
             _status?.Say($"Wrote {path}");
         }
-        catch (Exception ex) { await ShowPreviewError(ex.Message); }
+        catch (Exception ex) { await ShowPreviewError(ErrorText.For(ex)); }
     }
 
     private bool CanExportPreview() => _picker is not null && _variants.Count > 0;

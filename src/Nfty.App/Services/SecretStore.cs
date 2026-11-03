@@ -191,7 +191,7 @@ public sealed class WindowsCredentialStore : ISecretStore
     }
 
     private static InvalidOperationException Fail(string what, int error) =>
-        new($"Windows Credential Manager could not {what} the key: {new Win32Exception(error).Message}");
+        new($"Windows Credential Manager could not {what} the key (Windows error {error}). Check you are signed in to Windows and try again; the key is never written to a file instead.");
 }
 
 /// <summary>

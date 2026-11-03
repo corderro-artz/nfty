@@ -217,10 +217,10 @@ public partial class ImportImageViewModel : WizardViewModelBase, IDisposable
     /// <returns>Null when the form is ready to show, or the reason it cannot be.</returns>
     public string? TryLoad()
     {
-        // Core's one rule for a picture import, and its own sentence for a file that cannot be read:
-        // no decoder's or OS's wording reaches the screen.
+        // Core's one rule for a picture import; a file that cannot be read is Core's product
+        // sentence (PictureUnreadableException), shown through ErrorText like every failure.
         try { _source = ImageImport.Load(SourcePath, convertToSrgb: false, out _profile); }
-        catch (PictureUnreadableException ex) { return ex.Message; }
+        catch (PictureUnreadableException ex) { return ErrorText.For(ex); }
         OnPropertyChanged(nameof(ProfileNote));
         OnPropertyChanged(nameof(CanConvertProfile));
         OnPropertyChanged(nameof(ProfileUnsupported));

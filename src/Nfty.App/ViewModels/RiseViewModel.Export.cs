@@ -436,7 +436,7 @@ public sealed partial class RiseViewModel
         catch (Exception ex)
         {
             if (!_disposed)
-                await _dialogs.ShowErrorAsync("Could not export", ex.Message);
+                await _dialogs.ShowErrorAsync("Could not export", ErrorText.For(ex));
         }
         finally
         {

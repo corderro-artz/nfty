@@ -414,6 +414,21 @@ public class DarkModeContrastTests
         var settingsData = new SettingsDialogViewModel(dialogs, new ParallelismSettingService(dataStore, () => null),
             recents: new RecentsService(dataStore), store: dataStore) { Tab = SettingsTab.Data };
         yield return ("settings-data", new Views.SettingsDialogView { DataContext = settingsData }, null);
+        // SYSTEM registered to a moved copy: the warning dot and the reason line naming a path; and
+        // registered, where Apply is the disabled (0.38) button beside full-ink ones.
+        yield return ("settings-system-repair", new Views.SettingsDialogView
+        {
+            DataContext = new SettingsDialogViewModel(dialogs, new ParallelismSettingService(StateStore.InMemory(), () => null),
+                associations: SettingsPagesTests.StaleAssociations()) { Tab = SettingsTab.System },
+        }, null);
+        var registeredHive = new InMemoryRegistryHive();
+        var registeredAssoc = new FileAssociationRegistrar(registeredHive, AssociationLayout.Windows, @"C:\nfty\nfty.exe");
+        registeredAssoc.Apply(AssociationChoice.Suggested);
+        yield return ("settings-system-registered", new Views.SettingsDialogView
+        {
+            DataContext = new SettingsDialogViewModel(dialogs, new ParallelismSettingService(StateStore.InMemory(), () => null),
+                associations: registeredAssoc) { Tab = SettingsTab.System },
+        }, null);
         yield return ("leave-editor", new Views.LeaveDialogView { DataContext = new LeaveDialogViewModel(dialogs, "Leave the editor?", "Aura has unsaved changes. Leaving discards them.", canSave: true) }, null);
 
         yield return ("wizard-cookbook",

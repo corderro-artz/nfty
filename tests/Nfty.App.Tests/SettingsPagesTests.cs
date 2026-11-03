@@ -328,6 +328,14 @@ public class SettingsPagesTests
     private static double ModalHeight =>
         (ShellViewModel.MinWindowHeight - ShellViewModel.ChromeReserve) / ShellViewModel.BaseScale;
 
+    internal static FileAssociationRegistrar StaleAssociations()
+    {
+        var hive = new InMemoryRegistryHive();
+        new FileAssociationRegistrar(hive, AssociationLayout.Windows, @"D:\Users\someone\Downloads\old copy of nfty\nfty.exe")
+            .Apply(AssociationChoice.Suggested);
+        return new FileAssociationRegistrar(hive, AssociationLayout.Windows, @"C:\Program Files\nfty\nfty.exe");
+    }
+
     [AvaloniaFact]
     public void Every_page_is_the_same_height_and_fits_the_smallest_window_unscrolled()
     {
@@ -335,7 +343,10 @@ public class SettingsPagesTests
         var vm = new SettingsDialogViewModel(new FakeDialogs(), new ParallelismSettingService(store, () => "2"),
             new AppSettingsService(store), null, Publishing(store, new UnavailableSecretStore(
                 "Secure storage is unavailable: secret-tool was not found. Install libsecret-tools.")),
-            new RecentsService(store), store, new RecordingRevealer());
+            new RecentsService(store), store, new RecordingRevealer(),
+            // SYSTEM measured in its longest state: registered to a moved copy, so the detail line
+            // names a path and wraps.
+            associations: StaleAssociations());
         var view = new Views.SettingsDialogView { DataContext = vm };
         var window = new Window
         {

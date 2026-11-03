@@ -62,7 +62,7 @@ public sealed class LooseCreation
                 return null;
             }
         }
-        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not save", ex.Message); return null; }
+        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not save", ErrorText.For(ex)); return null; }
         return path;
     }
 
@@ -87,7 +87,7 @@ public sealed class LooseCreation
 
         LoadedIngredient built;
         try { built = result.Build(canvas); }   // Build allocates the raster - guard it (OOM on a huge canvas)
-        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not save", ex.Message); return null; }
+        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not save", ErrorText.For(ex)); return null; }
 
         try
         {
@@ -98,7 +98,7 @@ public sealed class LooseCreation
                 return null;
             }
         }
-        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not save", ex.Message); return null; }
+        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not save", ErrorText.For(ex)); return null; }
         finally { built.Dispose(); }
         return path;
     }
@@ -115,6 +115,6 @@ public sealed class LooseCreation
             if (!File.Exists(candidate)) return candidate;
         }
         try { return await _picker.SaveFileAsync(title, extension); }
-        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not save", ex.Message); return null; }
+        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not save", ErrorText.For(ex)); return null; }
     }
 }

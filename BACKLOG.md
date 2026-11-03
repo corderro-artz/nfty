@@ -370,3 +370,16 @@ state. Reachable only after an exception has already escaped the dispatcher; not
 **Pop-out viewer: a recipe tree row is a fixed-seed 2D snapshot.** The row's viewer rolls the recipe once with a fixed seed and shows a picture, with no reroll and no model. Pick up by routing the row through the Rise page's recipe source (reroll, model) or giving the viewer its own reroll control.
 
 **ImageSharp 3.2.0 (six advisories unreachable, suppressed).** 3.1.11 stays pinned: 3.2.0 and 4.x need a license key for Release builds. The six advisories (TIFF fax/CCITT/BigTIFF, HistogramEqualization, ICC CLUT) are made unreachable by `Imaging/ImageFormats` (PNG + JPEG decoders only, ICC dropped) and suppressed in `Directory.Build.props` with `NuGetAuditSuppress`. Pick up by moving to 3.2.0 if a license path appears, then deleting the six suppression lines; `ImageFormats` can stay as the one decode seam.
+
+## Planned: more pinning services (Filebase, NFT.Storage)
+
+**Status:** planned, author's decision (2026-11-03).
+
+The upload ships two providers: local IPFS (Kubo HTTP API, the default) and Pinata (user's own JWT,
+OS credential store). Filebase and NFT.Storage are the next two. Each is one more `IPinningService`
+in `Nfty.Core/Publish/Ipfs/` (status + folder add that returns the root CID of the folder's
+contents, so `ipfs://CID/1.png` resolves), one more Settings PUBLISHING choice with its key kept in
+the same credential store, and one more CLI provider flag beside `--pinata`. Checked against a real
+account before shipping, like Pinata was: the same Set must give the same CIDs on every provider.
+Filebase speaks an S3-compatible API (bucket + access key/secret); NFT.Storage's current API must be
+checked first, since its upload service has changed over time.

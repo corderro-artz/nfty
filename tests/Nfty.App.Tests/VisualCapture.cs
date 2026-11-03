@@ -982,7 +982,7 @@ public partial class VisualCapture
             // The card the window close, the editor's Back and Rise's Back all raise over unsaved work.
             Capture(new Views.LeaveDialogView { DataContext = new LeaveDialogViewModel(dialogs, "Leave the editor?", "Aura has unsaved changes. Leaving discards them.", canSave: true) }, variant, $"leave-editor-{key}.png");
 
-            Capture(new Views.NewCookBookView { DataContext = new NewCookBookViewModel(dialogs) { Name = "Vapor Pets", Symbol = "VP", Description = "A cosy little collection." } },
+            Capture(new Views.NewCookBookView { DataContext = new NewCookBookViewModel(dialogs) { Name = "Vapor Pets", Symbol = "VP", Description = "A cozy little collection." } },
                 variant, $"wizard-cookbook-{key}.png");
 
             // Siblings, or the "Resulting mix" panel hides and the frame proves nothing about it -
@@ -1519,7 +1519,7 @@ public partial class VisualCapture
                 $"zz-help-sheet-{key}.png");
 
             var autoSetting = new ParallelismSettingService(StateStore.InMemory(), () => null);
-            Capture(new Views.SettingsDialogView { DataContext = new SettingsDialogViewModel(dialogs, autoSetting) },
+            Capture(new Views.SettingsDialogView { DataContext = new SettingsDialogViewModel(dialogs, autoSetting) { Tab = SettingsTab.Performance } },
                 variant, $"zz-dialog-settings-auto-{key}.png");
             var customSetting = new ParallelismSettingService(StateStore.InMemory(), () => null);
             customSetting.Set(Nfty.Core.Parallelism.LogicalProcessors);
@@ -1566,9 +1566,42 @@ public partial class VisualCapture
                 { Tab = SettingsTab.Data },
             }, variant, $"zz-dialog-settings-data-{key}.png");
 
+            // SYSTEM (Windows only), over a memory registry: nothing registered (the proposed start),
+            // registered, and registered to a moved copy (the longest detail line).
+            Capture(new Views.SettingsDialogView
+            {
+                DataContext = new SettingsDialogViewModel(dialogs, new ParallelismSettingService(StateStore.InMemory(), () => null),
+                    associations: new FileAssociationRegistrar(new InMemoryRegistryHive(), AssociationLayout.Windows,
+                        @"C:\Program Files\nfty\nfty.exe")) { Tab = SettingsTab.System },
+            }, variant, $"zz-dialog-settings-system-unregistered-{key}.png");
+            var registeredHive = new InMemoryRegistryHive();
+            var registered = new FileAssociationRegistrar(registeredHive, AssociationLayout.Windows, @"C:\Program Files\nfty\nfty.exe");
+            registered.Apply(AssociationChoice.Suggested);
+            Capture(new Views.SettingsDialogView
+            {
+                DataContext = new SettingsDialogViewModel(dialogs, new ParallelismSettingService(StateStore.InMemory(), () => null),
+                    associations: registered) { Tab = SettingsTab.System },
+            }, variant, $"zz-dialog-settings-system-registered-{key}.png");
+            Capture(new Views.SettingsDialogView
+            {
+                DataContext = new SettingsDialogViewModel(dialogs, new ParallelismSettingService(StateStore.InMemory(), () => null),
+                    associations: SettingsPagesTests.StaleAssociations()) { Tab = SettingsTab.System },
+            }, variant, $"zz-dialog-settings-system-repair-{key}.png");
+
             Capture(new Views.ErrorDialogView
             { DataContext = new ErrorDialogViewModel(dialogs, "Could not open", "The file is not a readable CookBook.") },
                 variant, $"zz-dialog-error-{key}.png");
+
+            // The error card when a FRAMEWORK threw: a ZIP reader's own complaint about a file that
+            // is not a ZIP, as the app now words it (ErrorText). The raw sentence must never show.
+            var notZip = Path.Combine(Directory.CreateTempSubdirectory("nfty-capture-zip-").FullName, "Chest.set");
+            File.WriteAllText(notZip, "not a zip");
+            string zipText;
+            try { System.IO.Compression.ZipFile.OpenRead(notZip).Dispose(); zipText = ""; }
+            catch (Exception ex) { zipText = Nfty.App.Services.ErrorText.For(ex); }
+            Capture(new Views.ErrorDialogView
+            { DataContext = new ErrorDialogViewModel(dialogs, "Could not open the set", zipText) },
+                variant, $"zz-dialog-error-framework-{key}.png");
 
             Capture(new Views.ConfirmDialogView
             {

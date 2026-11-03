@@ -377,7 +377,7 @@ public sealed partial class ViewerViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync("Could not save image", ex.Message);
+            await _dialogs.ShowErrorAsync("Could not save image", ErrorText.For(ex));
         }
     }
 
@@ -491,7 +491,7 @@ public sealed partial class ViewerViewModel : ViewModelBase, IDisposable
         var target = await _picker.SaveFileAsync($"Save {Subject.Title} still", ".png");
         if (string.IsNullOrWhiteSpace(target)) return;
         try { await File.WriteAllBytesAsync(target, png); }
-        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not save still", ex.Message); }
+        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not save still", ErrorText.For(ex)); }
     }
 
     /// <summary>Exports the 3D model. A model that came from a file is copied byte for byte; one built
@@ -522,7 +522,7 @@ public sealed partial class ViewerViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync("Could not export model", ex.Message);
+            await _dialogs.ShowErrorAsync("Could not export model", ErrorText.For(ex));
         }
     }
 

@@ -128,8 +128,7 @@
                      last in the stack: in one column it had to go last so nothing was shoved when it
                      appeared, and in this column it is the consequence of the control directly above
                      it, with only the color block below - which the same click reveals anyway. -->
-                <TextBlock Classes="m-sub" Margin="0" Foreground="{DynamicResource WarningBrush}"
-                           TextWrapping="Wrap" IsVisible="{Binding LosesColor}"
+                <TextBlock Classes="caveat" IsVisible="{Binding LosesColor}"
                            Text="A value-map keeps lightness only — this picture's own colors will be gone. Its color is chosen at generation time." />
 
                 <!-- The color model, always laid out: on Custom it only dims. -->
@@ -202,8 +201,7 @@
       <!-- 24, not 20: the left edge of the NAME column, which is the body's own 24px padding. The line
            said 20 and sat four pixels left of the field it is about, so it read as body text rather
            than as that field's refusal. -->
-      <TextBlock x:Name="ProblemLine" Grid.Row="1" Classes="m-sub" Margin="24,0,24,10"
-                 Foreground="{DynamicResource WarningBrush}" TextWrapping="Wrap" Text="{Binding Problem}"
+      <TextBlock x:Name="ProblemLine" Grid.Row="1" Classes="caveat" Margin="24,0,24,10" Text="{Binding Problem}"
                  IsVisible="{Binding Problem, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
       <Border Grid.Row="2" Classes="modal-foot">

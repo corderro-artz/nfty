@@ -9,31 +9,27 @@
   </UserControl.KeyBindings>
   <Border Classes="modal monoform">
     <Grid RowDefinitions="Auto,*,Auto">
-      <!-- Header: the two reports as a segmented pair, the same control the editor uses for
-           Static/Dynamic, since this is likewise one surface showing one of two things. -->
-      <Border Grid.Row="0" Classes="modal-body tight">
-        <StackPanel Spacing="11">
-          <StackPanel Classes="plabel-row">
-            <Ellipse Classes="kdot" />
-            <TextBlock Text="REPORT" Classes="slbl" />
+      <!-- Header: the settings and export cards' grammar - the title left, the two reports as
+           underline tabs right, over one hairline. It was a kicker, a title and a segmented pill
+           stacked in three rows, the only tabbed card in the app that did not look like the others. -->
+      <Border Grid.Row="0" Classes="exporthead" Margin="24,12,24,0">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="18">
+          <TextBlock Grid.Column="0" Text="{Binding Title}" Classes="m-h" VerticalAlignment="Bottom"
+                     TextTrimming="CharacterEllipsis" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="18" VerticalAlignment="Bottom">
+            <Button Classes="railtab" Classes.on="{Binding !ShowingIdentity}" Content="STATS"
+                    Command="{Binding ShowStatsCommand}"
+                    ToolTip.Tip="The odds these weights imply — the CLI's stats" />
+            <Button Classes="railtab" Classes.on="{Binding ShowingIdentity}" Content="IDENTITY"
+                    Command="{Binding ShowIdentityCommand}"
+                    ToolTip.Tip="Ids for --recipe and --variant — the CLI's inspect" />
           </StackPanel>
-          <TextBlock Text="{Binding Title}" Classes="m-h" />
-          <Border Classes="seg" HorizontalAlignment="Left">
-            <Grid ColumnDefinitions="Auto,Auto">
-              <Button Grid.Column="0" Classes="seg-b" Classes.on="{Binding !ShowingIdentity}"
-                      Content="Stats" Command="{Binding ShowStatsCommand}"
-                      ToolTip.Tip="The odds these weights imply — the CLI's stats" />
-              <Button Grid.Column="1" Classes="seg-b" Classes.on="{Binding ShowingIdentity}"
-                      Content="Identity" Command="{Binding ShowIdentityCommand}"
-                      ToolTip.Tip="Ids for --recipe and --variant — the CLI's inspect" />
-            </Grid>
-          </Border>
-        </StackPanel>
+        </Grid>
       </Border>
 
       <!-- Selectable, so a user can take part of it without taking all of it. Mono and wrap-free:
            both reports are column-aligned and rewrapping them destroys the alignment. -->
-      <Border Grid.Row="1" Classes="modal-body tight" Padding="24,0,24,12">
+      <Border Grid.Row="1" Classes="modal-body tight" Padding="24,14,24,12">
         <Border Classes="reportbox">
           <ScrollViewer HorizontalScrollBarVisibility="Auto">
             <SelectableTextBlock Text="{Binding Text}" Classes="reporttext" />
