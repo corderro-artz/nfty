@@ -73,18 +73,22 @@ public class ExportMarketplaceTests
     [Fact]
     public void Every_marketplace_option_parses()
     {
-        var line = "export s --out d --base-uri ipfs://CID/ --token-names token-id --start-id 0 "
+        var line = "export s --out d --image-base-uri ipfs://CID/ --token-names token-id --start-id 0 "
             + "--external-url https://x.example/t/ --collection --external-link https://x.example/ "
             + "--royalty 2.5 --fee-recipient 0x1234567890abcdef1234567890abcdef12345678 "
-            + "--collection-image ipfs://CID/images/1.png --no-set-manifest";
+            + "--collection-image ipfs://CID/1.png --no-set-manifest";
         Assert.Empty(Parse(line).Errors);
         Assert.Empty(Parse("export s --out d --no-collection --set-manifest").Errors);
     }
 
     [Theory]
-    [InlineData("--base-uri bafy")]
-    [InlineData("--base-uri ipfs://CID")]
-    [InlineData("--base-uri ftp://x/")]
+    [InlineData("--image-base-uri bafy")]
+    [InlineData("--image-base-uri ipfs://CID")]
+    [InlineData("--image-base-uri ftp://x/")]
+    [InlineData("--model-base-uri ipfs://CID")]
+    [InlineData("--base-uri ipfs://CID/")]
+    [InlineData("--art-only --collection")]
+    [InlineData("--art-only --image-base-uri ipfs://CID/")]
     [InlineData("--token-names roman")]
     [InlineData("--start-id 2")]
     [InlineData("--external-url ipfs://x/")]
@@ -102,7 +106,7 @@ public class ExportMarketplaceTests
     [Fact]
     public void The_base_uri_error_names_the_rule()
     {
-        var errors = Parse("export s --out d --base-uri ipfs://CID").Errors;
+        var errors = Parse("export s --out d --image-base-uri ipfs://CID").Errors;
         Assert.Contains(errors, e => e.Message.Contains("must end with '/'", StringComparison.Ordinal));
     }
 
@@ -115,8 +119,8 @@ public class ExportMarketplaceTests
 
         // URI options against an export with no metadata and no collection.json.
         var ex = Assert.Throws<InvalidOperationException>(() =>
-            Run("export", set, "--out", dist, "--no-opensea", "--base-uri", "ipfs://C/"));
-        Assert.Contains("--base-uri", ex.Message);
+            Run("export", set, "--out", dist, "--no-opensea", "--image-base-uri", "ipfs://C/"));
+        Assert.Contains("--image-base-uri", ex.Message);
 
         // Collection fields without --collection.
         ex = Assert.Throws<InvalidOperationException>(() =>
@@ -131,13 +135,44 @@ public class ExportMarketplaceTests
     }
 
     [Fact]
+    public void Art_only_then_image_base_uri_is_the_two_step_drop()
+    {
+        string root = Directory.CreateTempSubdirectory().FullName;
+        string set = Cook(root);
+
+        // Step one: just the art, nothing that names an address.
+        string art = Export(set, root, out _, "--art-only", "--token-names", "token-id");
+        Assert.True(File.Exists(Path.Combine(art, "images", "1.png")));
+        Assert.False(Directory.Exists(Path.Combine(art, "metadata")));
+        Assert.False(File.Exists(Path.Combine(art, "collection.json")));
+        Assert.False(File.Exists(Path.Combine(art, "set.json")));
+
+        // Step two: the metadata, linking the uploaded folder by file name.
+        string root2 = Directory.CreateTempSubdirectory().FullName;
+        string made = Export(set, root2, out _, "--preset", "marketplace", "--token-names", "token-id",
+            "--image-base-uri", "ipfs://CID/");
+        using var item = JsonDocument.Parse(File.ReadAllText(Path.Combine(made, "metadata", "1")));
+        Assert.Equal("ipfs://CID/1.png", item.RootElement.GetProperty("image").GetString());
+    }
+
+    [Fact]
+    public void A_model_base_uri_without_models_is_rejected_not_ignored()
+    {
+        string root = Directory.CreateTempSubdirectory().FullName;
+        string set = Cook(root);
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            Run("export", set, "--out", Path.Combine(root, "dist"), "--model-base-uri", "ipfs://C/"));
+        Assert.Contains("no 3D models", ex.Message);
+    }
+
+    [Fact]
     public void A_marketplace_export_is_upload_ready()
     {
         string root = Directory.CreateTempSubdirectory().FullName;
         string set = Cook(root);
 
         string made = Export(set, root, out string err, "--preset", "marketplace",
-            "--base-uri", "ipfs://CID/", "--token-names", "token-id", "--start-id", "0",
+            "--image-base-uri", "ipfs://CID/", "--token-names", "token-id", "--start-id", "0",
             "--external-url", "https://cats.example/", "--royalty", "5",
             "--fee-recipient", "0x1234567890abcdef1234567890abcdef12345678");
 
@@ -147,14 +182,14 @@ public class ExportMarketplaceTests
         Assert.False(File.Exists(Path.Combine(made, "set.json")));
 
         using var item = JsonDocument.Parse(File.ReadAllText(Path.Combine(made, "metadata", "0")));
-        Assert.Equal("ipfs://CID/images/0.png", item.RootElement.GetProperty("image").GetString());
+        Assert.Equal("ipfs://CID/0.png", item.RootElement.GetProperty("image").GetString());
         Assert.Equal("Vapor Cats #0", item.RootElement.GetProperty("name").GetString());
         Assert.Equal("https://cats.example/0", item.RootElement.GetProperty("external_url").GetString());
 
         using var contract = JsonDocument.Parse(File.ReadAllText(Path.Combine(made, "collection.json")));
         Assert.Equal(500, contract.RootElement.GetProperty("seller_fee_basis_points").GetInt32());
         Assert.Equal("VC", contract.RootElement.GetProperty("symbol").GetString());
-        Assert.Equal("ipfs://CID/images/0.png", contract.RootElement.GetProperty("image").GetString());
+        Assert.Equal("ipfs://CID/0.png", contract.RootElement.GetProperty("image").GetString());
     }
 
     [Fact]
@@ -166,7 +201,7 @@ public class ExportMarketplaceTests
         Export(set, root, out string err);
 
         Assert.Contains("warning:", err, StringComparison.Ordinal);
-        Assert.Contains("set a base URI", err, StringComparison.Ordinal);
+        Assert.Contains("--image-base-uri", err, StringComparison.Ordinal);
     }
 
     [Fact]

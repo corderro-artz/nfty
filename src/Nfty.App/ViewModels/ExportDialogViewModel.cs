@@ -183,9 +183,13 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
     [ObservableProperty]
     private bool _includeCollectionMetadata;
 
-    /// <summary>Prefix for every image link, for example <c>ipfs://CID/</c>.</summary>
+    /// <summary>Where the uploaded <c>images/</c> folder lives, for example <c>ipfs://CID/</c>.</summary>
     [ObservableProperty]
-    private string _baseUri = "";
+    private string _imageBaseUri = "";
+
+    /// <summary>Where the uploaded <c>models/</c> folder lives, for example <c>ipfs://CID/</c>.</summary>
+    [ObservableProperty]
+    private string _modelBaseUri = "";
 
     /// <summary>Name files by bare token id rather than the Set's padded numbers.</summary>
     [ObservableProperty] private bool _tokenIdNames;
@@ -209,15 +213,21 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
     [ObservableProperty]
     private string _feeRecipient = "";
 
-    /// <summary>Whether a base URI would be written anywhere: into the metadata or collection.json.</summary>
-    public bool BaseUriEnabled => OpenSeaMetadata || IncludeCollectionMetadata;
+    /// <summary>Whether an image base URI would be written anywhere: into the metadata or collection.json.</summary>
+    public bool ImageBaseUriEnabled => OpenSeaMetadata || IncludeCollectionMetadata;
+    /// <summary>Whether a model base URI would be written anywhere: an <c>animation_url</c> in the metadata, for models that ship.</summary>
+    public bool ModelBaseUriEnabled => OpenSeaMetadata && Models && SetHasModels;
     /// <summary>Whether an external URL would be written anywhere: only into the item metadata.</summary>
     public bool ExternalUrlEnabled => OpenSeaMetadata;
     /// <summary>Whether the collection.json fields are live.</summary>
     public bool CollectionFieldsEnabled => IncludeCollectionMetadata;
 
-    /// <summary>Why the base URI is unusable; empty when it is fine or not in use.</summary>
-    public string BaseUriProblem => BaseUriEnabled ? MarketplaceRules.BaseUriProblem(BaseUri.Trim()) ?? "" : "";
+    /// <summary>Why the image base URI is unusable; empty when it is fine or not in use.</summary>
+    public string ImageBaseUriProblem =>
+        ImageBaseUriEnabled ? MarketplaceRules.BaseUriProblem(ImageBaseUri.Trim(), "Image base URI") ?? "" : "";
+    /// <summary>Why the model base URI is unusable; empty when it is fine or not in use.</summary>
+    public string ModelBaseUriProblem =>
+        ModelBaseUriEnabled ? MarketplaceRules.BaseUriProblem(ModelBaseUri.Trim(), "Model base URI") ?? "" : "";
     /// <summary>Why the external URL is unusable; empty when it is fine or not in use.</summary>
     public string ExternalUrlProblem =>
         ExternalUrlEnabled ? MarketplaceRules.WebUrlProblem(ExternalUrlBase.Trim(), "External URL") ?? "" : "";
@@ -232,7 +242,7 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
         CollectionFieldsEnabled ? MarketplaceRules.FeeRecipientProblem(FeeRecipient.Trim()) ?? "" : "";
 
     private string MarketplaceProblem() =>
-        new[] { BaseUriProblem, ExternalUrlProblem, ExternalLinkProblem, RoyaltyProblem, FeeRecipientProblem }
+        new[] { ImageBaseUriProblem, ModelBaseUriProblem, ExternalUrlProblem, ExternalLinkProblem, RoyaltyProblem, FeeRecipientProblem }
             .FirstOrDefault(p => p.Length > 0) ?? "";
 
     /// <summary>Also stitch every asset into one sheet.</summary>
@@ -461,7 +471,8 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
     {
         IncludeSetManifest = IncludeSetManifest,
         IncludeCollectionMetadata = IncludeCollectionMetadata,
-        BaseUri = BaseUriEnabled ? Trimmed(BaseUri) : null,
+        ImageBaseUri = ImageBaseUriEnabled ? Trimmed(ImageBaseUri) : null,
+        ModelBaseUri = ModelBaseUriEnabled ? Trimmed(ModelBaseUri) : null,
         TokenNaming = TokenIdNames ? TokenNaming.TokenId : TokenNaming.Padded,
         TokenStart = StartAtZero ? 0 : 1,
         ExternalUrlBase = ExternalUrlEnabled ? Trimmed(ExternalUrlBase) : null,
@@ -500,6 +511,26 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
         IncludeSetManifest = o.IncludeSetManifest;
         IsSealed = o.Sealed;
         Packed = o.Shape == ExportShape.Archive;
+    }
+
+    /// <summary>
+    /// Step one of a marketplace drop: export only what has to be uploaded first, the art (and the
+    /// models, when the Set has them), with no metadata, collection.json or set.json.
+    /// </summary>
+    /// <remarks>
+    /// The metadata carries the address the art was uploaded to, so the art has to be uploaded - and
+    /// addressed - before the metadata can be written. The same result is reachable by unticking the
+    /// boxes on CONTENTS; this is that, in one press.
+    /// </remarks>
+    [RelayCommand]
+    private void ArtOnly()
+    {
+        Images = true;
+        Models = SetHasModels;
+        OpenSeaMetadata = false;
+        NftyMetadata = false;
+        IncludeCollectionMetadata = false;
+        IncludeSetManifest = false;
     }
 
     /// <summary>Shows a page of the card.</summary>
@@ -682,14 +713,15 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
         nameof(Packed), nameof(IsSealed), nameof(Passphrase), nameof(PassphraseConfirm),
         nameof(Note), nameof(CookBookPath), nameof(MakeSpriteSheet), nameof(SheetColumns),
         nameof(SheetRows), nameof(NumberWatermark), nameof(WatermarkCorner),
-        nameof(IncludeSetManifest), nameof(IncludeCollectionMetadata), nameof(BaseUri),
-        nameof(TokenIdNames), nameof(StartAtZero), nameof(ExternalUrlBase), nameof(ExternalLink),
+        nameof(IncludeSetManifest), nameof(IncludeCollectionMetadata), nameof(ImageBaseUri),
+        nameof(ModelBaseUri), nameof(TokenIdNames), nameof(StartAtZero), nameof(ExternalUrlBase), nameof(ExternalLink),
         nameof(Royalty), nameof(FeeRecipient),
     };
 
     private static readonly IReadOnlySet<string> MarketplaceInputs = new HashSet<string>(StringComparer.Ordinal)
     {
-        nameof(OpenSeaMetadata), nameof(IncludeCollectionMetadata), nameof(BaseUri), nameof(ExternalUrlBase),
+        nameof(OpenSeaMetadata), nameof(IncludeCollectionMetadata), nameof(Models), nameof(ImageBaseUri),
+        nameof(ModelBaseUri), nameof(ExternalUrlBase),
         nameof(ExternalLink), nameof(Royalty), nameof(FeeRecipient),
     };
 
@@ -697,8 +729,9 @@ public partial class ExportDialogViewModel : ViewModelBase, IUnsavedWork
     private static readonly System.ComponentModel.PropertyChangedEventArgs[] MarketplaceDerived =
         new[]
         {
-            nameof(BaseUriEnabled), nameof(ExternalUrlEnabled), nameof(CollectionFieldsEnabled),
-            nameof(BaseUriProblem), nameof(ExternalUrlProblem), nameof(ExternalLinkProblem),
+            nameof(ImageBaseUriEnabled), nameof(ModelBaseUriEnabled), nameof(ExternalUrlEnabled),
+            nameof(CollectionFieldsEnabled), nameof(ImageBaseUriProblem), nameof(ModelBaseUriProblem),
+            nameof(ExternalUrlProblem), nameof(ExternalLinkProblem),
             nameof(RoyaltyProblem), nameof(FeeRecipientProblem),
         }.Select(n => new System.ComponentModel.PropertyChangedEventArgs(n)).ToArray();
 

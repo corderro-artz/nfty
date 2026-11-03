@@ -102,12 +102,25 @@ public static partial class CommandFactory
         var key = KeyOption();
 
         // The marketplace options. All export-only: the cooked Set on disk never changes.
-        var baseUri = new Option<string?>("--base-uri")
+        var artOnly = new Option<bool>("--art-only")
         {
-            Description = "Make each image link upload-ready by prefixing it with this address, "
-                + "e.g. ipfs://<CID>/ gives ipfs://<CID>/images/1.png. Must be absolute (ipfs, https, "
+            Description = "Step one of a marketplace drop: export only what has to be uploaded first - "
+                + "the images, and the models when the Set has them - with no metadata, collection.json "
+                + "or set.json. Upload images/ (and models/), then export again with --image-base-uri.",
+        };
+        var imageBaseUri = new Option<string?>("--image-base-uri")
+        {
+            Description = "Where you uploaded the images/ folder. Each image link becomes this followed by "
+                + "the file name: ipfs://<CID>/ gives ipfs://<CID>/1.png (an uploaded folder's address is "
+                + "its contents, so there is no images/ in the link). Must be absolute (ipfs, https, "
                 + "http or ar) and end with '/'; it is never repaired for you. Without it the links "
                 + "stay relative and nfty warns that OpenSea cannot resolve them.",
+        };
+        var modelBaseUri = new Option<string?>("--model-base-uri")
+        {
+            Description = "Where you uploaded the models/ folder. Each animation_url becomes this followed "
+                + "by the file name (ipfs://<CID>/1.glb). Written only for glb models that are exported. "
+                + "Same rules as --image-base-uri.",
         };
         var tokenNames = new Option<string?>("--token-names")
         {
@@ -146,7 +159,7 @@ public static partial class CommandFactory
         };
         var collectionImage = new Option<string?>("--collection-image")
         {
-            Description = "collection.json's image. Defaults to the first token's image when --base-uri "
+            Description = "collection.json's image. Defaults to the first token's image when --image-base-uri "
                 + "is set and the art is included. Needs collection.json.",
         };
         var setManifest = new Option<bool>("--set-manifest")
@@ -166,7 +179,7 @@ public static partial class CommandFactory
             + "different subset.")
         { path, outDir, preset, images, noImages, openSea, noOpenSea, nfty, noNfty, models, noModels,
           sheet, sheetCols, sheetRows, watermark, watermarkCorner, book, folder, pack, seal, note, key,
-          baseUri, tokenNames, startId, externalUrl, collection, noCollection, externalLink, royalty,
+          artOnly, imageBaseUri, modelBaseUri, tokenNames, startId, externalUrl, collection, noCollection, externalLink, royalty,
           feeRecipient, collectionImage, setManifest, noSetManifest };
 
         // Dependent options are REJECTED without what they depend on, never ignored: a --sheet-cols
@@ -179,6 +192,15 @@ public static partial class CommandFactory
                     result.AddError($"{name} must be at least 1.");
             if (!result.GetValue(watermark) && result.IsGiven(watermarkCorner))
                 result.AddError("--watermark-corner places the number; it needs --watermark.");
+            if (result.GetValue(artOnly))
+                foreach (var (given, name) in new (bool, string)[]
+                {
+                    (result.GetValue(openSea), "--open-sea"), (result.GetValue(nfty), "--nfty"),
+                    (result.GetValue(collection), "--collection"), (result.GetValue(setManifest), "--set-manifest"),
+                    (result.GetValue(noImages), "--no-images"), (result.GetValue(noModels), "--no-models"),
+                    (result.IsGiven(imageBaseUri), "--image-base-uri"), (result.IsGiven(modelBaseUri), "--model-base-uri"),
+                })
+                    if (given) result.AddError($"--art-only exports the art and nothing else; {name} asks for the opposite.");
             if (result.GetValue(models) && result.GetValue(noModels))
                 result.AddError("--models and --no-models ask for different things.");
             if (result.GetValue(collection) && result.GetValue(noCollection))
@@ -190,7 +212,8 @@ public static partial class CommandFactory
             // Each value is refused with the sentence the export dialog shows beside the field.
             foreach (var problem in new[]
             {
-                MarketplaceRules.BaseUriProblem(result.GetValue(baseUri)),
+                MarketplaceRules.BaseUriProblem(result.GetValue(imageBaseUri), "--image-base-uri"),
+                MarketplaceRules.BaseUriProblem(result.GetValue(modelBaseUri), "--model-base-uri"),
                 MarketplaceRules.WebUrlProblem(result.GetValue(externalUrl), "--external-url"),
                 MarketplaceRules.WebUrlProblem(result.GetValue(externalLink), "--external-link"),
                 MarketplaceRules.ImageUriProblem(result.GetValue(collectionImage)),
@@ -243,9 +266,24 @@ public static partial class CommandFactory
             if (parse.GetValue(noCollection)) options = options with { IncludeCollectionMetadata = false };
             if (parse.GetValue(setManifest)) options = options with { IncludeSetManifest = true };
             if (parse.GetValue(noSetManifest)) options = options with { IncludeSetManifest = false };
+            if (parse.GetValue(artOnly))
+            {
+                // The models go with the images when the Set has any: both are uploaded before the
+                // metadata can name them. Asked of the Set itself, so --art-only never needs --models.
+                bool hasModels = SetExporter.Plan(parse.GetValue(path)!, new ExportOptions()).SetHasModels;
+                options = options with
+                {
+                    Images = true,
+                    Models = hasModels,
+                    OpenSeaMetadata = false,
+                    NftyMetadata = false,
+                    IncludeCollectionMetadata = false,
+                    IncludeSetManifest = false,
+                };
+            }
 
             // Marketplace values are REJECTED where nothing would read them, never ignored: a
-            // --base-uri typed against an export with no metadata would quietly do nothing.
+            // --image-base-uri typed against an export with no metadata would quietly do nothing.
             void Needs(bool meaningful, string why, params Option[] given)
             {
                 foreach (var option in given)
@@ -253,7 +291,9 @@ public static partial class CommandFactory
                         throw new InvalidOperationException($"{option.Name} {why}");
             }
             Needs(options.OpenSeaMetadata || options.IncludeCollectionMetadata,
-                "is written into the standard metadata and collection.json, and this export has neither.", baseUri);
+                "is written into the standard metadata and collection.json, and this export has neither.", imageBaseUri);
+            Needs(options.OpenSeaMetadata && options.Models,
+                "is written into the metadata's animation_url, and this export has no metadata or no models.", modelBaseUri);
             Needs(options.OpenSeaMetadata, "is written into the standard metadata, and this export has none.",
                 externalUrl);
             Needs(options.OpenSeaMetadata || options.Images || options.Models,
@@ -264,7 +304,8 @@ public static partial class CommandFactory
             MarketplaceRules.TryParseRoyalty(parse.GetValue(royalty), out double? royaltyPercent);
             options = options with
             {
-                BaseUri = parse.GetValue(baseUri) is { Length: > 0 } uri ? uri : options.BaseUri,
+                ImageBaseUri = parse.GetValue(imageBaseUri) is { Length: > 0 } uri ? uri : options.ImageBaseUri,
+                ModelBaseUri = parse.GetValue(modelBaseUri) is { Length: > 0 } muri ? muri : options.ModelBaseUri,
                 TokenNaming = parse.GetValue(tokenNames) is { } naming
                     && TokenNamingTokens.TryParse(naming, out var chosenNaming) ? chosenNaming : options.TokenNaming,
                 TokenStart = parse.IsGiven(startId) ? parse.GetValue(startId) : options.TokenStart,
@@ -281,10 +322,10 @@ public static partial class CommandFactory
 
             // What the Set itself says, asked once: whether it has models to include, and which book
             // made it. Planned with the default options, so nothing here depends on the flags.
-            if (parse.GetValue(models) || bookPath is { Length: > 0 })
+            if (parse.GetValue(models) || parse.IsGiven(modelBaseUri) || bookPath is { Length: > 0 })
             {
                 var probe = SetExporter.Plan(parse.GetValue(path)!, new ExportOptions());
-                if (parse.GetValue(models) && !probe.SetHasModels)
+                if ((parse.GetValue(models) || parse.IsGiven(modelBaseUri)) && !probe.SetHasModels)
                     throw new InvalidOperationException("This Set has no 3D models; it was cooked without --models.");
 
                 // A warning, never a refusal - the rule `extend` keeps about the same comparison.

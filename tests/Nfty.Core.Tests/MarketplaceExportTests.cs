@@ -16,6 +16,7 @@ namespace Nfty.Core.Tests;
 public class MarketplaceExportTests
 {
     private const string Cid = "ipfs://bafyexample/";
+    private const string ModelCid = "ipfs://bafymodels/";
     private const string Wallet = "0x1234567890abcdef1234567890ABCDEF12345678";
 
     private static LoadedCookBook Book()
@@ -92,11 +93,11 @@ public class MarketplaceExportTests
     [Fact]
     public void Padded_names_with_start_one_are_what_nfty_always_wrote_even_with_a_base_uri()
     {
-        string export = Export(CookedSet(), new ExportOptions { BaseUri = Cid });
+        string export = Export(CookedSet(), new ExportOptions { ImageBaseUri = Cid });
 
         Assert.Contains("metadata/0001.json", Files(export));
         Assert.Contains("images/0001.png", Files(export));
-        Assert.Equal(Cid + "images/0001.png", Read(export, "metadata/0001.json").GetProperty("image").GetString());
+        Assert.Equal(Cid + "0001.png", Read(export, "metadata/0001.json").GetProperty("image").GetString());
         Assert.Equal("Chest Demo #1", Read(export, "metadata/0001.json").GetProperty("name").GetString());
     }
 
@@ -110,8 +111,47 @@ public class MarketplaceExportTests
         string export = Export(set, new ExportOptions());
         Assert.Equal("images/0001.png", Read(export, "metadata/0001.json").GetProperty("image").GetString());
 
-        var withBase = SetExporter.Plan(set, new ExportOptions { BaseUri = Cid });
+        var withBase = SetExporter.Plan(set, new ExportOptions { ImageBaseUri = Cid });
         Assert.DoesNotContain(withBase.Warnings, w => w.Contains("relative", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void An_image_link_is_the_base_plus_the_file_name_never_an_images_path()
+    {
+        string export = Export(CookedSet(), new ExportOptions { ImageBaseUri = Cid, TokenNaming = TokenNaming.TokenId });
+        // Uploading images/ gives a CID whose root IS the folder's contents.
+        Assert.Equal(Cid + "1.png", Read(export, "metadata/1").GetProperty("image").GetString());
+        Assert.DoesNotContain("/images/", Read(export, "metadata/1").GetProperty("image").GetString());
+    }
+
+    [Fact]
+    public void The_relative_image_warning_names_the_two_step_workflow()
+    {
+        var plan = SetExporter.Plan(CookedSet(), new ExportOptions());
+        Assert.Contains(plan.Warnings, w => w.Contains("--image-base-uri", StringComparison.Ordinal)
+            && w.Contains("upload images/", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A_bad_model_base_uri_is_refused_with_its_own_name()
+    {
+        var ex = Assert.Throws<ArgumentException>(() =>
+            SetExporter.Plan(CookedSet(), new ExportOptions { ModelBaseUri = "ipfs://CID" }));
+        Assert.Contains("Model base URI", ex.Message);
+    }
+
+    [Fact]
+    public void An_art_only_export_carries_images_and_no_metadata_for_the_first_upload()
+    {
+        string export = Export(CookedSet(), new ExportOptions
+        {
+            OpenSeaMetadata = false, NftyMetadata = false, IncludeCollectionMetadata = false, IncludeSetManifest = false,
+        });
+        var files = Files(export);
+        Assert.Contains("images/0001.png", files);
+        Assert.DoesNotContain(files, f => f.StartsWith("metadata/", StringComparison.Ordinal));
+        Assert.DoesNotContain("collection.json", files);
+        Assert.DoesNotContain("set.json", files);
     }
 
     [Fact]
@@ -121,7 +161,7 @@ public class MarketplaceExportTests
         string export = Export(set, new ExportOptions
         {
             TokenNaming = TokenNaming.TokenId,
-            BaseUri = Cid,
+            ImageBaseUri = Cid,
             NftyMetadata = true,
         });
 
@@ -135,7 +175,7 @@ public class MarketplaceExportTests
 
         var item = Read(export, "metadata/2");
         Assert.Equal("Chest Demo #2", item.GetProperty("name").GetString());
-        Assert.Equal(Cid + "images/2.png", item.GetProperty("image").GetString());
+        Assert.Equal(Cid + "2.png", item.GetProperty("image").GetString());
         // The rewritten file still holds the same traits.
         Assert.Equal(
             Read(set, "metadata/0002.json").GetProperty("attributes").GetRawText(),
@@ -149,7 +189,7 @@ public class MarketplaceExportTests
         {
             TokenNaming = TokenNaming.TokenId,
             TokenStart = 0,
-            BaseUri = Cid,
+            ImageBaseUri = Cid,
         });
 
         var files = Files(export);
@@ -158,7 +198,7 @@ public class MarketplaceExportTests
         Assert.DoesNotContain("metadata/3", files);
         Assert.Contains("images/0.png", files);
         Assert.Equal("Chest Demo #0", Read(export, "metadata/0").GetProperty("name").GetString());
-        Assert.Equal(Cid + "images/0.png", Read(export, "metadata/0").GetProperty("image").GetString());
+        Assert.Equal(Cid + "0.png", Read(export, "metadata/0").GetProperty("image").GetString());
     }
 
     [Fact]
@@ -196,7 +236,7 @@ public class MarketplaceExportTests
         string export = Export(CookedSet(), new ExportOptions
         {
             IncludeCollectionMetadata = true,
-            BaseUri = Cid,
+            ImageBaseUri = Cid,
             ExternalLink = "https://chests.example/",
             RoyaltyPercent = 2.5,
             FeeRecipient = Wallet,
@@ -205,7 +245,7 @@ public class MarketplaceExportTests
         var c = Read(export, "collection.json");
         Assert.Equal("Chest Demo", c.GetProperty("name").GetString());
         Assert.Equal("Chests of all kinds", c.GetProperty("description").GetString());
-        Assert.Equal(Cid + "images/0001.png", c.GetProperty("image").GetString());
+        Assert.Equal(Cid + "0001.png", c.GetProperty("image").GetString());
         Assert.Equal("https://chests.example/", c.GetProperty("external_link").GetString());
         Assert.Equal(250, c.GetProperty("seller_fee_basis_points").GetInt32());
         Assert.Equal(Wallet, c.GetProperty("fee_recipient").GetString());
@@ -218,13 +258,13 @@ public class MarketplaceExportTests
         string export = Export(CookedSet(), new ExportOptions
         {
             IncludeCollectionMetadata = true,
-            BaseUri = Cid,
+            ImageBaseUri = Cid,
             TokenNaming = TokenNaming.TokenId,
             TokenStart = 0,
         });
 
         var c = Read(export, "collection.json");
-        Assert.Equal(Cid + "images/0.png", c.GetProperty("image").GetString());
+        Assert.Equal(Cid + "0.png", c.GetProperty("image").GetString());
         Assert.False(c.TryGetProperty("external_link", out _));
         Assert.False(c.TryGetProperty("seller_fee_basis_points", out _));
         Assert.False(c.TryGetProperty("fee_recipient", out _));
@@ -237,7 +277,7 @@ public class MarketplaceExportTests
         string export = Export(set, new ExportOptions
         {
             IncludeCollectionMetadata = true,
-            BaseUri = Cid,
+            ImageBaseUri = Cid,
             CollectionImage = "https://x.example/banner.png",
         });
         Assert.Equal("https://x.example/banner.png", Read(export, "collection.json").GetProperty("image").GetString());
@@ -281,14 +321,15 @@ public class MarketplaceExportTests
         string set = CookedSet(2, new GlbModeler());
         string export = Export(set, new ExportOptions
         {
-            BaseUri = Cid,
+            ImageBaseUri = Cid,
+            ModelBaseUri = ModelCid,
             Models = true,
             TokenNaming = TokenNaming.TokenId,
         });
 
         Assert.Contains("models/1.glb", Files(export));
-        Assert.Equal(Cid + "models/1.glb", Read(export, "metadata/1").GetProperty("animation_url").GetString());
-        Assert.Equal(Cid + "models/2.glb", Read(export, "metadata/2").GetProperty("animation_url").GetString());
+        Assert.Equal(ModelCid + "1.glb", Read(export, "metadata/1").GetProperty("animation_url").GetString());
+        Assert.Equal(ModelCid + "2.glb", Read(export, "metadata/2").GetProperty("animation_url").GetString());
     }
 
     [Fact]
@@ -299,7 +340,13 @@ public class MarketplaceExportTests
         string noBase = Export(set, new ExportOptions { Models = true, TokenStart = 0 });
         Assert.False(Read(noBase, "metadata/0000.json").TryGetProperty("animation_url", out _));
 
-        string noModels = Export(set, new ExportOptions { BaseUri = Cid, Models = false });
+        // An image base alone never writes an animation_url: models have their own address.
+        string imageOnly = Export(set, new ExportOptions { ImageBaseUri = Cid, Models = true, TokenStart = 0 });
+        Assert.False(Read(imageOnly, "metadata/0000.json").TryGetProperty("animation_url", out _));
+        Assert.Contains(SetExporter.Plan(set, new ExportOptions { ImageBaseUri = Cid, Models = true }).Warnings,
+            w => w.Contains("--model-base-uri"));
+
+        string noModels = Export(set, new ExportOptions { ImageBaseUri = Cid, ModelBaseUri = ModelCid, Models = false });
         Assert.False(Read(noModels, "metadata/0001.json").TryGetProperty("animation_url", out _));
         Assert.DoesNotContain(Files(noModels), f => f.StartsWith("models/", StringComparison.Ordinal));
     }
@@ -335,7 +382,7 @@ public class MarketplaceExportTests
 
         var filled = market with
         {
-            BaseUri = Cid,
+            ImageBaseUri = Cid,
             TokenNaming = TokenNaming.TokenId,
             TokenStart = 0,
             ExternalUrlBase = "https://x.example/",
@@ -351,10 +398,10 @@ public class MarketplaceExportTests
     [Fact]
     public void Metadata_without_images_warns_that_the_links_dangle()
     {
-        var plan = SetExporter.Plan(CookedSet(), new ExportOptions { Images = false, BaseUri = Cid });
+        var plan = SetExporter.Plan(CookedSet(), new ExportOptions { Images = false, ImageBaseUri = Cid });
         Assert.Contains(plan.Warnings, w => w.Contains("dangle", StringComparison.Ordinal));
 
-        var fine = SetExporter.Plan(CookedSet(), new ExportOptions { BaseUri = Cid });
+        var fine = SetExporter.Plan(CookedSet(), new ExportOptions { ImageBaseUri = Cid });
         Assert.Empty(fine.Warnings);
     }
 
@@ -366,7 +413,7 @@ public class MarketplaceExportTests
 
         Export(set, new ExportOptions
         {
-            BaseUri = Cid,
+            ImageBaseUri = Cid,
             TokenNaming = TokenNaming.TokenId,
             IncludeCollectionMetadata = true,
             ExternalUrlBase = "https://x.example/",
@@ -378,15 +425,15 @@ public class MarketplaceExportTests
     }
 
     [Theory]
-    [InlineData("bafy/", "Base URI")]                          // not absolute
+    [InlineData("bafy/", "Image base URI")]                          // not absolute
     [InlineData("ftp://host/", "scheme ipfs, https, http or ar")]
     [InlineData("ipfs://CID", "must end with '/'")]
     [InlineData("https://host/dir", "must end with '/'")]
-    [InlineData("ipfs://CID /", "Base URI")]
+    [InlineData("ipfs://CID /", "Image base URI")]
     public void A_bad_base_uri_is_refused_naming_the_rule(string value, string expected)
     {
         var ex = Assert.Throws<ArgumentException>(() => SetExporter.Plan(CookedSet(),
-            new ExportOptions { BaseUri = value }));
+            new ExportOptions { ImageBaseUri = value }));
         Assert.Contains(expected, ex.Message);
         Assert.NotNull(MarketplaceRules.BaseUriProblem(value));
     }
@@ -457,7 +504,7 @@ public class MarketplaceExportTests
         var result = SetExporter.Export(CookedSet(), OutDir(), new ExportOptions
         {
             TokenNaming = TokenNaming.TokenId,
-            BaseUri = Cid,
+            ImageBaseUri = Cid,
             IncludeCollectionMetadata = true,
         });
 
@@ -467,6 +514,6 @@ public class MarketplaceExportTests
         Assert.Contains("images/1.png", names);
         Assert.Contains("collection.json", names);
         using var reader = new StreamReader(zip.GetEntry("metadata/1")!.Open());
-        Assert.Contains(Cid + "images/1.png", reader.ReadToEnd());
+        Assert.Contains(Cid + "1.png", reader.ReadToEnd());
     }
 }

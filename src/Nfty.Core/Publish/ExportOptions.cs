@@ -169,16 +169,30 @@ public record ExportOptions
     public bool IncludeSetManifest { get; init; } = true;
 
     /// <summary>
-    /// Prefix every <c>image</c> link (and the <c>animation_url</c> of a model) with this address, so
-    /// the metadata is upload-ready: <c>ipfs://CID/</c> gives <c>ipfs://CID/images/1.png</c>.
+    /// Where the uploaded <c>images/</c> folder lives. Each <c>image</c> link becomes this followed by
+    /// the image's FILE NAME: <c>ipfs://CID/</c> gives <c>ipfs://CID/1.png</c>.
     /// </summary>
     /// <remarks>
-    /// Export-only; the cooked Set keeps its relative paths. Must be absolute, use the scheme
+    /// <para>By file name, not by path inside the export: uploading the <c>images/</c> folder to IPFS
+    /// (Pinata, NFT.Storage, <c>ipfs add -r</c>) gives a CID whose root IS that folder's contents, so
+    /// the right link has no <c>images/</c> in it. It is also the only order that works: the metadata
+    /// carries this address, so the art has to be uploaded (and addressed) first.</para>
+    /// <para>Export-only; the cooked Set keeps its relative paths. Must be absolute, use the scheme
     /// <c>ipfs</c>, <c>https</c>, <c>http</c> or <c>ar</c>, and end with <c>/</c>
     /// (<see cref="MarketplaceRules.BaseUriProblem"/>). Never guessed or repaired. Null leaves the
-    /// relative path and the plan says so.
+    /// relative path and the plan says so.</para>
     /// </remarks>
-    public string? BaseUri { get; init; }
+    public string? ImageBaseUri { get; init; }
+
+    /// <summary>
+    /// Where the uploaded <c>models/</c> folder lives. Each <c>animation_url</c> becomes this followed
+    /// by the model's file name: <c>ipfs://CID/</c> gives <c>ipfs://CID/1.glb</c>.
+    /// </summary>
+    /// <remarks>
+    /// Same rules and reason as <see cref="ImageBaseUri"/>. An <c>animation_url</c> is written only
+    /// when this is set, the models are exported and their format is glb.
+    /// </remarks>
+    public string? ModelBaseUri { get; init; }
 
     /// <summary>How the exported files are named — the Set's padded names, or bare token ids.</summary>
     /// <remarks>
@@ -217,7 +231,7 @@ public record ExportOptions
 
     /// <summary>
     /// <c>collection.json</c>'s <c>image</c>. Null falls to the first token's image address when a
-    /// <see cref="BaseUri"/> is set and the art is exported, and is otherwise left out.
+    /// <see cref="ImageBaseUri"/> is set and the art is exported, and is otherwise left out.
     /// </summary>
     public string? CollectionImage { get; init; }
 
@@ -313,7 +327,8 @@ public record ExportOptions
                 {
                     Note = Note,
                     Shape = Shape,
-                    BaseUri = BaseUri,
+                    ImageBaseUri = ImageBaseUri,
+                    ModelBaseUri = ModelBaseUri,
                     TokenNaming = TokenNaming,
                     TokenStart = TokenStart,
                     ExternalUrlBase = ExternalUrlBase,

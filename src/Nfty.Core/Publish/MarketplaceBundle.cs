@@ -75,8 +75,9 @@ public sealed class LoadedBundle : IDisposable
 /// <c>attributes</c> array - OpenSea's item shape. Anything else is not claimed.</para>
 /// <para><b>Images resolve inside the bundle, never over the network.</b> A relative <c>image</c> is a
 /// path in the bundle; an absolute link (<c>ipfs://</c>, <c>https://</c>) is mapped by its trailing
-/// <c>images/&lt;file&gt;</c> onto the bundle's own <c>images/</c> folder, which is where the bundle
-/// will be uploaded from.</para>
+/// FILE NAME (<c>ipfs://CID/1.png</c>, what an export with an image base URI writes) - or by a
+/// trailing <c>images/&lt;file&gt;</c> - onto the bundle's own <c>images/</c> folder, which is where
+/// the bundle will be uploaded from.</para>
 /// </remarks>
 public static class MarketplaceBundle
 {
@@ -277,7 +278,7 @@ public static class MarketplaceBundle
     /// <param name="imageField">The metadata's <c>image</c> value.</param>
     /// <returns>The full path of a file that exists inside <paramref name="root"/>, or null.
     /// Nothing is fetched: a link with a scheme (<c>ipfs://</c>, <c>https://</c>) is mapped by its
-    /// trailing <c>images/&lt;file&gt;</c> onto the bundle's own <c>images/</c> folder.</returns>
+    /// trailing file name (or <c>images/&lt;file&gt;</c>) onto the bundle's own <c>images/</c> folder.</returns>
     public static string? ResolveImage(string root, string imageField)
     {
         if (string.IsNullOrWhiteSpace(root) || string.IsNullOrWhiteSpace(imageField)) return null;

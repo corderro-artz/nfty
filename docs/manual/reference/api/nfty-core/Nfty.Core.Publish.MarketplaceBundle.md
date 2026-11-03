@@ -14,7 +14,7 @@ Recognizes and reads a marketplace upload bundle: `images/` and `metadata/` (and
 
 **The test is exact, not a guess at arbitrary folders.** A folder or `.set` archive is a bundle when it has NO `set.json`, has a `metadata/` folder, and the first file in that folder (ordinal order) is a JSON object with a string `name`, a string `image` and an `attributes` array - OpenSea's item shape. Anything else is not claimed.
 
-**Images resolve inside the bundle, never over the network.** A relative `image` is a path in the bundle; an absolute link (`ipfs://`, `https://`) is mapped by its trailing `images/<file>` onto the bundle's own `images/` folder, which is where the bundle will be uploaded from.
+**Images resolve inside the bundle, never over the network.** A relative `image` is a path in the bundle; an absolute link (`ipfs://`, `https://`) is mapped by its trailing FILE NAME (`ipfs://CID/1.png`, what an export with an image base URI writes) - or by a trailing `images/<file>` - onto the bundle's own `images/` folder, which is where the bundle will be uploaded from.
 
 ## Methods
 
@@ -63,4 +63,4 @@ Finds the picture an item's `image` field names, inside the bundle.
 - `root` (`string`) - The bundle folder.
 - `imageField` (`string`) - The metadata's `image` value.
 
-**Returns.** The full path of a file that exists inside `root`, or null. Nothing is fetched: a link with a scheme (`ipfs://`, `https://`) is mapped by its trailing `images/<file>` onto the bundle's own `images/` folder.
+**Returns.** The full path of a file that exists inside `root`, or null. Nothing is fetched: a link with a scheme (`ipfs://`, `https://`) is mapped by its trailing file name (or `images/<file>`) onto the bundle's own `images/` folder.

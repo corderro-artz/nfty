@@ -199,13 +199,23 @@
                 <StackPanel Grid.Column="0" Spacing="9">
                   <StackPanel Spacing="4">
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                      <TextBlock Grid.Column="0" Text="BASE URI" Classes="slbl" />
+                      <TextBlock Grid.Column="0" Text="IMAGE BASE URI" Classes="slbl" />
                       <TextBlock Grid.Column="1" Classes="caveat" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
-                                 Text="{Binding BaseUriProblem}" ToolTip.Tip="{Binding BaseUriProblem}" />
+                                 Text="{Binding ImageBaseUriProblem}" ToolTip.Tip="{Binding ImageBaseUriProblem}" />
                     </Grid>
-                    <TextBox x:Name="BaseUriBox" Text="{Binding BaseUri}" IsEnabled="{Binding BaseUriEnabled}"
+                    <TextBox x:Name="ImageBaseUriBox" Text="{Binding ImageBaseUri}" IsEnabled="{Binding ImageBaseUriEnabled}"
                              PlaceholderText="ipfs://CID/"
-                             ToolTip.Tip="Put in front of every image link so the metadata is upload-ready: ipfs://CID/ gives ipfs://CID/images/1.png. Absolute, ipfs / https / http / ar, ending in a slash." />
+                             ToolTip.Tip="Where you uploaded the images/ folder. Each image link becomes this followed by the file name: ipfs://CID/ gives ipfs://CID/1.png (an uploaded folder's address is its contents, so no images/ in the link). Absolute, ipfs / https / http / ar, ending in a slash." />
+                  </StackPanel>
+                  <StackPanel Spacing="4">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                      <TextBlock Grid.Column="0" Text="MODEL BASE URI" Classes="slbl" />
+                      <TextBlock Grid.Column="1" Classes="caveat" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                                 Text="{Binding ModelBaseUriProblem}" ToolTip.Tip="{Binding ModelBaseUriProblem}" />
+                    </Grid>
+                    <TextBox x:Name="ModelBaseUriBox" Text="{Binding ModelBaseUri}" IsEnabled="{Binding ModelBaseUriEnabled}"
+                             PlaceholderText="ipfs://CID/"
+                             ToolTip.Tip="Where you uploaded the models/ folder. Each animation_url becomes this followed by the file name (ipfs://CID/1.glb). Only for a Set with glb models, with the metadata on." />
                   </StackPanel>
                   <StackPanel Spacing="4">
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
@@ -221,16 +231,16 @@
                   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
                     <StackPanel Grid.Column="0" Spacing="3">
                       <TextBlock Text="FILE NAMES" Classes="slbl" />
-                      <StackPanel Spacing="0">
-                        <RadioButton GroupName="names" Content="Padded 0001" IsChecked="{Binding !TokenIdNames}"
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <RadioButton GroupName="names" Content="Padded" IsChecked="{Binding !TokenIdNames}"
                                      ToolTip.Tip="The Set's own names: 0001.json, 0001.png." />
-                        <RadioButton GroupName="names" Content="Token id 1" IsChecked="{Binding TokenIdNames}"
+                        <RadioButton GroupName="names" Content="Token id" IsChecked="{Binding TokenIdNames}"
                                      ToolTip.Tip="What a contract's baseURI + tokenId resolves: metadata/1 (no extension), images/1.png, models/1.glb. The #n in each name follows." />
                       </StackPanel>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Spacing="3">
                       <TextBlock Text="FIRST ID" Classes="slbl" />
-                      <StackPanel Spacing="0">
+                      <StackPanel Orientation="Horizontal" Spacing="8">
                         <RadioButton GroupName="firstid" Content="1" IsChecked="{Binding !StartAtZero}"
                                      ToolTip.Tip="The first asset is token 1." />
                         <RadioButton GroupName="firstid" Content="0" IsChecked="{Binding StartAtZero}"
@@ -241,8 +251,14 @@
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Spacing="9">
-                  <CheckBox Content="collection.json" IsChecked="{Binding IncludeCollectionMetadata}"
-                            ToolTip.Tip="The contract-level metadata (OpenSea's contractURI): name, description, image, link, royalty." />
+                  <!-- The two files the export writes beside the items, on one row: they are one kind of
+                       thing, and the row they free is what lets the two base URIs fit the page. -->
+                  <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                    <CheckBox Grid.Column="0" Content="collection.json" IsChecked="{Binding IncludeCollectionMetadata}"
+                              ToolTip.Tip="The contract-level metadata (OpenSea's contractURI): name, description, image, link, royalty." />
+                    <CheckBox Grid.Column="1" Content="set.json" IsChecked="{Binding IncludeSetManifest}"
+                              ToolTip.Tip="The Set's own record: the seed, the source book's hash, the rarity table. Leave it out of a public drop; nfty cannot reopen an export without it." />
+                  </Grid>
                   <StackPanel Spacing="4">
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
                       <TextBlock Grid.Column="0" Text="EXTERNAL LINK" Classes="slbl" />
@@ -269,8 +285,13 @@
                   </Grid>
                   <TextBlock Classes="caveat" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding RoyaltyProblem}"
                              ToolTip.Tip="{Binding RoyaltyProblem}" />
-                  <CheckBox Content="set.json" IsChecked="{Binding IncludeSetManifest}"
-                            ToolTip.Tip="The Set's own record: the seed, the source book's hash, the rarity table. Leave it out of a public drop; nfty cannot reopen an export without it." />
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <TextBlock Grid.Column="0" Classes="m-sub" TextWrapping="Wrap" VerticalAlignment="Center"
+                               Text="Two steps: export the art only and upload it, then export again with its address here." />
+                    <Button Grid.Column="1" x:Name="ArtOnlyButton" Classes="tbtn" Content="Art only"
+                            Command="{Binding ArtOnlyCommand}" VerticalAlignment="Center"
+                            ToolTip.Tip="Step one: export just the images (and models), no metadata. Upload them, then come back with the address." />
+                  </Grid>
                 </StackPanel>
               </Grid>
             </StackPanel>
