@@ -410,7 +410,7 @@ public sealed class RecipeRiseSource : RiseSource
                 }
                 catch (PartialAlphaException ex)   // which layer keeps the stack 2D
                 {
-                    refusal = ex.Message;
+                    refusal = ErrorText.For(ex);
                     foreach (var p in picks) p.Dispose();
                     picks = new List<RollPick>();
                 }
@@ -427,7 +427,7 @@ public sealed class RecipeRiseSource : RiseSource
             if (picks is not null) foreach (var p in picks) p.Dispose();
             foreach (var r in rows) r.Dispose();
             var c = _book.Manifest.Canvas;
-            return new Rolled(new Image<Rgba32>(c.Width, c.Height), null, ex.Message, new List<RiseLayerRow>());
+            return new Rolled(new Image<Rgba32>(c.Width, c.Height), null, ErrorText.For(ex), new List<RiseLayerRow>());
         }
         finally
         {

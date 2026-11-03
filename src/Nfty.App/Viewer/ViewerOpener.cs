@@ -86,7 +86,7 @@ public static class ViewerOpener
                 $"“{name}” is not there any more, so there is nothing to show.",
             IOException =>
                 $"“{name}” could not be read: another program may have it open. Close it there and try again.",
-            _ => ex.Message,
+            _ => ErrorText.For(ex),
         };
     }
 
@@ -144,7 +144,7 @@ public static class ViewerOpener
                 try { return await Task.Run(() => ModelSubjects.ForModelFile(path), ct); }
                 catch (UnsupportedModelException ex)
                 {
-                    await dialogs.ShowErrorAsync("Could not open the model", ex.Message);
+                    await dialogs.ShowErrorAsync("Could not open the model", ErrorText.For(ex));
                     return null;
                 }
             case ".json":
@@ -223,7 +223,7 @@ public static class ViewerOpener
             }
             catch (SealedSetException ex)
             {
-                prompt.Error = ex.Message;
+                prompt.Error = ErrorText.For(ex);
                 prompt.Passphrase = "";
             }
         }

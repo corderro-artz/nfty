@@ -173,7 +173,7 @@ public partial class ImportImageViewModel : WizardViewModelBase, IDisposable
     public string? TryLoad()
     {
         try { _source = ImageFormats.Load(SourcePath); }
-        catch (Exception ex) { return $"“{SourceLeaf}” could not be read as an image: {ex.Message}"; }
+        catch (Exception ex) { return $"“{SourceLeaf}” could not be read as an image. {ErrorText.For(ex)}"; }
 
         if (_source.Width != _canvas.Width || _source.Height != _canvas.Height)
         {

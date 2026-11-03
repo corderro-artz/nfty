@@ -94,7 +94,7 @@ public sealed partial class RiseViewModel
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync("Could not save depth", ex.Message);
+            await _dialogs.ShowErrorAsync("Could not save depth", ErrorText.For(ex));
         }
         finally
         {

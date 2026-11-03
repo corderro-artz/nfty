@@ -368,3 +368,58 @@ renders nothing and therefore looks fine. The editor's enabled toolstrip, the dy
 two of three detail-header variants, the rule pill, the resulting-mix panel, and the Reports/Export
 buttons were each invisible-but-passing until a fixture was given what it needed to reach them. When
 a fixture cannot reach a state, add a frame or a test — "it looks right" is not evidence it works.
+
+---
+
+## Dialog consistency pass (2026-11-03)
+
+Every modal card and the viewer window looked at in both themes at the real modal area (1067x526).
+The newer cards (settings, export) had settled a grammar the older ones did not speak; this pass
+made the older ones speak it. What was chosen, per item:
+
+- **Prose is sans; mono is for DATA.** The wizards, rule form, report, import form and book
+  settings card were mono throughout (title, body, inputs, buttons) via `Border.monoform`, while
+  every newer card was sans. `.monoform`'s font rules now reach Landing only (`Grid.monoform`); the
+  card class keeps its hug-and-clamp layout. Mono survives where the text IS data: ids, paths,
+  file names, keycaps, tab captions, the report body.
+- **Every caps label is mono** (`TextBlock.plabel`, `TextBlock.slbl` state `MonoFontFamily`). They
+  were sans, so they rendered mono inside a mono wizard and sans everywhere else - the export
+  card's IMAGE BASE URI beside the settings card's mono UPLOAD TO. Settings' and the export done
+  state's row labels moved from `seglbl` to `plabel`; the cook card's `Count`/`Seed`/`Recipe` and
+  its models reveal's `Format`/`Pivot`/`Voxel size` became caps labels too.
+- **Footer left = the card's one useful note, else the Esc keycap hint.** `Esc to close/cancel/
+  dismiss/keep editing` text became the wizards' `KeyChord` + verb (settings, error, confirm,
+  leave, color-save). The export footer was the one card with an empty left cell when nothing was
+  wrong; it now shows the Esc hint (`FooterHintVisible`), and its problem line takes warning ink.
+- **Tabbed cards share one head.** The report card (kicker + title + segmented pill, three rows)
+  is now title left + underline tabs right on the export card's hairline (`Border.exporthead`).
+  Its title no longer repeats the tab ("Stats - ...").
+- **Body copy of the small cards is one size.** The error card's selectable message is a
+  `SelectableTextBlock`, which `TextBlock.m-sub` (exact type) never reached - 13px full ink beside
+  the confirm card's 11.5 muted. `m-sub` now names both types.
+- **One path strip.** The export done state showed the whole path on one trimmed mono line; it is
+  now the cook/Menu cards' leaf-over-parent strip (`OutputLeaf`/`OutputParent`).
+- **The export card no longer scrolls a page.** Three manifest consequences (debug mark, seal) grew
+  the pinned block past its 103 reserve and the card took the difference from the page: IMAGES
+  and SEAL scrolled, the debug-mark sentence was cut mid-glyph. The block is now fixed at 103; its
+  consequence list scrolls inside, the fold snapped to a whole line (`OnLayoutUpdated`, reading the
+  star row - loop-safe), and the head line says `+N more below` because Fluent's scrollbar hides
+  at rest.
+- **One warning/reason ink: `TextBlock.caveat`.** `warnline` (its 11.5 twin) removed; the rule
+  form's problem, the import form's color-loss note and problem line lost their inline
+  `Foreground`/`FontSize`. `canvaswarn` stays (caveat plus a stated line box and MaxLines).
+- **Errors are in product words (`Services/ErrorText`).** Every `ShowErrorAsync(..., ex.Message)`,
+  inline reason and status sentence goes through `ErrorText.For(ex)`: a message nfty THREW passes
+  verbatim (decided by the throwing method's assembly, since `InvalidOperationException` is both
+  Core's refusal and LINQ's "Sequence contains no elements"); a framework's (ZIP, JSON, IO
+  HRESULTs, HTTP, ImageSharp) becomes a sentence naming what to do next. The Windows credential
+  store's Win32 text became an error number plus advice. `ErrorTextTests` raises the real
+  framework exceptions and sweeps `src/Nfty.App` for a bare `ex.Message`.
+- Capture fixes: `zz-dialog-settings-auto-*` pictured GENERAL (no Tab set); a fixture said "cosy".
+  New frame `zz-dialog-error-framework-*` (a ZIP reader's failure, as the app words it).
+
+Left open: `Viewer/ViewerOpener.cs` still shows `ex.Message` in three places (a concurrent change
+owns the file; the sweep exempts it by name and should lose the exemption). The cook and Menu
+cards keep a kicker that repeats their title (`COOK` over "Cook a Set"); removing it changes card
+heights the cook layout tests pin, and was not worth it in this pass. The Menu card's local
+`.msg.problem` style is caveat's ink at 11.5 rather than 11.

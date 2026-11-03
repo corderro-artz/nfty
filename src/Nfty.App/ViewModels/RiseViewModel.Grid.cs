@@ -171,7 +171,7 @@ public sealed partial class RiseViewModel
         {
             foreach (var item in old) item.PropertyChanged += OnItemExportChanged;
             if (!_disposed)
-                await _dialogs.ShowErrorAsync("Could not change the grid", ex.Message);
+                await _dialogs.ShowErrorAsync("Could not change the grid", ErrorText.For(ex));
             return;
         }
         finally { IsVoxelBusy = false; }

@@ -46,8 +46,8 @@ public class CookDialogLabelTests
 
             var labels = view.GetVisualDescendants().OfType<TextBlock>()
                 .Select(t => t.Text).ToList();
-            Assert.Contains("Count", labels);
-            Assert.Contains("Seed", labels);
+            Assert.Contains("COUNT", labels);
+            Assert.Contains("SEED", labels);
         }
         finally { window.Close(); }
     }

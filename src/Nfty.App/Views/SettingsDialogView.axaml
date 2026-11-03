@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctl="using:Nfty.App.Controls"
              xmlns:vm="using:Nfty.App.ViewModels"
              xmlns:svc="using:Nfty.App.Services"
              x:Class="Nfty.App.Views.SettingsDialogView"
@@ -40,7 +41,7 @@
           <!-- ============================== GENERAL ============================== -->
           <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="12"
                 IsVisible="{Binding IsGeneralTab}">
-            <TextBlock Grid.Row="0" Grid.Column="0" Classes="seglbl" Text="THEME" />
+            <TextBlock Grid.Row="0" Grid.Column="0" Classes="plabel" VerticalAlignment="Center" Margin="0" Text="THEME" />
             <Border Grid.Row="0" Grid.Column="1" Classes="seg tiny" HorizontalAlignment="Left">
               <StackPanel Orientation="Horizontal">
                 <Button Classes="seg-b tiny" Content="System" Classes.on="{Binding IsSystemTheme}"
@@ -53,7 +54,7 @@
               </StackPanel>
             </Border>
 
-            <TextBlock Grid.Row="1" Grid.Column="0" Classes="seglbl" Text="NEW CANVAS" />
+            <TextBlock Grid.Row="1" Grid.Column="0" Classes="plabel" VerticalAlignment="Center" Margin="0" Text="NEW CANVAS" />
             <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="9">
               <NumericUpDown x:Name="CanvasField" Classes="nin" Width="86" MinWidth="0" Minimum="1"
                              Maximum="{Binding CanvasMaximum}" FormatString="0" Value="{Binding CanvasSide}"
@@ -71,7 +72,7 @@
           <!-- ============================ PERFORMANCE ============================ -->
           <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto" RowSpacing="12"
                 IsVisible="{Binding IsPerformanceTab}">
-            <TextBlock Grid.Row="0" Grid.Column="0" Classes="seglbl" Text="WORKER THREADS" />
+            <TextBlock Grid.Row="0" Grid.Column="0" Classes="plabel" VerticalAlignment="Center" Margin="0" Text="WORKER THREADS" />
             <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="12">
               <Border Classes="seg tiny" IsHitTestVisible="{Binding TrayEnabled}">
                 <!-- NOT IsEnabled: the app dims a disabled control to 0.38, which is legible over full
@@ -100,7 +101,7 @@
           <!-- ============================= PUBLISHING ============================= -->
           <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="10"
                 IsVisible="{Binding IsPublishingTab}">
-            <TextBlock Grid.Row="0" Grid.Column="0" Classes="seglbl" Text="UPLOAD TO" />
+            <TextBlock Grid.Row="0" Grid.Column="0" Classes="plabel" VerticalAlignment="Center" Margin="0" Text="UPLOAD TO" />
             <Border Grid.Row="0" Grid.Column="1" Classes="seg tiny" HorizontalAlignment="Left">
               <StackPanel Orientation="Horizontal">
                 <Button Classes="seg-b tiny" Content="Local IPFS" Classes.on="{Binding IsLocalIpfs}"
@@ -112,7 +113,7 @@
               </StackPanel>
             </Border>
 
-            <TextBlock Grid.Row="1" Grid.Column="0" Classes="seglbl" Text="IPFS API" />
+            <TextBlock Grid.Row="1" Grid.Column="0" Classes="plabel" VerticalAlignment="Center" Margin="0" Text="IPFS API" />
             <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="250,*" ColumnSpacing="10">
               <TextBox x:Name="ApiBox" Grid.Column="0" Text="{Binding KuboApi}" IsEnabled="{Binding IsLocalIpfs}"
                        PlaceholderText="http://127.0.0.1:5001"
@@ -121,7 +122,7 @@
                          TextTrimming="CharacterEllipsis" Text="{Binding ApiProblem}" ToolTip.Tip="{Binding ApiProblem}" />
             </Grid>
 
-            <TextBlock Grid.Row="2" Grid.Column="0" Classes="seglbl" Text="PINATA KEY" />
+            <TextBlock Grid.Row="2" Grid.Column="0" Classes="plabel" VerticalAlignment="Center" Margin="0" Text="PINATA KEY" />
             <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="250,Auto,Auto" ColumnSpacing="8"
                   IsEnabled="{Binding IsPinata}">
               <TextBox x:Name="KeyBox" Grid.Column="0" PasswordChar="•" Text="{Binding PinataKeyInput}"
@@ -133,7 +134,7 @@
             <TextBlock Grid.Row="3" Grid.Column="1" Classes="m-sub" Margin="0" TextWrapping="NoWrap"
                        TextTrimming="CharacterEllipsis" Text="{Binding KeyLine}" ToolTip.Tip="{Binding KeyLine}" />
 
-            <TextBlock Grid.Row="4" Grid.Column="0" Classes="seglbl" Text="CONNECTION" />
+            <TextBlock Grid.Row="4" Grid.Column="0" Classes="plabel" VerticalAlignment="Center" Margin="0" Text="CONNECTION" />
             <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Spacing="10">
               <Border x:Name="ConnectionChip" Classes="idchip" VerticalAlignment="Center">
                 <StackPanel Orientation="Horizontal" Spacing="6">
@@ -152,25 +153,25 @@
           <!-- ================================ DATA ================================ -->
           <Grid ColumnDefinitions="130,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="12"
                 IsVisible="{Binding IsDataTab}">
-            <TextBlock Grid.Row="0" Grid.Column="0" Classes="seglbl" VerticalAlignment="Top" Margin="0,1,0,0" Text="KEPT IN" />
+            <TextBlock Grid.Row="0" Grid.Column="0" Classes="plabel" VerticalAlignment="Top" Margin="0,1,0,0" Text="KEPT IN" />
             <TextBlock Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Classes="m-sub" Margin="0"
                        Text="{Binding StoreText}" />
 
-            <TextBlock Grid.Row="1" Grid.Column="0" Classes="seglbl" Text="RECENT FILES" />
+            <TextBlock Grid.Row="1" Grid.Column="0" Classes="plabel" VerticalAlignment="Center" Margin="0" Text="RECENT FILES" />
             <TextBlock Grid.Row="1" Grid.Column="1" Classes="m-sub" Margin="0" VerticalAlignment="Center"
                        Text="{Binding RecentsText}" />
             <Button Grid.Row="1" Grid.Column="2" Classes="tbtn" Content="Clear recents"
                     Command="{Binding ClearRecentsCommand}" HorizontalAlignment="Stretch"
                     ToolTip.Tip="Forget the Recent list on the start screen. No file is touched." />
 
-            <TextBlock Grid.Row="2" Grid.Column="0" Classes="seglbl" Text="WINDOWS, VIEWS" />
+            <TextBlock Grid.Row="2" Grid.Column="0" Classes="plabel" VerticalAlignment="Center" Margin="0" Text="WINDOWS, VIEWS" />
             <TextBlock Grid.Row="2" Grid.Column="1" Classes="m-sub" Margin="0" VerticalAlignment="Center"
                        Text="viewer window sizes, the editor's grid and rail" />
             <Button Grid.Row="2" Grid.Column="2" Classes="tbtn" Content="Reset" Command="{Binding ResetViewsCommand}"
                     HorizontalAlignment="Stretch"
                     ToolTip.Tip="Viewer windows open at their default sizes again; the editor opens with its default grid and rail." />
 
-            <TextBlock Grid.Row="3" Grid.Column="0" Classes="seglbl" Text="DATA FOLDER" />
+            <TextBlock Grid.Row="3" Grid.Column="0" Classes="plabel" VerticalAlignment="Center" Margin="0" Text="DATA FOLDER" />
             <TextBlock Grid.Row="3" Grid.Column="1" Classes="m-sub" Margin="0" VerticalAlignment="Center"
                        Text="recents, palette, settings, remembered views" />
             <Button Grid.Row="3" Grid.Column="2" Classes="tbtn" Content="Open folder" Command="{Binding OpenDataFolderCommand}"
@@ -264,7 +265,9 @@
 
       <Border Grid.Row="2" Classes="modal-foot">
         <Grid ColumnDefinitions="*,Auto">
-          <TextBlock Grid.Column="0" Classes="keyhint" VerticalAlignment="Center" Text="Esc to close" />
+          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+            <ctl:KeyChord Chord="Esc" Compact="True" /><TextBlock Text="close" Classes="keyhint" />
+          </StackPanel>
           <Button Grid.Column="1" Content="Close" Command="{Binding CloseCommand}" Classes="accent" />
         </Grid>
       </Border>

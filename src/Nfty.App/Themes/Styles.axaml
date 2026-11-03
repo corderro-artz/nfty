@@ -549,7 +549,13 @@
        text-transform: the sizing/letter-spacing/color is set here, and the consuming view supplies
        already-uppercased text where that matters (see TextBlock.data-h above for the existing
        convention this follows). -->
+  <!-- Every caps LABEL is mono: a kicker (slbl) and a field label (plabel) are names of fields,
+       read the way tab captions and pane headers are, and those were already mono. plabel/slbl
+       were sans, so they rendered mono only inside a mono-bodied wizard and sans everywhere else -
+       the export card's IMAGE BASE URI beside the settings card's mono UPLOAD TO, one row apart in
+       one app. Stated on the class now, not inherited from whatever card hosts it. -->
   <Style Selector="TextBlock.slbl">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="10" />
     <Setter Property="LetterSpacing" Value="1.4" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
@@ -1102,6 +1108,9 @@
     <!-- 103: the tallest tab's block with its warning glyphs (the UPLOAD tab shows fewer lines now,
          since "will do" notes are not warnings there, so it must be held to the others by this). -->
     <Setter Property="MinHeight" Value="103" />
+    <!-- And no taller: the card has no room past it at the smallest window, so growth here was
+         taken from the page above. The consequence list scrolls inside instead. -->
+    <Setter Property="MaxHeight" Value="103" />
     <Setter Property="Padding" Value="14,8,12,8" />
   </Style>
   <Style Selector="Border.ship TextBlock.part">
@@ -1434,18 +1443,15 @@
     <Setter Property="LetterSpacing" Value="-0.29" />   <!-- -.015em at 19px -->
     <Setter Property="Margin" Value="0,7,0,0" />
   </Style>
-  <Style Selector="TextBlock.m-sub">
+  <!-- SelectableTextBlock named too: Avalonia's type selector matches the EXACT type, so the error
+       card's selectable message (a SelectableTextBlock so it can be copied) took none of this and
+       drew at Fluent's 13px in full ink, beside a confirm card whose same-role sentence was 11.5
+       muted. Two cards of one shape, two sizes of body copy. -->
+  <Style Selector="TextBlock.m-sub, SelectableTextBlock.m-sub">
     <Setter Property="FontSize" Value="11.5" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="TextWrapping" Value="Wrap" />
     <Setter Property="Margin" Value="0,4,0,0" />
-  </Style>
-  <!-- A warning sentence in the card body: WarningBrush ink, the m-sub size and line box together. -->
-  <Style Selector="TextBlock.warnline">
-    <Setter Property="FontSize" Value="11.5" />
-    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
-    <Setter Property="TextWrapping" Value="Wrap" />
-    <Setter Property="Margin" Value="0" />
   </Style>
   <!-- .derived: dashed rule above, then "Identifier <code>" -->
   <Style Selector="TextBlock.derived">
@@ -1460,6 +1466,7 @@
   </Style>
 
   <Style Selector="TextBlock.plabel">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="10" />
     <Setter Property="LetterSpacing" Value="1.0" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
@@ -4002,16 +4009,23 @@
        root - a Classes attribute on a UserControl's own XAML root did not reach this selector,
        whereas anchoring on a child element matches the pattern already used throughout this file
        (Button.landing TextBlock.lbl, Border.metric.accent TextBlock.mv). -->
-  <Style Selector="Grid.monoform TextBlock, Border.monoform TextBlock">
+  <!-- LANDING ONLY (Grid.monoform), not the modal cards (Border.monoform). The wizards, the rule
+       form, the report, the import form and the book settings card used to be mono throughout -
+       title, body copy, inputs and buttons - while every newer card (settings, export, cook,
+       validity, voxel-ready, confirm, error, passphrase, menu) is sans with mono kept for DATA.
+       Stacked over one another they read as two applications' dialogs. Every card now speaks the
+       newer grammar: sans prose, plabel caps labels, mono only where the text IS data (ids, paths,
+       file names, keycaps, tabs). Border.monoform keeps its layout duties (hug + clamp). -->
+  <Style Selector="Grid.monoform TextBlock">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
   </Style>
-  <Style Selector="Grid.monoform TextBox, Border.monoform TextBox">
+  <Style Selector="Grid.monoform TextBox">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
   </Style>
-  <Style Selector="Grid.monoform Button, Border.monoform Button">
+  <Style Selector="Grid.monoform Button">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
   </Style>
-  <Style Selector="Grid.monoform NumericUpDown, Border.monoform NumericUpDown">
+  <Style Selector="Grid.monoform NumericUpDown">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
   </Style>
 

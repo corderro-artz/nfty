@@ -450,7 +450,7 @@ public partial class IngredientEditorViewModel
             // book with "1 problem" opens and its static layers reach here unparsed. VariantImagery
             // already catches the same exception for the same reason on the single-layer path.
             DisposeStackCaches();
-            StackProblem = ex.Message;
+            StackProblem = ErrorText.For(ex);
         }
     }
 
@@ -545,7 +545,7 @@ public partial class IngredientEditorViewModel
         {
             LoadedIngredient opened;
             try { opened = IngredientArchive.Read(row.Key); }
-            catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not open", ex.Message); return; }
+            catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not open", ErrorText.For(ex)); return; }
 
             try
             {
@@ -560,7 +560,7 @@ public partial class IngredientEditorViewModel
                                          or FormatException)
             {
                 opened.Dispose();
-                await _dialogs.ShowErrorAsync("Cannot use this layer", ex.Message);
+                await _dialogs.ShowErrorAsync("Cannot use this layer", ErrorText.For(ex));
                 return;
             }
 

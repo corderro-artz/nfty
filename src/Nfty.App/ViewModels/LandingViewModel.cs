@@ -168,7 +168,7 @@ public partial class LandingViewModel : ViewModelBase
         }
         string? path;
         try { path = await _picker.SaveFileAsync("Save new cookbook", ".cbk"); }
-        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not save", ex.Message); return; }
+        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not save", ErrorText.For(ex)); return; }
         if (path is null) return;   // canceled the picker
 
         var manifest = new CookBookManifest(result.DerivedId, result.Name,
@@ -177,7 +177,7 @@ public partial class LandingViewModel : ViewModelBase
             new Dictionary<string, double>(),   // no recipes yet
             TargetSupply: result.TargetSupplyOrNull);
         try { CookBookPersistence.WriteNew(path, manifest, Array.Empty<LoadedRecipe>()); }
-        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not save", ex.Message); return; }
+        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not save", ErrorText.For(ex)); return; }
 
         OpenPath(path);   // reads it back (fresh hash), session.Open(book, path), → Explorer
     }
@@ -193,7 +193,7 @@ public partial class LandingViewModel : ViewModelBase
     {
         string? path;
         try { path = await _picker.SaveFileAsync("New Kitchen", Nfty.Core.Formats.Kitchen.Extension); }
-        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not create", ex.Message); return; }
+        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not create", ErrorText.For(ex)); return; }
         if (path is null) return;   // canceled
 
         var name = Path.GetFileNameWithoutExtension(path);
@@ -205,7 +205,7 @@ public partial class LandingViewModel : ViewModelBase
                 new KitchenManifest(DeriveId(name), name));
             _kitchen!.Open(path);
         }
-        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not create", ex.Message); }
+        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not create", ErrorText.For(ex)); }
     }
 
     /// <summary>Only offered when a Kitchen session exists to hold the result. Composition supplies
@@ -226,11 +226,11 @@ public partial class LandingViewModel : ViewModelBase
     {
         string? path;
         try { path = await _picker.OpenFileAsync("Open Kitchen", Nfty.Core.Formats.Kitchen.Extension); }
-        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not open", ex.Message); return; }
+        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not open", ErrorText.For(ex)); return; }
         if (path is null) return;   // canceled
 
         try { _kitchen!.Open(path); }
-        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not open", ex.Message); }
+        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not open", ErrorText.For(ex)); }
     }
 
     /// <summary>Leaves the open Kitchen without opening another. The counterpart to
@@ -341,7 +341,7 @@ public partial class LandingViewModel : ViewModelBase
             catch (Exception ex)
             {
                 _ = _dialogs.ShowErrorAsync("Could not unpack the demo",
-                    $"The demo CookBook could not be written anywhere on this machine — {ex.Message}");
+                    $"The demo CookBook could not be written anywhere on this machine. {ErrorText.For(ex)}");
                 return;
             }
         }
@@ -365,7 +365,7 @@ public partial class LandingViewModel : ViewModelBase
 
         ArchiveKind kind;
         try { kind = Archives.KindOf(path); }
-        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not import", ex.Message); return; }
+        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not import", ErrorText.For(ex)); return; }
 
         if (kind == ArchiveKind.CookBook) { OpenPath(path); return; }
         if (kind == ArchiveKind.Ingredient) { OpenLooseIngredient(path); return; }
@@ -393,7 +393,7 @@ public partial class LandingViewModel : ViewModelBase
     {
         LoadedRecipe recipe;
         try { recipe = RecipeArchive.Read(path); }
-        catch (Exception ex) { _ = _dialogs.ShowErrorAsync("Could not open", ex.Message); return; }
+        catch (Exception ex) { _ = _dialogs.ShowErrorAsync("Could not open", ErrorText.For(ex)); return; }
         var book = LooseWorkspace.WrapRecipe(recipe);
         _session.Open(book, null);            // no source .cbk → the Explorer is read-only; session owns `book`
         _nav.To(_explorerFactory(book));
@@ -404,7 +404,7 @@ public partial class LandingViewModel : ViewModelBase
     {
         LoadedIngredient ing;
         try { ing = IngredientArchive.Read(path); }
-        catch (Exception ex) { _ = _dialogs.ShowErrorAsync("Could not open", ex.Message); return; }
+        catch (Exception ex) { _ = _dialogs.ShowErrorAsync("Could not open", ErrorText.For(ex)); return; }
         if (ing.VariantImages.Count == 0)
         {
             _ = _dialogs.ShowErrorAsync("Can't open", "This ingredient has no variants to edit.");
@@ -438,7 +438,7 @@ public partial class LandingViewModel : ViewModelBase
                 (_, ct) => CookBookArchive.ReadAsync(path, ct, par), cancellable: true);
         }
         catch (OperationCanceledException) { return; }   // the user stopped it: nothing opened
-        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not open", ex.Message); return; }
+        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not open", ErrorText.For(ex)); return; }
         _session.Open(book, path);
         _nav.To(_explorerFactory(book));
         RecordRecent(new RecentItem(book.Manifest.Name, RecentMeta(book), path, false));
@@ -546,7 +546,7 @@ public partial class LandingViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync("Could not open the set", ex.Message);
+            await _dialogs.ShowErrorAsync("Could not open the set", ErrorText.For(ex));
             return;
         }
         _nav.To(_setBrowserFactory(set));
@@ -581,7 +581,7 @@ public partial class LandingViewModel : ViewModelBase
         if (!CanRisePicture()) return;   // a disabled button is a label
         string? path;
         try { path = await _picker.OpenFileAsync("Rise a picture", ".png"); }
-        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not open", ex.Message); return; }
+        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not open", ErrorText.For(ex)); return; }
         if (path is null) return;        // canceled
         PendingOpen = RisePicturePathAsync(path);
     }
@@ -597,7 +597,7 @@ public partial class LandingViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync("Could not open the picture", ex.Message);
+            await _dialogs.ShowErrorAsync("Could not open the picture", ErrorText.For(ex));
             return;
         }
 
@@ -628,7 +628,7 @@ public partial class LandingViewModel : ViewModelBase
     {
         SealManifest header;
         try { header = Seal.Peek(path); }
-        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not read the sealed export", ex.Message); return; }
+        catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not read the sealed export", ErrorText.For(ex)); return; }
 
         var prompt = new PassphraseDialogViewModel(header, _dialogs);
         while (true)
@@ -646,12 +646,12 @@ public partial class LandingViewModel : ViewModelBase
             }
             catch (SealedSetException ex)
             {
-                prompt.Error = ex.Message;
+                prompt.Error = ErrorText.For(ex);
                 prompt.Passphrase = "";
             }
             catch (Exception ex)
             {
-                await _dialogs.ShowErrorAsync("Could not open the sealed export", ex.Message);
+                await _dialogs.ShowErrorAsync("Could not open the sealed export", ErrorText.For(ex));
                 return;
             }
         }
@@ -711,7 +711,7 @@ public partial class LandingViewModel : ViewModelBase
 
         ArchiveKind kind;
         try { kind = Archives.KindOf(path); }
-        catch (Exception ex) { _ = _dialogs.ShowErrorAsync("Can't open", ex.Message); return; }
+        catch (Exception ex) { _ = _dialogs.ShowErrorAsync("Can't open", ErrorText.For(ex)); return; }
         switch (kind)
         {
             case ArchiveKind.CookBook: OpenPath(path); return;
@@ -725,7 +725,7 @@ public partial class LandingViewModel : ViewModelBase
             // A Kitchen double-clicked in Explorer becomes the open workspace, as Open Kitchen… does.
             case ArchiveKind.Kitchen when _kitchen is not null:
                 try { _kitchen.Open(path); }
-                catch (Exception ex) { _ = _dialogs.ShowErrorAsync("Could not open", ex.Message); }
+                catch (Exception ex) { _ = _dialogs.ShowErrorAsync("Could not open", ErrorText.For(ex)); }
                 return;
             // The app does not edit a Menu; the viewer shows one, so the open goes there.
             case ArchiveKind.Menu when _viewer is not null: _ = OpenMenuInViewerAsync(path); return;

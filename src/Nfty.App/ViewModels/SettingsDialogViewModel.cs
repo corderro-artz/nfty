@@ -332,7 +332,7 @@ public partial class SettingsDialogViewModel : ViewModelBase
         }
         catch (InvalidOperationException ex)
         {
-            await _dialogs.ShowErrorAsync("Could not save the key", ex.Message);
+            await _dialogs.ShowErrorAsync("Could not save the key", ErrorText.For(ex));
             return;
         }
         finally
@@ -350,7 +350,7 @@ public partial class SettingsDialogViewModel : ViewModelBase
         try { _publishing.ForgetPinataKey(); }
         catch (InvalidOperationException ex)
         {
-            await _dialogs.ShowErrorAsync("Could not forget the key", ex.Message);
+            await _dialogs.ShowErrorAsync("Could not forget the key", ErrorText.For(ex));
             return;
         }
         KeyChanged();
@@ -404,7 +404,7 @@ public partial class SettingsDialogViewModel : ViewModelBase
         catch (Exception ex)
         {
             if (!cts.IsCancellationRequested)
-                SetStatus(ConnectionState.NotReachable, "not reachable", ex.Message);
+                SetStatus(ConnectionState.NotReachable, "not reachable", ErrorText.For(ex));
         }
     }
 
