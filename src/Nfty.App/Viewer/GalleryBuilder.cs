@@ -170,7 +170,7 @@ public static class GalleryBuilder
                 {
                     var facts = new List<ViewerFact>
                     {
-                        new("BUNDLE", "upload bundle, not a Set"),
+                        new("BUNDLE", "Upload bundle · read only", Banner: true),
                         new("NAME", item.Name),
                     };
                     if (item.Description.Length > 0) facts.Add(new("ABOUT", item.Description));
@@ -190,7 +190,7 @@ public static class GalleryBuilder
 
         var rail = new List<ViewerFact>
         {
-            new("BUNDLE", "upload bundle, not a Set - read only"),
+            new("BUNDLE", "Upload bundle · read only", Banner: true),
             new("COLLECTION", bundle.Collection?.Name is { Length: > 0 } cn ? cn : bundle.Name),
             new("ITEMS", bundle.Items.Count.ToString(CultureInfo.InvariantCulture)),
             new("IMAGES", string.Create(CultureInfo.InvariantCulture,

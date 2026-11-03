@@ -13,8 +13,8 @@ namespace Nfty.App.Converters;
 /// <remarks>
 /// Resolved out of the app's resources, as <see cref="DieFaceConverter"/> does, because
 /// <c>Icons.axaml</c> is generated from <c>assets/icons/*.svg</c>. The keys are spelled out so
-/// <c>DeadCodeAuditTests</c> can find them. A label with no glyph returns null, which a Path draws as
-/// nothing: the column is fixed, so the label beside it does not move.
+/// <c>DeadCodeAuditTests</c> can find them. A label the table does not name falls back to the trait diamond (or the paint drop for a
+/// <c>… COLOR</c> trait), so every row carries a mark.
 /// </remarks>
 public sealed class FactIconConverter : IValueConverter
 {
@@ -29,7 +29,6 @@ public sealed class FactIconConverter : IValueConverter
         ["RECIPES"] = "IconTypeRecipe",
         ["ASSET"] = "IconTypeSet",
         ["SET"] = "IconTypeSet",
-        ["ITEMS"] = "IconTypeSet",
         ["BOOK"] = "IconTypeCookBook",
         ["COOKBOOK"] = "IconTypeCookBook",
         ["LAYER"] = "IconTypeIngredient",
@@ -43,6 +42,21 @@ public sealed class FactIconConverter : IValueConverter
         ["MODEL"] = "IconRise",
         ["DEPTH"] = "IconRise",
         ["NOTE"] = "IconHelp",
+        ["COLLECTION"] = "IconTypeCookBook",
+        ["ITEMS"] = "IconTypeSet",
+        ["IMAGES"] = "IconTypeVariant",
+        ["IMAGE"] = "IconTypeVariant",
+        ["COVER"] = "IconTypeVariant",
+        ["LINK"] = "IconLink",
+        ["MODEL URL"] = "IconRise",
+        ["FILE"] = "IconOpen",
+        ["NAME"] = "IconTag",
+        ["SYMBOL"] = "IconSymbol",
+        ["ABOUT"] = "IconAbout",
+        ["ROYALTY"] = "IconPercent",
+        ["PAYEE"] = "IconWallet",
+        ["PROBLEMS"] = "IconMarkFlag",
+        ["TYPE"] = "IconTypeRecipe",
     };
 
     /// <summary>Maps a fact label onto its glyph.</summary>
@@ -50,12 +64,21 @@ public sealed class FactIconConverter : IValueConverter
     /// <param name="targetType">Ignored.</param>
     /// <param name="parameter">Ignored.</param>
     /// <param name="culture">Ignored.</param>
-    /// <returns>The glyph, or null for a label that has none.</returns>
-    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
-        value is string label && Keys.TryGetValue(label, out var key)
-            && Application.Current?.Resources.TryGetResource(key, null, out var geo) == true
-            ? geo
-            : null;
+    /// <returns>The glyph; null only when the value is not a label or the resource is missing.</returns>
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is not string label) return null;
+        // EVERY ROW CARRIES A GLYPH, so the rail is one grid of marks: a published trait the table does
+        // not name (a layer of the author's: BODY, GLOW) takes the trait diamond, and its rolled color
+        // ("BODY COLOR") the paint drop.
+        string key = Keys.TryGetValue(label, out var known) ? known
+            : label.EndsWith(" COLOR", StringComparison.Ordinal) ? DropKey
+            : TraitKey;
+        return Application.Current?.Resources.TryGetResource(key, null, out var geo) == true ? geo : null;
+    }
+
+    private const string TraitKey = "IconTrait";
+    private const string DropKey = "IconDrop";
 
     /// <summary>Not supported; a glyph does not name its label.</summary>
     /// <param name="value">Ignored.</param>

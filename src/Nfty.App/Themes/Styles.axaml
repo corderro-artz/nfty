@@ -1544,7 +1544,8 @@
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="12" />
     <Setter Property="LineHeight" Value="16" />
-    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="TextWrapping" Value="NoWrap" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
   </Style>
   <!-- Its label: the same 16px line box as the value beside it, so the two sit on one baseline
        (Avalonia centers a glyph inside a stated LineHeight; equal boxes line two sizes up). -->
@@ -4717,7 +4718,34 @@
     <Setter Property="FontSize" Value="10.5" />
     <Setter Property="LineHeight" Value="14" />
     <Setter Property="TextWrapping" Value="NoWrap" />
-    <Setter Property="Margin" Value="0,2,0,0" />
+    <Setter Property="MaxLines" Value="2" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    <Setter Property="Margin" Value="0,3,0,0" />
+  </Style>
+  <!-- A sentence-length value: the reading face, under its label, three lines at most. -->
+  <Style Selector="SelectableTextBlock.factprose">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="LineHeight" Value="16" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="MaxLines" Value="3" />
+    <Setter Property="TextTrimming" Value="WordEllipsis" />
+    <Setter Property="Margin" Value="0,3,0,0" />
+  </Style>
+  <!-- A statement about the whole subject: an accent-washed strip with the lock glyph, ahead of
+       the label/value rows. -->
+  <Style Selector="Border.factbanner">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="Padding" Value="8,5" />
+    <Setter Property="Margin" Value="0,8,0,4" />
+  </Style>
+  <Style Selector="Border.factbanner TextBlock">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.factbanner Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
   </Style>
   <!-- The large-canvas warning under a canvas field: one line, warning ink, its height always
        reserved (Opacity toggles) so typing past 512 x 512 moves nothing on the card. -->

@@ -73,7 +73,7 @@ public class BundleGalleryTests
         var gallery = Assert.IsType<GallerySubject>(subject).Gallery;
         Assert.Empty(dialogs.Errors);
         Assert.Equal(4, gallery.Items.Count);
-        Assert.Contains(gallery.Facts, f => f.Label == "BUNDLE" && f.Value.Contains("not a Set"));
+        Assert.Contains(gallery.Facts, f => f.Label == "BUNDLE" && f.Banner && f.Value.Contains("Upload bundle"));
         Assert.Contains(gallery.Facts, f => f.Label == "COLLECTION" && f.Value == "Chest Demo");
         Assert.Contains(gallery.Facts, f => f.Label == "SYMBOL" && f.Value == "CHST");
         Assert.Contains(gallery.Facts, f => f.Label == "ROYALTY" && f.Value == "5%");

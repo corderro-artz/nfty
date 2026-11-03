@@ -3,15 +3,66 @@ namespace Nfty.App.Viewer;
 /// <summary>One label/value line in the viewer's facts panel.</summary>
 /// <param name="Label">What the fact is.</param>
 /// <param name="Value">Its value, already worded for display.</param>
-public sealed record ViewerFact(string Label, string Value)
+/// <param name="Banner">A statement about the whole subject ("upload bundle - read only") rather than
+/// a label/value pair: drawn as a tinted strip across the card, never squeezed into a value column.</param>
+public sealed record ViewerFact(string Label, string Value, bool Banner = false)
 {
-    /// <summary>A long unbroken value (a DNA hash): drawn under its label across the whole card,
-    /// rather than wrapped into the value column four lines deep.</summary>
-    public bool IsWide => Value.Length > 32 && !Value.Contains(' ', StringComparison.Ordinal);
+    /// <summary>The most characters a value may have and still share its label's line: what the
+    /// 116px value column holds in 12px mono. Anything longer moves under its label at full width,
+    /// so the rail never wraps a value into a narrow column five lines deep.</summary>
+    public const int InlineChars = 15;
 
-    /// <summary>A wide value split at its half onto two lines of equal length, as the Set browser
-    /// splits a DNA; the value itself, for anything not wide.</summary>
-    public string WideText => IsWide ? $"{Value[..((Value.Length + 1) / 2)]}\n{Value[((Value.Length + 1) / 2)..]}" : Value;
+    /// <summary>The label as drawn: always the rail's small caps, whatever case a source spelled it in
+    /// (a metadata file's <c>trait_type</c> arrives as "Lock").</summary>
+    public string LabelText => Label.ToUpperInvariant();
+
+    /// <summary>Short: label and value side by side on one line.</summary>
+    public bool IsInline => !Banner && Value.Length <= InlineChars && Label.Length <= InlineLabelChars;
+
+    /// <summary>The longest label the 72px label column holds ("COLLECTION"); a longer one ("BANDS COLOR")
+    /// moves its value under it, so no label is ever trimmed.</summary>
+    public const int InlineLabelChars = 10;
+
+    /// <summary>A long unbroken value (a DNA hash, a URI, a wallet address): under its label across
+    /// the whole card, in small mono, two lines at most and trimmed past that (the tooltip and the
+    /// selection carry the whole value).</summary>
+    public bool IsWide => !Banner && !IsInline && !Value.Contains(' ', StringComparison.Ordinal);
+
+    /// <summary>Long text with words (a description, a sentence): under its label at full width in
+    /// the reading face, three lines at most.</summary>
+    public bool IsProse => !Banner && !IsInline && !IsWide;
+
+    /// <summary>How many characters of small mono one line of the card holds.</summary>
+    public const int WideLineChars = 32;
+
+    /// <summary>
+    /// A wide value as drawn. A HASH or ADDRESS (hex, optionally <c>0x</c>-prefixed) that fits two
+    /// lines is split at its half, so both lines are one length (the Set browser's DNA split) and no
+    /// digit is hidden. Anything else (a link, a path) stays on one line: whole when it fits, else
+    /// shortened in the MIDDLE so both its scheme and its informative end (<c>…/images/1.png</c>)
+    /// show. The tooltip and Copy info always carry the whole value.
+    /// </summary>
+    public string WideText
+    {
+        get
+        {
+            if (!IsWide) return Value;
+            if (IsHex && Value.Length > WideLineChars && Value.Length <= WideLineChars * 2)
+                return Value[..((Value.Length + 1) / 2)] + "\n" + Value[((Value.Length + 1) / 2)..];
+            if (Value.Length <= WideLineChars) return Value;
+            const int tail = 15;
+            return Value[..(WideLineChars - tail - 1)] + "…" + Value[^tail..];
+        }
+    }
+
+    private bool IsHex
+    {
+        get
+        {
+            var v = Value.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? Value[2..] : Value;
+            return v.Length > 0 && v.All(Uri.IsHexDigit);
+        }
+    }
 
     /// <summary>
     /// Turns a one-line fact written for a page ("seed viewer", "canvas 64 × 64", "picture · 32 × 32")
@@ -45,7 +96,8 @@ public sealed record ViewerFact(string Label, string Value)
     public static string AsText(string title, IEnumerable<ViewerFact> facts)
     {
         ArgumentNullException.ThrowIfNull(facts);
-        var rows = facts.Select(f => (Label: Word(f.Label) + ":", f.Value)).ToList();
+        var all = facts.ToList();
+        var rows = all.Where(f => !f.Banner).Select(f => (Label: Word(f.Label) + ":", f.Value)).ToList();
         int width = rows.Count == 0 ? 0 : rows.Max(r => r.Label.Length);
         var lines = new List<string>();
         if (!string.IsNullOrWhiteSpace(title))
@@ -53,6 +105,7 @@ public sealed record ViewerFact(string Label, string Value)
             lines.Add(title.Trim());
             lines.Add(new string('-', title.Trim().Length));
         }
+        lines.AddRange(all.Where(f => f.Banner).Select(f => f.Value));   // a banner is a line of its own
         lines.AddRange(rows.Select(r => r.Label.PadRight(width + 2) + r.Value));
         return string.Join(Environment.NewLine, lines);
     }

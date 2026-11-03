@@ -146,22 +146,41 @@
               <ItemsControl Classes="facts" ItemsSource="{Binding Facts}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vw:ViewerFact">
-                    <!-- Glyph, label and value in three fixed columns (every row states the same
-                         pixels, so the values line up whatever a label says): a stacked pair cost a
-                         line per fact and put a scrollbar on the rail at the smallest window. -->
-                    <Border Classes="factrow">
-                      <Grid ColumnDefinitions="14,72,*" RowDefinitions="Auto,Auto" ColumnSpacing="6">
-                        <Path Grid.Column="0" Classes="ico xs" VerticalAlignment="Top" Margin="0,1,0,0"
-                              Data="{Binding Label, Converter={x:Static appconv:FactIconConverter.Instance}}" />
-                        <TextBlock Grid.Column="1" Classes="factlbl" Text="{Binding Label}"
-                                   TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Label}" />
-                        <SelectableTextBlock Grid.Column="2" Classes="factval" Text="{Binding Value}"
-                                             IsVisible="{Binding !IsWide}" />
-                        <!-- A hash runs under its label across the card, split at its half. -->
-                        <SelectableTextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Classes="factval wide"
-                                             Text="{Binding WideText}" IsVisible="{Binding IsWide}" />
-                      </Grid>
-                    </Border>
+                    <!-- FOUR SHAPES, ONE PER KIND OF VALUE (ViewerFact). A short value shares its
+                         label's line, in fixed columns so every value lines up. Anything longer
+                         moves UNDER its label at the card's full width instead of wrapping five lines
+                         deep in a 116px column: hashes, links and addresses in small mono (two lines,
+                         trimmed, whole on the tooltip and in the selection), sentences in the reading
+                         face (three lines). A statement about the whole subject is a banner. -->
+                    <Panel>
+                      <Border Classes="factbanner" IsVisible="{Binding Banner}">
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                          <Path Classes="ico xs" Data="{StaticResource IconLock}" />
+                          <TextBlock Text="{Binding Value}" TextTrimming="CharacterEllipsis"
+                                     ToolTip.Tip="{Binding Value}" />
+                        </StackPanel>
+                      </Border>
+                      <Border Classes="factrow" IsVisible="{Binding !Banner}">
+                        <Grid ColumnDefinitions="14,72,*" RowDefinitions="Auto,Auto" ColumnSpacing="6">
+                          <Path Grid.Column="0" Classes="ico xs" VerticalAlignment="Top" Margin="0,2,0,0"
+                                Data="{Binding Label, Converter={x:Static appconv:FactIconConverter.Instance}}" />
+                          <TextBlock Grid.Column="1" Classes="factlbl" Text="{Binding LabelText}"
+                                     TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding LabelText}"
+                                     IsVisible="{Binding IsInline}" />
+                          <TextBlock Grid.Column="1" Grid.ColumnSpan="2" Classes="factlbl" Text="{Binding LabelText}"
+                                     TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding LabelText}"
+                                     IsVisible="{Binding !IsInline}" />
+                          <SelectableTextBlock Grid.Column="2" Classes="factval" Text="{Binding Value}"
+                                               IsVisible="{Binding IsInline}" />
+                          <SelectableTextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Classes="factval wide"
+                                               Text="{Binding WideText}" IsVisible="{Binding IsWide}"
+                                               ToolTip.Tip="{Binding Value}" />
+                          <SelectableTextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Classes="factprose"
+                                               Text="{Binding Value}" IsVisible="{Binding IsProse}"
+                                               ToolTip.Tip="{Binding Value}" />
+                        </Grid>
+                      </Border>
+                    </Panel>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>

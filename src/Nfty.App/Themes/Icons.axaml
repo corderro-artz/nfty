@@ -19,6 +19,9 @@
   <!-- A single flat sheet seen at an angle, no depth face: the picture that cannot rise. Must not read as Rise (a block), the rect tool, a lock or an eye. -->
   <StreamGeometry x:Key="Icon2dOnly">M2.5 17.5 7 8h14.5L17 17.5z</StreamGeometry>
 
+  <!-- A description: ragged lines of text. Not IconGrid (the canvas). -->
+  <StreamGeometry x:Key="IconAbout">M4 6h16M4 10h16M4 14h11M4 18h7</StreamGeometry>
+
   <!-- A long arrow pointing left: Back, the way out of a page to the one before it. -->
   <StreamGeometry x:Key="IconArrowLeft">M19 12H5M12 5l-7 7 7 7</StreamGeometry>
 
@@ -73,6 +76,9 @@
 
   <!-- Save-to-disk. Tray with an arrow into it: the standard download mark, not a floppy. -->
   <StreamGeometry x:Key="IconDownload">M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3</StreamGeometry>
+
+  <!-- A rolled color: a paint drop. Not IconFill (the bucket tool). -->
+  <StreamGeometry x:Key="IconDrop">M12 3c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11z</StreamGeometry>
 
   <!-- ingredient-editor.html: enlarge preview / fill pane with preview -->
   <StreamGeometry x:Key="IconEnlarge">M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7</StreamGeometry>
@@ -132,6 +138,9 @@
   <!-- ingredient-editor.html: pencil (the mockup's Brush/Edit mark) -->
   <StreamGeometry x:Key="IconPencil">M15 5l4 4M4 20l4-1L19 8a2 2 0 0 0-3-3L5 16z</StreamGeometry>
 
+  <!-- A share or royalty: the percent sign. -->
+  <StreamGeometry x:Key="IconPercent">M19 5 5 19M9 7a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM19 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0z</StreamGeometry>
+
   <!-- Icon geometry, traced from the locked mockups' inline SVG. The mockups draw every glyph as a 24x24 stroked path (stroke-linecap/linejoin round, ~2px), and the app previously substituted Unicode/emoji characters — which rendered as color emoji injecting off-palette hues (the toolbar padlock sampled #f6cd6a, the edit pencil #ff822d) and, where the shipped fonts lacked the glyph, as literal tofu boxes. The `d` strings below are copied from the mockups verbatim where the source was a <path>. Where the source used <rect>/<circle> (which StreamGeometry cannot express), the equivalent path is written out here and noted per icon. Paths stay in the original 24-unit coordinate space; the `Path.ico` style in Styles.axaml maps that shared 24-box onto the 12/13/14/18px icon box the way an <svg viewBox> does, so every glyph is scaled by the same factor rather than by its own bounds. landing.html: "+" leading glyph on the Create actions -->
   <StreamGeometry x:Key="IconPlus">M12 5v14M5 12h14</StreamGeometry>
 
@@ -160,6 +169,15 @@
   <!-- Two sliders, each knob on its own track at a different position. Not a cog: a cog at 14px is a gray blob, and these two knobs sit beside Help's circle and the zoom plus and minus without echoing either. -->
   <StreamGeometry x:Key="IconSettings">M4 8h9M17 8h3M4 16h3M11 16h9M17 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM11 16a2 2 0 1 1-4 0 2 2 0 0 1 4 0z</StreamGeometry>
 
+  <!-- The collection's ticker symbol: a type T in a frame. Not IconTag (one item's name). -->
+  <StreamGeometry x:Key="IconSymbol">M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8 8h8M12 8v9</StreamGeometry>
+
+  <!-- A name tag: the item's published name. Not IconLink (a reference elsewhere). -->
+  <StreamGeometry x:Key="IconTag">M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9zM7.5 7.5h.01</StreamGeometry>
+
+  <!-- A published trait: a small diamond, the mark every attribute row shares. -->
+  <StreamGeometry x:Key="IconTrait">M12 5l7 7-7 7-7-7z</StreamGeometry>
+
   <!-- explorer.html ICON.del: the Delete affordance -->
   <StreamGeometry x:Key="IconTrash">M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13</StreamGeometry>
 
@@ -185,6 +203,9 @@
 
   <!-- An arrow out of a tray: export, the other direction from IconDownload and IconImport. -->
   <StreamGeometry x:Key="IconUpload">M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12</StreamGeometry>
+
+  <!-- A payout address: a wallet with its clasp. -->
+  <StreamGeometry x:Key="IconWallet">M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM20 10h-4a2 2 0 0 0 0 4h4M4 8l12-4</StreamGeometry>
 
   <StreamGeometry x:Key="IconZoomIn">M12 5v14M5 12h14</StreamGeometry>
 
