@@ -39,7 +39,7 @@ The file name the demo is written out as.
 ### Summary { #f-summary }
 
 ```csharp
-public const string Summary = "A sample collection of layered chests — two Recipes, all three layer kinds, and a few hundred thousand possible assets.";
+public const string Summary = "A sample collection of layered chests — two Recipes, all three layer kinds, and over seven million possible assets.";
 ```
 
 One line describing what the demo is, for a button caption or a status message. Stated here rather than in each front-end so the CLI and the GUI say the same thing.

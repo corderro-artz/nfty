@@ -38,7 +38,7 @@ public static class DemoCookBook
     /// Stated here rather than in each front-end so the CLI and the GUI say the same thing.</summary>
     public const string Summary =
         "A sample collection of layered chests — two Recipes, all three layer kinds, "
-        + "and a few hundred thousand possible assets.";
+        + "and over seven million possible assets.";
 
     private const string ResourceName = "Nfty.Core.Demo." + FileName;
 
