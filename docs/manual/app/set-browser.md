@@ -3,7 +3,8 @@
 The Set browser shows a cooked collection as a grid, with the rarity of each asset's traits on the
 right. Open it from the Cook dialog's **Open Set**, from **Open a cooked .set…** on the opening
 screen, or from a Recent row. It opens packed `.set` archives, Set folders and sealed `.tin` files
-(after the passphrase).
+(after the passphrase). While a large Set opens, the card counts the assets as it reads them
+("Reading 1,234 of 10,000 assets…"); unpacking a `.set` comes first and shows a moving bar.
 
 ![The Set browser: a row washes on hover, the tile under the pointer washes further, and the selected one keeps its accent caption](../images/set-browser-light.png#only-light)
 ![The Set browser: a row washes on hover, the tile under the pointer washes further, and the selected one keeps its accent caption](../images/set-browser-dark.png#only-dark)

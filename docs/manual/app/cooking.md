@@ -26,7 +26,9 @@ to see any problems. The lock does not need to be open.
 
 3. Click **Cook** and choose an **empty** folder.
 
-A progress bar runs while the assets are rolled and written; **Cancel** stops it. When it finishes,
+A progress bar runs while the assets are rolled and written; **Cancel** stops it, and the files that
+cook had already written are removed, so a stopped cook never leaves a half-written Set. Files that
+were in the folder before, and an extended Set's earlier assets, are left alone. When it finishes,
 the dialog reports the result. Click the folder row to open it in your file manager, or **Open Set**
 to browse it in the [Set browser](set-browser.md). What the folder holds is in
 [What a Set contains](../reference/set-contents.md).

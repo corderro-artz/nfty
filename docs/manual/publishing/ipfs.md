@@ -44,7 +44,8 @@ When it finishes, the tab shows each address with **Copy**:
 | **CONTRACT URI** | Your contract's `contractURI`: `ipfs://<metadataCID>/collection.json`. |
 | **IMAGES**, **MODELS**, **METADATA** | Each uploaded folder. |
 
-**Cancel** stops between steps; whatever the service already received stays pinned. The window will
+**Cancel** stops between steps, and nfty then unpins every folder that run had already pinned, so a
+stopped or failed upload leaves nothing behind on the service. The window will
 not close during an upload. An upload is refused for a sealed export, one with no art or no metadata,
 or one with the debug mark on.
 
