@@ -55,7 +55,7 @@
          up under CREATE when the two action groups went side by side. -->
     <!-- ONE GRID FOR CREATE, OPEN AND THE FOOT. The wordmark block used to be a third row under both
          action stacks, so the page was as tall as the taller stack PLUS the block. OPEN gained a
-         sixth entry (Rise a picture…) and the page then wanted 433px of a 420px row at the smallest
+         sixth entry (Rise an asset…) and the page then wanted 433px of a 420px row at the smallest
          window - a scrollbar over thirteen pixels. CREATE is the short stack and leaves a void under
          it, so the block now sits in that void, at the foot of the left column as before, and the
          page is only as tall as OPEN. -->
@@ -170,7 +170,7 @@
 
       <!-- Rise: pixel art to 3D. A picture or a spritesheet is not an archive, so it has no other way in. -->
       <Button Classes="landing tbtn" Command="{Binding RisePictureCommand}">
-        <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconRise}" /><TextBlock Classes="lbl" Text="Rise a picture…" /></StackPanel></Grid>
+        <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconRise}" /><TextBlock Classes="lbl" Text="Rise an asset…" /></StackPanel></Grid>
       </Button>
       </StackPanel>
 

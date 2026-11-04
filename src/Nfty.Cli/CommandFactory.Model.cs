@@ -68,7 +68,7 @@ public static partial class CommandFactory
         var voxelSize = ModelVoxelSizeOption();
 
         var cmd = new Command("model",
-            "Rise a picture into a 3D model: every fully opaque pixel becomes a column of voxels — one "
+            "Rise an asset into a 3D model: every fully opaque pixel becomes a column of voxels — one "
                 + "for the paper plus its front and back depth — colored with the picture's own pixels. "
                 + "A partly transparent pixel is refused by name, never rounded.")
         { input, outp, variant, seed, front, back, format, pivot, voxelSize };

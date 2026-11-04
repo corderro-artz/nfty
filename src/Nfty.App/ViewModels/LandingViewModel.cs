@@ -68,7 +68,7 @@ public partial class LandingViewModel : ViewModelBase
     /// be unpacked into. Null falls back to a temp folder, which is what keeps a test that opens the
     /// demo off the developer's own build output.</param>
     /// <param name="rise">Builds the Rise page over a source. Null where Rise is not offered, which
-    /// disables <c>Rise a picture…</c> rather than hiding it.</param>
+    /// disables <c>Rise an asset…</c> rather than hiding it.</param>
     /// <param name="status">Where the page's opening line and the grid note are said.</param>
     /// <param name="bridge">Makes the Rise rail's thumbnails; the shipped bridge when null.</param>
     /// <param name="threads">The worker-thread setting, read at the start of each open; null runs at the default.</param>
@@ -580,7 +580,7 @@ public partial class LandingViewModel : ViewModelBase
     {
         if (!CanRisePicture()) return;   // a disabled button is a label
         string? path;
-        try { path = await _picker.OpenFileAsync("Rise a picture", ".png"); }
+        try { path = await _picker.OpenFileAsync("Rise an asset", ".png"); }
         catch (Exception ex) { await _dialogs.ShowErrorAsync("Could not open", ErrorText.For(ex)); return; }
         if (path is null) return;        // canceled
         PendingOpen = RisePicturePathAsync(path);
