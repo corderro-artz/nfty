@@ -101,7 +101,7 @@ public class RiseExportSafetyTests
     }
 
     [AvaloniaFact]
-    public async Task While_an_export_runs_the_page_is_inert_and_its_commands_refuse_even_when_executed()
+    public void While_an_export_runs_the_page_is_inert_and_its_commands_refuse_even_when_executed()
     {
         var nav = new FakeNav();
         RiseViewModel? vm = null;
@@ -132,7 +132,7 @@ public class RiseExportSafetyTests
             pine = vm.Items.Single(i => i.Id == "pine");
             vm.ApplyDepthStroke(new[] { (3, 2) }, DepthSide.Front, false);     // something Undo could take back
             var oak = vm.SelectedItem;
-            await vm.ExportCommand.ExecuteAsync(null);
+            UiThreadWait.For(vm.ExportCommand.ExecuteAsync(null));
 
             Assert.All(checks, Assert.True);
             Assert.Equal(frontBefore, vm.Surface.Get(2, 1).Front);
@@ -146,7 +146,7 @@ public class RiseExportSafetyTests
     }
 
     [AvaloniaFact]
-    public async Task A_recipe_cannot_be_rerolled_while_its_roll_is_exported()
+    public void A_recipe_cannot_be_rerolled_while_its_roll_is_exported()
     {
         using var book = RiseFixtures.ChestBook();
         var src = new RecipeRiseSource(book, book.Recipes[0], seed: 7, new ImageBridge());
@@ -160,7 +160,7 @@ public class RiseExportSafetyTests
         }));
         using (vm)
         {
-            await vm.ExportCommand.ExecuteAsync(null);
+            UiThreadWait.For(vm.ExportCommand.ExecuteAsync(null));
             Assert.False(couldReroll);
             Assert.Equal(7, src.Seed);
             Assert.True(vm.RerollCommand.CanExecute(null));
@@ -168,7 +168,7 @@ public class RiseExportSafetyTests
     }
 
     [AvaloniaFact]
-    public async Task Closing_the_page_during_an_export_frees_the_source_only_when_the_export_ends()
+    public void Closing_the_page_during_an_export_frees_the_source_only_when_the_export_ends()
     {
         RiseViewModel? vm = null;
         RiseSubject? subject = null;
@@ -180,7 +180,7 @@ public class RiseExportSafetyTests
             vm.Dispose();                                   // the page goes while the export is underway
             freedWhileExporting = subject.IsDisposed;
         }));
-        await vm.ExportCommand.ExecuteAsync(null);
+        UiThreadWait.For(vm.ExportCommand.ExecuteAsync(null));
 
         Assert.False(freedWhileExporting);
         Assert.True(subject!.IsDisposed);                   // freed once the export ended
@@ -206,7 +206,7 @@ public class RiseExportSafetyTests
     // ------------------------------------------------------------------ a Set: the book, the stream
 
     [AvaloniaFact]
-    public async Task A_set_export_waits_for_the_book_so_it_writes_the_depth_the_page_will_show()
+    public void A_set_export_waits_for_the_book_so_it_writes_the_depth_the_page_will_show()
     {
         var setDir = CookedBesideBook();
         using var set = SetReader.Read(setDir);
@@ -224,7 +224,7 @@ public class RiseExportSafetyTests
         Assert.Equal("Looking for the CookBook that cooked this Set…", dialogs.Busy.Single().PhaseText);
         Assert.False(exporting.IsCompleted);
         gate.Set();
-        await exporting;
+        UiThreadWait.For(exporting);
 
         // Every model carries the book's depth, none is paper: a paper 8x8 slab is a fixed size, the
         // book's oak (depth 2) is not.
@@ -238,19 +238,19 @@ public class RiseExportSafetyTests
     }
 
     [AvaloniaFact]
-    public async Task A_batch_card_counts_models_and_ends_full()
+    public void A_batch_card_counts_models_and_ends_full()
     {
         var setDir = CookedBesideBook();
         using var set = SetReader.Read(setDir);
         var src = new SetRiseSource(set, set.Items[0].Number, () => Array.Empty<string>(), new ImageBridge());
-        await src.BookSearch;
+        UiThreadWait.For(src.BookSearch);
         Dispatcher.UIThread.RunJobs();
         var dialogs = new Dialogs();
         var root = Temp();
         using var vm = Vm(src, new Picker(save: Path.Combine(root, "m.zip")), dialogs);
         vm.ToggleCheckAllCommand.Execute(null);
 
-        await vm.ExportCommand.ExecuteAsync(null);
+        UiThreadWait.For(vm.ExportCommand.ExecuteAsync(null));
         Dispatcher.UIThread.RunJobs();          // Progress<T> posts its last report
 
         var busy = dialogs.Busy.Single();
@@ -263,19 +263,19 @@ public class RiseExportSafetyTests
     }
 
     [AvaloniaFact]
-    public async Task Canceling_a_zip_batch_writes_no_zip_and_says_so()
+    public void Canceling_a_zip_batch_writes_no_zip_and_says_so()
     {
         var setDir = CookedBesideBook();
         using var set = SetReader.Read(setDir);
         var src = new SetRiseSource(set, set.Items[0].Number, () => Array.Empty<string>(), new ImageBridge());
-        await src.BookSearch;
+        UiThreadWait.For(src.BookSearch);
         Dispatcher.UIThread.RunJobs();
         var status = new StatusService();
         var root = Temp();
         using var vm = Vm(src, new Picker(save: Path.Combine(root, "m.zip")), new Dialogs(cancelBusy: true), status);
         vm.ToggleCheckAllCommand.Execute(null);
 
-        await vm.ExportCommand.ExecuteAsync(null);
+        UiThreadWait.For(vm.ExportCommand.ExecuteAsync(null));
 
         Assert.Empty(Directory.GetFiles(root));
         Assert.Equal("Export canceled. No zip was written.", status.Last);
@@ -332,12 +332,12 @@ public class RiseExportSafetyTests
     }
 
     [AvaloniaFact]
-    public async Task A_folder_batch_canceled_before_any_model_says_none_was_written()
+    public void A_folder_batch_canceled_before_any_model_says_none_was_written()
     {
         var setDir = CookedBesideBook();
         using var set = SetReader.Read(setDir);
         var src = new SetRiseSource(set, set.Items[0].Number, () => Array.Empty<string>(), new ImageBridge());
-        await src.BookSearch;
+        UiThreadWait.For(src.BookSearch);
         Dispatcher.UIThread.RunJobs();
         var status = new StatusService();
         var root = Temp();
@@ -345,19 +345,19 @@ public class RiseExportSafetyTests
         vm.Packed = false;
         vm.ToggleCheckAllCommand.Execute(null);
 
-        await vm.ExportCommand.ExecuteAsync(null);
+        UiThreadWait.For(vm.ExportCommand.ExecuteAsync(null));
 
         Assert.Equal("Export canceled. No models were written.", status.Last);
         Assert.Empty(Directory.GetFileSystemEntries(root));
     }
 
     [AvaloniaFact]
-    public async Task A_folder_batch_stopped_after_a_model_landed_names_the_folder_holding_it()
+    public void A_folder_batch_stopped_after_a_model_landed_names_the_folder_holding_it()
     {
         var setDir = CookedBesideBook();
         using var set = SetReader.Read(setDir);
         var src = new SetRiseSource(set, set.Items[0].Number, () => Array.Empty<string>(), new ImageBridge());
-        await src.BookSearch;
+        UiThreadWait.For(src.BookSearch);
         Dispatcher.UIThread.RunJobs();
         var status = new StatusService();
         var dialogs = new Dialogs();
@@ -367,7 +367,7 @@ public class RiseExportSafetyTests
         vm.ToggleCheckAllCommand.Execute(null);
         vm.FileWritten = _ => dialogs.Busy.Single().CancelCommand.Execute(null);   // stop after the first file
 
-        await vm.ExportCommand.ExecuteAsync(null);
+        UiThreadWait.For(vm.ExportCommand.ExecuteAsync(null));
 
         var folder = Directory.GetDirectories(root).Single();
         Assert.Single(Directory.GetFiles(folder));
@@ -388,12 +388,12 @@ public class RiseExportSafetyTests
     // ------------------------------------------------------------------ a Set lets go of what it left
 
     [AvaloniaFact]
-    public async Task Browsing_a_set_keeps_one_asset_loaded_and_frees_every_one_it_left()
+    public void Browsing_a_set_keeps_one_asset_loaded_and_frees_every_one_it_left()
     {
         var setDir = CookedBesideBook();
         using var set = SetReader.Read(setDir);
         var src = new SetRiseSource(set, set.Items[0].Number, () => Array.Empty<string>(), new ImageBridge());
-        await src.BookSearch;
+        UiThreadWait.For(src.BookSearch);
         Dispatcher.UIThread.RunJobs();
         using var vm = Vm(src, new Picker());
 
@@ -413,7 +413,7 @@ public class RiseExportSafetyTests
     }
 
     [AvaloniaFact]
-    public async Task A_left_asset_that_cannot_rise_stays_listed_as_2d_only()
+    public void A_left_asset_that_cannot_rise_stays_listed_as_2d_only()
     {
         var setDir = CookedBesideBook();
         using var set = SetReader.Read(setDir);
@@ -423,7 +423,7 @@ public class RiseExportSafetyTests
             SixLabors.ImageSharp.ImageExtensions.SaveAsPng(damaged, set.Items[1].ImagePath);
         }
         var src = new SetRiseSource(set, set.Items[0].Number, () => Array.Empty<string>(), new ImageBridge());
-        await src.BookSearch;
+        UiThreadWait.For(src.BookSearch);
         Dispatcher.UIThread.RunJobs();
         using var vm = Vm(src, new Picker());
 
@@ -463,28 +463,28 @@ public class RiseExportSafetyTests
     }
 
     [AvaloniaFact]
-    public async Task A_bin_the_picker_never_asked_about_is_named_when_it_is_replaced()
+    public void A_bin_the_picker_never_asked_about_is_named_when_it_is_replaced()
     {
         var dir = Temp();
         File.WriteAllBytes(Path.Combine(dir, "oak.bin"), new byte[] { 1 });
         var status = new StatusService();
         using var vm = BodyVm(new Picker(save: Path.Combine(dir, "oak.gltf")), status: status);
         vm.Format = Nfty.Model.ModelFormat.GltfWithBin;
-        await vm.ExportCommand.ExecuteAsync(null);
+        UiThreadWait.For(vm.ExportCommand.ExecuteAsync(null));
         Assert.EndsWith(" Replaced oak.bin.", status.Last);
     }
 
     [AvaloniaFact]
-    public async Task A_folder_batch_over_an_earlier_one_says_how_many_files_it_replaced()
+    public void A_folder_batch_over_an_earlier_one_says_how_many_files_it_replaced()
     {
         var root = Temp();
         var status = new StatusService();
         using var vm = BodyVm(new Picker(folder: root), status: status);
         vm.Packed = false;
         vm.ToggleCheckAllCommand.Execute(null);
-        await vm.ExportCommand.ExecuteAsync(null);
+        UiThreadWait.For(vm.ExportCommand.ExecuteAsync(null));
         Assert.DoesNotContain("Replaced", status.Last);
-        await vm.ExportCommand.ExecuteAsync(null);
+        UiThreadWait.For(vm.ExportCommand.ExecuteAsync(null));
         Assert.Contains(" Replaced 2 existing files.", status.Last);
     }
 }

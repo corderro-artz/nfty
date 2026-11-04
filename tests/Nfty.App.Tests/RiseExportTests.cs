@@ -88,7 +88,7 @@ public class RiseExportTests
     }
 
     [AvaloniaFact]
-    public async Task A_sealed_set_refuses_in_words_and_never_opens_the_picker()
+    public void A_sealed_set_refuses_in_words_and_never_opens_the_picker()
     {
         using var set = OpenSealed();
         var picker = new ScriptedPicker(throwIfAsked: true);
@@ -102,13 +102,13 @@ public class RiseExportTests
         Assert.Equal("Nothing to export", vm.ManifestTitle);
 
         // Executing anyway (a disabled button is a label) is still refused, picker untouched.
-        await vm.ExportCommand.ExecuteAsync(null);
+        UiThreadWait.For(vm.ExportCommand.ExecuteAsync(null));
         Assert.Equal(0, picker.Asked);
         Assert.Equal("", vm.ManifestSize);
     }
 
     [AvaloniaFact]
-    public async Task A_single_gltf_with_bin_is_written_under_the_picked_stem()
+    public void A_single_gltf_with_bin_is_written_under_the_picked_stem()
     {
         var dir = Temp();
         var status = new StatusService();
@@ -119,7 +119,7 @@ public class RiseExportTests
         Assert.Equal("Body-Oak.gltf", vm.ManifestTitle);
         Assert.Equal(new[] { "Body-Oak.gltf", "Body-Oak.bin" }, vm.ManifestParts);
 
-        await vm.ExportCommand.ExecuteAsync(null);
+        UiThreadWait.For(vm.ExportCommand.ExecuteAsync(null));
 
         Assert.Equal(new[] { "mychest.bin", "mychest.gltf" }, Names(dir));
         Assert.Equal($"Exported mychest.gltf, mychest.bin to {dir}.", status.Last);
@@ -127,7 +127,7 @@ public class RiseExportTests
     }
 
     [AvaloniaFact]
-    public async Task A_folder_batch_writes_exactly_the_names_the_manifest_lists()
+    public void A_folder_batch_writes_exactly_the_names_the_manifest_lists()
     {
         var root = Temp();
         using var vm = BodyVm(new ScriptedPicker(folder: root));
@@ -140,13 +140,13 @@ public class RiseExportTests
         Assert.Equal(new[] { "2 models", "2 files", "Body-Oak.glb, Body-Pine.glb" }, vm.ManifestParts);
         Assert.Equal("", vm.ManifestSize);       // a batch states names, not a size
 
-        await vm.ExportCommand.ExecuteAsync(null);
+        UiThreadWait.For(vm.ExportCommand.ExecuteAsync(null));
 
         Assert.Equal(vm.ManifestParts[2].Split(", "), Names(Path.Combine(root, "Body-models")));
     }
 
     [AvaloniaFact]
-    public async Task A_batch_of_two_file_models_counts_four_files_and_writes_four()
+    public void A_batch_of_two_file_models_counts_four_files_and_writes_four()
     {
         var root = Temp();
         using var vm = BodyVm(new ScriptedPicker(folder: root));
@@ -156,7 +156,7 @@ public class RiseExportTests
         vm.Format = ModelFormat.GltfWithBin;
 
         Assert.Equal("4 files", vm.ManifestParts[1]);
-        await vm.ExportCommand.ExecuteAsync(null);
+        UiThreadWait.For(vm.ExportCommand.ExecuteAsync(null));
         Assert.Equal(new[] { "Body-Oak.bin", "Body-Oak.gltf", "Body-Pine.bin", "Body-Pine.gltf" },
             Names(Path.Combine(root, "Body-models")));
     }
@@ -180,7 +180,7 @@ public class RiseExportTests
     }
 
     [AvaloniaFact]
-    public async Task A_batch_with_the_ghost_ticked_writes_the_others_and_names_the_ghost_as_skipped()
+    public void A_batch_with_the_ghost_ticked_writes_the_others_and_names_the_ghost_as_skipped()
     {
         var root = Temp();
         var status = new StatusService();
@@ -190,7 +190,7 @@ public class RiseExportTests
         Item(vm, "Ghost").IsChecked = true;      // a variant page loads every variant, so it is already known to be 2D and never reaches the writer
         vm.Packed = false;
 
-        await vm.ExportCommand.ExecuteAsync(null);
+        UiThreadWait.For(vm.ExportCommand.ExecuteAsync(null));
 
         Assert.Equal(new[] { "Body-Oak.glb", "Body-Pine.glb" }, Names(Path.Combine(root, "Body-models")));
         Assert.Equal($"Exported 2 models (2 files) to {Path.Combine(root, "Body-models")}. Skipped Ghost (2D only).", status.Last);
@@ -331,14 +331,14 @@ public class RiseExportTests
     }
 
     [AvaloniaFact]
-    public async Task A_cancelled_picker_writes_nothing_and_a_failure_is_said_in_a_dialog()
+    public void A_cancelled_picker_writes_nothing_and_a_failure_is_said_in_a_dialog()
     {
         var picker = new ScriptedPicker(save: null);
         using (var vm = BodyVm(picker))
         {
             Item(vm, "Oak").IsChecked = true;
             var status = new StatusService();
-            await vm.ExportCommand.ExecuteAsync(null);
+            UiThreadWait.For(vm.ExportCommand.ExecuteAsync(null));
             Assert.Equal(1, picker.Asked);
             Assert.Null(status.Last);
         }
@@ -346,13 +346,13 @@ public class RiseExportTests
         var dialogs = new FakeDialogs();
         using var failing = BodyVm(new ScriptedPicker(save: Path.Combine(Temp(), "nope", "..", "..", "x\0.glb")), dialogs: dialogs);
         Item(failing, "Oak").IsChecked = true;
-        await failing.ExportCommand.ExecuteAsync(null);
+        UiThreadWait.For(failing.ExportCommand.ExecuteAsync(null));
         Assert.IsType<ErrorDialogViewModel>(dialogs.Active);
         Assert.True(failing.ExportCommand.CanExecute(null));       // not left stuck exporting
     }
 
     [AvaloniaFact]
-    public async Task A_batch_set_names_what_the_writer_skips_when_the_picture_turns_out_to_be_2D()
+    public void A_batch_set_names_what_the_writer_skips_when_the_picture_turns_out_to_be_2D()
     {
         var (s, path) = RiseFixtures.OnDisk(RiseFixtures.ChestBook());
         var setDir = Path.Combine(Path.GetDirectoryName(path)!, "Chest Set");
@@ -374,7 +374,7 @@ public class RiseExportTests
             new ScriptedPicker(folder: root), status);
         vm.Packed = false;
         vm.ToggleCheckAllCommand.Execute(null);          // nothing is loaded but the first, so none is known to be 2D yet
-        await vm.ExportCommand.ExecuteAsync(null);
+        UiThreadWait.For(vm.ExportCommand.ExecuteAsync(null));
 
         Assert.Equal(20 - ghosts, Directory.GetFiles(Directory.GetDirectories(root).Single()).Length);
         Assert.Contains("(partial alpha)", status.Last);
@@ -424,7 +424,7 @@ public class RiseExportTests
     }
 
     [AvaloniaFact]
-    public async Task A_format_changed_while_the_picker_is_open_does_not_change_what_the_file_was_named_for()
+    public void A_format_changed_while_the_picker_is_open_does_not_change_what_the_file_was_named_for()
     {
         var dir = Temp();
         RiseViewModel? vm = null;
@@ -432,7 +432,7 @@ public class RiseExportTests
         vm = BodyVm(picker);
         using (vm)
         {
-            await vm.ExportCommand.ExecuteAsync(null);
+            UiThreadWait.For(vm.ExportCommand.ExecuteAsync(null));
             Assert.Equal(new[] { "pick.glb" }, Names(dir));
             Assert.Equal("glTF", System.Text.Encoding.ASCII.GetString(File.ReadAllBytes(Path.Combine(dir, "pick.glb")), 0, 4));
         }
@@ -453,7 +453,7 @@ public class RiseExportTests
     }
 
     [AvaloniaFact]
-    public async Task A_recipe_exports_its_one_roll_and_follows_a_reroll()
+    public void A_recipe_exports_its_one_roll_and_follows_a_reroll()
     {
         using var book = RiseFixtures.ChestBook();
         var recipe = book.Recipes.Single(r => r.Manifest.Id == "chest");
@@ -466,7 +466,7 @@ public class RiseExportTests
         src.Reroll();
         Assert.Equal("Chest-8.glb", vm.ManifestTitle);
 
-        await vm.ExportCommand.ExecuteAsync(null);
+        UiThreadWait.For(vm.ExportCommand.ExecuteAsync(null));
         Assert.Equal(new[] { "roll.glb" }, Names(dir));
     }
 
@@ -497,7 +497,7 @@ public class RiseExportTests
     }
 
     [AvaloniaFact]
-    public async Task A_recipe_export_writes_the_back_owner_color()
+    public void A_recipe_export_writes_the_back_owner_color()
     {
         using var book = RiseFixtures.StrapOverBody();
         var recipe = book.Recipes.Single();
@@ -505,7 +505,7 @@ public class RiseExportTests
         using var vm = Vm(new RecipeRiseSource(book, recipe, RiseFixtures.OakSeed(book, recipe), new ImageBridge()),
             new ScriptedPicker(save: Path.Combine(dir, "roll.glb")));
 
-        await vm.ExportCommand.ExecuteAsync(null);
+        UiThreadWait.For(vm.ExportCommand.ExecuteAsync(null));
 
         using var tex = GlbTexture(File.ReadAllBytes(Path.Combine(dir, "roll.glb")));
         Assert.Equal(GoldColor, tex[3, 3]);
@@ -513,7 +513,7 @@ public class RiseExportTests
     }
 
     [AvaloniaFact]
-    public async Task The_page_export_is_the_cooked_sets_model_byte_for_byte()
+    public void The_page_export_is_the_cooked_sets_model_byte_for_byte()
     {
         // One definition of the model: what the page exports for a roll is what a cook writes to models/.
         using var book = RiseFixtures.StrapOverBody(withGhost: false);
@@ -522,7 +522,7 @@ public class RiseExportTests
         var dir = Temp();
         using var vm = Vm(new RecipeRiseSource(book, recipe, seed, new ImageBridge()),
             new ScriptedPicker(save: Path.Combine(dir, "roll.glb")));
-        await vm.ExportCommand.ExecuteAsync(null);
+        UiThreadWait.For(vm.ExportCommand.ExecuteAsync(null));
 
         using var asset = Generator.GenerateStreaming(book,
             new GenerateOptions(1, seed.ToString(), "chest", EnforceUniqueDna: false)).First();
@@ -572,11 +572,11 @@ public class RiseExportTests
         var dir = Temp();
         using var vm = Vm(new SetRiseSource(set, set.Items[1].Number, () => Array.Empty<string>(), new ImageBridge()),
             new ScriptedPicker(save: Path.Combine(dir, "m.glb")));
-        await ((SetRiseSource)vm.Source).BookSearch;
-        await vm.Source.ExportReady;
+        UiThreadWait.For(((SetRiseSource)vm.Source).BookSearch);
+        UiThreadWait.For(vm.Source.ExportReady);
         Avalonia.Threading.Dispatcher.UIThread.RunJobs();
 
-        await vm.ExportCommand.ExecuteAsync(null);
+        UiThreadWait.For(vm.ExportCommand.ExecuteAsync(null));
         return (expected, File.ReadAllBytes(Path.Combine(dir, "m.glb")));
     }
 
