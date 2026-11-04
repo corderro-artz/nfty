@@ -27,7 +27,7 @@ public sealed class DepthMap
         Width = width;
         Height = height;
         _bytes = bytes;
-        IsFlat = _bytes.AsSpan().IndexOfAnyExcept((byte)0) < 0;
+        IsFlat = Array.TrueForAll(_bytes, b => b == 0);
     }
 
     /// <summary>Builds a flat map — every pixel's front and back at zero — for a canvas of the given
@@ -38,8 +38,8 @@ public sealed class DepthMap
     /// <returns>A new, all-zero <see cref="DepthMap"/>.</returns>
     public static DepthMap Flat(int width, int height)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
+        Guard.Positive(width, nameof(width));
+        Guard.Positive(height, nameof(height));
         return new DepthMap(width, height, new byte[checked(width * height * 2)]);
     }
 
@@ -55,8 +55,8 @@ public sealed class DepthMap
     /// </exception>
     public static DepthMap FromBytes(int width, int height, ReadOnlySpan<byte> bytes)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
+        Guard.Positive(width, nameof(width));
+        Guard.Positive(height, nameof(height));
         int expected = checked(width * height * 2);
         if (bytes.Length != expected)
             throw new ArgumentException(

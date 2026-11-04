@@ -9,12 +9,26 @@
     into here rather than keeping a second copy of the roll, because two copies is how "the server
     and the client agree" stops being true.
 
-    NO #if IN LOGIC. Should a second target framework ever be added, whatever it needs is written
-    unconditionally: one code path cannot diverge from itself.
+    TWO TARGETS, ONE CODE PATH. netstandard2.1 is for a game engine loading this as a managed plugin.
+    Whatever net10.0 has and netstandard2.1 lacks is replaced UNCONDITIONALLY (Guard, Hashing,
+    MenuJson) — never behind #if — so the assembly an engine embeds and the one the desktop app loads
+    run the same code to compute a DNA. The only conditional file is Compat/NetStandardShims.cs, which
+    declares compiler-support types (no logic) the older framework lacks.
   -->
-  <!-- No PropertyGroup: Directory.Build.props already sets TargetFramework, Nullable,
-       ImplicitUsings, LangVersion, the version stamp and the documentation settings. Restating one
-       here is the duplication that file's own comment warns about - seven csproj copies had already
-       drifted before it existed. -->
+  <!-- Directory.Build.props sets TargetFramework, Nullable, ImplicitUsings, LangVersion, the version
+       stamp and the documentation settings; only the target list is overridden here. -->
+  <PropertyGroup>
+    <TargetFramework></TargetFramework>
+    <TargetFrameworks>net10.0;netstandard2.1</TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Guard and Hashing (Compat/) are internal helpers every namespace here uses. -->
+    <Using Include="Nfty.Ticket" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.1'">
+    <Compile Remove="Compat/NetStandardShims.cs" />
+  </ItemGroup>
 
 </Project>

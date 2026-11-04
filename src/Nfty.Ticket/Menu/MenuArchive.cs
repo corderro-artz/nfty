@@ -1,6 +1,4 @@
 using System.IO.Compression;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Nfty.Core.Model;
 
 namespace Nfty.Ticket;
@@ -24,49 +22,12 @@ namespace Nfty.Ticket;
 /// </remarks>
 public sealed class MenuArchive : IDisposable
 {
-    /// <summary>
-    /// The wire policy this reader parses a Menu manifest with.
-    /// </summary>
-    /// <remarks>
-    /// <para><b>A local copy, not a shared one</b> — <c>Nfty.Ticket</c> is deliberately package-free
-    /// and cannot reference <c>Nfty.Core</c> (a runtime host that only needs to roll takes this
-    /// assembly and nothing else), so it cannot reuse <c>Nfty.Core.Formats.Json.Options</c>, which
-    /// <c>MenuWriter</c> (in <c>Nfty.Core.Publish</c>) writes with. <b>The two must agree</b> on the
-    /// property naming policy and the enum string conversion — they are the two ends of one format,
-    /// and a divergence there is a Menu that writes and does not read back.</para>
-    ///
-    /// <para><b>Deliberately narrower than <c>Json.Options</c> in one respect.</b> Core's options
-    /// also set <c>RespectRequiredConstructorParameters</c>, which demands every constructor
-    /// parameter without a C# default be present in the JSON. <see cref="MenuBook"/>'s
-    /// <c>SourceCookBookSha256</c> sits second in its primary constructor — not last — so it cannot
-    /// carry a default without reordering the parameter list, which would break every existing
-    /// positional <c>new MenuBook(...)</c> call in this repo (including pre-existing tests) for a
-    /// field that is legitimately absent whenever a book never came from a file. Left off for that
-    /// reason.</para>
-    ///
-    /// <para><b><see cref="JsonSerializerOptions.RespectNullableAnnotations"/> does NOT cover a
-    /// truncated manifest</b> — it rejects an explicit <c>null</c> for a non-nullable field, not an
-    /// absent key, which a first draft of this comment claimed and was wrong about. Without
-    /// <c>RespectRequiredConstructorParameters</c>, a manifest missing <c>canvas</c>, <c>recipes</c>,
-    /// or any other required field simply deserializes with that member left at its CLR default
-    /// (<c>null</c> for a reference type) and no exception — which is a Menu that opens fine and
-    /// fails later with a <see cref="NullReferenceException"/> deep inside <c>Ticketer.Prepare</c>,
-    /// nowhere near the actual problem. <see cref="ReadBook"/> closes that hole itself, explicitly,
-    /// via <see cref="ValidateBook"/> — naming the missing member rather than letting the gap stand
-    /// on the theory that nullable annotations alone were enough.</para>
-    /// </remarks>
-    private static readonly JsonSerializerOptions WireOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-
-        // allowIntegerValues: false - the default JsonStringEnumConverter reads a raw integer
-        // (e.g. "kind":1) just as readily as the named string, which would let a hand-edited or
-        // corrupted manifest silently pick a different LayerKind/ColorModel/etc. than the one its
-        // author wrote and typed as a name. Refused instead, the same way an unnamed value already
-        // is.
-        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false) },
-        RespectNullableAnnotations = true,
-    };
+    // The manifest is read by MenuJson, a reader with no JSON library (this assembly takes no
+    // package, and System.Text.Json is not in-box on netstandard2.1). It keeps the rules the
+    // System.Text.Json options here used to state: camelCase names, enums as camelCase NAMES only
+    // (an integer is refused), null refused for a non-nullable member — and, like those options, a
+    // MISSING member is left at its default, which ValidateBook then names. MenuWriter (Nfty.Core)
+    // writes with Json.Options; the two ends of the format must agree on naming and enum spelling.
 
     private readonly ZipArchive _zip;
     private readonly Dictionary<string, MenuCell> _cellsByKey;
@@ -101,7 +62,7 @@ public sealed class MenuArchive : IDisposable
     /// <exception cref="InvalidDataException">The file is not a readable Menu.</exception>
     public static MenuArchive Open(string path)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        Guard.NotBlank(path, nameof(path));
         return Open(File.OpenRead(path));
     }
 
@@ -114,7 +75,7 @@ public sealed class MenuArchive : IDisposable
     /// <exception cref="InvalidDataException">The stream is not a readable Menu.</exception>
     public static MenuArchive Open(Stream stream)
     {
-        ArgumentNullException.ThrowIfNull(stream);
+        Guard.NotNull(stream, nameof(stream));
 
         var zip = new ZipArchive(stream, ZipArchiveMode.Read);
         bool ok = false;
@@ -145,16 +106,26 @@ public sealed class MenuArchive : IDisposable
         }
 
         // A manifest written through Encoding.UTF8 (rather than a BOM-less UTF8Encoding) carries a
-        // three-byte preamble Utf8JsonReader does not skip on its own; stripped here once so neither
+        // three-byte preamble the reader would otherwise see as text; stripped here once so neither
         // the version peek nor the full parse below has to know about it.
         if (bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
-            bytes = bytes[3..];
+            bytes = bytes.AsSpan(3).ToArray();
 
         // The schema is gated BEFORE the strongly-typed parse, deliberately. A manifest declaring a
         // newer schema might not carry any of the fields MenuBook expects at all — a future version
         // is free to change what the file means — so checking the version first is what lets the
         // refusal say "too new" instead of a confusing JSON error about missing fields.
-        int version = ReadSchemaVersion(bytes);
+        object? root;
+        try
+        {
+            root = MenuJson.Parse(bytes);
+        }
+        catch (MenuJsonException ex)
+        {
+            throw new InvalidDataException($"manifest.json is not readable JSON: {ex.Message}", ex);
+        }
+
+        int version = ReadSchemaVersion(root);
         if (!MenuSchema.IsSupported(version, MenuSchema.Current))
         {
             // Below Oldest and above Current are different failures and read differently: a version
@@ -175,9 +146,9 @@ public sealed class MenuArchive : IDisposable
         MenuBook? book;
         try
         {
-            book = JsonSerializer.Deserialize<MenuBook>(bytes, WireOptions);
+            book = MenuJson.Book(root);
         }
-        catch (JsonException ex)
+        catch (MenuJsonException ex)
         {
             throw new InvalidDataException($"manifest.json is not a readable Menu: {ex.Message}", ex);
         }
@@ -188,15 +159,14 @@ public sealed class MenuArchive : IDisposable
     }
 
     /// <summary>
-    /// Checks that every member <see cref="WireOptions"/> cannot enforce on its own is actually
+    /// Checks that every member the manifest reader cannot enforce on its own is actually
     /// present, naming whichever one is not.
     /// </summary>
     /// <param name="book">The just-deserialized book.</param>
     /// <exception cref="InvalidDataException">A required member is missing or, for an atlas Menu,
     /// structurally empty.</exception>
     /// <remarks>
-    /// <see cref="JsonSerializerOptions.RespectRequiredConstructorParameters"/> is deliberately off
-    /// (see the remarks on <see cref="WireOptions"/>), which means <c>System.Text.Json</c> silently
+    /// The manifest reader deliberately does not demand every member, which means it silently
     /// leaves a missing member at its CLR default instead of throwing. Every one of those defaults is
     /// distinguishable from a genuine value here — <c>null</c> for every reference-typed member, and
     /// zero for the two atlas dimensions, which a real atlas can never legitimately have — so this is
@@ -219,8 +189,8 @@ public sealed class MenuArchive : IDisposable
         // Cells is required in BOTH modes - a loose Menu's rects are the whole image rather than a
         // sub-rect, but MenuWriter still writes one MenuCell per variant so a reader can treat both
         // modes through one code path (Cell() and ArtBytes() do not branch on Mode). A manifest
-        // missing the key entirely deserializes this to null (RespectRequiredConstructorParameters
-        // is off - see WireOptions), and MenuArchive's own constructor foreaches over it
+        // missing the key entirely deserializes this to null (the manifest reader
+        // does not demand it), and MenuArchive's own constructor foreaches over it
         // unconditionally, so an unchecked null here reached the caller as a bare
         // NullReferenceException instead of a named refusal.
         if (book.Art.Cells is null)
@@ -257,29 +227,15 @@ public sealed class MenuArchive : IDisposable
         }
     }
 
-    private static int ReadSchemaVersion(byte[] manifestBytes)
+    private static int ReadSchemaVersion(object? root)
     {
-        try
-        {
-            using var doc = JsonDocument.Parse(manifestBytes);
-            if (!doc.RootElement.TryGetProperty("menuSchemaVersion", out var v))
-                throw new InvalidDataException("manifest.json is missing menuSchemaVersion.");
-
-            // v.GetInt32() on a non-number JsonElement throws InvalidOperationException, which the
-            // JsonException catch below does not see - so a manifest carrying
-            // "menuSchemaVersion":"1" (a string, not a number) reached the caller as a bare,
-            // unnamed InvalidOperationException instead of the same InvalidDataException every
-            // other malformed-manifest case throws. TryGetInt32 never throws: it reports false for
-            // a non-number element and for a number with a fractional or out-of-range value alike.
-            if (v.ValueKind != JsonValueKind.Number || !v.TryGetInt32(out int version))
-                throw new InvalidDataException(
-                    "manifest.json's menuSchemaVersion must be a whole number.");
-            return version;
-        }
-        catch (JsonException ex)
-        {
-            throw new InvalidDataException($"manifest.json is not readable JSON: {ex.Message}", ex);
-        }
+        int? version = MenuJson.SchemaVersion(root, out bool present);
+        if (!present)
+            throw new InvalidDataException("manifest.json is missing menuSchemaVersion.");
+        // A string, a fraction or an out-of-range number all read as the same malformed-manifest
+        // failure every other case throws, never a bare exception.
+        return version ?? throw new InvalidDataException(
+            "manifest.json's menuSchemaVersion must be a whole number.");
     }
 
     /// <summary>
@@ -293,8 +249,8 @@ public sealed class MenuArchive : IDisposable
     /// at.</exception>
     public byte[] ArtBytes(string cellKey)
     {
-        ArgumentNullException.ThrowIfNull(cellKey);
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        Guard.NotNull(cellKey, nameof(cellKey));
+        Guard.NotDisposed(_disposed, this);
 
         if (!_cellsByKey.ContainsKey(cellKey))
             throw new KeyNotFoundException($"No cell for '{cellKey}'.");
@@ -318,8 +274,8 @@ public sealed class MenuArchive : IDisposable
     /// <exception cref="KeyNotFoundException">The Menu has no cell for <paramref name="cellKey"/>.</exception>
     public MenuCell Cell(string cellKey)
     {
-        ArgumentNullException.ThrowIfNull(cellKey);
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        Guard.NotNull(cellKey, nameof(cellKey));
+        Guard.NotDisposed(_disposed, this);
 
         return _cellsByKey.TryGetValue(cellKey, out var cell)
             ? cell
@@ -345,8 +301,8 @@ public sealed class MenuArchive : IDisposable
     /// </remarks>
     public DepthMap? Depth(string cellKey)
     {
-        ArgumentNullException.ThrowIfNull(cellKey);
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        Guard.NotNull(cellKey, nameof(cellKey));
+        Guard.NotDisposed(_disposed, this);
 
         if (!_cellsByKey.TryGetValue(cellKey, out var cell))
             throw new KeyNotFoundException($"No cell for '{cellKey}'.");
@@ -394,9 +350,9 @@ public sealed class MenuArchive : IDisposable
     /// hits the BCL's unnamed default message for either.</exception>
     public MenuLayer Layer(string recipeId, string ingredientId)
     {
-        ArgumentNullException.ThrowIfNull(recipeId);
-        ArgumentNullException.ThrowIfNull(ingredientId);
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        Guard.NotNull(recipeId, nameof(recipeId));
+        Guard.NotNull(ingredientId, nameof(ingredientId));
+        Guard.NotDisposed(_disposed, this);
 
         if (!_layersByRecipeId.TryGetValue(recipeId, out var byId))
             throw new KeyNotFoundException($"No recipe '{recipeId}' in this Menu.");

@@ -53,7 +53,7 @@ public static class Ticketer
     /// <returns>The prepared form, to hand <see cref="TryRoll"/> repeatedly.</returns>
     public static PreparedMenu Prepare(MenuBook book)
     {
-        ArgumentNullException.ThrowIfNull(book);
+        Guard.NotNull(book, nameof(book));
 
         var recipeWeights = book.Recipes.ToDictionary(r => r.Id, r => r.Weight, StringComparer.Ordinal);
         var plans = new Dictionary<string, RecipePlan>(StringComparer.Ordinal);
@@ -105,8 +105,8 @@ public static class Ticketer
     /// <seealso cref="AssetTicket"/>
     public static AssetTicket? TryRoll(PreparedMenu menu, IRng rng)
     {
-        ArgumentNullException.ThrowIfNull(menu);
-        ArgumentNullException.ThrowIfNull(rng);
+        Guard.NotNull(menu, nameof(menu));
+        Guard.NotNull(rng, nameof(rng));
 
         string recipeId = WeightedRoller.Roll(menu.Recipes, rng);
         var plan = menu.Plans[recipeId];

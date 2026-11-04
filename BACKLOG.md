@@ -9,25 +9,6 @@ reporting ceiling (0.7.2), and `Total` not being a lower bound when the walk is 
 
 ---
 
-## `Nfty.Ticket` does not target `netstandard2.1`
-
-**Status:** deferred deliberately; engine embedding is not a current goal.
-
-`Nfty.Ticket` targets `net10.0` alone. A game engine loading it as a managed plugin would want
-`netstandard2.1`, and adding that target later costs: replacing `SHA256.HashData`,
-`Convert.ToHexString` and `ArgumentNullException.ThrowIfNull`; an `IsExternalInit` shim for `init`
-accessors; and a hand-written reader for the Menu manifest, since `System.Text.Json` is a package
-rather than in-box below `net6.0`.
-
-**The rule that keeps it cheap:** `Nfty.Ticket` takes NO package dependency. The only thing a second
-target ever has to reconcile is framework API surface.
-
-**And the rule that keeps it correct:** whatever is replaced is replaced UNCONDITIONALLY, not behind
-`#if`. A conditional would mean the assembly an engine embeds and the assembly the desktop app loads
-run different code to compute a DNA — invisible in review and to any single-target test.
-
----
-
 ## An app-wide toggle for GPU acceleration
 
 **Status:** deferred by the author (2026-09-24) to the NEXT worktree, where they will scope it.

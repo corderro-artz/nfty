@@ -40,7 +40,7 @@ public static class Dna
             }
             sb.Append('|');
         }
-        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(sb.ToString()));
-        return Convert.ToHexStringLower(hash);
+        byte[] hash = Hashing.Sha256(Encoding.UTF8.GetBytes(sb.ToString()));
+        return Hashing.LowerHex(hash);
     }
 }

@@ -44,7 +44,7 @@ public static class SeedHash
     /// specifically, so the rule matches every Set already generated.</returns>
     public static ulong ToUlong(string seed)
     {
-        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(seed));
+        byte[] hash = Hashing.Sha256(Encoding.UTF8.GetBytes(seed));
 
         // Read the first 8 bytes in a FIXED byte order, not the machine's. BitConverter.ToUInt64
         // reads in native endianness, so the same seed would seed the RNG differently — and thus

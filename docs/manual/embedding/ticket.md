@@ -2,6 +2,8 @@
 
 `Nfty.Ticket` decides what an asset is: it reads a Menu, rolls tickets, and tells you what to draw.
 It has no dependencies at all, so a server or game engine takes `Nfty.Ticket.dll` and nothing else.
+It ships for **.NET 10** and **.NET Standard 2.1**, so an engine that loads managed plugins can take
+it as is. Both builds run the same code and roll the same assets from the same seed.
 Everything on this page comes from `samples/Nfty.Ticket.Sample`, which references `Nfty.Ticket` only:
 building it is the proof that the roll needs nothing more.
 

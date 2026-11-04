@@ -74,9 +74,9 @@ public sealed record AssetTicket(string Dna, string RecipeId, IReadOnlyList<Tick
             // Dynamic, with no error and the wrong pixels. Names are also what Json.Options already
             // does for every enum this product persists (JsonStringEnumConverter).
             parts.Add(l.Hue is double h && l.Sat is double s && l.Model is ColorModel m
-                ? string.Create(CultureInfo.InvariantCulture,
+                ? FormattableString.Invariant(
                     $"{head}@{h:R},{s:R},{m},{l.HueQuantize},{l.SatQuantize},{l.Kind}")
-                : string.Create(CultureInfo.InvariantCulture, $"{head}@,,,,,{l.Kind}"));
+                : FormattableString.Invariant($"{head}@,,,,,{l.Kind}"));
         }
         parts.Add(Dna);
         return string.Join("|", parts);
@@ -104,7 +104,7 @@ public sealed record AssetTicket(string Dna, string RecipeId, IReadOnlyList<Tick
     /// </remarks>
     public static AssetTicket Parse(string wire)
     {
-        ArgumentNullException.ThrowIfNull(wire);
+        Guard.NotNull(wire, nameof(wire));
         var parts = wire.Split('|');
         if (parts.Length < 3) throw new FormatException("A ticket needs a version, a recipe and a DNA.");
         if (parts[0] != Version)
@@ -177,9 +177,9 @@ public sealed record AssetTicket(string Dna, string RecipeId, IReadOnlyList<Tick
     /// a sign, surrounding space, another casing or a flags-style list is simply not a name.
     /// </summary>
     private static T Name<T>(string s, string layer, string field) where T : struct, Enum =>
-        Enum.GetNames<T>().Contains(s, StringComparer.Ordinal)
+        Enum.GetNames(typeof(T)).Contains(s, StringComparer.Ordinal)
             ? Enum.Parse<T>(s)
             : throw new FormatException(
                 $"Layer '{layer}' field '{field}' is '{s}'; expected one of " +
-                string.Join(", ", Enum.GetNames<T>()) + ".");
+                string.Join(", ", Enum.GetNames(typeof(T))) + ".");
 }

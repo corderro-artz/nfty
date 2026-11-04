@@ -39,8 +39,8 @@ public static class Plating
     /// from the Menu's colorization for that layer. The message names the layer.</exception>
     public static IReadOnlyList<Draw> Plate(MenuArchive menu, AssetTicket ticket)
     {
-        ArgumentNullException.ThrowIfNull(menu);
-        ArgumentNullException.ThrowIfNull(ticket);
+        Guard.NotNull(menu, nameof(menu));
+        Guard.NotNull(ticket, nameof(ticket));
 
         // KIND AND COLOR MODEL COME FROM THE MENU, NEVER FROM THE TICKET, and that is a
         // correctness rule rather than a tidiness one. Dna.Compute hashes LayerSelection, which
