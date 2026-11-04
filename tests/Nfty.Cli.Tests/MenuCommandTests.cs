@@ -344,7 +344,7 @@ public class MenuCommandTests
     }
 
     [Fact]
-    public void Inspect_voxel_on_a_menu_is_refused_and_points_to_the_source_cookbook()
+    public void Inspect_voxel_on_a_menu_reports_the_same_rows_as_its_cookbook()
     {
         var dir = Directory.CreateTempSubdirectory().FullName;
         try
@@ -353,14 +353,20 @@ public class MenuCommandTests
             var mnu = Path.Combine(dir, "game.mnu");
             Run("menu", cbk, "--out", mnu);
 
-            var ex = Assert.Throws<InvalidOperationException>(
-                () => CommandFactory.Build().Parse(["inspect", mnu, "--voxel"]).Invoke(NonThrowing));
+            var (bookCode, bookOut, _) = Capture("inspect", cbk, "--voxel");
+            var (menuCode, menuOut, _) = Capture("inspect", mnu, "--voxel");
 
-            // Substantive rather than a bare "does the word 'Menu' appear" check (that passed even
-            // against a wrong, category-framed message a reviewer swapped in) — this pins the one
-            // thing amendment D actually requires: the refusal redirects the reader to the source
-            // CookBook, not merely that it mentions the word "Menu" somewhere.
-            Assert.Contains("CookBook that produced this Menu", ex.Message, StringComparison.Ordinal);
+            Assert.Equal(0, bookCode);
+            Assert.Equal(0, menuCode);
+            // A Menu carries its source variants uncolorized, so the rows below the heading (whose
+            // title names the book or the collection) must match the book's byte for byte.
+            static string Rows(string text)
+            {
+                string tail = text[text.IndexOf("Voxel readiness:", StringComparison.Ordinal)..];
+                return tail[(tail.IndexOf('\n') + 1)..];
+            }
+            Assert.NotEmpty(Rows(bookOut).Trim());
+            Assert.Equal(Rows(bookOut), Rows(menuOut));
         }
         finally { Directory.Delete(dir, recursive: true); }
     }

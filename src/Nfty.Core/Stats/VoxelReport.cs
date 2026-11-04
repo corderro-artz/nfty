@@ -4,6 +4,7 @@ using Nfty.Core.Formats;
 using Nfty.Core.Imaging;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace Nfty.Core.Stats;
 
@@ -72,6 +73,57 @@ public static class VoxelReport
         var targets = new List<Target>();
         foreach (var r in book.Recipes) AddTargets(targets, r);
         return Run(targets, parallelism);
+    }
+
+    /// <summary>
+    /// Scans every variant cell of a Menu, in recipe then paint order — the same rows
+    /// <see cref="Scan(LoadedCookBook, Parallelism?)"/> gives for the book that wrote it, since a Menu
+    /// carries its source variants uncolorized. Atlas mode decodes the atlas once and crops each cell.
+    /// </summary>
+    /// <param name="menu">The open Menu.</param>
+    /// <param name="parallelism">How wide the pixel scans may run; null means <see cref="Parallelism.Default"/>. The rows never depend on it.</param>
+    /// <returns>One row per variant cell.</returns>
+    public static IReadOnlyList<VoxelVariant> Scan(Nfty.Ticket.MenuArchive menu, Parallelism? parallelism = null)
+    {
+        ArgumentNullException.ThrowIfNull(menu);
+        var targets = new List<Target>();
+        var owned = new List<Image<Rgba32>>();
+        Image<Rgba32>? atlas = null;
+        bool isAtlas = menu.Book.Art.Mode == Nfty.Ticket.MenuArtMode.Atlas;
+        try
+        {
+            foreach (var recipe in menu.Book.Recipes)
+            {
+                var byId = recipe.Layers.ToDictionary(l => l.Id, StringComparer.Ordinal);
+                foreach (var layerId in recipe.LayerOrder)
+                {
+                    if (!byId.TryGetValue(layerId, out var layer)) continue;
+                    foreach (var v in layer.Variants)
+                    {
+                        string key = Nfty.Ticket.MenuBook.CellKey(recipe.Id, layer.Id, v.Id);
+                        var cell = menu.Cell(key);
+                        Image<Rgba32> img;
+                        if (isAtlas)
+                        {
+                            atlas ??= ImageFormats.Load(menu.ArtBytes(key));
+                            img = atlas.Clone(c => c.Crop(new Rectangle(cell.X, cell.Y, cell.Width, cell.Height)));
+                        }
+                        else
+                        {
+                            img = ImageFormats.Load(menu.ArtBytes(key));
+                        }
+                        owned.Add(img);
+                        targets.Add(new Target(layer.Name, v.Name, v.Id, img));
+                    }
+                }
+            }
+            return Run(targets, parallelism);
+        }
+        finally
+        {
+            foreach (var img in owned) img.Dispose();
+            atlas?.Dispose();
+        }
     }
 
     /// <summary>One variant to scan, fixed in report order before any scan runs.</summary>

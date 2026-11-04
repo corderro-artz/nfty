@@ -93,3 +93,18 @@ Scans every variant of every layer in a recipe, in paint order.
 - `parallelism` (`Parallelism?`) - How wide the pixel scans may run; null means [`Parallelism.Default`](Nfty.Core.Parallelism.md#p-default). The rows never depend on it.
 
 **Returns.** One row per variant.
+
+### Scan(MenuArchive, Parallelism?) { #m-scan-nfty-ticket-menuarchive-nfty-core-parallelism }
+
+```csharp
+public static IReadOnlyList<VoxelVariant> Scan(MenuArchive menu, Parallelism? parallelism = null);
+```
+
+Scans every variant cell of a Menu, in recipe then paint order — the same rows [`VoxelReport.Scan()`](Nfty.Core.Stats.VoxelReport.md#m-scan-nfty-core-formats-loadedcookbook-nfty-core-parallelism) gives for the book that wrote it, since a Menu carries its source variants uncolorized. Atlas mode decodes the atlas once and crops each cell.
+
+**Parameters**
+
+- `menu` (`MenuArchive`) - The open Menu.
+- `parallelism` (`Parallelism?`) - How wide the pixel scans may run; null means [`Parallelism.Default`](Nfty.Core.Parallelism.md#p-default). The rows never depend on it.
+
+**Returns.** One row per variant cell.

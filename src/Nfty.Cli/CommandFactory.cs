@@ -255,18 +255,11 @@ public static partial class CommandFactory
                     break;
                 case ArchiveKind.Menu:
                 {
-                    // Unlike the Kitchen and Set refusals above, this is NOT "there is nothing to
-                    // scan": a Menu carries its source variants, uncolorized — exactly the art
-                    // --voxel wants. What is missing is a second decode path (crop each cell out of
-                    // one packed PNG rather than reading a standalone variant image), which nothing
-                    // has built yet — a build limitation, not a limit of the format.
-                    if (wantVoxel)
-                        throw new InvalidOperationException(
-                            "--voxel needs each variant decoded on its own, and this build does not "
-                            + "decode a Menu's art yet. Run it on the CookBook that produced this "
-                            + "Menu instead.");
+                    // Unlike the Kitchen and Set refusals above, a Menu carries its source variants,
+                    // uncolorized — exactly the art --voxel wants, cropped cell by cell.
                     using var menu = MenuArchive.Open(file);
                     PrintMenu(menu);
+                    if (wantVoxel) PrintVoxel(menu.Book.CollectionName, VoxelReport.Scan(menu, threads));
                     break;
                 }
                 default:

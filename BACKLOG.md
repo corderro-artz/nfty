@@ -43,24 +43,6 @@ run different code to compute a DNA — invisible in review and to any single-ta
 
 ---
 
-## `inspect --voxel` is refused on a `.mnu`
-
-**Status:** deferred on scope, not on principle.
-
-`--voxel` reports which variants carry partial alpha. It is refused on a `.ktn` (which lists paths
-without opening them), on a `.tin` (sealed), and on a cooked Set (the output rather than the source
-art). **A Menu is the one refused kind where the information genuinely IS present** — it carries
-the source variants, uncolorized, which is exactly what the flag scans.
-
-What is missing is the traversal, not the measurement: every `VoxelReport.Scan` overload takes a
-`Loaded*` decoded from a `.cbk`, so a Menu needs its atlas decoded and cropped per cell.
-`VoxelReport.CountPartial(Image<Rgba32>)` is already public and already does the per-image work.
-
-The refusal message says so in those terms, deliberately — a "cannot" borrowed from one of the other
-three arms would be false here, and a wrong reason in an error message is worse than a terse one.
-
----
-
 ## An app-wide toggle for GPU acceleration
 
 **Status:** deferred by the author (2026-09-24) to the NEXT worktree, where they will scope it.

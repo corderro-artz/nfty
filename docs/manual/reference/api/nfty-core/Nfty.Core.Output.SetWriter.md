@@ -32,10 +32,10 @@ Public because [`Validator`](Nfty.Core.Formats.Validator.md) reserves the name o
 
 ## Methods
 
-### ReadExisting(string, Parallelism?) { #m-readexisting-system-string-nfty-core-parallelism }
+### ReadExisting(string, Parallelism?, bool) { #m-readexisting-system-string-nfty-core-parallelism-syste-804e99 }
 
 ```csharp
-public static SetWriter.ExistingSet ReadExisting(string outDir, Parallelism? parallelism = null);
+public static SetWriter.ExistingSet ReadExisting(string outDir, Parallelism? parallelism = null, bool needDnas = true);
 ```
 
 Reads what an existing Set already holds, for extend.
@@ -44,6 +44,7 @@ Reads what an existing Set already holds, for extend.
 
 - `outDir` (`string`) - The Set folder.
 - `parallelism` (`Parallelism?`) - How wide the per-file parsing may run; null means [`Parallelism.Default`](Nfty.Core.Parallelism.md#p-default). The result never depends on it.
+- `needDnas` (`bool`) - False when the caller will not dedup against DNAs (an `--unlimited` extend, or a read for the models block): [`SetWriter.ExistingSet.Dnas`](Nfty.Core.Output.SetWriter.ExistingSet.md#p-dnas) is then empty when the index answers, and [`SetWriter.ExistingSet.NextNumber`](Nfty.Core.Output.SetWriter.ExistingSet.md#p-nextnumber) is right either way. The walk, used when the index cannot be trusted, still returns DNAs: it opens every file regardless.
 
 **Returns.** Its DNAs and the next free number. An empty Set yields no DNAs and number 1.
 
@@ -51,10 +52,14 @@ Reads what an existing Set already holds, for extend.
 
 - [`CorruptSetException`](Nfty.Core.Output.CorruptSetException.md) - An item file is unreadable or missing its fields.
 
-### ReadExistingAsync(string, CancellationToken, Parallelism?) { #m-readexistingasync-system-string-system-threading-cance-a3b46f }
+**Remarks**
+
+Answered from `set-index.txt` when it matches `nfty/*.json` exactly (see `SetIndex`), else by opening every item file. Identical result either way.
+
+### ReadExistingAsync(string, CancellationToken, Parallelism?, bool) { #m-readexistingasync-system-string-system-threading-cance-31a281 }
 
 ```csharp
-public static Task<SetWriter.ExistingSet> ReadExistingAsync(string outDir, CancellationToken cancellationToken = default, Parallelism? parallelism = null);
+public static Task<SetWriter.ExistingSet> ReadExistingAsync(string outDir, CancellationToken cancellationToken = default, Parallelism? parallelism = null, bool needDnas = true);
 ```
 
 Reads what an existing Set already holds, for extend.
@@ -64,6 +69,7 @@ Reads what an existing Set already holds, for extend.
 - `outDir` (`string`) - The Set folder.
 - `cancellationToken` (`CancellationToken`) - Cancels the read.
 - `parallelism` (`Parallelism?`) - How wide the per-file parsing may run; null means [`Parallelism.Default`](Nfty.Core.Parallelism.md#p-default).
+- `needDnas` (`bool`) - As for [`SetWriter.ReadExisting()`](Nfty.Core.Output.SetWriter.md#m-readexisting-system-string-nfty-core-parallelism-syste-804e99).
 
 **Returns.** Its DNAs and the next free number.
 

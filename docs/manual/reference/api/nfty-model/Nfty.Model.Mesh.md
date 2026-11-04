@@ -12,7 +12,7 @@ A triangle mesh: what `Riser` builds, what the writers serialize, and what the s
 
 ## Remarks
 
-**Vertex rule.** A vertex is shared only by the two triangles of its own quad: four vertices and six indices per quad, so [`Mesh.VertexCount`](Nfty.Model.Mesh.md#p-vertexcount) is always twice [`Mesh.TriangleCount`](Nfty.Model.Mesh.md#p-trianglecount) for a risen mesh. Vertices that share a position across quads are NOT merged — their normals and UVs differ per face, and a merge keyed on position alone would be wrong. Whether a merge keyed on (position, normal, uv) is worth its complexity is a size question answered by `RisePerfTests`' measurement, not assumed.
+**Vertex rule.** A mesh straight from `Riser` shares a vertex only between the two triangles of its own quad: four vertices and six indices per quad, so [`Mesh.VertexCount`](Nfty.Model.Mesh.md#p-vertexcount) is twice [`Mesh.TriangleCount`](Nfty.Model.Mesh.md#p-trianglecount). That is the fast build the Rise page repeats per stroke. [`Mesh.Compact()`](Nfty.Model.Mesh.md#m-compact) merges bit-identical (position, normal, uv) vertices for the written file.
 
 Coordinates follow glTF: +Y up, +Z toward the viewer. Texture coordinates put (0,0) at the image's top-left, so v grows downward with the image row.
 
@@ -120,3 +120,15 @@ public int VertexCount { get; }
 ```
 
 How many vertices the mesh has.
+
+## Methods
+
+### Compact() { #m-compact }
+
+```csharp
+public Mesh Compact();
+```
+
+A copy with every set of bit-identical (position, normal, uv) vertices merged into one, no epsilon. Vertices are numbered in first-seen order, so the same mesh always compacts to the same bytes; triangle count, winding and bounds are unchanged. It costs a hash pass, which is why the writers pay it and the live preview does not.
+
+**Returns.** The compacted mesh; this mesh itself when nothing merges.
