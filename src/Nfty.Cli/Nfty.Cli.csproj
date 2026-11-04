@@ -12,6 +12,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The interactive passphrase reader is tested through its key-source seam. -->
+    <InternalsVisibleTo Include="Nfty.Cli.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Nfty.Core\Nfty.Core.csproj" />
     <!-- `nfty model`. The CLI may take it; Nfty.Core may not. -->
     <ProjectReference Include="..\Nfty.Model\Nfty.Model.csproj" />

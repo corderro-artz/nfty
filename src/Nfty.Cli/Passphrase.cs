@@ -119,14 +119,24 @@ public static class Passphrase
                 $"There is no terminal to ask at. Name a source with {option} "
                 + $"({Sources}).");
 
-        string first = ReadMasked(prompt);
+        return ReadPrompt(prompt, confirm, () => Console.ReadKey(intercept: true), Console.Out);
+    }
+
+    /// <summary>
+    /// The interactive prompt over an injected key source and echo writer — the seam a test drives,
+    /// since a test runner's stdin is always redirected. The console path passes
+    /// <c>Console.ReadKey(intercept: true)</c> and <c>Console.Out</c>; nothing else differs.
+    /// </summary>
+    internal static string ReadPrompt(string prompt, bool confirm, Func<ConsoleKeyInfo> readKey, TextWriter echo)
+    {
+        string first = ReadMasked(prompt, readKey, echo);
         if (first.Length == 0)
             throw new InvalidOperationException("No passphrase was entered.");
         if (!confirm) return first;
 
         // Sealing is one-way by design: nothing anywhere can recover the contents of a seal whose
         // passphrase was mistyped, so the confirmation is not politeness.
-        if (ReadMasked("Confirm passphrase") != first)
+        if (ReadMasked("Confirm passphrase", readKey, echo) != first)
             throw new InvalidOperationException("The two entries did not match; nothing was written.");
         return first;
     }
@@ -139,23 +149,23 @@ public static class Passphrase
     /// passphrase to anyone looking over the shoulder this is meant to defeat, which is the one
     /// fact about it worth having.
     /// </remarks>
-    private static string ReadMasked(string prompt)
+    internal static string ReadMasked(string prompt, Func<ConsoleKeyInfo> readKey, TextWriter echo)
     {
-        Console.Write(prompt + ": ");
+        echo.Write(prompt + ": ");
         var typed = new System.Text.StringBuilder();
         while (true)
         {
-            var key = Console.ReadKey(intercept: true);
+            var key = readKey();
             switch (key.Key)
             {
                 case ConsoleKey.Enter:
-                    Console.WriteLine();
+                    echo.WriteLine();
                     return typed.ToString();
                 case ConsoleKey.Backspace:
                     if (typed.Length > 0) typed.Length--;
                     break;
                 case ConsoleKey.Escape:
-                    Console.WriteLine();
+                    echo.WriteLine();
                     throw new OperationCanceledException("Canceled.");
                 default:
                     if (!char.IsControl(key.KeyChar)) typed.Append(key.KeyChar);

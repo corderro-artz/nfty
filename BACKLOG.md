@@ -9,21 +9,6 @@ reporting ceiling (0.7.2), and `Total` not being a lower bound when the walk is 
 
 ---
 
-## The interactive passphrase prompt has no test
-
-**Status:** accepted, and mostly closed by `--key`.
-
-`Passphrase.ReadMasked` drives `Console.ReadKey` and cannot be exercised by a test runner, where
-stdin is always redirected. That was half the passphrase path when the only alternative was
-`--key-env`; naming the source (`env:` / `file:` / `stdin` / `prompt`) turned three of the four into
-ordinary functions with inputs and outputs, covered by `PassphraseSourceTests`.
-
-What is left untested is the genuinely interactive branch: key-by-key echo suppression, backspace,
-and Escape. Testing it would mean an indirection over `Console.ReadKey` whose only consumer is the
-test — worth it only if that reader grows logic worth checking. It has none today.
-
----
-
 ## `Nfty.Ticket` does not target `netstandard2.1`
 
 **Status:** deferred deliberately; engine embedding is not a current goal.
