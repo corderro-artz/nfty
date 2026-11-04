@@ -24,7 +24,7 @@ be told what they are holding. `payload.bin` beside it is a whole `.set` encrypt
 passphrase, and no tool opens that without the passphrase. It has its own extension rather than
 being a `.set` full of ciphertext, because a file whose name says what it is beats one that
 announces itself by failing to parse. See
-[What sealing does and does not do](../understand/sealing.md).
+[What sealing does and does not do](../concepts/sealing.md).
 
 ## Depth maps
 
@@ -55,7 +55,7 @@ cols=8;rows=4;cell=64x64;count=29
 integers, written invariant. A reader ignores keys it does not know, but a missing or malformed number,
 or a count past `cols * rows`, makes the whole record count as absent. Other programs skip an
 ancillary chunk they do not know, so the sheet is an ordinary picture to them. See
-[Rise a spritesheet](../how-to/rise-a-spritesheet.md).
+[Rise a spritesheet](../app/spritesheets.md).
 
 ## Looking inside one
 

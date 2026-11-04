@@ -1,372 +1,361 @@
-# Command line
+# Command reference
 
-Everything the app does, the command line does too. Useful for scripting, for checking a project
-before you cook it, and for the one job the app does not offer at all -- [extending a
-Set](../how-to/more-assets.md).
+Every command and option of the nfty command line, as `nfty <command> --help` defines them. For
+task-oriented guides see [The command line](../cli/index.md). This page writes the program as `nfty`;
+see [Running it](../cli/index.md#running-it).
 
-```bash
-dotnet run --project src/Nfty.Cli -- <command> [args]
+```text
+nfty [command] [options]
 ```
 
-The examples below write `nfty` for brevity.
+## Global options
 
-Every command at a glance. Each is covered in the section named.
+Every command accepts these.
 
-| Command | Section |
+| Option | Does |
 |---|---|
-| `demo` | [The demo](#the-demo) |
-| `inspect`, `validate`, `stats` | [Reading](#reading) |
-| `preview` | [Rendering](#rendering) |
-| `model` | [Making a 3D model](#making-a-3d-model) |
-| `generate`, `extend` | [Cooking](#cooking) |
-| `menu`, `serve` | [Menus and tickets](#menus-and-tickets) |
-| `export`, `sheet grid` | [Publishing](#publishing) |
-| `new`, `add`, `move`, `remove`, `set` | [Authoring](#authoring) |
+| `--threads <n\|max>` | Worker threads for heavy work. `max` (or `0`) uses every logical processor. Default: two thirds of them; `NFTY_THREADS` sets it when this is absent. A count above the machine's runs at the machine's and says so. The count never changes what is written. |
+| `--verbose` | On error, print the full stack trace as well as the message. |
+| `-h`, `-?`, `--help` | Show help for the command. |
+| `--version` | Print the version (top level only). |
 
-Options on every command: `--threads N|max` ([below](#worker-threads)), `--verbose` (print the stack
-trace when a command fails) and `-h`/`--help`. `nfty --version` prints the version.
+A failed command prints one sentence on stderr and exits `1`.
 
-## The demo
+## Commands at a glance
 
 | Command | Does |
 |---|---|
-| `nfty demo <dir>` | Writes the built-in demo CookBook into a folder. The archive is inside the program, so this needs no network and no other files. |
-| `nfty demo <dir> --force` | Replaces a copy that is already there. Without it, an existing `ChestDemo.cbk` is left exactly as it is. |
+| [`demo`](#demo) | Write the built-in demo CookBook. |
+| [`inspect`](#inspect) | Print what any nfty file or Set holds. |
+| [`validate`](#validate) | Report every problem in a CookBook, Recipe or Ingredient. |
+| [`stats`](#stats) | The odds a CookBook's weights imply, and its unique DNA space. |
+| [`preview`](#preview) | Render one variant, or a rolled Recipe, as a PNG. |
+| [`model`](#model) | Rise an asset into a 3D model. |
+| [`generate`](#generate) | Cook a new Set. |
+| [`extend`](#extend) | Grow an existing Set. |
+| [`menu`](#menu) | Write a `.mnu` Menu from a CookBook. |
+| [`serve`](#serve) | Roll or render one asset from a Menu. |
+| [`export`](#export) | Publish a cooked Set: presets, marketplace metadata, upload, seal. |
+| [`ipfs status`](#ipfs-status) | Check the IPFS service an upload would use. |
+| [`sheet grid`](#sheet-grid) | Read or set the grid a spritesheet carries. |
+| [`new`](#new) | Create an `.igt`, `.rcp`, `.cbk` or `.ktn`. |
+| [`add`](#add) | Add a variant, layer, Recipe or rule to an archive. |
+| [`move`](#move) | Move a layer in its stack, or a Recipe in its listing. |
+| [`remove`](#remove) | Remove a rule, layer, variant or Recipe. |
+| [`set`](#set) | Change weights, chances, depth, book metadata; snap soft edges. |
 
-See [The demo CookBook](../get-started/the-demo.md) for what is in it.
+Options that belong to another form of a command, or that depend on an option you did not give, are
+**refused**, not ignored.
 
 ## Reading
 
-| Command | Does |
+### demo
+
+```text
+nfty demo [<directory>] [--force]
+```
+
+Writes `ChestDemo.cbk` into the folder (default `.`, created if missing). The archive is inside the
+program, so this needs nothing else.
+
+| Option | Does |
 |---|---|
-| `nfty inspect <file>` | Prints what is inside any `.cbk`, `.rcp`, `.igt`, `.set`, `.ktn` or `.tin`, plus a book's own palette. A `.cbk` also prints its collection name and symbol, target supply and recipe order. A cooked Set also works as a **folder** -- which is what `generate --out` writes when you do not pass `--pack`. |
-| `nfty inspect <tin>` | A sealed export prints its header with **no passphrase**: the collection, the asset count, the sender's note and what you are permitted to do. Add `--key <source>` and it prints the full report of what is inside. |
-| `nfty inspect <tin> --key <source>` | See the line above. `<source>` is one of the [passphrase sources](#where-a-passphrase-comes-from). |
-| `nfty inspect <file> --voxel` | Also lists every variant carrying partial transparency. Costs a full scan of every image. Refused on a `.ktn` and on a cooked Set: both list paths without opening them, and a Set is the output rather than the source -- run it on the CookBook that produced it. |
-| `nfty validate <file>` | Reports every problem it finds, rather than stopping at the first. Takes a `.cbk`, or a loose `.rcp` or `.igt` (checked for everything that needs no canvas). |
-| `nfty stats <cbk>` | The odds the weights imply, trait by trait, plus the unique DNA space. |
+| `--force` | Overwrite an existing `ChestDemo.cbk`. Without it an existing copy is left untouched. |
 
-`inspect` on a cooked Set reports what a run **actually produced** -- its seed, the CookBook hash it
-came from, whether unique DNA was required, and the observed trait percentages. `stats` on the
-CookBook reports what the weights **predict**. Both group their traits the same way, so the same
-trait is in the same place in each; `stats` additionally splits its rows by Recipe, because a Set's
-rarity is collection-wide by definition.
+### inspect
 
-The predicted table carries the [color traits](set-contents.md#color-traits-and-none) too: a `<Layer> Color`
-row per color name a Dynamic or Static layer can roll, with its exact chance from the layer's ranges and weights
-(already scaled by how often the layer is present), and a `None` row for each optional layer.
-
-```
-nfty inspect ./collection          # what this run produced
-nfty stats   mybook.cbk            # what its weights imply
+```text
+nfty inspect <file> [--voxel] [--key <source>]
 ```
 
-## Rendering
+`<file>`: a `.cbk`, `.rcp`, `.igt`, `.ktn`, `.mnu`, `.set` or `.tin`, a cooked Set folder, or an upload
+bundle folder. Prints the tree with every part's `[id]`, rules with their positions, absent chances and
+the book's palette; for a Set, what the run produced (seed, CookBook hash, uniqueness mode, models,
+observed trait shares); for a `.tin`, its header, and with a key, its contents.
 
-```bash
-nfty preview aura.igt --variant glow --color hsv:200,70,90 --out one.png
-nfty preview cat.rcp --seed alpha --out stack.png
+| Option | Does |
+|---|---|
+| `--voxel` | Also list every variant with partly transparent pixels. Scans every image. Refused on a Kitchen or a Set. |
+| `--key <source>` | Passphrase for a `.tin`. See [sources](#where-a-secret-comes-from). |
+
+### validate
+
+```text
+nfty validate <file>
 ```
 
-An `.igt` renders one variant; a `.rcp` renders the whole stack rolled at a seed. Options belonging
-to the other form are **rejected**, not ignored.
+`<file>`: a `.cbk`, `.rcp` or `.igt`. Prints `OK — no problems.` and exits `0`, or prints every problem
+on stderr and exits `1`. A loose `.rcp` or `.igt` is checked for everything that needs no canvas.
+
+### stats
+
+```text
+nfty stats <cookbook>
+```
+
+Each Recipe's share, every variant's overall share by Recipe (with `<Layer> Color` and `None` rows),
+each optional layer's chance, and the unique DNA space, all predicted from the weights.
+
+### preview
+
+```text
+nfty preview <file.igt> --variant <id> [--color <spec>] [--model hsv|hsl] [--out <png>]
+nfty preview <file.rcp> [--seed <text>] [--only a,b] [--with <igt>] [--with-variant <id>] [--out <png>]
+```
 
 | Option | Form | Does |
 |---|---|---|
-| `--out <png>` | both | Where to write. Defaults to `preview.png`. |
-| `--variant <id>` | `.igt` | Which variant to render. Required. |
-| `--color <spec>` | `.igt` | The color for a Dynamic or Static layer, with its prefix: `hex:`, `rgb:`, `hsl:` or `hsv:`. Required for those kinds, omitted for Custom. A missing or unknown prefix is an error, never a guess. |
-| `--model hsv\|hsl` | `.igt` | Preview as if the layer used the other color model. Normally leave it: generation uses the layer's own. |
-| `--seed <text>` | `.rcp` | The roll that picks every layer's variant and color. Defaults to `nfty`. |
-| `--only a,b` | `.rcp` | Draw only these layers. They keep their real depths, and the whole recipe is still rolled, so a layer looks the same with or without its neighbors. |
-| `--with <igt>` | `.rcp` | Composite a loose layer on top, to see a layer you are making against the Recipe it will join. It must match the Recipe's canvas. |
-| `--with-variant <id>` | `.rcp` | Which variant of `--with` to draw. Defaults to its highest-weight one, so it holds still while you vary `--seed`. |
+| `--out <png>` | both | Output path. Default `preview.png`. |
+| `--variant <id>` | `.igt` | The variant to render. Required. |
+| `--color <spec>` | `.igt` | The [color spec](color-specs.md) for a Dynamic or Static layer. Required for those; omit for Custom. |
+| `--model hsv\|hsl` | `.igt` | Preview as if the layer used the other color model. |
+| `--seed <text>` | `.rcp` | The roll. Default `nfty`. |
+| `--only <ids>` | `.rcp` | Draw only these layers, at their real depths. The whole Recipe is still rolled. |
+| `--with <igt>` | `.rcp` | Composite a loose layer on top. Must match the canvas. |
+| `--with-variant <id>` | `.rcp` | Which variant of `--with`. Default: its highest-weight one. |
 
-## Making a 3D model
+### model
 
-```bash
-nfty model sprite.png --out sprite.glb
-nfty model sprite.png --out sprite.glb --front 2 --back 1
-nfty model hat.igt --variant red --out hat.gltf --format gltf
-nfty model chest.rcp --seed launch --out chest.glb
+```text
+nfty model <input> --out <file> [options]
 ```
 
-Every fully opaque pixel becomes a column of voxels: one for the paper, plus its **front** depth
-toward you and its **back** depth away from you. The column's sides take the art's edge pixel color, however dark it is. A
-`.png` has no stored depth, so it is flat paper unless you fill it; an `.igt` variant uses the depth
-stored with it. A Dynamic or Static variant rises as its stored **gray value-map**, as a loose
-picture of the same pixels would; there is no color option, because color is decided when an asset is
-cooked. The Rise page does the same thing with a picture, a layer, a roll or a cooked asset: see
-[Make a 3D model](../how-to/make-a-3d-model.md).
+`<input>`: a `.png`, an `.igt` with `--variant`, or a `.rcp` with `--seed`. Every fully opaque pixel
+becomes a column of voxels. A partly transparent pixel is refused by name.
 
 | Option | Does |
 |---|---|
-| `--out` | The model to write. Required. Its extension must match the format: `.glb`, or `.gltf`. |
-| `--variant <id>` | Which variant of an `.igt` to rise. Required for an `.igt`, refused for a `.png`. |
-| `--seed <text>` | Roll a Recipe (`.rcp`) with this seed and rise the whole stack, the same draw `nfty preview chest.rcp --seed <text>` shows. Required for an `.rcp`, refused otherwise. |
-| `--front N --back M` | Fill-all: every opaque pixel gets front `N` and back `M` (0 to 255 each), replacing any stored depth. Pass both or neither. Refused for an `.rcp`, which takes the depth its layers store. |
-| `--format` | `glb` (one file, the default), `gltf` (text plus a `.bin` beside it) or `gltf-embedded` (one text file). |
-| `--pivot` | Which point of the model sits at the origin: `bottom-center` (the default), `center` or `min-corner`. |
-| `--voxel-size` | World units per pixel, from 0.001 to 1000. Defaults to 1. The Rise page and the cook dialog keep the same range. |
-
-A picture with a **partly transparent** pixel is refused, naming it: a voxel is either there or not,
-and nfty does not round your art for you. `nfty inspect <file> --voxel` lists the variants that carry
-partial transparency. Options belonging to the other form are **rejected**, not ignored.
+| `--out <file>` | The model to write. Required. `.glb` for `glb`, `.gltf` for the others. |
+| `--variant <id>` | The `.igt` variant to rise (its stored depth is used). Refused for a `.png`. |
+| `--seed <text>` | Roll the `.rcp` and rise the whole stack. Required for, and only for, an `.rcp`. |
+| `--front <n>` / `--back <n>` | Fill-all depth, 0 to 255, replacing stored depth. Both or neither; not on an `.rcp`. |
+| `--format` | `glb` (default), `gltf` (plus a `.bin`), `gltf-embedded`. |
+| `--pivot` | `bottom-center` (default), `center`, `min-corner`. |
+| `--voxel-size` | World units per pixel, 0.001 to 1000. Default 1. |
 
 ## Cooking
 
-```bash
-nfty generate mybook.cbk --count 500 --seed launch --out ./collection
-nfty generate mybook.cbk --count 500 --seed launch --out ./collection --pack
-nfty extend   mybook.cbk ./collection --to 750
+### generate
+
+```text
+nfty generate <cookbook> --count <n> --out <dir> [options]
 ```
 
 | Option | Does |
 |---|---|
-| `--count` | How many assets. Required. |
-| `--seed` | The seed. Same book plus same seed is byte-identical output. |
-| `--out` | Where to write. Required. |
-| `--pack` | Also package the folder as a single `.set`, written **inside** the output folder and named after it. |
-| `--recipe <id>` | Restrict to one Recipe id instead of rolling by weight. |
-| `--unlimited` | Skip the uniqueness requirement. Assets may repeat; identity is the token number. Rules are still enforced. |
-| `--max-rerolls` | Per-asset reroll budget before giving up. |
-| `--models` | Also write a 3D model of every asset into `models/`, named like its image (`0001.glb`). See [Making a 3D model](#making-a-3d-model). Refused, with nothing written, when any variant of the book has a partly transparent pixel. An asset with nothing fully opaque gets no model and is listed (`skipped (nothing fully opaque): #0007`). |
-| `--model-format` | With `--models`: `glb` (the default), `gltf` or `gltf-embedded`. |
-| `--pivot`, `--voxel-size` | With `--models`: as for `nfty model`. |
+| `--count <n>` | How many assets. Required. |
+| `--out <dir>` | Folder to write the Set into. Required. |
+| `--seed <text>` | Default `nfty`. Same book and seed give byte-identical output. |
+| `--pack` | Also write the folder as one `.set`, inside it. |
+| `--recipe <id>` | Roll only this Recipe. |
+| `--unlimited` | Allow repeats: no unique-DNA requirement; identity is the token number. Rules still apply. |
+| `--max-rerolls <n>` | Per-asset reroll budget. Default 10000. |
+| `--models` | Also write `models/`. Refused, with nothing written, for a book with partial alpha. |
+| `--model-format` | With `--models`: `glb` (default), `gltf`, `gltf-embedded`. |
+| `--pivot`, `--voxel-size` | With `--models`: as for [`model`](#model). |
 
-The three model options are **rejected** without `--models`, not ignored. `inspect` on the finished Set prints a `Models:` line (format, pivot, voxel size, and how many assets were skipped).
+### extend
 
-`extend` options:
+```text
+nfty extend <cookbook> <set-dir> --to <n> [options]
+```
+
+Rolls only the new assets needed to reach `--to`, keeps every existing one, and recomputes rarity
+across the whole Set. Warns on stderr when the book's hash differs from the Set's record. Models follow
+the Set's recorded `models` block; there are no model options. Refused on an export with renamed files.
 
 | Option | Does |
 |---|---|
-| `--to` | The total the Set should reach. Required. Only the new assets are rolled. |
-| `--seed` | The seed for the new rolls. |
+| `--to <n>` | Target total. Required. |
+| `--seed <text>` | Seed for the new rolls. Default `nfty-extend`. |
 | `--unlimited` | As for `generate`. |
-| `--pack` | Also repackage the extended Set as a `.set`. |
-| `--max-rerolls` | As for `generate`. |
+| `--pack` | Repackage the Set as a `.set`. |
+| `--max-rerolls <n>` | As for `generate`. |
 
-`extend` rewrites the rarity of existing assets, since rarity is collection-wide. It warns on stderr
-(and carries on) when the book's hash differs from the one the Set recorded.
+## Menus
 
-`extend` takes no model options: a Set is modeled whole or not at all, so it reuses the options recorded in `set.json` and makes models for the new assets in the same format. Extending a modeled Set with a book that has partial alpha is refused.
+### menu
 
-## Menus and tickets
-
-```bash
-nfty menu mybook.cbk --out mybook.mnu [--art atlas|loose]
-nfty serve mybook.mnu --seed player-42 --out asset.png
-nfty serve mybook.mnu --ticket "<wire text>" --out asset.png
+```text
+nfty menu <cookbook> --out <file.mnu> [--art atlas|loose]
 ```
 
-`menu` flattens a CookBook into a `.mnu` that can roll and render with no `.cbk`. `serve` rolls one
-asset (`--seed`) or renders an already-rolled one (`--ticket`, quoted) through the same render
-`generate` uses. Exactly one of the two is required; `--max-rerolls` goes with `--seed` only. See
-[Roll assets at runtime](../how-to/roll-assets-at-runtime.md).
+| Option | Does |
+|---|---|
+| `--out` | The Menu to write. Required. |
+| `--art` | `atlas` (default): every distinct image in one PNG. `loose`: one PNG per variant. |
+
+### serve
+
+```text
+nfty serve <menu> (--seed <text> | --ticket "<wire>") --out <png> [--max-rerolls <n>]
+```
+
+| Option | Does |
+|---|---|
+| `--seed <text>` | Roll a fresh asset, the same roll `generate` makes first for that seed. |
+| `--ticket "<wire>"` | Render an already-rolled ticket. Its DNA is checked first. Quote it: it contains `\|`. |
+| `--out <png>` | Output PNG. Required. |
+| `--max-rerolls <n>` | With `--seed` only. Default 10000. |
+
+Exactly one of `--seed` and `--ticket`. Prints the DNA and Recipe.
 
 ## Publishing
 
-A cook writes *your* copy and holds everything. `export` writes somebody else's.
+### export
 
-```bash
-nfty export ./collection --out ./dist --preset marketplace
-nfty export ./collection --out ./dist --preset fullproject --book mybook.cbk
-NFTY_KEY=... nfty export ./collection --out ./dist --preset sealedcritique --key env:NFTY_KEY
+```text
+nfty export <set> --out <dir> [options]
 ```
+
+`<set>`: the folder `generate` wrote, or a `.set`. The export is named after the collection.
+
+**Contents and shape**
 
 | Option | Does |
 |---|---|
-| `--out` | Folder to write into. Required. The export is named after the **collection**, not the folder you cooked into. |
-| `--preset` | `marketplace`, `assetpack`, `fullproject` or `sealedcritique`. A starting point; every flag below overrides it. |
-| `--images` / `--no-images` | The generated art (`images/`). |
-| `--opensea` / `--no-opensea` | The standard ERC-721 fields (`metadata/`). |
-| `--nfty` / `--no-nfty` | Per-asset DNA, seed and layer colors (`nfty/`). What a buyer wants and a public listing does not. |
-| `--models` / `--no-models` | The 3D models (`models/`). `--models` is refused on a Set cooked without them. |
-| `--sheet` | Also stitch every asset into one `spritesheet.png`, in the Set's own numbering, carrying its grid inside the file. |
-| `--sheet-cols N` / `--sheet-rows N` | The sheet's grid. Need `--sheet`; one alone lets the other follow. |
-| `--watermark` | Stamp each exported image with its set number. The cooked Set is never touched and models never carry it. |
-| `--watermark-corner <corner>` | `top-left`, `top-right`, `bottom-left` or `bottom-right` (the default). Needs `--watermark`. |
-| `--book <cbk>` | Ship the source CookBook alongside. A Set records only its book's hash, so the path has to be given. |
-| `--folder` / `--pack` | Shape. `--pack` (one archive) is the default; a sealed export is always one file. |
-| `--seal` | Encrypt it and mark it view-only. Writes a `.tin`. |
-| `--note "<text>"` | A line for the recipient. On a sealed export it travels in the clear. |
-| `--key <source>` | Where the passphrase comes from — see below. Omit it and nfty asks at the terminal. |
-| `--art-only` | Step one of a marketplace drop: only the images (and the models, when the Set has them), with no metadata, `collection.json` or `set.json`. Upload them, then export again with `--image-base-uri`. Rejected beside options that ask for the opposite. |
-| `--image-base-uri <uri>` | Where you uploaded the `images/` folder. Each `image` becomes this plus the file name: `ipfs://<CID>/` gives `ipfs://<CID>/1.png` (an uploaded folder's CID is its contents, so no `images/` in the link). Absolute, scheme `ipfs`/`https`/`http`/`ar`, must end with `/`; never repaired. Without it the links stay relative and a warning is printed on stderr. |
-| `--model-base-uri <uri>` | Where you uploaded `models/`. Each glb model's `animation_url` becomes this plus the file name (`ipfs://<CID>/1.glb`). Needs a Set with models and the metadata; same rules as `--image-base-uri`. |
-| `--token-names padded\|token-id` | `padded` (default) is the Set's own `0001.json` / `0001.png`. `token-id` is `metadata/1` (no extension), `images/1.png`, `models/1.glb`, and renames the `#n` in each name and every link. `nfty/` keeps the Set's names. |
-| `--start-id 0\|1` | The token id of the first asset (default 1). Id = set number - 1 + this. |
-| `--external-url <uri>` | Each item's `external_url`: this address followed by its token id. |
-| `--collection` / `--no-collection` | Write `collection.json`, OpenSea's contract-level file (on for `marketplace`). |
-| `--external-link <uri>` | `collection.json`'s `external_link`. Needs `--collection`. |
-| `--royalty <percent>` | 0 to 100, at most 2 decimals; written as `seller_fee_basis_points`. Needs `--fee-recipient` and `--collection`. |
-| `--fee-recipient <0x...>` | `0x` and 40 hexadecimal digits. Needs `--collection`. |
-| `--collection-image <uri>` | `collection.json`'s `image`. Defaults to the first token's image when `--image-base-uri` is set and the art is included. Needs `--collection`. |
-| `--upload` | Upload as well as export, in one step: pin `images/` (and `models/`), write the metadata with those `ipfs://` addresses, pin `metadata/` with `collection.json` beside it, then write the export to `--out` with the same addresses. Prints the CIDs, the contract's `baseURI` and its `contractURI`. To the local IPFS node unless `--pinata`. Refused beside `--seal`, `--art-only`, `--image-base-uri` and `--model-base-uri`, and refused before anything is written when the service cannot be reached. |
-| `--api <url>` | The local node's RPC address (IPFS Desktop or Kubo). Default `http://127.0.0.1:5001`. Needs `--upload`. |
-| `--pinata` | Upload to Pinata instead, with your own API key. Needs `--upload`. |
-| `--pinata-key <source>` | Where the Pinata JWT comes from: a [named source](#where-a-passphrase-comes-from), never the key itself. Omit it and nfty asks at the terminal. Needs `--pinata`. |
-| `--set-manifest` / `--no-set-manifest` | Include `set.json`. Off for `marketplace` so the seed and book hash are not published; such an export is an upload bundle (open it read only, or `inspect` it) and cannot be sealed. An export that keeps it records its file naming and reopens as a Set. |
+| `-o`, `--out <dir>` | Folder to write into. Required. |
+| `--preset <name>` | `marketplace`, `assetpack`, `fullproject` or `sealedcritique`. Every flag below overrides it. |
+| `--images` / `--no-images` | `images/`. |
+| `--opensea` / `--no-opensea` | `metadata/`, the standard ERC-721 fields. |
+| `--nfty` / `--no-nfty` | `nfty/`: per-asset DNA, seed and colors. |
+| `--models` / `--no-models` | `models/`. `--models` is refused on a Set without them. |
+| `--set-manifest` / `--no-set-manifest` | `set.json`. Without it the export is an upload bundle and cannot be sealed. |
+| `--book <cbk>` | Ship this CookBook alongside. Warned about if its hash does not match the Set. |
+| `--folder` / `--pack` | Write a folder, or one archive (the default). |
+| `--sheet` | Also write `spritesheet.png`, carrying its grid. |
+| `--sheet-cols <n>` / `--sheet-rows <n>` | The sheet's grid. Need `--sheet`. |
+| `--watermark` | Stamp each exported image with its set number. Never the Set, never models. |
+| `--watermark-corner` | `top-left`, `top-right`, `bottom-left`, `bottom-right` (default). Needs `--watermark`. |
 
-A Set cooked with `--models` ships its `models/` in every preset (a marketplace shows a glb
-`animation_url` as a 3D viewer); `--models` / `--no-models` override that. The `marketplace` preset
-also starts at `--token-names token-id`, so a contract's `baseURI + tokenId` resolves; `--token-names
-padded` overrides it. The export prints a `3D models (N)` line when it carries them.
+**Sealing**
 
-`set.json` ships in every preset but `marketplace` -- it is what makes the result a Set rather than a
-folder of pictures, and it carries the collection-wide rarity table, the seed and the source book's
-hash. `--no-set-manifest` leaves it out; an export of nothing at all is refused.
+| Option | Does |
+|---|---|
+| `--seal` | Encrypt and mark view-only. Writes a `.tin`. |
+| `--key <source>` | Where the passphrase comes from ([sources](#where-a-secret-comes-from)). Omit to be asked. |
+| `--note "<text>"` | A line for the recipient, readable without the passphrase. |
 
-The marketplace options are all export-only; the cooked Set is never changed. They are **rejected**
-where nothing would read them (`--image-base-uri` with neither `--opensea` metadata nor `--collection`,
-`--royalty` without `--collection`), and a bad value is refused with the rule it broke. Warnings
-(relative image links, metadata whose images are not in the export) print on stderr. See
-[Put a collection on a marketplace](../how-to/put-a-collection-on-a-marketplace.md).
+**Marketplace**
 
-The command prints every part that went, by name, and warns when the export carries the source
-CookBook. A `--book` that is not the book that cooked the Set is warned about on stderr and still
-shipped, the rule `extend` keeps about the same comparison. Dependent options (`--sheet-cols` without
-`--sheet`, `--watermark-corner` without `--watermark`) are **rejected**, not ignored.
+| Option | Does |
+|---|---|
+| `--art-only` | Only `images/` (and `models/`): step one of a by-hand upload. |
+| `--image-base-uri <uri>` | Each `image` becomes this plus the file name. Absolute (`ipfs`, `https`, `http`, `ar`), ending in `/`. |
+| `--model-base-uri <uri>` | Each glb model's `animation_url`. Same rules. |
+| `--token-names padded\|token-id` | `padded` (`0001.json`, default) or `token-id` (`metadata/1`, `images/1.png`). `marketplace` starts at `token-id`. |
+| `--start-id 0\|1` | First token id. Default 1. |
+| `--external-url <uri>` | Each item's `external_url`: this plus its token id. |
+| `--collection` / `--no-collection` | `collection.json` (on for `marketplace`). |
+| `--external-link <uri>` | `collection.json`'s `external_link`. |
+| `--royalty <percent>` | 0 to 100, two decimals at most. Needs `--fee-recipient`. |
+| `--fee-recipient <0x…>` | `0x` and 40 hex digits. |
+| `--collection-image <uri>` | `collection.json`'s `image`. Default: the first token's image. |
 
-### Uploading to IPFS
+The `collection.json` options need `--collection`. Base URIs need metadata or `collection.json` to
+write into.
 
-```bash
-nfty ipfs status                                   # is the local node reachable? exits 1 when not
-nfty ipfs status --api http://127.0.0.1:5002
-NFTY_PINATA=... nfty ipfs status --pinata --pinata-key env:NFTY_PINATA
+**Upload**
 
-nfty export ./collection --out ./dist --preset marketplace --token-names token-id --upload
-nfty export ./collection --out ./dist --preset marketplace --token-names token-id \
-    --upload --pinata --pinata-key file:./pinata.jwt
-```
+| Option | Does |
+|---|---|
+| `--upload` | Pin `images/` (and `models/`), write metadata with those addresses, pin `metadata/` with `collection.json`, then write the export to `--out`. Prints the CIDs, `baseURI` and `contractURI`. Refused beside `--seal`, `--art-only` and the base URIs. |
+| `--api <url>` | Local node RPC address. Default `http://127.0.0.1:5001`. |
+| `--pinata` | Upload to Pinata instead of the local node. |
+| `--pinata-key <source>` | Where the Pinata JWT comes from ([sources](#where-a-secret-comes-from)). Omit to be asked. |
 
-`ipfs status` prints the provider, a one-line state (`connected · kubo 0.29.0`, `not reachable`,
-`key refused`) and what to do about it. `export --upload` prints, on stdout:
+### ipfs status
 
 ```text
-Uploaded to Local IPFS
-  images:      ipfs://<imagesCID>/
-  metadata:    ipfs://<metadataCID>/
-  baseURI:     ipfs://<metadataCID>/
-  contractURI: ipfs://<metadataCID>/collection.json
+nfty ipfs status [--api <url>] [--pinata --pinata-key <source>]
 ```
 
-then the usual export listing. Progress goes to stderr, one line per step. With padded file names
-it also warns that a contract's `baseURI + tokenId` will not find them.
+Prints the provider and a one-line state (`connected · kubo 0.29.0`, `not reachable`, `key refused`),
+and exits `1` when the service cannot be reached.
 
-### The grid a spritesheet carries
+### sheet grid
 
-```bash
-nfty sheet grid spritesheet.png                  # prints the embedded grid (or none) and the detected one
-nfty sheet grid spritesheet.png --cols 8 --rows 4
-nfty sheet grid spritesheet.png --cell 64x64
-nfty sheet grid spritesheet.png --clear
+```text
+nfty sheet grid <png> [--cols <n> --rows <n> | --cell <WxH> | --clear]
 ```
 
-Writing or clearing rewrites the file in place, keeping every pixel. A grid that does not divide the
-picture is refused with the reason. `--cols` and `--rows` go together; `--cell` is the other way to
-say the same grid; `--clear` takes none of them.
+With no options, prints the embedded grid (or none) and the one detected from the pixels. `--cols`
+with `--rows`, or `--cell` (`64x64`), writes a grid into the file keeping every pixel; `--clear` removes
+it.
 
-### Where a passphrase comes from
+### Where a secret comes from
 
-`--key` names its **source**, and so does `--pinata-key` for a Pinata key: the same sources, the same
-rules. An unprefixed value is an error, never a guess -- the same rule a
-[color spec](../understand/layer-kinds.md) follows, and for a sharper reason: `--key hunter2` looks
-like it works, and treating it as the passphrase would put your secret in the process list.
+`--key` (a passphrase) and `--pinata-key` (a Pinata JWT) never take the secret itself. They name its
+source:
 
 | Source | Reads |
 |---|---|
-| `env:NAME` | An environment variable. The usual answer for CI. |
-| `file:PATH` | The first line of a file. A trailing newline is dropped; spaces are kept. |
-| `stdin` | One line from standard input. Leaves nothing anywhere. |
-| `prompt` | Asks at the terminal, echoing nothing. The default when `--key` is omitted. |
+| `env:NAME` | An environment variable. Usual for CI. Inherited by child processes; readable from `/proc` by the same user on Linux. |
+| `file:PATH` | The first line of a file (trailing newline dropped). The file can be mode 600. |
+| `stdin` | One line from standard input. Leaves nothing behind. |
+| `prompt` | Asks at the terminal without echo. The default when the option is omitted. |
 
-They are not interchangeable, which is why you pick one. An environment variable is inherited by
-every child process and readable from `/proc/<pid>/environ` by the same user on Linux; a key file
-can be mode 600; a pipe leaves no trace at all.
+An unprefixed value is an error: `--key hunter2` is refused rather than putting your secret in the
+process list, shell history and CI logs. There is deliberately no `--passphrase`.
 
 ```bash
-nfty export ./collection --out ./dist --preset sealedcritique --key file:./key.txt
-printf '%s' "$PASS" | nfty export ./collection --out ./dist --preset sealedcritique --key stdin
+printf '%s' "$PASS" | nfty export ./set --out ./dist --preset sealedcritique --key stdin
 ```
-
-!!! warning "There is no `--passphrase`"
-
-    An argument on a command line is visible to every process on the machine while it runs, lands in
-    your shell history, and is captured verbatim by CI logs. That is why the sources above exist and
-    why an unprefixed `--key` is refused rather than accepted.
-
-See [Share a collection](../how-to/share-a-collection.md) and
-[What sealing does and does not do](../understand/sealing.md).
 
 ## Authoring
 
-Build archives without the app -- useful for generating a project from a script.
+Every authoring command validates its result and replaces the file atomically. Files resolve by id:
+variant `glow` is `glow.png`, layer `aura` is `aura.igt`, Recipe `cat` is `cat.rcp`. See
+[Build a project from a script](../cli/build-a-project.md) for the manifest formats.
 
-```bash
-nfty new ingredient aura.igt --manifest aura.json --images ./aura-pngs
-nfty new recipe     cat.rcp  --manifest cat.json  --ingredients ./igt
-nfty new cookbook   book.cbk --manifest book.json --recipes ./rcp
-nfty new kitchen    Studio.ktn --name Studio
+### new
 
-nfty add variant    aura.igt --id spark --weight 30 --image spark.png
-nfty add ingredient cat.rcp  --igt aura.igt --index 3
-nfty add recipe     book.cbk --rcp cat.rcp --weight 60
-
-nfty move ingredient cat.rcp --id aura --to 2
-nfty move ingredient cat.rcp --id aura --up
-
-nfty add rule       cat.rcp --type exclude --when bg:night --then glow:sparks
-nfty set chance     cat.rcp --id hat --absent 90
-nfty remove rule    cat.rcp --at 2
-
-nfty set depth chestbody.igt --variant stone --map stone-depth.png
-```
-
-`nfty set depth` gives one variant its [depth map](file-formats.md#depth-maps) from a picture. In the PNG, **red is the front depth and green the back depth**, each 0-255 voxels; blue and alpha are ignored. The picture must be exactly the variant's size, since nfty resamples nothing. Depth over a clear pixel is dropped, and a map that is all zero clears the variant's depth back to flat paper. Every other variant in the `.igt` is carried across untouched.
-
-Changing and removing, on a `.cbk` or on the loose part it holds. Each checks the result with the same validator as `nfty validate` before it writes, and replaces the file atomically.
-
-| Command | Does |
+| Command | Options |
 |---|---|
-| `nfty add rule <rcp> --type exclude\|require --when layer:variant --then layer:variant [--then ...]` | Adds an [incompatibility rule](../how-to/exclude-combinations.md). *Exclude*: none of the `--then` targets may be rolled with the trigger. *Require*: **all** of them must be, so repeat `--then` once per target. |
-| `nfty remove rule <rcp> --at N` | Removes rule number `N`, 1-based, as `nfty inspect` numbers them. |
-| `nfty set chance <rcp> --id I --absent P` | How often layer `I` is left out, as a **percent**. `0` always present, `100` never ([Leave a layer out sometimes](../how-to/leave-a-layer-out.md)). |
-| `nfty move ingredient <rcp> --id I (--to N \| --up \| --down)` | Moves a layer in the stack. Depth `1` is the bottom: it paints first and sits furthest back. `--to` past the top clamps to the top; `--up` (toward the front) and `--down` (toward the back) are no-ops at the ends. |
-| `nfty remove ingredient <cbk\|rcp> --id I [--recipe R]` | Drops a layer, its place in the stack, its absent chance and every rule naming it. `--recipe` is required on a `.cbk` and refused on a `.rcp`. |
-| `nfty remove variant <cbk\|igt> --id V [--recipe R --ingredient I]` | Drops one variant. The last variant of a layer is refused. |
-| `nfty remove recipe <cbk> --id R` | Drops a recipe and its roll weight. |
-| `nfty move recipe <cbk> --id R --to N` | Moves a recipe within the listing; `N` is 1-based, as in `remove rule --at`. Presentation only: the same seed cooks the same Set. |
-| `nfty set variant <igt\|cbk> --id V --weight W [--recipe R --ingredient I]` | Changes one variant's weight. `W` must be above zero. |
-| `nfty set recipe <cbk> --id R --weight W` | Changes a recipe's roll weight. `0` shelves it. |
-| `nfty set cookbook <cbk> [--name] [--collection-name] [--symbol] [--description] [--target-supply N\|none]` | Changes the book's name or collection metadata. At least one option is required. |
-| `nfty set voxel-ready <cbk> [--dry-run]` | Snaps every partially transparent pixel to solid or clear at 50% alpha, listing each variant it changes. `--dry-run` lists and writes nothing. |
+| `nfty new ingredient <out.igt>` | `--manifest <json>` and `--images <dir>` (required); `--keep-profile` keeps a picture's non-sRGB color profile instead of converting. |
+| `nfty new recipe <out.rcp>` | `--manifest <json>` and `--ingredients <dir>` (required). |
+| `nfty new cookbook <out.cbk>` | `--manifest <json>` and `--recipes <dir>` (required); `--force` writes despite validation problems. |
+| `nfty new kitchen <out.ktn>` | `--name <text>` (default: the file name). Its folder becomes the workspace. |
 
-Other options on these commands: `add variant` takes `--name` (display name; defaults to the id), and
-`new cookbook` and `add recipe` take `--force` to write even though validation reported problems.
-`new ingredient` and `add variant` convert a picture with a non-sRGB color profile (Display P3,
-Adobe RGB) to sRGB and print one line saying so; `--keep-profile` imports the pixels as stored. A
-profile nfty can't convert is named on stderr and the picture imported as is.
-`add ingredient --index N` is the 0-based position in the stack to insert at. `new ingredient|recipe|cookbook`
-read a manifest JSON (`--manifest`) and the folder of parts it names (`--images`, `--ingredients`,
-`--recipes`).
+### add
 
-Files resolve by convention: a layer id `aura` looks for `aura.igt`, a variant id `glow` looks for
-`glow.png`.
+| Command | Options |
+|---|---|
+| `nfty add variant <igt>` | `--id`, `--weight` (0 or more) and `--image <png>` (required); `--name`; `--keep-profile`. |
+| `nfty add ingredient <rcp>` | `--igt <file>` (required); `--index <n>`, the 0-based position (default: the top). |
+| `nfty add recipe <cbk>` | `--rcp <file>` and `--weight` (required); `--force`. |
+| `nfty add rule <rcp>` | `--type exclude\|require`, `--when layer:variant`, `--then layer:variant` (repeat for more targets). *Exclude*: none of the targets with the trigger. *Require*: all of them. |
 
-## Worker threads
+### move
 
-Every command takes `--threads N` (or `max`; `0` also means all). It sets how many worker threads
-heavy work uses: reading and writing archives, cooking, exporting, building models. When it is not
-given, the `NFTY_THREADS` environment variable sets it; otherwise nfty uses two thirds of the
-machine's logical processors. A count above the machine's runs at the machine's and says so.
-The count never changes what is written: the same command gives the same bytes at any thread count.
+| Command | Options |
+|---|---|
+| `nfty move ingredient <rcp>` | `--id` and one of `--to <depth>` (1 is the bottom; past the top clamps), `--up` (toward the front), `--down`. |
+| `nfty move recipe <cbk>` | `--id` and `--to <position>` (1-based). Listing only; the same seed cooks the same Set. |
 
-## Getting help
+### remove
 
-`nfty --help`, or `nfty <command> --help`, explains any of them.
+| Command | Options |
+|---|---|
+| `nfty remove rule <rcp>` | `--at <n>`, 1-based as `inspect` lists. Later rules shift down. |
+| `nfty remove ingredient <cbk\|rcp>` | `--id`; `--recipe` required on a `.cbk`, refused on a `.rcp`. Also drops its absent chance and every rule naming it. |
+| `nfty remove variant <cbk\|igt>` | `--id`; `--recipe` and `--ingredient` on a `.cbk`. A layer's last variant is refused. |
+| `nfty remove recipe <cbk>` | `--id`. Also drops its weight. |
 
-!!! note "Errors are messages, not stack traces"
+### set
 
-    A failed command prints one sentence meant to be read. Add `--verbose` if you want the trace as
-    well.
+| Command | Options |
+|---|---|
+| `nfty set variant <igt\|cbk>` | `--id`, `--weight` (above zero); `--recipe` and `--ingredient` on a `.cbk`. |
+| `nfty set recipe <cbk>` | `--id`, `--weight`. `0` shelves the Recipe. |
+| `nfty set chance <rcp>` | `--id`, `--absent <percent>`. `0` always present, `100` never. |
+| `nfty set cookbook <cbk>` | At least one of `--name`, `--collection-name`, `--symbol`, `--description`, `--target-supply <n\|none>`. |
+| `nfty set depth <igt>` | `--variant`, `--map <png>`: red front, green back, 0 to 255; same size as the variant; all zero clears. |
+| `nfty set voxel-ready <cbk>` | Snap partial alpha: 50% or more becomes solid, less becomes clear. `--dry-run` lists and writes nothing. |
+
+## Environment variables
+
+| Variable | Does |
+|---|---|
+| `NFTY_THREADS` | Thread count (`n` or `max`) when `--threads` is absent. |
+| `NFTY_PERF` | `1` enables the built-in timing scopes for embedding code. Never changes output. |

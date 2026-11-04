@@ -6,7 +6,7 @@
     this project is what proves the claim "a server that only decides what a drop contains takes
     Nfty.Ticket.dll and nothing else".
 
-    The manual includes regions of Program.cs (docs/manual/how-to/embed-the-ticket-library.md), so the
+    The manual includes regions of Program.cs (docs/manual/embedding/ticket.md), so the
     code a reader copies is the code CI compiled.
   -->
   <PropertyGroup>

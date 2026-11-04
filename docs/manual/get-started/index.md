@@ -1,38 +1,29 @@
 # Get started
 
-Four pages, in order. Each one ends with something real on your disk.
+These pages take you from nothing installed to a finished collection on your disk. Follow them in
+order the first time; each ends with something real you can open.
 
-<div class="grid cards" markdown>
+| Step | Page | You end with | Time |
+|---|---|---|---|
+| 1 | [Install nfty](install.md) | The app and the command line running | 5 min |
+| 2 | [Open the demo CookBook](the-demo.md) | A finished book to explore and cook | 2 min |
+| 3 | [Your first collection in the app](first-collection.md) | 50 numbered assets from two drawings | 20 min |
+| 4 | [Draw your first layer](first-layer.md) | A character on top, drawn with every editor tool | 20 min |
+| 5 | [Your first collection from the command line](first-collection-cli.md) | The same kind of project built and cooked by script | 15 min |
 
--   **1. [Install nfty](install.md)**
+Steps 3 and 4 use the desktop app. Step 5 uses only a terminal, so you can skip straight to it if
+you work headless, on a server or in CI.
 
-    ---
+## Before you begin
 
-    Build it and open the window. Five minutes.
+- A computer running **Windows** or **Linux** (x64) for the prebuilt downloads, or the .NET 10 SDK
+  to build from source on any platform, including macOS.
+- A screen of at least **1280×720**.
+- No art skill. The tutorials draw flat shapes.
 
--   **2. [The demo CookBook](the-demo.md)**
+## After the tutorials
 
-    ---
-
-    A finished collection, built into nfty. One click, nothing to download.
-
--   **3. [Your first collection](first-collection.md)**
-
-    ---
-
-    An empty screen to 50 finished assets, using art you have not drawn yet.
-
--   **4. [Draw your first layer](first-layer.md)**
-
-    ---
-
-    Replace one of those placeholder layers with something you drew.
-
-</div>
-
-Follow them in order the first time. They assume nothing except that you can run a terminal command
-once, and every step says exactly what to click.
-
-Once you have been through them, the rest of the manual stops being a tutorial: [How do I…](../how-to/index.md)
-answers single questions, and [Reference](../reference/index.md) describes each screen without telling
-you what to do with it.
+- [Concepts](../concepts/index.md) explains what you just did and why nfty works the way it does.
+- [Using the app](../app/index.md) and the [command line guide](../cli/index.md) cover each task in
+  depth.
+- [Publishing](../publishing/index.md) is the next step once a collection looks right.

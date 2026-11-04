@@ -143,6 +143,11 @@ plugins:
   - search
   - glightbox
 
+# A link to a heading that does not exist fails the strict build, as a link to a missing page does.
+validation:
+  links:
+    anchors: warn
+
 nav:
   - Home: index.md
   - Get started:
@@ -151,59 +156,76 @@ nav:
       - get-started/the-demo.md
       - get-started/first-collection.md
       - get-started/first-layer.md
-  - How do I…:
-      - how-to/index.md
-      - how-to/rarer-trait.md
-      - how-to/exclude-combinations.md
-      - how-to/reorder-layers.md
-      - how-to/line-layers-up.md
-      - how-to/import-art.md
-      - how-to/paint-in-color.md
-      - how-to/soft-edges.md
-      - how-to/make-a-3d-model.md
-      - how-to/view-an-asset-in-its-own-window.md
-      - how-to/shape-one-layer-on-the-whole-character.md
-      - how-to/cook-with-models.md
-      - how-to/fix-a-2d-only-book.md
-      - how-to/rise-a-spritesheet.md
-      - how-to/roll-assets-at-runtime.md
-      - how-to/inspect-an-asset.md
-      - how-to/more-assets.md
-      - how-to/share-a-collection.md
-      - how-to/put-a-collection-on-a-marketplace.md
-      - how-to/kitchen.md
-      - how-to/open-files-with-nfty-on-windows.md
-      - how-to/leave-a-layer-out.md
-      - how-to/raise-unique-count.md
-      - how-to/embed-nfty.md
-  - How nfty works:
-      - understand/index.md
-      - understand/six-words.md
-      - understand/why-gray.md
-      - understand/layer-kinds.md
-      - understand/uniqueness.md
-      - understand/seeds.md
-      - understand/sealing.md
-      - understand/depth.md
-      - understand/no-resizing.md
-      - understand/embedding.md
-      - understand/faq.md
+      - get-started/first-collection-cli.md
+  - Concepts:
+      - concepts/index.md
+      - concepts/vocabulary.md
+      - concepts/layer-kinds.md
+      - concepts/uniqueness.md
+      - concepts/rarity.md
+      - concepts/seeds.md
+      - concepts/depth.md
+      - concepts/no-resizing.md
+      - concepts/sealing.md
+  - Using the app:
+      - app/index.md
+      - Screens:
+          - app/opening-screen.md
+          - app/explorer.md
+          - app/ingredient-editor.md
+          - app/cooking.md
+          - app/set-browser.md
+          - app/viewer.md
+          - app/rise.md
+          - app/settings.md
+      - Shaping a collection:
+          - app/weights.md
+          - app/rules.md
+          - app/layer-order.md
+      - Art:
+          - app/import-art.md
+          - app/color-and-transparency.md
+      - 3D:
+          - app/rise-a-recipe.md
+          - app/spritesheets.md
+          - app/2d-only.md
+      - Workspace and system:
+          - app/kitchen.md
+          - app/file-associations.md
+  - Command line:
+      - cli/index.md
+      - cli/inspect.md
+      - cli/build-a-project.md
+      - cli/cook.md
+      - cli/models.md
+  - Publishing:
+      - publishing/index.md
+      - publishing/export.md
+      - publishing/marketplace.md
+      - publishing/ipfs.md
+      - publishing/sealed-critique.md
+  - Embedding:
+      - embedding/index.md
+      - embedding/menus-and-tickets.md
+      - embedding/ticket.md
+      - embedding/core.md
+      - embedding/models.md
   - Reference:
       - reference/index.md
-      - reference/opening-screen.md
-      - reference/explorer.md
-      - reference/editor.md
-      - reference/rise.md
-      - reference/shortcuts.md
       - reference/cli.md
+      - reference/shortcuts.md
+      - reference/color-specs.md
+      - reference/settings.md
+      - reference/file-formats.md
+      - reference/set-contents.md
       - reference/ticket-api.md
       - API reference:
           - reference/api/index.md
           - reference/api/nfty-ticket/index.md
           - reference/api/nfty-core/index.md
           - reference/api/nfty-model/index.md
-      - reference/settings.md
-      - reference/file-formats.md
-      - reference/set-contents.md
-      - reference/errors.md
       - reference/glossary.md
+  - Help:
+      - help/troubleshooting.md
+      - help/faq.md
+      - Releases: https://github.com/corderro-artz/nfty/releases
