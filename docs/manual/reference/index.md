@@ -1,53 +1,20 @@
 # Reference
 
-What each thing is, without telling you what to do with it. Look things up here; learn things
-in [Get started](../get-started/index.md) and [How nfty works](../understand/index.md).
+Facts to look up, without instructions. To learn a task, start in
+[Using the app](../app/index.md), [The command line](../cli/index.md) or
+[Publishing](../publishing/index.md).
 
-<div class="grid cards" markdown>
-
--   **Screens**
-
-    ---
-
-    [The opening screen](opening-screen.md)
-
-    [The Explorer](explorer.md)
-
-    [The Ingredient Editor](editor.md)
-
-    [The Rise page](rise.md)
-
--   **Input**
-
-    ---
-
-    [Keyboard shortcuts](shortcuts.md)
-
-    [Command line](cli.md)
-
-    [Ticket and Menu API](ticket-api.md)
-
-    [API reference](api/index.md)
-
-    [Settings and file locations](settings.md)
-
--   **Data**
-
-    ---
-
-    [File formats](file-formats.md)
-
-    [What a Set contains](set-contents.md)
-
--   **Words and messages**
-
-    ---
-
-    [Error messages](errors.md)
-
-    [Glossary](glossary.md)
-
-</div>
+| Page | Lists |
+|---|---|
+| [Command reference](cli.md) | Every command and option, with synopses. |
+| [Keyboard shortcuts](shortcuts.md) | Every key and gesture, by screen. |
+| [Color specs](color-specs.md) | The `hex:`, `rgb:`, `hsl:` and `hsv:` forms. |
+| [Settings files and environment variables](settings.md) | The `.nfty` folder, `settings.json` keys, `NFTY_THREADS`. |
+| [File formats](file-formats.md) | What is inside every nfty file, depth maps, the spritesheet grid record, versioning. |
+| [What a Set contains](set-contents.md) | Every file a cook writes, the two metadata formats, color traits, `set.json`. |
+| [Ticket and Menu API](ticket-api.md) | The roll's types at a glance. |
+| [API reference](api/index.md) | Every public type of `Nfty.Ticket`, `Nfty.Core` and `Nfty.Model`, generated from the source. |
+| [Glossary](glossary.md) | Every term the manual uses. |
 
 <div class="vs-typeface">
   <div class="vs-typeface__text">

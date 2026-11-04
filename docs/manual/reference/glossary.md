@@ -1,21 +1,26 @@
 # Glossary
 
-Every word the manual uses with a special meaning, in alphabetical order. The first six —
-CookBook, Recipe, Ingredient, Variant, Set and Kitchen — are explained as a story in
-[The six words](../understand/six-words.md).
+Every word the manual uses with a special meaning, in alphabetical order. The eight core words
+(CookBook, Recipe, Ingredient, Variant, Set, Kitchen, Menu and Ticket) are explained together in
+[The vocabulary](../concepts/vocabulary.md).
 
 **2D only**
 :   Marks a book, Recipe or Ingredient with at least one partly transparent pixel. It cooks images
     normally but cannot rise. Fixed with **Make voxel-ready**. See
-    [Fix a 2D-only book](../how-to/fix-a-2d-only-book.md).
+    [Fix a 2D-only book](../app/2d-only.md).
 
 **Absent chance**
 :   The percent of assets that leave a layer out entirely, set per layer on a Recipe. `0` always
-    shows it, `100` never does. See [Leave a layer out sometimes](../how-to/leave-a-layer-out.md).
+    shows it, `100` never does. See [Leave a layer out sometimes](../app/weights.md#leave-a-layer-out-sometimes).
+
+**Base URI**
+:   An export option: the address an uploaded folder lives at (`ipfs://<CID>/`), prefixed to each
+    file name in the metadata. Also the contract's `baseURI`, the metadata folder's address. See
+    [Upload to IPFS](../publishing/ipfs.md).
 
 **Canvas**
 :   The pixel size every drawing in a CookBook shares. Fixed when the book is created and permanent.
-    See [Why nfty never resizes your art](../understand/no-resizing.md).
+    See [Why nfty never resizes your art](../concepts/no-resizing.md).
 
 **Colorization**
 :   How a layer gets its color -- a hue and saturation range for Dynamic, one fixed color for Static,
@@ -41,7 +46,7 @@ CookBook, Recipe, Ingredient, Variant, Set and Kitchen — are explained as a st
 **Depth**
 :   How far a pixel stands out toward the viewer (front) and away from them (back), in voxels. A layer's
     *depth* is also its position in the stack: depth 1 paints first and sits furthest back. See
-    [Depth: paper, front and back](../understand/depth.md).
+    [Depth: paper, front and back](../concepts/depth.md).
 
 **DNA**
 :   An asset's fingerprint, hashed from its Recipe, its variant choices, and its quantized colors. No
@@ -50,9 +55,21 @@ CookBook, Recipe, Ingredient, Variant, Set and Kitchen — are explained as a st
 **Dynamic**
 :   A layer kind: a gray value-map whose color is rolled per asset from a range.
 
+**Edit lock**
+:   The **read-only** / **editing** chip in the title bar. A CookBook opens locked; adding, deleting,
+    reordering and saving need it unlocked. See [The edit lock](../app/explorer.md#the-edit-lock).
+
+**Export**
+:   A copy of a cooked Set written for somebody else, with only the parts they should have. See
+    [Export a Set](../publishing/export.md).
+
 **Extend**
 :   To grow an existing Set, keeping every asset already in it and recomputing rarity. See
-    [Make more assets later](../how-to/more-assets.md).
+    [Add assets to an existing Set](../app/cooking.md#add-assets-to-an-existing-set).
+
+**File associations**
+:   On Windows, which file types double-click into nfty or its viewer. Set per user on the Settings
+    card's SYSTEM tab. See [Open files with nfty on Windows](../app/file-associations.md).
 
 **Ingredient** (`.igt`)
 :   One layer of a Recipe: its kind, its colorization, and its weighted variants.
@@ -68,7 +85,7 @@ CookBook, Recipe, Ingredient, Variant, Set and Kitchen — are explained as a st
 **Menu** (`.mnu`)
 :   A CookBook flattened for runtime: every weight, rule, colorization and all the art, so a program
     can roll and render assets without the `.cbk`. See
-    [Roll assets at runtime](../how-to/roll-assets-at-runtime.md).
+    [Menus and tickets](../embedding/menus-and-tickets.md).
 
 **Model**
 :   A glTF 3D file (`.glb` or `.gltf`) made by Rise from one picture or one finished asset. A Set can
@@ -105,25 +122,25 @@ CookBook, Recipe, Ingredient, Variant, Set and Kitchen — are explained as a st
 
 **Rise**
 :   The page, and the act, of turning finished pixel art into a 3D model by giving each pixel a
-    thickness. See [Depth: paper, front and back](../understand/depth.md).
+    thickness. See [Depth: paper, front and back](../concepts/depth.md).
 
 **Rule**
 :   An exclusion: when this variant is picked, that one cannot be.
 
 **Sealed** (`.tin`)
 :   A Set encrypted for somebody else, optionally marked view-only. See
-    [What sealing does and does not do](../understand/sealing.md).
+    [What sealing does and does not do](../concepts/sealing.md).
 
 **Seed**
 :   The word that drives generation. Same book plus same seed produces identical output. See
-    [Why a seed reproduces a collection](../understand/seeds.md).
+    [Why a seed reproduces a collection](../concepts/seeds.md).
 
 **Set** (`.set`)
 :   A cooked collection: images, metadata, rarity and the seed that made it.
 
 **Spritesheet**
 :   Every asset stitched into one image in the Set's own numbering. It carries its own grid inside the
-    file. See [Rise a spritesheet](../how-to/rise-a-spritesheet.md).
+    file. See [Rise a spritesheet](../app/spritesheets.md).
 
 **Static**
 :   A layer kind: a gray value-map with one fixed color on every asset.
@@ -135,11 +152,16 @@ CookBook, Recipe, Ingredient, Variant, Set and Kitchen — are explained as a st
 **Ticket**
 :   One rolled outcome, a few hundred bytes: the Recipe, one variant per layer, each colored layer's
     rolled hue and saturation, and the DNA. It names a selection, not pixels. See
-    [Embed nfty in your program](../how-to/embed-nfty.md).
+    [Menus and tickets](../embedding/menus-and-tickets.md).
 
 **Unique DNA**
 :   How many distinguishable assets a CookBook can produce. A promise, not an estimate. See
-    [How uniqueness is counted](../understand/uniqueness.md).
+    [How uniqueness is decided](../concepts/uniqueness.md).
+
+**Upload bundle**
+:   An export without `set.json`: art and marketplace metadata ready to upload, which nfty opens
+    read-only to check. See
+    [Check the bundle](../publishing/marketplace.md#check-the-bundle-before-you-upload-it).
 
 **Value-map**
 :   A grayscale drawing where the gray means *lightness*, to be colored at generation time.
@@ -150,7 +172,7 @@ CookBook, Recipe, Ingredient, Variant, Set and Kitchen — are explained as a st
 **Viewer**
 :   The pop-out window that shows a cooked asset, a recipe roll or a gallery of a book's variants in
     2D, 3D or both. See
-    [View an asset in its own window](../how-to/view-an-asset-in-its-own-window.md).
+    [The viewer](../app/viewer.md).
 
 **Voxel**
 :   A cube one pixel wide. Rise builds a model from voxel columns: one voxel thick for paper, plus the

@@ -2,7 +2,7 @@
 
 # API reference
 
-The public types of the three libraries you can reference from your own program. For the task-shaped walk-through, with code that compiles, see [Embed nfty in your program](../../how-to/embed-nfty.md); for the roll alone, [Ticket and Menu API](../ticket-api.md).
+The public types of the three libraries you can reference from your own program. For the task-shaped walk-through, with code that compiles, see [Embedding nfty](../../embedding/index.md); for the roll alone, [Ticket and Menu API](../ticket-api.md).
 
 | Assembly | Types | What it is |
 |---|---|---|

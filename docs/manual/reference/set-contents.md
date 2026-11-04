@@ -22,14 +22,14 @@ replaces it rather than nesting the old one inside the new.
 
 `nfty inspect` reads either form -- the folder or the `.set` -- and reports what the run produced:
 its seed, the CookBook hash behind it, whether unique DNA was required, and the trait percentages the
-collection actually came out with. See [Command line](cli.md).
+collection actually came out with. See [`inspect`](cli.md#inspect).
 
 Two metadata files per asset, on purpose: one that marketplaces understand and one that keeps
 everything nfty knows. Neither is a subset of the other.
 
 ## Exports are Sets too, minus what you left out
 
-[Exporting](../how-to/share-a-collection.md) writes the same shape with parts removed -- a
+[Exporting](../publishing/export.md) writes the same shape with parts removed -- a
 marketplace export has no `nfty/`, and one for a collaborator has a `.cbk` beside `set.json`.
 `set.json` is on in every preset but Marketplace, which leaves it out so the seed is not published. An
 export that keeps it reopens as a Set whatever its file names: when the names are not the Set's own
@@ -48,7 +48,7 @@ Chest Demo.tin
 
 `nfty inspect` reads `seal.json` without any passphrase, so a recipient is told what they are
 holding. Everything else needs the key. See
-[What sealing does and does not do](../understand/sealing.md).
+[What sealing does and does not do](../concepts/sealing.md).
 
 ## `metadata/NNNN.json`
 
@@ -73,7 +73,7 @@ Standards-pure. Nothing nfty-specific in it.
 
 `Type` is the Recipe the asset was rolled from. Every other `trait_type` is a **layer name** -- which
 is why two layers in one Recipe may not share a name -- or a layer's color (next section). The
-`image` is a relative path in the cooked Set; [an export](../how-to/put-a-collection-on-a-marketplace.md)
+`image` is a relative path in the cooked Set; [an export](../publishing/marketplace.md)
 can make it an absolute address, name the files by token id, and add `external_url` and
 `animation_url`. nfty writes no `display_type` or numeric traits: its traits are categories, not
 numbers.
@@ -130,7 +130,7 @@ The Set browser reads the same file when you select an asset:
 
 | Field | Is |
 |---|---|
-| `dna` | The fingerprint. Unique across the Set -- see [How uniqueness is decided](../understand/uniqueness.md). |
+| `dna` | The fingerprint. Unique across the Set -- see [How uniqueness is decided](../concepts/uniqueness.md). |
 | `seed` | The seed that produced the whole collection. |
 | `rarity` | This asset's traits with their collection-wide percentages. |
 | `layers` | Per layer: its kind, and for Dynamic and Static, the exact hue and saturation it rolled. |
@@ -140,7 +140,7 @@ the collection.
 
 ## `models/`
 
-Present only when the Set was cooked with models ([Cook with 3D models](../how-to/cook-with-models.md)).
+Present only when the Set was cooked with models ([Cook with 3D models](../app/cooking.md#cook-with-3d-models)).
 One model per asset, named like its image: `0001.glb`, or `0001.gltf` plus `0001.bin`, or a single
 `0001.gltf` with its buffer inside, as the format chose. An asset with no fully opaque pixel has no
 model and no gap-filler; its number is listed in the `models` block of `set.json` below.
@@ -181,11 +181,11 @@ A Set cooked with models adds a `models` block; a Set without them has no such k
 | `voxelSize` | World units per pixel. |
 | `skipped` | Set numbers that have no model because nothing in them is fully opaque. Omitted when none. |
 
-[Extend](../how-to/more-assets.md) reads this block and makes the new assets' models the same way, so
+[Extend](../cli/cook.md#extend-a-set) reads this block and makes the new assets' models the same way, so
 a Set is modeled whole or not at all.
 
 `cookbookSha256` ties the Set back to the exact CookBook that produced it. It is what
-[extend](../how-to/more-assets.md) checks before warning you that the book has moved on.
+[extend](../cli/cook.md#extend-a-set) checks before warning you that the book has moved on.
 
 !!! note "Rarity is collection-wide"
 

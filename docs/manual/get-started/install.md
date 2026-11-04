@@ -1,101 +1,112 @@
 # Install nfty
 
-nfty runs on Windows, macOS and Linux. Prebuilt Windows and Linux (x64) downloads are on the
-[releases page](https://github.com/corderro-artz/nfty/releases/latest); on macOS, build from source.
+Download a prebuilt copy for Windows or Linux, or build nfty from source on any platform. Every
+download contains both the desktop app and the command line.
 
-## What you need
+## Requirements
 
-- **Windows or Linux** for a prebuilt download; macOS builds from source.
-- **A screen of 1280×720 or larger.** That is the smallest window nfty will open at. It opens at
-  1366×768 and remembers nothing about size, so a small display is the only case where it matters.
-- **.NET 10** only for the two framework-dependent downloads. The other two carry their own runtime.
+| | Needed |
+|---|---|
+| Operating system | Windows 10 or 11 (x64), or Linux (x64) for a download. macOS builds from source. |
+| Screen | 1280×720 or larger. nfty opens at 1366×768 and will not go smaller than 1280×720. |
+| .NET 10 runtime | Only for the two *framework-dependent* downloads. The others carry their own runtime. |
+| Linux libraries | The X11 session libraries, listed [below](#linux). The command line needs none. |
 
-## Download it
+## Choose a download
 
-Every download holds both the app and the command line, the demo CookBook and the licenses.
+Downloads are on the [releases page](https://github.com/corderro-artz/nfty/releases/latest). Each
+comes in four shapes:
 
-| Download | .NET 10 needed | Choose it when |
-|---|---|---|
-| **portable** | No | You want to unpack and run. Start here if unsure. |
+| Shape | Needs .NET 10 | Choose it when |
+|---|:--:|---|
+| **portable** | No | You want to unpack and run. **Start here if unsure.** |
 | **single-file** | No | You want one executable. It unpacks itself, so the first launch is slower. |
 | **framework-dependent** | Yes | You already have the .NET 10 runtime and want a small folder. |
 | **single-file-net10** | Yes | One small executable, with the runtime left out. |
 
-### Windows
+## Windows
 
-Downloads end in `.zip`. Unzip anywhere and run `Nfty.Desktop.exe`. The command line is in the
-`cli` folder. The framework-dependent shapes need the .NET 10 **desktop** runtime.
+1. Download the `.zip` for your shape and unzip it anywhere you can write to.
+2. Run `Nfty.Desktop.exe`.
+3. The command line is `cli\Nfty.Cli.exe` in the same folder. Run `cli\Nfty.Cli.exe --help` to check it.
 
-### Linux
+The framework-dependent shapes need the .NET 10 **desktop** runtime.
 
-Downloads end in `.tar.gz`, named `nfty-<version>-linux-x64-<shape>.tar.gz`. Unpack with `tar`,
-which keeps the executable bits:
+nfty installs nothing and writes nothing to the registry on its own. To make double-clicking a
+`.cbk`, `.set` or picture open nfty, turn it on in Settings: see
+[Open files with nfty on Windows](../app/file-associations.md).
 
-```bash
-tar -xzf nfty-<version>-linux-x64-portable.tar.gz
-cd nfty-<version>-linux-x64-portable
-./Nfty.Desktop            # the app
-./cli/Nfty.Cli --help     # the command line
-```
+## Linux
 
-The app needs the X11 session libraries. Every desktop install (GNOME, KDE, Xfce) already has them;
-a minimal or server install may not, and the app then says which one is missing and stops:
+1. Download `nfty-<version>-linux-x64-<shape>.tar.gz` and unpack it with `tar`, which keeps the
+   executable bits:
 
-| Distribution | Command |
-|---|---|
-| Debian, Ubuntu | `sudo apt install libice6 libsm6 libx11-6 libfontconfig1` |
-| Fedora | `sudo dnf install libICE libSM libX11 fontconfig` |
-| Arch | `sudo pacman -S libice libsm libx11 fontconfig` |
+    ```bash
+    tar -xzf nfty-<version>-linux-x64-portable.tar.gz
+    cd nfty-<version>-linux-x64-portable
+    ./Nfty.Desktop            # the app
+    ./cli/Nfty.Cli --help     # the command line
+    ```
 
-It runs under X11, and under Wayland through XWayland. The command line needs none of these
-libraries. The framework-dependent shapes need the .NET 10 runtime (`dotnet-runtime-10.0`; see
-[Install .NET on Linux](https://learn.microsoft.com/dotnet/core/install/linux)); there is no separate
-desktop runtime on Linux.
+2. If the app reports a missing library, install the X11 session libraries. Every desktop install
+   (GNOME, KDE, Xfce) already has them; a minimal or server install may not:
 
-**A launcher entry.** The folder carries `dev.vaporsoft.nfty.desktop`, `nfty.png` and `install-desktop-entry.sh`.
-Run the script once and nfty appears in your desktop's application menu with its icon; it writes to
-`~/.local/share/applications` and `~/.local/share/icons` only, and points at the folder you ran it
-from, so run it again if you move the folder.
+    | Distribution | Command |
+    |---|---|
+    | Debian, Ubuntu | `sudo apt install libice6 libsm6 libx11-6 libfontconfig1` |
+    | Fedora | `sudo dnf install libICE libSM libX11 fontconfig` |
+    | Arch | `sudo pacman -S libice libsm libx11 fontconfig` |
 
-**Where settings live.** In a `.nfty` folder beside `Nfty.Desktop` when that folder is writable, so
-an unpacked copy keeps its recent files and palette to itself. Unpacked somewhere you cannot write
-(`/opt`, `/usr`, a read-only mount), nfty uses `~/.config/nfty` (or `$XDG_CONFIG_HOME/nfty`) instead.
-Settings → Data says which one it is using.
+3. Optional: run `./install-desktop-entry.sh` once to add nfty to your application menu with its
+   icon. It writes only to `~/.local/share/applications` and `~/.local/share/icons`, and points at the
+   folder you ran it from, so run it again if you move the folder.
 
-**Saving a Pinata key** (Settings → Publishing) uses your keyring through `secret-tool`: install
-`libsecret-tools` (Debian, Ubuntu) or `libsecret` (Fedora, Arch), with GNOME Keyring or KWallet
-running. Without it nfty says so and saves no key; it never writes one to a file.
+The app runs under X11, and under Wayland through XWayland. The framework-dependent shapes need the
+.NET 10 runtime (`dotnet-runtime-10.0`, see
+[Install .NET on Linux](https://learn.microsoft.com/dotnet/core/install/linux)).
 
-## Or build it
+To save a Pinata key for uploads, nfty uses your keyring through `secret-tool`: install
+`libsecret-tools` (Debian, Ubuntu) or `libsecret` (Fedora, Arch) with GNOME Keyring or KWallet
+running. Without it nfty saves no key and says so; it never writes one to a file.
 
-You need the **.NET 10 SDK** from [dotnet.microsoft.com](https://dotnet.microsoft.com/) (on Linux,
-your distribution's `dotnet-sdk-10.0` package works). Open a terminal in the folder you cloned nfty
-into:
+## Build from source (any platform)
+
+You need the [.NET 10 SDK](https://dotnet.microsoft.com/) (on Linux, `dotnet-sdk-10.0` from your
+distribution works). In the folder you cloned nfty into:
 
 ```bash
 dotnet build nfty.sln
-dotnet run --project src/Nfty.Desktop
+dotnet run --project src/Nfty.Desktop        # the app
+dotnet run --project src/Nfty.Cli -- --help  # the command line
 ```
 
 The first build takes a minute or two while packages download.
 
-You should get this window:
+## Check that it works
+
+Start the app. You should see the opening screen:
 
 ![The opening screen: create and open actions on the left, recent books on the right, the Kitchen shelf along the bottom](../images/landing-light.png#only-light)
 ![The opening screen: create and open actions on the left, recent books on the right, the Kitchen shelf along the bottom](../images/landing-dark.png#only-dark)
 
-If you see it, you are done.
+From a terminal, `Nfty.Cli --version` prints the version.
 
-!!! tip "There is a command line too"
+!!! tip "Call it `nfty`"
 
-    The same engine runs headless, for scripting and for checking a project before you cook it:
+    This manual writes the command line as `nfty`. Make that work with an alias, for example
+    `alias nfty="$HOME/nfty/cli/Nfty.Cli"` in your shell profile, or on Windows
+    `Set-Alias nfty C:\Tools\nfty\cli\Nfty.Cli.exe` in your PowerShell profile. From a source
+    checkout, `nfty` means `dotnet run --project src/Nfty.Cli --`.
 
-    ```bash
-    dotnet run --project src/Nfty.Cli -- --help
-    ```
+## Where nfty keeps its own files
 
-    You do not need it to follow this manual. See [Command line](../reference/cli.md).
+Your CookBooks and Sets are wherever you save them. nfty's own state (recent files, saved palettes,
+settings) lives in a `.nfty` folder beside the program when that folder is writable, so an unpacked
+copy keeps its history to itself. If it is not writable, nfty falls back (on Linux, first to
+`~/.config/nfty` or `$XDG_CONFIG_HOME/nfty`), and when nothing on disk is usable it keeps state for
+the session only. **Settings → DATA** shows which. See
+[Settings files and environment variables](../reference/settings.md).
 
----
+## Next step
 
-**Next:** [The demo CookBook →](the-demo.md)
+[Open the demo CookBook →](the-demo.md)

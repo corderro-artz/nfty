@@ -1,67 +1,67 @@
-# The demo CookBook
+# Open the demo CookBook
 
-nfty carries a finished collection inside it. You do not have to download it, find it or build it —
-it is part of the program, and it is there on a fresh copy with nothing else on the machine.
+nfty carries a finished collection inside the program. Opening it is the fastest way to see what a
+complete project looks like before you build your own. Nothing is downloaded.
 
-On the opening screen, click **Open the demo CookBook**.
+## Open it
 
-It writes a real `ChestDemo.cbk` into a `demo` folder beside the application and opens it in the
-Explorer. From that point nothing about it is special: it is an ordinary CookBook, it has the same
-edit lock, and **Cook** produces a real Set.
+=== "In the app"
 
-From the command line, the same book:
+    On the opening screen, click **Open the demo CookBook**.
 
-```
-nfty demo .
-nfty inspect ChestDemo.cbk
-```
+    nfty writes a real `ChestDemo.cbk` into a `demo` folder beside the application and opens it in
+    the Explorer.
+
+=== "From the command line"
+
+    ```bash
+    nfty demo .              # writes ./ChestDemo.cbk
+    nfty inspect ChestDemo.cbk
+    nfty stats ChestDemo.cbk
+    ```
+
+From then on it is an ordinary CookBook: it has the same edit lock as any other, and **Cook Set**
+produces a real Set.
 
 ## What is in it
 
-A collection of layered treasure chests, drawn at 32×32.
+Layered treasure chests, drawn at 32×32 pixels. Two Recipes share six layers: **Chest**, with a
+barrel lid, and **Strongbox**, with a flat slab lid.
 
 | Layer | Kind | What it does |
 |---|---|---|
-| **Glow** | Dynamic | Sparks or runes floating around the chest. Usually absent. |
-| **Body** | Dynamic | The chest itself — planked, plated, slatted, paneled or stone. |
+| **Glow** | Dynamic | Sparks or runes floating around the chest. Absent 72% of the time. |
+| **Feet** | Custom | Pewter blocks, a runner rail, or gilt ball feet. |
+| **Body** | Dynamic | The chest itself: planked, plated, slatted, paneled or stone. |
 | **Bands** | Dynamic | Hoops, straps, corner brackets, side edging or studs. |
-| **Trim** | Custom | Gilt edging, set gems, a string of pearls or gold filigree. Usually absent. |
-| **Feet** | Custom | Pewter blocks, a pewter runner rail, or gilt ball feet. |
-| **Lock** | Static | A keyhole, latch, padlock, dial, crest or keypad. |
+| **Trim** | Custom | Gilt edging, set gems, pearls or filigree. Absent 55% of the time. |
+| **Lock** | Static | A keyhole, latch, padlock, dial, crest or keypad, in one fixed brass. |
 
-Two Recipes share those layers: **Chest**, with a barrel lid, and **Strongbox**, with a flat slab.
+The book deliberately shows one of everything:
 
-That is deliberately one of everything the manual talks about:
+- **All three [layer kinds](../concepts/layer-kinds.md).** Body and Bands roll their own color on
+  every asset, the Lock is one brass for the whole collection, and Trim and Feet are full-color art
+  composited exactly as drawn.
+- **Weighted color bands.** A body rolls warm timber about 60% of the time and cold metal the rest.
+- **Two optional layers.** Glow and Trim are often left out, which is what makes a few chests rare.
+  See [Weights and rarity](../app/weights.md).
+- **A rule.** A stone chest never carries a keypad. See [Rules](../app/rules.md).
+- **Depth.** Every layer carries relief, so the demo rises into 3D on the [Rise page](../app/rise.md).
 
-- **All three [layer kinds](../understand/layer-kinds.md).** The Body and Bands roll their own color
-  on every asset; the Lock is one fixed brass for the whole collection; the Trim and the Feet are
-  full-color art composited exactly as drawn.
-- **Two [optional layers](../how-to/rarer-trait.md).** Glow is absent 72% of the time and Trim 55%,
-  which is what makes some chests plain and a few of them special.
-- **A [rule](../how-to/exclude-combinations.md).** A stone chest never carries a keypad.
-- **Weighted color bands.** A body rolls warm timber about 60% of the time and cold metal the rest,
-  rather than any color at all.
+Twenty-nine drawings produce exactly **7,155,000** distinct assets. That figure is a count, not an
+estimate; see [How uniqueness is decided](../concepts/uniqueness.md).
 
-The art also carries **depth**, so the demo rises into 3D: the chest's barrel lid curves the same way front and back, so it reads as one object from any side, the lid's lip overhangs the body, the bands, trim and lock stand proud of the face, and the body is twelve voxels deep. Glow stays flat on purpose. Open the Rise page on any of it to see the model; depth never changes which assets are unique.
+## It is yours to change
 
-Twenty-nine small drawings, and **7,155,000** distinct assets. That is
-[why the art is gray](../understand/why-gray.md), stated as a file you can open.
+Reorder the layers, repaint the lock, change the weights, cook it. Reopening the demo does **not**
+restore it: your copy stays as you left it. To get a clean copy, delete `demo/ChestDemo.cbk` and
+click the button again, or run:
 
-That figure is exact, not an estimate, and it is exact on purpose: nfty counts the space rather than
-guessing at it, and the demo's quantize steps are chosen so it stays countable. Cook a thousand of
-them and every one is different.
-
-## It is yours to break
-
-Reorder the layers, delete a variant, repaint the lock, change the weights, cook it and look at the
-result. Reopening the demo does **not** restore it — your copy stays as you left it.
-
-To get a clean one back, delete `demo/ChestDemo.cbk` and click the button again, or run:
-
-```
+```bash
 nfty demo . --force
 ```
 
----
+## Next step
 
-**Next:** [Your first collection →](first-collection.md)
+[Your first collection in the app →](first-collection.md), or skip to
+[your first collection from the command line](first-collection-cli.md).
