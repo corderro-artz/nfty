@@ -25,6 +25,9 @@ produces a real Set.
 
 ## What is in it
 
+![The demo CookBook open in the Explorer](../images/explorer-light.png#only-light)
+![The demo CookBook open in the Explorer](../images/explorer-dark.png#only-dark)
+
 Layered treasure chests, drawn at 32×32 pixels. Two Recipes share six layers: **Chest**, with a
 barrel lid, and **Strongbox**, with a flat slab lid.
 
