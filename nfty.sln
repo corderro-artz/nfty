@@ -35,6 +35,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nfty.Ticket.Sample", "sampl
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nfty.Embedding.Sample", "samples\Nfty.Embedding.Sample\Nfty.Embedding.Sample.csproj", "{B493B747-14DE-4E70-A448-2870DF997860}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nfty.Ticket.NetStandard.Tests", "tests\Nfty.Ticket.NetStandard.Tests\Nfty.Ticket.NetStandard.Tests.csproj", "{0620DDE6-A247-4BE8-9F53-6123FD20AE2C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -201,6 +203,18 @@ Global
 		{B493B747-14DE-4E70-A448-2870DF997860}.Release|x64.Build.0 = Release|Any CPU
 		{B493B747-14DE-4E70-A448-2870DF997860}.Release|x86.ActiveCfg = Release|Any CPU
 		{B493B747-14DE-4E70-A448-2870DF997860}.Release|x86.Build.0 = Release|Any CPU
+		{0620DDE6-A247-4BE8-9F53-6123FD20AE2C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0620DDE6-A247-4BE8-9F53-6123FD20AE2C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0620DDE6-A247-4BE8-9F53-6123FD20AE2C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{0620DDE6-A247-4BE8-9F53-6123FD20AE2C}.Debug|x64.Build.0 = Debug|Any CPU
+		{0620DDE6-A247-4BE8-9F53-6123FD20AE2C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0620DDE6-A247-4BE8-9F53-6123FD20AE2C}.Debug|x86.Build.0 = Debug|Any CPU
+		{0620DDE6-A247-4BE8-9F53-6123FD20AE2C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0620DDE6-A247-4BE8-9F53-6123FD20AE2C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0620DDE6-A247-4BE8-9F53-6123FD20AE2C}.Release|x64.ActiveCfg = Release|Any CPU
+		{0620DDE6-A247-4BE8-9F53-6123FD20AE2C}.Release|x64.Build.0 = Release|Any CPU
+		{0620DDE6-A247-4BE8-9F53-6123FD20AE2C}.Release|x86.ActiveCfg = Release|Any CPU
+		{0620DDE6-A247-4BE8-9F53-6123FD20AE2C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -219,5 +233,6 @@ Global
 		{8F493F4C-ED52-44BA-8C3A-041982BA97B5} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{609828FA-CBC8-4C16-AAEA-D1B3137DC6AA} = {5D20AA90-6969-D8BD-9DCD-8634F4692FDA}
 		{B493B747-14DE-4E70-A448-2870DF997860} = {5D20AA90-6969-D8BD-9DCD-8634F4692FDA}
+		{0620DDE6-A247-4BE8-9F53-6123FD20AE2C} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal

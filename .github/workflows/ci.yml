@@ -124,6 +124,7 @@ jobs:
           restore-keys: nuget-${{ runner.os }}-
       - run: dotnet test tests/Nfty.App.Tests -c Release
       - run: dotnet test tests/Nfty.Ticket.Tests -c Release
+      - run: dotnet test tests/Nfty.Ticket.NetStandard.Tests -c Release
 
   # What is GENERATED and committed has to be what the source would generate now, and the manual has
   # to build. None of this needs a display, so it runs on Linux, once.

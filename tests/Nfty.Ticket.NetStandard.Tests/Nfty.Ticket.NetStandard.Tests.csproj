@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The SAME tests as Nfty.Ticket.Tests, compiled again against Nfty.Ticket's netstandard2.1 build
+    (SetTargetFramework below). The host is net10.0, which loads a netstandard2.1 assembly as is, so
+    every assertion - including RollFreezeTests' frozen tickets and DNAs - holds the build a game
+    engine embeds to the build the desktop app loads.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Nfty.Ticket.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Compile Include="..\Nfty.Ticket.Tests\*.cs" Link="%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Nfty.Ticket\Nfty.Ticket.csproj" SetTargetFramework="TargetFramework=netstandard2.1" />
+  </ItemGroup>
+
+</Project>
