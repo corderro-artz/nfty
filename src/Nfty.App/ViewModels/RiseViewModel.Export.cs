@@ -435,7 +435,9 @@ public sealed partial class RiseViewModel
         {
             try { await delay(wait.Token).ConfigureAwait(false); }
             catch (OperationCanceledException) { return; }     // a newer change owns the count
-            Dispatcher.UIThread.Post(() => SizeDue(gen));
+            // A closed page posts nothing: a late post from a page already gone is work the UI
+            // thread (and, in the test harness, the NEXT test's fresh dispatcher) never asked for.
+            if (!_disposed) Dispatcher.UIThread.Post(() => SizeDue(gen));
         });
     }
 
@@ -477,7 +479,7 @@ public sealed partial class RiseViewModel
                 text = "";     // a figure we cannot stand behind is left off, not guessed
             }
             finally { snapshot.Dispose(); }
-            Dispatcher.UIThread.Post(() => SizeLanded(gen, text));
+            if (!_disposed) Dispatcher.UIThread.Post(() => SizeLanded(gen, text));
         });
     }
 

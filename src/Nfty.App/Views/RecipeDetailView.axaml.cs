@@ -258,6 +258,10 @@ public partial class RecipeDetailView : UserControl
     /// it: variant B's own cost table records "Keyboard: none", and a reorder reachable only by
     /// pointer is an incomplete feature. The arrow follows the TABLE — Alt+Up moves the row up the
     /// page, towards #1 — which is why #1's meaning is spelled out in the header hint.</summary>
+    /// <summary>The move the last Alt+arrow started: the observable handle a fire-and-forget
+    /// gesture owes its test (as <c>ExplorerView.PendingReorder</c>).</summary>
+    internal Task PendingReorder { get; private set; } = Task.CompletedTask;
+
     private async void OnKeyDown(object? sender, KeyEventArgs e)
     {
         // Enter is NOT handled here. It used to be, and it could never fire: this handler is
@@ -279,7 +283,7 @@ public partial class RecipeDetailView : UserControl
         if (rows == 0 || DataContext is not RecipeDetailViewModel vm || vm.SelectedLayer is not { } row) return;
 
         e.Handled = true;
-        await vm.MoveSelectedRowsAsync(rows);
+        await (PendingReorder = vm.MoveSelectedRowsAsync(rows));
         // Unconditionally, including the no-op at either end: the grip must keep focus so the next
         // keystroke still reaches this handler.
         FocusGripOf(row);

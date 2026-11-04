@@ -297,17 +297,17 @@ public class RecipeLayerReorderTests
             Dispatcher.UIThread.RunJobs();
 
             window.KeyPressQwerty(PhysicalKey.ArrowUp, RawInputModifiers.Alt);
-            Dispatcher.UIThread.RunJobs();
+            UiThreadWait.For(view.PendingReorder);
             Assert.Equal(new[] { "bg", "hat", "body" }, pane.Layers.Select(l => l.Id));
 
             // The second keystroke is the one that proves the feature: it only lands if the first
             // move kept the selection AND left focus inside this pane.
             window.KeyPressQwerty(PhysicalKey.ArrowUp, RawInputModifiers.Alt);
-            Dispatcher.UIThread.RunJobs();
+            UiThreadWait.For(view.PendingReorder);
             Assert.Equal(new[] { "hat", "bg", "body" }, pane.Layers.Select(l => l.Id));
 
             window.KeyPressQwerty(PhysicalKey.ArrowDown, RawInputModifiers.Alt);
-            Dispatcher.UIThread.RunJobs();
+            UiThreadWait.For(view.PendingReorder);
             Assert.Equal(new[] { "bg", "hat", "body" }, pane.Layers.Select(l => l.Id));
         }
         finally { window.Close(); pane.Dispose(); }
