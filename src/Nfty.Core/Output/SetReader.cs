@@ -133,8 +133,9 @@ public static class SetReader
     /// <param name="path">What the caller asked for, for messages.</param>
     /// <param name="ct">Checked before each asset.</param>
     /// <param name="parallelism">How wide the per-asset JSON parsing may run; null means <see cref="Parallelism.Default"/>. The result never depends on it.</param>
+    /// <param name="progress">One report per asset parsed, in order, one at a time.</param>
     internal static LoadedSet Load(string dir, string? temp, string path, CancellationToken ct,
-        Parallelism? parallelism = null)
+        Parallelism? parallelism = null, IProgress<SetReadProgress>? progress = null)
     {
         try
         {
@@ -177,8 +178,17 @@ public static class SetReader
                 var files = Directory.EnumerateFiles(nftyDir, "*.json").ToList();
                 files.Sort(StringComparer.Ordinal);
                 var parsed = new NftyMetadata[files.Count];
-                ParallelWork.For(files.Count, parallelism ?? Parallelism.Default, ct,
-                    i => parsed[i] = SetItemFile.ReadNfty(files[i], File.ReadAllText(files[i])));
+                // Counted and reported under one lock, so a caller's handler sees 1, 2, 3 … in
+                // order, one call at a time, whatever the parallel parse finishes first.
+                var gate = new Lock();
+                int done = 0;
+                progress?.Report(new SetReadProgress(0, files.Count));
+                ParallelWork.For(files.Count, parallelism ?? Parallelism.Default, ct, i =>
+                {
+                    parsed[i] = SetItemFile.ReadNfty(files[i], File.ReadAllText(files[i]));
+                    if (progress is not null)
+                        lock (gate) progress.Report(new SetReadProgress(++done, files.Count));
+                });
 
                 foreach (var m in parsed.OrderBy(m => m.SetNumber))
                 {
@@ -214,22 +224,25 @@ public static class SetReader
     /// <param name="ct">Cancels the read.</param>
     /// <param name="parallelism">How wide the per-asset JSON parsing may run; null means <see cref="Parallelism.Default"/>. The result never depends on it.</param>
     /// <returns>The manifest and items; the caller owns it and must dispose it.</returns>
+    /// <param name="progress">Receives one report per asset parsed, in increasing order, one at a
+    /// time; nothing during the unpack of a <c>.set</c>, which counts nothing it could report.</param>
     public static Task<LoadedSet> ReadAsync(string path, CancellationToken ct = default,
-        Parallelism? parallelism = null) => ReadAsync(path, ct, NewTemp, parallelism);
+        Parallelism? parallelism = null, IProgress<SetReadProgress>? progress = null) =>
+        ReadAsync(path, ct, NewTemp, parallelism, progress);
 
-    /// <summary><see cref="ReadAsync(string, CancellationToken, Parallelism?)"/> with the temp directory supplied.</summary>
+    /// <summary><see cref="ReadAsync(string, CancellationToken, Parallelism?, IProgress{SetReadProgress}?)"/> with the temp directory supplied.</summary>
     internal static async Task<LoadedSet> ReadAsync(string path, CancellationToken ct, Func<string> newTemp,
-        Parallelism? parallelism = null)
+        Parallelism? parallelism = null, IProgress<SetReadProgress>? progress = null)
     {
         path = FolderOfManifest(path);
-        if (!File.Exists(path)) return await Task.Run(() => Load(path, null, path, ct, parallelism), ct).ConfigureAwait(false);
+        if (!File.Exists(path)) return await Task.Run(() => Load(path, null, path, ct, parallelism, progress), ct).ConfigureAwait(false);
         string temp = newTemp();
         try
         {
             try { await ZipFile.ExtractToDirectoryAsync(path, temp, ct).ConfigureAwait(false); }
             catch (InvalidDataException) { throw NotAnArchive(path); }
             // Load owns the copy once it runs; if the token stops it from starting, the catch does.
-            return await Task.Run(() => Load(temp, temp, path, ct, parallelism), ct).ConfigureAwait(false);
+            return await Task.Run(() => Load(temp, temp, path, ct, parallelism, progress), ct).ConfigureAwait(false);
         }
         catch
         {

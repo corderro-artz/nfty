@@ -63,6 +63,30 @@ public partial class BusyViewModel : ViewModelBase
     /// vanished on the click would tell the user it had stopped before it had. The phase line says
     /// so instead, and the work closes the card when it actually unwinds.
     /// </remarks>
+    /// <summary>
+    /// Turns the card determinate once a job can COUNT: the bar fills and the phase line says
+    /// "Reading 1,234 of 10,000 assets…". Until the first report the card stays indeterminate,
+    /// which is the honest state for a step (an unpack) that counts nothing. Reports may arrive on any
+    /// thread; each is applied on the UI thread.
+    /// </summary>
+    /// <param name="noun">What is being counted, plural ("assets").</param>
+    /// <returns>A progress sink for the job.</returns>
+    public IProgress<Nfty.Core.Output.SetReadProgress> Counting(string noun) =>
+        new Reporter(this, noun);
+
+    private sealed class Reporter(BusyViewModel busy, string noun) : IProgress<Nfty.Core.Output.SetReadProgress>
+    {
+        public void Report(Nfty.Core.Output.SetReadProgress value) =>
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                if (value.Total <= 0) return;
+                busy.IsIndeterminate = false;
+                busy.Progress = (double)value.Done / value.Total;
+                busy.PhaseText = string.Create(System.Globalization.CultureInfo.InvariantCulture,
+                    $"Reading {value.Done:N0} of {value.Total:N0} {noun}…");
+            });
+    }
+
     [RelayCommand(CanExecute = nameof(CanCancel))]
     private void Cancel()
     {

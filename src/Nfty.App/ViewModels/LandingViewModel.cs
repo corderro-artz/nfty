@@ -538,7 +538,7 @@ public partial class LandingViewModel : ViewModelBase
             // - a Set on a network share - is stopped from the card, and its unpacked copy goes too.
             set = await BusyViewModel.RunAsync(_dialogs, "Opening Set",
                 Directory.Exists(path) ? "Reading the collection…" : "Unpacking…",
-                (_, ct) => SetReader.ReadAsync(path, ct, par), cancellable: true);
+                (busy, ct) => SetReader.ReadAsync(path, ct, par, busy.Counting("assets")), cancellable: true);
         }
         catch (OperationCanceledException)
         {

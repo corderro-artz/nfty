@@ -51,10 +51,10 @@ Reads a Set.
 
 - [`CorruptSetException`](Nfty.Core.Output.CorruptSetException.md) - The Set is missing or malformed.
 
-### ReadAsync(string, CancellationToken, Parallelism?) { #m-readasync-system-string-system-threading-cancellationt-8d5897 }
+### ReadAsync(string, CancellationToken, Parallelism?, IProgress&lt;SetReadProgress&gt;?) { #m-readasync-system-string-system-threading-cancellationt-6cba92 }
 
 ```csharp
-public static Task<LoadedSet> ReadAsync(string path, CancellationToken ct = default, Parallelism? parallelism = null);
+public static Task<LoadedSet> ReadAsync(string path, CancellationToken ct = default, Parallelism? parallelism = null, IProgress<SetReadProgress>? progress = null);
 ```
 
 Reads a Set off the calling thread, honoring `ct` throughout: during the unpack (the archive extracts asynchronously) and between assets while parsing. A canceled or failed read deletes its unpacked copy.
@@ -64,5 +64,6 @@ Reads a Set off the calling thread, honoring `ct` throughout: during the unpack 
 - `path` (`string`) - A Set folder, or a `.set` archive.
 - `ct` (`CancellationToken`) - Cancels the read.
 - `parallelism` (`Parallelism?`) - How wide the per-asset JSON parsing may run; null means [`Parallelism.Default`](Nfty.Core.Parallelism.md#p-default). The result never depends on it.
+- `progress` (`IProgress<SetReadProgress>?`) - Receives one report per asset parsed, in increasing order, one at a time; nothing during the unpack of a `.set`, which counts nothing it could report.
 
 **Returns.** The manifest and items; the caller owns it and must dispose it.

@@ -1579,7 +1579,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         try
         {
             set = await BusyViewModel.RunAsync(_dialogs, "Opening Set", "Reading the collection…",
-                (_, ct) => SetReader.ReadAsync(dir, ct, par), cancellable: true);
+                (busy, ct) => SetReader.ReadAsync(dir, ct, par, busy.Counting("assets")), cancellable: true);
         }
         catch (OperationCanceledException) { return; }   // the user stopped it: nothing opened
         catch (Exception ex)

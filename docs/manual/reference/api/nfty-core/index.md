@@ -4,7 +4,7 @@
 
 The whole engine: archives, validation, generation, rendering, Sets, export, sealing, statistics. Depends on Nfty.Ticket and ImageSharp.
 
-183 public types. Each page lists the public and protected members with their signatures and the documentation written beside the code.
+184 public types. Each page lists the public and protected members with their signatures and the documentation written beside the code.
 
 ## Nfty.Core
 
@@ -163,6 +163,7 @@ The whole engine: archives, validation, generation, rendering, Sets, export, sea
 | [`SetManifest`](Nfty.Core.Output.SetManifest.md) | record | The Set's own record, written to `set.json`: its name, size, seed, the hash of the book that produced it, the collection-wide rarity table and the per-recipe distribution. |
 | [`SetModels`](Nfty.Core.Output.SetModels.md) | record | `set.json`'s record of the 3D models a cook made. |
 | [`SetProvenance`](Nfty.Core.Output.SetProvenance.md) | class | Whether the CookBook in front of you is the one a Set on disk was cooked from, and what to say when it is not. |
+| [`SetReadProgress`](Nfty.Core.Output.SetReadProgress.md) | struct | How far a Set read has got: assets parsed so far, of how many. |
 | [`SetReader`](Nfty.Core.Output.SetReader.md) | class | Opens a cooked Set — a folder, or a packed `.set` archive. |
 | [`SetWriter`](Nfty.Core.Output.SetWriter.md) | class | Writes a generated collection to disk: the images, both metadata files per asset, and the Set manifest — and reads an existing Set back so `extend` can add to it. |
 | [`SetWriter.ExistingSet`](Nfty.Core.Output.SetWriter.ExistingSet.md) | record | What a Set already on disk contributes to an extend run. |

@@ -199,7 +199,7 @@ public static class ViewerOpener
         CancellationToken ct, Func<IEnumerable<string>>? bookCandidates)
     {
         var set = await BusyViewModel.RunAsync(dialogs, "Opening Set", "Reading the Set…",
-            (_, token) => SetReader.ReadAsync(path, token), cancellable: true);
+            (busy, token) => SetReader.ReadAsync(path, token, progress: busy.Counting("assets")), cancellable: true);
         ct.ThrowIfCancellationRequested();
         return Gallery(GalleryBuilder.ForSet(set, null, bookCandidates));
     }

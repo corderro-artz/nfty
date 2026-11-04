@@ -555,4 +555,23 @@ public class SetWriterTests
         Assert.Equal(before, after);
         Assert.True(SetReader.IsSetFolder(outDir));
     }
+
+    private sealed class Collect : IProgress<SetReadProgress>
+    {
+        public List<SetReadProgress> Seen { get; } = [];
+        public void Report(SetReadProgress value) => Seen.Add(value);
+    }
+
+    [Fact]
+    public async Task Reading_a_set_reports_each_asset_in_order()
+    {
+        var outDir = Path.Combine(Directory.CreateTempSubdirectory().FullName, "out");
+        using (var set = Generator.Generate(FourComboBook(), new GenerateOptions(4, "s")))
+            SetWriter.Write(set, outDir, pack: false);
+
+        var seen = new Collect();
+        using var loaded = await SetReader.ReadAsync(outDir, progress: seen, parallelism: Parallelism.All);
+
+        Assert.Equal(Enumerable.Range(0, 5).Select(i => new SetReadProgress(i, 4)), seen.Seen);
+    }
 }
