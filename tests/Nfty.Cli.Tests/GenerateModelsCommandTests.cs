@@ -209,6 +209,35 @@ public class GenerateModelsCommandTests
     }
 
     [Fact]
+    public void Every_fractional_option_parses_the_same_under_a_comma_decimal_culture()
+    {
+        var original = System.Globalization.CultureInfo.CurrentCulture;
+        System.Globalization.CultureInfo.CurrentCulture = new System.Globalization.CultureInfo("de-DE");
+        try
+        {
+            string[] lines =
+            [
+                "add variant a.igt --id v --weight 0.5 --image v.png",
+                "add recipe b.cbk --rcp c.rcp --weight 0.5",
+                "set variant a.igt --id v --weight 0.5",
+                "set recipe b.cbk --id c --weight 0.5",
+                "set chance c.rcp --id hat --absent 0.5",
+            ];
+            foreach (string line in lines)
+            {
+                var result = Parse(line);
+                Assert.Empty(result.Errors);
+                string name = line.Contains("--absent") ? "--absent" : "--weight";
+                Assert.Equal(0.5, result.GetValue<double>(name));
+            }
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentCulture = original;
+        }
+    }
+
+    [Fact]
     public void Extend_lists_only_the_new_assets_skips()
     {
         // Fully clear art: every asset is skipped. The first cook skips #0001; extending to two

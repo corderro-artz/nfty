@@ -17,10 +17,32 @@ public static partial class CommandFactory
     private static Option<string?> OptionalText(string name, string description) =>
         new(name) { Description = description };
 
+    /// <summary>
+    /// A fractional option read in the INVARIANT culture: System.CommandLine's built-in converter reads
+    /// the current one, so under <c>de-DE</c> <c>--weight 0.5</c> parsed as <c>5</c>. Every fractional
+    /// option is made here, so none can fall back to the culture-sensitive converter.
+    /// </summary>
+    internal static Option<double> InvariantNumber(string name) => new(name)
+    {
+        CustomParser = result => ParseInvariant(result, name, 0d),
+    };
+
+    /// <summary>The one invariant-culture parse every fractional option shares.</summary>
+    internal static double ParseInvariant(System.CommandLine.Parsing.ArgumentResult result, string name, double fallback)
+    {
+        string token = result.Tokens.Count == 1 ? result.Tokens[0].Value : string.Empty;
+        if (double.TryParse(token, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double value))
+            return value;
+        result.AddError($"{name} must be a number; got '{token}'.");
+        return fallback;
+    }
+
     /// <summary>Weights are numbers a person types; NaN or infinity would pass a bare range check.</summary>
     private static Option<double> WeightOption(string description, bool allowZero)
     {
-        var weight = new Option<double>("--weight") { Description = description, Required = true };
+        var weight = InvariantNumber("--weight");
+        weight.Description = description;
+        weight.Required = true;
         weight.Validators.Add(r =>
         {
             double v = r.GetValueOrDefault<double>();

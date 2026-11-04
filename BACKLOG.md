@@ -146,24 +146,6 @@ call on the hosting story first.
 
 ---
 
-## M6 deferred: fractional CLI options parse culture-sensitively
-
-**Status:** pre-existing precedent, not introduced by this branch; deferred as one family, not a
-piecemeal per-option fix.
-
-`--weight`, `--absent` and any future fractional CLI option parse via System.CommandLine's built-in
-`float`/`double` converter, which reads the current culture — under `de-DE`, `--weight 0.5` parses as
-`5` (the culture's decimal separator is a comma, so `.` is read as a thousands separator instead).
-This is the same trap `ColorSpec`'s explicit-prefix rule exists to avoid for color input, just not yet
-closed for numeric options.
-
-**Closed for `--voxel-size`** (`model` and `generate --models`): both take it from one shared option
-builder, `ModelVoxelSizeOption`, whose `CustomParser` reads the invariant culture; pinned by
-`Voxel_size_parses_the_same_under_a_comma_decimal_culture`. The rest still want fixing once, for the
-whole family (a shared invariant-culture parser each option opts into), rather than one at a time.
-
----
-
 ## Rise page: the model of a 512px stroke lands a build behind
 
 **Status:** the UI-thread half is fixed (2026-11-04); what is left is latency, not a frozen page.

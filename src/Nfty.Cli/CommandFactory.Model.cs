@@ -209,14 +209,7 @@ public static partial class CommandFactory
     {
         Description = "World units per pixel, and per voxel of depth, from " + ModelVoxelSize.Min.ToString(CultureInfo.InvariantCulture) + " to " + ModelVoxelSize.Max.ToString(CultureInfo.InvariantCulture) + ".",
         DefaultValueFactory = _ => 1d,
-        CustomParser = result =>
-        {
-            string token = result.Tokens.Count == 1 ? result.Tokens[0].Value : string.Empty;
-            if (double.TryParse(token, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
-                return value;
-            result.AddError($"--voxel-size must be a number; got '{token}'.");
-            return 1d;
-        },
+        CustomParser = result => ParseInvariant(result, "--voxel-size", 1d),
     };
 
     /// <summary>Refuses a given voxel size outside <see cref="ModelVoxelSize"/>'s range. Only checked when

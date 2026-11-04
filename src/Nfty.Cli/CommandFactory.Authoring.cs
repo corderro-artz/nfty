@@ -380,14 +380,12 @@ public static partial class CommandFactory
                 + "the .rcp to list them.",
             Required = true,
         };
-        var absent = new Option<double>("--absent")
-        {
-            Description = "How often the layer is left out, as a PERCENT. 0 always appears and "
+        var absent = InvariantNumber("--absent");
+        absent.Description = "How often the layer is left out, as a PERCENT. 0 always appears and "
                 + "clears the setting; 100 never appears, which shelves the layer without deleting "
                 + "it — the same meaning a recipe weight of 0 carries. The variants' own weights "
-                + "decide which one shows up when it does, and are untouched by this.",
-            Required = true,
-        };
+                + "decide which one shows up when it does, and are untouched by this.";
+        absent.Required = true;
         absent.Validators.Add(r =>
         {
             double v = r.GetValueOrDefault<double>();
@@ -604,7 +602,9 @@ public static partial class CommandFactory
         var igtPath = new Argument<string>("igt") { Description = "Path to the .igt to modify in place." };
         var id = new Option<string>("--id") { Description = "New variant id (must be unique in the ingredient).", Required = true };
         var name = new Option<string?>("--name") { Description = "Display name (defaults to the id)." };
-        var weight = new Option<double>("--weight") { Description = "Variant weight (zero or greater).", Required = true };
+        var weight = InvariantNumber("--weight");
+        weight.Description = "Variant weight (zero or greater).";
+        weight.Required = true;
         var image = new Option<string>("--image") { Description = "PNG for this variant.", Required = true };
         var keep = KeepProfileOption();
         var cmd = new Command("variant", "Add one variant (id, weight, image) to an existing .igt.")
@@ -699,7 +699,9 @@ public static partial class CommandFactory
     {
         var cbkPath = new Argument<string>("cbk") { Description = "Path to the .cbk to modify in place." };
         var rcp = new Option<string>("--rcp") { Description = "Path to the .rcp to add.", Required = true };
-        var weight = new Option<double>("--weight") { Description = "Recipe roll weight (zero or greater).", Required = true };
+        var weight = InvariantNumber("--weight");
+        weight.Description = "Recipe roll weight (zero or greater).";
+        weight.Required = true;
         var force = new Option<bool>("--force")
         {
             Description = "Write even if validation reports problems (printed as warnings).",
