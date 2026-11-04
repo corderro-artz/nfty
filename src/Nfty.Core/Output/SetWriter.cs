@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text.Json;
+using Nfty.Core.Diagnostics;
 using Nfty.Core.Formats;
 using Nfty.Core.Generation;
 using SixLabors.ImageSharp;
@@ -85,8 +86,12 @@ public static class SetWriter
         var skipped = models is null ? null : new bool[set.Assets.Count];
         var layout = Prepare(outDir, models is not null);
         int shape = ShapeFor(onDisk, outDir);
+        // An interrupted write must leave no index, not a stale one; it is rewritten below.
+        SetIndex.Delete(outDir);
         var existing = LoadExisting(layout, set);
         var rarity = new Rarity(existing, set, shape);
+        var indexSlots = new SetIndexEntry[set.Assets.Count];
+        var indexSlotOf = SlotsOf(set);
 
         // One asset's three files depend on that asset and on `rarity`, which is finished being
         // built above and is only read from here on. Nothing is shared and nothing accumulates, so
@@ -99,7 +104,9 @@ public static class SetWriter
             var (imagePath, metaPath, nftyPath) = PathsFor(layout, asset.SetNumber);
             asset.Image.Save(imagePath, new PngEncoder());
             File.WriteAllText(metaPath, Serialize(BuildOpenSea(set, asset, shape)));
-            File.WriteAllText(nftyPath, Serialize(BuildNfty(set, asset, rarity, shape)));
+            var nftyText = Serialize(BuildNfty(set, asset, rarity, shape));
+            File.WriteAllText(nftyPath, nftyText);
+            indexSlots[indexSlotOf[asset.SetNumber]] = IndexEntryOf(nftyPath, asset.SetNumber, asset.Dna, nftyText);
 
             // Built, written and dropped one at a time: memory is one model per worker, never the set.
             var files = ModelFor(models, asset);
@@ -110,12 +117,20 @@ public static class SetWriter
         }, progress is null ? null : done => progress.Report(new WriteProgress(done, set.Assets.Count)));
 
         // Extend's regrade: same shape, same independence — one file per existing item.
-        ParallelWork.ForEach(existing, parallelism, cancellationToken, item =>
-            File.WriteAllText(item.NftyPath, Serialize(Regraded(item, rarity))));
+        var existingEntries = new SetIndexEntry[existing.Count];
+        ParallelWork.For(existing.Count, parallelism, cancellationToken, i =>
+        {
+            var item = existing[i];
+            var text = Serialize(Regraded(item, rarity));
+            File.WriteAllText(item.NftyPath, text);
+            existingEntries[i] = IndexEntryOf(item.NftyPath, item.SetNumber, item.Nfty.Dna, text);
+        });
 
         File.WriteAllText(SetJsonPath(outDir),
             Serialize(BuildSetManifest(set, existing, rarity, recorded, onDisk.Unique,
                 MergedModels(models, recordedModels, set, skipped), shape)));
+
+        SetIndex.Write(outDir, [.. indexSlots, .. existingEntries]);
 
         if (pack) Pack(outDir);
     }
@@ -150,8 +165,11 @@ public static class SetWriter
         var skipped = models is null ? null : new bool[set.Assets.Count];
         var layout = Prepare(outDir, models is not null);
         int shape = ShapeFor(onDisk, outDir);
+        SetIndex.Delete(outDir);
         var existing = await LoadExistingAsync(layout, set, cancellationToken).ConfigureAwait(false);
         var rarity = new Rarity(existing, set, shape);
+        var indexSlots = new SetIndexEntry[set.Assets.Count];
+        var indexSlotOf = SlotsOf(set);
 
         var slots = SlotsOf(set);
         var progressGate = new Lock();
@@ -161,7 +179,9 @@ public static class SetWriter
             var (imagePath, metaPath, nftyPath) = PathsFor(layout, asset.SetNumber);
             await asset.Image.SaveAsync(imagePath, new PngEncoder(), ct).ConfigureAwait(false);
             await File.WriteAllTextAsync(metaPath, Serialize(BuildOpenSea(set, asset, shape)), ct).ConfigureAwait(false);
-            await File.WriteAllTextAsync(nftyPath, Serialize(BuildNfty(set, asset, rarity, shape)), ct).ConfigureAwait(false);
+            var nftyText = Serialize(BuildNfty(set, asset, rarity, shape));
+            await File.WriteAllTextAsync(nftyPath, nftyText, ct).ConfigureAwait(false);
+            indexSlots[indexSlotOf[asset.SetNumber]] = IndexEntryOf(nftyPath, asset.SetNumber, asset.Dna, nftyText);
 
             // The modeler is synchronous CPU work; it is not faked async. One model at a time per worker.
             var files = ModelFor(models, asset);
@@ -178,13 +198,22 @@ public static class SetWriter
                     progress.Report(new WriteProgress(++done, set.Assets.Count));
         }).ConfigureAwait(false);
 
-        await ParallelWork.ForEachAsync(existing, parallelism, cancellationToken, async (item, ct) =>
-            await File.WriteAllTextAsync(item.NftyPath, Serialize(Regraded(item, rarity)), ct).ConfigureAwait(false)).ConfigureAwait(false);
+        var existingEntries = new SetIndexEntry[existing.Count];
+        await ParallelWork.ForEachAsync(Enumerable.Range(0, existing.Count).ToList(), parallelism, cancellationToken,
+            async (i, ct) =>
+            {
+                var item = existing[i];
+                var text = Serialize(Regraded(item, rarity));
+                await File.WriteAllTextAsync(item.NftyPath, text, ct).ConfigureAwait(false);
+                existingEntries[i] = IndexEntryOf(item.NftyPath, item.SetNumber, item.Nfty.Dna, text);
+            }).ConfigureAwait(false);
 
         await File.WriteAllTextAsync(SetJsonPath(outDir),
             Serialize(BuildSetManifest(set, existing, rarity, recorded, onDisk.Unique,
                 MergedModels(models, recordedModels, set, skipped), shape)),
             cancellationToken).ConfigureAwait(false);
+
+        await SetIndex.WriteAsync(outDir, [.. indexSlots, .. existingEntries], cancellationToken).ConfigureAwait(false);
 
         // ZipFile has no async API; keep the UI thread free rather than pretend.
         if (pack) await Task.Run(() => Pack(outDir), cancellationToken).ConfigureAwait(false);
@@ -193,9 +222,15 @@ public static class SetWriter
     /// <summary>Reads what an existing Set already holds, for extend.</summary>
     /// <param name="outDir">The Set folder.</param>
     /// <param name="parallelism">How wide the per-file parsing may run; null means <see cref="Parallelism.Default"/>. The result never depends on it.</param>
+    /// <param name="needDnas">False when the caller will not dedup against DNAs (an <c>--unlimited</c> extend, or a
+    /// read for the models block): <see cref="ExistingSet.Dnas"/> is then empty when the index answers, and
+    /// <see cref="ExistingSet.NextNumber"/> is right either way. The walk, used when the index cannot be trusted,
+    /// still returns DNAs: it opens every file regardless.</param>
     /// <returns>Its DNAs and the next free number. An empty Set yields no DNAs and number 1.</returns>
+    /// <remarks>Answered from <c>set-index.txt</c> when it matches <c>nfty/*.json</c> exactly (see
+    /// <c>SetIndex</c>), else by opening every item file. Identical result either way.</remarks>
     /// <exception cref="CorruptSetException">An item file is unreadable or missing its fields.</exception>
-    public static ExistingSet ReadExisting(string outDir, Parallelism? parallelism = null)
+    public static ExistingSet ReadExisting(string outDir, Parallelism? parallelism = null, bool needDnas = true)
     {
         var onDisk = RecordedAt(outDir);
         string? sha = onDisk.Sha;
@@ -204,9 +239,14 @@ public static class SetWriter
         var nftyDir = Path.Combine(outDir, SetLayout.NftyDir);
         if (!Directory.Exists(nftyDir)) return new ExistingSet(Array.Empty<string>(), 1, sha, recordedModels);
 
+        using (Perf.Measure("extend.readExisting.index"))
+            if (SetIndex.TryRead(outDir, nftyDir, needDnas) is { } indexed)
+                return FromIndex(indexed, sha, recordedModels);
+
         // Parsed in parallel into slots; the maximum is order-free. The listing is sorted ordinally,
         // as SetReader's is, so when several files are damaged the one named is the same on every
         // file system - enumeration order is the file system's, not nfty's.
+        using var walk = Perf.Measure("extend.readExisting.walk");
         var files = ListItemFiles(nftyDir);
         var parsed = new (string Dna, int Number)[files.Count];
         ParallelWork.For(files.Count, parallelism ?? Parallelism.Default, CancellationToken.None,
@@ -218,10 +258,12 @@ public static class SetWriter
     /// <param name="outDir">The Set folder.</param>
     /// <param name="cancellationToken">Cancels the read.</param>
     /// <param name="parallelism">How wide the per-file parsing may run; null means <see cref="Parallelism.Default"/>.</param>
+    /// <param name="needDnas">As for <see cref="ReadExisting"/>.</param>
     /// <returns>Its DNAs and the next free number.</returns>
     /// <exception cref="CorruptSetException">An item file is unreadable or missing its fields.</exception>
     public static async Task<ExistingSet> ReadExistingAsync(
-        string outDir, CancellationToken cancellationToken = default, Parallelism? parallelism = null)
+        string outDir, CancellationToken cancellationToken = default, Parallelism? parallelism = null,
+        bool needDnas = true)
     {
         var onDisk = await RecordedAtAsync(outDir, cancellationToken).ConfigureAwait(false);
         string? sha = onDisk.Sha;
@@ -230,6 +272,11 @@ public static class SetWriter
         var nftyDir = Path.Combine(outDir, SetLayout.NftyDir);
         if (!Directory.Exists(nftyDir)) return new ExistingSet(Array.Empty<string>(), 1, sha, recordedModels);
 
+        using (Perf.Measure("extend.readExisting.index"))
+            if (await SetIndex.TryReadAsync(outDir, nftyDir, needDnas, cancellationToken).ConfigureAwait(false) is { } indexed)
+                return FromIndex(indexed, sha, recordedModels);
+
+        using var walk = Perf.Measure("extend.readExisting.walk");
         var files = ListItemFiles(nftyDir);
         var parsed = new (string Dna, int Number)[files.Count];
         await ParallelWork.ForEachAsync(Enumerable.Range(0, files.Count).ToList(),
@@ -241,6 +288,23 @@ public static class SetWriter
             }).ConfigureAwait(false);
         return Assemble(parsed, sha, recordedModels);
     }
+
+    /// <summary>An <see cref="ExistingSet"/> from a verified index: the same fold <see cref="Assemble"/> does.</summary>
+    private static ExistingSet FromIndex(List<SetIndexEntry> entries, string? sha, SetModels? models)
+    {
+        int max = 0;
+        var dnas = new List<string>(entries.Count);
+        foreach (var e in entries)
+        {
+            if (e.Dna.Length > 0) dnas.Add(e.Dna);
+            max = Math.Max(max, e.Number);
+        }
+        return new ExistingSet(dnas, max + 1, sha, models);
+    }
+
+    /// <summary>The index line for an item file just written: its size is the UTF-8 length of the text written.</summary>
+    private static SetIndexEntry IndexEntryOf(string nftyPath, int number, string dna, string text) =>
+        new(Path.GetFileName(nftyPath), System.Text.Encoding.UTF8.GetByteCount(text), number, dna);
 
     /// <summary>Every <c>nfty/*.json</c>, in ordinal order of path.</summary>
     private static List<string> ListItemFiles(string nftyDir)

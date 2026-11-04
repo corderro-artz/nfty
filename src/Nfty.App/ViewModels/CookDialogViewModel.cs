@@ -387,7 +387,7 @@ public partial class CookDialogViewModel : ViewModelBase, IUnsavedWork
                 : $"Cooked {made} {noun}.";
             if (modeler is not null)
             {
-                var written = (await SetWriter.ReadExistingAsync(dir, _cts.Token, par)).Models;
+                var written = (await SetWriter.ReadExistingAsync(dir, _cts.Token, par, needDnas: false)).Models;
                 int skipped = (written?.Skipped ?? []).Count(n => n >= existing.NextNumber);
                 ResultText += $" · {made - skipped} models" + (skipped > 0 ? $" · {skipped} skipped" : "");
             }

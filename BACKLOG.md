@@ -61,36 +61,6 @@ three arms would be false here, and a wrong reason in an error message is worse 
 
 ---
 
-## `extend` rebuilds a Set's DNA index by opening every asset file
-
-**Status:** deferred; real and measured, but it only bites at large Sets.
-
-`SetWriter.ReadExisting`/`ReadExistingAsync` enumerates `nfty/*.json` and does one
-`File.ReadAllText` plus `JsonDocument.Parse` **per already-minted asset**, sequentially, on every
-`extend` run — including under `--unlimited`, where the reconstructed DNA set is not used for dedup
-at all.
-
-**What is NOT the problem.** The uniqueness check itself is already O(1): `Generator.RollAll` builds
-one `HashSet<string>` and calls `seen.Add` per attempt, measured flat from an empty set to one
-preloaded with 500,000 DNAs. And the rerolls that pile up as a book's space fills cannot be helped
-by any index — expected attempts per success tracks `N/(N-k)` (about 13 at 90% full, 30 at 99%),
-because rejection sampling keeps proposing combinations already taken rather than because checking
-is slow. Sampling from the remaining space instead would need an enumeration `UniqueSpace`
-deliberately refuses, or a change to RNG consumption per draw, which would change every collection
-ever generated.
-
-**The shape of the fix, if it is ever wanted:** an append-only `nfty/_index.jsonl` sidecar written as
-each asset is written, preferred by `ReadExisting` when present AND consistent (line count against
-the `nfty/*.json` count), falling back to today's per-file walk otherwise. Determinism is untouched:
-it changes only what `ReadExisting` reads to populate `existingDnas`/`startNumber`, which are
-consumed identically downstream, so no sort order and no RNG draw count moves.
-
-**The staleness check is the load-bearing part, not the index.** A user who hand-edits a Set folder
-leaves an index that either claims a DNA is taken when it is not (harmless — one needless reroll) or
-fails to report one that is (breaks the uniqueness guarantee `extend` exists to preserve). Same
-posture `CookBookManifest.RecipeOrder` already keeps: never trust a possibly-stale listing, verify
-or fall back.
-
 ## An app-wide toggle for GPU acceleration
 
 **Status:** deferred by the author (2026-09-24) to the NEXT worktree, where they will scope it.
