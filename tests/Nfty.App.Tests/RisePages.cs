@@ -62,6 +62,18 @@ internal static class RisePages
     internal static RiseViewModel Vm(RiseSource source) =>
         new(source, new ImageBridge(), new FakeNav(), new FakeDialogs(), new FilePickerService(), new StatusService());
 
+    /// <summary>Waits (pumping the dispatcher) until the page's off-thread mesh build has landed: the
+    /// model on screen is then the model of the depth on the surface.</summary>
+    internal static void Settle(RiseViewModel vm) => UiThreadWait.For(vm.PendingMeshBuild);
+
+    /// <summary>Waits until the EXPORT tab's debounced size count has landed. The debounce is dropped first
+    /// so the wait is the count, not a quarter of a second of timer.</summary>
+    internal static void SettleSize(RiseViewModel vm)
+    {
+        vm.SizeDelay = _ => System.Threading.Tasks.Task.CompletedTask;
+        UiThreadWait.For(vm.PendingSize);
+    }
+
     /// <summary>Oak with a front/back pattern: the top half one thick, the bottom half three thick.</summary>
     internal static DepthMap PaintedOak()
     {

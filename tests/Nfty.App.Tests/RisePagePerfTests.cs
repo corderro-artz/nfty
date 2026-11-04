@@ -20,7 +20,9 @@ namespace Nfty.App.Tests;
 /// <summary>
 /// Where the time goes on the Rise page at 64, 256 and 512 pixel art: a single depth click, a drag's
 /// previews, the 3D view's repaint. Measured, never asserted as wall-clock; the only assertions are that
-/// every scope the page is expected to report really does.
+/// every scope the page is expected to report really does. <c>Rise.PreviewStroke</c> and
+/// <c>Rise.ApplyStroke</c> are the UI thread's whole share of a move and a release; the model itself is
+/// built off the UI thread (<c>Rise.MeshRebuild</c>, <c>Riser.TryBuild</c>).
 /// </summary>
 /// <remarks>Run with <c>dotnet test tests/Nfty.App.Tests --filter FullyQualifiedName~RisePagePerf -l "console;verbosity=detailed"</c>.</remarks>
 public class RisePagePerfTests
@@ -85,6 +87,11 @@ public class RisePagePerfTests
         Perf.Enable();
         try
         {
+            // Every move of the drag is a frame apart, so every one is due a rebuild: what a real drag
+            // at 30 moves a second asks of the page. (On the real clock the loop runs inside one budget
+            // and would measure a drag that never rebuilds.)
+            long t = 0;
+            vm.NowMs = () => t;
             Perf.Reset();
             int mid = size / 2;
             for (int i = 0; i < 20; i++)
@@ -93,10 +100,12 @@ public class RisePagePerfTests
             var drag = Enumerable.Range(0, 40).Select(i => (mid - 20 + i, mid + 5)).ToList();
             for (int n = 1; n <= drag.Count; n++)
             {
+                t += RiseViewModel.MeshBudgetMs;
                 vm.PreviewDepthStroke(drag.Take(n).ToList(), DepthSide.Back, lower: false);
                 Dispatcher.UIThread.RunJobs();
             }
             vm.ApplyDepthStroke(drag, DepthSide.Back, lower: false);
+            RisePages.Settle(vm);       // the model is built off the UI thread: let the last one land
 
             vm.SwapPreviewCommand.Execute(null);
             for (int i = 0; i < 10; i++)
@@ -158,7 +167,7 @@ public class RisePagePerfTests
             int mid = size / 2;
             for (int i = 0; i < 20; i++)
                 vm.ApplyDepthStroke(new[] { (mid - 10 + i, mid) }, DepthSide.Front, lower: false);
-            Dispatcher.UIThread.RunJobs();
+            RisePages.Settle(vm);
             Assert.Contains("Rise.Recombine", Perf.Snapshot().Select(e => e.Name).ToHashSet());
             _out.WriteLine($"=== Rise write-through, {size}px two-layer stack ===");
             _out.WriteLine(Perf.Report());

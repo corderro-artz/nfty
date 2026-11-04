@@ -63,6 +63,7 @@ public class ViewerLiveFollowTests
 
         Stroke(vm, 3);
         Assert.Equal(0, changes);           // nothing is cloned inside the stroke
+        RisePages.Settle(vm);               // the model is built off the UI thread; one lands
         Frame();
 
         Assert.Equal(1, changes);
@@ -77,21 +78,37 @@ public class ViewerLiveFollowTests
     }
 
     [AvaloniaFact]
-    public void Ten_strokes_in_one_frame_raise_one_change()
+    public void Ten_strokes_raise_a_change_per_landed_model_never_per_stroke()
     {
         var vm = RisePages.VariantVm();
         using var live = new LiveSubject(vm);
         int changes = 0;
         live.Changed += () => changes++;
 
+        // The first stroke's build is held, so the other nine pile up behind it: one runs, the latest waits,
+        // the eight between are replaced unbuilt. Two models land, so the viewer may change at most twice,
+        // never once per stroke.
+        var gate = new System.Threading.Tasks.TaskCompletionSource();
+        vm.BeforeMeshBuild = () => gate.Task;
+        int landed = 0;
+        vm.MeshApplied = _ => landed++;
         for (int i = 0; i < 10; i++) Stroke(vm, i % 8);
         Frame();
-
-        Assert.Equal(1, changes);
-        // And the next frame's stroke is a new change: coalescing must not stick.
-        Stroke(vm, 1);
+        Assert.Equal(0, changes);           // nothing has landed: no stroke raised a change by itself
+        vm.BeforeMeshBuild = null;
+        gate.SetResult();
+        RisePages.Settle(vm);
         Frame();
-        Assert.Equal(2, changes);
+
+        Assert.Equal(2, landed);
+        Assert.InRange(changes, 1, landed);
+        Assert.Same(vm.Mesh, live.Model!.Mesh);    // and the viewer ends on the last model
+        // And the next stroke is a new change: coalescing must not stick.
+        int before = changes;
+        Stroke(vm, 1);
+        RisePages.Settle(vm);
+        Frame();
+        Assert.Equal(before + 1, changes);
         vm.Dispose();
     }
 
@@ -102,6 +119,7 @@ public class ViewerLiveFollowTests
         using var live = new LiveSubject(vm);
         Assert.True(live.IsLive);
         Stroke(vm, 2);
+        RisePages.Settle(vm);
         var expected = Bytes(vm.Subject.Art);
         var expectedMesh = vm.Mesh;
         int changes = 0;

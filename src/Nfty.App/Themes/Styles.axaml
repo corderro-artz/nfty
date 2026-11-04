@@ -1118,6 +1118,11 @@
     <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
+  <!-- The Rise EXPORT tab's size while it is being counted again: the last exact figure stays, in fainter
+       ink, so nothing beside it moves; the new one replaces it when the count lands. Never an estimate. -->
+  <Style Selector="Border.ship TextBlock.part.pending">
+    <Setter Property="Opacity" Value="0.5" />
+  </Style>
   <Style Selector="Border.ship TextBlock.fn">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="13" />

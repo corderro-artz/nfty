@@ -83,6 +83,13 @@ public sealed partial class RiseViewModel
     /// <summary>"32 solid px".</summary>
     public string SolidHeader => string.Create(CultureInfo.InvariantCulture, $"{Surface.SolidCount:N0} solid px");
 
+    // The histogram for the one notification pass of OnDepthEdited, which reads it twice (rows, deepest):
+    // a whole-surface scan each, about 15 ms at 512 px in Debug. Held only for that synchronous pass, in
+    // which nothing changes the surface, so no read outside it can see a stale one.
+    private IReadOnlyList<ThicknessBucket>? _histogramPass;
+
+    private IReadOnlyList<ThicknessBucket> HistogramNow => _histogramPass ?? Surface.Histogram();
+
     /// <summary>One row per thickness present, thinnest first.</summary>
     public IReadOnlyList<ThicknessRow> Thickness
     {
@@ -90,7 +97,7 @@ public sealed partial class RiseViewModel
         {
             var s = Surface;
             int solid = s.SolidCount;
-            return s.Histogram().Select(b => new ThicknessRow(
+            return HistogramNow.Select(b => new ThicknessRow(
                 string.Create(CultureInfo.InvariantCulture, $"{b.Total} {(b.Total == 1 ? "voxel" : "voxels")}"),
                 b.Count,
                 b.Count.ToString("N0", CultureInfo.InvariantCulture),
@@ -103,7 +110,7 @@ public sealed partial class RiseViewModel
     {
         get
         {
-            var h = Surface.Histogram();
+            var h = HistogramNow;
             return h.Count == 0 ? "—" : string.Create(CultureInfo.InvariantCulture, $"deepest {h[^1].Total}");
         }
     }
@@ -136,8 +143,13 @@ public sealed partial class RiseViewModel
 
     partial void OnDepthEdited()
     {
-        OnPropertyChanged(nameof(Thickness));
-        OnPropertyChanged(nameof(DeepestText));
+        _histogramPass = Surface.Histogram();
+        try
+        {
+            OnPropertyChanged(nameof(Thickness));
+            OnPropertyChanged(nameof(DeepestText));
+        }
+        finally { _histogramPass = null; }
         OnPropertyChanged(nameof(FillAllLabel));
         OnPropertyChanged(nameof(SolidHeader));
         OnPropertyChanged(nameof(HasUnsavedDepth));

@@ -445,6 +445,7 @@ public class RiseExportSafetyTests
     {
         using var vm = BodyVm(new Picker());
         vm.ShowExportTabCommand.Execute(null);
+        RisePages.SettleSize(vm);
         var size = vm.ManifestSize;
         Assert.NotEqual("", size);
 
@@ -452,10 +453,12 @@ public class RiseExportSafetyTests
         pine.IsChecked = true;                  // two: a batch states no size
         Assert.Equal("", vm.ManifestSize);
         pine.IsChecked = false;                 // one again
+        RisePages.SettleSize(vm);
         Assert.Equal(size, vm.ManifestSize);
 
         vm.SelectedItem.IsChecked = false;      // none
         vm.SelectedItem.IsChecked = true;       // the same one, ticked again
+        RisePages.SettleSize(vm);
         Assert.Equal(size, vm.ManifestSize);
     }
 

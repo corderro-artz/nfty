@@ -1,6 +1,7 @@
 using Nfty.App.Services;
 using System.ComponentModel;
 using System.Globalization;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Rise;
@@ -68,6 +69,10 @@ public sealed partial class RiseViewModel
     private void DisposeExport()
     {
         foreach (var item in Items) item.PropertyChanged -= OnItemExportChanged;
+        // A count still waiting never starts; one running reads only its snapshot and is dropped when it lands.
+        _sizeWait?.Cancel();
+        _sizeWait = null;
+        _sizeIdle?.TrySetResult();
     }
 
     private void OnItemExportChanged(object? sender, PropertyChangedEventArgs e)
@@ -382,33 +387,113 @@ public sealed partial class RiseViewModel
         ExportCommand.NotifyCanExecuteChanged();
     }
 
-    /// <summary>Builds the one model to count its bytes (ruling 8), only while the EXPORT tab shows.</summary>
+    /// <summary>How long after the last change the exact size is counted again.</summary>
+    internal const int SizeDebounceMs = 250;
+
+    private long _sizeGen;
+    private CancellationTokenSource? _sizeWait;
+    private TaskCompletionSource? _sizeIdle;
+
+    /// <summary>The size figure is being counted again: the last exact one stands in fainter ink until
+    /// the new one lands. Never an estimate.</summary>
+    [ObservableProperty] private bool _isSizePending;
+
+    /// <summary>Completes when no size count is waiting or running and <see cref="ManifestSize"/> is final;
+    /// a test awaits it through <c>UiThreadWait.For</c>.</summary>
+    public Task PendingSize => _sizeIdle?.Task ?? Task.CompletedTask;
+
+    /// <summary>The wait between the last change and the count; a test replaces it with none.</summary>
+    internal Func<CancellationToken, Task> SizeDelay { get; set; } = token => Task.Delay(SizeDebounceMs, token);
+
+    /// <summary>Counts the one model's bytes (ruling 8), only while the EXPORT tab shows: debounced, so a
+    /// run of edits counts once, and built off the UI thread from an export snapshot taken on it.</summary>
+    /// <remarks>Exact, never estimated: the figure is the bytes <see cref="ModelBatch.Build"/> produces.
+    /// While a count is due the last figure of the SAME model stays, marked <see cref="IsSizePending"/>;
+    /// another model's figure is never shown for this one, even marked.</remarks>
     private void RecomputeSize()
     {
-        _manifestSize = "";
-        _sizedItem = null;
-        if (!IsExportTab || Source.ExportRefusal is not null) return;
+        long gen = ++_sizeGen;
+        _sizeWait?.Cancel();
+        _sizeWait = null;
         var items = ExportItems;
-        if (items.Count != 1) return;
+        if (!IsExportTab || Source.ExportRefusal is not null || items.Count != 1)
+        {
+            _manifestSize = "";
+            _sizedItem = null;
+            SizeSettled();
+            return;
+        }
+        if (!ReferenceEquals(items[0], _sizedItem)) _manifestSize = "";
         _sizedItem = items[0];
-        try
+        IsSizePending = true;
+        if (_sizeIdle is null || _sizeIdle.Task.IsCompleted)
+            _sizeIdle = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var wait = new CancellationTokenSource();
+        _sizeWait = wait;
+        var delay = SizeDelay;
+        _ = Task.Run(async () =>
         {
-            SizeBuilds++;
-            using var snapshot = Source.SnapshotExport(items);
-            var input = snapshot.Open(0, BaseNames(items)[0]);
-            ModelBatchResult result;
-            try { result = ModelBatch.Build(new[] { input }, ExportOptions); }
-            finally { RiseExportSnapshot.Release(input); }
-            if (result.Files.Count == 0) return;
-            // The .gltf names its .bin, so its bytes depend on the stem the user has not picked yet:
-            // that format's figure is said to be approximate; the other two carry no name at all.
-            _manifestSize = (Format == ModelFormat.GltfWithBin ? "~" : "")
-                + SizeText.Of(result.Files.Sum(f => (long)f.Bytes.Length));
-        }
-        catch (Exception)
+            try { await delay(wait.Token).ConfigureAwait(false); }
+            catch (OperationCanceledException) { return; }     // a newer change owns the count
+            Dispatcher.UIThread.Post(() => SizeDue(gen));
+        });
+    }
+
+    /// <summary>The debounce ran out: snapshot on the UI thread, count on the pool.</summary>
+    private void SizeDue(long gen)
+    {
+        if (_disposed || gen != _sizeGen) return;
+        var items = ExportItems;
+        if (!IsExportTab || Source.ExportRefusal is not null || items.Count != 1 || !ReferenceEquals(items[0], _sizedItem))
         {
-            _manifestSize = "";     // a figure we cannot stand behind is left off, not guessed
+            _manifestSize = "";
+            SizeSettled();
+            OnPropertyChanged(nameof(ManifestSize));
+            return;
         }
+        SizeBuilds++;
+        RiseExportSnapshot snapshot;
+        try { snapshot = Source.SnapshotExport(items); }
+        catch (Exception) { SizeLanded(gen, ""); return; }
+        var options = ExportOptions;
+        string baseName = BaseNames(items)[0];
+        // The .gltf names its .bin, so its bytes depend on the stem the user has not picked yet:
+        // that format's figure is said to be approximate; the other two carry no name at all.
+        string prefix = options.Format == ModelFormat.GltfWithBin ? "~" : "";
+        _ = Task.Run(() =>
+        {
+            string text = "";
+            try
+            {
+                var input = snapshot.Open(0, baseName);
+                ModelBatchResult result;
+                try { result = ModelBatch.Build(new[] { input }, options); }
+                finally { RiseExportSnapshot.Release(input); }
+                if (result.Files.Count > 0)
+                    text = prefix + SizeText.Of(result.Files.Sum(f => (long)f.Bytes.Length));
+            }
+            catch (Exception)
+            {
+                text = "";     // a figure we cannot stand behind is left off, not guessed
+            }
+            finally { snapshot.Dispose(); }
+            Dispatcher.UIThread.Post(() => SizeLanded(gen, text));
+        });
+    }
+
+    private void SizeLanded(long gen, string text)
+    {
+        if (_disposed) { _sizeIdle?.TrySetResult(); return; }
+        if (gen != _sizeGen) return;        // a newer change is counting; it settles the handle
+        _manifestSize = text;
+        SizeSettled();
+        OnPropertyChanged(nameof(ManifestSize));
+    }
+
+    private void SizeSettled()
+    {
+        IsSizePending = false;
+        _sizeIdle?.TrySetResult();
     }
 
     // ---------------------------------------------------------------- export
