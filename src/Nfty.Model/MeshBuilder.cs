@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Runtime.InteropServices;
 using Nfty.Core.Diagnostics;
 
 namespace Nfty.Model;
@@ -36,6 +37,10 @@ internal sealed class MeshBuilder
     private readonly List<float> _normals = [];
     private readonly List<float> _texCoords = [];
     private readonly List<uint> _indices = [];
+    private readonly Dictionary<VertexKey, uint> _seen = new(1024);
+
+    /// <summary>A vertex's eight floats as bit patterns: equal keys are bit-identical vertices.</summary>
+    private readonly record struct VertexKey(uint Px, uint Py, uint Pz, uint Nx, uint Ny, uint Nz, uint U, uint V);
 
     /// <summary>Starts a mesh over a <paramref name="width"/> × <paramref name="height"/> image.</summary>
     public MeshBuilder(int width, int height)
@@ -123,7 +128,8 @@ internal sealed class MeshBuilder
         // The copies BACKLOG M5 asks about, and only them: the three ToArray calls and the clones Mesh's
         // constructor makes. Its own scope so a Perf report can say what share of the build they are.
         using var copies = Perf.Measure("MeshBuilder.ToMesh.copies");
-        return new Mesh(positions, _normals.ToArray(), _texCoords.ToArray(), _indices.ToArray(), FaceAtlas.WidthFor(_width), _height);
+        return Mesh.Adopt(positions, CollectionsMarshal.AsSpan(_normals).ToArray(), CollectionsMarshal.AsSpan(_texCoords).ToArray(),
+            CollectionsMarshal.AsSpan(_indices).ToArray(), FaceAtlas.WidthFor(_width), _height);
     }
 
     // THE UV RULE (A = FaceAtlas.WidthFor(W)): front faces u = x / A, back faces u = (W + 1 + x) / A,
@@ -137,16 +143,23 @@ internal sealed class MeshBuilder
     private void Quad(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 normal,
         Vector2 ta, Vector2 tb, Vector2 tc, Vector2 td)
     {
-        uint first = checked((uint)(_positions.Count / 3));
-        Vertex(a, normal, ta);
-        Vertex(b, normal, tb);
-        Vertex(c, normal, tc);
-        Vertex(d, normal, td);
-        _indices.AddRange([first, first + 1, first + 2, first, first + 2, first + 3]);
+        uint ia = Vertex(a, normal, ta);
+        uint ib = Vertex(b, normal, tb);
+        uint ic = Vertex(c, normal, tc);
+        uint id = Vertex(d, normal, td);
+        _indices.AddRange([ia, ib, ic, ia, ic, id]);
     }
 
-    private void Vertex(Vector3 p, Vector3 n, Vector2 t)
+    private uint Vertex(Vector3 p, Vector3 n, Vector2 t)
     {
+        var key = new VertexKey(
+            BitConverter.SingleToUInt32Bits(p.X), BitConverter.SingleToUInt32Bits(p.Y), BitConverter.SingleToUInt32Bits(p.Z),
+            BitConverter.SingleToUInt32Bits(n.X), BitConverter.SingleToUInt32Bits(n.Y), BitConverter.SingleToUInt32Bits(n.Z),
+            BitConverter.SingleToUInt32Bits(t.X), BitConverter.SingleToUInt32Bits(t.Y));
+        ref uint slot = ref CollectionsMarshal.GetValueRefOrAddDefault(_seen, key, out bool exists);
+        if (exists) return slot;
+        uint index = checked((uint)(_positions.Count / 3));
+        slot = index;
         _positions.Add(p.X);
         _positions.Add(p.Y);
         _positions.Add(p.Z);
@@ -155,5 +168,6 @@ internal sealed class MeshBuilder
         _normals.Add(n.Z);
         _texCoords.Add(t.X);
         _texCoords.Add(t.Y);
+        return index;
     }
 }

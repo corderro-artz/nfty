@@ -9,12 +9,11 @@ namespace Nfty.Model;
 /// from many threads.
 /// </summary>
 /// <remarks>
-/// <para><b>Vertex rule.</b> A vertex is shared only by the two triangles of its own quad: four
-/// vertices and six indices per quad, so <see cref="VertexCount"/> is always twice
-/// <see cref="TriangleCount"/> for a risen mesh. Vertices that share a position across quads are NOT
-/// merged — their normals and UVs differ per face, and a merge keyed on position alone would be
-/// wrong. Whether a merge keyed on (position, normal, uv) is worth its complexity is a size question
-/// answered by <c>RisePerfTests</c>' measurement, not assumed.</para>
+/// <para><b>Vertex rule.</b> A vertex is shared by every triangle that needs the exact same
+/// (position, normal, uv), compared bit for bit with no epsilon, so two adjoining same-orientation
+/// quads share their common edge. Vertices are numbered in first-seen emission order, so identical
+/// input gives byte-identical output. Quads meeting at a differing normal or uv never merge.
+/// <see cref="TriangleCount"/> and winding are unaffected.</para>
 ///
 /// <para>Coordinates follow glTF: +Y up, +Z toward the viewer. Texture coordinates put (0,0) at the
 /// image's top-left, so v grows downward with the image row.</para>
@@ -47,6 +46,18 @@ public sealed class Mesh
     /// no vertex, or a position is not finite.</exception>
     public Mesh(float[] positions, float[] normals, float[] texCoords, uint[] indices,
         int textureWidth, int textureHeight)
+        : this(positions, normals, texCoords, indices, textureWidth, textureHeight, copy: true)
+    {
+    }
+
+    /// <summary>Builds a mesh that takes ownership of the arrays without copying. Only for a caller
+    /// that never touches them again (<see cref="MeshBuilder"/>); same validation as the public constructor.</summary>
+    internal static Mesh Adopt(float[] positions, float[] normals, float[] texCoords, uint[] indices,
+        int textureWidth, int textureHeight)
+        => new(positions, normals, texCoords, indices, textureWidth, textureHeight, copy: false);
+
+    private Mesh(float[] positions, float[] normals, float[] texCoords, uint[] indices,
+        int textureWidth, int textureHeight, bool copy)
     {
         ArgumentNullException.ThrowIfNull(positions);
         ArgumentNullException.ThrowIfNull(normals);
@@ -79,12 +90,12 @@ public sealed class Mesh
             if (!float.IsFinite(f))
                 throw new ArgumentException("Every position must be a finite number.", nameof(positions));
 
-        float[] p = (float[])positions.Clone();
+        float[] p = copy ? (float[])positions.Clone() : positions;
         Positions = Array.AsReadOnly(p);
         _positions = p;
-        _normals = (float[])normals.Clone();
-        _texCoords = (float[])texCoords.Clone();
-        _indices = (uint[])indices.Clone();
+        _normals = copy ? (float[])normals.Clone() : normals;
+        _texCoords = copy ? (float[])texCoords.Clone() : texCoords;
+        _indices = copy ? (uint[])indices.Clone() : indices;
         Normals = Array.AsReadOnly(_normals);
         TexCoords = Array.AsReadOnly(_texCoords);
         Indices = Array.AsReadOnly(_indices);

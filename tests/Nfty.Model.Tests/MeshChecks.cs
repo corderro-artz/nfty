@@ -27,13 +27,14 @@ internal static class MeshChecks
     public static IReadOnlyList<QuadView> Quads(Mesh m)
     {
         var quads = new List<QuadView>();
-        for (int q = 0; q < m.VertexCount / 4; q++)
+        // Vertices are shared across quads, so a quad is read through its six indices (a b c a c d).
+        for (int q = 0; q < m.TriangleCount / 2; q++)
         {
-            int v = q * 4;
+            int[] v = [(int)m.Indices[q * 6], (int)m.Indices[(q * 6) + 1], (int)m.Indices[(q * 6) + 2], (int)m.Indices[(q * 6) + 5]];
             quads.Add(new QuadView(
-                Normal(m, v),
-                [Position(m, v), Position(m, v + 1), Position(m, v + 2), Position(m, v + 3)],
-                [Uv(m, v), Uv(m, v + 1), Uv(m, v + 2), Uv(m, v + 3)]));
+                Normal(m, v[0]),
+                [Position(m, v[0]), Position(m, v[1]), Position(m, v[2]), Position(m, v[3])],
+                [Uv(m, v[0]), Uv(m, v[1]), Uv(m, v[2]), Uv(m, v[3])]));
         }
         return quads;
     }
