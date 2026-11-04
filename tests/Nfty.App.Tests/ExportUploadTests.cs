@@ -39,6 +39,9 @@ public class ExportUploadTests
                 reachable ? "Connected to kubo 0.29.0 at http://127.0.0.1:5001."
                     : "Local IPFS is not reachable at http://127.0.0.1:5001. Start IPFS Desktop or Kubo (ipfs daemon)."));
 
+        public Task<bool> RemoveAsync(string cid, CancellationToken cancellationToken = default) =>
+            Task.FromResult(true);
+
         public async Task<string> AddFolderAsync(string folder, string label, IProgress<PinProgress>? progress = null,
             CancellationToken cancellationToken = default)
         {

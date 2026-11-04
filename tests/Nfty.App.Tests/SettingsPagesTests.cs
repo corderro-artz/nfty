@@ -41,6 +41,9 @@ public class SettingsPagesTests
         }
         public Task<string> AddFolderAsync(string folder, string label, IProgress<PinProgress>? progress = null,
             CancellationToken cancellationToken = default) => Task.FromResult("bafyfake0000000000000000");
+
+        public Task<bool> RemoveAsync(string cid, CancellationToken cancellationToken = default) =>
+            Task.FromResult(true);
     }
 
     private static PublishingSettingsService Publishing(IStateStore store, ISecretStore secrets, bool reachable = true) =>
