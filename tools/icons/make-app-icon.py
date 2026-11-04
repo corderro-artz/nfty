@@ -28,6 +28,7 @@ import os
 from PIL import Image, ImageDraw
 
 OUT = os.path.join('src', 'Nfty.Desktop', 'nfty.ico')
+PNG_OUT = os.path.join('src', 'Nfty.Desktop', 'Assets', 'nfty.png')
 
 # Straight from Themes/Tokens.axaml's DARK dictionary. The icon sits on a taskbar, not on the app's
 # own ground, and the dark tile reads on both light and dark Windows themes where the light one
@@ -104,6 +105,7 @@ def draw(size):
 def main():
     frames = [draw(s) for s in SIZES]
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
+    os.makedirs(os.path.dirname(PNG_OUT), exist_ok=True)
 
     # append_images, NOT sizes= alone. Given only sizes=, Pillow takes the one image it was called on
     # and downsamples it for every entry - which silently threw away the per-size drawing above and
@@ -113,6 +115,13 @@ def main():
                     sizes=[(s, s) for s in SIZES],
                     append_images=frames[:-1])
     print('wrote %s  (%d sizes: %s)' % (OUT, len(SIZES), ', '.join(str(s) for s in SIZES)))
+
+    # Linux has no PE icon resource: X11 and Wayland take the window icon from the app at run time
+    # (Window.Icon, set from this embedded PNG) and a launcher takes it from the .desktop file's Icon=,
+    # which the release tarball points at this same file. The 256 frame, drawn for its size like the
+    # rest - the desktop scales it down, which at 48 and up reads fine.
+    frames[-1].save(PNG_OUT, format='PNG', optimize=True)
+    print('wrote %s  (256 px)' % PNG_OUT)
 
 
 if __name__ == '__main__':

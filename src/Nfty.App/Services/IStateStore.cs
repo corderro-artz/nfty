@@ -10,6 +10,12 @@ public enum StoreLocation
     /// <summary>Rule 2 — in the current working directory.</summary>
     WorkingDirectory,
 
+    /// <summary>Linux only — the user's own config folder, <c>$XDG_CONFIG_HOME/nfty</c> or
+    /// <c>~/.config/nfty</c>, taken when nothing can be written beside the executable (a copy under
+    /// <c>/opt</c> or <c>/usr</c>, or an AppImage, whose folder is a read-only mount). Declared after
+    /// the others so no existing value moves; its place in the ORDER is straight after rule 1.</summary>
+    UserConfig,
+
     /// <summary>Rule 3 — in the open Kitchen's folder.</summary>
     Kitchen,
 
@@ -38,6 +44,7 @@ public sealed record StoreResolution(StoreLocation Location, string? Directory)
     {
         StoreLocation.BesideExecutable => $"Saved beside the app, in {Directory}",
         StoreLocation.WorkingDirectory => $"Saved in the current folder, {Directory}",
+        StoreLocation.UserConfig => $"Saved in your config folder, {Directory}",
         StoreLocation.Kitchen => $"Saved in this Kitchen, {Directory}",
         StoreLocation.Chosen => $"Saved in the folder you chose, {Directory}",
         _ => "Nowhere writable was found, so this is kept for this session only. "
@@ -64,6 +71,12 @@ public sealed record StoreChoice(bool Accepted, string? Reason);
 ///
 /// <list type="number">
 ///   <item><description><c>.nfty/</c> beside the executable.</description></item>
+///   <item><description>Linux only: <c>nfty/</c> in the user's config folder
+///   (<see cref="UserConfigFolder"/>). An installed copy's folder is root-owned or a read-only
+///   mount, and the working directory a launcher hands it is arbitrary (often <c>/</c> or
+///   <c>$HOME</c>), so the XDG folder is the honest next place. A portable copy unpacked somewhere
+///   writable still keeps everything beside itself, as on Windows. Windows has no such rule: its
+///   order is unchanged.</description></item>
 ///   <item><description><c>.nfty/</c> in the current working directory.</description></item>
 ///   <item><description><c>.nfty/</c> in the open Kitchen's folder, once a Kitchen is open.</description></item>
 ///   <item><description>In memory — and <see cref="StoreResolution.Description"/> says so.</description></item>
@@ -126,6 +139,7 @@ public sealed class StateStore : IStateStore
     private readonly IKitchenSession? _kitchen;
     private readonly string? _beside;
     private readonly string? _working;
+    private readonly string? _userConfig;
     private readonly Func<string, bool> _canCreate;
 
     /// <summary>State held for the session when there is nowhere to write it. Ordinal so the flush
@@ -142,17 +156,30 @@ public sealed class StateStore : IStateStore
     /// into and a test that wrote there would leave state in the developer's own build output.</param>
     /// <param name="working">Rule 2's root. Defaults to the process working directory, with the
     /// same warning.</param>
-    public StateStore(IKitchenSession? kitchen = null, string? beside = null, string? working = null)
-        : this(kitchen, beside, working, null) { }
+    /// <param name="userConfig">The Linux config-folder rule's folder, used as given (no
+    /// <c>.nfty</c> nesting), or null for no such rule. Null by default so a test can never reach the
+    /// real <c>~/.config</c> by omission; the app passes <see cref="UserConfigFolder.ForThisMachine"/>
+    /// through <see cref="ForThisMachine"/>.</param>
+    public StateStore(IKitchenSession? kitchen = null, string? beside = null, string? working = null,
+        string? userConfig = null)
+        : this(kitchen, beside, working, null, userConfig) { }
+
+    /// <summary>The store the app runs on: the real executable folder and working directory, plus
+    /// the user's config folder on Linux.</summary>
+    /// <param name="kitchen">The open-Kitchen session.</param>
+    /// <returns>The resolved store.</returns>
+    public static StateStore ForThisMachine(IKitchenSession? kitchen) =>
+        new(kitchen, userConfig: UserConfigFolder.ForThisMachine());
 
     /// <summary>The real constructor. <paramref name="canCreate"/> is a test seam: it replaces the
     /// write-probe so a test can express "nothing here is writable" without ACL surgery, which is
     /// how the resolution ORDER gets tested. Production always passes null and probes for real, and
     /// <see cref="Choose"/> ignores the seam entirely — a refusal has to be a genuine one.</summary>
     internal StateStore(IKitchenSession? kitchen, string? beside, string? working,
-        Func<string, bool>? canCreate)
+        Func<string, bool>? canCreate, string? userConfig = null)
     {
         _kitchen = kitchen;
+        _userConfig = userConfig;
         _beside = beside ?? AppContext.BaseDirectory;
         _working = working ?? Directory.GetCurrentDirectory();
         _canCreate = canCreate ?? DefaultCanCreate;
@@ -205,6 +232,7 @@ public sealed class StateStore : IStateStore
 
         Adopt(
             Locate(_beside) is { } beside ? new StoreResolution(StoreLocation.BesideExecutable, beside)
+            : LocateExact(_userConfig) is { } config ? new StoreResolution(StoreLocation.UserConfig, config)
             : Locate(_working) is { } working ? new StoreResolution(StoreLocation.WorkingDirectory, working)
             : Locate(_kitchen?.Current?.Directory) is { } kitchen ? new StoreResolution(StoreLocation.Kitchen, kitchen)
             : new StoreResolution(StoreLocation.InMemory, null));
@@ -284,6 +312,16 @@ public sealed class StateStore : IStateStore
         string dir;
         try { dir = Path.Combine(Path.GetFullPath(root), FolderName); }
         catch { return null; }
+        return LocateExact(dir);
+    }
+
+    /// <summary><see cref="Locate"/> for a folder named exactly: the config folder is <c>nfty</c>,
+    /// not a <c>.nfty</c> inside something, because <c>~/.config</c> is already the hidden place.</summary>
+    private string? LocateExact(string? dir)
+    {
+        if (string.IsNullOrWhiteSpace(dir)) return null;
+        try { dir = Path.GetFullPath(dir); }
+        catch { return null; }
 
         // Existence short-circuits the writability test, and that ORDER is the rule: a .nfty written
         // when the app sat somewhere writable has to still be found when it no longer is. Probing
@@ -321,4 +359,41 @@ public sealed class StateStore : IStateStore
             return ErrorText.For(ex);
         }
     }
+}
+
+/// <summary>
+/// The user's config folder for nfty on Linux: <c>$XDG_CONFIG_HOME/nfty</c>, or <c>~/.config/nfty</c>
+/// when that variable is unset, empty or relative (the XDG Base Directory spec says a relative value
+/// is invalid and must be ignored). Null on every other system: Windows keeps state beside the
+/// executable or in the working directory exactly as before.
+/// </summary>
+public static class UserConfigFolder
+{
+    /// <summary>The folder's name inside the config root.</summary>
+    public const string Name = "nfty";
+
+    /// <summary>The folder for this process's environment, or null off Linux.</summary>
+    /// <returns>The path, or null.</returns>
+    public static string? ForThisMachine() =>
+        Resolve(OperatingSystem.IsLinux() || OperatingSystem.IsFreeBSD(), Environment.GetEnvironmentVariable);
+
+    /// <summary>The rule itself, with the platform and the environment supplied. What the tests
+    /// drive, so none of them reads the developer's real <c>$HOME</c>.</summary>
+    /// <param name="isLinux">Whether the rule applies at all.</param>
+    /// <param name="environment">Reads one environment variable; null when unset.</param>
+    /// <returns>The folder, or null when the rule does not apply or no home is known.</returns>
+    public static string? Resolve(bool isLinux, Func<string, string?> environment)
+    {
+        ArgumentNullException.ThrowIfNull(environment);
+        if (!isLinux) return null;
+        var xdg = environment("XDG_CONFIG_HOME");
+        if (!string.IsNullOrEmpty(xdg) && xdg.StartsWith('/')) return Join(xdg, Name);
+        var home = environment("HOME");
+        if (!string.IsNullOrEmpty(home) && home.StartsWith('/')) return Join(Join(home, ".config"), Name);
+        return null;
+    }
+
+    /// <summary>A forward-slash join: these are Linux paths, and a test run on Windows must produce
+    /// the same string, not one with a backslash in it.</summary>
+    private static string Join(string a, string b) => a.TrimEnd('/') + "/" + b;
 }
