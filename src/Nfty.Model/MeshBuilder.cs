@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Runtime.InteropServices;
 using Nfty.Core.Diagnostics;
 
 namespace Nfty.Model;
@@ -123,7 +124,8 @@ internal sealed class MeshBuilder
         // The copies BACKLOG M5 asks about, and only them: the three ToArray calls and the clones Mesh's
         // constructor makes. Its own scope so a Perf report can say what share of the build they are.
         using var copies = Perf.Measure("MeshBuilder.ToMesh.copies");
-        return new Mesh(positions, _normals.ToArray(), _texCoords.ToArray(), _indices.ToArray(), FaceAtlas.WidthFor(_width), _height);
+        return Mesh.Adopt(positions, CollectionsMarshal.AsSpan(_normals).ToArray(), CollectionsMarshal.AsSpan(_texCoords).ToArray(),
+            CollectionsMarshal.AsSpan(_indices).ToArray(), FaceAtlas.WidthFor(_width), _height);
     }
 
     // THE UV RULE (A = FaceAtlas.WidthFor(W)): front faces u = x / A, back faces u = (W + 1 + x) / A,

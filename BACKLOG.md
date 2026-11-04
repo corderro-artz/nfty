@@ -87,47 +87,20 @@ render one.
 
 ---
 
-## A cross-quad `(position, normal, uv)` vertex dedup for risen meshes
+## Risen meshes: wall emission dominates, and walls barely dedup
 
-**Status:** deferred; measured (`RisePerfTests`), not added, per the step-6 task brief's instruction
-to add this entry rather than the pass itself if the numbers argued for one.
+**Status:** open, measured; the cross-quad vertex dedup itself shipped (see CLAUDE.md, `Nfty.Model`).
 
-`Mesh`'s vertex rule is deliberate: a vertex is shared only within its own quad (`VertexCount` is
-always exactly twice `TriangleCount`), never merged across quads, because two quads meeting at an
-edge usually disagree on normal or UV. `RisePerfTests` measured a 512px disc (24,892 triangles,
-49,784 vertices, a 1,900,004-byte GLB): vertex data (position + normal + UV, 32 bytes/vertex) is
-1,593,088 bytes — **83.85% of the file**. Indices add another 298,704 bytes (15.72%), so vertex +
-index data together are 99.57% of the GLB; the PNG texture and JSON scaffolding are the remaining
-0.43% (~8.2 KB).
+`ModelWriter` now compacts the mesh (`Mesh.Compact()`: bit-identical `(position, normal, uv)` vertices merged, first-seen order) before writing; `Riser.TryBuild` stays un-deduped for the per-stroke Rise preview. On the
+512px Dome-ring disc (24,892 triangles) that is only 49,784 -> 48,700 vertices (-2.2%) and a
+1,903,132 -> 1,868,444 byte GLB (-1.8%): wall quads (9,208 segments against 3,238 merged faces) sample
+their pixel's center, so every wall quad has its own UV and shares nothing with the next pixel's. A wall
+dedup would need a different UV rule (e.g. one texel per wall run), which changes the texture contract.
+Doing it inside `TryBuild` cost ~34 -> ~42 ms per build, hence the move to the writer.
 
-That 83.85% is a hard ceiling on what any dedup could ever remove, not an estimate of what it would
-actually save — index count is unaffected by merging (the same number of triangles still needs three
-vertex references each), and only vertices sharing the *exact* same position, normal AND UV can
-merge at all. In practice that limits merges to touching quads of the *same* orientation (e.g. two
-adjoining front-face rectangles from `GreedyRects`, or two adjoining back-face ones); a front face
-meeting a wall, or two walls meeting at a corner, have different normals and can never merge under
-this key. A separate, uncommitted timing split of `Riser.TryBuild`'s internals on the same 512px
-fixture (scan ~10.3 ms, `GreedyRects.Merge` ~10.0 ms, face emission ~4.1 ms, wall emission ~16.0 ms)
-found 9,208 wall segments against only 3,238 merged front/back rectangles — this fixture's Dome
-depth pattern (8 rings) turns most of the disc into wall, which is exactly the geometry a
-same-orientation dedup helps least. So the real, achievable saving is well below the 83.85% ceiling
-and depends heavily on how "steppy" a given book's art is; it is not knowable without building the
-merge and measuring it on real (not synthetic-ring) demo art.
-
-**If picked up:** key on `(position, normal, uv)` exactly (no epsilon — the same float bit patterns
-already flow through one deterministic pipeline), dedup per mesh after `EmitWalls`, and keep the
-"`VertexCount == 2 * TriangleCount`" invariant as documentation of the *un-deduped* builder output
-only, moving the real invariant to a new test asserting no two indices reference bit-identical
-vertices where it would be safe to merge them. Any change here must stay byte-identical for
-identical input (`Every_format_is_byte_identical_when_written_twice` and its GLB sibling), so the
-merge's own ordering needs to be as deterministic as `GreedyRects`' discovery order is today.
-
-**Also open, from the same measurement:** `Riser.TryBuild` at 512px is dominated by wall emission
-(~16.0 ms), not by `GreedyRects.Merge` (~10.0 ms) — wall emission alone costs more than the merge
-step, and roughly as much as scanning plus merging combined. `EmitWalls` walks every pixel and
-checks all four neighbors regardless of how many walls it finds, so its cost tracks image area more
-than solid-pixel count; if 512px+ art becomes routine, that loop is the one worth revisiting first,
-before a vertex dedup.
+`EmitWalls` walks every pixel and checks four neighbors; it was NOT rewritten (no clear win measured:
+the per-quad emission, not the neighbor check, is most of its ~16 ms). Revisit with a profiler if 512px+
+art becomes routine.
 
 ---
 
@@ -148,45 +121,6 @@ gltf-viewer.donmccurdy.com to confirm by eye that nothing is mirrored or upside-
 read right, the pixels are crisp (no mip filtering blur), and nothing is see-through from the back.
 Do this once, on the files Task 7 already produced (or freshly regenerated ones — they are
 byte-identical either way), and close this entry.
-
----
-
-## M5 deferred: `Mesh`/`MeshBuilder` copies vertex data three times
-
-**Status:** deferred. Step 8 now builds a model for every asset of a whole Set (`SetModeler.Model`, in
-parallel under `generate --models`), so the copies are measured instead of guessed at; nothing is
-optimized unless the measurement says to.
-
-`MeshBuilder` accumulates vertex data in `List<float>` fields as it walks a picture's faces and
-walls. `MeshBuilder.ToMesh` calls `ToArray()` on each of them — copy one — and `Mesh`'s own
-constructor clones its array parameters again — copy two — so building one mesh moves the same bytes
-three times before anything is written to disk. Harmless at the sizes the earlier steps shipped (a
-512px disc's GLB is 1.9 MB; the copies are microseconds against `EmitWalls`' own cost, see the
-vertex-dedup entry above). A fix would be an internal no-copy constructor, or an ownership-transfer
-overload that takes `MeshBuilder`'s arrays directly.
-
-**Rule recorded for deciding:** optimize only if the copy is more than 10% of `SetModeler.Model`'s
-time at the sizes people cook; otherwise leave it.
-
-**Measured numbers (step 8 Task 17, `SetModelsPerfTests`):** 50 assets per run, each a dome-shaped disc
-body (three colors) under an optional hat, `SetModeler.Model` timed one asset at a time after one
-unmeasured warm-up; three runs, so the range is shown. `MeshBuilder.ToMesh.copies` is the final statement
-of `ToMesh` only: the three `ToArray` calls plus the clones `Mesh`'s constructor makes.
-
-| Canvas | `SetModeler.Model` per asset | `Riser.TryBuild` | `StackDepth.Combine` | `ModelWriter.Write` | `ToMesh.copies` | Copy share of `Model` |
-|--------|------------------------------|------------------|----------------------|---------------------|-----------------|-----------------------|
-| 64 px  | 2.6 - 3.1 ms | 1.5 - 1.9 ms | 0.24 ms | 1.0 - 1.3 ms | 0.29 - 0.36 ms (20 MB / 50) | **11 - 14%** |
-| 512 px | 62 - 68 ms | 32 - 36 ms | 21 - 23 ms | 14 - 15 ms | 2.3 - 2.5 ms (163 MB / 50) | **3.6 - 4%** |
-
-(`Riser.TryBuild` includes `ToMesh`, so the scopes nest and do not sum; the 512 px run wrote 99.6 MB of
-GLB for the 50 assets, the 64 px run 12.4 MB.)
-
-**Reading against the rule above:** at 512 px the copies are under 4% of a model and stay. At 64 px, a
-size people really cook, the share is over the 10% line, but the absolute cost is about 0.3 ms per asset
-(15 ms for 50; 3 s for 10,000 assets on one thread, and `generate --models` models in parallel). Nothing
-was optimized. The rule as written would say optimize; the numbers say it would save well under a
-second on any realistic cook. The author's call, with the three-copies design (no-copy constructor or
-ownership-transfer overload) still the fix to reach for if it ever matters.
 
 ---
 
