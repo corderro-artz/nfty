@@ -8,7 +8,7 @@ download contains both the desktop app and the command line.
 | | Needed |
 |---|---|
 | Operating system | Windows 10 or 11 (x64), or Linux (x64) for a download. macOS builds from source. |
-| Screen | 1280×720 or larger. nfty opens at 1366×768 and will not go smaller than 1280×720. |
+| Screen | 1280×720 or larger. nfty opens at 1280×720, its smallest size; make the window larger for more room. |
 | .NET 10 runtime | Only for the two *framework-dependent* downloads. The others carry their own runtime. |
 | Linux libraries | The X11 session libraries, listed [below](#linux). The command line needs none. |
 

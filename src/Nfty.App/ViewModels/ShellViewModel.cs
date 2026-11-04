@@ -64,7 +64,7 @@ public partial class ShellViewModel : ViewModelBase
     /// screen came to be squeezed to the pixel and why four separate overruns had to be chased out
     /// of them. 720p is a size people recognise, it is 80px wider and 8px taller than what it
     /// replaces, and the slack is the point: nothing here should sit one style tweak from clipping.
-    /// The app opens at 1366x768, a comfortable step above it rather than a few pixels above it.</para>
+    /// The app opens AT it (1280x720, author's ruling 2026-11-04: opening a step above the minimum read as odd), so the editor's two strips open wrapped by group, as designed for the minimum.</para>
     ///
     /// <para>1366x768 was tried as the floor and reverted. It fits a laptop screen exactly, which is
     /// the appeal, but it is a 1.92:1 window and it would not have fixed the palette strip, which

@@ -123,7 +123,7 @@ public class ToolstripLayoutTests
     /// fit 1280 and never will — while wrapping at the default is a budget that has been overspent.
     /// </remarks>
     [AvaloniaFact]
-    public void The_strip_is_one_line_at_the_window_the_app_opens_at()
+    public void The_strip_is_one_line_at_a_1366_window()
     {
         var (window, view) = Render(DefaultPageWidth);
         try
