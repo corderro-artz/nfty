@@ -1,5 +1,15 @@
 # Linux readiness review (2026-11-03)
 
+> **RESOLUTION (same day, on top of `339e009` v2.2.0).** Every blocker and should-fix item below is
+> fixed or, where it cannot be fixed in nfty, documented; each item carries a *Resolved* note. Proof
+> was taken on WSL2 Ubuntu 24.04.4 + WSLg from the Windows-built linux-x64 tarball: exec bits survive
+> `tar -xzf`; the CLI ran `demo` → `generate --count 12 --models` → `export --preset marketplace` →
+> `inspect`; the GUI opened the Set from argv and an export was driven THROUGH THE GUI (Export card →
+> Marketplace → GTK folder picker → "Exported 12 assets"), its 37 entries byte-identical to the CLI
+> export of the same Set; a read-only install kept its state in `$XDG_CONFIG_HOME/nfty` (Settings →
+> Data says so); the X11 window carries `_NET_WM_ICON`. Still unverified: a real GNOME/KDE keyring
+> round trip, a native Wayland session, a portal-only file dialog, linux-arm64 execution.
+
 Reviewed at `b3bfb48` (worktree-nfty-ticket). Tested on WSL2 Ubuntu 24.04.4 (x86_64, WSLg 1.0.71, dotnet SDK 10.0.109 + runtime 10.0.9). Product code untouched.
 
 ## Verdict: READY WITH FIXES
@@ -34,6 +44,18 @@ Reviewed at `b3bfb48` (worktree-nfty-ticket). Tested on WSL2 Ubuntu 24.04.4 (x86
 
 Fix: see "Proposed build.py changes" below. Ship **tar.gz** for Linux (exec bit, symlink-safe), zip stays for Windows.
 
+*Resolved.* `build.py <ver> linux-x64` writes four `.tar.gz` (portable 79.5 MB, single-file 72.7,
+framework-dependent 12.3, single-file-net10 12.3) with modes set by the tar filter (0755 binaries,
+`createdump`, the install script and dirs; 0644 the rest; uid/gid 0). No `.exe`; READ-ME-FIRST in
+LF with Linux wording, the dependency line and the runtime named `dotnet-runtime-10.0`. The demo is
+extracted by the TARGET's CLI: on a Windows host through `wsl` (drvfs shows every file executable),
+otherwise the source copy with the line saying so. One trap found on the way: the `.desktop` file
+first named `nfty.desktop` IS `Nfty.Desktop` on the case-insensitive Windows build host and replaced
+the app binary with 237 bytes of text (the 1.3 MB "single-file-net10" tarball gave it away). Now
+`dev.vaporsoft.nfty.desktop`, and build.py refuses a Linux artifact whose two heads are not ELF.
+Windows output unchanged: file lists of all four win-x64 zips and the READ-ME bytes identical before
+and after.
+
 ### B2. Startup crash without libICE / libSM
 Fresh WSL Ubuntu 24.04 (minimal, no GTK stack):
 ```
@@ -49,22 +71,66 @@ I tried the obvious code workaround, `.With(new X11PlatformOptions { EnableSessi
 
 Fix: document the package list and declare it as `Depends` if a .deb is made: `libice6 libsm6 libx11-6 libfontconfig1` (+ `libxcursor1 libxrandr2 libxi6` already present here). Optionally wrap `StartWithClassicDesktopLifetime` in a catch for `DllNotFoundException` that prints "install libice6 libsm6" instead of a core dump (currently exit 134, SIGABRT).
 
+*Resolved (documented + guarded).* Decompiled `X11PlatformLifetimeEvents..ctor` (12.1.1): it calls
+`IceAddConnectionWatch` unconditionally, `EnableSessionManagement` is read only later, so the
+dependency cannot be avoided from nfty. `Program.Main` now catches the `DllNotFoundException` for the
+listed X11 libraries and prints which library is missing and the apt/dnf/pacman line, exit 1 (shown
+in WSL without the libs). Install page, README and READ-ME-FIRST list
+`libice6 libsm6 libx11-6 libfontconfig1`.
+
 ## Should-fix
 
 ### S1. State lives beside the executable; unwritable on a real install
 `IStateStore` order: `.nfty` beside exe, then cwd, then Kitchen, then memory. Under `/usr/lib/nfty` or `/opt/nfty` (root-owned) beside-exe is unwritable, so state lands in whatever cwd the launcher had (often `$HOME` or `/`) or memory-only (recents lost). The portable tarball in a user dir works as designed. Fix: add an XDG step on Linux (`$XDG_CONFIG_HOME/nfty` or `~/.config/nfty`) between beside-exe and cwd, only when beside-exe is not writable and nothing exists. Needed before any .deb/AppImage; AppImage mounts read-only so it is mandatory there.
 
+*Resolved.* `StateStore` gained the rule straight after beside-exe, Linux/FreeBSD only:
+`UserConfigFolder` = `$XDG_CONFIG_HOME/nfty` (absolute values only, per the spec) else
+`~/.config/nfty`. Every state file (recents, palette, settings.json, editor view, viewer windows,
+publishing) already went through the one `IStateStore`, so nothing else moved. The rule is wired only
+by `StateStore.ForThisMachine`; the constructor's parameter defaults to null so no test can reach a
+real `~/.config`. Beside-exe stays first so a portable copy is still self-contained; Windows order is
+unchanged. `UserConfigFolderTests` drive it with injected env + temp dirs; in WSL a `chmod -R a-w`
+install launched from `/` wrote `recents.json` to `$XDG_CONFIG_HOME/nfty` and nothing beside the exe
+or in cwd.
+
 ### S2. No window/taskbar icon on Linux
 `ApplicationIcon` (`nfty.ico`) is a Windows PE resource; neither `MainWindow.axaml` nor `ViewerWindow.axaml` sets `Icon`, and the window uses `SystemDecorations=None` custom chrome. Linux shows a generic icon. Fix: ship a PNG set (e.g. 256/48), set `Icon="/Assets/nfty.png"` on both windows (or `Window.Icon` from `BrandMark` render), and `.desktop` file (below). Not verified in a compositor with a real taskbar (WSLg wrapper shows its own).
+
+*Resolved.* `tools/icons/make-app-icon.py` also writes `src/Nfty.Desktop/Assets/nfty.png` (its 256
+frame; `nfty.ico` regenerated byte-identical), embedded as an Avalonia resource; `AppIcon.Apply` (from
+`ChromeWiring.Attach`, so all three windows) sets `Window.Icon` off Windows only, Windows keeps the PE
+icon. Read back over X11 in WSLg: the `nfty` window has `_NET_WM_ICON` 128x128, `WM_CLASS`
+`Nfty.Desktop`. The tarball ships `dev.vaporsoft.nfty.desktop` (`StartupWMClass=Nfty.Desktop`),
+`nfty.png` and `install-desktop-entry.sh` (writes to `~/.local/share` only). A real desktop's taskbar
+is still unseen.
 
 ### S3. Secret store untested on a real keyring
 `SecretToolStore` shells out to `secret-tool` (stdin for the secret, good). In WSL: `which secret-tool` -> absent, no gnome-keyring/kwallet daemon, so I could only exercise the "unavailable" path by reading the code (`UnavailableReason` text is accurate: "install libsecret-tools... make sure a keyring is running"). Store/lookup/clear round trip never run. Do on a GNOME/KDE box: `nfty ipfs`/Settings -> save Pinata key, restart, read back; check behavior with keyring locked. Note `secret-tool` is a separate package (`libsecret-tools`) not installed by default on many distros; consider listing as `Recommends`.
 
+*Partly resolved.* `SecretToolStoreTests` runs the store against a stand-in `secret-tool` script
+(Linux/macOS only) that logs argv and captures stdin: the secret arrives on stdin byte for byte,
+appears in no argument, and store/lookup/clear round-trip. Install docs and READ-ME name
+`libsecret-tools`. Still open: the same round trip against a real GNOME Keyring/KWallet, and a
+locked keyring.
+
 ### S4. File dialogs untested
 `DesktopFilePicker` uses Avalonia `StorageProvider` (DBus xdg-desktop-portal when available, else Avalonia's managed fallback). WSLg has no portal, I could not drive a native dialog from here (no clicking into WSLg window). Confirm on GNOME/KDE with portal and on a bare WM. `xdg-open` for Reveal is guarded and best-effort (fine).
 
+*Partly verified.* Driven from the Windows side (SetCursorPos/SendKeys into the WSLg window): the
+Export card's folder picker opened as a GTK chooser titled "Export to folder", navigated and returned
+the folder; the export landed. A portal-backed dialog on GNOME/KDE is still unseen.
+
 ### S5. CI has no Linux GUI-test job
 CI runs App tests only on `windows-latest`; I ran all 1871 on Linux headless, green. Add `tests/Nfty.App.Tests` to the ubuntu leg of `core-cross-platform` (cost ~4 min). Also CI and WSL pin: `global.json` wants 10.0.301 with `latestFeature` roll-forward; Ubuntu's packaged SDK is 10.0.109, so `dotnet build` from a distro SDK fails ("Install the [10.0.301] .NET SDK"). Contributors on Linux need `dotnet-install.sh`; building the release from Windows for `-r linux-x64` works with no Linux toolchain.
+
+*Resolved.* CI job `app-linux` (ubuntu-latest) runs `Nfty.App.Tests` and `Nfty.Ticket.Tests`.
+`global.json` is now `10.0.100` + `latestFeature`: any 10.0 SDK at or above the 1xx band builds,
+rolling to the newest installed (Windows keeps resolving 10.0.301; `setup-dotnet` installs the latest
+10.0 for `latestFeature`). WSL with Ubuntu's packaged 10.0.114 resolved it and built the solution with
+0 warnings.
+
+### S6 resolved
+READ-ME-FIRST on Linux says `dotnet-runtime-10.0` and links the Linux install page; no "DESKTOP".
 
 ### S6. Framework-dependent Linux blurb
 `dotnet-runtime-10.0` is enough on Linux (no WindowsDesktop runtime exists). Tell users that in READ-ME-FIRST.
