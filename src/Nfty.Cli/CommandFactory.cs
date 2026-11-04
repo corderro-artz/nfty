@@ -939,7 +939,7 @@ public static partial class CommandFactory
             using var set = Generator.Generate(book, opts);
             SetWriter.Write(set, dir, parse.GetValue(pack), modeler, parallelism: threads);
             Console.WriteLine($"Generated {set.Assets.Count} → {dir}");
-            if (modeler is not null && SetWriter.ReadExisting(dir, threads).Models is { } made) PrintModelsMade(made, 1);
+            if (modeler is not null && SetWriter.ReadExisting(dir, threads, needDnas: false).Models is { } made) PrintModelsMade(made, 1);
             return 0;
         });
         return cmd;
@@ -984,7 +984,7 @@ public static partial class CommandFactory
             string setDir = parse.GetValue(dir)!;
             int target = parse.GetValue(to);
 
-            var existing = SetWriter.ReadExisting(setDir, threads);
+            var existing = SetWriter.ReadExisting(setDir, threads, needDnas: !parse.GetValue(unlimited));
 
             int have = existing.NextNumber - 1;
             int need = target - have;
@@ -1014,7 +1014,7 @@ public static partial class CommandFactory
                 existing.Dnas, existing.NextNumber);
             SetWriter.Write(more, setDir, parse.GetValue(pack), modeler, parallelism: threads);
             Console.WriteLine($"Extended by {need} → {target} total.");
-            if (modeler is not null && SetWriter.ReadExisting(setDir, threads).Models is { } made) PrintModelsMade(made, existing.NextNumber);
+            if (modeler is not null && SetWriter.ReadExisting(setDir, threads, needDnas: false).Models is { } made) PrintModelsMade(made, existing.NextNumber);
             return 0;
         });
         return cmd;

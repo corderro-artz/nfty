@@ -71,6 +71,8 @@ public class MarketplaceExportTests
     private static List<string> Files(string dir) =>
         Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories)
             .Select(f => Path.GetRelativePath(dir, f).Replace(Path.DirectorySeparatorChar, '/'))
+            // set-index.txt is a cache beside the Set, not part of it: an export never carries it.
+            .Where(f => f != "set-index.txt")
             .OrderBy(f => f, StringComparer.Ordinal).ToList();
 
     private static JsonElement Read(string root, string rel)
