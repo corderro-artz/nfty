@@ -516,7 +516,9 @@ public static class SetExporter
         int total = stamped + items.Count + plan.Entries.Count + 1;
         var sheetProgress = progress is null
             ? null
-            : new Progress<SpriteSheetProgress>(
+            // Synchronous, never Progress<T>: that posts each report to the thread pool, so a late
+            // sheet report could land after "Done" and the bar would end part-way.
+            : new InlineProgress<SpriteSheetProgress>(
                 sp => Report(progress, stamped + sp.Placed, total, sp.Phase));
 
         await SpriteSheet.WriteAsync(items, layout, temp, sheetProgress, cancellationToken)
@@ -525,6 +527,12 @@ public static class SetExporter
         var entries = plan.Entries.ToList();
         entries.Add(Entry(temp, ExportPlan.SpriteSheetName));
         return (plan with { Entries = entries }, temp, items.Count);
+    }
+
+    /// <summary>Calls the handler on the reporting thread, in order, before Report returns.</summary>
+    private sealed class InlineProgress<T>(Action<T> report) : IProgress<T>
+    {
+        public void Report(T value) => report(value);
     }
 
     private static void Report(IProgress<ExportProgress>? progress, int done, int total, string phase) =>

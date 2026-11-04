@@ -332,7 +332,9 @@ public class ViewerInfoRailTests
             var collapseAt = collapse.TranslatePoint(new Point(collapse.Bounds.Width / 2, collapse.Bounds.Height / 2), view)!.Value;
             Assert.True(Math.Abs(collapseAt.X - extendAt.X) < 0.5 && Math.Abs(collapseAt.Y - extendAt.Y) < 0.5,
                 $"collapse at {collapseAt}, extend at {extendAt}");
-            var hit = view.GetVisualAt(collapseAt, v => v.IsEffectivelyVisible);
+            // InputHitTest, not GetVisualAt: it is what a real click resolves through, and it honors
+            // IsHitTestVisible (GetVisualAt does not, so it found the covered extend button).
+            var hit = view.InputHitTest(collapseAt) as Visual;
             Assert.True(hit is not null && (ReferenceEquals(hit, collapse) || collapse.IsVisualAncestorOf(hit)),
                 $"hit {hit?.GetType().Name} '{(hit as Control)?.Name}' classes [{string.Join(",", (hit as StyledElement)?.Classes ?? [])}] "
                 + $"under {string.Join(" < ", (hit as Visual)?.GetVisualAncestors().Take(4).Select(a => a.GetType().Name + ((a as Control)?.Name is { Length: > 0 } n ? "#" + n : "")) ?? [])}");
