@@ -72,28 +72,6 @@ byte-identical either way), and close this entry.
 
 ---
 
-## OpenSea `animation_url` does not point at the model
-
-**Status:** deferred by decision (step 8, Q16); marketplace metadata is untouched.
-
-A Set cooked with `--models` has `models/NNNN.glb`, and OpenSea's metadata standard has an
-`animation_url` field that marketplaces use to show a 3D model. `metadata/NNNN.json` does not set it.
-Reasons, so nobody has to re-derive them:
-
-- `metadata/` is deliberately standards-pure and records an asset's image path relative to the Set.
-  `animation_url` has to be an address where the model is *hosted*, which nfty cannot know at cook
-  time; a relative `models/0001.glb` would be a broken link on every marketplace.
-- The Marketplace export preset leaves `models/` out, because a marketplace mints the art and its
-  standard fields. A field pointing at a file that preset does not ship would dangle by construction.
-- Adding it changes every published `metadata/NNNN.json`, and `extend` would need to rewrite it.
-
-To pick it up: add an optional base URL to the export (and to `generate`), have `SetWriter.BuildOpenSea`
-emit `animation_url` only when a model exists for that asset and a base was given, and decide what the
-Marketplace preset does about its `models/` (ship them, or leave the field off). Needs the author's
-call on the hosting story first.
-
----
-
 ## Rise page: the model of a 512px stroke lands a build behind
 
 **Status:** the UI-thread half is fixed (2026-11-04); what is left is latency, not a frozen page.
@@ -181,8 +159,6 @@ state. Reachable only after an exception has already escaped the dispatcher; not
 **The Kitchen has no creation wizard.** `New Kitchen` is a save-file picker, so there is no `wizard-kitchen` frame to capture although the audit list (V-M3) named one. If a wizard is ever built, add the frame and a `DarkModeContrastTests` screen with it.
 
 **The `set-browser-loading` capture shows a mixed state.** A Set browser's first four tiles decode even a 25-megapixel picture inside the first layout pass on this machine, so the frame shows four decoded blue squares beside two loading diamonds, not six diamonds. Making it fully deterministic needs a way to hold `ThumbnailGate` closed from a test (the gate is built inside `SetBrowserViewModel`). Pick up by letting the view model take a gate.
-
-**Pop-out viewer: no OS file association.** Double-clicking a `.cbk`, `.set`, `.glb` and so on does not open the viewer. Deferred because registering a file type edits the user's system settings, so it must be opt-in, per-user (HKCU, no admin rights) and removable from the app; none of that is built. Pick up as an opt-in toggle that writes and removes the per-user registry keys, with a test around the key writer behind an interface.
 
 **Pop-out viewer: no single-instance hand-off.** Opening a file from the shell would start a second app process. Deferred because it needs a named pipe or mutex plus argument forwarding, and it is only useful once a file association exists. Pick up together with the association: the second process sends its path to the first and exits.
 
