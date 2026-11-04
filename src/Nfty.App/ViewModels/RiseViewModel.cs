@@ -284,6 +284,8 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable, IUnsaved
     /// <param name="lower">True to lower by one instead of raise.</param>
     public void PreviewDepthStroke(IReadOnlyList<(int x, int y)> points, DepthSide side, bool lower)
     {
+        // The UI thread's whole share of a move, the off-thread mesh build excluded.
+        using var _ = Perf.Measure("Rise.PreviewStroke");
         if (points.Count == 0 || !IsPaintable) return;
         if (ActiveTool == EditorTool.Fill) return;                       // commit-only, as the editor's
         if (ActiveTool == EditorTool.Select && !SelectionContains(points[0].x, points[0].y)) return;   // marking
@@ -297,8 +299,8 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable, IUnsaved
         if (NowMs() - _lastMeshMs >= MeshBudgetMs)
         {
             RebuildMesh();
-            // Stamped AFTER the rebuild: a rebuild that itself costs more than the budget (39 ms at
-            // 512px) would otherwise leave the next move due at once, a duty cycle of 100%.
+            // Stamped AFTER the request: what the UI thread pays for one (the recombine and the snapshot)
+            // must not leave the next move due at once. The build itself runs off the UI thread.
             _lastMeshMs = NowMs();
         }
     }
@@ -306,7 +308,7 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable, IUnsaved
     /// <summary>The clock the mesh throttle reads; a test replaces it.</summary>
     internal Func<long> NowMs { get; set; } = () => Environment.TickCount64;
 
-    /// <summary>Called after every mesh rebuild; a test counts them and charges them a cost.</summary>
+    /// <summary>Called on every mesh rebuild request, on the UI thread; a test counts them and charges them a cost.</summary>
     internal Action? MeshRebuilt { get; set; }
 
     /// <summary>Commits a stroke as one undo step, or marks a region when Select starts outside one.</summary>
@@ -317,6 +319,7 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable, IUnsaved
     {
         // EVERY exit ends the gesture: a refused stroke (read-only source, empty path) must still lift
         // the 3D view's repaint budget, so the view needs no workaround of its own.
+        using var _ = Perf.Measure("Rise.ApplyStroke");
         try { ApplyDepthStrokeCore(points, side, lower); }
         finally { GestureEnded?.Invoke(); }
     }
@@ -423,17 +426,19 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable, IUnsaved
             : null;
     }
 
-    private void RebuildMesh()
+    /// <summary>Brings the model up to date with the depth: off the UI thread for an edit, at once for a new
+    /// subject (see <c>RiseViewModel.MeshBuild.cs</c>).</summary>
+    /// <param name="now">Build on the UI thread before returning, dropping anything still in flight.</param>
+    private void RebuildMesh(bool now = false)
     {
         // A recipe's union is derived from its layers' maps: bring it up to date from whatever the surface holds
         // now (a standing preview included) BEFORE the mesh is built from it. The recombine rewrites only the
         // rectangle that changed, in place; the 3D view is told about the texture anyway, ahead of the mesh.
         Editor.Sync();
         OnPropertyChanged(nameof(Texture));
-        Mesh = BuildMesh();
-        if (Mesh is { } m) _preview?.SetSubject(m.Min, m.Max);
         MeshRebuilt?.Invoke();
-        ViewerChanged?.Invoke();
+        if (now) BuildMeshNow();
+        else RequestMesh();
     }
 
     // ---------------------------------------------------------------- the pop-out viewer
@@ -665,7 +670,7 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable, IUnsaved
         var subject = Subject;
         _builtSurface = subject.Depth;
         RebuildArt();
-        RebuildMesh();
+        RebuildMesh(now: true);
         _preview?.Reset(1f);
         ClampToSubject();
         SubjectChanged?.Invoke();
@@ -756,6 +761,8 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable, IUnsaved
         ViewerChanged = null;
         UndoStanding();
         _disposed = true;
+        // A build still running reads only its own copies and is dropped when it lands; one waiting never starts.
+        DropWaiting();
         Source.Changed -= OnSourceChanged;
         DisposeExport();
         Source.Saved -= OnSourceSaved;

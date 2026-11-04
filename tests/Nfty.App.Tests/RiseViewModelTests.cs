@@ -162,8 +162,10 @@ public class RiseViewModelTests
         using var vm = OakVm();
         var flatDepth = vm.Mesh!.Max.Z - vm.Mesh.Min.Z;
         vm.ApplyDepthStroke(new[] { (2, 2) }, DepthSide.Front, false);
+        RisePages.Settle(vm);
         Assert.True(vm.Mesh!.Max.Z - vm.Mesh.Min.Z > flatDepth);
         vm.UndoCommand.Execute(null);
+        RisePages.Settle(vm);
         Assert.Equal(flatDepth, vm.Mesh!.Max.Z - vm.Mesh.Min.Z);
     }
 
@@ -173,8 +175,10 @@ public class RiseViewModelTests
         using var vm = OakVm();
         var flatDepth = vm.Mesh!.Max.Z - vm.Mesh.Min.Z;
         vm.PreviewDepthStroke(new[] { (2, 2) }, DepthSide.Front, false);    // first move always rebuilds
+        RisePages.Settle(vm);
         Assert.True(vm.Mesh!.Max.Z - vm.Mesh.Min.Z > flatDepth);
         vm.CancelDepthPreview();
+        RisePages.Settle(vm);
         Assert.Equal(flatDepth, vm.Mesh!.Max.Z - vm.Mesh.Min.Z);
     }
 

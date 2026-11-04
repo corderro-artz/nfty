@@ -164,27 +164,24 @@ whole family (a shared invariant-culture parser each option opts into), rather t
 
 ---
 
-## Rise page: a 512px mesh rebuild costs about two frames
+## Rise page: the model of a 512px stroke lands a build behind
 
-**Status:** measured in `RisePagePerfTests` (Debug build), not optimized.
+**Status:** the UI-thread half is fixed (2026-11-04); what is left is latency, not a frozen page.
 
-At 512px art `Rise.MeshRebuild` (all of it `Riser.TryBuild`) averages 33 ms and peaks near 63 ms,
-over the 33 ms interaction budget; the 3D repaint (`Raster.Render`) is 27 ms mean. At 256px a
-rebuild is 8 ms and at 64px 1.3 ms. The rebuild runs synchronously on the UI thread inside
-`RiseViewModel.PreviewDepthStroke`, so it is not only the 3D tile that lags: the throttle caps
-rebuilds at roughly half the UI thread, and canvas input during a 512px drag is handled in 33-63 ms
-chunks (delayed, never dropped). The exact model lands on release. The levers are the already-noted
-cross-quad vertex dedup, an incremental rebuild of only the columns a stroke touched, and moving the
-rebuild off the UI thread (it is a pure function of art + depth). Re-measure in Release first.
+The mesh is built off the UI thread (`RiseViewModel.MeshBuild.cs`, latest wins, one running + one
+waiting), and the EXPORT tab's exact size is debounced 250 ms and counted off the UI thread. Measured
+in `RisePagePerfTests` at 512px, UI-thread time per drag move (`Rise.PreviewStroke`) went from 28.2 ms
+to 0.21 ms in Debug (6.5 ms to 0.69 ms Release), and per release (`Rise.ApplyStroke`) from 48 ms to
+26 ms Debug (12.6 ms to 3.3 ms Release). The build itself (`Riser.TryBuild`) is unchanged, ~30 ms
+Debug / ~7-12 ms Release, so during a 512px drag the 3D tile shows the model of a move one build old,
+and on release the exact model lands one build later (always: the last request's build is never
+dropped). Levers still open: cross-quad vertex dedup and an incremental rebuild of only the columns a
+stroke touched (both in `Nfty.Model`).
 
-**Also on the EXPORT tab:** while EXPORT shows with one model ticked, every committed stroke, undo,
-fill, format/pivot/voxel change and item change rebuilds that whole model a SECOND time and
-PNG-encodes its texture (`RiseViewModel.RecomputeSize`, ruling 8's exact size figure), synchronously
-on the UI thread, on top of the preview rebuild above, and clones the art for the snapshot it builds
-from. Not during a drag (previews never ask), only on commit. Cheap at the sizes this branch ships;
-at 512px it doubles the commit cost. The fix is a debounce (recount ~250 ms after the last change,
-the figure blank or marked stale meanwhile) or counting off the UI thread from the export snapshot;
-either keeps "exact, never estimated". Measure first.
+**What is left of the 26 ms Debug release** is the DEPTH tab's own bindings after an edit
+(`OnDepthEdited`): the thickness histogram is a whole-surface scan (~15 ms at 512px Debug, now taken
+once per pass, was twice) and its rows rebuild the list control. Measure in Release before touching it;
+an incremental histogram kept by `DepthSurface` would remove the scan.
 
 **Rise, a Set's book arrival that throws part-way:** `SetRiseSource.Arrive` publishes `ExportReady` in a
 `finally`, so an export is never left waiting, but an exception from a listener or a reseed mid-loop leaves

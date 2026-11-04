@@ -278,6 +278,7 @@ public class RiseExportTests
         using var vm = BodyVm(new ScriptedPicker());
         Item(vm, "Oak").IsChecked = true;
         vm.ShowExportTabCommand.Execute(null);
+        RisePages.SettleSize(vm);
 
         using var snapshot = vm.Source.SnapshotExport(new[] { vm.SelectedItem });
         var input = snapshot.Open(0, "x");
@@ -292,12 +293,14 @@ public class RiseExportTests
     public void The_exact_size_is_built_only_on_the_export_tab_and_follows_options_and_depth()
     {
         using var vm = BodyVm(new ScriptedPicker());
+        vm.SizeDelay = _ => Task.CompletedTask;
         Item(vm, "Oak").IsChecked = true;
         vm.VoxelSize = 2;
         Assert.Equal(0, vm.SizeBuilds);
         Assert.Equal("", vm.ManifestSize);
 
         vm.ShowExportTabCommand.Execute(null);
+        RisePages.SettleSize(vm);
         Assert.Equal(1, vm.SizeBuilds);
         var glb = vm.ManifestSize;
         Assert.Matches(@"^\d+(\.\d)? (bytes|KB|MB)$|^\d+ (bytes|KB)$", glb);
@@ -310,15 +313,18 @@ public class RiseExportTests
         Assert.Equal(SizeText.Of(actual), glb);
 
         vm.Format = ModelFormat.GltfEmbedded;
+        RisePages.SettleSize(vm);
         Assert.Equal(2, vm.SizeBuilds);
         Assert.NotEqual(glb, vm.ManifestSize);
 
         vm.ApplyDepthStroke(new[] { (2, 1) }, DepthSide.Front, false);
+        RisePages.SettleSize(vm);
         Assert.Equal(3, vm.SizeBuilds);
 
         vm.ShowDepthTabCommand.Execute(null);
         vm.VoxelSize = 3;
         vm.ApplyDepthStroke(new[] { (3, 1) }, DepthSide.Front, false);
+        RisePages.SettleSize(vm);
         Assert.Equal(3, vm.SizeBuilds);          // nothing built while the DEPTH tab shows
     }
 
@@ -436,8 +442,11 @@ public class RiseExportTests
         using var vm = BodyVm(new ScriptedPicker());
         vm.Format = ModelFormat.GltfWithBin;
         vm.ShowExportTabCommand.Execute(null);
+        RisePages.SettleSize(vm);
         Assert.StartsWith("~", vm.ManifestSize);
         vm.Format = ModelFormat.Glb;
+        RisePages.SettleSize(vm);
+        Assert.NotEqual("", vm.ManifestSize);
         Assert.DoesNotContain("~", vm.ManifestSize);
     }
 

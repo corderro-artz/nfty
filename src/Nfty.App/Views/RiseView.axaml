@@ -679,7 +679,7 @@
               <StackPanel Spacing="4">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                   <TextBlock Grid.Column="0" Classes="fn" Text="{Binding ManifestTitle}" TextTrimming="CharacterEllipsis" />
-                  <TextBlock Grid.Column="1" Classes="part" Text="{Binding ManifestSize}" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Classes="part" Classes.pending="{Binding IsSizePending}" Text="{Binding ManifestSize}" VerticalAlignment="Center" />
                 </Grid>
                 <ItemsControl ItemsSource="{Binding ManifestParts}">
                   <ItemsControl.ItemsPanel>

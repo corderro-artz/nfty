@@ -152,6 +152,7 @@ public class RiseWriteThroughPageTests
                 expected += 1 + front + back;
             }
 
+        RisePages.Settle(p.Vm);
         Assert.NotNull(p.Vm.Mesh);
         Assert.Equal(expected, Volume(p.Vm.Mesh!), 2);
     }
