@@ -193,6 +193,18 @@ public class DeadCodeAuditTests
         ["ComboBoxBorderBrush"] = "consumed by Fluent's ComboBox theme, not by us",
         ["ComboBoxBorderBrushPointerOver"] = "consumed by Fluent's ComboBox theme, not by us",
         ["ComboBoxBorderBrushPressed"] = "consumed by Fluent's ComboBox theme, not by us",
+        ["ComboBoxDropDownBackground"] = "consumed by Fluent's ComboBox drop-down, not by us",
+        ["ComboBoxDropDownBorderBrush"] = "consumed by Fluent's ComboBox drop-down, not by us",
+        ["ComboBoxItemBackgroundPointerOver"] = "consumed by Fluent's ComboBox drop-down, not by us",
+        ["ComboBoxItemBackgroundPressed"] = "consumed by Fluent's ComboBox drop-down, not by us",
+        ["ComboBoxItemBackgroundSelected"] = "consumed by Fluent's ComboBox drop-down, not by us",
+        ["ComboBoxItemBackgroundSelectedPointerOver"] = "consumed by Fluent's ComboBox drop-down, not by us",
+        ["ComboBoxItemBackgroundSelectedPressed"] = "consumed by Fluent's ComboBox drop-down, not by us",
+        ["ComboBoxItemForegroundPointerOver"] = "consumed by Fluent's ComboBox drop-down, not by us",
+        ["ComboBoxItemForegroundPressed"] = "consumed by Fluent's ComboBox drop-down, not by us",
+        ["ComboBoxItemForegroundSelected"] = "consumed by Fluent's ComboBox drop-down, not by us",
+        ["ComboBoxItemForegroundSelectedPointerOver"] = "consumed by Fluent's ComboBox drop-down, not by us",
+        ["ComboBoxItemForegroundSelectedPressed"] = "consumed by Fluent's ComboBox drop-down, not by us",
     };
 
     /// <summary>Every token the theme defines is referenced by something.</summary>
