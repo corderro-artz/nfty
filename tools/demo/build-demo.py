@@ -217,6 +217,24 @@ def entries(data, prefix=""):
     return found
 
 
+def same_manifest(name, a, b):
+    """A manifest.json compares by MEANING: an optional field written as null is the same as one left
+    out (the format's additive-field contract), so a book written by an older build, which spelled
+    "recipeOrder": null, is not drift. Anything else must match byte for byte."""
+    if not name.endswith("manifest.json"):
+        return False
+    def drop_nulls(v):
+        if isinstance(v, dict):
+            return {k: drop_nulls(x) for k, x in v.items() if x is not None}
+        if isinstance(v, list):
+            return [drop_nulls(x) for x in v]
+        return v
+    try:
+        return drop_nulls(json.loads(a)) == drop_nulls(json.loads(b))
+    except ValueError:
+        return False
+
+
 def check(cbk):
     """Compare a fresh build with the embedded copy. Returns the process exit code."""
     with open(cbk, "rb") as f:
@@ -230,7 +248,7 @@ def check(cbk):
         if name not in fresh:
             print("differs: %s is only in the embedded demo" % name)
             return 1
-        if fresh[name] != shipped[name]:
+        if fresh[name] != shipped[name] and not same_manifest(name, fresh[name], shipped[name]):
             print("differs: %s (%d bytes built, %d embedded)" % (name, len(fresh[name]), len(shipped[name])))
             return 1
     print("demo is up to date")

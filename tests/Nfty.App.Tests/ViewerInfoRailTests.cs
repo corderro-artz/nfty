@@ -333,7 +333,9 @@ public class ViewerInfoRailTests
             Assert.True(Math.Abs(collapseAt.X - extendAt.X) < 0.5 && Math.Abs(collapseAt.Y - extendAt.Y) < 0.5,
                 $"collapse at {collapseAt}, extend at {extendAt}");
             var hit = view.GetVisualAt(collapseAt, v => v.IsEffectivelyVisible);
-            Assert.True(hit is not null && (ReferenceEquals(hit, collapse) || collapse.IsVisualAncestorOf(hit)));
+            Assert.True(hit is not null && (ReferenceEquals(hit, collapse) || collapse.IsVisualAncestorOf(hit)),
+                $"hit {hit?.GetType().Name} '{(hit as Control)?.Name}' classes [{string.Join(",", (hit as StyledElement)?.Classes ?? [])}] "
+                + $"under {string.Join(" < ", (hit as Visual)?.GetVisualAncestors().Take(4).Select(a => a.GetType().Name + ((a as Control)?.Name is { Length: > 0 } n ? "#" + n : "")) ?? [])}");
 
             // Every group at once, every value whole.
             var full = panel.GetVisualDescendants().OfType<SelectableTextBlock>().Where(t => t.Classes.Contains("factfull")).ToList();
