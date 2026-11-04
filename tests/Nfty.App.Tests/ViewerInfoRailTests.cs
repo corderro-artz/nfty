@@ -334,6 +334,9 @@ public class ViewerInfoRailTests
                 $"collapse at {collapseAt}, extend at {extendAt}");
             // InputHitTest, not GetVisualAt: it is what a real click resolves through, and it honors
             // IsHitTestVisible (GetVisualAt does not, so it found the covered extend button).
+            // Hit testing reads the last RENDERED frame, so render one: on Linux CI the frame with the
+            // panel had not been drawn yet and the click resolved against the frame before it.
+            window.CaptureRenderedFrame()?.Dispose();
             var hit = view.InputHitTest(collapseAt) as Visual;
             Assert.True(hit is not null && (ReferenceEquals(hit, collapse) || collapse.IsVisualAncestorOf(hit)),
                 $"hit {hit?.GetType().Name} '{(hit as Control)?.Name}' classes [{string.Join(",", (hit as StyledElement)?.Classes ?? [])}] "

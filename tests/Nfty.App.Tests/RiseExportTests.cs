@@ -162,7 +162,7 @@ public class RiseExportTests
     }
 
     [AvaloniaFact]
-    public async Task A_packed_batch_zip_holds_the_listed_names()
+    public void A_packed_batch_zip_holds_the_listed_names()
     {
         var root = Temp();
         var zipPath = Path.Combine(root, "out.zip");
@@ -171,7 +171,9 @@ public class RiseExportTests
         Item(vm, "Pine").IsChecked = true;
 
         Assert.Equal("Body-models.zip", vm.ManifestTitle);
-        await vm.ExportCommand.ExecuteAsync(null);
+        // Waited ON the UI thread: an awaited continuation could resume off it, and the view model
+        // then disposed from a pool thread failed the cleanup on Linux CI.
+        UiThreadWait.For(vm.ExportCommand.ExecuteAsync(null));
 
         using var zip = ZipFile.OpenRead(zipPath);
         Assert.Equal(vm.ManifestParts[2].Split(", "), zip.Entries.Select(e => e.FullName).ToArray());
