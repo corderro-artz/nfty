@@ -50,8 +50,9 @@
           <StackPanel Spacing="11" Classes="exportpages">
 
             <!-- ============================ CONTENTS ============================ -->
-            <StackPanel Spacing="12" IsVisible="{Binding IsContentsTab}"
+            <StackPanel Spacing="12"
                         IsEnabled="{Binding ShowForm}">
+              <StackPanel.IsVisible><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsContentsTab" /><Binding Path="!IsDone" /></MultiBinding></StackPanel.IsVisible>
 
               <!-- Four starting points. Which one is lit comes from the OPTIONS, not from the click
                    that set them, so a tile goes out the moment a box below it disagrees. -->
@@ -124,8 +125,9 @@
             </StackPanel>
 
             <!-- ============================= IMAGES ============================= -->
-            <StackPanel Spacing="14" IsVisible="{Binding IsImagesTab}"
+            <StackPanel Spacing="14"
                         IsEnabled="{Binding ShowForm}">
+              <StackPanel.IsVisible><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsImagesTab" /><Binding Path="!IsDone" /></MultiBinding></StackPanel.IsVisible>
 
               <!-- SPRITESHEET. The grid boxes open on the squarest layout that holds this
                    collection, filled in - a box showing nothing is a form asking a question the
@@ -197,8 +199,9 @@
                  cooked Set is never touched. Each field's reason sits on its own label line, in
                  warning ink and reserved, so a mistyped URI says why without the page growing a row;
                  the same sentence is in the footer, which is what stops Export. -->
-            <StackPanel Spacing="12" IsVisible="{Binding IsMarketplaceTab}"
+            <StackPanel Spacing="12"
                         IsEnabled="{Binding ShowForm}">
+              <StackPanel.IsVisible><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsMarketplaceTab" /><Binding Path="!IsDone" /></MultiBinding></StackPanel.IsVisible>
               <Grid ColumnDefinitions="*,*" ColumnSpacing="22">
                 <StackPanel Grid.Column="0" Spacing="9">
                   <StackPanel Spacing="4">
@@ -376,7 +379,8 @@
             </StackPanel>
 
             <!-- ============================== SEAL ============================== -->
-            <StackPanel Spacing="11" IsVisible="{Binding IsSealTab}" IsEnabled="{Binding ShowForm}">
+            <StackPanel Spacing="11" IsEnabled="{Binding ShowForm}">
+              <StackPanel.IsVisible><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsSealTab" /><Binding Path="!IsDone" /></MultiBinding></StackPanel.IsVisible>
               <Border Classes="sealbox" Classes.on="{Binding IsSealed}">
                 <StackPanel Spacing="10">
                   <!-- Disabled, not hidden, where the platform has no AES-GCM: a control that

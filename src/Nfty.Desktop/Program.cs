@@ -50,5 +50,9 @@ internal static class Program
 
     public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>()
         .UsePlatformDetect()
+        // The bundled IBM Plex Sans is the DEFAULT family, not only a Window style: a popup, tooltip
+        // or menu is its own top level (a separate X11 window on Linux) and inherits nothing from the
+        // main window, so without this it drew in whatever the OS had - Segoe UI here, DejaVu there.
+        .With(new Avalonia.Media.FontManagerOptions { DefaultFamilyName = "avares://Nfty.App/Assets/Fonts#IBM Plex Sans" })
         .LogToTrace();
 }

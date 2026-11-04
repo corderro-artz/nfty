@@ -1119,6 +1119,10 @@ public partial class VisualCapture
                 $"export-upload-done-{key}.png");
             Capture(new Views.ExportDialogView { DataContext = UploadDone(new FakeDialogs(), withModels: false) }, variant,
                 $"export-upload-done-nomodels-{key}.png");
+            var exportDone = new ExportDialogViewModel(ExportCaptureSet(withModels: true), new FilePickerService(),
+                new NoopFolderRevealer(), new FakeDialogs())
+            { OutputPath = @"C:\Users\Corde\Desktop\Chest Demo.set", ResultText = "Exported 12 assets.", IsDone = true };
+            Capture(new Views.ExportDialogView { DataContext = exportDone }, variant, $"export-done-{key}.png");
             var contents = ExportCaptureSet(withModels: true);
             var contentsMarket = new ExportDialogViewModel(contents, new FilePickerService(), new NoopFolderRevealer(),
                 new FakeDialogs());

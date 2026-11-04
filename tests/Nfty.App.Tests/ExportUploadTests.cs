@@ -238,6 +238,8 @@ public class ExportUploadTests
     [InlineData("contents")]
     // The same with a Set that has models: a third link warning (models not linked) must not scroll it.
     [InlineData("contents-models")]
+    // A plain export that finished: the result line and path strip join the page.
+    [InlineData("export-done")]
     public async Task The_upload_page_never_scrolls_at_the_smallest_window(string state)
     {
         ExportDialogViewModel vm = state switch
@@ -248,6 +250,7 @@ public class ExportUploadTests
         };
         await vm.PendingUploadCheck;
         if (state is "contents" or "contents-models") vm.Tab = ExportTab.Contents;
+        if (state == "export-done") { vm.Tab = ExportTab.Contents; vm.OutputPath = Path.Combine(Path.GetTempPath(), "Chest Demo.set"); vm.ResultText = "Exported 12 assets."; vm.IsDone = true; }
         if (state == "running") { vm.IsRunning = true; vm.PhaseText = "Uploading images... 1.2 MB of 3.1 MB"; }
         var view = new Views.ExportDialogView { DataContext = vm };
         var window = new Window
