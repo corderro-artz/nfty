@@ -124,6 +124,9 @@ public static class MarketplaceUpload
         string label = plan.OutputName;
 
         string temp = Directory.CreateTempSubdirectory("nfty-upload-").FullName;
+        // Every CID pinned so far. A stopped or failed upload unpins them, so a half drop does not
+        // stay on the service (or on the author's Pinata bill) with no export naming it.
+        var pinned = new List<string>();
         try
         {
             // 1. The art, alone - named exactly as the final export will name it.
@@ -149,12 +152,14 @@ public static class MarketplaceUpload
             string imageCid = await PinAsync(pinning, Path.Combine(artResult.Path, "images"), label + "-images",
                 UploadStage.PinningImages, 0.05, models ? 0.45 : 0.75, "Uploading images", progress, cancellationToken)
                 .ConfigureAwait(false);
+            pinned.Add(imageCid);
             string? modelCid = null;
             string modelDir = Path.Combine(artResult.Path, "models");
             if (models && Directory.Exists(modelDir) && Directory.EnumerateFiles(modelDir).Any())
                 modelCid = await PinAsync(pinning, modelDir, label + "-models",
                     UploadStage.PinningModels, 0.45, 0.75, "Uploading models", progress, cancellationToken)
                     .ConfigureAwait(false);
+            if (modelCid is not null) pinned.Add(modelCid);
 
             // 3. The metadata, now that it can name the art.
             Say(UploadStage.ExportingMetadata, 0.76, "Writing the metadata...");
@@ -190,6 +195,7 @@ public static class MarketplaceUpload
             string metadataCid = await PinAsync(pinning, stage, label + "-metadata",
                 UploadStage.PinningMetadata, 0.78, 0.92, "Uploading metadata", progress, cancellationToken)
                 .ConfigureAwait(false);
+            pinned.Add(metadataCid);
 
             // 5. The author's own copy, carrying the same addresses.
             Say(UploadStage.WritingExport, 0.93, "Writing the export...");
@@ -209,9 +215,27 @@ public static class MarketplaceUpload
                 hasCollection ? $"ipfs://{metadataCid}/{MarketplaceFiles.CollectionName}" : null,
                 local, warnings);
         }
+        catch
+        {
+            await UnpinAsync(pinning, pinned).ConfigureAwait(false);
+            throw;
+        }
         finally
         {
             try { Directory.Delete(temp, recursive: true); } catch { /* best effort */ }
+        }
+    }
+
+    /// <summary>Takes back what a stopped or failed upload pinned, ignoring the caller's (already
+    /// canceled) token but bounded so a dead service cannot hold the error up for long.</summary>
+    private static async Task UnpinAsync(IPinningService pinning, List<string> pinned)
+    {
+        if (pinned.Count == 0) return;
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        foreach (var cid in pinned)
+        {
+            try { await pinning.RemoveAsync(cid, timeout.Token).ConfigureAwait(false); }
+            catch { /* best effort: the upload's own failure is what the caller reports */ }
         }
     }
 

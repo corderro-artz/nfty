@@ -20,6 +20,15 @@ public class MarketplaceUploadTests
     private sealed class FakePinning(bool reachable = true) : IPinningService
     {
         public List<(string Label, Dictionary<string, byte[]> Files)> Pins { get; } = new();
+        public List<string> Removed { get; } = new();
+        /// <summary>When set, the pin with this 1-based number is canceled by this source instead.</summary>
+        public (int At, CancellationTokenSource Cts)? CancelAt { get; set; }
+
+        public Task<bool> RemoveAsync(string cid, CancellationToken cancellationToken = default)
+        {
+            Removed.Add(cid);
+            return Task.FromResult(true);
+        }
         public string Provider => "Fake";
 
         public Task<PinningStatus> StatusAsync(CancellationToken cancellationToken = default) =>
@@ -30,6 +39,11 @@ public class MarketplaceUploadTests
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (CancelAt is { } c && Pins.Count + 1 == c.At)
+            {
+                c.Cts.Cancel();
+                cancellationToken.ThrowIfCancellationRequested();
+            }
             var files = Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories)
                 .ToDictionary(f => Path.GetRelativePath(folder, f).Replace('\\', '/'), File.ReadAllBytes,
                     StringComparer.Ordinal);
@@ -186,5 +200,27 @@ public class MarketplaceUploadTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             MarketplaceUpload.RunAsync(CookedSet(), Directory.CreateTempSubdirectory("nfty-up-out-").FullName,
                 Drop(), new FakePinning(), cancellationToken: cts.Token));
+    }
+
+    [Fact]
+    public async Task A_cancel_mid_upload_unpins_what_was_already_pinned()
+    {
+        using var cts = new CancellationTokenSource();
+        var pinning = new FakePinning { CancelAt = (2, cts) };   // the art pins, then the next pin is stopped
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            MarketplaceUpload.RunAsync(CookedSet(), Directory.CreateTempSubdirectory("nfty-up-out-").FullName,
+                Drop(), pinning, cancellationToken: cts.Token));
+
+        Assert.Single(pinning.Pins);
+        Assert.Equal(["bafycid1aaaaaaaaaaaaaaaa"], pinning.Removed);
+    }
+
+    [Fact]
+    public async Task A_finished_upload_unpins_nothing()
+    {
+        var pinning = new FakePinning();
+        await MarketplaceUpload.RunAsync(CookedSet(), Directory.CreateTempSubdirectory("nfty-up-out-").FullName,
+            Drop(), pinning);
+        Assert.Empty(pinning.Removed);
     }
 }

@@ -123,6 +123,64 @@ public sealed class PinataPinning : IPinningService
         }
     }
 
+    /// <summary>
+    /// Unpins a folder pin. Pinata's v3 Files API addresses a pin by its id, so the id is looked up by
+    /// CID (<c>GET /v3/files/public?cid=</c>) and each match deleted (<c>DELETE /v3/files/public/{id}</c>);
+    /// when v3 lists nothing for it (a key without v3 scopes, or a folder pin v3 does not list), the
+    /// legacy <c>DELETE /pinning/unpin/{cid}</c> is tried. Uploads stay on <c>pinFileToIPFS</c> because
+    /// Pinata's v3 upload endpoint does not take folders, and a drop needs a folder's CID.
+    /// </summary>
+    /// <param name="cid">The root CID to unpin.</param>
+    /// <param name="cancellationToken">Stops the requests.</param>
+    /// <returns>True when Pinata confirmed a removal.</returns>
+    public async Task<bool> RemoveAsync(string cid, CancellationToken cancellationToken = default)
+    {
+        Cid.Require(cid, Provider);
+        bool removed = false;
+        try
+        {
+            using var list = Request(HttpMethod.Get, "v3/files/public?cid=" + Uri.EscapeDataString(cid));
+            using var listed = await _http.SendAsync(list, cancellationToken).ConfigureAwait(false);
+            if (listed.IsSuccessStatusCode)
+            {
+                string body = await listed.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                foreach (var id in FileIds(body))
+                {
+                    using var delete = Request(HttpMethod.Delete, "v3/files/public/" + Uri.EscapeDataString(id));
+                    using var deleted = await _http.SendAsync(delete, cancellationToken).ConfigureAwait(false);
+                    removed |= deleted.IsSuccessStatusCode;
+                }
+            }
+            if (removed) return true;
+            using var unpin = Request(HttpMethod.Delete, "pinning/unpin/" + Uri.EscapeDataString(cid));
+            using var unpinned = await _http.SendAsync(unpin, cancellationToken).ConfigureAwait(false);
+            return unpinned.IsSuccessStatusCode;
+        }
+        catch (HttpRequestException)
+        {
+            return removed;
+        }
+    }
+
+    /// <summary>The ids in a v3 List Files answer (<c>data.files[].id</c>).</summary>
+    private static List<string> FileIds(string body)
+    {
+        var ids = new List<string>();
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            if (doc.RootElement.ValueKind == JsonValueKind.Object
+                && doc.RootElement.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Object
+                && data.TryGetProperty("files", out var files) && files.ValueKind == JsonValueKind.Array)
+                foreach (var f in files.EnumerateArray())
+                    if (f.ValueKind == JsonValueKind.Object && f.TryGetProperty("id", out var id)
+                        && id.ValueKind == JsonValueKind.String && !string.IsNullOrEmpty(id.GetString()))
+                        ids.Add(id.GetString()!);
+        }
+        catch (JsonException) { }
+        return ids;
+    }
+
     /// <summary>The folder name every part shares: the label, with nothing that could add a level.</summary>
     private static string SafeLabel(string label)
     {

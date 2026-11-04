@@ -31,6 +31,26 @@ public sealed class KuboPinning : IPinningService
     private readonly HttpClient _http;
     private readonly Uri _api;
 
+    /// <summary>Unpins with <c>POST /api/v0/pin/rm?arg={cid}</c>; the blocks go at the node's next GC.</summary>
+    /// <param name="cid">The root CID to unpin.</param>
+    /// <param name="cancellationToken">Stops the request.</param>
+    /// <returns>True when the node confirmed it.</returns>
+    public async Task<bool> RemoveAsync(string cid, CancellationToken cancellationToken = default)
+    {
+        Cid.Require(cid, Provider);
+        try
+        {
+            using var response = await _http.PostAsync(
+                new Uri(_api, "api/v0/pin/rm?arg=" + Uri.EscapeDataString(cid)), null, cancellationToken)
+                .ConfigureAwait(false);
+            return response.IsSuccessStatusCode;
+        }
+        catch (HttpRequestException)
+        {
+            return false;
+        }
+    }
+
     /// <summary>Creates the client.</summary>
     /// <param name="http">The client to speak through. Its timeout should be infinite: an upload of
     /// a large collection takes as long as it takes, and the token stops it.</param>

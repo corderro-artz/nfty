@@ -50,6 +50,21 @@ Adds and pins every file under `folder`, returning the CID of a directory whose 
 - `ArgumentException` - The folder is missing or holds no file.
 - [`PinningException`](Nfty.Core.Publish.Ipfs.PinningException.md) - The service refused, failed or answered without a CID.
 
+### RemoveAsync(string, CancellationToken) { #m-removeasync-system-string-system-threading-cancellationtoken }
+
+```csharp
+public abstract Task<bool> RemoveAsync(string cid, CancellationToken cancellationToken = default);
+```
+
+Unpins `cid`, best effort: how a stopped or failed upload takes back what it already pinned. Never throws for a pin the service no longer holds.
+
+**Parameters**
+
+- `cid` (`string`) - A root CID [`IPinningService.AddFolderAsync()`](Nfty.Core.Publish.Ipfs.IPinningService.md#m-addfolderasync-system-string-system-string-system-ipro-2bdf0f) returned.
+- `cancellationToken` (`CancellationToken`) - Stops the request.
+
+**Returns.** True when the service confirmed the removal.
+
 ### StatusAsync(CancellationToken) { #m-statusasync-system-threading-cancellationtoken }
 
 ```csharp

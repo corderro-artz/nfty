@@ -111,6 +111,21 @@ Why a typed RPC address cannot be used, or null when it can.
 
 **Returns.** The sentence, or null.
 
+### RemoveAsync(string, CancellationToken) { #m-removeasync-system-string-system-threading-cancellationtoken }
+
+```csharp
+public Task<bool> RemoveAsync(string cid, CancellationToken cancellationToken = default);
+```
+
+Unpins with `POST /api/v0/pin/rm?arg={cid}`; the blocks go at the node's next GC.
+
+**Parameters**
+
+- `cid` (`string`) - The root CID to unpin.
+- `cancellationToken` (`CancellationToken`) - Stops the request.
+
+**Returns.** True when the node confirmed it.
+
 ### StatusAsync(CancellationToken) { #m-statusasync-system-threading-cancellationtoken }
 
 ```csharp

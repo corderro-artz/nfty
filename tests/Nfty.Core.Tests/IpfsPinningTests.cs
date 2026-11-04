@@ -240,6 +240,41 @@ public class IpfsPinningTests
     }
 
     [Fact]
+    public async Task Pinata_remove_finds_the_pin_by_cid_and_deletes_it_by_id()
+    {
+        var handler = new FakeHandler(r => r.Method == HttpMethod.Get
+            ? Json("""{"data":{"files":[{"id":"f-1","cid":"x"},{"id":"f-2","cid":"x"}],"next_page_token":""}}""")
+            : Json("{}"));
+        Assert.True(await new PinataPinning(new HttpClient(handler), Jwt).RemoveAsync(WrapperCid));
+
+        Assert.Equal(
+            [$"GET https://api.pinata.cloud/v3/files/public?cid={WrapperCid}",
+             "DELETE https://api.pinata.cloud/v3/files/public/f-1",
+             "DELETE https://api.pinata.cloud/v3/files/public/f-2"],
+            handler.Requests.Select(r => $"{r.Method} {r.Uri}"));
+        Assert.All(handler.Requests, r => Assert.Equal("Bearer " + Jwt, r.Auth));
+    }
+
+    [Fact]
+    public async Task Pinata_remove_falls_back_to_the_legacy_unpin_when_v3_lists_nothing()
+    {
+        var handler = new FakeHandler(r => r.Method == HttpMethod.Get ? Json("""{"data":{"files":[]}}""") : Json("{}"));
+        Assert.True(await new PinataPinning(new HttpClient(handler), Jwt).RemoveAsync(WrapperCid));
+        Assert.Equal($"DELETE https://api.pinata.cloud/pinning/unpin/{WrapperCid}",
+            $"{handler.Requests[^1].Method} {handler.Requests[^1].Uri}");
+    }
+
+    [Fact]
+    public async Task Kubo_remove_is_pin_rm()
+    {
+        var handler = new FakeHandler(_ => Json("""{"Pins":["x"]}"""));
+        Assert.True(await new KuboPinning(new HttpClient(handler), KuboPinning.DefaultApi).RemoveAsync(WrapperCid));
+        var req = Assert.Single(handler.Requests);
+        Assert.Equal(HttpMethod.Post, req.Method);
+        Assert.Equal($"http://127.0.0.1:5001/api/v0/pin/rm?arg={WrapperCid}", req.Uri.ToString());
+    }
+
+    [Fact]
     public async Task Pinata_add_shares_one_leading_folder_and_does_not_wrap_again()
     {
         var dir = Folder(("1.png", "one"), ("2.png", "two"));

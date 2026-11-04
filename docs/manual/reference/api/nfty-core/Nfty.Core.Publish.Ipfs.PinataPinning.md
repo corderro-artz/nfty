@@ -82,6 +82,21 @@ Adds and pins every file under `folder`, returning the CID of a directory whose 
 - `ArgumentException` - The folder is missing or holds no file.
 - [`PinningException`](Nfty.Core.Publish.Ipfs.PinningException.md) - The service refused, failed or answered without a CID.
 
+### RemoveAsync(string, CancellationToken) { #m-removeasync-system-string-system-threading-cancellationtoken }
+
+```csharp
+public Task<bool> RemoveAsync(string cid, CancellationToken cancellationToken = default);
+```
+
+Unpins a folder pin. Pinata's v3 Files API addresses a pin by its id, so the id is looked up by CID (`GET /v3/files/public?cid=`) and each match deleted (`DELETE /v3/files/public/{id}`); when v3 lists nothing for it (a key without v3 scopes, or a folder pin v3 does not list), the legacy `DELETE /pinning/unpin/{cid}` is tried. Uploads stay on `pinFileToIPFS` because Pinata's v3 upload endpoint does not take folders, and a drop needs a folder's CID.
+
+**Parameters**
+
+- `cid` (`string`) - The root CID to unpin.
+- `cancellationToken` (`CancellationToken`) - Stops the requests.
+
+**Returns.** True when Pinata confirmed a removal.
+
 ### StatusAsync(CancellationToken) { #m-statusasync-system-threading-cancellationtoken }
 
 ```csharp

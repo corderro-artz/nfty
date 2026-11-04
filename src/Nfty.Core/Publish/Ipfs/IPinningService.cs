@@ -80,4 +80,13 @@ public interface IPinningService
     /// <exception cref="PinningException">The service refused, failed or answered without a CID.</exception>
     Task<string> AddFolderAsync(string folder, string label, IProgress<PinProgress>? progress = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Unpins <paramref name="cid"/>, best effort: how a stopped or failed upload takes back what it
+    /// already pinned. Never throws for a pin the service no longer holds.
+    /// </summary>
+    /// <param name="cid">A root CID <see cref="AddFolderAsync"/> returned.</param>
+    /// <param name="cancellationToken">Stops the request.</param>
+    /// <returns>True when the service confirmed the removal.</returns>
+    Task<bool> RemoveAsync(string cid, CancellationToken cancellationToken = default);
 }

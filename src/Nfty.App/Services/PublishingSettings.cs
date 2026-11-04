@@ -80,6 +80,10 @@ public sealed class UnconfiguredPinning(string provider, string reason) : IPinni
     public Task<string> AddFolderAsync(string folder, string label, IProgress<PinProgress>? progress = null,
         CancellationToken cancellationToken = default) =>
         Task.FromException<string>(new PinningException(reason));
+
+    /// <inheritdoc />
+    public Task<bool> RemoveAsync(string cid, CancellationToken cancellationToken = default) =>
+        Task.FromResult(false);
 }
 
 /// <inheritdoc cref="IPublishingSettings"/>
