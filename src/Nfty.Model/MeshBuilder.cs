@@ -37,14 +37,47 @@ internal sealed class MeshBuilder
     private readonly List<float> _normals = [];
     private readonly List<float> _texCoords = [];
     private readonly List<uint> _indices = [];
-    private readonly Dictionary<VertexKey, uint> _seen = new(1024);
+    private readonly Dictionary<VertexKey, uint> _seen;
 
     /// <summary>A vertex's eight floats as bit patterns: equal keys are bit-identical vertices.</summary>
-    private readonly record struct VertexKey(uint Px, uint Py, uint Pz, uint Nx, uint Ny, uint Nz, uint U, uint V);
+    private readonly struct VertexKey : IEquatable<VertexKey>
+    {
+        private readonly uint px, py, pz, nx, ny, nz, u, v;
+
+        public VertexKey(uint px, uint py, uint pz, uint nx, uint ny, uint nz, uint u, uint v)
+        {
+            this.px = px; this.py = py; this.pz = pz;
+            this.nx = nx; this.ny = ny; this.nz = nz;
+            this.u = u; this.v = v;
+        }
+
+        public bool Equals(VertexKey o) =>
+            px == o.px && py == o.py && pz == o.pz && nx == o.nx && ny == o.ny && nz == o.nz && u == o.u && v == o.v;
+
+        public override bool Equals(object? obj) => obj is VertexKey k && Equals(k);
+
+        // Cheap multiplicative mix; deterministic (no per-process seed), though only equality matters
+        // for the output — vertex numbers come from first-seen order, never from hash order.
+        public override int GetHashCode()
+        {
+            ulong h = px;
+            h = (h * 0x9E3779B97F4A7C15UL) ^ py;
+            h = (h * 0x9E3779B97F4A7C15UL) ^ pz;
+            h = (h * 0x9E3779B97F4A7C15UL) ^ (((ulong)nx << 32) | ny);
+            h = (h * 0x9E3779B97F4A7C15UL) ^ (((ulong)nz << 32) | u);
+            h = (h * 0x9E3779B97F4A7C15UL) ^ v;
+            h *= 0x9E3779B97F4A7C15UL;
+            return (int)(h >> 32);
+        }
+    }
 
     /// <summary>Starts a mesh over a <paramref name="width"/> × <paramref name="height"/> image.</summary>
-    public MeshBuilder(int width, int height)
+    /// <param name="width">Image width in pixels.</param>
+    /// <param name="height">Image height in pixels.</param>
+    /// <param name="expectedVertices">A size hint for the vertex table; never a limit.</param>
+    public MeshBuilder(int width, int height, int expectedVertices = 1024)
     {
+        _seen = new(Math.Max(expectedVertices, 16));
         _width = width;
         _height = height;
     }
