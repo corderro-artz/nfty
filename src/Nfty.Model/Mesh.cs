@@ -9,11 +9,10 @@ namespace Nfty.Model;
 /// from many threads.
 /// </summary>
 /// <remarks>
-/// <para><b>Vertex rule.</b> A vertex is shared by every triangle that needs the exact same
-/// (position, normal, uv), compared bit for bit with no epsilon, so two adjoining same-orientation
-/// quads share their common edge. Vertices are numbered in first-seen emission order, so identical
-/// input gives byte-identical output. Quads meeting at a differing normal or uv never merge.
-/// <see cref="TriangleCount"/> and winding are unaffected.</para>
+/// <para><b>Vertex rule.</b> A mesh straight from <c>Riser</c> shares a vertex only between the two
+/// triangles of its own quad: four vertices and six indices per quad, so <see cref="VertexCount"/> is
+/// twice <see cref="TriangleCount"/>. That is the fast build the Rise page repeats per stroke.
+/// <see cref="Compact"/> merges bit-identical (position, normal, uv) vertices for the written file.</para>
 ///
 /// <para>Coordinates follow glTF: +Y up, +Z toward the viewer. Texture coordinates put (0,0) at the
 /// image's top-left, so v grows downward with the image row.</para>
@@ -114,6 +113,78 @@ public sealed class Mesh
         }
         Min = min;
         Max = max;
+    }
+
+    /// <summary>A copy with every set of bit-identical (position, normal, uv) vertices merged into one,
+    /// no epsilon. Vertices are numbered in first-seen order, so the same mesh always compacts to the
+    /// same bytes; triangle count, winding and bounds are unchanged. It costs a hash pass, which is why
+    /// the writers pay it and the live preview does not.</summary>
+    /// <returns>The compacted mesh; this mesh itself when nothing merges.</returns>
+    public Mesh Compact()
+    {
+        var seen = new Dictionary<VertexKey, uint>(VertexCount);
+        var remap = new uint[VertexCount];
+        var keep = new List<int>(VertexCount);
+        for (int v = 0; v < VertexCount; v++)
+        {
+            var key = new VertexKey(
+                BitConverter.SingleToUInt32Bits(_positions[v * 3]), BitConverter.SingleToUInt32Bits(_positions[(v * 3) + 1]),
+                BitConverter.SingleToUInt32Bits(_positions[(v * 3) + 2]), BitConverter.SingleToUInt32Bits(_normals[v * 3]),
+                BitConverter.SingleToUInt32Bits(_normals[(v * 3) + 1]), BitConverter.SingleToUInt32Bits(_normals[(v * 3) + 2]),
+                BitConverter.SingleToUInt32Bits(_texCoords[v * 2]), BitConverter.SingleToUInt32Bits(_texCoords[(v * 2) + 1]));
+            ref uint slot = ref System.Runtime.InteropServices.CollectionsMarshal.GetValueRefOrAddDefault(seen, key, out bool exists);
+            if (!exists)
+            {
+                slot = (uint)keep.Count;
+                keep.Add(v);
+            }
+            remap[v] = slot;
+        }
+        if (keep.Count == VertexCount) return this;
+
+        var p = new float[keep.Count * 3];
+        var n = new float[keep.Count * 3];
+        var t = new float[keep.Count * 2];
+        for (int k = 0; k < keep.Count; k++)
+        {
+            int v = keep[k];
+            Array.Copy(_positions, v * 3, p, k * 3, 3);
+            Array.Copy(_normals, v * 3, n, k * 3, 3);
+            Array.Copy(_texCoords, v * 2, t, k * 2, 2);
+        }
+        var idx = new uint[_indices.Length];
+        for (int i = 0; i < idx.Length; i++) idx[i] = remap[_indices[i]];
+        return Adopt(p, n, t, idx, TextureWidth, TextureHeight);
+    }
+
+    private readonly struct VertexKey : IEquatable<VertexKey>
+    {
+        private readonly uint px, py, pz, nx, ny, nz, u, v;
+
+        public VertexKey(uint px, uint py, uint pz, uint nx, uint ny, uint nz, uint u, uint v)
+        {
+            this.px = px; this.py = py; this.pz = pz;
+            this.nx = nx; this.ny = ny; this.nz = nz;
+            this.u = u; this.v = v;
+        }
+
+        public bool Equals(VertexKey o) =>
+            px == o.px && py == o.py && pz == o.pz && nx == o.nx && ny == o.ny && nz == o.nz && u == o.u && v == o.v;
+
+        public override bool Equals(object? obj) => obj is VertexKey k && Equals(k);
+
+        // Cheap multiplicative mix; only equality affects output (numbering is first-seen order).
+        public override int GetHashCode()
+        {
+            ulong h = px;
+            h = (h * 0x9E3779B97F4A7C15UL) ^ py;
+            h = (h * 0x9E3779B97F4A7C15UL) ^ pz;
+            h = (h * 0x9E3779B97F4A7C15UL) ^ (((ulong)nx << 32) | ny);
+            h = (h * 0x9E3779B97F4A7C15UL) ^ (((ulong)nz << 32) | u);
+            h = (h * 0x9E3779B97F4A7C15UL) ^ v;
+            h *= 0x9E3779B97F4A7C15UL;
+            return (int)(h >> 32);
+        }
     }
 
     /// <summary>xyz per vertex, in world units.</summary>

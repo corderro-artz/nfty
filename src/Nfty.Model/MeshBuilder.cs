@@ -37,47 +37,10 @@ internal sealed class MeshBuilder
     private readonly List<float> _normals = [];
     private readonly List<float> _texCoords = [];
     private readonly List<uint> _indices = [];
-    private readonly Dictionary<VertexKey, uint> _seen;
-
-    /// <summary>A vertex's eight floats as bit patterns: equal keys are bit-identical vertices.</summary>
-    private readonly struct VertexKey : IEquatable<VertexKey>
-    {
-        private readonly uint px, py, pz, nx, ny, nz, u, v;
-
-        public VertexKey(uint px, uint py, uint pz, uint nx, uint ny, uint nz, uint u, uint v)
-        {
-            this.px = px; this.py = py; this.pz = pz;
-            this.nx = nx; this.ny = ny; this.nz = nz;
-            this.u = u; this.v = v;
-        }
-
-        public bool Equals(VertexKey o) =>
-            px == o.px && py == o.py && pz == o.pz && nx == o.nx && ny == o.ny && nz == o.nz && u == o.u && v == o.v;
-
-        public override bool Equals(object? obj) => obj is VertexKey k && Equals(k);
-
-        // Cheap multiplicative mix; deterministic (no per-process seed), though only equality matters
-        // for the output — vertex numbers come from first-seen order, never from hash order.
-        public override int GetHashCode()
-        {
-            ulong h = px;
-            h = (h * 0x9E3779B97F4A7C15UL) ^ py;
-            h = (h * 0x9E3779B97F4A7C15UL) ^ pz;
-            h = (h * 0x9E3779B97F4A7C15UL) ^ (((ulong)nx << 32) | ny);
-            h = (h * 0x9E3779B97F4A7C15UL) ^ (((ulong)nz << 32) | u);
-            h = (h * 0x9E3779B97F4A7C15UL) ^ v;
-            h *= 0x9E3779B97F4A7C15UL;
-            return (int)(h >> 32);
-        }
-    }
 
     /// <summary>Starts a mesh over a <paramref name="width"/> × <paramref name="height"/> image.</summary>
-    /// <param name="width">Image width in pixels.</param>
-    /// <param name="height">Image height in pixels.</param>
-    /// <param name="expectedVertices">A size hint for the vertex table; never a limit.</param>
-    public MeshBuilder(int width, int height, int expectedVertices = 1024)
+    public MeshBuilder(int width, int height)
     {
-        _seen = new(Math.Max(expectedVertices, 16));
         _width = width;
         _height = height;
     }
@@ -176,23 +139,16 @@ internal sealed class MeshBuilder
     private void Quad(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 normal,
         Vector2 ta, Vector2 tb, Vector2 tc, Vector2 td)
     {
-        uint ia = Vertex(a, normal, ta);
-        uint ib = Vertex(b, normal, tb);
-        uint ic = Vertex(c, normal, tc);
-        uint id = Vertex(d, normal, td);
-        _indices.AddRange([ia, ib, ic, ia, ic, id]);
+        uint first = checked((uint)(_positions.Count / 3));
+        Vertex(a, normal, ta);
+        Vertex(b, normal, tb);
+        Vertex(c, normal, tc);
+        Vertex(d, normal, td);
+        _indices.AddRange([first, first + 1, first + 2, first, first + 2, first + 3]);
     }
 
-    private uint Vertex(Vector3 p, Vector3 n, Vector2 t)
+    private void Vertex(Vector3 p, Vector3 n, Vector2 t)
     {
-        var key = new VertexKey(
-            BitConverter.SingleToUInt32Bits(p.X), BitConverter.SingleToUInt32Bits(p.Y), BitConverter.SingleToUInt32Bits(p.Z),
-            BitConverter.SingleToUInt32Bits(n.X), BitConverter.SingleToUInt32Bits(n.Y), BitConverter.SingleToUInt32Bits(n.Z),
-            BitConverter.SingleToUInt32Bits(t.X), BitConverter.SingleToUInt32Bits(t.Y));
-        ref uint slot = ref CollectionsMarshal.GetValueRefOrAddDefault(_seen, key, out bool exists);
-        if (exists) return slot;
-        uint index = checked((uint)(_positions.Count / 3));
-        slot = index;
         _positions.Add(p.X);
         _positions.Add(p.Y);
         _positions.Add(p.Z);
@@ -201,6 +157,5 @@ internal sealed class MeshBuilder
         _normals.Add(n.Z);
         _texCoords.Add(t.X);
         _texCoords.Add(t.Y);
-        return index;
     }
 }

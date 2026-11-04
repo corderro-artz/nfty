@@ -121,12 +121,12 @@ render one.
 
 **Status:** open, measured; the cross-quad vertex dedup itself shipped (see CLAUDE.md, `Nfty.Model`).
 
-`MeshBuilder` now merges bit-identical `(position, normal, uv)` vertices in first-seen order. On the
+`ModelWriter` now compacts the mesh (`Mesh.Compact()`: bit-identical `(position, normal, uv)` vertices merged, first-seen order) before writing; `Riser.TryBuild` stays un-deduped for the per-stroke Rise preview. On the
 512px Dome-ring disc (24,892 triangles) that is only 49,784 -> 48,700 vertices (-2.2%) and a
 1,903,132 -> 1,868,444 byte GLB (-1.8%): wall quads (9,208 segments against 3,238 merged faces) sample
 their pixel's center, so every wall quad has its own UV and shares nothing with the next pixel's. A wall
 dedup would need a different UV rule (e.g. one texel per wall run), which changes the texture contract.
-`Riser.TryBuild` at 512px (Release, cold single call) went ~34 ms -> ~42 ms for the hash table.
+Doing it inside `TryBuild` cost ~34 -> ~42 ms per build, hence the move to the writer.
 
 `EmitWalls` walks every pixel and checks four neighbors; it was NOT rewritten (no clear win measured:
 the per-quad emission, not the neighbor check, is most of its ~16 ms). Revisit with a profiler if 512px+

@@ -80,7 +80,7 @@ public static class Riser
         if (scan.Solid == 0)
             return null;
 
-        var builder = new MeshBuilder(w, h, (int)Math.Min(1 << 20, (long)scan.Solid / 4 + 1024));
+        var builder = new MeshBuilder(w, h);
         foreach (var r in GreedyRects.Merge(w, h, front)) builder.FrontFace(r);
         foreach (var r in GreedyRects.Merge(w, h, back)) builder.BackFace(r);
         EmitWalls(builder, w, h, front, back, faces);

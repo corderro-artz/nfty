@@ -90,7 +90,7 @@ public static class ModelWriter
                 $"The mesh addresses a {mesh.TextureWidth}x{mesh.TextureHeight} atlas; this one is "
                 + $"{atlas.Width}x{atlas.Height}.", nameof(atlas));
 
-        var (root, bin) = GltfBuilder.Build(mesh, EncodeTexture(atlas));
+        var (root, bin) = GltfBuilder.Build(mesh.Compact(), EncodeTexture(atlas));
         return options.Format switch
         {
             ModelFormat.Glb => new[]

@@ -195,11 +195,23 @@ public class RiserTests
     }
 
     [Fact]
-    public void No_two_vertices_are_bit_identical()
+    public void A_built_mesh_shares_vertices_only_within_a_quad()
+    {
+        var mesh = Rise(Shapes.All["plus"], Shapes.Patterns["alternate"]);
+        Assert.Equal(2 * mesh.TriangleCount, mesh.VertexCount);
+        for (int q = 0; q < mesh.TriangleCount / 2; q++)
+        {
+            uint b = (uint)(q * 4);
+            Assert.Equal(new[] { b, b + 1, b + 2, b, b + 2, b + 3 }, mesh.Indices.Skip(q * 6).Take(6));
+        }
+    }
+
+    [Fact]
+    public void No_two_vertices_of_a_compacted_mesh_are_bit_identical()
     {
         foreach (var shape in new[] { "plus", "L", "hole", "checkerboard", "square" })
         {
-            var mesh = Rise(Shapes.All[shape], Shapes.Patterns["alternate"]);
+            var mesh = Rise(Shapes.All[shape], Shapes.Patterns["alternate"]).Compact();
             var seen = new HashSet<(uint, uint, uint, uint, uint, uint, uint, uint)>();
             for (int v = 0; v < mesh.VertexCount; v++)
             {
@@ -214,12 +226,17 @@ public class RiserTests
     }
 
     [Fact]
-    public void Adjoining_same_orientation_quads_share_their_edge_vertices()
+    public void Compacting_shares_edge_vertices_of_adjoining_quads_and_keeps_the_triangles()
     {
-        // "##" over "#.": a tall column and a lone pixel, one depth: same normal, same z, continuous
-        // uv, so the two front rectangles share the vertices on x = 1. Un-deduped, every quad owns four.
+        // "##" over "#.": a tall column and a lone pixel at one depth: same normal, same z, continuous
+        // uv, so the two front rectangles share the vertices on x = 1.
         var mesh = Rise(["##", "#."]);
-        Assert.True(mesh.VertexCount < 2 * mesh.TriangleCount);
+        var compact = mesh.Compact();
+        Assert.True(compact.VertexCount < mesh.VertexCount);
+        Assert.Equal(mesh.TriangleCount, compact.TriangleCount);
+        Assert.Equal(mesh.Min, compact.Min);
+        Assert.Equal(mesh.Max, compact.Max);
+        Assert.Equal(MeshChecks.Quads(mesh).Select(q => q.Corners), MeshChecks.Quads(compact).Select(q => q.Corners));
     }
 
     [Fact]
