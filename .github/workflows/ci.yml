@@ -80,7 +80,7 @@ jobs:
         run: dotnet list nfty.sln package --vulnerable --include-transitive
 
   # The engine and the CLI carry the determinism guarantees, and those are exactly what a
-  # platform-specific assumption breaks. The GUI is skipped here: it needs a display stack.
+  # platform-specific assumption breaks. The GUI tests run on Linux in `app-linux` below (headless).
   #
   # THREE operating systems, not one. Determinism is promised across machines and architectures, and
   # `SealTests` additionally depends on `AesGcm` being present at all — a platform capability, not a
@@ -103,6 +103,27 @@ jobs:
       # A model's bytes are promised identical for identical input on any machine, exactly as a
       # cooked Set's are, so the engine that writes them is checked on all three systems too.
       - run: dotnet test tests/Nfty.Model.Tests -c Release
+
+  # The GUI tests on Linux. They render through Avalonia's HEADLESS backend (Skia, no X server), so
+  # no display stack is needed - what this catches is a Linux-only difference in the app layer: a
+  # path separator, a case-sensitive resource name, a Windows-only API reached without a guard, the
+  # Linux secret store's argv/stdin contract (SecretToolStoreTests runs only here and on macOS). The
+  # whole suite passed on WSL Ubuntu 24.04 before this job existed; this keeps it that way. Skia's
+  # Linux native needs fontconfig, which ubuntu-latest carries.
+  app-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Packages.props', 'global.json') }}
+          restore-keys: nuget-${{ runner.os }}-
+      - run: dotnet test tests/Nfty.App.Tests -c Release
+      - run: dotnet test tests/Nfty.Ticket.Tests -c Release
 
   # What is GENERATED and committed has to be what the source would generate now, and the manual has
   # to build. None of this needs a display, so it runs on Linux, once.

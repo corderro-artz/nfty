@@ -35,8 +35,9 @@ of them, out of twenty-nine 32×32 sprites.
 
 ## Download and start in 60 seconds
 
-1. **Download** a zip from the [releases page](https://github.com/corderro-artz/nfty/releases/latest)
-   (**portable** if unsure), unzip it and run `Nfty.Desktop.exe`.
+1. **Download** from the [releases page](https://github.com/corderro-artz/nfty/releases/latest)
+   (**portable** if unsure): on Windows unzip it and run `Nfty.Desktop.exe`; on Linux
+   `tar -xzf` it and run `./Nfty.Desktop`.
 2. Click **Open the demo CookBook**, then **Cook Set**, give it a seed such as `launch`, and pick an
    empty folder. Fifty distinct chests land in it, numbered, with marketplace metadata beside each.
 3. Click **Open Set** to browse them, or open a Recipe and click **Rise** to turn one into a 3D model.
@@ -135,7 +136,7 @@ More in the [User Manual](https://www.vaporsoft.dev/nfty/docs/): [keyboard short
 | Requirement | Version | Notes |
 | --- | --- | --- |
 | .NET SDK | 10.0 | Pinned by [`global.json`](global.json); needed to build, not to run a release |
-| .NET desktop runtime | 10.0 | Only for the two framework-dependent download shapes |
+| .NET runtime | 10.0 | Only for the two framework-dependent download shapes (the desktop runtime on Windows, `dotnet-runtime-10.0` on Linux) |
 | OS | Windows, macOS, Linux | The desktop head is Avalonia; the CLI is platform-agnostic |
 | Screen | 1280×720 or larger | The app's window minimum; it opens at 1366×768 |
 | Python | 3.10+ | Optional — the manual, the demo generator and the icon build are Python tools |
@@ -155,23 +156,28 @@ Package versions live in [`Directory.Packages.props`](Directory.Packages.props) 
 
 ## Installation
 
-Prebuilt Windows builds are on the
+Prebuilt Windows (x64) and Linux (x64) builds are on the
 [releases page](https://github.com/corderro-artz/nfty/releases/latest). Every download carries both
 front-ends, the demo CookBook, and the licenses.
 
-| Zip | Size | .NET 10 needed | For |
-| --- | --- | --- | --- |
-| **portable** | 85 MB | No | Unzip anywhere and run. Start here if you are unsure. |
-| **single-file** | 77 MB | No | One `.exe`. Unpacks itself on first launch, so that launch is slower. |
-| **framework-dependent** | 15 MB | Yes | A small folder; needs the .NET 10 desktop runtime. |
-| **single-file-net10** | 15 MB | Yes | One `.exe` with the runtime left out. |
+| Shape | Windows `.zip` | Linux `.tar.gz` | .NET 10 needed | For |
+| --- | --- | --- | --- | --- |
+| **portable** | 85 MB | 80 MB | No | Unpack anywhere and run. Start here if you are unsure. |
+| **single-file** | 77 MB | 73 MB | No | One executable. Unpacks itself on first launch, so that launch is slower. |
+| **framework-dependent** | 15 MB | 12 MB | Yes | A small folder; needs the .NET 10 runtime. |
+| **single-file-net10** | 15 MB | 12 MB | Yes | One executable with the runtime left out. |
 
-Zips are named `nfty-<version>-<rid>-<shape>.zip` (`tools/release/build.py` makes them). The app is
-`Nfty.Desktop.exe`; the command line sits in the `cli` folder.
+Archives are named `nfty-<version>-<rid>-<shape>.zip` on Windows and `.tar.gz` on Linux
+(`tools/release/build.py` makes them; the tarball keeps the executable bits). The app is
+`Nfty.Desktop.exe` / `./Nfty.Desktop`; the command line sits in the `cli` folder. On Linux the app
+needs `libice6 libsm6 libx11-6 libfontconfig1` (present on any desktop install), and
+`./install-desktop-entry.sh` adds a launcher entry and icon for the unpacked copy — see
+[Install nfty](docs/manual/get-started/install.md).
 
 nfty keeps its settings in a `.nfty` folder **beside the executable**, so a copy carries its own
 recent-files list, palette and thread setting and writes nothing elsewhere. Move or delete the folder and nothing is
-left behind.
+left behind. On Linux, where an installed copy's folder is read-only, it falls back to
+`~/.config/nfty` (`$XDG_CONFIG_HOME/nfty`).
 
 To build from source:
 
@@ -490,8 +496,10 @@ have been missed by reading code. Three companion sweeps catch what a frame cann
 ## Deployment
 
 ```bash
-python tools/release/build.py <version> win-x64   # writes four archives to .release/
+python tools/release/build.py <version> win-x64     # four .zip archives in .release/
 gh release create v<version> .release/*.zip
+python tools/release/build.py <version> linux-x64   # four .tar.gz archives (wipes .release/ first)
+gh release upload v<version> .release/*.tar.gz
 ```
 
 - **Version**: `<Version>` in [`Directory.Build.props`](Directory.Build.props), stated once and

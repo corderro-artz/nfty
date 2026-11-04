@@ -26,7 +26,7 @@ public static class ServiceRegistration
 
         // The .nfty store, and the things that live in it. Built by hand rather than by type so the
         // Kitchen session reaches the store (rule 3 of its discovery order).
-        services.AddSingleton<IStateStore>(sp => new StateStore(sp.GetRequiredService<IKitchenSession>()));
+        services.AddSingleton<IStateStore>(sp => StateStore.ForThisMachine(sp.GetRequiredService<IKitchenSession>()));
         services.AddSingleton<IRecentsService>(sp =>
             new RecentsService(sp.GetRequiredService<IStateStore>()));
         services.AddSingleton<IPaletteService>(sp =>

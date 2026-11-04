@@ -19,6 +19,12 @@
     <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Condition="'$(Configuration)'=='Debug'" />
   </ItemGroup>
   <ItemGroup>
+    <!-- The same mark as a PNG, for the window icon on X11/Wayland, where no PE resource exists
+         (AppIcon.cs). Written by the same script as nfty.ico; the Linux tarball ships a copy for
+         its .desktop file. -->
+    <AvaloniaResource Include="Assets\nfty.png" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Nfty.App\Nfty.App.csproj" />
   </ItemGroup>
 </Project>

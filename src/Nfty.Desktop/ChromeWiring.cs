@@ -18,6 +18,7 @@ internal static class ChromeWiring
     /// when the frame's commands are bound to a view model (the shell's are).</param>
     public static void Attach(Window window, WindowFrame frame, bool captionCommands)
     {
+        AppIcon.Apply(window);
         frame.DragRequested += window.BeginMoveDrag;
         frame.ToggleMaximizeRequested += () => Toggle(window);
         frame.ResizeRequested += (edge, e) =>
