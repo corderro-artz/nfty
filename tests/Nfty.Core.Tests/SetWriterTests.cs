@@ -481,4 +481,78 @@ public class SetWriterTests
                 Assert.Equal(25.0, rarity.GetProperty("rarityPct").GetDouble());
         }
     }
+
+    private static Nfty.Core.Formats.LoadedCookBook FourComboBook()
+    {
+        LoadedIngredient Ing(string id, params string[] vids) => new()
+        {
+            Manifest = new Nfty.Core.Model.IngredientManifest(id, id,
+                Nfty.Core.Model.LayerKind.Custom, null,
+                vids.Select(v => new Nfty.Core.Model.Variant(v, v, 1)).ToList()),
+            VariantImages = vids.ToDictionary(v => v,
+                _ => new Image<Rgba32>(2, 2, new Rgba32(9, 9, 9, 255))),
+        };
+        var book = new Nfty.Core.Formats.LoadedCookBook
+        {
+            Manifest = new Nfty.Core.Model.CookBookManifest("cb", "VP",
+                new Nfty.Core.Model.Dimensions(2, 2),
+                new Nfty.Core.Model.Collection("VP", "", "VP"),
+                new Dictionary<string, double> { ["cat"] = 1 }),
+            Recipes = new[]
+            {
+                new Nfty.Core.Formats.LoadedRecipe
+                {
+                    Manifest = new Nfty.Core.Model.RecipeManifest("cat", "Cat",
+                        new[] { "bg", "body" }, Array.Empty<Nfty.Core.Model.IncompatibilityRule>()),
+                    Ingredients = new[] { Ing("bg", "a", "b"), Ing("body", "x", "y") }, // 4 combos
+                },
+            },
+        };
+        return book;
+    }
+
+    private sealed class CancelAfterFirst(CancellationTokenSource cts) : IProgress<WriteProgress>
+    {
+        public void Report(WriteProgress value) => cts.Cancel();
+    }
+
+    [Fact]
+    public void A_canceled_cook_takes_back_every_file_it_added_and_nothing_else()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        var book = FourComboBook();
+        var outDir = Path.Combine(dir, "kitchen");
+        Directory.CreateDirectory(outDir);
+        File.WriteAllText(Path.Combine(outDir, "mine.txt"), "the author's own file");
+        using var set = Generator.Generate(book, new GenerateOptions(3, "s"));
+        using var cts = new CancellationTokenSource();
+
+        Assert.ThrowsAny<OperationCanceledException>(() => SetWriter.Write(set, outDir, pack: false,
+            progress: new CancelAfterFirst(cts), cancellationToken: cts.Token, parallelism: Parallelism.Sequential));
+
+        Assert.Equal(["mine.txt"], Directory.EnumerateFileSystemEntries(outDir).Select(Path.GetFileName));
+    }
+
+    [Fact]
+    public async Task A_canceled_extend_keeps_the_earlier_set_whole()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        var book = FourComboBook();
+        var outDir = Path.Combine(dir, "out");
+        using (var first = Generator.Generate(book, new GenerateOptions(1, "s")))
+            SetWriter.Write(first, outDir, pack: false);
+        var before = Directory.EnumerateFiles(outDir, "*", SearchOption.AllDirectories)
+            .Where(f => !f.EndsWith("set-index.txt", StringComparison.Ordinal)).Order(StringComparer.Ordinal).ToList();
+
+        var existing = SetWriter.ReadExisting(outDir);
+        using var more = Generator.Generate(book, new GenerateOptions(2, "s2"),
+            existingDnas: existing.Dnas, startNumber: existing.NextNumber);
+        using var cts = new CancellationTokenSource();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => SetWriter.WriteAsync(more, outDir, pack: false,
+            new CancelAfterFirst(cts), cts.Token, parallelism: Parallelism.Sequential));
+
+        var after = Directory.EnumerateFiles(outDir, "*", SearchOption.AllDirectories).Order(StringComparer.Ordinal).ToList();
+        Assert.Equal(before, after);
+        Assert.True(SetReader.IsSetFolder(outDir));
+    }
 }

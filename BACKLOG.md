@@ -130,8 +130,6 @@ state. Reachable only after an exception has already escaped the dispatcher; not
 
 **Status:** each is a minor a review noted and the author did not rule on. None is a defect in shipped behavior. One paragraph each: what, why deferred, how to pick up.
 
-**A canceled cook leaves partial files and no `set.json`.** Canceling `Generator`/`SetWriter` mid-write stops the parallel writes but does not remove the images, `metadata/` and `nfty/` files already written, and `set.json` is written last, so the folder is not a readable Set. Deferred: the folder is the author's, and deleting from a cancel path is a destructive guess. Pick up by writing into a temp sibling and renaming on success, or by saying so on the cook dialog's Canceled line. `SetReader.IsSetFolder` already reports "not a Set" correctly.
-
 **The watermark-stamp test's "lowest-named file" assertion is vacuous.** `CorruptSetException` names the lowest-positioned unreadable asset, but the test corrupts only one file, so it cannot fail if the choice becomes nondeterministic. Pick up by corrupting two files and asserting the lower one is named at several degrees of parallelism, then probe by choosing the higher.
 
 **A test that diffs the global TEMP directory could flake.** A test asserting a temp folder was removed compares listings of the shared TEMP, so another process or test creating a folder there fails it. Pick up by giving the code under test an injectable temp root and diffing that instead.

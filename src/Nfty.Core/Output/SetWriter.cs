@@ -74,6 +74,16 @@ public static class SetWriter
         IProgress<WriteProgress>? progress = null, CancellationToken cancellationToken = default,
         Parallelism? parallelism = null)
     {
+        // A failed or canceled run takes back the files it added (WriteRollback), so a stop never
+        // leaves a folder that looks like a Set without a set.json.
+        var rollback = WriteRollback.Capture(outDir);
+        try { WriteCore(set, outDir, pack, models, progress, cancellationToken, parallelism); }
+        catch { rollback.Undo(); throw; }
+    }
+
+    private static void WriteCore(GeneratedSet set, string outDir, bool pack, IAssetModeler? models,
+        IProgress<WriteProgress>? progress, CancellationToken cancellationToken, Parallelism? parallelism)
+    {
         parallelism ??= Parallelism.Default;
         // Read BEFORE anything can overwrite set.json — see RecordedAt.
         var onDisk = RecordedAt(outDir);
@@ -154,6 +164,18 @@ public static class SetWriter
         CancellationToken cancellationToken = default,
         IAssetModeler? models = null,
         Parallelism? parallelism = null)
+    {
+        var rollback = WriteRollback.Capture(outDir);
+        try
+        {
+            await WriteCoreAsync(set, outDir, pack, progress, cancellationToken, models, parallelism).ConfigureAwait(false);
+        }
+        catch { rollback.Undo(); throw; }
+    }
+
+    private static async Task WriteCoreAsync(GeneratedSet set, string outDir, bool pack,
+        IProgress<WriteProgress>? progress, CancellationToken cancellationToken, IAssetModeler? models,
+        Parallelism? parallelism)
     {
         parallelism ??= Parallelism.Default;
         // Read BEFORE anything can overwrite set.json — see RecordedAt.
