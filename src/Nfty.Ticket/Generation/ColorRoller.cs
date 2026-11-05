@@ -13,9 +13,14 @@ public readonly record struct RolledColor(double H, double S);
 public static class ColorRoller
 {
     /// <summary>Rolls a color, consuming RNG.</summary>
-    /// <param name="c">The layer's colorization.</param>
+    /// <param name="c">Validated colorization: nonempty entries with finite, nonnegative weights
+    /// and a finite positive total, each containing exactly one valid range or fixed spec.</param>
     /// <param name="rng">The run's RNG.</param>
     /// <returns>The rolled hue and saturation.</returns>
+    /// <exception cref="InvalidOperationException">The entries have zero or negative total weight.</exception>
+    /// <exception cref="FormatException">The chosen fixed color spec is malformed or nonfinite.</exception>
+    /// <remarks>Consumes one draw for the entry and two more for a range; fixed entries consume
+    /// only the entry draw. The caller validates the colorization before rolling.</remarks>
     public static RolledColor Roll(Colorization c, IRng rng)
     {
         var entry = PickEntry(c.Entries, rng);
@@ -34,9 +39,9 @@ public static class ColorRoller
     /// interval algebraically — the count is a promise about what <see cref="Roll"/> produces, and
     /// re-derivation is what let the two drift apart before.
     /// </summary>
-    /// <param name="range">The range being sampled.</param>
+    /// <param name="range">A validated, finite range with ascending hue and saturation bounds.</param>
     /// <param name="unit">A value in <c>[0,1)</c>, as <see cref="IRng.NextDouble"/> produces.</param>
-    /// <returns>Hue in degrees.</returns>
+    /// <returns>Hue in degrees. Floating-point rounding can reach the upper bound.</returns>
     public static double SampleHue(ColorRange range, double unit) =>
         range.HueMin + unit * (range.HueMax - range.HueMin);
 
@@ -45,9 +50,9 @@ public static class ColorRoller
     /// <see cref="RolledColor.S"/> carries. The <c>/100</c> is not cosmetic: its rounding is baked
     /// into the DNA of every Set ever generated, so this is the only definition of the value.
     /// </summary>
-    /// <param name="range">The range being sampled.</param>
+    /// <param name="range">A validated, finite range with ascending hue and saturation bounds.</param>
     /// <param name="unit">A value in <c>[0,1)</c>, as <see cref="IRng.NextDouble"/> produces.</param>
-    /// <returns>Saturation as a 0..1 fraction.</returns>
+    /// <returns>Saturation as a 0..1 fraction. Floating-point rounding can reach the upper bound.</returns>
     public static double SampleSat(ColorRange range, double unit) =>
         (range.SatMin + unit * (range.SatMax - range.SatMin)) / 100.0;
 
@@ -56,10 +61,10 @@ public static class ColorRoller
     /// Used by Static layers, which colorize with exactly one fixed color and no per-asset roll,
     /// and by <c>preview</c>, so a rendered preview resolves color exactly as generation does.
     /// </summary>
-    /// <param name="fixedSpec">A prefixed color spec (<c>hex:</c>, <c>rgb:</c>, <c>hsl:</c>, <c>hsv:</c>).</param>
-    /// <param name="model">Which model hue and saturation are read in; the value or lightness is dropped.</param>
-    /// <returns>The hue (degrees) and saturation (0..1) of the color.</returns>
-    /// <exception cref="FormatException">The spec has no prefix, an unknown one, or a malformed body.</exception>
+    /// <param name="fixedSpec">A prefixed color spec accepted by <see cref="ColorSpec.Parse"/>.</param>
+    /// <param name="model">HSV or HSL, determining which saturation is taken from the RGB color.</param>
+    /// <returns>The fixed hue in degrees and saturation as a 0..1 fraction.</returns>
+    /// <exception cref="FormatException">The color spec is malformed or contains a nonfinite component.</exception>
     public static RolledColor FromFixed(string fixedSpec, ColorModel model)
     {
         var rgb = ColorSpec.Parse(fixedSpec);
@@ -79,6 +84,10 @@ public static class ColorRoller
             acc += e.Weight;
             if (r < acc) return e;
         }
-        return entries[^1];
+        // Multiplication can round r up to total, even with a unit sample below one. A trailing
+        // zero-weight entry remains shelved at that endpoint; use the last positive option.
+        for (int i = entries.Count - 1; i >= 0; i--)
+            if (entries[i].Weight > 0) return entries[i];
+        throw new InvalidOperationException("Color entries have no positive weight.");
     }
 }

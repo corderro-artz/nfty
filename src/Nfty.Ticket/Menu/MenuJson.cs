@@ -18,8 +18,9 @@ internal sealed class MenuJsonException : Exception
 /// <remarks>
 /// It reads what <c>System.Text.Json</c> wrote with the options the Menu was written under, and
 /// keeps that reader's rules: strict RFC 8259 (no comments, no trailing commas), camelCase property
-/// names matched case-sensitively, unknown properties ignored, a missing property left at its default
-/// (the caller's <c>ValidateBook</c> names it), <c>null</c> refused where the member is not nullable,
+/// names matched case-sensitively, unknown properties ignored, required properties demanded while
+/// binding, nullable members and absent <c>partialAlpha</c> retaining their defaults, <c>null</c>
+/// refused where the member is not nullable,
 /// enums only as their camelCase NAME (an integer is refused), and the last of two duplicate
 /// properties wins.
 /// </remarks>
@@ -83,8 +84,10 @@ internal static class MenuJson
     private static MenuRecipe Recipe(object? x, string at)
     {
         var o = Obj(x, at);
+        string id = Str(o, "id", at)!;
+        at += $" (recipe '{id}')";
         return new MenuRecipe(
-            Str(o, "id", at)!,
+            id,
             Str(o, "name", at)!,
             Num(o, "weight", at),
             List(o, "layerOrder", at, (s, sat) => AsStr(s, sat))!,
@@ -150,14 +153,20 @@ internal static class MenuJson
         return new RuleTarget(Str(o, "ingredientId", at)!, Str(o, "variantId", at)!);
     }
 
-    // --- member readers: missing = default, null refused unless the member is nullable ---
+    // Required members cannot default silently: missing numeric fields could otherwise become
+    // legitimate-looking zero weights, coordinates or range endpoints. Nullable members remain
+    // optional; partialAlpha is the sole optional non-nullable member, handled explicitly by Bool.
 
     private static Dictionary<string, object?> Obj(object? x, string at) =>
         x as Dictionary<string, object?> ?? throw new MenuJsonException($"{at} must be an object.");
 
     private static bool Has(Dictionary<string, object?> o, string name, string at, bool nullable, out object? value)
     {
-        if (!o.TryGetValue(name, out value)) return false;
+        if (!o.TryGetValue(name, out value))
+        {
+            if (nullable) return false;
+            throw new MenuJsonException($"{at} is missing '{name}'.");
+        }
         if (value is null)
         {
             if (nullable) return false;
@@ -211,6 +220,7 @@ internal static class MenuJson
 
     private static bool Bool(Dictionary<string, object?> o, string name, string at)
     {
+        if (!o.ContainsKey(name)) return false;
         if (!Has(o, name, at, nullable: false, out var v)) return false;
         return v is bool b ? b : throw new MenuJsonException($"{at}.{name} must be true or false.");
     }

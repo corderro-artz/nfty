@@ -14,11 +14,12 @@ public enum ColorModel
 
 /// <summary>A band of color a Dynamic layer can roll within.</summary>
 /// <param name="HueMin">Lowest hue in degrees.</param>
-/// <param name="HueMax">Highest hue in degrees. The interval is half-open — <c>ColorRoller</c>
-/// samples <c>Min + r*(Max-Min)</c> with <c>r</c> in <c>[0,1)</c> — so Max itself is only reached by
-/// a degenerate range where Min equals Max.</param>
+/// <param name="HueMax">Highest hue in degrees. <c>ColorRoller</c> samples
+/// <c>Min + r*(Max-Min)</c> with <c>r</c> in <c>[0,1)</c>: mathematically half-open, although
+/// floating-point rounding can reach Max even when Min differs from Max.</param>
 /// <param name="SatMin">Lowest saturation, 0..100.</param>
-/// <param name="SatMax">Highest saturation, 0..100; half-open in the same way.</param>
+/// <param name="SatMax">Highest saturation, 0..100; sampled with the same floating-point
+/// endpoint behavior as hue, then divided by 100.</param>
 public record ColorRange(double HueMin, double HueMax, double SatMin, double SatMax);
 
 /// <summary>One weighted color option. Exactly one of <see cref="Range"/> or <see cref="Fixed"/> is

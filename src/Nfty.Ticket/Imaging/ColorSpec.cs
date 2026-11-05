@@ -10,7 +10,10 @@ public static class ColorSpec
     /// <summary>Parses a spec such as <c>hex:d6249f</c> or <c>hsv:322,83,84</c>.</summary>
     /// <param name="spec">The prefixed spec.</param>
     /// <returns>The color.</returns>
-    /// <exception cref="FormatException">The prefix is missing, unknown, or the body is malformed.</exception>
+    /// <exception cref="FormatException">The prefix is missing or unknown, the body is malformed,
+    /// or a numeric component is not finite.</exception>
+    /// <remarks>Finite components retain the existing RGB rounding/clamping and hue-wrapping
+    /// conversions; numeric components use invariant culture.</remarks>
     public static RgbColor Parse(string spec)
     {
         if (string.IsNullOrWhiteSpace(spec))
@@ -77,8 +80,16 @@ public static class ColorSpec
         var parts = body.Split(',');
         if (parts.Length != 3)
             throw new FormatException($"Expected 3 comma-separated values, got '{body}'.");
-        double D(string s) => double.Parse(s.Trim(), CultureInfo.InvariantCulture);
-        return make(D(parts[0]), D(parts[1]), D(parts[2]));
+        double D(int index)
+        {
+            string component = parts[index].Trim();
+            double value = double.Parse(component, CultureInfo.InvariantCulture);
+            if (!double.IsFinite(value))
+                throw new FormatException(
+                    $"Color component {(index + 1).ToString(CultureInfo.InvariantCulture)} '{component}' in '{body}' must be finite.");
+            return value;
+        }
+        return make(D(0), D(1), D(2));
     }
 
     private static byte Byte(double d) => (byte)Math.Clamp((int)Math.Round(d), 0, 255);

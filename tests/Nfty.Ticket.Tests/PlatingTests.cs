@@ -173,4 +173,74 @@ public class PlatingTests
         // message Layer produces to prove it is the one that actually ran.
         Assert.Equal("No recipe 'dog' in this Menu.", ex.Message);
     }
+
+    private static MenuArchive TwoLayerMenu()
+    {
+        var layers = new[] { "apple", "zebra" }.Select(id =>
+            new MenuLayer(id, id, LayerKind.Custom, null, [new Variant("a", "A", 1)])).ToArray();
+        var recipe = new MenuRecipe("cat", "Cat", 1, ["zebra", "apple"], layers, [],
+            new Dictionary<string, double> { ["apple"] = 50, ["zebra"] = 50 });
+        var cells = layers.Select(l => new MenuCell("cat/" + l.Id + "/a", 0, 0, 2, 2)).ToArray();
+        return OpenMenu(new MenuBook(MenuSchema.Current, null, new Dimensions(2, 2), "C", "S",
+            [recipe], new MenuArt(MenuArtMode.Loose, 0, 0, cells)));
+    }
+
+    [Fact]
+    public void Plate_uses_menu_paint_order_when_valid_wire_fields_are_reversed()
+    {
+        using var menu = TwoLayerMenu();
+        TicketLayer[] layers = [new("zebra", "a", null, null, null, LayerKind.Custom, 0, 0),
+            new("apple", "a", null, null, null, LayerKind.Custom, 0, 0)];
+        var genuine = new AssetTicket(AssetTicket.ComputeDna("cat", layers), "cat", layers);
+        string[] parts = genuine.ToWire().Split('|');
+        (parts[2], parts[3]) = (parts[3], parts[2]);
+        var reordered = AssetTicket.Parse(string.Join('|', parts));
+
+        Assert.Equal(genuine.Dna, reordered.Dna);
+        Assert.Equal(new[] { "cat/zebra/a", "cat/apple/a" },
+            Plating.Plate(menu, reordered).Select(d => d.ImageKey));
+    }
+
+    [Fact]
+    public void Plate_refuses_duplicate_ticket_layers_even_when_the_wire_DNA_matches()
+    {
+        using var menu = TwoLayerMenu();
+        TicketLayer layer = new("apple", "a", null, null, null, LayerKind.Custom, 0, 0);
+        TicketLayer[] layers = [layer, layer];
+        var ticket = AssetTicket.Parse(new AssetTicket(AssetTicket.ComputeDna("cat", layers),
+            "cat", layers).ToWire());
+        var ex = Assert.Throws<FormatException>(() => Plating.Plate(menu, ticket));
+        Assert.Contains("apple", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("hat", "a")]
+    [InlineData("apple", "missing")]
+    public void Plate_refuses_unknown_ticket_ids(string ingredientId, string variantId)
+    {
+        using var menu = TwoLayerMenu();
+        var ticket = new AssetTicket("unused", "cat",
+            [new(ingredientId, variantId, null, null, null, LayerKind.Custom, 0, 0)]);
+        var ex = Assert.Throws<KeyNotFoundException>(() => Plating.Plate(menu, ticket));
+        Assert.Contains(ingredientId == "hat" ? "hat" : "missing", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Plate_preserves_optional_omissions_including_an_empty_known_recipe_ticket()
+    {
+        using var menu = TwoLayerMenu();
+        var ticket = new AssetTicket("unused", "cat",
+            [new("apple", "a", null, null, null, LayerKind.Custom, 0, 0)]);
+        Assert.Equal("cat/apple/a", Assert.Single(Plating.Plate(menu, ticket)).ImageKey);
+        Assert.Empty(Plating.Plate(menu, ticket with { Layers = [] }));
+    }
+
+    [Fact]
+    public void Plate_refuses_an_empty_ticket_naming_an_unknown_recipe()
+    {
+        using var menu = TwoLayerMenu();
+        var ex = Assert.Throws<KeyNotFoundException>(() =>
+            Plating.Plate(menu, new AssetTicket("unused", "dog", [])));
+        Assert.Contains("dog", ex.Message, StringComparison.Ordinal);
+    }
 }

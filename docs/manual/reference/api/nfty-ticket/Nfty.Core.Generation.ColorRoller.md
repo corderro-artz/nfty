@@ -22,14 +22,14 @@ Resolves a single fixed color spec to its (H, S) deterministically, consuming NO
 
 **Parameters**
 
-- `fixedSpec` (`string`) - A prefixed color spec (`hex:`, `rgb:`, `hsl:`, `hsv:`).
-- `model` (`ColorModel`) - Which model hue and saturation are read in; the value or lightness is dropped.
+- `fixedSpec` (`string`) - A prefixed color spec accepted by [`ColorSpec.Parse()`](Nfty.Core.Imaging.ColorSpec.md#m-parse-system-string).
+- `model` (`ColorModel`) - HSV or HSL, determining which saturation is taken from the RGB color.
 
-**Returns.** The hue (degrees) and saturation (0..1) of the color.
+**Returns.** The fixed hue in degrees and saturation as a 0..1 fraction.
 
 **Exceptions**
 
-- `FormatException` - The spec has no prefix, an unknown one, or a malformed body.
+- `FormatException` - The color spec is malformed or contains a nonfinite component.
 
 ### Roll(Colorization, IRng) { #m-roll-nfty-core-model-colorization-nfty-core-generation-irng }
 
@@ -41,10 +41,19 @@ Rolls a color, consuming RNG.
 
 **Parameters**
 
-- `c` (`Colorization`) - The layer's colorization.
+- `c` (`Colorization`) - Validated colorization: nonempty entries with finite, nonnegative weights and a finite positive total, each containing exactly one valid range or fixed spec.
 - `rng` (`IRng`) - The run's RNG.
 
 **Returns.** The rolled hue and saturation.
+
+**Exceptions**
+
+- `InvalidOperationException` - The entries have zero or negative total weight.
+- `FormatException` - The chosen fixed color spec is malformed or nonfinite.
+
+**Remarks**
+
+Consumes one draw for the entry and two more for a range; fixed entries consume only the entry draw. The caller validates the colorization before rolling.
 
 ### SampleHue(ColorRange, double) { #m-samplehue-nfty-core-model-colorrange-system-double }
 
@@ -56,10 +65,10 @@ The hue this range yields for a unit sample. Split out so `UniqueSpace` can eval
 
 **Parameters**
 
-- `range` (`ColorRange`) - The range being sampled.
+- `range` (`ColorRange`) - A validated, finite range with ascending hue and saturation bounds.
 - `unit` (`double`) - A value in `[0,1)`, as [`IRng.NextDouble()`](Nfty.Core.Generation.IRng.md#m-nextdouble) produces.
 
-**Returns.** Hue in degrees.
+**Returns.** Hue in degrees. Floating-point rounding can reach the upper bound.
 
 ### SampleSat(ColorRange, double) { #m-samplesat-nfty-core-model-colorrange-system-double }
 
@@ -71,7 +80,7 @@ The saturation this range yields for a unit sample, as the 0..1 fraction [`Rolle
 
 **Parameters**
 
-- `range` (`ColorRange`) - The range being sampled.
+- `range` (`ColorRange`) - A validated, finite range with ascending hue and saturation bounds.
 - `unit` (`double`) - A value in `[0,1)`, as [`IRng.NextDouble()`](Nfty.Core.Generation.IRng.md#m-nextdouble) produces.
 
-**Returns.** Saturation as a 0..1 fraction.
+**Returns.** Saturation as a 0..1 fraction. Floating-point rounding can reach the upper bound.

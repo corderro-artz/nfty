@@ -25,7 +25,9 @@ public class MenuJsonTests
         "{\"menuSchemaVersion\":" + MenuSchema.Current.ToString(CultureInfo.InvariantCulture)
         + ",\"canvas\":{\"width\":2,\"height\":2},\"collectionName\":\"C \\u00e9\\\"q\","
         + "\"collectionSymbol\":\"S\",\"recipes\":" + recipes + ","
-        + "\"art\":{\"mode\":\"loose\",\"atlasWidth\":0,\"atlasHeight\":0,\"cells\":[]}" + extra + "}";
+        + "\"art\":{\"mode\":\"loose\",\"atlasWidth\":0,\"atlasHeight\":0,\"cells\":["
+        + (recipes == "[]" ? "" : "{\"key\":\"cat/bg/a\",\"x\":0,\"y\":0,\"width\":2,\"height\":2}")
+        + "]}" + extra + "}";
 
     private const string Recipe =
         "[{\"id\":\"cat\",\"name\":\"Cat\",\"weight\":2.5e0,\"layerOrder\":[\"bg\"],"

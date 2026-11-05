@@ -12,9 +12,9 @@ Turns a ticket into the ordered list of draws that reproduces it.
 
 ## Remarks
 
-**Bottom-first, in `layerOrder`** — generation's own paint order, which the ticket already carries because [`Ticketer`](Nfty.Ticket.Ticketer.md) walks the layers in it.
+**Bottom-first, in `layerOrder`** â€” generation's own paint order, which the ticket normally carries because [`Ticketer`](Nfty.Ticket.Ticketer.md) walks the layers in it. The Menu remains authoritative when wire fields arrive in another order.
 
-Nothing here touches a pixel. The colorize rule a renderer must implement is one line: `rgb = HsvToRgb(hue, sat, source.R / 255)` with the source's alpha carried through untouched — which is exactly what `Colorizer.Apply` computes, via a 256-entry table it builds because the red channel is the only per-pixel input.
+Nothing here touches a pixel. The colorize rule a renderer must implement is one line: `rgb = HsvToRgb(hue, sat, source.R / 255)` for HSV, or `rgb = HslToRgb(hue, sat, source.R / 255)` for HSL (source red supplies lightness). In both cases the source's alpha is carried through untouched â€” which is exactly what `Colorizer.Apply` computes, via a 256-entry table it builds because the red channel is the only per-pixel input.
 
 ## Methods
 
@@ -35,5 +35,5 @@ The draws that reproduce a ticket.
 
 **Exceptions**
 
-- `KeyNotFoundException` - The Menu has no recipe named by [`AssetTicket.RecipeId`](Nfty.Ticket.AssetTicket.md#p-recipeid); that recipe has no layer for one of the ticket's ingredient ids (both from [`MenuArchive.Layer()`](Nfty.Ticket.MenuArchive.md#m-layer-system-string-system-string)); or the Menu has no art cell for one of the ticket's rolled variants (from [`MenuArchive.Cell()`](Nfty.Ticket.MenuArchive.md#m-cell-system-string)). All three name the specific id that was not found.
-- `FormatException` - A colorized layer's hue or saturation quantize differs from the Menu's colorization for that layer. The message names the layer.
+- `KeyNotFoundException` - The Menu has no recipe named by [`AssetTicket.RecipeId`](Nfty.Ticket.AssetTicket.md#p-recipeid); that recipe has no layer for one of the ticket's ingredient ids; a layer has no variant named by the ticket; or the Menu has no art cell for one of the ticket's rolled variants. The message names the specific id that was not found.
+- `FormatException` - A colorized layer's hue or saturation quantize differs from the Menu's colorization for that layer, or a ticket repeats an ingredient id. The message names the layer.

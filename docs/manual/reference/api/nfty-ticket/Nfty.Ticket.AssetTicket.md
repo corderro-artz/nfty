@@ -87,7 +87,7 @@ Reads a ticket back from [`AssetTicket.ToWire()`](Nfty.Ticket.AssetTicket.md#m-t
 
 **Remarks**
 
-**The DNA is recomputed and compared, never trusted.** This catches an alteration to the recipe id, an ingredient id, a variant id, or a rolled hue/saturation that moves it to another BUCKET — `Dna.Compute` hashes the quantized bucket index, so the DNA pins a color only to its bucket, never to a value. **`Kind`, `Model` and the quantize steps are not pinned by it**: the hash never sees the first two, and it sees a quantize step only through the bucket index it produces, so a wire that re-quantizes (hue 100 at step 10 and hue 205 at step 20 are both bucket 10) recomputes to the same DNA and parses successfully. This check cannot catch that and is not meant to: all three are fixed by the book for a given `(recipeId, ingredientId)` and cannot legitimately vary per asset, so they are verified against the MENU at plating — `Plating.Plate` takes kind and model from the Menu and refuses a ticket whose quantize differs from it. The ticket says what was rolled; the Menu says what the layer IS.
+DNA recomputation checks consistency, not authenticity: anyone can recompute the hash. The hash uses quantized color buckets, so it does not pin exact hue/saturation, layer order, kind or color model. Quantize steps affect the bucket index but are not independently hashed (hue 100 at step 10 and hue 205 at step 20 both give bucket 10). `Plating.Plate` resolves authoritative paint order, kind and model from the Menu and refuses quantize steps that differ from it. A parsed ticket still needs that Menu check.
 
 ### ToWire() { #m-towire }
 
@@ -97,7 +97,7 @@ public string ToWire();
 
 The ticket as one line: what goes in a database column or across a network.
 
-**Returns.** `v1|recipe|ing:var[@hue,sat,model,hq,sq]|...|dna`. Every figure is INVARIANT — a comma decimal separator under a European locale would collide with the field separator itself.
+**Returns.** `v1|recipe|ing:var@hue,sat,model,hq,sq,kind|...|dna`. Each layer has all six comma-separated fields after `@`; a Custom layer uses `ing:var@,,,,,Custom`. Enum fields use their declared names. Every number uses invariant formatting so a locale's decimal separator cannot collide with the field separator.
 
 **Exceptions**
 

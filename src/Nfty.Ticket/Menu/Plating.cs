@@ -16,12 +16,15 @@ public readonly record struct Draw(
 /// Turns a ticket into the ordered list of draws that reproduces it.
 /// </summary>
 /// <remarks>
-/// <para><b>Bottom-first, in <c>layerOrder</c></b> — generation's own paint order, which the ticket
-/// already carries because <see cref="Ticketer"/> walks the layers in it.</para>
+/// <para><b>Bottom-first, in <c>layerOrder</c></b> â€” generation's own paint order, which the ticket
+/// normally carries because <see cref="Ticketer"/> walks the layers in it. The Menu remains
+/// authoritative when wire fields arrive in another order.</para>
 ///
 /// <para>Nothing here touches a pixel. The colorize rule a renderer must implement is one line:
-/// <c>rgb = HsvToRgb(hue, sat, source.R / 255)</c> with the source's alpha carried through
-/// untouched — which is exactly what <c>Colorizer.Apply</c> computes, via a 256-entry table it
+/// <c>rgb = HsvToRgb(hue, sat, source.R / 255)</c> for HSV, or
+/// <c>rgb = HslToRgb(hue, sat, source.R / 255)</c> for HSL (source red supplies lightness).
+/// In both cases the source's alpha is carried through
+/// untouched â€” which is exactly what <c>Colorizer.Apply</c> computes, via a 256-entry table it
 /// builds because the red channel is the only per-pixel input.</para>
 /// </remarks>
 public static class Plating
@@ -32,15 +35,26 @@ public static class Plating
     /// <returns>One draw per present layer, bottom-first.</returns>
     /// <exception cref="KeyNotFoundException">The Menu has no recipe named by
     /// <see cref="AssetTicket.RecipeId"/>; that recipe has no layer for one of the ticket's
-    /// ingredient ids (both from <see cref="MenuArchive.Layer"/>); or the Menu has no art cell for
-    /// one of the ticket's rolled variants (from <see cref="MenuArchive.Cell"/>). All three name the
-    /// specific id that was not found.</exception>
+    /// ingredient ids; a layer has no variant named by the ticket; or the Menu has no art cell for
+    /// one of the ticket's rolled variants. The message names the specific id that was not found.</exception>
     /// <exception cref="FormatException">A colorized layer's hue or saturation quantize differs
-    /// from the Menu's colorization for that layer. The message names the layer.</exception>
+    /// from the Menu's colorization for that layer, or a ticket repeats an ingredient id.
+    /// The message names the layer.</exception>
     public static IReadOnlyList<Draw> Plate(MenuArchive menu, AssetTicket ticket)
     {
         Guard.NotNull(menu, nameof(menu));
         Guard.NotNull(ticket, nameof(ticket));
+        var recipe = menu.Recipe(ticket.RecipeId);
+        var present = new Dictionary<string, (TicketLayer Roll, MenuLayer Definition)>(StringComparer.Ordinal);
+        foreach (var layer in ticket.Layers)
+        {
+            var definition = menu.Layer(recipe.Id, layer.IngredientId);
+            if (!present.TryAdd(layer.IngredientId, (layer, definition)))
+                throw new FormatException($"Recipe '{recipe.Id}' ticket repeats layer '{layer.IngredientId}'.");
+            if (!definition.Variants.Any(v => string.Equals(v.Id, layer.VariantId, StringComparison.Ordinal)))
+                throw new KeyNotFoundException(
+                    $"Layer '{layer.IngredientId}' of recipe '{recipe.Id}' has no variant '{layer.VariantId}'.");
+        }
 
         // KIND AND COLOR MODEL COME FROM THE MENU, NEVER FROM THE TICKET, and that is a
         // correctness rule rather than a tidiness one. Dna.Compute hashes LayerSelection, which
@@ -63,10 +77,11 @@ public static class Plating
         // from the ticket, because it is what was rolled. So the step it was bucketed at must be the
         // Menu's own, or a forged ticket keeps its identity while drawing a different color.
         var draws = new List<Draw>(ticket.Layers.Count);
-        foreach (var layer in ticket.Layers)
+        foreach (string id in recipe.LayerOrder)
         {
+            if (!present.TryGetValue(id, out var selection)) continue;
+            var (layer, definition) = selection;
             string key = MenuBook.CellKey(ticket.RecipeId, layer.IngredientId, layer.VariantId);
-            var definition = menu.Layer(ticket.RecipeId, layer.IngredientId);
             if (definition.Colorization is { } c
                 && (layer.HueQuantize != c.HueQuantize || layer.SatQuantize != c.SatQuantize))
                 throw new FormatException(

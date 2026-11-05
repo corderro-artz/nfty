@@ -18,7 +18,7 @@ The Menu schema range this build can read and write — separate from [`Schema`]
 public const int Current = 2;
 ```
 
-The schema version this build WRITES. It reads this and every earlier one — see [`MenuSchema.IsSupported()`](Nfty.Ticket.MenuSchema.md#m-issupported-system-int32-system-int32).
+The schema version this build writes. It reads the inclusive range [`MenuSchema.Oldest`](Nfty.Ticket.MenuSchema.md#f-oldest) through this version.
 
 ### Oldest { #f-oldest }
 
@@ -26,7 +26,7 @@ The schema version this build WRITES. It reads this and every earlier one — se
 public const int Oldest = 2;
 ```
 
-The oldest schema this build can read. A version below this is either a malformed manifest or a real, older Menu — schema 1, from before depth maps and the 2D-only (`partialAlpha`) flag existed — written by a build of nfty this one no longer reads. Both cases are refused the same way (see [`MenuSchema.IsSupported()`](Nfty.Ticket.MenuSchema.md#m-issupported-system-int32-system-int32)); this build does not try to tell them apart, since neither is readable here.
+The oldest schema this build reads. Schema 1 predates depth maps and the `partialAlpha` listing cache and is no longer supported. Versions outside the supported range are refused rather than silently misparsed.
 
 ## Methods
 
@@ -36,11 +36,11 @@ The oldest schema this build can read. A version below this is either a malforme
 public static bool IsSupported(int version, int current);
 ```
 
-Whether `version` is readable by a build whose newest schema is `current`. `current` is a parameter rather than being read from [`MenuSchema.Current`](Nfty.Ticket.MenuSchema.md#f-current) so the RANGE itself is testable. With Current == 1 the range 1..Current contains exactly one value, which makes "accepts older versions" indistinguishable from "demands exact equality" — a test written against the constant passes either way and proves nothing. Passing a hypothetical current lets the rule be pinned now, before there is a version 2 to try it on.
+Checks whether a version falls in the reader's inclusive supported range.
 
 **Parameters**
 
 - `version` (`int`) - The version a Menu declares.
-- `current` (`int`) - The newest version the reader supports.
+- `current` (`int`) - The newest version the reader supports. Explicit so tests can verify a multi-version range even while [`MenuSchema.Oldest`](Nfty.Ticket.MenuSchema.md#f-oldest) equals [`MenuSchema.Current`](Nfty.Ticket.MenuSchema.md#f-current).
 
-**Returns.** Whether the reader can understand that version.
+**Returns.** True when `version` is at least [`MenuSchema.Oldest`](Nfty.Ticket.MenuSchema.md#f-oldest) and no greater than `current`.

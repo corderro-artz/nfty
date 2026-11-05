@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.IO.Compression;
 using System.Text;
+using System.Text.Json.Nodes;
 
 namespace Nfty.Ticket.Tests;
 
@@ -356,5 +357,233 @@ public class MenuArchiveTests
             + "\"collectionSymbol\":\"S\",\"recipes\":[" + recipe + "],"
             + "\"art\":{\"mode\":\"loose\",\"atlasWidth\":0,\"atlasHeight\":0,\"cells\":[]}}");
         Assert.Throws<InvalidDataException>(() => MenuArchive.Open(new MemoryStream(bytes)));
+    }
+
+    private const string CompleteManifest = """
+        {"menuSchemaVersion":2,"canvas":{"width":2,"height":2},"collectionName":"C","collectionSymbol":"S",
+         "recipes":[{"id":"cat","name":"Cat","weight":1,"layerOrder":["bg"],
+          "layers":[{"id":"bg","name":"Bg","kind":"dynamic","variants":[{"id":"a","name":"A","weight":1}],
+           "colorization":{"model":"hsv","hueQuantize":10,"satQuantize":10,
+            "entries":[{"weight":1,"range":{"hueMin":0,"hueMax":360,"satMin":0,"satMax":100}}]}}],
+          "rules":[{"type":"exclude","when":{"ingredientId":"bg","variantId":"a"},"targets":[]}],"absentPercent":{}}],
+         "art":{"mode":"loose","atlasWidth":0,"atlasHeight":0,
+          "cells":[{"key":"cat/bg/a","x":0,"y":0,"width":2,"height":2}]}}
+        """;
+
+    private static JsonNode At(JsonNode root, string path)
+    {
+        foreach (string segment in path.Split('/'))
+            root = root is JsonArray array ? array[int.Parse(segment, CultureInfo.InvariantCulture)]!
+                : root[segment]!;
+        return root;
+    }
+
+    public static IEnumerable<object[]> MalformedStructures()
+    {
+        string[] required = ["canvas/width", "canvas/height", "recipes/0/name", "recipes/0/weight",
+            "recipes/0/layers/0/kind", "recipes/0/layers/0/variants", "recipes/0/layers/0/variants/0/weight",
+            "recipes/0/layers/0/colorization/model", "recipes/0/layers/0/colorization/hueQuantize",
+            "recipes/0/layers/0/colorization/satQuantize", "recipes/0/layers/0/colorization/entries",
+            "recipes/0/layers/0/colorization/entries/0/weight",
+            "recipes/0/layers/0/colorization/entries/0/range/hueMin",
+            "recipes/0/rules/0/type", "recipes/0/rules/0/when", "recipes/0/rules/0/targets",
+            "recipes/0/rules/0/when/variantId", "art/mode", "art/atlasWidth", "art/cells/0/x"];
+        foreach (string path in required)
+        {
+            var root = JsonNode.Parse(CompleteManifest)!;
+            int slash = path.LastIndexOf('/');
+            At(root, path[..slash]).AsObject().Remove(path[(slash + 1)..]);
+            yield return [root.ToJsonString(), path[(slash + 1)..]];
+        }
+        string[] nulls = ["recipes/0", "recipes/0/layers/0", "recipes/0/layers/0/variants/0",
+            "recipes/0/layers/0/colorization/entries/0", "recipes/0/rules/0",
+            "recipes/0/rules/0/when", "recipes/0/layerOrder/0", "art/cells/0"];
+        foreach (string path in nulls)
+        {
+            var root = JsonNode.Parse(CompleteManifest)!;
+            int slash = path.LastIndexOf('/');
+            var parent = At(root, path[..slash]);
+            if (parent is JsonArray array) array[int.Parse(path[(slash + 1)..], CultureInfo.InvariantCulture)] = null;
+            else parent[path[(slash + 1)..]] = null;
+            yield return [root.ToJsonString(), path.Split('/').First(s => !int.TryParse(s, out _))];
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(MalformedStructures))]
+    public void Malformed_nested_structure_is_refused_at_open_with_context(string manifest, string context)
+    {
+        var ex = Assert.Throws<InvalidDataException>(() => MenuArchive.Open(new MemoryStream(ZipWith(manifest))));
+        Assert.Contains(context, ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("[]")]
+    [InlineData("null")]
+    [InlineData("42")]
+    public void A_non_object_manifest_is_a_contextual_refusal(string manifest)
+    {
+        var ex = Assert.Throws<InvalidDataException>(() => MenuArchive.Open(new MemoryStream(ZipWith(manifest))));
+        Assert.Contains("manifest", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("recipes", "recipe")]
+    [InlineData("recipes/0/layers", "bg")]
+    [InlineData("recipes/0/layers/0/variants", "a")]
+    [InlineData("art/cells", "cat/bg/a")]
+    [InlineData("recipes/0/layerOrder", "bg")]
+    public void Duplicate_identifiers_are_refused_before_lookup_caches(string path, string context)
+    {
+        var root = JsonNode.Parse(CompleteManifest)!;
+        var items = At(root, path).AsArray();
+        items.Add(items[0]!.DeepClone());
+        var ex = Assert.Throws<InvalidDataException>(() => MenuArchive.Open(new MemoryStream(ZipWith(root.ToJsonString()))));
+        Assert.Contains(context, ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("recipes/0/weight", "-1", "weight")]
+    [InlineData("recipes/0/layers/0/variants/0/weight", "-1", "weight")]
+    [InlineData("recipes/0/layers/0/variants/0/weight", "0", "weight")]
+    [InlineData("recipes/0/layers/0/colorization/entries/0/weight", "-1", "weight")]
+    [InlineData("recipes/0/layers/0/colorization/hueQuantize", "0", "hueQuantize")]
+    [InlineData("recipes/0/layers/0/colorization/entries/0/range/satMax", "101", "range")]
+    [InlineData("recipes/0/layers/0/colorization/entries/0/range/hueMin", "361", "range")]
+    [InlineData("recipes/0/layers/0/colorization/entries/0/fixed", "\"hex:ffffff\"", "entry")]
+    [InlineData("recipes/0/layers/0/kind", "\"custom\"", "colorization")]
+    [InlineData("recipes/0/layers/0/kind", "\"static\"", "fixed")]
+    [InlineData("recipes/0/layerOrder/0", "\"missing\"", "layerOrder")]
+    [InlineData("recipes/0/layerOrder", "[]", "layerOrder")]
+    [InlineData("recipes/0/rules/0/when/variantId", "\"missing\"", "rule")]
+    [InlineData("recipes/0/absentPercent/missing", "50", "absentPercent")]
+    [InlineData("recipes/0/absentPercent/bg", "101", "absentPercent")]
+    [InlineData("art/cells/0/x", "-1", "cell")]
+    [InlineData("art/cells/0/width", "0", "cell")]
+    [InlineData("canvas/width", "0", "canvas")]
+    [InlineData("art/cells", "[]", "cat/bg/a")]
+    public void Invalid_nested_values_are_refused_at_open(string path, string jsonValue, string context)
+    {
+        var root = JsonNode.Parse(CompleteManifest)!;
+        int slash = path.LastIndexOf('/');
+        var parent = At(root, path[..slash]);
+        if (parent is JsonArray array) array[int.Parse(path[(slash + 1)..], CultureInfo.InvariantCulture)] = JsonNode.Parse(jsonValue);
+        else parent[path[(slash + 1)..]] = JsonNode.Parse(jsonValue);
+        var ex = Assert.Throws<InvalidDataException>(() => MenuArchive.Open(new MemoryStream(ZipWith(root.ToJsonString()))));
+        Assert.Contains(context, ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Atlas_cell_bounds_use_widened_arithmetic()
+    {
+        var root = JsonNode.Parse(CompleteManifest)!;
+        root["art"]!["mode"] = "atlas";
+        root["art"]!["atlasWidth"] = int.MaxValue;
+        root["art"]!["atlasHeight"] = 2;
+        root["art"]!["cells"]![0]!["x"] = int.MaxValue;
+        var ex = Assert.Throws<InvalidDataException>(() => MenuArchive.Open(new MemoryStream(ZipWith(root.ToJsonString()))));
+        Assert.Contains("cell", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Overflowing_depth_dimensions_do_not_wrap_to_a_matching_entry_length()
+    {
+        byte[] bytes = ZipWithManifestAndEntry(LooseManifestWithOneCell("cat/bg/a", 65536, 65536),
+            "depth/cat/bg/a.dep", []);
+        using var menu = MenuArchive.Open(new MemoryStream(bytes));
+        var ex = Assert.Throws<InvalidDataException>(() => menu.Depth("cat/bg/a"));
+        Assert.Contains("8589934592", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Omitted_legitimate_optional_members_still_allow_rolling()
+    {
+        using var menu = MenuArchive.Open(new MemoryStream(ZipWith(CompleteManifest)));
+        var ticket = Ticketer.TryRoll(Ticketer.Prepare(menu.Book), new Nfty.Core.Generation.SplitMix64Rng(1));
+        Assert.NotNull(ticket);
+        Assert.Null(menu.Book.SourceCookBookSha256);
+        Assert.False(menu.Book.PartialAlpha);
+    }
+
+    [Fact]
+    public void Open_closes_its_stream_when_ZipArchive_construction_fails()
+    {
+        var stream = new MemoryStream([1, 2, 3]);
+        Assert.Throws<InvalidDataException>(() => MenuArchive.Open(stream));
+        Assert.False(stream.CanRead);
+    }
+
+    [Fact]
+    public void Open_closes_its_stream_when_the_manifest_fails()
+    {
+        var stream = new MemoryStream(ZipWith("[]"));
+        Assert.ThrowsAny<Exception>(() => MenuArchive.Open(stream));
+        Assert.False(stream.CanRead);
+    }
+
+    [Fact]
+    public void A_successful_open_keeps_the_stream_until_disposal()
+    {
+        var stream = new MemoryStream(ZipWith(ManifestOmitting()));
+        var menu = MenuArchive.Open(stream);
+        Assert.True(stream.CanRead);
+        menu.Dispose();
+        Assert.False(stream.CanRead);
+    }
+
+    [Fact]
+    public void A_malformed_file_can_be_reopened_exclusively_immediately_after_refusal()
+    {
+        string path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllBytes(path, [1, 2, 3]);
+            Assert.Throws<InvalidDataException>(() => MenuArchive.Open(path));
+            using var reopened = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            Assert.Equal(3, reopened.Length);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public void Comma_separated_layer_kinds_cannot_create_an_undefined_kind()
+    {
+        string manifest = CompleteManifest.Replace("\"kind\":\"dynamic\"", "\"kind\":\"dynamic, custom\"", StringComparison.Ordinal);
+        var ex = Assert.Throws<InvalidDataException>(() => MenuArchive.Open(new MemoryStream(ZipWith(manifest))));
+        Assert.Contains("kind", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Ambiguous_ingredient_ids_are_refused_without_banning_equals_in_variant_ids()
+    {
+        string ambiguous = CompleteManifest.Replace("bg", "a=b", StringComparison.Ordinal);
+        var ex = Assert.Throws<InvalidDataException>(() => MenuArchive.Open(new MemoryStream(ZipWith(ambiguous))));
+        Assert.Contains("=", ex.Message, StringComparison.Ordinal);
+        string supported = CompleteManifest.Replace("\"a\"", "\"b=c\"", StringComparison.Ordinal)
+            .Replace("cat/bg/a", "cat/bg/b=c", StringComparison.Ordinal);
+        using var menu = MenuArchive.Open(new MemoryStream(ZipWith(supported)));
+        var ticket = Ticketer.TryRoll(Ticketer.Prepare(menu.Book), new Nfty.Core.Generation.SplitMix64Rng(1));
+        Assert.Equal("b=c", Assert.Single(ticket!.Layers).VariantId);
+    }
+
+    [Theory]
+    [InlineData("cat", "\\uD800")]
+    [InlineData("bg", "\\uDC00")]
+    [InlineData("\"a\"", "\"\\uD800\"")]
+    public void Invalid_UTF16_ids_are_contextual_archive_refusals(string before, string after)
+    {
+        string manifest = CompleteManifest.Replace(before, after, StringComparison.Ordinal);
+        var ex = Assert.Throws<InvalidDataException>(() => MenuArchive.Open(new MemoryStream(ZipWith(manifest))));
+        Assert.Contains("Recipe", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("UTF-16", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Paired_astral_Unicode_ids_remain_supported()
+    {
+        string manifest = CompleteManifest.Replace("bg", "face\\uD83D\\uDE00", StringComparison.Ordinal);
+        using var menu = MenuArchive.Open(new MemoryStream(ZipWith(manifest)));
+        var ticket = Ticketer.TryRoll(Ticketer.Prepare(menu.Book), new Nfty.Core.Generation.SplitMix64Rng(1));
+        Assert.Equal("face\U0001F600", Assert.Single(ticket!.Layers).IngredientId);
     }
 }

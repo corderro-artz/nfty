@@ -21,9 +21,9 @@ public ColorRange(double HueMin, double HueMax, double SatMin, double SatMax);
 **Parameters**
 
 - `HueMin` (`double`) - Lowest hue in degrees.
-- `HueMax` (`double`) - Highest hue in degrees. The interval is half-open — `ColorRoller` samples `Min + r*(Max-Min)` with `r` in `[0,1)` — so Max itself is only reached by a degenerate range where Min equals Max.
+- `HueMax` (`double`) - Highest hue in degrees. `ColorRoller` samples `Min + r*(Max-Min)` with `r` in `[0,1)`: mathematically half-open, although floating-point rounding can reach Max even when Min differs from Max.
 - `SatMin` (`double`) - Lowest saturation, 0..100.
-- `SatMax` (`double`) - Highest saturation, 0..100; half-open in the same way.
+- `SatMax` (`double`) - Highest saturation, 0..100; sampled with the same floating-point endpoint behavior as hue, then divided by 100.
 
 ## Properties
 
@@ -33,7 +33,7 @@ public ColorRange(double HueMin, double HueMax, double SatMin, double SatMax);
 public double HueMax { get; init; }
 ```
 
-Highest hue in degrees. The interval is half-open — `ColorRoller` samples `Min + r*(Max-Min)` with `r` in `[0,1)` — so Max itself is only reached by a degenerate range where Min equals Max.
+Highest hue in degrees. `ColorRoller` samples `Min + r*(Max-Min)` with `r` in `[0,1)`: mathematically half-open, although floating-point rounding can reach Max even when Min differs from Max.
 
 ### HueMin { #p-huemin }
 
@@ -49,7 +49,7 @@ Lowest hue in degrees.
 public double SatMax { get; init; }
 ```
 
-Highest saturation, 0..100; half-open in the same way.
+Highest saturation, 0..100; sampled with the same floating-point endpoint behavior as hue, then divided by 100.
 
 ### SatMin { #p-satmin }
 

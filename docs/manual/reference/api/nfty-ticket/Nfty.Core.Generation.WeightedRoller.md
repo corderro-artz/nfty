@@ -23,9 +23,9 @@ The weight of an "absent" outcome that makes a layer miss `percent` of the time 
 **Parameters**
 
 - `percent` (`double`) - How often the layer is left out, 0..100.
-- `variantTotal` (`double`) - The total weight of the layer's variants.
+- `variantTotal` (`double`) - The finite, nonnegative total weight of validated variants.
 
-**Returns.** A weight to hand [`WeightedRoller.Roll()`](Nfty.Core.Generation.WeightedRoller.md#m-roll-nfty-core-generation-weightedroller-weighttable-s-3d1014).
+**Returns.** A weight to hand [`WeightedRoller.Roll()`](Nfty.Core.Generation.WeightedRoller.md#m-roll-nfty-core-generation-weightedroller-weighttable-s-3d1014). An unrepresentable weight is positive infinity; rolling refuses it or an overflowing combined total.
 
 **Exceptions**
 
@@ -61,9 +61,9 @@ Resolves the draw order and running totals of a weight table. Pure: an unusable 
 
 **Parameters**
 
-- `weights` (`IReadOnlyDictionary<string, double>`) - Weight per key; keys are drawn in ordinal order whatever the dictionary's own.
+- `weights` (`IReadOnlyDictionary<string, double>`) - Relative weights keyed by identifier. Callers must validate that each weight is finite and nonnegative; preparation preserves ordinal summation order.
 
-**Returns.** The table to hand to [`WeightedRoller.Roll()`](Nfty.Core.Generation.WeightedRoller.md#m-roll-nfty-core-generation-weightedroller-weighttable-n-cabca6).
+**Returns.** An ordinally ordered table. A nonfinite or nonpositive total is refused when rolled.
 
 ### Roll(IReadOnlyDictionary&lt;string, double&gt;, IRng) { #m-roll-system-collections-generic-ireadonlydictionary-sy-f53023 }
 
@@ -75,10 +75,14 @@ Prepares and rolls in one step. Prefer [`WeightedRoller.Prepare()`](Nfty.Core.Ge
 
 **Parameters**
 
-- `weights` (`IReadOnlyDictionary<string, double>`) - Weight per key.
+- `weights` (`IReadOnlyDictionary<string, double>`) - Finite, nonnegative relative weight per key.
 - `rng` (`IRng`) - The run's RNG.
 
 **Returns.** The chosen key.
+
+**Exceptions**
+
+- `InvalidOperationException` - The total is not a finite positive number.
 
 ### Roll(WeightedRoller.WeightTable, IRng) { #m-roll-nfty-core-generation-weightedroller-weighttable-n-cabca6 }
 
@@ -90,7 +94,7 @@ Rolls a prepared table.
 
 **Parameters**
 
-- `table` (`WeightedRoller.WeightTable`) - The prepared weights.
+- `table` (`WeightedRoller.WeightTable`) - Weights from [`WeightedRoller.Prepare()`](Nfty.Core.Generation.WeightedRoller.md#m-prepare-system-collections-generic-ireadonlydictionary-2d4b54), with finite, nonnegative individual weights.
 - `rng` (`IRng`) - The run's RNG.
 
 **Returns.** The chosen key.
@@ -98,6 +102,10 @@ Rolls a prepared table.
 **Exceptions**
 
 - `InvalidOperationException` - The total is not a finite positive number.
+
+**Remarks**
+
+Consumes exactly one RNG draw. Floating-point rounding at the upper endpoint selects the last positive interval rather than a trailing zero-weight key.
 
 ### Roll(WeightedRoller.WeightTable, double, IRng) { #m-roll-nfty-core-generation-weightedroller-weighttable-s-3d1014 }
 
@@ -109,7 +117,7 @@ Rolls a prepared table that also carries a chance of choosing NOTHING — a laye
 
 **Parameters**
 
-- `table` (`WeightedRoller.WeightTable`) - The prepared weights.
+- `table` (`WeightedRoller.WeightTable`) - Weights from [`WeightedRoller.Prepare()`](Nfty.Core.Generation.WeightedRoller.md#m-prepare-system-collections-generic-ireadonlydictionary-2d4b54), with finite, nonnegative individual weights.
 - `absentWeight` (`double`) - Weight of the "nothing" outcome, competing with every key in the table. Zero for a table with no such outcome.
 - `rng` (`IRng`) - The run's RNG.
 
@@ -117,10 +125,10 @@ Rolls a prepared table that also carries a chance of choosing NOTHING — a laye
 
 **Exceptions**
 
-- `InvalidOperationException` - The total is not a finite positive number.
+- `InvalidOperationException` - The absent weight is negative or nonfinite, or the combined total is not a finite positive number.
 
 **Remarks**
 
-**ONE DRAW, and at `absentWeight` zero this is the old arithmetic bit-for-bit.** That is the whole design of the overload and it is not a nicety: the absent outcome is not a key in the table, so the key array and its ordinal order are untouched; `total` is `0 + table.Total`, so `r` is drawn from exactly the same range; `r < 0` is false and `r -= 0` changes nothing, so the walk that follows sees the same number it always did. A cookbook that does not use optional layers therefore produces byte-identical output from the same seed, and every Set ever generated stays reproducible. `AbsentOutcomeTests` pins that against a recorded baseline rather than trusting this paragraph.
+Consumes exactly one draw. The absent outcome is not a key in the table, so its ordinal order is untouched. At zero absent weight, `0 + table.Total`, `r < 0` and `r -= 0` preserve ordinary draw arithmetic bit-for-bit. Both overloads share the same scan and corrected floating-point endpoint handling: a rounded upper endpoint cannot select a zero-weight key. `AbsentLayerTests` pins zero-absence equivalence and `TicketFreezeTests` guards the recorded ordinary collection baseline.
 
 The absent outcome is drawn FIRST, before the keys. Which end it sits at is arbitrary, but it has to be fixed and stated somewhere, because it decides which outcome a given random number lands on.

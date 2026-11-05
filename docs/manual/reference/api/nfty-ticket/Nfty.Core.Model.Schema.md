@@ -18,7 +18,7 @@ The manifest schema range this build can read and write.
 public const int Current = 2;
 ```
 
-The schema version this build WRITES. It reads this and every earlier one — see [`Schema.IsSupported()`](Nfty.Core.Model.Schema.md#m-issupported-system-int32-system-int32).
+The schema version this build writes. It reads the inclusive range [`Schema.Oldest`](Nfty.Core.Model.Schema.md#f-oldest) through this version.
 
 ### Oldest { #f-oldest }
 
@@ -26,7 +26,7 @@ The schema version this build WRITES. It reads this and every earlier one — se
 public const int Oldest = 2;
 ```
 
-The oldest schema this build can read. Rise, 2026-09-25: v1 dropped by the author's decision — no v1 archives kept, and every fixture under tests/fixtures/ was regenerated at v2 (see tests/fixtures/README.md and CLAUDE.md). A schemaVersion below 2 is therefore refused exactly like one above [`Schema.Current`](Nfty.Core.Model.Schema.md#f-current): named by name, not silently misparsed (see Nfty.Core's UnsupportedSchemaVersionException — this project stays dependency-free, so it cannot cref that type). Nothing predates 1, so a version below 1 stays a malformed manifest rather than an old one.
+The oldest schema this build reads. Schema 1 support was deliberately dropped when schema 2 introduced depth maps and the `partialAlpha` listing cache; older and newer versions are both refused rather than silently misparsed.
 
 ## Methods
 
@@ -36,11 +36,11 @@ The oldest schema this build can read. Rise, 2026-09-25: v1 dropped by the autho
 public static bool IsSupported(int version, int current);
 ```
 
-Whether `version` is readable by a build whose newest schema is `current`. `current` is a parameter rather than being read from [`Schema.Current`](Nfty.Core.Model.Schema.md#f-current) so the RANGE itself is testable. With Current == 1 the range 1..Current contains exactly one value, which makes "accepts older versions" indistinguishable from "demands exact equality" — a test written against the constant passes either way and proves nothing. Passing a hypothetical current lets the rule be pinned now, before there is a version 2 to try it on.
+Checks whether a version falls in the reader's inclusive supported range.
 
 **Parameters**
 
-- `version` (`int`) - The schema version a manifest declares.
-- `current` (`int`) - The newest schema the reading build understands.
+- `version` (`int`) - The version a manifest declares.
+- `current` (`int`) - The newest version the reader supports. Explicit so tests can verify a multi-version range even while [`Schema.Oldest`](Nfty.Core.Model.Schema.md#f-oldest) equals [`Schema.Current`](Nfty.Core.Model.Schema.md#f-current).
 
-**Returns.** True when `version` lies between [`Schema.Oldest`](Nfty.Core.Model.Schema.md#f-oldest) and `current`.
+**Returns.** True when `version` is at least [`Schema.Oldest`](Nfty.Core.Model.Schema.md#f-oldest) and no greater than `current`.

@@ -52,8 +52,10 @@ public sealed record AssetTicket(string Dna, string RecipeId, IReadOnlyList<Tick
     /// The ticket as one line: what goes in a database column or across a network.
     /// </summary>
     /// <returns>
-    /// <c>v1|recipe|ing:var[@hue,sat,model,hq,sq]|...|dna</c>. Every figure is INVARIANT — a comma
-    /// decimal separator under a European locale would collide with the field separator itself.
+    /// <c>v1|recipe|ing:var@hue,sat,model,hq,sq,kind|...|dna</c>. Each layer has all six
+    /// comma-separated fields after <c>@</c>; a Custom layer uses <c>ing:var@,,,,,Custom</c>.
+    /// Enum fields use their declared names. Every number uses invariant formatting so a locale's
+    /// decimal separator cannot collide with the field separator.
     /// </returns>
     /// <exception cref="InvalidOperationException">An id carries a character the wire uses as a
     /// separator where <see cref="Parse"/> would read it as one: <c>|</c> in any id, or <c>:</c> in
@@ -89,18 +91,12 @@ public sealed record AssetTicket(string Dna, string RecipeId, IReadOnlyList<Tick
     /// but its name, or a figure that is not finite — the message names the layer and the field), is
     /// a version this build does not read, or carries a DNA its own contents do not produce.</exception>
     /// <remarks>
-    /// <b>The DNA is recomputed and compared, never trusted.</b> This catches an alteration to the
-    /// recipe id, an ingredient id, a variant id, or a rolled hue/saturation that moves it to another
-    /// BUCKET — <c>Dna.Compute</c> hashes the quantized bucket index, so the DNA pins a color only to
-    /// its bucket, never to a value. <b><c>Kind</c>, <c>Model</c> and the quantize steps are not
-    /// pinned by it</b>: the hash never sees the first two, and it sees a quantize step only through
-    /// the bucket index it produces, so a wire that re-quantizes (hue 100 at step 10 and hue 205 at
-    /// step 20 are both bucket 10) recomputes to the same DNA and parses successfully. This check
-    /// cannot catch that and is not meant to: all three are fixed by the book for a given
-    /// <c>(recipeId, ingredientId)</c> and cannot legitimately vary per asset, so they are verified
-    /// against the MENU at plating — <c>Plating.Plate</c> takes kind and model from the Menu and
-    /// refuses a ticket whose quantize differs from it. The ticket says what was rolled; the Menu says
-    /// what the layer IS.
+    /// DNA recomputation checks consistency, not authenticity: anyone can recompute the hash.
+    /// The hash uses quantized color buckets, so it does not pin exact hue/saturation, layer order,
+    /// kind or color model. Quantize steps affect the bucket index but are not independently hashed
+    /// (hue 100 at step 10 and hue 205 at step 20 both give bucket 10).
+    /// <c>Plating.Plate</c> resolves authoritative paint order, kind and model from the Menu and
+    /// refuses quantize steps that differ from it. A parsed ticket still needs that Menu check.
     /// </remarks>
     public static AssetTicket Parse(string wire)
     {

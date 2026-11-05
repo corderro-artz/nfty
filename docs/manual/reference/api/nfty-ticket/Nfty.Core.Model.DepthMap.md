@@ -48,10 +48,14 @@ The back depth (0..255) at a pixel.
 
 **Parameters**
 
-- `x` (`int`) - Column, 0-based.
-- `y` (`int`) - Row, 0-based.
+- `x` (`int`) - Column in `[0, Width)`.
+- `y` (`int`) - Row in `[0, Height)`.
 
-**Returns.** The back depth, 0 for flat paper.
+**Returns.** The pixel's back depth, 0 for flat paper.
+
+**Exceptions**
+
+- `ArgumentOutOfRangeException` - Either coordinate is outside the map.
 
 ### Flat(int, int) { #m-flat-system-int32-system-int32 }
 
@@ -70,7 +74,8 @@ Builds a flat map — every pixel's front and back at zero — for a canvas of t
 
 **Exceptions**
 
-- `ArgumentOutOfRangeException` - `width` or `height` is not positive.
+- `ArgumentOutOfRangeException` - Either dimension is not positive.
+- `OverflowException` - The byte count exceeds `MaxValue`.
 
 ### FromBytes(int, int, ReadOnlySpan&lt;byte&gt;) { #m-frombytes-system-int32-system-int32-system-readonlyspa-a448ef }
 
@@ -91,6 +96,8 @@ Builds a map from its raw bytes, copying them so the caller cannot mutate the ma
 **Exceptions**
 
 - `ArgumentException` - `bytes` is not exactly `width * height * 2` bytes long.
+- `ArgumentOutOfRangeException` - Either dimension is not positive.
+- `OverflowException` - The byte count exceeds `MaxValue`.
 
 ### Front(int, int) { #m-front-system-int32-system-int32 }
 
@@ -102,10 +109,14 @@ The front depth (0..255) at a pixel.
 
 **Parameters**
 
-- `x` (`int`) - Column, 0-based.
-- `y` (`int`) - Row, 0-based.
+- `x` (`int`) - Column in `[0, Width)`.
+- `y` (`int`) - Row in `[0, Height)`.
 
-**Returns.** The front depth, 0 for flat paper.
+**Returns.** The pixel's front depth, 0 for flat paper.
+
+**Exceptions**
+
+- `ArgumentOutOfRangeException` - Either coordinate is outside the map.
 
 ### ToBytes() { #m-tobytes }
 
@@ -127,9 +138,13 @@ Returns a new map with one pixel's front and back depth replaced, leaving this m
 
 **Parameters**
 
-- `x` (`int`) - Column, 0-based.
-- `y` (`int`) - Row, 0-based.
+- `x` (`int`) - Column in `[0, Width)`.
+- `y` (`int`) - Row in `[0, Height)`.
 - `front` (`byte`) - The new front depth.
 - `back` (`byte`) - The new back depth.
 
 **Returns.** A new [`DepthMap`](Nfty.Core.Model.DepthMap.md) with the one pixel changed.
+
+**Exceptions**
+
+- `ArgumentOutOfRangeException` - Either coordinate is outside the map.

@@ -44,4 +44,8 @@ Parses a spec such as `hex:d6249f` or `hsv:322,83,84`.
 
 **Exceptions**
 
-- `FormatException` - The prefix is missing, unknown, or the body is malformed.
+- `FormatException` - The prefix is missing or unknown, the body is malformed, or a numeric component is not finite.
+
+**Remarks**
+
+Finite components retain the existing RGB rounding/clamping and hue-wrapping conversions; numeric components use invariant culture.

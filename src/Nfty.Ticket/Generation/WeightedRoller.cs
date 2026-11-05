@@ -33,8 +33,9 @@ public static class WeightedRoller
     /// (zero or negative total) is not rejected here but on the <see cref="Roll(WeightTable, IRng)"/>
     /// that tries to use it, so preparing a table early cannot move where the error surfaces.
     /// </summary>
-    /// <param name="weights">Weight per key; keys are drawn in ordinal order whatever the dictionary's own.</param>
-    /// <returns>The table to hand to <see cref="Roll(WeightTable, IRng)"/>.</returns>
+    /// <param name="weights">Relative weights keyed by identifier. Callers must validate that each
+    /// weight is finite and nonnegative; preparation preserves ordinal summation order.</param>
+    /// <returns>An ordinally ordered table. A nonfinite or nonpositive total is refused when rolled.</returns>
     public static WeightTable Prepare(IReadOnlyDictionary<string, double> weights)
     {
         // Ordinal, not the default culture-sensitive comparison: the draw order decides which key
@@ -55,9 +56,10 @@ public static class WeightedRoller
 
     /// <summary>Prepares and rolls in one step. Prefer <see cref="Prepare"/> plus
     /// <see cref="Roll(WeightTable, IRng)"/> when rolling the same table repeatedly.</summary>
-    /// <param name="weights">Weight per key.</param>
+    /// <param name="weights">Finite, nonnegative relative weight per key.</param>
     /// <param name="rng">The run's RNG.</param>
     /// <returns>The chosen key.</returns>
+    /// <exception cref="InvalidOperationException">The total is not a finite positive number.</exception>
     public static string Roll(IReadOnlyDictionary<string, double> weights, IRng rng) =>
         Roll(Prepare(weights), rng);
 
@@ -65,22 +67,20 @@ public static class WeightedRoller
     /// Rolls a prepared table that also carries a chance of choosing NOTHING — a layer that may be
     /// left out of an asset entirely.
     /// </summary>
-    /// <param name="table">The prepared weights.</param>
+    /// <param name="table">Weights from <see cref="Prepare"/>, with finite, nonnegative individual weights.</param>
     /// <param name="absentWeight">Weight of the "nothing" outcome, competing with every key in the
     /// table. Zero for a table with no such outcome.</param>
     /// <param name="rng">The run's RNG.</param>
     /// <returns>The chosen key, or <see langword="null"/> for the absent outcome.</returns>
-    /// <exception cref="InvalidOperationException">The total is not a finite positive number.</exception>
+    /// <exception cref="InvalidOperationException">The absent weight is negative or nonfinite,
+    /// or the combined total is not a finite positive number.</exception>
     /// <remarks>
-    /// <b>ONE DRAW, and at <paramref name="absentWeight"/> zero this is the old arithmetic
-    /// bit-for-bit.</b> That is the whole design of the overload and it is not a nicety: the absent
-    /// outcome is not a key in the table, so the key array and its ordinal order are untouched;
-    /// <c>total</c> is <c>0 + table.Total</c>, so <c>r</c> is drawn from exactly the same range;
-    /// <c>r &lt; 0</c> is false and <c>r -= 0</c> changes nothing, so the walk that follows sees the
-    /// same number it always did. A cookbook that does not use optional layers therefore produces
-    /// byte-identical output from the same seed, and every Set ever generated stays reproducible.
-    /// <c>AbsentOutcomeTests</c> pins that against a recorded baseline rather than trusting this
-    /// paragraph.
+    /// Consumes exactly one draw. The absent outcome is not a key in the table, so its ordinal
+    /// order is untouched. At zero absent weight, <c>0 + table.Total</c>, <c>r &lt; 0</c> and
+    /// <c>r -= 0</c> preserve ordinary draw arithmetic bit-for-bit. Both overloads share the same
+    /// scan and corrected floating-point endpoint handling: a rounded upper endpoint cannot
+    /// select a zero-weight key. <c>AbsentLayerTests</c> pins zero-absence equivalence and
+    /// <c>TicketFreezeTests</c> guards the recorded ordinary collection baseline.
     ///
     /// <para>The absent outcome is drawn FIRST, before the keys. Which end it sits at is arbitrary,
     /// but it has to be fixed and stated somewhere, because it decides which outcome a given random
@@ -93,10 +93,16 @@ public static class WeightedRoller
                 "Absent weight must be a finite number, zero or greater, but it is "
                 + $"{absentWeight.ToString(CultureInfo.InvariantCulture)}.");
 
+        return RollCore(table, absentWeight, rng);
+    }
+
+    private static string? RollCore(WeightTable table, double absentWeight, IRng rng)
+    {
         double total = absentWeight + table.Total;
 
-        // Checked before `total <= 0`, because that comparison is FALSE for NaN — see the note on
-        // the single-argument overload, which this one shares its arithmetic with.
+        // Checked before `total <= 0`, because that comparison is FALSE for NaN and would wave it
+        // through. A NaN total also makes every threshold comparison false, silently pinning all
+        // rolls to the fallback outcome. This shared boundary runs before either overload draws.
         if (!double.IsFinite(total))
             throw new InvalidOperationException(
                 $"Total weight must be a finite number, but it is {total.ToString(CultureInfo.InvariantCulture)}.");
@@ -110,8 +116,12 @@ public static class WeightedRoller
         for (int i = 0; i < cumulative.Length; i++)
             if (r < cumulative[i]) return table.Keys[i];
 
-        // Unreachable for a finite, positive total, as on the overload below.
-        return table.Keys[^1];
+        // Floating-point multiplication or the absent subtraction can round r to the endpoint.
+        // Use the last interval with positive width, never a trailing zero-weight key. With no
+        // positive key interval, a valid positive total belongs entirely to the absent outcome.
+        for (int i = cumulative.Length - 1; i >= 0; i--)
+            if (cumulative[i] > (i == 0 ? 0 : cumulative[i - 1])) return table.Keys[i];
+        return null;
     }
 
     /// <summary>
@@ -119,8 +129,9 @@ public static class WeightedRoller
     /// time against the variants it competes with.
     /// </summary>
     /// <param name="percent">How often the layer is left out, 0..100.</param>
-    /// <param name="variantTotal">The total weight of the layer's variants.</param>
-    /// <returns>A weight to hand <see cref="Roll(WeightTable, double, IRng)"/>.</returns>
+    /// <param name="variantTotal">The finite, nonnegative total weight of validated variants.</param>
+    /// <returns>A weight to hand <see cref="Roll(WeightTable, double, IRng)"/>. An unrepresentable
+    /// weight is positive infinity; rolling refuses it or an overflowing combined total.</returns>
     /// <remarks>
     /// Solving <c>a / (a + W) = p</c> for <c>a</c> gives <c>W · p / (1 − p)</c>. The conversion from
     /// a percent happens HERE and nowhere else, which is the reason the manifest stores a percent
@@ -140,7 +151,12 @@ public static class WeightedRoller
                 + $"{percent.ToString(CultureInfo.InvariantCulture)}. 100 means the layer never "
                 + "appears, which is not rolled at all — test it with AlwaysAbsent first.");
 
-        return variantTotal * percent / (100 - percent);
+        double product = variantTotal * percent;
+        // Keep ordinary arithmetic bit-for-bit: reassociate only when this intermediate overflows.
+        // Dividing the percent first avoids an unnecessary infinity when the final weight fits.
+        return double.IsInfinity(product) && double.IsFinite(variantTotal)
+            ? variantTotal * (percent / (100 - percent))
+            : product / (100 - percent);
     }
 
     /// <summary>Whether a layer with this absent percent is never rolled at all.</summary>
@@ -149,32 +165,11 @@ public static class WeightedRoller
     public static bool AlwaysAbsent(double percent) => percent >= 100;
 
     /// <summary>Rolls a prepared table.</summary>
-    /// <param name="table">The prepared weights.</param>
+    /// <param name="table">Weights from <see cref="Prepare"/>, with finite, nonnegative individual weights.</param>
     /// <param name="rng">The run's RNG.</param>
     /// <returns>The chosen key.</returns>
     /// <exception cref="InvalidOperationException">The total is not a finite positive number.</exception>
-    public static string Roll(WeightTable table, IRng rng)
-    {
-        double total = table.Total;
-
-        // Checked before `total <= 0`, because that comparison is FALSE for NaN and would wave it
-        // through. A NaN total makes every `r < cumulative[i]` below false too, so the draw would
-        // fall out of the loop and return Keys[^1] on every single roll — turning the defensive
-        // return into the production path and silently pinning a whole collection to one
-        // ordinal-last key. Validator reports non-finite weights now; this is the backstop for a
-        // table assembled some other way.
-        if (!double.IsFinite(total))
-            throw new InvalidOperationException(
-                $"Total weight must be a finite number, but it is {total.ToString(CultureInfo.InvariantCulture)}.");
-        if (total <= 0) throw new InvalidOperationException("Total weight must be positive.");
-
-        double r = rng.NextDouble() * total;
-        var cumulative = table.Cumulative;
-        for (int i = 0; i < cumulative.Length; i++)
-            if (r < cumulative[i]) return table.Keys[i];
-
-        // Unreachable for a finite, positive total: r = NextDouble() * total is strictly less than
-        // total, which is Cumulative[^1]. Kept as a total-function guarantee, not as a fallback.
-        return table.Keys[^1];
-    }
+    /// <remarks>Consumes exactly one RNG draw. Floating-point rounding at the upper endpoint
+    /// selects the last positive interval rather than a trailing zero-weight key.</remarks>
+    public static string Roll(WeightTable table, IRng rng) => RollCore(table, 0, rng)!;
 }

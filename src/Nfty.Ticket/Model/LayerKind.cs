@@ -5,8 +5,9 @@ namespace Nfty.Core.Model;
 /// </summary>
 public enum LayerKind
 {
-    /// <summary>A grayscale value-map colorized with EXACTLY ONE fixed color, deterministically.
-    /// Consumes no RNG, so a static layer adds no cross-asset uniqueness.</summary>
+    /// <summary>A grayscale value-map colorized with exactly one fixed color, deterministically.
+    /// Applying the color consumes no RNG and adds no color uniqueness. Selecting the variant
+    /// still consumes RNG, and distinct variants can add cross-asset uniqueness.</summary>
     Static,
 
     /// <summary>A grayscale value-map whose hue and saturation are ROLLED per asset from the

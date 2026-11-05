@@ -150,29 +150,12 @@ public class TicketerTests
     }
 
     /// <summary>
-    /// Defends the RULES CHECK'S PLACEMENT: it must run once, after every layer has been rolled —
-    /// never per layer as each is added — because a rejected roll has to consume the same draws a
-    /// successful one does, or the very next roll in the sequence (the caller's reroll) starts from
-    /// a different RNG state than it would have. An early short-circuit is invisible in the ticket
-    /// it produces (both placements can reject the very same selection), so this has to be told
-    /// apart by DRAW COUNT, not by outcome.
-    ///
-    /// <para><b>An Exclude rule cannot discriminate this, and that is why every other rejection test
-    /// here uses Exclude.</b> <c>RulesEngine.IsLegal</c> only fails an Exclude rule when its target
-    /// is PRESENT in the selection — which requires the target's layer to have already been rolled.
-    /// A per-layer check evaluated right after each layer is added can therefore never see an
-    /// Exclude violation before every relevant layer is in, so it can never fire early and this
-    /// probe would pass under both placements no matter how the fixture were shaped.</para>
-    ///
-    /// <para>A Require rule is the opposite: it fails when the target is NOT present, and "not
-    /// present" is indistinguishable from "not rolled yet" in a partial selection. So a recipe with
-    /// three Custom layers (a, b, c) and a Require rule whose When is on <c>a</c> and whose target
-    /// is on <c>b</c> — one rule per variant of <c>a</c>, so it fires whichever variant is rolled —
-    /// makes a per-layer check reject immediately after <c>a</c>, before <c>b</c> or <c>c</c> are
-    /// ever rolled. Correct placement rolls all three layers before checking at all: 1 draw for the
-    /// recipe plus 1 per layer is 4. An early short-circuit after <c>a</c> is 1 + 1 is 2. Asserted
-    /// unconditionally, because it holds whether the final roll is accepted or rejected — this test
-    /// is about how many draws were SPENT getting to that answer, not what the answer is.</para>
+    /// Rules run after every layer is rolled, preserving the next roll's RNG state even when this
+    /// roll is rejected. Require exposes premature checking after layer a: b is not rolled yet, so
+    /// its required target appears absent. Correct placement spends four draws (recipe + a/b/c);
+    /// premature checking spends only two. Exclude can also expose early checking when a conflict
+    /// appears before later layers are rolled. This fixture uses Require to guarantee the early
+    /// failure regardless of which a variant is chosen, and checks draw count for either outcome.
     /// </summary>
     [Fact]
     public void The_rules_check_runs_once_after_every_layer_not_per_layer_as_each_is_rolled()

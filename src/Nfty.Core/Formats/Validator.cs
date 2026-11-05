@@ -345,6 +345,12 @@ public static class Validator
                     + "weights must be zero or greater, and zero means never rolled.");
 
         CheckId(problems, where, ing.Manifest.Id);
+        // Keep historical DNA bytes: '=' separates ingredient from variant in the hash input.
+        // Refuse ambiguous ingredient ids at authoring/generation gates, not archive reads, so an
+        // old book can still be inspected and repaired. Variant ids may still contain '='.
+        if (ing.Manifest.Id?.Contains('=') == true)
+            problems.Add($"{where} has id '{ing.Manifest.Id}', which contains '='; DNA uses '=' "
+                + "to separate ingredient and variant ids. Rename the ingredient before generating.");
         foreach (var v in ing.Manifest.Variants)
             CheckId(problems, $"{where} variant '{v.Id}'", v.Id);
 
@@ -574,6 +580,17 @@ public static class Validator
 
         if (id.Any(char.IsControl))
             problems.Add($"{what} has id '{id}', which contains a control character.");
+
+        // UTF-8 replaces unpaired surrogates, merging distinct in-memory ids in the DNA input.
+        // Paired surrogates encode valid Unicode and remain accepted without normalization.
+        for (int i = 0; i < id.Length; i++)
+        {
+            if (!char.IsSurrogate(id[i])) continue;
+            if (char.IsSurrogatePair(id, i)) { i++; continue; }
+            problems.Add($"{what} has an unpaired UTF-16 surrogate in its id; ids must contain "
+                + "valid Unicode so distinct ids remain distinct in DNA.");
+            break;
+        }
     }
 
     /// <summary>Explicit rather than <c>Path.GetInvalidFileNameChars</c>: that set is

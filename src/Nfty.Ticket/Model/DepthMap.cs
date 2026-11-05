@@ -32,10 +32,11 @@ public sealed class DepthMap
 
     /// <summary>Builds a flat map — every pixel's front and back at zero — for a canvas of the given
     /// size.</summary>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="width"/> or <paramref name="height"/> is not positive.</exception>
     /// <param name="width">Width in pixels; must be positive.</param>
     /// <param name="height">Height in pixels; must be positive.</param>
     /// <returns>A new, all-zero <see cref="DepthMap"/>.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Either dimension is not positive.</exception>
+    /// <exception cref="OverflowException">The byte count exceeds <see cref="int.MaxValue"/>.</exception>
     public static DepthMap Flat(int width, int height)
     {
         Guard.Positive(width, nameof(width));
@@ -53,6 +54,8 @@ public sealed class DepthMap
     /// <exception cref="ArgumentException">
     /// <paramref name="bytes"/> is not exactly <c>width * height * 2</c> bytes long.
     /// </exception>
+    /// <exception cref="ArgumentOutOfRangeException">Either dimension is not positive.</exception>
+    /// <exception cref="OverflowException">The byte count exceeds <see cref="int.MaxValue"/>.</exception>
     public static DepthMap FromBytes(int width, int height, ReadOnlySpan<byte> bytes)
     {
         Guard.Positive(width, nameof(width));
@@ -64,18 +67,25 @@ public sealed class DepthMap
         return new DepthMap(width, height, bytes.ToArray());
     }
 
-    private int IndexOf(int x, int y) => (y * Width + x) * 2;
+    private int IndexOf(int x, int y)
+    {
+        if ((uint)x >= (uint)Width) throw new ArgumentOutOfRangeException(nameof(x));
+        if ((uint)y >= (uint)Height) throw new ArgumentOutOfRangeException(nameof(y));
+        return (y * Width + x) * 2;
+    }
 
     /// <summary>The front depth (0..255) at a pixel.</summary>
-    /// <returns>The front depth, 0 for flat paper.</returns>
-    /// <param name="x">Column, 0-based.</param>
-    /// <param name="y">Row, 0-based.</param>
+    /// <param name="x">Column in <c>[0, Width)</c>.</param>
+    /// <param name="y">Row in <c>[0, Height)</c>.</param>
+    /// <returns>The pixel's front depth, 0 for flat paper.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Either coordinate is outside the map.</exception>
     public byte Front(int x, int y) => _bytes[IndexOf(x, y)];
 
     /// <summary>The back depth (0..255) at a pixel.</summary>
-    /// <returns>The back depth, 0 for flat paper.</returns>
-    /// <param name="x">Column, 0-based.</param>
-    /// <param name="y">Row, 0-based.</param>
+    /// <param name="x">Column in <c>[0, Width)</c>.</param>
+    /// <param name="y">Row in <c>[0, Height)</c>.</param>
+    /// <returns>The pixel's back depth, 0 for flat paper.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Either coordinate is outside the map.</exception>
     public byte Back(int x, int y) => _bytes[IndexOf(x, y) + 1];
 
     /// <summary>A copy of the map's raw bytes, in the same front/back row-major layout described on
@@ -85,15 +95,16 @@ public sealed class DepthMap
 
     /// <summary>Returns a new map with one pixel's front and back depth replaced, leaving this map
     /// unchanged.</summary>
-    /// <param name="x">Column, 0-based.</param>
-    /// <param name="y">Row, 0-based.</param>
+    /// <param name="x">Column in <c>[0, Width)</c>.</param>
+    /// <param name="y">Row in <c>[0, Height)</c>.</param>
     /// <param name="front">The new front depth.</param>
     /// <param name="back">The new back depth.</param>
     /// <returns>A new <see cref="DepthMap"/> with the one pixel changed.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Either coordinate is outside the map.</exception>
     public DepthMap With(int x, int y, byte front, byte back)
     {
-        var next = (byte[])_bytes.Clone();
         int i = IndexOf(x, y);
+        var next = (byte[])_bytes.Clone();
         next[i] = front;
         next[i + 1] = back;
         return new DepthMap(Width, Height, next);

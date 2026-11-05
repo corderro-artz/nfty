@@ -2031,6 +2031,9 @@ public partial class VisualCapture
                     var (vm, owner) = build();
                     using var page = RisePages.Show(vm, w, h, variant, owner);
                     arrange(page);
+                    // A gesture can queue an off-thread mesh update. Capture the resulting depth,
+                    // not whichever previous mesh happened to be on screen when the worker ran.
+                    RisePages.Settle(vm);
                     var model = page.View.FindControl<Views.ModelPreviewView>("ModelView")!;
                     model.RepaintNow();     // the 3D view paints on a posted job; the frame must not beat it
                     Dispatcher.UIThread.RunJobs();

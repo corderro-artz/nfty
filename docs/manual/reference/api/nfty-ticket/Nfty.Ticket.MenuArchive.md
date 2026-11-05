@@ -12,9 +12,11 @@ Reads a `.mnu` Menu: every weight, rule and colorization a rolled asset needs, p
 
 ## Remarks
 
-**This assembly decodes no pixels** — that is the whole point of `Nfty.Ticket` being package-free. In atlas mode [`MenuArchive.ArtBytes()`](Nfty.Ticket.MenuArchive.md#m-artbytes-system-string) hands back the WHOLE atlas PNG's bytes and [`MenuArchive.Cell()`](Nfty.Ticket.MenuArchive.md#m-cell-system-string) the rect inside it; the caller crops. In loose mode the "rect" is simply the whole image, so a caller can treat both modes through one code path without ever asking which mode a Menu was written in.
+**This assembly decodes no pixels** â€” that is the whole point of `Nfty.Ticket` being package-free. In atlas mode [`MenuArchive.ArtBytes()`](Nfty.Ticket.MenuArchive.md#m-artbytes-system-string) hands back the WHOLE atlas PNG's bytes and [`MenuArchive.Cell()`](Nfty.Ticket.MenuArchive.md#m-cell-system-string) the rect inside it; the caller crops. In loose mode the "rect" is simply the whole image, so a caller can treat both modes through one code path without ever asking which mode a Menu was written in.
 
-**Owns the open archive.** [`MenuArchive.Open()`](Nfty.Ticket.MenuArchive.md#m-open-system-string) opens the file and keeps it open for the life of this object — [`MenuArchive.ArtBytes()`](Nfty.Ticket.MenuArchive.md#m-artbytes-system-string) reads from it lazily rather than eagerly decoding everything up front, which is what lets a host page through a large Menu's art without holding it all in memory at once. Dispose frees the archive (and, for [`MenuArchive.Open()`](Nfty.Ticket.MenuArchive.md#m-open-system-string), the file it was opened from).
+**Owns the open archive.** [`MenuArchive.Open()`](Nfty.Ticket.MenuArchive.md#m-open-system-string) opens the file and keeps it open for the life of this object â€” [`MenuArchive.ArtBytes()`](Nfty.Ticket.MenuArchive.md#m-artbytes-system-string) reads from it lazily rather than eagerly decoding everything up front, which is what lets a host page through a large Menu's art without holding it all in memory at once. Dispose frees the archive (and, for [`MenuArchive.Open()`](Nfty.Ticket.MenuArchive.md#m-open-system-string), the file it was opened from).
+
+The stream is also closed when opening fails, including ZIP construction. Instance reads are not safe to run concurrently: lazy entries share the archive's underlying stream.
 
 ## Properties
 
@@ -40,7 +42,7 @@ One cell's art, as raw PNG bytes.
 
 - `cellKey` (`string`) - A key from [`MenuBook.CellKey()`](Nfty.Ticket.MenuBook.md#m-cellkey-system-string-system-string-system-string).
 
-**Returns.** In atlas mode, the whole atlas PNG's bytes — use [`MenuArchive.Cell()`](Nfty.Ticket.MenuArchive.md#m-cell-system-string) to find where this cell sits inside them. In loose mode, that one variant's own PNG bytes in full.
+**Returns.** In atlas mode, the whole atlas PNG's bytes â€” use [`MenuArchive.Cell()`](Nfty.Ticket.MenuArchive.md#m-cell-system-string) to find where this cell sits inside them. In loose mode, that one variant's own PNG bytes in full.
 
 **Exceptions**
 
@@ -59,7 +61,7 @@ Where `cellKey`'s art sits inside the bytes [`MenuArchive.ArtBytes()`](Nfty.Tick
 
 - `cellKey` (`string`) - A key from [`MenuBook.CellKey()`](Nfty.Ticket.MenuBook.md#m-cellkey-system-string-system-string-system-string).
 
-**Returns.** The cell rect — the whole image in loose mode, so a caller can treat both modes with one code path.
+**Returns.** The cell rect â€” the whole image in loose mode, so a caller can treat both modes with one code path.
 
 **Exceptions**
 
@@ -77,16 +79,16 @@ One variant's depth map, when it has one.
 
 - `cellKey` (`string`) - A key from [`MenuBook.CellKey()`](Nfty.Ticket.MenuBook.md#m-cellkey-system-string-system-string-system-string).
 
-**Returns.** `null` when the variant carries no depth data — "paper" for the Rise feature — otherwise a [`DepthMap`](Nfty.Core.Model.DepthMap.md) sized to that cell's [`MenuCell.Width`](Nfty.Ticket.MenuCell.md#p-width) and [`MenuCell.Height`](Nfty.Ticket.MenuCell.md#p-height).
+**Returns.** `null` when the variant carries no depth data â€” "paper" for the Rise feature â€” otherwise a [`DepthMap`](Nfty.Core.Model.DepthMap.md) sized to that cell's [`MenuCell.Width`](Nfty.Ticket.MenuCell.md#p-width) and [`MenuCell.Height`](Nfty.Ticket.MenuCell.md#p-height).
 
 **Exceptions**
 
-- `KeyNotFoundException` - The Menu has no cell for `cellKey` — the same check, and the same message, [`MenuArchive.Cell()`](Nfty.Ticket.MenuArchive.md#m-cell-system-string) makes.
+- `KeyNotFoundException` - The Menu has no cell for `cellKey` â€” the same check, and the same message, [`MenuArchive.Cell()`](Nfty.Ticket.MenuArchive.md#m-cell-system-string) makes.
 - `InvalidDataException` - A stored depth entry's length disagrees with the cell's dimensions, naming the key.
 
 **Remarks**
 
-**Read lazily, like [`MenuArchive.ArtBytes()`](Nfty.Ticket.MenuArchive.md#m-artbytes-system-string)** — not eagerly at [`MenuArchive.Open()`](Nfty.Ticket.MenuArchive.md#m-open-system-string) — for the same reason: most variants carry no depth data at all, and this assembly stays package-free, so nothing here decodes a pixel either way; a `.dep` entry is already raw bytes in the exact layout [`DepthMap.FromBytes()`](Nfty.Core.Model.DepthMap.md#m-frombytes-system-int32-system-int32-system-readonlyspa-a448ef) expects.
+**Read lazily, like [`MenuArchive.ArtBytes()`](Nfty.Ticket.MenuArchive.md#m-artbytes-system-string)** â€” not eagerly at [`MenuArchive.Open()`](Nfty.Ticket.MenuArchive.md#m-open-system-string) â€” for the same reason: most variants carry no depth data at all, and this assembly stays package-free, so nothing here decodes a pixel either way; a `.dep` entry is already raw bytes in the exact layout [`DepthMap.FromBytes()`](Nfty.Core.Model.DepthMap.md#m-frombytes-system-int32-system-int32-system-readonlyspa-a448ef) expects.
 
 ### Dispose() { #m-dispose }
 
@@ -102,7 +104,7 @@ Closes the underlying archive, and the file it was opened from.
 public MenuLayer Layer(string recipeId, string ingredientId);
 ```
 
-One layer's definition — kind, colorization and variants — as the recipe it belongs to records it.
+One layer's definition â€” kind, colorization and variants â€” as the recipe it belongs to records it.
 
 **Parameters**
 
@@ -113,7 +115,7 @@ One layer's definition — kind, colorization and variants — as the recipe it 
 
 **Exceptions**
 
-- `KeyNotFoundException` - The Menu has no recipe named `recipeId`, or that recipe has no layer named `ingredientId`. Both cases are reported by this single method — naming which of the two failed — so a caller (`Plating.Plate`, chiefly) never has to reach into [`MenuArchive.Book`](Nfty.Ticket.MenuArchive.md#p-book) itself to answer the question, and never hits the BCL's unnamed default message for either.
+- `KeyNotFoundException` - The Menu has no recipe named `recipeId`, or that recipe has no layer named `ingredientId`. Both cases are reported by this single method â€” naming which of the two failed â€” so a caller (`Plating.Plate`, chiefly) never has to reach into [`MenuArchive.Book`](Nfty.Ticket.MenuArchive.md#p-book) itself to answer the question, and never hits the BCL's unnamed default message for either.
 
 ### Open(Stream) { #m-open-system-io-stream }
 
@@ -125,13 +127,13 @@ Opens a `.mnu` from an already-open stream.
 
 **Parameters**
 
-- `stream` (`Stream`) - A seekable stream over the archive's bytes. Ownership passes to the returned [`MenuArchive`](Nfty.Ticket.MenuArchive.md) — it is closed when that object is disposed.
+- `stream` (`Stream`) - A seekable stream over the archive's bytes. Ownership passes to the returned [`MenuArchive`](Nfty.Ticket.MenuArchive.md) â€” it is closed when that object is disposed, or immediately if opening fails.
 
 **Returns.** The open archive; the caller disposes it.
 
 **Exceptions**
 
-- `NotSupportedException` - The manifest declares a schema newer than this build reads.
+- `NotSupportedException` - The manifest declares a schema outside [`MenuSchema.Oldest`](Nfty.Ticket.MenuSchema.md#f-oldest) through [`MenuSchema.Current`](Nfty.Ticket.MenuSchema.md#f-current).
 - `InvalidDataException` - The stream is not a readable Menu.
 
 ### Open(string) { #m-open-system-string }
@@ -150,5 +152,5 @@ Opens a `.mnu` file for reading.
 
 **Exceptions**
 
-- `NotSupportedException` - The manifest declares a schema newer than this build reads.
+- `NotSupportedException` - The manifest declares a schema outside [`MenuSchema.Oldest`](Nfty.Ticket.MenuSchema.md#f-oldest) through [`MenuSchema.Current`](Nfty.Ticket.MenuSchema.md#f-current).
 - `InvalidDataException` - The file is not a readable Menu.

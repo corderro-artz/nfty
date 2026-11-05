@@ -4,6 +4,38 @@ namespace Nfty.Ticket.Tests;
 
 public class DepthMapTests
 {
+    [Theory]
+    [InlineData(-1, 0, "x")]
+    [InlineData(2, 0, "x")]
+    [InlineData(0, -1, "y")]
+    [InlineData(0, 2, "y")]
+    [InlineData(int.MinValue, 0, "x")]
+    [InlineData(int.MaxValue, 0, "x")]
+    [InlineData(0, int.MinValue, "y")]
+    [InlineData(0, int.MaxValue, "y")]
+    public void Each_axis_is_checked_before_flattening_reads_or_writes(int x, int y, string parameter)
+    {
+        var map = DepthMap.Flat(2, 2);
+        Assert.Equal(parameter, Assert.Throws<ArgumentOutOfRangeException>(() => map.Front(x, y)).ParamName);
+        Assert.Equal(parameter, Assert.Throws<ArgumentOutOfRangeException>(() => map.Back(x, y)).ParamName);
+        Assert.Equal(parameter, Assert.Throws<ArgumentOutOfRangeException>(() => map.With(x, y, 99, 88)).ParamName);
+        Assert.Equal(new byte[8], map.ToBytes());
+    }
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 0)]
+    [InlineData(0, 1)]
+    [InlineData(1, 1)]
+    public void Every_valid_corner_can_be_read_and_replaced(int x, int y)
+    {
+        var original = DepthMap.Flat(2, 2);
+        var changed = original.With(x, y, 99, 88);
+        Assert.Equal(99, changed.Front(x, y));
+        Assert.Equal(88, changed.Back(x, y));
+        Assert.True(original.IsFlat);
+    }
+
     [Fact]
     public void Bytes_are_front_then_back_row_major_top_row_first()
     {
