@@ -26,7 +26,7 @@ public NftyMetadata(int SetNumber, string Recipe, string Dna, string Seed, IRead
 - `Seed` (`string`) - The seed of the run that produced it.
 - `Rarity` (`IReadOnlyList<RarityAttribute>`) - The share of the collection carrying each of its traits.
 - `Layers` (`IReadOnlyList<LayerColor>`) - What each layer contributed, including the color it rolled.
-- `AbsentLayers` (`IReadOnlyList<string>?`) - The ids of optional layers the roll left out; null when none were.
+- `AbsentLayers` (`IReadOnlyList<string>?`) - The display names of optional layers the roll left out; null when none were.
 
 ## Properties
 
@@ -36,7 +36,7 @@ public NftyMetadata(int SetNumber, string Recipe, string Dna, string Seed, IRead
 public IReadOnlyList<string>? AbsentLayers { get; init; }
 ```
 
-The ids of optional layers the roll left out; null when none were.
+The display names of optional layers the roll left out; null when none were.
 
 ### Dna { #p-dna }
 

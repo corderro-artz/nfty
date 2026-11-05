@@ -56,6 +56,10 @@ Measures the enclosing block.
 
 **Returns.** A scope to dispose at the end of the block. Disposing a disabled scope does nothing.
 
+**Remarks**
+
+Wall time spans thread changes. Allocation deltas are thread-local and available only when the scope starts and ends on the same thread; they do not measure worker-thread allocations.
+
 **Example**
 
 ```csharp
@@ -74,7 +78,7 @@ The snapshot as a fixed-width table.
 
 **Remarks**
 
-Formatted the way `Stats/`'s reports are — invariant, so two runs on two machines can be diffed.
+Numbers use invariant formatting, as `Stats/`'s reports do. An allocation total is `n/a` if any of its calls ended on a different thread; times are still reported.
 
 ### Reset() { #m-reset }
 

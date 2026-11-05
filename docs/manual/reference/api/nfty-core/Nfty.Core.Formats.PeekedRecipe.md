@@ -21,7 +21,7 @@ public PeekedRecipe(RecipeManifest Manifest, IReadOnlyList<IngredientManifest> I
 **Parameters**
 
 - `Manifest` (`RecipeManifest`) - The recipe manifest — layer order, rules, absent percents.
-- `Ingredients` (`IReadOnlyList<IngredientManifest>`) - Its ingredients' manifests, ordinally by id.
+- `Ingredients` (`IReadOnlyList<IngredientManifest>`) - Its ingredients' manifests, in the producer's supplied order. Archive readers supply ordinal id order; [`PeekedRecipe.Of()`](Nfty.Core.Formats.PeekedRecipe.md#m-of-nfty-core-formats-loadedrecipe) preserves the loaded recipe's order.
 
 ## Properties
 
@@ -31,7 +31,7 @@ public PeekedRecipe(RecipeManifest Manifest, IReadOnlyList<IngredientManifest> I
 public IReadOnlyList<IngredientManifest> Ingredients { get; init; }
 ```
 
-Its ingredients' manifests, ordinally by id.
+Its ingredients' manifests, in the producer's supplied order. Archive readers supply ordinal id order; [`PeekedRecipe.Of()`](Nfty.Core.Formats.PeekedRecipe.md#m-of-nfty-core-formats-loadedrecipe) preserves the loaded recipe's order.
 
 ### Manifest { #p-manifest }
 

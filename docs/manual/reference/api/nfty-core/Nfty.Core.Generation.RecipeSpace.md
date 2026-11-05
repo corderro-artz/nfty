@@ -20,8 +20,8 @@ public RecipeSpace(BigInteger Total, BigInteger Combos, SpaceCertainty Certainty
 
 **Parameters**
 
-- `Total` (`BigInteger`) - Legal combinations times reachable color buckets. This is the recipe's space in isolation and is recorded even for a shelved (zero-weight) recipe; whether the cookbook can actually roll it is a separate question the cookbook-level [`UniqueSpaceCount.Total`](Nfty.Core.Generation.UniqueSpaceCount.md#p-total) answers.
-- `Combos` (`BigInteger`) - The legal variant combinations alone, without color buckets folded in. [`RecipeSpace.Total`](Nfty.Core.Generation.RecipeSpace.md#p-total) can be zero for two unrelated reasons — the rules exclude every combination, or a layer has no reachable color buckets — and only this figure tells them apart. A caller must never read a zero [`RecipeSpace.Total`](Nfty.Core.Generation.RecipeSpace.md#p-total) as a rule conflict.
+- `Total` (`BigInteger`) - The sum of each legal selection's color-bucket product; an absent layer contributes one shape. This is the recipe's space in isolation, recorded even for a shelved (zero-weight) recipe; whether the cookbook can actually roll it is a separate question the cookbook-level [`UniqueSpaceCount.Total`](Nfty.Core.Generation.UniqueSpaceCount.md#p-total) answers.
+- `Combos` (`BigInteger`) - The legal variant combinations alone when walked, or the unconstrained combination count when the rule walk exceeds its budget, without color buckets folded in. [`RecipeSpace.Total`](Nfty.Core.Generation.RecipeSpace.md#p-total) can be zero for two unrelated reasons — the rules exclude every combination, or a layer has no reachable color buckets — and only this figure tells them apart. A caller must never read a zero [`RecipeSpace.Total`](Nfty.Core.Generation.RecipeSpace.md#p-total) as a rule conflict.
 - `Certainty` (`SpaceCertainty`) - What [`RecipeSpace.Total`](Nfty.Core.Generation.RecipeSpace.md#p-total) is: the figure, a floor, a ceiling, or nothing. Decided while counting, where it is still known WHICH half gave up — a under-counted bucket set multiplied by zero combinations lands back at zero, so this cannot be re-derived afterwards from the total alone.
 
 ## Properties
@@ -40,7 +40,7 @@ What [`RecipeSpace.Total`](Nfty.Core.Generation.RecipeSpace.md#p-total) is: the 
 public BigInteger Combos { get; init; }
 ```
 
-The legal variant combinations alone, without color buckets folded in. [`RecipeSpace.Total`](Nfty.Core.Generation.RecipeSpace.md#p-total) can be zero for two unrelated reasons — the rules exclude every combination, or a layer has no reachable color buckets — and only this figure tells them apart. A caller must never read a zero [`RecipeSpace.Total`](Nfty.Core.Generation.RecipeSpace.md#p-total) as a rule conflict.
+The legal variant combinations alone when walked, or the unconstrained combination count when the rule walk exceeds its budget, without color buckets folded in. [`RecipeSpace.Total`](Nfty.Core.Generation.RecipeSpace.md#p-total) can be zero for two unrelated reasons — the rules exclude every combination, or a layer has no reachable color buckets — and only this figure tells them apart. A caller must never read a zero [`RecipeSpace.Total`](Nfty.Core.Generation.RecipeSpace.md#p-total) as a rule conflict.
 
 ### IsCountable { #p-iscountable }
 
@@ -66,4 +66,4 @@ Whether [`RecipeSpace.Total`](Nfty.Core.Generation.RecipeSpace.md#p-total) is th
 public BigInteger Total { get; init; }
 ```
 
-Legal combinations times reachable color buckets. This is the recipe's space in isolation and is recorded even for a shelved (zero-weight) recipe; whether the cookbook can actually roll it is a separate question the cookbook-level [`UniqueSpaceCount.Total`](Nfty.Core.Generation.UniqueSpaceCount.md#p-total) answers.
+The sum of each legal selection's color-bucket product; an absent layer contributes one shape. This is the recipe's space in isolation, recorded even for a shelved (zero-weight) recipe; whether the cookbook can actually roll it is a separate question the cookbook-level [`UniqueSpaceCount.Total`](Nfty.Core.Generation.UniqueSpaceCount.md#p-total) answers.

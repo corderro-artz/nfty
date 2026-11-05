@@ -82,6 +82,11 @@ public sealed class PinataPinning : IPinningService
 
     /// <inheritdoc />
     public async Task<string> AddFolderAsync(string folder, string label,
+        IProgress<PinProgress>? progress = null, CancellationToken cancellationToken = default) =>
+        (await AddFolderOwnedAsync(folder, label, progress, cancellationToken).ConfigureAwait(false)).Cid;
+
+    /// <inheritdoc />
+    public async Task<PinAcquisition> AddFolderOwnedAsync(string folder, string label,
         IProgress<PinProgress>? progress = null, CancellationToken cancellationToken = default)
     {
         var files = MultipartFolderContent.FilesIn(folder);
@@ -111,15 +116,21 @@ public sealed class PinataPinning : IPinningService
             if (!response.IsSuccessStatusCode)
                 throw new PinningException($"Pinata refused the upload ({(int)response.StatusCode}): {ErrorText(body)}");
             string? hash = null;
+            bool acquired = false;
             try
             {
                 using var doc = JsonDocument.Parse(body);
                 if (doc.RootElement.ValueKind == JsonValueKind.Object
                     && doc.RootElement.TryGetProperty("IpfsHash", out var h) && h.ValueKind == JsonValueKind.String)
+                {
                     hash = h.GetString();
+                    // An omitted or malformed duplication flag is not evidence of new ownership.
+                    acquired = doc.RootElement.TryGetProperty("isDuplicate", out var duplicate)
+                        && duplicate.ValueKind == JsonValueKind.False;
+                }
             }
             catch (JsonException) { }
-            return Cid.Require(hash, Provider);
+            return new PinAcquisition(Cid.Require(hash, Provider), acquired);
         }
     }
 

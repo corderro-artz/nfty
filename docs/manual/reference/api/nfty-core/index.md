@@ -4,7 +4,7 @@
 
 The whole engine: archives, validation, generation, rendering, Sets, export, sealing, statistics. Depends on Nfty.Ticket and ImageSharp.
 
-184 public types. Each page lists the public and protected members with their signatures and the documentation written beside the code.
+185 public types. Each page lists the public and protected members with their signatures and the documentation written beside the code.
 
 ## Nfty.Core
 
@@ -114,9 +114,9 @@ The whole engine: archives, validation, generation, rendering, Sets, export, sea
 | [`SpaceCertainty`](Nfty.Core.Generation.SpaceCertainty.md) | enum | What a counted space actually tells you: an answer, a bound in a stated direction, or nothing. |
 | [`SpaceText`](Nfty.Core.Generation.SpaceText.md) | class | How a counted DNA space is written down, for every surface that shows one. |
 | [`TraitSelection`](Nfty.Core.Generation.TraitSelection.md) | record | One layer's contribution as published metadata. |
-| [`UniqueSpace`](Nfty.Core.Generation.UniqueSpace.md) | class | Counts the unique DNA space of a cookbook: per recipe, the legal variant combinations (rules honoured) multiplied by each dynamic layer's quantized color buckets. |
+| [`UniqueSpace`](Nfty.Core.Generation.UniqueSpace.md) | class | Counts the unique DNA space of a cookbook: per recipe, the sum of each legal selection's product of present dynamic layers' quantized color buckets. |
 | [`UniqueSpaceCount`](Nfty.Core.Generation.UniqueSpaceCount.md) | record | How many distinct DNA a cookbook can produce. |
-| [`UniqueSpaceExhaustedException`](Nfty.Core.Generation.UniqueSpaceExhaustedException.md) | class | More unique assets were requested than the cookbook can produce. |
+| [`UniqueSpaceExhaustedException`](Nfty.Core.Generation.UniqueSpaceExhaustedException.md) | class | The retry budget ran out while enforcing unique DNA, without proving the space is exhausted. |
 
 ## Nfty.Core.Imaging
 
@@ -216,6 +216,7 @@ The whole engine: archives, validation, generation, rendering, Sets, export, sea
 | [`IPinningService`](Nfty.Core.Publish.Ipfs.IPinningService.md) | interface | Somewhere a folder can be put on IPFS and kept there: a local Kubo node, or a pinning service. |
 | [`KuboPinning`](Nfty.Core.Publish.Ipfs.KuboPinning.md) | class | A local IPFS node — IPFS Desktop or the Kubo daemon — reached over its HTTP RPC. |
 | [`MarketplaceUpload`](Nfty.Core.Publish.Ipfs.MarketplaceUpload.md) | class | The whole marketplace upload in one call: art first, then metadata that points at it. |
+| [`PinAcquisition`](Nfty.Core.Publish.Ipfs.PinAcquisition.md) | record | The pin returned by an upload and whether this call newly acquired it. |
 | [`PinProgress`](Nfty.Core.Publish.Ipfs.PinProgress.md) | record | How far a folder upload has got. |
 | [`PinataPinning`](Nfty.Core.Publish.Ipfs.PinataPinning.md) | class | Pinata, the hosted pinning service, reached with the author's own API key (a JWT). |
 | [`PinningException`](Nfty.Core.Publish.Ipfs.PinningException.md) | class | A pinning service refused, failed or answered with something unusable. |

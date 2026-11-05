@@ -17,14 +17,8 @@ internal static class ExportNaming
     /// <summary>The naming these options give the exported files.</summary>
     internal static SetFiles Of(ExportOptions o) => new(TokenNamingTokens.Spell(o.TokenNaming), o.TokenStart);
 
-    /// <summary>Whether these options leave every name exactly as the Set wrote it.</summary>
-    internal static bool IsDefault(ExportOptions o) => Of(o).IsDefault;
-
     /// <summary>The token id of the asset with this set number.</summary>
     internal static int Id(int number, ExportOptions o) => Of(o).Id(number);
-
-    /// <summary>The name an asset's files share, without extension.</summary>
-    internal static string Stem(int number, ExportOptions o) => Of(o).Stem(number);
 
     internal static string ImageFile(int number, ExportOptions o) => Of(o).ImageFile(number);
 

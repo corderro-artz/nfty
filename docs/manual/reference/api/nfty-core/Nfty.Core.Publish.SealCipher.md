@@ -23,7 +23,7 @@ public SealCipher(string Algorithm, int FrameBytes, int Frames, long PlainBytes,
 - `Algorithm` (`string`) - The AEAD name.
 - `FrameBytes` (`int`) - Plaintext bytes per frame. The payload is encrypted in independently authenticated frames so a 4 GB collection never has to be held in memory to be read or written.
 - `Frames` (`int`) - How many frames the payload holds.
-- `PlainBytes` (`long`) - The plaintext length, which is what gives the final (short) frame its size. Both are in the AAD of every frame, so a truncated payload fails to authenticate rather than decrypting to a shorter collection.
+- `PlainBytes` (`long`) - The plaintext length, which is what gives the final (short) frame its size. Both are covered by the header MAC and every frame's AAD. A reader therefore expects the declared bytes and refuses a truncated payload.
 - `NoncePrefix` (`string`) - The four random bytes every frame nonce begins with, hex. The remaining eight are the frame index, so no nonce can repeat under one key.
 
 ## Properties
@@ -66,4 +66,4 @@ The four random bytes every frame nonce begins with, hex. The remaining eight ar
 public long PlainBytes { get; init; }
 ```
 
-The plaintext length, which is what gives the final (short) frame its size. Both are in the AAD of every frame, so a truncated payload fails to authenticate rather than decrypting to a shorter collection.
+The plaintext length, which is what gives the final (short) frame its size. Both are covered by the header MAC and every frame's AAD. A reader therefore expects the declared bytes and refuses a truncated payload.

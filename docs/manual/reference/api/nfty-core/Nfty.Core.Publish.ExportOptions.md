@@ -116,7 +116,7 @@ Include `set.json` — the Set's own record: seed, source-book hash, rarity tabl
 
 **Remarks**
 
-**On by default, off for [`ExportPreset.Marketplace`](Nfty.Core.Publish.ExportPreset.md#f-marketplace)**: a public drop has no use for the seed and the book's hash, and a seed that should stay private until the reveal is otherwise published with the art. An export without it is for UPLOAD, not for opening — nfty reads a Set by its `set.json`, so it cannot reopen one, and a sealed export (which exists to be opened) refuses to leave it out.
+**On by default, off for [`ExportPreset.Marketplace`](Nfty.Core.Publish.ExportPreset.md#f-marketplace)**: a public drop has no use for the seed and the book's hash, and a seed that should stay private until the reveal is otherwise published with the art. Without it nfty cannot reopen the export as a full Set; a suitable art/metadata export can still reopen as a read-only [`MarketplaceBundle`](Nfty.Core.Publish.MarketplaceBundle.md). A sealed export requires the manifest.
 
 ### ModelBaseUri { #p-modelbaseuri }
 

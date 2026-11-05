@@ -8,7 +8,7 @@ Namespace `Nfty.Core.Generation` in assembly `Nfty.Core`.
 public class UniqueSpaceExhaustedException : InvalidOperationException
 ```
 
-More unique assets were requested than the cookbook can produce. [`UniqueSpaceExhaustedException.Available`](Nfty.Core.Generation.UniqueSpaceExhaustedException.md#p-available) is the true maximum only when [`UniqueSpaceExhaustedException.Certainty`](Nfty.Core.Generation.UniqueSpaceExhaustedException.md#p-certainty) says so; otherwise it is a bound, and [`UniqueSpaceExhaustedException.Certainty`](Nfty.Core.Generation.UniqueSpaceExhaustedException.md#p-certainty) is what says in which direction.
+The retry budget ran out while enforcing unique DNA, without proving the space is exhausted. [`UniqueSpaceExhaustedException.Available`](Nfty.Core.Generation.UniqueSpaceExhaustedException.md#p-available) is the true maximum only when [`UniqueSpaceExhaustedException.Certainty`](Nfty.Core.Generation.UniqueSpaceExhaustedException.md#p-certainty) says so; otherwise it is a bound, and [`UniqueSpaceExhaustedException.Certainty`](Nfty.Core.Generation.UniqueSpaceExhaustedException.md#p-certainty) is what says in which direction.
 
 ## Remarks
 
@@ -40,7 +40,7 @@ Creates the exception.
 public BigInteger Available { get; }
 ```
 
-How many unique DNA the book actually admits.
+The counted unique DNA space, whose direction or exactness is stated by [`UniqueSpaceExhaustedException.Certainty`](Nfty.Core.Generation.UniqueSpaceExhaustedException.md#p-certainty).
 
 **Remarks**
 
@@ -68,7 +68,7 @@ Whether [`UniqueSpaceExhaustedException.Available`](Nfty.Core.Generation.UniqueS
 public int Produced { get; }
 ```
 
-How many were produced before the space ran out.
+How many were produced before the retry budget ran out.
 
 ### Requested { #p-requested }
 

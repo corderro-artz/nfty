@@ -20,7 +20,8 @@ public static class Validator
     /// <returns>One human-readable line per problem; empty when the book is legal.</returns>
     public static IReadOnlyList<string> Validate(LoadedCookBook cb)
     {
-        var problems = new List<string>();
+        var problems = ManifestStructure.OfLoaded(cb);
+        if (problems.Count > 0) return problems;
         CheckCookBook(problems, cb);
         foreach (var r in cb.Recipes)
             CheckRecipe(problems, r, cb.Manifest.Canvas);
@@ -37,7 +38,8 @@ public static class Validator
     /// <returns>One sentence per problem; empty when the ingredient is valid. Never throws for a bad ingredient.</returns>
     public static IReadOnlyList<string> ValidateIngredient(LoadedIngredient ing)
     {
-        var problems = new List<string>();
+        var problems = ManifestStructure.OfLoaded(ing);
+        if (problems.Count > 0) return problems;
         string where = $"Ingredient '{ing.Manifest.Id}'";
         CheckIngredient(problems, where, ing);
         CheckUniformSize(problems, where, ing.VariantImages.Values);
@@ -53,7 +55,8 @@ public static class Validator
     /// <returns>One sentence per problem; empty when the recipe is valid. Never throws for a bad recipe.</returns>
     public static IReadOnlyList<string> ValidateRecipe(LoadedRecipe r)
     {
-        var problems = new List<string>();
+        var problems = ManifestStructure.OfLoaded(r);
+        if (problems.Count > 0) return problems;
         CheckRecipeStructure(problems, r);
         foreach (var ing in r.Ingredients)
             CheckIngredient(problems, $"Ingredient '{ing.Manifest.Id}' in '{r.Manifest.Id}'", ing);
@@ -69,7 +72,10 @@ public static class Validator
         foreach (var dup in Duplicates(cb.Recipes.Select(r => r.Manifest.Id)))
             problems.Add($"CookBook has duplicate recipe id '{dup}'.");
 
-        if (cb.Manifest.RecipeWeights.Values.Sum() <= 0)
+        double recipeTotal = cb.Manifest.RecipeWeights.Values.Sum();
+        if (!double.IsFinite(recipeTotal))
+            problems.Add("CookBook has a non-finite total recipe weight; the total must be finite.");
+        else if (recipeTotal <= 0)
             problems.Add("CookBook has zero total recipe weight.");
 
         // Target supply is optional (absent on every schemaVersion-1 archive), but a book that
@@ -150,6 +156,9 @@ public static class Validator
         CheckLayerOrder(problems, r, ingById);
 
         foreach (var rule in r.Manifest.Rules)
+        {
+            if (!Enum.IsDefined(rule.Type))
+                problems.Add($"Recipe '{r.Manifest.Id}' has an undefined rule type ({Num((int)rule.Type)}).");
             foreach (var t in rule.Targets.Append(rule.When))
                 if (!ingById.TryGetValue(t.IngredientId, out var target))
                     problems.Add($"Recipe '{r.Manifest.Id}' rule references unknown ingredient '{t.IngredientId}'.");
@@ -160,6 +169,7 @@ public static class Validator
                 else if (!target.Manifest.Variants.Any(v => string.Equals(v.Id, t.VariantId, StringComparison.Ordinal)))
                     problems.Add($"Recipe '{r.Manifest.Id}' rule references unknown variant "
                         + $"'{t.VariantId}' of ingredient '{t.IngredientId}'.");
+        }
 
         CheckRuleSanity(problems, r);
         CheckAbsentChances(problems, r);
@@ -252,9 +262,10 @@ public static class Validator
     }
 
     /// <summary>
-    /// Rules that resolve fine and still cannot mean what they say. Both of these are caught at
-    /// authoring time by <c>RuleEdits.Validate</c>, so they can only reach a book that was written
-    /// by hand — which is the only way a rule could be written at all before that class existed.
+    /// Checks self-layer constraints and contradictions across rules. <c>RuleEdits.Validate</c>
+    /// also refuses self-layer targets during authoring, but its empty/duplicate-target checks
+    /// are authoring policy: this gate continues to accept those manifest shapes. Cross-rule
+    /// contradictions need the whole recipe and are checked here rather than by that single-rule API.
     ///
     /// <para>They are reported rather than tolerated for the same reason the unknown-variant check
     /// above is: each one silently changes the size of the space, and the author's first sign of it
@@ -330,7 +341,10 @@ public static class Validator
     {
         if (ing.Manifest.Variants.Count == 0)
             problems.Add($"{where} has no variants.");
-        if (ing.Manifest.Variants.Sum(v => v.Weight) <= 0)
+        double variantTotal = ing.Manifest.Variants.Sum(v => v.Weight);
+        if (!double.IsFinite(variantTotal))
+            problems.Add($"{where} has a non-finite total variant weight; the total must be finite.");
+        else if (variantTotal <= 0)
             problems.Add($"{where} has zero total variant weight.");
         foreach (var dup in Duplicates(ing.Manifest.Variants.Select(v => v.Id)))
             problems.Add($"{where} has duplicate variant id '{dup}'.");
@@ -423,12 +437,21 @@ public static class Validator
                 // Without both, the roll has nothing to pick from.
                 if (col.Entries.Count == 0)
                     problems.Add($"{where} is dynamic but has no colorization entries; dynamic requires at least one.");
-                else if (col.Entries.Sum(e => e.Weight) <= 0)
-                    problems.Add($"{where} is dynamic but its colorization entries have zero total weight.");
+                else
+                {
+                    double colorTotal = col.Entries.Sum(e => e.Weight);
+                    if (!double.IsFinite(colorTotal))
+                        problems.Add($"{where} has a non-finite total colorization weight; the total must be finite.");
+                    else if (colorTotal <= 0)
+                        problems.Add($"{where} is dynamic but its colorization entries have zero total weight.");
+                }
 
                 foreach (var entry in col.Entries)
                     if ((entry.Fixed is null) == (entry.Range is null))
                         problems.Add($"{where} has a colorization entry that must have exactly one of fixed or range.");
+                break;
+            default:
+                problems.Add($"{where} has an undefined layer kind ({Num((int)kind)}).");
                 break;
         }
     }
@@ -437,6 +460,8 @@ public static class Validator
     private static void CheckColorEntries(List<string> problems, string where, Colorization? col)
     {
         if (col is null) return;
+        if (!Enum.IsDefined(col.Model))
+            problems.Add($"{where} has an undefined color model ({Num((int)col.Model)}).");
 
         // Dna.cs and UniqueSpace.cs both floor a non-positive quantize up to 1 via Math.Max(1, q)
         // so the count-versus-generate promise stays intact — but that coercion is silent, and a

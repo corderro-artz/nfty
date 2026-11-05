@@ -17,7 +17,9 @@ namespace Nfty.Core.Imaging;
 /// decoders/encoders or <c>HistogramEqualization</c>, none of which nfty ever calls; the sixth is ICC
 /// CLUT parsing, reached only through <c>IccProfile.Entries</c>/<c>CheckIntegrity</c>, which nothing here
 /// touches. Registering only PNG + JPEG makes the TIFF half unreachable from any file a user hands us,
-/// whatever its extension says, and <c>SkipMetadata</c> keeps embedded ICC profiles from being read.</para>
+/// whatever its extension says. <c>SkipMetadata</c> skips optional metadata, but the pinned PNG decoder
+/// still retains raw ICC bytes. Typed loads explicitly drop that lazy profile with <c>NoIcc</c>;
+/// no overload reads its parsed entries or header.</para>
 /// <para>A file in any other format is refused with <see cref="UnknownImageFormatException"/> (the type
 /// every existing caller already handles) carrying a message in the product's words. The
 /// <c>keepMetadata</c> overloads exist for ONE reason: the sprite sheet's <c>nfty-grid</c> text chunk

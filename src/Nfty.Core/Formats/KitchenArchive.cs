@@ -25,9 +25,10 @@ public static class KitchenArchive
     public static KitchenManifest Read(ZipArchive zip) =>
         ArchiveIo.ReadManifest<KitchenManifest>(zip);
 
-    /// <summary>Writes a <c>.ktn</c>.</summary>
+    /// <summary>Creates a <c>.ktn</c>; never overwrites an existing file.</summary>
     /// <param name="path">Destination path.</param>
     /// <param name="manifest">The workspace's identity.</param>
+    /// <exception cref="IOException">The destination already exists, or cannot be created.</exception>
     public static void Write(string path, KitchenManifest manifest)
     {
         using var zip = ZipFile.Open(path, ZipArchiveMode.Create);
@@ -45,15 +46,19 @@ public static class KitchenArchive
         return Read(zip);
     }
 
-    /// <summary>Writes a <c>.ktn</c>.</summary>
+    /// <summary>Creates a <c>.ktn</c>; never overwrites an existing file.</summary>
     /// <param name="path">Destination path.</param>
     /// <param name="manifest">The workspace's identity.</param>
     /// <param name="cancellationToken">Cancels the write.</param>
     /// <returns>A task that completes when it is written.</returns>
+    /// <exception cref="IOException">The destination already exists, or cannot be created.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.
+    /// Pre-cancellation leaves the destination untouched.</exception>
     public static async Task WriteAsync(string path, KitchenManifest manifest,
         CancellationToken cancellationToken = default)
     {
-        var file = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None,
+        cancellationToken.ThrowIfCancellationRequested();
+        var file = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None,
             bufferSize: 4096, useAsync: true);
         await using var fileScope = file.ConfigureAwait(false);
         using var zip = new ZipArchive(file, ZipArchiveMode.Create);

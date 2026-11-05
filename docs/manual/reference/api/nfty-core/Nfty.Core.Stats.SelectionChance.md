@@ -21,7 +21,7 @@ public SelectionChance(double Probability, SpaceCertainty Certainty);
 **Parameters**
 
 - `Probability` (`double`) - The probability, 0..1. Zero whenever `Certainty` is [`SpaceCertainty.Unknown`](Nfty.Core.Generation.SpaceCertainty.md#f-unknown) — a figure that means nothing is not carried as a number that looks like one.
-- `Certainty` (`SpaceCertainty`) - [`SpaceCertainty.Exact`](Nfty.Core.Generation.SpaceCertainty.md#f-exact) when nothing gave up; [`SpaceCertainty.AtLeast`](Nfty.Core.Generation.SpaceCertainty.md#f-atleast) when the rules could not be walked, which makes the figure a floor on the probability and so a CEILING on the odds ("at most 1 in N"); [`SpaceCertainty.Unknown`](Nfty.Core.Generation.SpaceCertainty.md#f-unknown) when the selection could not be mapped onto the book at all. [`SpaceCertainty.AtMost`](Nfty.Core.Generation.SpaceCertainty.md#f-atmost) never occurs here and is not special-cased: see [`SelectionOdds`](Nfty.Core.Stats.SelectionOdds.md) for why the error can only go one way.
+- `Certainty` (`SpaceCertainty`) - [`SpaceCertainty.Exact`](Nfty.Core.Generation.SpaceCertainty.md#f-exact) when nothing gave up; [`SpaceCertainty.AtLeast`](Nfty.Core.Generation.SpaceCertainty.md#f-atleast) when the rules could not be walked, which makes the figure a floor on the probability and so a CEILING on the odds ("at most 1 in N"); [`SpaceCertainty.Unknown`](Nfty.Core.Generation.SpaceCertainty.md#f-unknown) when the selection could not be mapped onto the book, or a weighted branch cannot retain its nominal share at the sampler's precision. [`SpaceCertainty.AtMost`](Nfty.Core.Generation.SpaceCertainty.md#f-atmost) never occurs here and is not special-cased: see [`SelectionOdds`](Nfty.Core.Stats.SelectionOdds.md) for why the error can only go one way.
 
 ## Properties
 
@@ -31,7 +31,7 @@ public SelectionChance(double Probability, SpaceCertainty Certainty);
 public SpaceCertainty Certainty { get; init; }
 ```
 
-[`SpaceCertainty.Exact`](Nfty.Core.Generation.SpaceCertainty.md#f-exact) when nothing gave up; [`SpaceCertainty.AtLeast`](Nfty.Core.Generation.SpaceCertainty.md#f-atleast) when the rules could not be walked, which makes the figure a floor on the probability and so a CEILING on the odds ("at most 1 in N"); [`SpaceCertainty.Unknown`](Nfty.Core.Generation.SpaceCertainty.md#f-unknown) when the selection could not be mapped onto the book at all. [`SpaceCertainty.AtMost`](Nfty.Core.Generation.SpaceCertainty.md#f-atmost) never occurs here and is not special-cased: see [`SelectionOdds`](Nfty.Core.Stats.SelectionOdds.md) for why the error can only go one way.
+[`SpaceCertainty.Exact`](Nfty.Core.Generation.SpaceCertainty.md#f-exact) when nothing gave up; [`SpaceCertainty.AtLeast`](Nfty.Core.Generation.SpaceCertainty.md#f-atleast) when the rules could not be walked, which makes the figure a floor on the probability and so a CEILING on the odds ("at most 1 in N"); [`SpaceCertainty.Unknown`](Nfty.Core.Generation.SpaceCertainty.md#f-unknown) when the selection could not be mapped onto the book, or a weighted branch cannot retain its nominal share at the sampler's precision. [`SpaceCertainty.AtMost`](Nfty.Core.Generation.SpaceCertainty.md#f-atmost) never occurs here and is not special-cased: see [`SelectionOdds`](Nfty.Core.Stats.SelectionOdds.md) for why the error can only go one way.
 
 ### IsExact { #p-isexact }
 

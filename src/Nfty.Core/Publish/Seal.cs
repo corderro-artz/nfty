@@ -111,7 +111,7 @@ public static class Seal
     /// </summary>
     /// <param name="path">Where to write it. An existing file there is replaced.</param>
     /// <param name="plaintext">The bytes to encrypt — a packed Set. Must be seekable: the frame
-    /// count and the plaintext length are authenticated by the FIRST frame, so both have to be
+    /// count and plaintext length are covered by the header MAC and every frame's AAD, so both must be
     /// known before a byte is written.</param>
     /// <param name="collection">The collection's name, shown to a recipient with no key.</param>
     /// <param name="count">How many assets are inside, shown to a recipient with no key.</param>
@@ -165,7 +165,7 @@ public static class Seal
             PolicyMac: string.Empty,
             Kdf: new SealKdf(KdfName, iterations, Convert.ToHexStringLower(salt)),
             Cipher: new SealCipher(CipherName, FrameBytes, frames, plainBytes,
-                Convert.ToHexStringLower(noncePrefix)));
+                Convert.ToHexStringLower(noncePrefix))) { AuthenticationVersion = 2 };
         header = header with { PolicyMac = Convert.ToHexStringLower(Mac(macKey, header)) };
 
         if (File.Exists(path)) File.Delete(path);

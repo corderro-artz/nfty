@@ -16,7 +16,7 @@ metadata written beside every image.
 
 None of it is approximate. The same book and the same seed produce byte-identical output on any
 machine, in any locale, on any CPU architecture, and the program counts the exact number of distinct
-assets a book admits *before* you ask it for any. The demo built into the binary admits **7,155,000**
+assets a book admits *before* you ask it for any. The demo built into the binary admits **8,745,000**
 of them, out of twenty-nine 32×32 sprites.
 
 **Access**  
@@ -62,7 +62,7 @@ nfty menu ChestDemo.cbk --out chest.mnu                        # flatten it for 
 
 | | |
 |---|---|
-| ![The Explorer on the Chest Demo: 2 recipes, 12 layers, 49 variants, 7,155,000 unique DNA](assets/readme/hero-light.png#gh-light-mode-only)![The Explorer on the Chest Demo: 2 recipes, 12 layers, 49 variants, 7,155,000 unique DNA](assets/readme/hero-dark.png#gh-dark-mode-only) | ![The Ingredient Editor: a gray value-map, the colorize rail and a live preview](assets/readme/editor-light.png#gh-light-mode-only)![The Ingredient Editor: a gray value-map, the colorize rail and a live preview](assets/readme/editor-dark.png#gh-dark-mode-only) |
+| ![The Explorer on the Chest Demo: 2 recipes, 12 layers, 49 variants, 8,745,000 unique DNA](assets/readme/hero-light.png#gh-light-mode-only)![The Explorer on the Chest Demo: 2 recipes, 12 layers, 49 variants, 8,745,000 unique DNA](assets/readme/hero-dark.png#gh-dark-mode-only) | ![The Ingredient Editor: a gray value-map, the colorize rail and a live preview](assets/readme/editor-light.png#gh-light-mode-only)![The Ingredient Editor: a gray value-map, the colorize rail and a live preview](assets/readme/editor-dark.png#gh-dark-mode-only) |
 | **Count before you cook.** The Explorer reads the exact number of distinct assets a book admits. | **Draw in gray, color at cook time.** The editor is built in; one drawing rolls a hue per asset. |
 | ![The Set browser: fifty cooked chests with one asset's DNA and trait rarity](assets/readme/set-light.png#gh-light-mode-only)![The Set browser: fifty cooked chests with one asset's DNA and trait rarity](assets/readme/set-dark.png#gh-dark-mode-only) | ![The Rise page on a rolled Chest recipe with its 3D tile](assets/readme/rise-light.png#gh-light-mode-only)![The Rise page on a rolled Chest recipe with its 3D tile](assets/readme/rise-dark.png#gh-dark-mode-only) |
 | **Browse and export.** Every asset carries its fingerprint, rarity and, optionally, a 3D model. | **Rise.** Paint depth into a rolled recipe and export glTF. |
@@ -225,7 +225,7 @@ Its Landing screen carries **Open the demo CookBook**, which unpacks that same b
 and opens it. The demo is yours to break, and reopening it keeps whatever you did to it.
 
 The demo is a small collection of layered chests: two Recipes, seven Ingredients covering all three
-layer kinds, two optional layers, one incompatibility rule, and **7,155,000** distinct assets out of
+layer kinds, two optional layers, one incompatibility rule, and **8,745,000** distinct assets out of
 twenty-nine 32×32 sprites — which is the argument for value-map colorization, made in a file you can
 open.
 

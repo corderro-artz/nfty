@@ -162,9 +162,9 @@ public record ExportOptions
     /// <remarks>
     /// <para><b>On by default, off for <see cref="ExportPreset.Marketplace"/></b>: a public drop has no
     /// use for the seed and the book's hash, and a seed that should stay private until the reveal is
-    /// otherwise published with the art. An export without it is for UPLOAD, not for opening — nfty
-    /// reads a Set by its <c>set.json</c>, so it cannot reopen one, and a sealed export (which exists
-    /// to be opened) refuses to leave it out.</para>
+    /// otherwise published with the art. Without it nfty cannot reopen the export as a full Set;
+    /// a suitable art/metadata export can still reopen as a read-only <see cref="MarketplaceBundle"/>.
+    /// A sealed export requires the manifest.</para>
     /// </remarks>
     public bool IncludeSetManifest { get; init; } = true;
 

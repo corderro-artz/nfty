@@ -126,7 +126,10 @@ public class DemoCookBookTests
         // print it, and a number in prose has nothing keeping it true. Changing the demo is allowed
         // and this is meant to fail when you do - it fails with the new number, so updating the two
         // documents is a copy rather than a recount.
-        Assert.Equal(7_155_000, space.Total);
+        // Count actual rounded sampler endpoints: both body unions contain 22 buckets, bands 4,
+        // glow 12, other layers 1. Summing legal selections (absence contributes one shape) gives
+        // Chest 4,785,000 + Strongbox 3,960,000. The old ideal half-open count missed real DNA.
+        Assert.Equal(8_745_000, space.Total);
     }
 
     [Fact]

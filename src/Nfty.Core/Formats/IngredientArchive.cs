@@ -59,8 +59,7 @@ public static class IngredientArchive
             }
         });
 
-        var zeroed = DepthMap.FromBytes(map.Width, map.Height, bytes);
-        return zeroed.IsFlat ? null : zeroed.ToBytes();
+        return Array.Exists(bytes, b => b != 0) ? bytes : null;
     }
 
     /// <summary>Writes an Ingredient into an already-open archive.</summary>

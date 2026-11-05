@@ -84,7 +84,7 @@ Every file that belongs to the Set in `setDir`, and nothing else in that folder.
 
 - `setDir` (`string`) - The Set folder.
 
-**Returns.** Absolute paths, in `Ordinal` order. Ordinal because these reach an output file: the default comparer sorts by the current culture, so the same Set would pack to a different archive on an `en-US` machine than on a `sv-SE` one — the rule every other sort that reaches disk here already follows.
+**Returns.** Paths relative or absolute as `setDir`, in `Ordinal` order. Ordinal because these reach an output file: the default comparer sorts by the current culture, so the same Set would pack to a different archive on an `en-US` machine than on a `sv-SE` one — the rule every other sort that reaches disk here already follows.
 
 **Exceptions**
 
@@ -130,7 +130,7 @@ The model files `set.json` in `setDir` accounts for: for a Set that recorded a `
 
 - `setDir` (`string`) - The Set folder.
 
-**Returns.** Absolute paths, in `Ordinal` order.
+**Returns.** Paths relative or absolute as `setDir`, in `Ordinal` order.
 
 **Exceptions**
 

@@ -88,7 +88,7 @@ public static class CookBookArchive
     /// decoded image in the tree. Its manifest's <c>PartialAlpha</c> is recomputed from its loaded
     /// recipes rather than trusting the stored value.</returns>
     /// <exception cref="InvalidDataException">The archive or a manifest inside it is unreadable.</exception>
-    /// <exception cref="UnsupportedSchemaVersionException">It declares a newer schema than this build reads.</exception>
+    /// <exception cref="UnsupportedSchemaVersionException">It declares a schema outside this build's supported range, including versions below the floor.</exception>
     public static LoadedCookBook Read(string path, Parallelism? parallelism = null)
     {
         using var zip = ZipFile.OpenRead(path);

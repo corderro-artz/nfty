@@ -194,7 +194,7 @@ public static class CookBookEdits
     /// </summary>
     /// <remarks>
     /// <para>Reuses every surviving image; the caller owns the removed one, exactly as
-    /// <see cref="RemoveIngredient"/> hands back the subtree it dropped.</para>
+    /// <see cref="RemoveIngredient"/> leaves the removed subtree in the caller's ownership.</para>
     /// <para>It REFUSES to empty an ingredient. A layer with no variants has nothing to roll, and
     /// <c>Validator</c> reports it as a problem - so a book saved that way is broken from then on,
     /// reported on a screen nowhere near the delete. A front-end is expected to gray the control as
@@ -207,7 +207,8 @@ public static class CookBookEdits
     /// <param name="variantId">The variant to remove.</param>
     /// <returns>A book with that variant gone.</returns>
     /// <exception cref="KeyNotFoundException">No such recipe, ingredient or variant.</exception>
-    /// <exception cref="InvalidOperationException">It is the ingredient's only variant.</exception>
+    /// <exception cref="InvalidOperationException">It is the ingredient's only variant, or a rule
+    /// references it as a trigger or target. Edit or remove that rule before deleting the variant.</exception>
     public static LoadedCookBook RemoveVariant(LoadedCookBook book, string recipeId,
         string ingredientId, string variantId)
     {
@@ -221,6 +222,18 @@ public static class CookBookEdits
             throw new InvalidOperationException(
                 $"'{ingredient.Manifest.Name}' has one variant left. A layer with none has nothing "
                 + "to roll; delete the layer instead.");
+
+        var removed = new RuleTarget(ingredientId, variantId);
+        for (int i = 0; i < recipe.Manifest.Rules.Count; i++)
+        {
+            var rule = recipe.Manifest.Rules[i];
+            string? reference = rule.When == removed ? "trigger"
+                : rule.Targets.Contains(removed) ? "target" : null;
+            if (reference is not null)
+                throw new InvalidOperationException(
+                    FormattableString.Invariant($"Cannot delete variant '{ingredientId}:{variantId}': recipe '{recipeId}' rule {i + 1} ")
+                    + $"references it as a {reference}. Edit or remove that rule first.");
+        }
 
         var variants = ingredient.Manifest.Variants.Where(v => v.Id != variantId).ToList();
         var images = ingredient.VariantImages

@@ -57,8 +57,9 @@ public record RarityReport(IReadOnlyList<RecipeOdds> Recipes, IReadOnlyList<Trai
 /// damage at the far end of the scale: a deep book's rare traits all collapsed onto exactly 0, so
 /// the ingredient pane could not tell them apart, sorted them arbitrarily (<c>OrderBy</c> is stable,
 /// so they kept whatever order they arrived in) and printed each of them as "0%" beside a trait no
-/// asset carries. The figures are exact here and <see cref="RarityText"/> decides what a surface
-/// prints, which is the same split <c>SpaceText</c> already makes for the DNA space.
+/// asset carries. The figures retain their nominal weight-model precision here and
+/// <see cref="RarityText"/> decides what a surface prints. These are intended shares before rule
+/// rejection, uniqueness, and finite RNG resolution, rather than exact observed roll probabilities.
 /// </remarks>
 public static class RarityCalculator
 {
@@ -104,7 +105,7 @@ public static class RarityCalculator
                 }
 
                 // The "{Layer} Color" trait the cook publishes right after the layer's own: its shares
-                // are ColorName's exact chances, scaled by presence like the variants above.
+                // are ColorName's uniform-range model shares, scaled by presence like variants.
                 if (ing.Manifest.Kind is LayerKind.Dynamic or LayerKind.Static && ing.Manifest.Colorization is { } colorization)
                     foreach (var (colorName, share) in ColorName.Shares(colorization))
                     {

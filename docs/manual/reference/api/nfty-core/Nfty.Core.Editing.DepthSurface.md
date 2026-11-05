@@ -228,9 +228,9 @@ What the depth looks like overall.
 public PixelRect? TakeDirty();
 ```
 
-The bounding rectangle of every pixel whose depth CHANGED since the last call (a write of the value a pixel already held changes nothing), and forgets it. A derived view of this surface (the combined stack of a recipe) recomputes just that rectangle.
+The bounding rectangle invalidated since the last call, and forgets it. Individual writes invalidate only changed pixels; [`DepthSurface.Overwrite()`](Nfty.Core.Editing.DepthSurface.md#m-overwrite-nfty-core-model-depthmap) invalidates the whole canvas, even for identical bytes. A derived view (the combined stack of a recipe) recomputes that rectangle.
 
-**Returns.** The rectangle, or null when nothing changed.
+**Returns.** The rectangle, or null when nothing was invalidated.
 
 ### ToDepthMap() { #m-todepthmap }
 

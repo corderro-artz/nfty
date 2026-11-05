@@ -197,11 +197,13 @@ public class UniqueSpaceTests
     [Fact]
     public void Sat_axis_counts_only_reachable_buckets()
     {
-        // sat 0..30 at quantize 10 => buckets 0,1,2 (30 unreachable). hue 0..0 => 1 bucket.
+        // The top legal unit draw rounds saturation to 0.3, so DNA reaches bucket 3 too.
+        // A random sample of 200,000 rolls sees the three ordinary buckets but is not a proof
+        // that the rare upper endpoint is impossible (CoreMathAuditTests rolls it explicitly).
         var book = Book(Recipe("cat", Array.Empty<IncompatibilityRule>(),
             Dynamic("aura", new ColorRange(0, 0, 0, 30), hueQ: 30, satQ: 10, "glow")));
 
-        Assert.Equal(3, UniqueSpace.Count(book).Total);
+        Assert.Equal(4, UniqueSpace.Count(book).Total);
         Assert.Equal(3, RollDistinctDna(book, 200_000));
     }
 

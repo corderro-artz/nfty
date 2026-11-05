@@ -16,7 +16,9 @@ The `seal.json` at the top of a sealed export — **plaintext, deliberately**.
 
 **That is a deliberate metadata leak and it is the whole cost of the choice.** Anyone who obtains the file learns that the collection exists, what it is called and how large it is. The art, the traits, the rarity and the DNA are all inside the encryption; the label on the tin is not.
 
-**[`SealManifest.PolicyMac`](Nfty.Core.Publish.SealManifest.md#p-policymac) is what stops the label being rewritten.** It is an HMAC over [`SealManifest.Canonical()`](Nfty.Core.Publish.SealManifest.md#m-canonical) keyed by a second key derived from the same passphrase, so someone who intercepts the file cannot edit `allowExport` to true, or restate the note, and pass it on. Someone who HAS the passphrase can recompute it — that is not a gap in the implementation, it is what it means to hold the key, and it is why the seal is described everywhere in this product as a lock on a door rather than a wall.
+[`SealManifest.AuthenticationVersion`](Nfty.Core.Publish.SealManifest.md#p-authenticationversion) 2 binds fields unambiguously. Legacy version 1 remains readable with its original delimiter encoding; its collection/count/note labels cannot be made retroactively tamper-proof. New writers always emit version 2.
+
+**[`SealManifest.PolicyMac`](Nfty.Core.Publish.SealManifest.md#p-policymac) authenticates the header.** It is an HMAC over [`SealManifest.Canonical()`](Nfty.Core.Publish.SealManifest.md#m-canonical) keyed by a second key derived from the same passphrase, so someone who intercepts the file cannot edit `allowExport` to true, or restate the note, and pass it on. Someone who HAS the passphrase can recompute it — that is not a gap in the implementation, it is what it means to hold the key, and it is why the seal is described everywhere in this product as a lock on a door rather than a wall.
 
 ## Constructors
 
@@ -44,9 +46,19 @@ public SealManifest(string SealId, string Collection, int Count, string? Note, S
 
 **That is a deliberate metadata leak and it is the whole cost of the choice.** Anyone who obtains the file learns that the collection exists, what it is called and how large it is. The art, the traits, the rarity and the DNA are all inside the encryption; the label on the tin is not.
 
-**[`SealManifest.PolicyMac`](Nfty.Core.Publish.SealManifest.md#p-policymac) is what stops the label being rewritten.** It is an HMAC over [`SealManifest.Canonical()`](Nfty.Core.Publish.SealManifest.md#m-canonical) keyed by a second key derived from the same passphrase, so someone who intercepts the file cannot edit `allowExport` to true, or restate the note, and pass it on. Someone who HAS the passphrase can recompute it — that is not a gap in the implementation, it is what it means to hold the key, and it is why the seal is described everywhere in this product as a lock on a door rather than a wall.
+[`SealManifest.AuthenticationVersion`](Nfty.Core.Publish.SealManifest.md#p-authenticationversion) 2 binds fields unambiguously. Legacy version 1 remains readable with its original delimiter encoding; its collection/count/note labels cannot be made retroactively tamper-proof. New writers always emit version 2.
+
+**[`SealManifest.PolicyMac`](Nfty.Core.Publish.SealManifest.md#p-policymac) authenticates the header.** It is an HMAC over [`SealManifest.Canonical()`](Nfty.Core.Publish.SealManifest.md#m-canonical) keyed by a second key derived from the same passphrase, so someone who intercepts the file cannot edit `allowExport` to true, or restate the note, and pass it on. Someone who HAS the passphrase can recompute it — that is not a gap in the implementation, it is what it means to hold the key, and it is why the seal is described everywhere in this product as a lock on a door rather than a wall.
 
 ## Properties
+
+### AuthenticationVersion { #p-authenticationversion }
+
+```csharp
+public int AuthenticationVersion { get; init; }
+```
+
+The authenticated-header encoding: absent in historical files means version 1. Version 2 uses length-prefixed fields and binds the schema version as well.
 
 ### Cipher { #p-cipher }
 
@@ -128,9 +140,13 @@ A random 128-bit id, hex. It is in the AAD of every frame, so frames cannot be s
 public string Canonical();
 ```
 
-The exact bytes the MAC covers, as a string.
+The exact UTF-8 text the MAC covers.
 
-**Returns.** One line naming every header field that carries meaning, in a fixed order.
+**Returns.** Fields in a fixed order, using the declared authentication version.
+
+**Exceptions**
+
+- [`SealedSetException`](Nfty.Core.Publish.SealedSetException.md) - The authentication version is unsupported.
 
 **Remarks**
 

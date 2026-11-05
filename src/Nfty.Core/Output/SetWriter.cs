@@ -77,12 +77,13 @@ public static class SetWriter
         // A failed or canceled run takes back the files it added (WriteRollback), so a stop never
         // leaves a folder that looks like a Set without a set.json.
         var rollback = WriteRollback.Capture(outDir);
-        try { WriteCore(set, outDir, pack, models, progress, cancellationToken, parallelism); }
+        try { WriteCore(set, outDir, pack, models, progress, cancellationToken, parallelism, rollback); }
         catch { rollback.Undo(); throw; }
     }
 
     private static void WriteCore(GeneratedSet set, string outDir, bool pack, IAssetModeler? models,
-        IProgress<WriteProgress>? progress, CancellationToken cancellationToken, Parallelism? parallelism)
+        IProgress<WriteProgress>? progress, CancellationToken cancellationToken, Parallelism? parallelism,
+        WriteRollback rollback)
     {
         parallelism ??= Parallelism.Default;
         // Read BEFORE anything can overwrite set.json — see RecordedAt.
@@ -94,6 +95,7 @@ public static class SetWriter
         // of the modeler without building any model, so this costs no memory.
         ValidateModelNames(models, set);
         var skipped = models is null ? null : new bool[set.Assets.Count];
+        rollback.BeginMutation();
         var layout = Prepare(outDir, models is not null);
         int shape = ShapeFor(onDisk, outDir);
         // An interrupted write must leave no index, not a stale one; it is rewritten below.
@@ -101,14 +103,13 @@ public static class SetWriter
         var existing = LoadExisting(layout, set);
         var rarity = new Rarity(existing, set, shape);
         var indexSlots = new SetIndexEntry[set.Assets.Count];
-        var indexSlotOf = SlotsOf(set);
+        var slots = SlotsOf(set);
 
         // One asset's three files depend on that asset and on `rarity`, which is finished being
         // built above and is only read from here on. Nothing is shared and nothing accumulates, so
         // the files that land on disk are byte-identical whatever order they are written in — only
         // the order changes, and no reader can see it. PNG encoding is the cost here, and it is
         // CPU-bound, so this is where the time goes.
-        var slots = SlotsOf(set);
         ParallelWork.ForEachReporting(set.Assets, parallelism, cancellationToken, asset =>
         {
             var (imagePath, metaPath, nftyPath) = PathsFor(layout, asset.SetNumber);
@@ -116,7 +117,7 @@ public static class SetWriter
             File.WriteAllText(metaPath, Serialize(BuildOpenSea(set, asset, shape)));
             var nftyText = Serialize(BuildNfty(set, asset, rarity, shape));
             File.WriteAllText(nftyPath, nftyText);
-            indexSlots[indexSlotOf[asset.SetNumber]] = IndexEntryOf(nftyPath, asset.SetNumber, asset.Dna, nftyText);
+            indexSlots[slots[asset.SetNumber]] = IndexEntryOf(nftyPath, asset.SetNumber, asset.Dna, nftyText);
 
             // Built, written and dropped one at a time: memory is one model per worker, never the set.
             var files = ModelFor(models, asset);
@@ -131,7 +132,7 @@ public static class SetWriter
         ParallelWork.For(existing.Count, parallelism, cancellationToken, i =>
         {
             var item = existing[i];
-            var text = Serialize(Regraded(item, rarity));
+            var text = Serialize(Regraded(item, rarity, shape));
             File.WriteAllText(item.NftyPath, text);
             existingEntries[i] = IndexEntryOf(item.NftyPath, item.SetNumber, item.Nfty.Dna, text);
         });
@@ -168,14 +169,14 @@ public static class SetWriter
         var rollback = WriteRollback.Capture(outDir);
         try
         {
-            await WriteCoreAsync(set, outDir, pack, progress, cancellationToken, models, parallelism).ConfigureAwait(false);
+            await WriteCoreAsync(set, outDir, pack, progress, cancellationToken, models, parallelism, rollback).ConfigureAwait(false);
         }
         catch { rollback.Undo(); throw; }
     }
 
     private static async Task WriteCoreAsync(GeneratedSet set, string outDir, bool pack,
         IProgress<WriteProgress>? progress, CancellationToken cancellationToken, IAssetModeler? models,
-        Parallelism? parallelism)
+        Parallelism? parallelism, WriteRollback rollback)
     {
         parallelism ??= Parallelism.Default;
         // Read BEFORE anything can overwrite set.json — see RecordedAt.
@@ -185,15 +186,15 @@ public static class SetWriter
         // As in Write: every name validated before anything is written.
         ValidateModelNames(models, set);
         var skipped = models is null ? null : new bool[set.Assets.Count];
+        rollback.BeginMutation();
         var layout = Prepare(outDir, models is not null);
         int shape = ShapeFor(onDisk, outDir);
         SetIndex.Delete(outDir);
         var existing = await LoadExistingAsync(layout, set, cancellationToken).ConfigureAwait(false);
         var rarity = new Rarity(existing, set, shape);
         var indexSlots = new SetIndexEntry[set.Assets.Count];
-        var indexSlotOf = SlotsOf(set);
-
         var slots = SlotsOf(set);
+
         var progressGate = new Lock();
         int done = 0;
         await ParallelWork.ForEachAsync(set.Assets, parallelism, cancellationToken, async (asset, ct) =>
@@ -203,7 +204,7 @@ public static class SetWriter
             await File.WriteAllTextAsync(metaPath, Serialize(BuildOpenSea(set, asset, shape)), ct).ConfigureAwait(false);
             var nftyText = Serialize(BuildNfty(set, asset, rarity, shape));
             await File.WriteAllTextAsync(nftyPath, nftyText, ct).ConfigureAwait(false);
-            indexSlots[indexSlotOf[asset.SetNumber]] = IndexEntryOf(nftyPath, asset.SetNumber, asset.Dna, nftyText);
+            indexSlots[slots[asset.SetNumber]] = IndexEntryOf(nftyPath, asset.SetNumber, asset.Dna, nftyText);
 
             // The modeler is synchronous CPU work; it is not faked async. One model at a time per worker.
             var files = ModelFor(models, asset);
@@ -225,7 +226,7 @@ public static class SetWriter
             async (i, ct) =>
             {
                 var item = existing[i];
-                var text = Serialize(Regraded(item, rarity));
+                var text = Serialize(Regraded(item, rarity, shape));
                 await File.WriteAllTextAsync(item.NftyPath, text, ct).ConfigureAwait(false);
                 existingEntries[i] = IndexEntryOf(item.NftyPath, item.SetNumber, item.Nfty.Dna, text);
             }).ConfigureAwait(false);
@@ -574,8 +575,17 @@ public static class SetWriter
     }
 
     /// <summary>An existing item with its rarity restated against the enlarged collection.</summary>
-    private static NftyMetadata Regraded(ExistingItem item, Rarity rarity) =>
-        item.Nfty with { Rarity = item.Attributes.Select(a => rarity.For(a.Trait_type, a.Value)).ToList() };
+    private static NftyMetadata Regraded(ExistingItem item, Rarity rarity, int shape) =>
+        item.Nfty with { Rarity = ExistingAttributes(item, shape).Select(a => rarity.For(a.Trait_type, a.Value)).ToList() };
+
+    private static IEnumerable<MetadataAttribute> ExistingAttributes(ExistingItem item, int shape)
+    {
+        foreach (var attr in item.Attributes) yield return attr;
+        if (shape >= MetadataTraits.CurrentShape || item.Nfty.AbsentLayers is not { } absent) yield break;
+        foreach (string name in absent.Distinct(StringComparer.Ordinal))
+            if (!item.Attributes.Any(a => a.Trait_type == name))
+                yield return new MetadataAttribute(name, AbsentValue);
+    }
 
     /// <summary>Set number to its slot in the per-asset <c>skipped</c> array; read-only once built.</summary>
     private static Dictionary<int, int> SlotsOf(GeneratedSet set)
@@ -774,10 +784,19 @@ public static class SetWriter
         // Taken BEFORE the archive is created, so it cannot contain itself mid-write.
         var entries = SetLayout.FilesIn(dir);
 
-        if (File.Exists(archivePath)) File.Delete(archivePath);
-        using var zip = ZipFile.Open(archivePath, ZipArchiveMode.Create);
-        foreach (var file in entries)
-            zip.CreateEntryFromFile(file, Path.GetRelativePath(dir, file).Replace(Path.DirectorySeparatorChar, '/'));
+        string staging = Path.Combine(dir, ".nfty-pack-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            using (var zip = ZipFile.Open(staging, ZipArchiveMode.Create))
+                foreach (var file in entries)
+                    zip.CreateEntryFromFile(file, Path.GetRelativePath(dir, file).Replace(Path.DirectorySeparatorChar, '/'));
+            File.Move(staging, archivePath, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(staging))
+                try { File.Delete(staging); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+        }
     }
 
     private static string Serialize<T>(T value) => JsonSerializer.Serialize(value, Json.Options);
@@ -805,7 +824,7 @@ public static class SetWriter
         public Rarity(IReadOnlyList<ExistingItem> existing, GeneratedSet set, int shape)
         {
             foreach (var item in existing)
-                foreach (var attr in item.Attributes) Bump(attr.Trait_type, attr.Value);
+                foreach (var attr in ExistingAttributes(item, shape)) Bump(attr.Trait_type, attr.Value);
 
             foreach (var asset in set.Assets)
             {

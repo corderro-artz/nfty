@@ -159,11 +159,11 @@ Removes one variant from an ingredient.
 **Exceptions**
 
 - `KeyNotFoundException` - No such recipe, ingredient or variant.
-- `InvalidOperationException` - It is the ingredient's only variant.
+- `InvalidOperationException` - It is the ingredient's only variant, or a rule references it as a trigger or target. Edit or remove that rule before deleting the variant.
 
 **Remarks**
 
-Reuses every surviving image; the caller owns the removed one, exactly as [`CookBookEdits.RemoveIngredient()`](Nfty.Core.Editing.CookBookEdits.md#m-removeingredient-nfty-core-formats-loadedcookbook-syst-c6fa3f) hands back the subtree it dropped.
+Reuses every surviving image; the caller owns the removed one, exactly as [`CookBookEdits.RemoveIngredient()`](Nfty.Core.Editing.CookBookEdits.md#m-removeingredient-nfty-core-formats-loadedcookbook-syst-c6fa3f) leaves the removed subtree in the caller's ownership.
 
 It REFUSES to empty an ingredient. A layer with no variants has nothing to roll, and `Validator` reports it as a problem - so a book saved that way is broken from then on, reported on a screen nowhere near the delete. A front-end is expected to gray the control as well; this is the backstop that makes the rule true of the operation rather than true of whichever caller remembered it.
 

@@ -51,7 +51,7 @@ The book deliberately shows one of everything:
 - **A rule.** A stone chest never carries a keypad. See [Rules](../app/rules.md).
 - **Depth.** Every layer carries relief, so the demo rises into 3D on the [Rise page](../app/rise.md).
 
-Twenty-nine drawings produce exactly **7,155,000** distinct assets. That figure is a count, not an
+Twenty-nine drawings produce exactly **8,745,000** distinct assets. That figure is a count, not an
 estimate; see [How uniqueness is decided](../concepts/uniqueness.md).
 
 ## It is yours to change

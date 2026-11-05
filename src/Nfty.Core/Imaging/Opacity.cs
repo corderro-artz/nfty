@@ -47,13 +47,7 @@ public static class Opacity
     /// first one it finds.</summary>
     /// <param name="images">The images to scan, in order.</param>
     /// <returns><c>true</c> as soon as a partial pixel is found in any image.</returns>
-    public static bool HasPartialAlpha(IEnumerable<Image<Rgba32>> images)
-    {
-        foreach (var img in images)
-            if (HasPartialAlpha(img))
-                return true;
-        return false;
-    }
+    public static bool HasPartialAlpha(IEnumerable<Image<Rgba32>> images) => images.Any(HasPartialAlpha);
 
     /// <summary>Whether any variant image of a layer carries partial alpha.</summary>
     /// <param name="ing">The layer to scan.</param>
@@ -63,22 +57,10 @@ public static class Opacity
     /// <summary>Whether any layer's variant image in a recipe carries partial alpha.</summary>
     /// <param name="recipe">The recipe to scan.</param>
     /// <returns><c>true</c> as soon as a partial pixel is found in any of its layers.</returns>
-    public static bool HasPartialAlpha(LoadedRecipe recipe)
-    {
-        foreach (var ing in recipe.Ingredients)
-            if (HasPartialAlpha(ing))
-                return true;
-        return false;
-    }
+    public static bool HasPartialAlpha(LoadedRecipe recipe) => recipe.Ingredients.Any(HasPartialAlpha);
 
     /// <summary>Whether any variant image anywhere in a book carries partial alpha.</summary>
     /// <param name="book">The book to scan.</param>
     /// <returns><c>true</c> as soon as a partial pixel is found anywhere in it.</returns>
-    public static bool HasPartialAlpha(LoadedCookBook book)
-    {
-        foreach (var recipe in book.Recipes)
-            if (HasPartialAlpha(recipe))
-                return true;
-        return false;
-    }
+    public static bool HasPartialAlpha(LoadedCookBook book) => book.Recipes.Any(HasPartialAlpha);
 }

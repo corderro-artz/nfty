@@ -49,7 +49,7 @@ public record LayerColor(string Layer, string Kind, string? Model, double? H, do
 /// <param name="Seed">The seed of the run that produced it.</param>
 /// <param name="Rarity">The share of the collection carrying each of its traits.</param>
 /// <param name="Layers">What each layer contributed, including the color it rolled.</param>
-/// <param name="AbsentLayers">The ids of optional layers the roll left out; null when none were.</param>
+/// <param name="AbsentLayers">The display names of optional layers the roll left out; null when none were.</param>
 public record NftyMetadata(
     int SetNumber,
     string Recipe,
@@ -79,7 +79,8 @@ public record RecipeCount(string Recipe, int Count, double Percent);
 /// </summary>
 /// <param name="Name">The collection's name.</param>
 /// <param name="Count">How many assets the Set holds.</param>
-/// <param name="Seed">The seed that produced it; the same seed and cookbook reproduce it exactly.</param>
+/// <param name="Seed">The seed that produced it; reproduction also needs the same cookbook and
+/// compatible generation options, including <see cref="UniqueDna"/>.</param>
 /// <param name="CookbookSha256">SHA-256 of the source <c>.cbk</c> — what ties a Set back to the exact
 /// archive that produced it. Null when the cookbook never came from a file (an in-memory book).
 ///

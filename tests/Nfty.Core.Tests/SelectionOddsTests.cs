@@ -225,7 +225,7 @@ public class SelectionOddsTests
     /// <para>Probed with a budget of TWO, which is the smallest that starves the right half: the
     /// denominator has to walk this recipe's four combinations and gives up, while the numerator —
     /// restricted to the one outcome per layer the metadata names — still walks. A budget of one
-    /// would starve both and report nothing, which is a different answer and not this one.</para>
+    /// also permits that single-outcome numerator; the limit includes equality.</para>
     /// </summary>
     [Fact]
     public void An_unwalkable_book_reports_a_floor_rather_than_a_guess()
@@ -280,7 +280,7 @@ public class SelectionOddsTests
     public void A_budget_the_caller_got_wrong_is_refused_rather_than_downgrading_the_whole_book()
     {
         // Left unchecked it does not merely give a wrong answer. The walk is gated on
-        // `combos >= budget`, which a zero or negative budget makes true on the first layer, so
+        // `combos > budget`, which a zero or negative budget makes true on the first layer, so
         // every recipe reports itself unwalkable and the book silently comes back as a floor -
         // indistinguishable from a book that genuinely could not be counted.
         using var book = Ruled();

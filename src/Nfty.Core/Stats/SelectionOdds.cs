@@ -17,7 +17,8 @@ namespace Nfty.Core.Stats;
 /// <see cref="SpaceCertainty.Exact"/> when nothing gave up; <see cref="SpaceCertainty.AtLeast"/>
 /// when the rules could not be walked, which makes the figure a floor on the probability and so a
 /// CEILING on the odds ("at most 1 in N"); <see cref="SpaceCertainty.Unknown"/> when the selection
-/// could not be mapped onto the book at all. <see cref="SpaceCertainty.AtMost"/> never occurs here
+/// could not be mapped onto the book, or a weighted branch cannot retain its nominal share at the
+/// sampler's precision. <see cref="SpaceCertainty.AtMost"/> never occurs here
 /// and is not special-cased: see <see cref="SelectionOdds"/> for why the error can only go one way.
 /// </param>
 public record SelectionChance(double Probability, SpaceCertainty Certainty)
@@ -99,7 +100,7 @@ public static class SelectionOdds
         ArgumentNullException.ThrowIfNull(book);
         // A non-positive budget is the caller's own argument and is refused, exactly as
         // UniqueSpace.Count refuses one. Left unchecked it does not merely give a wrong answer: the
-        // walk below is gated on `combos >= budget`, which a zero or negative budget makes true
+        // walk below is gated on `combos > budget`, which a zero or negative budget makes true
         // immediately, so every recipe reports itself unwalkable and the whole book silently
         // downgrades to a floor.
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(enumerationBudget);
@@ -152,11 +153,13 @@ public static class SelectionOdds
         if (!asOdds)
         {
             double pct = chance.Probability * 100.0;
-            // Enough places to stay non-zero however deep the stack goes: a six-layer asset is
-            // routinely a thousandth of a percent, and "0.00%" is not a figure.
+            // Decimal places handle ordinary stacks; scientific notation keeps arbitrarily small
+            // positive chances nonzero without replacing a probability floor with a larger one.
             string text = pct >= 0.01
                 ? pct.ToString("0.##", CultureInfo.InvariantCulture)
-                : pct.ToString("0.######", CultureInfo.InvariantCulture);
+                : pct >= 0.000001
+                    ? pct.ToString("0.######", CultureInfo.InvariantCulture)
+                    : pct.ToString("0.######E+0", CultureInfo.InvariantCulture);
             return bounded ? $"at least {text}%" : $"{text}%";
         }
 
@@ -209,12 +212,22 @@ public sealed class BookOdds
             if (!double.IsFinite(w) || w < 0) { usable = false; break; }
             total += w;
         }
+        usable &= WeightPrecision.CanReport(_weights.OrderBy(kv => kv.Key, StringComparer.Ordinal).Select(kv => kv.Value));
         _weightTotal = usable && total > 0 ? total : 0;
         if (_weightTotal <= 0) return;     // nothing can be priced; every Of() returns Nothing
 
         foreach (var recipe in book.Recipes)
-            if (TryLayers(recipe, out var layers))
+        {
+            if (TryLayers(recipe, out var layers, out bool precisionAvailable))
                 _recipes[recipe.Manifest.Id] = new Resolved(recipe.Manifest.Rules, layers);
+            else if (!precisionAvailable && _weights.GetValueOrDefault(recipe.Manifest.Id) > 0)
+            {
+                // This is not a budgeted rule walk: its nominal weighted probabilities cannot
+                // describe this draw, so do not turn an unavailable normalizer into a floor.
+                _weightTotal = 0;
+                return;
+            }
+        }
 
         // THE DENOMINATOR, computed once. Exactly 1 for a book with no rules anywhere, which is most
         // books and costs nothing to notice; otherwise one budgeted walk per ruled recipe, which is
@@ -230,7 +243,9 @@ public sealed class BookOdds
             if (!_recipes.TryGetValue(id, out var resolved)) return;
             double mass = LegalMass(resolved.Layers, resolved.Rules, _budget, out bool walked);
             if (!walked) return;                       // _denominator stays null: a floor is all we have
-            denominator += mass * w / _weightTotal;
+            // Use the same association as the numerator. (mass*w)/total can round below
+            // mass*(w/total), making a guaranteed outcome look larger than the whole legal mass.
+            denominator += mass * (w / _weightTotal);
         }
 
         if (denominator > 0) _denominator = denominator;
@@ -340,6 +355,8 @@ public sealed class BookOdds
     /// </summary>
     /// <param name="recipe">The recipe. May be mid-edit and invalid; this reports rather than throws.</param>
     /// <param name="layers">Its layers, empty when it could not be resolved.</param>
+    /// <param name="precisionAvailable">False when a nominal weighted share cannot be represented
+    /// reliably by one sampler draw, rather than when the book is merely incomplete.</param>
     /// <returns>Whether every layer resolved.</returns>
     /// <remarks>
     /// The arithmetic mirrors <c>Ticketer.Prepare</c> and
@@ -352,8 +369,9 @@ public sealed class BookOdds
     /// <c>Ticketer</c> — over a book with a rule, an absent percent and uneven recipe weights, and
     /// checks the prediction against the observed rate.
     /// </remarks>
-    private static bool TryLayers(PeekedRecipe recipe, out List<LayerOdds> layers)
+    private static bool TryLayers(PeekedRecipe recipe, out List<LayerOdds> layers, out bool precisionAvailable)
     {
+        precisionAvailable = true;
         layers = new List<LayerOdds>(recipe.Manifest.LayerOrder.Count);
         var byId = Nfty.Ticket.Lookup.ById(recipe.Ingredients, i => i.Id);
 
@@ -368,6 +386,14 @@ public sealed class BookOdds
             {
                 layers.Add(new LayerOdds(id, ing.Name, Array.Empty<VariantOdds>(), 1));
                 continue;
+            }
+
+            if (!WeightPrecision.CanReport(ing.Variants.OrderBy(v => v.Id, StringComparer.Ordinal)
+                    .Select(v => v.Weight), percent))
+            {
+                precisionAvailable = false;
+                layers.Clear();
+                return false;
             }
 
             double variantTotal = 0;
@@ -434,7 +460,7 @@ public sealed class BookOdds
         foreach (var l in layers)
         {
             combos *= Math.Max(1, l.Branches);
-            if (combos >= budget) { walked = false; return 0; }
+            if (combos > budget) { walked = false; return 0; }
         }
 
         double total = 0;

@@ -12,7 +12,7 @@ THE one way nfty decodes a picture. Every `Image.Load`, `Image.Identify` and `De
 
 ## Remarks
 
-Why: ImageSharp is pinned at 3.1.11 (see Directory.Packages.props) and that version carries six advisories whose fixes exist only in 3.2.0+ (which needs a license key). Five are TIFF decoders/encoders or `HistogramEqualization`, none of which nfty ever calls; the sixth is ICC CLUT parsing, reached only through `IccProfile.Entries`/`CheckIntegrity`, which nothing here touches. Registering only PNG + JPEG makes the TIFF half unreachable from any file a user hands us, whatever its extension says, and `SkipMetadata` keeps embedded ICC profiles from being read.
+Why: ImageSharp is pinned at 3.1.11 (see Directory.Packages.props) and that version carries six advisories whose fixes exist only in 3.2.0+ (which needs a license key). Five are TIFF decoders/encoders or `HistogramEqualization`, none of which nfty ever calls; the sixth is ICC CLUT parsing, reached only through `IccProfile.Entries`/`CheckIntegrity`, which nothing here touches. Registering only PNG + JPEG makes the TIFF half unreachable from any file a user hands us, whatever its extension says. `SkipMetadata` skips optional metadata, but the pinned PNG decoder still retains raw ICC bytes. Typed loads explicitly drop that lazy profile with `NoIcc`; no overload reads its parsed entries or header.
 
 A file in any other format is refused with `UnknownImageFormatException` (the type every existing caller already handles) carrying a message in the product's words. The `keepMetadata` overloads exist for ONE reason: the sprite sheet's `nfty-grid` text chunk lives in PNG metadata. There a PNG's ICC chunk is stored unparsed and written back untouched.
 

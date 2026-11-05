@@ -26,7 +26,7 @@ public LoadedIngredient();
 public IReadOnlyDictionary<string, DepthMap> Depths { get; init; }
 ```
 
-Per-pixel front/back depth maps, keyed by variant id. A variant with no entry here is flat — "paper" — for the Rise feature. Never as large as [`LoadedIngredient.VariantImages`](Nfty.Core.Formats.LoadedIngredient.md#p-variantimages): most variants carry no depth data at all.
+Per-pixel front/back depth maps, keyed by variant id. A variant with no entry here is flat — "paper" — for the Rise feature. May cover every variant, although variants without painted depth need no entry.
 
 ### Manifest { #p-manifest }
 

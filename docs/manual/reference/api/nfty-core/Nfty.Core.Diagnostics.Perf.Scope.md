@@ -18,4 +18,4 @@ One measured block. A default instance is the disabled case and does nothing.
 public void Dispose();
 ```
 
-Closes the scope and folds its time and allocation into the totals.
+Closes the scope, folds its wall time into the totals, and includes the thread-local allocation delta only when closing on the creating thread.

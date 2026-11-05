@@ -16,7 +16,7 @@ This is [`ArchivePeek`](Nfty.Core.Formats.ArchivePeek.md)'s argument carried one
 
 So this is the shape those questions take their input in. It is deliberately NOT `IDisposable`: there is nothing here to own. [`LoadedCookBook`](Nfty.Core.Formats.LoadedCookBook.md) remains the engine's form — `Generator` and `Validator` take that and only that, because they draw pixels — and a reader of this one must not assume the art is even present.
 
-**Recipe order here is ordinal, not the book's own [`CookBookManifest.RecipeOrder`](../nfty-ticket/Nfty.Core.Model.CookBookManifest.md#p-recipeorder).** That field is a listing preference and this is not a listing; anything that shows a reader a book's recipes wants [`CookBookArchive.Read()`](Nfty.Core.Formats.CookBookArchive.md#m-read-system-string-nfty-core-parallelism) or the manifest field itself.
+[`ArchivePeek.CookBookTree()`](Nfty.Core.Formats.ArchivePeek.md#m-cookbooktree-system-string) supplies recipes ordinally by id. [`PeekedCookBook.Of()`](Nfty.Core.Formats.PeekedCookBook.md#m-of-nfty-core-formats-loadedcookbook) preserves the loaded book's supplied order, including its listing preference from [`CookBookManifest.RecipeOrder`](../nfty-ticket/Nfty.Core.Model.CookBookManifest.md#p-recipeorder). The record itself imposes no order.
 
 ## Constructors
 
@@ -29,7 +29,7 @@ public PeekedCookBook(CookBookManifest Manifest, IReadOnlyList<PeekedRecipe> Rec
 **Parameters**
 
 - `Manifest` (`CookBookManifest`) - The book's own manifest — canvas, collection, recipe weights.
-- `Recipes` (`IReadOnlyList<PeekedRecipe>`) - Its recipes, ordinally by id.
+- `Recipes` (`IReadOnlyList<PeekedRecipe>`) - Its recipes, in the producer's supplied order.
 
 **Remarks**
 
@@ -37,7 +37,7 @@ This is [`ArchivePeek`](Nfty.Core.Formats.ArchivePeek.md)'s argument carried one
 
 So this is the shape those questions take their input in. It is deliberately NOT `IDisposable`: there is nothing here to own. [`LoadedCookBook`](Nfty.Core.Formats.LoadedCookBook.md) remains the engine's form — `Generator` and `Validator` take that and only that, because they draw pixels — and a reader of this one must not assume the art is even present.
 
-**Recipe order here is ordinal, not the book's own [`CookBookManifest.RecipeOrder`](../nfty-ticket/Nfty.Core.Model.CookBookManifest.md#p-recipeorder).** That field is a listing preference and this is not a listing; anything that shows a reader a book's recipes wants [`CookBookArchive.Read()`](Nfty.Core.Formats.CookBookArchive.md#m-read-system-string-nfty-core-parallelism) or the manifest field itself.
+[`ArchivePeek.CookBookTree()`](Nfty.Core.Formats.ArchivePeek.md#m-cookbooktree-system-string) supplies recipes ordinally by id. [`PeekedCookBook.Of()`](Nfty.Core.Formats.PeekedCookBook.md#m-of-nfty-core-formats-loadedcookbook) preserves the loaded book's supplied order, including its listing preference from [`CookBookManifest.RecipeOrder`](../nfty-ticket/Nfty.Core.Model.CookBookManifest.md#p-recipeorder). The record itself imposes no order.
 
 ## Properties
 
@@ -55,7 +55,7 @@ The book's own manifest — canvas, collection, recipe weights.
 public IReadOnlyList<PeekedRecipe> Recipes { get; init; }
 ```
 
-Its recipes, ordinally by id.
+Its recipes, in the producer's supplied order.
 
 ## Methods
 

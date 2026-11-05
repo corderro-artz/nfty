@@ -271,7 +271,11 @@ public static class SetExporter
         var plan = PlanFrom(source.Dir, source.Leaf, options, cookBookPath);
 
         Directory.CreateDirectory(outDir);
-        string destination = Path.Combine(Path.GetFullPath(outDir), plan.OutputName);
+        string root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(outDir));
+        string destination = Path.GetFullPath(Path.Combine(root, plan.OutputName));
+        var pathComparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        if (!string.Equals(Path.GetDirectoryName(destination), root, pathComparison))
+            throw new ArgumentException("The export name must be an immediate child of the output folder.", nameof(outDir));
 
         // Copying a folder over itself empties it one file at a time. The comparison is on the full
         // path because "." and an absolute path are the same folder and do not look it.
@@ -280,6 +284,10 @@ public static class SetExporter
                 Path.TrimEndingDirectorySeparator(source.Dir), StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException(
                 $"'{destination}' is the Set being exported. Choose a different folder.", nameof(outDir));
+
+        if (options.Shape == ExportShape.Folder && Directory.Exists(destination)
+            && Directory.EnumerateFileSystemEntries(destination).Any())
+            throw new IOException($"Export destination '{destination}' is not empty. Choose an empty folder.");
 
         string? sheetTemp = null;
         string? artTemp = null;
@@ -294,7 +302,7 @@ public static class SetExporter
             if (options.NumberWatermark)
             {
                 (plan, artTemp, stamped) = await StampAsync(
-                    source.Dir, plan, options, progress, parallelism ?? Parallelism.Default, cancellationToken)
+                    plan, options, progress, parallelism ?? Parallelism.Default, cancellationToken)
                     .ConfigureAwait(false);
             }
 
@@ -378,7 +386,6 @@ public static class SetExporter
     /// <summary>
     /// Renders a stamped copy of every asset and points the plan's art entries at it.
     /// </summary>
-    /// <param name="setDir">The Set being exported, already unpacked.</param>
     /// <param name="plan">The plan so far.</param>
     /// <param name="options">The request, for the corner.</param>
     /// <param name="progress">The run's progress sink.</param>
@@ -391,10 +398,9 @@ public static class SetExporter
     /// entry's SOURCE is swapped. Every shape downstream then carries the stamped art through the
     /// entry list it already walks, exactly as the sheet does.</para>
     ///
-    /// <para><b>The number comes from the FILENAME, which is the one place it is already written
-    /// down.</b> An asset's stem is its set number, and reading it back costs nothing where opening
-    /// every <c>nfty/NNNN.json</c> to look up the same integer would cost a file read apiece. A stem
-    /// that is not a number is left unstamped rather than guessed at.</para>
+    /// <para>The number comes from <see cref="ExportEntry.SetNumber"/>, which survives renaming to a
+    /// token id. A hand-built entry without it falls back to the source filename; a nonnumeric stem
+    /// is left unstamped.</para>
     ///
     /// <para><b>Each asset is its own file</b> and the stamp is a pure function of (pixels, number),
     /// so the assets are numbered in parallel; each result lands in the entry slot found by
@@ -402,9 +408,8 @@ public static class SetExporter
     /// one is named, whatever the thread count. A failure removes the temp folder it created: the
     /// caller never receives the path, so nobody else could.</para>
     /// </remarks>
-    private static async Task<(ExportPlan Plan, string Temp, int Steps)> StampAsync(string setDir,
-        ExportPlan plan, ExportOptions options, IProgress<ExportProgress>? progress,
-        Parallelism parallelism, CancellationToken cancellationToken)
+    private static async Task<(ExportPlan Plan, string Temp, int Steps)> StampAsync(ExportPlan plan,
+        ExportOptions options, IProgress<ExportProgress>? progress, Parallelism parallelism, CancellationToken cancellationToken)
     {
         string temp = Directory.CreateTempSubdirectory("nfty-stamp-").FullName;
         try
@@ -412,7 +417,8 @@ public static class SetExporter
             string prefix = SetLayout.ImagesDir + "/";
             var artAt = new List<int>();
             for (int e = 0; e < plan.Entries.Count; e++)
-                if (plan.Entries[e].Name.StartsWith(prefix, StringComparison.Ordinal)) artAt.Add(e);
+                if (plan.Entries[e].SetNumber is not null
+                    && plan.Entries[e].Name.StartsWith(prefix, StringComparison.Ordinal)) artAt.Add(e);
 
             int total = artAt.Count * 2 + plan.Entries.Count;
             var entries = plan.Entries.ToList();
@@ -709,6 +715,12 @@ public static class SetExporter
 
             string dir = rel[..rel.IndexOf('/')];
             int? number = dir == SetLayout.NftyDir ? null : from.NumberOf(file);
+            // Only the primary per-item file is renamed. These directories are taken whole, so
+            // numbered alternate encodings and nested files belong to the export at their own paths.
+            if (number is { } candidate && dir != SetLayout.ModelsDir
+                && rel != dir + "/" + (dir == SetLayout.ImagesDir
+                    ? from.ImageFile(candidate) : from.MetadataFile(candidate)))
+                number = null;
 
             // nfty/ keeps the Set's own names and numbering: it is nfty's record of the Set,
             // cross-referenced by set number, and not what a marketplace reads.
@@ -809,6 +821,14 @@ public static class SetExporter
             Warn("Models are not linked: upload models/, then export again with --model-base-uri "
                 + "ipfs://<CID>/ to write animation_url.",
                 "Models are not linked: upload models/, then set the Model base URI to write animation_url.");
+
+        var destinations = new HashSet<string>(OperatingSystem.IsWindows()
+            ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        foreach (var entry in entries)
+            if (!destinations.Add(entry.Name))
+                throw new ArgumentException($"Export files collide at '{entry.Name}'.", nameof(options));
+        if (options.SpriteSheet && !destinations.Add(ExportPlan.SpriteSheetName))
+            throw new ArgumentException($"Export files collide at '{ExportPlan.SpriteSheetName}'.", nameof(options));
 
         string stem = FileNameFor(manifest.Name, leaf);
         string name = options.Shape == ExportShape.Folder ? stem
@@ -936,9 +956,21 @@ public static class SetExporter
     /// </remarks>
     private static string FileNameFor(string collection, string fallback)
     {
-        var cleaned = new string(collection
-            .Where(c => !Path.GetInvalidFileNameChars().Contains(c)).ToArray()).Trim();
-        return cleaned.Length > 0 ? cleaned : fallback;
+        static string Clean(string value) => new string(value
+            .Where(c => !Path.GetInvalidFileNameChars().Contains(c) && c is not '/' and not '\\').ToArray())
+            .Trim().TrimEnd('.', ' ');
+        string cleaned = Clean(collection);
+        if (cleaned.Length == 0) cleaned = Clean(fallback);
+        if (cleaned.Length == 0) cleaned = "collection";
+        // Windows device names remain reserved even with an extension; sanitize them on every OS
+        // so an export named on Unix can still be unpacked on Windows.
+        string device = cleaned.Split('.')[0].ToUpperInvariant();
+        if (device is "CON" or "PRN" or "AUX" or "NUL" or "CONIN$" or "CONOUT$"
+            || (device.Length == 4 && (device.StartsWith("COM", StringComparison.Ordinal)
+                || device.StartsWith("LPT", StringComparison.Ordinal))
+                && "123456789\u00b9\u00b2\u00b3".Contains(device[3])))
+            cleaned = "_" + cleaned;
+        return cleaned;
     }
 
     /// <summary>
@@ -966,14 +998,29 @@ public static class SetExporter
     private static void WriteFolder(ExportPlan plan, string destination,
         IProgress<ExportProgress>? progress, int done, int total, CancellationToken ct)
     {
-        Directory.CreateDirectory(destination);
-        foreach (var e in plan.Entries)
+        // A folder export owns only this staging directory. Refusing nonempty destinations avoids
+        // retaining excluded private files, and staging leaves the chosen destination clean on failure.
+        string staging = Path.Combine(Path.GetDirectoryName(destination)!, ".nfty-export-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(staging);
+        try
         {
+            foreach (var e in plan.Entries)
+            {
+                ct.ThrowIfCancellationRequested();
+                string target = Path.Combine(staging, e.Name.Replace('/', Path.DirectorySeparatorChar));
+                Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+                File.Copy(e.Source, target, overwrite: false);
+                Report(progress, ++done, total, "Writing...");
+            }
             ct.ThrowIfCancellationRequested();
-            string target = Path.Combine(destination, e.Name.Replace('/', Path.DirectorySeparatorChar));
-            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-            File.Copy(e.Source, target, overwrite: true);
-            Report(progress, ++done, total, "Writing...");
+            // Recheck by removing only an EMPTY destination. Concurrent user files cause refusal.
+            if (Directory.Exists(destination)) Directory.Delete(destination, recursive: false);
+            Directory.Move(staging, destination);
+        }
+        finally
+        {
+            if (Directory.Exists(staging))
+                try { Directory.Delete(staging, recursive: true); } catch { /* best effort */ }
         }
     }
 

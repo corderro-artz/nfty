@@ -63,7 +63,7 @@ public static class SetLayout
     /// </summary>
     /// <exception cref="ArgumentException"><paramref name="setDir"/> is null or whitespace.</exception>
     /// <param name="setDir">The Set folder.</param>
-    /// <returns>Absolute paths, in <see cref="StringComparer.Ordinal"/> order.</returns>
+    /// <returns>Paths relative or absolute as <paramref name="setDir"/>, in <see cref="StringComparer.Ordinal"/> order.</returns>
     /// <remarks>This is the one rule for "which of the folder's <c>models/</c> is the Set's": the
     /// listing, <c>Pack</c>, the exporter and the export dialog all ask here, so a user's own
     /// <c>models/secret-source.blend</c> - or a stray <c>0001.glb</c> beside a Set cooked without
@@ -134,7 +134,8 @@ public static class SetLayout
     /// <exception cref="ArgumentException"><paramref name="setDir"/> is null or whitespace.</exception>
     /// <param name="setDir">The Set folder.</param>
     /// <returns>
-    /// Absolute paths, in <see cref="StringComparer.Ordinal"/> order. Ordinal because these reach an
+    /// Paths relative or absolute as <paramref name="setDir"/>, in <see cref="StringComparer.Ordinal"/>
+    /// order. Ordinal because these reach an
     /// output file: the default comparer sorts by the current culture, so the same Set would pack to
     /// a different archive on an <c>en-US</c> machine than on a <c>sv-SE</c> one — the rule every
     /// other sort that reaches disk here already follows.

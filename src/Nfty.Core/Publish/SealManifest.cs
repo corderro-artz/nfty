@@ -29,8 +29,8 @@ public record SealKdf(string Algorithm, int Iterations, string Salt);
 /// authenticated frames so a 4 GB collection never has to be held in memory to be read or written.</param>
 /// <param name="Frames">How many frames the payload holds.</param>
 /// <param name="PlainBytes">The plaintext length, which is what gives the final (short) frame its
-/// size. Both are in the AAD of every frame, so a truncated payload fails to authenticate rather
-/// than decrypting to a shorter collection.</param>
+/// size. Both are covered by the header MAC and every frame's AAD. A reader therefore expects
+/// the declared bytes and refuses a truncated payload.</param>
 /// <param name="NoncePrefix">The four random bytes every frame nonce begins with, hex. The
 /// remaining eight are the frame index, so no nonce can repeat under one key.</param>
 public record SealCipher(string Algorithm, int FrameBytes, int Frames, long PlainBytes, string NoncePrefix);
@@ -49,7 +49,10 @@ public record SealCipher(string Algorithm, int FrameBytes, int Frames, long Plai
 /// The art, the traits, the rarity and the DNA are all inside the encryption; the label on the tin
 /// is not.</para>
 ///
-/// <para><b><see cref="PolicyMac"/> is what stops the label being rewritten.</b> It is an HMAC over
+/// <para><see cref="AuthenticationVersion"/> 2 binds fields unambiguously. Legacy version 1 remains
+/// readable with its original delimiter encoding; its collection/count/note labels cannot be made
+/// retroactively tamper-proof. New writers always emit version 2.</para>
+/// <para><b><see cref="PolicyMac"/> authenticates the header.</b> It is an HMAC over
 /// <see cref="Canonical"/> keyed by a second key derived from the same passphrase, so someone who
 /// intercepts the file cannot edit <c>allowExport</c> to true, or restate the note, and pass it on.
 /// Someone who HAS the passphrase can recompute it — that is not a gap in the implementation, it is
@@ -77,10 +80,15 @@ public record SealManifest(
     SealCipher Cipher,
     int SchemaVersion = Schema.Current) : ISchemaVersioned
 {
+    /// <summary>The authenticated-header encoding: absent in historical files means version 1.
+    /// Version 2 uses length-prefixed fields and binds the schema version as well.</summary>
+    public int AuthenticationVersion { get; init; } = 1;
+
     /// <summary>
-    /// The exact bytes the MAC covers, as a string.
+    /// The exact UTF-8 text the MAC covers.
     /// </summary>
-    /// <returns>One line naming every header field that carries meaning, in a fixed order.</returns>
+    /// <returns>Fields in a fixed order, using the declared authentication version.</returns>
+    /// <exception cref="SealedSetException">The authentication version is unsupported.</exception>
     /// <remarks>
     /// <b>Spelled out by hand rather than by re-serializing this record</b>, because the MAC has to
     /// mean the same thing in every future build. <c>System.Text.Json</c> emits a record's members
@@ -88,20 +96,50 @@ public record SealManifest(
     /// refactor with no observable effect anywhere else — silently invalidate every seal ever
     /// written. This method is the format; the record is just how it is carried.
     /// </remarks>
-    public string Canonical() => string.Join('|',
-        "nfty-seal/1",
-        SealId,
-        Collection,
-        Count.ToString(System.Globalization.CultureInfo.InvariantCulture),
-        Note ?? string.Empty,
-        Policy.AllowExport ? "export=yes" : "export=no",
-        Policy.AllowEdit ? "edit=yes" : "edit=no",
-        Kdf.Algorithm,
-        Kdf.Iterations.ToString(System.Globalization.CultureInfo.InvariantCulture),
-        Kdf.Salt,
-        Cipher.Algorithm,
-        Cipher.FrameBytes.ToString(System.Globalization.CultureInfo.InvariantCulture),
-        Cipher.Frames.ToString(System.Globalization.CultureInfo.InvariantCulture),
-        Cipher.PlainBytes.ToString(System.Globalization.CultureInfo.InvariantCulture),
-        Cipher.NoncePrefix);
+    public string Canonical()
+    {
+        if (AuthenticationVersion is not (1 or 2))
+            throw new SealedSetException($"Unsupported seal authentication version {AuthenticationVersion}.");
+        string?[] fields =
+        [
+            SealId,
+            Collection,
+            Count.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            Note,
+            Policy.AllowExport ? "export=yes" : "export=no",
+            Policy.AllowEdit ? "edit=yes" : "edit=no",
+            Kdf.Algorithm,
+            Kdf.Iterations.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            Kdf.Salt,
+            Cipher.Algorithm,
+            Cipher.FrameBytes.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            Cipher.Frames.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            Cipher.PlainBytes.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            Cipher.NoncePrefix,
+            SchemaVersion.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        ];
+        if (AuthenticationVersion == 2)
+            return "nfty-seal/2|" + string.Concat(fields.Select(field => field is null ? "-1:"
+                : System.Text.Encoding.UTF8.GetByteCount(field).ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    + ":" + field));
+
+        // Frozen /1 encoding: changing these bytes would orphan historical seals. Its unescaped
+        // delimiters make certain labels ambiguous, so legacy readability carries that limitation.
+        return string.Join('|',
+            "nfty-seal/1",
+            SealId,
+            Collection,
+            Count.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            Note ?? string.Empty,
+            Policy.AllowExport ? "export=yes" : "export=no",
+            Policy.AllowEdit ? "edit=yes" : "edit=no",
+            Kdf.Algorithm,
+            Kdf.Iterations.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            Kdf.Salt,
+            Cipher.Algorithm,
+            Cipher.FrameBytes.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            Cipher.Frames.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            Cipher.PlainBytes.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            Cipher.NoncePrefix);
+    }
 }

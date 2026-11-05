@@ -68,7 +68,7 @@ internal static class SetItemFile
                     $"Set item '{path}' has no 'dna' field, so extend cannot tell which assets "
                     + "already exist.");
             if (!doc.RootElement.TryGetProperty("setNumber", out var number)
-                || !number.TryGetInt32(out int setNumber))
+                || number.ValueKind != JsonValueKind.Number || !number.TryGetInt32(out int setNumber))
                 throw new CorruptSetException(path,
                     $"Set item '{path}' has no usable 'setNumber' field, so extend cannot tell "
                     + "where to continue numbering.");

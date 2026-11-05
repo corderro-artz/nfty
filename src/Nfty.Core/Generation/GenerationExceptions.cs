@@ -3,7 +3,7 @@ namespace Nfty.Core.Generation;
 /// <summary>
 /// A recipe's incompatibility rules exclude every combination of its variants, so no asset
 /// of that type can ever be rolled. Distinct from <see cref="UniqueSpaceExhaustedException"/>,
-/// which means the space is real but too small — this means the space is empty.
+/// which reports retry exhaustion with uniqueness enabled — this means the space is empty.
 /// </summary>
 public class RuleConflictException : InvalidOperationException
 {
@@ -18,8 +18,9 @@ public class RuleConflictException : InvalidOperationException
 }
 
 /// <summary>
-/// More unique assets were requested than the cookbook can produce. <see cref="Available"/> is
-/// the true maximum only when <see cref="Certainty"/> says so; otherwise it is a bound, and
+/// The retry budget ran out while enforcing unique DNA, without proving the space is exhausted.
+/// <see cref="Available"/> is the true maximum only when <see cref="Certainty"/> says so;
+/// otherwise it is a bound, and
 /// <see cref="Certainty"/> is what says in which direction.
 /// </summary>
 /// <remarks>
@@ -31,7 +32,7 @@ public class RuleConflictException : InvalidOperationException
 /// </remarks>
 public class UniqueSpaceExhaustedException : InvalidOperationException
 {
-    /// <summary>How many unique DNA the book actually admits.</summary>
+    /// <summary>The counted unique DNA space, whose direction or exactness is stated by <see cref="Certainty"/>.</summary>
     /// <remarks>
     /// A <see cref="System.Numerics.BigInteger"/>, like the count it comes from: a book whose space
     /// is too big to fit a <see cref="long"/> is exactly the book most likely to exhaust a caller's
@@ -46,7 +47,7 @@ public class UniqueSpaceExhaustedException : InvalidOperationException
     public bool IsExact => Certainty == SpaceCertainty.Exact;
     /// <summary>How many assets were asked for.</summary>
     public int Requested { get; }
-    /// <summary>How many were produced before the space ran out.</summary>
+    /// <summary>How many were produced before the retry budget ran out.</summary>
     public int Produced { get; }
 
     /// <summary>Creates the exception.</summary>

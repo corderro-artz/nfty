@@ -336,7 +336,7 @@ public partial class VisualCapture
             var cookBookVm = new CookBookDetailViewModel(cookBook, () => { }, () => { }, () => { }, () => { });
             Capture(new Views.CookBookDetailView { DataContext = cookBookVm }, variant, $"cookbook-detail-{key}.png");
 
-            // The SAME card over the built-in demo, whose DNA space is 7,155,000. Every other fixture
+            // The SAME card over the built-in demo, whose DNA space is 8,745,000. Every other fixture
             // in this file is a two-variant toy, so the UNIQUE DNA tile had only ever been captured
             // holding a single digit — no frame in the set was evidence that it can hold a real
             // figure, which is the one number on this card that has no upper bound.

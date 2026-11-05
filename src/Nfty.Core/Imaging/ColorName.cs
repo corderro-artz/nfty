@@ -52,34 +52,31 @@ public static class ColorName
     {
         if (!double.IsFinite(hue) || !double.IsFinite(saturation) || saturation < GrayBelow) return Gray;
 
-        double wrapped = hue % 360.0;
-        if (wrapped < 0) wrapped += 360.0;
-
-        // Boundaries sit at 15 + 30k, so shifting by 15 puts them on multiples of 30 and the sector
-        // is a floor. A hue that rounds to exactly 360 after the shift wraps back to Red.
-        int sector = (int)Math.Floor((wrapped + 15.0) / 30.0) % 12;
-        string name = Hues[sector];
+        string name = Hues[SectorOf(hue)];
         return saturation < PaleBelow ? "Pale " + name : name;
     }
 
     /// <summary>
-    /// The exact chance that one roll of <paramref name="colorization"/> is published under each color
-    /// name: the book-side twin of <see cref="Of"/>, so the predicted rarity table and the cooked one
-    /// speak about the same buckets.
+    /// The ideal uniform-range share of each published color name: the book-side twin of
+    /// <see cref="Of"/>, so predicted rarity and cooked names use the same buckets.
     /// </summary>
     /// <param name="colorization">The layer's colorization (Dynamic or Static).</param>
     /// <returns>Name to probability, only names that can occur, ordinal-sorted by name, summing to 1.
-    /// Empty when the entries carry no weight (the roller itself refuses that colorization).</returns>
+    /// Empty when the entries carry no weight, or positive entry shares cannot be represented
+    /// reliably by one weighted draw. Empty means unavailable, not that colors have no chance.</returns>
     /// <remarks>
-    /// <para>Matches <c>ColorRoller.Roll</c> exactly: an entry is picked by weight
+    /// <para>Models <c>ColorRoller.Roll</c>: an entry is picked by weight
     /// (<c>w/W</c>; a zero-weight entry never), a ranged entry then samples hue and saturation
     /// <b>independently</b>, each as <c>Min + r*(Max-Min)</c> with <c>r</c> in <c>[0,1)</c>, so each
-    /// is uniform on the half-open interval and a name's chance is
+    /// has an ideal uniform half-open interval and a name's share is
     /// <c>|H and sector| / |H| * |S and band| / |S|</c>. A degenerate axis (<c>Min == Max</c>) is a
-    /// point mass, named by the very comparisons <see cref="Of"/> makes. A fixed entry is a point
+    /// point mass, as is a saturation interval whose sampled endpoints round to one fraction,
+    /// named by the very comparisons <see cref="Of"/> makes. A fixed entry is a point
     /// mass on <c>ColorRoller.FromFixed</c>. Red's sector wraps (345..360 and 0..15), and a hue range
     /// wider than a turn counts every lap. The color model does not enter: it only decides how a
-    /// fixed spec is read, and ranges are stated in the model's own H and S.</para>
+    /// fixed spec is read, and ranges are stated in the model's own H and S. The actual sampler
+    /// uses finite floating-point draws and arithmetic: rounding can reach the upper endpoint,
+    /// so these continuous shares do not promise exact discrete sampling probabilities.</para>
     /// <para>Sums run in entry order and sector order, sequentially, so the figures are identical on
     /// every machine.</para>
     /// </remarks>
@@ -87,6 +84,7 @@ public static class ColorName
     {
         ArgumentNullException.ThrowIfNull(colorization);
         var shares = new SortedDictionary<string, double>(StringComparer.Ordinal);
+        if (!WeightPrecision.CanReport(colorization.Entries.Select(e => e.Weight))) return shares;
 
         double total = 0;
         foreach (var e in colorization.Entries) total += Math.Max(0, e.Weight);
@@ -122,7 +120,7 @@ public static class ColorName
         // Saturation as the 0..1 fractions SampleSat produces: gray [.., 0.12), pale [0.12, 0.35), full [0.35, ..).
         double satLo = ColorRoller.SampleSat(range, 0), satHi = range.SatMax / 100.0;
         double gray, pale, full;
-        if (range.SatMax == range.SatMin)
+        if (satHi == satLo)
         {
             gray = satLo < GrayBelow ? 1 : 0;
             pale = gray == 0 && satLo < PaleBelow ? 1 : 0;
@@ -171,6 +169,7 @@ public static class ColorName
     {
         double wrapped = hue % 360.0;
         if (wrapped < 0) wrapped += 360.0;
+        // Shift boundaries at 15 + 30k onto multiples of 30; wrap the top sector back to Red.
         return (int)Math.Floor((wrapped + 15.0) / 30.0) % 12;
     }
 

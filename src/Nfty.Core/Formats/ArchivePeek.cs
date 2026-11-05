@@ -25,21 +25,21 @@ public static class ArchivePeek
     /// <param name="path">Path to a <c>.cbk</c>.</param>
     /// <returns>Its manifest.</returns>
     /// <exception cref="InvalidDataException">The archive or its manifest is unreadable.</exception>
-    /// <exception cref="UnsupportedSchemaVersionException">It declares a newer schema than this build reads.</exception>
+    /// <exception cref="UnsupportedSchemaVersionException">It declares a schema outside this build's supported range, including versions below the floor.</exception>
     public static CookBookManifest CookBook(string path) => Peek<CookBookManifest>(path);
 
     /// <summary>Reads a Recipe's manifest alone.</summary>
     /// <param name="path">Path to a <c>.rcp</c>.</param>
     /// <returns>Its manifest.</returns>
     /// <exception cref="InvalidDataException">The archive or its manifest is unreadable.</exception>
-    /// <exception cref="UnsupportedSchemaVersionException">It declares a newer schema than this build reads.</exception>
+    /// <exception cref="UnsupportedSchemaVersionException">It declares a schema outside this build's supported range, including versions below the floor.</exception>
     public static RecipeManifest Recipe(string path) => Peek<RecipeManifest>(path);
 
     /// <summary>Reads an Ingredient's manifest alone.</summary>
     /// <param name="path">Path to an <c>.igt</c>.</param>
     /// <returns>Its manifest.</returns>
     /// <exception cref="InvalidDataException">The archive or its manifest is unreadable.</exception>
-    /// <exception cref="UnsupportedSchemaVersionException">It declares a newer schema than this build reads.</exception>
+    /// <exception cref="UnsupportedSchemaVersionException">It declares a schema outside this build's supported range, including versions below the floor.</exception>
     public static IngredientManifest Ingredient(string path) => Peek<IngredientManifest>(path);
 
     /// <summary>
@@ -56,7 +56,7 @@ public static class ArchivePeek
     /// <returns>The book's manifests, recipes ordinally by id.</returns>
     /// <exception cref="InvalidDataException">The archive or a manifest inside it is unreadable.</exception>
     /// <exception cref="UnsupportedSchemaVersionException">It, or something inside it, declares a
-    /// newer schema than this build reads.</exception>
+    /// schema outside this build's supported range, including versions below the floor.</exception>
     public static PeekedCookBook CookBookTree(string path)
     {
         using var zip = ZipFile.OpenRead(path);
@@ -74,7 +74,7 @@ public static class ArchivePeek
     /// <returns>The recipe's manifests.</returns>
     /// <exception cref="InvalidDataException">The archive or a manifest inside it is unreadable.</exception>
     /// <exception cref="UnsupportedSchemaVersionException">It, or something inside it, declares a
-    /// newer schema than this build reads.</exception>
+    /// schema outside this build's supported range, including versions below the floor.</exception>
     public static PeekedRecipe RecipeTree(string path)
     {
         using var zip = ZipFile.OpenRead(path);

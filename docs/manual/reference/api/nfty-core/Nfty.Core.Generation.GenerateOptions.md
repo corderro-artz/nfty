@@ -23,7 +23,7 @@ public GenerateOptions(int Count, string Seed, string? RecipeId = null, int MaxR
 - `Count` (`int`) - How many assets to produce.
 - `Seed` (`string`) - The string seed driving the RNG. The same cookbook and seed reproduce a run byte for byte, across machine locales and CPU architectures alike.
 - `RecipeId` (`string?`) - Restrict the run to one Recipe, overriding the cookbook's weights entirely. Null rolls a Recipe per asset, which is the normal case.
-- `MaxRerollsPerAsset` (`int`) - How many times a single asset may be re-rolled before the run gives up — a rule violation and a DNA collision both cost an attempt. Exhausting it raises [`RuleConflictException`](Nfty.Core.Generation.RuleConflictException.md) or [`UniqueSpaceExhaustedException`](Nfty.Core.Generation.UniqueSpaceExhaustedException.md) depending on which is actually true of the book.
+- `MaxRerollsPerAsset` (`int`) - How many times a single asset may be re-rolled before the run gives up — a rule violation and a DNA collision both cost an attempt. Exhausting it raises [`RuleConflictException`](Nfty.Core.Generation.RuleConflictException.md) when all combinations are known to be forbidden, [`UniqueSpaceExhaustedException`](Nfty.Core.Generation.UniqueSpaceExhaustedException.md) when uniqueness is enabled, or an ordinary `InvalidOperationException` when uniqueness is disabled and rules reject every attempt.
 - `EnforceUniqueDna` (`bool`) - When true (the default), every asset must have distinct DNA: a roll colliding with one already produced is discarded and re-rolled, and a run that cannot fill its quota from the unique space fails with [`UniqueSpaceExhaustedException`](Nfty.Core.Generation.UniqueSpaceExhaustedException.md). When false, every roll is accepted even if its DNA repeats, and identity is carried by the sequential token id (the output number) as ERC-721 defines it — so any Count is producible regardless of the unique space. This skips both the dedup bookkeeping and the space-counting, which is the expensive part of a large run on a slow machine. Incompatibility rules are still enforced either way.
 - `Parallelism` (`Parallelism?`) - How wide the render step may run; null means [`Parallelism.Default`](Nfty.Core.Parallelism.md#p-default). Never changes a result, and is not recorded anywhere.
 
@@ -61,7 +61,7 @@ When true (the default), every asset must have distinct DNA: a roll colliding wi
 public int MaxRerollsPerAsset { get; init; }
 ```
 
-How many times a single asset may be re-rolled before the run gives up — a rule violation and a DNA collision both cost an attempt. Exhausting it raises [`RuleConflictException`](Nfty.Core.Generation.RuleConflictException.md) or [`UniqueSpaceExhaustedException`](Nfty.Core.Generation.UniqueSpaceExhaustedException.md) depending on which is actually true of the book.
+How many times a single asset may be re-rolled before the run gives up — a rule violation and a DNA collision both cost an attempt. Exhausting it raises [`RuleConflictException`](Nfty.Core.Generation.RuleConflictException.md) when all combinations are known to be forbidden, [`UniqueSpaceExhaustedException`](Nfty.Core.Generation.UniqueSpaceExhaustedException.md) when uniqueness is enabled, or an ordinary `InvalidOperationException` when uniqueness is disabled and rules reject every attempt.
 
 ### Parallelism { #p-parallelism }
 

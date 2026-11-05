@@ -8,7 +8,7 @@ Namespace `Nfty.Core.Generation` in assembly `Nfty.Core`.
 public static class UniqueSpace
 ```
 
-Counts the unique DNA space of a cookbook: per recipe, the legal variant combinations (rules honoured) multiplied by each dynamic layer's quantized color buckets. Static and custom layers contribute a single bucket — a static layer's color is constant, so it adds no cross-asset uniqueness.
+Counts the unique DNA space of a cookbook: per recipe, the sum of each legal selection's product of present dynamic layers' quantized color buckets. Absent layers contribute one shape. Static and custom layers contribute a single bucket — a static layer's color is constant, so it adds no cross-asset uniqueness.
 
 ## Fields
 
@@ -24,7 +24,7 @@ How many things [`UniqueSpace.Count()`](Nfty.Core.Generation.UniqueSpace.md#m-co
 
 This bounds the two places that genuinely enumerate: the per-selection walk a recipe with rules needs, and the set of distinct colour buckets a colorization fills. Both cost time and memory proportional to the number, so both need a budget.
 
-**It does NOT bound the answer, and there is no longer a second number that does.** The cap was 1,000,000 for everything once, so a book with five million distinct assets reported "more than 1000000" — a figure exactly computable in a single multiply, because once the walk has happened the rest is arithmetic. That was split into a budget and a reporting ceiling of `long.MaxValue`, which fixed the million and moved the wall to 9.2e18, where six ordinary layers walk straight through it. A `BigInteger` total has no wall at all, so the reporting ceiling is GONE rather than raised again: arithmetic is free and is now treated as free, and [`UniqueSpaceCount.IsExact`](Nfty.Core.Generation.UniqueSpaceCount.md#p-isexact) means exactly one thing — **no enumeration gave up** — which is what every caller already read it as.
+**It does NOT bound the answer, and there is no longer a second number that does.** The cap was 1,000,000 for everything once, so a book with five million distinct assets reported "more than 1000000" — a figure exactly computable in a single multiply, because once the walk has happened the rest is arithmetic. That was split into a budget and a reporting ceiling of `long.MaxValue`, which fixed the million and moved the wall to 9.2e18, where six ordinary layers walk straight through it. A `BigInteger` total has no wall at all, so the reporting ceiling is GONE rather than raised again: arithmetic is free and is now treated as free, and [`UniqueSpaceCount.IsExact`](Nfty.Core.Generation.UniqueSpaceCount.md#p-isexact) means exactly one thing — **no contributing enumeration gave up** — an absent layer's colors cannot affect the answer.
 
 ## Methods
 
@@ -83,7 +83,7 @@ How many distinct quantized colors one colorization admits.
 - `colorization` (`Colorization`) - The block to count. May be mid-edit and illegal; this never throws.
 - `enumerationBudget` (`long`) - How many buckets to enumerate before giving up; see [`UniqueSpace.DefaultEnumerationBudget`](Nfty.Core.Generation.UniqueSpace.md#f-defaultenumerationbudget). Filling this set is real work, so it is budgeted.
 
-**Returns.** The bucket count, and whether it is exact rather than saturated.
+**Returns.** The bucket count, and whether its union was fully enumerated rather than bounded. Returns (0, false) when positive entry shares cannot be represented reliably by one weighted draw; this reports no usable count, rather than an exact zero.
 
 **Exceptions**
 
@@ -91,4 +91,4 @@ How many distinct quantized colors one colorization admits.
 
 **Remarks**
 
-This is the same counter [`UniqueSpace.Count()`](Nfty.Core.Generation.UniqueSpace.md#m-count-nfty-core-formats-loadedcookbook-system-int64) multiplies per dynamic layer, exposed because an editor showing the user a colors figure must show *that* figure. The Ingredient editor used to print the product of the two quantize STEPS, which is not a count of anything: a hue step of 30 and a saturation step of 20 read as "600 colors" where the layer actually admits 36, and coarsening a step — which can only ever remove colors — made the number go up.
+This is the same counter [`UniqueSpace.Count()`](Nfty.Core.Generation.UniqueSpace.md#m-count-nfty-core-formats-loadedcookbook-system-int64) multiplies per dynamic layer, exposed because an editor showing the user a colors figure must show *that* figure. The Ingredient editor used to print the product of the two quantize STEPS, which is not a count of anything: a hue step of 30 and a saturation step of 20 read as "600 colors" where the layer actually admits 36, and coarsening a step — which can only ever remove colors — made the number go up. Counts the actual floating-point sampler, including buckets reached by rounding onto a range's upper endpoint even though its unit draw is less than one. A reachable bucket may have very little probability; an exact count does not promise a retry budget can fill it.

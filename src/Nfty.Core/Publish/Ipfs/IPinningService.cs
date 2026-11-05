@@ -42,6 +42,12 @@ public sealed class PinningException : Exception
     public PinningException(string message, Exception inner) : base(message, inner) { }
 }
 
+/// <summary>The pin returned by an upload and whether this call newly acquired it.</summary>
+/// <param name="Cid">The root content address.</param>
+/// <param name="Acquired">True only with positive evidence this call acquired a new pin.
+/// False includes pre-existing pins and unknown ownership; neither may be rolled back.</param>
+public sealed record PinAcquisition(string Cid, bool Acquired);
+
 /// <summary>
 /// Somewhere a folder can be put on IPFS and kept there: a local Kubo node, or a pinning service.
 /// </summary>
@@ -80,6 +86,20 @@ public interface IPinningService
     /// <exception cref="PinningException">The service refused, failed or answered without a CID.</exception>
     Task<string> AddFolderAsync(string folder, string label, IProgress<PinProgress>? progress = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Adds a folder while reporting whether rollback owns its pin.</summary>
+    /// <param name="folder">The folder to add.</param>
+    /// <param name="label">The provider's label.</param>
+    /// <param name="progress">Upload byte progress.</param>
+    /// <param name="cancellationToken">Stops the upload.</param>
+    /// <returns>The CID and acquisition evidence. The compatibility default reports unknown
+    /// ownership, so existing third-party implementations remain safe without changing.</returns>
+    /// <remarks>Pinning APIs do not reference-count consumers of the same CID. Callers must serialize
+    /// conflicting uploads and other pin mutations against a shared account/node; acquisition
+    /// evidence cannot protect references created independently after it was observed.</remarks>
+    async Task<PinAcquisition> AddFolderOwnedAsync(string folder, string label,
+        IProgress<PinProgress>? progress = null, CancellationToken cancellationToken = default) =>
+        new(await AddFolderAsync(folder, label, progress, cancellationToken).ConfigureAwait(false), false);
 
     /// <summary>
     /// Unpins <paramref name="cid"/>, best effort: how a stopped or failed upload takes back what it

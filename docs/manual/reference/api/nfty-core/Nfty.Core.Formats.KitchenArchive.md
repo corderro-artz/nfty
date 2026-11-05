@@ -90,12 +90,16 @@ Writes the manifest into an already-open archive.
 public static void Write(string path, KitchenManifest manifest);
 ```
 
-Writes a `.ktn`.
+Creates a `.ktn`; never overwrites an existing file.
 
 **Parameters**
 
 - `path` (`string`) - Destination path.
 - `manifest` (`KitchenManifest`) - The workspace's identity.
+
+**Exceptions**
+
+- `IOException` - The destination already exists, or cannot be created.
 
 ### WriteAsync(string, KitchenManifest, CancellationToken) { #m-writeasync-system-string-nfty-core-model-kitchenmanife-a33d42 }
 
@@ -103,7 +107,7 @@ Writes a `.ktn`.
 public static Task WriteAsync(string path, KitchenManifest manifest, CancellationToken cancellationToken = default);
 ```
 
-Writes a `.ktn`.
+Creates a `.ktn`; never overwrites an existing file.
 
 **Parameters**
 
@@ -112,3 +116,8 @@ Writes a `.ktn`.
 - `cancellationToken` (`CancellationToken`) - Cancels the write.
 
 **Returns.** A task that completes when it is written.
+
+**Exceptions**
+
+- `IOException` - The destination already exists, or cannot be created.
+- `OperationCanceledException` - `cancellationToken` was canceled. Pre-cancellation leaves the destination untouched.

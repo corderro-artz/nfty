@@ -23,7 +23,7 @@ desktop app, a command line, and three .NET libraries you can embed in a game or
 4. **Cook with a seed.** The same CookBook and the same seed always produce byte-identical output,
    on any machine.
 
-The demo CookBook built into nfty is twenty-nine small drawings and can produce **7,155,000**
+The demo CookBook built into nfty is twenty-nine small drawings and can produce **8,745,000**
 distinct assets. That ratio is the point of the whole design.
 
 ## Where to go

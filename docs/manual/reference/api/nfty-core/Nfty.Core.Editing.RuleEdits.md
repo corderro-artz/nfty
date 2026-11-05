@@ -96,7 +96,7 @@ Replaces the rule at `index`.
 public static void Validate(IncompatibilityRule rule);
 ```
 
-Rejects a rule that cannot mean anything. This is the authoring half of a pair: `Validator` reports the same two shapes on a book that already has them, since before this class existed a rule could only be written by hand and a hand-written one can be anything. Refusing to WRITE one costs nothing; refusing to COOK one is justified because each silently changes the size of the DNA space.
+Rejects empty target lists, targets on the trigger's own layer, and duplicate targets during authoring. `Validator` separately checks references, defined enum values, self-layer constraints and contradictions across rules. It accepts empty and duplicate target lists already present in a manifest; this authoring check does not decide whole-book legality.
 
 **Parameters**
 

@@ -39,11 +39,15 @@ internal static class ArchiveIo
     }
 
     /// <summary>Shared tail of both manifest readers: reject a null document, then gate the schema
-    /// version. Split out so the sync and async paths cannot drift on either check.</summary>
+    /// version and nested structure. Split out so sync and async paths cannot drift.</summary>
     private static T Verified<T>(T? manifest) where T : ISchemaVersioned
     {
         if (manifest is null) throw new InvalidDataException("manifest.json deserialized to null.");
         UnsupportedSchemaVersionException.Require(manifest);
+        var problems = ManifestStructure.OfManifest(manifest);
+        if (problems.Count > 0)
+            throw new InvalidDataException($"manifest.json is not a readable {typeof(T).Name}: "
+                + string.Join(" ", problems));
         return manifest;
     }
 
@@ -163,15 +167,19 @@ internal static class ArchiveIo
     /// </summary>
     private static T ReadInner<T>(MemoryStream bytes, string entryName, Func<ZipArchive, T> read)
     {
-        ZipArchive inner;
-        try { inner = new ZipArchive(bytes, ZipArchiveMode.Read); }
+        using var inner = OpenInner(bytes, entryName);
+        return read(inner);
+    }
+
+    private static ZipArchive OpenInner(MemoryStream bytes, string entryName)
+    {
+        try { return new ZipArchive(bytes, ZipArchiveMode.Read); }
         catch (InvalidDataException ex)
         {
             throw new InvalidDataException(
                 $"Entry '{entryName}' is not a readable nfty archive: {ex.Message} "
                 + "(only nfty archives belong under this folder inside the file).", ex);
         }
-        using (inner) return read(inner);
     }
 
     /// <summary>SHA-256 of a file's bytes, lowercase hex. Streamed — archives can be large.</summary>
@@ -307,7 +315,8 @@ internal static class ArchiveIo
         ms.Position = 0;
         // Same reframing as the sync twin; see ReadInner for why "Central Directory corrupt" is the
         // wrong thing to tell someone who dropped a README into the archive.
-        return await ReadInner(ms, entryName, inner => read(inner, ct)).ConfigureAwait(false);
+        using var inner = OpenInner(ms, entryName);
+        return await read(inner, ct).ConfigureAwait(false);
     }
 
     public static IEnumerable<string> EntryNamesUnder(ZipArchive zip, string prefix) =>

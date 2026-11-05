@@ -52,19 +52,22 @@ public enum SpaceCertainty
     /// <summary>
     /// Nothing is known and the total means nothing. The book is invalid in a way that makes the
     /// question meaningless (a layerOrder entry naming no ingredient, a Dynamic layer with no
-    /// colorization), or the two bounds above contradict each other.
+    /// colorization), weighted choices are below the sampler's reporting precision, or the two
+    /// bounds above contradict each other.
     /// </summary>
     Unknown,
 }
 
 /// <summary>One recipe's share of the space.</summary>
 /// <param name="Total">
-/// Legal combinations times reachable color buckets. This is the recipe's space in isolation and
-/// is recorded even for a shelved (zero-weight) recipe; whether the cookbook can actually roll it
+/// The sum of each legal selection's color-bucket product; an absent layer contributes one shape.
+/// This is the recipe's space in isolation, recorded even for a shelved (zero-weight) recipe;
+/// whether the cookbook can actually roll it
 /// is a separate question the cookbook-level <see cref="UniqueSpaceCount.Total"/> answers.
 /// </param>
 /// <param name="Combos">
-/// The legal variant combinations alone, without color buckets folded in. <see cref="Total"/>
+/// The legal variant combinations alone when walked, or the unconstrained combination count when
+/// the rule walk exceeds its budget, without color buckets folded in. <see cref="Total"/>
 /// can be zero for two unrelated reasons — the rules exclude every combination, or a layer has
 /// no reachable color buckets — and only this figure tells them apart. A caller must never read
 /// a zero <see cref="Total"/> as a rule conflict.
@@ -167,9 +170,9 @@ public record UniqueSpaceCount(
 }
 
 /// <summary>
-/// Counts the unique DNA space of a cookbook: per recipe, the legal variant combinations
-/// (rules honoured) multiplied by each dynamic layer's quantized color buckets. Static and
-/// custom layers contribute a single bucket — a static layer's color is constant, so it
+/// Counts the unique DNA space of a cookbook: per recipe, the sum of each legal selection's
+/// product of present dynamic layers' quantized color buckets. Absent layers contribute one shape.
+/// Static and custom layers contribute a single bucket — a static layer's color is constant, so it
 /// adds no cross-asset uniqueness.
 /// </summary>
 public static class UniqueSpace
@@ -190,7 +193,7 @@ public static class UniqueSpace
     /// six ordinary layers walk straight through it. A <see cref="BigInteger"/> total has no wall at
     /// all, so the reporting ceiling is GONE rather than raised again: arithmetic is free and is now
     /// treated as free, and <see cref="UniqueSpaceCount.IsExact"/> means exactly one thing —
-    /// <b>no enumeration gave up</b> — which is what every caller already read it as.</para>
+    /// <b>no contributing enumeration gave up</b> — an absent layer's colors cannot affect the answer.</para>
     /// </remarks>
     public const long DefaultEnumerationBudget = 1_000_000;
 
@@ -219,6 +222,9 @@ public static class UniqueSpace
         BigInteger total = 0;
         var certainty = SpaceCertainty.Exact;
         var recipes = new Dictionary<string, RecipeSpace>();
+        bool recipeWeightsReportable = book.Manifest.RecipeWeights.Values.All(w => w == 0)
+            || WeightPrecision.CanReport(book.Manifest.RecipeWeights.OrderBy(kv => kv.Key, StringComparer.Ordinal)
+                .Select(kv => kv.Value));
 
         foreach (var recipe in book.Recipes)
         {
@@ -246,7 +252,9 @@ public static class UniqueSpace
         // Nothing is clamped here and nothing is re-checked afterwards. The budget governs WALKING;
         // summing the recipes is addition, and a BigInteger sum cannot overflow, so the certainty
         // the recipes carry is the whole of what this total is.
-        return new UniqueSpaceCount(total, certainty, enumerationBudget, recipes);
+        return recipeWeightsReportable
+            ? new UniqueSpaceCount(total, certainty, enumerationBudget, recipes)
+            : new UniqueSpaceCount(0, SpaceCertainty.Unknown, enumerationBudget, recipes);
     }
 
     /// <summary>
@@ -255,13 +263,18 @@ public static class UniqueSpace
     /// <param name="colorization">The block to count. May be mid-edit and illegal; this never throws.</param>
     /// <param name="enumerationBudget">How many buckets to enumerate before giving up; see
     /// <see cref="DefaultEnumerationBudget"/>. Filling this set is real work, so it is budgeted.</param>
-    /// <returns>The bucket count, and whether it is exact rather than saturated.</returns>
+    /// <returns>The bucket count, and whether its union was fully enumerated rather than bounded.
+    /// Returns (0, false) when positive entry shares cannot be represented reliably by one weighted draw;
+    /// this reports no usable count, rather than an exact zero.</returns>
     /// <remarks>
     /// This is the same counter <see cref="Count"/> multiplies per dynamic layer, exposed because an
     /// editor showing the user a colors figure must show <em>that</em> figure. The Ingredient editor
     /// used to print the product of the two quantize STEPS, which is not a count of anything: a hue
     /// step of 30 and a saturation step of 20 read as "600 colors" where the layer actually admits
     /// 36, and coarsening a step — which can only ever remove colors — made the number go up.
+    /// Counts the actual floating-point sampler, including buckets reached by rounding onto a
+    /// range's upper endpoint even though its unit draw is less than one. A reachable bucket may
+    /// have very little probability; an exact count does not promise a retry budget can fill it.
     /// </remarks>
     /// <exception cref="ArgumentOutOfRangeException">The budget is zero or negative.</exception>
     public static (long Count, bool Exact) CountColors(
@@ -277,7 +290,9 @@ public static class UniqueSpace
     /// <param name="Buckets">Distinct quantized colors ONE present variant of this layer admits;
     /// 1 for static and custom, which contribute no cross-asset color uniqueness.</param>
     /// <param name="CanBeAbsent">Whether "not there at all" is one of this layer's outcomes.</param>
-    private record LayerShapes(string Id, IReadOnlyList<Variant> Variants, long Buckets, bool CanBeAbsent)
+    /// <param name="BucketsExact">Whether the present layer's color buckets were fully counted.</param>
+    private record LayerShapes(string Id, IReadOnlyList<Variant> Variants, long Buckets, bool CanBeAbsent,
+        bool BucketsExact)
     {
         /// <summary>Distinct DNA contributions this layer can make on its own: every present
         /// variant times the colors it can wear, plus one for being absent, which is a single shape
@@ -320,8 +335,14 @@ public static class UniqueSpace
             double percent = recipe.Manifest.AbsentPercentOf(ing.Manifest.Id);
             bool never = WeightedRoller.AlwaysAbsent(percent);
 
+            if (!never && ing.Manifest.Variants.Any(v => v.Weight > 0)
+                && !WeightPrecision.CanReport(ing.Manifest.Variants.OrderBy(v => v.Id, StringComparer.Ordinal)
+                    .Select(v => v.Weight), percent))
+                return (0, 0, SpaceCertainty.Unknown);
+
             long buckets = 1;
-            if (ing.Manifest.Kind == LayerKind.Dynamic)
+            bool layerBucketsExact = true;
+            if (ing.Manifest.Kind == LayerKind.Dynamic && !never)
             {
                 // A Dynamic layer with no colorization block is illegal, and Validator says so — but
                 // this method is documented never to throw, precisely so a GUI can call it on a book
@@ -329,17 +350,23 @@ public static class UniqueSpace
                 // until the book is fixed", not an honest zero.
                 if (ing.Manifest.Colorization is not { } colorization)
                     return (0, 0, SpaceCertainty.Unknown);
+                if (colorization.Entries.Any(e => e.Weight > 0)
+                    && !WeightPrecision.CanReport(colorization.Entries.Select(e => e.Weight)))
+                    return (0, 0, SpaceCertainty.Unknown);
                 var (b, bExact) = DistinctBuckets(colorization, budget);
                 buckets = b;
-                bucketsExact &= bExact;
+                layerBucketsExact = bExact;
+                // An always-absent layer contributes no colors to either counting path.
+                bucketsExact &= bExact || never;
             }
 
             layers.Add(new LayerShapes(
                 ing.Manifest.Id,
                 // A layer that never appears offers no variants at all, however many it carries.
-                never ? Array.Empty<Variant>() : Reachable(ing).Variants,
+                never ? Array.Empty<Variant>() : Reachable(ing),
                 buckets,
-                percent > 0));
+                percent > 0,
+                layerBucketsExact));
         }
 
         // THE UNCONSTRAINED PRODUCT, computed once and used by both paths. It is free - a product
@@ -367,7 +394,7 @@ public static class UniqueSpace
         // DNA, because the walk costs one rules check per selection whatever colours those
         // selections carry. That separation is what lets a book with billions of distinct assets
         // over a few thousand combinations count exactly.
-        if (combos >= budget)
+        if (combos > budget)
         {
             // Too many to walk. `product` is a genuine upper bound - but ONLY if the buckets it was
             // built from were themselves counted. If they were not, the product is built on an
@@ -382,15 +409,17 @@ public static class UniqueSpace
 
         BigInteger total = 0;
         long legal = 0;
+        bool legalBucketsExact = true;
         var selection = new Dictionary<string, string>();
 
-        void Walk(int depth, BigInteger bucketsSoFar)
+        void Walk(int depth, BigInteger bucketsSoFar, bool exactSoFar)
         {
             if (depth == layers.Count)
             {
                 if (!RulesEngine.IsLegal(selection, recipe.Manifest.Rules)) return;
                 legal++;
                 total += bucketsSoFar;
+                legalBucketsExact &= exactSoFar;
                 return;
             }
 
@@ -398,7 +427,7 @@ public static class UniqueSpace
             foreach (var v in layer.Variants)
             {
                 selection[layer.Id] = v.Id;
-                Walk(depth + 1, bucketsSoFar * layer.Buckets);
+                Walk(depth + 1, bucketsSoFar * layer.Buckets, exactSoFar && layer.BucketsExact);
             }
             selection.Remove(layer.Id);
 
@@ -406,17 +435,15 @@ public static class UniqueSpace
             // the selection — which is exactly what RulesEngine already reads as "not present", so
             // exclude rules pass and require rules fail with no new code. It multiplies no buckets:
             // a layer nobody can see wears no color.
-            if (layer.CanBeAbsent) Walk(depth + 1, bucketsSoFar);
+            if (layer.CanBeAbsent) Walk(depth + 1, bucketsSoFar, exactSoFar);
         }
 
-        Walk(0, 1);
+        Walk(0, 1, true);
         // The walk finished, so the selection count is exact and the sum of what it found is too.
-        // An under-counted bucket set is the only thing left that can make the total a floor.
-        return (total, legal, bucketsExact ? SpaceCertainty.Exact : SpaceCertainty.AtLeast);
+        // Only bucket sets present in a LEGAL selection can make its total a strict floor; rules
+        // may force every under-counted layer absent, or forbid every selection entirely.
+        return (total, legal, legalBucketsExact ? SpaceCertainty.Exact : SpaceCertainty.AtLeast);
     }
-
-    /// <summary>One layer reduced to the variants a roll can actually land on.</summary>
-    private record ReachableLayer(string Id, IReadOnlyList<Variant> Variants);
 
     /// <summary>
     /// The variants of an ingredient that
@@ -431,11 +458,11 @@ public static class UniqueSpace
     /// Validator rejects a duplicate variant id outright, so this only guards the same class of
     /// latent bug <see cref="RecipeLayers.TryResolve"/> guards for ingredient ids.
     /// </summary>
-    private static ReachableLayer Reachable(LoadedIngredient ing) =>
-        new(ing.Manifest.Id, ing.Manifest.Variants
+    private static IReadOnlyList<Variant> Reachable(LoadedIngredient ing) =>
+        ing.Manifest.Variants
             .Where(v => v.Weight > 0)
             .DistinctBy(v => v.Id, StringComparer.Ordinal)
-            .ToList());
+            .ToList();
 
     /// <summary>
     /// The distinct quantized buckets a colorization can roll.
@@ -449,6 +476,8 @@ public static class UniqueSpace
     /// </remarks>
     private static (long Count, bool Exact) DistinctBuckets(Colorization col, long budget)
     {
+        if (col.Entries.Any(e => e.Weight > 0)
+            && !WeightPrecision.CanReport(col.Entries.Select(e => e.Weight))) return (0, false);
         int hueQ = Math.Max(1, col.HueQuantize);
         int satQ = Math.Max(1, col.SatQuantize);
         var seen = new HashSet<(long Hue, long Sat)>();
@@ -469,6 +498,7 @@ public static class UniqueSpace
                 try { c = ColorRoller.FromFixed(entry.Fixed, col.Model); }
                 catch (FormatException) { return (0, false); }
                 seen.Add((ColorBuckets.Hue(c.H, hueQ), ColorBuckets.Sat(c.S, satQ)));
+                if (seen.Count > budget) return (budget, false);
                 continue;
             }
 
@@ -476,19 +506,19 @@ public static class UniqueSpace
             // here rather than a NullReferenceException on the dereference below.
             if (entry.Range is null) return (0, false);
 
-            // A range covers every bucket reachable by ColorRoller.Roll, which samples
-            // Min + r*(Max-Min) with r in [0,1) — so Max itself is never rolled.
+            // Compose the actual sampler with the DNA bucketer. Floating-point rounding can make
+            // an upper endpoint reachable even though the unit draw is strictly less than one.
             var r = entry.Range;
-            var (h0, h1) = BucketSpan(r.HueMin, r.HueMax,
-                u => ColorRoller.SampleHue(r, u), h => ColorBuckets.Hue(h, hueQ));
-            var (s0, s1) = BucketSpan(r.SatMin, r.SatMax,
-                u => ColorRoller.SampleSat(r, u), s => ColorBuckets.Sat(s, satQ));
+            var (h0, h1) = BucketSpan(u => ColorRoller.SampleHue(r, u), h => ColorBuckets.Hue(h, hueQ));
+            var (s0, s1) = BucketSpan(u => ColorRoller.SampleSat(r, u), s => ColorBuckets.Sat(s, satQ));
 
             for (long h = h0; h <= h1; h++)
                 for (long s = s0; s <= s1; s++)
                 {
                     seen.Add((h, s));
-                    if (seen.Count >= budget) return (budget, false);
+                    // Equality is still exact if no further distinct bucket exists, including
+                    // overlaps and later fixed entries. One extra bucket proves a strict floor.
+                    if (seen.Count > budget) return (budget, false);
                 }
         }
 
@@ -496,9 +526,9 @@ public static class UniqueSpace
     }
 
     /// <summary>
-    /// The inclusive bucket span reachable on one axis. <see cref="ColorRoller.Roll"/> samples
-    /// <c>Min + r*(Max-Min)</c> with <c>r ∈ [0,1)</c>, so the reachable interval is <c>[Min, Max)</c>.
-    /// A degenerate range (Min == Max) reaches exactly its endpoint, so it keeps that one bucket.
+    /// The inclusive bucket span of one axis under the actual floating-point sampler. The
+    /// extremal unit draws are zero and <c>1 - 2^-53</c>, the highest value SplitMix64 can return.
+    /// A degenerate range reaches exactly its endpoint and keeps that one bucket.
     ///
     /// <para><paramref name="sample"/> is the axis's own sampler from <see cref="ColorRoller"/> and
     /// <paramref name="bucket"/> its bucketing function from <see cref="ColorBuckets"/> — the same
@@ -506,21 +536,18 @@ public static class UniqueSpace
     /// re-derive the reachable interval algebraically from the stored percentages, and that
     /// re-derivation is what let the count and the DNA disagree.</para>
     ///
-    /// <para>The step back happens in the <em>sampled</em> space, not the stored percentage —
-    /// saturation's <c>/100</c> would swallow it (<c>BitDecrement(30)/100.0</c> rounds straight back
-    /// onto <c>0.3</c>). Nor is the top read at <c>BitDecrement(1.0)</c>: the unit sample nearest 1
-    /// makes <c>(0 + r*30)/100.0</c> round to exactly <c>0.3</c>, so Max's own bucket becomes
-    /// reachable — at probability 2⁻⁵³. Counting it would be true and useless, because
-    /// <c>Generate</c> would exhaust its reroll budget trying to deliver it. <c>Count</c> is a
-    /// promise about what can actually be produced, so the half-open <c>[Min, Max)</c> reading
-    /// stands and the measure-zero edge is deliberately excluded.</para>
+    /// <para>The sampler and bucketer are monotone on validated ranges. Adjacent draws change a
+    /// sampled hue by far less than one degree (or saturation by one percentage point), while a
+    /// valid quantization is at least one, so no intermediate bucket can be skipped. Evaluating
+    /// both real extrema therefore counts the whole span, including rounded upper endpoints.
+    /// For example, <c>(0 + BitDecrement(1.0)*30)/100.0</c> rounds to exactly <c>0.3</c> and DNA
+    /// puts it in the next bucket; an ideal half-open interval would miss that identity.</para>
     /// </summary>
     private static (long Lo, long Hi) BucketSpan(
-        double min, double max, Func<double, double> sample, Func<double, long> bucket)
+        Func<double, double> sample, Func<double, long> bucket)
     {
         long lo = bucket(sample(0.0));
-        if (max <= min) return (lo, lo);
-        return (lo, Math.Max(lo, bucket(Math.BitDecrement(sample(1.0)))));
+        return (lo, Math.Max(lo, bucket(sample(Math.BitDecrement(1.0)))));
     }
 
     /// <summary>

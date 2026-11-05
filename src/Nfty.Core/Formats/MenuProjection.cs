@@ -8,8 +8,9 @@ namespace Nfty.Core.Formats;
 /// Projects a loaded or peeked CookBook into the image-free <see cref="MenuBook"/> the roll works on.
 /// </summary>
 /// <remarks>
-/// Cheap: it copies manifest records that are already in memory and opens no image. That is what lets
-/// <c>Generator</c> roll through <c>Ticketer</c> without a second walk of its own.
+/// Copies manifests already in memory and decodes no images. The loaded-book overload also scans
+/// every variant's pixels to recompute partial alpha; the peeked overload trusts the stored stamp.
+/// The resulting image-free graph lets <c>Generator</c> roll through <c>Ticketer</c>.
 /// </remarks>
 public static class MenuProjection
 {

@@ -155,10 +155,10 @@ public sealed class DepthSurface : IEditSurface<DepthPixel>
         _dirtyY1 = Math.Max(_dirtyY1, y);
     }
 
-    /// <summary>The bounding rectangle of every pixel whose depth CHANGED since the last call (a write of the
-    /// value a pixel already held changes nothing), and forgets it. A derived view of this surface (the
-    /// combined stack of a recipe) recomputes just that rectangle.</summary>
-    /// <returns>The rectangle, or null when nothing changed.</returns>
+    /// <summary>The bounding rectangle invalidated since the last call, and forgets it. Individual
+    /// writes invalidate only changed pixels; <see cref="Overwrite"/> invalidates the whole canvas,
+    /// even for identical bytes. A derived view (the combined stack of a recipe) recomputes that rectangle.</summary>
+    /// <returns>The rectangle, or null when nothing was invalidated.</returns>
     public PixelRect? TakeDirty()
     {
         if (_dirtyX1 < 0) return null;

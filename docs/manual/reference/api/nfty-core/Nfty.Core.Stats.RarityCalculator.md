@@ -12,7 +12,7 @@ Computes the odds a cookbook's weights imply. Distinct from the rarity written i
 
 ## Remarks
 
-**NOTHING HERE IS ROUNDED, AND IT USED TO BE.** Every share came out of this class already rounded to two places, which is a DISPLAY decision taken in a data source — and it did real damage at the far end of the scale: a deep book's rare traits all collapsed onto exactly 0, so the ingredient pane could not tell them apart, sorted them arbitrarily (`OrderBy` is stable, so they kept whatever order they arrived in) and printed each of them as "0%" beside a trait no asset carries. The figures are exact here and [`RarityText`](Nfty.Core.Stats.RarityText.md) decides what a surface prints, which is the same split `SpaceText` already makes for the DNA space.
+**NOTHING HERE IS ROUNDED, AND IT USED TO BE.** Every share came out of this class already rounded to two places, which is a DISPLAY decision taken in a data source — and it did real damage at the far end of the scale: a deep book's rare traits all collapsed onto exactly 0, so the ingredient pane could not tell them apart, sorted them arbitrarily (`OrderBy` is stable, so they kept whatever order they arrived in) and printed each of them as "0%" beside a trait no asset carries. The figures retain their nominal weight-model precision here and [`RarityText`](Nfty.Core.Stats.RarityText.md) decides what a surface prints. These are intended shares before rule rejection, uniqueness, and finite RNG resolution, rather than exact observed roll probabilities.
 
 ## Methods
 

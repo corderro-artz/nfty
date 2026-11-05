@@ -35,6 +35,10 @@ public class MarketplaceUploadTests
             Task.FromResult(new PinningStatus(reachable, Provider, reachable ? "connected" : "not reachable",
                 reachable ? "ok" : "The fake node is down."));
 
+        public async Task<PinAcquisition> AddFolderOwnedAsync(string folder, string label,
+            IProgress<PinProgress>? progress = null, CancellationToken cancellationToken = default) =>
+            new(await AddFolderAsync(folder, label, progress, cancellationToken), true);
+
         public Task<string> AddFolderAsync(string folder, string label, IProgress<PinProgress>? progress = null,
             CancellationToken cancellationToken = default)
         {

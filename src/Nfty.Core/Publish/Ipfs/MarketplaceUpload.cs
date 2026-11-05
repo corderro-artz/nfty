@@ -98,7 +98,8 @@ public static class MarketplaceUpload
     /// <param name="pinning">Where to upload.</param>
     /// <param name="cookBookPath">The <c>.cbk</c> to ship in the local export, when the options include it.</param>
     /// <param name="progress">How far the run has got.</param>
-    /// <param name="cancellationToken">Stops the run. Folders a service already pinned stay pinned.</param>
+    /// <param name="cancellationToken">Stops the run. Newly acquired pins are unpinned best effort; pre-existing pins and pins
+    /// whose ownership is unknown are retained.</param>
     /// <param name="parallelism">Passed to every export.</param>
     /// <returns>The CIDs, the contract addresses and the local export.</returns>
     /// <exception cref="ArgumentException">The options cannot be uploaded (<see cref="Problem"/>).</exception>
@@ -124,8 +125,8 @@ public static class MarketplaceUpload
         string label = plan.OutputName;
 
         string temp = Directory.CreateTempSubdirectory("nfty-upload-").FullName;
-        // Every CID pinned so far. A stopped or failed upload unpins them, so a half drop does not
-        // stay on the service (or on the author's Pinata bill) with no export naming it.
+        // Only pins positively acquired by this operation. A returned CID alone proves no ownership:
+        // uploading identical art may merely find a previous collection's existing pin.
         var pinned = new List<string>();
         try
         {
@@ -150,16 +151,14 @@ public static class MarketplaceUpload
 
             // 2. Pin the art.
             string imageCid = await PinAsync(pinning, Path.Combine(artResult.Path, "images"), label + "-images",
-                UploadStage.PinningImages, 0.05, models ? 0.45 : 0.75, "Uploading images", progress, cancellationToken)
+                UploadStage.PinningImages, 0.05, models ? 0.45 : 0.75, "Uploading images", progress, cancellationToken, pinned)
                 .ConfigureAwait(false);
-            pinned.Add(imageCid);
             string? modelCid = null;
             string modelDir = Path.Combine(artResult.Path, "models");
             if (models && Directory.Exists(modelDir) && Directory.EnumerateFiles(modelDir).Any())
                 modelCid = await PinAsync(pinning, modelDir, label + "-models",
-                    UploadStage.PinningModels, 0.45, 0.75, "Uploading models", progress, cancellationToken)
+                    UploadStage.PinningModels, 0.45, 0.75, "Uploading models", progress, cancellationToken, pinned)
                     .ConfigureAwait(false);
-            if (modelCid is not null) pinned.Add(modelCid);
 
             // 3. The metadata, now that it can name the art.
             Say(UploadStage.ExportingMetadata, 0.76, "Writing the metadata...");
@@ -193,9 +192,8 @@ public static class MarketplaceUpload
 
             // 4. Pin the metadata.
             string metadataCid = await PinAsync(pinning, stage, label + "-metadata",
-                UploadStage.PinningMetadata, 0.78, 0.92, "Uploading metadata", progress, cancellationToken)
+                UploadStage.PinningMetadata, 0.78, 0.92, "Uploading metadata", progress, cancellationToken, pinned)
                 .ConfigureAwait(false);
-            pinned.Add(metadataCid);
 
             // 5. The author's own copy, carrying the same addresses.
             Say(UploadStage.WritingExport, 0.93, "Writing the export...");
@@ -232,7 +230,7 @@ public static class MarketplaceUpload
     {
         if (pinned.Count == 0) return;
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        foreach (var cid in pinned)
+        foreach (var cid in pinned.Distinct(StringComparer.Ordinal))
         {
             try { await pinning.RemoveAsync(cid, timeout.Token).ConfigureAwait(false); }
             catch { /* best effort: the upload's own failure is what the caller reports */ }
@@ -241,13 +239,15 @@ public static class MarketplaceUpload
 
     private static async Task<string> PinAsync(IPinningService pinning, string folder, string label,
         UploadStage stage, double from, double to, string phase, IProgress<UploadProgress>? progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, List<string> pinned)
     {
         progress?.Report(new UploadProgress(stage, from, phase + "..."));
         var bytes = progress is null ? null : new SyncProgress<PinProgress>(p =>
             progress.Report(new UploadProgress(stage, from + (to - from) * p.Fraction,
                 $"{phase}... {SizeText.Of(p.BytesSent)} of {SizeText.Of(p.BytesTotal)}")));
-        return await pinning.AddFolderAsync(folder, label, bytes, cancellationToken).ConfigureAwait(false);
+        var pin = await pinning.AddFolderOwnedAsync(folder, label, bytes, cancellationToken).ConfigureAwait(false);
+        if (pin.Acquired) pinned.Add(pin.Cid);
+        return pin.Cid;
     }
 
     private static void CopyFolder(string from, string to)

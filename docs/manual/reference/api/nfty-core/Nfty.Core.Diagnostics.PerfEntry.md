@@ -24,7 +24,7 @@ public PerfEntry(string Name, long Calls, double TotalMs, double MaxMs, long All
 - `Calls` (`long`) - How many times it ran.
 - `TotalMs` (`double`) - Wall-clock time across every call.
 - `MaxMs` (`double`) - The slowest single call — the number a user actually feels.
-- `AllocatedBytes` (`long`) - Managed bytes allocated inside the scope, summed.
+- `AllocatedBytes` (`long`) - Summed thread-local allocation deltas from scopes that start and end on the same thread. Check [`PerfEntry.AllocationAvailable`](Nfty.Core.Diagnostics.PerfEntry.md#p-allocationavailable) before interpreting the total.
 
 ## Properties
 
@@ -34,7 +34,19 @@ public PerfEntry(string Name, long Calls, double TotalMs, double MaxMs, long All
 public long AllocatedBytes { get; init; }
 ```
 
-Managed bytes allocated inside the scope, summed.
+Summed thread-local allocation deltas from scopes that start and end on the same thread. Check [`PerfEntry.AllocationAvailable`](Nfty.Core.Diagnostics.PerfEntry.md#p-allocationavailable) before interpreting the total.
+
+### AllocationAvailable { #p-allocationavailable }
+
+```csharp
+public bool AllocationAvailable { get; init; }
+```
+
+Whether every measured call started and ended on the same thread, allowing its thread-local allocation delta to be included. False makes the allocation column unavailable.
+
+**Remarks**
+
+A delta includes allocations by that thread during the interval, not allocations on other threads. It does not attribute all allocations of an asynchronous operation.
 
 ### Calls { #p-calls }
 

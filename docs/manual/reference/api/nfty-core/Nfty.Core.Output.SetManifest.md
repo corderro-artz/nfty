@@ -22,7 +22,7 @@ public SetManifest(string Name, int Count, string Seed, string? CookbookSha256, 
 
 - `Name` (`string`) - The collection's name.
 - `Count` (`int`) - How many assets the Set holds.
-- `Seed` (`string`) - The seed that produced it; the same seed and cookbook reproduce it exactly.
+- `Seed` (`string`) - The seed that produced it; reproduction also needs the same cookbook and compatible generation options, including [`SetManifest.UniqueDna`](Nfty.Core.Output.SetManifest.md#p-uniquedna).
 - `CookbookSha256` (`string?`) - SHA-256 of the source `.cbk` — what ties a Set back to the exact archive that produced it. Null when the cookbook never came from a file (an in-memory book). Documented here rather than on the parameter itself: a `<summary>` inside a positional record's parameter list is not a valid documentation location, so the compiler discarded it with CS1587 and no tooling ever saw it — on the one field CLAUDE.md insists stays threaded through.
 - `GeneratorVersion` (`string`) - The engine version stamp.
 - `Distribution` (`IReadOnlyList<RecipeCount>`) - Per-recipe counts and shares across the Set.
@@ -123,7 +123,7 @@ The collection-wide rarity table.
 public string Seed { get; init; }
 ```
 
-The seed that produced it; the same seed and cookbook reproduce it exactly.
+The seed that produced it; reproduction also needs the same cookbook and compatible generation options, including [`SetManifest.UniqueDna`](Nfty.Core.Output.SetManifest.md#p-uniquedna).
 
 ### Symbol { #p-symbol }
 

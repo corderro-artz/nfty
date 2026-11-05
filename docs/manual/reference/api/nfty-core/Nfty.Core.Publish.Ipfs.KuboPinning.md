@@ -97,6 +97,27 @@ Adds and pins every file under `folder`, returning the CID of a directory whose 
 - `ArgumentException` - The folder is missing or holds no file.
 - [`PinningException`](Nfty.Core.Publish.Ipfs.PinningException.md) - The service refused, failed or answered without a CID.
 
+### AddFolderOwnedAsync(string, string, IProgress&lt;PinProgress&gt;?, CancellationToken) { #m-addfolderownedasync-system-string-system-string-system-c4dcee }
+
+```csharp
+public Task<PinAcquisition> AddFolderOwnedAsync(string folder, string label, IProgress<PinProgress>? progress = null, CancellationToken cancellationToken = default);
+```
+
+Adds a folder while reporting whether rollback owns its pin.
+
+**Parameters**
+
+- `folder` (`string`) - The folder to add.
+- `label` (`string`) - The provider's label.
+- `progress` (`IProgress<PinProgress>?`) - Upload byte progress.
+- `cancellationToken` (`CancellationToken`) - Stops the upload.
+
+**Returns.** The CID and acquisition evidence. The compatibility default reports unknown ownership, so existing third-party implementations remain safe without changing.
+
+**Remarks**
+
+Pinning APIs do not reference-count consumers of the same CID. Callers must serialize conflicting uploads and other pin mutations against a shared account/node; acquisition evidence cannot protect references created independently after it was observed.
+
 ### ApiProblem(string?) { #m-apiproblem-system-string }
 
 ```csharp

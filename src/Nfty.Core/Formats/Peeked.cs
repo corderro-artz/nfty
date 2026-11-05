@@ -19,13 +19,12 @@ namespace Nfty.Core.Formats;
 /// engine's form — <c>Generator</c> and <c>Validator</c> take that and only that, because they draw
 /// pixels — and a reader of this one must not assume the art is even present.</para>
 ///
-/// <para><b>Recipe order here is ordinal, not the book's own
-/// <see cref="CookBookManifest.RecipeOrder"/>.</b> That field is a listing preference and this is not
-/// a listing; anything that shows a reader a book's recipes wants <see cref="CookBookArchive.Read"/>
-/// or the manifest field itself.</para>
+/// <para><see cref="ArchivePeek.CookBookTree"/> supplies recipes ordinally by id.
+/// <see cref="Of"/> preserves the loaded book's supplied order, including its listing preference
+/// from <see cref="CookBookManifest.RecipeOrder"/>. The record itself imposes no order.</para>
 /// </remarks>
 /// <param name="Manifest">The book's own manifest — canvas, collection, recipe weights.</param>
-/// <param name="Recipes">Its recipes, ordinally by id.</param>
+/// <param name="Recipes">Its recipes, in the producer's supplied order.</param>
 public record PeekedCookBook(CookBookManifest Manifest, IReadOnlyList<PeekedRecipe> Recipes)
 {
     /// <summary>The same book, projected off one that is already open and decoded.</summary>
@@ -41,7 +40,8 @@ public record PeekedCookBook(CookBookManifest Manifest, IReadOnlyList<PeekedReci
 
 /// <summary>One recipe's manifests: its own, and one per ingredient nested inside it.</summary>
 /// <param name="Manifest">The recipe manifest — layer order, rules, absent percents.</param>
-/// <param name="Ingredients">Its ingredients' manifests, ordinally by id.</param>
+/// <param name="Ingredients">Its ingredients' manifests, in the producer's supplied order.
+/// Archive readers supply ordinal id order; <see cref="Of"/> preserves the loaded recipe's order.</param>
 public record PeekedRecipe(RecipeManifest Manifest, IReadOnlyList<IngredientManifest> Ingredients)
 {
     /// <summary>The same recipe, projected off one that is already open and decoded.</summary>

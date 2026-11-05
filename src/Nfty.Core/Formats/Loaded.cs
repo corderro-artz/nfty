@@ -16,8 +16,8 @@ public class LoadedIngredient : IDisposable
     public required IReadOnlyDictionary<string, Image<Rgba32>> VariantImages { get; init; }
 
     /// <summary>Per-pixel front/back depth maps, keyed by variant id. A variant with no entry here
-    /// is flat — "paper" — for the Rise feature. Never as large as <see cref="VariantImages"/>: most
-    /// variants carry no depth data at all.</summary>
+    /// is flat — "paper" — for the Rise feature. May cover every variant, although variants without
+    /// painted depth need no entry.</summary>
     public IReadOnlyDictionary<string, DepthMap> Depths { get; init; } = DepthMaps.None;
 
     /// <summary>Frees every image this object owns. Reading an archive eagerly decodes them all,

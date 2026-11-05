@@ -58,7 +58,7 @@ internal static class ParallelWork
                     // indices above the lowest failure so far are skipped — they can never be it.
                     if (i > Volatile.Read(ref lowest)) return;
                     try { body(i); }
-                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
                     {
                         failures.Add((i, ex));
                         int seen;
@@ -141,7 +141,7 @@ internal static class ParallelWork
                     // As in For: a failure skips only higher indices, so the lowest one still runs.
                     if (i > Volatile.Read(ref lowest)) return;
                     try { await body(items[i], ct).ConfigureAwait(false); }
-                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
                     {
                         failures.Add((i, ex));
                         int seen;

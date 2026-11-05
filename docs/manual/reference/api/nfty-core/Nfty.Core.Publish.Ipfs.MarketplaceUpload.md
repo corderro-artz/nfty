@@ -52,7 +52,7 @@ Uploads a Set's art and metadata and writes the export with the real addresses.
 - `pinning` (`IPinningService`) - Where to upload.
 - `cookBookPath` (`string?`) - The `.cbk` to ship in the local export, when the options include it.
 - `progress` (`IProgress<UploadProgress>?`) - How far the run has got.
-- `cancellationToken` (`CancellationToken`) - Stops the run. Folders a service already pinned stay pinned.
+- `cancellationToken` (`CancellationToken`) - Stops the run. Newly acquired pins are unpinned best effort; pre-existing pins and pins whose ownership is unknown are retained.
 - `parallelism` (`Parallelism?`) - Passed to every export.
 
 **Returns.** The CIDs, the contract addresses and the local export.

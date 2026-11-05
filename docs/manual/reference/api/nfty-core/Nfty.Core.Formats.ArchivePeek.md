@@ -35,7 +35,7 @@ Reads a CookBook's manifest alone.
 **Exceptions**
 
 - `InvalidDataException` - The archive or its manifest is unreadable.
-- [`UnsupportedSchemaVersionException`](Nfty.Core.Formats.UnsupportedSchemaVersionException.md) - It declares a newer schema than this build reads.
+- [`UnsupportedSchemaVersionException`](Nfty.Core.Formats.UnsupportedSchemaVersionException.md) - It declares a schema outside this build's supported range, including versions below the floor.
 
 ### CookBookTree(string) { #m-cookbooktree-system-string }
 
@@ -54,7 +54,7 @@ Reads a CookBook and every manifest nested inside it — recipes and their ingre
 **Exceptions**
 
 - `InvalidDataException` - The archive or a manifest inside it is unreadable.
-- [`UnsupportedSchemaVersionException`](Nfty.Core.Formats.UnsupportedSchemaVersionException.md) - It, or something inside it, declares a newer schema than this build reads.
+- [`UnsupportedSchemaVersionException`](Nfty.Core.Formats.UnsupportedSchemaVersionException.md) - It, or something inside it, declares a schema outside this build's supported range, including versions below the floor.
 
 **Remarks**
 
@@ -77,7 +77,7 @@ Reads an Ingredient's manifest alone.
 **Exceptions**
 
 - `InvalidDataException` - The archive or its manifest is unreadable.
-- [`UnsupportedSchemaVersionException`](Nfty.Core.Formats.UnsupportedSchemaVersionException.md) - It declares a newer schema than this build reads.
+- [`UnsupportedSchemaVersionException`](Nfty.Core.Formats.UnsupportedSchemaVersionException.md) - It declares a schema outside this build's supported range, including versions below the floor.
 
 ### Recipe(string) { #m-recipe-system-string }
 
@@ -96,7 +96,7 @@ Reads a Recipe's manifest alone.
 **Exceptions**
 
 - `InvalidDataException` - The archive or its manifest is unreadable.
-- [`UnsupportedSchemaVersionException`](Nfty.Core.Formats.UnsupportedSchemaVersionException.md) - It declares a newer schema than this build reads.
+- [`UnsupportedSchemaVersionException`](Nfty.Core.Formats.UnsupportedSchemaVersionException.md) - It declares a schema outside this build's supported range, including versions below the floor.
 
 ### RecipeTree(string) { #m-recipetree-system-string }
 
@@ -115,7 +115,7 @@ Reads a Recipe and every Ingredient manifest nested inside it, without decoding 
 **Exceptions**
 
 - `InvalidDataException` - The archive or a manifest inside it is unreadable.
-- [`UnsupportedSchemaVersionException`](Nfty.Core.Formats.UnsupportedSchemaVersionException.md) - It, or something inside it, declares a newer schema than this build reads.
+- [`UnsupportedSchemaVersionException`](Nfty.Core.Formats.UnsupportedSchemaVersionException.md) - It, or something inside it, declares a schema outside this build's supported range, including versions below the floor.
 
 ### VariantPng(string, string?, string?, string) { #m-variantpng-system-string-system-string-system-string-s-6605d3 }
 

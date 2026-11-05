@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 
 namespace Nfty.Core.Diagnostics;
 
@@ -9,11 +10,18 @@ namespace Nfty.Core.Diagnostics;
 /// <param name="Calls">How many times it ran.</param>
 /// <param name="TotalMs">Wall-clock time across every call.</param>
 /// <param name="MaxMs">The slowest single call — the number a user actually feels.</param>
-/// <param name="AllocatedBytes">Managed bytes allocated inside the scope, summed.</param>
+/// <param name="AllocatedBytes">Summed thread-local allocation deltas from scopes that start and
+/// end on the same thread. Check <see cref="AllocationAvailable"/> before interpreting the total.</param>
 public readonly record struct PerfEntry(string Name, long Calls, double TotalMs, double MaxMs, long AllocatedBytes)
 {
     /// <summary>Mean time per call.</summary>
     public double MeanMs => Calls == 0 ? 0 : TotalMs / Calls;
+
+    /// <summary>Whether every measured call started and ended on the same thread, allowing its
+    /// thread-local allocation delta to be included. False makes the allocation column unavailable.</summary>
+    /// <remarks>A delta includes allocations by that thread during the interval, not allocations on
+    /// other threads. It does not attribute all allocations of an asynchronous operation.</remarks>
+    public bool AllocationAvailable { get; init; } = true;
 }
 
 /// <summary>
@@ -37,6 +45,7 @@ public static class Perf
         public long Ticks;
         public long MaxTicks;
         public long Bytes;
+        public bool AllocationAvailable = true;
     }
 
     private static readonly Dictionary<string, Bucket> Buckets = new(StringComparer.Ordinal);
@@ -66,11 +75,13 @@ public static class Perf
     /// </summary>
     /// <param name="name">The scope's name; totals accumulate per name.</param>
     /// <returns>A scope to dispose at the end of the block. Disposing a disabled scope does nothing.</returns>
+    /// <remarks>Wall time spans thread changes. Allocation deltas are thread-local and available only
+    /// when the scope starts and ends on the same thread; they do not measure worker-thread allocations.</remarks>
     /// <example><code>using var _ = Perf.Measure("SetReader.Read");</code></example>
     public static Scope Measure(string name) =>
         Enabled ? new Scope(name, Stopwatch.GetTimestamp(), GC.GetAllocatedBytesForCurrentThread()) : default;
 
-    private static void Add(string name, long ticks, long bytes)
+    private static void Add(string name, long ticks, long? bytes)
     {
         lock (Gate)
         {
@@ -78,7 +89,8 @@ public static class Perf
             b.Calls++;
             b.Ticks += ticks;
             if (ticks > b.MaxTicks) b.MaxTicks = ticks;
-            b.Bytes += bytes;
+            if (bytes is { } measured) b.Bytes += measured;
+            else b.AllocationAvailable = false;
         }
     }
 
@@ -91,7 +103,8 @@ public static class Perf
             var perTick = 1000.0 / Stopwatch.Frequency;
             return Buckets
                 .Select(kv => new PerfEntry(kv.Key, kv.Value.Calls, kv.Value.Ticks * perTick,
-                    kv.Value.MaxTicks * perTick, kv.Value.Bytes))
+                    kv.Value.MaxTicks * perTick, kv.Value.Bytes)
+                    { AllocationAvailable = kv.Value.AllocationAvailable })
                 .OrderByDescending(e => e.TotalMs)
                 .ToList();
         }
@@ -101,8 +114,8 @@ public static class Perf
     /// The snapshot as a fixed-width table.
     /// </summary>
     /// <returns>One line per scope, plus a header. Empty string when nothing was measured.</returns>
-    /// <remarks>Formatted the way <c>Stats/</c>'s reports are — invariant, so two runs on two
-    /// machines can be diffed.</remarks>
+    /// <remarks>Numbers use invariant formatting, as <c>Stats/</c>'s reports do. An allocation total
+    /// is <c>n/a</c> if any of its calls ended on a different thread; times are still reported.</remarks>
     public static string Report()
     {
         var rows = Snapshot();
@@ -117,11 +130,13 @@ public static class Perf
           .Append("   CALLS      TOTAL ms       MEAN ms        MAX ms      ALLOC KB\n");
         foreach (var r in rows)
             sb.Append(r.Name.PadRight(w))
-              .Append(r.Calls.ToString().PadLeft(8))
-              .Append(r.TotalMs.ToString("N2").PadLeft(13))
-              .Append(r.MeanMs.ToString("N3").PadLeft(14))
-              .Append(r.MaxMs.ToString("N2").PadLeft(14))
-              .Append((r.AllocatedBytes / 1024.0).ToString("N0").PadLeft(14))
+              .Append(r.Calls.ToString(CultureInfo.InvariantCulture).PadLeft(8))
+              .Append(r.TotalMs.ToString("N2", CultureInfo.InvariantCulture).PadLeft(13))
+              .Append(r.MeanMs.ToString("N3", CultureInfo.InvariantCulture).PadLeft(14))
+              .Append(r.MaxMs.ToString("N2", CultureInfo.InvariantCulture).PadLeft(14))
+              .Append((r.AllocationAvailable
+                  ? (r.AllocatedBytes / 1024.0).ToString("N0", CultureInfo.InvariantCulture)
+                  : "n/a").PadLeft(14))
               .Append('\n');
         return sb.ToString();
     }
@@ -132,20 +147,25 @@ public static class Perf
         private readonly string? _name;
         private readonly long _start;
         private readonly long _bytes;
+        private readonly int _threadId;
 
         internal Scope(string name, long start, long bytes)
         {
             _name = name;
             _start = start;
             _bytes = bytes;
+            _threadId = Environment.CurrentManagedThreadId;
         }
 
-        /// <summary>Closes the scope and folds its time and allocation into the totals.</summary>
+        /// <summary>Closes the scope, folds its wall time into the totals, and includes the thread-local
+        /// allocation delta only when closing on the creating thread.</summary>
         public void Dispose()
         {
             if (_name is null) return;
             Add(_name, Stopwatch.GetTimestamp() - _start,
-                GC.GetAllocatedBytesForCurrentThread() - _bytes);
+                Environment.CurrentManagedThreadId == _threadId
+                    ? GC.GetAllocatedBytesForCurrentThread() - _bytes
+                    : null);
         }
     }
 }

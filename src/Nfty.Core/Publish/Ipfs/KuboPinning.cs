@@ -144,6 +144,41 @@ public sealed class KuboPinning : IPinningService
         new(false, Provider, "not reachable", detail);
 
     /// <inheritdoc />
+    public async Task<PinAcquisition> AddFolderOwnedAsync(string folder, string label,
+        IProgress<PinProgress>? progress = null, CancellationToken cancellationToken = default)
+    {
+        // Snapshot before Add can pin anything. Include all kinds conservatively: a CID that was
+        // already direct, recursive or indirect is never claimed by this upload. Base32 normalizes
+        // CIDv0 into CIDv1, matching Add's representation of the same content address.
+        HashSet<string> before;
+        try
+        {
+            using var response = await _http.PostAsync(new Uri(_api, "api/v0/pin/ls?type=all&cid-base=base32"),
+                null, cancellationToken).ConfigureAwait(false);
+            string body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+                throw new PinningException("Local IPFS could not establish existing pins: " + ErrorText(body));
+            using var doc = JsonDocument.Parse(body);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object)
+                throw new PinningException("Local IPFS answered without a readable pin list.");
+            // Kubo omits Keys when its pin map is empty (json omitempty).
+            before = new HashSet<string>(StringComparer.Ordinal);
+            if (doc.RootElement.TryGetProperty("Keys", out var keys))
+            {
+                if (keys.ValueKind != JsonValueKind.Object)
+                    throw new PinningException("Local IPFS answered without a readable pin list.");
+                foreach (var pin in keys.EnumerateObject()) before.Add(pin.Name);
+            }
+        }
+        catch (Exception ex) when (ex is HttpRequestException or JsonException)
+        {
+            throw new PinningException("Local IPFS could not establish existing pins.", ex);
+        }
+        string cid = await AddFolderAsync(folder, label, progress, cancellationToken).ConfigureAwait(false);
+        return new PinAcquisition(cid, !before.Contains(cid));
+    }
+
+    /// <inheritdoc />
     public async Task<string> AddFolderAsync(string folder, string label,
         IProgress<PinProgress>? progress = null, CancellationToken cancellationToken = default)
     {

@@ -89,17 +89,17 @@ A non-finite input is `Gray`: nothing meaningful can be said of it, and a metada
 public static IReadOnlyDictionary<string, double> Shares(Colorization colorization);
 ```
 
-The exact chance that one roll of `colorization` is published under each color name: the book-side twin of [`ColorName.Of()`](Nfty.Core.Imaging.ColorName.md#m-of-system-double-system-double), so the predicted rarity table and the cooked one speak about the same buckets.
+The ideal uniform-range share of each published color name: the book-side twin of [`ColorName.Of()`](Nfty.Core.Imaging.ColorName.md#m-of-system-double-system-double), so predicted rarity and cooked names use the same buckets.
 
 **Parameters**
 
 - `colorization` (`Colorization`) - The layer's colorization (Dynamic or Static).
 
-**Returns.** Name to probability, only names that can occur, ordinal-sorted by name, summing to 1. Empty when the entries carry no weight (the roller itself refuses that colorization).
+**Returns.** Name to probability, only names that can occur, ordinal-sorted by name, summing to 1. Empty when the entries carry no weight, or positive entry shares cannot be represented reliably by one weighted draw. Empty means unavailable, not that colors have no chance.
 
 **Remarks**
 
-Matches `ColorRoller.Roll` exactly: an entry is picked by weight (`w/W`; a zero-weight entry never), a ranged entry then samples hue and saturation **independently**, each as `Min + r*(Max-Min)` with `r` in `[0,1)`, so each is uniform on the half-open interval and a name's chance is `|H and sector| / |H| * |S and band| / |S|`. A degenerate axis (`Min == Max`) is a point mass, named by the very comparisons [`ColorName.Of()`](Nfty.Core.Imaging.ColorName.md#m-of-system-double-system-double) makes. A fixed entry is a point mass on `ColorRoller.FromFixed`. Red's sector wraps (345..360 and 0..15), and a hue range wider than a turn counts every lap. The color model does not enter: it only decides how a fixed spec is read, and ranges are stated in the model's own H and S.
+Models `ColorRoller.Roll`: an entry is picked by weight (`w/W`; a zero-weight entry never), a ranged entry then samples hue and saturation **independently**, each as `Min + r*(Max-Min)` with `r` in `[0,1)`, so each has an ideal uniform half-open interval and a name's share is `|H and sector| / |H| * |S and band| / |S|`. A degenerate axis (`Min == Max`) is a point mass, as is a saturation interval whose sampled endpoints round to one fraction, named by the very comparisons [`ColorName.Of()`](Nfty.Core.Imaging.ColorName.md#m-of-system-double-system-double) makes. A fixed entry is a point mass on `ColorRoller.FromFixed`. Red's sector wraps (345..360 and 0..15), and a hue range wider than a turn counts every lap. The color model does not enter: it only decides how a fixed spec is read, and ranges are stated in the model's own H and S. The actual sampler uses finite floating-point draws and arithmetic: rounding can reach the upper endpoint, so these continuous shares do not promise exact discrete sampling probabilities.
 
 Sums run in entry order and sector order, sequentially, so the figures are identical on every machine.
 

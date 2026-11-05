@@ -44,7 +44,7 @@ Nearly every book counts exactly. A few can only be bounded, and the wording say
 
 | Wording | Means |
 |---|---|
-| `7,155,000` | Exact. |
+| `8,745,000` | Exact. |
 | `more than N` | A floor: a color set was too large to enumerate, so N under-counts. |
 | `at most N` | A ceiling: a ruled Recipe has too many combinations to walk, so N is the count before rules removed any. |
 | `cannot be counted` | Both happened (the figure bounds the truth in neither direction), or the book has problems; run `nfty validate`. |

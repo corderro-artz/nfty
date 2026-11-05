@@ -8,7 +8,7 @@ Namespace `Nfty.Core.Generation` in assembly `Nfty.Core`.
 public class RuleConflictException : InvalidOperationException
 ```
 
-A recipe's incompatibility rules exclude every combination of its variants, so no asset of that type can ever be rolled. Distinct from [`UniqueSpaceExhaustedException`](Nfty.Core.Generation.UniqueSpaceExhaustedException.md), which means the space is real but too small — this means the space is empty.
+A recipe's incompatibility rules exclude every combination of its variants, so no asset of that type can ever be rolled. Distinct from [`UniqueSpaceExhaustedException`](Nfty.Core.Generation.UniqueSpaceExhaustedException.md), which reports retry exhaustion with uniqueness enabled — this means the space is empty.
 
 ## Constructors
 

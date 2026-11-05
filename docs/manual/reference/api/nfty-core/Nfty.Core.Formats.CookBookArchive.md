@@ -63,7 +63,7 @@ Reads a CookBook, eagerly decoding every variant image inside it.
 **Exceptions**
 
 - `InvalidDataException` - The archive or a manifest inside it is unreadable.
-- [`UnsupportedSchemaVersionException`](Nfty.Core.Formats.UnsupportedSchemaVersionException.md) - It declares a newer schema than this build reads.
+- [`UnsupportedSchemaVersionException`](Nfty.Core.Formats.UnsupportedSchemaVersionException.md) - It declares a schema outside this build's supported range, including versions below the floor.
 
 ### ReadAsync(string, CancellationToken, Parallelism?) { #m-readasync-system-string-system-threading-cancellationt-34f1f2 }
 

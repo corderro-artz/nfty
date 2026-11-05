@@ -37,9 +37,9 @@ Generates the whole collection into memory. The returned set owns every asset im
 
 **Exceptions**
 
-- `InvalidOperationException` - [`GenerateOptions.Count`](Nfty.Core.Generation.GenerateOptions.md#p-count) is not positive, the book fails [`Validator`](Nfty.Core.Formats.Validator.md) (the message lists every problem), or [`GenerateOptions.RecipeId`](Nfty.Core.Generation.GenerateOptions.md#p-recipeid) names no recipe.
+- `InvalidOperationException` - [`GenerateOptions.Count`](Nfty.Core.Generation.GenerateOptions.md#p-count) is not positive, the book fails [`Validator`](Nfty.Core.Formats.Validator.md) (the message lists every problem), [`GenerateOptions.RecipeId`](Nfty.Core.Generation.GenerateOptions.md#p-recipeid) names no recipe, or rule retries run out with uniqueness disabled.
 - [`RuleConflictException`](Nfty.Core.Generation.RuleConflictException.md) - The recipe rules exclude every combination, so no asset can be rolled.
-- [`UniqueSpaceExhaustedException`](Nfty.Core.Generation.UniqueSpaceExhaustedException.md) - The unique DNA space is real but smaller than the count requested.
+- [`UniqueSpaceExhaustedException`](Nfty.Core.Generation.UniqueSpaceExhaustedException.md) - The retry budget was exhausted while enforcing unique DNA; the counted space need not be exhausted.
 - `OperationCanceledException` - `cancellationToken` was canceled.
 
 **Remarks**
@@ -69,9 +69,9 @@ Generation offloaded to a background thread. The work is CPU-bound, so this is a
 
 **Exceptions**
 
-- `InvalidOperationException` - [`GenerateOptions.Count`](Nfty.Core.Generation.GenerateOptions.md#p-count) is not positive, the book fails [`Validator`](Nfty.Core.Formats.Validator.md) (the message lists every problem), or [`GenerateOptions.RecipeId`](Nfty.Core.Generation.GenerateOptions.md#p-recipeid) names no recipe.
+- `InvalidOperationException` - [`GenerateOptions.Count`](Nfty.Core.Generation.GenerateOptions.md#p-count) is not positive, the book fails [`Validator`](Nfty.Core.Formats.Validator.md) (the message lists every problem), [`GenerateOptions.RecipeId`](Nfty.Core.Generation.GenerateOptions.md#p-recipeid) names no recipe, or rule retries run out with uniqueness disabled.
 - [`RuleConflictException`](Nfty.Core.Generation.RuleConflictException.md) - The recipe rules exclude every combination, so no asset can be rolled.
-- [`UniqueSpaceExhaustedException`](Nfty.Core.Generation.UniqueSpaceExhaustedException.md) - The unique DNA space is real but smaller than the count requested.
+- [`UniqueSpaceExhaustedException`](Nfty.Core.Generation.UniqueSpaceExhaustedException.md) - The retry budget was exhausted while enforcing unique DNA; the counted space need not be exhausted.
 - `OperationCanceledException` - `cancellationToken` was canceled.
 
 ### GenerateStreaming(LoadedCookBook, GenerateOptions, IReadOnlyList&lt;string&gt;?, int, IProgress&lt;GenerationProgress&gt;?, CancellationToken) { #m-generatestreaming-nfty-core-formats-loadedcookbook-nft-7dbe9b }
@@ -95,6 +95,7 @@ Yields assets one at a time so a caller can write or draw each and dispose it be
 
 **Exceptions**
 
-- `InvalidOperationException` - Raised eagerly, before enumeration starts: the count is not positive, the book is invalid, or [`GenerateOptions.RecipeId`](Nfty.Core.Generation.GenerateOptions.md#p-recipeid) names no recipe.
+- `InvalidOperationException` - Raised eagerly if the count is not positive, the book is invalid, or [`GenerateOptions.RecipeId`](Nfty.Core.Generation.GenerateOptions.md#p-recipeid) names no recipe; also raised during enumeration if rule retries run out with uniqueness disabled.
 - [`RuleConflictException`](Nfty.Core.Generation.RuleConflictException.md) - Raised during enumeration when the rules exclude every combination.
-- [`UniqueSpaceExhaustedException`](Nfty.Core.Generation.UniqueSpaceExhaustedException.md) - Raised during enumeration when the unique space is smaller than the count requested.
+- [`UniqueSpaceExhaustedException`](Nfty.Core.Generation.UniqueSpaceExhaustedException.md) - Raised during enumeration when the retry budget is exhausted while enforcing unique DNA; the counted space need not be exhausted.
+- `OperationCanceledException` - Raised during enumeration when `cancellationToken` is canceled.

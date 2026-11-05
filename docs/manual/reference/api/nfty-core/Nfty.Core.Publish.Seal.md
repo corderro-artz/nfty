@@ -160,7 +160,7 @@ Seals `plaintext` into a new archive at `path`.
 **Parameters**
 
 - `path` (`string`) - Where to write it. An existing file there is replaced.
-- `plaintext` (`Stream`) - The bytes to encrypt — a packed Set. Must be seekable: the frame count and the plaintext length are authenticated by the FIRST frame, so both have to be known before a byte is written.
+- `plaintext` (`Stream`) - The bytes to encrypt — a packed Set. Must be seekable: the frame count and plaintext length are covered by the header MAC and every frame's AAD, so both must be known before a byte is written.
 - `collection` (`string`) - The collection's name, shown to a recipient with no key.
 - `count` (`int`) - How many assets are inside, shown to a recipient with no key.
 - `note` (`string?`) - What the author wants read first, or null.
