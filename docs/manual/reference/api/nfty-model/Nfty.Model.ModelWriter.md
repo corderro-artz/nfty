@@ -18,14 +18,14 @@ Writes a risen mesh and its texture as model files. Every format is serialized f
 public static IReadOnlyList<ModelFile> Write(Mesh mesh, Image<Rgba32> art, RiseOptions options, string baseName, StackFaces? faces = null);
 ```
 
-Writes one model.
+Writes one model, compacting bit-identical vertices before serialization.
 
 **Parameters**
 
 - `mesh` (`Mesh`) - The mesh, from [`Riser.TryBuild()`](Nfty.Model.Riser.md#m-trybuild-sixlabors-imagesharp-image-sixlabors-imagesha-c616c2).
 - `art` (`Image<Rgba32>`) - The picture the mesh was risen from — the same size. Not modified. The texture is the [`FaceAtlas`](Nfty.Model.FaceAtlas.md) built from it.
-- `options` (`RiseOptions`) - Which format to write.
-- `baseName` (`string`) - The file name without extension, and without any folder.
+- `options` (`RiseOptions`) - Only [`RiseOptions.Format`](Nfty.Model.RiseOptions.md#p-format) is used. The mesh already carries its pivot and scale.
+- `baseName` (`string`) - The file name without extension or folder; must be safe on Windows and other supported platforms. Valid names are retained exactly, never sanitized.
 - `faces` (`StackFaces?`) - The stack's face owners (the atlas halves), or `null` for a single picture. Borrowed, not disposed.
 
 **Returns.** The files: one for [`ModelFormat.Glb`](Nfty.Model.ModelFormat.md#f-glb) and [`ModelFormat.GltfEmbedded`](Nfty.Model.ModelFormat.md#f-gltfembedded), two (`.gltf` then `.bin`) for [`ModelFormat.GltfWithBin`](Nfty.Model.ModelFormat.md#f-gltfwithbin).
@@ -41,14 +41,14 @@ Writes one model.
 public static IReadOnlyList<ModelFile> WriteAtlas(Mesh mesh, Image<Rgba32> atlas, RiseOptions options, string baseName);
 ```
 
-Writes one model from a texture that is already the mesh's [`FaceAtlas`](Nfty.Model.FaceAtlas.md): what a viewer holds when it was handed a mesh and its atlas but not the art they came from. The bytes are exactly those [`ModelWriter.Write()`](Nfty.Model.ModelWriter.md#m-write-nfty-model-mesh-sixlabors-imagesharp-image-sixla-88ef19) produces for the same atlas.
+Writes one model from a texture that is already the mesh's [`FaceAtlas`](Nfty.Model.FaceAtlas.md): what a viewer holds when it was handed a mesh and its atlas but not the art they came from. The bytes are exactly those [`ModelWriter.Write()`](Nfty.Model.ModelWriter.md#m-write-nfty-model-mesh-sixlabors-imagesharp-image-sixla-88ef19) produces for the same atlas. Bit-identical vertices may be compacted, changing vertex numbering while preserving geometry.
 
 **Parameters**
 
 - `mesh` (`Mesh`) - The mesh.
 - `atlas` (`Image<Rgba32>`) - The atlas the mesh's UVs address; not modified.
-- `options` (`RiseOptions`) - Which format to write.
-- `baseName` (`string`) - The file name without extension, and without any folder.
+- `options` (`RiseOptions`) - Only [`RiseOptions.Format`](Nfty.Model.RiseOptions.md#p-format) is used. The mesh already carries its pivot and scale.
+- `baseName` (`string`) - The file name without extension or folder; must be safe on Windows and other supported platforms. Valid names are retained exactly, never sanitized.
 
 **Returns.** The files, as for [`ModelWriter.Write()`](Nfty.Model.ModelWriter.md#m-write-nfty-model-mesh-sixlabors-imagesharp-image-sixla-88ef19).
 

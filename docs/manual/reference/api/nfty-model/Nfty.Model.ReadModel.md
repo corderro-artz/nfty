@@ -8,7 +8,7 @@ Namespace `Nfty.Model` in assembly `Nfty.Model`.
 public sealed record ReadModel
 ```
 
-A model read back from a file: the solid and the PNG its UVs address.
+A model read back from a file: the solid and the encoded PNG its UVs address. The constructor retains the supplied mutable byte array. No decoded image is held or needs disposal; callers own any image they decode from these bytes.
 
 ## Constructors
 

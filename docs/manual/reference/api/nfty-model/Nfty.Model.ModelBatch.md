@@ -44,7 +44,7 @@ Rises a batch and writes it as it goes: each model is built, written and let go 
 - `destination` (`ModelDestination`) - A folder or a zip.
 - `progress` (`IProgress<int>?`) - Told how many pictures are done (written or skipped) after each one.
 - `cancellation` (`CancellationToken`) - Checked before each picture. A canceled zip is never left behind (it is written beside its destination and moved over it only when complete); a canceled folder keeps the models finished before the stop, each whole, since a file is written only once its model is.
-- `onWritten` (`Action<string>?`) - Told each file's name once it is in the destination, on the thread doing the export; how a caller knows whether a stopped batch wrote anything.
+- `onWritten` (`Action<string>?`) - Told each file's name once it is in the destination, on the thread doing the export, after the model's complete file set is written to the sink. Folder files are committed; zip entries remain staged until the whole batch completes.
 
 **Returns.** The file names written, the pictures skipped, and the files that already existed.
 
@@ -67,10 +67,10 @@ Rises a batch like [`ModelBatch.Export()`](Nfty.Model.ModelBatch.md#m-export-sys
 - `release` (`Action<ModelInput>?`) - Called once for every opened picture as soon as its model is built (or its build failed), on the thread that built it; null when the caller keeps ownership.
 - `options` (`RiseOptions`) - How to rise and write.
 - `destination` (`ModelDestination`) - A folder or a zip.
-- `parallelism` (`Parallelism`) - How many pictures build at once. A sequential degree gives exactly the sequential overload's behavior, on the calling thread.
+- `parallelism` (`Parallelism`) - How many pictures build at once. A sequential degree gives exactly its bytes, order and calling thread. This overload releases inputs after building, before writing, including at a sequential degree; the other overload releases after writing.
 - `progress` (`IProgress<int>?`) - Told how many pictures are done (written or skipped), in order, one call at a time.
 - `cancellation` (`CancellationToken`) - Checked before each window and each picture. A canceled zip is never left behind; a canceled folder keeps every model written before the stop, each one whole.
-- `onWritten` (`Action<string>?`) - Told each file's name once it is in the destination, in write order, on the calling thread.
+- `onWritten` (`Action<string>?`) - Told each file's name once it is in the destination, in write order, on the calling thread, after the model's complete file set is written to the sink. Folder files are committed; zip entries remain staged until the whole batch completes.
 
 **Returns.** The file names written, the pictures skipped, and the files that already existed.
 

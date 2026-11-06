@@ -12,7 +12,7 @@ Rises every asset of a cook into model files: [`StackDepth.ForAsset()`](Nfty.Mod
 
 ## Remarks
 
-Reads only — the book and the asset's picture are never mutated — so concurrent calls for different assets are safe and the bytes depend on the asset alone, at any thread count.
+Reads only — the book and the asset's picture are never mutated — so concurrent calls for different assets are safe and the bytes depend on the asset alone, at any thread count. The modeler retains borrowed recipe, image and depth references from the book, not snapshots. Keep the book live and stable until all model calls have finished.
 
 ## Constructors
 

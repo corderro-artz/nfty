@@ -9,8 +9,9 @@ namespace Nfty.Model;
 /// switches from one owner's color to the other's.
 /// </summary>
 /// <remarks>
-/// Owns both images. Non-solid pixels are clear in both. For an all-paper stack both faces equal the
-/// art and every seam is 0.
+/// Owns both images. <see cref="StackDepth.Combine"/> clears non-solid pixels in both. For an
+/// all-paper stack both faces equal the art and every seam is 0. <see cref="Uniform"/> instead copies
+/// the supplied pixels, including their alpha, without validation.
 /// </remarks>
 public sealed class StackFaces : IDisposable
 {
@@ -70,7 +71,8 @@ public sealed class StackFaces : IDisposable
     /// <returns>The copy.</returns>
     public StackFaces Clone() => new(Front.Clone(), Back.Clone(), (int[])_backColored.Clone());
 
-    /// <summary>The faces of a single picture: both are the art, and the seam is 0.</summary>
+    /// <summary>The faces of a single picture: both clone the art, preserving its alpha without
+    /// validation, and the seam is 0.</summary>
     /// <param name="art">The picture; cloned, not taken.</param>
     /// <returns>Faces the caller owns.</returns>
     public static StackFaces Uniform(Image<Rgba32> art)

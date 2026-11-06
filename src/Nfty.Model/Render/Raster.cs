@@ -34,7 +34,9 @@ public static class Raster
     /// texture coordinate it carries.</summary>
     internal readonly record struct ScreenVertex(float X, float Y, float W, float U, float V);
 
-    private readonly record struct ClipVertex(Vector4 Clip, float U, float V);
+    // Bits identify the original triangle edges on which this vertex lies. Clipping retains that
+    // identity so a shortened voxel edge still uses its world line for coverage.
+    private readonly record struct ClipVertex(Vector4 Clip, float U, float V, byte Edges = 0);
 
     /// <summary>Draws every triangle of <paramref name="mesh"/>, sampling <paramref name="texture"/>
     /// nearest-neighbor, into <paramref name="target"/>, as seen by <paramref name="camera"/>. The
@@ -101,6 +103,9 @@ public static class Raster
                 var c0 = clip[i0];
                 var c1 = clip[i1];
                 var c2 = clip[i2];
+                var a = new ClipVertex(c0, uvs[i0 * 2], uvs[(i0 * 2) + 1], 5);
+                var b = new ClipVertex(c1, uvs[i1 * 2], uvs[(i1 * 2) + 1], 3);
+                var c = new ClipVertex(c2, uvs[i2 * 2], uvs[(i2 * 2) + 1], 6);
 
                 // Near plane: Matrix4x4.CreatePerspectiveFieldOfView maps it to clip z = 0, and the
                 // inside (z >= 0) implies w > 0. Clip BEFORE any divide — a vertex behind the eye
@@ -108,9 +113,9 @@ public static class Raster
                 int count;
                 if (c0.Z >= 0f && c1.Z >= 0f && c2.Z >= 0f)
                 {
-                    polygon[0] = new ClipVertex(c0, uvs[i0 * 2], uvs[(i0 * 2) + 1]);
-                    polygon[1] = new ClipVertex(c1, uvs[i1 * 2], uvs[(i1 * 2) + 1]);
-                    polygon[2] = new ClipVertex(c2, uvs[i2 * 2], uvs[(i2 * 2) + 1]);
+                    polygon[0] = a;
+                    polygon[1] = b;
+                    polygon[2] = c;
                     count = 3;
                 }
                 else if (c0.Z < 0f && c1.Z < 0f && c2.Z < 0f)
@@ -119,12 +124,21 @@ public static class Raster
                 }
                 else
                 {
-                    count = ClipToNearPlane(
-                        new ClipVertex(c0, uvs[i0 * 2], uvs[(i0 * 2) + 1]),
-                        new ClipVertex(c1, uvs[i1 * 2], uvs[(i1 * 2) + 1]),
-                        new ClipVertex(c2, uvs[i2 * 2], uvs[(i2 * 2) + 1]),
-                        polygon);
+                    count = ClipToNearPlane(a, b, c, polygon);
                 }
+
+                var line0 = AxisLine.For(positions, i0, i1, viewProjection, target);
+                var line1 = AxisLine.For(positions, i1, i2, viewProjection, target);
+                var line2 = AxisLine.For(positions, i2, i0, viewProjection, target);
+                var sampleBounds = TextureBounds.For(a.U, a.V, b.U, b.V, c.U, c.V, texture.Width, texture.Height);
+
+                AxisLine Line(ClipVertex from, ClipVertex to) => (from.Edges & to.Edges) switch
+                {
+                    1 => line0,
+                    2 => line1,
+                    4 => line2,
+                    _ => default,
+                };
 
                 // Face normal: all three vertices of one risen quad's triangle share one normal already
                 // (Mesh.cs: a vertex is shared only within its own quad), so any vertex's normal is the
@@ -152,7 +166,8 @@ public static class Raster
                     if (signedArea >= 0f)
                         continue; // back-facing or degenerate
 
-                    FillTriangle(s0, s1, s2, brightness, texels, texture.Width, texture.Height, target);
+                    FillTriangle(s0, s1, s2, brightness, texels, texture.Width, texture.Height, target,
+                        Line(polygon[0], polygon[k]), Line(polygon[k], polygon[k + 1]), Line(polygon[k + 1], polygon[0]), sampleBounds);
                     any = true;
                 }
                 if (any) drawn++;
@@ -263,11 +278,19 @@ public static class Raster
             if (fromIn) output[n++] = from;
             if (fromIn != toIn)
             {
-                float t = from.Clip.Z / (from.Clip.Z - to.Clip.Z);
+                // Always interpolate from the inside endpoint. Adjacent triangles visit their
+                // shared edge in opposite directions; Lerp(a,b,t) and Lerp(b,a,1-t) need not round
+                // to the same position. This ordering gives both triangles bit-identical vertices.
+                var inside = fromIn ? from : to;
+                var outside = fromIn ? to : from;
+                float t = inside.Clip.Z / (inside.Clip.Z - outside.Clip.Z);
+                var position = Vector4.Lerp(inside.Clip, outside.Clip, t);
+                position.Z = 0f;
                 output[n++] = new ClipVertex(
-                    Vector4.Lerp(from.Clip, to.Clip, t),
-                    from.U + ((to.U - from.U) * t),
-                    from.V + ((to.V - from.V) * t));
+                    position,
+                    inside.U + ((outside.U - inside.U) * t),
+                    inside.V + ((outside.V - inside.V) * t),
+                    (byte)(from.Edges & to.Edges));
             }
         }
     }
@@ -292,6 +315,13 @@ public static class Raster
     internal static void FillTriangle(
         ScreenVertex v0, ScreenVertex v1, ScreenVertex v2,
         float brightness, ReadOnlySpan<Rgba32> texels, int textureWidth, int textureHeight, RenderTarget target)
+        => FillTriangle(v0, v1, v2, brightness, texels, textureWidth, textureHeight, target, default, default, default,
+            TextureBounds.For(v0.U, v0.V, v1.U, v1.V, v2.U, v2.V, textureWidth, textureHeight));
+
+    private static void FillTriangle(
+        ScreenVertex v0, ScreenVertex v1, ScreenVertex v2,
+        float brightness, ReadOnlySpan<Rgba32> texels, int textureWidth, int textureHeight, RenderTarget target,
+        AxisLine line01, AxisLine line12, AxisLine line20, TextureBounds sampleBounds)
     {
         // Orient so the edge functions below are positive inside; swapping two vertices swaps their
         // attributes with them, so interpolation is unaffected.
@@ -300,6 +330,7 @@ public static class Raster
         if (area < 0f)
         {
             (v1, v2) = (v2, v1);
+            (line01, line20) = (line20, line01);
             area = -area;
         }
 
@@ -314,7 +345,10 @@ public static class Raster
         float d0x = v2.X - v1.X, d0y = v2.Y - v1.Y;
         float d1x = v0.X - v2.X, d1y = v0.Y - v2.Y;
         float d2x = v1.X - v0.X, d2y = v1.Y - v0.Y;
-        bool own0 = IsTopLeft(d0x, d0y), own1 = IsTopLeft(d1x, d1y), own2 = IsTopLeft(d2x, d2y);
+        var coverage0 = line12.Valid ? new CoverageEdge(line12, v0) : new CoverageEdge(v1, v2);
+        var coverage1 = line20.Valid ? new CoverageEdge(line20, v1) : new CoverageEdge(v2, v0);
+        var coverage2 = line01.Valid ? new CoverageEdge(line01, v2) : new CoverageEdge(v0, v1);
+        bool own0 = coverage0.OwnsBoundary, own1 = coverage1.OwnsBoundary, own2 = coverage2.OwnsBoundary;
 
         // Perspective-correct interpolation: barycentric weights on 1/w, not on screen-space
         // position directly, or texturing would warp on any triangle not parallel to the screen.
@@ -336,11 +370,17 @@ public static class Raster
             for (int x = minX; x <= maxX; x++)
             {
                 float px = x + 0.5f;
+                // Coverage uses canonical double arithmetic: reversing an edge negates the SAME
+                // calculation, rather than recomputing it from the other endpoint. Large clipped
+                // triangles otherwise lose pixels through cancellation at their shared diagonal.
+                double c0 = coverage0.At(px, py), c1 = coverage1.At(px, py), c2 = coverage2.At(px, py);
+                if (c0 < 0 || c1 < 0 || c2 < 0) continue;
+                if ((c0 == 0 && !own0) || (c1 == 0 && !own1) || (c2 == 0 && !own2)) continue;
+
+                // Retain the original interpolation arithmetic for ordinary texture/depth parity.
                 float f0 = row0 - (d0y * (px - v1.X));
                 float f1 = row1 - (d1y * (px - v2.X));
                 float f2 = row2 - (d2y * (px - v0.X));
-                if (f0 < 0f || f1 < 0f || f2 < 0f) continue;
-                if ((f0 == 0f && !own0) || (f1 == 0f && !own1) || (f2 == 0f && !own2)) continue;
 
                 float w0 = f0 * invArea, w1 = f1 * invArea, w2 = f2 * invArea;
                 float invW = (w0 * invW0) + (w1 * invW1) + (w2 * invW2);
@@ -351,8 +391,8 @@ public static class Raster
 
                 float u = ((w0 * uw0) + (w1 * uw1) + (w2 * uw2)) * depth;
                 float v = ((w0 * vw0) + (w1 * vw1) + (w2 * vw2)) * depth;
-                int tx = Math.Clamp((int)(u * textureWidth), 0, textureWidth - 1);
-                int ty = Math.Clamp((int)(v * textureHeight), 0, textureHeight - 1);
+                int tx = Math.Clamp((int)(u * textureWidth), sampleBounds.MinX, sampleBounds.MaxX);
+                int ty = Math.Clamp((int)(v * textureHeight), sampleBounds.MinY, sampleBounds.MaxY);
                 var texel = texels[(ty * textureWidth) + tx];
                 if (texel.A < AlphaCutoff) continue; // cut out: nothing drawn, depth untouched
 
@@ -370,6 +410,117 @@ public static class Raster
     private static float Edge(ScreenVertex a, ScreenVertex b, float cx, float cy) =>
         ((b.X - a.X) * (cy - a.Y)) - ((b.Y - a.Y) * (cx - a.X));
 
+    private readonly struct CoverageEdge
+    {
+        private readonly double x, y, dx, dy;
+        private readonly bool reversed;
+        private readonly AxisLine line;
+
+        public bool OwnsBoundary => line.Valid
+            ? IsTopLeft(reversed ? -line.B : line.B, reversed ? line.A : -line.A)
+            : IsTopLeft(reversed ? -dx : dx, reversed ? -dy : dy);
+
+        public CoverageEdge(ScreenVertex a, ScreenVertex b)
+        {
+            reversed = a.X > b.X || (a.X == b.X && a.Y > b.Y);
+            if (reversed) (a, b) = (b, a);
+            x = a.X;
+            y = a.Y;
+            dx = (double)b.X - a.X;
+            dy = (double)b.Y - a.Y;
+            line = default;
+        }
+
+        public CoverageEdge(AxisLine line, ScreenVertex inside)
+        {
+            this.line = line;
+            reversed = line.At(inside.X, inside.Y) < 0;
+            x = y = dx = dy = 0;
+        }
+
+        public double At(float px, float py)
+        {
+            double value = line.Valid ? line.At(px, py) : (dx * (py - y)) - (dy * (px - x));
+            return reversed ? -value : value;
+        }
+    }
+
+    // A voxel edge's projected line depends only on its world axis and the other two coordinates,
+    // never on its endpoints. Greedy rectangles can meet a long edge with two short edges: deriving
+    // all three equations from independently rounded screen endpoints leaves T-junction cracks.
+    // Homogeneous projection of one canonical point and the axis direction makes those equations
+    // identical, including when near clipping shortens the edge. This changes coverage only.
+    private readonly record struct AxisLine(double A, double B, double C)
+    {
+        public bool Valid => A != 0 || B != 0;
+
+        public double At(double x, double y) => (A * x) + (B * y) + C;
+
+        public static AxisLine For(ReadOnlySpan<float> positions, int from, int to, Matrix4x4 vp, RenderTarget target)
+        {
+            var a = new Vector3(positions[from * 3], positions[(from * 3) + 1], positions[(from * 3) + 2]);
+            var b = new Vector3(positions[to * 3], positions[(to * 3) + 1], positions[(to * 3) + 2]);
+            int axis = -1;
+            for (int i = 0; i < 3; i++)
+            {
+                if (a[i] == b[i]) continue;
+                if (axis >= 0) return default; // a face/fan diagonal, rather than a voxel edge
+                axis = i;
+            }
+            if (axis < 0) return default;
+            a[axis] = 0;
+
+            double px = ((double)a.X * vp.M11) + ((double)a.Y * vp.M21) + ((double)a.Z * vp.M31) + vp.M41;
+            double py = ((double)a.X * vp.M12) + ((double)a.Y * vp.M22) + ((double)a.Z * vp.M32) + vp.M42;
+            double pw = ((double)a.X * vp.M14) + ((double)a.Y * vp.M24) + ((double)a.Z * vp.M34) + vp.M44;
+            (double dx, double dy, double dw) = axis switch
+            {
+                0 => (vp.M11, vp.M12, vp.M14),
+                1 => (vp.M21, vp.M22, vp.M24),
+                _ => (vp.M31, vp.M32, vp.M34),
+            };
+            double lx = (py * dw) - (pw * dy);
+            double ly = (pw * dx) - (px * dw);
+            double lw = (px * dy) - (py * dx);
+            return new AxisLine(2 * lx / target.Width, -2 * ly / target.Height, -lx + ly + lw);
+        }
+    }
+
+    // NFTY face UV rectangles address half-open texel regions. At a greedy boundary, interpolation
+    // can round an interior coordinate to the exclusive maximum and sample the transparent neighbor.
+    // Keep nearest-neighbor samples inside the original triangle's UV range, before near clipping.
+    // A constant coordinate addresses one texel (as wall strips do), rather than an empty interval.
+    private readonly record struct TextureBounds(int MinX, int MaxX, int MinY, int MaxY)
+    {
+        public static TextureBounds For(float u0, float v0, float u1, float v1, float u2, float v2, int width, int height)
+        {
+            static (int Min, int Max) Range(float a, float b, float c, int size)
+            {
+                float min = MathF.Min(a, MathF.Min(b, c)), max = MathF.Max(a, MathF.Max(b, c));
+                if (min == max)
+                {
+                    int texel = (int)Math.Clamp((double)min * size, 0, size - 1);
+                    return (texel, texel);
+                }
+                int first = (int)Math.Clamp(Math.Floor(Boundary(min, size)), 0, size - 1);
+                int last = (int)Math.Clamp(Math.Ceiling(Boundary(max, size)) - 1, first, size - 1);
+                return (first, last);
+            }
+
+            static double Boundary(float uv, int size)
+            {
+                // MeshBuilder writes integer/size in float. Multiplying back can land on either
+                // side of that integer (7/13 and 7/23 do). Recover it only on an exact re-encoding
+                // match, without an epsilon; non-grid limits retain their exact float value.
+                float integer = MathF.Round(uv * size);
+                return uv == integer / size ? integer : (double)uv * size;
+            }
+            var x = Range(u0, u1, u2, width);
+            var y = Range(v0, v1, v2, height);
+            return new TextureBounds(x.Min, x.Max, y.Min, y.Max);
+        }
+    }
+
     // Top edge: horizontal, running left to right. Left edge: running upward.
-    private static bool IsTopLeft(float dx, float dy) => (dy == 0f && dx > 0f) || dy < 0f;
+    private static bool IsTopLeft(double dx, double dy) => (dy == 0 && dx > 0) || dy < 0;
 }

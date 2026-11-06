@@ -39,5 +39,5 @@ Builds the mesh for one picture.
 **Exceptions**
 
 - [`PartialAlphaException`](Nfty.Model.PartialAlphaException.md) - Some pixel is partly transparent.
-- `ArgumentException` - The depth map or the faces are another size.
-- `ArgumentOutOfRangeException` - The voxel size is not positive and finite, or the pivot is not one of [`Pivot`](Nfty.Model.Pivot.md)'s values.
+- `ArgumentException` - The depth map or the faces are another size, or a transformed position is not finite.
+- `ArgumentOutOfRangeException` - The voxel size is not positive and finite, or the pivot is not one of [`Pivot`](Nfty.Model.Pivot.md)'s values, or the selected scale and pivot collapse a triangle in the picture's geometry.

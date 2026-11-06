@@ -45,9 +45,11 @@ public static class Riser
     /// <returns>The mesh, or <c>null</c> when no pixel is fully opaque. Its UVs address
     /// <see cref="FaceAtlas"/>.</returns>
     /// <exception cref="PartialAlphaException">Some pixel is partly transparent.</exception>
-    /// <exception cref="ArgumentException">The depth map or the faces are another size.</exception>
+    /// <exception cref="ArgumentException">The depth map or the faces are another size, or a
+    /// transformed position is not finite.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The voxel size is not positive and finite, or the
-    /// pivot is not one of <see cref="Pivot"/>'s values.</exception>
+    /// pivot is not one of <see cref="Pivot"/>'s values, or the selected scale and pivot collapse a
+    /// triangle in the picture's geometry.</exception>
     public static Mesh? TryBuild(Image<Rgba32> art, DepthMap? depth, RiseOptions options, string source = "the art", StackFaces? faces = null)
     {
         ArgumentNullException.ThrowIfNull(art);

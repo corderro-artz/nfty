@@ -64,12 +64,12 @@ public static class ModelBatch
         return IsDeviceName(stem) ? stem + "_" + trimmed[stem.Length..] : trimmed;
     }
 
-    private static bool IsDeviceName(string stem)
+    internal static bool IsDeviceName(string stem)
     {
         if (stem.Equals("CON", StringComparison.OrdinalIgnoreCase) || stem.Equals("PRN", StringComparison.OrdinalIgnoreCase)
             || stem.Equals("AUX", StringComparison.OrdinalIgnoreCase) || stem.Equals("NUL", StringComparison.OrdinalIgnoreCase))
             return true;
-        return stem.Length == 4 && stem[3] is >= '1' and <= '9'
+        return stem.Length == 4 && (stem[3] is >= '1' and <= '9' or '\u00b9' or '\u00b2' or '\u00b3')
             && (stem.StartsWith("COM", StringComparison.OrdinalIgnoreCase) || stem.StartsWith("LPT", StringComparison.OrdinalIgnoreCase));
     }
 
@@ -126,6 +126,24 @@ public static class ModelBatch
         };
     }
 
+    private static (IReadOnlyList<string> Names, List<int> Order) PrepareNames(
+        IReadOnlyList<string> baseNames, ModelFormat format)
+    {
+        var names = UniqueBaseNames(baseNames);
+        var order = Enumerable.Range(0, names.Count)
+            .OrderBy(i => FileNamesFor(names[i], format)[0], StringComparer.Ordinal).ToList();
+        foreach (var name in names)
+            foreach (var file in FileNamesFor(name, format)) CheckPlain(file);
+        return (names, order);
+    }
+
+    private static void SortSkipped(List<SkippedModel> skipped, IReadOnlyList<string> names)
+    {
+        var rank = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        for (int k = 0; k < names.Count; k++) rank[names[k]] = k;
+        skipped.Sort((x, y) => rank[x.Name].CompareTo(rank[y.Name]));
+    }
+
     /// <summary>Rises every input that can rise.</summary>
     /// <param name="inputs">The pictures. Enumerated once, each finished before the next is asked
     /// for — a lazy sequence may free an input when the next is requested.</param>
@@ -171,7 +189,8 @@ public static class ModelBatch
     /// <param name="destination">A folder or a zip.</param>
     /// <param name="progress">Told how many pictures are done (written or skipped) after each one.</param>
     /// <param name="onWritten">Told each file's name once it is in the destination, on the thread
-    /// doing the export; how a caller knows whether a stopped batch wrote anything.</param>
+    /// doing the export, after the model's complete file set is written to the sink. Folder files
+    /// are committed; zip entries remain staged until the whole batch completes.</param>
     /// <param name="cancellation">Checked before each picture. A canceled zip is never left behind (it is
     /// written beside its destination and moved over it only when complete); a canceled folder keeps
     /// the models finished before the stop, each whole, since a file is written only once its model is.</param>
@@ -189,11 +208,7 @@ public static class ModelBatch
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(destination);
 
-        var names = UniqueBaseNames(baseNames);
-        var order = Enumerable.Range(0, names.Count)
-            .OrderBy(i => FileNamesFor(names[i], options.Format)[0], StringComparer.Ordinal).ToList();
-        foreach (var n in names)
-            foreach (var f in FileNamesFor(n, options.Format)) CheckPlain(f);
+        var (names, order) = PrepareNames(baseNames, options.Format);
 
         var written = new List<string>();
         var skipped = new List<SkippedModel>();
@@ -212,9 +227,10 @@ public static class ModelBatch
                     skipped.Add(new SkippedModel(name, SkipReason.NothingSolid, "nothing in it is fully opaque, so there is nothing to rise"));
                 else
                 {
-                    foreach (var f in ModelWriter.Write(mesh, input.Art, options, name, input.Faces))
+                    var files = ModelWriter.Write(mesh, input.Art, options, name, input.Faces);
+                    sink.Add(files);
+                    foreach (var f in files)
                     {
-                        sink.Add(f);
                         onWritten?.Invoke(f.FileName);
                         written.Add(f.FileName);
                     }
@@ -232,9 +248,7 @@ public static class ModelBatch
         }
         sink.Complete();
         // Skips are reported in the caller's order, as Build reports them.
-        var rank = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        for (int k = 0; k < names.Count; k++) rank[names[k]] = k;
-        skipped.Sort((x, y) => rank[x.Name].CompareTo(rank[y.Name]));
+        SortSkipped(skipped, names);
         return new ModelExportResult(written, skipped, replaced);
     }
 
@@ -252,12 +266,14 @@ public static class ModelBatch
     /// <param name="options">How to rise and write.</param>
     /// <param name="destination">A folder or a zip.</param>
     /// <param name="parallelism">How many pictures build at once. A sequential degree gives exactly
-    /// the sequential overload's behavior, on the calling thread.</param>
+    /// its bytes, order and calling thread. This overload releases inputs after building, before
+    /// writing, including at a sequential degree; the other overload releases after writing.</param>
     /// <param name="progress">Told how many pictures are done (written or skipped), in order, one call at a time.</param>
     /// <param name="cancellation">Checked before each window and each picture. A canceled zip is never left
     /// behind; a canceled folder keeps every model written before the stop, each one whole.</param>
     /// <param name="onWritten">Told each file's name once it is in the destination, in write order, on
-    /// the calling thread.</param>
+    /// the calling thread, after the model's complete file set is written to the sink. Folder files
+    /// are committed; zip entries remain staged until the whole batch completes.</param>
     /// <returns>The file names written, the pictures skipped, and the files that already existed.</returns>
     /// <remarks>
     /// <para><b>Build wide, write narrow.</b> The mesh build and the file encode are pure functions of
@@ -278,11 +294,7 @@ public static class ModelBatch
         ArgumentNullException.ThrowIfNull(destination);
         ArgumentNullException.ThrowIfNull(parallelism);
 
-        var names = UniqueBaseNames(baseNames);
-        var order = Enumerable.Range(0, names.Count)
-            .OrderBy(i => FileNamesFor(names[i], options.Format)[0], StringComparer.Ordinal).ToList();
-        foreach (var n in names)
-            foreach (var f in FileNamesFor(n, options.Format)) CheckPlain(f);
+        var (names, order) = PrepareNames(baseNames, options.Format);
 
         var written = new List<string>();
         var skipped = new List<SkippedModel>();
@@ -327,19 +339,19 @@ public static class ModelBatch
                 cancellation.ThrowIfCancellationRequested();
                 if (skipSlots[k] is { } skip) skipped.Add(skip);
                 if (filesSlots[k] is { } files)
+                {
+                    sink.Add(files);
                     foreach (var f in files)
                     {
-                        sink.Add(f);
                         onWritten?.Invoke(f.FileName);
                         written.Add(f.FileName);
                     }
+                }
                 progress?.Report(++done);
             }
         }
         sink.Complete();
-        var rank = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        for (int k = 0; k < names.Count; k++) rank[names[k]] = k;
-        skipped.Sort((x, y) => rank[x.Name].CompareTo(rank[y.Name]));
+        SortSkipped(skipped, names);
         return new ModelExportResult(written, skipped, replaced);
     }
 
@@ -422,7 +434,7 @@ public abstract class ModelDestination
     // never in a field written after construction.
     internal abstract class Sink : IDisposable
     {
-        public abstract void Add(ModelFile file);
+        public abstract void Add(IReadOnlyList<ModelFile> files);
         public abstract void Complete();
         public abstract void Dispose();
     }
@@ -444,12 +456,59 @@ public abstract class ModelDestination
                 _replaced = replaced;
             }
 
-            public override void Add(ModelFile file)
+            public override void Add(IReadOnlyList<ModelFile> files)
             {
                 Directory.CreateDirectory(_directory);
-                string target = Path.Combine(_directory, file.FileName);
-                if (File.Exists(target)) _replaced.Add(file.FileName);
-                File.WriteAllBytes(target, file.Bytes);
+                string staging = Path.Combine(_directory, ".nfty-model-" + Guid.NewGuid().ToString("N"));
+                Directory.CreateDirectory(staging);
+                var backups = new List<(string Target, string Backup)>();
+                var installed = new List<string>();
+                bool retainRecovery = false;
+                try
+                {
+                    // Finish encoding/writing every new file before moving any existing output.
+                    for (int i = 0; i < files.Count; i++)
+                        File.WriteAllBytes(Path.Combine(staging, "new-" + i.ToString(System.Globalization.CultureInfo.InvariantCulture)), files[i].Bytes);
+                    for (int i = 0; i < files.Count; i++)
+                    {
+                        string target = Path.Combine(_directory, files[i].FileName);
+                        if (!File.Exists(target)) continue;
+                        string backup = Path.Combine(staging, "old-" + i.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                        File.Move(target, backup);
+                        backups.Add((target, backup));
+                    }
+                    for (int i = 0; i < files.Count; i++)
+                    {
+                        string target = Path.Combine(_directory, files[i].FileName);
+                        File.Move(Path.Combine(staging, "new-" + i.ToString(System.Globalization.CultureInfo.InvariantCulture)), target);
+                        installed.Add(target);
+                    }
+                    foreach (var (target, _) in backups) _replaced.Add(Path.GetFileName(target));
+                }
+                catch (Exception failure)
+                {
+                    try
+                    {
+                        foreach (string target in installed) File.Delete(target);
+                        foreach (var (target, backup) in backups) File.Move(backup, target);
+                    }
+                    catch (Exception recovery) when (recovery is IOException or UnauthorizedAccessException)
+                    {
+                        // Never delete a backup if restoration itself failed. Name its recovery
+                        // directory and retain both errors rather than silently losing the old model.
+                        retainRecovery = true;
+                        throw new IOException($"Model replacement failed and could not be restored. Recovery files remain in '{staging}'.",
+                            new AggregateException(failure, recovery));
+                    }
+                    throw;
+                }
+                finally
+                {
+                    if (!retainRecovery)
+                        try { Directory.Delete(staging, recursive: true); }
+                        catch (IOException) { /* best effort: preserve the operation's result */ }
+                        catch (UnauthorizedAccessException) { /* best effort */ }
+                }
             }
 
             public override void Complete() { }
@@ -491,12 +550,15 @@ public abstract class ModelDestination
                 }
             }
 
-            public override void Add(ModelFile file)
+            public override void Add(IReadOnlyList<ModelFile> files)
             {
-                var entry = _zip.CreateEntry(file.FileName, CompressionLevel.Optimal);
-                entry.LastWriteTime = Stamp;
-                using (var es = entry.Open()) es.Write(file.Bytes);
-                _entries.Add(file.FileName);
+                foreach (var file in files)
+                {
+                    var entry = _zip.CreateEntry(file.FileName, CompressionLevel.Optimal);
+                    entry.LastWriteTime = Stamp;
+                    using (var es = entry.Open()) es.Write(file.Bytes);
+                    _entries.Add(file.FileName);
+                }
             }
 
             public override void Complete()

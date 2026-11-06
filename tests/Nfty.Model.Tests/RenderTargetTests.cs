@@ -13,6 +13,8 @@ public class RenderTargetTests
         Assert.Equal(3, target.Height);
         Assert.Equal(12, target.Color.Length);
         Assert.Equal(12, target.Depth.Length);
+        Assert.All(target.Color, c => Assert.Equal(default, c));
+        Assert.All(target.Depth, d => Assert.Equal(0f, d));
     }
 
     [Fact]

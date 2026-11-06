@@ -18,7 +18,7 @@ What the stack rule makes of a stack: the art, the union depth map and the face 
 public Image<Rgba32> Art { get; }
 ```
 
-The picture the stack shows from the front (the compositor's composite, or the finished picture it was given).
+The finished 2D composite (the compositor's result, or the finished picture it was given). Front surface colors are in [`StackFaces.Front`](Nfty.Model.StackFaces.md#p-front), where protruding lower layers can own pixels.
 
 ### Depth { #p-depth }
 

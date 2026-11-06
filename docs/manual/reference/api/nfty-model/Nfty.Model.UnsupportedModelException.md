@@ -8,7 +8,7 @@ Namespace `Nfty.Model` in assembly `Nfty.Model`.
 public sealed class UnsupportedModelException : Exception
 ```
 
-A model file uses something [`GltfReader`](Nfty.Model.GltfReader.md) does not read. The reader understands exactly the shape [`ModelWriter`](Nfty.Model.ModelWriter.md) writes, so anything else is refused by naming the feature, never guessed at.
+A model's content is malformed, truncated, structurally invalid or uses a feature outside [`GltfReader`](Nfty.Model.GltfReader.md)'s supported [`ModelWriter`](Nfty.Model.ModelWriter.md) subset. The reason is named, never guessed at. Ordinary file I/O and permission failures are not represented by this type.
 
 ## Constructors
 
@@ -22,7 +22,7 @@ Creates the exception.
 
 **Parameters**
 
-- `feature` (`string`) - The unsupported feature, worded for a reader (e.g. "more than one mesh").
+- `feature` (`string`) - The unsupported feature or malformed content, worded for a reader (e.g. "more than one mesh" or "a truncated GLB chunk").
 
 ## Properties
 
@@ -32,4 +32,4 @@ Creates the exception.
 public string Feature { get; }
 ```
 
-The feature that was refused.
+The unsupported feature or malformed content that was refused.

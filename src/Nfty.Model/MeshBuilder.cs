@@ -1,5 +1,4 @@
 using System.Numerics;
-using System.Runtime.InteropServices;
 using Nfty.Core.Diagnostics;
 
 namespace Nfty.Model;
@@ -92,7 +91,8 @@ internal sealed class MeshBuilder
     }
 
     /// <summary>Applies the pivot and the voxel size, and freezes the result.</summary>
-    /// <exception cref="ArgumentOutOfRangeException">The options name an undefined pivot.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The options name an undefined pivot or the
+    /// transformed coordinates collapse a triangle.</exception>
     public Mesh ToMesh(RiseOptions options)
     {
         var min = new Vector3(float.PositiveInfinity);
@@ -120,12 +120,34 @@ internal sealed class MeshBuilder
             positions[i + 1] = (_positions[i + 1] - pivot.Y) * s;
             positions[i + 2] = (_positions[i + 2] - pivot.Z) * s;
         }
+        RequireRepresentableTriangles(positions, options);
 
-        // The copies BACKLOG M5 asks about, and only them: the three ToArray calls and the clones Mesh's
-        // constructor makes. Its own scope so a Perf report can say what share of the build they are.
+        // Snapshot the remaining lists; Mesh.Adopt takes ownership without cloning them again.
+        // Its own scope lets a Perf report say what share of the build these copies are.
         using var copies = Perf.Measure("MeshBuilder.ToMesh.copies");
-        return Mesh.Adopt(positions, CollectionsMarshal.AsSpan(_normals).ToArray(), CollectionsMarshal.AsSpan(_texCoords).ToArray(),
-            CollectionsMarshal.AsSpan(_indices).ToArray(), FaceAtlas.WidthFor(_width), _height);
+        return Mesh.Adopt(positions, _normals.ToArray(), _texCoords.ToArray(),
+            _indices.ToArray(), FaceAtlas.WidthFor(_width), _height);
+    }
+
+    private void RequireRepresentableTriangles(float[] positions, RiseOptions options)
+    {
+        for (int i = 0; i < _indices.Count; i += 3)
+        {
+            int a = checked((int)_indices[i] * 3);
+            int b = checked((int)_indices[i + 1] * 3);
+            int c = checked((int)_indices[i + 2] * 3);
+            // Even distinct subnormal float coordinates have a real area. Compute differences and
+            // products in double so the test itself cannot underflow (or overflow) for finite floats.
+            double ux = (double)positions[b] - positions[a];
+            double uy = (double)positions[b + 1] - positions[a + 1];
+            double uz = (double)positions[b + 2] - positions[a + 2];
+            double vx = (double)positions[c] - positions[a];
+            double vy = (double)positions[c + 1] - positions[a + 1];
+            double vz = (double)positions[c + 2] - positions[a + 2];
+            if ((uy * vz) - (uz * vy) == 0 && (uz * vx) - (ux * vz) == 0 && (ux * vy) - (uy * vx) == 0)
+                throw new ArgumentOutOfRangeException(nameof(options), options.VoxelSize,
+                    "VoxelSize cannot represent this picture's geometry at the selected pivot without collapsing a triangle.");
+        }
     }
 
     // THE UV RULE (A = FaceAtlas.WidthFor(W)): front faces u = x / A, back faces u = (W + 1 + x) / A,

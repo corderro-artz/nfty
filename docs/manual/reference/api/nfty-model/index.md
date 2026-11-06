@@ -23,10 +23,10 @@ Rise: pixel art to 3D. Voxel meshes, glTF writing and reading. Depends on Nfty.C
 | [`ModelInput`](Nfty.Model.ModelInput.md) | record | One picture to rise in a batch. |
 | [`ModelTokens`](Nfty.Model.ModelTokens.md) | class | The text spellings of [`ModelFormat`](Nfty.Model.ModelFormat.md) and [`Pivot`](Nfty.Model.Pivot.md), in one place. |
 | [`ModelWriter`](Nfty.Model.ModelWriter.md) | class | Writes a risen mesh and its texture as model files. |
-| [`PartialAlphaBookException`](Nfty.Model.PartialAlphaBookException.md) | class | A CookBook with a partly transparent variant cannot be cooked into models: every asset's picture would be refused one by one. |
+| [`PartialAlphaBookException`](Nfty.Model.PartialAlphaBookException.md) | class | Refuses modeling a whole CookBook up front when any variant has partly transparent pixels, naming the variants once. |
 | [`PartialAlphaException`](Nfty.Model.PartialAlphaException.md) | class | A picture with a partly transparent pixel cannot be risen. |
 | [`Pivot`](Nfty.Model.Pivot.md) | enum | Which point of the model's bounding box is moved to the origin. |
-| [`ReadModel`](Nfty.Model.ReadModel.md) | record | A model read back from a file: the solid and the PNG its UVs address. |
+| [`ReadModel`](Nfty.Model.ReadModel.md) | record | A model read back from a file: the solid and the encoded PNG its UVs address. |
 | [`RiseOptions`](Nfty.Model.RiseOptions.md) | record | How a picture is risen and written. |
 | [`Riser`](Nfty.Model.Riser.md) | class | Rises one finished picture into one solid. |
 | [`SetModeler`](Nfty.Model.SetModeler.md) | class | Rises every asset of a cook into model files: [`StackDepth.ForAsset()`](Nfty.Model.StackDepth.md#m-forasset-nfty-core-formats-loadedrecipe-nfty-core-gene-9cba93) for the depth, [`Riser.TryBuild()`](Nfty.Model.Riser.md#m-trybuild-sixlabors-imagesharp-image-sixlabors-imagesha-c616c2) for the solid, [`ModelWriter`](Nfty.Model.ModelWriter.md) for the bytes. |
@@ -36,7 +36,7 @@ Rise: pixel art to 3D. Voxel meshes, glTF writing and reading. Depends on Nfty.C
 | [`StackFaces`](Nfty.Model.StackFaces.md) | class | The two face pictures of a risen stack: what the front and the back of each column show, each taken from the layer that OWNS that face by the union rule, plus the seam where a column's wall switches from one owner's color to the other's. |
 | [`StackPick`](Nfty.Model.StackPick.md) | struct | One present layer of a selection: its ingredient, the variant chosen, and the color it rolled (null for the stored pixels). |
 | [`StackRise`](Nfty.Model.StackRise.md) | class | What the stack rule makes of a stack: the art, the union depth map and the face owners' pictures. |
-| [`UnsupportedModelException`](Nfty.Model.UnsupportedModelException.md) | class | A model file uses something [`GltfReader`](Nfty.Model.GltfReader.md) does not read. |
+| [`UnsupportedModelException`](Nfty.Model.UnsupportedModelException.md) | class | A model's content is malformed, truncated, structurally invalid or uses a feature outside [`GltfReader`](Nfty.Model.GltfReader.md)'s supported [`ModelWriter`](Nfty.Model.ModelWriter.md) subset. |
 
 ## Nfty.Model.Render
 
@@ -44,5 +44,5 @@ Rise: pixel art to 3D. Voxel meshes, glTF writing and reading. Depends on Nfty.C
 |---|---|---|
 | [`Camera`](Nfty.Model.Render.Camera.md) | class | An immutable turntable-orbit camera: [`Camera.ViewProjection()`](Nfty.Model.Render.Camera.md#m-viewprojection-system-int32-system-int32) is the one function that owns the view and projection mapping together, and every other mapping (picking, zoom-anchoring) derives from it or its inverse rather than restating the matrices beside it. |
 | [`Raster`](Nfty.Model.Render.Raster.md) | class | The software rasterizer: transforms a [`Mesh`](Nfty.Model.Mesh.md) by a [`Camera`](Nfty.Model.Render.Camera.md)'s view-projection, clips against the near plane, culls back faces, resolves visibility with a z-buffer, samples the texture with nearest-neighbor filtering, and shades with flat, quantized, camera-relative lighting — the whole rendering pipeline the spec lists (see `docs/superpowers/specs/2026-09-22-model-preview-design.md`, "Rendering"). |
-| [`RenderTarget`](Nfty.Model.Render.RenderTarget.md) | class | A plain pixel-and-depth surface `Raster` writes into: one background-filled color per pixel and a z-buffer initialized to "nothing here yet". |
+| [`RenderTarget`](Nfty.Model.Render.RenderTarget.md) | class | A plain pixel-and-depth surface `Raster` writes into. |
 | [`Viewport`](Nfty.Model.Render.Viewport.md) | class | The one mapping between normalized device coordinates and pixels. |

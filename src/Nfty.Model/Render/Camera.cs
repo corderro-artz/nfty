@@ -66,8 +66,9 @@ public sealed class Camera
     public float Pitch { get; }
 
     /// <summary>Builds a camera, clamping <paramref name="target"/> into the box, and
-    /// <paramref name="distance"/> and <paramref name="pitch"/> into range, so every instance that
-    /// exists is already valid. The box sets the distance limits and clip planes.</summary>
+    /// <paramref name="distance"/> and <paramref name="pitch"/> into range. Inputs must be finite;
+    /// this constructor does not validate NaN or infinity. For finite inputs the box sets the
+    /// distance limits, target confinement and clip planes.</summary>
     /// <param name="target">The point orbited and looked at; clamped into the box.</param>
     /// <param name="distance">Eye-to-target distance; clamped to <see cref="MinDistance"/>..<see cref="MaxDistance"/>.</param>
     /// <param name="yaw">Orbit angle around the vertical axis, radians.</param>
@@ -162,22 +163,13 @@ public sealed class Camera
         return new Camera(Target + delta, Distance, Yaw, Pitch, BoundsMin, BoundsMax);
     }
 
-    /// <summary>A new camera zoomed by <paramref name="factor"/> such that the world point under
-    /// <paramref name="pointerScreen"/> stays under it, to within a pixel. Two passes: zoom around
-    /// <see cref="Target"/> (trivially exact for whatever <see cref="Target"/> itself projects to,
-    /// since <see cref="ViewProjection"/> always centers <see cref="Target"/> on screen), then a
-    /// corrective pan that cancels the screen-space error the zoom introduced for the off-center
-    /// anchor point. That correction does NOT go through the public <see cref="Pan"/> — <see cref="Pan"/>
-    /// converts pixels to world units using <see cref="Distance"/> (the eye-to-Target depth), which is
-    /// exact only for a point sitting exactly at <see cref="Target"/>'s depth; the anchor is generally
-    /// off that plane. Because a pan perpendicular to the forward axis never changes a fixed point's
-    /// depth along that axis (the shift has zero component along forward by construction), the
-    /// anchor's own forward-axis depth is constant through the correction, so converting the
-    /// screen-space error to world units at THAT depth — instead of at <see cref="Distance"/> — makes
-    /// the correction exact in one pass rather than an approximation that needs iterating.
-    /// Exact while the corrected target stays inside the subject box; over empty space far beside the
-    /// model the target clamp wins and the anchor drifts — orbiting about empty air is what the clamp
-    /// exists to prevent.</summary>
+    /// <summary>A new camera zoomed by <paramref name="factor"/> while holding a heuristic anchor
+    /// under <paramref name="pointerScreen"/> to within a pixel. The anchor is the pointer's pick ray
+    /// sampled at the current eye-to-target distance, not an intersection with the mesh. A corrective
+    /// pan uses the anchor's own view depth. If the correction would leave the subject box or raise
+    /// the distance floor, zoom progress is limited along the anchored path; a fully constrained
+    /// camera can remain unchanged. Zoom-in never increases the distance. Extreme numeric inputs
+    /// or an anchor at/behind the eye can prevent the requested zoom from being completed.</summary>
     /// <param name="factor">Multiplier for the eye distance.</param>
     /// <param name="pointerScreen">The pointer position in screen pixels.</param>
     /// <param name="width">Viewport width in pixels.</param>
@@ -187,15 +179,37 @@ public sealed class Camera
     {
         var anchor = Unproject(pointerScreen, width, height);
         var zoomed = Zoom(factor);
-        return zoomed.CorrectTowardAnchor(anchor, pointerScreen, width, height);
+        if (zoomed.Distance == Distance) return this;
+        var corrected = zoomed.CorrectTowardAnchor(anchor, pointerScreen, width, height);
+        if (corrected is not null) return corrected;
+
+        // Along an anchored zoom the corrective pan is affine in distance. Search that path from
+        // the known valid original view rather than letting the constructor's new target-dependent
+        // floor push the requested zoom backward. Each accepted candidate satisfies both clamps.
+        var best = this;
+        float accepted = 0f, rejected = 1f;
+        for (int i = 0; i < 24; i++)
+        {
+            float progress = (accepted + rejected) / 2f;
+            float distance = Distance + ((zoomed.Distance - Distance) * progress);
+            var step = new Camera(Target, distance, Yaw, Pitch, BoundsMin, BoundsMax);
+            var candidate = step.CorrectTowardAnchor(anchor, pointerScreen, width, height);
+            if (candidate is not null)
+            {
+                accepted = progress;
+                best = candidate;
+            }
+            else rejected = progress;
+        }
+        return best;
     }
 
-    private Camera CorrectTowardAnchor(Vector3 anchor, Vector2 pointerScreen, int width, int height)
+    private Camera? CorrectTowardAnchor(Vector3 anchor, Vector2 pointerScreen, int width, int height)
     {
         var vp = ViewProjection(width, height);
         var clip = Vector4.Transform(new Vector4(anchor, 1f), vp);
         if (MathF.Abs(clip.W) < 1e-6f)
-            return this; // anchor landed behind the eye; nothing sane to correct toward
+            return null; // no feasible anchored correction at this distance
         var screenNow = Viewport.NdcToScreen(new Vector2(clip.X / clip.W, clip.Y / clip.W), width, height);
 
         var error = pointerScreen - screenNow;
@@ -203,14 +217,16 @@ public sealed class Camera
         var forward = Vector3.Normalize(Target - Eye);
         float anchorDepth = Vector3.Dot(anchor - Eye, forward);
         if (anchorDepth <= 0f)
-            return this; // anchor is behind the eye along the view axis; nothing sane to correct toward
+            return null; // anchor is behind the eye along the view axis
 
         float worldPerPixel = WorldPerPixel(anchorDepth, height);
         var (right, up) = Basis();
         // Same sign convention as Pan: a positive screen-space error along X moves the camera along
         // -right (so the anchor's projection shifts by +error.X), and along +up for Y.
         var delta = -right * error.X * worldPerPixel + up * error.Y * worldPerPixel;
-        return new Camera(Target + delta, Distance, Yaw, Pitch, BoundsMin, BoundsMax);
+        var correctedTarget = Target + delta;
+        var corrected = new Camera(correctedTarget, Distance, Yaw, Pitch, BoundsMin, BoundsMax);
+        return corrected.Target == correctedTarget && corrected.Distance == Distance ? corrected : null;
     }
 
     /// <summary>The one function that owns view and projection together. The near and far planes
@@ -228,9 +244,10 @@ public sealed class Camera
     }
 
     /// <summary>A camera framing the given bounds: centered on the box, pulled back to fit its
-    /// bounding sphere in the NARROWER of the vertical and horizontal fields of view (so a tall
-    /// viewport, <paramref name="aspect"/> below 1, does not crop sideways) with 15% margin, looking
-    /// square-on at the front face (yaw 0, pitch 0) with the box center on the viewport center.</summary>
+    /// bounding sphere in the narrower of the vertical and horizontal fields of view with 15%
+    /// margin, subject to <see cref="MaxDistance"/>. Framing is best effort: an extremely narrow
+    /// viewport can still crop at that limit. Looks square-on at the front face (yaw 0, pitch 0)
+    /// with the box center on the viewport center.</summary>
     /// <param name="min">Minimum corner of the subject box.</param>
     /// <param name="max">Maximum corner of the subject box.</param>
     /// <param name="aspect">Viewport width over height; a non-positive or non-finite value counts as 1.</param>
@@ -248,7 +265,8 @@ public sealed class Camera
 
     /// <summary>The same view (target, distance, orientation) over a new subject box: the radius, the
     /// distance limits and the target's confinement follow the box, the camera does not jump (the
-    /// target is only moved if it would fall outside, the distance only if it would break the floor).</summary>
+    /// target moves only if it would fall outside; the distance is raised to the new floor or reduced
+    /// to the new maximum when necessary).</summary>
     /// <returns>The camera over the new box.</returns>
     /// <param name="min">Minimum corner of the new box.</param>
     /// <param name="max">Maximum corner of the new box.</param>

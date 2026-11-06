@@ -112,13 +112,15 @@ public class DemoModelsTests
                     {
                         using var without = StackDepth.ForSelection(recipe, [(bodyId, body.Id)]);
                         using var with = StackDepth.ForSelection(recipe, [(bodyId, body.Id), (overlayId, variant.Id)]);
+                        var withoutDepth = without.Depth;
+                        var withDepth = with.Depth;
                         var art = overlay.VariantImages[variant.Id];
                         for (int y = 0; y < art.Height; y++)
                             for (int x = 0; x < art.Width; x++)
                             {
                                 if (!Opacity.IsSolid(art[x, y])) continue;
                                 checkedPixels++;
-                                Assert.True(with.Depth.Back(x, y) == without.Depth.Back(x, y),
+                                Assert.True(withDepth.Back(x, y) == withoutDepth.Back(x, y),
                                     $"{recipe.Manifest.Id}: {overlayId}/{variant.Id} changed the {body.Id} back at ({x},{y})");
                             }
                     }
@@ -137,18 +139,19 @@ public class DemoModelsTests
         {
             using var rise = StackDepth.ForSelection(recipe, [("chestbody", v.Id)]);
             var art = ing.VariantImages[v.Id];
+            var depth = rise.Depth;
             var seen = new HashSet<int>();
             int previous = -1;
             for (int y = 7; y <= 11; y++)
             {
                 var solid = Enumerable.Range(0, art.Width).Where(x => Opacity.IsSolid(art[x, y])).ToList();
                 int mid = (solid[0] + solid[^1]) / 2;
-                int center = rise.Depth.Back(mid, y);
+                int center = depth.Back(mid, y);
                 Assert.True(center >= previous, $"{v.Id}: back falls going down at row {y}");
                 previous = center;
                 seen.Add(center);
-                Assert.True(rise.Depth.Back(solid[0], y) < center, $"{v.Id}: row {y} left end is not rounded");
-                Assert.True(rise.Depth.Back(solid[^1], y) < center, $"{v.Id}: row {y} right end is not rounded");
+                Assert.True(depth.Back(solid[0], y) < center, $"{v.Id}: row {y} left end is not rounded");
+                Assert.True(depth.Back(solid[^1], y) < center, $"{v.Id}: row {y} right end is not rounded");
             }
             Assert.True(seen.Count >= 3, $"{v.Id}: the lid back has {seen.Count} distinct depths");
         }
@@ -167,20 +170,21 @@ public class DemoModelsTests
         {
             using var rise = StackDepth.ForSelection(recipe, [("chestbody", v.Id)]);
             var art = ing.VariantImages[v.Id];
+            var depth = rise.Depth;
             int previous = -1;
             for (int y = 7; y <= 15; y++)
             {
                 var solid = Enumerable.Range(0, art.Width).Where(x => Opacity.IsSolid(art[x, y])).ToList();
                 int mid = (solid[0] + solid[^1]) / 2;
-                int front = rise.Depth.Front(mid, y);
-                Assert.Equal(front + 1, rise.Depth.Back(mid, y));
+                int front = depth.Front(mid, y);
+                Assert.Equal(front + 1, depth.Back(mid, y));
                 Assert.True(front >= previous, $"{v.Id}: the dome front falls going down at row {y}");
                 previous = front;
             }
             // The lip overhangs the lid course, and the lid course the body.
-            Assert.True(rise.Depth.Front(16, 14) > rise.Depth.Front(16, 13), $"{v.Id}: no lip");
-            Assert.True(rise.Depth.Front(16, 13) > rise.Depth.Front(16, 20), $"{v.Id}: the lid does not overhang the body");
-            Assert.True(rise.Depth.Front(16, 7) < rise.Depth.Front(16, 11), $"{v.Id}: the dome is flat");
+            Assert.True(depth.Front(16, 14) > depth.Front(16, 13), $"{v.Id}: no lip");
+            Assert.True(depth.Front(16, 13) > depth.Front(16, 20), $"{v.Id}: the lid does not overhang the body");
+            Assert.True(depth.Front(16, 7) < depth.Front(16, 11), $"{v.Id}: the dome is flat");
         }
     }
 
@@ -251,11 +255,12 @@ public class DemoModelsTests
             string bodyVariant = asset.Traits.Single(t => t.IngredientId == bodyId).VariantId;
             var bodyArt = Layer(recipe, bodyId).VariantImages[bodyVariant];
             using var rise = StackDepth.ForAsset(recipe, asset)!;
+            var depth = rise.Depth;
             double volume = 0;
             for (int y = 0; y < asset.Image.Height; y++)
                 for (int x = 0; x < asset.Image.Width; x++)
                     if (Opacity.IsSolid(asset.Image[x, y]))
-                        volume += 1 + rise.Depth.Front(x, y) + rise.Depth.Back(x, y);
+                        volume += 1 + depth.Front(x, y) + depth.Back(x, y);
             foreach (var t in asset.Traits.Where(t => t.IngredientId is "bands" or "lock" or "trim"))
             {
                 var art = Layer(recipe, t.IngredientId).VariantImages[t.VariantId];
@@ -264,10 +269,10 @@ public class DemoModelsTests
                         if (Opacity.IsSolid(art[x, y]) && Opacity.IsSolid(bodyArt[x, y]))
                         {
                             overlayPixels++;
-                            Assert.True(rise.Depth.Back(x, y) >= 1, $"asset {asset.SetNumber}: {t.IngredientId} pixel ({x},{y}) is hollow behind");
+                            Assert.True(depth.Back(x, y) >= 1, $"asset {asset.SetNumber}: {t.IngredientId} pixel ({x},{y}) is hollow behind");
                         }
             }
-            var mesh = Riser.TryBuild(asset.Image, rise.Depth, new RiseOptions(), "x", rise.Faces);
+            var mesh = Riser.TryBuild(asset.Image, depth, new RiseOptions(), "x", rise.Faces);
             Assert.NotNull(mesh);
             Assert.Equal(volume, MeshChecks.Volume(mesh!));
         }

@@ -42,4 +42,4 @@ Which point of the bounding box lands on the origin.
 public float VoxelSize { get; init; }
 ```
 
-World units per pixel (and per voxel of depth). Must be positive and finite.
+World units per pixel (and per voxel of depth). Must be positive and finite. [`Riser.TryBuild()`](Nfty.Model.Riser.md#m-trybuild-sixlabors-imagesharp-image-sixlabors-imagesha-c616c2) refuses scale and pivot combinations whose transformed positions are not finite or whose triangles collapse at float precision; the usable scale depends on the picture's geometry and the selected pivot.

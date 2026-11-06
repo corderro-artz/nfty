@@ -34,7 +34,10 @@ public enum Pivot
 /// axis is additive at every existing call site — the rule <c>ExportOptions</c> already follows.</summary>
 public sealed record RiseOptions
 {
-    /// <summary>World units per pixel (and per voxel of depth). Must be positive and finite.</summary>
+    /// <summary>World units per pixel (and per voxel of depth). Must be positive and finite.
+    /// <see cref="Riser.TryBuild"/> refuses scale and pivot combinations whose transformed positions
+    /// are not finite or whose triangles collapse at float precision; the usable scale depends on
+    /// the picture's geometry and the selected pivot.</summary>
     public float VoxelSize { get; init; } = 1f;
 
     /// <summary>Which point of the bounding box lands on the origin.</summary>

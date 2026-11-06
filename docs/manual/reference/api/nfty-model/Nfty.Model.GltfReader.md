@@ -24,11 +24,11 @@ Reads a GLB held in memory.
 
 - `glb` (`ReadOnlySpan<byte>`) - The whole file.
 
-**Returns.** The mesh and texture.
+**Returns.** The mesh and encoded PNG bytes; no decoded image needs disposal.
 
 **Exceptions**
 
-- [`UnsupportedModelException`](Nfty.Model.UnsupportedModelException.md) - The bytes are not a GLB nfty could have written.
+- [`UnsupportedModelException`](Nfty.Model.UnsupportedModelException.md) - The content is malformed, truncated or outside nfty's supported GLB subset.
 
 ### Read(string) { #m-read-system-string }
 
@@ -42,8 +42,12 @@ Reads a model file; the extension (.glb or .gltf) says which.
 
 - `path` (`string`) - The file. A .gltf's .bin sits beside it.
 
-**Returns.** The mesh and texture.
+**Returns.** The mesh and encoded PNG bytes; no decoded image needs disposal.
 
 **Exceptions**
 
-- [`UnsupportedModelException`](Nfty.Model.UnsupportedModelException.md) - The file is not one nfty could have written.
+- [`UnsupportedModelException`](Nfty.Model.UnsupportedModelException.md) - The content is malformed, truncated or outside nfty's supported subset, or a referenced companion buffer is missing.
+
+**Remarks**
+
+Ordinary file I/O and permission failures propagate, including failure to open `path` itself. They are not unsupported-content errors.

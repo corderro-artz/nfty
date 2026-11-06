@@ -8,7 +8,7 @@ Namespace `Nfty.Model.Render` in assembly `Nfty.Model`.
 public sealed class RenderTarget
 ```
 
-A plain pixel-and-depth surface `Raster` writes into: one background-filled color per pixel and a z-buffer initialized to "nothing here yet". The array references are fixed at construction (D7); their contents mutate freely as `Raster` draws. Single owner; not thread-safe.
+A plain pixel-and-depth surface `Raster` writes into. Construction leaves both arrays zero-filled; call [`RenderTarget.Clear()`](Nfty.Model.Render.RenderTarget.md#m-clear-sixlabors-imagesharp-pixelformats-rgba32) before rendering to initialize the background and infinite depth. The array references are fixed at construction (D7); their contents mutate freely as `Raster` draws. Single owner; not thread-safe.
 
 ## Constructors
 
@@ -18,7 +18,7 @@ A plain pixel-and-depth surface `Raster` writes into: one background-filled colo
 public RenderTarget(int width, int height);
 ```
 
-Allocates a [`RenderTarget.Width`](Nfty.Model.Render.RenderTarget.md#p-width) × [`RenderTarget.Height`](Nfty.Model.Render.RenderTarget.md#p-height) surface. Both dimensions must be positive.
+Allocates a [`RenderTarget.Width`](Nfty.Model.Render.RenderTarget.md#p-width) × [`RenderTarget.Height`](Nfty.Model.Render.RenderTarget.md#p-height) surface. Both dimensions must be positive. Colors and depths are initially zero; call [`RenderTarget.Clear()`](Nfty.Model.Render.RenderTarget.md#m-clear-sixlabors-imagesharp-pixelformats-rgba32) before rendering.
 
 **Parameters**
 

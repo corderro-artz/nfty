@@ -22,7 +22,7 @@ Immutable by the same rule [`Mesh`](Nfty.Model.Mesh.md) states for itself: every
 public Camera(Vector3 target, float distance, float yaw, float pitch, Vector3 boundsMin, Vector3 boundsMax);
 ```
 
-Builds a camera, clamping `target` into the box, and `distance` and `pitch` into range, so every instance that exists is already valid. The box sets the distance limits and clip planes.
+Builds a camera, clamping `target` into the box, and `distance` and `pitch` into range. Inputs must be finite; this constructor does not validate NaN or infinity. For finite inputs the box sets the distance limits, target confinement and clip planes.
 
 **Parameters**
 
@@ -149,7 +149,7 @@ Orbit angle around the vertical axis, radians. Unclamped — free spin.
 public static Camera FramedOn(Vector3 min, Vector3 max, float aspect = 1f);
 ```
 
-A camera framing the given bounds: centered on the box, pulled back to fit its bounding sphere in the NARROWER of the vertical and horizontal fields of view (so a tall viewport, `aspect` below 1, does not crop sideways) with 15% margin, looking square-on at the front face (yaw 0, pitch 0) with the box center on the viewport center.
+A camera framing the given bounds: centered on the box, pulled back to fit its bounding sphere in the narrower of the vertical and horizontal fields of view with 15% margin, subject to [`Camera.MaxDistance`](Nfty.Model.Render.Camera.md#p-maxdistance). Framing is best effort: an extremely narrow viewport can still crop at that limit. Looks square-on at the front face (yaw 0, pitch 0) with the box center on the viewport center.
 
 **Parameters**
 
@@ -226,7 +226,7 @@ The one function that owns view and projection together. The near and far planes
 public Camera WithSubject(Vector3 min, Vector3 max);
 ```
 
-The same view (target, distance, orientation) over a new subject box: the radius, the distance limits and the target's confinement follow the box, the camera does not jump (the target is only moved if it would fall outside, the distance only if it would break the floor).
+The same view (target, distance, orientation) over a new subject box: the radius, the distance limits and the target's confinement follow the box, the camera does not jump (the target moves only if it would fall outside; the distance is raised to the new floor or reduced to the new maximum when necessary).
 
 **Parameters**
 
@@ -255,7 +255,7 @@ A new camera at [`Camera.Distance`](Nfty.Model.Render.Camera.md#p-distance) scal
 public Camera ZoomAnchored(float factor, Vector2 pointerScreen, int width, int height);
 ```
 
-A new camera zoomed by `factor` such that the world point under `pointerScreen` stays under it, to within a pixel. Two passes: zoom around [`Camera.Target`](Nfty.Model.Render.Camera.md#p-target) (trivially exact for whatever [`Camera.Target`](Nfty.Model.Render.Camera.md#p-target) itself projects to, since [`Camera.ViewProjection()`](Nfty.Model.Render.Camera.md#m-viewprojection-system-int32-system-int32) always centers [`Camera.Target`](Nfty.Model.Render.Camera.md#p-target) on screen), then a corrective pan that cancels the screen-space error the zoom introduced for the off-center anchor point. That correction does NOT go through the public [`Camera.Pan()`](Nfty.Model.Render.Camera.md#m-pan-system-numerics-vector2-system-int32) — [`Camera.Pan()`](Nfty.Model.Render.Camera.md#m-pan-system-numerics-vector2-system-int32) converts pixels to world units using [`Camera.Distance`](Nfty.Model.Render.Camera.md#p-distance) (the eye-to-Target depth), which is exact only for a point sitting exactly at [`Camera.Target`](Nfty.Model.Render.Camera.md#p-target)'s depth; the anchor is generally off that plane. Because a pan perpendicular to the forward axis never changes a fixed point's depth along that axis (the shift has zero component along forward by construction), the anchor's own forward-axis depth is constant through the correction, so converting the screen-space error to world units at THAT depth — instead of at [`Camera.Distance`](Nfty.Model.Render.Camera.md#p-distance) — makes the correction exact in one pass rather than an approximation that needs iterating. Exact while the corrected target stays inside the subject box; over empty space far beside the model the target clamp wins and the anchor drifts — orbiting about empty air is what the clamp exists to prevent.
+A new camera zoomed by `factor` while holding a heuristic anchor under `pointerScreen` to within a pixel. The anchor is the pointer's pick ray sampled at the current eye-to-target distance, not an intersection with the mesh. A corrective pan uses the anchor's own view depth. If the correction would leave the subject box or raise the distance floor, zoom progress is limited along the anchored path; a fully constrained camera can remain unchanged. Zoom-in never increases the distance. Extreme numeric inputs or an anchor at/behind the eye can prevent the requested zoom from being completed.
 
 **Parameters**
 

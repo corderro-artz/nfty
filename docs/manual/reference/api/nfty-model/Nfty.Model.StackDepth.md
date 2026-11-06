@@ -73,7 +73,7 @@ The union rise of one generated asset.
 - `asset` (`GeneratedAsset`) - The asset; its traits are its present layers, in paint order, and its color rolls recolorize them.
 - `source` (`string`) - How to name the asset in a refusal.
 
-**Returns.** The rise, or `null` for an all-absent roll (nothing painted: paper).
+**Returns.** The owning rise, which the caller must dispose, or `null` for an all-absent roll (nothing painted: paper).
 
 **Exceptions**
 
@@ -101,6 +101,7 @@ The union rise of one rolled selection of a recipe.
 
 - `KeyNotFoundException` - A named layer or variant is not in the recipe.
 - [`PartialAlphaException`](Nfty.Model.PartialAlphaException.md) - Some layer has a partly transparent pixel.
+- `ArgumentException` - The selection is empty, layer or depth-map sizes disagree, or the finished picture's size or solid mask disagrees with the selected layers.
 
 **Remarks**
 

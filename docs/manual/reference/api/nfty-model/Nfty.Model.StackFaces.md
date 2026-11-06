@@ -12,7 +12,7 @@ The two face pictures of a risen stack: what the front and the back of each colu
 
 ## Remarks
 
-Owns both images. Non-solid pixels are clear in both. For an all-paper stack both faces equal the art and every seam is 0.
+Owns both images. [`StackDepth.Combine()`](Nfty.Model.StackDepth.md#m-combine-system-collections-generic-ireadonlylist-syste-19a328) clears non-solid pixels in both. For an all-paper stack both faces equal the art and every seam is 0. [`StackFaces.Uniform()`](Nfty.Model.StackFaces.md#m-uniform-sixlabors-imagesharp-image-sixlabors-imageshar-8fb129) instead copies the supplied pixels, including their alpha, without validation.
 
 ## Properties
 
@@ -106,7 +106,7 @@ Disposes the front and back pictures.
 public static StackFaces Uniform(Image<Rgba32> art);
 ```
 
-The faces of a single picture: both are the art, and the seam is 0.
+The faces of a single picture: both clone the art, preserving its alpha without validation, and the seam is 0.
 
 **Parameters**
 

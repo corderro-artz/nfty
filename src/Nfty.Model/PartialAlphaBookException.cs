@@ -3,8 +3,9 @@ using Nfty.Core.Stats;
 namespace Nfty.Model;
 
 /// <summary>
-/// A CookBook with a partly transparent variant cannot be cooked into models: every asset's picture
-/// would be refused one by one. Refused up front, once, naming the variants.
+/// Refuses modeling a whole CookBook up front when any variant has partly transparent pixels,
+/// naming the variants once. Some rolled assets may avoid those variants; the whole-book check
+/// ensures every possible selected layer can be modeled before cooking starts.
 /// </summary>
 public sealed class PartialAlphaBookException : InvalidOperationException
 {

@@ -33,17 +33,23 @@ public static class ModelTokens
     /// <param name="format">The format.</param>
     /// <returns>Its token.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Not a named format.</exception>
-    public static string NameOf(ModelFormat format) =>
-        Formats.Where(f => f.Format == format).Select(f => f.Token).FirstOrDefault()
-            ?? throw new ArgumentOutOfRangeException(nameof(format), format, "Unknown model format.");
+    public static string NameOf(ModelFormat format)
+    {
+        foreach (var (value, token) in Formats)
+            if (value == format) return token;
+        throw new ArgumentOutOfRangeException(nameof(format), format, "Unknown model format.");
+    }
 
     /// <summary>The token for a pivot.</summary>
     /// <param name="pivot">The pivot.</param>
     /// <returns>Its token.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Not a named pivot.</exception>
-    public static string NameOf(Pivot pivot) =>
-        Pivots.Where(p => p.Pivot == pivot).Select(p => p.Token).FirstOrDefault()
-            ?? throw new ArgumentOutOfRangeException(nameof(pivot), pivot, "Unknown pivot.");
+    public static string NameOf(Pivot pivot)
+    {
+        foreach (var (value, token) in Pivots)
+            if (value == pivot) return token;
+        throw new ArgumentOutOfRangeException(nameof(pivot), pivot, "Unknown pivot.");
+    }
 
     /// <summary>The format a token names.</summary>
     /// <param name="token">A token from <see cref="FormatNames"/>.</param>

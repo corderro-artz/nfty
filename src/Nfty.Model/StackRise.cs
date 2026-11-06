@@ -45,8 +45,9 @@ public sealed class StackRise : IDisposable
         return (y * Art.Width) + x;
     }
 
-    /// <summary>The picture the stack shows from the front (the compositor's composite, or the
-    /// finished picture it was given).</summary>
+    /// <summary>The finished 2D composite (the compositor's result, or the finished picture it was
+    /// given). Front surface colors are in <see cref="StackFaces.Front"/>, where protruding lower
+    /// layers can own pixels.</summary>
     public Image<Rgba32> Art { get; }
 
     /// <summary>Per pixel, the union of the solid layers' columns, as a map of its own (a copy of the

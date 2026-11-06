@@ -2,7 +2,7 @@
 
 Current baseline: `5dece661785a75990576f4016eb796558ba75fd4` (`origin/main`, fetched 2026-11-05).
 
-Current status: **Ticket and Core complete.** User authorized the Core checkpoint and the Model review on 2026-11-05. Core checkpoint: local tag `audit-core-verified-2026-11-05`. Model is next; nothing has been merged or pushed.
+Current status: **Ticket, Core and Model complete; CLI review authorized.** User accepted Model verification and authorized proceeding on 2026-11-06. Model checkpoint: local tag `audit-model-verified-2026-11-06`. Core commit `24f2ed6`, local tag `audit-core-verified-2026-11-05`. Nothing has been merged or pushed.
 
 The initial review used stale local `main` (`fea71d8`, 115 commits behind). The user identified the missing seed reroll control during verification. The isolated branch was rebased onto current `origin/main`; fixes were adapted and all verification repeated. Initial results are historical evidence only, not proof of compatibility with the current baseline.
 
@@ -22,8 +22,8 @@ The initial review used stale local `main` (`fea71d8`, 115 commits behind). The 
 |---|---|---|---|---|---|
 | 1 | Nfty.Ticket | Shared model, RNG, colors, DNA, Menu reader, tickets; both Ticket test projects and relevant Core integration tests | Complete | Complete | Approved; local tag audit-ticket-verified-2026-11-05 |
 | 2 | Nfty.Core | Archives, validation, editing, imaging, generation, statistics, publishing; Nfty.Core.Tests | Complete | Complete | Fixed and verified; local tag audit-core-verified-2026-11-05; [evidence](02-core-verification.md) |
-| 3 | Nfty.Model | Rise, meshes, model formats/readers, batch export; Nfty.Model.Tests | Pending | Pending | Not authorized |
-| 4 | Nfty.Cli | Command wiring, authoring, options, errors; Nfty.Cli.Tests | Pending | Pending | Not authorized |
+| 3 | Nfty.Model | Rise, meshes, model formats/readers, batch export; Nfty.Model.Tests | Complete | Complete | Fixed and verified; local tag audit-model-verified-2026-11-06; [evidence](03-model-verification.md) |
+| 4 | Nfty.Cli | Command wiring, authoring, options, errors; Nfty.Cli.Tests | Pending | Pending | Review authorized; no fixes approved |
 | 5 | Nfty.App | Avalonia views, controls, view models, services, themes, viewer; Nfty.App.Tests | Pending | Pending | Not authorized |
 | 6 | Nfty.Desktop | Desktop startup, windows, platform integration; relevant Nfty.App.Tests | Pending | Pending | Not authorized |
 | 7 | Nfty.Ticket.Sample | Package-free Ticket embedding example and its runtime contract | Pending | Pending | Not authorized |
@@ -31,6 +31,28 @@ The initial review used stale local `main` (`fea71d8`, 115 commits behind). The 
 | 9 | Tooling and integration | tools/, CI, shared build/package configuration, release and documentation generators; cross-project consistency | Pending | Pending | Not authorized |
 
 Current solution: six production projects, two sample projects, and six test projects. `Nfty.Ticket.NetStandard.Tests` exercises the same Ticket test sources against the netstandard2.1 assembly; it is included in Stage 1. Test projects are reviewed with their production owner. Stage 9 covers executable code outside those projects; XML review applies where applicable, with equivalent documentation review for scripts.
+
+## Completed review: Nfty.Model
+
+- [x] Inventory 29 production files: 12 geometry/mesh files, nine model format files, four rendering files and four options/batch/integration files.
+- [x] Assign independent review scopes; retain math, determinism and ownership as primary acceptance criteria.
+- [x] Pass 1: inspect every implementation and relevant tests/callers; reproduce actionable defects.
+- [x] Establish the current Release Model test baseline: 500 passed, no failures or skips.
+- [x] Pass 2: separately review XML contracts and simplification opportunities in every scope.
+- [x] Consolidate confirmed findings, deferred proposals, compatibility constraints and evidence into the [Stage 3 report](03-model.md): 11 findings, 17 XML items, seven bounded simplification proposals and two optional measurement candidates.
+- [x] Stop for the user's review; no Model fixes before approval.
+
+- [x] After approval: delegate implementation of M01–M11, D01–D17 and S01–S07; retain M11's distance cap with an accurate best-effort contract.
+- [x] Independently verify integrated math and error boundaries; correct related T-junction/UV rounding cases and prove backup retention after secondary rollback failure.
+- [x] Verify final Release solution: 5,148 passed, zero failed, one platform-specific skip; build at zero warnings/errors. Model: 669 passed, 169 additional cases.
+- [x] Verify 470/470 sampled files, 60 mesh/format goldens, direct thread parity and four-culture writer parity.
+- [x] Inspect all changed regions across 431 captured frames: 356 exact matches; 67 expected preview corrections; six random-path labels; two in-flight loading states.
+- [x] Regenerate/check 269 API pages, build the manual strictly and confirm protected files unchanged.
+- [x] Publish the [final verification report](03-model-verification.md), complete the [implementation checklist](03-model-implementation.md) and stop before CLI.
+
+Stage 3 result: all 11 findings, 17 XML items and seven bounded simplifications addressed. Narrow-aspect framing retains its existing distance cap with an accurate contract; two unmeasured optimizations remain deferred. Ordinary exported output is byte-identical in sampled comparisons; preview coverage intentionally improves. Verification ran on Windows x64; another CPU architecture and an external model viewer were not exercised.
+
+The implementation and verification phases are complete. The user accepted verification and approved proceeding on 2026-11-06. Model is locally committed/tagged before the CLI review; no merge or push.
 
 ## Completed review: Nfty.Core
 

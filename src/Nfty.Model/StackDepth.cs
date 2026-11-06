@@ -188,6 +188,8 @@ public static class StackDepth
     /// <returns>The rise; the caller disposes it.</returns>
     /// <exception cref="KeyNotFoundException">A named layer or variant is not in the recipe.</exception>
     /// <exception cref="PartialAlphaException">Some layer has a partly transparent pixel.</exception>
+    /// <exception cref="ArgumentException">The selection is empty, layer or depth-map sizes disagree,
+    /// or the finished picture's size or solid mask disagrees with the selected layers.</exception>
     /// <remarks>
     /// A pick with a color, on a colorized layer, is recolorized exactly as generation did
     /// (<see cref="VariantPreview"/>); a pick with none, or a Custom layer, uses the stored pixels. An
@@ -237,7 +239,8 @@ public static class StackDepth
     /// <param name="asset">The asset; its traits are its present layers, in paint order, and its
     /// color rolls recolorize them.</param>
     /// <param name="source">How to name the asset in a refusal.</param>
-    /// <returns>The rise, or <c>null</c> for an all-absent roll (nothing painted: paper).</returns>
+    /// <returns>The owning rise, which the caller must dispose, or <c>null</c> for an all-absent roll
+    /// (nothing painted: paper).</returns>
     /// <exception cref="KeyNotFoundException">A trait names a layer or variant the recipe lacks.</exception>
     /// <exception cref="PartialAlphaException">Some layer has a partly transparent pixel.</exception>
     public static StackRise? ForAsset(LoadedRecipe recipe, GeneratedAsset asset, string source = "the asset")

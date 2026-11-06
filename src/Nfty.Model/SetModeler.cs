@@ -14,6 +14,8 @@ namespace Nfty.Model;
 /// <remarks>
 /// Reads only — the book and the asset's picture are never mutated — so concurrent calls for
 /// different assets are safe and the bytes depend on the asset alone, at any thread count.
+/// The modeler retains borrowed recipe, image and depth references from the book, not snapshots.
+/// Keep the book live and stable until all model calls have finished.
 /// </remarks>
 public sealed class SetModeler : IAssetModeler
 {
@@ -45,13 +47,7 @@ public sealed class SetModeler : IAssetModeler
     public SetModels Options => _record;
 
     /// <inheritdoc />
-    public IReadOnlyList<string> FileNames(string baseName) => _options.Format switch
-    {
-        ModelFormat.Glb => [baseName + ".glb"],
-        ModelFormat.GltfWithBin => [baseName + ".gltf", baseName + ".bin"],
-        ModelFormat.GltfEmbedded => [baseName + ".gltf"],
-        _ => throw new ArgumentOutOfRangeException(nameof(baseName), _options.Format, "Unknown model format."),
-    };
+    public IReadOnlyList<string> FileNames(string baseName) => ModelBatch.FileNamesFor(baseName, _options.Format);
 
     /// <inheritdoc />
     public IReadOnlyList<SetFile>? Model(GeneratedAsset asset, string baseName)

@@ -2,10 +2,10 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace Nfty.Model.Render;
 
-/// <summary>A plain pixel-and-depth surface <c>Raster</c> writes into: one background-filled
-/// color per pixel and a z-buffer initialized to "nothing here yet". The array references are fixed
-/// at construction (D7); their contents mutate freely as <c>Raster</c> draws. Single owner; not
-/// thread-safe.</summary>
+/// <summary>A plain pixel-and-depth surface <c>Raster</c> writes into. Construction leaves both
+/// arrays zero-filled; call <see cref="Clear"/> before rendering to initialize the background and
+/// infinite depth. The array references are fixed at construction (D7); their contents mutate freely
+/// as <c>Raster</c> draws. Single owner; not thread-safe.</summary>
 public sealed class RenderTarget
 {
     /// <summary>Pixels across.</summary>
@@ -22,7 +22,7 @@ public sealed class RenderTarget
     public float[] Depth { get; }
 
     /// <summary>Allocates a <see cref="Width"/> × <see cref="Height"/> surface. Both dimensions must
-    /// be positive.</summary>
+    /// be positive. Colors and depths are initially zero; call <see cref="Clear"/> before rendering.</summary>
     /// <param name="width">Width in pixels; must be positive.</param>
     /// <param name="height">Height in pixels; must be positive.</param>
     /// <exception cref="ArgumentOutOfRangeException">A dimension is not positive.</exception>
