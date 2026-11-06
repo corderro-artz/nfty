@@ -196,6 +196,14 @@ public static partial class CommandFactory
         // typed without --sheet would silently make no sheet. Counts below one cannot name a grid.
         cmd.Validators.Add(result =>
         {
+            // Conversion can be lazy. Force each typed value through the guarded boundary before
+            // dependent checks read it; the parser keeps its original conversion diagnostic.
+            foreach (var option in cmd.Options.OfType<Option<bool>>())
+                if (!result.TryGetValue(option, out _)) return;
+            foreach (var option in cmd.Options.OfType<Option<int>>())
+                if (!result.TryGetValue(option, out _)) return;
+            foreach (var option in cmd.Options.OfType<Option<string?>>())
+                if (!result.TryGetValue(option, out _)) return;
             result.RejectUnless(result.GetValue(sheet), "sizes the spritesheet; it needs --sheet.", sheetCols, sheetRows);
             foreach (var (option, name) in new (Option<int>, string)[] { (sheetCols, "--sheet-cols"), (sheetRows, "--sheet-rows") })
                 if (result.IsGiven(option) && result.GetValue(option) < 1)
@@ -221,6 +229,12 @@ public static partial class CommandFactory
                     if (given) result.AddError($"--upload uploads the art and writes its address itself; {name} cannot go with it.");
             if (result.GetValue(models) && result.GetValue(noModels))
                 result.AddError("--models and --no-models ask for different things.");
+            if (result.GetValue(images) && result.GetValue(noImages))
+                result.AddError("--images and --no-images ask for different things.");
+            if (result.GetValue(openSea) && result.GetValue(noOpenSea))
+                result.AddError("--opensea and --no-opensea ask for different things.");
+            if (result.GetValue(nfty) && result.GetValue(noNfty))
+                result.AddError("--nfty and --no-nfty ask for different things.");
             if (result.GetValue(collection) && result.GetValue(noCollection))
                 result.AddError("--collection and --no-collection ask for different things.");
             if (result.GetValue(setManifest) && result.GetValue(noSetManifest))
@@ -279,16 +293,22 @@ public static partial class CommandFactory
             if (parse.GetValue(pack)) options = options with { Shape = ExportShape.Archive };
             if (parse.GetValue(seal)) options = options with { Sealed = true };
             if (parse.GetValue(note) is { Length: > 0 } text) options = options with { Note = text };
+            if (parse.IsGiven(key) && !options.Sealed)
+                throw new InvalidOperationException("--key supplies a sealing passphrase; it needs --seal or a sealed preset.");
 
             if (parse.GetValue(collection)) options = options with { IncludeCollectionMetadata = true };
             if (parse.GetValue(noCollection)) options = options with { IncludeCollectionMetadata = false };
             if (parse.GetValue(setManifest)) options = options with { IncludeSetManifest = true };
             if (parse.GetValue(noSetManifest)) options = options with { IncludeSetManifest = false };
+            // Both callers ask only about the source, using identical default options. Keep the
+            // probe lazy so unrelated options retain their existing error and warning timing.
+            ExportPlan? defaultPlan = null;
+            ExportPlan DefaultPlan() => defaultPlan ??= SetExporter.Plan(parse.GetValue(path)!, new ExportOptions());
             if (parse.GetValue(artOnly))
             {
                 // The models go with the images when the Set has any: both are uploaded before the
                 // metadata can name them. Asked of the Set itself, so --art-only never needs --models.
-                bool hasModels = SetExporter.Plan(parse.GetValue(path)!, new ExportOptions()).SetHasModels;
+                bool hasModels = DefaultPlan().SetHasModels;
                 options = options with
                 {
                     Images = true,
@@ -342,7 +362,7 @@ public static partial class CommandFactory
             // made it. Planned with the default options, so nothing here depends on the flags.
             if (parse.GetValue(models) || parse.IsGiven(modelBaseUri) || bookPath is { Length: > 0 })
             {
-                var probe = SetExporter.Plan(parse.GetValue(path)!, new ExportOptions());
+                var probe = DefaultPlan();
                 if ((parse.GetValue(models) || parse.IsGiven(modelBaseUri)) && !probe.SetHasModels)
                     throw new InvalidOperationException("This Set has no 3D models; it was cooked without --models.");
 
@@ -373,18 +393,23 @@ public static partial class CommandFactory
 
     /// <summary>The option both <c>export</c> and <c>inspect</c> take a passphrase through.
     /// One declaration, so the two cannot describe it differently.</summary>
+    /// <returns>The option that names the passphrase source.</returns>
     private static Option<string?> KeyOption() => new("--key")
     {
         Description = $"Where the passphrase comes from: {Passphrase.Sources}. The source is NAMED "
             + "rather than guessed, the way a color spec is - they are not interchangeable, and "
             + "picking one silently would be picking your threat model for you. An environment "
-            + "variable is inherited by every child process and readable from /proc on Linux; a "
+            + "variable is normally inherited by child processes and can be readable from /proc on Linux; a "
             + "file can be mode 600; stdin leaves nothing anywhere. There is deliberately no "
-            + "--passphrase: an argument is visible to every process on the machine, lands in your "
-            + "shell history, and is captured verbatim by CI logs. Omit it and nfty asks at the "
+            + "--passphrase: an argument can be visible to processes with sufficient permissions, land in "
+            + "shell history, and enter CI logs. Omit it and nfty asks at the "
             + "terminal, echoing nothing.",
     };
 
+    /// <summary>Maps a validated corner token to the image-stamp corner.</summary>
+    /// <param name="slug">One of the four accepted corner tokens.</param>
+    /// <returns>The matching corner.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">The token is unknown.</exception>
     private static StampCorner CornerOf(string slug) => slug switch
     {
         "top-left" => StampCorner.TopLeft,
@@ -394,8 +419,14 @@ public static partial class CommandFactory
         _ => throw new ArgumentOutOfRangeException(nameof(slug), slug, "Unknown corner."),
     };
 
+    /// <summary>Names a preset using its invariant command-line token.</summary>
+    /// <param name="preset">The preset.</param>
+    /// <returns>The lowercase token.</returns>
     private static string Slug(ExportPreset preset) => preset.ToString().ToLowerInvariant();
 
+    /// <summary>Resolves a preset token already accepted by the parser.</summary>
+    /// <param name="slug">The validated token.</param>
+    /// <returns>The named preset.</returns>
     private static ExportPreset Parse(string slug) =>
         Enum.GetValues<ExportPreset>().First(p => Slug(p) == slug);
 
@@ -407,6 +438,8 @@ public static partial class CommandFactory
     /// what leaves the machine. "Exported 1,502 files" is exactly the sentence that let a packed Set
     /// carry an author's source book for three releases without anyone noticing.
     /// </remarks>
+    /// <param name="result">The completed export and its final contents.</param>
+    /// <param name="options">The options, used to explain sealing.</param>
     private static void PrintExport(ExportResult result, ExportOptions options)
     {
         Console.WriteLine($"{result.Plan.Collection} → {result.Path}");
@@ -431,6 +464,9 @@ public static partial class CommandFactory
     /// <summary>
     /// Prints a sealed export: its header always, and the Set inside it when a passphrase opens it.
     /// </summary>
+    /// <remarks>The cleartext header contains unverified claims until authenticated opening
+    /// succeeds. With no key source this prints those claims only; opening owns and disposes the
+    /// decrypted Set after rendering its report.</remarks>
     /// <param name="file">The <c>.tin</c>.</param>
     /// <param name="keySpec">The source named by <c>--key</c>, or null when none was given.</param>
     private static void PrintSealed(string file, string? keySpec)

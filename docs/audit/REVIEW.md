@@ -2,7 +2,7 @@
 
 Current baseline: `5dece661785a75990576f4016eb796558ba75fd4` (`origin/main`, fetched 2026-11-05).
 
-Current status: **Ticket, Core and Model complete; CLI review authorized.** User accepted Model verification and authorized proceeding on 2026-11-06. Model checkpoint: local tag `audit-model-verified-2026-11-06`. Core commit `24f2ed6`, local tag `audit-core-verified-2026-11-05`. Nothing has been merged or pushed.
+Current status: **Ticket, Core, Model and CLI accepted; App review active.** The user accepted CLI verification and approved proceeding on 2026-11-06. CLI checkpoint: local tag `audit-cli-verified-2026-11-06`. App work is review-only until findings are approved. Nothing has been merged or pushed.
 
 The initial review used stale local `main` (`fea71d8`, 115 commits behind). The user identified the missing seed reroll control during verification. The isolated branch was rebased onto current `origin/main`; fixes were adapted and all verification repeated. Initial results are historical evidence only, not proof of compatibility with the current baseline.
 
@@ -23,14 +23,34 @@ The initial review used stale local `main` (`fea71d8`, 115 commits behind). The 
 | 1 | Nfty.Ticket | Shared model, RNG, colors, DNA, Menu reader, tickets; both Ticket test projects and relevant Core integration tests | Complete | Complete | Approved; local tag audit-ticket-verified-2026-11-05 |
 | 2 | Nfty.Core | Archives, validation, editing, imaging, generation, statistics, publishing; Nfty.Core.Tests | Complete | Complete | Fixed and verified; local tag audit-core-verified-2026-11-05; [evidence](02-core-verification.md) |
 | 3 | Nfty.Model | Rise, meshes, model formats/readers, batch export; Nfty.Model.Tests | Complete | Complete | Fixed and verified; local tag audit-model-verified-2026-11-06; [evidence](03-model-verification.md) |
-| 4 | Nfty.Cli | Command wiring, authoring, options, errors; Nfty.Cli.Tests | Pending | Pending | Review authorized; no fixes approved |
-| 5 | Nfty.App | Avalonia views, controls, view models, services, themes, viewer; Nfty.App.Tests | Pending | Pending | Not authorized |
+| 4 | Nfty.Cli | Command wiring, authoring, options, errors; Nfty.Cli.Tests | Complete | Complete | Accepted; local tag audit-cli-verified-2026-11-06; [evidence](04-cli-verification.md) |
+| 5 | Nfty.App | Avalonia views, controls, view models, services, themes, viewer; Nfty.App.Tests | Active | Pending | Review authorized; fixes require approval |
 | 6 | Nfty.Desktop | Desktop startup, windows, platform integration; relevant Nfty.App.Tests | Pending | Pending | Not authorized |
 | 7 | Nfty.Ticket.Sample | Package-free Ticket embedding example and its runtime contract | Pending | Pending | Not authorized |
 | 8 | Nfty.Embedding.Sample | Core/Model embedding example and its runtime contract | Pending | Pending | Not authorized |
 | 9 | Tooling and integration | tools/, CI, shared build/package configuration, release and documentation generators; cross-project consistency | Pending | Pending | Not authorized |
 
 Current solution: six production projects, two sample projects, and six test projects. `Nfty.Ticket.NetStandard.Tests` exercises the same Ticket test sources against the netstandard2.1 assembly; it is included in Stage 1. Test projects are reviewed with their production owner. Stage 9 covers executable code outside those projects; XML review applies where applicable, with equivalent documentation review for scripts.
+
+## Completed review: Nfty.Cli
+
+- [x] Inventory 12 production C# files (3,885 lines), project wiring and 28 companion test source files (5,726 lines).
+- [x] Split read-only review ownership across main/model commands, authoring/sheets and publishing/error boundaries.
+- [x] Establish Release baseline at `95775d6`: solution build has zero warnings/errors; CLI suite has 331 passed, no failures/skips.
+- [x] Pass 1: inspect every command path and relevant tests; reproduce confirmed failures without editing production code or tests.
+- [x] Independently confirm model-pair recovery, existing-Set generation/uniqueness and extension-overflow findings against saved executable probes.
+- [x] Pass 2: independently inspect XML completeness/correctness and bounded simplification opportunities.
+- [x] Consolidate nine findings (seven P2, two P3), 13 grouped XML items and eight bounded simplifications into the [Stage 4 report](04-cli.md).
+- [x] Update tracker and stop for user review; no CLI implementation without approval.
+- [x] After approval: delegate and implement L01–L09, D01–D13 and S01–S08; preserve historical authoring weight-key order while removing quadratic restoration.
+- [x] Resolve additional missing-text parser cases discovered by independent review; 5,400-case sweep now has zero uncaught exceptions.
+- [x] Verify Release solution: zero warnings/errors; 5,228 passed, zero failed, one platform-specific skip. CLI: 406 passed (75 additional); Model: 674 passed (five additional).
+- [x] Verify 470/470 sampled files, seven nested authoring payloads per operation, 98/38-file thread parity and 76 files in each of four cultures.
+- [x] Inspect 431 captured frames: 421 exact matches; variable temporary labels/loading and five one-level border pixels classified, with unchanged-binary repeats and historical comparisons recorded.
+- [x] Regenerate/check 269 API pages, build the manual strictly and confirm protected files unchanged.
+- [x] Publish [final evidence and limits](04-cli-verification.md), complete the [implementation checklist](04-cli-implementation.md) and stop before App review.
+
+Stage 4 result: all nine findings, 13 grouped XML items and eight bounded simplifications addressed. Model pairs and existing Sets are protected; overflow and parser failures are corrected; secret/sealing boundaries are explicit. Ordinary sampled output and authoring payloads remain byte-identical. Finite Windows x64 verification, culture/thread proof, frame differences and recovery limits are documented. The user accepted CLI verification and approved the next review on 2026-11-06. CLI is locally committed/tagged in the isolated worktree. App review may proceed; no App fixes, merge or push are authorized.
 
 ## Completed review: Nfty.Model
 

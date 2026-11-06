@@ -21,6 +21,7 @@ public static partial class CommandFactory
         return group;
     }
 
+    /// <summary>Reads, records or clears a spritesheet's embedded grid.</summary>
     private static Command SheetGridCommand()
     {
         var png = new Argument<string>("png") { Description = "The spritesheet PNG." };
@@ -40,12 +41,13 @@ public static partial class CommandFactory
 
         cmd.Validators.Add(result =>
         {
+            if (!result.TryGetValue(clear, out bool removeGrid)) return;
             bool colsRows = result.IsGiven(cols) || result.IsGiven(rows);
             if (result.IsGiven(cols) != result.IsGiven(rows))
                 result.AddError("--cols and --rows describe the grid together; pass both.");
             if (colsRows && result.IsGiven(cell))
                 result.AddError("--cell and --cols/--rows are two ways to say one grid; pass one.");
-            if (result.GetValue(clear) && (colsRows || result.IsGiven(cell)))
+            if (removeGrid && (colsRows || result.IsGiven(cell)))
                 result.AddError("--clear removes the grid; it cannot be combined with --cols, --rows or --cell.");
         });
 
@@ -95,6 +97,7 @@ public static partial class CommandFactory
         return cmd;
     }
 
+    /// <summary>Parses an invariant WIDTHxHEIGHT cell size, naming malformed input in the refusal.</summary>
     private static (int Width, int Height) ParseCell(string text)
     {
         string[] parts = text.Split('x', 2, StringSplitOptions.TrimEntries);

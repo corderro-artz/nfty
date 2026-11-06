@@ -20,9 +20,9 @@ using SixLabors.ImageSharp.Processing;
 namespace Nfty.Cli;
 
 /// <summary>
-/// The whole command surface, built in one place so <c>Program</c> stays four lines and the
-/// authoring commands can live in their own partial. Handlers here catch nothing: they throw, and
-/// <c>Program</c> turns the exception into a message through <see cref="ErrorReport"/>.
+/// Builds the command surface across its main, authoring, modeling, publishing and sheet partials.
+/// Handler failures propagate to <c>Program</c>, which reports parsing and invocation failures
+/// through <see cref="ErrorReport"/>.
 /// </summary>
 public static partial class CommandFactory
 {
@@ -50,6 +50,7 @@ public static partial class CommandFactory
         + $"{Parallelism.LogicalProcessors} logical processors; "
         + $"{Parallelism.EnvironmentVariable} sets it when this is not given)";
 
+    /// <summary>Builds the recursive thread option and its input validator.</summary>
     private static Option<string?> BuildThreadsOption()
     {
         var option = new Option<string?>("--threads")
@@ -59,7 +60,7 @@ public static partial class CommandFactory
         };
         option.Validators.Add(result =>
         {
-            var text = result.GetValueOrDefault<string?>();
+            if (!result.TryGetValue<string?>(out var text)) return;
             if (text is not null && !Parallelism.TryParse(text, out _))
                 result.AddError($"--threads takes a whole number or 'max', not '{text}'.");
         });
@@ -72,7 +73,8 @@ public static partial class CommandFactory
     /// machine's and says so on stderr. An invalid <c>NFTY_THREADS</c> is an error naming the variable.
     /// </summary>
     /// <param name="parse">The parsed command line.</param>
-    /// <returns>The count to hand to Core.</returns>
+    /// <returns>The requested parallelism; its effective worker count is capped to the machine.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="parse"/> is null.</exception>
     /// <exception cref="ArgumentException"><c>NFTY_THREADS</c> is set to something that is not a count.</exception>
     public static Parallelism ResolveThreads(ParseResult parse)
     {
@@ -130,6 +132,7 @@ public static partial class CommandFactory
         return root;
     }
 
+    /// <summary>Creates the embedded-demo extraction command, preserving an edited copy by default.</summary>
     private static Command Demo()
     {
         var outDir = new Argument<string>("directory")
@@ -161,6 +164,7 @@ public static partial class CommandFactory
         return cmd;
     }
 
+    /// <summary>Creates archive, Set and upload-bundle inspection with optional source-art scanning.</summary>
     private static Command Inspect()
     {
         var path = new Argument<string>("file")
@@ -273,6 +277,7 @@ public static partial class CommandFactory
         return cmd;
     }
 
+    /// <summary>Prints a borrowed book's identity, palette and recipe tree.</summary>
     private static void PrintCookBook(LoadedCookBook cb)
     {
         Console.WriteLine($"CookBook: {cb.Manifest.Name} ({cb.Manifest.Canvas.Width}x{cb.Manifest.Canvas.Height})");
@@ -337,6 +342,7 @@ public static partial class CommandFactory
         Console.Write(VoxelReport.Render(title, rows));
     }
 
+    /// <summary>Prints a borrowed recipe's real layer order and numbered rules, tolerating missing IDs.</summary>
     private static void PrintRecipe(LoadedRecipe recipe, double? weight, string indent)
     {
         string suffix = weight is double w
@@ -410,6 +416,7 @@ public static partial class CommandFactory
         foreach (var recipe in book.Recipes) PrintMenuRecipe(recipe, "  ");
     }
 
+    /// <summary>Prints one Menu recipe in its recorded layer order.</summary>
     private static void PrintMenuRecipe(MenuRecipe recipe, string indent)
     {
         Console.WriteLine(
@@ -428,6 +435,7 @@ public static partial class CommandFactory
             Console.WriteLine($"{indent}  Rule {i + 1}: {RuleLine(recipe.Rules[i])}");
     }
 
+    /// <summary>Prints a Menu layer, its absence chance and weighted variants.</summary>
     private static void PrintMenuLayer(MenuLayer layer, string indent, double absentPercent)
     {
         Console.WriteLine($"{indent}Ingredient: {layer.Name} [{layer.Id}] ({layer.Kind}){AbsentSuffix(absentPercent)}");
@@ -435,6 +443,7 @@ public static partial class CommandFactory
             Console.WriteLine(VariantLine(indent, v.Name, v.Id, v.Weight));
     }
 
+    /// <summary>Creates validation for a complete book or a standalone recipe or ingredient.</summary>
     private static Command Validate()
     {
         var path = new Argument<string>("file") { Description = "Path to a .cbk, .rcp or .igt file." };
@@ -472,6 +481,7 @@ public static partial class CommandFactory
         return cmd;
     }
 
+    /// <summary>Creates the command that prints Core's invariant book-odds report.</summary>
     private static Command Stats()
     {
         var path = new Argument<string>("cookbook") { Description = "Path to a .cbk file." };
@@ -492,6 +502,7 @@ public static partial class CommandFactory
         return cmd;
     }
 
+    /// <summary>Creates the single-variant and seeded-recipe preview forms.</summary>
     private static Command Preview()
     {
         var path = new Argument<string>("file")
@@ -523,7 +534,7 @@ public static partial class CommandFactory
         };
         model.Validators.Add(result =>
         {
-            string? v = result.GetValueOrDefault<string?>();
+            if (!result.TryGetValue<string?>(out var v)) return;
             if (v is not null
                 && !v.Equals("hsv", StringComparison.OrdinalIgnoreCase)
                 && !v.Equals("hsl", StringComparison.OrdinalIgnoreCase))
@@ -585,7 +596,8 @@ public static partial class CommandFactory
             // "an .igt", so `preview book.cbk` was told --variant is required — advice that, followed,
             // produced a different error from a different layer. Say what preview actually reads, and
             // say it once.
-            if (PreviewForm(file) is null)
+            var form = PreviewForm(file);
+            if (form is null)
             {
                 result.AddError($"preview reads an Ingredient ({Archives.IngredientExtension}) or a "
                     + $"Recipe ({Archives.RecipeExtension}); '{file}' is neither. An .igt renders one "
@@ -593,7 +605,7 @@ public static partial class CommandFactory
                 return;
             }
 
-            if (IsRecipePath(file))
+            if (form == ArchiveKind.Recipe)
             {
                 if (result.IsGiven(variant))
                     result.AddError("--variant names one Variant of an .igt; the .rcp form rolls "
@@ -663,9 +675,6 @@ public static partial class CommandFactory
             ? kind
             : null;
 
-    /// <summary>Whether a path selects <c>preview</c>'s Recipe form.</summary>
-    private static bool IsRecipePath(string path) => PreviewForm(path) == ArchiveKind.Recipe;
-
     /// <summary>The original form: one named Variant of one Ingredient.</summary>
     private static int PreviewIngredient(
         string file, string outPath, string variantId, string? colorSpec, string? modelName)
@@ -731,7 +740,7 @@ public static partial class CommandFactory
 
             // The layer's own depth, not its position among the drawn ones: --only hides layers, it
             // does not renumber them, and a printed "1, 3, 4" is what says so.
-            int depth = recipe.Manifest.LayerOrder.ToList().IndexOf(id) + 1;
+            int depth = LayerDepth.DepthOf(recipe.Manifest, id);
             drawn.Add((Num(depth), layer, null));
         }
 
@@ -852,6 +861,7 @@ public static partial class CommandFactory
         }
     }
 
+    /// <summary>Creates generation of a new Set, refusing occupied output before rolling.</summary>
     private static Command Generate()
     {
         var path = new Argument<string>("cookbook") { Description = "Path to a .cbk file." };
@@ -901,15 +911,17 @@ public static partial class CommandFactory
         // so a --pivot typed anyway would silently do nothing.
         cmd.Validators.Add(result =>
         {
-            result.RejectUnless(result.GetValue(models),
+            if (!result.TryGetValue(models, out var wantModels)) return;
+            result.RejectUnless(wantModels,
                 "applies only with --models; without it no model is made.", modelFormat, pivot, voxelSize);
             CheckVoxelSize(result, voxelSize);
         });
         cmd.SetAction(parse =>
         {
             var threads = ResolveThreads(parse);
-            using var book = CookBookArchive.Read(parse.GetValue(path)!, threads);
             string dir = parse.GetValue(outDir)!;
+            RequireNewSetDirectory(dir, parse.GetValue(pack));
+            using var book = CookBookArchive.Read(parse.GetValue(path)!, threads);
             var opts = new GenerateOptions(
                 Count: parse.GetValue(count),
                 Seed: parse.GetValue(seed)!,
@@ -929,6 +941,8 @@ public static partial class CommandFactory
                 })
                 : null;
 
+            if (modeler is not null) RequireNewModelFiles(dir, modeler, opts.Count);
+
             using var set = Generator.Generate(book, opts);
             SetWriter.Write(set, dir, parse.GetValue(pack), modeler, parallelism: threads);
             Console.WriteLine($"Generated {set.Assets.Count} → {dir}");
@@ -938,6 +952,51 @@ public static partial class CommandFactory
         return cmd;
     }
 
+    /// <summary>Refuses existing Set-owned paths while allowing unrelated Kitchen files.</summary>
+    private static void RequireNewSetDirectory(string directory, bool pack)
+    {
+        foreach (string name in new[] { SetLayout.ManifestFile, SetIndex.FileName })
+        {
+            string path = Path.Combine(directory, name);
+            if (File.Exists(path) || Directory.Exists(path)) throw SetCollision(directory, path);
+        }
+        foreach (string name in SetLayout.Directories)
+        {
+            string path = Path.Combine(directory, name);
+            if (File.Exists(path) || (Directory.Exists(path) && Directory.EnumerateFileSystemEntries(path).Any()))
+                throw SetCollision(directory, path);
+        }
+        if (pack)
+        {
+            string path = SetLayout.PackedPath(directory);
+            if (File.Exists(path) || Directory.Exists(path)) throw SetCollision(directory, path);
+        }
+    }
+
+    /// <summary>Protects only numbered model targets this run can write; other models are borrowed workspace data.</summary>
+    private static void RequireNewModelFiles(string directory, IAssetModeler modeler, int count)
+    {
+        string models = Path.Combine(directory, SetLayout.ModelsDir);
+        if (File.Exists(models)) throw SetCollision(directory, models);
+        if (!Directory.Exists(models)) return;
+        foreach (string path in Directory.EnumerateFileSystemEntries(models).Order(StringComparer.Ordinal))
+        {
+            string stem = Path.GetFileNameWithoutExtension(path);
+            if (!int.TryParse(stem, NumberStyles.None, CultureInfo.InvariantCulture, out int number)
+                || number < 1 || number > count || stem != SetLayout.Stem(number)) continue;
+            foreach (string name in modeler.FileNames(stem))
+            {
+                string target = Path.Combine(models, name);
+                if (File.Exists(target) || Directory.Exists(target)) throw SetCollision(directory, target);
+            }
+        }
+    }
+
+    /// <summary>Names the occupied path and the deliberate alternatives to replacing an existing Set.</summary>
+    private static InvalidOperationException SetCollision(string directory, string path) => new(
+        $"'{directory}' already contains Set output at '{path}'. Use extend to grow that Set, or choose a fresh output folder.");
+
+    /// <summary>Creates extension with the recorded model settings and already-met-target no-op policy.</summary>
     private static Command Extend()
     {
         var path = new Argument<string>("cookbook") { Description = "Path to the .cbk file the existing Set was generated from." };
@@ -980,11 +1039,10 @@ public static partial class CommandFactory
             var existing = SetWriter.ReadExisting(setDir, threads, needDnas: !parse.GetValue(unlimited));
 
             int have = existing.NextNumber - 1;
+            // Check before subtracting: an already-met extreme negative target must not wrap into
+            // positive work. A run that adds nothing mixes nothing, so no provenance warning is needed.
+            if (target <= have) { Console.WriteLine($"Already at {Num(have)}."); return 0; }
             int need = target - have;
-
-            // Before the early return, but after the arithmetic: a run that adds nothing mixes
-            // nothing, so warning about the book would be noise on a no-op.
-            if (need <= 0) { Console.WriteLine($"Already at {have}."); return 0; }
 
             // A warning, to stderr, and never a refusal: re-cooking a deliberately edited book is a
             // legitimate thing to want, and the author is the one who knows. Core owns the wording so
@@ -1013,6 +1071,7 @@ public static partial class CommandFactory
         return cmd;
     }
 
+    /// <summary>Creates Menu export and reports the archive's recorded art layout.</summary>
     private static Command Menu()
     {
         var path = new Argument<string>("cookbook") { Description = "Path to a .cbk file." };
@@ -1063,6 +1122,7 @@ public static partial class CommandFactory
         return cmd;
     }
 
+    /// <summary>Creates seeded Menu rolling or rendering of an already-rolled ticket.</summary>
     private static Command Serve()
     {
         var path = new Argument<string>("menu") { Description = "Path to a .mnu Menu." };
@@ -1169,7 +1229,7 @@ public static partial class CommandFactory
         };
         opt.Validators.Add(result =>
         {
-            if (result.GetValueOrDefault<int>() < 1)
+            if (result.TryGetValue<int>(out var value) && value < 1)
                 result.AddError("--max-rerolls must be a positive integer.");
         });
         return opt;

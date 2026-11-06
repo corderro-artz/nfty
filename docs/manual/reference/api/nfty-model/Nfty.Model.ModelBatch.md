@@ -137,12 +137,12 @@ Makes a list of names safe and distinct, ignoring case.
 public static void WriteFolder(string directory, IReadOnlyList<ModelFile> files);
 ```
 
-Writes the files into a folder, creating it.
+Writes the files into a folder, creating it. Stages the complete group before replacing existing files; a failed replacement restores the previous files. If restoration also fails, the exception names a retained recovery directory.
 
 **Parameters**
 
 - `directory` (`string`) - The folder.
-- `files` (`IReadOnlyList<ModelFile>`) - The files.
+- `files` (`IReadOnlyList<ModelFile>`) - One complete file group. Repeated destination names keep the last payload.
 
 **Exceptions**
 

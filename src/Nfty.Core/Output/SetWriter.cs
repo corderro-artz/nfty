@@ -775,11 +775,7 @@ public static class SetWriter
     private static void Pack(string outDir)
     {
         string dir = Path.TrimEndingDirectorySeparator(Path.GetFullPath(outDir));
-        // The folder's own name, which is what the sibling archive was called too, so a Set packed
-        // by an older build keeps the name people already know it by. A path with no leaf at all (a
-        // drive root) would otherwise produce a bare ".set".
-        string leaf = Path.GetFileName(dir);
-        string archivePath = Path.Combine(dir, (leaf.Length > 0 ? leaf : "collection") + ".set");
+        string archivePath = SetLayout.PackedPath(dir);
 
         // Taken BEFORE the archive is created, so it cannot contain itself mid-write.
         var entries = SetLayout.FilesIn(dir);

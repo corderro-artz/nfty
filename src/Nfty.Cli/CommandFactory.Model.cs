@@ -14,7 +14,7 @@ namespace Nfty.Cli;
 
 public static partial class CommandFactory
 {
-    /// <summary>Which of <c>model</c>'s two forms an input selects.</summary>
+    /// <summary>Which of <c>model</c>'s picture, Ingredient and seeded Recipe forms an input selects.</summary>
     private enum ModelInput
     {
         /// <summary>A loose <c>.png</c>.</summary>
@@ -27,6 +27,7 @@ public static partial class CommandFactory
         Recipe,
     }
 
+    /// <summary>Creates the single-model command and its form-specific option guards.</summary>
     private static Command ModelCommand()
     {
         var input = new Argument<string>("input")
@@ -81,7 +82,8 @@ public static partial class CommandFactory
             string? file = result.GetValue(input);
             if (string.IsNullOrEmpty(file)) return;   // the missing-argument error already speaks
 
-            switch (ModelInputOf(file))
+            var form = ModelInputOf(file);
+            switch (form)
             {
                 case null:
                     result.AddError($"model reads a picture (.png), an Ingredient "
@@ -107,7 +109,7 @@ public static partial class CommandFactory
                         + "seed says which roll.");
                     break;
             }
-            if (result.IsGiven(seed) && ModelInputOf(file) is not ModelInput.Recipe)
+            if (result.IsGiven(seed) && form is not ModelInput.Recipe)
                 result.AddError("--seed rolls a Recipe (.rcp); a picture or a variant is not rolled.");
 
             if (result.IsGiven(front) != result.IsGiven(back))
@@ -115,14 +117,14 @@ public static partial class CommandFactory
                     + "(0 leaves a side flat).");
             foreach (var (option, name) in new (Option<int> Option, string Name)[] { (front, "--front"), (back, "--back") })
             {
-                int value = result.GetValue(option);
-                if (result.IsGiven(option) && value is < 0 or > 255)
+                if (!result.IsGiven(option) || !result.TryGetValue(option, out int value)) continue;
+                if (value is < 0 or > 255)
                     result.AddError($"{name} must be 0..255 (one byte per side); got {value}.");
             }
 
             CheckVoxelSize(result, voxelSize);
 
-            string? outPath = result.GetValue(outp);
+            if (!result.TryGetValue(outp, out string? outPath)) return;
             if (outPath is not null && string.IsNullOrWhiteSpace(Path.GetFileNameWithoutExtension(outPath)))
             {
                 result.AddError($"--out '{outPath}' has no file name before the extension; "
@@ -135,7 +137,9 @@ public static partial class CommandFactory
             // GetValue on an option whose value failed that check throws instead of returning it —
             // this is the one place that value is needed for something AcceptOnlyFromAmong does not
             // already say, so it must not re-trip the same failure into an unhandled exception.
-            string fmt = result.IsGiven(format) ? result.GetResult(format)!.Tokens[0].Value : "glb";
+            var formatResult = result.GetResult(format);
+            if (result.IsGiven(format) && formatResult!.Tokens.Count == 0) return;
+            string fmt = result.IsGiven(format) ? formatResult!.Tokens[0].Value : "glb";
             if (outPath is not null && ModelTokens.FormatNames.Contains(fmt, StringComparer.Ordinal))
             {
                 string expected = fmt == "glb" ? ".glb" : ".gltf";
@@ -165,9 +169,9 @@ public static partial class CommandFactory
                 ModelInput.Ingredient => ModelFromIngredient(file, parse.GetValue(variant)!, outPath, options, fill, ResolveThreads(parse)),
                 ModelInput.Recipe => ModelFromRecipe(file, parse.GetValue(seed)!, outPath, options, ResolveThreads(parse)),
                 // A backstop, not a reachable path: the validator has already refused anything that
-                // is neither form, with a better-worded message.
+                // is none of the forms, with a better-worded message.
                 _ => throw new NotSupportedException(
-                    $"model reads a picture (.png) or an Ingredient ({Archives.IngredientExtension}), not '{file}'."),
+                    $"model reads a picture (.png), an Ingredient ({Archives.IngredientExtension}), or a Recipe ({Archives.RecipeExtension}), not '{file}'."),
             };
         });
         return cmd;
@@ -187,6 +191,7 @@ public static partial class CommandFactory
         return format;
     }
 
+    /// <summary>Creates the pivot option shared by single-model and Set modeling.</summary>
     private static Option<string> ModelPivotOption()
     {
         var pivot = new Option<string>("--pivot")
@@ -216,8 +221,8 @@ public static partial class CommandFactory
     /// GIVEN: an unset option has not run its default factory yet at validation time.</summary>
     private static void CheckVoxelSize(System.CommandLine.Parsing.CommandResult result, Option<double> voxelSize)
     {
-        if (result.GetResult(voxelSize) is not { Implicit: false } given || given.Errors.Any()) return;
-        if (ModelVoxelSize.ProblemWith(result.GetValue(voxelSize)) is { } problem)
+        if (!result.IsGiven(voxelSize) || !result.TryGetValue(voxelSize, out double value)) return;
+        if (ModelVoxelSize.ProblemWith(value) is { } problem)
             result.AddError(problem);
     }
 
@@ -234,10 +239,10 @@ public static partial class CommandFactory
     }
 
     /// <summary>
-    /// Which of <c>model</c>'s forms a path selects, or null for neither. A picture is recognized by
+    /// Which of <c>model</c>'s forms a path selects, or null for an unsupported path. A picture is recognized by
     /// its extension FIRST: it is not an archive kind, so <see cref="Archives.KindOf"/> would refuse
     /// it. Every other path goes through <see cref="Archives.TryKindOf"/> — the one owner of the
-    /// extension-to-kind table — and only an Ingredient is accepted.
+    /// extension-to-kind table — and an Ingredient or seeded Recipe is accepted.
     /// </summary>
     private static ModelInput? ModelInputOf(string path) =>
         string.Equals(Path.GetExtension(path), ".png", StringComparison.OrdinalIgnoreCase) ? ModelInput.Picture
@@ -245,6 +250,7 @@ public static partial class CommandFactory
         : kind == ArchiveKind.Recipe ? ModelInput.Recipe
         : null;
 
+    /// <summary>Loads and rises one picture, disposing its decoded art after the write.</summary>
     private static int ModelFromPicture(string file, string outPath, RiseOptions options, (byte Front, byte Back)? fill)
     {
         using var art = ImageFormats.Load(file);
@@ -252,6 +258,7 @@ public static partial class CommandFactory
         return WriteModel(art, depth, options, outPath, $"'{file}'");
     }
 
+    /// <summary>Rises one borrowed variant from an Ingredient owned and disposed by this operation.</summary>
     private static int ModelFromIngredient(string file, string variantId, string outPath, RiseOptions options,
         (byte Front, byte Back)? fill, Parallelism threads)
     {
@@ -298,6 +305,8 @@ public static partial class CommandFactory
         }
     }
 
+    /// <summary>Rises borrowed art and commits its complete file group, restoring existing files on
+    /// failure. If restoration also fails, the error names retained recovery files. Does not dispose art or faces.</summary>
     private static int WriteModel(Image<Rgba32> art, DepthMap? depth, RiseOptions options, string outPath, string source,
         StackFaces? faces = null)
     {
@@ -306,24 +315,22 @@ public static partial class CommandFactory
 
         string dir = Path.GetDirectoryName(Path.GetFullPath(outPath))!;
         var files = ModelWriter.Write(mesh, art, options, Path.GetFileNameWithoutExtension(outPath), faces);
-        Directory.CreateDirectory(dir);
-
         // ModelWriter names every file with ITS OWN canonical lower-case extension (.glb, .gltf,
         // .bin); the validator only compared --out's extension case-INsensitively, so the casing
         // the user actually typed (e.g. "Model.GLB") must be restored here for the one file --out
         // names. A sibling file with a different extension (the .bin next to a .gltf) was never
         // named by --out, so its casing is untouched.
         string outExt = Path.GetExtension(outPath);
-        var written = new List<string>(files.Count);
+        var named = new List<ModelFile>(files.Count);
         foreach (var f in files)
         {
             string name = string.Equals(Path.GetExtension(f.FileName), outExt, StringComparison.OrdinalIgnoreCase)
                 ? Path.GetFileNameWithoutExtension(f.FileName) + outExt
                 : f.FileName;
-            string path = Path.Combine(dir, name);
-            File.WriteAllBytes(path, f.Bytes);
-            written.Add(path);
+            named.Add(new ModelFile(name, f.Bytes));
         }
+        ModelBatch.WriteFolder(dir, named);
+        var written = named.Select(f => Path.Combine(dir, f.FileName));
 
         Console.WriteLine($"Wrote {string.Join(" and ", written)} ("
             + mesh.TriangleCount.ToString("N0", CultureInfo.InvariantCulture) + " triangles)");

@@ -1,12 +1,12 @@
 namespace Nfty.Cli;
 
 /// <summary>
-/// Where a sealing passphrase comes from on a command line.
+/// Reads a sealing passphrase or Pinata credential from a named command-line source.
 /// </summary>
 /// <remarks>
 /// <para><b>There is deliberately no <c>--passphrase</c> option.</b> An argument on a command line
-/// is visible to every process on the machine for as long as the command runs, it lands in the
-/// shell's history file, and it is captured verbatim by any CI log the command runs under. A secret
+/// may be visible to other processes with sufficient permissions for as long as the command runs,
+/// it can land in the shell's history file, and CI command logs can capture it verbatim. A secret
 /// that has to be typed in front of all three is not a secret, and offering the flag would mean
 /// most people used it — the convenient path is the one that gets taken.</para>
 ///
@@ -18,10 +18,11 @@ namespace Nfty.Cli;
 ///
 /// <para><b>Why more than one source.</b> An environment variable is the usual answer and it is
 /// what most tools stop at, but it is not the safest one available: on Linux
-/// <c>/proc/&lt;pid&gt;/environ</c> is readable by the same user, every child process inherits it,
-/// and anything that dumps the environment on a crash dumps it too. A file can be mode 600 and is
-/// not inherited; stdin leaves nothing anywhere at all and is what a pipeline should use. The
-/// prompt is the default because it leaves the least behind of any of them.</para>
+/// <c>/proc/&lt;pid&gt;/environ</c> can be readable by the same user, child processes normally inherit it,
+/// and a crash report can capture environment values. A file can have restricted permissions;
+/// stdin can feed a pipeline without putting the secret in arguments or environment variables.
+/// The input producer and its logs still need protection. The prompt is the default because it
+/// avoids requiring a separately stored source.</para>
 /// </remarks>
 public static class Passphrase
 {
@@ -42,9 +43,12 @@ public static class Passphrase
         $"{EnvPrefix}NAME, {FilePrefix}PATH, {StdinSource} or {PromptSource}";
 
     /// <summary>
-    /// Reads a passphrase from the source <paramref name="spec"/> names.
+    /// Reads a nonempty secret from the source <paramref name="spec"/> names.
     /// </summary>
-    /// <param name="spec">The <c>--key</c> value, or null to prompt.</param>
+    /// <remarks>Environment values are read whole. Files and stdin supply their first line,
+    /// without its CR/LF ending; file encoding is detected from its BOM when present. Leading,
+    /// interior and trailing spaces are preserved. Empty values or first lines are refused.</remarks>
+    /// <param name="spec">The named source option's value, or null to prompt.</param>
     /// <param name="prompt">What to ask, when prompting.</param>
     /// <param name="confirm">Ask twice and require a match. Applies to the PROMPT only: a
     /// passphrase read from a variable, a file or a pipe was not typed here, so asking for it twice
@@ -52,8 +56,12 @@ public static class Passphrase
     /// open, its author included, which is why the typed path confirms at all.</param>
     /// <param name="option">The option the source was named by, for the error messages: <c>--key</c>
     /// for a passphrase, <c>--pinata-key</c> for a pinning key. The same sources, the same rules.</param>
-    /// <returns>The passphrase.</returns>
-    /// <exception cref="InvalidOperationException">The source is unknown, or names nothing.</exception>
+    /// <returns>The nonempty secret.</returns>
+    /// <exception cref="InvalidOperationException">The source is unknown, empty or missing; prompting
+    /// has no terminal; or confirmation does not match.</exception>
+    /// <exception cref="IOException">Reading the source file or console fails.</exception>
+    /// <exception cref="UnauthorizedAccessException">The source file cannot be accessed.</exception>
+    /// <exception cref="OperationCanceledException">Escape cancels the prompt.</exception>
     public static string Read(string? spec, string prompt, bool confirm = false, string option = "--key")
     {
         if (spec is null || spec == PromptSource) return ReadPrompt(prompt, confirm, option);
@@ -76,8 +84,10 @@ public static class Passphrase
                 throw new InvalidOperationException($"{option} {FilePrefix} needs a path.");
             if (!File.Exists(path))
                 throw new InvalidOperationException($"{option} named the file '{path}', which is not there.");
-            return FirstLine(File.ReadAllText(path))
-                ?? throw new InvalidOperationException($"'{path}' is empty.");
+            using var reader = new StreamReader(path);
+            return reader.ReadLine() is { Length: > 0 } line
+                ? line
+                : throw new InvalidOperationException($"'{path}' is empty.");
         }
 
         if (spec == StdinSource)
@@ -90,7 +100,7 @@ public static class Passphrase
         // reason - the sources are not interchangeable, so choosing one silently would be choosing
         // the user's threat model for them.
         throw new InvalidOperationException(
-            $"'{spec}' does not name a {(option == "--key" ? "passphrase" : option)} source; expected {Sources}.");
+            $"{option} does not name a {(option == "--key" ? "passphrase" : option)} source; expected {Sources}.");
     }
 
     /// <summary>
@@ -104,6 +114,8 @@ public static class Passphrase
     /// leading spaces are KEPT: a space is a legitimate character in a passphrase, and trimming it
     /// would be the same bug wearing different clothes.
     /// </remarks>
+    /// <param name="text">The text, or null for no input.</param>
+    /// <returns>The first line when nonempty, or null for a missing or empty first line.</returns>
     private static string? FirstLine(string? text)
     {
         if (text is null) return null;
@@ -112,6 +124,11 @@ public static class Passphrase
         return line.Length == 0 ? null : line;
     }
 
+    /// <summary>Prompts at an interactive terminal, refusing redirected input.</summary>
+    /// <param name="prompt">The prompt label.</param>
+    /// <param name="confirm">Whether to require the same entry twice.</param>
+    /// <param name="option">The source option to name when no terminal exists.</param>
+    /// <returns>The nonempty secret.</returns>
     private static string ReadPrompt(string prompt, bool confirm, string option)
     {
         if (Console.IsInputRedirected)
@@ -127,6 +144,13 @@ public static class Passphrase
     /// since a test runner's stdin is always redirected. The console path passes
     /// <c>Console.ReadKey(intercept: true)</c> and <c>Console.Out</c>; nothing else differs.
     /// </summary>
+    /// <param name="prompt">The prompt label.</param>
+    /// <param name="confirm">Whether to require the same entry twice.</param>
+    /// <param name="readKey">Borrowed key source; called synchronously.</param>
+    /// <param name="echo">Borrowed writer for prompts and newlines; never disposed here.</param>
+    /// <returns>The nonempty secret.</returns>
+    /// <exception cref="InvalidOperationException">The entry is empty or confirmation differs.</exception>
+    /// <exception cref="OperationCanceledException">Escape cancels either entry.</exception>
     internal static string ReadPrompt(string prompt, bool confirm, Func<ConsoleKeyInfo> readKey, TextWriter echo)
     {
         string first = ReadMasked(prompt, readKey, echo);
@@ -145,10 +169,17 @@ public static class Passphrase
     /// Reads a line without echoing it.
     /// </summary>
     /// <remarks>
-    /// Nothing is echoed at all — not even asterisks. A row of stars publishes the length of the
+    /// Secret characters are never echoed, including as asterisks; prompts and newlines are written.
+    /// Enter finishes, Backspace removes the last UTF-16 code unit, Escape cancels, and other control
+    /// characters are ignored. A row of stars publishes the length of the
     /// passphrase to anyone looking over the shoulder this is meant to defeat, which is the one
     /// fact about it worth having.
     /// </remarks>
+    /// <param name="prompt">The label written before reading.</param>
+    /// <param name="readKey">Borrowed synchronous key source.</param>
+    /// <param name="echo">Borrowed writer for prompts and newlines; never disposed here.</param>
+    /// <returns>The entered text, which may be empty.</returns>
+    /// <exception cref="OperationCanceledException">Escape cancels the entry.</exception>
     internal static string ReadMasked(string prompt, Func<ConsoleKeyInfo> readKey, TextWriter echo)
     {
         echo.Write(prompt + ": ");

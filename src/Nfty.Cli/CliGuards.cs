@@ -25,6 +25,38 @@ internal static class CliGuards
     internal static bool IsGiven(this ParseResult parse, Option option) =>
         parse.GetResult(option) is { Implicit: false };
 
+    /// <summary>Reads an option during validation, retaining the parser's diagnostic when lazy
+    /// conversion fails instead of turning invalid input into a thrown validator failure.</summary>
+    /// <typeparam name="T">The option value type.</typeparam>
+    /// <param name="result">The result whose option is being validated.</param>
+    /// <param name="option">The option to read.</param>
+    /// <param name="value">The converted value, or its default when conversion failed.</param>
+    /// <returns>True when the value was read successfully.</returns>
+    internal static bool TryGetValue<T>(this SymbolResult result, Option<T> option, out T value)
+    {
+        try { value = result.GetValue(option)!; return true; }
+        catch (InvalidOperationException) when (result.GetResult(option)?.Errors.Any() == true)
+        {
+            value = default!;
+            return false;
+        }
+    }
+
+    /// <summary>Reads the option being validated while preserving its conversion errors.</summary>
+    /// <typeparam name="T">The option value type.</typeparam>
+    /// <param name="result">The option result being validated.</param>
+    /// <param name="value">The converted value, or its default when conversion failed.</param>
+    /// <returns>True when the value was read successfully.</returns>
+    internal static bool TryGetValue<T>(this OptionResult result, out T value)
+    {
+        try { value = result.GetValueOrDefault<T>()!; return true; }
+        catch (InvalidOperationException) when (result.Errors.Any())
+        {
+            value = default!;
+            return false;
+        }
+    }
+
     /// <summary>Refuses each given option when <paramref name="allowed"/> is false, naming it. An option
     /// that silently does nothing is worse than one that says no.</summary>
     /// <param name="result">The command result being validated.</param>
@@ -40,9 +72,10 @@ internal static class CliGuards
     }
 
     /// <summary>Refuses an option that belongs to the other form of a command, never ignores it.</summary>
-    /// <param name="value">The option's value, null when not typed.</param>
+    /// <param name="value">The option's value, null when not typed. An empty string is supplied.</param>
     /// <param name="option">The option's name as typed.</param>
     /// <param name="why">The reason, worded to follow the option's name.</param>
+    /// <exception cref="InvalidOperationException"><paramref name="value"/> is not null.</exception>
     internal static void RejectGiven(string? value, string option, string why)
     {
         if (value is not null)
@@ -50,10 +83,11 @@ internal static class CliGuards
     }
 
     /// <summary>The value of an option the current form requires.</summary>
-    /// <param name="value">The option's value, null when not typed.</param>
+    /// <param name="value">The option's value, null when not typed. An empty string is supplied.</param>
     /// <param name="option">The option's name as typed.</param>
     /// <param name="why">The condition, worded to follow "is required".</param>
     /// <returns>The value.</returns>
+    /// <exception cref="InvalidOperationException"><paramref name="value"/> is null.</exception>
     internal static string RequireGiven(string? value, string option, string why) =>
         value ?? throw new InvalidOperationException($"{option} is required {why}");
 }

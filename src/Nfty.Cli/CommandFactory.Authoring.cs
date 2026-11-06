@@ -11,8 +11,8 @@ namespace Nfty.Cli;
 
 public static partial class CommandFactory
 {
-    /// <summary>The `new` command group: create an archive from a manifest JSON plus the artifacts
-    /// one level down, resolved by the {id} filename convention.</summary>
+    /// <summary>Creates archives from authoring manifests and their parts, or a Kitchen from a name.</summary>
+    /// <returns>The group of archive creation commands.</returns>
     public static Command NewGroup()
     {
         var group = new Command("new", "Create a new .igt / .rcp / .cbk / .ktn from a manifest and its parts.");
@@ -72,6 +72,7 @@ public static partial class CommandFactory
         return cmd;
     }
 
+    /// <summary>Builds an ingredient from a manifest and variant pictures.</summary>
     private static Command NewIngredient()
     {
         var outPath = new Argument<string>("out") { Description = "Output .igt path to create." };
@@ -113,6 +114,7 @@ public static partial class CommandFactory
         return cmd;
     }
 
+    /// <summary>Assembles a recipe from a manifest and ingredient archives.</summary>
     private static Command NewRecipe()
     {
         var outPath = new Argument<string>("out") { Description = "Output .rcp path to create." };
@@ -160,6 +162,7 @@ public static partial class CommandFactory
         return cmd;
     }
 
+    /// <summary>Assembles a cookbook from a manifest and recipe archives.</summary>
     private static Command NewCookbook()
     {
         var outPath = new Argument<string>("out") { Description = "Output .cbk path to create." };
@@ -218,6 +221,7 @@ public static partial class CommandFactory
     }
 
     /// <summary>The `add` command group: append a single item into an existing archive.</summary>
+    /// <returns>The group of archive addition commands.</returns>
     public static Command AddGroup()
     {
         var group = new Command("add", "Append a variant / ingredient / recipe to an existing archive.");
@@ -232,6 +236,7 @@ public static partial class CommandFactory
     /// The `set` command group: change one property of an existing archive in place. Distinct from
     /// `add`, which appends something that was not there.
     /// </summary>
+    /// <returns>The group of property editing commands.</returns>
     public static Command SetGroup()
     {
         var group = new Command("set", "Change a property of an existing archive.");
@@ -246,6 +251,8 @@ public static partial class CommandFactory
 
     /// <summary>Loads the `--map` picture, turning every way that can fail into a sentence that names
     /// the path and the reason rather than an ImageSharp exception message.</summary>
+    /// <param name="mapPath">The PNG containing depth channels.</param>
+    /// <returns>The decoded picture; the caller owns and must dispose it.</returns>
     private static Image<Rgba32> LoadDepthPicture(string mapPath)
     {
         if (!File.Exists(mapPath))
@@ -388,7 +395,7 @@ public static partial class CommandFactory
         absent.Required = true;
         absent.Validators.Add(r =>
         {
-            double v = r.GetValueOrDefault<double>();
+            if (!r.TryGetValue<double>(out var v)) return;
             if (!double.IsFinite(v) || v < 0 || v > 100)
                 r.AddError("--absent is a percent: it must be between 0 and 100.");
         });
@@ -417,9 +424,6 @@ public static partial class CommandFactory
             var problems = Validator.ValidateRecipe(merged);
             if (problems.Count > 0) { Report(problems); return 1; }
 
-            // Read(path) closed its file handle before returning, so it's safe to replace the file
-            // now. RecipeArchive.Write opens in ZipArchiveMode.Create, which throws if the target
-            // already exists, so we write to a sibling temp file and move it into place.
             WriteReplacing(path, p => RecipeArchive.Write(p, manifest, recipe.Ingredients));
             Console.WriteLine(percent == 0
                 ? $"Layer '{ingredientId}' now always appears in {path}"
@@ -431,14 +435,15 @@ public static partial class CommandFactory
 
     /// <summary>A percent as a person reads it: no trailing zeros, and invariant so a report copied
     /// between machines says the same thing.</summary>
+    /// <param name="percent">The percentage to display.</param>
+    /// <returns>The invariant percentage with up to two decimal places.</returns>
     internal static string Pct(double percent) =>
         percent.ToString("0.##", CultureInfo.InvariantCulture) + "%";
 
     /// <summary>
-    /// The `remove` command group. One subcommand so far, and it exists because `add rule` without
-    /// it would be a one-way door: a rule written by mistake could only be taken back by unzipping
-    /// the archive and editing the JSON, which is the state the whole feature is here to end.
+    /// The `remove` command group: remove a rule, ingredient, variant or recipe from an archive.
     /// </summary>
+    /// <returns>The group of archive removal commands.</returns>
     public static Command RemoveGroup()
     {
         var group = new Command("remove", "Remove an item from an existing archive.");
@@ -452,7 +457,7 @@ public static partial class CommandFactory
     /// <summary>
     /// Parses a <c>layer:variant</c> pair. Colon-delimited to match the color specs
     /// (<c>hex:d6249f</c>) the CLI already takes, and unambiguous because both halves are ids —
-    /// the id rule produces lowercase hyphen-joined words, never a colon.
+    /// valid ids cannot contain a colon.
     /// </summary>
     private static RuleTarget ParseTarget(string spec, string optionName)
     {
@@ -517,9 +522,6 @@ public static partial class CommandFactory
             var problems = Validator.ValidateRecipe(merged);
             if (problems.Count > 0) { Report(problems); return 1; }
 
-            // Read(path) closed its file handle before returning, so it's safe to replace the file
-            // now. RecipeArchive.Write opens in ZipArchiveMode.Create, which throws if the target
-            // already exists, so we write to a sibling temp file and move it into place.
             WriteReplacing(path, p => RecipeArchive.Write(p, manifest, recipe.Ingredients));
             Console.WriteLine($"Added rule {manifest.Rules.Count} to {path}: {RuleLine(rule)}");
             return 0;
@@ -544,7 +546,7 @@ public static partial class CommandFactory
         };
         at.Validators.Add(r =>
         {
-            if (r.GetValueOrDefault<int>() < 1)
+            if (r.TryGetValue<int>(out var value) && value < 1)
                 r.AddError("--at is 1-based: the first rule is 1.");
         });
         var cmd = new Command("rule", "Remove one incompatibility rule from an existing .rcp.")
@@ -590,6 +592,8 @@ public static partial class CommandFactory
     /// they see confirmed back. The separator is <c>+</c> rather than a comma because a require
     /// rule demands ALL of its targets and a comma reads like a choice.
     /// </summary>
+    /// <param name="rule">The rule to describe, retaining its target order.</param>
+    /// <returns>The trigger, relationship and targets as one line.</returns>
     internal static string RuleLine(IncompatibilityRule rule)
     {
         string verb = rule.Type == RuleType.Exclude ? "never with" : "always with";
@@ -597,6 +601,7 @@ public static partial class CommandFactory
         return $"{rule.When.IngredientId}:{rule.When.VariantId} {verb} {targets}";
     }
 
+    /// <summary>Adds a weighted picture to an existing ingredient.</summary>
     private static Command AddVariant()
     {
         var igtPath = new Argument<string>("igt") { Description = "Path to the .igt to modify in place." };
@@ -631,10 +636,6 @@ public static partial class CommandFactory
                 var problems = Validator.ValidateIngredient(merged);
                 if (problems.Count > 0) { Report(problems); return 1; }
 
-                // Read(path) closed its file handle before returning, so it's safe to replace the
-                // file now. IngredientArchive.Write opens in ZipArchiveMode.Create, which throws
-                // if the target already exists, so we write to a sibling temp file and move it
-                // into place rather than deleting the original first.
                 WriteReplacing(path, p => IngredientArchive.Write(p, manifest, images, existing.Depths));
                 Console.WriteLine($"Added variant '{vid}' to {path}");
                 return 0;
@@ -644,6 +645,7 @@ public static partial class CommandFactory
         return cmd;
     }
 
+    /// <summary>Inserts an ingredient into a recipe's layer stack.</summary>
     private static Command AddIngredient()
     {
         var rcpPath = new Argument<string>("rcp") { Description = "Path to the .rcp to modify in place." };
@@ -654,7 +656,7 @@ public static partial class CommandFactory
         };
         index.Validators.Add(r =>
         {
-            var v = r.GetValueOrDefault<int?>();
+            if (!r.TryGetValue<int?>(out var v)) return;
             if (v is < 0) r.AddError("--index must be zero or greater.");
         });
         var cmd = new Command("ingredient", "Add an .igt as a layer of an existing .rcp.")
@@ -684,10 +686,6 @@ public static partial class CommandFactory
             var problems = Validator.ValidateRecipe(merged);
             if (problems.Count > 0) { Report(problems); return 1; }
 
-            // Read(path) closed its file handle before returning, so it's safe to replace the
-            // file now. RecipeArchive.Write opens in ZipArchiveMode.Create, which throws if the
-            // target already exists, so we write to a sibling temp file and move it into place
-            // rather than deleting the original first.
             WriteReplacing(path, p => RecipeArchive.Write(p, manifest, ingredients));
             Console.WriteLine($"Added ingredient '{id}' to {path} at index {at}");
             return 0;
@@ -695,6 +693,7 @@ public static partial class CommandFactory
         return cmd;
     }
 
+    /// <summary>Adds a recipe and its selection weight to a cookbook.</summary>
     private static Command AddRecipe()
     {
         var cbkPath = new Argument<string>("cbk") { Description = "Path to the .cbk to modify in place." };
@@ -733,12 +732,8 @@ public static partial class CommandFactory
                 Console.Error.WriteLine("--force: writing despite the problems above.");
             }
 
-            // Read(path) closed its file handle before returning, so it's safe to replace the
-            // file now. CookBookArchive.Write opens in ZipArchiveMode.Create, which throws if the
-            // target already exists, so we write to a sibling temp file and move it into place
-            // rather than deleting the original first.
             WriteReplacing(path, p => CookBookArchive.Write(p, manifest, recipes));
-            Console.WriteLine($"Added recipe '{id}' (weight {parse.GetValue(weight)}) to {path}");
+            Console.WriteLine($"Added recipe '{id}' (weight {parse.GetValue(weight).ToString(CultureInfo.InvariantCulture)}) to {path}");
             return 0;
         });
         return cmd;
@@ -748,6 +743,7 @@ public static partial class CommandFactory
     /// The `move` command group: change where an existing archive stacks something it already holds.
     /// Separate from `add`, which chooses a position only at insert time and could never revisit it.
     /// </summary>
+    /// <returns>The group of archive reordering commands.</returns>
     public static Command MoveGroup()
     {
         var group = new Command("move", "Reorder the layers an existing archive stacks.");
@@ -782,7 +778,7 @@ public static partial class CommandFactory
         };
         to.Validators.Add(r =>
         {
-            if (r.GetValueOrDefault<int?>() is < 1)
+            if (r.TryGetValue<int?>(out var value) && value is < 1)
                 r.AddError("--to must be 1 or greater: depth is 1-based, and depth 1 is the bottom layer.");
         });
         var up = new Option<bool>("--up")
@@ -806,10 +802,13 @@ public static partial class CommandFactory
         // success. Absent-entirely is refused for the same reason — there would be no destination.
         cmd.Validators.Add(result =>
         {
+            if (!result.TryGetValue(to, out int? destination)
+                || !result.TryGetValue(up, out bool moveUp)
+                || !result.TryGetValue(down, out bool moveDown)) return;
             var given = new List<string>();
-            if (result.GetValue(to) is not null) given.Add("--to");
-            if (result.GetValue(up)) given.Add("--up");
-            if (result.GetValue(down)) given.Add("--down");
+            if (destination is not null) given.Add("--to");
+            if (moveUp) given.Add("--up");
+            if (moveDown) given.Add("--down");
 
             if (given.Count == 0)
                 result.AddError("move ingredient needs a destination: --to <depth>, --up, or --down.");
@@ -848,10 +847,6 @@ public static partial class CommandFactory
             var problems = Validator.ValidateRecipe(merged);
             if (problems.Count > 0) { Report(problems); return 1; }
 
-            // Read(path) closed its file handle before returning, so it's safe to replace the
-            // file now. RecipeArchive.Write opens in ZipArchiveMode.Create, which throws if the
-            // target already exists, so we write to a sibling temp file and move it into place
-            // rather than deleting the original first.
             WriteReplacing(path, p => RecipeArchive.Write(p, moved, recipe.Ingredients));
 
             Console.WriteLine($"Moved '{ingredientId}' in '{recipe.Manifest.Id}' from depth "
@@ -891,11 +886,16 @@ public static partial class CommandFactory
     /// sibling temp file, then replaces the target with a single move. If the write fails, the
     /// original file is left untouched — the Core archive writers open with ZipArchiveMode.Create
     /// (which refuses an existing file), so a plain in-place overwrite would otherwise have to
-    /// delete first and lose the original on any mid-write failure. Reused by every `add` command.
+    /// delete first and lose the original on any mid-write failure. Archive readers close their
+    /// file handles before returning, so edits may replace the loaded archive safely.
     /// </summary>
     private static void WriteReplacing(string path, Action<string> write) => AtomicFile.Replace(path, write);
 
     /// <summary>Loads one PNG per distinct variant id, by the {id}.png convention.</summary>
+    /// <param name="m">The ingredient manifest naming the variants.</param>
+    /// <param name="imagesDir">The directory containing variant pictures.</param>
+    /// <param name="convertToSrgb">Whether to convert supported embedded color profiles.</param>
+    /// <returns>Decoded pictures owned by the caller. A partial load disposes all pictures before throwing.</returns>
     private static Dictionary<string, Image<Rgba32>> LoadVariantImages(IngredientManifest m, string imagesDir, bool convertToSrgb)
     {
         var loaded = new Dictionary<string, Image<Rgba32>>();
@@ -928,6 +928,9 @@ public static partial class CommandFactory
 
     /// <summary>Loads one picture for import through Core's one rule (<see cref="ImageImport.Load"/>),
     /// saying in one line what happened to its color profile.</summary>
+    /// <param name="path">The picture to import.</param>
+    /// <param name="convertToSrgb">Whether to convert a supported embedded color profile.</param>
+    /// <returns>The imported picture; the caller owns and must dispose it.</returns>
     private static Image<Rgba32> LoadPicture(string path, bool convertToSrgb)
     {
         var img = ImageImport.Load(path, convertToSrgb, out var profile);

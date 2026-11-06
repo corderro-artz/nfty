@@ -8,12 +8,12 @@ using static Nfty.Cli.CliGuards;
 namespace Nfty.Cli;
 
 /// <summary>
-/// Authoring parity: the edits the app makes to a book that the command line could not. Every one is
-/// a thin wrapper over the Core call the GUI uses (<see cref="CookBookEdits"/>, <see cref="VoxelReady"/>),
-/// validates with <see cref="Validator"/> before it writes, and writes through <c>AtomicFile</c>.
+/// Authoring edits shared with the app through Core editing operations and manifest transformations.
+/// Changed graphs are validated before being written through <c>AtomicFile</c>.
 /// </summary>
 public static partial class CommandFactory
 {
+    /// <summary>Defines an optional text value without inventing a default.</summary>
     private static Option<string?> OptionalText(string name, string description) =>
         new(name) { Description = description };
 
@@ -22,12 +22,18 @@ public static partial class CommandFactory
     /// the current one, so under <c>de-DE</c> <c>--weight 0.5</c> parsed as <c>5</c>. Every fractional
     /// option is made here, so none can fall back to the culture-sensitive converter.
     /// </summary>
+    /// <param name="name">The option name, including its leading dashes.</param>
+    /// <returns>An invariant numeric option whose invalid tokens become parse errors.</returns>
     internal static Option<double> InvariantNumber(string name) => new(name)
     {
         CustomParser = result => ParseInvariant(result, name, 0d),
     };
 
     /// <summary>The one invariant-culture parse every fractional option shares.</summary>
+    /// <param name="result">The argument result containing one numeric token.</param>
+    /// <param name="name">The option name used in an error.</param>
+    /// <param name="fallback">The value returned after recording a parse error.</param>
+    /// <returns>The parsed number, or the fallback when the token is invalid or missing.</returns>
     internal static double ParseInvariant(System.CommandLine.Parsing.ArgumentResult result, string name, double fallback)
     {
         string token = result.Tokens.Count == 1 ? result.Tokens[0].Value : string.Empty;
@@ -45,7 +51,7 @@ public static partial class CommandFactory
         weight.Required = true;
         weight.Validators.Add(r =>
         {
-            double v = r.GetValueOrDefault<double>();
+            if (!r.TryGetValue<double>(out var v)) return;
             if (!double.IsFinite(v) || v < 0 || (!allowZero && v == 0))
                 r.AddError(allowZero
                     ? "--weight must be zero or greater (0 shelves it)."
@@ -64,6 +70,7 @@ public static partial class CommandFactory
         return kind;
     }
 
+    /// <summary>Names an expected archive kind using its familiar extension.</summary>
     private static string KindWord(ArchiveKind kind) => kind switch
     {
         ArchiveKind.CookBook => ".cbk",
@@ -74,6 +81,12 @@ public static partial class CommandFactory
 
     /// <summary>Reads a book, applies <paramref name="edit"/>, validates, writes it back and prints
     /// the confirmation. Returns 1 (problems printed) rather than writing an illegal book.</summary>
+    /// <param name="path">The cookbook to edit in place.</param>
+    /// <param name="edit">Builds a graph borrowing the original book's images; it must not dispose them.</param>
+    /// <param name="confirmation">Describes the successfully written graph while its images remain live.</param>
+    /// <returns>Zero on success, or one when validation refuses the edit.</returns>
+    /// <remarks>This helper owns and disposes the original loaded book. The edited wrapper is borrowed,
+    /// so it is not disposed separately and must not introduce newly owned images.</remarks>
     private static int EditBook(string path, Func<LoadedCookBook, LoadedCookBook> edit,
         Func<LoadedCookBook, string> confirmation)
     {
@@ -86,6 +99,7 @@ public static partial class CommandFactory
         return 0;
     }
 
+    /// <summary>Removes a layer from a cookbook recipe or a standalone recipe.</summary>
     private static Command RemoveIngredient()
     {
         var file = new Argument<string>("file") { Description = "Path to the .cbk or .rcp to modify in place." };
@@ -120,6 +134,7 @@ public static partial class CommandFactory
         return cmd;
     }
 
+    /// <summary>Removes a variant while preserving the surviving art and depth.</summary>
     private static Command RemoveVariant()
     {
         var file = new Argument<string>("file") { Description = "Path to the .cbk or .igt to modify in place." };
@@ -164,6 +179,7 @@ public static partial class CommandFactory
         return cmd;
     }
 
+    /// <summary>Removes a recipe and its selection weight from a cookbook.</summary>
     private static Command RemoveRecipe()
     {
         var file = new Argument<string>("cbk") { Description = "Path to the .cbk to modify in place." };
@@ -180,6 +196,7 @@ public static partial class CommandFactory
         return cmd;
     }
 
+    /// <summary>Changes a cookbook's recipe listing without changing its rolls.</summary>
     private static Command MoveRecipe()
     {
         var file = new Argument<string>("cbk") { Description = "Path to the .cbk to modify in place." };
@@ -192,7 +209,8 @@ public static partial class CommandFactory
         };
         to.Validators.Add(r =>
         {
-            if (r.GetValueOrDefault<int>() < 1) r.AddError("--to is 1-based: the first recipe is 1.");
+            if (r.TryGetValue<int>(out var value) && value < 1)
+                r.AddError("--to is 1-based: the first recipe is 1.");
         });
         var cmd = new Command("recipe", "Move a recipe within a .cbk's listing.") { file, id, to };
         cmd.SetAction(parse =>
@@ -208,6 +226,7 @@ public static partial class CommandFactory
         return cmd;
     }
 
+    /// <summary>Changes a named variant's weight, refusing an unknown id.</summary>
     private static IngredientManifest Reweigh(IngredientManifest m, string variantId, double w)
     {
         if (m.Variants.All(v => v.Id != variantId))
@@ -215,6 +234,7 @@ public static partial class CommandFactory
         return m with { Variants = m.Variants.Select(v => v.Id == variantId ? v with { Weight = w } : v).ToList() };
     }
 
+    /// <summary>Changes one variant's weight in an ingredient or a cookbook recipe.</summary>
     private static Command SetVariant()
     {
         var file = new Argument<string>("file") { Description = "Path to the .igt or .cbk to modify in place." };
@@ -274,6 +294,7 @@ public static partial class CommandFactory
         return cmd;
     }
 
+    /// <summary>Changes a recipe's selection weight, allowing zero to shelve it.</summary>
     private static Command SetRecipe()
     {
         var file = new Argument<string>("cbk") { Description = "Path to the .cbk to modify in place." };
@@ -290,12 +311,13 @@ public static partial class CommandFactory
             {
                 var rcp = b.Recipes.FirstOrDefault(r => r.Manifest.Id == recipeId)
                     ?? throw new KeyNotFoundException($"No recipe '{recipeId}' in cookbook '{b.Manifest.Id}'.");
+                // Keep Upsert's historical weight-key order in the saved manifest. Only the weight
+                // changes, so the original recipe list already restores the author's listing.
                 var edited = CookBookEdits.UpsertRecipe(b, rcp, w);
-                // Upsert appends; the listing is the author's, so put the recipe back where it was.
                 return new LoadedCookBook
                 {
                     Manifest = edited.Manifest,
-                    Recipes = b.Recipes.Select(r => edited.Recipes.First(e => e.Manifest.Id == r.Manifest.Id)).ToList(),
+                    Recipes = b.Recipes,
                     SourceSha256 = b.SourceSha256,
                 };
             }, _ => $"Recipe '{recipeId}' now has weight {w.ToString(CultureInfo.InvariantCulture)}"
@@ -304,6 +326,7 @@ public static partial class CommandFactory
         return cmd;
     }
 
+    /// <summary>Edits cookbook identity fields and the optional intended supply.</summary>
     private static Command SetCookbook()
     {
         var file = new Argument<string>("cbk") { Description = "Path to the .cbk to modify in place." };
@@ -333,26 +356,20 @@ public static partial class CommandFactory
                 target = parsed;
             }
             ExpectKind(path, ArchiveKind.CookBook);
-            return EditBook(path, b => new LoadedCookBook
-            {
-                Manifest = b.Manifest with
+            return EditBook(path, b => CookBookEdits.EditIdentity(b,
+                n ?? b.Manifest.Name,
+                b.Manifest.Collection with
                 {
-                    Name = n ?? b.Manifest.Name,
-                    Collection = b.Manifest.Collection with
-                    {
-                        Name = cn ?? b.Manifest.Collection.Name,
-                        Symbol = sy ?? b.Manifest.Collection.Symbol,
-                        Description = de ?? b.Manifest.Collection.Description,
-                    },
-                    TargetSupply = ts is null ? b.Manifest.TargetSupply : target,
+                    Name = cn ?? b.Manifest.Collection.Name,
+                    Symbol = sy ?? b.Manifest.Collection.Symbol,
+                    Description = de ?? b.Manifest.Collection.Description,
                 },
-                Recipes = b.Recipes,
-                SourceSha256 = b.SourceSha256,
-            }, _ => $"Updated {path}");
+                ts is null ? b.Manifest.TargetSupply : target), _ => $"Updated {path}");
         });
         return cmd;
     }
 
+    /// <summary>Plans or applies the alpha snapping required for voxel models.</summary>
     private static Command SetVoxelReady()
     {
         var file = new Argument<string>("cbk") { Description = "Path to the .cbk to modify in place." };

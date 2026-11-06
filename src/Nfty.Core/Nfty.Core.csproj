@@ -20,6 +20,8 @@
     <InternalsVisibleTo Include="Nfty.App.Tests" />
     <!-- Nfty.Model fans a Rise batch out through the same ParallelWork rules as everything else, rather than restating them. -->
     <InternalsVisibleTo Include="Nfty.Model" />
+    <!-- Authoring JSON uses the same structural boundary as archive reads. -->
+    <InternalsVisibleTo Include="Nfty.Cli" />
   </ItemGroup>
 
   <!-- The built-in sample collection. Embedded rather than copied beside the executable because two

@@ -6,7 +6,7 @@ namespace Nfty.Cli;
 
 /// <summary>Reads an authoring manifest JSON file through the shared <see cref="Json.Options"/>,
 /// turning framework parse failures into messages that name the file. Enforces the schema version
-/// so an authoring input cannot declare a format this build cannot write.</summary>
+/// and nested structure before callers load parts, so malformed input fails at the file boundary.</summary>
 public static class ManifestFile
 {
     /// <summary>Reads an authoring manifest.</summary>
@@ -36,6 +36,10 @@ public static class ManifestFile
         // Omitting schemaVersion is fine (it defaults to Schema.Current); declaring an unsupported
         // one is rejected with the same message the archive readers use.
         UnsupportedSchemaVersionException.Require(manifest);
+        var problems = ManifestStructure.OfManifest(manifest);
+        if (problems.Count > 0)
+            throw new InvalidDataException($"Manifest '{path}' is not a readable {typeof(T).Name}: "
+                + string.Join(" ", problems));
         return manifest;
     }
 }

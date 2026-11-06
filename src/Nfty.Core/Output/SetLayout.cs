@@ -35,6 +35,19 @@ public static class SetLayout
     /// <summary>The Set manifest, which is also what identifies a folder as a Set at all.</summary>
     public const string ManifestFile = "set.json";
 
+    /// <summary>The packed archive path inside a Set folder, also used to preflight a new CLI cook.</summary>
+    /// <param name="directory">The Set folder.</param>
+    /// <returns>The folder's name with a .set extension, or collection.set at a filesystem root.</returns>
+    internal static string PackedPath(string directory)
+    {
+        string dir = Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory));
+        // The folder's own name, which is what the sibling archive was called too, so a Set packed
+        // by an older build keeps the name people already know it by. A path with no leaf at all (a
+        // drive root) would otherwise produce a bare ".set".
+        string leaf = Path.GetFileName(dir);
+        return Path.Combine(dir, (leaf.Length > 0 ? leaf : "collection") + ".set");
+    }
+
     /// <summary>The generated art, one <c>NNNN.png</c> per asset.</summary>
     public const string ImagesDir = "images";
 

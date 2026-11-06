@@ -355,22 +355,38 @@ public static class ModelBatch
         return new ModelExportResult(written, skipped, replaced);
     }
 
-    /// <summary>Writes the files into a folder, creating it.</summary>
+    /// <summary>Writes the files into a folder, creating it. Stages the complete group before
+    /// replacing existing files; a failed replacement restores the previous files. If restoration
+    /// also fails, the exception names a retained recovery directory.</summary>
     /// <exception cref="ArgumentException"><paramref name="directory"/> is null or whitespace.</exception>
     /// <param name="directory">The folder.</param>
-    /// <param name="files">The files.</param>
+    /// <param name="files">One complete file group. Repeated destination names keep the last payload.</param>
     public static void WriteFolder(string directory, IReadOnlyList<ModelFile> files)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(directory);
         ArgumentNullException.ThrowIfNull(files);
         foreach (var f in files) CheckPlain(f.FileName);
-        Directory.CreateDirectory(directory);
-        foreach (var f in files)
+        // The convenience writer has always accepted repeated destinations: the final payload wins.
+        // Keep that behavior before asking the sink to install each destination exactly once.
+        var targets = new Dictionary<string, int>(OperatingSystem.IsWindows()
+            ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        var distinct = new List<ModelFile>();
+        foreach (var file in files)
         {
-            string target = Path.Combine(directory, f.FileName);
-            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-            File.WriteAllBytes(target, f.Bytes);
+            string target = Path.GetFullPath(Path.Combine(directory, file.FileName));
+            if (targets.TryGetValue(target, out int index))
+                distinct[index] = new ModelFile(distinct[index].FileName, file.Bytes);
+            else
+            {
+                targets.Add(target, distinct.Count);
+                distinct.Add(file);
+            }
         }
+        Directory.CreateDirectory(directory);
+        if (files.Count == 0) return;
+        using var sink = ModelDestination.Folder(directory).Open([]);
+        sink.Add(distinct.Count == files.Count ? files : distinct);
+        sink.Complete();
     }
 
     /// <summary>Writes the files into a zip: ordinal-sorted entries, fixed timestamp, so identical
@@ -469,6 +485,10 @@ public abstract class ModelDestination
                     // Finish encoding/writing every new file before moving any existing output.
                     for (int i = 0; i < files.Count; i++)
                         File.WriteAllBytes(Path.Combine(staging, "new-" + i.ToString(System.Globalization.CultureInfo.InvariantCulture)), files[i].Bytes);
+                    // WriteFolder also accepts contained relative subpaths. Create their parents
+                    // after staging succeeds, before moving any of the previous payloads.
+                    foreach (var file in files)
+                        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(Path.Combine(_directory, file.FileName)))!);
                     for (int i = 0; i < files.Count; i++)
                     {
                         string target = Path.Combine(_directory, files[i].FileName);
