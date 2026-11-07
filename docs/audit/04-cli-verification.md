@@ -70,7 +70,7 @@ A final XML-only correction removed an absolute secrecy claim about stdin. The s
 - Folder rollback covers recoverable operation failures, not power loss or process termination across multiple filesystem operations. If restoration itself fails, the reported backup directory is retained for recovery.
 - Preflight refuses existing output; it is not an interprocess lock against a second writer racing after the check. Separate processes must not generate into the same destination concurrently.
 - Synthetic credentials and stubbed/provider-free paths test error behavior. No live upload, real secret or external model viewer was used.
-- The requested stop is before App review. CLI changes remain uncommitted; no new tag, merge or push is made at this checkpoint.
+- The requested verification stop was observed. The user accepted the results on 2026-11-06; CLI was committed as `cf67cce` and locally tagged `audit-cli-verified-2026-11-06` before the authorized App review. No merge or push.
 
 ## Local evidence
 

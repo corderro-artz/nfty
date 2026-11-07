@@ -1,6 +1,6 @@
 # Stage 4 — Nfty.Cli audit
 
-Status: both review passes complete on 2026-11-06; the user subsequently approved implementation. Fixes, XML corrections and bounded simplifications are complete and [verified](04-cli-verification.md). Stopped for user verification before App review. Baseline: `95775d6`, locally tagged `audit-model-verified-2026-11-06`. No production code, committed tests, fixtures, dependencies or archived designs changed during the review-only phase. CLI implementation remains uncommitted; nothing has been merged or pushed.
+Status: both review passes complete on 2026-11-06; the user subsequently approved implementation. Fixes, XML corrections and bounded simplifications are complete and [verified](04-cli-verification.md). The user accepted verification and approved App review on 2026-11-06. Baseline: `95775d6`, locally tagged `audit-model-verified-2026-11-06`. No production code, committed tests, fixtures, dependencies or archived designs changed during the review-only phase. CLI checkpoint: `cf67cce`, local tag `audit-cli-verified-2026-11-06`; nothing has been merged or pushed.
 
 ## Coverage and baseline
 
@@ -184,7 +184,7 @@ Suggested implementation scope: L01–L09, D01–D13 and S01–S08, with finite 
 
 Verification should include zero-warning Release build, the whole solution suite, real process error/exit tests, output failure recovery, deterministic byte samples, four-culture formatting and existing rendered captures if shared Model I/O is extracted. Use synthetic secret markers and stub providers; do not contact a live account merely to test these guards.
 
-The review-only approval stop was observed. The user subsequently authorized fixes; the [implementation checklist](04-cli-implementation.md) records completion and preservation refinements. The [final verification report](04-cli-verification.md) records all gates and limits. Work is stopped for user verification before App review. The Model checkpoint is already committed/tagged; CLI work remains uncommitted.
+The review-only approval stop was observed. The user subsequently authorized fixes; the [implementation checklist](04-cli-implementation.md) records completion and preservation refinements. The [final verification report](04-cli-verification.md) records all gates and limits. The user accepted verification on 2026-11-06. CLI is committed as `cf67cce`, locally tagged `audit-cli-verified-2026-11-06`; App review was authorized. No merge or push.
 
 ## Local evidence
 

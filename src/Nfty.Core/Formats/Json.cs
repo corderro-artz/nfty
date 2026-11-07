@@ -14,6 +14,9 @@ public static class Json
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = true,
+        // The platform default is CRLF on Windows and LF elsewhere. Output bytes (including
+        // metadata lengths in the Set index) must be identical across platforms.
+        NewLine = "\n",
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
 
         // A manifest record declares which of its members may be absent, in the type: `Colorization?`

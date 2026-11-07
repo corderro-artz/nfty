@@ -1,6 +1,6 @@
 # CLI implementation and verification
 
-Approved on 2026-11-06: implement the Stage 4 findings, XML corrections and bounded simplifications in the existing isolated worktree, then stop before App review. Baseline: `95775d6`, local tag `audit-model-verified-2026-11-06`. Implementation and verification are complete; [final evidence](04-cli-verification.md) is ready for the user's verification. No merge or push; changes remain uncommitted.
+Approved on 2026-11-06: implement the Stage 4 findings, XML corrections and bounded simplifications in the existing isolated worktree, then stop before App review. Baseline: `95775d6`, local tag `audit-model-verified-2026-11-06`. Implementation and verification are complete; [final evidence](04-cli-verification.md) was accepted by the user on 2026-11-06. CLI checkpoint: `cf67cce`, local tag `audit-cli-verified-2026-11-06`. No merge or push.
 
 ## Task checklist
 
