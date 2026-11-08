@@ -14,10 +14,11 @@ application, so the art and the collection it belongs to are authored in one env
 two. The end result is an expansive, reusable asset catalog, or a finished drop with OpenSea
 metadata written beside every image.
 
-None of it is approximate. The same book and the same seed produce byte-identical output on any
-machine, in any locale, on any CPU architecture, and the program counts the exact number of distinct
-assets a book admits *before* you ask it for any. The demo built into the binary admits **8,745,000**
-of them, out of twenty-nine 32×32 sprites.
+The same book, seed and generation options produce byte-identical output across machines, locales
+and CPU architectures. nfty reports the exact number of distinct DNA a book admits when it can,
+and an explicit bound or unknown result when counting is limited. The built-in demo admits exactly
+**8,745,000** distinct DNA from twenty-nine 32×32 sprites. DNA records the selection and quantized
+colors; different DNA can still render alike when drawings are identical or hidden.
 
 **Access**  
 [![Manual](https://img.shields.io/website?url=https%3A%2F%2Fwww.vaporsoft.dev%2Fnfty%2Fdocs%2F&label=User%20Manual&logo=readthedocs&logoColor=white)](https://www.vaporsoft.dev/nfty/docs/)
@@ -25,13 +26,13 @@ of them, out of twenty-nine 32×32 sprites.
 
 **Delivery**  
 [![CI](https://img.shields.io/github/actions/workflow/status/corderro-artz/nfty/ci.yml?branch=main&label=CI&logo=githubactions&logoColor=white)](https://github.com/corderro-artz/nfty/actions/workflows/ci.yml)
-[![Warnings](https://img.shields.io/badge/warnings-0-3d6b52)](#house-rules)
+[![Build policy](https://img.shields.io/badge/build-warnings%20as%20errors-3d6b52)](#house-rules)
 [![License: MIT](https://img.shields.io/badge/License-MIT-a11f31?logo=open-source-initiative&logoColor=white)](LICENSE)
 
 **Runtime**  
-[![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
+[![.NET SDK 10](https://img.shields.io/badge/.NET%20SDK-10.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![Avalonia 12](https://img.shields.io/badge/Avalonia-12.1.1-8B44AC)](https://avaloniaui.net/)
-[![Platform](https://img.shields.io/badge/platform-windows%20%7C%20linux%20%7C%20macOS-lightgrey)](https://github.com/corderro-artz/nfty)
+[![Downloads](https://img.shields.io/badge/downloads-Windows%20x64%20%7C%20Linux%20x64-lightgrey)](https://github.com/corderro-artz/nfty/releases/latest)
 
 ## Download and start in 60 seconds
 
@@ -42,7 +43,7 @@ of them, out of twenty-nine 32×32 sprites.
    empty folder. Fifty distinct chests land in it, numbered, with marketplace metadata beside each.
 3. Click **Open Set** to browse them, or open a Recipe and click **Rise** to turn one into a 3D model.
 
-The same thing from a terminal, and from your own program:
+From a terminal (using `nfty` as an alias for the download's `cli/Nfty.Cli` executable):
 
 ```bash
 nfty demo .                                                    # writes ChestDemo.cbk here
@@ -51,7 +52,7 @@ nfty menu ChestDemo.cbk --out chest.mnu                        # flatten it for 
 ```
 
 - Walk through it with pictures: **[Get started](https://www.vaporsoft.dev/nfty/docs/get-started/)**.
-- Roll in a game or server: **[Embed nfty in your program](https://www.vaporsoft.dev/nfty/docs/how-to/embed-nfty/)**.
+- Roll in a game or server: **[Embed nfty in your program](https://www.vaporsoft.dev/nfty/docs/embedding/)**.
 - Every command: **[Command line](https://www.vaporsoft.dev/nfty/docs/reference/cli/)**.
 
 > **Using the app rather than working on it?** The **[User Manual](https://www.vaporsoft.dev/nfty/docs/)** is for you; this file is for
@@ -63,7 +64,7 @@ nfty menu ChestDemo.cbk --out chest.mnu                        # flatten it for 
 | | |
 |---|---|
 | ![The Explorer on the Chest Demo: 2 recipes, 12 layers, 49 variants, 8,745,000 unique DNA](assets/readme/hero-light.png#gh-light-mode-only)![The Explorer on the Chest Demo: 2 recipes, 12 layers, 49 variants, 8,745,000 unique DNA](assets/readme/hero-dark.png#gh-dark-mode-only) | ![The Ingredient Editor: a gray value-map, the colorize rail and a live preview](assets/readme/editor-light.png#gh-light-mode-only)![The Ingredient Editor: a gray value-map, the colorize rail and a live preview](assets/readme/editor-dark.png#gh-dark-mode-only) |
-| **Count before you cook.** The Explorer reads the exact number of distinct assets a book admits. | **Draw in gray, color at cook time.** The editor is built in; one drawing rolls a hue per asset. |
+| **Count before you cook.** The Explorer reports exact DNA counts, bounds or an unknown result. | **Draw in gray, color at cook time.** The editor is built in; one drawing rolls a hue per asset. |
 | ![The Set browser: fifty cooked chests with one asset's DNA and trait rarity](assets/readme/set-light.png#gh-light-mode-only)![The Set browser: fifty cooked chests with one asset's DNA and trait rarity](assets/readme/set-dark.png#gh-dark-mode-only) | ![The Rise page on a rolled Chest recipe with its 3D tile](assets/readme/rise-light.png#gh-light-mode-only)![The Rise page on a rolled Chest recipe with its 3D tile](assets/readme/rise-dark.png#gh-dark-mode-only) |
 | **Browse and export.** Every asset carries its fingerprint, rarity and, optionally, a 3D model. | **Rise.** Paint depth into a rolled recipe and export glTF. |
 | ![The viewer showing a chest in 2D and 3D side by side](assets/readme/viewer-light.png#gh-light-mode-only)![The viewer showing a chest in 2D and 3D side by side](assets/readme/viewer-dark.png#gh-dark-mode-only) | ![The Quick Reference sheet with its four tabs and search box](docs/manual/images/help-sheet-light.png#gh-light-mode-only)![The Quick Reference sheet with its four tabs and search box](docs/manual/images/help-sheet-dark.png#gh-dark-mode-only) |
@@ -95,11 +96,11 @@ Sealing, spritesheets, the Kitchen and the runtime Menu are in the
 
 ## Overview
 
-nfty is two front-ends over one engine. `Nfty.Core` holds the whole of it — the archive formats, the
-colorizer, the roller, the rules engine, the rarity math and the text reports — and carries no UI or
-CLI dependency, so the command line and the Avalonia desktop app produce identical bytes from
-identical inputs. A collection is authored as a small tree of ZIP archives, generated against a
-string seed, and published as images plus two parallel sets of per-asset metadata.
+nfty is two front-ends over the same libraries. Dependency-free `Nfty.Ticket` owns rolling, rules,
+DNA and Menu reading; `Nfty.Core` adds authoring archives, imaging, generation, rarity and output,
+with no UI or CLI dependency. The command line and Avalonia desktop app therefore produce identical
+bytes from identical inputs and options. A collection is authored as a tree of ZIP archives,
+generated against a string seed, and published as images plus two sets of per-asset metadata.
 
 ### Capabilities
 
@@ -107,7 +108,7 @@ string seed, and published as images plus two parallel sets of per-asset metadat
 | --- | --- |
 | Value-map colorization | One grayscale drawing rolls a hue and saturation per asset; lightness is the art's, color is the collection's |
 | Three layer kinds | Dynamic (rolled color), Static (one fixed color, no RNG), Custom (full-color RGBA, composited as-is) |
-| Counted output space | `UniqueSpace` reports the exact number of distinct assets a book admits, and says which direction it is bounded in |
+| Counted output space | `UniqueSpace` reports exact DNA counts when computable, otherwise a lower bound, upper bound or unknown result |
 | Deterministic runs | SplitMix64 from a string seed; identical output across locales, machines and CPU architectures |
 | Optional layers | A per-recipe chance that a layer is left out entirely, added without changing any existing seed's output |
 | Incompatibility rules | Exclude and require constraints between named variants, enforced by re-rolling inside a bounded retry budget |
@@ -115,7 +116,7 @@ string seed, and published as images plus two parallel sets of per-asset metadat
 | Dual metadata | Standards-pure OpenSea `metadata/NNNN.json` plus a rich `nfty/NNNN.json` with DNA, seed, rarity and per-layer color |
 | Export and sealing | Four independent content axes, a plan you read before it writes, and AES-256-GCM sealing for a view-only handoff |
 | Extend | Re-open a cooked Set, add to it, and recompute rarity across the whole collection |
-| Open formats | Every archive is a ZIP with a `manifest.json`; the custom extension is a renamed `.zip` |
+| Open formats | Ordinary ZIP archives: authoring files and Menus use `manifest.json`, Sets use `set.json`, sealed exports use `seal.json` plus encrypted payload |
 
 ## The Suite
 
@@ -124,21 +125,22 @@ string seed, and published as images plus two parallel sets of per-asset metadat
 | **App** (`Nfty.Desktop`) | Avalonia desktop app: Explorer, pixel editor, Set browser, cook and export dialogs | [Get started](https://www.vaporsoft.dev/nfty/docs/get-started/) |
 | **CLI** (`Nfty.Cli`) | Every operation headless, for scripts and CI | [Command line](docs/manual/reference/cli.md) |
 | **Ticket** (`Nfty.Ticket`) | Dependency-free runtime API: roll an asset's identity from a Menu and a seed | [Ticket and Menu API](docs/manual/reference/ticket-api.md) |
-| **Menu** (`.mnu`) | A CookBook flattened with its art, so a runtime rolls and renders with no `.cbk` | [Roll assets at runtime](docs/manual/how-to/roll-assets-at-runtime.md) |
-| **Rise** (`Nfty.Model`) | Pixel art to a 3D model (glTF): depth painting, models inside Sets | [Make a 3D model](docs/manual/how-to/make-a-3d-model.md) |
-| **Viewer** | Pop-out window for one asset or model, 2D and 3D | [View an asset in its own window](docs/manual/how-to/view-an-asset-in-its-own-window.md) |
+| **Menu** (`.mnu`) | A CookBook flattened with its art, so a runtime rolls and renders with no `.cbk` | [Roll assets at runtime](docs/manual/embedding/menus-and-tickets.md) |
+| **Rise** (`Nfty.Model`) | Pixel art to a 3D model (glTF): depth painting, models inside Sets | [Make a 3D model](docs/manual/app/rise.md) |
+| **Viewer** | Pop-out window for one asset or model, 2D and 3D | [View an asset in its own window](docs/manual/app/viewer.md) |
 
 More in the [User Manual](https://www.vaporsoft.dev/nfty/docs/): [keyboard shortcuts](docs/manual/reference/shortcuts.md),
-[settings](docs/manual/reference/settings.md) and the [FAQ](docs/manual/understand/faq.md).
+[settings](docs/manual/reference/settings.md) and the [FAQ](docs/manual/help/faq.md).
 
 ## Requirements
 
 | Requirement | Version | Notes |
 | --- | --- | --- |
 | .NET SDK | 10.0 | Pinned by [`global.json`](global.json); needed to build, not to run a release |
-| .NET runtime | 10.0 | Only for the two framework-dependent download shapes (the desktop runtime on Windows, `dotnet-runtime-10.0` on Linux) |
-| OS | Windows, macOS, Linux | The desktop head is Avalonia; the CLI is platform-agnostic |
-| Screen | 1280×720 or larger | The app's window minimum; it opens at 1366×768 |
+| .NET runtime | 10.0 | Only for the two framework-dependent download shapes; ordinary .NET Runtime suffices (`dotnet-runtime-10.0` on Linux) |
+| Downloads | Windows x64, Linux x64 | Four shapes for each; no prebuilt macOS download |
+| Source and libraries | .NET 10; Ticket also .NET Standard 2.1 | Core, CLI and Model tests run on Windows, Linux and macOS; native desktop release checks cover Windows and Linux |
+| Window | 1280×720 logical units or larger | The app opens at this minimum; OS display scaling affects the physical screen space needed |
 | Python | 3.10+ | Optional — the manual, the demo generator and the icon build are Python tools |
 
 ### Dependencies
@@ -160,24 +162,26 @@ Prebuilt Windows (x64) and Linux (x64) builds are on the
 [releases page](https://github.com/corderro-artz/nfty/releases/latest). Every download carries both
 front-ends, the demo CookBook, and the licenses.
 
-| Shape | Windows `.zip` | Linux `.tar.gz` | .NET 10 needed | For |
-| --- | --- | --- | --- | --- |
-| **portable** | 85 MB | 80 MB | No | Unpack anywhere and run. Start here if you are unsure. |
-| **single-file** | 77 MB | 73 MB | No | One executable. Unpacks itself on first launch, so that launch is slower. |
-| **framework-dependent** | 15 MB | 12 MB | Yes | A small folder; needs the .NET 10 runtime. |
-| **single-file-net10** | 15 MB | 12 MB | Yes | One executable with the runtime left out. |
+| Shape | .NET 10 needed | For |
+| --- | --- | --- |
+| **portable** | No | Unpack and run. Start here if you are unsure. |
+| **single-file** | No | One executable per front-end. Unpacks itself on first launch, so that launch is slower. |
+| **framework-dependent** | Yes | A smaller folder; needs the .NET 10 runtime. |
+| **single-file-net10** | Yes | One executable per front-end, with the runtime left out. |
 
 Archives are named `nfty-<version>-<rid>-<shape>.zip` on Windows and `.tar.gz` on Linux
 (`tools/release/build.py` makes them; the tarball keeps the executable bits). The app is
 `Nfty.Desktop.exe` / `./Nfty.Desktop`; the command line sits in the `cli` folder. On Linux the app
-needs `libice6 libsm6 libx11-6 libfontconfig1` (present on any desktop install), and
+needs X11 and font libraries (`libice6 libsm6 libx11-6 libfontconfig1 libxrandr2 libxi6 libxcursor1`
+on Debian/Ubuntu), and
 `./install-desktop-entry.sh` adds a launcher entry and icon for the unpacked copy — see
 [Install nfty](docs/manual/get-started/install.md).
 
-nfty keeps its settings in a `.nfty` folder **beside the executable**, so a copy carries its own
-recent-files list, palette and thread setting and writes nothing elsewhere. Move or delete the folder and nothing is
-left behind. On Linux, where an installed copy's folder is read-only, it falls back to
-`~/.config/nfty` (`$XDG_CONFIG_HOME/nfty`).
+nfty normally keeps recents, palettes and settings in `.nfty` **beside the executable**. When that
+location cannot be created it tries fallbacks, including `$XDG_CONFIG_HOME/nfty` (or `~/.config/nfty`)
+on Linux; Settings → DATA shows the active location. Optional launcher/file-type registration and
+saved Pinata credentials use the operating system's locations. See
+[Settings files](docs/manual/reference/settings.md) and [Installation](docs/manual/get-started/install.md).
 
 To build from source:
 
@@ -270,21 +274,24 @@ nfty move ingredient cat.rcp --id shades --to 3
 ```
 
 …or drag a row in the desktop app. Reordering produces a **different collection**, not a re-render:
-the generator consumes one roll per layer in order, so moving a layer moves which roll reaches it.
+the generator consumes a random stream in stack order, including Dynamic color draws and skips for
+layers that are always absent. Moving a layer can change which draws reach later choices.
 
 ### Two Ways to Mint
 
-Rejecting duplicates is the default, and it is a promise: no two assets in a Set are the same, and a
-run that cannot fill its count from the unique DNA space fails and states the real maximum.
+Rejecting duplicate DNA is the default. A run that cannot find enough accepted rolls within its
+retry budget fails with the known count or bound; reaching that budget does not prove the entire
+space was exhausted. Distinct DNA records distinct selections and quantized colors, rather than
+guaranteeing visually different pixels.
 
 It is not the only way. **Allow repeats** in the Cook dialog, or `--unlimited` on the command line,
-keeps every roll — so any count is producible from any book, and identity is the token number as
-ERC-721 defines it. The rules are still enforced and the weights still decide rarity: a low-weight
+keeps repeated DNA, removing the uniqueness limit; identity is the token number as ERC-721 defines
+it. Validation, rules and bounded rule retries still apply. The weights still decide rarity: a low-weight
 variant stays uncommon, a layer with a low appearance chance is rarer still, and the rarest asset in
 the drop is the low-weight variant of a low-chance layer.
 
-The two modes are not interchangeable for reproducibility. The same book and seed give a *different*
-collection under each, because rejecting a duplicate spends a roll the other mode does not — which is
+The two modes are not interchangeable for reproducibility. The same book and seed can give a different
+collection under each, because rejecting a duplicate spends a roll the other mode keeps — which is
 why `set.json` records `uniqueDna` alongside the seed.
 
 ## Architecture
@@ -301,12 +308,12 @@ nfty/
 │   │   ├── Output/         Set writer, dual metadata, extend loader
 │   │   ├── Publish/        Export planning and AES-256-GCM sealing
 │   │   └── Stats/          Rarity, and the reports both front-ends print
-│   ├── Nfty.Ticket/        Roll + Menu runtime, no dependencies   (net10.0)
+│   ├── Nfty.Ticket/        Roll + Menu runtime, no dependencies   (net10.0, netstandard2.1)
 │   ├── Nfty.Model/         Rise: pixel art to a 3D model, glTF    (net10.0)
 │   ├── Nfty.Cli/           System.CommandLine wiring              (net10.0)
 │   ├── Nfty.App/           Avalonia GUI — ViewModels, Views, Themes
 │   └── Nfty.Desktop/       Desktop head — window, clipboard, pickers
-├── tests/                  Tests across five xunit.v3 projects
+├── tests/                  Six xunit.v3 projects, including Ticket's .NET Standard target
 │   └── fixtures/           Archives an older build wrote, and still reads
 ├── docs/
 │   ├── manual/             The end-user manual (Material for MkDocs)
@@ -370,7 +377,7 @@ dotnet run --project src/Nfty.Cli -- --help
 | `extend <cbk> <set>` | Grow an existing Set, recomputing rarity across all of it |
 | `menu <cbk> --out <mnu>` | Write a `.mnu` Menu: the book's weights, rules, colorization and art, flattened so a runtime host can roll and render an asset with no `.cbk` present |
 | `serve <mnu>` | Roll (`--seed`) or render (`--ticket`) one asset from a `.mnu` Menu, through the same render `generate` uses |
-| `model <png\|igt>` | Rise an asset (a picture, or one Ingredient variant, with its stored depth) into a 3D model: GLB, glTF + `.bin`, or glTF with the buffer inline. `--front N --back M` raises every opaque pixel at once |
+| `model <png\|igt\|rcp>` | Rise a picture, Ingredient variant or seeded Recipe roll into GLB, glTF + `.bin`, or embedded glTF. `--front N --back M` fills depth on a picture or variant |
 | `export <set>` | Publish a cooked Set: choose what goes with it, and in what shape |
 | `new ingredient\|recipe\|cookbook\|kitchen` | Build an archive from a manifest and its parts |
 | `add variant\|ingredient\|recipe\|rule` | Append to an existing archive |
@@ -419,15 +426,16 @@ detail pane, a Set browser over cooked output, and an **Ingredient Editor** with
   under and over the art while you draw.
 - **A gesture previews the pixels it will commit**, not an outline standing in for them — the shape
   tools fill, and a line commits at the brush's size in the brush's ink.
-- **Pixel art scales with nearest neighbor**, everywhere. Nothing in the app or the engine blurs,
-  resamples or anti-aliases an author's pixels.
+- **Pixel art scales with nearest neighbor.** Imports must match the canvas; cooking preserves that
+  size. Previews and the viewer's integer-scale exports keep crisp pixels without smoothing.
 
 ## Performance
 
 Measured inside the real app with [`Nfty.Core/Diagnostics/Perf.cs`](src/Nfty.Core/Diagnostics/Perf.cs)
 — named scopes with wall time and managed allocation, free when off, enabled by `NFTY_PERF=1`. It
 measures whole user-facing operations rather than microbenchmarks, which is why it is not
-BenchmarkDotNet.
+BenchmarkDotNet. The figures below are historical measurements of those optimizations on the
+development machine and workloads shown, rather than timing guarantees for a current release.
 
 | Operation | Before | After | What changed |
 | --- | --- | --- | --- |
@@ -460,8 +468,8 @@ dotnet test --filter FullyQualifiedName~DnaTests.Same_selection_same_dna
 
 Tests are named `Snake_case_sentences`, which is what `--filter` matches. Fixtures are built in
 memory from tiny synthetic images; there are **no golden-image files**, and every image assertion
-reads a pixel. `tests/fixtures/` is the one exception and the only place real archives are read from
-disk — their value is that an older build wrote them and they still read, so they are never
+reads a pixel. `tests/fixtures/` carries frozen archives — their value is that an older build wrote
+them and they still read, so they are never
 regenerated to make a failing test pass.
 
 ### Visual Verification
@@ -482,7 +490,8 @@ have been missed by reading code. Three companion sweeps catch what a frame cann
 ### House Rules
 
 - **The build is the lint.** `TreatWarningsAsErrors` and `GenerateDocumentationFile` are on, so a
-  warning or an undocumented public member fails the build. Zero warnings, always.
+  compiler warning or an undocumented public member fails the build. NuGet advisories are audited
+  separately; release verification also checks the publish logs for warnings and errors.
 - **Generated files are committed, and the generator is the source.** `Themes/Icons.axaml` comes from
   `assets/icons/*.svg` via `python tools/icons/build.py`; the demo `.cbk` comes from
   `tools/demo/`. Edit the generator, re-run it, commit both — a test fails if the pair disagrees.
@@ -495,12 +504,17 @@ have been missed by reading code. Three companion sweeps catch what a frame cann
 
 ## Deployment
 
-```bash
-python tools/release/build.py <version> win-x64     # four .zip archives in .release/
-gh release create v<version> .release/*.zip
-python tools/release/build.py <version> linux-x64   # four .tar.gz archives (wipes .release/ first)
-gh release upload v<version> .release/*.tar.gz
-```
+Releases come from a clean, verified `main` checkout. Set the version in `Directory.Build.props`,
+commit the intended release tree, and run both build/test and documentation gates before tagging.
+
+1. Run `python tools/release/build.py <version> win-x64` for the four Windows ZIPs.
+2. Preserve those artifacts outside `.release`, then run
+   `python tools/release/build.py <version> linux-x64` for the four Linux tarballs.
+   **Each invocation deletes `.release` first.** Verify the resolved checkout path before running it.
+3. Check every shape's extracted CLI and demo, seeded output, platform startup and complete
+   zero-warning publish logs. Preserve the complete eight-asset set and record its hashes.
+4. Tag that committed main tree and publish all eight verified assets together with release notes.
+   The documentation commit can precede the tag so the packaged README is current.
 
 - **Version**: `<Version>` in [`Directory.Build.props`](Directory.Build.props), stated once and
   carried by every assembly in the solution.
@@ -523,8 +537,9 @@ gh release upload v<version> .release/*.tar.gz
 > `mkdocs serve`. `docs_dir` is `docs/manual`, not `docs/`, so the archived mockups and design specs
 > stay out of the published site.
 
-> **Note:** GUI tests render through Avalonia's headless backend with Skia, so they run on Windows in
-> CI. The engine and CLI carry the determinism guarantees and are the ones re-run cross-platform.
+> **Note:** GUI tests render through Avalonia's headless backend with Skia on Windows and Linux in
+> CI. The standalone late-callback probe runs on both too. Core, CLI and Model tests also run on macOS;
+> this does not imply a prebuilt macOS desktop release.
 
 > **Note:** Sealing needs `AesGcm`, which is a platform capability rather than a language feature.
 > `Seal.IsSupported` answers for the current machine.
