@@ -1,0 +1,61 @@
+{
+  "version": "2.4.9",
+  "mainCommit": "c23eac47112c743b028b56e33edcea6391c07958",
+  "url": "https://github.com/corderro-artz/nfty/releases/tag/v2.4.9",
+  "publishedAt": "2026-11-08T22:46:47Z",
+  "hostedCi": "https://github.com/corderro-artz/nfty/actions/runs/42530430593",
+  "localPassedTests": 5375,
+  "localPlatformSkips": 1,
+  "crossPlatformAndCrossReleaseIdenticalPayloads": 67,
+  "openDependabotAlerts": 0,
+  "assets": [
+    {
+      "name": "nfty-2.4.9-linux-x64-framework-dependent.tar.gz",
+      "size": 12941695,
+      "digest": "sha256:da235611ca3abc552eba55912e69daffcf38e5e23254f67086f76251a8066714",
+      "browser_download_url": "https://github.com/corderro-artz/nfty/releases/download/v2.4.9/nfty-2.4.9-linux-x64-framework-dependent.tar.gz"
+    },
+    {
+      "name": "nfty-2.4.9-linux-x64-portable.tar.gz",
+      "size": 83412010,
+      "digest": "sha256:01be8ae6b6dbd887b8c347670fdfce64956164b330831658e96b2764fae3a935",
+      "browser_download_url": "https://github.com/corderro-artz/nfty/releases/download/v2.4.9/nfty-2.4.9-linux-x64-portable.tar.gz"
+    },
+    {
+      "name": "nfty-2.4.9-linux-x64-single-file-net10.tar.gz",
+      "size": 12937773,
+      "digest": "sha256:b0d95ce5bd06c90d535c1c92776792389c0037252aabc90c934a8aaf524bf609",
+      "browser_download_url": "https://github.com/corderro-artz/nfty/releases/download/v2.4.9/nfty-2.4.9-linux-x64-single-file-net10.tar.gz"
+    },
+    {
+      "name": "nfty-2.4.9-linux-x64-single-file.tar.gz",
+      "size": 76282807,
+      "digest": "sha256:281b0c74ab6fe562d18387b3199b63e3aa0f594dc3a60e0246f96e4a1231078b",
+      "browser_download_url": "https://github.com/corderro-artz/nfty/releases/download/v2.4.9/nfty-2.4.9-linux-x64-single-file.tar.gz"
+    },
+    {
+      "name": "nfty-2.4.9-win-x64-framework-dependent.zip",
+      "size": 15630899,
+      "digest": "sha256:bf9c45d54eb5dbb096010b3a464fc0c625f42450051047d81d06edf6a166392b",
+      "browser_download_url": "https://github.com/corderro-artz/nfty/releases/download/v2.4.9/nfty-2.4.9-win-x64-framework-dependent.zip"
+    },
+    {
+      "name": "nfty-2.4.9-win-x64-portable.zip",
+      "size": 89123614,
+      "digest": "sha256:107048493534940312ccc4503686705e1a32d53bac11e4c33cd8d1c0b8a27d53",
+      "browser_download_url": "https://github.com/corderro-artz/nfty/releases/download/v2.4.9/nfty-2.4.9-win-x64-portable.zip"
+    },
+    {
+      "name": "nfty-2.4.9-win-x64-single-file-net10.zip",
+      "size": 15535308,
+      "digest": "sha256:f2c9a2f0c5e4aab737ce949cfd56c3bb80895962a6c11fcd93600f36114bd361",
+      "browser_download_url": "https://github.com/corderro-artz/nfty/releases/download/v2.4.9/nfty-2.4.9-win-x64-single-file-net10.zip"
+    },
+    {
+      "name": "nfty-2.4.9-win-x64-single-file.zip",
+      "size": 81161093,
+      "digest": "sha256:5c3358bb4d61dc09e3949b0e10a789001029fc37705a44a7eff35727a4f3900c",
+      "browser_download_url": "https://github.com/corderro-artz/nfty/releases/download/v2.4.9/nfty-2.4.9-win-x64-single-file.zip"
+    }
+  ]
+}

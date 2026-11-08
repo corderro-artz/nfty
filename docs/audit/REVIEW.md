@@ -2,32 +2,37 @@
 
 Current baseline: `5dece661785a75990576f4016eb796558ba75fd4` (`origin/main`, verified 2026-11-08).
 
-Current status: **All nine two-pass reviews and approved implementations are complete.**
-Audited release [2.4.8](https://github.com/corderro-artz/nfty/releases/tag/v2.4.8) is published from
-main (`6c07a38`): eight verified assets, 67/67 cross-platform payload parity and all nine hosted
-CI jobs green. [Full after-action report](AFTER-ACTION.md) records every fix, simplification,
+Current status: **Complete.** All nine two-pass audits and approved fixes are committed on main.
+Audited [2.4.8](https://github.com/corderro-artz/nfty/releases/tag/v2.4.8) and the separately requested
+[2.4.9 Cook cleanup](https://github.com/corderro-artz/nfty/releases/tag/v2.4.9) are published with eight
+verified assets each. [Full after-action report](AFTER-ACTION.md) lists every fix, simplification,
 XML correction, result and limitation. [Final integration](10-final-verification.md).
 
+## Final task checklist
+
+- [x] Complete both passes across Ticket, Core, Model, CLI, App, Desktop, both samples and tooling.
+- [x] Implement approved correctness, ownership, math, XML and bounded simplification fixes.
+- [x] Merge verified audited work into main; commit/tag/push/publish 2.4.8; verify eight asset hashes.
+- [x] Complete Cook options/footer cleanup, stable geometry, scan-state and keyboard checks.
+- [x] Patch Pillow tooling/Python minimum; verify demo pixels and zero open GitHub dependency alerts.
+- [x] Correct README/manual links, badges, requirements and behavior claims; preserve Diataxis categories.
+- [x] Refresh four actual-production Cook screenshots in both themes; verify all live image hashes.
+- [x] Verify existing 269-page XML-to-HTML API reference; link the reusable generator and live pages.
+- [x] Final Release build: zero warnings/errors; 5,375 tests passed, zero failed, one platform skip.
+- [x] Compare 453 rendered frames; classify intended Cook changes and all incidental differences.
+- [x] Rebuild all eight 2.4.9 assets; verify native startup/centering and 67/67 cross-platform/cross-release payload parity.
+- [x] Commit/tag/push/publish 2.4.9 from main; all nine release CI jobs green; all server asset hashes match.
+- [x] Publish documentation; verify current manual, API signatures, 2.4.9 product metadata and four images live.
+- [x] Preserve/SHA-256 verify 25,780 evidence files; delete the merged audit branch.
+
+Codex blocks checkout-folder removal: “The task’s primary checkout cannot be removed.” The retained
+folder is detached; active development is `M:/Repositories/nfty` on main. No review/fix/release task
+is awaiting approval. Intentional optional work remains in BACKLOG.md. Maximum two subagents was
+respected. Latest continuation details: [handoff](HANDOFF.md).
+
 The original stale-main review was rebased onto `5dece661785a75990576f4016eb796558ba75fd4`; readiness
-checks were repeated. Initial stale results remain historical evidence, not release proof.
-
-## Active follow-ups for 2.4.9
-
-- [x] Complete and publish the full audited 2.4.8 release from main; verify uploaded asset hashes.
-- [x] Correct README links, badges, requirements and claims; separate README commit `6c07a38`.
-- [x] Correct 21 manual pages; strict build and 457 local targets pass (awaiting main commit/deploy).
-- [x] Verify and apply Pillow 13 tooling pin/Python 3.11 minimum; all 59 old alert ranges exclude it.
-- [x] Finish requested Cook options/footer cleanup and rendered/keyboard/fixed-geometry checks.
-- [x] Refresh four Cook manual screenshots in both themes from real 50-asset/50-model renders.
-- [x] Final 2.4.9 build: zero warnings/errors; full solution 5,375 passed/one platform skip; 453 frames compared.
-- [ ] Rebuild/verify all eight 2.4.9 assets and cross-release output parity.
-- [ ] Commit/tag/push/release 2.4.9 from main; verify CI, hashes, badges and deployed docs.
-- [x] Preserve 25,780 ignored evidence files with SHA-256 verification; delete the merged audit branch.
-- Checkout folder archival is blocked by Codex: “The task’s primary checkout cannot be removed.”
-  The folder is detached; active work remains on main.
-
-Maximum two subagents; no new engine/features beyond the approved follow-ups. Deferred optimization
-and feature work remains in BACKLOG.md. Latest continuation details: [handoff](HANDOFF.md).
+checks were repeated. Earlier checkpoint stop/no-push notes below are historical records, not the
+current status.
 
 ## Rules
 

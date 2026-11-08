@@ -2,8 +2,8 @@
 
 **2026-11-08.** The reviewed source changes are implemented and merged into main. This report records
 what changed, what was simplified, the result of each change, and the limits of the evidence.
-**Audited release 2.4.8 is published from main.** A separately requested Cook-dialog cleanup and
-developer-tool security update are in progress for 2.4.9; their remaining gates are listed below.
+**Completed:** audited release 2.4.8 and the separately requested 2.4.9 Cook cleanup are
+published from main. The manual, refreshed screenshots and generated API reference are live.
 
 The audit covered Nfty.Ticket, Nfty.Core, Nfty.Model, Nfty.Cli, Nfty.App, Nfty.Desktop, both embedding
 samples, developer tools, CI and shared build configuration. Each scope received a correctness and
@@ -53,41 +53,39 @@ product behavior was changed for this timestamp-only difference. A subsequent co
 (`final-audit-tests-corrected.log`). The earlier red logs are retained rather than labeled passes.
 
 
-## Current follow-up status — 2.4.9
+## Completed 2.4.9 follow-up and publication record
 
-The original nine staged audits and their approved implementations are complete. The user then
-requested a separate cleanup of the Cook dialog's options/footer and a new main-branch release.
+The original nine staged audits and approved implementations are complete. The user then
+requested a separate Cook-dialog cleanup, updated screenshots and another main-branch release.
+Those follow-ups are complete too; no implementation or publication gate remains pending.
 
-- **Complete:** 2.4.8 main merge, commit/tag/push/publication, eight-asset digest verification and
-  all nine hosted CI jobs. The table above records the actual published checkpoint.
-- **Complete locally:** README corrections; 21 manual-page corrections; strict manual build;
-  63 pages and 457 local file targets checked with zero missing targets. Publication follows
-  the separate main documentation commit. Existing Diataxis navigation remains.
-- **Complete locally:** Pillow tooling pin updated from 12.1.1 to 13.0.0 and the Python tooling
-  minimum to 3.11. All 59 Dependabot alert ranges include the old pin and exclude the new one.
-  Isolated verification preserves all 49 demo PNGs and 45 depth maps; 15 manifest differences
-  are only the already accepted canonical LF change. Tool regressions pass (18 plus one Windows
-  symlink-permission skip). Pillow is not a shipped .NET application dependency. Final hosted
-  checks and alert refresh follow the next push. ImageSharp remains pinned at 3.1.11.
-- **Complete locally:** compact Cook options/footer, truthful DNA/retry hints, fixed geometry
-  across model/form/running/done states, both themes and keyboard verification; 49 focused passes.
-- **Complete locally:** four manual screenshots replaced from actual 50-asset/50-model production
-  renders, with exact source-pixel verification and updated crop mappings.
-- **Complete locally:** final Release build has zero warnings/errors; corrected full solution
-  passes **5,375 tests with zero failures and one Linux-only skip** (App 2,067). Captured 453
-  frames: 403 common frames exact, 20 intentional Cook changes, six temporary path labels,
-  two tiny raster variations (two/four pixels; maximum channel differences one/three), and
-  22 new Cook-state frames. No baseline frame is missing.
-- **Pending:** eight fresh 2.4.9 packages/output parity; main tag/push/release; live documentation,
-  screenshots, badges and dependency-alert refresh.
-- **Complete:** preserved and SHA-256 verified all 25,780 ignored evidence files on main, then
-  deleted the merged `codex/ticket-audit-fixes` branch. Codex refuses to remove this chat’s primary
-  checkout folder; that folder remains detached and is not the active development branch.
+| Item | Observed result |
+|---|---|
+| Release | [2.4.9](https://github.com/corderro-artz/nfty/releases/tag/v2.4.9), published 2026-11-08; tag on main `c23eac47112c743b028b56e33edcea6391c07958`. |
+| Implementation commits | `a0c23f2` patches Pillow; `6b8617b` tidies Cook presentation/version; `c23eac4` publishes the documentation/report/images. The final closeout changes audit records only. |
+| Build/tests | Forced Release build: zero warnings/errors. Corrected complete solution: **5,375 passed, zero failed, one Linux-only skip**, including App 2,067. Focused Cook suite: 49 passed, seven new cases; the separate capture selection overlaps it. |
+| Hosted CI | [Run 42530430593](https://github.com/corderro-artz/nfty/actions/runs/42530430593): all nine jobs successful on the actual release source commit. |
+| Rendered UI | 453 frames: 403 common frames exact, 20 intentional Cook changes, six random path labels, two tiny raster variations (two/four pixels, maximum channel differences one/three), and 22 new Cook-state frames. No baseline frame missing. |
+| Geometry/keyboard | Card 430×421 DIP throughout form/model/extend/running/done states; footer/action bounds and 18 painted footer-strip comparisons remain exact in both themes. Space/Tab paths and late partial-alpha handling pass. |
+| Packages/output | All eight assets rebuilt from main with zero publish warnings/errors. Extracted CLIs produce **67/67 identical payloads across Windows/Linux, all four shapes, and 2.4.8 versus 2.4.9**. Every GitHub server SHA-256 and byte count matches; [inventory](releases/2.4.9.json). |
+| Native startup/centering | Four Windows packages enter the native input loop and remain alive/responding with empty stderr. Four Linux main windows center at (320,180), 1280×720 on a private 1920×1080 display; the final served.png viewer centers at (448,252), 1024×576. |
+| Developer-tool security | Pillow 13.0.0/Python 3.11 minimum applied. All 59 previous advisory ranges exclude it; GitHub now reports **zero open Dependabot alerts**. Isolated demo verification preserves 49 PNGs/45 depth maps; 15 manifest differences are only canonical LF. Frozen/demo archives were not rewritten. ImageSharp remains 3.1.11. |
+| Live documentation | [Deployment 42531923431](https://github.com/corderro-artz/corderro-artz.github.io/actions/runs/42531923431) succeeded. Four live Cook PNG SHA-256 hashes match committed images; both cooking guides reuse them. The product page shows 2.4.9. |
+| Generated XML documentation | [Live API reference](https://www.vaporsoft.dev/nfty/docs/reference/api/): 269 HTML pages for Ticket/Core/Model. Current record-struct and generic-constraint declarations were checked against the live HTML. The README links the reusable generator and separate check/lint commands. |
+| Branch/evidence cleanup | Merged `codex/ticket-audit-fixes` branch deleted. All 25,780 ignored evidence files were copied to main and SHA-256 verified. Codex refuses removal of this chat’s primary checkout; its retained folder is detached, while active development is on main. |
 
-The first 2.4.9 full run found the new test harness’s unbounded worker gate via the repository
-wait-policy guard. A bounded wait corrected it; a transient wrong callback-argument edit was
-rejected by the compiler and corrected. The nearest ten cases and the subsequent complete
-solution rerun pass. No production behavior changed for this harness correction.
+The first 2.4.9 full run caught the new worker-only test gate through the repository’s wait-policy
+guard. A bounded wait corrected it; a transient wrong callback-argument edit was rejected by the
+compiler and corrected. The nearest ten cases and subsequent entire solution pass. No production
+behavior changed for this harness correction. Initial fixed-six-second native snapshots were
+also replaced with bounded, instrumented readiness checks: Windows queue idle and Linux mapped,
+centered content windows. The viewer check explicitly waits for served.png rather than accepting
+the intermediate launch window. The original attempts remain in ignored evidence; they are not
+called successful gates.
+
+The user-requested source, documentation, release and branch tasks are complete. Intentional
+feature/performance deferrals below remain backlog, and the primary-checkout folder restriction
+is an application constraint rather than an unmerged code branch.
 
 ## Public documentation corrections
 
@@ -666,6 +664,6 @@ Detailed local artifacts are retained under ignored `artifacts/audit/`, includin
 frame inventories, native-boundary probes, failed-before evidence and final logs. In particular,
 Desktop's `desktop-final-focused.log`, `desktop-frame-comparison.csv` and
 `desktop-source-freeze.csv` separate the final fixed source from the disclosed stale-mutant run.
-Final local, hosted-CI, package and publication evidence is retained under
-`artifacts/audit/release-2.4.8/audited-final/`. The additional 2.4.9 tasks above remain explicitly
-open until their own checks and publication finish.
+Final evidence is retained under `artifacts/audit/release-2.4.8/audited-final/`,
+`artifacts/audit/release-2.4.9/`, and `artifacts/audit/cook-cleanup-2.4.9/` on the main checkout.
+The two public release inventories preserve asset names, sizes and server digests alongside this report.

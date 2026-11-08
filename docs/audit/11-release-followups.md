@@ -85,4 +85,17 @@ channel difference one/three). Twenty-two new Cook-state frames were added; none
 Focused before/after regions and actual manual renders were visually inspected. Production code
 was unchanged by the later test-gate correction, so the captured UI remains the verified source.
 
-Package, publication and live-site gates remain in the current tracker until directly observed.
+All eight package/native gates are complete. The original arbitrary six-second startup snapshots
+were superseded by instrumented readiness checks: bounded Windows input-idle and actual mapped,
+centered Linux content windows. The viewer predicate explicitly waits for served.png, not the
+intermediate launch window. Every final probe passes with empty application stderr; the original
+attempts remain retained rather than being labeled successful. See the .NET
+[readiness API](https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.process.waitforinputidle?view=net-10.0).
+
+Version 2.4.9 is published from main c23eac4 with eight server digests/sizes matching local archives.
+All 67 payloads match Windows/Linux, all shapes and 2.4.8/2.4.9. All nine hosted CI jobs passed on
+the exact release commit. GitHub open dependency alerts are zero. Site deployment 42531923431
+succeeded; all four live PNG hashes and current API record/constraint signatures match source.
+The audit branch is deleted; 25,780 evidence files are SHA-256 preserved. Codex blocks deletion
+of this chat’s primary checkout folder, which remains detached. No implementation/release task
+remains pending; optional work is retained explicitly in BACKLOG.md.
