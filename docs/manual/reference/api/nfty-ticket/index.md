@@ -2,7 +2,7 @@
 
 # Nfty.Ticket
 
-The roll, and nothing else. `net10.0`, no NuGet packages, no imaging library: reference this alone to decide what an asset is - recipe, variants, rolled color, DNA - on a server or in an engine.
+The roll, and nothing else. `net10.0` and `netstandard2.1`, no NuGet packages, no imaging library: reference this alone to decide what an asset is - recipe, variants, rolled color, DNA - on a server or in an engine.
 
 49 public types. Each page lists the public and protected members with their signatures and the documentation written beside the code.
 
@@ -14,8 +14,8 @@ The roll, and nothing else. `net10.0`, no NuGet packages, no imaging library: re
 | [`ColorRoller`](Nfty.Core.Generation.ColorRoller.md) | class | Turns a layer's colorization into the color one asset will use. |
 | [`Dna`](Nfty.Core.Generation.Dna.md) | class | An asset's identity: SHA-256 over the recipe id, each layer's variant id, and — for colorized layers — the QUANTIZED color. |
 | [`IRng`](Nfty.Core.Generation.IRng.md) | interface | The single source of randomness a run consumes. |
-| [`LayerSelection`](Nfty.Core.Generation.LayerSelection.md) | struct | What one layer contributed to an asset, in the form the DNA hashes. |
-| [`RolledColor`](Nfty.Core.Generation.RolledColor.md) | struct | One rolled color: the hue and saturation a value-map is tinted with. |
+| [`LayerSelection`](Nfty.Core.Generation.LayerSelection.md) | record struct | What one layer contributed to an asset, in the form the DNA hashes. |
+| [`RolledColor`](Nfty.Core.Generation.RolledColor.md) | record struct | One rolled color: the hue and saturation a value-map is tinted with. |
 | [`RulesEngine`](Nfty.Core.Generation.RulesEngine.md) | class | Decides whether a rolled selection satisfies a recipe's incompatibility rules. |
 | [`SeedHash`](Nfty.Core.Generation.SeedHash.md) | class | Turns a user's seed string into RNG state. |
 | [`SplitMix64Rng`](Nfty.Core.Generation.SplitMix64Rng.md) | class | SplitMix64. |
@@ -28,7 +28,7 @@ The roll, and nothing else. `net10.0`, no NuGet packages, no imaging library: re
 |---|---|---|
 | [`ColorConvert`](Nfty.Core.Imaging.ColorConvert.md) | class | Conversions between RGB and the two color spaces a layer can be authored in. |
 | [`ColorSpec`](Nfty.Core.Imaging.ColorSpec.md) | class | Parses the prefixed color specs an author writes. |
-| [`RgbColor`](Nfty.Core.Imaging.RgbColor.md) | struct | An 8-bit-per-channel color, used as the neutral currency between the color-space conversions and ImageSharp. |
+| [`RgbColor`](Nfty.Core.Imaging.RgbColor.md) | record struct | An 8-bit-per-channel color, used as the neutral currency between the color-space conversions and ImageSharp. |
 
 ## Nfty.Core.Model
 
@@ -60,7 +60,7 @@ The roll, and nothing else. `net10.0`, no NuGet packages, no imaging library: re
 | Type | Kind | Summary |
 |---|---|---|
 | [`AssetTicket`](Nfty.Ticket.AssetTicket.md) | record | One roll, complete, costing no pixels: what a server stores and hands a client. |
-| [`Draw`](Nfty.Ticket.Draw.md) | struct | One layer to draw. |
+| [`Draw`](Nfty.Ticket.Draw.md) | record struct | One layer to draw. |
 | [`Lookup`](Nfty.Ticket.Lookup.md) | class | Lookup helpers shared by every assembly that resolves ids to things. |
 | [`MenuArchive`](Nfty.Ticket.MenuArchive.md) | class | Reads a `.mnu` Menu: every weight, rule and colorization a rolled asset needs, plus its art, with no imaging library involved. |
 | [`MenuArt`](Nfty.Ticket.MenuArt.md) | record | How a Menu carries its art. |
@@ -72,5 +72,5 @@ The roll, and nothing else. `net10.0`, no NuGet packages, no imaging library: re
 | [`MenuSchema`](Nfty.Ticket.MenuSchema.md) | class | The Menu schema range this build can read and write — separate from [`Schema`](Nfty.Core.Model.Schema.md) because a Menu is not a CookBook manifest and evolves on its own line. |
 | [`Plating`](Nfty.Ticket.Plating.md) | class | Turns a ticket into the ordered list of draws that reproduces it. |
 | [`PreparedMenu`](Nfty.Ticket.PreparedMenu.md) | class | A Menu with its draw order and running weight totals already resolved. |
-| [`TicketLayer`](Nfty.Ticket.TicketLayer.md) | struct | What one layer contributed to a rolled asset. |
+| [`TicketLayer`](Nfty.Ticket.TicketLayer.md) | record struct | What one layer contributed to a rolled asset. |
 | [`Ticketer`](Nfty.Ticket.Ticketer.md) | class | The roll: decides a whole asset and touches no pixels. |

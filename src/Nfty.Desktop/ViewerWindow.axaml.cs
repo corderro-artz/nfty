@@ -17,8 +17,8 @@ namespace Nfty.Desktop;
 /// closes, so a host hands both over and forgets them.</para>
 /// <para><b>It writes its size when it closes</b>, into the entry for the layout it is in (2D only, or
 /// 2D and 3D), together with the backdrop the reader chose. It remembers the last NORMAL size and
-/// position, so a window closed while maximized comes back with the size it had before it was
-/// maximized, not the size of the screen.</para>
+/// position in the existing settings format, so a window closed while maximized retains its normal
+/// size. The host centers every new viewer; it does not restore those stored coordinates.</para>
 /// <para>Escape closes the window's open dialog and does nothing otherwise: a viewer holds nothing
 /// unsaved, but a stray Escape must not make it vanish. Ctrl+W closes the window.</para>
 /// </remarks>
@@ -29,6 +29,8 @@ public partial class ViewerWindow : Window
     private readonly IViewerWindowState _state;
     private Size _normalSize;
     private PixelPoint? _normalPosition;
+    private bool _disposed;
+    private readonly DesktopDialogLifetime _dialogLifetime;
 
     /// <summary>Exists only so Avalonia's runtime XAML loader and designers find a public constructor;
     /// a viewer without a subject has nothing to show.</summary>
@@ -47,6 +49,7 @@ public partial class ViewerWindow : Window
         _vm = vm;
         _dialogs = dialogs;
         _state = state;
+        _dialogLifetime = new DesktopDialogLifetime(this, dialogs);
 
         DataContext = vm;
         ChromeWiring.Attach(this, this.FindControl<Nfty.App.Controls.WindowFrame>("Frame")!, captionCommands: true);
@@ -60,11 +63,12 @@ public partial class ViewerWindow : Window
 
         var scrim = this.FindControl<Panel>("DialogScrim")!;
         var slot = this.FindControl<ContentControl>("DialogSlot")!;
-        dialogs.Changed += () =>
+        _updateDialogs = () =>
         {
             slot.Content = dialogs.Active;
             scrim.IsVisible = dialogs.Active is not null;
         };
+        dialogs.Changed += _updateDialogs;
 
         KeyBindings.Add(new KeyBinding
         {
@@ -74,7 +78,7 @@ public partial class ViewerWindow : Window
         KeyBindings.Add(new KeyBinding
         {
             Gesture = new KeyGesture(Key.Escape),
-            Command = new RelayCommand(CloseOpenDialog),
+            Command = new AsyncRelayCommand(_dialogLifetime.DismissActiveAsync),
         });
 
         Resized += (_, _) =>
@@ -87,6 +91,8 @@ public partial class ViewerWindow : Window
         };
     }
 
+    private readonly Action _updateDialogs;
+
     /// <summary>The window's view model.</summary>
     public ViewerViewModel ViewModel => _vm;
 
@@ -94,8 +100,8 @@ public partial class ViewerWindow : Window
     public DialogService Dialogs => _dialogs;
 
     /// <summary>
-    /// Places the window at the remembered position if some screen still shows it, and otherwise
-    /// asks for the center of the screen: an unplugged monitor cannot strand a window.
+    /// Explicitly places a window at saved coordinates, clamped to a remaining screen. Retained for
+    /// callers requesting placement; the desktop host uses centered startup instead.
     /// </summary>
     /// <param name="entry">The remembered window.</param>
     /// <param name="screens">Each screen's working area in pixels and its pixels per DIP.</param>
@@ -113,22 +119,38 @@ public partial class ViewerWindow : Window
         }
     }
 
-    // Escape with no dialog open does nothing, deliberately: the key is not ours to spend on closing
-    // a window that holds nothing unsaved but was opened on purpose.
-    private void CloseOpenDialog()
+    /// <summary>Centers on a live opening window's display, retaining independent window ownership.</summary>
+    /// <param name="openingWindow">A live shell or viewer, or null to use the native opening display.</param>
+    internal void Center(Window? openingWindow)
     {
-        if (_dialogs.Active is not null) _dialogs.Close(null);
+        WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        if (openingWindow is { IsVisible: true }
+            && openingWindow.Screens.ScreenFromWindow(openingWindow) is { } screen)
+            Position = screen.WorkingArea.Center;
     }
 
     /// <summary>Writes the size for the layout this window is in, then frees what it owns.</summary>
     /// <param name="e">The close request.</param>
     protected override void OnClosed(EventArgs e)
     {
-        base.OnClosed(e);
-        try { Remember(); }
-        catch (Exception) { /* convenience state: a failed save never stops a window closing */ }
-        _vm.Dispose();
-        _vm.Subject.Dispose();
+        try
+        {
+            base.OnClosed(e);
+            try { Remember(); }
+            catch (Exception) { /* convenience state: a failed save never stops a window closing */ }
+        }
+        finally { DisposeContent(); }
+    }
+
+    /// <summary>Releases the transferred content, including a window that failed before showing.</summary>
+    internal void DisposeContent()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _dialogs.Changed -= _updateDialogs;
+        while (_dialogs.Active is not null) _dialogs.Close(null);
+        try { _vm.Dispose(); }
+        finally { _vm.Subject.Dispose(); }
     }
 
     private void Remember()

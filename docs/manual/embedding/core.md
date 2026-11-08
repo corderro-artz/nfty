@@ -10,6 +10,8 @@ which references `Nfty.Core` and `Nfty.Model`.
 
 ## Read a book and generate
 
+The runnable sample requests three assets with distinct DNA, so its CookBook must permit at least three.
+
 ```csharp
 --8<-- "samples/Nfty.Embedding.Sample/Program.cs:cook"
 ```
@@ -39,7 +41,9 @@ Recipes and Ingredients inside it) is `IDisposable`, and `using var` frees the w
 ```
 
 `MenuRenderer.Render` uses the same colorizer and compositor as `generate`, so a client rendering a
-server's ticket gets identical pixels. You dispose the returned image.
+server's ticket gets identical pixels. You dispose the returned image. Rule rejection consumes a
+roll, so the sample keeps the same RNG stream and retries up to 1,000 times; reaching that bound
+does not prove the book has no legal selections.
 
 ## Write a Menu
 

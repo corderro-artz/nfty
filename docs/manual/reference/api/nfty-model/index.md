@@ -34,7 +34,7 @@ Rise: pixel art to 3D. Voxel meshes, glTF writing and reading. Depends on Nfty.C
 | [`SkippedModel`](Nfty.Model.SkippedModel.md) | record | A picture a batch left out. |
 | [`StackDepth`](Nfty.Model.StackDepth.md) | class | The stack rule, in one place: a layered picture is risen as ONE solid, never as stacked slabs (slabs z-fight wherever two layers cover a pixel). |
 | [`StackFaces`](Nfty.Model.StackFaces.md) | class | The two face pictures of a risen stack: what the front and the back of each column show, each taken from the layer that OWNS that face by the union rule, plus the seam where a column's wall switches from one owner's color to the other's. |
-| [`StackPick`](Nfty.Model.StackPick.md) | struct | One present layer of a selection: its ingredient, the variant chosen, and the color it rolled (null for the stored pixels). |
+| [`StackPick`](Nfty.Model.StackPick.md) | record struct | One present layer of a selection: its ingredient, the variant chosen, and the color it rolled (null for the stored pixels). |
 | [`StackRise`](Nfty.Model.StackRise.md) | class | What the stack rule makes of a stack: the art, the union depth map and the face owners' pictures. |
 | [`UnsupportedModelException`](Nfty.Model.UnsupportedModelException.md) | class | A model's content is malformed, truncated, structurally invalid or uses a feature outside [`GltfReader`](Nfty.Model.GltfReader.md)'s supported [`ModelWriter`](Nfty.Model.ModelWriter.md) subset. |
 

@@ -7,16 +7,18 @@ a POST, so the only requirement is a browser pointed at the printed URL.
 
     python tools/diagrams/build.py          # serve, wait for a render, write, exit
 
-The palette is read from src/Nfty.App/Themes/Tokens.axaml's own values, so the
-diagram cannot drift from the app the way a hand-picked hex would.
+The palette below mirrors src/Nfty.App/Themes/Tokens.axaml. Update it when the
+theme tokens change; this script does not parse the XAML.
 """
 import http.server
 import json
 import pathlib
+import secrets
 import socketserver
 import sys
 import threading
 import webbrowser
+import xml.etree.ElementTree as ET
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 DIAGRAMS = ROOT / "docs" / "diagrams"
@@ -94,13 +96,16 @@ for (const [name, vars] of Object.entries(themes)) {
   const out = '<?xml version="1.0" encoding="UTF-8"?>' + new XMLSerializer().serializeToString(el);
   done[name] = out; log(name + " rendered, " + out.length + " bytes");
 }
-const r = await fetch("/write", { method:"POST", body: JSON.stringify(done) });
+const r = await fetch("/write", { method:"POST", headers:{"X-Nfty-Render-Token": %(token)s},
+                                  body: JSON.stringify(done) });
+if (!r.ok) throw new Error(await r.text());
 log(await r.text());
 </script></body>"""
 
 
 class Handler(http.server.BaseHTTPRequestHandler):
     written = threading.Event()
+    token = secrets.token_urlsafe(32)
 
     def log_message(self, *a):
         pass
@@ -111,6 +116,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             "src": json.dumps((DIAGRAMS / "generation-pipeline.mmd").read_text(encoding="utf-8")),
             "themes": json.dumps(THEMES),
             "font": json.dumps(FONT),
+            "token": json.dumps(self.token),
         }
         raw = body.encode("utf-8")
         self.send_response(200)
@@ -120,7 +126,28 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.wfile.write(raw)
 
     def do_POST(self):
-        payload = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+        # A page on another origin can POST to localhost. Only the render page can read this token;
+        # its custom header also prevents a simple cross-origin form submission from writing files.
+        if self.path != '/write':
+            self.send_error(404)
+            return
+        if not secrets.compare_digest(self.headers.get('X-Nfty-Render-Token', ''), self.token):
+            self.send_error(403, 'render token required')
+            return
+        try:
+            size = int(self.headers.get('Content-Length', '0'))
+            if not 0 < size <= 8 * 1024 * 1024:
+                raise ValueError('invalid render size')
+            payload = json.loads(self.rfile.read(size))
+            if not isinstance(payload, dict) or set(payload) != set(THEMES):
+                raise ValueError('expected exactly light and dark SVGs')
+            # Check the WHOLE pair before opening either output. Theme names are never path input.
+            for svg in payload.values():
+                if not isinstance(svg, str) or ET.fromstring(svg).tag != '{http://www.w3.org/2000/svg}svg':
+                    raise ValueError('expected SVG documents')
+        except (ValueError, ET.ParseError) as ex:
+            self.send_error(400, str(ex))
+            return
         for name, svg in payload.items():
             out = DIAGRAMS / f"generation-pipeline-{name}.svg"
             out.write_text(svg, encoding="utf-8", newline="\n")

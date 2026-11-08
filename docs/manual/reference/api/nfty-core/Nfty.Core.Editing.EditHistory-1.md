@@ -5,7 +5,7 @@
 Namespace `Nfty.Core.Editing` in assembly `Nfty.Core`.
 
 ```csharp
-public sealed class EditHistory<TPixel>
+public sealed class EditHistory<TPixel> where TPixel : struct
 ```
 
 Undo/redo stack of reversible edit commands over one surface.

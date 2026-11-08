@@ -5,7 +5,7 @@
 Namespace `Nfty.Core.Editing` in assembly `Nfty.Core`.
 
 ```csharp
-public interface IEditSurface<TPixel>
+public interface IEditSurface<TPixel> where TPixel : struct
 ```
 
 A fixed-size, randomly-addressable raster the edit commands paint on, generic over the pixel it stores: [`ValueMap`](Nfty.Core.Editing.ValueMap.md) supplies [`GrayPixel`](Nfty.Core.Editing.GrayPixel.md), [`ColorMap`](Nfty.Core.Editing.ColorMap.md) supplies `Rgba32`. The commands hold geometry only — every "what does this pixel become" decision travels as a `TPixel`, so one implementation of disc stamping, shape rasterising, region scanning and the undo snapshot serves both surfaces.

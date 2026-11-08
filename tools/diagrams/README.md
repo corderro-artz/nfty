@@ -9,6 +9,8 @@ python tools/diagrams/build.py
 
 It serves a page, prints a URL, and writes both SVGs when a browser renders it. Mermaid needs a
 browser either way; mermaid-cli would drag puppeteer and a second Chromium in to supply one.
+The local write endpoint requires the render page's token and accepts only a complete light/dark
+pair of SVG documents. Malformed renders are rejected before either output is opened.
 
 `DiagramSourceTests` fails the build if a rendered SVG stops carrying a word the `.mmd` says, so the
 "Source:" caption under the README figure stays true. Edit the `.mmd`, run the script, commit all

@@ -5,7 +5,7 @@
 Namespace `Nfty.Core.Diagnostics` in assembly `Nfty.Core`.
 
 ```csharp
-public readonly struct PerfEntry : IEquatable<PerfEntry>
+public readonly record struct PerfEntry
 ```
 
 One measured scope's running totals.

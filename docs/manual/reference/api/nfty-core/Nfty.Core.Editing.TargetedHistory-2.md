@@ -5,7 +5,7 @@
 Namespace `Nfty.Core.Editing` in assembly `Nfty.Core`.
 
 ```csharp
-public sealed class TargetedHistory<TKey, TPixel>
+public sealed class TargetedHistory<TKey, TPixel> where TKey : notnull where TPixel : struct
 ```
 
 One undo/redo history across many surfaces: each step remembers WHICH surface it edited, so undoing restores that surface and says which one it was.

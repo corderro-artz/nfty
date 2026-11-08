@@ -2,7 +2,22 @@
 
 Worktree: `C:/Users/Corde/.codex/worktrees/ticket-audit-fixes/nfty`. Branch: `codex/ticket-audit-fixes`. Checkpoint: `audit-app-verified-2026-11-08`. Read CLAUDE.md, AGENTS.md, REVIEW.md and 05-app-verification.md. Other applications' chat histories are separate from these files.
 
-## Stop boundary
+## Latest checkpoint — final integration
+
+All nine project/tooling reviews and approved fixes are complete. See 06-desktop.md,
+07-ticket-sample.md, 08-embedding-sample.md, 09-tooling.md and 10-final-verification.md.
+Final forced Release build: zero warnings/errors. Test targets: 5,368 passes/one Linux-only skip;
+470/470 output payloads exact; 431 frames compared, 423 exact and eight classified.
+Both controlled callback probes pass. Independent external model-viewer validation is complete.
+Fresh packages, main merge/tag/publication and a separate public-docs commit remain required.
+The ignored AFTER-ACTION-draft.md enumerates every fix/simplification/XML result; finalize it
+as docs/audit/AFTER-ACTION.md after publication. Do not claim pending release assets are verified.
+
+## Latest user direction — remaining stages and release
+
+The user has superseded the earlier stop boundary: finish Desktop, Ticket.Sample, Embedding.Sample and tooling/integration, including the new requirement that main and viewer windows open centered on the opening display (primary fallback). After final verification, commit and merge into main, tag/push and publish the newest audited release (v2.4.8 if still available). Maximum two agents at once. Current implementation is active; the prior checkpoint details below remain historical evidence, not a claim that these remaining stages are complete.
+
+## Previous stop boundary (superseded)
 
 Ticket, Core, Model, CLI and App both-pass audits and approved fixes are locally committed/tagged and verified. **Stop before Desktop, Ticket.Sample, Embedding.Sample and tooling/CI/integration reviews. No merge, push or publication.** The user requested at most two agents; the two final agents have finished. Old Set compatibility is waived; math, determinism, ownership and fixed geometry remain requirements.
 

@@ -5,7 +5,7 @@
 Namespace `Nfty.Core.Editing` in assembly `Nfty.Core`.
 
 ```csharp
-public readonly struct ThicknessBucket : IEquatable<ThicknessBucket>
+public readonly record struct ThicknessBucket
 ```
 
 How many solid pixels share one total thickness.

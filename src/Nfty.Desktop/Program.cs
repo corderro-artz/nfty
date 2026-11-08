@@ -2,6 +2,7 @@ using Avalonia;
 
 namespace Nfty.Desktop;
 
+/// <summary>The native application entry point and Avalonia configuration.</summary>
 internal static class Program
 {
     /// <summary>The path the process was started with (<c>nfty book.cbk</c>, or a file dropped on the
@@ -12,6 +13,9 @@ internal static class Program
     /// app shell. The command the Windows "open with the nfty viewer" registration runs.</summary>
     internal static bool ViewerOnly { get; private set; }
 
+    /// <summary>Starts the desktop lifetime and reports recognized missing Linux libraries.</summary>
+    /// <param name="args">An optional startup path and viewer switch.</param>
+    /// <returns>The application exit code, or one for a recognized startup dependency failure.</returns>
     [STAThread]
     public static int Main(string[] args)
     {
@@ -21,7 +25,7 @@ internal static class Program
         {
             return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
-        catch (DllNotFoundException ex) when (MissingLinuxLibrary(ex) is { } sentence)
+        catch (DllNotFoundException ex) when (OperatingSystem.IsLinux() && MissingLinuxLibrary(ex) is { } sentence)
         {
             // Avalonia 12's X11 backend opens libICE/libSM for session management unconditionally
             // (X11PlatformOptions.EnableSessionManagement=false does not skip it), so a minimal
@@ -34,20 +38,23 @@ internal static class Program
 
     /// <summary>The product sentence for a missing X11 library, or null when the exception is not
     /// one of the libraries nfty's Linux install notes list.</summary>
+    /// <param name="ex">The dependency failure; only a recognized library name is copied.</param>
+    /// <returns>A Linux installation hint, or null for an unrecognized library.</returns>
     internal static string? MissingLinuxLibrary(DllNotFoundException ex)
     {
-        if (OperatingSystem.IsWindows()) return null;
         string text = ex.Message;   // read for the library's NAME only, never shown
         string? lib = new[] { "libICE", "libSM", "libX11", "libfontconfig", "libXrandr", "libXi", "libXcursor" }
             .FirstOrDefault(name => text.Contains(name, StringComparison.Ordinal));
         if (lib is null) return null;
         return $"nfty cannot start: the system library {lib} is not installed.\n"
-             + "On Debian or Ubuntu:  sudo apt install libice6 libsm6 libx11-6 libfontconfig1\n"
-             + "On Fedora:            sudo dnf install libICE libSM libX11 fontconfig\n"
-             + "On Arch:              sudo pacman -S libice libsm libx11 fontconfig\n"
+             + "On Debian or Ubuntu:  sudo apt install libice6 libsm6 libx11-6 libfontconfig1 libxrandr2 libxi6 libxcursor1\n"
+             + "On Fedora:            sudo dnf install libICE libSM libX11 fontconfig libXrandr libXi libXcursor\n"
+             + "On Arch:              sudo pacman -S libice libsm libx11 fontconfig libxrandr libxi libxcursor\n"
              + "The command line (cli/Nfty.Cli) needs none of these.";
     }
 
+    /// <summary>Configures native Avalonia rendering and the bundled default font.</summary>
+    /// <returns>The application builder, before the desktop lifetime starts.</returns>
     public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>()
         .UsePlatformDetect()
         // The bundled IBM Plex Sans is the DEFAULT family, not only a Window style: a popup, tooltip

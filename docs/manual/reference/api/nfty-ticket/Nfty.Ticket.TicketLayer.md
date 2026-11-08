@@ -5,7 +5,7 @@
 Namespace `Nfty.Ticket` in assembly `Nfty.Ticket`.
 
 ```csharp
-public readonly struct TicketLayer : IEquatable<TicketLayer>
+public readonly record struct TicketLayer
 ```
 
 What one layer contributed to a rolled asset.

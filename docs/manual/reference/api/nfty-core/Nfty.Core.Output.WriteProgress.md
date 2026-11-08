@@ -5,7 +5,7 @@
 Namespace `Nfty.Core.Output` in assembly `Nfty.Core`.
 
 ```csharp
-public readonly struct WriteProgress : IEquatable<WriteProgress>
+public readonly record struct WriteProgress
 ```
 
 How far a set write has got. [`WriteProgress.Fraction`](Nfty.Core.Output.WriteProgress.md#p-fraction) suits a progress bar.

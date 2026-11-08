@@ -1,6 +1,4 @@
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
 using Nfty.App.Services;
 using Nfty.App.Viewer;
 using Nfty.App.ViewModels;
@@ -15,9 +13,9 @@ namespace Nfty.Desktop;
 /// a viewer is meant to outlive the shell: it is dragged to a second screen and left there. The
 /// application keeps running until the LAST window closes (<see cref="App.Shutdown"/>), so closing
 /// the main window leaves open viewers alone.</para>
-/// <para>The main window is used for one thing only: to find the screens, when it still exists. If
-/// it is gone, or was never there, the viewer asks its own platform for them and otherwise opens
-/// centered.</para>
+/// <para>New viewers center on the opening window's display when it is available, otherwise on the
+/// native opening display with a primary-display fallback. Remembered sizes and maximized state
+/// survive; old screen coordinates do not override centering.</para>
 /// </remarks>
 public sealed class DesktopViewerHost : IViewerHost
 {
@@ -38,12 +36,13 @@ public sealed class DesktopViewerHost : IViewerHost
     {
     }
 
-    /// <summary>Creates the host with a stated way to find the main window, which a test supplies.</summary>
+    /// <summary>Creates the host with a stated way to find the opening window.</summary>
     /// <param name="picker">Save dialogs.</param>
     /// <param name="clipboard">The clipboard.</param>
     /// <param name="state">The remembered window size.</param>
     /// <param name="bridge">Turns art into bitmaps.</param>
-    /// <param name="mainWindow">Finds the main window, or null when there is none.</param>
+    /// <param name="mainWindow">Finds a live opening window, or null to use the native opening display.
+    /// The default host prefers the active viewer, then the shell, then any visible window.</param>
     public DesktopViewerHost(IFilePickerService picker, IClipboardService clipboard, IViewerWindowState state,
         IImageBridge bridge, Func<Window?> mainWindow)
     {
@@ -57,34 +56,48 @@ public sealed class DesktopViewerHost : IViewerHost
     /// <summary>Raised with each window just before it is shown, so a test can reach it.</summary>
     public event Action<ViewerWindow>? Opened;
 
-    private static Window? DefaultMainWindow() =>
-        (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+    private static Window? DefaultMainWindow() => DesktopWindowContext.Current;
 
     /// <inheritdoc />
     public void Open(ViewerSubject subject)
     {
         ArgumentNullException.ThrowIfNull(subject);
-        var remembered = _state.Current;
-        var dialogs = new DialogService();
-        // A gallery's tiles report into THIS window's dialog layer: the one it was opened through may
-        // be the main window, closed since, or the launch window of `--viewer`, closed at once.
-        if (subject is GallerySubject g) g.Gallery.Dialogs = dialogs;
-        var vm = new ViewerViewModel(subject, _picker, _clipboard, dialogs, _bridge) { InWindow = true };
-        if (Enum.TryParse<ViewerBackdrop>(remembered.Backdrop, out var backdrop)) vm.TwoD.Backdrop = backdrop;
-        vm.TwoD.BackdropColor = remembered.BackdropColor;
-        vm.Preview.Wireframe = remembered.Wireframe;
+        ViewerViewModel? vm = null;
+        ViewerWindow? window = null;
+        try
+        {
+            var remembered = _state.Current;
+            var dialogs = new DialogService();
+            // Tiles report into THIS window's layer: the shell or launch window may be gone.
+            if (subject is GallerySubject g) g.Gallery.Dialogs = dialogs;
+            vm = new ViewerViewModel(subject, _picker, _clipboard, dialogs, _bridge) { InWindow = true };
+            if (Enum.TryParse<ViewerBackdrop>(remembered.Backdrop, out var backdrop)) vm.TwoD.Backdrop = backdrop;
+            vm.TwoD.BackdropColor = remembered.BackdropColor;
+            vm.Preview.Wireframe = remembered.Wireframe;
 
-        var entry = vm.Layout == ViewerLayout.TwoD ? remembered.TwoD : remembered.ThreeD;
-        var window = new ViewerWindow(vm, dialogs, _state, entry);
+            var entry = vm.Layout == ViewerLayout.TwoD ? remembered.TwoD : remembered.ThreeD;
+            window = new ViewerWindow(vm, dialogs, _state, entry);
 
-        // A closed main window has no live screens to ask; the new window's own platform is the
-        // fallback, and with neither the window simply opens centered.
-        var main = _mainWindow();
-        var screens = (main is { IsVisible: true } ? main.Screens : null) ?? window.Screens;
-        window.Place(entry, screens?.All.Select(s => (s.WorkingArea, s.Scaling)).ToArray()
-            ?? Array.Empty<(PixelRect WorkingArea, double Scaling)>());
+            // CenterScreen calculates physical frame size at the opening screen's DPI before show.
+            // Show(owner) would make the viewer die with the shell.
+            window.Center(_mainWindow());
 
-        Opened?.Invoke(window);
-        window.Show();
+            Opened?.Invoke(window);
+            window.Show();
+        }
+        catch
+        {
+            if (window is not null)
+            {
+                try { window.Close(); }
+                finally { window.DisposeContent(); }
+            }
+            else
+            {
+                try { vm?.Dispose(); }
+                finally { subject.Dispose(); }
+            }
+            throw;
+        }
     }
 }

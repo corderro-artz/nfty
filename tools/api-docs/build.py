@@ -13,7 +13,7 @@ need a .NET SDK. Edit a `///` comment, run this, commit the pages - `--check` fa
 disagree, so the generated half cannot quietly become the real one.
 
     python tools/api-docs/build.py                 # rebuild the libraries, regenerate the pages
-    python tools/api-docs/build.py --check         # regenerate to a temp folder, diff, exit 1 on drift
+    python tools/api-docs/build.py --check         # regenerate in memory, diff, exit 1 on drift
     python tools/api-docs/build.py --lint          # complain about thin or broken documentation, exit 1
     python tools/api-docs/build.py --surface s.json   # reuse a surface dump instead of running dotnet
 
@@ -29,7 +29,6 @@ import re
 import shutil
 import subprocess
 import sys
-import tempfile
 import xml.etree.ElementTree as ET
 from posixpath import dirname, join, relpath
 
@@ -40,7 +39,7 @@ SURFACE_PROJECT = os.path.join('tools', 'api-docs', 'surface')
 # Assembly -> (folder under reference/api, what a reader takes it for).
 ASSEMBLIES = {
     'Nfty.Ticket': ('nfty-ticket',
-                    'The roll, and nothing else. `net10.0`, no NuGet packages, no imaging library: '
+                    'The roll, and nothing else. `net10.0` and `netstandard2.1`, no NuGet packages, no imaging library: '
                     'reference this alone to decide what an asset is - recipe, variants, rolled color, '
                     'DNA - on a server or in an engine.'),
     'Nfty.Core': ('nfty-core',
@@ -398,7 +397,6 @@ def render_member(model, r, tid, m):
             out += [b, '']
     if s.get('value') is not None and r.blocks(s['value']):
         out += ['**Value.** ' + r.blocks(s['value']), '']
-    ptypes = {p['name']: p['type'] for p in m.get('params', [])}
     if m.get('params'):
         out += ['**Parameters**', '']
         for p in m['params']:
@@ -662,7 +660,7 @@ def read_tree(root):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--check', action='store_true',
-                    help='regenerate to a temporary folder and compare; exit 1 when the committed pages differ')
+                    help='regenerate in memory and compare; exit 1 when the committed pages differ')
     ap.add_argument('--lint', action='store_true',
                     help='check the documentation itself (blank or name-only summaries, missing param, '
                          'typeparam and returns, unresolved cref); exit 1 listing every offender')

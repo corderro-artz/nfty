@@ -5,7 +5,7 @@
 Namespace `Nfty.Core.Editing` in assembly `Nfty.Core`.
 
 ```csharp
-public sealed class EraseStroke<TPixel> : RegionEditCommand<TPixel>
+public sealed class EraseStroke<TPixel> : RegionEditCommand<TPixel> where TPixel : struct
 ```
 
 Erases to transparency — sets alpha to 0, keeping every other channel — along a path.

@@ -5,7 +5,7 @@
 Namespace `Nfty.Core.Editing` in assembly `Nfty.Core`.
 
 ```csharp
-public readonly struct Brush<TPixel> : IEquatable<Brush<TPixel>>
+public readonly record struct Brush<TPixel> where TPixel : struct
 ```
 
 Brush settings: stamp diameter in pixels and the pixel it paints. One type for both surfaces — a gray brush is a `Brush<GrayPixel>`, a color brush a `Brush<Rgba32>` — because nothing about a brush differs between them beyond its payload. The payload carries its own alpha, which is what lets an unlocked session paint a semi-transparent stroke; under [`OpacityLock.Locked`](Nfty.Core.Editing.OpacityLock.md#f-locked) it is snapped when applied.

@@ -126,7 +126,8 @@ static Dictionary<string, object> Describe(Type t)
         string ret = Fmt(m.ReturnType, Nullability(m.ReturnParameter));
         string display = op ? OperatorName(m) : m.Name;
         string sig = Access(m) + Modifiers(m) + (op ? OperatorKeyword(m) : ret + " " + display + tp)
-                     + "(" + ParamList(m.GetParameters()) + ")";
+                     + "(" + ParamList(m.GetParameters()) + ")"
+                     + Constraints(m.IsGenericMethodDefinition ? m.GetGenericArguments() : []);
         var method = Member(id, op ? "operator" : "method", sig, display + tp + "(" + TypeList(m.GetParameters()) + ")",
             m.GetParameters(), Inherits(m, isProperty: false));
         // The lint wants <returns> on anything that returns a value, and <typeparam> per generic parameter.
@@ -185,8 +186,9 @@ static string KindOf(Type t) =>
     : "class";
 
 static bool IsRecord(Type t) => t.GetMethod("<Clone>$", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance) is not null
-                                || (t.IsValueType && t.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-                                     .Any(m => m.Name == "PrintMembers" || m.Name.Contains("PrintMembers")));
+                                || (t.IsValueType && t.GetMethod("PrintMembers", BindingFlags.NonPublic | BindingFlags.Instance
+                                     | BindingFlags.DeclaredOnly, [typeof(StringBuilder)]) is { ReturnType: var result } printer
+                                     && result == typeof(bool) && Generated(printer));
 
 static string TypeDeclaration(Type t)
 {
@@ -197,7 +199,7 @@ static string TypeDeclaration(Type t)
     {
         var inv = t.GetMethod("Invoke")!;
         return sb + "delegate " + Fmt(inv.ReturnType, Nullability(inv.ReturnParameter)) + " " + DisplayName(t)
-               + "(" + ParamList(inv.GetParameters()) + ")";
+               + "(" + ParamList(inv.GetParameters()) + ")" + Constraints(OwnTypeParameters(t));
     }
     if (t.IsClass && t.IsAbstract && t.IsSealed) sb.Append("static ");
     else if (t.IsClass && t.IsAbstract && kind is "class" or "record") sb.Append("abstract ");
@@ -215,9 +217,55 @@ static string TypeDeclaration(Type t)
             && i.GetGenericTypeDefinition() == typeof(IEquatable<>)) continue;
         bases.Add(Fmt(i, null));
     }
-    if (bases.Count > 0 && !t.IsInterface) sb.Append(" : ").Append(string.Join(", ", bases));
-    else if (bases.Count > 0) sb.Append(" : ").Append(string.Join(", ", bases));
-    return sb.ToString();
+    if (bases.Count > 0) sb.Append(" : ").Append(string.Join(", ", bases));
+    return sb + Constraints(OwnTypeParameters(t));
+}
+
+// The declaration must carry the same restrictions a consumer's generic code must satisfy.
+// The CLR stores struct/class/new() as flags and base/interface restrictions as types. notnull is
+// compiler metadata: a parameter's NullableAttribute overrides its nearest NullableContextAttribute.
+static Type[] OwnTypeParameters(Type t) => t.IsGenericTypeDefinition
+    ? t.GetGenericArguments().Skip(t.DeclaringType?.GetGenericArguments().Length ?? 0).ToArray() : [];
+
+static string Constraints(IEnumerable<Type> parameters)
+{
+    var clauses = new StringBuilder();
+    foreach (var p in parameters)
+    {
+        var flags = p.GenericParameterAttributes;
+        bool valueType = flags.HasFlag(GenericParameterAttributes.NotNullableValueTypeConstraint);
+        var types = p.GetGenericParameterConstraints();
+        var parts = new List<string>();
+        if (valueType) parts.Add("struct");
+        else if (flags.HasFlag(GenericParameterAttributes.ReferenceTypeConstraint))
+            parts.Add(ConstraintNullability(p) == 2 ? "class?" : "class");
+        else if (ConstraintNullability(p) == 1 && types.All(t => t.IsInterface)) parts.Add("notnull");
+        parts.AddRange(types.Where(t => !valueType || t != typeof(ValueType))
+            .OrderBy(t => t.IsInterface).ThenBy(t => Fmt(t, null), StringComparer.Ordinal)
+            .Select(t => Fmt(t, null)));
+        // struct already requires a public parameterless constructor; spelling both is illegal C#.
+        if (!valueType && flags.HasFlag(GenericParameterAttributes.DefaultConstructorConstraint)) parts.Add("new()");
+        if (parts.Count > 0) clauses.Append(" where ").Append(p.Name).Append(" : ").Append(string.Join(", ", parts));
+    }
+    return clauses.ToString();
+}
+
+static byte ConstraintNullability(Type p)
+{
+    static byte? Flag(MemberInfo owner, string attribute)
+    {
+        var data = owner.GetCustomAttributesData().FirstOrDefault(a =>
+            a.AttributeType.FullName == "System.Runtime.CompilerServices." + attribute);
+        if (data?.ConstructorArguments is not { Count: > 0 } args) return null;
+        return args[0].Value is byte flag ? flag
+            : args[0].Value is IReadOnlyCollection<CustomAttributeTypedArgument> { Count: > 0 } values
+                && values.First().Value is byte first ? first : null;
+    }
+    if (Flag(p, "NullableAttribute") is { } own) return own;
+    if (p.DeclaringMethod is { } method && Flag(method, "NullableContextAttribute") is { } local) return local;
+    for (Type? type = p.DeclaringType; type is not null; type = type.DeclaringType)
+        if (Flag(type, "NullableContextAttribute") is { } context) return context;
+    return 0;
 }
 
 // ---- names and ids -------------------------------------------------------------------------------

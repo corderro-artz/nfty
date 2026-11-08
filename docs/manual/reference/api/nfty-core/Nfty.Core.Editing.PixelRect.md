@@ -5,7 +5,7 @@
 Namespace `Nfty.Core.Editing` in assembly `Nfty.Core`.
 
 ```csharp
-public readonly struct PixelRect : IEquatable<PixelRect>
+public readonly record struct PixelRect
 ```
 
 An integer pixel rectangle (top-left origin).

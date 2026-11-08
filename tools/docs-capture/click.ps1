@@ -4,6 +4,7 @@
 # single joined string and every comma then reads as a field, which turned a click count
 # of 1 into 222.
 param([string]$Points, [int]$SettleMs = 900)
+$ErrorActionPreference = 'Stop'
 
 Add-Type @"
 using System;
@@ -31,6 +32,7 @@ foreach ($pt in ($Points -split ';')) {
     [NClick]::GetCursorPos([ref]$p) | Out-Null
     if ($p.X -eq $x -and $p.Y -eq $y) { break }
   }
+  if ($p.X -ne $x -or $p.Y -ne $y) { throw "cursor would not move to $x,$y" }
   for ($c = 0; $c -lt $n; $c++) {
     [NClick]::mouse_event(0x0002, 0, 0, 0, [IntPtr]::Zero)   # LEFTDOWN
     [NClick]::mouse_event(0x0004, 0, 0, 0, [IntPtr]::Zero)   # LEFTUP

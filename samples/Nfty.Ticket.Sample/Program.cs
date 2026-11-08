@@ -30,7 +30,7 @@ AssetTicket? ticket = null;
 for (int attempt = 0; attempt < 1000 && ticket is null; attempt++)
     ticket = Ticketer.TryRoll(prepared, rng);               // null = a rule rejected this roll
 if (ticket is null)
-    throw new InvalidOperationException("The rules rejected every roll.");
+    throw new InvalidOperationException("No legal ticket after 1,000 attempts.");
 
 string wire = ticket.ToWire();                              // store this, or send it
 // --8<-- [end:roll]
@@ -51,15 +51,16 @@ foreach (Draw draw in Plating.Plate(menu, back))            // bottom-first: pai
     if (draw.Kind == LayerKind.Custom)
     {
         // Full-color art: composite the cropped cell as it is.
-        Console.WriteLine($"  custom  {cell.Key} at ({cell.X},{cell.Y}) {cell.Width}x{cell.Height}");
+        Console.WriteLine(FormattableString.Invariant($"  custom  {cell.Key} at ({cell.X},{cell.Y}) {cell.Width}x{cell.Height}"));
     }
     else
     {
-        // Gray value-map: every pixel becomes HsvToRgb(hue, sat, gray / 255), alpha untouched.
-        // (draw.Model says whether the layer is HSV or HSL; this sample only shows the idea.)
-        RgbColor mid = ColorConvert.HsvToRgb(draw.Hue, draw.Sat, 128 / 255.0);
-        Console.WriteLine($"  tinted  {cell.Key} hue {draw.Hue:0.#} sat {draw.Sat:0.##}"
-                          + $" -> mid-gray becomes {ColorSpec.Format(mid)}");
+        // Gray supplies value for HSV or lightness for HSL; keep the source pixel's alpha.
+        RgbColor mid = draw.Model == ColorModel.Hsv
+            ? ColorConvert.HsvToRgb(draw.Hue, draw.Sat, 128 / 255.0)
+            : ColorConvert.HslToRgb(draw.Hue, draw.Sat, 128 / 255.0);
+        Console.WriteLine(FormattableString.Invariant(
+            $"  tinted  {cell.Key} hue {draw.Hue:0.#} sat {draw.Sat:0.##} -> mid-gray becomes {ColorSpec.Format(mid)}"));
     }
     _ = png; // a real renderer decodes this with its own PNG library and crops `cell`
 }

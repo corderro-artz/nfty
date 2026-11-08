@@ -10,9 +10,8 @@ using Nfty.App.ViewModels;
 namespace Nfty.Desktop;
 
 /// <summary>
-/// The desktop head. Composes the head-agnostic services from <c>Nfty.App</c> with the three whose
-/// real implementation needs a window — the file picker, the folder revealer and the clipboard — and
-/// puts the shell in a <see cref="MainWindow"/>.
+/// The desktop head. Composes shared services with native pickers, folder reveal, clipboard and
+/// viewer windows, then starts either the shell or a viewer-only launch.
 /// </summary>
 public partial class App : Application
 {
@@ -86,18 +85,7 @@ public partial class App : Application
         var recents = provider.GetRequiredService<IRecentsService>();
         var launch = new ViewerLaunchWindow(path);
         desktop.MainWindow = launch;
-        launch.Opened += async (_, _) =>
-        {
-            try
-            {
-                var full = Path.GetFullPath(path);
-                var subject = await Nfty.App.Viewer.ViewerOpener.OpenAsync(full, launch.Dialogs, host: host,
-                    bookCandidates: () => recents.Items.Select(i => i.Path).ToList());
-                if (subject is not null) host.Open(subject);
-            }
-            catch (Exception) { /* the open reports its own failures; never crash the launch */ }
-            finally { launch.Close(); }
-        };
+        launch.Opened += (_, _) => { _ = launch.BeginOpen(host, () => recents.Items.Select(i => i.Path).ToList()); };
         desktop.Exit += (_, _) => provider.Dispose();
         launch.Show();
     }

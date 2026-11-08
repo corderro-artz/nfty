@@ -25,7 +25,7 @@ The whole engine: archives, validation, generation, rendering, Sets, export, sea
 |---|---|---|
 | [`Perf`](Nfty.Core.Diagnostics.Perf.md) | class | A tiny always-available profiler: named scopes, wall time, and managed allocation. |
 | [`Perf.Scope`](Nfty.Core.Diagnostics.Perf.Scope.md) | struct | One measured block. |
-| [`PerfEntry`](Nfty.Core.Diagnostics.PerfEntry.md) | struct | One measured scope's running totals. |
+| [`PerfEntry`](Nfty.Core.Diagnostics.PerfEntry.md) | record struct | One measured scope's running totals. |
 
 ## Nfty.Core.Editing
 
@@ -33,24 +33,24 @@ The whole engine: archives, validation, generation, rendering, Sets, export, sea
 |---|---|---|
 | [`AbsentChance`](Nfty.Core.Editing.AbsentChance.md) | class | Authoring for a recipe's optional layers: how often each one is left out entirely. |
 | [`AlphaSnap<TPixel>`](Nfty.Core.Editing.AlphaSnap-1.md) | class | Snaps every partially transparent pixel at 50%: alpha at or above [`VoxelReady.Threshold`](Nfty.Core.Editing.VoxelReady.md#f-threshold) becomes 255, below it becomes 0. |
-| [`Brush<TPixel>`](Nfty.Core.Editing.Brush-1.md) | struct | Brush settings: stamp diameter in pixels and the pixel it paints. |
+| [`Brush<TPixel>`](Nfty.Core.Editing.Brush-1.md) | record struct | Brush settings: stamp diameter in pixels and the pixel it paints. |
 | [`BrushStroke<TPixel>`](Nfty.Core.Editing.BrushStroke-1.md) | class | Paints the brush's pixel as a filled disc stamped along a path. |
 | [`ColorMap`](Nfty.Core.Editing.ColorMap.md) | class | Editable single-layer raster storing full-color RGBA, bound to a fixed canvas size — the color-mode counterpart to [`ValueMap`](Nfty.Core.Editing.ValueMap.md), and the only surface a Custom layer's artwork can be painted on. |
 | [`CookBookEdits`](Nfty.Core.Editing.CookBookEdits.md) | class | Splices an edited ingredient back into a loaded cookbook. |
 | [`DepthFillAll`](Nfty.Core.Editing.DepthFillAll.md) | class | Sets every solid pixel to one front/back depth, replacing whatever was there. |
 | [`DepthLook`](Nfty.Core.Editing.DepthLook.md) | enum | What a whole depth map looks like at a glance. |
 | [`DepthPicture`](Nfty.Core.Editing.DepthPicture.md) | class | Turns an ordinary picture into a [`DepthMap`](../nfty-ticket/Nfty.Core.Model.DepthMap.md): the way an author who draws depth in any pixel editor hands it to nfty. |
-| [`DepthPixel`](Nfty.Core.Editing.DepthPixel.md) | struct | One pixel's depth: how far it stands in front of, and behind, the paper plane. |
+| [`DepthPixel`](Nfty.Core.Editing.DepthPixel.md) | record struct | One pixel's depth: how far it stands in front of, and behind, the paper plane. |
 | [`DepthSide`](Nfty.Core.Editing.DepthSide.md) | enum | Which side of the paper a depth edit raises or lowers. |
 | [`DepthStep`](Nfty.Core.Editing.DepthStep.md) | class | Raises or lowers one side of the depth of every solid pixel a gesture touches, by exactly one. |
-| [`DepthSummary`](Nfty.Core.Editing.DepthSummary.md) | struct | A depth map's look, with the shared depth when it is uniform. |
+| [`DepthSummary`](Nfty.Core.Editing.DepthSummary.md) | record struct | A depth map's look, with the shared depth when it is uniform. |
 | [`DepthSurface`](Nfty.Core.Editing.DepthSurface.md) | class | The surface the depth tools edit: one [`DepthPixel`](Nfty.Core.Editing.DepthPixel.md) per art pixel, held beside a copy of the art that says which pixels are solid and which share a color. |
 | [`DrawShape<TPixel>`](Nfty.Core.Editing.DrawShape-1.md) | class | Fills a rectangle, inscribed ellipse, or upright triangle with one pixel. |
 | [`EditHistory<TPixel>`](Nfty.Core.Editing.EditHistory-1.md) | class | Undo/redo stack of reversible edit commands over one surface. |
 | [`EraseStroke<TPixel>`](Nfty.Core.Editing.EraseStroke-1.md) | class | Erases to transparency — sets alpha to 0, keeping every other channel — along a path. |
 | [`FloodFill<TPixel>`](Nfty.Core.Editing.FloodFill-1.md) | class | 4-connected flood fill of the region matching the seed pixel exactly. |
 | [`Footprint`](Nfty.Core.Editing.Footprint.md) | class | Which pixels a gesture touches, independent of what it writes there. |
-| [`GrayPixel`](Nfty.Core.Editing.GrayPixel.md) | struct | One pixel of a [`ValueMap`](Nfty.Core.Editing.ValueMap.md): a single grayscale value plus an alpha. |
+| [`GrayPixel`](Nfty.Core.Editing.GrayPixel.md) | record struct | One pixel of a [`ValueMap`](Nfty.Core.Editing.ValueMap.md): a single grayscale value plus an alpha. |
 | [`IEditCommand<TPixel>`](Nfty.Core.Editing.IEditCommand-1.md) | interface | One reversible edit over an [`IEditSurface<TPixel>`](Nfty.Core.Editing.IEditSurface-1.md). |
 | [`IEditSurface<TPixel>`](Nfty.Core.Editing.IEditSurface-1.md) | interface | A fixed-size, randomly-addressable raster the edit commands paint on, generic over the pixel it stores: [`ValueMap`](Nfty.Core.Editing.ValueMap.md) supplies [`GrayPixel`](Nfty.Core.Editing.GrayPixel.md), [`ColorMap`](Nfty.Core.Editing.ColorMap.md) supplies `Rgba32`. |
 | [`ImageImport`](Nfty.Core.Editing.ImageImport.md) | class | Turning a picture somebody drew elsewhere into something a layer can hold. |
@@ -60,12 +60,12 @@ The whole engine: archives, validation, generation, rendering, Sets, export, sea
 | [`MoveSelection<TPixel>`](Nfty.Core.Editing.MoveSelection-1.md) | class | Moves a rectangular selection by (dx, dy) on a single flat raster: the source area is cleared to transparent and its pixels are re-stamped at the shifted position. |
 | [`OpacityLock`](Nfty.Core.Editing.OpacityLock.md) | enum | Whether a paint command may write partial alpha. |
 | [`PictureUnreadableException`](Nfty.Core.Editing.PictureUnreadableException.md) | class | A picture could not be read for import. |
-| [`PixelRect`](Nfty.Core.Editing.PixelRect.md) | struct | An integer pixel rectangle (top-left origin). |
+| [`PixelRect`](Nfty.Core.Editing.PixelRect.md) | record struct | An integer pixel rectangle (top-left origin). |
 | [`RegionEditCommand<TPixel>`](Nfty.Core.Editing.RegionEditCommand-1.md) | class | Base for edits expressed as "these pixels get these new values". |
 | [`RuleEdits`](Nfty.Core.Editing.RuleEdits.md) | class | Authoring for a recipe's incompatibility rules: add, replace, remove. |
 | [`ShapeKind`](Nfty.Core.Editing.ShapeKind.md) | enum | The shapes the editor can draw. |
 | [`TargetedHistory<TKey, TPixel>`](Nfty.Core.Editing.TargetedHistory-2.md) | class | One undo/redo history across many surfaces: each step remembers WHICH surface it edited, so undoing restores that surface and says which one it was. |
-| [`ThicknessBucket`](Nfty.Core.Editing.ThicknessBucket.md) | struct | How many solid pixels share one total thickness. |
+| [`ThicknessBucket`](Nfty.Core.Editing.ThicknessBucket.md) | record struct | How many solid pixels share one total thickness. |
 | [`ValueMap`](Nfty.Core.Editing.ValueMap.md) | class | Editable single-layer raster: one grayscale value (0–255) plus one alpha (0–255) per pixel, bound to a fixed canvas size. |
 | [`VariantDraft`](Nfty.Core.Editing.VariantDraft.md) | class | An editable variant: identity + weight + its pixels, in one or both of the two forms a variant can be authored in. |
 | [`VoxelReady`](Nfty.Core.Editing.VoxelReady.md) | class | Makes a book's art voxel-ready: every partially transparent pixel snaps at 50% to solid or clear, through [`AlphaSnap<TPixel>`](Nfty.Core.Editing.AlphaSnap-1.md), so there is one snap rule. |
@@ -107,7 +107,7 @@ The whole engine: archives, validation, generation, rendering, Sets, export, sea
 | [`GenerateOptions`](Nfty.Core.Generation.GenerateOptions.md) | record | Everything one generation run needs to know. |
 | [`GeneratedAsset`](Nfty.Core.Generation.GeneratedAsset.md) | class | One finished asset. |
 | [`GeneratedSet`](Nfty.Core.Generation.GeneratedSet.md) | record | A whole generated collection, held in memory. |
-| [`GenerationProgress`](Nfty.Core.Generation.GenerationProgress.md) | struct | How far a generation run has got. |
+| [`GenerationProgress`](Nfty.Core.Generation.GenerationProgress.md) | record struct | How far a generation run has got. |
 | [`Generator`](Nfty.Core.Generation.Generator.md) | class | The generation pipeline. |
 | [`RecipeSpace`](Nfty.Core.Generation.RecipeSpace.md) | record | One recipe's share of the space. |
 | [`RuleConflictException`](Nfty.Core.Generation.RuleConflictException.md) | class | A recipe's incompatibility rules exclude every combination of its variants, so no asset of that type can ever be rolled. |
@@ -133,10 +133,10 @@ The whole engine: archives, validation, generation, rendering, Sets, export, sea
 | [`PictureProfile`](Nfty.Core.Imaging.PictureProfile.md) | class | A picture's embedded ICC profile, read by nfty's own reader, and the one conversion of it to sRGB both front-ends use. |
 | [`PictureProfileKind`](Nfty.Core.Imaging.PictureProfileKind.md) | enum | What an imported picture's embedded color profile means for it. |
 | [`PixelCompare`](Nfty.Core.Imaging.PixelCompare.md) | class | Comparing two pictures pixel for pixel. |
-| [`PreviewLayer`](Nfty.Core.Imaging.PreviewLayer.md) | struct | One reference layer in a stack preview: which ingredient, which of its variants, and the color to draw it in. |
+| [`PreviewLayer`](Nfty.Core.Imaging.PreviewLayer.md) | record struct | One reference layer in a stack preview: which ingredient, which of its variants, and the color to draw it in. |
 | [`StackPreview`](Nfty.Core.Imaging.StackPreview.md) | class | Composites several layers at their real depths, so art authored one layer at a time can be lined up against the layers it will actually sit between. |
 | [`StackRoll`](Nfty.Core.Imaging.StackRoll.md) | class | Rolls a whole Recipe into the [`PreviewLayer`](Nfty.Core.Imaging.PreviewLayer.md) stack [`StackPreview.Render()`](Nfty.Core.Imaging.StackPreview.md#m-render-nfty-core-model-dimensions-system-collections-g-7bf0b3) draws — one deterministic roll from a seed, in generation's own draw order. |
-| [`StackSplit`](Nfty.Core.Imaging.StackSplit.md) | struct | A recipe's reference layers split around the one being edited: what paints under it, and what paints over it. |
+| [`StackSplit`](Nfty.Core.Imaging.StackSplit.md) | record struct | A recipe's reference layers split around the one being edited: what paints under it, and what paints over it. |
 | [`StampCorner`](Nfty.Core.Imaging.StampCorner.md) | enum | Which corner a stamp sits in. |
 | [`Upscale`](Nfty.Core.Imaging.Upscale.md) | class | Whole-pixel enlargement for export: every source pixel becomes an exact factor-by-factor block, so pixel art stays pixel art. |
 | [`VariantPreview`](Nfty.Core.Imaging.VariantPreview.md) | class | Renders one Variant exactly as generation would: colorized from its value-map for Dynamic and Static layers, passed through untouched for Custom. |
@@ -163,11 +163,11 @@ The whole engine: archives, validation, generation, rendering, Sets, export, sea
 | [`SetManifest`](Nfty.Core.Output.SetManifest.md) | record | The Set's own record, written to `set.json`: its name, size, seed, the hash of the book that produced it, the collection-wide rarity table and the per-recipe distribution. |
 | [`SetModels`](Nfty.Core.Output.SetModels.md) | record | `set.json`'s record of the 3D models a cook made. |
 | [`SetProvenance`](Nfty.Core.Output.SetProvenance.md) | class | Whether the CookBook in front of you is the one a Set on disk was cooked from, and what to say when it is not. |
-| [`SetReadProgress`](Nfty.Core.Output.SetReadProgress.md) | struct | How far a Set read has got: assets parsed so far, of how many. |
+| [`SetReadProgress`](Nfty.Core.Output.SetReadProgress.md) | record struct | How far a Set read has got: assets parsed so far, of how many. |
 | [`SetReader`](Nfty.Core.Output.SetReader.md) | class | Opens a cooked Set — a folder, or a packed `.set` archive. |
 | [`SetWriter`](Nfty.Core.Output.SetWriter.md) | class | Writes a generated collection to disk: the images, both metadata files per asset, and the Set manifest — and reads an existing Set back so `extend` can add to it. |
 | [`SetWriter.ExistingSet`](Nfty.Core.Output.SetWriter.ExistingSet.md) | record | What a Set already on disk contributes to an extend run. |
-| [`WriteProgress`](Nfty.Core.Output.WriteProgress.md) | struct | How far a set write has got. |
+| [`WriteProgress`](Nfty.Core.Output.WriteProgress.md) | record struct | How far a set write has got. |
 
 ## Nfty.Core.Publish
 
@@ -244,4 +244,4 @@ The whole engine: archives, validation, generation, rendering, Sets, export, sea
 | [`TraitRowKind`](Nfty.Core.Stats.TraitRowKind.md) | enum | What a [`TraitOdds`](Nfty.Core.Stats.TraitOdds.md) row describes. |
 | [`VariantReach`](Nfty.Core.Stats.VariantReach.md) | record | How far one variant's edit reaches: the share of the collection that carries it, and, when the book states a target supply, the expected number of assets. |
 | [`VoxelReport`](Nfty.Core.Stats.VoxelReport.md) | class | Reports whether an archive's artwork can be turned into a voxel model, and where it cannot. |
-| [`VoxelVariant`](Nfty.Core.Stats.VoxelVariant.md) | struct | What a single variant's artwork does about transparency. |
+| [`VoxelVariant`](Nfty.Core.Stats.VoxelVariant.md) | record struct | What a single variant's artwork does about transparency. |

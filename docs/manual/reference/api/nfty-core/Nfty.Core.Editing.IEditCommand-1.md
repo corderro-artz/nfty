@@ -5,7 +5,7 @@
 Namespace `Nfty.Core.Editing` in assembly `Nfty.Core`.
 
 ```csharp
-public interface IEditCommand<TPixel>
+public interface IEditCommand<TPixel> where TPixel : struct
 ```
 
 One reversible edit over an [`IEditSurface<TPixel>`](Nfty.Core.Editing.IEditSurface-1.md). Apply captures enough to Undo.

@@ -5,13 +5,13 @@
         x:Class="Nfty.Desktop.MainWindow"
         x:DataType="vm:ShellViewModel"
         Width="1280" Height="720"
+        WindowStartupLocation="CenterScreen"
         MinWidth="{x:Static vm:ShellViewModel.MinWindowWidth}"
         MinHeight="{x:Static vm:ShellViewModel.MinWindowHeight}" Title="nfty"
         Background="Transparent" TransparencyLevelHint="Transparent"
         ExtendClientAreaToDecorationsHint="True" WindowDecorations="None">
-  <!-- The size above is the mockups' own 1180x720 (min 900x580) times ShellViewModel.BaseScale. The
-       shell now renders 20% larger, so keeping the old window size would have shown 20% LESS of the
-       layout rather than the same layout bigger - the Explorer's pane track alone needs 1014px. -->
+  <!-- The application opens at its 1280x720 DIP minimum. CenterScreen uses the native opening
+       display, falling back to the primary display, and centers in its working area at its DPI. -->
   <Window.KeyBindings>
     <KeyBinding Gesture="Ctrl+OemQuestion" Command="{Binding ShowHelpCommand}" />
     <KeyBinding Gesture="Ctrl+OemPlus" Command="{Binding ZoomInCommand}" />
@@ -19,11 +19,7 @@
     <KeyBinding Gesture="Ctrl+OemMinus" Command="{Binding ZoomOutCommand}" />
     <KeyBinding Gesture="Ctrl+Subtract" Command="{Binding ZoomOutCommand}" />
     <KeyBinding Gesture="Ctrl+D0" Command="{Binding ZoomResetCommand}" />
-    <!-- Light/dark had no way in at all: both theme dictionaries are built and tested, and
-         ToggleThemeCommand was bound by nothing, so a user could not switch. Keyboard only, and
-         deliberately so - the mockups carry a "Theme" button in their own .pitch scaffolding,
-         OUTSIDE the app window, as a preview control for viewing the mockup both ways. There is no
-         theme control in the locked chrome, and inventing one would be design drift. -->
+    <!-- The keyboard route complements the titlebar's theme control. -->
     <KeyBinding Gesture="Ctrl+T" Command="{Binding ToggleThemeCommand}" />
     <!-- Close the open CookBook or Set and return to Landing. The brand block in the titlebar does
          the same thing on click; this is the keyboard route, and Ctrl+W is what "close the thing

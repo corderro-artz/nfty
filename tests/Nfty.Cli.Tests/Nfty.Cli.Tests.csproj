@@ -17,6 +17,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Nfty.Cli\Nfty.Cli.csproj" />
+    <ProjectReference Include="..\..\samples\Nfty.Ticket.Sample\Nfty.Ticket.Sample.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\samples\Nfty.Embedding.Sample\Nfty.Embedding.Sample.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>

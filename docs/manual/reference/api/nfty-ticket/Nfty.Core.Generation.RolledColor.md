@@ -5,7 +5,7 @@
 Namespace `Nfty.Core.Generation` in assembly `Nfty.Ticket`.
 
 ```csharp
-public readonly struct RolledColor : IEquatable<RolledColor>
+public readonly record struct RolledColor
 ```
 
 One rolled color: the hue and saturation a value-map is tinted with. Value and lightness are deliberately absent — those come from the grayscale art.

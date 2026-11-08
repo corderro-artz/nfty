@@ -1,5 +1,7 @@
 using System.CommandLine;
 using System.Globalization;
+using System.IO.Compression;
+using System.Security.Cryptography;
 using Nfty.Cli;
 using Nfty.Core.Formats;
 using Nfty.Core.Model;
@@ -74,7 +76,7 @@ public class CliAuthoringAuditTests
             string rcp = Path.Combine(temp.FullName, "dog.rcp");
             RecipeArchive.Write(rcp, dog.Manifest, dog.Ingredients);
             string? expected = null;
-            byte[]? expectedArchive = null;
+            string[]? expectedPayloads = null;
             string book = Path.Combine(temp.FullName, "book.cbk");
             foreach (string culture in new[] { "en-US", "de-DE", "fr-FR", "tr-TR" })
             {
@@ -90,9 +92,11 @@ public class CliAuthoringAuditTests
 
                 Assert.Contains("(weight 0.5)", text.ToString(), StringComparison.Ordinal);
                 expected ??= text.ToString();
-                expectedArchive ??= File.ReadAllBytes(book);
+                using var archive = ZipFile.OpenRead(book);
+                string[] payloads = PayloadHashes(archive).ToArray();
+                expectedPayloads ??= payloads;
                 Assert.Equal(expected, text.ToString());
-                Assert.Equal(expectedArchive, File.ReadAllBytes(book));
+                Assert.Equal(expectedPayloads, payloads);
             }
         }
         finally
@@ -154,6 +158,28 @@ public class CliAuthoringAuditTests
             Assert.Equal(new[] { "hex:123456" }, changed.Manifest.Palette);
         }
         finally { temp.Delete(recursive: true); }
+    }
+
+    // ZIP timestamps vary with wall-clock time. Compare every nested name and payload instead.
+    private static IEnumerable<string> PayloadHashes(ZipArchive archive, string prefix = "")
+    {
+        foreach (var entry in archive.Entries.OrderBy(e => e.FullName, StringComparer.Ordinal))
+        {
+            using var stream = entry.Open();
+            using var bytes = new MemoryStream();
+            stream.CopyTo(bytes);
+            bytes.Position = 0;
+            string name = prefix + entry.FullName;
+            if (entry.FullName.EndsWith(".rcp", StringComparison.Ordinal) ||
+                entry.FullName.EndsWith(".igt", StringComparison.Ordinal))
+            {
+                using var nested = new ZipArchive(bytes, ZipArchiveMode.Read);
+                foreach (string payload in PayloadHashes(nested, name + "!"))
+                    yield return payload;
+            }
+            else
+                yield return name + ":" + Convert.ToHexString(SHA256.HashData(bytes));
+        }
     }
 
     private static string WriteOrderedBook(string directory)

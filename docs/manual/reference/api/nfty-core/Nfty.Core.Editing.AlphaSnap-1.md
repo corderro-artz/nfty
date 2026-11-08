@@ -5,7 +5,7 @@
 Namespace `Nfty.Core.Editing` in assembly `Nfty.Core`.
 
 ```csharp
-public sealed class AlphaSnap<TPixel> : RegionEditCommand<TPixel>
+public sealed class AlphaSnap<TPixel> : RegionEditCommand<TPixel> where TPixel : struct
 ```
 
 Snaps every partially transparent pixel at 50%: alpha at or above [`VoxelReady.Threshold`](Nfty.Core.Editing.VoxelReady.md#f-threshold) becomes 255, below it becomes 0. Color channels are untouched. Pixels already fully opaque or fully clear are not written, so snapping clean art changes nothing and records no undo step.

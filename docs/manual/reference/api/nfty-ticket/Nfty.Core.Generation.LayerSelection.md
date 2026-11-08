@@ -5,7 +5,7 @@
 Namespace `Nfty.Core.Generation` in assembly `Nfty.Ticket`.
 
 ```csharp
-public readonly struct LayerSelection : IEquatable<LayerSelection>
+public readonly record struct LayerSelection
 ```
 
 What one layer contributed to an asset, in the form the DNA hashes.

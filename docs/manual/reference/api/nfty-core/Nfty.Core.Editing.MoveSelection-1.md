@@ -5,7 +5,7 @@
 Namespace `Nfty.Core.Editing` in assembly `Nfty.Core`.
 
 ```csharp
-public sealed class MoveSelection<TPixel> : RegionEditCommand<TPixel>
+public sealed class MoveSelection<TPixel> : RegionEditCommand<TPixel> where TPixel : struct
 ```
 
 Moves a rectangular selection by (dx, dy) on a single flat raster: the source area is cleared to transparent and its pixels are re-stamped at the shifted position. Later writes win, so a pixel that is both cleared and re-stamped ends up stamped.

@@ -5,7 +5,7 @@
 Namespace `Nfty.Ticket` in assembly `Nfty.Ticket`.
 
 ```csharp
-public readonly struct Draw : IEquatable<Draw>
+public readonly record struct Draw
 ```
 
 One layer to draw.

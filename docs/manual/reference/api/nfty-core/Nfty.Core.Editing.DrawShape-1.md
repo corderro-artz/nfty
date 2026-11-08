@@ -5,7 +5,7 @@
 Namespace `Nfty.Core.Editing` in assembly `Nfty.Core`.
 
 ```csharp
-public sealed class DrawShape<TPixel> : RegionEditCommand<TPixel>
+public sealed class DrawShape<TPixel> : RegionEditCommand<TPixel> where TPixel : struct
 ```
 
 Fills a rectangle, inscribed ellipse, or upright triangle with one pixel.

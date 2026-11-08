@@ -79,6 +79,9 @@ dotnet run --project samples/Nfty.Ticket.Sample -- ./demo/chest.mnu player-42
 ```
 
 It prints the seed's ticket in wire form and each layer's draw.
+The color example respects each layer's HSV/HSL model, and numeric reports use invariant formatting.
+Exhausting the sample's 1,000-roll retry limit is a bounded failure, not proof that the rules exclude
+every possible selection.
 
 ## See also
 

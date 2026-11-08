@@ -35,6 +35,13 @@ def on_post_build(config, **kwargs):  # noqa: ARG001 - MkDocs passes more than t
         log.warning("fonts: no .ttf in %s - the install bundle will be missing", FONT_SOURCE)
         return
 
+    licence = os.path.join(FONT_SOURCE, "OFL.txt")
+    if not os.path.isfile(licence):
+        # Refuse the redistribution before creating a downloadable zip. MkDocs --strict also
+        # makes this warning fail CI, but a local non-strict build must not hand out unlicensed faces.
+        log.warning("fonts: OFL.txt missing from %s - refusing to build the install bundle", FONT_SOURCE)
+        return
+
     out = os.path.join(config["site_dir"], BUNDLE)
     os.makedirs(os.path.dirname(out), exist_ok=True)
 
@@ -43,11 +50,6 @@ def on_post_build(config, **kwargs):  # noqa: ARG001 - MkDocs passes more than t
             z.write(os.path.join(FONT_SOURCE, face), face)
         # The licence travels WITH the fonts. SIL OFL requires it to accompany any redistribution,
         # and handing a reader a zip of eight faces is a redistribution.
-        licence = os.path.join(FONT_SOURCE, "OFL.txt")
-        if os.path.exists(licence):
-            z.write(licence, "OFL.txt")
-        else:
-            log.warning("fonts: OFL.txt missing from %s - the bundle would ship unlicensed",
-                        FONT_SOURCE)
+        z.write(licence, "OFL.txt")
 
     log.info("fonts: bundled %d faces into %s", len(faces), BUNDLE)

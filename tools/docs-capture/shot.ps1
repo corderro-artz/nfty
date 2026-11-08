@@ -5,10 +5,9 @@
 # the window is still settling from SW_RESTORE is silently ignored -- hence the settle, move, settle,
 # move again. The grab is the WINDOW rect inset by Border.frame's 12px shadow gutter, not the client
 # rect, so no desktop bleeds in around the rounded corners.
-# 1416x950 is the documentation standard. The height moved up from 864 when the window minimum
-# became 924 (set by the quick-reference sheet, the largest modal) -- a shorter capture is a size the
-# app will not open at, so every figure has to be shot at or above it.
+# 1416x792 produces the manual's 1392x768 page frames; 950 remains the default for tall pages.
 param([string]$Out, [int]$Width = 1416, [int]$Height = 950, [int]$Gutter = 12)
+$ErrorActionPreference = 'Stop'
 
 Add-Type -AssemblyName System.Drawing
 Add-Type @"
@@ -27,9 +26,10 @@ public struct NRECT { public int Left, Top, Right, Bottom; }
 [NWin]::SetProcessDPIAware() | Out-Null
 
 $p = Get-Process Nfty.Desktop -ErrorAction Stop | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
+if (-not $p) { throw 'no visible nfty window found' }
 $hwnd = $p.MainWindowHandle
-[NWin]::SetWindowPos($hwnd, [IntPtr](-1), 0, 0, 0, 0, 0x0003) | Out-Null   # HWND_TOPMOST, no move/size
-[NWin]::SetForegroundWindow($hwnd) | Out-Null
+if (-not [NWin]::SetWindowPos($hwnd, [IntPtr](-1), 0, 0, 0, 0, 0x0003)) { throw 'nfty window could not be made topmost' }
+if (-not [NWin]::SetForegroundWindow($hwnd)) { throw 'nfty window could not be focused' }
 
 # Place and VERIFY. A single MoveWindow is not enough: issued while the window is still settling it
 # is accepted and then undone, and the only way to know is to read the rect back.
@@ -40,7 +40,9 @@ for ($i = 0; $i -lt 12; $i++) {
   [NWin]::GetWindowRect($hwnd, [ref]$r) | Out-Null
   if (($r.Right - $r.Left) -eq $Width -and ($r.Bottom - $r.Top) -eq $Height) { break }
 }
-if (($r.Bottom - $r.Top) -ne $Height) { Write-Error "window would not size to ${W}x${H}"; exit 1 }
+if (($r.Right - $r.Left) -ne $Width -or ($r.Bottom - $r.Top) -ne $Height) {
+  throw "window would not size to ${Width}x${Height}"
+}
 Start-Sleep -Milliseconds 500
 $ox = $r.Left + $Gutter
 $oy = $r.Top + $Gutter
@@ -49,7 +51,9 @@ $ch = ($r.Bottom - $r.Top) - 2 * $Gutter
 
 $bmp = New-Object System.Drawing.Bitmap($cw, $ch)
 $g = [System.Drawing.Graphics]::FromImage($bmp)
-$g.CopyFromScreen($ox, $oy, 0, 0, (New-Object System.Drawing.Size($cw, $ch)))
-$bmp.Save($Out, [System.Drawing.Imaging.ImageFormat]::Png)
-$g.Dispose(); $bmp.Dispose()
+try {
+  $g.CopyFromScreen($ox, $oy, 0, 0, (New-Object System.Drawing.Size($cw, $ch)))
+  $bmp.Save($Out, [System.Drawing.Imaging.ImageFormat]::Png)
+}
+finally { $g.Dispose(); $bmp.Dispose() }
 Write-Output "$Out  ${cw}x${ch}"

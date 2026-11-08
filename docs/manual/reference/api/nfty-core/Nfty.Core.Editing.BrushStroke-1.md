@@ -5,7 +5,7 @@
 Namespace `Nfty.Core.Editing` in assembly `Nfty.Core`.
 
 ```csharp
-public sealed class BrushStroke<TPixel> : RegionEditCommand<TPixel>
+public sealed class BrushStroke<TPixel> : RegionEditCommand<TPixel> where TPixel : struct
 ```
 
 Paints the brush's pixel as a filled disc stamped along a path.

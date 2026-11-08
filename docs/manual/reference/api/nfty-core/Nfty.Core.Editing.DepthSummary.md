@@ -5,7 +5,7 @@
 Namespace `Nfty.Core.Editing` in assembly `Nfty.Core`.
 
 ```csharp
-public readonly struct DepthSummary : IEquatable<DepthSummary>
+public readonly record struct DepthSummary
 ```
 
 A depth map's look, with the shared depth when it is uniform.

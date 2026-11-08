@@ -5,7 +5,7 @@
 Namespace `Nfty.Core.Imaging` in assembly `Nfty.Ticket`.
 
 ```csharp
-public readonly struct RgbColor : IEquatable<RgbColor>
+public readonly record struct RgbColor
 ```
 
 An 8-bit-per-channel color, used as the neutral currency between the color-space conversions and ImageSharp.

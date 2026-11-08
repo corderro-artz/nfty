@@ -5,7 +5,7 @@
 Namespace `Nfty.Core.Imaging` in assembly `Nfty.Core`.
 
 ```csharp
-public readonly struct StackSplit : IEquatable<StackSplit>
+public readonly record struct StackSplit
 ```
 
 A recipe's reference layers split around the one being edited: what paints under it, and what paints over it.

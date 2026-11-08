@@ -5,7 +5,7 @@
 Namespace `Nfty.Core.Editing` in assembly `Nfty.Core`.
 
 ```csharp
-public readonly struct GrayPixel : IEquatable<GrayPixel>
+public readonly record struct GrayPixel
 ```
 
 One pixel of a [`ValueMap`](Nfty.Core.Editing.ValueMap.md): a single grayscale value plus an alpha. This is what keeps the value-map's guarantee true now that the paint stack is generic — a command painting a value-map can only ever hand it a `GrayPixel`, and a `GrayPixel` has nowhere to put independent R/G/B. The guarantee is a property of the type, not of the care each command takes.

@@ -5,7 +5,7 @@
 Namespace `Nfty.Core.Generation` in assembly `Nfty.Core`.
 
 ```csharp
-public readonly struct GenerationProgress : IEquatable<GenerationProgress>
+public readonly record struct GenerationProgress
 ```
 
 How far a generation run has got. [`GenerationProgress.Fraction`](Nfty.Core.Generation.GenerationProgress.md#p-fraction) suits a progress bar.

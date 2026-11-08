@@ -11,7 +11,7 @@ Four shapes, because they answer different questions a person downloading this a
                                                because the runtime is inside it, and slower on first
                                                launch because it unpacks to a temp folder.
   framework  "I already have .NET 10."         A fifth the size. Needs the .NET 10 runtime
-                                               installed (the DESKTOP runtime on Windows).
+                                               installed.
   compact    "One file, and I have .NET."      One executable with the natives embedded, but the
                                                runtime left out - a third of the self-contained
                                                single file.
@@ -42,9 +42,11 @@ doubted. The CLI to run is chosen by the TARGET RID, not the host: a linux-x64 b
 runs its Linux CLI through WSL when `wsl` is there; when nothing can run it (no WSL, or arm64 on an
 x64 host) the source copy is used and the line says so.
 """
+import argparse
 import io
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -70,9 +72,11 @@ EXECUTABLES = {'Nfty.Desktop', 'Nfty.Cli', 'createdump', 'install-desktop-entry.
 
 def run(args):
     r = subprocess.run(args, cwd=ROOT, capture_output=True, text=True)
+    # A successful exit can still carry SDK, linker or native-tool warnings. Preserve the complete
+    # diagnostics on both success and failure so a release review can actually enforce its bar.
+    sys.stdout.write(r.stdout)
+    sys.stderr.write(r.stderr)
     if r.returncode != 0:
-        sys.stdout.write(r.stdout[-4000:])
-        sys.stdout.write(r.stderr[-2000:])
         raise SystemExit('FAILED: ' + ' '.join(args))
 
 
@@ -95,7 +99,7 @@ def cli_command(folder):
     cli = os.path.join(folder, 'cli', 'Nfty.Cli' + EXE)
     if not os.path.exists(cli) or RID.split('-')[-1] != host_arch():
         return None
-    if LINUX == (os.name != 'nt'):
+    if (LINUX and sys.platform.startswith('linux')) or (not LINUX and os.name == 'nt'):
         return [cli]
     if LINUX and os.name == 'nt' and shutil.which('wsl'):
         r = subprocess.run(['wsl', '-e', 'wslpath', '-a', cli.replace('\\', '/')],
@@ -117,7 +121,9 @@ def unpack_demo(folder):
             if cli[0] == 'wsl':
                 print('    (demo extracted by the Linux CLI, run through WSL)')
             return
-        print('    (published CLI could not unpack the demo: %s)' % r.stderr.strip()[:120])
+        sys.stdout.write(r.stdout)
+        sys.stderr.write(r.stderr)
+        raise SystemExit('FAILED: the published CLI could not unpack its embedded demo')
     os.makedirs(dest, exist_ok=True)
     shutil.copy(DEMO_SOURCE, dest)
     print('    (demo copied from source, not extracted from the build)')
@@ -152,6 +158,7 @@ def tar_mode(info):
 def stage(name, desktop_extra, cli_extra, blurb):
     """Publishes both front-ends into one folder and archives it."""
     folder = os.path.join(OUT, 'nfty-%s-%s-%s' % (VERSION, RID, name))
+    require_output_path(folder)
     if os.path.isdir(folder):
         shutil.rmtree(folder)
     os.makedirs(folder)
@@ -229,11 +236,11 @@ nfty %s (%s)
 The desktop app is ./Nfty.Desktop in this folder.
 The command line is ./cli/Nfty.Cli - run it with --help.
 
-The desktop app needs the X11 session libraries, which every desktop install
+The desktop app needs the X11 and font libraries, which every desktop install
 (GNOME, KDE, Xfce) already has but a minimal or server install may not:
-  Debian/Ubuntu:  sudo apt install libice6 libsm6 libx11-6 libfontconfig1
-  Fedora:         sudo dnf install libICE libSM libX11 fontconfig
-  Arch:           sudo pacman -S libice libsm libx11 fontconfig
+  Debian/Ubuntu:  sudo apt install libice6 libsm6 libx11-6 libfontconfig1 libxrandr2 libxi6 libxcursor1
+  Fedora:         sudo dnf install libICE libSM libX11 fontconfig libXrandr libXi libXcursor
+  Arch:           sudo pacman -S libice libsm libx11 fontconfig libxrandr libxi libxcursor
 It runs under X11 and under Wayland through XWayland. The command line needs
 none of these.
 
@@ -282,8 +289,17 @@ here=$(cd "$(dirname "$0")" && pwd)
 data=${XDG_DATA_HOME:-$HOME/.local/share}
 mkdir -p "$data/applications" "$data/icons/hicolor/256x256/apps"
 cp "$here/nfty.png" "$data/icons/hicolor/256x256/apps/nfty.png"
-sed -e "s|^Exec=.*|Exec=\"$here/Nfty.Desktop\" %f|" -e "s|^Icon=.*|Icon=nfty|" \
-    "$here/dev.vaporsoft.nfty.desktop" > "$data/applications/dev.vaporsoft.nfty.desktop"
+# Exec's quoted argument is decoded twice (desktop string, then command argument), so a literal
+# backslash needs four and quotes/backticks/dollars need two. Percent is a field-code introducer.
+# Never interpolate the path into sed's replacement: an ampersand or delimiter would corrupt it.
+executable=$(printf '%s' "$here/Nfty.Desktop" | sed -e 's/\\/\\\\\\\\/g' -e 's/["`$]/\\\\&/g' -e 's/%/%%/g')
+while IFS= read -r line; do
+    case "$line" in
+        Exec=*) printf 'Exec="%s" %%f\n' "$executable" ;;
+        Icon=*) printf 'Icon=nfty\n' ;;
+        *) printf '%s\n' "$line" ;;
+    esac
+done < "$here/dev.vaporsoft.nfty.desktop" > "$data/applications/dev.vaporsoft.nfty.desktop"
 command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$data/applications" || true
 echo "Installed $data/applications/dev.vaporsoft.nfty.desktop -> $here/Nfty.Desktop"
 """
@@ -315,13 +331,13 @@ def blurb(kind):
                        'itself to a temporary folder on first run, so the first launch is\n'
                        'slower than the portable build; every launch after that is not.',
         'framework-dependent': 'FRAMEWORK-DEPENDENT BUILD - the small one. It needs the .NET 10\n'
-                               'DESKTOP runtime already installed:\n'
+                               'runtime already installed:\n'
                                '  https://dotnet.microsoft.com/download/dotnet/10.0\n'
                                'If you are not sure, take the portable build instead.',
         'single-file-net10': 'SINGLE FILE, .NET REQUIRED. One executable with nothing beside\n'
                              'it - the native libraries are embedded too - but the runtime is\n'
                              'left out, so it is a third the size of the self-contained single\n'
-                             'file. Needs the .NET 10 DESKTOP runtime:\n'
+                             'file. Needs the .NET 10 runtime:\n'
                              '  https://dotnet.microsoft.com/download/dotnet/10.0',
     }[kind]
     return COMMON % (VERSION, RID, text)
@@ -337,7 +353,22 @@ SHAPES = [
 ]
 
 
+def require_output_path(path):
+    """Refuse cleanup outside this checkout's real .release folder, including symlink escapes."""
+    expected = os.path.join(os.path.realpath(ROOT), '.release')
+    resolved = os.path.realpath(path)
+    if os.path.realpath(OUT) != expected or os.path.commonpath([expected, resolved]) != expected:
+        raise SystemExit('FAILED: release output must stay inside ' + expected)
+
+
 def main():
+    ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
+    ap.add_argument('version', nargs='?', default=VERSION)
+    ap.add_argument('rid', nargs='?', default=RID, choices=('win-x64', 'linux-x64', 'linux-arm64'))
+    args = ap.parse_args()
+    if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?', args.version):
+        ap.error('version must be a version number, without path separators')
+    require_output_path(OUT)
     if os.path.isdir(OUT):
         shutil.rmtree(OUT)
     os.makedirs(OUT)

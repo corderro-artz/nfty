@@ -53,9 +53,9 @@ nfty installs nothing and writes nothing to the registry on its own. To make dou
 
     | Distribution | Command |
     |---|---|
-    | Debian, Ubuntu | `sudo apt install libice6 libsm6 libx11-6 libfontconfig1` |
-    | Fedora | `sudo dnf install libICE libSM libX11 fontconfig` |
-    | Arch | `sudo pacman -S libice libsm libx11 fontconfig` |
+    | Debian, Ubuntu | `sudo apt install libice6 libsm6 libx11-6 libfontconfig1 libxrandr2 libxi6 libxcursor1` |
+    | Fedora | `sudo dnf install libICE libSM libX11 fontconfig libXrandr libXi libXcursor` |
+    | Arch | `sudo pacman -S libice libsm libx11 fontconfig libxrandr libxi libxcursor` |
 
 3. Optional: run `./install-desktop-entry.sh` once to add nfty to your application menu with its
    icon. It writes only to `~/.local/share/applications` and `~/.local/share/icons`, and points at the

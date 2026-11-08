@@ -5,7 +5,7 @@
 Namespace `Nfty.Core.Output` in assembly `Nfty.Core`.
 
 ```csharp
-public readonly struct SetReadProgress : IEquatable<SetReadProgress>
+public readonly record struct SetReadProgress
 ```
 
 How far a Set read has got: assets parsed so far, of how many.

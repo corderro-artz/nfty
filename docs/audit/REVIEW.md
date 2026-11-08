@@ -2,7 +2,7 @@
 
 Current baseline: `5dece661785a75990576f4016eb796558ba75fd4` (`origin/main`, verified 2026-11-08).
 
-Current status: **Ticket, Core, Model and CLI accepted; App both passes, approved fixes and final verification complete.** App local checkpoint: `audit-app-verified-2026-11-08`; awaiting user inspection. Final Release build: zero warnings/errors; 5,335 passed, zero failed, one Linux-only skip. No merge, push or publication. Stop before Desktop and later reviews.
+Current status: **All nine two-pass reviews and approved implementations complete.** Final integration checks are recorded in [verification](10-final-verification.md). Latest user direction authorizes centered startup for main/viewers, commit/merge into main and publication of the newest audited release, followed by a separate public-documentation commit. Maximum two agents. Release packaging/publication is the remaining gate.
 
 The initial review used stale local `main` (`fea71d8`, 115 commits behind). The user identified the missing seed reroll control during verification. The isolated branch was rebased onto current `origin/main`; fixes were adapted and all verification repeated. Initial results are historical evidence only, not proof of compatibility with the current baseline.
 
@@ -28,13 +28,26 @@ Release gates: [2.4.8 candidate](06-release-gates.md). Cross-platform package ve
 | 2 | Nfty.Core | Archives, validation, editing, imaging, generation, statistics, publishing; Nfty.Core.Tests | Complete | Complete | Fixed and verified; local tag audit-core-verified-2026-11-05; [evidence](02-core-verification.md) |
 | 3 | Nfty.Model | Rise, meshes, model formats/readers, batch export; Nfty.Model.Tests | Complete | Complete | Fixed and verified; local tag audit-model-verified-2026-11-06; [evidence](03-model-verification.md) |
 | 4 | Nfty.Cli | Command wiring, authoring, options, errors; Nfty.Cli.Tests | Complete | Complete | Accepted; local tag audit-cli-verified-2026-11-06; [evidence](04-cli-verification.md) |
-| 5 | Nfty.App | Avalonia views, controls, view models, services, themes, viewer; Nfty.App.Tests | Complete | Complete | Implemented and verified; [report](05-app-verification.md); local tag audit-app-verified-2026-11-08; awaiting user inspection |
-| 6 | Nfty.Desktop | Desktop startup, windows, platform integration; relevant Nfty.App.Tests | Pending | Pending | Not started; stop before review |
-| 7 | Nfty.Ticket.Sample | Package-free Ticket embedding example and its runtime contract | Pending | Pending | Not started; stop before review |
-| 8 | Nfty.Embedding.Sample | Core/Model embedding example and its runtime contract | Pending | Pending | Not started; stop before review |
-| 9 | Tooling and integration | tools/, CI, shared build/package configuration, release and documentation generators; cross-project consistency | Pending | Pending | Not started; stop before review |
+| 5 | Nfty.App | Avalonia views, controls, view models, services, themes, viewer; Nfty.App.Tests | Complete | Complete | Implemented and verified; [report](05-app-verification.md); local tag audit-app-verified-2026-11-08 |
+| 6 | Nfty.Desktop | Desktop startup, windows, platform integration; relevant Nfty.App.Tests | Complete | Complete | W01–W08, R01, D01–D08 and S01–S05 complete; [report](06-desktop.md) |
+| 7 | Nfty.Ticket.Sample | Package-free Ticket embedding example and its runtime contract | Complete | Complete | TS01–TS03 complete; [report](07-ticket-sample.md) |
+| 8 | Nfty.Embedding.Sample | Core/Model embedding example and its runtime contract | Complete | Complete | ES01–ES02 complete; [report](08-embedding-sample.md) |
+| 9 | Tooling and integration | tools/, CI, shared build/package configuration, release and documentation generators; cross-project consistency | Complete | Complete | T01–T09 complete; [tooling](09-tooling.md), [integration](10-final-verification.md) |
 
 Current solution: six production projects, two sample projects, and six test projects. `Nfty.Ticket.NetStandard.Tests` exercises the same Ticket test sources against the netstandard2.1 assembly; it is included in Stage 1. Test projects are reviewed with their production owner. Stage 9 covers executable code outside those projects; XML review applies where applicable, with equivalent documentation review for scripts.
+
+## Completed remaining stages
+
+- [x] Desktop: inspect every platform/window service; complete separate XML/simplification pass.
+- [x] Correct eight lifetime/native-service findings and center main/new viewer startup.
+- [x] Ticket sample: correct HSV/HSL math, invariant reports and bounded-retry wording.
+- [x] Embedding sample: reuse prepared Menu through bounded legal-roll retries; invariant reports.
+- [x] Tooling: complete executable inventory, nine finding groups and documentation/simplification pass.
+- [x] Prove final Release build, all test targets, 470 output payloads, 431 frames, callback probes,
+  API/manual generation and tooling regressions. Preserve failed attempts and explicit limits.
+- [x] Independently open GLB/glTF/bin and Ingredient output in a third-party viewer; zero validator errors/warnings.
+- [ ] Fresh eight-package verification from main; publish v2.4.8 only after passing.
+- [ ] Separate README/manual/badges documentation commit on main; finalize after-action report.
 
 ## Completed review: Nfty.App
 

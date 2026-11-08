@@ -14,13 +14,20 @@ public sealed class DesktopFolderRevealer : IFolderRevealer
     {
         try
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                Process.Start(new ProcessStartInfo("explorer.exe", $"\"{path}\"") { UseShellExecute = true });
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                Process.Start(new ProcessStartInfo("open", $"\"{path}\"") { UseShellExecute = true });
-            else
-                Process.Start(new ProcessStartInfo("xdg-open", $"\"{path}\"") { UseShellExecute = true });
+            using var process = Process.Start(StartInfo(path));
         }
         catch { /* best effort — reveal must never crash the app */ }
+    }
+
+    /// <summary>Builds the platform opener request without starting a process.</summary>
+    /// <param name="path">The path to pass as one argument.</param>
+    /// <returns>The native launch request.</returns>
+    internal static ProcessStartInfo StartInfo(string path)
+    {
+        var executable = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "explorer.exe"
+            : RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "open" : "xdg-open";
+        var request = new ProcessStartInfo(executable) { UseShellExecute = true };
+        request.ArgumentList.Add(path);
+        return request;
     }
 }

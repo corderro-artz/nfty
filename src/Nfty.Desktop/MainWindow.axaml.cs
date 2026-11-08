@@ -1,8 +1,5 @@
-using System.Threading.Tasks;
 using Avalonia.Controls;
-using Avalonia.Input;
 using Avalonia.Markup.Xaml;
-using Avalonia.VisualTree;
 using Nfty.App.ViewModels;
 using Nfty.App.Views;
 
@@ -30,9 +27,10 @@ public partial class MainWindow : Window
     }
 
     private bool _closeConfirmed;
+    private ShellViewModel? _attachedShell;
 
-    /// <summary>Asks the shell before the window goes: the titlebar button, Alt+F4 and the OS ending
-    /// the session all arrive here, so no way of closing skips the unsaved-work check.</summary>
+    /// <summary>Routes window close requests through the current shell's unsaved-work check.
+    /// An operating system may still force process termination during shutdown.</summary>
     /// <param name="e">Canceled while the shell asks; the window closes itself once it answers yes.</param>
     protected override void OnClosing(WindowClosingEventArgs e)
     {
@@ -47,7 +45,7 @@ public partial class MainWindow : Window
         bool alreadyAsking = shell.PendingClose is { IsCompleted: false };
         var answer = shell.BeginClose();
         if (alreadyAsking) return;        // the request already running closes the window on yes
-        if (await answer)
+        if (await answer && ReferenceEquals(DataContext, shell))
         {
             _closeConfirmed = true;
             Close();
@@ -59,12 +57,32 @@ public partial class MainWindow : Window
     protected override void OnDataContextChanged(EventArgs e)
     {
         base.OnDataContextChanged(e);
-        if (DataContext is ShellViewModel shell)
-        {
-            shell.MinimizeRequested += () => WindowState = WindowState.Minimized;
-            shell.ToggleMaximizeRequested += () =>
-                WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
-            shell.CloseRequested += Close;
-        }
+        DetachShell();
+        if (DataContext is not ShellViewModel shell) return;
+        _attachedShell = shell;
+        shell.MinimizeRequested += Minimize;
+        shell.ToggleMaximizeRequested += ToggleMaximize;
+        shell.CloseRequested += Close;
+    }
+
+    private void Minimize() => WindowState = WindowState.Minimized;
+    private void ToggleMaximize() =>
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+
+    private void DetachShell()
+    {
+        if (_attachedShell is not { } shell) return;
+        shell.MinimizeRequested -= Minimize;
+        shell.ToggleMaximizeRequested -= ToggleMaximize;
+        shell.CloseRequested -= Close;
+        _attachedShell = null;
+    }
+
+    /// <summary>Disconnects caption commands when their window is gone.</summary>
+    /// <param name="e">The closed notification.</param>
+    protected override void OnClosed(EventArgs e)
+    {
+        DetachShell();
+        base.OnClosed(e);
     }
 }

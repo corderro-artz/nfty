@@ -52,7 +52,7 @@ The path is **joined**, not merely visited: a disc is stamped at every pixel on 
 ### Region&lt;TPixel&gt;(IEditSurface&lt;TPixel&gt;, int, int) { #m-region-1-nfty-core-editing-ieditsurface-0-system-int32-92e628 }
 
 ```csharp
-public static List<(int, int)> Region<TPixel>(IEditSurface<TPixel> surface, int seedX, int seedY);
+public static List<(int, int)> Region<TPixel>(IEditSurface<TPixel> surface, int seedX, int seedY) where TPixel : struct;
 ```
 
 The 4-connected run of pixels exactly equal to the seed pixel, alpha included, so a region spreads across an erased area without leaking into a painted one.

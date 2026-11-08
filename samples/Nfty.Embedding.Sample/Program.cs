@@ -31,18 +31,22 @@ using GeneratedSet set = Generator.Generate(book, new GenerateOptions(Count: 3, 
 
 foreach (GeneratedAsset asset in set.Assets)                // the set owns the asset images too
 {
-    asset.Image.SaveAsPng(Path.Combine(outDir, $"{asset.SetNumber:0000}.png"));
-    Console.WriteLine($"#{asset.SetNumber} {asset.RecipeName} {asset.Dna[..12]}");
+    asset.Image.SaveAsPng(Path.Combine(outDir, FormattableString.Invariant($"{asset.SetNumber:0000}.png")));
+    Console.WriteLine(FormattableString.Invariant($"#{asset.SetNumber} {asset.RecipeName} {asset.Dna[..12]}"));
 }
 // --8<-- [end:cook]
 
 // --8<-- [start:render]
 // A ticket rolled elsewhere (a server, nfty serve) renders to the identical pixels. Note
-// MenuRenderer needs Nfty.Core; the Nfty.Ticket sample draws the same ticket without it.
+// MenuRenderer needs Nfty.Core; the Nfty.Ticket sample describes how to draw it without Core.
 using var menu = MenuArchive.Open(args[1]);
-AssetTicket ticket = Ticketer.TryRoll(Ticketer.Prepare(menu.Book),
-                                      new SplitMix64Rng(7))
-                     ?? throw new InvalidOperationException("The rules rejected the roll; roll again.");
+PreparedMenu prepared = Ticketer.Prepare(menu.Book);
+var rng = new SplitMix64Rng(7);
+AssetTicket? ticket = null;
+for (int attempt = 0; attempt < 1000 && ticket is null; attempt++)
+    ticket = Ticketer.TryRoll(prepared, rng);
+if (ticket is null)
+    throw new InvalidOperationException("No legal ticket after 1,000 attempts.");
 using (var image = MenuRenderer.Render(menu, ticket))       // you own the returned image
     image.SaveAsPng(Path.Combine(outDir, "ticket.png"));
 // --8<-- [end:render]
@@ -61,7 +65,7 @@ else
     foreach (ModelFile file in ModelWriter.Write(mesh, first.Image, options, "0001", rise?.Faces))
     {
         File.WriteAllBytes(Path.Combine(outDir, file.FileName), file.Bytes);
-        Console.WriteLine($"model {file.FileName} {file.Bytes.Length:N0} bytes");
+        Console.WriteLine(FormattableString.Invariant($"model {file.FileName} {file.Bytes.Length:N0} bytes"));
     }
 // --8<-- [end:rise]
 

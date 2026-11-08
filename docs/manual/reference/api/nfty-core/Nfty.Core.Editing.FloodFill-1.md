@@ -5,7 +5,7 @@
 Namespace `Nfty.Core.Editing` in assembly `Nfty.Core`.
 
 ```csharp
-public sealed class FloodFill<TPixel> : RegionEditCommand<TPixel>
+public sealed class FloodFill<TPixel> : RegionEditCommand<TPixel> where TPixel : struct
 ```
 
 4-connected flood fill of the region matching the seed pixel exactly.

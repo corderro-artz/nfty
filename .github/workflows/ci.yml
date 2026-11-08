@@ -1,4 +1,4 @@
-# The project had 1030 tests, a zero-warning build and a set of invariants that only hold because
+# The project has a zero-warning build and a set of invariants that only hold because
 # something checks them — and none of it ran unless a human remembered to run it. This is that
 # something.
 name: CI
@@ -58,6 +58,23 @@ jobs:
 
       - name: Test
         run: dotnet test nfty.sln --no-build -c Release --logger "trx;LogFileName=results.trx" --results-directory artifacts/tests
+
+      # Runs outside xUnit: a nested Headless session would invalidate its runner's application.
+      - name: Late headless callbacks retain their owner's dispatcher
+        run: |
+          dotnet run --project tools/verification/headless-callback-probe -c Release
+          dotnet run --project tools/verification/headless-callback-probe -c Release --no-build -- --dispose
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install the capture tools' image library
+        run: python -m pip install -r tools/demo/requirements.txt
+
+      # Native calls are replaced before the scripts execute; these tests cannot click the desktop.
+      - name: Release and authoring tool regressions (including PowerShell guards)
+        run: python -m unittest discover -s tools/tests -v
 
       - name: Upload test results
         if: always()
@@ -125,6 +142,10 @@ jobs:
       - run: dotnet test tests/Nfty.App.Tests -c Release
       - run: dotnet test tests/Nfty.Ticket.Tests -c Release
       - run: dotnet test tests/Nfty.Ticket.NetStandard.Tests -c Release
+      - name: Late headless callbacks retain their owner's dispatcher
+        run: |
+          dotnet run --project tools/verification/headless-callback-probe -c Release
+          dotnet run --project tools/verification/headless-callback-probe -c Release --no-build -- --dispose
 
   # What is GENERATED and committed has to be what the source would generate now, and the manual has
   # to build. None of this needs a display, so it runs on Linux, once.
@@ -182,6 +203,13 @@ jobs:
       # published reference, so that bar is checked here, against the same XML they are made from.
       - name: Every public member is documented, not just commented
         run: python tools/api-docs/build.py --lint
+
+      # Reuses the surface tool built by --check. Other tooling proofs use temp directories and a
+      # loopback HTTP server; no release packaging, browser, native app or generated-asset writes.
+      - name: Release and authoring tool regressions (including the real API surface)
+        env:
+          NFTY_TEST_API_SURFACE: '1'
+        run: python -m unittest discover -s tools/tests -v
 
       # The ONE manual build. It never publishes: the manual is served at www.vaporsoft.dev/nfty/docs/
       # by the Vaporsoft site, which clones this repository and runs this same pinned toolchain on

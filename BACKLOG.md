@@ -52,23 +52,9 @@ art becomes routine.
 
 ---
 
-## Step 7's model files were never opened in a real glTF viewer
+## External glTF viewer validation — completed
 
-**Status:** a process gap, not a doubt about the mesh math; needs a human or a desktop-capable agent.
-
-Task 7's manual CLI run wrote three model files (a GLB, a `.gltf`+`.bin` pair, and an `.igt` GLB) and
-checked them the way the plan's own fallback allows when "no viewer is available to the
-implementer": an independent Python checker verified orientation (front-facing +Z, no mirroring, not
-upside down against glTF's own conventions), enclosed volume, edge balance on the quarter-unit
-lattice, wall UVs landing on the correct texel, and determinism across two runs. None of that is in
-doubt — it is exactly the reasoning `MeshChecks` and `GltfValidator` already pin in the test suite.
-
-What is still missing is the one thing analysis cannot stand in for: actual pixels on an actual
-screen. Nobody has opened those three files in Windows 3D Viewer, Blender, or
-gltf-viewer.donmccurdy.com to confirm by eye that nothing is mirrored or upside-down, the edge colors
-read right, the pixels are crisp (no mip filtering blur), and nothing is see-through from the back.
-Do this once, on the files Task 7 already produced (or freshly regenerated ones — they are
-byte-identical either way), and close this entry.
+**Status:** completed during the final audit on 2026-11-08. Fresh GLB, glTF/bin and stored-depth Ingredient GLB exports were opened in an independent three.js viewer. Front/back orientation, opaque faces, texture edges and stored depth were visually checked. GLB and glTF/bin rendered identically at the same camera. Khronos validation reported zero errors/warnings; one informational non-power-of-two atlas note per model is expected. Evidence: `artifacts/audit/external-viewer/VERIFICATION.md`. No general foreign-model reader was added.
 
 ---
 
@@ -158,11 +144,11 @@ state. Reachable only after an exception has already escaped the dispatcher; not
 
 **The `set-browser-loading` capture shows a mixed state.** A Set browser's first four tiles decode even a 25-megapixel picture inside the first layout pass on this machine, so the frame shows four decoded blue squares beside two loading diamonds, not six diamonds. Making it fully deterministic needs a way to hold `ThumbnailGate` closed from a test (the gate is built inside `SetBrowserViewModel`). Pick up by letting the view model take a gate.
 
-**Pop-out viewer: no single-instance hand-off.** Opening a file from the shell would start a second app process. Deferred because it needs a named pipe or mutex plus argument forwarding, and it is only useful once a file association exists. Pick up together with the association: the second process sends its path to the first and exits.
+**Pop-out viewer: no single-instance hand-off.** Opening a file from the shell would start a second app process. File associations and standalone viewer launching now exist. Separate viewer processes remain intentional; optional single-instance routing would need a named pipe or mutex plus argument forwarding. Add it only if requested, preserving independent viewer windows.
 
 **Pop-out viewer: no drag-and-drop onto a window.** `Avalonia.Headless` registers no platform drag source and no test can drive a drop, so a drop handler would ship unverified. Pick up when a headless-testable seam exists (a handler taking the dropped paths, exercised directly) and wire both the viewer and the shell window to it.
 
-**Pop-out viewer: no `nfty view <file>` command.** The viewer lives in `Nfty.App`; the CLI does not reference it and must not start a GUI. Pick up as a small launcher in `Nfty.Desktop` that accepts a path argument and opens the viewer at startup.
+**Pop-out viewer: standalone launching completed.** `Nfty.Desktop --viewer <path>` opens a viewer without the shell, and Windows file associations use that route. The CLI intentionally remains independent of the GUI; no additional `nfty view` command is required for the existing launch workflow.
 
 **Pop-out viewer: a generic glTF reader.** `GltfReader` reads only the subset nfty's own `ModelWriter` writes (one mesh, one texture, the fixed accessors), and refuses anything else by name. A model from elsewhere needs sparse accessors, other component types, multiple nodes, materials and cameras. Deferred: nothing in the product produces such a file and the zero-new-packages rule rules out a library. Pick up only if people ask to inspect foreign models.
 

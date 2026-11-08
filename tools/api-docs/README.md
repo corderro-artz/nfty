@@ -34,6 +34,10 @@ its `cref` when given, otherwise from the base or interface member the surface t
 - **Page names** are the full type name with generic ticks made file-safe, for example
   `Nfty.Ticket.Ticketer.md` and `Nfty.Core.Editing.EditHistory-1.md`. Namespaces are not assemblies:
   `Nfty.Ticket.dll` declares types in `Nfty.Core.*` namespaces too, so pages are grouped by assembly.
+- **Generic constraints** accompany the declaration, including the pixel `struct` restriction,
+  `TargetedHistory`'s `notnull` key, and generic methods' interface restrictions. CLR constraint
+  flags supply struct/class/default-constructor restrictions; compiler nullable context metadata
+  distinguishes the existing `notnull` constraint.
 
 ## What the documentation must say
 

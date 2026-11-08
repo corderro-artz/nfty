@@ -1,13 +1,11 @@
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
 using Nfty.App.Services;
 
 namespace Nfty.Desktop;
 
-/// <summary>Real file picker over Avalonia's StorageProvider. Head-specific: it needs the window's
-/// TopLevel, so it is not headless-testable — verified by manual smoke.</summary>
+/// <summary>Native file and folder pickers, attached to a live window. Selected storage handles are
+/// released after extracting the local path; non-local selections return null.</summary>
 public sealed class DesktopFilePicker : IFilePickerService
 {
     /// <summary>Shows an open dialog filtered to <paramref name="extensions"/>.</summary>
@@ -29,7 +27,8 @@ public sealed class DesktopFilePicker : IFilePickerService
             AllowMultiple = false,
             FileTypeFilter = new[] { filter },
         });
-        return files.Count > 0 ? files[0].TryGetLocalPath() : null;
+        try { return files.Count > 0 ? files[0].TryGetLocalPath() : null; }
+        finally { foreach (var file in files) file.Dispose(); }
     }
 
     /// <summary>Shows a save dialog defaulting to <paramref name="defaultExtension"/>.</summary>
@@ -42,7 +41,7 @@ public sealed class DesktopFilePicker : IFilePickerService
         if (top is null) return null;
 
         var ext = defaultExtension.StartsWith('.') ? defaultExtension : "." + defaultExtension;
-        var file = await top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        using var file = await top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = title,
             DefaultExtension = ext.TrimStart('.'),
@@ -63,9 +62,9 @@ public sealed class DesktopFilePicker : IFilePickerService
             Title = title,
             AllowMultiple = false,
         });
-        return folders.Count > 0 ? folders[0].TryGetLocalPath() : null;
+        try { return folders.Count > 0 ? folders[0].TryGetLocalPath() : null; }
+        finally { foreach (var folder in folders) folder.Dispose(); }
     }
 
-    private static TopLevel? TopLevel =>
-        (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+    private static TopLevel? TopLevel => DesktopWindowContext.Current;
 }

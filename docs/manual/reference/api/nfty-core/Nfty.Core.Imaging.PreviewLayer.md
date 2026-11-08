@@ -5,7 +5,7 @@
 Namespace `Nfty.Core.Imaging` in assembly `Nfty.Core`.
 
 ```csharp
-public readonly struct PreviewLayer : IEquatable<PreviewLayer>
+public readonly record struct PreviewLayer
 ```
 
 One reference layer in a stack preview: which ingredient, which of its variants, and the color to draw it in.

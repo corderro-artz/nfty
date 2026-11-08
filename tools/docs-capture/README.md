@@ -16,9 +16,9 @@ only in this folder, so every figure showed a CookBook no reader could open.
 
 ```bash
 # 1. Build the demo workspace: the SHIPPED demo CookBook, plus a Kitchen, loose parts and a
-#    cooked Set beside it. The book itself lives in tools/demo/ and is the one embedded in the
+#    cooked Set beside it. The book lives in src/Nfty.Core/Demo/ and is embedded in the
 #    app, so the manual shows the book a reader actually has.
-python tools/demo/build-demo.py --workspace M:/nfty-demo
+python tools/demo/build-demo.py --no-embed --workspace M:/nfty-demo
 
 # 2. Launch the app and drive it to each screen by hand, capturing as you go.
 dotnet run --project src/Nfty.Desktop
@@ -45,7 +45,8 @@ lists. Any short, neutral folder works — but keep it short: it appears in the 
 
 ## The capture size
 
-**1416x792**, which `shot.ps1 -Height 792` produces (the default 950 is still fine for a tall page).
+**1416x792**, which `pair.py` uses by default and `shot.ps1 -Height 792` produces
+(`shot.ps1`'s default 950 is still fine for a tall page).
 `shot.ps1` insets the window by the 12px shadow gutter, so every page frame is **1392x768**, the
 size the manual's figures use. The window minimum is 1280x720 (`ShellViewModel.MinWindowWidth` and
 `MinWindowHeight`); a shorter capture is a size the app will not open at.
@@ -80,7 +81,10 @@ folder. Never trust capture order.
 
 **A game that owns the mouse eats every click.** A full-screen game that warps or clips the cursor
 makes `click.ps1` report success while nothing happens (read the cursor back: it never moves).
-Minimize it first.
+Minimize it first. The script now stops without clicking if cursor placement cannot be verified.
+
+Capture commands also stop on PowerShell failures, and `shot.ps1` verifies both window dimensions
+before accessing the screen. An old temporary frame cannot make a failed capture pass.
 
 **`shot.ps1` makes nfty TOPMOST.** A native file dialog opened afterwards sits behind it, so click the
 dialog's filename box by screen position before typing. Once the pop-out viewer is open,

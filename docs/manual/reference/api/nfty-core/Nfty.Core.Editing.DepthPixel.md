@@ -5,7 +5,7 @@
 Namespace `Nfty.Core.Editing` in assembly `Nfty.Core`.
 
 ```csharp
-public readonly struct DepthPixel : IEquatable<DepthPixel>
+public readonly record struct DepthPixel
 ```
 
 One pixel's depth: how far it stands in front of, and behind, the paper plane.

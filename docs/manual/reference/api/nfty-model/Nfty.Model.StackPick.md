@@ -5,7 +5,7 @@
 Namespace `Nfty.Model` in assembly `Nfty.Model`.
 
 ```csharp
-public readonly struct StackPick : IEquatable<StackPick>
+public readonly record struct StackPick
 ```
 
 One present layer of a selection: its ingredient, the variant chosen, and the color it rolled (null for the stored pixels).

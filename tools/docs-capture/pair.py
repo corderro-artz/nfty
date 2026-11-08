@@ -10,28 +10,34 @@ from PIL import Image
 
 SCRATCH = os.path.dirname(os.path.abspath(__file__))
 NAME, OUT = sys.argv[1], sys.argv[2]
-HEIGHT = sys.argv[3] if len(sys.argv) > 3 else "950"
+HEIGHT = sys.argv[3] if len(sys.argv) > 3 else "792"
 
 def ps(*args):
-    return subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", *args],
-                          capture_output=True, text=True)
+    result = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", *args],
+                            capture_output=True, text=True)
+    if result.returncode:
+        sys.stderr.write(result.stdout + result.stderr)
+    result.check_returncode()
+    return result
 
 def shot(path):
     ps("-File", os.path.join(SCRATCH, "shot.ps1"), "-Out", path, "-Height", HEIGHT)
 
 def toggle():
     ps("-Command",
-       "Add-Type @'\nusing System;using System.Runtime.InteropServices;\n"
+       "$ErrorActionPreference='Stop'\nAdd-Type @'\nusing System;using System.Runtime.InteropServices;\n"
        "public class FG{[DllImport(\"user32.dll\")]public static extern bool SetForegroundWindow(IntPtr h);}\n'@\n"
        "$p=Get-Process Nfty.Desktop|Where-Object{$_.MainWindowHandle -ne 0}|Select-Object -First 1\n"
-       "[FG]::SetForegroundWindow($p.MainWindowHandle)|Out-Null; Start-Sleep -Milliseconds 350\n"
+       "if (!$p -or ![FG]::SetForegroundWindow($p.MainWindowHandle)) { throw 'nfty window could not be focused' }\n"
+       "Start-Sleep -Milliseconds 350\n"
        "(New-Object -ComObject WScript.Shell).SendKeys('^t')")
     time.sleep(1.0)
 
 def lum(path):
-    im = Image.open(path).convert('RGB')
-    r, g, b = im.getpixel((im.width // 2, 12))
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+    with Image.open(path) as source:
+        with source.convert('RGB') as im:
+            r, g, b = im.getpixel((im.width // 2, 12))
+            return 0.2126 * r + 0.7152 * g + 0.0722 * b
 
 a = os.path.join(OUT, NAME + "-a.png")
 b = os.path.join(OUT, NAME + "-b.png")

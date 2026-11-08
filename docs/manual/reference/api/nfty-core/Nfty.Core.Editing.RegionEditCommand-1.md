@@ -5,7 +5,7 @@
 Namespace `Nfty.Core.Editing` in assembly `Nfty.Core`.
 
 ```csharp
-public abstract class RegionEditCommand<TPixel> : IEditCommand<TPixel>
+public abstract class RegionEditCommand<TPixel> : IEditCommand<TPixel> where TPixel : struct
 ```
 
 Base for edits expressed as "these pixels get these new values". The new pixels are computed once, before any mutation, and the prior pixels are snapshotted for undo — so redo is just Apply again. Region-scoped, so history stays memory-light even on a large canvas.

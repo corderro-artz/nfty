@@ -5,7 +5,7 @@
 Namespace `Nfty.Core.Stats` in assembly `Nfty.Core`.
 
 ```csharp
-public readonly struct VoxelVariant : IEquatable<VoxelVariant>
+public readonly record struct VoxelVariant
 ```
 
 What a single variant's artwork does about transparency.
