@@ -31,15 +31,17 @@ new ones.
 The Explorer's **depth** is a layer's position in the stack: depth 1 paints first and sits furthest
 back. That is paint order, and it decides which layer hides which. The Rise page's depth is
 **thickness**, how far a pixel stands out of or sinks behind its own plane. The two meet only when
-a Recipe is risen: the stack is flattened to one picture by paint order, and each visible pixel takes
-the thickness of the whole stack there: the front reaches as far as any solid layer's front, the back as far as any
-layer's back, and each face takes the color of the layer that owns it. A layer on top can add relief but never cut away what a layer under it built.
+a Recipe is risen: its layers contribute a combined column at each covered pixel. The front reaches
+as far as any solid layer's front, the back as far as any layer's back, and each face takes the color
+of the layer that owns it. A layer on top can add relief but never cut away what a layer under it built.
 
-## One solid, from finished art
+## One solid, with each face's color
 
-A model is built from one finished image, never from layers. A Recipe's roll is composited first,
-exactly as cooking composites it, and the single result rises. So a model always matches the picture
-you would have shipped.
+A loose picture rises from that picture and its depth. A Recipe or cooked asset also uses the
+rolled layers' depth and colors: their columns combine into one solid, and a protruding lower
+layer can own a front or back face even when another layer covers it in the flat 2D composite.
+The front and back pictures therefore preserve the appropriate owners rather than duplicating
+one flattened image.
 
 ## A voxel is there or it is not
 
@@ -78,7 +80,7 @@ collection without ever saying so. Compare [Why nfty never resizes your art](no-
 
 Cooking can stamp each asset's number in a corner, for checking a sheet by eye. That is a property of
 an **exported image**, applied on the way out to a copy. A model is copied as cooked, and its texture
-is the unstamped asset, so a mark can never end up painted on a 3D model. The export card says so
+uses the unstamped layer colors, so a mark can never end up painted on a 3D model. The export card says so
 beside the mark option.
 
 ## Why a gray layer rises gray

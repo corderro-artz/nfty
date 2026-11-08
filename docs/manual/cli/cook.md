@@ -19,11 +19,12 @@ nfty generate book.cbk --count 100000 --seed big --out ./big --unlimited
 | `--seed` | The seed (default `nfty`). Same book and seed give byte-identical output. |
 | `--pack` | Also write the folder as one `.set`, inside the folder and named after it. |
 | `--recipe <id>` | Roll only this Recipe instead of choosing one per asset by weight. |
-| `--unlimited` | Allow repeats: keep every roll, so any count is producible. Identity becomes the token number. Rules still apply. |
+| `--unlimited` | Allow repeated DNA, removing the uniqueness limit. Identity becomes the token number. Validation, rules and bounded retries still apply. |
 | `--max-rerolls` | Per-asset budget for finding a legal, unique roll (default 10,000). |
 
-The book is validated first; a broken book, or a count above the unique DNA space (without
-`--unlimited`), is refused before anything is written, with the reason. What the folder holds is in
+The book is validated first. Generation samples within a per-asset retry budget; failure reports
+the known count or bound, and can occur before all legal DNA has been found. A failed fresh cook
+removes the files it added. What the folder holds is in
 [What a Set contains](../reference/set-contents.md). Check the run afterward with `nfty inspect
 ./collection`.
 
@@ -54,8 +55,8 @@ nfty extend book.cbk ./collection --to 750
 nfty extend book.cbk ./collection --to 750 --seed second-drop --pack
 ```
 
-`extend` keeps every existing asset, rolls only new ones that do not collide with them, and continues
-the numbering.
+`extend` keeps existing images and DNA and continues the numbering. With uniqueness enforced it
+rejects collisions with earlier DNA; `--unlimited` permits repeats.
 
 | Option | Does |
 |---|---|
@@ -67,7 +68,8 @@ the numbering.
 Things to know:
 
 - **Rarity is recomputed** across the whole collection, so existing items' `rarity` fields are
-  rewritten. Their images and DNA never change.
+  rewritten. Their images and DNA never change. Canceling removes newly added files but does not
+  restore rarity fields already rewritten on older items.
 - **A changed book is warned about, not refused.** If the book's hash differs from the one in
   `set.json`, `extend` prints a warning on stderr and carries on. A book that gained a layer or was
   reordered rolls differently; see [Why a seed reproduces a collection](../concepts/seeds.md).

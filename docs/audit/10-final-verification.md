@@ -62,10 +62,15 @@ of-two face atlas using supported nearest/clamp sampling. Evidence and screensho
 
 ## Publication boundary and limits
 
-The release must be built afresh from the merged main commit. Earlier candidate packages predate
-the final App/Desktop fixes and must not be published. Extracted packaged CLIs, cross-platform
-payload parity, native startup and GitHub asset verification are separate release gates. Their
-final outcome belongs in the release record and [after-action report](AFTER-ACTION.md).
+Release 2.4.8 was built afresh from merged main commit `6c07a38` and published after all eight
+extracted-CLI/native startup gates passed. All 67 output payloads match across both operating
+systems and every packaging shape. GitHub's eight server SHA-256 digests and sizes match the
+local archives. All nine hosted CI jobs passed on the actual release commit, including the
+Windows/Linux App gates, both samples and Core/CLI/Model on macOS. See the
+[published asset inventory](releases/2.4.8.json) and [after-action report](AFTER-ACTION.md).
+
+The separately requested 2.4.9 Cook cleanup has its own final verification boundary; its pending
+checks are listed in the current tracker rather than being inferred from 2.4.8.
 
 Local checks cover Windows x64 and Linux x64/WSL where stated. They do not certify native macOS
 Keychain behavior, every mixed-DPI monitor arrangement, live provider rollback, every CPU

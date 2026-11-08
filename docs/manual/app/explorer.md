@@ -78,8 +78,9 @@ error.
 | **RECIPE WEIGHTS** | Each Recipe's roll weight and resulting share. `0` shelves a Recipe. |
 | **PALETTE** | Swatches stored in the book, so they travel with it. **Add the editor's saved palette** copies yours in. |
 
-Names, symbol, description and supply never change what a seed produces; Recipe weights do. Saving
-needs editing unlocked.
+Names, symbol, description and supply do not change rolled selections or DNA; Recipe weights can.
+Published metadata and the recorded book hash can still change after an edit. Saving needs editing
+unlocked.
 
 ## The Recipe panel
 

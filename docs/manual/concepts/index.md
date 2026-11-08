@@ -8,7 +8,7 @@ question comes up.
 |---|---|
 | [The vocabulary](vocabulary.md) | What a CookBook, Recipe, Ingredient, Variant, Set, Kitchen, Menu and Ticket are, and how they nest. |
 | [Layer kinds and value-maps](layer-kinds.md) | Why most layers are drawn in gray, and when to use Dynamic, Static or Custom. |
-| [How uniqueness is decided](uniqueness.md) | What an asset's DNA is made of, and why the unique DNA figure is a count, not an estimate. |
+| [How uniqueness is decided](uniqueness.md) | What DNA records, how repeats are rejected, and when the space figure is exact, bounded or unknown. |
 | [Rarity and weights](rarity.md) | How weights, optional layers and rules turn into the percentages a buyer sees. |
 | [Why a seed reproduces a collection](seeds.md) | What is guaranteed to repeat, and the edits that change a collection. |
 | [Depth: paper, front and back](depth.md) | How a flat picture becomes a 3D model, and why a soft edge cannot. |

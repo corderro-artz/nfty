@@ -9,12 +9,13 @@ No. It produces the files a drop needs, can upload them to IPFS, and gives you t
 `contractURI` for your contract. See [Publishing](../publishing/index.md).
 
 **Does the same seed always give the same collection?**
-Yes: the same book, seed and uniqueness mode give byte-identical output on any machine, locale, CPU
+Yes: the same book, seed and generation options give byte-identical output on any machine, locale, CPU
 and thread count. See [Why a seed reproduces a collection](../concepts/seeds.md).
 
 **I reordered my layers and the same seed gave different assets. Is that a bug?**
-No. Each layer consumes one random draw in stack order, so moving a layer changes which draw reaches
-it. A reordered book is a different collection.
+No. Layers consume a random stream in stack order, including Dynamic color draws and skips for
+always-absent layers. Moving a layer can change the draws reaching other choices; treat the reordered
+book as a different collection.
 
 **Why are my layers drawn in gray?**
 Gray is lightness; nfty supplies the hue per asset, so one drawing becomes many colors with your
@@ -38,7 +39,8 @@ than rounding. Snap it with **Make voxel-ready** or `nfty set voxel-ready`. See
 [Fix a 2D-only book](../app/2d-only.md).
 
 **Can I resize my art in nfty?**
-No. nfty never resamples a pixel; a wrong-sized picture is refused. See
+Imports must match the book's canvas; nfty refuses a wrong-sized picture rather than silently
+resizing it. Display scaling and integer-scale viewer exports use nearest-neighbor. See
 [Why nfty never resizes your art](../concepts/no-resizing.md).
 
 **How strong is a sealed `.tin`?**

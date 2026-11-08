@@ -28,8 +28,9 @@ produces a real Set.
 ![The demo CookBook open in the Explorer](../images/explorer-light.png#only-light)
 ![The demo CookBook open in the Explorer](../images/explorer-dark.png#only-dark)
 
-Layered treasure chests, drawn at 32×32 pixels. Two Recipes share six layers: **Chest**, with a
-barrel lid, and **Strongbox**, with a flat slab lid.
+Layered treasure chests, drawn at 32×32 pixels. **Chest**, with a barrel lid, and **Strongbox**, with
+a flat slab lid, each stack six layer categories. They share five Ingredients and use different
+Body Ingredients: seven Ingredients in the book altogether.
 
 | Layer | Kind | What it does |
 |---|---|---|
@@ -49,10 +50,12 @@ The book deliberately shows one of everything:
 - **Two optional layers.** Glow and Trim are often left out, which is what makes a few chests rare.
   See [Weights and rarity](../app/weights.md).
 - **A rule.** A stone chest never carries a keypad. See [Rules](../app/rules.md).
-- **Depth.** Every layer carries relief, so the demo rises into 3D on the [Rise page](../app/rise.md).
+- **Depth.** Body, Feet, Bands, Trim and Lock carry relief; Glow deliberately stays flat paper.
+  Explore the result on the [Rise page](../app/rise.md).
 
-Twenty-nine drawings produce exactly **8,745,000** distinct assets. That figure is a count, not an
-estimate; see [How uniqueness is decided](../concepts/uniqueness.md).
+Twenty-nine drawings permit exactly **8,745,000** distinct DNA values. That figure counts
+fingerprints, not guaranteed visually different pictures; see
+[How uniqueness is decided](../concepts/uniqueness.md).
 
 ## It is yours to change
 

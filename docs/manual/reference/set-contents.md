@@ -88,7 +88,8 @@ on (every new cook):
   The name is the color's bucket: saturation below 0.12 is `Gray`; otherwise one of twelve hue names
   centered every 30 degrees -- Red, Orange, Yellow, Lime, Green, Mint, Cyan, Azure, Blue, Violet,
   Purple, Magenta -- with `Pale ` in front from 0.12 up to 0.35. Boundaries are half-open, so 15 degrees
-  is Orange and 345 is Red. Two assets that differ only in a hue now publish different traits, and
+  is Orange and 345 is Red. Assets that differ in hue can publish different color traits; hues inside
+  the same named bucket share a trait. The
   the rarity table counts each color name like any other trait. The exact color stays in `nfty/`.
 - **A left-out layer.** A layer that is optional in the asset's Recipe and was left out is
   published as the value `None`. A layer the Recipe does not stack is not listed at all.
@@ -130,7 +131,7 @@ The Set browser reads the same file when you select an asset:
 
 | Field | Is |
 |---|---|
-| `dna` | The fingerprint. Unique across the Set -- see [How uniqueness is decided](../concepts/uniqueness.md). |
+| `dna` | The fingerprint. Unique across a Set cooked with unique DNA required; repeats are permitted otherwise. See [How uniqueness is decided](../concepts/uniqueness.md). |
 | `seed` | The seed that produced the whole collection. |
 | `rarity` | This asset's traits with their collection-wide percentages. |
 | `layers` | Per layer: its kind, and for Dynamic and Static, the exact hue and saturation it rolled. |
@@ -145,8 +146,10 @@ One model per asset, named like its image: `0001.glb`, or `0001.gltf` plus `0001
 `0001.gltf` with its buffer inside, as the format chose. An asset with no fully opaque pixel has no
 model and no gap-filler; its number is listed in the `models` block of `set.json` below.
 
-Each model's texture is the asset's picture as cooked. Export copies `models/` as it is and never
-re-renders it, so the debug number mark, which stamps exported images only, cannot reach one.
+Each model's texture carries its cooked front and back face pictures, separated by a gutter. For
+layered assets, each face uses the color of its owning layer; it need not duplicate the flat 2D
+composite. Export copies `models/` as it is and never re-renders it, so the debug number mark,
+which stamps exported images only, cannot reach one.
 
 ## `set.json`
 

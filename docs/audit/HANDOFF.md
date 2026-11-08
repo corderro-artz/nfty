@@ -1,44 +1,73 @@
 # Audit handoff — 2026-11-08
 
-Worktree: `C:/Users/Corde/.codex/worktrees/ticket-audit-fixes/nfty`. Branch: `codex/ticket-audit-fixes`. Checkpoint: `audit-app-verified-2026-11-08`. Read CLAUDE.md, AGENTS.md, REVIEW.md and 05-app-verification.md. Other applications' chat histories are separate from these files.
+Main checkout: `M:/Repositories/nfty`. Audited code `af84cf6`, README/release tree `6c07a38`.
+Version 2.4.8 is tagged, pushed and published from main with eight verified assets. All nine hosted
+CI jobs passed on `6c07a38`; local full solution 5,368 passes/one Linux-only skip and zero-warning
+Release build. Output 470/470 exact; packaged Windows/Linux output 67/67 exact in all shapes.
+Native Linux main and viewer coordinates are exactly centered. See AFTER-ACTION.md, REVIEW.md
+and releases/2.4.8.json.
 
-## Latest checkpoint — final integration
+## Active 2.4.9 follow-ups
 
-All nine project/tooling reviews and approved fixes are complete. See 06-desktop.md,
-07-ticket-sample.md, 08-embedding-sample.md, 09-tooling.md and 10-final-verification.md.
-Final forced Release build: zero warnings/errors. Test targets: 5,368 passes/one Linux-only skip;
-470/470 output payloads exact; 431 frames compared, 423 exact and eight classified.
-Both controlled callback probes pass. Independent external model-viewer validation is complete.
-Fresh packages, main merge/tag/publication and a separate public-docs commit remain required.
-The ignored AFTER-ACTION-draft.md enumerates every fix/simplification/XML result; finalize it
-as docs/audit/AFTER-ACTION.md after publication. Do not claim pending release assets are verified.
+User requested a separate Cook options/footer cleanup, screenshots where needed, then a new main
+commit/tag/push/release. No engine changes. Desktop reviewer owns Cook markup/hints/tests and the
+.NET build slot; coordinator owns version/docs/final verification/releases. Tooling reviewer has
+completed the Pillow13/Python3.11 pin update after isolated demo/tool regression proof, and is
+preparing the relevant manual screenshot mapping. Two subagents maximum.
 
-## Latest user direction — remaining stages and release
+21 non-generated manual pages are corrected/strict-built and pending commit. README correction
+was already committed separately. AFTER-ACTION.md is current locally and explicitly marks new
+follow-ups pending. Do not represent 2.4.9 as released until its own checks finish.
 
-The user has superseded the earlier stop boundary: finish Desktop, Ticket.Sample, Embedding.Sample and tooling/integration, including the new requirement that main and viewer windows open centered on the opening display (primary fallback). After final verification, commit and merge into main, tag/push and publish the newest audited release (v2.4.8 if still available). Maximum two agents at once. Current implementation is active; the prior checkpoint details below remain historical evidence, not a claim that these remaining stages are complete.
+## Cleanup and evidence
 
-## Previous stop boundary (superseded)
+The merged `codex/ticket-audit-fixes` branch is deleted after verifying main ancestry and the
+published 2.4.8 gates. All 25,780 ignored evidence files were copied to main artifacts/audit and
+SHA-256 verified; inventory: artifacts/audit-preservation-sha256.json. The native archive tool
+refused folder removal with “The task’s primary checkout cannot be removed.” Therefore
+C:/Users/Corde/.codex/worktrees/ticket-audit-fixes/nfty remains detached at af84cf6. Do not bypass
+that protection. All active development, commits and releases use M:/Repositories/nfty/main.
+Other historical worktrees belong to other work and were not touched. Earlier candidate packages
+must never replace final rebuilt assets. The release builder deletes .release each run.
 
-Ticket, Core, Model, CLI and App both-pass audits and approved fixes are locally committed/tagged and verified. **Stop before Desktop, Ticket.Sample, Embedding.Sample and tooling/CI/integration reviews. No merge, push or publication.** The user requested at most two agents; the two final agents have finished. Old Set compatibility is waived; math, determinism, ownership and fixed geometry remain requirements.
+Native Windows CUA was interrupted by physical Escape after actual demo/Cook/seed-reroll
+verification. User later reauthorized desktop use; the attempted CUA completion summary was
+aborted before dispatch. No further desktop input was sent. Linux native startup/centering and
+Windows hidden startup checks passed independently. Avoid interfering with other running apps.
 
-## Final evidence
+Read CLAUDE.md and AGENTS.md. Never regenerate tests/fixtures, edit docs/design/archive, or upgrade
+ImageSharp beyond3.1.11. Preserve determinism, image ownership and fixed geometry. BACKLOG.md holds
+intentional deferrals; completed external model-viewer validation is recorded there.
 
-- Release solution: zero warnings/errors; 5,335 passed, zero failed, one Linux-only skip. App: 2,032 passed, 104 more than baseline. Final full run follows the last UI correction.
-- Output: 470/470 byte-identical to canonical-LF checkpoint; one/four-thread comparisons 98/98 demo and 38/38 fixture files.
-- Rendered frames: 431 compared, 417 exact; six temporary labels, two LF-related size labels, four dimension-label alignments, one loading state, one ten-pixel single-level control-edge difference. Every changed region inspected; controlled comparisons recorded. Share-bar frames remain exact; minimum-voxel text fits in the fixed 26px row.
-- H01 actual application callback: old binary fails forced reset gap, fixed code passes live/disposed cases. Owner dispatchers and pending ownership prevent stale callbacks claiming another application. Both mesh-disposal interleavings are covered. The historical competing callback was not recorded; upstream reset gap remains a framework constraint. Tracked standalone regression: tools/verification/headless-callback-probe/README.md.
-- API lint clean, 269 pages current, strict manual passed, compiled App XML duplicate summaries zero. Fixtures, archived designs and package pins untouched.
+## Live verification checkpoint
 
-Full report/checklist: 05-app-verification.md and 05-app-implementation.md. Ignored artifacts/audit/ retains failed-before evidence, focused/full logs, hashes, screenshots and pixel inventories. Do not repeat completed audits or publish old candidate packages.
+Cook implementation is frozen:49focused passes,7newcases,18fixed-footer pixel comparisons,
+production430×421DIPcard. Four actual50asset/50modelmanualscreenshots refreshed,520×509,
+commoncrop(436,135,956,644), noresampling; strictmanualpasses. Noengineproductionfileschanged.
+Pillow13/Python3.11pin applied andisolateddemo/toolproofpassed. Bothsubagentsfinished.
 
-## Merge and release
+Firstfinal2.4.9build:0warnings/errors. Fullcapture run:alllibrarytargets passed,App2066pass,
+1policyfailure,1Linuxskip. Guardcaught gate.Wait() innewworker-onlyscan test. Rootreplacedit
+with boundedManualResetEventSlim.Wait(TimeSpan.FromSeconds(10));a mistakenParallelism-as-token
+intermediatecompileattemptwascorrected. FocusedCook+UiThreadWaitrecheck10/10green. Corrected
+complete solution run is active, execsession28669;log artifacts/audit/2.4.9-final-tests-corrected.log.
+Expected5375passes/1skip, butdonotclaimuntilactualexit observed.
 
-Main checkout M:/Repositories/nfty is clean; origin/main is an ancestor of this branch. Two obstructing old untracked notes were preserved with SHA-256 verification at M:/Repositories/nfty-audit-notes-before-merge-20261108/docs/audit; no tracked main file changed. Recheck status/ancestry before any future authorized merge.
+Fullcapture453PNGs:431baseline+22new;403commonframespixel-exact,20Cookchangesintentional,
+6temporarypathlabels,2minorunchanged-scope rastervariations(2and4pixels;inspectmaxdelta).
+Inventory artifacts/audit/2.4.9-frame-parity.json. Productionunchanged byboundedtestgatecorrection,
+sofirstcapture remainsvalidvisualevidence;redrunisnotsuccessfullycompletedfullsuite.
 
-No GitHub push, release tag or publication occurred. Existing eight v2.4.8 candidate packages are older evidence and need rebuilding before publication. Eventual releases originate from main. tools/release/build.py deletes .release/ each time: verify the resolved workspace target and preserve needed packages first.
+2.4.9helpers alreadyprepared underM artifacts/audit/release-2.4.9:build-final.py,verify-packages.py,
+linux-native-final.py. BuildhelperpublishesMmainandpreservesWin.releasebeforeLinuxcleanup.
+VerifierneedsNFTY_CODE_ROOT=M:/Repositories/nfty andNFTY_RELEASE_PROOF=<thatMproofdir>.
+Itretains2.4.8verificationseeds so67payloads cancompare2.4.8versus2.4.9. Versionprops2.4.9edited.
+No2.4.9commits/tags/push/packages/releaseyet. Commitsecurity,UI+version,docs separatelyoncegreen;
+finalbuildassetsfromcommittedmain,verify8shapes/native/crossreleaseparity,tag/pushmain andpublish.
 
-## Limits and deferred work
-
-Native macOS Keychain replacement, real Linux keyring failure, native mixed-DPI movement, live cloud upload, another CPU architecture and an external model viewer were not executed. Status-policy tests and pure DPI arithmetic do not claim native execution. Minimal Desktop DPI bridges support App A19 and are not its full review.
-
-BACKLOG.md retains GPU/performance proposals, external model-viewer validation, large-image Rise lag, walker consolidation, small audit leftovers and more pinning providers. These were not silently included in the completed App scope.
+APIHTMLisalreadyLIVEHTTP200athttps://www.vaporsoft.dev/nfty/docs/reference/api/,269generated
+Ticket/Core/ModelpagesfromcompilerXML+reflection. READMEaddedlinkandreusablecommands.
+notify-site tokenisabsent(auto30minpoll);forfinaldocsLIVErequirement rootcaninvokeexisting
+DeploytoGitHubPages workflow_dispatch in corderro-artz/corderro-artz.github.io afterfinalpush.
+Workflowdeploy.yml inspectedandsupportsdispatch. VerifyactualfourlivePNGhashesandnewmanualtext,
+CI/latestreleasebadges/dependencyalerts. Do notmodifywebsitecode,secrets orpermissions.

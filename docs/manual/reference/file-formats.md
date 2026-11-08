@@ -1,8 +1,9 @@
 # File formats
 
-Every nfty file is a **ZIP archive with a `manifest.json` inside**. The custom extension is a renamed
-`.zip`, so any unzip tool can open one and read exactly what it holds. There is no database, and
-nothing is hidden.
+nfty's authoring and collection archives are ordinary **ZIP files** with custom extensions. Any
+unzip tool can inspect their entries. CookBooks, Recipes, Ingredients, Kitchens and Menus use
+`manifest.json`; Sets use `set.json`; sealed exports use `seal.json` and an encrypted payload.
+Pictures and glTF models keep their own standard formats.
 
 | Extension | Holds | Contains |
 |---|---|---|

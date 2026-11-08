@@ -8,7 +8,7 @@ download contains both the desktop app and the command line.
 | | Needed |
 |---|---|
 | Operating system | Windows 10 or 11 (x64), or Linux (x64) for a download. macOS builds from source. |
-| Screen | 1280×720 or larger. nfty opens at 1280×720, its smallest size; make the window larger for more room. |
+| Window space | 1280×720 logical units or larger. nfty opens at this minimum; display scaling affects the physical screen space required. |
 | .NET 10 runtime | Only for the two *framework-dependent* downloads. The others carry their own runtime. |
 | Linux libraries | The X11 session libraries, listed [below](#linux). The command line needs none. |
 
@@ -30,7 +30,8 @@ comes in four shapes:
 2. Run `Nfty.Desktop.exe`.
 3. The command line is `cli\Nfty.Cli.exe` in the same folder. Run `cli\Nfty.Cli.exe --help` to check it.
 
-The framework-dependent shapes need the .NET 10 **desktop** runtime.
+The framework-dependent shapes need the ordinary **.NET 10 Runtime**. The Windows Desktop Runtime
+also supplies it, but nfty does not require WPF or Windows Forms.
 
 nfty installs nothing and writes nothing to the registry on its own. To make double-clicking a
 `.cbk`, `.set` or picture open nfty, turn it on in Settings: see
@@ -48,8 +49,8 @@ nfty installs nothing and writes nothing to the registry on its own. To make dou
     ./cli/Nfty.Cli --help     # the command line
     ```
 
-2. If the app reports a missing library, install the X11 session libraries. Every desktop install
-   (GNOME, KDE, Xfce) already has them; a minimal or server install may not:
+2. If the app reports a missing library, install the X11 and font libraries. Desktop distributions
+   commonly include them; minimal or server installations may need them added:
 
     | Distribution | Command |
     |---|---|
@@ -58,8 +59,8 @@ nfty installs nothing and writes nothing to the registry on its own. To make dou
     | Arch | `sudo pacman -S libice libsm libx11 fontconfig libxrandr libxi libxcursor` |
 
 3. Optional: run `./install-desktop-entry.sh` once to add nfty to your application menu with its
-   icon. It writes only to `~/.local/share/applications` and `~/.local/share/icons`, and points at the
-   folder you ran it from, so run it again if you move the folder.
+   icon. It writes under `$XDG_DATA_HOME` (`~/.local/share` by default), in `applications/` and
+   `icons/`, and points at the folder you ran it from, so run it again if you move the folder.
 
 The app runs under X11, and under Wayland through XWayland. The framework-dependent shapes need the
 .NET 10 runtime (`dotnet-runtime-10.0`, see

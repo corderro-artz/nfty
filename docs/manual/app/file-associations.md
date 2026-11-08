@@ -36,8 +36,9 @@ Each double-click starts its own nfty process, so two files open in two windows.
 
 ## Make nfty the default for pictures, models and JSON
 
-For nfty's own extensions, **Apply** is enough: no other program claims `.cbk` or `.set`, so nfty
-becomes their default.
+For nfty's own extensions, **Apply** sets the default only when it is empty or already belongs to
+nfty. Another program's default is preserved. If Windows already has a different choice for an
+extension, select nfty through **Default apps…**.
 
 For `.png`, `.jpg`, `.glb`, `.gltf` and `.json`, Windows does not let *any* program make itself the
 default. Since Windows 10 the default is recorded in a per-user `UserChoice` key protected by a hash

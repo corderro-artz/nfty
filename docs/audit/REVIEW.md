@@ -2,13 +2,32 @@
 
 Current baseline: `5dece661785a75990576f4016eb796558ba75fd4` (`origin/main`, verified 2026-11-08).
 
-Current status: **All nine two-pass reviews and approved implementations complete.** Final integration checks are recorded in [verification](10-final-verification.md). Latest user direction authorizes centered startup for main/viewers, commit/merge into main and publication of the newest audited release, followed by a separate public-documentation commit. Maximum two agents. Release packaging/publication is the remaining gate.
+Current status: **All nine two-pass reviews and approved implementations are complete.**
+Audited release [2.4.8](https://github.com/corderro-artz/nfty/releases/tag/v2.4.8) is published from
+main (`6c07a38`): eight verified assets, 67/67 cross-platform payload parity and all nine hosted
+CI jobs green. [Full after-action report](AFTER-ACTION.md) records every fix, simplification,
+XML correction, result and limitation. [Final integration](10-final-verification.md).
 
-The initial review used stale local `main` (`fea71d8`, 115 commits behind). The user identified the missing seed reroll control during verification. The isolated branch was rebased onto current `origin/main`; fixes were adapted and all verification repeated. Initial results are historical evidence only, not proof of compatibility with the current baseline.
+The original stale-main review was rebased onto `5dece661785a75990576f4016eb796558ba75fd4`; readiness
+checks were repeated. Initial stale results remain historical evidence, not release proof.
 
-Latest checkpoint and continuation instructions: [handoff](HANDOFF.md). Earlier Windows/Linux v2.4.8 packages require rebuilding after App changes; publication remains on hold. The user requires releases from main after verification, rather than from the audit branch. Old Set compatibility is waived. Code merge gates pass; merge remains on hold and final release assets need rebuilding.
+## Active follow-ups for 2.4.9
 
-Release gates: [2.4.8 candidate](06-release-gates.md). Cross-platform package verification found and corrected platform-dependent JSON newlines. The canonical-LF checkpoint had 5,231 passing tests/one platform skip and 67/67 Windows/Linux payload parity. The completed App checkpoint has 5,335 passes/one platform skip and 470/470 output preservation; packages still require rebuilding. The user waived old-Set compatibility and approved main merge/publication only after valid final checks.
+- [x] Complete and publish the full audited 2.4.8 release from main; verify uploaded asset hashes.
+- [x] Correct README links, badges, requirements and claims; separate README commit `6c07a38`.
+- [x] Correct 21 manual pages; strict build and 457 local targets pass (awaiting main commit/deploy).
+- [x] Verify and apply Pillow 13 tooling pin/Python 3.11 minimum; all 59 old alert ranges exclude it.
+- [x] Finish requested Cook options/footer cleanup and rendered/keyboard/fixed-geometry checks.
+- [x] Refresh four Cook manual screenshots in both themes from real 50-asset/50-model renders.
+- [x] Final 2.4.9 build: zero warnings/errors; full solution 5,375 passed/one platform skip; 453 frames compared.
+- [ ] Rebuild/verify all eight 2.4.9 assets and cross-release output parity.
+- [ ] Commit/tag/push/release 2.4.9 from main; verify CI, hashes, badges and deployed docs.
+- [x] Preserve 25,780 ignored evidence files with SHA-256 verification; delete the merged audit branch.
+- Checkout folder archival is blocked by Codex: “The task’s primary checkout cannot be removed.”
+  The folder is detached; active work remains on main.
+
+Maximum two subagents; no new engine/features beyond the approved follow-ups. Deferred optimization
+and feature work remains in BACKLOG.md. Latest continuation details: [handoff](HANDOFF.md).
 
 ## Rules
 
@@ -36,6 +55,10 @@ Release gates: [2.4.8 candidate](06-release-gates.md). Cross-platform package ve
 
 Current solution: six production projects, two sample projects, and six test projects. `Nfty.Ticket.NetStandard.Tests` exercises the same Ticket test sources against the netstandard2.1 assembly; it is included in Stage 1. Test projects are reviewed with their production owner. Stage 9 covers executable code outside those projects; XML review applies where applicable, with equivalent documentation review for scripts.
 
+The project checkpoint narratives below retain their original stop boundaries and local-tag
+status for traceability. Statements such as “not started” or “no merge/push” describe those
+earlier checkpoints; the current status and active checklist above supersede them.
+
 ## Completed remaining stages
 
 - [x] Desktop: inspect every platform/window service; complete separate XML/simplification pass.
@@ -46,8 +69,8 @@ Current solution: six production projects, two sample projects, and six test pro
 - [x] Prove final Release build, all test targets, 470 output payloads, 431 frames, callback probes,
   API/manual generation and tooling regressions. Preserve failed attempts and explicit limits.
 - [x] Independently open GLB/glTF/bin and Ingredient output in a third-party viewer; zero validator errors/warnings.
-- [ ] Fresh eight-package verification from main; publish v2.4.8 only after passing.
-- [ ] Separate README/manual/badges documentation commit on main; finalize after-action report.
+- [x] Fresh eight-package verification from main; published v2.4.8 after all checks passed.
+- [x] Separate README commit on main; manual corrections and the after-action report are current locally, pending the follow-up documentation commit.
 
 ## Completed review: Nfty.App
 

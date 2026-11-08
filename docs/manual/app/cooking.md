@@ -18,17 +18,18 @@ to see any problems. The lock does not need to be open.
     | Option | Means |
     |---|---|
     | **COUNT** | How many assets to make. |
-    | **SEED** | Any word. Arrives with a random one; the die rolls another. The same book and seed always cook the same collection. |
+    | **SEED** | Any word. Arrives with a random one; the die rolls another. The same book, seed and options cook the same collection. |
     | **RECIPE** | Every Recipe by its weight (the default), or one Recipe only. |
     | **Pack into a single .set** | Also write the folder as one `.set` archive, inside the folder. |
-    | **Allow repeats** | Keep every roll, even a duplicate DNA. Any count becomes possible; identity becomes the token number. See [Allowing repeats](../concepts/uniqueness.md#allowing-repeats). |
+    | **Allow repeats** | Accept repeated DNA, removing the uniqueness limit. Rules and bounded retries still apply; identity becomes the token number. See [Allowing repeats](../concepts/uniqueness.md#allowing-repeats). |
     | **Include 3D models** | Also write a model of every asset into `models/`. See [below](#cook-with-3d-models). |
 
 3. Click **Cook** and choose an **empty** folder.
 
 A progress bar runs while the assets are rolled and written; **Cancel** stops it, and the files that
-cook had already written are removed, so a stopped cook never leaves a half-written Set. Files that
-were in the folder before, and an extended Set's earlier assets, are left alone. When it finishes,
+cook added are removed. Existing images and DNA are kept, although a canceled extend can already
+have updated older assets' rarity fields; it does not restore every previous metadata byte.
+When it finishes,
 the dialog reports the result. Click the folder row to open it in your file manager, or **Open Set**
 to browse it in the [Set browser](set-browser.md). What the folder holds is in
 [What a Set contains](../reference/set-contents.md).
@@ -41,8 +42,8 @@ to browse it in the [Set browser](set-browser.md). What the folder holds is in
 Choose a folder that **already holds a Set** in step 3. nfty extends it instead of overwriting it:
 
 - **COUNT** becomes the number to **add**; the dialog shows the resulting total (`→ 750 total`).
-- Every existing asset, image and DNA is kept. New assets never collide with old ones and continue the
-  numbering.
+- Existing images and DNA are kept, and numbering continues. With unique DNA required, new DNA
+  cannot collide with an earlier asset; **Allow repeats** permits those collisions.
 - Rarity is recomputed across the whole collection, so existing items' `rarity` fields are rewritten.
 - The Set's own Recipe mix is used, so the **RECIPE** choice is set aside.
 - If the book has changed since the Set was cooked (its hash differs), the dialog **warns** and carries
@@ -71,8 +72,9 @@ pixels. The line beside the box says how many; see [Fix a 2D-only book](2d-only.
 
 ## If the book cannot make enough
 
-Without **Allow repeats**, asking for more than the book's **UNIQUE DNA** is refused before anything
-is written, with the real maximum named. Raise the figure, cheapest first:
+Without **Allow repeats**, a request beyond the remaining exact DNA space cannot succeed. A cook
+can also reach its retry budget while unused DNA remains, particularly with uneven weights or
+restrictive rules. Read the message's count or bound and the number produced. To expand the space:
 
 1. **Widen a hue or saturation range** on a Dynamic layer (COLORIZE tab). No drawing needed.
 2. **Make the quantize steps finer.** Smaller steps mean more colors count as different.
@@ -86,6 +88,6 @@ Or tick **Allow repeats** and stop needing the figure. Weights still decide rari
     A book with two drawings and a huge hue range can produce a million distinct assets that all look
     like the same two drawings. Push both.
 
-If a cook stops with "the reroll budget ran out", legal unique rolls exist but are hard to hit at
-random, usually because of rules. Loosen them, or cook from the command line with a larger
-`--max-rerolls`.
+If a cook reaches its reroll budget, review weights, rules and the requested count. A larger
+`--max-rerolls` on the command line gives sampling more attempts; it cannot create additional DNA
+or make contradictory rules legal.

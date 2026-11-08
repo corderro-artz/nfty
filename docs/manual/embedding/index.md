@@ -11,7 +11,7 @@ Pick the smallest one that does the job.
 
 | You want to | Reference | Brings |
 |---|---|---|
-| Decide what an asset is (on a server, in an engine) and draw it yourself | `Nfty.Ticket` | Nothing else. `net10.0`, **no NuGet packages**, no imaging library. |
+| Decide what an asset is (on a server, in an engine) and draw it yourself | `Nfty.Ticket` | Nothing else. `net10.0` and `netstandard2.1`, **no NuGet packages**, no imaging library. |
 | Read `.cbk` files, cook collections, render pixels, write Sets, export, write Menus | `Nfty.Core` | `Nfty.Ticket` and ImageSharp. |
 | Make 3D models (voxel meshes, glTF) | `Nfty.Model` | `Nfty.Core`. No glTF library. |
 

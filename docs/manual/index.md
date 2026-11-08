@@ -8,7 +8,8 @@ title: nfty
 
 nfty is a generator for layered pixel-art collections. You draw a few options for each layer of a
 character (backgrounds, bodies, eyes, hats), and nfty stacks, colors and combines them into a
-collection where every asset carries a fingerprint proving it is unlike any other. It ships as a
+collection where every asset records its traits and DNA fingerprint. Unique-DNA mode rejects
+repeated fingerprints; identical or hidden drawings can still produce matching pixels. It ships as a
 desktop app, a command line, and three .NET libraries you can embed in a game or a server.
 
 ![The nfty opening screen: create, open, recent books and the Kitchen shelf](images/landing-light.png#only-light)
@@ -23,8 +24,9 @@ desktop app, a command line, and three .NET libraries you can embed in a game or
 4. **Cook with a seed.** The same CookBook and the same seed always produce byte-identical output,
    on any machine.
 
-The demo CookBook built into nfty is twenty-nine small drawings and can produce **8,745,000**
-distinct assets. That ratio is the point of the whole design.
+The demo CookBook built into nfty is twenty-nine small drawings and admits **8,745,000**
+distinct DNA values. Their selections and quantized colors are explained under
+[uniqueness](concepts/uniqueness.md).
 
 ## Where to go
 

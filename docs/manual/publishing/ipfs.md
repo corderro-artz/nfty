@@ -1,9 +1,10 @@
 # Upload to IPFS
 
 Every NFT drop runs in the same order, because metadata must carry the address of the art: upload the
-art, write the metadata with its address, upload the metadata, point the contract at it. nfty can do
-all four steps in one press, to an IPFS node on your machine or to Pinata, or you can do them by hand
-with any pinning service. nfty does not deploy a contract or mint.
+art, write the metadata with its address, upload the metadata, point the contract at it. nfty can
+prepare and upload the files in one press, to an IPFS node on your machine or to Pinata, then gives
+you the URIs to configure on your contract. You can also upload by hand. nfty does not deploy,
+configure a contract, or mint.
 
 **Before you start:** fill in the [MARKETPLACE tab](marketplace.md) with **Token id** file names
 (the Marketplace preset already does), and leave the base URIs empty.
@@ -44,9 +45,10 @@ When it finishes, the tab shows each address with **Copy**:
 | **CONTRACT URI** | Your contract's `contractURI`: `ipfs://<metadataCID>/collection.json`. |
 | **IMAGES**, **MODELS**, **METADATA** | Each uploaded folder. |
 
-**Cancel** stops between steps, and nfty then unpins every folder that run had already pinned, so a
-stopped or failed upload leaves nothing behind on the service. The window will
-not close during an upload. An upload is refused for a sealed export, one with no art or no metadata,
+**Cancel** stops the operation. After cancellation or failure, nfty attempts to unpin only folders
+it can confirm this operation newly pinned; pre-existing pins and pins with unknown ownership stay.
+Cleanup is best effort with a 30-second bound, so an unavailable service can leave new pins behind.
+The window will not close during an upload. An upload is refused for a sealed export, one with no art or no metadata,
 or one with the debug mark on.
 
 ## Upload in one step (command line)
@@ -89,8 +91,8 @@ With another pinning service, or to look at the files between steps, do it in tw
     That writes `images/` (and `models/`) with no metadata, `collection.json` or `set.json`. Use the
     same naming you will use in step 3.
 
-2. **Upload `images/` (and `models/`)** to any pinning service (Pinata or NFT.Storage in the browser,
-   or `ipfs add -r --cid-version=1 images` with Kubo) and copy each folder's CID.
+2. **Upload `images/` (and `models/`)** with your pinning service's folder-upload flow, or
+   `ipfs add -r --cid-version=1 images` with Kubo, and copy each folder's CID.
 
 3. **Export again with the addresses:**
 

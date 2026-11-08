@@ -521,6 +521,9 @@ commit the intended release tree, and run both build/test and documentation gate
 - **CI**: [`ci.yml`](.github/workflows/ci.yml) — builds and tests on Windows, audits the dependency
   graph for advisories separately, and re-runs the engine and CLI on Ubuntu, macOS (arm64) and
   Windows, because determinism is promised across architectures.
+- **Library API docs**: the [live HTML reference](https://www.vaporsoft.dev/nfty/docs/reference/api/)
+  covers Ticket, Core and Model. `python tools/api-docs/build.py` regenerates it from compiler XML
+  and public signatures; run `--check` and `--lint` separately to verify generated pages and XML contracts.
 - **Manual**: the same [`ci.yml`](.github/workflows/ci.yml) checks that the committed API reference
   and demo match their generators, builds `docs/manual/` with `mkdocs --strict`, and runs both
   embedding samples. It publishes nothing: the manual is served at

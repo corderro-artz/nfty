@@ -1,7 +1,7 @@
 # How uniqueness is decided
 
-By default nfty guarantees that no two assets in a Set are the same. This page explains what "the
-same" means, how the **unique DNA** figure is counted, and how to switch the guarantee off.
+By default nfty rejects repeated DNA within a Set. This page explains what DNA records, how the
+**unique DNA** figure is counted, and how to allow repeats.
 
 ## An asset's fingerprint
 
@@ -15,10 +15,13 @@ A layer left out by its absent chance contributes nothing, so two assets that bo
 about it. Paint order and depth never enter the hash. When a roll produces a DNA the Set already
 has, nfty throws the roll away and rolls again.
 
+This is a guarantee about fingerprints, not visually distinct pixels. Two different variants can
+contain identical drawings, and a layer hidden by another can still contribute to DNA.
+
 ## Colors are counted in buckets
 
-A hue is a continuous number, so strictly every roll would be a new color and every asset trivially
-unique. That would be a worthless guarantee: two assets one degree of hue apart look identical.
+A hue can take many finely spaced values. Treating each as a separate identity would give little
+control over visible variety: two assets one degree of hue apart can look alike.
 
 So each colored layer's color is **quantized** before it reaches the DNA. The layer's **QUANTIZE**
 setting says how coarsely: a hue step of 30 divides the wheel into 30-degree buckets, and two rolls
@@ -27,20 +30,22 @@ mean more.
 
 ## The count is a promise
 
-**UNIQUE DNA** on the CookBook panel (and the last line of `nfty stats`) is the number of legal,
-distinguishable assets the book can produce: every variant combination the rules allow, times the
+**UNIQUE DNA** on the CookBook panel (and the last line of `nfty stats`) counts legal DNA values:
+every variant combination the rules allow, times the
 color buckets each colored layer can land in, with each optional layer adding its "absent" case.
 
 ![The CookBook panel, showing the DNA space broken down per recipe](../images/cookbook-panel-light.png#only-light)
 ![The CookBook panel, showing the DNA space broken down per recipe](../images/cookbook-panel-dark.png#only-dark)
 
-The **DNA SPACE** list shows the figure per Recipe, so you can see which one is the bottleneck. Ask
-for more assets than the total and nfty refuses before it starts and states the true maximum. It
-never ships duplicates you did not ask for.
+The **DNA SPACE** list shows the figure per Recipe. An exact count describes the legal DNA space;
+the generator still samples it with a bounded retry budget. Asking for more than the remaining
+space cannot succeed, and a heavily weighted book can also reach its retry limit before finding
+every available DNA. A failed fresh cook leaves no completed Set, and unique mode never accepts a
+duplicate to fill the request.
 
 ## When the figure is a bound, not a count
 
-Nearly every book counts exactly. A few can only be bounded, and the wording says which direction:
+Some books count exactly; others can only be bounded or reported as unknown. The wording says which:
 
 | Wording | Means |
 |---|---|
@@ -52,29 +57,35 @@ Nearly every book counts exactly. A few can only be bounded, and the wording say
 Large figures print in full when they fit, then as a named magnitude (`2.46 billion`), then with an
 exponent (`2.18e21`). The exact digits are on the figure's tooltip.
 
-## Two different failures
+## Reading a failed cook
 
-They look alike and mean opposite things:
+The message distinguishes what is known:
 
-- **"...allows exactly N unique DNA, but M were requested."** The space is real and smaller than
-  what you asked for. Make it bigger: see [Cooking](../app/cooking.md#if-the-book-cannot-make-enough).
+- **"...allows exactly N unique DNA, but M were requested."** N is the book's exact DNA count.
+  Compare the request and any existing assets with that space. If enough unused DNA should remain,
+  sampling may have reached its retry limit instead. See
+  [Cooking](../app/cooking.md#if-the-book-cannot-make-enough).
 - **A rule conflict.** The rules exclude *every* combination, so the space is empty. Remove or
   loosen a rule.
+- **A reroll-budget failure with a bound or unknown space.** The attempts did not find another
+  acceptable roll; that alone does not prove the space is exhausted. Consider weights, rules and
+  the request before raising the budget.
 
 ## Allowing repeats
 
 The guarantee has a cost: a small book cannot mint a large collection. Many collections are minted
-the other way. Tick **Allow repeats** in the Cook dialog (or pass `--unlimited`) and every roll is
-kept, so any count is producible from any book.
+the other way. Tick **Allow repeats** in the Cook dialog (or pass `--unlimited`) to accept repeated
+DNA and remove the uniqueness limit. Validation, rules and the rule-retry budget still apply.
 
 Nothing else changes. Rules are still enforced, and **the weights still decide how rare each asset
 is**: a low-weight variant stays uncommon, and a low-weight variant on a rarely present layer is
-rarer still. You give up only the promise that two assets are never identical. Identity becomes the
+rarer still. You give up the promise that two assets have different DNA. Identity becomes the
 asset's **number**, as ERC-721 defines it.
 
 `set.json` records which mode made a Set (`"uniqueDna": true` or `false`). The same book and seed
-give *different* collections in the two modes, because rejecting a duplicate consumes a roll the
-other mode never spends. The seed and this field together reproduce a run.
+can give different collections in the two modes, because rejecting a duplicate consumes a roll the
+other mode keeps. Reproducing a run requires the same book, seed and generation options, including
+this mode.
 
 ## See also
 

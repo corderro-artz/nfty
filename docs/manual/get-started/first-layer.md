@@ -76,7 +76,7 @@ Select **Vapor Pets**, click **Cook Set**, and use the **same seed** as before, 
 folder.
 
 You get a different collection, not the old one with a creature added. Adding a layer changes how
-random numbers are handed out, so every roll changes. See
+random numbers are handed out, so the selections and DNA can change. See
 [Why a seed reproduces a collection](../concepts/seeds.md).
 
 ## What you did

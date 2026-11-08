@@ -58,8 +58,9 @@ brand-new, empty book reports what to add first; that is not a fault.
 
 ### "...allows exactly N unique DNA, but M were requested."
 
-The book cannot make that many distinct assets; N is the real maximum. Widen a hue range, make
-quantize finer, add variants, loosen a rule, or allow repeats. See
+N is the book's exact DNA count. Compare the requested count and any existing assets with that
+space. A request beyond the remaining space needs fewer assets, a larger space or repeats; when
+enough unused DNA should remain, sampling may instead have reached its retry budget. See
 [If the book cannot make enough](../app/cooking.md#if-the-book-cannot-make-enough).
 
 ### A rule conflict
@@ -69,8 +70,9 @@ bigger space will not help. Remove or loosen a rule. See [Rules](../app/rules.md
 
 ### "The reroll budget ran out"
 
-Legal, unique rolls exist but are hard to hit at random, usually because of rules. Loosen them, or pass
-a larger `--max-rerolls`.
+The attempts did not find another acceptable roll. Read the count or bound in the message and
+review the requested count, weights and rules. A larger `--max-rerolls` gives sampling more chances
+when legal unused DNA remains; it cannot enlarge the space or fix contradictory rules.
 
 ### A layer never shows up in the output
 
@@ -90,7 +92,8 @@ sometimes intended, but the new assets roll from the changed book.
 
 ### Art looks blurry
 
-nfty never smooths or resamples. Check the source art, then partial transparency:
+nfty displays pixel art with nearest-neighbor scaling and does not silently resize it on import.
+Check the source art, display scale and partial transparency:
 `nfty inspect book.cbk --voxel`.
 
 ## 3D and Rise

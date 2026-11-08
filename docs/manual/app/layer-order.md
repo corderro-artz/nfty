@@ -5,8 +5,8 @@ over everything. Change the order to put a layer in front of or behind another.
 
 !!! warning "Reordering makes a different collection"
 
-    nfty draws one random number per layer, in stack order. Move a layer and you move *which draw
-    reaches it*, so the same seed now picks different variants. If you have already cooked and
+    Layers consume a random stream in stack order, including Dynamic color draws and skips for
+    always-absent layers. A move can change which draws reach other choices. If you have already cooked and
     shipped a Set from this book, the next cook after a reorder is a different collection, not the
     same assets restacked. See [Why a seed reproduces a collection](../concepts/seeds.md).
 

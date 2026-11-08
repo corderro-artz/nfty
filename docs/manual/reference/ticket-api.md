@@ -1,6 +1,6 @@
 # Ticket and Menu API
 
-The `Nfty.Ticket` assembly: `net10.0`, no NuGet packages, no imaging library. Types live in the
+The `Nfty.Ticket` assembly: `net10.0` and `netstandard2.1`, no NuGet packages, no imaging library. Types live in the
 `Nfty.Ticket` namespace unless noted. This page is the roll at a glance; every public type, with
 signatures, is in the [API reference](api/index.md). For worked examples that compile, see
 [Roll and draw with Nfty.Ticket](../embedding/ticket.md); for the command-line route,
